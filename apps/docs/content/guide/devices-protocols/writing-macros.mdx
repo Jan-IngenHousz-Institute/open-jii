@@ -12,6 +12,14 @@ isolated Lambda sandbox. The mobile field flow runs JavaScript locally and
 Python in Pyodide; an R macro fails on the phone with a "cannot run on this
 device" message instead of running.
 
+JavaScript runs on the phone without a connection. The app downloads the
+Pyodide runtime from the internet before it can run a Python macro. If that
+runtime has not loaded when the phone goes offline, the result step says the
+macro needs an internet connection instead of showing its output. The reading
+can still be accepted, and the platform runs the macro once the measurement
+uploads. A macro that must give results in the field without a connection
+should be written in JavaScript.
+
 Open **Macros** and select **New macro** to choose a language, write the code,
 and optionally associate compatible protocols. You can also create or select a
 macro while adding a **Macro** cell to a workbook. Put the macro after the values
@@ -25,6 +33,10 @@ On the **Macros** page, select **Name**, **Language**, **Protocols**, or **Updat
 list. Click once for ascending order, again for descending order, and a third time to clear that
 column. Hold **Shift** to add a second sort. The selected order stays in the URL, so a refresh or
 shared link keeps it. **Reset sorting** clears the selection and returns to the default order.
+
+In a phone-width browser window the list shows only the **Name** column, so Name is the only
+heading you can select there; the other columns appear as the window widens. A sort chosen in a
+wider window, or carried in a shared link, still applies while its column is hidden.
 
 ![The macro list with Name sorted ascending](/img/guide/web/macros-list.webp)
 
@@ -56,12 +68,19 @@ own `sample` property whose value is a JSON object or array:
 
 | Value presented to a host                    | Value macro code receives                          |
 | -------------------------------------------- | -------------------------------------------------- |
-| Direct object, scalar, or `null`             | The same value                                     |
+| Direct object                                | The same value                                     |
+| Direct scalar or `null`                      | The same value on the phone; see the note below    |
 | `{ sample: [measurement] }`                  | `measurement`                                      |
 | `{ sample: measurement }`                    | `measurement` when it is a JSON object             |
 | Root array, including `[]` or multiple items | The complete, unchanged array                      |
 | `{ sample: [] }`                             | An `empty-envelope` failure; macro code is not run |
 | `{ sample: [first, second] }`                | `first`                                            |
+
+The backend only accepts a JSON object or array as a macro's input. A direct
+scalar or `null` sent to the macro API is refused with HTTP 400 before the
+normalizer or the macro runs, and the field app refuses to save a measurement
+that is a scalar or `null`. Only the phone's own run can hand a scalar or `null`
+to macro code.
 
 **Intentional root-array behavior change.** On generic backend calls, web
 workbooks, and mobile JavaScript or Python runs, a root array is no longer
@@ -188,9 +207,26 @@ selects only JavaScript or Python.
 When you select a language in a workbook macro cell, the selection takes effect
 after saving succeeds. If saving fails, the cell keeps its previous language.
 
-The language is pinned into each published workbook version together with the
-macro code. If you change a macro's language after an experiment was published,
-publish the workbook again so the field app runs it with the new language.
+The language is pinned into each workbook version together with the macro code.
+The field app, and the platform when it processes uploaded measurements, run the
+code and language pinned in the experiment's version. Versions created before the
+language was pinned hold only the code; for those, the language saved on the
+workbook's macro cell is used, even if the macro itself has since moved to
+another language. The web workbook runner always runs the macro's current code
+and language, so a macro that works there can still run with an old language in
+the field.
+
+If an experiment runs a macro with the wrong language:
+
+1. Open the workbook and select the right language in the macro cell itself.
+   Changing the language only on the macro's own page does not count as a change
+   to the workbook, so no new version would follow.
+2. On the experiment's **Design** tab, select **Review & upgrade** to move the
+   experiment to a new version that pins the corrected language. See
+   [Workbooks](/guide/experiments/workbooks#edit-and-publish-changes).
+3. A measurement recorded under a workbook version keeps that version. The
+   platform processes it, and the app re-runs it from **Recent**, with that
+   version's language. Upgrading changes only what comes next.
 
 ## Runtimes and available libraries
 

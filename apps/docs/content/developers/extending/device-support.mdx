@@ -26,17 +26,17 @@ A device that wants push support must implement the `SET_CONFIG` frame documente
 
 ## Where family knowledge lives
 
-| Layer          | Artifact                                                                                  | Declares                                                                                                               |
-| -------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Database       | `sensor_family` enum in `packages/database/src/schema.ts`                                 | Persisted family values on protocols and devices.                                                                      |
-| API contract   | `zSensorFamily` in `packages/api/src/domains/protocol/protocol.schema.ts`                 | The wire enum shared by protocols, devices, and registration.                                                          |
-| API contract   | `DEVICE_PROFILES` in `packages/api/src/domains/device/device-profile.ts`                  | Canonical product spelling and display roles. The exhaustive `Record` makes a missing profile a compile error.         |
-| Device toolkit | `DEVICE_TRANSPORT_SUPPORT` in `packages/iot/src/core/types.ts`                            | Transports, BLE/Bluetooth Classic support, and the stored-config (push) flag per `DeviceType`.                         |
-| Device toolkit | `SENSOR_FAMILIES` and `packages/iot/src/driver/*`                                         | Which families are identifiable over a local probe, and the adapter speaking each device-native serial protocol.       |
-| Web host       | `sensorFamilyToDeviceType` in `apps/web/hooks/iot/device-type-mapping.ts`                 | Routing from the API family to the toolkit `DeviceType`.                                                               |
-| Web host       | `createDriver` in `apps/web/hooks/iot/useIotCommunication/useIotCommunication.ts`         | Which driver a local connection instantiates per family.                                                               |
-| Web host       | `executeProtocolWithDriver` in `apps/web/hooks/iot/useIotProtocolExecution`               | How protocol cells run per family: direct JSON, the `SET_CONFIG`/`RUN`/`GET_DATA` sequence, or refused with a message. |
-| Web host       | `DOWNLOAD_ONLY_NOTE_KEYS` in `apps/web/components/iot-devices/device-config-delivery.tsx` | The reason copy shown when push is unavailable, resolved through `@repo/i18n`.                                         |
+| Layer          | Artifact                                                                                               | Declares                                                                                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Database       | `sensor_family` enum in `packages/database/src/schema.ts`                                              | Persisted family values on protocols and devices.                                                                |
+| API contract   | `zSensorFamily` in `packages/api/src/domains/protocol/protocol.schema.ts`                              | The wire enum shared by protocols, devices, and registration.                                                    |
+| API contract   | `DEVICE_PROFILES` in `packages/api/src/domains/iot/device-profile.ts`                                  | Canonical product spelling and display roles. The exhaustive `Record` makes a missing profile a compile error.   |
+| Device toolkit | `DEVICE_TRANSPORT_SUPPORT` in `packages/iot/src/core/types.ts`                                         | Transports, BLE/Bluetooth Classic support, and the stored-config (push) flag per `DeviceType`.                   |
+| Device toolkit | `SENSOR_FAMILIES` and `packages/iot/src/driver/*`                                                      | Which families are identifiable over a local probe, and the adapter speaking each device-native serial protocol. |
+| Web host       | `sensorFamilyToDeviceType` in `apps/web/hooks/iot/device-type-mapping.ts`                              | Routing from the API family to the toolkit `DeviceType`.                                                         |
+| Web host       | `createDriver` in `apps/web/hooks/iot/useIotCommunication/useIotCommunication.ts`                      | Which driver a local connection instantiates per family.                                                         |
+| Web host       | `executeProtocolWithDriver` in `apps/web/hooks/iot/useIotProtocolExecution/useIotProtocolExecution.ts` | How protocol cells run per family: direct JSON or the `SET_CONFIG`/`RUN`/`GET_DATA` sequence.                    |
+| Web host       | `DOWNLOAD_ONLY_NOTE_KEYS` in `apps/web/components/iot-devices/device-config-delivery.tsx`              | The reason copy shown when push is unavailable, resolved through `@repo/i18n`.                                   |
 
 `@repo/iot` stays dependency-free, so `SENSOR_FAMILIES` is duplicated by hand from `zSensorFamily` rather than imported; the two lists differ deliberately when a family has no local identification handshake (Ambyte today).
 
@@ -50,7 +50,7 @@ Two things intentionally do **not** change per family:
 | Family      | Product   | Local transports              | Config push | Protocol cells over a direct connection         | Driver                |
 | ----------- | --------- | ----------------------------- | ----------- | ----------------------------------------------- | --------------------- |
 | `multispeq` | MultispeQ | serial (BT Classic on native) | no          | yes, protocol JSON sent directly                | `MultispeqDriver`     |
-| `ambit`     | Ambit     | serial                        | no          | refused, command cells only                     | `AmbitDriver`         |
+| `ambit`     | Ambit     | serial                        | no          | yes, protocol JSON sent directly                | `AmbitDriver`         |
 | `minipar`   | MiniPAR   | serial                        | no          | yes, protocol JSON sent directly                | `MiniParDriver`       |
 | `ambyte`    | Ambyte    | serial                        | no          | generic compatibility path for protocol testing | `GenericDeviceDriver` |
 | `generic`   | none      | serial, BLE                   | yes         | `SET_CONFIG` / `RUN` / `GET_DATA` sequence      | `GenericDeviceDriver` |
