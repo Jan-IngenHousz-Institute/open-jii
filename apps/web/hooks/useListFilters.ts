@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { z } from "zod";
 
 export type ListFilterShape = Record<string, z.ZodEnum<[string, ...string[]]>>;
@@ -40,18 +40,15 @@ export function useListFilters<S extends ListFilterShape>(shape: S) {
 
   const [filters, setFilters] = useState<ListFilters<S>>(() => parseFilters(shape, searchParams));
 
-  const shapeRef = useRef(shape);
-  shapeRef.current = shape;
-  const searchParamsRef = useRef(searchParams);
-  searchParamsRef.current = searchParams;
-
   const serialized = serializeFilters(filters);
   const urlSerialized = serializeFilters(parseFilters(shape, searchParams));
 
+  // Each run reads this render's params and shape; only a filter change, not params identity
+  // churn, should trigger a write.
   useEffect(() => {
-    const current = searchParamsRef.current.toString();
+    const current = searchParams.toString();
     const next = new URLSearchParams(current);
-    for (const key of Object.keys(shapeRef.current)) {
+    for (const key of Object.keys(shape)) {
       const values = filters[key];
       if (values.length) {
         next.set(key, values.join(","));
@@ -69,7 +66,7 @@ export function useListFilters<S extends ListFilterShape>(shape: S) {
   // Back/forward replay.
   useEffect(() => {
     if (urlSerialized === serialized) return;
-    setFilters(parseFilters(shapeRef.current, searchParamsRef.current));
+    setFilters(parseFilters(shape, searchParams));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally drives off URL change only.
   }, [urlSerialized]);
 
@@ -78,8 +75,8 @@ export function useListFilters<S extends ListFilterShape>(shape: S) {
   }, []);
 
   const clearFilters = useCallback(() => {
-    setFilters(parseFilters(shapeRef.current, new URLSearchParams()));
-  }, []);
+    setFilters(parseFilters(shape, new URLSearchParams()));
+  }, [shape]);
 
   const hasActiveFilters = Object.values<string[]>(filters).some((values) => values.length > 0);
 
