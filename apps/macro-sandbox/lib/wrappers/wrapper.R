@@ -134,7 +134,10 @@ for (item in batch_items) {
     # Super-assignment escape
     makeActiveBinding = "makeActiveBinding() is disabled",
     delayedAssign     = "delayedAssign() is disabled",
-    assign            = "assign() is disabled"
+    assign            = "assign() is disabled",
+    # Direct calls into R's internals, which would go around every block above
+    .Internal  = ".Internal() is disabled",
+    .Primitive = ".Primitive() is disabled"
   )
 
   for (fn_name in names(blocked)) {
