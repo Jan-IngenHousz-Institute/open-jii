@@ -60,9 +60,7 @@ async function executeMacro(code: string, json: unknown, ctx: object): Promise<M
   }
 
   if (!isMacroOutput(result)) {
-    throw new MacroOutputNotObjectError(
-      result === null ? "null" : Array.isArray(result) ? "an array" : typeof result,
-    );
+    throw new MacroOutputNotObjectError(result);
   }
   return result;
 }
@@ -79,10 +77,21 @@ export class UnsupportedMacroLanguageError extends Error {
   }
 }
 
+/** Same wording as the backend's rejection of a non-object Lambda output. */
 export class MacroOutputNotObjectError extends Error {
-  constructor(public readonly received: string) {
-    super(`Macro output must be an object, but the macro returned ${received}`);
+  constructor(received: unknown) {
+    super(`Macro output must be an object, not ${MacroOutputNotObjectError.describe(received)}`);
     this.name = "MacroOutputNotObjectError";
+  }
+
+  private static describe(value: unknown): string {
+    if (value === null) {
+      return "null";
+    }
+    if (Array.isArray(value)) {
+      return "an array";
+    }
+    return `a ${typeof value}`;
   }
 }
 

@@ -44,7 +44,8 @@ export const pythonMacroSandboxScript = `(function() {
         '__result__ = __macro__(__json_input__, __ctx_input__)\\n' +
         'if isinstance(__result__, dict):\\n' +
         '    output.update(__result__)\\n' +
-        '__result_holder__.result = json.dumps(output)\\n';
+        // allow_nan=False as in the Lambda: a NaN fails the macro instead of leaving JSON.parse an empty result.
+        '__result_holder__.result = json.dumps(output, allow_nan=False)\\n';
       await pyodide.runPythonAsync(wrapped);
       var raw = resultHolder.result;
       var str = (typeof raw === 'string') ? raw : (raw != null ? String(raw) : '');

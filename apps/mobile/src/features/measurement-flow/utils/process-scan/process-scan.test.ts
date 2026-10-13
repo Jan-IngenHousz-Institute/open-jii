@@ -360,12 +360,17 @@ describe("applyMacro: JavaScript output", () => {
     expect(out).toEqual({ kept: true });
   });
 
-  it("rejects a returned value that is not an object", async () => {
-    for (const returned of ["null", "42", "[1, 2]"]) {
+  it("rejects a returned value that is not an object, worded as the backend does", async () => {
+    const cases = [
+      ["null", "null"],
+      ["42", "a number"],
+      ["[1, 2]", "an array"],
+    ];
+    for (const [returned, kind] of cases) {
       const code = encode(`return ${returned};`);
-      await expect(
-        applyMacro({ sample: { phi2: 0.5 } }, { code, language: "javascript" }),
-      ).rejects.toBeInstanceOf(MacroOutputNotObjectError);
+      const run = applyMacro({ sample: { phi2: 0.5 } }, { code, language: "javascript" });
+      await expect(run).rejects.toBeInstanceOf(MacroOutputNotObjectError);
+      await expect(run).rejects.toThrow(`Macro output must be an object, not ${kind}`);
     }
   });
 });
