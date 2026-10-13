@@ -20,6 +20,10 @@ export async function generateMetadata({
   return { title: t("experiments.archiveTitle") };
 }
 
+/**
+ * Render the archive, prefetching page 1 when sort and visibility are falsy.
+ * The status query parameter does not affect prefetching or the archived view.
+ */
 export default async function ExperimentPage({ searchParams }: ExperimentPageProps) {
   // Only the default view is fetched ahead; a sorted or filtered view's input comes from the
   // client's parsing. The archive ignores `status`, so it does not change the view.

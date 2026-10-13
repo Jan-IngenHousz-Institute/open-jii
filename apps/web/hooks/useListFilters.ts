@@ -22,6 +22,7 @@ function parseFilters<S extends ListFilterShape>(shape: S, params: ReadableParam
   return Object.fromEntries(entries) as ListFilters<S>;
 }
 
+/** Serialize filter state for comparison, including keys with empty selections. */
 function serializeFilters(filters: Record<string, string[]>): string {
   return Object.entries(filters)
     .map(([key, values]) => `${key}=${values.join(",")}`)
@@ -32,6 +33,9 @@ function serializeFilters(filters: Record<string, string[]>): string {
  * URL-backed multi-value list filters. Every key of `shape` is one filter, written as
  * `?key=a,b`. All keys go out in a single navigation: one `useUrlState` per filter would
  * build each write from the same stale params, so clearing two at once restored one.
+ * URL values outside each enum and duplicates are discarded. Setters deduplicate selections;
+ * clearing removes every filter key while preserving other query parameters. URL writes replace
+ * browser history without scrolling, and back/forward navigation restores the filters.
  */
 export function useListFilters<S extends ListFilterShape>(shape: S) {
   const router = useRouter();

@@ -24,6 +24,11 @@ interface ListExperimentsProps {
   archived?: boolean;
 }
 
+/**
+ * Render the searchable, sortable experiment list with pagination and URL filters.
+ * `archived` shows related archived experiments with a visibility filter only.
+ * Active filters can be cleared from the toolbar or an empty result without clearing search or sort.
+ */
 export function ListExperiments({ archived = false }: ListExperimentsProps) {
   const {
     data,

@@ -524,6 +524,14 @@ export class ExperimentRepository {
     }
   }
 
+  /**
+   * Return experiments the caller can access, optionally limited to `limit` rows.
+   * `related` scope narrows to personal access paths or authorship without bypassing access checks.
+   * Nonempty status and visibility filters match any value within each filter and must both match.
+   * Empty arrays apply no restriction; archived rows are hidden unless `statuses` includes
+   * `archived` or `options.includeArchived` is true. `options.organizationId` narrows by owning
+   * organization. Query errors are converted to failure results.
+   */
   async findAll(
     userId: string,
     scope?: ResourceScope,
@@ -566,7 +574,11 @@ export class ExperimentRepository {
     });
   }
 
-  /** One page plus the total, counted separately so an out-of-range page still reports it. */
+  /**
+   * One page plus the total, counted separately so an out-of-range page still reports it.
+   * `page` is 1-based and `pageSize` is the maximum row count; neither is validated here.
+   * Access, filters and ordering follow {@link findAll}. Query errors become failure results.
+   */
   async findPage(
     userId: string,
     page: number,

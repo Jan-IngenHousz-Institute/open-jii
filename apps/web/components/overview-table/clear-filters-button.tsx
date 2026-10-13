@@ -8,6 +8,7 @@ interface ClearFiltersButtonProps {
   onClear: () => void;
 }
 
+/** Render a translated clear button that calls `onClear`, or nothing when `active` is false. */
 export function ClearFiltersButton({ active, onClear }: ClearFiltersButtonProps) {
   const { t } = useTranslation();
 

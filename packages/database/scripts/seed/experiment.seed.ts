@@ -10,7 +10,11 @@ import {
 } from "./constants";
 import type { SeedUser } from "./types";
 
-/** Experiments, two of them on fixed ids so they line up with real measurement data. */
+/**
+ * Insert experiments in seed order and grant the user admin access in their personal organization.
+ * Three use fixed IDs to line up with measurement data. Return the inserted rows in that order.
+ * Database errors propagate, and earlier inserts and grants remain if a later operation fails.
+ */
 export async function seedExperiments(user: SeedUser, personalOrganizationId: string) {
   // 5. Create experiments. Two experiments use fixed UUIDs so they line up
   // with dev/staging Databricks measurement data; the rest get

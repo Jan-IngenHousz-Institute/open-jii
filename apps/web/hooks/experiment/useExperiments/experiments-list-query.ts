@@ -15,7 +15,11 @@ interface ExperimentsListView {
   sort?: ExperimentSort;
 }
 
-/** One view of the experiments list, built the same way for the hook and for the server. */
+/**
+ * One view of the experiments list, built the same way for the hook and for the server.
+ * Archived views force related scope and archived status. Empty filters and sort criteria,
+ * and blank searches, are omitted; nonblank search text is sent unchanged.
+ */
 export function experimentsListQuery(utils: QueryUtils, view: ExperimentsListView) {
   return utils.experiments.listExperiments.queryOptions({
     input: {

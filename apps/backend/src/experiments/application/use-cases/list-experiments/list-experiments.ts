@@ -24,6 +24,10 @@ export class ListExperimentsUseCase {
     private readonly resourceMetrics: ResourceMetricsService,
   ) {}
 
+  /**
+   * Return accessible experiments using the filters and ordering of
+   * {@link ExperimentRepository.findAll}, including any repository failure result.
+   */
   async execute(
     userId: string,
     scope?: ResourceScope,
@@ -75,6 +79,11 @@ export class ListExperimentsUseCase {
     return result;
   }
 
+  /**
+   * Return a 1-based page and the matching total using {@link ExperimentRepository.findPage}.
+   * Each item includes activity, or null when no series is available. Repository failures
+   * are returned unchanged; errors thrown by the metrics service reject this promise.
+   */
   async executePaginated(
     userId: string,
     page: number,

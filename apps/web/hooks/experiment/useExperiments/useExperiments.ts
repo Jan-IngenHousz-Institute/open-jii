@@ -11,6 +11,13 @@ import { useSearchPending } from "../../useSearchPending";
 import { experimentsListQuery } from "./experiments-list-query";
 import { useExperimentListFilters } from "./useExperimentListFilters";
 
+/**
+ * Fetch a paginated experiment list with URL filters and sorting and a 300 ms search debounce.
+ * `initialSearch` seeds local search state. `archived` restricts requests to related archived
+ * experiments and ignores the URL status filter. Search, filter and sort setters reset to page 1;
+ * clearing filters keeps search and sort. Previous data remains visible while a new query loads,
+ * and query errors are exposed through `error`.
+ */
 export const useExperiments = ({
   initialSearch = "",
   archived = false,
