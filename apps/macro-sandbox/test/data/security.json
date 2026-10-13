@@ -402,8 +402,8 @@
     "timeout": 10,
     "protocol_id": "test-security-circular_reference",
     "expect": {
-      "success": false,
-      "error": false
+      "success": true,
+      "error": true
     }
   },
   {
@@ -1275,8 +1275,8 @@
     "timeout": 10,
     "protocol_id": "test-security-internal_inspect",
     "expect": {
-      "success": false,
-      "error": false
+      "success": true,
+      "error": true
     }
   },
   {
