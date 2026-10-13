@@ -1,12 +1,17 @@
+import { useActivity } from "@/components/activity/activity-context";
+import type { ActivityEntry } from "@/components/activity/activity-context";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { env } from "~/env";
+import { parseApiError } from "~/util/apiError";
 
 import {
   UPLOAD_KIND_CONSTANTS,
   inferUploadSourceKind,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
+import { useTranslation } from "@repo/i18n/client";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 export type UploadValidationError =
   | { code: "noFiles" }
@@ -24,6 +29,8 @@ export type UploadValidationResult =
 interface UploadInput {
   params: { id: string };
   body: FormData;
+  /** The target table's name, for the progress row and toasts. */
+  label: string;
 }
 
 // uploadData is a native streaming multipart endpoint, intentionally off the
@@ -122,8 +129,60 @@ function validateTabular(
 
 export const useExperimentDataUpload = () => {
   const queryClient = useQueryClient();
+  const { upsert } = useActivity();
+  const { t } = useTranslation("experimentData");
 
+  const trackTransfer = (
+    transferId: string,
+    variables: UploadInput,
+    status: ActivityEntry["status"],
+  ) => {
+    const now = new Date().toISOString();
+    upsert({
+      id: transferId,
+      kind: "data_upload",
+      title: variables.label,
+      status,
+      experimentId: variables.params.id,
+      createdAt: now,
+      updatedAt: now,
+    });
+  };
+
+  // Callbacks here, not on mutate(), still run once the dialog that started the upload is closed.
   const mutation = useMutation({
+    onMutate: (variables: UploadInput) => {
+      const transferId = crypto.randomUUID();
+      trackTransfer(transferId, variables, "running");
+      toast({
+        description: t("experimentData.uploadDataModal.transfer.started", {
+          table: variables.label,
+        }),
+      });
+      return { transferId };
+    },
+    onSuccess: async (_data, variables, transfer) => {
+      trackTransfer(transfer.transferId, variables, "succeeded");
+      toast({
+        description: t("experimentData.uploadDataModal.transfer.received", {
+          table: variables.label,
+        }),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: orpc.experiments.getExperiment.queryKey({ input: { id: variables.params.id } }),
+      });
+    },
+    onError: (error, variables, transfer) => {
+      if (transfer) {
+        trackTransfer(transfer.transferId, variables, "failed");
+      }
+      toast({
+        title: t("experimentData.uploadDataModal.transfer.failed", { table: variables.label }),
+        description:
+          parseApiError(error)?.message ?? t("experimentData.uploadDataModal.submitError.fallback"),
+        variant: "destructive",
+      });
+    },
     mutationFn: async ({ params, body }: UploadInput) => {
       const response = await fetch(
         `${env.NEXT_PUBLIC_API_URL}/api/v1/experiments/${params.id}/data/uploads`,
@@ -140,11 +199,6 @@ export const useExperimentDataUpload = () => {
       }
 
       return response.json() as Promise<unknown>;
-    },
-    onSuccess: async (_data, variables) => {
-      await queryClient.invalidateQueries({
-        queryKey: orpc.experiments.getExperiment.queryKey({ input: { id: variables.params.id } }),
-      });
     },
   });
 

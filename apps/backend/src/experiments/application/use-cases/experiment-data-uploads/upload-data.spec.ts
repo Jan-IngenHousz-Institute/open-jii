@@ -139,6 +139,36 @@ describe("UploadDataUseCase", () => {
     );
   });
 
+  it("reads off the rest of a file that Databricks did not take, so the request can end", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Upload_Rejected_File",
+      userId: testUserId,
+    });
+    vi.spyOn(uploadsRepository, "validateTargetTable").mockResolvedValue(
+      success({ uploadTableId: STUB_UPLOAD_TABLE_ID, uploadTableName: "greenhouse_temps" }),
+    );
+    vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
+      failure(AppError.internal("Failed to upload file to Databricks: timeout")),
+    );
+    const rejected = Readable.from(["h\n1"]);
+
+    mountMultipart(multipartUploadService, async ({ field, file }) => {
+      field("sourceKind", "csv");
+      field("targetKind", "new");
+      field("targetName", "greenhouse_temps");
+      await file({ ...makeFile("data.csv"), stream: rejected });
+    });
+
+    await useCase.execute({
+      experimentId: experiment.id,
+      userId: testUserId,
+      requestStream: Readable.from([""]),
+      requestHeaders: MULTIPART_HEADERS,
+    });
+
+    expect(rejected.readableFlowing).toBe(true);
+  });
+
   it("refuses a contributing collaborator who tries to create a new target table", async () => {
     const collaboratorId = await testApp.createTestUser({});
     const { experiment } = await testApp.createExperiment({

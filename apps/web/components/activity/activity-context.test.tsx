@@ -79,3 +79,39 @@ describe("useActivity", () => {
     expect(result.current.unreadCount).toBe(0);
   });
 });
+
+describe("leaving with an upload in flight", () => {
+  function leave(): boolean {
+    const event = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(event);
+    return event.defaultPrevented;
+  }
+
+  it("asks the browser to confirm only while an upload is running", () => {
+    const { result } = renderHook(() => useActivity());
+    expect(leave()).toBe(false);
+
+    act(() => result.current.upsert(makeEntry({ id: "u", kind: "data_upload" })));
+    expect(leave()).toBe(true);
+
+    act(() =>
+      result.current.upsert(
+        makeEntry({
+          id: "u",
+          kind: "data_upload",
+          status: "succeeded",
+          updatedAt: "2026-01-01T00:01:00.000Z",
+        }),
+      ),
+    );
+    expect(leave()).toBe(false);
+  });
+
+  it("does not ask for an export in flight", () => {
+    const { result } = renderHook(() => useActivity());
+
+    act(() => result.current.upsert(makeEntry({ id: "x", kind: "data_export" })));
+
+    expect(leave()).toBe(false);
+  });
+});

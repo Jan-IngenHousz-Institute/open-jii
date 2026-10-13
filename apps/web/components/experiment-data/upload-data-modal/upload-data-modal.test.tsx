@@ -9,6 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type * as DialogModule from "@repo/ui/components/dialog";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { UploadDataModal } from "./upload-data-modal";
 
@@ -400,7 +401,40 @@ describe("UploadDataModal", () => {
     expect(spy.called).toBe(false);
   });
 
-  it("surfaces a submit error message when the upload request fails", async () => {
+  it("refuses a new table name the experiment already uses, before uploading", async () => {
+    setExperimentTables([
+      createExperimentTable({
+        identifier: "leaf_traits",
+        tableType: "upload",
+        displayName: "leaf_traits",
+        totalRows: 7,
+      }),
+    ]);
+    mountEmptyHistory();
+    const spy = mountUploadCapture();
+
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
+
+    await enterCreateView("csv");
+    await userEvent.click(
+      await screen.findByLabelText("experimentData.uploadDataModal.targetKind.new"),
+    );
+    await userEvent.type(
+      screen.getByLabelText("experimentData.uploadDataModal.newTable.label"),
+      "leaf_traits",
+    );
+    await selectFiles(["data.csv"]);
+    await userEvent.click(
+      screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.upload" }),
+    );
+
+    expect(
+      await screen.findByText("experimentData.uploadDataModal.validation.nameTaken"),
+    ).toBeInTheDocument();
+    expect(spy.called).toBe(false);
+  });
+
+  it("returns to the list at once and shows a failed upload there", async () => {
     setExperimentTables();
     mountEmptyHistory();
     mountUploadCapture(500);
@@ -417,11 +451,14 @@ describe("UploadDataModal", () => {
       screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.upload" }),
     );
 
+    expect(screen.getByText("experimentData.uploadDataModal.history.title")).toBeInTheDocument();
     await waitFor(() => {
       expect(
-        screen.getByText("experimentData.uploadDataModal.submitError.title"),
+        screen.getByText("experimentData.uploadDataModal.transfer.statusFailed"),
       ).toBeInTheDocument();
     });
+    expect(screen.getByText("leaf_traits")).toBeInTheDocument();
+    expect(toast).toHaveBeenLastCalledWith(expect.objectContaining({ variant: "destructive" }));
   });
 
   it("returns to the list view via Back without uploading", async () => {

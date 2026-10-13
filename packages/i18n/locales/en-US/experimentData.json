@@ -103,10 +103,10 @@
         "tooManyFiles": "Too many files: select at most {{max}}",
         "ambyteInvalidStructure": "The selected folder doesn't match the expected Ambyte_N layout",
         "ambyteOversizedFiles_one": "{{count}} file exceeds the maximum allowed size",
-        "ambyteOversizedFiles_other": "{{count}} files exceed the maximum allowed size"
+        "ambyteOversizedFiles_other": "{{count}} files exceed the maximum allowed size",
+        "nameTaken": "A table named '{{name}}' already exists in this experiment"
       },
       "submitError": {
-        "title": "Upload failed",
         "fallback": "Upload failed"
       },
       "status": {
@@ -117,10 +117,6 @@
         "failed": {
           "title": "Upload failed",
           "fallback": "The processing job failed."
-        },
-        "processing": {
-          "title": "Processing…",
-          "description": "Your file is uploaded; the processing job is running."
         }
       },
       "actions": {
@@ -156,6 +152,13 @@
         "fileCount_one": "{{count}} file",
         "fileCount_other": "{{count}} files",
         "untargeted": "(no table)"
+      },
+      "transfer": {
+        "started": "Uploading to {{table}}. You can close this dialog and keep working; keep this tab open until the upload finishes.",
+        "received": "Upload to {{table}} received. You'll get a notification when it's ready to query.",
+        "failed": "Upload to {{table}} failed",
+        "statusUploading": "Uploading",
+        "statusFailed": "Upload failed"
       }
     }
   }

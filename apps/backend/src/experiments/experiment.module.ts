@@ -41,6 +41,7 @@ import { DownloadExportUseCase } from "./application/use-cases/experiment-data-e
 import { InitiateExportUseCase } from "./application/use-cases/experiment-data-exports/initiate-export";
 import { ListExportsUseCase } from "./application/use-cases/experiment-data-exports/list-exports";
 import { ListUploadsUseCase } from "./application/use-cases/experiment-data-uploads/list-uploads";
+import { NotifyUploadOutcomeUseCase } from "./application/use-cases/experiment-data-uploads/notify-upload-outcome";
 import { UploadDataUseCase } from "./application/use-cases/experiment-data-uploads/upload-data";
 import { GetDistinctColumnValuesUseCase } from "./application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
@@ -119,6 +120,7 @@ import { ExperimentJoinCodesController } from "./presentation/experiment-join-co
 import { ExperimentJoinRequestsController } from "./presentation/experiment-join-requests.controller";
 import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
 import { ExperimentMetadataController } from "./presentation/experiment-metadata.controller";
+import { ExperimentUploadWebhookController } from "./presentation/experiment-upload-webhook.controller";
 import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
 import { ExperimentWorkbooksController } from "./presentation/experiment-workbooks.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
@@ -157,6 +159,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentDataUploadsController,
     ProjectTransferRequestsController,
     ProjectTransferWebhookController,
+    ExperimentUploadWebhookController,
   ],
   providers: [
     // Port implementations
@@ -239,6 +242,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     GetExperimentTableColumnsUseCase,
     UploadDataUseCase,
     ListUploadsUseCase,
+    NotifyUploadOutcomeUseCase,
     InitiateExportUseCase,
     ListExportsUseCase,
     DownloadExportUseCase,
