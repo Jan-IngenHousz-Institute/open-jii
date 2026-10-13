@@ -17,6 +17,19 @@ export function zListSort<T extends z.ZodType<string>>(fields: T) {
 }
 
 /**
+ * A multi-value list filter: values within one filter match either. A bare value is still
+ * accepted so callers written for the single-value inputs keep working; an empty array
+ * filters nothing.
+ */
+export function zListFilter<T extends z.ZodEnum<[string, ...string[]]>>(values: T) {
+  return z
+    .union([values, z.array(values)])
+    .transform((value: z.infer<T> | z.infer<T>[]): z.infer<T>[] => [
+      ...new Set(Array.isArray(value) ? value : [value]),
+    ]);
+}
+
+/**
  * Page selector for the list procedures. Both are optional and neither carries a schema
  * default: `page` presence is what switches a listing from an array to an envelope, so a
  * default here would silently paginate every caller. The server applies

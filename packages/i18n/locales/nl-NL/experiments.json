@@ -33,6 +33,10 @@
     "private": "Privé",
     "public": "Publiek"
   },
+  "filters": {
+    "status": "Status",
+    "visibility": "Zichtbaarheid"
+  },
   "actions": {
     "start": "Experiment starten",
     "pause": "Experiment pauzeren",
