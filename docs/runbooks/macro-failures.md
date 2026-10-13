@@ -2,7 +2,7 @@
 
 **Macro results are being written with errors the platform caused, not the macros.** A failed macro
 still commits its result row, with the reason in `macro_error` and no output, so the backlog stays
-at zero and nothing else notices. The heartbeat export sorts every error by what wrote it: the macro
+at zero and never shows it. The heartbeat export sorts every error by what wrote it: the macro
 itself (`Cause` macro), a run with nothing to run on (input), or the pipeline, the backend or the
 sandbox on the way (platform). This alert watches platform only, two half hours in a row.
 

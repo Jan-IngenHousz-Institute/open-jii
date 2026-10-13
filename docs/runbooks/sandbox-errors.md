@@ -25,8 +25,8 @@ saturate reserved concurrency and cause throttles rather than errors. This alert
 only; throttles have their own rule and their own tile on the daily report, and a different fix.
 
 **Input that grew.** A batch that ran yesterday and runs out of memory or time today on unchanged
-code means its input grew, such as longer traces from a new protocol. That points at the data, not
-the sandbox.
+code may have grown, such as longer traces from a new protocol. Unchanged code does not settle it:
+compare the batch's input with any recent runtime or configuration change before blaming the data.
 
 ## Closing
 
