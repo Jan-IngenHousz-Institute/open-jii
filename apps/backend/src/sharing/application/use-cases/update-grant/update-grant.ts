@@ -1,12 +1,15 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import type {
+  SharingGranteeType,
   SharingResourceType,
   UpdateCollaboratorBody,
 } from "@repo/api/domains/sharing/sharing.schema";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import type { ResourceCollaborator } from "../../../core/models/sharing.model";
 import { SharingRepository } from "../../../core/repositories/sharing.repository";
 
@@ -16,9 +19,12 @@ import { SharingRepository } from "../../../core/repositories/sharing.repository
  */
 @Injectable()
 export class UpdateGrantUseCase {
+  private readonly logger = new Logger(UpdateGrantUseCase.name);
+
   constructor(
     private readonly authz: AuthorizationService,
     private readonly repo: SharingRepository,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   async execute(
@@ -52,7 +58,56 @@ export class UpdateGrantUseCase {
       return failure(AppError.notFound("Grant not found"));
     }
 
+    if (updated.value.previousRole !== updated.value.role) {
+      await this.notify(userId, updated.value, resourceType, resourceId);
+    }
+
     const ownership = await this.authz.getOwnership(resourceType, resourceId);
     return this.repo.list(resourceType, resourceId, ownership?.organizationId ?? null);
+  }
+
+  /**
+   * Tell the grantee their level changed. A team or an organization has nobody to
+   * address yet, and a failure anywhere here leaves the change itself standing.
+   */
+  private async notify(
+    actorId: string,
+    grantee: { granteeType: SharingGranteeType; granteeId: string; role: string },
+    resourceType: SharingResourceType,
+    resourceId: string,
+  ): Promise<void> {
+    if (grantee.granteeType !== "user") return;
+
+    const name = await this.repo.findResourceName(resourceType, resourceId);
+    if (name.isFailure() || name.value === null) {
+      this.logger.error({
+        msg: "Could not name the resource, the grantee was not notified",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "update-grant",
+        resourceType,
+        resourceId,
+        ...(name.isFailure() ? { error: name.error } : {}),
+      });
+      return;
+    }
+
+    const dispatched = await this.notifications.dispatch({
+      type: "resource_access_changed",
+      recipientIds: [grantee.granteeId],
+      actorId,
+      resource: { type: resourceType, id: resourceId },
+      params: { resourceName: name.value, role: grantee.role },
+    });
+
+    if (dispatched.isFailure()) {
+      this.logger.error({
+        msg: "Failed to notify the grantee, their access was still changed",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "update-grant",
+        resourceType,
+        resourceId,
+        error: dispatched.error,
+      });
+    }
   }
 }
