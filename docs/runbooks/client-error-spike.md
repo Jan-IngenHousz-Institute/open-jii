@@ -34,6 +34,6 @@ script origin, that is usually what it is.
 
 ## Producer status
 
-Exception capture is already live in the web app. This entry stays inactive until the PostHog
-insight alert that watches new-signature appearance is configured, since the capture and the alarm
-are separate things.
+PostHog posts new, reopened and spiking issues to Slack through the three `error_alert` hog
+functions in `infrastructure/modules/posthog`. The entry stays inactive here, because the alarm is
+PostHog's and the exceptions entry already charts the count on the daily report.

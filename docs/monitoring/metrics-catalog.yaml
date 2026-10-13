@@ -30,13 +30,14 @@ version: 1
 
 # A num in a runbook, a Slack line or an incident note has to mean one thing forever, so
 # numbers are never reused. A retired entry keeps its num and goes active: false; a merged
-# entry leaves a gap recorded here; a new entry takes the next num after the last pass.
+# entry, or one dropped before it was ever built, leaves a gap recorded here; a new entry takes
+# the next num after the last pass.
 # The consistency tests hold the catalog to this block.
 passes:
   - date: 2026-08-14
     range: [1, 63]
-    gaps: [3]
-    note: initial metric-by-metric review; 3 merged into 2
+    gaps: [3, 43]
+    note: initial metric-by-metric review; 3 merged into 2; 43 (pageview collapse) dropped on 2026-10-09, since consent-gated pageviews are too few to alert on
   - date: 2026-09-14
     range: [64, 64]
     note: gold materialization age split out of 10
@@ -975,19 +976,7 @@ metrics:
     slots: [alert]
     severity: warning
     runbook: docs/runbooks/client-error-spike.md
-    notes: PostHog insight alert, delivered by PostHog rather than through CloudWatch.
-
-  - num: 43
-    id: pageview-collapse
-    name: Pageview collapse
-    family: observability
-    source: posthog
-    phase: P3
-    active: false
-    slots: [alert]
-    severity: critical
-    runbook: docs/runbooks/pageview-collapse.md
-    notes: Covers the white-screen-deploy blind spot; CloudWatch sees 200s throughout.
+    notes: Delivered by PostHog's error alerts, which cover every service, not through CloudWatch.
 
   # Product insights (PostHog, need event taxonomy)
   - num: 44

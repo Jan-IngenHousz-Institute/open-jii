@@ -8,6 +8,7 @@ import {
   parseArgs,
   parseReview,
   planApply,
+  showIssue,
 } from "./posthog-issues.js";
 import type { ReviewEntry } from "./posthog-issues.js";
 
@@ -92,6 +93,39 @@ describe("listIssues", () => {
       decision: "",
       url: `https://eu.posthog.com/project/80726/error_tracking/${id}`,
     });
+  });
+
+  it("leaves lastSeen empty for an issue with no events in the window", async () => {
+    const query = vi.fn<PostHogClient["query"]>().mockResolvedValue({
+      columns: ["id", "events", "last_seen"],
+      results: [[id, 0, "1970-01-01T00:00:00Z"]],
+    });
+
+    const [first] = await listIssues(client({ query }), 30);
+
+    expect(first).toMatchObject({ events: 0, lastSeen: null });
+  });
+});
+
+describe("showIssue", () => {
+  it("says an issue has no events left rather than printing empty dates", async () => {
+    const query = vi.fn<PostHogClient["query"]>().mockImplementation((hogql) =>
+      Promise.resolve(
+        hogql.includes("error_tracking_issues")
+          ? {
+              columns: ["name", "description", "status"],
+              results: [["Error", "boom", "resolved"]],
+            }
+          : hogql.includes("count() AS events")
+            ? { columns: ["events", "users"], results: [[0, 0]] }
+            : { columns: [], results: [] },
+      ),
+    );
+    const lines: string[] = [];
+
+    await showIssue(client({ query }), id, (line) => lines.push(line));
+
+    expect(lines).toContain("no events left in PostHog's retention\n");
   });
 });
 
