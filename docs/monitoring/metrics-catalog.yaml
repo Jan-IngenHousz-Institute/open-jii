@@ -639,7 +639,13 @@ metrics:
       stat: Average
       unit: percent
       dimensions: { DistributionId: "${CLOUDFRONT_DISTRIBUTION_ID}", Region: Global }
-    baseline: { method: threshold, max: 5 }
+      request_count: { metric: Requests, stat: Sum, period: 300 }
+    baseline:
+      method: threshold
+      max: 5
+      min_failed_requests: 50
+      window_seconds: 300
+      failed_request_estimate: "5xxErrorRate * Requests / 100"
     runbook: docs/runbooks/cloudfront-errors.md
     notes: >-
       CloudFront metrics live in us-east-1. The rule reads five-minute buckets and also needs 50
