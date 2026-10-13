@@ -1035,6 +1035,260 @@ EOT
   }
 }
 
+# Serving store. The CloudWatch agent on its instance publishes all three signals, and only
+# the first treats silence as an outage, so a stopped instance alerts once.
+resource "grafana_rule_group" "serving_store_health" {
+  provider         = grafana.amg
+  name             = "Serving Store Health"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 60
+
+  # Catalog entry 100. Uptime only arrives while ClickHouse answers, so its absence is the
+  # outage.
+  rule {
+    name      = "Serving Store Not Answering"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/ServingStore"
+        metricName = "ClickHouseAsyncMetrics_Uptime"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "count"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B < 1"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "Alerting"
+    exec_err_state = "Alerting"
+    for            = "1m"
+
+    annotations = {
+      description      = "No uptime has arrived from the serving store for five minutes: ClickHouse is not answering, or the instance or its agent has stopped. The runbook tells the three apart."
+      summary          = "Serving store not answering"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-answers.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["store-answers"]
+    }
+    labels = {
+      metric_id = "store-answers"
+      severity  = "warning"
+      service   = "serving-store"
+    }
+  }
+
+  rule {
+    name      = "Serving Store High Memory"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/ServingStore"
+        metricName = "mem_used_percent"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 85"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "The serving store's instance is above 85% memory. ClickHouse refuses queries past 90%."
+      summary          = "High memory on the serving store"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-memory.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["store-memory"]
+    }
+    labels = {
+      metric_id = "store-memory"
+      severity  = "warning"
+      service   = "serving-store"
+    }
+  }
+
+  rule {
+    name      = "Serving Store Disk Filling"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/ServingStore"
+        metricName = "disk_used_percent"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+          path        = "/var/lib/clickhouse"
+          fstype      = "ext4"
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 80"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "15m"
+
+    annotations = {
+      description      = "The serving store's data volume is above 80% full."
+      summary          = "Serving store disk filling"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-disk.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["store-disk"]
+    }
+    labels = {
+      metric_id = "store-disk"
+      severity  = "warning"
+      service   = "serving-store"
+    }
+  }
+}
+
 # Macro Sandbox Alerts
 resource "grafana_rule_group" "macro_sandbox_health" {
   count = length(var.macro_sandbox_function_names) > 0 ? 1 : 0

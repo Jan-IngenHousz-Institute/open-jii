@@ -1,5 +1,5 @@
-import { db } from "../../src/database";
-import { resourceVisits } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import { resourceVisits } from "../../src/postgres/schema";
 import type { SeedExperiment, SeedUser } from "./types";
 
 const MINUTE = 60_000;
