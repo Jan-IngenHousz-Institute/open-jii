@@ -247,9 +247,7 @@ def test_nested_parquet_non_finite_values_become_null(spark, tmp_path, numeric_t
 
 def _task_function(name: str, namespace: dict[str, Any]) -> Callable[..., Any]:
     module = ast.parse(_TASK_PATH.read_text())
-    function = next(
-        node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == name
-    )
+    function = next(node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == name)
     exec(compile(ast.Module(body=[function], type_ignores=[]), _TASK_PATH, "exec"), namespace)
     return cast(Callable[..., Any], namespace[name])
 
