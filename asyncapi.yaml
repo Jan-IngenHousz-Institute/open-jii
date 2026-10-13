@@ -166,14 +166,17 @@ components:
               Platform id of the protocol that produced this measurement,
               resolved by the publisher per result (a workbook run can span
               several protocols). Required on the lean topic shape for the
-              row to be attributed; the sentinel value "questions" marks
-              question-only uploads. On the legacy topic shape the topic's
+              row to be attributed. Current mobile questions-only uploads omit
+              this field; older queued payloads may carry the historical
+              "questions" sentinel. On the legacy topic shape the topic's
               trailing segment takes precedence.
           workbook_version_id:
             type: string
             description: >
               Platform id of the workbook version this measurement was
-              produced under. Absent outside workbook runs.
+              produced under. Current mobile workbook measurements and
+              questions-only uploads carry it; other publishers and older
+              payloads may omit it.
           workbook_id:
             type: string
             description: >
@@ -186,7 +189,9 @@ components:
             description: >
               Publisher-minted id shared by every measurement of one
               workbook run, correlating results across devices and
-              protocols.
+              protocols. Current mobile workbook measurements and
+              questions-only uploads carry it; other publishers and older
+              payloads may omit it.
           macro_context:
             type: string
             description: >
@@ -303,7 +308,11 @@ components:
             description: Manufacturer of the publishing phone.
           client_os:
             type: string
-            description: OS name of the publishing phone (e.g. "Android", "iOS").
+            description: >
+              OS name reported by the publishing phone, such as "Android",
+              "iOS", or "iPadOS". Current Android builds send "Android";
+              older Android uploads may contain build-fingerprint-like values.
+              Stored historical values are not normalized or backfilled.
           client_os_version:
             type: string
             description: OS version of the publishing phone.

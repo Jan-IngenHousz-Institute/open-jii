@@ -10,11 +10,12 @@ import {
   Sprout,
   MessageCircleQuestion,
   ChevronDown,
+  Link as LinkIcon,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
@@ -32,9 +33,13 @@ import {
 } from "@repo/ui/components/dropdown-menu";
 import { ThemeToggle } from "@repo/ui/components/theme";
 
+import { isPublicNavigationLinkActive } from "../public-navigation-links";
+import type { PublicNavigationLink } from "../public-navigation-links";
+
 interface UnifiedNavbarProps {
   locale: string;
   isHomePage?: boolean;
+  links: PublicNavigationLink[] | null;
 }
 
 /**
@@ -140,7 +145,7 @@ function UserMenu({
   );
 }
 
-export function UnifiedNavbar({ locale, isHomePage = false }: UnifiedNavbarProps) {
+export function UnifiedNavbar({ locale, isHomePage = false, links }: UnifiedNavbarProps) {
   const { t } = useTranslation();
   // Read in the browser, so the page around the navbar is the same for every visitor and can be cached.
   const { data: session } = useSession();
@@ -199,54 +204,30 @@ export function UnifiedNavbar({ locale, isHomePage = false }: UnifiedNavbarProps
     };
   }, [isHomePage, bannerOffset]);
 
-  // Navigation items
-  const navItems = useMemo(
-    () => [
-      {
-        href: `/${locale}`,
-        label: t("navigation.home", "Home"),
-        icon: Home,
-        isActive: pathname === `/${locale}` || pathname === `/${locale}/`,
-      },
-      {
-        href: `/${locale}/about`,
-        label: t("navigation.about", "About JII"),
-        icon: User,
-        isActive: pathname.startsWith(`/${locale}/about`),
-      },
-      {
-        href: `/${locale}/blog`,
-        label: t("navigation.blog", "Blog"),
-        icon: BookOpen,
-        isActive: pathname.startsWith(`/${locale}/blog`),
-      },
-      {
-        href: `/${locale}/faq`,
-        label: t("navigation.faq", "FAQ"),
-        icon: MessageCircleQuestion,
-        isActive: pathname.startsWith(`/${locale}/faq`),
-      },
-      {
-        href: `/${locale}/platform`,
-        label: t("navigation.platform", "Platform"),
-        icon: Sprout,
-        isActive:
-          pathname.startsWith(`/${locale}/platform`) ||
-          pathname.startsWith(`/${locale}/login`) ||
-          pathname.startsWith(`/${locale}/register`) ||
-          pathname.startsWith(`/api/auth/verify-request`) ||
-          pathname.startsWith(`/${locale}/verify-request`),
-      },
-    ],
-    [locale, t, pathname],
-  );
+  const navigationLinks = links ?? [
+    { id: "home", href: `/${locale}`, label: t("navigation.home", "Home") },
+    { id: "platform", href: `/${locale}/platform`, label: t("navigation.platform", "Platform") },
+  ];
+  const navItems = navigationLinks.map((link) => ({
+    ...link,
+    isActive: isPublicNavigationLinkActive(link.href, pathname, locale),
+    icon:
+      link.href === `/${locale}`
+        ? Home
+        : link.href === `/${locale}/blog`
+          ? BookOpen
+          : link.href === `/${locale}/faq`
+            ? MessageCircleQuestion
+            : link.href === `/${locale}/platform`
+              ? Sprout
+              : LinkIcon,
+  }));
 
   // Routes with no hero photo behind the bar, so the chrome is solid from the top.
   const isChromeRoute =
     pathname.startsWith(`/${locale}/cookie-settings`) ||
     pathname.startsWith(`/${locale}/cookie-policy`) ||
     pathname.startsWith(`/${locale}/terms-and-conditions`) ||
-    pathname.startsWith(`/${locale}/about`) ||
     pathname.startsWith(`/${locale}/blog`) ||
     pathname.startsWith(`/${locale}/faq`) ||
     pathname.startsWith(`/${locale}/releases`) ||
@@ -315,7 +296,7 @@ export function UnifiedNavbar({ locale, isHomePage = false }: UnifiedNavbarProps
 
             return (
               <Link
-                key={item.href}
+                key={item.id}
                 href={item.href}
                 className={`${linkClass} group`}
                 aria-current={item.isActive ? "page" : undefined}
@@ -368,7 +349,7 @@ export function UnifiedNavbar({ locale, isHomePage = false }: UnifiedNavbarProps
                   const Icon = item.icon;
 
                   return (
-                    <DropdownMenuItem key={item.href} asChild>
+                    <DropdownMenuItem key={item.id} asChild>
                       <Link
                         href={item.href}
                         className={`flex items-center space-x-3 ${

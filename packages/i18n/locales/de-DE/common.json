@@ -904,7 +904,7 @@
     "reportBugButton": null,
     "recentExperiments": "Kürzliche Experimente",
     "recentArticles": "Neueste Blogbeiträge",
-    "yourExperiments": "Ihre neuesten Experimente",
+    "recentlyOpenedExperiments": "Zuletzt geöffnet",
     "seeAll": "Alle ansehen",
     "statistics": "Statistiken",
     "quickActions": "Schnellaktionen",
@@ -928,7 +928,10 @@
         "title": "Öffentliche Forschung entdecken",
         "description": "Sehen Sie sich echte Experimente an, die andere veröffentlicht haben."
       }
-    }
+    },
+    "yourExperiments": "Ihre Experimente",
+    "userExperimentsLoadFailed": "Ihre Experimente konnten nicht geladen werden.",
+    "userExperimentsRetry": "Erneut versuchen"
   },
   "auth": {
     "login": "Anmelden",

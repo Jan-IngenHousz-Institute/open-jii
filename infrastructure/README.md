@@ -1,137 +1,37 @@
-# 🏗️ openJII Infrastructure
+# openJII infrastructure
 
-This directory contains [OpenTofu](https://opentofu.org/manifesto/) (Terraform) configuration for deploying and managing the **openJII** cloud infrastructure. It follows a **modular architecture**, allowing the infrastructure to be efficiently configured with services that are necessary. Though it is scalable to multiple environments, currently the system is running on a single, development environment.
+OpenJII's cloud resources are declared with OpenTofu. Environment compositions live under `infrastructure/env/`; reusable modules live under `infrastructure/modules/`.
 
-## 📖 Overview
+| Composition | Region in `variables.tf` | Purpose                                                                                                                                                                                                                                        |
+| ----------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `env/dev`   | `eu-central-1`           | Development services and data paths.                                                                                                                                                                                                           |
+| `env/prod`  | `eu-central-1`           | Production services and data paths, including cross-region backup configuration.                                                                                                                                                               |
+| `env/dr`    | `eu-west-1`              | Disaster recovery configuration. It references some production resources and creates traffic-switching DNS records only when its cutover input is enabled. This directory establishes configuration, not evidence that a DR stack is deployed. |
 
-The infrastructure is built on **Amazon Web Services (AWS)** and defined using **OpenTofu** as Infrastructure as Code (IaC), with the goal of providing a secure, scalable, and maintainable cloud infrastructure that supports the **openJII platform**.
+Each composition has its own `main.tf`, variables and S3 state backend. There is no `env/staging` directory. Read the target environment's files before changing a module or interpreting a plan.
 
-This repository leverages **cloud best practices**, including **least privilege access control**, **automated deployments**, and **separation of concerns** to ensure performance, robustness, security and flexibility.
+## Repository map
 
-### 🏛️ Cloud Architecture
-
-This infrastructure is designed to enable the **communcation and data ingestion** from JII MultispeQ devices, as well as **data persistance and processing**. Furthermore, it provisions for all other openJII touchpoints, such as the Community Hub, native and web application, as well as openJII **static content**, including the Documentation Hub and deployment configuration.
-
-```mermaid
-graph TD;
-    subgraph "AWS Cloud Infrastructure"
-        G[AWS IAM]:::iam
-        A[Amazon S3] -- Serves Content --> B[Amazon CloudFront CDN]
-        C[AWS IoT Core] -- Processes Messages --> D[AWS Timestream]
-        E[OpenTofu Backend] -- Stores State --> F[Amazon S3 + DynamoDB]
-    end
-    G -.-> A
-    G -.-> B
-    G -.-> C
-    G -.-> D
-    G -.-> E
-    classDef iam fill:#f4f4f4,stroke:#000,stroke-width:1px
-```
-
-### 🔧 Key Components
-
-- **Amazon S3** – Scalable object storage for static assets, logs, and deployment configuration, with encryption and lifecycle policies for security and cost management.
-- **Amazon CloudFront** – A global Content Delivery Network (CDN) that caches and distributes content efficiently, reducing latency and improving security with TLS encryption.
-- **AWS IoT Core** – A managed service for connecting and managing IoT devices, supporting MQTT and HTTP protocols for secure device-to-cloud messaging.
-- **AWS Timestream** – A managed time-series database optimized for IoT and operational analytics, with automatic data tiering for performance and cost efficiency.
-- **IAM (Identity and Access Management)** – Enforces authentication and fine-grained access controls, integrating with AWS services to manage permissions securely.
-
-### 📂 Directory Structure
-
-The directory is structured as follows:
-
-```
+```text
 infrastructure/
-├── env/                # Environment-specific configurations (dev, staging, prod)
+├── env/
 │   ├── dev/
-├── modules/            # Reusable OpenTofu modules
-│   ├── s3/             # S3 storage module
-│   ├── cloudfront/     # CloudFront CDN module
-│   ├── iot-core/       # IoT Core module
-│   ├── timestream/     # Timestream database module
-│   ├── docusaurus-s3/  # Module for documentation hub hosting
-├── provider.tf         # OpenTofu provider configurations
-├── variables.tf        # Global variables shared across modules
-└── README.md           # Project documentation
+│   ├── prod/
+│   └── dr/
+├── modules/
+│   ├── iot-core/
+│   ├── kinesis/
+│   ├── databricks/
+│   ├── grafana/
+│   ├── opennext/
+│   └── ...
+└── README.md
 ```
 
-## 📜 Infrastructure Design and Considerations
+The environment compositions select the modules they need. The DR composition does not provision a Databricks workspace or Grafana, but it stores connection details for the existing production Databricks workspace in a Secrets Manager module. Dev and prod provision their own Databricks and Grafana resources. Follow the source references in each environment's `main.tf` for the exact current set.
 
-It is crucial that the openJII cloud infrastructure is **resilient, scalable, and cost-effective**, and remains as such. For this purpose, decisions and considerations are recorded as **Architecture Design Records (ADRs)** in the openJII Documentation Hub:
+## Review a change
 
-[Design Records: Infrastructure](/)
+Use OpenTofu to format and validate the configuration in the target environment, then review its plan with the owners of that environment. The repository's [release workflows](../apps/docs/content/developers/contributing/release-workflows.mdx) describe approval and deployment order for dev and prod. The [Centrum status-view cutover runbook](../docs/runbooks/releases/centrum-status-cutover.md) covers its separate release sequence. Do not treat `pnpm tf` as a read-only check: `package.json` points it at `tf:dev`, which includes `tofu apply`.
 
-## 🛠️ Developer's Guide
-
-### Prerequisites
-
-Ensure you have the following tools installed:
-
-- **OpenTofu**: [Download OpenTofu](https://opentofu.org/download/)
-- **AWS CLI**: [Install AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
-- **Git**: Used for version control.
-
-### AWS Authentication
-
-To run OpenTofu commands against AWS, you need valid AWS credentials. Authentication can be done using:
-
-- **AWS Profile**:
-
-  ```sh
-  aws configure
-  ```
-
-  This will prompt you to enter your **AWS Access Key, Secret Key, Region**, and default output format.
-
-- **Environment Variables**:
-  ```sh
-  export AWS_ACCESS_KEY_ID=your-access-key
-  export AWS_SECRET_ACCESS_KEY=your-secret-key
-  export AWS_REGION=your-region
-  ```
-  These variables allow OpenTofu to interact with AWS services without storing credentials in a file.
-
-### Deployment Steps
-
-To deploy the infrastructure, follow these steps:
-
-1. **Change the directory to the environment**:
-
-   ```
-   cd infrastructure/env/dev
-   ```
-
-2. **Initialize OpenTofu**:
-
-   ```sh
-   tofu init
-   ```
-
-3. **Validate and preview the changes before applying**:
-
-   ```sh
-   tofu validate && tofu plan
-   ```
-
-4. **Apply the configuration**:
-   ```sh
-   tofu apply
-   ```
-
-If `pnpm` is installed, one can also simply run the following command from the project root directory:
-
-```sh
-pnpm run tf
-```
-
-## ⚠️ Disclaimer
-
-While the openJII project is **open source**, provisioning infrastructure on AWS is **restricted to repository owners and administrators**. This is necessary to prevent **unauthorized access, security risks, and unnecessary costs**, and to ensure the platform remains operational and retains longevity.
-
-However, we welcome **contributions, ideas, and improvements**! If you have an idea for improving the infrastructure, you are encouraged to:
-
-1. **Fork the repository** and deploy it in your own cloud environment.
-2. **Test your changes** and verify improvements.
-3. **Submit a pull request** with your proposed modifications.
-
-This ensures that all contributions are vetted before being applied to the official infrastructure.
+Production and DR changes need their own reviewed plan and release or recovery procedure. The presence of an `env/dr` directory alone does not establish a live failover target. Keep credentials and state out of Git; the `backend.tf` files name each environment's remote state bucket.

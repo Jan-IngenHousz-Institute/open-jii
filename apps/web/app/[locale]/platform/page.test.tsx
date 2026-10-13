@@ -31,7 +31,9 @@ vi.mock("@/components/dashboard/dashboard-section", () => ({
   ),
 }));
 vi.mock("@/components/dashboard/user-experiments-section", () => ({
-  UserExperimentsSection: () => <div>Experiments</div>,
+  UserExperimentsSection: () => (
+    <section aria-label="dashboard.yourExperiments">Experiments</section>
+  ),
 }));
 vi.mock("@/components/dashboard/public-experiments-section", () => ({
   PublicExperimentsSection: () => <div>Public Experiments</div>,
@@ -67,7 +69,7 @@ describe("PlatformDashboard", () => {
   it("fetches both experiment lists on the server so the page arrives with them", async () => {
     render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
 
-    expect(JSON.stringify(prefetched.queries)).toContain('"scope":"related"');
+    expect(JSON.stringify(prefetched.queries)).toContain('"listHomeExperiments"');
     expect(JSON.stringify(prefetched.queries)).toContain('"visibility":"public"');
   });
 });

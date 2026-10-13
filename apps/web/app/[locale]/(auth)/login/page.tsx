@@ -1,4 +1,4 @@
-import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
+import { PublicNavbar } from "@/components/navigation/public-navbar";
 import type { SearchParamsType } from "@/util/searchParams";
 import { getFirstSearchParam } from "@/util/searchParams";
 import { AuthBackground } from "~/components/auth/auth-background";
@@ -21,7 +21,7 @@ export default async function LoginPage(props: {
   return (
     <>
       {/* Navbar stays sticky on top */}
-      <UnifiedNavbar locale={locale} />
+      <PublicNavbar locale={locale} />
 
       <AuthBackground alt="Login background" />
 

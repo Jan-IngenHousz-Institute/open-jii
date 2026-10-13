@@ -69,8 +69,8 @@ rows fit on a page, and **Previous** and **Next** appear once there are more.
 
 ![The notifications page with day groups, the All and Unread tabs and the category filter](/img/chrome-refresh/notifications-page.webp)
 
-Data exports and uploads do not appear here. Follow an export on the experiment's own
-data page, where its export list keeps the status.
+Data exports and uploads do not appear here. To check on an export, open the
+dataset's export list on the experiment's **Data** page.
 
 ### Which notifications also reach you by email
 
@@ -87,19 +87,34 @@ available on its own as those notifications are added.
 
 ![The Notifications tab in account settings, with one email switch per category](/img/guide/web/account-security/notification-settings.webp)
 
-## Your recent experiments
+## Your experiments and recently opened work
 
-The first row on the dashboard shows up to three of your experiments: ones you
-own, ones shared with you, and ones in your organizations. **See all** opens the
-experiments list.
+Before you open any related experiments, the first row on the dashboard shows
+up to three under **Your experiments**, newest update first. Related experiments
+include work you created, work shared with you, and work in your organizations.
+You must still have access, and archived experiments do not appear. Tied updates
+keep a stable order. Each card shows its update date and your strongest current
+role, such as Owner, Admin, Viewer or Member. Authorship alone does not give you
+a role or access to a private experiment.
 
-If you have no experiments yet, the row offers three places to start instead:
-**Create an experiment** opens the new experiment form, **Join an organization**
-opens the organizations list, where you can ask to join a public organization,
-and **Browse public research** opens the experiments list with the search box
-ready to type in.
+Once you open an eligible experiment's overview, the title changes to
+**Recently opened**. The row shows up to three experiments you actually opened,
+newest visit first, with the date you opened each one. It does not fill spare
+places with unvisited work. Opening unrelated public research does not add it
+here. Returning to Home or reloading preserves your visit history. If none of
+your visited experiments is still accessible and nonarchived, the row returns
+to **Your experiments**. **See all** opens the experiments list.
 
-![The dashboard's three first-work cards for someone with no related experiments](/img/guide/web/dashboard-first-work.webp)
+If you have no accessible related experiments, the row offers three places to
+start: **Create an experiment** opens the new experiment form, **Join an
+organization** opens the organizations list, where you can ask to join a public
+organization, and **Browse public research** opens the experiments list with the
+search box ready to type in.
+
+While the row loads, it shows placeholders. If it cannot load your experiments,
+it shows an error and **Try again**. A failed request never means you have no
+work. Leaving Home and returning checks your current access again, so a card
+disappears if someone revoked your access.
 
 ## Recently updated public experiments
 
@@ -137,11 +152,20 @@ nothing to report is left out rather than shown as a zero.
 
 ## Account settings
 
-Open your profile menu at the bottom of the sidebar to reach your account pages.
-They have tabs for general profile details, **Security** (passkeys and sign-in
-methods), and **API keys**.
+Open your profile menu at the bottom of the sidebar and select **Account** to
+reach your account pages. They have five tabs:
+
+- **General** for your profile details.
+- **Security** for passkeys and sign-in methods.
+- **API keys** for keys that let scripts call the openJII API on your behalf.
+- **Invitations** for invitations to join an organization that are waiting for
+  you, each with **Accept invitation** and **Decline**. See
+  [Find and join an organization](/guide/organizations/finding-and-joining#if-you-were-invited-instead).
+- **Notifications** for the email switches described
+  [above](#which-notifications-also-reach-you-by-email).
+
 See [Account security and API keys](/guide/get-started/account-security-api-keys)
-for details.
+for the Security and API keys tabs.
 
 ## Next steps
 

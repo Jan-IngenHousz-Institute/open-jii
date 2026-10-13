@@ -5,15 +5,31 @@ import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { Building2, Users } from "lucide-react";
 
-import type { ExperimentListItem } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentCallerRole,
+  ExperimentListItem,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 import { Badge } from "@repo/ui/components/badge";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 
+/** When the caller last opened the experiment, and the role they hold on it. */
+export interface ExperimentVisit {
+  openedAt: string;
+  callerRole: ExperimentCallerRole | null;
+}
+
 /** True for any card in the set, so the reserved badge row is never dead space. */
-export function hasBadges(experiment: ExperimentListItem): boolean {
-  return experiment.visibility === "private" || Boolean(experiment.organizationName);
+export function hasBadges(
+  experiment: ExperimentListItem,
+  caller?: Pick<ExperimentVisit, "callerRole">,
+): boolean {
+  return (
+    experiment.visibility === "private" ||
+    Boolean(experiment.organizationName) ||
+    Boolean(caller?.callerRole)
+  );
 }
 
 function ownerName(experiment: ExperimentListItem): string {
@@ -27,15 +43,20 @@ interface ExperimentOverviewCardProps {
   /** Set by the grid, so titles line up across cards whose badges differ. */
   reserveBadgeRow: boolean;
   showUpdatedLabel?: boolean;
+  /** Shows the caller's role and when they opened it, in place of the update date. */
+  visit?: ExperimentVisit;
+  callerRole?: ExperimentCallerRole | null;
 }
 
-/** Renders a linked experiment summary with badges, owner, member count, and an optionally labeled update date. */
+/** Renders a linked experiment summary with badges, owner, member count, and an update or opened date. */
 export function ExperimentOverviewCard({
   experiment,
   href,
   locale,
   reserveBadgeRow,
   showUpdatedLabel = false,
+  visit,
+  callerRole = visit?.callerRole,
 }: ExperimentOverviewCardProps) {
   const { t } = useTranslation("experiments");
   const format = useLocalDateFormat(locale);
@@ -46,6 +67,11 @@ export function ExperimentOverviewCard({
 
   const renderBadges = () => (
     <>
+      {callerRole ? (
+        <Badge variant="outline" className="font-normal">
+          {t(`callerRoles.${callerRole}`)}
+        </Badge>
+      ) : null}
       {experiment.organizationName ? (
         <Badge variant="secondary" className="max-w-full gap-1 font-normal">
           <Building2 className="size-3 shrink-0" aria-hidden />
@@ -77,9 +103,15 @@ export function ExperimentOverviewCard({
             <span className="tabular-nums">{members}</span>
           </span>
         ) : null}
-        <span className="tabular-nums" title={t("columns.updated")}>
-          {showUpdatedLabel ? t("updatedOn", { date: updated }) : updated}
-        </span>
+        {visit ? (
+          <span className="tabular-nums" title={format.dateTime(visit.openedAt)}>
+            {t("openedOn", { when: format.relative(visit.openedAt) })}
+          </span>
+        ) : (
+          <span className="tabular-nums" title={t("columns.updated")}>
+            {showUpdatedLabel ? t("updatedOn", { date: updated }) : updated}
+          </span>
+        )}
       </span>
     </span>
   );

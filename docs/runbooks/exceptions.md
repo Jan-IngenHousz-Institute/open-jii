@@ -7,11 +7,14 @@ issues to Slack itself, so nothing in Grafana alerts on this.
 
 ## Where the exceptions come from
 
-Every exception carries `environment` and `service`:
-
 - `web`: the browser, from visitors who accepted cookies, and the page server, for everyone.
 - `backend`: server errors only (5xx), counted against the signed-in user when there is one.
 - `mobile`: uncaught errors and error log lines.
+
+Every exception carries `environment` and `service`, except two kinds from phones: errors from
+JavaScript older than release 2.71.0, such as the store build 2.65.0, until those phones update; and
+native crashes from any build, which the native SDK sends without the app's tags. Prod's inbox lists
+them as untagged, and dev's leaves them out.
 
 Only deployed builds report. A backend, web app or Metro phone build on a developer's machine
 sends PostHog nothing, so every issue here comes from dev, prod or an installed app.

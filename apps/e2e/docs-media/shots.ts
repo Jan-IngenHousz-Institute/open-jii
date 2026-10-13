@@ -107,7 +107,8 @@ export const SHOTS: readonly Shot[] = [
     publish: "img/guide/web/dashboard.webp",
     frame: "desktop",
     route: "/platform",
-    scope: "Authenticated dashboard: welcome card, recent experiments, compact contextual header",
+    scope:
+      "Authenticated dashboard: welcome card, experiments selected from real visits or related work, compact contextual header",
   },
   {
     slug: "dashboard-first-work",
@@ -115,7 +116,7 @@ export const SHOTS: readonly Shot[] = [
     frame: "desktop",
     route: "/platform",
     session: "newcomer",
-    scope: "Dashboard empty state with the three first-work cards in the recent experiments row",
+    scope: "Dashboard with no accessible related experiments and the three first-work cards",
   },
   {
     slug: "experiments-list",

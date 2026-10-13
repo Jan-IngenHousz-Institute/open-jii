@@ -1,9 +1,11 @@
 import type { QueryUtils } from "~/lib/orpc";
 
-// Paginated, not the bare list: only that branch attaches `activity`.
 export const userExperimentsQuery = (utils: QueryUtils) =>
-  utils.experiments.listExperiments.queryOptions({
-    input: { scope: "related", page: 1, pageSize: 3 },
+  utils.experiments.listHomeExperiments.queryOptions({
+    input: { limit: 3 },
+    staleTime: 0,
+    refetchOnMount: "always",
+    retry: false,
   });
 
 export const PUBLIC_EXPERIMENTS_PAGE_SIZE = 6;

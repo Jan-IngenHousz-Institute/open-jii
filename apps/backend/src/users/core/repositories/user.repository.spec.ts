@@ -22,6 +22,7 @@ import {
   inArray,
   notifications,
   resourceGrants,
+  resourceVisits,
   sql,
   teamMembers,
   teams,
@@ -1055,6 +1056,24 @@ describe("UserRepository", () => {
   });
 
   describe("delete", () => {
+    it("removes the user's visits", async () => {
+      const userToDeleteId = await testApp.createTestUser({});
+      const otherUserId = await testApp.createTestUser({});
+      const { experiment } = await testApp.createExperiment({
+        name: "Opened",
+        userId: otherUserId,
+        visibility: "public",
+      });
+      await testApp.addResourceVisit({ userId: userToDeleteId, resourceId: experiment.id });
+      await testApp.addResourceVisit({ userId: otherUserId, resourceId: experiment.id });
+
+      const result = await repository.delete(userToDeleteId);
+
+      expect(result.isSuccess()).toBe(true);
+      const remaining = await testApp.database.select().from(resourceVisits);
+      expect(remaining.map((row) => row.userId)).toEqual([otherUserId]);
+    });
+
     it("should soft-delete a user and scrub PII", async () => {
       // Arrange
       const userToDeleteId = await testApp.createTestUser({
