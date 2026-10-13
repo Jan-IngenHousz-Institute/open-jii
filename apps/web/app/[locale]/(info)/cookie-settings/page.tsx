@@ -80,6 +80,10 @@ export default function CookieSettingsPage() {
                 <strong>{t("cookieSettings.essentialExamples")}</strong>{" "}
                 {t("cookieSettings.essentialExamplesText")}
               </p>
+              <p className="text-sm">
+                <strong>{t("cookieSettings.essentialFeatureChecks")}</strong>{" "}
+                {t("cookieSettings.essentialFeatureChecksText")}
+              </p>
               <div className="bg-muted mt-4 rounded-md p-3">
                 <p className="text-sm font-medium">{t("cookieSettings.essentialStatus")}</p>
               </div>
