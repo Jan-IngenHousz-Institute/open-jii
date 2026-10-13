@@ -30,6 +30,8 @@ import type {
   ExperimentFlowGraph,
   ExperimentListItem,
   ExperimentUploadMetadata,
+  RecentlyOpenedExperiment,
+  RelatedHomeExperiment,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 import type {
@@ -111,6 +113,23 @@ export function createExperiment(overrides: Partial<ExperimentListItem> = {}): E
     membershipStatus: "none",
     ...overrides,
   };
+}
+
+export function createRecentlyOpenedExperiment(
+  overrides: Partial<RecentlyOpenedExperiment> = {},
+): RecentlyOpenedExperiment {
+  return {
+    ...createExperiment(),
+    openedAt: "2025-01-20T00:00:00.000Z",
+    callerRole: "owner",
+    ...overrides,
+  };
+}
+
+export function createHomeExperiment(
+  overrides: Partial<RelatedHomeExperiment> = {},
+): RelatedHomeExperiment {
+  return { ...createExperiment(), callerRole: "owner", ...overrides };
 }
 
 // ── Transfer Request ────────────────────────────────────────────

@@ -32,6 +32,7 @@ import { sharingContract } from "./domains/sharing/sharing.contract";
 import { sharingTransferAdminContract } from "./domains/sharing/transfer-admin/sharing-transfer-admin.contract";
 import { sharingTransferOrgContract } from "./domains/sharing/transfer-org/sharing-transfer-org.contract";
 import { userContract } from "./domains/user/user.contract";
+import { visitContract } from "./domains/visit/visit.contract";
 import { workbookContract } from "./domains/workbook/workbook.contract";
 
 // Aggregate oRPC contract router mirroring the ts-rest `contract` shape so the
@@ -74,5 +75,6 @@ export const contract = {
   search: searchContract,
   sharing: { ...sharingContract, ...sharingTransferAdminContract, ...sharingTransferOrgContract },
   users: userContract,
+  visits: visitContract,
   workbooks: workbookContract,
 };

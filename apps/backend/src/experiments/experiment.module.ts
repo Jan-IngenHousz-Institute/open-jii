@@ -78,6 +78,8 @@ import { GetExperimentAccessUseCase } from "./application/use-cases/get-experime
 import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get-experiment";
 import { ListExperimentContributorsUseCase } from "./application/use-cases/list-experiment-contributors/list-experiment-contributors";
 import { ListExperimentsUseCase } from "./application/use-cases/list-experiments/list-experiments";
+import { ListHomeExperimentsUseCase } from "./application/use-cases/list-home-experiments/list-home-experiments";
+import { ListRecentlyOpenedExperimentsUseCase } from "./application/use-cases/list-recently-opened-experiments/list-recently-opened-experiments";
 import { CreateTransferRequestUseCase } from "./application/use-cases/project-transfer-requests/create-transfer-request/create-transfer-request";
 import { ListTransferRequestsUseCase } from "./application/use-cases/project-transfer-requests/list-transfer-requests/list-transfer-requests";
 import { ExecuteProjectTransferUseCase } from "./application/use-cases/project-transfer/execute-project-transfer";
@@ -225,6 +227,8 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     GetExperimentUseCase,
     GetExperimentAccessUseCase,
     ListExperimentsUseCase,
+    ListRecentlyOpenedExperimentsUseCase,
+    ListHomeExperimentsUseCase,
     UpdateExperimentUseCase,
     DeleteExperimentUseCase,
 

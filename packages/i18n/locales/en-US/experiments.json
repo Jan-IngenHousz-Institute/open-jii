@@ -222,6 +222,13 @@
   "created": "Created",
   "updated": "Updated",
   "updatedOn": "Updated {{date}}",
+  "openedOn": "Opened {{when}}",
+  "callerRoles": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "viewer": "Viewer",
+    "member": "Member"
+  },
   "descriptionTitle": "Description",
   "and": "and",
   "save": "Save",
