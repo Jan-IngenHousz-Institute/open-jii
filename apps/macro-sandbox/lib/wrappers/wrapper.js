@@ -59,12 +59,17 @@ if (macroResult !== undefined) {
 `;
 
 // A macro can throw any value. One thrown from the sandbox context is not an instance of this
-// realm's Error, so the message is read by shape.
+// realm's Error, so the message is read by shape. Reading it can throw too, for an object with no
+// prototype or a throwing getter, and that must still fail only the macro's own item.
 function errorMessage(thrown) {
-  if (thrown !== null && typeof thrown === "object" && typeof thrown.message === "string") {
-    return thrown.message;
+  try {
+    if (thrown !== null && typeof thrown === "object" && typeof thrown.message === "string") {
+      return thrown.message;
+    }
+    return String(thrown);
+  } catch {
+    return "the macro threw a value that cannot be read as an error message";
   }
-  return String(thrown);
 }
 
 // Clone data preserving its type (array vs plain object).

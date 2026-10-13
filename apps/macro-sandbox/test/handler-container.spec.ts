@@ -237,6 +237,25 @@ describe.skipIf(!ENABLED)("handler container data contract", () => {
 
       expect(response.results[0]).toEqual({ id: "thrown", success: false, error: "plain words" });
     });
+
+    it("fails only its own item when the thrown value cannot be read", async () => {
+      const response = await invoke(JAVASCRIPT_PORT, {
+        script: b64('if (json["bad"]) throw Object.create(null); output["ok"] = true'),
+        items: [
+          { id: "bad", data: { bad: true } },
+          { id: "good", data: {} },
+        ],
+        timeout: 10,
+      });
+
+      expect(response.status).toBe("success");
+      expect(response.results[0]).toEqual({
+        id: "bad",
+        success: false,
+        error: "the macro threw a value that cannot be read as an error message",
+      });
+      expect(response.results[1]).toEqual({ id: "good", success: true, output: { ok: true } });
+    });
   });
 
   describe("python libraries", () => {
