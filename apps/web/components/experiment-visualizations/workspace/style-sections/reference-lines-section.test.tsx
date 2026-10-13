@@ -37,6 +37,15 @@ describe("ReferenceLinesSection", () => {
     expect(await screen.findByText("workspace.style.referenceLinesEmpty")).toBeInTheDocument();
   });
 
+  it("leaves a chart with no reference lines untouched when it mounts", () => {
+    const { form } = renderWithForm<ChartFormValues>(
+      (form) => <ReferenceLinesSection form={form} />,
+      { useFormProps: { defaultValues: { ...defaults(), config: lineChartType.defaultConfig() } } },
+    );
+
+    expect(form.getValues("config.referenceLines")).toBeUndefined();
+  });
+
   it("appends a reference line when the add button is pressed", async () => {
     const user = userEvent.setup();
     const { form } = renderWithForm<ChartFormValues>(
@@ -94,5 +103,27 @@ describe("ReferenceLinesSection", () => {
     const refs = form.getValues("config.referenceLines") ?? [];
     expect(refs).toHaveLength(1);
     expect(refs[0].value).toBe(2);
+  });
+
+  it("shows the remaining line's values after an earlier one is removed", async () => {
+    const user = userEvent.setup();
+    renderWithForm<ChartFormValues>((form) => <ReferenceLinesSection form={form} />, {
+      useFormProps: {
+        defaultValues: defaults([
+          { axis: "y", value: 1, label: "Baseline", color: "#9ca3af", dash: "dash" },
+          { axis: "x", value: 2, label: "Target", color: "#9ca3af", dash: "dash" },
+        ]),
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: "workspace.style.referenceLines" }));
+    const removes = await screen.findAllByRole("button", {
+      name: "workspace.style.referenceLineRemove",
+    });
+    await user.click(removes[0]);
+
+    expect(screen.getByDisplayValue("Target")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("2")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Baseline")).not.toBeInTheDocument();
   });
 });

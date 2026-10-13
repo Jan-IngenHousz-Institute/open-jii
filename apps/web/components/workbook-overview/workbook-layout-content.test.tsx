@@ -43,6 +43,14 @@ describe("WorkbookLayoutContent", () => {
     expect(screen.getByText("autosave.saved")).toBeInTheDocument();
   });
 
+  it("shows no save indicator to a reader who cannot edit", () => {
+    renderContent({ capabilities: readOnlyCapabilities });
+
+    expect(screen.getByText("Photosynthesis Lab")).toBeInTheDocument();
+    expect(screen.queryByText("autosave.saved")).not.toBeInTheDocument();
+    expect(screen.queryByText("autosave.saving")).not.toBeInTheDocument();
+  });
+
   it("renders children content", () => {
     renderContent();
     expect(screen.getByTestId("children")).toBeInTheDocument();

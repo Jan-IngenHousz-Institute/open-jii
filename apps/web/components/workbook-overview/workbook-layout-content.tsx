@@ -25,7 +25,7 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
 
   // Capability, not ownership: a "Can edit" grantee renames and edits.
   const { canUpdate, canShare, canLeave } = workbook.capabilities;
-  const indicatorStatus = isUpdating ? "saving" : (autosave?.status ?? "idle");
+  const autosaveStatus = isUpdating ? "saving" : (autosave?.status ?? "idle");
 
   const handleTitleSave = async (newName: string) => {
     await updateWorkbook(
@@ -55,7 +55,7 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
           isPending={isUpdating}
           icon={<BookOpen className="h-6 w-6" />}
         />
-        <AutosaveIndicator status={indicatorStatus} />
+        <AutosaveIndicator status={canUpdate ? autosaveStatus : null} />
       </div>
 
       <ResourceDetailTabs
