@@ -454,13 +454,23 @@ for item in batch_items:
         signal.alarm(1)
 
         exec(compiled_code, scope)
-        
+
         signal.alarm(0)
+
+        output = scope.get("output", {})
+        # Serialised per item, so an output JSON cannot carry fails its own item instead of the
+        # whole batch: a NumPy number, or a NaN, which the backend's JSON parser refuses.
+        try:
+            json.dumps(output, allow_nan=False)
+        except MemoryError:
+            raise
+        except Exception as e:
+            raise TypeError(f"output cannot be sent as JSON: {e}") from None
 
         results.append({
             "id": row_id,
             "success": True,
-            "output": scope.get("output", {})
+            "output": output
         })
     except MemoryError:
         raise

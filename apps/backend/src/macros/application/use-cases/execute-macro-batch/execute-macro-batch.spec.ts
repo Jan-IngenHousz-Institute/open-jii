@@ -759,6 +759,42 @@ describe("ExecuteMacroBatchUseCase", () => {
       expect(result.value.errors).toBeUndefined();
     });
 
+    it("fails only the item whose macro returned something other than an object", async () => {
+      const macro = await createTestMacro();
+      vi.spyOn(lambdaPort, "invokeLambda").mockResolvedValue(
+        success({
+          statusCode: 200,
+          payload: {
+            status: "success",
+            results: [
+              { id: "v1", success: true, output: { echo: 1 } },
+              { id: "v2", success: true, output: null },
+              { id: "v3", success: true, output: [1, 2] },
+              { id: "v4", success: true, output: 7 },
+            ],
+          },
+        }),
+      );
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      const result = await useCase.execute({
+        items: ["v1", "v2", "v3", "v4"].map((id) => ({
+          id,
+          macro_id: macro.id,
+          data: { phi2: 1 },
+        })),
+      });
+
+      assertSuccess(result);
+      expect(result.value.results.map((r) => [r.id, r.success, r.output, r.error])).toEqual([
+        ["v1", true, { echo: 1 }, undefined],
+        ["v2", false, undefined, "Macro output must be an object, not null"],
+        ["v3", false, undefined, "Macro output must be an object, not an array"],
+        ["v4", false, undefined, "Macro output must be an object, not a number"],
+      ]);
+      expect(result.value.errors).toBeUndefined();
+    });
+
     it("fails the whole group safely when Lambda returns too few results", async () => {
       const macro = await createTestMacro();
       vi.spyOn(lambdaPort, "invokeLambda").mockResolvedValue(
