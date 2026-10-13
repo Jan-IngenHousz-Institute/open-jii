@@ -41,7 +41,7 @@ describe("ExperimentJoinRequestsController", () => {
     vi.spyOn(emailAdapter, "sendJoinRequestRejectedNotification").mockResolvedValue(
       success(undefined),
     );
-    vi.spyOn(emailAdapter, "sendAddedUserNotification").mockResolvedValue(success(undefined));
+    vi.spyOn(emailAdapter, "sendAccessGrantedNotification").mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {
@@ -217,14 +217,15 @@ describe("ExperimentJoinRequestsController", () => {
       );
 
       // Standard membership-change email fires
-      expect(emailAdapter.sendAddedUserNotification).toHaveBeenCalledWith(
-        experiment.id,
-        experiment.name,
-        expect.any(String),
+      expect(emailAdapter.sendAccessGrantedNotification).toHaveBeenCalledWith({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        resourceName: experiment.name,
+        actor: expect.any(String) as string,
         // Approval hands out the contributing tier, never an administering one.
-        "a contributor who can view and add data",
-        "requester@example.com",
-      );
+        role: "a contributor who can view and add data",
+        email: "requester@example.com",
+      });
     });
 
     it("returns 403 when a non-admin attempts to approve", async () => {
@@ -269,7 +270,7 @@ describe("ExperimentJoinRequestsController", () => {
         .expect(StatusCodes.CREATED);
 
       await testApp.addExperimentCollaborator(experiment.id, requesterUserId);
-      vi.mocked(emailAdapter).sendAddedUserNotification.mockClear();
+      vi.mocked(emailAdapter).sendAccessGrantedNotification.mockClear();
 
       const approvePath = testApp.resolveOrpcPath(contract.experiments.approveJoinRequest, {
         id: experiment.id,
@@ -288,7 +289,7 @@ describe("ExperimentJoinRequestsController", () => {
         id: experiment.id,
       });
       await testApp.get(mePath).withAuth(requesterUserId).expect(StatusCodes.NOT_FOUND);
-      expect(vi.mocked(emailAdapter).sendAddedUserNotification.mock.calls).toHaveLength(0);
+      expect(vi.mocked(emailAdapter).sendAccessGrantedNotification.mock.calls).toHaveLength(0);
     });
   });
 

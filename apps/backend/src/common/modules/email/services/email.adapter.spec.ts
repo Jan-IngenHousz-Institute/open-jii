@@ -29,130 +29,6 @@ describe("EmailAdapter", () => {
     await testApp.teardown();
   });
 
-  describe("sendAddedUserNotification", () => {
-    const MOCK_EXPERIMENT_ID = "exp-123";
-    const MOCK_EXPERIMENT_NAME = "Test Experiment";
-    const MOCK_ACTOR = "John Doe";
-    const MOCK_ROLE = "researcher";
-    const MOCK_EMAIL = "test@example.com";
-
-    it("should successfully delegate to NotificationsService and return success", async () => {
-      // Arrange
-      const mockResult = success(undefined);
-      const notificationSpy = vi
-        .spyOn(notificationsService, "sendAddedUserNotification")
-        .mockResolvedValue(mockResult);
-
-      // Act
-      const result = await adapter.sendAddedUserNotification(
-        MOCK_EXPERIMENT_ID,
-        MOCK_EXPERIMENT_NAME,
-        MOCK_ACTOR,
-        MOCK_ROLE,
-        MOCK_EMAIL,
-      );
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-
-      // Verify the service was called with correct parameters
-      expect(notificationSpy).toHaveBeenCalledOnce();
-      expect(notificationSpy).toHaveBeenCalledWith(
-        MOCK_EXPERIMENT_ID,
-        MOCK_EXPERIMENT_NAME,
-        MOCK_ACTOR,
-        MOCK_ROLE,
-        MOCK_EMAIL,
-      );
-    });
-
-    it("should delegate to NotificationsService and return failure when service fails", async () => {
-      // Arrange
-      const mockError = failure({
-        name: "InternalError",
-        code: "INTERNAL_ERROR",
-        message: "Email service failed",
-        statusCode: 500,
-      });
-      const notificationSpy = vi
-        .spyOn(notificationsService, "sendAddedUserNotification")
-        .mockResolvedValue(mockError);
-
-      // Act
-      const result = await adapter.sendAddedUserNotification(
-        MOCK_EXPERIMENT_ID,
-        MOCK_EXPERIMENT_NAME,
-        MOCK_ACTOR,
-        MOCK_ROLE,
-        MOCK_EMAIL,
-      );
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.code).toBe("INTERNAL_ERROR");
-      expect(result.error.message).toBe("Email service failed");
-
-      // Verify the service was called
-      expect(notificationSpy).toHaveBeenCalledOnce();
-    });
-
-    it("should handle exceptions from NotificationsService", async () => {
-      // Arrange
-      const mockError = new Error("Unexpected service error");
-      const notificationSpy = vi
-        .spyOn(notificationsService, "sendAddedUserNotification")
-        .mockRejectedValue(mockError);
-
-      // Act & Assert
-      await expect(
-        adapter.sendAddedUserNotification(
-          MOCK_EXPERIMENT_ID,
-          MOCK_EXPERIMENT_NAME,
-          MOCK_ACTOR,
-          MOCK_ROLE,
-          MOCK_EMAIL,
-        ),
-      ).rejects.toThrow("Unexpected service error");
-
-      // Verify the service was called
-      expect(notificationSpy).toHaveBeenCalledOnce();
-    });
-
-    it("should pass through all parameters correctly", async () => {
-      // Arrange
-      const customExperimentId = "custom-exp-456";
-      const customExperimentName = "Custom Experiment Name";
-      const customActor = "Jane Smith";
-      const customRole = "admin";
-      const customEmail = "custom@example.com";
-
-      const mockResult = success(undefined);
-      const notificationSpy = vi
-        .spyOn(notificationsService, "sendAddedUserNotification")
-        .mockResolvedValue(mockResult);
-
-      // Act
-      await adapter.sendAddedUserNotification(
-        customExperimentId,
-        customExperimentName,
-        customActor,
-        customRole,
-        customEmail,
-      );
-
-      // Assert
-      expect(notificationSpy).toHaveBeenCalledWith(
-        customExperimentId,
-        customExperimentName,
-        customActor,
-        customRole,
-        customEmail,
-      );
-    });
-  });
-
   describe("sendTransferRequestConfirmation", () => {
     const MOCK_EMAIL = "test@example.com";
     const MOCK_PROJECT_ID_OLD = "project-123";
@@ -269,28 +145,56 @@ describe("EmailAdapter", () => {
     // token — the real caller never passes one.
     const MOCK_ACCESS_PHRASE = "a contributor who can view and add data";
 
+    const invitation = {
+      resourceType: "experiment",
+      resourceId: MOCK_RESOURCE_ID,
+      resourceName: MOCK_RESOURCE_NAME,
+      actor: MOCK_ACTOR,
+      role: MOCK_ACCESS_PHRASE,
+      email: "invite@example.com",
+    } as const;
+
     it("should send an email and return success", async () => {
       const notificationSpy = vi
-        .spyOn(notificationsService, "sendAddedUserNotification")
+        .spyOn(notificationsService, "sendAccessGrantedNotification")
         .mockResolvedValue(success(undefined));
 
-      const result = await adapter.sendInvitationEmail(
-        MOCK_RESOURCE_ID,
-        MOCK_RESOURCE_NAME,
-        MOCK_ACTOR,
-        MOCK_ACCESS_PHRASE,
-        "invite@example.com",
-      );
+      const result = await adapter.sendInvitationEmail(invitation);
 
       assertSuccess(result);
       expect(notificationSpy).toHaveBeenCalledOnce();
-      expect(notificationSpy).toHaveBeenCalledWith(
-        MOCK_RESOURCE_ID,
-        MOCK_RESOURCE_NAME,
-        MOCK_ACTOR,
-        MOCK_ACCESS_PHRASE,
-        "invite@example.com",
+      expect(notificationSpy).toHaveBeenCalledWith(invitation);
+    });
+
+    it("should return failure when the service fails", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendAccessGrantedNotification")
+        .mockResolvedValue(
+          failure({
+            name: "InternalError",
+            code: "INTERNAL_ERROR",
+            message: "Email service failed",
+            statusCode: 500,
+          }),
+        );
+
+      const result = await adapter.sendInvitationEmail(invitation);
+
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toBe("Email service failed");
+      expect(notificationSpy).toHaveBeenCalledOnce();
+    });
+
+    it("should propagate an exception from the service", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendAccessGrantedNotification")
+        .mockRejectedValue(new Error("Unexpected service error"));
+
+      await expect(adapter.sendInvitationEmail(invitation)).rejects.toThrow(
+        "Unexpected service error",
       );
+      expect(notificationSpy).toHaveBeenCalledOnce();
     });
   });
 

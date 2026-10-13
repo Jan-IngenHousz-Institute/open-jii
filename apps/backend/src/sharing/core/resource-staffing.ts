@@ -54,7 +54,7 @@ type StaffedResourceTable =
  * a new shareable type from being silently exempt from the deletion blocker while
  * every spec stays green.
  */
-const STAFFED_RESOURCE_TABLES: Record<SharingResourceType, StaffedResourceTable> = {
+export const STAFFED_RESOURCE_TABLES: Record<SharingResourceType, StaffedResourceTable> = {
   experiment: experiments,
   macro: macros,
   protocol: protocols,

@@ -2406,6 +2406,9 @@ module "backend_ecs" {
   enable_cognito_policy     = true
   cognito_identity_pool_arn = module.cognito.identity_pool_arn
 
+  enable_dependency_health_policy = true
+  database_cluster_arn            = module.aurora_db.cluster_arn
+
   # Secrets configuration
   secrets = [
     {
@@ -2579,6 +2582,10 @@ module "backend_ecs" {
     {
       name  = "ENVIRONMENT_PREFIX"
       value = var.environment
+    },
+    {
+      name  = "DB_CLUSTER_IDENTIFIER"
+      value = "open-jii-${var.environment}-db-cluster"
     },
     {
       name  = "AWS_LOCATION_PLACE_INDEX_NAME"

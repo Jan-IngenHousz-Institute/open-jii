@@ -32,6 +32,7 @@ import {
   deleteGrant,
   ensureDirectAdminGrant,
   experiments,
+  iotDevices,
   sql,
   teamMembers,
   teams,
@@ -41,7 +42,14 @@ import {
   deleteGranteeGrant,
   workbooks,
 } from "@repo/database";
-import type { DatabaseInstance, DbOrTx, GrantRole, SQL } from "@repo/database";
+import type {
+  DatabaseInstance,
+  DbOrTx,
+  EnsureAdminGrantOutcome,
+  GrantRole,
+  ResourceGrantRow,
+  SQL,
+} from "@repo/database";
 
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, trigramMatch } from "../../../common/utils/fts";
@@ -56,6 +64,7 @@ import type {
   CreateGrantInput,
   DirectGrantRow,
   EnrichedGrant,
+  GrantWriteResult,
   ResourceCollaborator,
   ResourceRef,
 } from "../models/sharing.model";
@@ -71,6 +80,7 @@ import {
   lockStaffedResource,
   lockUserAccount,
   seedCreatorControl,
+  STAFFED_RESOURCE_TABLES,
 } from "../resource-staffing";
 import type { StaffingGuardedWrite } from "../resource-staffing";
 import { mayTransferOutOfOrganization } from "../transfer-authority";
@@ -104,6 +114,14 @@ async function assertResourceIsUnarchived(
  * being read as some tier it never meant.
  */
 const toGrantRole = (stored: string) => stored as GrantRole;
+
+/** The part of a written grant row the use cases act on. */
+const toDirectGrantRow = (row: ResourceGrantRow): DirectGrantRow => ({
+  id: row.id,
+  role: row.role,
+  granteeType: row.granteeType,
+  granteeId: row.granteeId,
+});
 
 /**
  * The strongest role in a Better Auth role string — owner subsumes admin subsumes
@@ -523,7 +541,7 @@ export class SharingRepository {
    * Upsert a grant. `ON CONFLICT DO UPDATE` can *demote*, so re-sharing a resource's
    * sole admin as a viewer is a staffing change and refused like any other demotion.
    */
-  create(input: CreateGrantInput): Promise<Result<DirectGrantRow>> {
+  create(input: CreateGrantInput): Promise<Result<GrantWriteResult>> {
     return tryCatch(() =>
       this.db.transaction(async (tx) => {
         let granteeTeamOrganizationId: string | null = null;
@@ -587,7 +605,22 @@ export class SharingRepository {
           throw AppError.badRequest("Grantee not found");
         }
 
-        return upsertGrant(tx, {
+        // Read before the upsert overwrites it: the resource and the grantee are both
+        // claimed by now, so nothing else can slip a grant in between the two.
+        const held = await tx
+          .select({ role: resourceGrants.role })
+          .from(resourceGrants)
+          .where(
+            and(
+              eq(resourceGrants.resourceType, input.resourceType),
+              eq(resourceGrants.resourceId, input.resourceId),
+              eq(resourceGrants.granteeType, input.granteeType),
+              eq(resourceGrants.granteeId, input.granteeId),
+            ),
+          )
+          .limit(1);
+
+        const written = await upsertGrant(tx, {
           resourceType: input.resourceType,
           resourceId: input.resourceId,
           granteeType: input.granteeType,
@@ -595,6 +628,14 @@ export class SharingRepository {
           role: input.role,
           createdBy: input.createdBy,
         });
+
+        return {
+          id: written.id,
+          role: written.role,
+          granteeType: input.granteeType,
+          granteeId: input.granteeId,
+          previousRole: held.at(0)?.role ?? null,
+        };
       }),
     );
   }
@@ -602,7 +643,7 @@ export class SharingRepository {
   /** Change a grant's role by id. Resolves to null when no grant matched. */
   updateRole(
     params: ResourceRef & { grantId: string; role: ShareableRole },
-  ): Promise<Result<DirectGrantRow | null>> {
+  ): Promise<Result<GrantWriteResult | null>> {
     return this.guardedWrite(
       {
         resourceType: params.resourceType,
@@ -610,7 +651,23 @@ export class SharingRepository {
         target: { by: "grant", grantId: params.grantId },
         nextRole: params.role,
       },
-      async (tx) => (await updateGrantRole(tx, params)) ?? null,
+      async (tx) => {
+        const held = await tx
+          .select({ role: resourceGrants.role })
+          .from(resourceGrants)
+          .where(
+            and(
+              eq(resourceGrants.id, params.grantId),
+              eq(resourceGrants.resourceType, params.resourceType),
+              eq(resourceGrants.resourceId, params.resourceId),
+            ),
+          )
+          .limit(1);
+
+        const updated = await updateGrantRole(tx, params);
+        if (!updated) return null;
+        return { ...toDirectGrantRow(updated), previousRole: held.at(0)?.role ?? null };
+      },
     );
   }
 
@@ -623,7 +680,10 @@ export class SharingRepository {
         target: { by: "grant", grantId: params.grantId },
         nextRole: null,
       },
-      async (tx) => (await deleteGrant(tx, params)) ?? null,
+      async (tx) => {
+        const deleted = await deleteGrant(tx, params);
+        return deleted ? toDirectGrantRow(deleted) : null;
+      },
     );
   }
 
@@ -640,13 +700,15 @@ export class SharingRepository {
         target: { by: "grantee", granteeType: "user", granteeId: params.userId },
         nextRole: null,
       },
-      async (tx) =>
-        (await deleteGranteeGrant(tx, {
+      async (tx) => {
+        const removed = await deleteGranteeGrant(tx, {
           resourceType: params.resourceType,
           resourceId: params.resourceId,
           granteeType: "user",
           granteeId: params.userId,
-        })) ?? null,
+        });
+        return removed ? toDirectGrantRow(removed) : null;
+      },
       (removed) => removed !== null,
     );
   }
@@ -663,7 +725,7 @@ export class SharingRepository {
    */
   ensureDirectAdminGrant(
     params: ResourceRef & { userId: string; createdBy: string },
-  ): Promise<Result<void>> {
+  ): Promise<Result<EnsureAdminGrantOutcome>> {
     return tryCatch(() =>
       this.db.transaction(async (tx) => {
         if (!(await lockUserAccount(tx, params.userId))) {
@@ -688,9 +750,36 @@ export class SharingRepository {
           throw AppError.badRequest("Target user is not available");
         }
 
-        await ensureDirectAdminGrant(tx, params);
+        return ensureDirectAdminGrant(tx, params);
       }),
     );
+  }
+
+  /**
+   * A resource's display name, for the surfaces that name it outside the sharing
+   * responses. Unscoped: the caller has just passed `share` on this resource.
+   *
+   * A device's name is optional where every other type's is required, so a nameless
+   * device falls back to its serial number — which is `NOT NULL` and unique. That
+   * keeps `null` meaning only one thing to every caller: no such resource.
+   */
+  findResourceName(
+    resourceType: SharingResourceType,
+    resourceId: string,
+  ): Promise<Result<string | null>> {
+    return tryCatch(async () => {
+      const table = STAFFED_RESOURCE_TABLES[resourceType];
+      const name =
+        resourceType === "device"
+          ? sql<string>`COALESCE(${iotDevices.name}, ${iotDevices.serialNumber})`
+          : table.name;
+      const rows = await this.db
+        .select({ name })
+        .from(table)
+        .where(eq(table.id, resourceId))
+        .limit(1);
+      return rows.at(0)?.name ?? null;
+    });
   }
 
   /**

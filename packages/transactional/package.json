@@ -19,9 +19,9 @@
       "types": "./dist/render/verification-request.d.ts",
       "default": "./dist/render/verification-request.js"
     },
-    "./render/added-user-notification": {
-      "types": "./dist/render/added-user-notification.d.ts",
-      "default": "./dist/render/added-user-notification.js"
+    "./render/access-granted-notification": {
+      "types": "./dist/render/access-granted-notification.d.ts",
+      "default": "./dist/render/access-granted-notification.js"
     },
     "./render/transfer-request-confirmation": {
       "types": "./dist/render/transfer-request-confirmation.d.ts",

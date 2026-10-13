@@ -27,6 +27,13 @@ export interface ResourceRef {
 export interface DirectGrantRow {
   id: string;
   role: string;
+  granteeType: SharingGranteeType;
+  granteeId: string;
+}
+
+/** A create or role update, with what the grantee held before it. */
+export interface GrantWriteResult extends DirectGrantRow {
+  previousRole: string | null;
 }
 
 export interface CreateGrantInput extends ResourceRef {
