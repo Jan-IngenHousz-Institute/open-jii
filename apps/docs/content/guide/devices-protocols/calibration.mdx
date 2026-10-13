@@ -1,0 +1,110 @@
+---
+title: "Calibration"
+description: "Calibrate a device at the bench, review and approve the fit, write the coefficients to the device, and see what is in force."
+---
+
+{/* verified: code@51111b3da 2026-10-12 */}
+
+Calibration in openJII is done at a bench: the device is connected to your
+computer, the browser runs a calibration procedure against it and any reference
+instruments, a script fits coefficients from the readings, and you decide whether
+to apply them. Completed captures are kept on the device's record, so you can see
+which coefficients are in force and where they came from. Stopping a capture before
+it finishes leaves no run on record.
+
+<Callout type="info">
+  Calibration is currently in internal testing and available only to accounts with calibration
+  enabled. If **Calibrations** does not appear under **Devices** in the sidebar, it is not available
+  to you yet.
+</Callout>
+
+## What you need
+
+- A device registered in **Devices** that you can contribute to. Recording a
+  bench run requires contribute access; approving, rejecting or writing it needs
+  **Can edit** on the device, or Owner or Admin of the organization that owns it.
+  Only people who can manage a device see its **Calibration** tab.
+- A Chromium-based browser on a desktop. The browser is the bridge to the
+  hardware over Web Serial; without Web Serial, **Run at the bench** stays
+  disabled.
+- The reference instruments the procedure names, each on a serial port of its
+  own.
+
+## Calibration procedures
+
+**Calibrations** in the sidebar lists the procedures you can see, with their
+device family, visibility and when they were last updated. A procedure says
+which device family it is for, which instruments the bench needs, the steps it
+walks, the coefficients it produces and the script that fits them. Its page
+shows these as **The rig it needs**, **What it does at the bench**, **What it
+produces** and **How it fits**, with the device family and minimum firmware in
+the details beside them. A run on firmware older than that minimum is refused.
+
+**New calibration** creates a procedure straight away, named "Untitled
+calibration" and set up for a MiniPAR, and opens it so you can edit it. Once a
+run has recorded a procedure, it can no longer be edited; use **Duplicate** to
+start a new one from it.
+
+<Callout type="warn">
+  A calibration procedure is **public** from the moment it is created, including one made with **New
+  calibration** or **Duplicate**, and public cannot be undone. Everyone who has calibration switched
+  on can find and read it. Do not put anything in a procedure that you would not share.
+</Callout>
+
+## Calibrate a device
+
+Start from the device's **Calibration** tab with **Calibrate**, or from a
+procedure's page with **Run at the bench**. The wizard has six steps.
+
+1. **Procedure.** Pick the procedure for this device.
+2. **Connect.** Select **Connect device** and choose the device's port, then
+   connect each instrument the procedure needs. The run cannot start until the
+   device answers as the family the procedure is for and every required
+   instrument is connected. Started from a device, the wizard also checks the
+   serial number the unit reports against that device's record, and a different
+   serial stops the run; a unit that reports no serial cannot be checked, so make
+   sure the right one is on the port. Started from a procedure's page, the
+   wizard matches the unit to one of your registered devices by its serial, or
+   asks **Which device is this?** when the firmware does not report one.
+3. **Capture.** **Start the run** walks the procedure and records each reading.
+   Answer what it asks along the way. **Stop** ends the run without recording
+   anything.
+4. **Review.** The result lists each block and the coefficients of any block that
+   computed. If the script supplies a quality verdict, the card shows **Quality
+   gates passed** or **Quality gates failed**. R² and NRMSE appear when the
+   script supplies those numbers with the verdict. A chart appears when the
+   result includes usable fitted-point data or vector coefficients. **Approve**
+   applies the computed coefficients to the device's record, replacing any
+   earlier ones for the same block.
+   **Reject** applies nothing and keeps the run on record. Only a run that
+   produced coefficients can be approved. Approving does not touch the hardware.
+5. **Write.** **Write to device** writes each approved block and confirms it by
+   reading it back. A block that is not confirmed may have reached the device in
+   part, so run the calibration again before trusting the device. **Finish
+   without writing** leaves the coefficients approved on record only.
+6. **Done.** A summary of what was measured, approved and confirmed on the
+   device.
+
+Only MiniPAR and Ambit coefficients can be written to the device. For every
+other family, including MultispeQ, the write step says the calibration is
+approved on record only.
+
+## What is in force
+
+A device's **Calibration** tab shows the **In force** card and the **Bench
+sessions** list. **In force** shows the coefficients the device's record holds,
+since when, and whether they were **Written to device**, are **Not yet written to
+device**, or were **Written but not confirmed**. The device's overview has a
+**Calibration** card with the date it was last calibrated and a link to this tab.
+
+Each bench session keeps its status (Running, Computed, Compute failed, Error,
+Approved or Rejected), what the bench measured, the review and any write.
+Opening a session that is still waiting for a decision gives you **Approve** and
+**Reject**. A session that was approved but never written offers **Write to
+device**, so you can write it later from the bench.
+
+{/* MEDIA: SHOT (needs a calibration rig and an account with calibration switched on) the device Calibration tab with the In force card, and the wizard's Review step. */}
+
+For the measurement side of each device, see
+[MultispeQ](/guide/devices-protocols/multispeq) and
+[Continuous sensors](/guide/devices-protocols/continuous-sensors).
