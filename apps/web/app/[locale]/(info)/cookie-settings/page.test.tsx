@@ -1,8 +1,7 @@
 import { render, screen, userEvent } from "@/test/test-utils";
-import type { PostHog } from "posthog-js";
+import posthog from "posthog-js";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { setConsentStatus } from "~/lib/cookie-consent";
-import { usePostHog } from "~/providers/posthog-context";
+import { setAnalyticsConsent } from "~/lib/cookie-consent";
 
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -11,24 +10,15 @@ import CookieSettingsPage from "./page";
 let mockConsentStatus = "pending";
 vi.mock("~/lib/cookie-consent", () => ({
   getConsentStatus: () => mockConsentStatus,
-  setConsentStatus: vi.fn((s: string) => {
+  setAnalyticsConsent: vi.fn((_posthog: unknown, s: string) => {
     mockConsentStatus = s;
   }),
 }));
 
 describe("CookieSettingsPage", () => {
-  let posthog: PostHog;
-
   beforeEach(() => {
     vi.clearAllMocks();
     mockConsentStatus = "pending";
-    posthog = {
-      opt_in_capturing: vi.fn(),
-      opt_out_capturing: vi.fn(),
-      reset: vi.fn(),
-      capture: vi.fn(),
-    } as unknown as PostHog;
-    vi.mocked(usePostHog).mockReturnValue(posthog);
   });
 
   it("renders page title and cookie cards", () => {
@@ -64,8 +54,7 @@ describe("CookieSettingsPage", () => {
 
     await user.click(screen.getByText("cookieSettings.enableAnalytics"));
 
-    expect(posthog.opt_in_capturing).toHaveBeenCalled();
-    expect(setConsentStatus).toHaveBeenCalledWith("accepted");
+    expect(setAnalyticsConsent).toHaveBeenCalledWith(posthog, "accepted");
     expect(toast).toHaveBeenCalledWith({ description: "cookieSettings.analyticsEnabledToast" });
   });
 
@@ -76,9 +65,7 @@ describe("CookieSettingsPage", () => {
 
     await user.click(screen.getByText("cookieSettings.disableAnalytics"));
 
-    expect(posthog.opt_out_capturing).toHaveBeenCalled();
-    expect(posthog.reset).toHaveBeenCalled();
-    expect(setConsentStatus).toHaveBeenCalledWith("rejected");
+    expect(setAnalyticsConsent).toHaveBeenCalledWith(posthog, "rejected");
     expect(toast).toHaveBeenCalledWith({ description: "cookieSettings.analyticsDisabledToast" });
   });
 });

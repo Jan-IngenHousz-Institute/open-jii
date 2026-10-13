@@ -18,7 +18,7 @@ import {
 import { Switch } from "@repo/ui/components/switch";
 
 import type { ConsentStatus } from "../lib/cookie-consent";
-import { getConsentStatus, setConsentStatus } from "../lib/cookie-consent";
+import { getConsentStatus, setAnalyticsConsent } from "../lib/cookie-consent";
 
 export function CookieBanner() {
   const posthog = usePostHog();
@@ -32,29 +32,19 @@ export function CookieBanner() {
   }, []);
 
   const handleAcceptCookies = () => {
-    setConsentStatus("accepted");
+    setAnalyticsConsent(posthog, "accepted");
     setConsentGiven("accepted");
-    posthog?.opt_in_capturing();
   };
 
   const handleDeclineCookies = () => {
-    setConsentStatus("rejected");
+    setAnalyticsConsent(posthog, "rejected");
     setConsentGiven("rejected");
-    posthog?.opt_out_capturing();
-    posthog?.reset();
   };
 
   const handleSavePreferences = () => {
-    if (analyticsEnabled) {
-      setConsentStatus("accepted");
-      setConsentGiven("accepted");
-      posthog?.opt_in_capturing();
-    } else {
-      setConsentStatus("rejected");
-      setConsentGiven("rejected");
-      posthog?.opt_out_capturing();
-      posthog?.reset();
-    }
+    const status = analyticsEnabled ? "accepted" : "rejected";
+    setAnalyticsConsent(posthog, status);
+    setConsentGiven(status);
     setShowManage(false);
   };
 
