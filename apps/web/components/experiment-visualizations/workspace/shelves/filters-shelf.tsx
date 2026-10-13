@@ -3,9 +3,8 @@
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { useFieldArray } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 
-import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -36,14 +35,11 @@ export function FiltersShelf({
 }: FiltersShelfProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  const { fields } = useFieldArray({
-    control: form.control,
-    name: "dataConfig.filters",
-  });
+  // Watched, not `useFieldArray`: that writes `[]` into an absent array on mount,
+  // which autosave reads as an edit.
+  const filters = useWatch({ control: form.control, name: "dataConfig.filters" }) ?? [];
 
   const [open, setOpen] = useState(false);
-
-  const filters = (form.watch("dataConfig.filters") ?? []) as ExperimentDataFilter[];
 
   const list = (
     <FilterChipList
@@ -68,8 +64,8 @@ export function FiltersShelf({
       <section className="space-y-3">
         <CollapsibleTrigger className="flex w-full items-center gap-2 text-left">
           <h3 className="text-sm font-semibold">{t("workspace.shelves.filters")}</h3>
-          {fields.length > 0 && (
-            <span className="text-muted-foreground text-xs">({fields.length})</span>
+          {filters.length > 0 && (
+            <span className="text-muted-foreground text-xs">({filters.length})</span>
           )}
           <ChevronDown
             className={cn(
