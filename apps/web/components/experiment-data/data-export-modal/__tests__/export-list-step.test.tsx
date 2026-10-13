@@ -3,6 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import type React from "react";
 import { describe, expect, it, vi } from "vitest";
+import { env } from "~/env";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentExportRecord } from "@repo/api/domains/experiment/experiment.schema";
@@ -19,15 +20,6 @@ vi.mock("@repo/ui/components/dialog", async (importOriginal) => {
     ),
   };
 });
-
-const mockDownloadExport = vi.fn();
-vi.mock("~/hooks/experiment/useDownloadExport/useDownloadExport", () => ({
-  useDownloadExport: () => ({
-    downloadExport: mockDownloadExport,
-    isDownloading: false,
-    downloadingExportId: null,
-  }),
-}));
 
 const completedExport = createExportRecord({
   exportId: "export-1",
@@ -196,21 +188,31 @@ describe("ExportListStep", () => {
     expect(onCreateExport).toHaveBeenCalledWith("xlsx");
   });
 
-  it("calls downloadExport when download button is clicked", async () => {
+  it("links the download button to the export endpoint", async () => {
     mountExports([completedExport]);
 
     render(<ExportListStep {...defaultProps} />);
 
-    await waitFor(() => {
-      expect(screen.getByText("CSV")).toBeInTheDocument();
+    const downloadLink = await screen.findByRole("link", {
+      name: "experimentData.exportModal.downloadExport",
     });
 
-    // The download button is an icon button
-    const user = userEvent.setup();
-    const downloadButton = screen.getByRole("button", { name: "" });
-    await user.click(downloadButton);
+    expect(downloadLink).toHaveAttribute(
+      "href",
+      `${env.NEXT_PUBLIC_API_URL}/api/v1/experiments/exp-123/data/exports/export-1`,
+    );
+  });
 
-    expect(mockDownloadExport).toHaveBeenCalledWith("export-1");
+  it("offers no download for an export that has not completed", async () => {
+    mountExports([runningExport]);
+
+    render(<ExportListStep {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("NDJSON")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("shows creating state", async () => {

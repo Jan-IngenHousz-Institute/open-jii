@@ -239,6 +239,7 @@ export class ExperimentDataExportsRepository {
   async downloadExport(params: { experimentId: string; exportId: string }): Promise<
     Result<{
       stream: Readable;
+      contentLength?: number;
       filePath: string;
       tableName: string;
       format: ExportFormat;

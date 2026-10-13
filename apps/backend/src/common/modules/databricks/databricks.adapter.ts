@@ -163,6 +163,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   ): Promise<
     Result<{
       stream: Readable;
+      contentLength?: number;
       filePath: string;
       tableName: string;
       format: ExportFormat;
@@ -250,7 +251,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }
 
     return success({
-      stream: downloadResult.value,
+      stream: downloadResult.value.stream,
+      contentLength: downloadResult.value.contentLength,
       filePath,
       tableName,
       format,
