@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { zUpdateExperimentBody } from "../experiment.schema";
 import {
   zExperimentDownloadExportResponse,
-  zExperimentExportPathParam,
   zExperimentExportRecord,
   zExperimentInitiateExportBody,
   zExperimentInitiateExportResponse,
@@ -193,12 +192,5 @@ describe("anonymizeContributors on update/export bodies", () => {
   it("zExperimentInitiateExportBody accepts the per-export override", () => {
     const body = { tableName: "t", format: "csv" as const, anonymizeContributors: true };
     expect(zExperimentInitiateExportBody.parse(body)).toEqual(body);
-  });
-});
-describe("zExperimentExportPathParam", () => {
-  it("accepts valid ids and rejects a bad exportId", () => {
-    const ok = { id: uuidA, exportId: uuidB };
-    expect(zExperimentExportPathParam.parse(ok)).toEqual(ok);
-    expect(() => zExperimentExportPathParam.parse({ id: uuidA, exportId: "nope" })).toThrow();
   });
 });

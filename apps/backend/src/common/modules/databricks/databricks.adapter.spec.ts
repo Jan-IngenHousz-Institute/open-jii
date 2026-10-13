@@ -851,7 +851,7 @@ describe("DatabricksAdapter", () => {
       // Mock file download
       nock(databricksHost)
         .get(`${DatabricksFilesService.FILES_ENDPOINT}${filePath}`)
-        .reply(200, "csv-content", { "content-type": "text/csv" });
+        .reply(200, "csv-content", { "content-type": "text/csv", "content-length": "11" });
 
       const result = await databricksAdapter.streamExport(exportId, experimentId);
 
@@ -862,6 +862,7 @@ describe("DatabricksAdapter", () => {
       expect(result.value.format).toBe("csv");
       expect(result.value.completedAt).toBe("2026-01-02 03:04:05");
       expect(result.value.stream).toBeInstanceOf(Object);
+      expect(result.value.contentLength).toBe(11);
     });
 
     it("should return a null completion time when the column is absent", async () => {

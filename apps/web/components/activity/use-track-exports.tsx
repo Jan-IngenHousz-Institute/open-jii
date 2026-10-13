@@ -77,8 +77,6 @@ export function useTrackExports(args: {
         experimentId,
         createdAt: record.createdAt,
         updatedAt: derivedUpdatedAt,
-        // Same canonical URL that useDownloadExport hits, so the bell and the
-        // export modal resolve to one download route.
         resultUrl: record.exportId
           ? `${env.NEXT_PUBLIC_API_URL}/api/v1/experiments/${experimentId}/data/exports/${record.exportId}`
           : undefined,

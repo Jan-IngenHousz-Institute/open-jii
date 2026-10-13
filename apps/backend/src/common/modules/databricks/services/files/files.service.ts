@@ -7,7 +7,7 @@ import { ErrorCodes } from "../../../../utils/error-codes";
 import { Result, tryCatch, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
-import { UploadFileResponse } from "./files.types";
+import type { DownloadFileResponse, UploadFileResponse } from "./files.types";
 
 @Injectable()
 export class DatabricksFilesService {
@@ -76,7 +76,9 @@ export class DatabricksFilesService {
           params: {
             overwrite: false,
           },
-          // Streams advance only as bytes flow; allow longer for large uploads.
+          // Following redirects means keeping every body chunk for a replay, and the
+          // timeout then caps the whole transfer instead of an idle socket.
+          maxRedirects: 0,
           timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
           maxBodyLength: Infinity,
           maxContentLength: Infinity,
@@ -110,9 +112,9 @@ export class DatabricksFilesService {
   /**
    * Download a file from Databricks as a stream
    * @param filePath - The full path to the file in Databricks (e.g., /Volumes/catalog/schema/volume/path/file.csv)
-   * @returns Result containing a readable stream of the file contents
+   * @returns Result containing a readable stream of the file contents and its size when known
    */
-  async download(filePath: string): Promise<Result<Readable>> {
+  async download(filePath: string): Promise<Result<DownloadFileResponse>> {
     return await tryCatch(
       async () => {
         const tokenResult = await this.authService.getAccessToken();
@@ -138,6 +140,8 @@ export class DatabricksFilesService {
             Authorization: `Bearer ${token}`,
           },
           responseType: "stream",
+          // The body is read at the client's pace; without redirects the timeout stops at the headers.
+          maxRedirects: 0,
           timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
         });
 
@@ -148,7 +152,12 @@ export class DatabricksFilesService {
           status: "success",
         });
 
-        return response.data as Readable;
+        const contentLength = Number(response.headers["content-length"] ?? Number.NaN);
+
+        return {
+          stream: response.data as Readable,
+          contentLength: Number.isSafeInteger(contentLength) ? contentLength : undefined,
+        };
       },
       (error) => {
         this.logger.error({

@@ -17,7 +17,7 @@ import {
   Check,
 } from "lucide-react";
 import * as React from "react";
-import { useDownloadExport } from "~/hooks/experiment/useDownloadExport/useDownloadExport";
+import { env } from "~/env";
 import { useListExports } from "~/hooks/experiment/useListExports/useListExports";
 import { useLocale } from "~/hooks/useLocale";
 import { parseApiError } from "~/util/apiError";
@@ -124,19 +124,21 @@ const formatDateTime = (dateString: string | null): string => {
 
 const ExportCard = ({
   export: exportRecord,
-  onDownload,
-  isDownloading,
+  experimentId,
   index,
 }: {
   export: ExperimentExportRecord;
-  onDownload: (exportId: string) => void;
-  isDownloading: boolean;
+  experimentId: string;
   index: number;
 }) => {
   const { t } = useTranslation("experimentData");
   const locale = useLocale();
 
-  const canDownload = exportRecord.status === "completed" && exportRecord.exportId;
+  // A plain link lets the browser stream the file to disk instead of holding it in the tab.
+  const downloadUrl =
+    exportRecord.status === "completed" && exportRecord.exportId
+      ? `${env.NEXT_PUBLIC_API_URL}/api/v1/experiments/${experimentId}/data/exports/${exportRecord.exportId}`
+      : undefined;
   const isFailed = exportRecord.status === "failed";
   const dateTime = formatDateTime(exportRecord.createdAt);
 
@@ -195,19 +197,11 @@ const ExportCard = ({
         </div>
       </div>
 
-      {canDownload && exportRecord.exportId && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onDownload(exportRecord.exportId ?? "")}
-          disabled={isDownloading}
-          className="h-8 w-8 shrink-0"
-        >
-          {isDownloading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
+      {downloadUrl && (
+        <Button variant="ghost" size="icon" asChild className="h-8 w-8 shrink-0">
+          <a href={downloadUrl} aria-label={t("experimentData.exportModal.downloadExport")}>
             <Download className="text-muted-foreground h-4 w-4" />
-          )}
+          </a>
         </Button>
       )}
     </Card>
@@ -242,7 +236,6 @@ export function ExportListStep({
 }: ExportListStepProps) {
   const { t } = useTranslation("experimentData");
   const { data, isLoading, error } = useListExports({ experimentId, tableName });
-  const { downloadExport, isDownloading, downloadingExportId } = useDownloadExport(experimentId);
   const exports = data?.exports ?? [];
 
   // Mirror every poll into the global activity context so the topbar bell
@@ -309,9 +302,8 @@ export function ExportListStep({
                   <ExportCard
                     key={exportRecord.exportId ?? `export-${index}`}
                     export={exportRecord}
+                    experimentId={experimentId}
                     index={exports.length - index}
-                    onDownload={downloadExport}
-                    isDownloading={isDownloading && downloadingExportId === exportRecord.exportId}
                   />
                 ))}
               </div>
