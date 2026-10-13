@@ -27,11 +27,13 @@ vi.mock("@/components/server-prefetch/prefetched-queries", () => ({
 }));
 
 describe("ExperimentPage", () => {
-  const renderPage = async (sort?: string) =>
+  const renderPage = async (
+    searchParams: { sort?: string; status?: string; visibility?: string } = {},
+  ) =>
     render(
       await Page({
         params: Promise.resolve({ locale: "en-US" }),
-        searchParams: Promise.resolve({ sort }),
+        searchParams: Promise.resolve(searchParams),
       }),
     );
 
@@ -51,7 +53,15 @@ describe("ExperimentPage", () => {
   });
 
   it("leaves a sorted view to the browser, which parses the sort itself", async () => {
-    await renderPage('[{"field":"name","direction":"asc"}]');
+    await renderPage({ sort: '[{"field":"name","direction":"asc"}]' });
     expect(prefetched.queries).toEqual([]);
   });
+
+  it.each([{ status: "active" }, { visibility: "public" }])(
+    "leaves a filtered view (%o) to the browser",
+    async (searchParams) => {
+      await renderPage(searchParams);
+      expect(prefetched.queries).toEqual([]);
+    },
+  );
 });

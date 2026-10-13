@@ -474,14 +474,30 @@
             "name": "status",
             "in": "query",
             "schema": {
-              "enum": [
-                "active",
-                "stale",
-                "archived",
-                "published"
+              "anyOf": [
+                {
+                  "enum": [
+                    "active",
+                    "stale",
+                    "archived",
+                    "published"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "active",
+                      "stale",
+                      "archived",
+                      "published"
+                    ],
+                    "type": "string"
+                  }
+                }
               ],
-              "type": "string",
-              "description": "Filter experiments by their status"
+              "description": "Filter experiments by status; several values match either"
             },
             "allowEmptyValue": true,
             "allowReserved": true
@@ -490,12 +506,26 @@
             "name": "visibility",
             "in": "query",
             "schema": {
-              "enum": [
-                "private",
-                "public"
+              "anyOf": [
+                {
+                  "enum": [
+                    "private",
+                    "public"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "private",
+                      "public"
+                    ],
+                    "type": "string"
+                  }
+                }
               ],
-              "type": "string",
-              "description": "Filter experiments by their visibility"
+              "description": "Filter experiments by visibility; several values match either"
             },
             "allowEmptyValue": true,
             "allowReserved": true
