@@ -1,5 +1,6 @@
 import { Asset } from "expo-asset";
 import { File } from "expo-file-system";
+import { isMacroOutput } from "~/shared/measurements/macro-output";
 import type { MacroOutput } from "~/shared/measurements/macro-output";
 import { createLogger } from "~/shared/observability/logger";
 
@@ -38,18 +39,32 @@ async function executeMacro(code: string, json: unknown, ctx: object): Promise<M
   const mathLibSource = await mathLibSourcePromise;
   // Wrap the macro in an IIFE that receives `json` (nearest input) and `ctx`
   // (upstream outputs by name), isolating its scope from mathLib internals.
+  // As in the Lambda sandbox, a macro that returns nothing hands back `output`.
   const macroSource =
-    mathLibSource + "\n\n\n" + "return (function(json, ctx) {\n" + code + "\n})(json, ctx);";
+    mathLibSource +
+    "\n\n\n" +
+    "var output = {};\n" +
+    "var macroResult = (function(json, ctx) {\n" +
+    code +
+    "\n})(json, ctx);\n" +
+    "return macroResult === undefined ? output : macroResult;";
 
+  let result: unknown;
   try {
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
     const fn = new Function("json", "ctx", macroSource);
-    const output = fn(structuredClone(json), deepFreeze(structuredClone(ctx)));
-    return output;
+    result = fn(structuredClone(json), deepFreeze(structuredClone(ctx)));
   } catch (err) {
     log.error("(JS) error", { err: (err as Error)?.message });
     throw err;
   }
+
+  if (!isMacroOutput(result)) {
+    throw new MacroOutputNotObjectError(
+      result === null ? "null" : Array.isArray(result) ? "an array" : typeof result,
+    );
+  }
+  return result;
 }
 
 export interface MacroInput {
@@ -61,6 +76,13 @@ export class UnsupportedMacroLanguageError extends Error {
   constructor(public readonly language: string) {
     super(`Macro language "${language}" cannot run on this device (supported: javascript, python)`);
     this.name = "UnsupportedMacroLanguageError";
+  }
+}
+
+export class MacroOutputNotObjectError extends Error {
+  constructor(public readonly received: string) {
+    super(`Macro output must be an object, but the macro returned ${received}`);
+    this.name = "MacroOutputNotObjectError";
   }
 }
 

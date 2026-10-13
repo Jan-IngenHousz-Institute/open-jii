@@ -50,6 +50,10 @@ wider window, or carried in a shared link, still applies while its column is hid
 | `ctx`        | Completed upstream questions, protocols, commands, and macros keyed by canonical workbook name. Names are lowercased, punctuation becomes underscores, and duplicate names resolve to the nearest upstream value. |
 | Return value | A JSON-serializable object: a Python dictionary, JavaScript object, or R list. Its keys become the macro output available to later cells and data processing.                                                     |
 
+Older JavaScript and Python macros fill a predefined `output` object instead of
+returning one. The platform and the phone both accept that: when a macro returns
+nothing, its output is whatever it put in `output`.
+
 Question values use an `{ answer: ... }` object. Named protocol, command, and
 macro entries contain their output object. Only upstream cells are included;
 the macro cannot read itself or a later cell. The host passes `ctx` itself to

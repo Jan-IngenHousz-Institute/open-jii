@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LogEntry } from "~/shared/observability/logger";
 import { addLogSink, getMinLogLevel, setMinLogLevel } from "~/shared/observability/logger";
 
-import { applyMacro } from "./process-scan";
+import { applyMacro, MacroOutputNotObjectError } from "./process-scan";
 import { registerPythonMacroRunner } from "./python-macro-runner";
 
 // The raw `.txt` import is resolved by the Metro asset system at runtime;
@@ -338,6 +338,35 @@ describe("applyMacro: canonical once-per-measurement execution", () => {
       applyMacro({ sample: [] }, { code: encode("# irrelevant"), language: "python" }),
     ).rejects.toMatchObject({ code: "empty-envelope" });
     expect(runner).not.toHaveBeenCalled();
+  });
+});
+
+describe("applyMacro: JavaScript output", () => {
+  it("uses an assigned `output` when the macro returns nothing", async () => {
+    const code = encode(`output = { kind: typeof json };`);
+    const [out] = await applyMacro({ sample: { phi2: 0.5 } }, { code, language: "javascript" });
+    expect(out).toEqual({ kind: "object" });
+  });
+
+  it("uses a filled `output` when the macro returns nothing", async () => {
+    const code = encode(`output.phi2 = json.phi2;`);
+    const [out] = await applyMacro({ sample: { phi2: 0.5 } }, { code, language: "javascript" });
+    expect(out).toEqual({ phi2: 0.5 });
+  });
+
+  it("prefers the returned object over `output`", async () => {
+    const code = encode(`output.ignored = true; return { kept: true };`);
+    const [out] = await applyMacro({ sample: { phi2: 0.5 } }, { code, language: "javascript" });
+    expect(out).toEqual({ kept: true });
+  });
+
+  it("rejects a returned value that is not an object", async () => {
+    for (const returned of ["null", "42", "[1, 2]"]) {
+      const code = encode(`return ${returned};`);
+      await expect(
+        applyMacro({ sample: { phi2: 0.5 } }, { code, language: "javascript" }),
+      ).rejects.toBeInstanceOf(MacroOutputNotObjectError);
+    }
   });
 });
 

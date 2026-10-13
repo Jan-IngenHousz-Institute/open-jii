@@ -38,9 +38,13 @@ export const pythonMacroSandboxScript = `(function() {
         'import base64, json\\n' +
         '__json_input__ = json.loads(base64.b64decode("' + jsonB64 + '").decode("utf-8"))\\n' +
         '__ctx_input__ = json.loads(base64.b64decode("' + ctxB64 + '").decode("utf-8"))\\n' +
+        // As in the Lambda sandbox, a macro may fill the predefined output dict instead of returning one.
+        'output = {}\\n' +
         'def __macro__(json, ctx):\\n' + indent(code) + '\\n\\n' +
         '__result__ = __macro__(__json_input__, __ctx_input__)\\n' +
-        '__result_holder__.result = json.dumps(__result__)\\n';
+        'if isinstance(__result__, dict):\\n' +
+        '    output.update(__result__)\\n' +
+        '__result_holder__.result = json.dumps(output)\\n';
       await pyodide.runPythonAsync(wrapped);
       var raw = resultHolder.result;
       var str = (typeof raw === 'string') ? raw : (raw != null ? String(raw) : '');
