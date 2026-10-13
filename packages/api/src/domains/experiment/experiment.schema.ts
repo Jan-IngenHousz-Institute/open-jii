@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-import { zListSort, zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
+import {
+  zListFilter,
+  zListSort,
+  zPaginated,
+  zPaginationQuery,
+  zResourceScope,
+} from "../../shared/listing";
 import { sanitizeQuestionLabel } from "../../transforms/label-sanitization";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zResourceSeries } from "../metrics/metrics.schema";
@@ -488,8 +494,12 @@ export const zExperimentFilterQuery = z
     /** @deprecated Alias for `scope: "related"`, removed once web and mobile have migrated. */
     filter: z.enum(["member"]).optional().describe("Deprecated alias for scope=related"),
     scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
-    status: zExperimentStatus.optional().describe("Filter experiments by their status"),
-    visibility: zExperimentVisibility.optional().describe("Filter experiments by their visibility"),
+    status: zListFilter(zExperimentStatus)
+      .optional()
+      .describe("Filter experiments by status; several values match either"),
+    visibility: zListFilter(zExperimentVisibility)
+      .optional()
+      .describe("Filter experiments by visibility; several values match either"),
     search: z.string().optional().describe("Search term for experiment name"),
     sort: zExperimentSort.optional().describe("Up to two ordered sort criteria"),
   })

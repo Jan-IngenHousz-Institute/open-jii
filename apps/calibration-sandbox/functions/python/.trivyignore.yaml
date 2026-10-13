@@ -38,6 +38,77 @@ vulnerabilities:
     statement: "PCRE2 JIT memory corruption. Neither the runtime nor macro code uses PCRE2."
     expired_at: 2026-11-05
 
+  # openssl-fips-provider-latest / openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1, fixed
+  # in .0.3, which the AL2023 repos do not carry yet. Every id is a QUIC, DTLS,
+  # TLS-server, CMP, peer-certificate or signing path: the sandbox serves none of
+  # them and has no outbound network to meet a malicious peer.
+  - id: CVE-2026-35189
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
+    statement: "Crafted peer certificate CRL heap growth. No TLS peers."
+    expired_at: 2026-11-05
+  - id: CVE-2026-35191
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
+    statement: "QUIC server amplification. No QUIC."
+    expired_at: 2026-11-05
+  - id: CVE-2026-42772
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
+    statement: "QUIC stream reassembly DoS. No QUIC."
+    expired_at: 2026-11-05
+  - id: CVE-2026-54872
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
+    statement: "Generic-curve ECDSA nonce timing leak. No signing endpoint to time."
+    expired_at: 2026-11-05
+  - id: CVE-2026-54873
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
+    statement: "QUIC packet buffer retention. No QUIC."
+    expired_at: 2026-11-05
+  - id: CVE-2026-72897
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
+    statement: "TLS server context switch out-of-bounds write. No TLS server."
+    expired_at: 2026-11-05
+  - id: CVE-2026-75804
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
+    statement: "QUIC connection flow control DoS. No QUIC."
+    expired_at: 2026-11-05
+  - id: CVE-2026-75805
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
+    statement: "CMP revocation response NULL deref. No CMP client."
+    expired_at: 2026-11-05
+  - id: CVE-2026-75806
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
+    statement: "Undersized DTLS record DoS. No DTLS."
+    expired_at: 2026-11-05
+  - id: CVE-2026-84782
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
+    statement: "DTLS retransmission information disclosure. No DTLS."
+    expired_at: 2026-11-05
+  - id: CVE-2026-84784
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
+    statement: "QUIC connection ID backlog DoS. No QUIC."
+    expired_at: 2026-11-05
+
   # aws-lambda-rie, Go stdlib 1.26.7, fixed in 1.26.9. The base entrypoint runs
   # RIE only when AWS_LAMBDA_RUNTIME_API is unset, which Lambda always sets.
   - id: CVE-2026-78667

@@ -10,16 +10,20 @@ import {
 } from "./constants";
 import type { SeedUser } from "./types";
 
-/** Experiments, two of them on fixed ids so they line up with real measurement data. */
+/**
+ * Insert experiments in seed order and grant the user admin access in their personal organization.
+ * Three use fixed IDs to line up with measurement data. Return the inserted rows in that order.
+ * Database errors propagate, and earlier inserts and grants remain if a later operation fails.
+ */
 export async function seedExperiments(user: SeedUser, personalOrganizationId: string) {
   // 5. Create experiments. Two experiments use fixed UUIDs so they line up
-  // with dev/staging Databricks measurement data; the other three get
+  // with dev/staging Databricks measurement data; the rest get
   // generated UUIDs as before.
   const experimentData: {
     id?: string;
     name: string;
     description: string;
-    status: "active" | "published" | "archived";
+    status: "active" | "stale" | "published" | "archived";
     visibility: "public" | "private";
   }[] = [
     {
@@ -58,6 +62,21 @@ export async function seedExperiments(user: SeedUser, personalOrganizationId: st
       description:
         "Long-running soil health monitoring across multiple sites in the US Midwest, tracking EC, pH, and moisture.",
       status: "active",
+      visibility: "public",
+    },
+    // Appended, never inserted: other seeds pick experiments by position.
+    {
+      name: "[Seed] Greenhouse Tomato Trial",
+      description:
+        "Paused trial comparing supplemental lighting regimes on greenhouse tomato yield.",
+      status: "stale",
+      visibility: "private",
+    },
+    {
+      name: "[Seed] Barley Root Imaging",
+      description:
+        "Archived minirhizotron imaging of barley root growth under two nitrogen levels.",
+      status: "archived",
       visibility: "public",
     },
   ];

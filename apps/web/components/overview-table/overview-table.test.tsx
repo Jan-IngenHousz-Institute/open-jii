@@ -94,6 +94,23 @@ describe("OverviewTable", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
+  it("renders an empty-state action when one is given", () => {
+    render(
+      <OverviewTable
+        columns={stubColumns}
+        items={[]}
+        isLoading={false}
+        getRowKey={(item) => item.id}
+        getRowHref={(item) => `/platform/stubs/${item.id}`}
+        emptyMessage="Nothing matches"
+        emptyAction={<button type="button">Clear filters</button>}
+      />,
+    );
+
+    expect(screen.getByText("Nothing matches")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Clear filters" })).toBeInTheDocument();
+  });
+
   it("renders a row per item and navigates on row click", async () => {
     const user = userEvent.setup();
     const { router } = renderStubTable([
