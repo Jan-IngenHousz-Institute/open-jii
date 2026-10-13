@@ -53,7 +53,7 @@ for the first time from the invitation email, and including ORCID and GitHub —
 accept anything.
 
 So the flow for someone brand new is: they follow the link in the email, sign up, and
-the invitation is still there waiting on that tab, with **Accept** on it.
+the invitation is still there waiting on that tab, with **Accept invitation** on it.
 
 <Callout type="warn">
   Invitations are matched on the **email address**, not the person. If you invite an address they
@@ -61,13 +61,23 @@ the invitation is still there waiting on that tab, with **Accept** on it.
   assuming the invitation is broken, and re-send to the right one.
 </Callout>
 
-Invitations expire. An expired one has to be sent again.
+Invitations expire after 48 hours. An expired one has to be sent again.
 
 ## Approve or reject a request
 
-If your organization is public, people can ask to join from the directory. Pending
-requests appear on the **Requests** tab with any message they wrote. **Approve** adds
-them as a Member; **Reject** declines without adding them.
+If your organization is public, people can ask to join from the directory. Requests
+only arrive while it is public. Each Owner and Admin is told about a new request in
+their [notifications](/guide/get-started/platform-tour#notifications), and by email
+unless they have switched off email for **Requests and invitations**; opening the
+notification brings you to **Members**.
+
+Pending requests appear on the **Requests** tab with any message they wrote. **Approve**
+adds them as a Member; **Reject** declines without adding them. Either way the person
+who asked is told the outcome. Requests already decided, or withdrawn by the person who
+asked, are kept below under **Earlier requests**.
+
+An organization holds at most 100 members. Once it is full, approving a request is
+refused until you remove someone.
 
 This is the one path that puts somebody on the roster straight away, and it is the same
 rule seen from the other side: they asked, so there is nothing left for them to accept.

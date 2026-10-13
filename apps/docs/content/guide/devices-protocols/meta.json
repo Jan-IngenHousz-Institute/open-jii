@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "multispeq",
+    "calibration",
     "continuous-sensors",
     "protocols",
     "writing-protocols",

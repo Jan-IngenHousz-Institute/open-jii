@@ -31,6 +31,7 @@ import type {
   ExperimentListItem,
   ExperimentUploadMetadata,
   RecentlyOpenedExperiment,
+  RelatedHomeExperiment,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 import type {
@@ -123,6 +124,12 @@ export function createRecentlyOpenedExperiment(
     callerRole: "owner",
     ...overrides,
   };
+}
+
+export function createHomeExperiment(
+  overrides: Partial<RelatedHomeExperiment> = {},
+): RelatedHomeExperiment {
+  return { ...createExperiment(), callerRole: "owner", ...overrides };
 }
 
 // ── Transfer Request ────────────────────────────────────────────

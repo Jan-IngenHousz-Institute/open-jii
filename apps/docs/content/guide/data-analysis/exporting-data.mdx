@@ -36,8 +36,12 @@ exports keep their existing behavior.
 5. Create the export. It is queued and prepared in the background.
 6. Return to the export list and download it when its status is **Completed**.
 
-The list keeps previous exports and shows their format, creation time, status,
-row count, and size when those values are available.
+Each export in the list shows its number, its status (**Queued**, **Pending**,
+**Preparing**, **Completed** or **Failed**), its format and when it was created,
+with the row count and file size once they are known. Only a completed export
+has a download button. The list covers the dataset's exports by everyone who can
+open the experiment, not only yours. Download a completed export when you need it
+rather than counting on the list to keep it.
 
 {/* NEEDS-LIVE-CHECK: create and download all five formats from a representative dataset; compare row counts, contributor anonymization, nested/raw values, and export-vs-table values. */}
 ![The Export Dataset dialog with all five formats and the contributor-anonymization option](/img/guide/web/export-dialog.png)
@@ -57,6 +61,6 @@ row count, and size when those values are available.
   when flattening and spreadsheet compatibility are acceptable.
 
 <Callout type="info">
-  Export creation is asynchronous. The dataset's export list is where you follow one: it holds the
-  status of every export you have asked for.
+  Export creation is asynchronous. Follow an export in the dataset's export list, and download it
+  once its status is **Completed**.
 </Callout>

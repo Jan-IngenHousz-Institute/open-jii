@@ -46,6 +46,10 @@ Click once for ascending order, again for descending order, and a third time to 
 Hold **Shift** to add a second sort. The selected order stays in the URL, so a refresh or shared
 link keeps it. **Reset sorting** clears the selection and returns to the default order.
 
+In a phone-width browser window the list shows only the **Name** column, so Name is the only
+heading you can select there; the other columns appear as the window widens. A sort chosen in a
+wider window, or carried in a shared link, still applies while its column is hidden.
+
 ![The Workbooks overview with the Name column sorted ascending](/img/guide/web/workbooks-list.webp)
 
 ## Use connected-device context
@@ -72,9 +76,16 @@ Python and JavaScript examples using `json`, `ctx`, and `ctx.$device`.
 
 ## Edit and publish changes
 
-The workbook owner edits the live draft. Workbooks autosave, and publishing
-creates a newer version. If a protocol or macro belongs to someone else, fork it
-before editing so the workbook points to your copy.
+The workbook's owner, anyone with **Can edit** on the workbook, and owners and
+admins of the organization that owns it can edit the live draft. Workbooks
+autosave. Saving the draft does not change what an experiment runs: a new
+version is created when someone who can edit an experiment attaches the workbook
+or upgrades the experiment to it, and either there is no version yet or the
+draft, or the code of a protocol or macro it uses, has changed since the latest
+one. Editing the workbook from an experiment's **Design** tab moves that
+experiment to the new version on each save. If you cannot edit a protocol or
+macro the workbook uses, fork it before editing so the workbook points to your
+copy.
 
 You can also fork a **whole workbook**: open it and select **Fork** to create
 your own editable copy of all its cells, then attach that copy to your
