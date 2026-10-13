@@ -419,6 +419,9 @@ describe("ListExperiments", () => {
     });
     await user.click(retry);
 
-    expect(await screen.findByRole("link", { name: "Exp 1" })).toBeInTheDocument();
+    // Re-queried on each attempt: the rows can re-render after the first match, which detaches it.
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "Exp 1" })).toBeInTheDocument();
+    });
   });
 });
