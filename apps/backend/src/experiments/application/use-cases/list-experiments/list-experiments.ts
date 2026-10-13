@@ -24,31 +24,35 @@ export class ListExperimentsUseCase {
     private readonly resourceMetrics: ResourceMetricsService,
   ) {}
 
+  /**
+   * Return accessible experiments using the filters and ordering of
+   * {@link ExperimentRepository.findAll}, including any repository failure result.
+   */
   async execute(
     userId: string,
     scope?: ResourceScope,
-    status?: ExperimentStatus,
+    statuses?: ExperimentStatus[],
     search?: string,
     sort?: ExperimentSort,
-    visibility?: ExperimentVisibility,
+    visibilities?: ExperimentVisibility[],
   ): Promise<Result<ExperimentSearchRow[]>> {
     this.logger.log({
       msg: "Listing experiments",
       operation: "list",
       userId,
       scope,
-      status,
-      visibility,
+      statuses,
+      visibilities,
       search,
     });
 
     const result = await this.experimentRepository.findAll(
       userId,
       scope,
-      status,
+      statuses,
       search,
       undefined,
-      { visibility },
+      { visibilities },
       sort,
     );
 
@@ -75,15 +79,20 @@ export class ListExperimentsUseCase {
     return result;
   }
 
+  /**
+   * Return a 1-based page and the matching total using {@link ExperimentRepository.findPage}.
+   * Each item includes activity, or null when no series is available. Repository failures
+   * are returned unchanged; errors thrown by the metrics service reject this promise.
+   */
   async executePaginated(
     userId: string,
     page: number,
     pageSize: number,
     scope?: ResourceScope,
-    status?: ExperimentStatus,
+    statuses?: ExperimentStatus[],
     search?: string,
     sort?: ExperimentSort,
-    visibility?: ExperimentVisibility,
+    visibilities?: ExperimentVisibility[],
   ): Promise<Result<{ items: ExperimentWithActivity[]; totalCount: number }>> {
     this.logger.log({
       msg: "Listing experiments",
@@ -92,8 +101,8 @@ export class ListExperimentsUseCase {
       page,
       pageSize,
       scope,
-      status,
-      visibility,
+      statuses,
+      visibilities,
       search,
       sort,
     });
@@ -103,9 +112,9 @@ export class ListExperimentsUseCase {
       page,
       pageSize,
       scope,
-      status,
+      statuses,
       search,
-      { visibility },
+      { visibilities },
       sort,
     );
     if (paged.isFailure()) {

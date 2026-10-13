@@ -120,7 +120,7 @@ describe("ListExperimentsUseCase", () => {
     });
 
     // Act - filter by "active" status
-    const result = await useCase.execute(userId, undefined, "active");
+    const result = await useCase.execute(userId, undefined, ["active"]);
 
     expect(result.isSuccess()).toBe(true);
 
@@ -165,7 +165,7 @@ describe("ListExperimentsUseCase", () => {
     });
 
     // Act - scope to "related" with "active" status
-    const result = await useCase.execute(mainUserId, "related", "active");
+    const result = await useCase.execute(mainUserId, "related", ["active"]);
 
     expect(result.isSuccess()).toBe(true);
 
@@ -260,7 +260,7 @@ describe("ListExperimentsUseCase", () => {
     });
 
     // Act
-    const result = await useCase.execute(mainUserId, "related", "active", "Searchable");
+    const result = await useCase.execute(mainUserId, "related", ["active"], "Searchable");
 
     // Assert
     expect(result.isSuccess()).toBe(true);
@@ -307,14 +307,9 @@ describe("ListExperimentsUseCase", () => {
       status: "archived",
     });
 
-    const result = await useCase.execute(
-      testUserId,
-      "all",
-      undefined,
-      undefined,
-      undefined,
+    const result = await useCase.execute(testUserId, "all", undefined, undefined, undefined, [
       "public",
-    );
+    ]);
 
     assertSuccess(result);
     expect(result.value.map((e) => e.id).sort()).toEqual([ownPublic.id, otherPublic.id].sort());
@@ -349,7 +344,7 @@ describe("ListExperimentsUseCase", () => {
       undefined,
       undefined,
       [{ field: "updated", direction: "desc" }],
-      "public",
+      ["public"],
     );
 
     assertSuccess(result);

@@ -425,6 +425,34 @@ describe("ExperimentController", () => {
       expect(response.body.map((experiment) => experiment.id)).toEqual([publicExperiment.id]);
     });
 
+    it("should match either of several statuses sent as an array", async () => {
+      const { experiment: active } = await testApp.createExperiment({
+        name: "Active Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+      const { experiment: stale } = await testApp.createExperiment({
+        name: "Stale Experiment",
+        userId: testUserId,
+        status: "stale",
+      });
+      await testApp.createExperiment({
+        name: "Published Experiment",
+        userId: testUserId,
+        status: "published",
+      });
+
+      const response: SuperTestResponse<ExperimentList> = await testApp
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
+        .withAuth(testUserId)
+        .query("status[0]=active&status[1]=stale&visibility[0]=private&visibility[1]=public")
+        .expect(StatusCodes.OK);
+
+      expect(response.body.map((experiment) => experiment.id).sort()).toEqual(
+        [active.id, stale.id].sort(),
+      );
+    });
+
     it("should combine filter and status parameters", async () => {
       // Create an active experiment owned by test user
       const { experiment: myActive } = await testApp.createExperiment({
