@@ -68,6 +68,7 @@ export class WorkbookController {
         scope: resolveListScope(input),
         userId: session.user.id,
         sort: input.sort,
+        visibilities: input.visibility,
       };
 
       if (input.page !== undefined) {

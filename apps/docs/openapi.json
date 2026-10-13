@@ -38202,6 +38202,34 @@
             "example": "sort[0][field]=usedBy&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc"
           },
           {
+            "name": "visibility",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "private",
+                    "public"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "private",
+                      "public"
+                    ],
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "Filter workbooks by visibility; several values match either"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
             "name": "page",
             "in": "query",
             "schema": {
