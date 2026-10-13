@@ -8,6 +8,7 @@
 # DBTITLE 1,Imports
 import json
 import io
+import tempfile
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -193,13 +194,26 @@ def export_data(df, row_count):
             df.coalesce(1).write.mode("overwrite").json(OUTPUT_PATH)
         elif FORMAT == "json-array":
             # Write as a proper JSON array: [{}, {}, ...]
-            # Collects all rows to the driver - suitable for reasonably sized exports.
+            # Rows stream to a local temp file one at a time, so the driver never holds
+            # the whole export. The ", " separator matches json.dumps(list).
             # We write into a Spark-style partitioned directory so the output layout
             # (single data file + _SUCCESS marker) matches csv/ndjson/parquet, which
             # keeps get_export_file_path() and the downstream download flow consistent.
-            rows = [row.asDict(recursive=True) for row in df.collect()]
-            dbutils.fs.put(f"{OUTPUT_PATH}/part-00000.json", json.dumps(rows, default=str), overwrite=True)
-            dbutils.fs.put(f"{OUTPUT_PATH}/_SUCCESS", "", overwrite=True)
+            # Uploaded via the Files API: dbutils.fs.put sends the whole file as one
+            # gRPC message, which serverless caps at 128 MiB.
+            from databricks.sdk import WorkspaceClient
+            w = WorkspaceClient()
+            with tempfile.TemporaryFile() as payload:
+                payload.write(b"[")
+                for index, row in enumerate(df.toLocalIterator()):
+                    if index > 0:
+                        payload.write(b", ")
+                    payload.write(json.dumps(row.asDict(recursive=True), default=str).encode("utf-8"))
+                payload.write(b"]")
+                payload.seek(0)
+                w.files.create_directory(OUTPUT_PATH)
+                w.files.upload(f"{OUTPUT_PATH}/part-00000.json", payload, overwrite=True)
+            w.files.upload(f"{OUTPUT_PATH}/_SUCCESS", io.BytesIO(b""), overwrite=True)
         elif FORMAT == "parquet":
             df.coalesce(1).write.mode("overwrite").parquet(OUTPUT_PATH)
         elif FORMAT == "xlsx":

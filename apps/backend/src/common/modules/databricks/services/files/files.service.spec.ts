@@ -1,4 +1,5 @@
 import nock from "nock";
+import { Readable } from "stream";
 
 import { TestHarness } from "../../../../../test/test-harness";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
@@ -124,6 +125,27 @@ describe("DatabricksFilesService", () => {
       assertFailure(result);
       expect(result.error.message).toContain("exceeds Databricks per-file limit");
     });
+
+    // Replaying a body on redirect requires holding all of it in memory.
+    it("does not follow a redirect for a streamed upload", async () => {
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      const expectedPath = `/Volumes/${MOCK_CATALOG_NAME}/${MOCK_SCHEMA_NAME}/data-imports/${MOCK_SOURCE_TYPE}/${MOCK_FILE_NAME}`;
+      nock(databricksHost)
+        .put(`${DatabricksFilesService.FILES_ENDPOINT}${expectedPath}`)
+        .query({ overwrite: "false" })
+        .reply(307, undefined, { Location: `${databricksHost}/redirected` });
+      const redirected = nock(databricksHost).put("/redirected").reply(200);
+
+      const result = await filesService.upload(expectedPath, Readable.from([MOCK_FILE_BUFFER]));
+
+      assertFailure(result);
+      expect(redirected.isDone()).toBe(false);
+    });
   });
 
   describe("download", () => {
@@ -140,13 +162,34 @@ describe("DatabricksFilesService", () => {
       // Mock file download request
       nock(databricksHost)
         .get(`${DatabricksFilesService.FILES_ENDPOINT}${downloadPath}`)
-        .reply(200, "csv-file-content", { "content-type": "text/csv" });
+        .reply(200, "csv-file-content", { "content-type": "text/csv", "content-length": "16" });
 
       const result = await filesService.download(downloadPath);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toBeDefined();
+      expect(result.value.stream).toBeInstanceOf(Readable);
+      expect(result.value.contentLength).toBe(16);
+    });
+
+    it("leaves the size unknown when Databricks sends no content-length", async () => {
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .get(`${DatabricksFilesService.FILES_ENDPOINT}${downloadPath}`)
+        .reply(200, () => Readable.from(["csv-file-content"]), {
+          "content-type": "text/csv",
+          "transfer-encoding": "chunked",
+        });
+
+      const result = await filesService.download(downloadPath);
+
+      assertSuccess(result);
+      expect(result.value.contentLength).toBeUndefined();
     });
 
     it("should handle API errors when downloading a file", async () => {
