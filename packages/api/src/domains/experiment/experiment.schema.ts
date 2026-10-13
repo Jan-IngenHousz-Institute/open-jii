@@ -72,6 +72,21 @@ const zRecentlyOpenedExperiment = zExperimentListEntry.extend({
 
 export const zRecentlyOpenedExperimentList = z.array(zRecentlyOpenedExperiment);
 
+const zRelatedHomeExperiment = zExperimentListEntry.extend({
+  callerRole: zExperimentCallerRole.nullable(),
+});
+
+export const zHomeExperiments = z.discriminatedUnion("source", [
+  z.object({ source: z.literal("recently-opened"), experiments: zRecentlyOpenedExperimentList }),
+  z.object({ source: z.literal("related"), experiments: z.array(zRelatedHomeExperiment) }),
+]);
+
+export const DEFAULT_HOME_EXPERIMENTS_LIMIT = 3;
+
+export const zHomeExperimentsQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(20).optional().describe("Rows to return, 3 by default"),
+});
+
 export const zExperimentAccess = z.object({
   experiment: zExperiment,
   hasAccess: z.boolean(),
@@ -310,6 +325,8 @@ export type Experiment = z.infer<typeof zExperiment>;
 export type ExperimentListItem = z.infer<typeof zExperimentListEntry>;
 export type ExperimentCallerRole = z.infer<typeof zExperimentCallerRole>;
 export type RecentlyOpenedExperiment = z.infer<typeof zRecentlyOpenedExperiment>;
+export type RelatedHomeExperiment = z.infer<typeof zRelatedHomeExperiment>;
+export type HomeExperiments = z.infer<typeof zHomeExperiments>;
 export type ExperimentList = z.infer<typeof zExperimentList>;
 export type ExperimentFlowNodeType = z.infer<typeof zExperimentFlowNodeType>;
 export type ExperimentFlowGraph = z.infer<typeof zExperimentFlowGraph>;
