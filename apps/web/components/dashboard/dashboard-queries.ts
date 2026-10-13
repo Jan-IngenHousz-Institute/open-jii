@@ -1,8 +1,11 @@
 import type { QueryUtils } from "~/lib/orpc";
 
 export const userExperimentsQuery = (utils: QueryUtils) =>
-  utils.experiments.listRecentlyOpenedExperiments.queryOptions({
-    input: { scope: "related", limit: 3 },
+  utils.experiments.listHomeExperiments.queryOptions({
+    input: { limit: 3 },
+    staleTime: 0,
+    refetchOnMount: "always",
+    retry: false,
   });
 
 export const PUBLIC_EXPERIMENTS_PAGE_SIZE = 6;
