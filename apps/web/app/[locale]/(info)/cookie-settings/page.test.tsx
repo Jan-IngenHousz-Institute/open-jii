@@ -38,6 +38,11 @@ describe("CookieSettingsPage", () => {
     expect(screen.getByText("cookieSettings.analyticsTitle")).toBeInTheDocument();
   });
 
+  it("says what feature checks send to PostHog under the essential cookies", () => {
+    render(<CookieSettingsPage />);
+    expect(screen.getByText("cookieSettings.essentialFeatureChecksText")).toBeInTheDocument();
+  });
+
   it("shows enabled status when consent is accepted", () => {
     mockConsentStatus = "accepted";
     render(<CookieSettingsPage />);

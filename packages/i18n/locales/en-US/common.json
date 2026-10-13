@@ -1385,6 +1385,8 @@
     "essentialPurposeText": "Authentication, security, session management",
     "essentialExamples": "Examples:",
     "essentialExamplesText": "Login sessions, CSRF protection, secure connections",
+    "essentialFeatureChecks": "Feature checks:",
+    "essentialFeatureChecksText": "To decide which features to show you, we ask PostHog. It receives your organization memberships and, from our servers, your email address. These checks set no cookies and create no analytics profile.",
     "essentialStatus": "Status: Always Active",
     "analyticsTitle": "Analytics Cookies",
     "analyticsDescription": "These cookies help us understand how visitors interact with our website.",
