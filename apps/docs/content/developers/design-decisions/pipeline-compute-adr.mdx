@@ -13,7 +13,7 @@ description: "Why Centrum and the macro pipeline run on the node types, editions
 
 ## Context
 
-Both pipelines shared one cluster policy that put every node on `r5d.large`, a type spot often reclaims, and production ran them in development mode. Yet they do different work. Centrum ingests from Kinesis, runs Python UDFs and maintains streaming and AUTO CDC tables, so its workers need memory and steady cores. The macro pipeline mostly waits on the macro sandbox over HTTP, so its workers only need to be cheap.
+Both pipelines shared one cluster policy that put every node on `r5d.large`, a type spot often reclaims, and production ran them in development mode. Yet they do different work. Centrum ingests from Kinesis, runs Python UDFs and maintains streaming tables and append-only bridges, so its workers need memory and steady cores. The macro pipeline mostly waits on the macro sandbox over HTTP, so its workers only need to be cheap.
 
 ## Decision
 
@@ -44,7 +44,7 @@ Each pipeline has its own cluster policy, which pins these types.
 
 - Centrum costs more per node, so its savings have to come from the lighter architecture.
 - The larger drivers cost a few dollars a day more per pipeline and environment.
-- Bronze and silver hold small files until predictive optimization compacts them.
+- With auto compaction off, all Centrum tables depend on catalog predictive optimization to compact small files. Check that predictive optimization is enabled for the catalog before relying on it.
 - A settings change restarts a continuous pipeline, so each promotion restarts it twice, once for Terraform and once after the bundle deploys.
 
 ## Alternatives Considered
