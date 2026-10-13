@@ -2,6 +2,7 @@
  * Cookie consent state management
  * Handles storing and retrieving user consent preferences for analytics cookies
  */
+import type { PostHog } from "posthog-js";
 
 export type ConsentStatus = "pending" | "accepted" | "rejected";
 
@@ -53,6 +54,28 @@ export function setConsentStatus(status: "accepted" | "rejected"): void {
   const channel = new BroadcastChannel(CONSENT_CHANNEL);
   channel.postMessage(status);
   channel.close();
+}
+
+/**
+ * Record a visitor's analytics choice and apply it to PostHog at once. PostHog picks its
+ * persistence when it starts, memory only until consent, so a choice made during a visit switches
+ * it too: without the switch, the identity used after accepting is lost on the next page load.
+ */
+export function setAnalyticsConsent(
+  posthog: PostHog | null,
+  status: "accepted" | "rejected",
+): void {
+  setConsentStatus(status);
+
+  if (status === "accepted") {
+    posthog?.set_config({ persistence: "localStorage+cookie" });
+    posthog?.opt_in_capturing();
+    return;
+  }
+
+  posthog?.opt_out_capturing();
+  posthog?.reset();
+  posthog?.set_config({ persistence: "memory" });
 }
 
 /**
