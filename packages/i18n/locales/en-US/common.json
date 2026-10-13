@@ -904,7 +904,7 @@
     "reportBugButton": "Report bug",
     "recentExperiments": "Recent Experiments",
     "recentArticles": "Recent blog posts",
-    "recentlyOpenedExperiments": "Your recently opened experiments",
+    "recentlyOpenedExperiments": "Recently opened",
     "seeAll": "See all",
     "statistics": "Statistics",
     "quickActions": "Quick Actions",
@@ -928,7 +928,10 @@
         "title": "Browse public research",
         "description": "Look at real experiments others have published."
       }
-    }
+    },
+    "yourExperiments": "Your experiments",
+    "userExperimentsLoadFailed": "Could not load your experiments.",
+    "userExperimentsRetry": "Try again"
   },
   "auth": {
     "login": "Sign in",

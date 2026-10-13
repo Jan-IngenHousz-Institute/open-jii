@@ -1,5 +1,8 @@
+import { orpc } from "@/lib/orpc";
+import { createRecentlyOpenedExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
+import { useQuery } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -29,5 +32,29 @@ describe("useRecordExperimentVisit", () => {
 
     await waitFor(() => expect(spy.called).toBe(true));
     expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("refreshes home from fallback to actual history after recording a visit", async () => {
+    server.mount(contract.experiments.listHomeExperiments, {
+      body: { source: "related", experiments: [] },
+    });
+    server.mount(contract.visits.recordExperimentVisit, { status: 204 });
+    const { result, rerender } = renderHook(
+      ({ enabled }) => {
+        useRecordExperimentVisit("exp-1", enabled);
+        return useQuery(orpc.experiments.listHomeExperiments.queryOptions({ input: { limit: 3 } }));
+      },
+      { initialProps: { enabled: false } },
+    );
+    await waitFor(() => expect(result.current.data?.source).toBe("related"));
+    server.mount(contract.experiments.listHomeExperiments, {
+      body: {
+        source: "recently-opened",
+        experiments: [createRecentlyOpenedExperiment({ id: "exp-1" })],
+      },
+    });
+    rerender({ enabled: true });
+    await waitFor(() => expect(result.current.data?.source).toBe("recently-opened"));
+    expect(result.current.data?.experiments[0].id).toBe("exp-1");
   });
 });

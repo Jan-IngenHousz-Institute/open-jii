@@ -904,7 +904,7 @@
     "reportBugButton": null,
     "recentExperiments": "Recente experimenten",
     "recentArticles": null,
-    "recentlyOpenedExperiments": "Je recent geopende experimenten",
+    "recentlyOpenedExperiments": "Recent geopend",
     "seeAll": null,
     "statistics": "Statistieken",
     "quickActions": "Snelle acties",
@@ -928,7 +928,10 @@
         "title": "Bekijk openbaar onderzoek",
         "description": "Bekijk echte experimenten die anderen hebben gepubliceerd."
       }
-    }
+    },
+    "yourExperiments": "Je experimenten",
+    "userExperimentsLoadFailed": "Je experimenten konden niet worden geladen.",
+    "userExperimentsRetry": "Opnieuw proberen"
   },
   "auth": {
     "login": "Inloggen",
