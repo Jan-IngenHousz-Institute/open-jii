@@ -1,9 +1,10 @@
 # Maintenance page (Contentful resilience)
 
-The public marketing/info pages (`/`, `/about`, `/faq`, `/blog`, `/policies`,
+The public marketing/info pages (`/`, `/faq`, `/blog`, `/policies`,
 `/terms-and-conditions`, `/cookie-policy`) render content from Contentful. When
 Contentful is unreachable or its access token is stale, those fetches fail with
 an HTTP error (`401 ACCESS_TOKEN_INVALID`, `404 NotFound`, network timeout, …).
+The retired `/{locale}/about` route redirects to the homepage's `#about-jii` section; it does not read the archived About entry.
 
 Previously any such failure surfaced as a bare **HTTP 500** to the visitor.
 Now it degrades to a branded maintenance page instead:

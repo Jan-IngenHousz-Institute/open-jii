@@ -83,11 +83,16 @@ time, and compare its output and run time with the original.
 
 ## Target the right device family
 
-| Connected family | Protocol-cell behavior                                                                                                                                                      |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| MultispeQ        | Receives the protocol JSON array directly and returns a measurement response.                                                                                               |
-| MiniPAR          | Accepts JSON protocol arrays or objects and returns a footer-framed measurement envelope.                                                                                   |
-| Ambit            | Rejects protocol JSON over a direct connection. Use command cells for operations such as `hello`, `get_par`, and `set_spec`; full measurements use the Ambyte gateway path. |
+| Connected family | Protocol-cell behavior                                                                                                                                                                       |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MultispeQ        | Receives the protocol JSON array directly and returns a measurement response.                                                                                                                |
+| MiniPAR          | Accepts JSON protocol arrays or objects and returns a footer-framed measurement envelope.                                                                                                    |
+| Ambit            | Accepts JSON protocol arrays or objects over a direct connection and returns a footer-framed measurement envelope. If the firmware rejects the protocol, the cell fails with its error code. |
+
+Command cells still cover single Ambit operations such as `hello`, `get_par`, and
+`set_spec`. A protocol cell in a web workbook only runs a protocol whose JSON is
+an array of objects, so write MiniPAR and Ambit protocols as arrays even though
+the devices also accept a single object.
 
 Generic drivers use a separate load, run, and retrieve sequence. Do not assume a
 MultispeQ field has the same meaning on another family merely because the JSON
@@ -96,7 +101,7 @@ can be stored.
 ## Validate on connected hardware
 
 1. Save the protocol with the correct sensor family.
-2. In the Code & test step, connect the exact hardware model intended for the
+2. In the **Code & Test** step, connect the exact hardware model intended for the
    study.
 3. Run the protocol and inspect the raw response, duration, prompts, warnings,
    and device state.

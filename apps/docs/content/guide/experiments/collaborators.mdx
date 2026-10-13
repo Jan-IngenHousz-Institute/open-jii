@@ -63,10 +63,11 @@ Open your experiment and go to the **Collaborators** tab, then select **Invite**
 One search field covers every way of adding someone:
 
 - **A user** — search by name or email and select them. They get access
-  immediately at the level you choose, and hear about it in their notification
-  bell, with an email while **Membership and access** is switched on under
-  **Account → Notifications**. Changing their level later, or removing them,
-  reaches the bell too, with no email.
+  immediately at the level you choose. The search shows up to 20 matching
+  people, each with their email address under their name. They hear about it
+  in their notification bell, with an email while **Membership and access** is
+  switched on under **Account → Notifications**. Changing their level later, or
+  removing them, reaches the bell too, with no email.
 - **An organization** — switch **Share with** to _Organization_ and pick one of
   your own. Everyone in that organization gets the level you choose.
 - **Someone by email** — type an email address that is not yet on openJII and
@@ -85,6 +86,17 @@ The Collaborators tab groups people into three sub-tabs:
 - **Requests** — pending requests to join (see below).
 
 The filter above the tabs narrows all three lists at once.
+
+<Callout type="info">
+  **Coming in an upcoming release: fewer email addresses on show.** The picker and the lists will
+  stop showing everyone's address. You will always see your own email. Organization owners and
+  admins will see their organization's members' emails. Someone who manages an experiment will see
+  the email of a person with a pending request to join that experiment, on that request only.
+  Managing an experiment will not reveal its collaborators' emails. The person who sent an
+  invitation will see its address; for an organization invitation, that organization's owners and
+  admins will also see it. Other addresses will be hidden. Inviting someone by typing their exact
+  email address will keep working.
+</Callout>
 
 ## Requests to join a public experiment
 
@@ -182,7 +194,7 @@ still comes from their access level.
 
 The collaborator list, the pending invitations and the access levels are only
 visible to people who can manage access — that is, holders of **Can edit** and
-admins of the owning organization. Everyone else sees the experiment's
+owners and admins of the owning organization. Everyone else sees the experiment's
 contributor credit (names and avatars) and nothing about who holds which level.
 
 If you hold **Can view**, the Collaborators tab shows you a **Your access** card

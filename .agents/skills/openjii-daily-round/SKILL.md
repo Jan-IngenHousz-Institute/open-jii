@@ -41,7 +41,7 @@ between rounds.
 
 The file is too large to read whole; take it apart with `jq`:
 
-- `unavailable`: what could not be read. Everything here goes into your report.
+- `unavailable`: failed annotation, dashboard and panel reads that the command recorded. Report every entry, then check the rules count separately as below.
 - `rules`: every alert rule, with its `state` (`firing`, `pending`, `inactive`), `health` (`ok`,
   `error`, `nodata`), `activeSince`, `lastError` and `metricId`.
 - `delta`: the rules that started firing inside the window (`new`), fired since before it
@@ -49,6 +49,8 @@ The file is too large to read whole; take it apart with `jq`:
 - `changes`: every state change Grafana recorded inside the window, oldest first.
 - `panels`: the daily report's open panels over the window. Each series has its `min`, `max`,
   `last` and `sum`, and the `red` stretches where a reading passed its limit; charts keep `points`.
+
+Count `.rules` before giving an all-clear. If it has zero entries, report **the round could not be completed**, even when `unavailable` is empty. A 2xx rules response with an unexpected or empty shape currently becomes zero rules without an `unavailable` entry. HTTP errors on the rules request throw instead of producing a round file. In either case, ask for the Grafana rules read to be checked and wait for a valid round before describing alert state as quiet.
 
 ```bash
 jq '.unavailable, .delta' .claude/round/prod.json
@@ -163,6 +165,6 @@ Open with one of: nothing needs a person, something needs a person, or the round
 completed. Name the window it covered. Then the changes from step 3, the errors from step 5, then
 the evidence for anything in the second category.
 
-Say plainly what you could not check and why, starting with everything in `unavailable`. A round
+Say plainly what you could not check and why, including everything in `unavailable` and the zero-rules check from step 1. A round
 that reads confidently past a firing dead-man is worse than no round, because it converts an
 unknown into a false all-clear.
