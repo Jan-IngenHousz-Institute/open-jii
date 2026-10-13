@@ -85,6 +85,10 @@ export type RecentlyOpenedExperimentRow = ExperimentSearchRow & {
   callerRole: ResourceRoleName | null;
 };
 
+export type RelatedHomeExperimentRow = ExperimentSearchRow & {
+  callerRole: ResourceRoleName | null;
+};
+
 /**
  * Contributors plus the experiment's anonymization setting, so no caller can publish
  * identities without first deciding what to do about the flag.
@@ -650,6 +654,30 @@ export class ExperimentRepository {
         .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
         .where(where)
         .orderBy(desc(resourceVisits.visitedAt), asc(experiments.id))
+        .limit(limit);
+    });
+  }
+
+  async findRecentlyUpdatedRelated(
+    userId: string,
+    limit: number,
+  ): Promise<Result<RelatedHomeExperimentRow[]>> {
+    return tryCatch(async () => {
+      const { where, fields } = this.buildListing(userId, "related");
+      const callerRole = resourceRoleExpression({
+        database: this.database,
+        resourceType: "experiment",
+        resourceIdColumn: experiments.id,
+        organizationIdColumn: experiments.organizationId,
+        userId,
+      });
+
+      return this.database
+        .select({ ...fields, callerRole })
+        .from(experiments)
+        .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
+        .where(where)
+        .orderBy(desc(experiments.updatedAt), asc(experiments.id))
         .limit(limit);
     });
   }

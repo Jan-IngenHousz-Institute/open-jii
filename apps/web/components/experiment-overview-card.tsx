@@ -21,11 +21,14 @@ export interface ExperimentVisit {
 }
 
 /** True for any card in the set, so the reserved badge row is never dead space. */
-export function hasBadges(experiment: ExperimentListItem, visit?: ExperimentVisit): boolean {
+export function hasBadges(
+  experiment: ExperimentListItem,
+  caller?: Pick<ExperimentVisit, "callerRole">,
+): boolean {
   return (
     experiment.visibility === "private" ||
     Boolean(experiment.organizationName) ||
-    Boolean(visit?.callerRole)
+    Boolean(caller?.callerRole)
   );
 }
 
@@ -42,6 +45,7 @@ interface ExperimentOverviewCardProps {
   showUpdatedLabel?: boolean;
   /** Shows the caller's role and when they opened it, in place of the update date. */
   visit?: ExperimentVisit;
+  callerRole?: ExperimentCallerRole | null;
 }
 
 /** Renders a linked experiment summary with badges, owner, member count, and an update or opened date. */
@@ -52,6 +56,7 @@ export function ExperimentOverviewCard({
   reserveBadgeRow,
   showUpdatedLabel = false,
   visit,
+  callerRole = visit?.callerRole,
 }: ExperimentOverviewCardProps) {
   const { t } = useTranslation("experiments");
   const format = useLocalDateFormat(locale);
@@ -62,9 +67,9 @@ export function ExperimentOverviewCard({
 
   const renderBadges = () => (
     <>
-      {visit?.callerRole ? (
+      {callerRole ? (
         <Badge variant="outline" className="font-normal">
-          {t(`callerRoles.${visit.callerRole}`)}
+          {t(`callerRoles.${callerRole}`)}
         </Badge>
       ) : null}
       {experiment.organizationName ? (
