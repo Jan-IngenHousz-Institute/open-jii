@@ -7,6 +7,11 @@ const expectedHttpFailures = [
     statuses: new Set([404, 500]),
   },
   {
+    // So the public pages built from Contentful fail to render, even as a link's prefetch.
+    url: /^https?:\/\/[^/]+\/[a-z]{2}(?:-[A-Z]{2})?(?:\/(?:about|blog|cookie-policy|faq|policies|releases|terms-and-conditions)(?:\/[^?#]*)?)?(?:[?#]|$)/,
+    statuses: new Set([500]),
+  },
+  {
     // The example environment deliberately points Databricks at an unreachable endpoint.
     url: /\/api\/v1\/experiments\/[^/]+\/(?:data|metadata|tables)(?:[/?#]|$)/,
     statuses: new Set([500]),
