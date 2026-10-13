@@ -16,9 +16,14 @@ export function useRecordExperimentVisit(experimentId: string, enabled: boolean)
     orpcClient.visits
       .recordExperimentVisit({ id: experimentId })
       .then(() =>
-        queryClient.invalidateQueries({
-          queryKey: orpc.experiments.listRecentlyOpenedExperiments.key(),
-        }),
+        Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: orpc.experiments.listRecentlyOpenedExperiments.key(),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: orpc.experiments.listHomeExperiments.key(),
+          }),
+        ]),
       )
       .catch(() => undefined);
   }, [enabled, experimentId, queryClient]);
