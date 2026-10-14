@@ -22,14 +22,6 @@ export interface DrainCounts {
 }
 
 /**
- * One row per claim, not a batch. A claim stamps every row it takes with the same
- * `claimed_at`, and the rows are then sent one at a time; with a slow mail server the
- * last rows of a batch would pass the lease before their turn came and be taken back
- * and sent twice. Sending was always sequential, so nothing is lost by claiming one.
- */
-const CLAIM_SIZE = 1;
-
-/**
  * No single send legitimately takes this long, so a claim older than it was abandoned.
  * Only true while the mail transport's own timeouts stay under it: see
  * `MAIL_TRANSPORT_TIMEOUTS_MS`, which the email module's spec pins against this.
@@ -79,8 +71,8 @@ export class NotificationOutboxWorker {
   }
 
   /**
-   * Claims and sends until a claim comes back empty. A second call while one is running
-   * returns at once — the running drain will pick up whatever the second one would have.
+   * Claims and sends one row at a time until nothing is due. A second call while one
+   * is running returns at once; the running drain picks up whatever it would have.
    */
   async drain(): Promise<DrainCounts> {
     const counts: DrainCounts = { sent: 0, retried: 0, failed: 0 };
@@ -93,25 +85,23 @@ export class NotificationOutboxWorker {
 
     try {
       for (;;) {
-        const claimed = await this.deliveries.claimDue(CLAIM_SIZE, LEASE_MS);
+        const claim = await this.deliveries.claimDue(LEASE_MS);
 
-        if (claimed.isFailure()) {
+        if (claim.isFailure()) {
           this.logger.error({
-            msg: "Failed to claim notification deliveries",
+            msg: "Failed to claim a notification delivery",
             errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
             operation: "notification-outbox",
-            error: claimed.error,
+            error: claim.error,
           });
           break;
         }
 
-        if (claimed.value.length === 0) {
+        if (claim.value === null) {
           break;
         }
 
-        for (const row of claimed.value) {
-          counts[await this.handle(row)] += 1;
-        }
+        counts[await this.handle(claim.value)] += 1;
       }
     } catch (error) {
       this.logger.error({

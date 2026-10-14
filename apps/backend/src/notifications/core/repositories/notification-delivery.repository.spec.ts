@@ -1,6 +1,7 @@
 import { createSecondaryDatabase, eq, notificationDeliveries, notifications } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
+import { claimedRow } from "../../../test/notification-deliveries";
 import { TestHarness } from "../../../test/test-harness";
 import { NotificationDeliveryRepository } from "./notification-delivery.repository";
 
@@ -87,28 +88,26 @@ describe("NotificationDeliveryRepository", () => {
     const { notification, delivery } = await seedDelivery();
     const now = new Date();
 
-    const claimed = await repository.claimDue(25, LEASE_MS);
+    const claimed = await repository.claimDue(LEASE_MS);
 
     assertSuccess(claimed);
     const stamped = await rowById(delivery.id);
-    expect(claimed.value).toEqual([
-      {
-        id: delivery.id,
-        notificationId: notification.id,
-        channel: "email",
-        status: "sending",
-        attempts: 0,
-        // The claim a later write has to still hold, and it has to be the value the
-        // row actually carries: fencing compares the two for equality.
-        claimedAt: stamped.claimedAt,
-        recipientId,
-        type: "experiment_join_request_received",
-        actorId,
-        resourceType: "experiment",
-        resourceId: experimentId,
-        params: { experimentName: "Photosynthesis" },
-      },
-    ]);
+    expect(claimed.value).toEqual({
+      id: delivery.id,
+      notificationId: notification.id,
+      channel: "email",
+      status: "sending",
+      attempts: 0,
+      // The claim a later write has to still hold, and it has to be the value the
+      // row actually carries: fencing compares the two for equality.
+      claimedAt: stamped.claimedAt,
+      recipientId,
+      type: "experiment_join_request_received",
+      actorId,
+      resourceType: "experiment",
+      resourceId: experimentId,
+      params: { experimentName: "Photosynthesis" },
+    });
     expect(stamped).toMatchObject({ status: "sending" });
     // Stamped by the database, not the caller, so pin that it was set and is recent.
     expect(stamped.claimedAt).toBeInstanceOf(Date);
@@ -118,33 +117,27 @@ describe("NotificationDeliveryRepository", () => {
   it("leaves a row that is not due yet", async () => {
     await seedDelivery({ nextAttemptAt: new Date(Date.now() + 10 * MINUTE) });
 
-    const claimed = await repository.claimDue(25, LEASE_MS);
+    const claimed = await repository.claimDue(LEASE_MS);
 
     assertSuccess(claimed);
-    expect(claimed.value).toEqual([]);
+    expect(claimed.value).toBeNull();
   });
 
-  it("takes the oldest due rows first, and never more than the limit", async () => {
+  it("takes the oldest due row, then the next one", async () => {
     const now = new Date();
-    // Six due rows for a batch of two: enough that a claim which re-ran its due
-    // query per joined row would visibly walk past the batch it asked for.
-    const seeded: Awaited<ReturnType<typeof seedDelivery>>[] = [];
-    for (let minutes = 6; minutes >= 1; minutes -= 1) {
-      seeded.push(
-        await seedDelivery({ nextAttemptAt: new Date(now.getTime() - minutes * MINUTE) }),
-      );
-    }
+    const older = await seedDelivery({ nextAttemptAt: new Date(now.getTime() - 2 * MINUTE) });
+    const newer = await seedDelivery({ nextAttemptAt: new Date(now.getTime() - MINUTE) });
 
-    const claimed = await repository.claimDue(2, LEASE_MS);
+    const first = await repository.claimDue(LEASE_MS);
+    const second = await repository.claimDue(LEASE_MS);
+    const third = await repository.claimDue(LEASE_MS);
 
-    assertSuccess(claimed);
-    expect(claimed.value).toHaveLength(2);
-    expect(claimed.value.map((row) => row.id).sort()).toEqual(
-      seeded
-        .slice(0, 2)
-        .map(({ delivery }) => delivery.id)
-        .sort(),
-    );
+    assertSuccess(first);
+    assertSuccess(second);
+    assertSuccess(third);
+    expect(first.value?.id).toBe(older.delivery.id);
+    expect(second.value?.id).toBe(newer.delivery.id);
+    expect(third.value).toBeNull();
   });
 
   it("takes back a claim older than the lease and leaves a fresh one alone", async () => {
@@ -158,13 +151,13 @@ describe("NotificationDeliveryRepository", () => {
       claimedAt: new Date(now.getTime() - MINUTE),
     });
 
-    const claimed = await repository.claimDue(25, LEASE_MS);
+    const claimed = await repository.claimDue(LEASE_MS);
 
     assertSuccess(claimed);
-    expect(claimed.value.map((row) => row.id)).toEqual([abandoned.delivery.id]);
+    expect(claimed.value?.id).toBe(abandoned.delivery.id);
     // Taking a claim back counts the attempt nobody finished, so a row that is
     // abandoned every time still runs out of attempts instead of looping forever.
-    expect(claimed.value[0].attempts).toBe(1);
+    expect(claimed.value?.attempts).toBe(1);
     expect(await rowById(abandoned.delivery.id)).toMatchObject({ attempts: 1 });
     // The fresh claim is untouched, count included.
     expect(await rowById(inFlight.delivery.id)).toMatchObject({
@@ -176,19 +169,19 @@ describe("NotificationDeliveryRepository", () => {
   it("leaves the count alone on a row claimed while pending", async () => {
     const { delivery } = await seedDelivery({ attempts: 2 });
 
-    const claimed = await repository.claimDue(25, LEASE_MS);
+    const claimed = await repository.claimDue(LEASE_MS);
 
     assertSuccess(claimed);
-    expect(claimed.value[0].attempts).toBe(2);
+    expect(claimed.value?.attempts).toBe(2);
     expect(await rowById(delivery.id)).toMatchObject({ attempts: 2 });
   });
 
   describe("fencing an outcome on the claim it belongs to", () => {
     it("writes when the claim is still held", async () => {
       await seedDelivery();
-      const claimed = await repository.claimDue(1, LEASE_MS);
+      const claimed = await repository.claimDue(LEASE_MS);
       assertSuccess(claimed);
-      const claim = claimed.value[0];
+      const claim = claimedRow(claimed.value);
 
       const marked = await repository.markSent(claim, new Date());
 
@@ -199,16 +192,16 @@ describe("NotificationDeliveryRepository", () => {
 
     it("writes nothing when the row has been reclaimed since", async () => {
       await seedDelivery();
-      const first = await repository.claimDue(1, LEASE_MS);
+      const first = await repository.claimDue(LEASE_MS);
       assertSuccess(first);
-      const stale = first.value[0];
+      const stale = claimedRow(first.value);
 
       // The lease hands the row to another task, which is what a stalled sender wakes
       // up to find; its claim stamp is no longer the one on the row.
       await setDelivery(stale.id, { claimedAt: new Date(Date.now() - 6 * MINUTE) });
-      const second = await repository.claimDue(1, LEASE_MS);
+      const second = await repository.claimDue(LEASE_MS);
       assertSuccess(second);
-      const held = second.value[0];
+      const held = claimedRow(second.value);
       assertSuccess(await repository.markSent(held, new Date()));
 
       const late = await repository.markRetry(stale, {
@@ -225,9 +218,9 @@ describe("NotificationDeliveryRepository", () => {
 
     it("writes nothing when the row is no longer sending", async () => {
       await seedDelivery();
-      const claimed = await repository.claimDue(1, LEASE_MS);
+      const claimed = await repository.claimDue(LEASE_MS);
       assertSuccess(claimed);
-      const claim = claimed.value[0];
+      const claim = claimedRow(claimed.value);
       assertSuccess(await repository.markSent(claim, new Date()));
 
       const second = await repository.markFailed(claim, { attempts: 5, lastError: "too late" });
@@ -266,7 +259,7 @@ describe("NotificationDeliveryRepository", () => {
       // claim sits on the other task's lock, and a test that hangs leaves this
       // transaction open and takes every spec after it down with it.
       const claimed = await Promise.race([
-        repository.claimDue(25, LEASE_MS),
+        repository.claimDue(LEASE_MS),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("claimDue waited for a row another task held")), 2_000),
         ),
@@ -274,33 +267,38 @@ describe("NotificationDeliveryRepository", () => {
       await holding;
 
       assertSuccess(claimed);
-      expect(claimed.value.map((row) => row.id)).toEqual([free.delivery.id]);
+      expect(claimed.value?.id).toBe(free.delivery.id);
       expect(await rowById(held.delivery.id)).toMatchObject({ status: "pending" });
     } finally {
       await blocker.close();
     }
   });
 
-  it("hands two tasks claiming at once disjoint batches", async () => {
-    const seeded = await Promise.all(Array.from({ length: 20 }, () => seedDelivery()));
+  it("never hands two tasks claiming at once the same row", async () => {
+    const seeded = await Promise.all(Array.from({ length: 2 }, () => seedDelivery()));
     const secondary = createSecondaryDatabase();
 
     try {
       const otherTask = new NotificationDeliveryRepository(secondary.database);
 
       const [first, second] = await Promise.all([
-        repository.claimDue(10, LEASE_MS),
-        otherTask.claimDue(10, LEASE_MS),
+        repository.claimDue(LEASE_MS),
+        otherTask.claimDue(LEASE_MS),
       ]);
 
       assertSuccess(first);
       assertSuccess(second);
-      const firstIds = first.value.map((row) => row.id);
-      const secondIds = second.value.map((row) => row.id);
-      expect(firstIds.filter((id) => secondIds.includes(id))).toEqual([]);
-      expect([...firstIds, ...secondIds].sort()).toEqual(
+      // Each took one of the two, and between them they took both: `SKIP LOCKED`
+      // sent the second claim past the row the first was taking rather than onto it.
+      expect(first.value).not.toBeNull();
+      expect(second.value).not.toBeNull();
+      expect([first.value?.id, second.value?.id].sort()).toEqual(
         seeded.map(({ delivery }) => delivery.id).sort(),
       );
+
+      const third = await repository.claimDue(LEASE_MS);
+      assertSuccess(third);
+      expect(third.value).toBeNull();
     } finally {
       await secondary.close();
     }

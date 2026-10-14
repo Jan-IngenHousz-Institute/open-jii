@@ -24,16 +24,17 @@ type ClaimedDeliveryRow = Omit<ClaimedDelivery, "status" | "claimedAt"> & {
   claimedAt: string;
 };
 
-/** The row and the claim on it that a later write has to still hold to land. */
+/** What a later write has to still hold for it to land: a row, and the claim on it. */
 export type DeliveryClaim = Pick<ClaimedDelivery, "id" | "claimedAt">;
 
 /** Postgres binds one parameter per column, so a single statement cannot take every row. */
 const INSERT_CHUNK_SIZE = 1000;
 
 /**
- * Truncated to milliseconds because that is the precision a claim survives a round
- * trip at: Postgres stores microseconds, the driver hands back a millisecond `Date`,
- * and every write after the claim is fenced on this value matching exactly.
+ * Truncated to milliseconds, the precision a claim survives a round trip at: Postgres
+ * stores microseconds and a JavaScript `Date` holds milliseconds, so an untruncated
+ * stamp could not be compared back, and every write after a claim is fenced on this
+ * value matching exactly.
  */
 const CLAIM_STAMP = sql`date_trunc('milliseconds', now() AT TIME ZONE 'UTC')`;
 
@@ -68,20 +69,21 @@ export class NotificationDeliveryRepository {
   }
 
   /**
-   * Claims due rows for this task. `FOR UPDATE SKIP LOCKED` hands each
-   * task a disjoint set, so no two tasks send the same email. The second arm is the
-   * lease: a row left `sending` longer than `leaseMs` was abandoned by a dead task
-   * and is taken back, counted as an attempt so it cannot be reclaimed forever.
+   * Claims the oldest due row for this task, or nothing when none is due.
+   * `FOR UPDATE SKIP LOCKED` sends each task to a different row, so no two send the
+   * same email. The second arm is the lease: a row left `sending` longer than
+   * `leaseMs` was abandoned by a dead task and is taken back, counted as an attempt
+   * so it cannot be reclaimed forever.
    *
    * Every comparison uses the database clock, because `next_attempt_at` is stamped
    * by it on insert; a task clock that has drifted would make the nudge miss the
    * row it just queued.
    *
    * The due set must be a CTE. As a subquery beside the join the planner may re-run
-   * it per joined row, each run skipping the rows the last one just claimed, so a
-   * `LIMIT 25` returns the whole backlog. A locking CTE runs exactly once.
+   * it per joined row, each run stepping over the row the last one took, so a claim
+   * meant for one row walks the whole backlog. A locking CTE is evaluated once.
    */
-  async claimDue(limit: number, leaseMs: number): Promise<Result<ClaimedDelivery[]>> {
+  async claimDue(leaseMs: number): Promise<Result<ClaimedDelivery | null>> {
     return tryCatch(async () => {
       const claimed = await this.database.execute<ClaimedDeliveryRow>(sql`
         WITH due AS (
@@ -93,7 +95,7 @@ export class NotificationDeliveryRepository {
                  AND ${notificationDeliveries.claimedAt}
                      <= (now() AT TIME ZONE 'UTC') - make_interval(secs => ${leaseMs / 1000}))
           ORDER BY ${notificationDeliveries.nextAttemptAt}
-          LIMIT ${limit}
+          LIMIT 1
           FOR UPDATE SKIP LOCKED
         )
         UPDATE ${notificationDeliveries}
@@ -119,11 +121,15 @@ export class NotificationDeliveryRepository {
                   ${notifications.params}
       `);
 
-      return [...claimed].map((row) => ({
-        ...row,
-        status: zDeliveryStatus.parse(row.status),
-        claimedAt: new Date(row.claimedAt),
-      }));
+      const claim = claimed.at(0);
+
+      return claim
+        ? {
+            ...claim,
+            status: zDeliveryStatus.parse(claim.status),
+            claimedAt: new Date(claim.claimedAt),
+          }
+        : null;
     });
   }
 

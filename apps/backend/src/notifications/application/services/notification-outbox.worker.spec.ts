@@ -12,6 +12,7 @@ import {
 
 import { EmailAdapter } from "../../../common/modules/email/services/email.adapter";
 import { AppError, assertSuccess, failure, success } from "../../../common/utils/fp-utils";
+import { claimedRow } from "../../../test/notification-deliveries";
 import { TestHarness } from "../../../test/test-harness";
 import { NotificationDeliveryRepository } from "../../core/repositories/notification-delivery.repository";
 import { NotificationRepository } from "../../core/repositories/notification.repository";
@@ -338,8 +339,8 @@ describe("NotificationOutboxWorker", () => {
 
     expect(first).toEqual({ sent: 1, retried: 0, failed: 0 });
     expect(reentrant.counts).toEqual({ sent: 0, retried: 0, failed: 0 });
-    // The re-entrant drain never reached the database: one claim for the batch, one
-    // that came back empty, and nothing from the second call.
+    // The re-entrant drain never reached the database: one claim that found the row,
+    // one that found nothing, and nothing at all from the second call.
     expect(claim).toHaveBeenCalledTimes(2);
   });
 
@@ -385,7 +386,7 @@ describe("NotificationOutboxWorker", () => {
       expect(await deliveryById(queued.id)).toMatchObject({ status: "sent" });
     });
 
-    it("treats a thrown send as that attempt failing, not as the batch failing", async () => {
+    it("treats a thrown send as that attempt failing, not as the drain failing", async () => {
       const queued = await queueOne();
       vi.spyOn(testApp.module.get(NotificationEmailService), "send").mockRejectedValue(
         new Error("transport exploded"),
@@ -430,9 +431,9 @@ describe("NotificationOutboxWorker", () => {
     it("does not undo a send another task made while this one was stalled", async () => {
       const queued = await queueOne();
       // This task claims the row, then stalls long enough for the lease to hand it on.
-      const claimed = await deliveryRepository.claimDue(1, LEASE_MS);
+      const claimed = await deliveryRepository.claimDue(LEASE_MS);
       assertSuccess(claimed);
-      const stale = claimed.value[0];
+      const stale = claimedRow(claimed.value);
 
       await setDelivery(stale.id, { claimedAt: new Date(Date.now() - 6 * MINUTE) });
       expect(await worker.drain()).toEqual({ sent: 1, retried: 0, failed: 0 });
