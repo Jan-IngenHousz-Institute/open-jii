@@ -41,4 +41,16 @@ describe("workbook list query", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("turns one visibility into a list and keeps a list of them", () => {
+    expect(zWorkbookFilterQuery.parse({ visibility: "public" }).visibility).toEqual(["public"]);
+    expect(
+      zWorkbookFilterQuery.parse({ visibility: ["private", "public", "private"] }).visibility,
+    ).toEqual(["private", "public"]);
+  });
+
+  it("rejects an unknown visibility and leaves the filter optional", () => {
+    expect(zWorkbookFilterQuery.safeParse({ visibility: "hidden" }).success).toBe(false);
+    expect(zWorkbookFilterQuery.parse({}).visibility).toBeUndefined();
+  });
 });
