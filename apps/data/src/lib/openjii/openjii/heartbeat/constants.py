@@ -55,6 +55,10 @@ BROKER_TO_API_LATENCY_METRIC = "BrokerToApiP95Seconds"
 MACRO_BACKLOG_METRIC = "MacroBacklogRows"
 INGEST_IDLE_METRIC = "IngestIdleMinutes"
 MACRO_IDLE_METRIC = "MacroIdleMinutes"
+# Macro results that carry an error instead of output, per half hour and per Cause, and how many
+# macros fail on one protocol while working on another over the last day.
+MACRO_FAILED_ROWS_METRIC = "MacroFailedRows"
+MACRO_PROTOCOL_FAILURES_METRIC = "MacroProtocolFailures"
 
 PATH_BUCKET_MINUTES = 30
 
@@ -64,6 +68,7 @@ DRIVER_OLD_GEN_METRIC = "DriverOldGenAfterFullGcPercent"
 
 STALE_EXPERIMENTS_DETAIL = "stale_experiments"
 SILENT_DEVICES_DETAIL = "silent_devices"
+MACRO_PROTOCOL_FAILURES_DETAIL = "macro_protocol_failures"
 
 # Key prefix the metrics-forwarder Lambda subscribes to
 HEARTBEAT_KEY_PREFIX = "heartbeat"
