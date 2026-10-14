@@ -65,7 +65,7 @@ jobs:
       - name: Try to download coverage artifacts
         id: download
         if: steps.locate.outputs.found == 'true'
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         continue-on-error: true
         with:
           name: ${{ steps.locate.outputs.artifact_name }}
@@ -83,7 +83,7 @@ jobs:
       # apps/data tests through uv; the regenerate path runs the full test suite.
       - name: Setup uv (only if regenerating coverage)
         if: steps.download.outcome != 'success'
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: true
           cache-dependency-glob: "apps/data/uv.lock"
