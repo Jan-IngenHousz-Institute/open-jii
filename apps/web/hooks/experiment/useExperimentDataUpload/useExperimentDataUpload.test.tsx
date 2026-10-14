@@ -1,5 +1,8 @@
+import { useActivity } from "@/components/activity/activity-context";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useExperimentDataUpload } from "./useExperimentDataUpload";
 
@@ -52,7 +55,11 @@ describe("useExperimentDataUpload (mutation)", () => {
     const { result } = renderHook(() => useExperimentDataUpload());
 
     act(() => {
-      result.current.mutate({ params: { id: "exp-1" }, body: buildFormData() });
+      result.current.mutate({
+        params: { id: "exp-1" },
+        body: buildFormData(),
+        label: "Leaf traits",
+      });
     });
 
     await waitFor(() => {
@@ -77,12 +84,100 @@ describe("useExperimentDataUpload (mutation)", () => {
     const { result } = renderHook(() => useExperimentDataUpload());
 
     act(() => {
-      result.current.mutate({ params: { id: "exp-1" }, body: buildFormData() });
+      result.current.mutate({
+        params: { id: "exp-1" },
+        body: buildFormData(),
+        label: "Leaf traits",
+      });
     });
 
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
+  });
+
+  it("tracks the transfer while it runs and announces when it is received", async () => {
+    let respond: (response: Response) => void = () => undefined;
+    vi.spyOn(globalThis, "fetch").mockReturnValue(
+      new Promise<Response>((resolve) => {
+        respond = resolve;
+      }),
+    );
+
+    const { result } = renderHook(() => ({
+      upload: useExperimentDataUpload(),
+      activity: useActivity(),
+    }));
+
+    act(() => {
+      result.current.upload.mutate({
+        params: { id: "exp-1" },
+        body: buildFormData(),
+        label: "Leaf traits",
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.activity.entries).toEqual([
+        expect.objectContaining({
+          kind: "data_upload",
+          title: "Leaf traits",
+          status: "running",
+          experimentId: "exp-1",
+        }),
+      ]);
+    });
+    expect(toast).toHaveBeenCalledWith({
+      description: "experimentData.uploadDataModal.transfer.started",
+    });
+
+    act(() => {
+      respond(
+        new Response(JSON.stringify({ uploadId: "u-1" }), {
+          status: 201,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.activity.entries[0]?.status).toBe("succeeded");
+    });
+    expect(toast).toHaveBeenLastCalledWith({
+      description: "experimentData.uploadDataModal.transfer.received",
+    });
+  });
+
+  it("marks the transfer failed and shows the error", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ message: "Too many files in upload" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    const { result } = renderHook(() => ({
+      upload: useExperimentDataUpload(),
+      activity: useActivity(),
+    }));
+
+    act(() => {
+      result.current.upload.mutate({
+        params: { id: "exp-1" },
+        body: buildFormData(),
+        label: "Leaf traits",
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.activity.entries[0]?.status).toBe("failed");
+    });
+    expect(toast).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        title: "experimentData.uploadDataModal.transfer.failed",
+        variant: "destructive",
+      }),
+    );
   });
 
   it("returns a mutation result with a mutate function", () => {

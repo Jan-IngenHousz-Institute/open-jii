@@ -128,6 +128,9 @@ export class ExperimentDataUploadsRepository {
       return success(completed);
     }
 
+    // A run stays active after writing its record while it waits for the rows to reach the table.
+    const active = activeResult.value.filter((upload) => !completedIds.has(upload.uploadId));
+
     const failedResult = await this.databricksPort.getFailedUploads(
       experimentId,
       completedIds,
@@ -140,10 +143,10 @@ export class ExperimentDataUploadsRepository {
         experimentId,
         error: failedResult.error.message,
       });
-      return success([...activeResult.value, ...completed]);
+      return success([...active, ...completed]);
     }
 
-    return success([...activeResult.value, ...failedResult.value, ...completed]);
+    return success([...active, ...failedResult.value, ...completed]);
   }
 
   private mapCompletedRows(schemaData: {

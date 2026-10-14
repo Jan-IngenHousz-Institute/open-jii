@@ -14,6 +14,7 @@ import {
 } from "@repo/ui/components/dropdown-menu";
 
 import { UploadHistoryPanel } from "./history/upload-history-panel";
+import { UploadTransferList } from "./history/upload-transfer-list";
 
 export interface UploadListViewProps {
   experimentId: string;
@@ -42,7 +43,8 @@ export function UploadListView({
 
   return (
     <div className="flex min-h-0 flex-col gap-4">
-      <DialogBody>
+      <DialogBody className="space-y-4">
+        <UploadTransferList experimentId={experimentId} />
         <UploadHistoryPanel experimentId={experimentId} enabled={enabled} />
       </DialogBody>
 

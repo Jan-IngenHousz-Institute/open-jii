@@ -1,6 +1,9 @@
 import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
+import http from "http";
+import https from "https";
 import { Readable } from "stream";
+import { setTimeout as sleep } from "timers/promises";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
 import { ErrorCodes } from "../../../../utils/error-codes";
@@ -18,6 +21,10 @@ export class DatabricksFilesService {
   // Hard cap enforced by the Databricks Files API: per-file uploads max out at 5 GiB.
   // https://docs.databricks.com/api/workspace/files/upload
   public static readonly MAX_UPLOAD_BYTES = 5 * 1024 * 1024 * 1024;
+
+  public static readonly MAX_RESETS_WITHOUT_PROGRESS = 3;
+
+  public static readonly RESUME_DELAY_MS = 250;
 
   constructor(
     private readonly httpService: HttpService,
@@ -76,11 +83,11 @@ export class DatabricksFilesService {
           params: {
             overwrite: false,
           },
-          // Following redirects means keeping every body chunk for a replay, and the
-          // timeout then caps the whole transfer instead of an idle socket.
-          maxRedirects: 0,
+          // An explicit transport skips both redirect-following, which keeps every body chunk
+          // for a replay, and axios' wall-clock timer, which would cap a slow upload at the
+          // timeout. What remains is the socket's idle timeout.
+          transport: fullPath.startsWith("https:") ? https : http,
           timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
-          maxBodyLength: Infinity,
           maxContentLength: Infinity,
         });
 
@@ -117,33 +124,13 @@ export class DatabricksFilesService {
   async download(filePath: string): Promise<Result<DownloadFileResponse>> {
     return await tryCatch(
       async () => {
-        const tokenResult = await this.authService.getAccessToken();
-        if (tokenResult.isFailure()) {
-          throw tokenResult.error;
-        }
-
-        const token = tokenResult.value;
-        const host = this.configService.getHost();
-        const apiUrl = `${host}${DatabricksFilesService.FILES_ENDPOINT}`;
-
         this.logger.debug({
           msg: "Downloading file from Databricks",
           operation: "downloadFile",
           filePath,
         });
 
-        const fullPath = `${apiUrl}${filePath}`;
-
-        // Use axios to stream the response
-        const response = await this.httpService.axiosRef.get(fullPath, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          responseType: "stream",
-          // The body is read at the client's pace; without redirects the timeout stops at the headers.
-          maxRedirects: 0,
-          timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
-        });
+        const response = await this.requestFile(filePath, 0);
 
         this.logger.log({
           msg: "Successfully initiated file download from Databricks",
@@ -152,11 +139,12 @@ export class DatabricksFilesService {
           status: "success",
         });
 
-        const contentLength = Number(response.headers["content-length"] ?? Number.NaN);
+        const length = Number(response.headers["content-length"] ?? Number.NaN);
+        const contentLength = Number.isSafeInteger(length) ? length : undefined;
 
         return {
-          stream: response.data as Readable,
-          contentLength: Number.isSafeInteger(contentLength) ? contentLength : undefined,
+          stream: this.resumableStream(filePath, response.data, contentLength),
+          contentLength,
         };
       },
       (error) => {
@@ -172,5 +160,117 @@ export class DatabricksFilesService {
         );
       },
     );
+  }
+
+  /** Requests the file from `offset` on; a resumed request must come back as that exact range. */
+  private async requestFile(filePath: string, offset: number) {
+    const tokenResult = await this.authService.getAccessToken();
+    if (tokenResult.isFailure()) {
+      throw tokenResult.error;
+    }
+
+    const url = `${this.configService.getHost()}${DatabricksFilesService.FILES_ENDPOINT}${filePath}`;
+
+    const response = await this.httpService.axiosRef.get<Readable>(url, {
+      headers: {
+        Authorization: `Bearer ${tokenResult.value}`,
+        ...(offset > 0 ? { Range: `bytes=${offset}-` } : {}),
+      },
+      responseType: "stream",
+      // The body is read at the client's pace; without redirects the timeout stops at the headers.
+      maxRedirects: 0,
+      timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
+    });
+
+    const contentRange = String(response.headers["content-range"] ?? "");
+    const isExpectedRange = response.status === 206 && contentRange.startsWith(`bytes ${offset}-`);
+    if (offset > 0 && !isExpectedRange) {
+      response.data.destroy();
+      throw new Error(`Databricks did not resume the download at byte ${offset}`);
+    }
+
+    return response;
+  }
+
+  /**
+   * Databricks resets a download whose reader falls behind, which a slow client causes.
+   * Each reset re-requests the rest of the file, so the caller sees one unbroken stream.
+   * Destroying the returned stream, as a cancelled download does, closes Databricks at once.
+   */
+  private resumableStream(
+    filePath: string,
+    first: Readable,
+    contentLength: number | undefined,
+  ): Readable {
+    let source: Readable | null = null;
+    let offset = 0;
+    let resetsWithoutProgress = 0;
+
+    const output = new Readable({
+      read: () => {
+        source?.resume();
+      },
+      destroy: (error, callback) => {
+        source?.destroy();
+        callback(error);
+      },
+    });
+
+    const resume = async (error: Error) => {
+      source = null;
+      if (output.destroyed) {
+        return;
+      }
+
+      const hasEveryByte = contentLength !== undefined && offset >= contentLength;
+      if (hasEveryByte) {
+        output.push(null);
+        return;
+      }
+
+      resetsWithoutProgress += 1;
+      if (resetsWithoutProgress > DatabricksFilesService.MAX_RESETS_WITHOUT_PROGRESS) {
+        output.destroy(error);
+        return;
+      }
+
+      this.logger.warn({
+        msg: "Databricks dropped the download, resuming",
+        operation: "downloadFile",
+        filePath,
+        offset,
+        error: String(error),
+      });
+      await sleep(DatabricksFilesService.RESUME_DELAY_MS * resetsWithoutProgress);
+
+      try {
+        attach((await this.requestFile(filePath, offset)).data);
+      } catch (requestError) {
+        // A resume request can fail like the read it replaces, so it counts against the same limit.
+        void resume(requestError instanceof Error ? requestError : new Error(String(requestError)));
+      }
+    };
+
+    const attach = (next: Readable) => {
+      // The caller may have gone away while a resume request was in flight.
+      if (output.destroyed) {
+        next.destroy();
+        return;
+      }
+
+      source = next;
+      next.on("data", (chunk: Buffer) => {
+        offset += chunk.length;
+        resetsWithoutProgress = 0;
+        if (!output.push(chunk)) {
+          next.pause();
+        }
+      });
+      next.once("end", () => output.push(null));
+      next.once("error", (error) => void resume(error));
+    };
+
+    attach(first);
+    return output;
   }
 }

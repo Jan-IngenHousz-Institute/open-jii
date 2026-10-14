@@ -68,6 +68,30 @@ class TestHmacSignature:
 
 
 @responses.activate
+def test_notify_upload_outcome_posts_a_signed_payload(client: BackendClient) -> None:
+    responses.add(
+        responses.POST,
+        f"{BASE_URL}/api/v1/webhooks/data-upload",
+        json={"success": True},
+        status=201,
+    )
+    payload = {
+        "experimentId": "e1",
+        "uploadId": "u1",
+        "userId": "user-1",
+        "outcome": "ready",
+        "uploadTableName": "Leaf temperatures",
+    }
+
+    assert client.notify_upload_outcome(payload) == {"success": True}
+
+    sent = responses.calls[0].request
+    assert json.loads(sent.body) == payload
+    timestamp = int(sent.headers["x-databricks-timestamp"])
+    assert sent.headers["x-databricks-signature"] == _expected_signature(payload, timestamp)
+
+
+@responses.activate
 def test_get_user_metadata_happy_path(client: BackendClient) -> None:
     responses.add(
         responses.POST,

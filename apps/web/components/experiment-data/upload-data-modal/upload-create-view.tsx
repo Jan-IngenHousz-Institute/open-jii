@@ -3,11 +3,10 @@
 import { useExperimentDataUpload } from "@/hooks/experiment/useExperimentDataUpload/useExperimentDataUpload";
 import type { UploadValidationError } from "@/hooks/experiment/useExperimentDataUpload/useExperimentDataUpload";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FileSpreadsheet, FolderUp, Loader2 } from "lucide-react";
+import { FileSpreadsheet, FolderUp } from "lucide-react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
-import { parseApiError } from "~/util/apiError";
 
 import {
   UPLOAD_KIND_CONSTANTS,
@@ -52,7 +51,6 @@ export function UploadCreateView({
 
   const [files, setFiles] = React.useState<FileList | null>(null);
   const [fileError, setFileError] = React.useState<UploadValidationError | null>(null);
-  const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   const form = useForm<ExperimentUploadFormFields>({
     resolver: zodResolver(zExperimentUploadFormFields),
@@ -80,16 +78,10 @@ export function UploadCreateView({
   const extensions = isAmbyte ? [] : UPLOAD_KIND_CONSTANTS[sourceKind].extensions;
   const formatLabel = t(`experimentData.uploadDataModal.history.sourceKind.${sourceKind}`);
 
-  const {
-    mutate: uploadData,
-    isPending: isUploading,
-    validate,
-    stripExcluded,
-  } = useExperimentDataUpload();
+  const { mutate: uploadData, validate, stripExcluded } = useExperimentDataUpload();
 
   const handleFilesChange = (selected: FileList | null) => {
     setFiles(selected);
-    setSubmitError(null);
     // Validate on selection so format/size errors surface before the user hits Upload.
     if (!selected || selected.length === 0) {
       setFileError(null);
@@ -98,6 +90,12 @@ export function UploadCreateView({
     const fileCheck = validate(selected, sourceKind);
     setFileError("code" in fileCheck ? fileCheck : null);
   };
+
+  const targetTableName = (values: ExperimentUploadFormFields): string =>
+    values.targetKind === "new"
+      ? values.targetName
+      : (uploadTables.find((table) => table.identifier === values.uploadTableId)?.displayName ??
+        values.uploadTableId);
 
   const onSubmit = (values: ExperimentUploadFormFields) => {
     if (!files || files.length === 0) {
@@ -112,7 +110,19 @@ export function UploadCreateView({
     }
 
     setFileError(null);
-    setSubmitError(null);
+
+    // The backend refuses a taken name too, but only after the upload is under way.
+    const isNameTaken =
+      values.targetKind === "new" &&
+      uploadTables.some((table) => table.displayName === values.targetName);
+    if (isNameTaken) {
+      form.setError("targetName", {
+        message: t("experimentData.uploadDataModal.validation.nameTaken", {
+          name: values.targetName,
+        }),
+      });
+      return;
+    }
 
     const formData = new FormData();
     formData.append("sourceKind", values.sourceKind);
@@ -126,19 +136,9 @@ export function UploadCreateView({
       formData.append("files", file);
     }
 
-    uploadData(
-      {
-        params: { id: experimentId },
-        body: formData,
-      },
-      {
-        onSuccess: () => onUploaded(),
-        onError: (error) => {
-          const message = parseApiError(error)?.message;
-          setSubmitError(message ?? t("experimentData.uploadDataModal.submitError.fallback"));
-        },
-      },
-    );
+    // The upload carries on in the background; progress and the outcome arrive as toasts.
+    uploadData({ params: { id: experimentId }, body: formData, label: targetTableName(values) });
+    onUploaded();
   };
 
   const fileErrorMessage = useFileErrorMessage(fileError);
@@ -151,13 +151,11 @@ export function UploadCreateView({
           canManage={canManage}
           targetKind={targetKind}
           uploadTables={uploadTables}
-          disabled={isUploading}
         />
 
         <FileUpload
           files={files}
           onFilesChange={handleFilesChange}
-          isUploading={isUploading}
           allowDirectories={isAmbyte}
           accept={isAmbyte ? undefined : extensions.join(",")}
           multiple
@@ -186,25 +184,14 @@ export function UploadCreateView({
           selectedFilesText={t("experimentData.uploadDataModal.files.dropzone.selectedFiles")}
           validationTitle={t("experimentData.uploadDataModal.validation.title")}
           validationErrors={fileErrorMessage ? [fileErrorMessage] : []}
-          uploadError={
-            submitError
-              ? {
-                  title: t("experimentData.uploadDataModal.submitError.title"),
-                  message: submitError,
-                }
-              : undefined
-          }
-          uploadingText={t("experimentData.uploadDataModal.status.processing.title")}
-          uploadingDescription={t("experimentData.uploadDataModal.status.processing.description")}
         />
       </DialogBody>
 
       <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between">
-        <Button type="button" variant="outline" onClick={onBack} disabled={isUploading}>
+        <Button type="button" variant="outline" onClick={onBack}>
           {t("experimentData.uploadDataModal.actions.back")}
         </Button>
-        <Button type="submit" disabled={isUploading || (!canManage && !hasExistingTables)}>
-          {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        <Button type="submit" disabled={!canManage && !hasExistingTables}>
           {t("experimentData.uploadDataModal.actions.upload")}
         </Button>
       </DialogFooter>

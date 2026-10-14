@@ -253,4 +253,34 @@ describe("MultipartUploadService", () => {
       expect(result.error.message).toContain("exceeds the maximum allowed size");
     }
   });
+  it("ends the parse and the file in flight when the client goes away", async () => {
+    const stream = new PassThrough();
+    const req = Object.assign(stream, {
+      headers: { "content-type": `multipart/form-data; boundary=${BOUNDARY}` },
+    });
+    stream.write(
+      `--${BOUNDARY}\r\nContent-Disposition: form-data; name="files"; filename="a.csv"\r\n` +
+        "Content-Type: text/csv\r\n\r\nx,y\n1,2\n",
+    );
+
+    let fileOutcome: Promise<unknown> = Promise.resolve(null);
+    const result = await service.parse({
+      requestStream: req,
+      requestHeaders: req.headers,
+      limits,
+      onField: vi.fn(),
+      onFile: async (file) => {
+        setImmediate(() => stream.destroy(new Error("aborted")));
+        fileOutcome = drain(file.stream).then(
+          () => null,
+          (error: unknown) => error,
+        );
+        await fileOutcome;
+        return success(undefined);
+      },
+    });
+
+    expect(result.isFailure()).toBe(true);
+    expect(await fileOutcome).toBeInstanceOf(Error);
+  });
 });

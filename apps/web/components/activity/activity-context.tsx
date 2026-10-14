@@ -2,7 +2,11 @@
 
 import * as React from "react";
 
-export type ActivityJobKind = "data_export" | "ambyte_processing" | "metadata_reprocess";
+export type ActivityJobKind =
+  | "data_export"
+  | "data_upload"
+  | "ambyte_processing"
+  | "metadata_reprocess";
 export type ActivityJobStatus = "queued" | "pending" | "running" | "succeeded" | "failed";
 
 export interface ActivityEntry {
@@ -54,6 +58,19 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
       return [merged, ...next];
     });
   }, []);
+
+  const hasUploadInFlight = entries.some((e) => e.kind === "data_upload" && e.status === "running");
+
+  // Closing the tab is the one thing that stops an upload in flight, so the browser asks first.
+  React.useEffect(() => {
+    if (!hasUploadInFlight) {
+      return;
+    }
+
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warnBeforeLeaving);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
+  }, [hasUploadInFlight]);
 
   const markAllRead = React.useCallback(() => setLastSeenAt(Date.now()), []);
 

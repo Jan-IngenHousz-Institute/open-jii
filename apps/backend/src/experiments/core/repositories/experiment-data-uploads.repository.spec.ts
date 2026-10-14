@@ -271,6 +271,44 @@ describe("ExperimentDataUploadsRepository", () => {
       );
     });
 
+    it("lists a run that already wrote its record once, as completed", async () => {
+      const uploadId = faker.string.uuid();
+
+      vi.spyOn(databricksPort, "getUploadMetadata").mockResolvedValue(
+        success({
+          columns: METADATA_COLUMNS,
+          rows: [row({ upload_id: uploadId })],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
+      // The job keeps running after writing the record while it waits for the table rows.
+      vi.spyOn(databricksPort, "getActiveUploads").mockResolvedValue(
+        success([
+          {
+            uploadId,
+            experimentId,
+            uploadTableId,
+            uploadTableName: "leaf_traits",
+            sourceKind: "csv",
+            status: "running",
+            fileCount: null,
+            rowCount: null,
+            createdBy: "user-1",
+            createdAt: "2026-01-01T00:00:00Z",
+            completedAt: null,
+            errorMessage: null,
+          },
+        ]),
+      );
+      vi.spyOn(databricksPort, "getFailedUploads").mockResolvedValue(success([]));
+
+      const result = await repository.listUploads({ experimentId });
+
+      assertSuccess(result);
+      expect(result.value).toEqual([expect.objectContaining({ uploadId, status: "completed" })]);
+    });
+
     it("skips completed rows with an unrecognized source_kind instead of failing the whole list", async () => {
       const goodId = faker.string.uuid();
       vi.spyOn(databricksPort, "getUploadMetadata").mockResolvedValue(

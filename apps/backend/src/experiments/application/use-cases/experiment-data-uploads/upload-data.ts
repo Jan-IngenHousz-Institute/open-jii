@@ -148,6 +148,10 @@ export class UploadDataUseCase {
           file.stream,
         );
         if (uploadResult.isFailure()) {
+          // Whatever Databricks did not take is still arriving. Detach it from the failed request
+          // and read it off, or busboy waits on this file and the whole request hangs.
+          file.stream.unpipe();
+          file.stream.resume();
           errors.push({ fileName: safeName, error: uploadResult.error.message });
           return success(undefined);
         }
