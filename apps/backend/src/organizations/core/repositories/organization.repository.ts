@@ -1,7 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
 
 import { ORGANIZATION_TYPE_SEARCH_ALIASES } from "@repo/api/domains/organization/organization.schema";
-import type { OrganizationSort } from "@repo/api/domains/organization/organization.schema";
+import type {
+  OrganizationSort,
+  OrganizationType,
+} from "@repo/api/domains/organization/organization.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 import {
   and,
@@ -14,6 +17,7 @@ import {
   experiments,
   getTableName,
   ilike,
+  inArray,
   iotDevices,
   isNotPersonalOrgSql,
   isNull,
@@ -397,7 +401,12 @@ export class OrganizationRepository {
    */
   async listDirectory(
     userId: string,
-    params: { search?: string; scope?: ResourceScope; sort?: OrganizationSort },
+    params: {
+      search?: string;
+      scope?: ResourceScope;
+      sort?: OrganizationSort;
+      types?: OrganizationType[];
+    },
   ): Promise<Result<{ organizations: OrganizationDirectoryEntryDto[] }>> {
     return tryCatch(async () => {
       const isMember = this.membershipExists(userId);
@@ -422,6 +431,7 @@ export class OrganizationRepository {
         // "Mine": the visible set narrowed to what the caller belongs to. Applied on top
         // of the visibility boundary, never instead of it.
         params.scope === "related" ? isMember : undefined,
+        params.types?.length ? inArray(organizations.type, params.types) : undefined,
       );
 
       const sortFields = {

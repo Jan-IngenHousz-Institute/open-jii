@@ -1,6 +1,7 @@
 "use client";
 
 import { ListPagination } from "@/components/list-pagination";
+import { ClearFiltersButton } from "@/components/overview-table/clear-filters-button";
 import { getOrganizationColumns } from "@/components/overview-table/organization-columns";
 import {
   createOverviewTableSorting,
@@ -11,10 +12,19 @@ import { OverviewToolbar } from "@/components/overview-toolbar";
 import { useOrganizationsList } from "@/hooks/organization/useOrganizationsList/useOrganizationsList";
 import { useLocale } from "@/hooks/useLocale";
 
+import { zOrganizationType } from "@repo/api/domains/organization/organization.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
+import { MultiSelectFilter } from "@repo/ui/components/multi-select-filter";
 import { SearchInput } from "@repo/ui/components/search-input";
 
 import { organizationPath } from "./organization-routes";
+
+function emptyMessageKey(hasActiveFilters: boolean, hasSearch: boolean): string {
+  if (hasActiveFilters) return "organizations.noFilterMatches";
+  if (hasSearch) return "organizations.noMatches";
+  return "organizations.directory.emptyTitle";
+}
 
 /**
  * One ownership-ranked organization directory. Membership is shown by ordering
@@ -40,6 +50,10 @@ export function ListOrganizations() {
     sort,
     setSort,
     toggleSort,
+    types,
+    setTypes,
+    clearFilters,
+    hasActiveFilters,
   } = useOrganizationsList();
   const hasSearch = debouncedSearch.trim() !== "";
 
@@ -59,7 +73,23 @@ export function ListOrganizations() {
             className="w-full md:w-64"
           />
         }
-        filters={<ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />}
+        filters={
+          <>
+            <MultiSelectFilter
+              title={t("organizations.fields.type")}
+              options={zOrganizationType.options.map((value) => ({
+                value,
+                label: t(`organizations.types.${value}`),
+              }))}
+              selected={types}
+              onChange={setTypes}
+              emptyLabel={t("common.filterNoResults")}
+              selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
+            />
+            <ClearFiltersButton active={hasActiveFilters} onClear={clearFilters} />
+            <ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />
+          </>
+        }
       />
 
       <div
@@ -83,9 +113,14 @@ export function ListOrganizations() {
           retryLabel={t("common.errors.tryAgain")}
           getRowKey={(organization) => organization.id}
           getRowHref={(organization) => organizationPath(locale, organization.id)}
-          emptyMessage={t(
-            hasSearch ? "organizations.noMatches" : "organizations.directory.emptyTitle",
-          )}
+          emptyMessage={t(emptyMessageKey(hasActiveFilters, hasSearch))}
+          emptyAction={
+            hasActiveFilters && (
+              <Button variant="outline" size="sm" onClick={clearFilters}>
+                {t("common.clearFilters")}
+              </Button>
+            )
+          }
         />
 
         {organizations.length > 0 && (

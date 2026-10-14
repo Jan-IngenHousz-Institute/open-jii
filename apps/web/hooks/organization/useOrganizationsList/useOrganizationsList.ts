@@ -7,15 +7,20 @@ import { useUrlState } from "@/hooks/useUrlState";
 import { useEffect, useState } from "react";
 
 import { zOrganizationSort } from "@repo/api/domains/organization/organization.schema";
-import type { OrganizationVisibility } from "@repo/api/domains/organization/organization.schema";
+import type {
+  OrganizationType,
+  OrganizationVisibility,
+} from "@repo/api/domains/organization/organization.schema";
 
 import { useListSorting } from "../../useListSorting";
+import { useOrganizationListFilters } from "./useOrganizationListFilters";
 
 /** One organization row, whichever slice of the listing produced it. */
 export interface OrganizationListItem {
   id: string;
   name: string;
   description: string | null;
+  type: OrganizationType | null;
   memberCount: number;
   resourceCount: number;
   visibility: OrganizationVisibility;
@@ -39,6 +44,7 @@ export function useOrganizationsList() {
   const [page, setPage] = useState(1);
   const [debouncedSearch] = useDebounce(search);
   const { sort, setSort, toggleSort } = useListSorting(zOrganizationSort);
+  const { types, setTypes, clearFilters, hasActiveFilters } = useOrganizationListFilters();
 
   const setSearch = (value: string) => {
     setSearchState(value);
@@ -49,6 +55,7 @@ export function useOrganizationsList() {
     search: debouncedSearch,
     scope: "all",
     sort,
+    types,
   });
   const isSearchPending = useSearchPending({
     search,
@@ -61,6 +68,7 @@ export function useOrganizationsList() {
       id: organization.id,
       name: organization.name,
       description: organization.description,
+      type: organization.type,
       memberCount: organization.memberCount,
       resourceCount: organization.resourceCount,
       // Read from the row, not assumed: the directory carries the caller's own private
@@ -106,5 +114,15 @@ export function useOrganizationsList() {
       toggleSort(field, multi);
       setPage(1);
     },
+    types,
+    setTypes: (values: typeof types) => {
+      setTypes(values);
+      setPage(1);
+    },
+    clearFilters: () => {
+      clearFilters();
+      setPage(1);
+    },
+    hasActiveFilters,
   };
 }

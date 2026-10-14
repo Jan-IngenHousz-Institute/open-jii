@@ -1,3 +1,4 @@
+import type { OrganizationListItem } from "@/hooks/organization/useOrganizationsList/useOrganizationsList";
 import { createExperiment, createMacro, createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
@@ -238,32 +239,71 @@ describe("experiment overview columns", () => {
 });
 
 describe("organization overview columns", () => {
-  it("keeps the organization name as the primary phone column", () => {
-    render(
+  function organizationRow(overrides: Partial<OrganizationListItem> = {}): OrganizationListItem {
+    return {
+      id: "org-1",
+      name: "JII",
+      description: null,
+      type: "university",
+      memberCount: 4,
+      resourceCount: 7,
+      visibility: "public",
+      isMember: true,
+      ...overrides,
+    };
+  }
+
+  function renderOrganizations(items: OrganizationListItem[]) {
+    return render(
       <OverviewTable
         columns={getOrganizationColumns(t)}
-        items={[
-          {
-            id: "org-1",
-            name: "JII",
-            description: null,
-            memberCount: 4,
-            resourceCount: 7,
-            visibility: "public",
-            isMember: true,
-          },
-        ]}
+        sorting={createOverviewTableSorting([], vi.fn(), {
+          unsorted: "Unsorted",
+          asc: "Ascending",
+          desc: "Descending",
+          secondary: "Secondary sort",
+        })}
+        items={items}
         getRowKey={(organization) => organization.id}
         getRowHref={(organization) => `/platform/organizations/${organization.id}`}
         emptyMessage="organizations.empty"
       />,
     );
+  }
 
+  it("keeps the organization name as the primary phone column", () => {
+    renderOrganizations([organizationRow()]);
+
+    expectColumnHiddenBelowItsBreakpoint("organizations.fields.type");
+    expect(screen.getByRole("columnheader", { name: "organizations.fields.type" })).toHaveClass(
+      "md:table-cell",
+    );
     expectColumnHiddenBelowItsBreakpoint("organizations.tabs.members");
     expectColumnHiddenBelowItsBreakpoint("organizations.resources.title");
     expect(screen.getByRole("columnheader", { name: "organizations.resources.title" })).toHaveClass(
       "lg:table-cell",
     );
+  });
+
+  it("shows each organization's type and leaves the cell empty without one", () => {
+    renderOrganizations([
+      organizationRow({ id: "typed", name: "Typed Org", type: "university" }),
+      organizationRow({ id: "untyped", name: "Untyped Org", type: null }),
+    ]);
+
+    const typedRow = screen.getByText("Typed Org").closest("tr");
+    const untypedRow = screen.getByText("Untyped Org").closest("tr");
+    expect(typedRow).toHaveTextContent("organizations.types.university");
+    expect(untypedRow).not.toHaveTextContent("organizations.types.");
+  });
+
+  it("does not offer to sort by type", () => {
+    renderOrganizations([organizationRow()]);
+
+    const typeHeader = screen.getByRole("columnheader", { name: "organizations.fields.type" });
+    expect(within(typeHeader).queryByRole("button")).toBeNull();
+    const nameHeader = screen.getByRole("columnheader", { name: /organizations\.fields\.name/ });
+    expect(within(nameHeader).getByRole("button")).toBeInTheDocument();
   });
 });
 

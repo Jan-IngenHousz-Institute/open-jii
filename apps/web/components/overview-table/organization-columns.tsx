@@ -1,4 +1,5 @@
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { organizationTypeLabelKey } from "@/components/organizations/organization-labels";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import type { OrganizationListItem } from "@/hooks/organization/useOrganizationsList/useOrganizationsList";
 import { FolderOpen, Users } from "lucide-react";
@@ -46,6 +47,16 @@ export function getOrganizationColumns(
           </div>
         </>
       ),
+    },
+    {
+      header: t("organizations.fields.type"),
+      className: "hidden w-48 md:table-cell",
+      cell: (organization) =>
+        organization.type && (
+          <span className={cn("text-[13px]", overviewTableText.muted)}>
+            {t(organizationTypeLabelKey(organization.type))}
+          </span>
+        ),
     },
     {
       header: t("organizations.tabs.members"),

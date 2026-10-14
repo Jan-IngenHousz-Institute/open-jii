@@ -512,6 +512,7 @@
     "searchPlaceholder": "Organisationen suchen…",
     "searchLabel": "Organisationen durchsuchen",
     "noMatches": "Keine Organisation passt zu Ihrer Suche",
+    "noFilterMatches": "Keine Organisation entspricht diesen Filtern",
     "tabs": {
       "members": "Mitglieder",
       "teams": "Teams",

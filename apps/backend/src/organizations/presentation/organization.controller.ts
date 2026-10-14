@@ -45,6 +45,7 @@ export class OrganizationController {
         search: input.search,
         scope: input.scope,
         sort: input.sort,
+        types: input.type,
       });
 
       if (result.isSuccess()) {

@@ -9,7 +9,7 @@ import OrganizationsListContent from "./organizations-list-content";
 
 interface OrganizationsPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ q?: string; sort?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; type?: string }>;
 }
 
 export async function generateMetadata({
@@ -22,9 +22,9 @@ export async function generateMetadata({
 }
 
 export default async function OrganizationsPage({ searchParams }: OrganizationsPageProps) {
-  // Only the unfiltered, unsorted directory is fetched ahead; other views come from the client.
-  const [{ q, sort }, session] = await Promise.all([searchParams, auth()]);
-  const isDefaultView = !q && !sort;
+  // Only the unfiltered, unsearched, unsorted directory is fetched ahead; other views come from the client.
+  const [{ q, sort, type }, session] = await Promise.all([searchParams, auth()]);
+  const isDefaultView = !q && !sort && !type;
 
   return (
     <PrefetchedQueries

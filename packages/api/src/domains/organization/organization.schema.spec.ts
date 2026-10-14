@@ -41,4 +41,25 @@ describe("organization directory query", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("turns a single type into an array", () => {
+    expect(zOrganizationDirectoryQuery.parse({ type: "university" }).type).toEqual(["university"]);
+  });
+
+  it("passes a type array through without duplicates", () => {
+    expect(
+      zOrganizationDirectoryQuery.parse({ type: ["university", "non_profit", "university"] }).type,
+    ).toEqual(["university", "non_profit"]);
+  });
+
+  it("rejects an unknown type", () => {
+    expect(zOrganizationDirectoryQuery.safeParse({ type: "lab" }).success).toBe(false);
+    expect(zOrganizationDirectoryQuery.safeParse({ type: ["university", "lab"] }).success).toBe(
+      false,
+    );
+  });
+
+  it("leaves the type filter optional", () => {
+    expect(zOrganizationDirectoryQuery.parse({}).type).toBeUndefined();
+  });
 });

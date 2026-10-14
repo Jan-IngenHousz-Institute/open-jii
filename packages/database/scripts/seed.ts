@@ -9,6 +9,7 @@ import { seedFlows } from "./seed/flow.seed";
 import { seedDevices } from "./seed/iot-device.seed";
 import { seedMacros } from "./seed/macro.seed";
 import { seedNotifications } from "./seed/notification.seed";
+import { seedOrganizations } from "./seed/organization.seed";
 import { seedProtocolMacroLinks } from "./seed/protocol-macro.seed";
 import { seedProtocols } from "./seed/protocol.seed";
 import { seedNewcomer, seedUser } from "./seed/user.seed";
@@ -34,6 +35,7 @@ async function main() {
 
   const createdExperiments = await seedExperiments(user, personalOrganizationId);
   await seedContributors(createdExperiments);
+  await seedOrganizations();
   await seedFlows(createdExperiments);
   await seedWorkbooks(user, personalOrganizationId, createdExperiments, createdProtocols);
 
