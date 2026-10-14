@@ -4,7 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api/contract";
 import type {
   UserList,
-  UserProfileList,
+  UserSearchResultList,
   User,
   DeletionBlockersResponse,
 } from "@repo/api/domains/user/user.schema";
@@ -84,7 +84,7 @@ describe("UserController", () => {
         email: "bob@example.com",
       });
 
-      const response: SuperTestResponse<UserProfileList> = await testApp
+      const response: SuperTestResponse<UserSearchResultList> = await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ query: firstName })
@@ -102,7 +102,7 @@ describe("UserController", () => {
       const email = `alice${faker.string.alphanumeric(10).toLowerCase()}@example.com`;
       const userId = await testApp.createTestUser({ name: "Alice Smith", email });
 
-      const response: SuperTestResponse<UserProfileList> = await testApp
+      const response: SuperTestResponse<UserSearchResultList> = await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ query: email })
@@ -120,7 +120,7 @@ describe("UserController", () => {
         await testApp.createTestUser({ name: `${email} Candidate ${i}` });
       }
 
-      const response: SuperTestResponse<UserProfileList> = await testApp
+      const response: SuperTestResponse<UserSearchResultList> = await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ query: email.toUpperCase(), limit: 20 })
@@ -143,7 +143,7 @@ describe("UserController", () => {
       });
       await testApp.addOrganizationMember(orgId, memberId, "member");
 
-      const response: SuperTestResponse<UserProfileList> = await testApp
+      const response: SuperTestResponse<UserSearchResultList> = await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ query: firstName })
@@ -166,7 +166,7 @@ describe("UserController", () => {
         email: `${firstName.toLowerCase()}.johnson@example.com`,
       });
 
-      const response: SuperTestResponse<UserProfileList> = await testApp
+      const response: SuperTestResponse<UserSearchResultList> = await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ query: firstName })
@@ -190,7 +190,7 @@ describe("UserController", () => {
       }
 
       // Get first 2 users
-      const firstPageResponse: SuperTestResponse<UserProfileList> = await testApp
+      const firstPageResponse: SuperTestResponse<UserSearchResultList> = await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ query: "Pagewright", limit: 2, offset: 0 })
@@ -199,7 +199,7 @@ describe("UserController", () => {
       expect(firstPageResponse.body).toHaveLength(2);
 
       // Get next 2 users
-      const secondPageResponse: SuperTestResponse<UserProfileList> = await testApp
+      const secondPageResponse: SuperTestResponse<UserSearchResultList> = await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ query: "Pagewright", limit: 2, offset: 2 })

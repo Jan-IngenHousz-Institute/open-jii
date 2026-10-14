@@ -63,6 +63,7 @@ export const zUserSearchResult = zUserProfile.extend({
 });
 export const zUserSearchResultList = z.array(zUserSearchResult);
 export type UserSearchResult = z.infer<typeof zUserSearchResult>;
+export type UserSearchResultList = z.infer<typeof zUserSearchResultList>;
 
 // Path parameters
 export const zUserIdPathParam = z.object({

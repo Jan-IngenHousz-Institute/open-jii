@@ -194,6 +194,25 @@ export class EmailVisibilityService {
     }
   }
 
+  async redactAllAfterWrite<T>(
+    callerId: string,
+    result: Result<T[]>,
+    lens: EmailLens<T>,
+    scope?: EmailScope,
+  ): Promise<Result<T[]>> {
+    if (result.isFailure()) return result;
+    try {
+      return await this.redactAll(callerId, result, lens, scope);
+    } catch {
+      this.logger.warn({
+        msg: "Email visibility lookup failed after a committed write; withholding emails",
+        operation: "redact-list-after-write",
+        callerId,
+      });
+      return success(result.value.map((row) => lens.withoutEmail(row)));
+    }
+  }
+
   /** Apply an answer already fetched, for callers that redact several lists at once. */
   strip<T>(rows: T[], visible: Set<string>, lens: EmailLens<T>): T[] {
     return rows.map((row) => {

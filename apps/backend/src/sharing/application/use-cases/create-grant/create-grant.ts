@@ -86,7 +86,7 @@ export class CreateGrantUseCase {
     }
 
     const ownership = await this.authz.getOwnership(resourceType, resourceId);
-    return this.emailVisibility.redactAll(
+    return this.emailVisibility.redactAllAfterWrite(
       userId,
       await this.repo.list(resourceType, resourceId, ownership?.organizationId ?? null),
       collaboratorEmail(),

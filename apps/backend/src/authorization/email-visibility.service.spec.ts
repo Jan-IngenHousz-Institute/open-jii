@@ -7,7 +7,7 @@ import {
   teamMembers,
 } from "@repo/database";
 
-import { AppError, failure } from "../common/utils/fp-utils";
+import { AppError, failure, success } from "../common/utils/fp-utils";
 import { TestHarness } from "../test/test-harness";
 import { AuthorizationService } from "./authorization.service";
 import {
@@ -368,6 +368,46 @@ describe("EmailVisibilityService", () => {
 
       expect(result).toBe(writeFailure);
       expect(visibility).not.toHaveBeenCalled();
+    });
+
+    it("preserves a failed list result without a visibility query", async () => {
+      const failed = failure(AppError.internal("List unavailable"));
+      const visibility = vi.spyOn(service, "visibleUserEmails");
+      const result = await service.redactAllAfterWrite(callerId, failed, flatEmail());
+      expect(result).toBe(failed);
+      expect(visibility).not.toHaveBeenCalled();
+    });
+
+    it("redacts every address in a committed list after visibility failure, retaining row metadata", async () => {
+      const rows = [
+        { userId: callerId, email: "me@example.test", name: "Me" },
+        { userId: targetId, email: "them@example.test", name: "Them" },
+      ];
+      const visibility = vi
+        .spyOn(service, "visibleUserEmails")
+        .mockRejectedValue(new Error("Visibility unavailable"));
+      const result = await service.redactAllAfterWrite(callerId, success(rows), flatEmail());
+      expect(result.isSuccess()).toBe(true);
+      if (result.isFailure()) throw result.error;
+      expect(result.value).toEqual(rows.map((row) => ({ ...row, email: null })));
+      expect(visibility).toHaveBeenCalledTimes(1);
+      await expect(service.redactAll(callerId, success(rows), flatEmail())).rejects.toThrow(
+        "Visibility unavailable",
+      );
+    });
+
+    it("retains the usual visibility answer for a committed list in one SQL statement", async () => {
+      const rows = [
+        { userId: callerId, email: "me@example.test" },
+        { userId: targetId, email: "them@example.test" },
+      ];
+      const execute = vi.spyOn(testApp.database, "execute");
+      const result = await service.redactAllAfterWrite(callerId, success(rows), flatEmail());
+      expect(result.isSuccess()).toBe(true);
+      if (result.isFailure()) throw result.error;
+      expect(result.value).toEqual([{ ...rows[0] }, { ...rows[1], email: null }]);
+      expect(execute).toHaveBeenCalledTimes(1);
+      execute.mockRestore();
     });
 
     it("nulls a flat row's address and leaves a visible one", async () => {

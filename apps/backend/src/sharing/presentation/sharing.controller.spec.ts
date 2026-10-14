@@ -1,10 +1,16 @@
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import type { GranteeUserDto, ResourceGrantDto } from "@repo/api/domains/sharing/sharing.schema";
-import { and, eq, profiles, resourceGrants, teamMembers } from "@repo/database";
+import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
+import type {
+  ResourceCollaboratorDto,
+  GranteeUserDto,
+  ResourceGrantDto,
+} from "@repo/api/domains/sharing/sharing.schema";
+import { and, eq, notifications, profiles, resourceGrants, teamMembers } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
+import { EmailVisibilityService } from "../../authorization/email-visibility.service";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { SharingRepository } from "../core/repositories/sharing.repository";
@@ -919,6 +925,93 @@ describe("SharingController", () => {
       const stored = grants.find((grant) => grant.granteeId === legacy);
       expect(stored?.role).toBe("owner");
     });
+  });
+
+  describe("visibility outages after committed grant writes", () => {
+    it.each(["create", "update"] as const)(
+      "%s succeeds with a redacted list after visibility lookup fails, without losing access or notification",
+      async (operation) => {
+        const { experiment } = await testApp.createExperiment({
+          name: "Private fixture",
+          userId: owner,
+          visibility: "private",
+        });
+        const target = await testApp.createTestUser({
+          name: "Grant Target",
+          email: "grant-outage@example.test",
+        });
+        const initial =
+          operation === "update"
+            ? await testApp.addResourceGrant({
+                resourceType: "experiment",
+                resourceId: experiment.id,
+                granteeType: "user",
+                granteeId: target,
+                role: "viewer",
+                createdBy: owner,
+              })
+            : null;
+        const role = operation === "create" ? "viewer" : "admin";
+        const visibility = vi
+          .spyOn(testApp.module.get(EmailVisibilityService), "visibleUserEmails")
+          .mockRejectedValue(new Error("Visibility database unavailable"));
+        const response = initial
+          ? await testApp
+              .patch(
+                testApp.resolveOrpcPath(contract.sharing.updateGrant, {
+                  resourceType: "experiment",
+                  id: experiment.id,
+                  grantId: initial.id,
+                }),
+              )
+              .withAuth(owner)
+              .send({ role })
+          : await testApp
+              .post(
+                testApp.resolveOrpcPath(contract.sharing.createGrant, {
+                  resourceType: "experiment",
+                  id: experiment.id,
+                }),
+              )
+              .withAuth(owner)
+              .send({ granteeType: "user", granteeId: target, role });
+        const stored = await testApp.database
+          .select({ role: resourceGrants.role })
+          .from(resourceGrants)
+          .where(
+            and(eq(resourceGrants.resourceId, experiment.id), eq(resourceGrants.granteeId, target)),
+          );
+        expect(stored).toEqual([{ role }]);
+        expect(
+          (
+            await authz.can(target, {
+              resourceType: "experiment",
+              resourceId: experiment.id,
+              action: operation === "create" ? "read" : "manage",
+            })
+          ).allow,
+        ).toBe(true);
+        const notices = await testApp.database
+          .select({ type: notifications.type })
+          .from(notifications)
+          .where(
+            and(eq(notifications.resourceId, experiment.id), eq(notifications.recipientId, target)),
+          );
+        expect(notices).toEqual([
+          { type: operation === "create" ? "resource_access_granted" : "resource_access_changed" },
+        ]);
+        expect(response.status).toBe(operation === "create" ? StatusCodes.CREATED : StatusCodes.OK);
+        const rows = response.body as ResourceCollaboratorDto[];
+        expect(rows.filter(isGranteeRow).every((row) => row.grantee.email === null)).toBe(true);
+        expect(rows.filter(isGranteeRow).find((row) => row.granteeId === target)).toMatchObject({
+          granteeId: target,
+          role,
+          grantee: { displayName: "Grant Target", email: null },
+        });
+        expect(JSON.stringify(rows)).not.toContain("grant-outage@example.test");
+        expect(visibility).toHaveBeenCalledTimes(1);
+      },
+    );
   });
 
   describe("grant write failures surface as errors", () => {
