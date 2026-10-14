@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { notificationDeliveries } from "@repo/database";
+import type { notificationDeliveries, notifications } from "@repo/database";
 
 export const DELIVERY_STATUSES = ["pending", "sending", "sent", "failed"] as const;
 
@@ -26,16 +26,11 @@ export interface NotificationDeliveryInsertRow {
  * one round trip per batch. `type` and `resourceType` stay as stored: a build that
  * does not know them cannot render the email and the worker says so on the row.
  */
-export interface ClaimedDelivery {
-  id: string;
-  notificationId: string;
-  channel: string;
-  status: DeliveryStatus;
-  attempts: number;
-  recipientId: string;
-  type: string;
-  actorId: string | null;
-  resourceType: string | null;
-  resourceId: string | null;
-  params: Record<string, string>;
-}
+export type ClaimedDelivery = Pick<
+  NotificationDeliveryRow,
+  "id" | "notificationId" | "channel" | "status" | "attempts"
+> &
+  Pick<
+    typeof notifications.$inferSelect,
+    "recipientId" | "type" | "actorId" | "resourceType" | "resourceId" | "params"
+  >;

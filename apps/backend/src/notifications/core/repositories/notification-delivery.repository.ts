@@ -10,20 +10,11 @@ import type {
   NotificationDeliveryInsertRow,
 } from "../models/notification-delivery.model";
 
-/** The claim returns raw columns, so the row it hands back is the database's shape. */
-interface ClaimedDeliveryRow extends Record<string, unknown> {
-  id: string;
-  notification_id: string;
-  channel: string;
-  status: string;
-  attempts: number;
-  recipient_id: string;
-  type: string;
-  actor_id: string | null;
-  resource_type: string | null;
-  resource_id: string | null;
-  params: Record<string, string>;
-}
+/**
+ * What the claim's `RETURNING` hands back: the aliases there spell every column the way
+ * the model does, so only `status` is still the unparsed text the database stores.
+ */
+type ClaimedDeliveryRow = Omit<ClaimedDelivery, "status"> & { status: string };
 
 /** Postgres binds one parameter per column, so a single statement cannot take every row. */
 const INSERT_CHUNK_SIZE = 1000;
@@ -59,23 +50,18 @@ export class NotificationDeliveryRepository {
   }
 
   /**
-   * Takes a batch of due rows for this task alone. `SKIP LOCKED` is what lets several
-   * tasks drain at once: a row another task is claiming in the same instant is passed
-   * over rather than waited for, so no two tasks ever send the same email. The second
-   * arm is the lease — a row left `sending` by a task that died is due again once its
-   * claim is older than `leaseMs`, and taking it back counts as an attempt, so a row
-   * nobody ever finishes gives up like any other instead of being reclaimed forever.
+   * Claims a batch of due rows for this task. `FOR UPDATE SKIP LOCKED` hands each
+   * task a disjoint set, so no two tasks send the same email. The second arm is the
+   * lease: a row left `sending` longer than `leaseMs` was abandoned by a dead task
+   * and is taken back, counted as an attempt so it cannot be reclaimed forever.
    *
-   * Every time here is the database's, never the caller's: `next_attempt_at` defaults
-   * to the database clock on insert, so comparing it against a task's clock makes a
-   * nudge miss the row it just queued whenever the two have drifted apart.
+   * Every comparison uses the database clock, because `next_attempt_at` is stamped
+   * by it on insert; a task clock that has drifted would make the nudge miss the
+   * row it just queued.
    *
-   * The due set has to be a CTE. Written as a subquery beside the join to
-   * `notifications` — in `IN (…)` or as a derived table — the planner is free to
-   * re-run it per joined row, and because each run sees the rows the previous one
-   * just claimed as no longer pending, it takes the next batch instead: a claim for
-   * 25 comes back with the whole backlog. A CTE holding a locking clause is never
-   * inlined, so it runs exactly once and `LIMIT` means what it says.
+   * The due set must be a CTE. As a subquery beside the join the planner may re-run
+   * it per joined row, each run skipping the rows the last one just claimed, so a
+   * `LIMIT 25` returns the whole backlog. A locking CTE runs exactly once.
    */
   async claimDue(limit: number, leaseMs: number): Promise<Result<ClaimedDelivery[]>> {
     return tryCatch(async () => {
@@ -102,31 +88,19 @@ export class NotificationDeliveryRepository {
         WHERE ${notificationDeliveries.id} = due.id
           AND ${notifications.id} = ${notificationDeliveries.notificationId}
         RETURNING ${notificationDeliveries.id},
-                  ${notificationDeliveries.notificationId},
+                  ${notificationDeliveries.notificationId} AS "notificationId",
                   ${notificationDeliveries.channel},
                   ${notificationDeliveries.status},
                   ${notificationDeliveries.attempts},
-                  ${notifications.recipientId},
+                  ${notifications.recipientId} AS "recipientId",
                   ${notifications.type},
-                  ${notifications.actorId},
-                  ${notifications.resourceType},
-                  ${notifications.resourceId},
+                  ${notifications.actorId} AS "actorId",
+                  ${notifications.resourceType} AS "resourceType",
+                  ${notifications.resourceId} AS "resourceId",
                   ${notifications.params}
       `);
 
-      return [...claimed].map((row) => ({
-        id: row.id,
-        notificationId: row.notification_id,
-        channel: row.channel,
-        status: zDeliveryStatus.parse(row.status),
-        attempts: row.attempts,
-        recipientId: row.recipient_id,
-        type: row.type,
-        actorId: row.actor_id,
-        resourceType: row.resource_type,
-        resourceId: row.resource_id,
-        params: row.params,
-      }));
+      return [...claimed].map((row) => ({ ...row, status: zDeliveryStatus.parse(row.status) }));
     });
   }
 
