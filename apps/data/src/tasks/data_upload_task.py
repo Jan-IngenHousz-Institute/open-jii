@@ -16,6 +16,7 @@
 import json
 import logging
 import os
+import time
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -37,6 +38,7 @@ from pyspark.sql.types import (
 
 from ambyte import find_byte_folders, load_files_per_byte, process_trace_files
 from openjii.json_scrub import scrub_non_finite_json_value
+from enrich.backend_client import BackendClient
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -574,8 +576,80 @@ def main() -> dict:
             "upload_id": UPLOAD_ID,
         }
 
+# COMMAND ----------
+
+# DBTITLE 1,Notify the uploader
+UPLOADED_DATA_TABLE = f"{CATALOG_NAME}.centrum.experiment_uploaded_data"
+ENVIRONMENT = (_optional_widget("ENVIRONMENT") or "").lower()
+# The pipeline is continuous, so rows usually land within minutes; an hour means it is stuck.
+TABLE_WAIT_SECONDS = 60 * 60
+TABLE_POLL_SECONDS = 15
+
+
+def wait_for_table_rows(expected_rows: int) -> bool:
+    """True once all of the upload's rows are in the experiment's table, False if they never arrive."""
+    deadline = time.monotonic() + TABLE_WAIT_SECONDS
+    while time.monotonic() < deadline:
+        try:
+            landed = spark.sql(
+                f"SELECT count(*) AS landed FROM {UPLOADED_DATA_TABLE} WHERE upload_id = :upload_id",
+                args={"upload_id": UPLOAD_ID},
+            ).first()["landed"]
+            if landed >= expected_rows:
+                return True
+        except Exception as e:
+            # A failed check is retried at the next poll; raising would rerun the whole upload.
+            logger.warning(f"Could not count the upload's rows yet: {e}")
+        time.sleep(TABLE_POLL_SECONDS)
+    return False
+
+
+def notify_uploader(outcome: str) -> None:
+    """Have the backend tell the uploader how the upload ended. Never fails the task, whose
+    retries would process the upload again."""
+    if not (UPLOAD_ID and USER_ID and UPLOAD_TABLE_NAME and ENVIRONMENT):
+        logger.warning("The upload has no id, uploader, table name or environment, so nobody is notified")
+        return
+    try:
+        scope = f"node-webhook-secret-scope-{ENVIRONMENT}"
+        client = BackendClient(
+            base_url=dbutils.secrets.get(scope=scope, key="webhook_base_url"),
+            api_key_id=dbutils.secrets.get(scope=scope, key="webhook_api_key_id"),
+            webhook_secret=dbutils.secrets.get(scope=scope, key="webhook_secret"),
+        )
+        client.notify_upload_outcome(
+            {
+                "experimentId": EXPERIMENT_ID,
+                "uploadId": UPLOAD_ID,
+                "userId": USER_ID,
+                "outcome": outcome,
+                "uploadTableName": UPLOAD_TABLE_NAME,
+            }
+        )
+        logger.info(f"Notified the uploader: outcome={outcome}")
+    except Exception as e:
+        logger.error(f"Failed to notify the uploader: {e}")
+
+
+def report_outcome(result: dict) -> None:
+    rows_written = int(result.get("rows_written", 0))
+    if result["status"] == "error" or rows_written == 0:
+        notify_uploader("failed")
+    elif wait_for_table_rows(rows_written):
+        notify_uploader("ready")
+    else:
+        logger.error(f"Upload {UPLOAD_ID} did not reach {UPLOADED_DATA_TABLE} within {TABLE_WAIT_SECONDS} s")
+        notify_uploader("failed")
+
+# COMMAND ----------
+
 result = main()
 logger.info(f"Status: {result['status']}")
+try:
+    report_outcome(result)
+except Exception as e:
+    # The upload is done by now; a failure here must not make the job retry and process it again.
+    logger.error(f"Failed to report the upload outcome: {e}")
 # notebook.exit serialises whatever it's given via repr(), which produces a
 # Python-literal blob that downstream callers (jobs API, runs.get) can't parse.
 # Emit JSON so consumers can ingest the result directly.

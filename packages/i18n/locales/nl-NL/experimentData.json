@@ -103,10 +103,10 @@
         "tooManyFiles": "Te veel bestanden: selecteer er maximaal {{max}}",
         "ambyteInvalidStructure": "De geselecteerde map voldoet niet aan de verwachte Ambyte_N-structuur",
         "ambyteOversizedFiles_one": "{{count}} bestand overschrijdt de maximaal toegestane grootte",
-        "ambyteOversizedFiles_other": "{{count}} bestanden overschrijden de maximaal toegestane grootte"
+        "ambyteOversizedFiles_other": "{{count}} bestanden overschrijden de maximaal toegestane grootte",
+        "nameTaken": "Er bestaat al een tabel met de naam '{{name}}' in dit experiment"
       },
       "submitError": {
-        "title": "Upload mislukt",
         "fallback": "Upload mislukt"
       },
       "status": {
@@ -117,10 +117,6 @@
         "failed": {
           "title": "Upload mislukt",
           "fallback": "De verwerkingstaak is mislukt."
-        },
-        "processing": {
-          "title": "Verwerken…",
-          "description": "Uw bestand is geüpload; de verwerkingstaak loopt."
         }
       },
       "actions": {
@@ -156,6 +152,13 @@
         "fileCount_one": "{{count}} bestand",
         "fileCount_other": "{{count}} bestanden",
         "untargeted": "(geen tabel)"
+      },
+      "transfer": {
+        "started": "Bezig met uploaden naar {{table}}. Je kunt dit venster sluiten en verder werken; houd dit tabblad open tot de upload klaar is.",
+        "received": "Upload naar {{table}} ontvangen. Je krijgt een melding zodra hij klaar is om te bevragen.",
+        "failed": "Upload naar {{table}} mislukt",
+        "statusUploading": "Bezig met uploaden",
+        "statusFailed": "Upload mislukt"
       }
     }
   }

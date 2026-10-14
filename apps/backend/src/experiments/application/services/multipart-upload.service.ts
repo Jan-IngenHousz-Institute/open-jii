@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import busboy from "busboy";
 import type { IncomingHttpHeaders } from "http";
+import { finished } from "stream";
 
 import { AsyncQueue } from "../../../common/utils/async-queue";
 import { AppError, Result, failure, success } from "../../../common/utils/fp-utils";
@@ -99,6 +100,12 @@ export class MultipartUploadService {
         });
 
         requestStream.pipe(bb);
+        // pipe() leaves the parser waiting when the client goes away; this ends it and the file in flight.
+        finished(requestStream, (err) => {
+          if (err) {
+            bb.destroy(err);
+          }
+        });
       });
     } catch (err: unknown) {
       this.logger.error({

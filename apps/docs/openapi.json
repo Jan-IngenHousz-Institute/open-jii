@@ -15693,6 +15693,76 @@
         }
       }
     },
+    "/api/v1/webhooks/data-upload": {
+      "post": {
+        "operationId": "experiments.uploadOutcome",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "experimentId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "uploadId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "userId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "User who started the upload"
+                  },
+                  "outcome": {
+                    "enum": [
+                      "ready",
+                      "failed"
+                    ],
+                    "type": "string",
+                    "description": "ready once the upload's rows are in its table, failed when they will not arrive"
+                  },
+                  "uploadTableName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Table the upload was written to"
+                  }
+                },
+                "required": [
+                  "experimentId",
+                  "uploadId",
+                  "userId",
+                  "outcome",
+                  "uploadTableName"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health/time": {
       "get": {
         "operationId": "health.getTime",

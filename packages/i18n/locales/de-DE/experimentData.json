@@ -103,10 +103,10 @@
         "tooManyFiles": "Zu viele Dateien: maximal {{max}} auswählen",
         "ambyteInvalidStructure": "Der gewählte Ordner entspricht nicht dem erwarteten Ambyte_N-Layout",
         "ambyteOversizedFiles_one": "{{count}} Datei überschreitet die maximal zulässige Größe",
-        "ambyteOversizedFiles_other": "{{count}} Dateien überschreiten die maximal zulässige Größe"
+        "ambyteOversizedFiles_other": "{{count}} Dateien überschreiten die maximal zulässige Größe",
+        "nameTaken": "In diesem Experiment gibt es bereits eine Tabelle namens '{{name}}'"
       },
       "submitError": {
-        "title": "Upload fehlgeschlagen",
         "fallback": "Upload fehlgeschlagen"
       },
       "status": {
@@ -117,10 +117,6 @@
         "failed": {
           "title": "Upload fehlgeschlagen",
           "fallback": "Der Verarbeitungsjob ist fehlgeschlagen."
-        },
-        "processing": {
-          "title": "Wird verarbeitet…",
-          "description": "Ihre Datei wurde hochgeladen; der Verarbeitungsjob läuft."
         }
       },
       "actions": {
@@ -156,6 +152,13 @@
         "fileCount_one": "{{count}} Datei",
         "fileCount_other": "{{count}} Dateien",
         "untargeted": "(keine Tabelle)"
+      },
+      "transfer": {
+        "started": "Der Upload nach {{table}} läuft. Sie können diesen Dialog schließen und weiterarbeiten; lassen Sie diesen Tab geöffnet, bis der Upload abgeschlossen ist.",
+        "received": "Upload nach {{table}} empfangen. Sie werden benachrichtigt, sobald er abgefragt werden kann.",
+        "failed": "Upload nach {{table}} fehlgeschlagen",
+        "statusUploading": "Wird hochgeladen",
+        "statusFailed": "Upload fehlgeschlagen"
       }
     }
   }

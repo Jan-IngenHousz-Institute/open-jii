@@ -243,3 +243,133 @@ def test_nested_parquet_non_finite_values_become_null(spark, tmp_path, numeric_t
         {"id": 2, "nested": {"Fm'.value": 1.25, "a`b": [], "label": "Infinity"}, "arrays": [], "maps": {}},
     ]
     assert serialized.filter(F.expr("try_parse_json(uploaded_data) IS NULL")).count() == 0
+
+
+def _task_function(name: str, namespace: dict[str, Any]) -> Callable[..., Any]:
+    module = ast.parse(_TASK_PATH.read_text())
+    function = next(node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == name)
+    exec(compile(ast.Module(body=[function], type_ignores=[]), _TASK_PATH, "exec"), namespace)
+    return cast(Callable[..., Any], namespace[name])
+
+
+class _Logger:
+    def error(self, _message: str) -> None:
+        pass
+
+
+def _report_outcome(table_rows_arrive: bool) -> tuple[Callable[[dict], None], list[str], list[int]]:
+    notified: list[str] = []
+    waited_for: list[int] = []
+
+    def wait_for_table_rows(expected_rows: int) -> bool:
+        waited_for.append(expected_rows)
+        return table_rows_arrive
+
+    namespace: dict[str, Any] = {
+        "notify_uploader": notified.append,
+        "wait_for_table_rows": wait_for_table_rows,
+        "logger": _Logger(),
+        "UPLOAD_ID": "upload-1",
+        "UPLOADED_DATA_TABLE": "catalog.centrum.experiment_uploaded_data",
+        "TABLE_WAIT_SECONDS": 3600,
+    }
+    return _task_function("report_outcome", namespace), notified, waited_for
+
+
+def test_upload_is_reported_ready_once_its_rows_are_in_the_table() -> None:
+    report_outcome, notified, waited_for = _report_outcome(table_rows_arrive=True)
+
+    report_outcome({"status": "success", "rows_written": 42})
+
+    assert waited_for == [42]
+    assert notified == ["ready"]
+
+
+def test_upload_is_reported_failed_when_its_rows_never_arrive() -> None:
+    report_outcome, notified, _ = _report_outcome(table_rows_arrive=False)
+
+    report_outcome({"status": "partial", "rows_written": 7})
+
+    assert notified == ["failed"]
+
+
+@pytest.mark.parametrize(
+    "result",
+    [
+        {"status": "error", "error_message": "boom"},
+        {"status": "partial", "rows_written": 0},
+    ],
+)
+def test_upload_without_rows_is_reported_failed_without_waiting(result: dict) -> None:
+    report_outcome, notified, waited_for = _report_outcome(table_rows_arrive=True)
+
+    report_outcome(result)
+
+    assert waited_for == []
+    assert notified == ["failed"]
+
+
+class _FakeSpark:
+    def __init__(self, counts: list[int | Exception]) -> None:
+        self.counts = counts
+        self.queries: list[dict] = []
+
+    def sql(self, query: str, args: dict) -> "_FakeSpark":
+        self.queries.append(args)
+        return self
+
+    def first(self) -> dict:
+        landed = self.counts.pop(0)
+        if isinstance(landed, Exception):
+            raise landed
+        return {"landed": landed}
+
+
+class _QuietLogger:
+    def warning(self, _message: str) -> None:
+        pass
+
+
+class _Clock:
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def monotonic(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.now += seconds
+
+
+def _wait_for_table_rows(spark: _FakeSpark, clock: _Clock) -> Callable[[int], bool]:
+    namespace: dict[str, Any] = {
+        "spark": spark,
+        "time": clock,
+        "UPLOAD_ID": "upload-1",
+        "UPLOADED_DATA_TABLE": "catalog.centrum.experiment_uploaded_data",
+        "TABLE_WAIT_SECONDS": 60,
+        "TABLE_POLL_SECONDS": 15,
+        "logger": _QuietLogger(),
+    }
+    return _task_function("wait_for_table_rows", namespace)
+
+
+def test_waits_until_every_row_of_the_upload_has_landed() -> None:
+    spark = _FakeSpark([0, 3, 5])
+
+    assert _wait_for_table_rows(spark, _Clock())(5) is True
+    assert spark.queries == [{"upload_id": "upload-1"}] * 3
+
+
+def test_gives_up_when_the_rows_do_not_land_in_time() -> None:
+    spark = _FakeSpark([0, 0, 0, 0, 0])
+    clock = _Clock()
+
+    assert _wait_for_table_rows(spark, clock)(5) is False
+    assert clock.now == 60
+
+
+def test_keeps_waiting_when_a_count_query_fails() -> None:
+    spark = _FakeSpark([RuntimeError("warehouse hiccup"), 5])
+
+    assert _wait_for_table_rows(spark, _Clock())(5) is True

@@ -23,7 +23,7 @@ export interface UploadTargetPickerProps {
   canManage: boolean;
   targetKind: "new" | "existing";
   uploadTables: ExperimentTableMetadata[];
-  disabled: boolean;
+  disabled?: boolean;
 }
 
 export function UploadTargetPicker({
@@ -31,7 +31,7 @@ export function UploadTargetPicker({
   canManage,
   targetKind,
   uploadTables,
-  disabled,
+  disabled = false,
 }: UploadTargetPickerProps) {
   const { t } = useTranslation("experimentData");
   const hasExistingTables = uploadTables.length > 0;
