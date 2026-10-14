@@ -106,6 +106,18 @@ describe("FiltersShelf", () => {
     expect(screen.queryByText(/^\(\d+\)$/)).not.toBeInTheDocument();
   });
 
+  it("leaves a chart with no filters untouched when it mounts", () => {
+    mountDistinct();
+    const { form } = renderWithForm<ChartFormValues>(
+      (form) => (
+        <FiltersShelf form={form} columns={columns} experimentId="exp-1" tableName="readings" />
+      ),
+      { useFormProps: { defaultValues: defaults() } },
+    );
+
+    expect(form.getValues("dataConfig.filters")).toBeUndefined();
+  });
+
   it("collapses the filters back to undefined when the last filter is removed", async () => {
     mountDistinct();
     const user = userEvent.setup();

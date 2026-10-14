@@ -14,6 +14,7 @@
     "renameError": "Failed to rename workbook",
     "noWorkbooks": "No workbooks found",
     "noMatches": "No workbooks match your search",
+    "noFilterMatches": "No workbooks match these filters",
     "workbookCreated": "Workbook created successfully",
     "workbookUpdated": "Workbook updated successfully",
     "createError": "Failed to create workbook. Please try again.",

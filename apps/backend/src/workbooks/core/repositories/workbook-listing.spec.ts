@@ -365,4 +365,67 @@ describe("WorkbookRepository listing scope and pagination", () => {
       expect(new Set(ids).size).toBe(created.length);
     });
   });
+
+  describe("visibility filter", () => {
+    let mine: { id: string };
+    let minePrivate: { id: string };
+    let theirs: { id: string };
+
+    beforeEach(async () => {
+      mine = await testApp.createWorkbook({
+        name: "Soil public",
+        createdBy: owner,
+        visibility: "public",
+      });
+      minePrivate = await testApp.createWorkbook({
+        name: "Soil private",
+        createdBy: owner,
+        visibility: "private",
+      });
+      theirs = await testApp.createWorkbook({
+        name: "Leaf public",
+        createdBy: stranger,
+        visibility: "public",
+      });
+    });
+
+    it("keeps only rows with the one visibility asked for", async () => {
+      const result = await repository.findAll({ userId: owner, visibilities: ["private"] });
+
+      assertSuccess(result);
+      expect(result.value.map((w) => w.id)).toEqual([minePrivate.id]);
+    });
+
+    it("matches either value when both are asked for", async () => {
+      const result = await repository.findAll({
+        userId: owner,
+        visibilities: ["private", "public"],
+      });
+
+      assertSuccess(result);
+      expect(result.value.map((w) => w.id).sort()).toEqual(
+        [mine.id, minePrivate.id, theirs.id].sort(),
+      );
+    });
+
+    it("treats an empty list as no filter", async () => {
+      const result = await repository.findAll({ userId: owner, visibilities: [] });
+
+      assertSuccess(result);
+      expect(result.value).toHaveLength(3);
+    });
+
+    it("combines with scope=related and search, and counts the filtered set", async () => {
+      const result = await repository.findPage(1, 20, {
+        userId: owner,
+        scope: "related",
+        search: "Soil",
+        visibilities: ["public"],
+      });
+
+      assertSuccess(result);
+      expect(result.value.items.map((w) => w.id)).toEqual([mine.id]);
+      expect(result.value.totalCount).toBe(1);
+    });
+  });
 });
