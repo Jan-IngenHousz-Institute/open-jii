@@ -1,11 +1,19 @@
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import type { GranteeUserDto, ResourceGrantDto } from "@repo/api/domains/sharing/sharing.schema";
-import { and, eq, profiles, resourceGrants, teamMembers } from "@repo/database";
+import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
+import type {
+  ResourceCollaboratorDto,
+  GranteeUserDto,
+  ResourceGrantDto,
+} from "@repo/api/domains/sharing/sharing.schema";
+import { and, eq, notifications, profiles, resourceGrants, teamMembers } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
+import { EmailVisibilityService } from "../../authorization/email-visibility.service";
+import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
+import { SharingRepository } from "../core/repositories/sharing.repository";
 
 /**
  * HTTP-level tests for the sharing controller. Authorization runs through the
@@ -272,6 +280,224 @@ describe("SharingController", () => {
         .get(`${searchPath(macro.id)}?query=passer`)
         .withAuth(passerBy)
         .expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  describe("addresses in the picker", () => {
+    const searchPath = (macroId: string) =>
+      testApp.resolveOrpcPath(contract.sharing.searchGranteeUsers, {
+        resourceType: "macro",
+        id: macroId,
+      });
+
+    it.each([
+      ["no query", ""],
+      ["a one-character query", "?query=a"],
+      ["a one-character query padded with spaces", "?query=%20a%20"],
+      ["a limit above 20", "?query=ab&limit=21"],
+    ])("rejects %s with 400", async (_label, queryString) => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+
+      await testApp
+        .get(`${searchPath(macro.id)}${queryString}`)
+        .withAuth(owner)
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("finds a stranger by name or full address, never showing the address", async () => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+      const stranger = await testApp.createTestUser({
+        name: "Wilhelmina Stranger",
+        email: "qvortrup.k@example.com",
+      });
+
+      const byName = await testApp
+        .get(`${searchPath(macro.id)}?query=Wilhelmina`)
+        .withAuth(owner)
+        .expect(StatusCodes.OK);
+      const byAddress = await testApp
+        .get(`${searchPath(macro.id)}?query=QVORTRUP.K@example.com`)
+        .withAuth(owner)
+        .expect(StatusCodes.OK);
+      const byFragment = await testApp
+        .get(`${searchPath(macro.id)}?query=qvortrup`)
+        .withAuth(owner)
+        .expect(StatusCodes.OK);
+
+      for (const res of [byName, byAddress]) {
+        expect(res.body as GranteeUserDto[]).toEqual([
+          expect.objectContaining({ userId: stranger, email: null }),
+        ]);
+        expect(JSON.stringify(res.body).toLowerCase()).not.toContain("qvortrup.k@example.com");
+      }
+      expect((byFragment.body as GranteeUserDto[]).map((c) => c.userId)).not.toContain(stranger);
+    });
+
+    it("computes exact-email evidence in the grantee search statement", async () => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+      const email = "exact-evidence@example.test";
+      const exactId = await testApp.createTestUser({ name: "Zelda Target", email });
+      const nameId = await testApp.createTestUser({ name: `${email} Candidate` });
+      const select = vi.spyOn(testApp.database, "select");
+      const result = await testApp.module
+        .get(SharingRepository)
+        .searchGranteeUsers("macro", macro.id, macro.organizationId, {
+          query: email.toUpperCase(),
+          limit: 20,
+        });
+      expect(result.isSuccess()).toBe(true);
+      if (result.isFailure()) throw result.error;
+      expect(result.value).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ userId: exactId, matchedEmail: true }),
+          expect.objectContaining({ userId: nameId, matchedEmail: false }),
+        ]),
+      );
+      expect(select).toHaveBeenCalledTimes(1);
+      select.mockRestore();
+    });
+
+    it("ranks an exact address ahead of more name matches than the page limit", async () => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+      const email = "crowded@example.com";
+      const targetId = await testApp.createTestUser({ name: "Zelda Target", email });
+      for (let i = 0; i < 21; i++) {
+        await testApp.createTestUser({ name: `${email} Candidate ${i}` });
+      }
+
+      const response: SuperTestResponse<GranteeUserDto[]> = await testApp
+        .get(searchPath(macro.id))
+        .withAuth(owner)
+        .query({ query: email.toUpperCase(), limit: 20 })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toHaveLength(20);
+      expect(response.body[0]).toMatchObject({ userId: targetId, email: null, matchedEmail: true });
+      for (const candidate of response.body.slice(1))
+        expect(candidate).toMatchObject({ matchedEmail: false });
+      expect(response.body.every((candidate) => candidate.email === null)).toBe(true);
+    });
+
+    it("shows an owner of the organization its members' addresses, but no one else's", async () => {
+      const org = await testApp.createOrganization("Greenhouse Lab");
+      await testApp.addOrganizationMember(org, owner, "owner");
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner, organizationId: org });
+      const member = await testApp.createTestUser({
+        name: "Xanthippe Member",
+        email: "xmember@example.com",
+      });
+      const outsider = await testApp.createTestUser({
+        name: "Xanthippe Outsider",
+        email: "xoutsider@example.com",
+      });
+      await testApp.addOrganizationMember(org, member, "member");
+
+      const res = await testApp
+        .get(`${searchPath(macro.id)}?query=Xanthippe`)
+        .withAuth(owner)
+        .expect(StatusCodes.OK);
+
+      const emails = Object.fromEntries(
+        (res.body as GranteeUserDto[]).map((candidate) => [candidate.userId, candidate.email]),
+      );
+      expect(emails).toEqual({ [member]: "xmember@example.com", [outsider]: null });
+    });
+
+    it("shows a share-capable plain member nobody's address", async () => {
+      const org = await testApp.createOrganization("Greenhouse Lab");
+      await testApp.addOrganizationMember(org, owner, "owner");
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner, organizationId: org });
+      const sharer = await testApp.createTestUser({ name: "Sharer" });
+      await testApp.addOrganizationMember(org, sharer, "member");
+      await testApp.addResourceAdmin("macro", macro.id, sharer);
+      await testApp.createTestUser({ name: "Ysolde Member", email: "ysolde@example.com" });
+
+      const res = await testApp
+        .get(`${searchPath(macro.id)}?query=Ysolde`)
+        .withAuth(sharer)
+        .expect(StatusCodes.OK);
+
+      expect((res.body as GranteeUserDto[]).every((candidate) => candidate.email === null)).toBe(
+        true,
+      );
+      expect(JSON.stringify(res.body)).not.toContain("ysolde@example.com");
+    });
+  });
+
+  describe("addresses on the collaborators list", () => {
+    const collaboratorsPath = (experimentId: string) =>
+      testApp.resolveOrpcPath(contract.sharing.listGrants, {
+        resourceType: "experiment",
+        id: experimentId,
+      });
+
+    it("never hands a grantee's address back to whoever granted them", async () => {
+      const sharer = await testApp.createTestUser({ name: "Sharer" });
+      const { experiment } = await testApp.createExperiment({ name: "Mine", userId: sharer });
+      const stranger = await testApp.createTestUser({
+        name: "Grant Target",
+        email: "target@example.com",
+      });
+
+      const created = await testApp
+        .post(collaboratorsPath(experiment.id))
+        .withAuth(sharer)
+        .send({ granteeType: "user", granteeId: stranger, role: "viewer" })
+        .expect(StatusCodes.CREATED);
+      const grant = (created.body as ResourceGrantDto[]).find((row) => row.granteeId === stranger);
+      if (!grant) throw new Error("the new grant is missing from the list");
+
+      const updated = await testApp
+        .patch(
+          testApp.resolveOrpcPath(contract.sharing.updateGrant, {
+            resourceType: "experiment",
+            id: experiment.id,
+            grantId: grant.id,
+          }),
+        )
+        .withAuth(sharer)
+        .send({ role: "admin" })
+        .expect(StatusCodes.OK);
+      const listed = await testApp
+        .get(collaboratorsPath(experiment.id))
+        .withAuth(sharer)
+        .expect(StatusCodes.OK);
+
+      for (const res of [created, updated, listed]) {
+        const row = (res.body as ResourceGrantDto[]).find((r) => r.granteeId === stranger);
+        expect(row?.grantee.email).toBeNull();
+        expect(JSON.stringify(res.body)).not.toContain("target@example.com");
+      }
+    });
+
+    it("shows an organization admin the address of a member granted on its experiment", async () => {
+      const org = await testApp.createOrganization("Greenhouse Lab");
+      await testApp.addOrganizationMember(org, owner, "owner");
+      const orgAdmin = await testApp.createTestUser({ name: "Org Admin" });
+      await testApp.addOrganizationMember(org, orgAdmin, "admin");
+      const member = await testApp.createTestUser({ name: "Member", email: "m@example.com" });
+      await testApp.addOrganizationMember(org, member, "member");
+      const outsider = await testApp.createTestUser({ name: "Outsider", email: "o@example.com" });
+      const { experiment } = await testApp.createExperiment({
+        name: "Org exp",
+        userId: owner,
+        organizationId: org,
+      });
+      await testApp.addExperimentCollaborator(experiment.id, member);
+      await testApp.addExperimentCollaborator(experiment.id, outsider);
+
+      const res = await testApp
+        .get(collaboratorsPath(experiment.id))
+        .withAuth(orgAdmin)
+        .expect(StatusCodes.OK);
+
+      const grantRows = (res.body as ResourceGrantDto[]).filter(
+        (row) => row.granteeType === "user",
+      );
+      const emails = Object.fromEntries(grantRows.map((row) => [row.granteeId, row.grantee.email]));
+      expect(emails[member]).toBe("m@example.com");
+      expect(emails[outsider]).toBeNull();
+      expect(JSON.stringify(res.body)).not.toContain("o@example.com");
     });
   });
 
@@ -699,6 +925,93 @@ describe("SharingController", () => {
       const stored = grants.find((grant) => grant.granteeId === legacy);
       expect(stored?.role).toBe("owner");
     });
+  });
+
+  describe("visibility outages after committed grant writes", () => {
+    it.each(["create", "update"] as const)(
+      "%s succeeds with a redacted list after visibility lookup fails, without losing access or notification",
+      async (operation) => {
+        const { experiment } = await testApp.createExperiment({
+          name: "Private fixture",
+          userId: owner,
+          visibility: "private",
+        });
+        const target = await testApp.createTestUser({
+          name: "Grant Target",
+          email: "grant-outage@example.test",
+        });
+        const initial =
+          operation === "update"
+            ? await testApp.addResourceGrant({
+                resourceType: "experiment",
+                resourceId: experiment.id,
+                granteeType: "user",
+                granteeId: target,
+                role: "viewer",
+                createdBy: owner,
+              })
+            : null;
+        const role = operation === "create" ? "viewer" : "admin";
+        const visibility = vi
+          .spyOn(testApp.module.get(EmailVisibilityService), "visibleUserEmails")
+          .mockRejectedValue(new Error("Visibility database unavailable"));
+        const response = initial
+          ? await testApp
+              .patch(
+                testApp.resolveOrpcPath(contract.sharing.updateGrant, {
+                  resourceType: "experiment",
+                  id: experiment.id,
+                  grantId: initial.id,
+                }),
+              )
+              .withAuth(owner)
+              .send({ role })
+          : await testApp
+              .post(
+                testApp.resolveOrpcPath(contract.sharing.createGrant, {
+                  resourceType: "experiment",
+                  id: experiment.id,
+                }),
+              )
+              .withAuth(owner)
+              .send({ granteeType: "user", granteeId: target, role });
+        const stored = await testApp.database
+          .select({ role: resourceGrants.role })
+          .from(resourceGrants)
+          .where(
+            and(eq(resourceGrants.resourceId, experiment.id), eq(resourceGrants.granteeId, target)),
+          );
+        expect(stored).toEqual([{ role }]);
+        expect(
+          (
+            await authz.can(target, {
+              resourceType: "experiment",
+              resourceId: experiment.id,
+              action: operation === "create" ? "read" : "manage",
+            })
+          ).allow,
+        ).toBe(true);
+        const notices = await testApp.database
+          .select({ type: notifications.type })
+          .from(notifications)
+          .where(
+            and(eq(notifications.resourceId, experiment.id), eq(notifications.recipientId, target)),
+          );
+        expect(notices).toEqual([
+          { type: operation === "create" ? "resource_access_granted" : "resource_access_changed" },
+        ]);
+        expect(response.status).toBe(operation === "create" ? StatusCodes.CREATED : StatusCodes.OK);
+        const rows = response.body as ResourceCollaboratorDto[];
+        expect(rows.filter(isGranteeRow).every((row) => row.grantee.email === null)).toBe(true);
+        expect(rows.filter(isGranteeRow).find((row) => row.granteeId === target)).toMatchObject({
+          granteeId: target,
+          role,
+          grantee: { displayName: "Grant Target", email: null },
+        });
+        expect(JSON.stringify(rows)).not.toContain("grant-outage@example.test");
+        expect(visibility).toHaveBeenCalledTimes(1);
+      },
+    );
   });
 
   describe("grant write failures surface as errors", () => {

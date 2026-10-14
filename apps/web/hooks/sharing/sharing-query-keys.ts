@@ -26,7 +26,7 @@ export function granteeUsersQueryKey(
   userId: string | undefined,
   resourceType: SharingResourceType,
   resourceId: string,
-  query: string | undefined,
+  query: string,
 ) {
   const input = { resourceType, id: resourceId, query };
   return orpc.sharing.searchGranteeUsers.queryKey({

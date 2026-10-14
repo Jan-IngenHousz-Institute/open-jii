@@ -1480,4 +1480,112 @@ describe("organization plugin configuration and protection hooks", () => {
       ).toEqual([]);
     });
   });
+  describe("other people's addresses", () => {
+    const leaks = (value: unknown, ...emails: string[]) =>
+      emails.filter((email) => JSON.stringify(value).toLowerCase().includes(email.toLowerCase()));
+
+    it("are withheld from every member row a plain member lists", async () => {
+      const { owner, admin, member, org } = await orgWithPlainMember();
+
+      const listed = await auth.api.listMembers({
+        query: { organizationId: org.id },
+        headers: member.headers,
+      });
+
+      const emails = Object.fromEntries(listed.members.map((row) => [row.userId, row.user.email]));
+      expect(emails).toEqual({
+        [owner.userId]: null,
+        [admin.userId]: null,
+        [member.userId]: member.email,
+      });
+      expect(leaks(listed, owner.email, admin.email)).toEqual([]);
+    });
+
+    it("are withheld from an owner too, whose addresses come from the backend roster", async () => {
+      const { owner, admin, member, org } = await orgWithPlainMember();
+
+      const listed = await auth.api.listMembers({
+        query: { organizationId: org.id },
+        headers: owner.headers,
+      });
+
+      expect(leaks(listed, admin.email, member.email)).toEqual([]);
+      expect(listed.members.find((row) => row.userId === owner.userId)?.user.email).toBe(
+        owner.email,
+      );
+    });
+
+    it("are withheld from the full organization's members", async () => {
+      const { owner, admin, member, org } = await orgWithPlainMember();
+
+      const full = await auth.api.getFullOrganization({
+        query: { organizationId: org.id },
+        headers: member.headers,
+      });
+
+      expect(full?.members).toHaveLength(3);
+      expect(leaks(full, owner.email, admin.email)).toEqual([]);
+    });
+
+    it("leave the caller's own active membership alone", async () => {
+      const { owner, admin, member, org } = await orgWithPlainMember();
+      await auth.api.setActiveOrganization({
+        body: { organizationId: org.id },
+        headers: member.headers,
+      });
+
+      const active = await auth.api.getActiveMember({ headers: member.headers });
+
+      expect(active.user.email).toBe(member.email);
+      expect(leaks(active, owner.email, admin.email)).toEqual([]);
+    });
+
+    it("are withheld from what re-roling and removing a member answer", async () => {
+      const { owner, member, org } = await orgWithPlainMember();
+      const [memberRow] = await testApp.database
+        .select({ id: organizationMembers.id })
+        .from(organizationMembers)
+        .where(
+          and(
+            eq(organizationMembers.organizationId, org.id),
+            eq(organizationMembers.userId, member.userId),
+          ),
+        );
+
+      const updated = await auth.api.updateMemberRole({
+        body: { memberId: memberRow.id, role: "admin", organizationId: org.id },
+        headers: owner.headers,
+      });
+      const removed = await auth.api.removeMember({
+        body: { memberIdOrEmail: memberRow.id, organizationId: org.id },
+        headers: owner.headers,
+      });
+
+      expect(leaks(updated, member.email)).toEqual([]);
+      expect(leaks(removed, member.email)).toEqual([]);
+    });
+
+    it("keep the inviter's address from the invitee, before and after accepting", async () => {
+      const owner = await signIn("owner");
+      const org = await createOrganization(owner);
+      const invitee = await signIn("invitee");
+      const invitation = await auth.api.createInvitation({
+        body: { email: invitee.email, role: "member", organizationId: org.id },
+        headers: owner.headers,
+      });
+
+      const seen = await auth.api.getInvitation({
+        query: { id: invitation.id },
+        headers: invitee.headers,
+      });
+      const accepted = await auth.api.acceptInvitation({
+        body: { invitationId: invitation.id },
+        headers: invitee.headers,
+      });
+
+      expect(seen).toMatchObject({ id: invitation.id, inviterEmail: null });
+      expect(leaks(seen, owner.email)).toEqual([]);
+      expect(leaks(accepted, owner.email)).toEqual([]);
+    });
+  });
 });

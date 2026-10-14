@@ -73,7 +73,7 @@ import type {
   ResourceGrantDto,
   ResourceOwnerDto,
 } from "@repo/api/domains/sharing/sharing.schema";
-import type { Invitation, UserProfile } from "@repo/api/domains/user/user.schema";
+import type { Invitation, UserSearchResult } from "@repo/api/domains/user/user.schema";
 import type {
   BranchCell,
   CommandCell,
@@ -304,7 +304,7 @@ export function createWorkbook(overrides: Partial<Workbook> = {}): Workbook {
 
 // ── User Profile ────────────────────────────────────────────────
 
-export function createUserProfile(overrides: Partial<UserProfile> = {}): UserProfile {
+export function createUserProfile(overrides: Partial<UserSearchResult> = {}): UserSearchResult {
   return {
     userId: "user-1",
     firstName: "Test",
@@ -312,6 +312,7 @@ export function createUserProfile(overrides: Partial<UserProfile> = {}): UserPro
     bio: null,
     activated: true,
     email: "test@example.com",
+    matchedEmail: false,
     ...overrides,
   };
 }
@@ -323,6 +324,7 @@ export function createGranteeUser(overrides: Partial<GranteeUserDto> = {}): Gran
     firstName: "Test",
     lastName: "User",
     email: "test@example.com",
+    matchedEmail: false,
     avatarUrl: null,
     organizationRole: null,
     existingGrantRole: null,

@@ -16,6 +16,7 @@ import {
   organizations,
 } from "@repo/database";
 
+import { EmailVisibilityService } from "../../authorization/email-visibility.service";
 import { EmailAdapter } from "../../common/modules/email/services/email.adapter";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../notifications/application/services/notification-dispatch.service";
@@ -278,6 +279,24 @@ describe("OrganizationJoinRequestsController", () => {
       }
     });
 
+    it("shows a decider the address of a pending requester, not of a rejected one", async () => {
+      const organizationId = await seedOrg("public");
+      const decided = await testApp.createTestUser({ email: "decided@example.com" });
+      await testApp.addOrganizationJoinRequest(organizationId, decided, { status: "rejected" });
+      await testApp.addOrganizationJoinRequest(organizationId, requesterId);
+
+      const response: SuperTestResponse<OrganizationJoinRequestList> = await testApp
+        .get(listPath(organizationId))
+        .withAuth(adminId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.map((request) => request.user.email)).toEqual([
+        "requester@example.com",
+        null,
+      ]);
+      expect(JSON.stringify(response.body)).not.toContain("decided@example.com");
+    });
+
     it("403s a plain member", async () => {
       const organizationId = await seedOrg("public");
 
@@ -383,6 +402,36 @@ describe("OrganizationJoinRequestsController", () => {
         "requester@example.com",
       );
     });
+
+    it.each(["approve", "reject"] as const)(
+      "keeps a committed %s successful and hides email when the visibility read fails",
+      async (decision) => {
+        const organizationId = await seedOrg("public");
+        const requestId = await seedPendingRequest(organizationId);
+        vi.spyOn(
+          testApp.module.get(EmailVisibilityService),
+          "visibleUserEmails",
+        ).mockRejectedValueOnce(new Error("Visibility read unavailable"));
+
+        const response: SuperTestResponse<OrganizationJoinRequest> = await testApp
+          .patch(decidePath(organizationId, requestId))
+          .withAuth(adminId)
+          .send({ decision })
+          .expect(StatusCodes.OK);
+
+        const status = decision === "approve" ? "approved" : "rejected";
+        expect(response.body).toMatchObject({ status, user: { id: requesterId, email: null } });
+        expect(JSON.stringify(response.body)).not.toContain("requester@example.com");
+        const persisted = await testApp.database
+          .select({ status: organizationJoinRequests.status })
+          .from(organizationJoinRequests)
+          .where(eq(organizationJoinRequests.id, requestId));
+        expect(persisted).toEqual([{ status }]);
+        expect(await membershipRows(organizationId, requesterId)).toEqual(
+          decision === "approve" ? [{ role: "member" }] : [],
+        );
+      },
+    );
 
     it("approve is idempotent for somebody who joined meanwhile, keeping their role", async () => {
       const organizationId = await seedOrg("public");

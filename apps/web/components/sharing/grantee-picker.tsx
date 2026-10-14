@@ -57,6 +57,7 @@ export type GranteeSelection =
 
 interface GranteeResultRow extends SelectedGrantee {
   email?: string | null;
+  matchedEmail?: boolean;
   avatarUrl?: string | null;
   firstName?: string;
   lastName?: string;
@@ -191,6 +192,7 @@ export function GranteePicker({
           id: u.userId,
           displayName: `${u.firstName} ${u.lastName}`.trim() || (u.email ?? u.userId),
           email: u.email,
+          matchedEmail: u.matchedEmail && emailSchema.safeParse(debouncedSearch.trim()).success,
           avatarUrl: u.avatarUrl,
           firstName: u.firstName,
           lastName: u.lastName,
@@ -240,7 +242,9 @@ export function GranteePicker({
   // An invitation to an address that already has an account would sit pending forever.
   const isRegisteredAddress =
     isEmailTerm &&
-    (users ?? []).some((u) => (u.email ?? "").toLowerCase() === typedEmail.toLowerCase());
+    isDebounced &&
+    debouncedSearch.trim().toLowerCase() === typedEmail.toLowerCase() &&
+    (users ?? []).some((u) => u.matchedEmail);
   const canInviteByEmail =
     allowEmailInvite &&
     granteeType === "user" &&
@@ -337,6 +341,7 @@ export function GranteePicker({
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <GranteeResults
+            needsMoreCharacters={granteeType === "user" && typedEmail.length < 2}
             results={results}
             isLoading={isLoading}
             isError={isError}
@@ -364,6 +369,7 @@ export function GranteePicker({
 type EmptyReason = "alreadyInvited" | "noMatch";
 
 function GranteeResults({
+  needsMoreCharacters,
   results,
   isLoading,
   isError,
@@ -374,6 +380,7 @@ function GranteeResults({
   onSelect,
   onSelectEmail,
 }: {
+  needsMoreCharacters: boolean;
   results: GranteeResultRow[];
   isLoading: boolean;
   isError: boolean;
@@ -385,6 +392,14 @@ function GranteeResults({
   onSelectEmail: () => void;
 }) {
   const { t } = useTranslation();
+
+  if (needsMoreCharacters) {
+    return (
+      <div className="text-muted-foreground p-4 text-center text-sm">
+        {t("common.searchMinCharacters")}
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -459,19 +474,26 @@ function GranteeResults({
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-2">
               <span className="truncate text-sm font-medium">{result.displayName}</span>
+              {result.matchedEmail && (
+                <Badge variant="outline" className="shrink-0 text-xs font-normal">
+                  {t("common.emailMatched")}
+                </Badge>
+              )}
               {result.accessBadges?.map((badge) => (
                 <Badge key={badge} variant="outline" className="shrink-0 text-xs font-normal">
                   {badge}
                 </Badge>
               ))}
             </div>
-            {result.type === "user" ? (
+            {result.type === "user" && result.email && (
               <div className="text-muted-foreground truncate text-xs">{result.email}</div>
-            ) : result.type === "team" ? (
+            )}
+            {result.type === "team" && (
               <div className="text-muted-foreground truncate text-xs">
                 {t("sharing.teamMemberCount", { count: result.memberCount ?? 0 })}
               </div>
-            ) : (
+            )}
+            {result.type === "organization" && (
               <div className="text-muted-foreground truncate text-xs">
                 {t("sharing.granteeTypeOrganization")}
               </div>

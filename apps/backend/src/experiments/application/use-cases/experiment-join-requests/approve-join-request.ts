@@ -1,6 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
+import {
+  EmailVisibilityService,
+  nestedUserEmail,
+} from "../../../../authorization/email-visibility.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
@@ -18,6 +22,7 @@ export class ApproveJoinRequestUseCase {
     private readonly experimentRepository: ExperimentRepository,
     private readonly joinRequestRepository: ExperimentJoinRequestRepository,
     private readonly notifications: NotificationDispatchService,
+    private readonly emailVisibility: EmailVisibilityService,
   ) {}
 
   async execute(
@@ -120,7 +125,14 @@ export class ApproveJoinRequestUseCase {
         });
       }
 
-      return success(approved);
+      return this.emailVisibility.redactAfterWrite(
+        currentUserId,
+        success(approved),
+        nestedUserEmail(),
+        {
+          experimentId,
+        },
+      );
     });
   }
 }
