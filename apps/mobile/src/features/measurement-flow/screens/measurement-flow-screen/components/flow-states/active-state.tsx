@@ -30,7 +30,10 @@ function renderNode(currentNode: FlowNode, isDispatchTarget: boolean) {
     case "question":
       return <QuestionNode node={currentNode} />;
     case "analysis":
-      return <AnalysisNode content={currentNode.content} nodeId={currentNode.id} />;
+      // One instance per step: what a step accepted, its comment and its dialogs belong to it.
+      return (
+        <AnalysisNode key={currentNode.id} content={currentNode.content} nodeId={currentNode.id} />
+      );
     case "branch":
       return <BranchNode node={currentNode} />;
     case "instruction":
