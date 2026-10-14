@@ -23,14 +23,16 @@ export interface NotificationDeliveryInsertRow {
 
 /**
  * A claimed row with everything the email needs reachable from it, so a drain makes
- * one round trip per batch. `type` and `resourceType` stay as stored: a build that
+ * one round trip per claim. `type` and `resourceType` stay as stored: a build that
  * does not know them cannot render the email and the worker says so on the row.
+ *
+ * `claimedAt` is what every later write on this row is fenced against, so it is
+ * non-null here: a row that came back from a claim was stamped by it.
  */
 export type ClaimedDelivery = Pick<
   NotificationDeliveryRow,
-  "id" | "notificationId" | "channel" | "status" | "attempts"
-> &
-  Pick<
+  "id" | "notificationId" | "channel" | "status" | "attempts" | "claimedAt"
+> & { claimedAt: Date } & Pick<
     typeof notifications.$inferSelect,
     "recipientId" | "type" | "actorId" | "resourceType" | "resourceId" | "params"
   >;

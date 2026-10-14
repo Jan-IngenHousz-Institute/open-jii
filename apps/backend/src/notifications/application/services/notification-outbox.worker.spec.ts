@@ -17,7 +17,7 @@ import { NotificationDeliveryRepository } from "../../core/repositories/notifica
 import { NotificationRepository } from "../../core/repositories/notification.repository";
 import { NotificationDispatchService } from "./notification-dispatch.service";
 import { NotificationEmailService } from "./notification-email.service";
-import { NotificationOutboxWorker, OUTBOX_INTERVAL } from "./notification-outbox.worker";
+import { LEASE_MS, NotificationOutboxWorker, OUTBOX_INTERVAL } from "./notification-outbox.worker";
 
 const MINUTE = 60_000;
 
@@ -425,6 +425,30 @@ describe("NotificationOutboxWorker", () => {
       expect(await worker.drain()).toEqual({ sent: 1, retried: 0, failed: 0 });
       expect(sendSubmitted).toHaveBeenCalledTimes(1);
       expect(await deliveryById(queued.id)).toMatchObject({ status: "sending" });
+    });
+
+    it("does not undo a send another task made while this one was stalled", async () => {
+      const queued = await queueOne();
+      // This task claims the row, then stalls long enough for the lease to hand it on.
+      const claimed = await deliveryRepository.claimDue(1, LEASE_MS);
+      assertSuccess(claimed);
+      const stale = claimed.value[0];
+
+      await setDelivery(stale.id, { claimedAt: new Date(Date.now() - 6 * MINUTE) });
+      expect(await worker.drain()).toEqual({ sent: 1, retried: 0, failed: 0 });
+
+      // The stalled task finally comes back and records the failure it saw.
+      const late = await deliveryRepository.markRetry(stale, {
+        attempts: 1,
+        nextAttemptAt: new Date(Date.now() + MINUTE),
+        lastError: "Mail server refused",
+      });
+
+      // Without the fence this row would read `pending` again and be sent twice.
+      assertSuccess(late);
+      expect(await deliveryById(queued.id)).toMatchObject({ status: "sent" });
+      expect(sendSubmitted).toHaveBeenCalledTimes(1);
+      expect(late.value).toBe(false);
     });
 
     it("counts a retry whose row could not be marked", async () => {

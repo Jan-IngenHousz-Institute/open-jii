@@ -69,6 +69,12 @@ describe("NotificationDeliveryRepository", () => {
     return { notification, delivery };
   }
 
+  const setDelivery = (id: string, values: Partial<typeof notificationDeliveries.$inferInsert>) =>
+    testApp.database
+      .update(notificationDeliveries)
+      .set(values)
+      .where(eq(notificationDeliveries.id, id));
+
   const rowById = async (id: string) => {
     const [row] = await testApp.database
       .select()
@@ -84,6 +90,7 @@ describe("NotificationDeliveryRepository", () => {
     const claimed = await repository.claimDue(25, LEASE_MS);
 
     assertSuccess(claimed);
+    const stamped = await rowById(delivery.id);
     expect(claimed.value).toEqual([
       {
         id: delivery.id,
@@ -91,6 +98,9 @@ describe("NotificationDeliveryRepository", () => {
         channel: "email",
         status: "sending",
         attempts: 0,
+        // The claim a later write has to still hold, and it has to be the value the
+        // row actually carries: fencing compares the two for equality.
+        claimedAt: stamped.claimedAt,
         recipientId,
         type: "experiment_join_request_received",
         actorId,
@@ -99,7 +109,6 @@ describe("NotificationDeliveryRepository", () => {
         params: { experimentName: "Photosynthesis" },
       },
     ]);
-    const stamped = await rowById(delivery.id);
     expect(stamped).toMatchObject({ status: "sending" });
     // Stamped by the database, not the caller, so pin that it was set and is recent.
     expect(stamped.claimedAt).toBeInstanceOf(Date);
@@ -172,6 +181,61 @@ describe("NotificationDeliveryRepository", () => {
     assertSuccess(claimed);
     expect(claimed.value[0].attempts).toBe(2);
     expect(await rowById(delivery.id)).toMatchObject({ attempts: 2 });
+  });
+
+  describe("fencing an outcome on the claim it belongs to", () => {
+    it("writes when the claim is still held", async () => {
+      await seedDelivery();
+      const claimed = await repository.claimDue(1, LEASE_MS);
+      assertSuccess(claimed);
+      const claim = claimed.value[0];
+
+      const marked = await repository.markSent(claim, new Date());
+
+      assertSuccess(marked);
+      expect(marked.value).toBe(true);
+      expect(await rowById(claim.id)).toMatchObject({ status: "sent", claimedAt: null });
+    });
+
+    it("writes nothing when the row has been reclaimed since", async () => {
+      await seedDelivery();
+      const first = await repository.claimDue(1, LEASE_MS);
+      assertSuccess(first);
+      const stale = first.value[0];
+
+      // The lease hands the row to another task, which is what a stalled sender wakes
+      // up to find; its claim stamp is no longer the one on the row.
+      await setDelivery(stale.id, { claimedAt: new Date(Date.now() - 6 * MINUTE) });
+      const second = await repository.claimDue(1, LEASE_MS);
+      assertSuccess(second);
+      const held = second.value[0];
+      assertSuccess(await repository.markSent(held, new Date()));
+
+      const late = await repository.markRetry(stale, {
+        attempts: 1,
+        nextAttemptAt: new Date(Date.now() + MINUTE),
+        lastError: "a stalled task catching up",
+      });
+
+      // The row keeps the state its real owner left it in, so the email goes out once.
+      assertSuccess(late);
+      expect(await rowById(stale.id)).toMatchObject({ status: "sent", attempts: 1 });
+      expect(late.value).toBe(false);
+    });
+
+    it("writes nothing when the row is no longer sending", async () => {
+      await seedDelivery();
+      const claimed = await repository.claimDue(1, LEASE_MS);
+      assertSuccess(claimed);
+      const claim = claimed.value[0];
+      assertSuccess(await repository.markSent(claim, new Date()));
+
+      const second = await repository.markFailed(claim, { attempts: 5, lastError: "too late" });
+
+      assertSuccess(second);
+      expect(await rowById(claim.id)).toMatchObject({ status: "sent" });
+      expect(second.value).toBe(false);
+    });
   });
 
   it("steps over a row another task is already holding", async () => {

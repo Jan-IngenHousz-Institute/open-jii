@@ -9,6 +9,7 @@ import {
 } from "@repo/api/domains/notification/notification.schema";
 
 import { ErrorCodes } from "../../../common/utils/error-codes";
+import type { Result } from "../../../common/utils/fp-utils";
 import type { ClaimedDelivery } from "../../core/models/notification-delivery.model";
 import { NotificationDeliveryRepository } from "../../core/repositories/notification-delivery.repository";
 import { NotificationRepository } from "../../core/repositories/notification.repository";
@@ -20,7 +21,13 @@ export interface DrainCounts {
   failed: number;
 }
 
-const BATCH_SIZE = 25;
+/**
+ * One row per claim, not a batch. A claim stamps every row it takes with the same
+ * `claimed_at`, and the rows are then sent one at a time; with a slow mail server the
+ * last rows of a batch would pass the lease before their turn came and be taken back
+ * and sent twice. Sending was always sequential, so nothing is lost by claiming one.
+ */
+const CLAIM_SIZE = 1;
 
 /**
  * No single send legitimately takes this long, so a claim older than it was abandoned.
@@ -43,7 +50,7 @@ type RowOutcome = keyof DrainCounts;
 
 /**
  * Sends what dispatch queued. Every task runs this loop; Postgres hands each one a
- * disjoint batch, so two tasks never send the same email. Nothing here reads a
+ * different row, so two tasks never send the same email. Nothing here reads a
  * preference — dispatch already decided the email is owed — and nothing here touches
  * the notification row, so the bell stays right whatever the mail server does.
  */
@@ -86,7 +93,7 @@ export class NotificationOutboxWorker {
 
     try {
       for (;;) {
-        const claimed = await this.deliveries.claimDue(BATCH_SIZE, LEASE_MS);
+        const claimed = await this.deliveries.claimDue(CLAIM_SIZE, LEASE_MS);
 
         if (claimed.isFailure()) {
           this.logger.error({
@@ -128,7 +135,7 @@ export class NotificationOutboxWorker {
     return counts;
   }
 
-  /** One row, start to finish. Anything thrown is that attempt failing, never the batch. */
+  /** One row, start to finish. Anything thrown is that attempt failing, never the drain. */
   private async handle(row: ClaimedDelivery): Promise<RowOutcome> {
     try {
       return await this.send(row);
@@ -198,20 +205,37 @@ export class NotificationOutboxWorker {
       return this.recordFailure(row, sent.error.message);
     }
 
-    const marked = await this.deliveries.markSent(row.id, new Date());
-    if (marked.isFailure()) {
+    this.recordOutcome(row, await this.deliveries.markSent(row, new Date()), "sent");
+
+    return "sent";
+  }
+
+  /**
+   * What became of the write that records an outcome. A write that fails is left to the
+   * lease; a write that lands on nothing means this task stalled past the lease and the
+   * row belongs to whoever took it back, so its state is theirs to set, not ours.
+   */
+  private recordOutcome(row: ClaimedDelivery, written: Result<boolean>, outcome: string): void {
+    if (written.isFailure()) {
       this.logger.error({
-        msg: "Sent a notification email but could not mark the delivery sent",
+        msg: `Could not record a notification email ${outcome}; the lease will offer the row again`,
         errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
         operation: "notification-outbox",
         deliveryId: row.id,
         notificationId: row.notificationId,
-        type: row.type,
-        error: marked.error,
+        error: written.error,
       });
+      return;
     }
 
-    return "sent";
+    if (!written.value) {
+      this.logger.warn({
+        msg: `Lost the claim before recording a notification email ${outcome}; another task has this row`,
+        operation: "notification-outbox",
+        deliveryId: row.id,
+        notificationId: row.notificationId,
+      });
+    }
   }
 
   /** An attempt that might have gone differently: wait, then try again, up to five times. */
@@ -234,21 +258,12 @@ export class NotificationOutboxWorker {
     }
 
     const nextAttemptAt = new Date(Date.now() + RETRY_WAITS_MS[attempts - 1]);
-    const marked = await this.deliveries.markRetry(row.id, {
+    const marked = await this.deliveries.markRetry(row, {
       attempts,
       nextAttemptAt,
       lastError: reason,
     });
-
-    if (marked.isFailure()) {
-      this.logger.error({
-        msg: "Could not record a notification email retry; the lease will offer the row again",
-        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-        operation: "notification-outbox",
-        deliveryId: row.id,
-        error: marked.error,
-      });
-    }
+    this.recordOutcome(row, marked, "retry");
 
     return "retried";
   }
@@ -274,17 +289,11 @@ export class NotificationOutboxWorker {
       error: reason,
     });
 
-    const marked = await this.deliveries.markFailed(row.id, { attempts, lastError: reason });
-
-    if (marked.isFailure()) {
-      this.logger.error({
-        msg: "Could not record a failed notification email; the lease will offer the row again",
-        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-        operation: "notification-outbox",
-        deliveryId: row.id,
-        error: marked.error,
-      });
-    }
+    this.recordOutcome(
+      row,
+      await this.deliveries.markFailed(row, { attempts, lastError: reason }),
+      "failure",
+    );
 
     return "failed";
   }
