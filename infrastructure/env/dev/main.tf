@@ -2280,7 +2280,7 @@ module "backend_ecr" {
   environment                   = var.environment
   repository_name               = "open-jii-backend"
   service_name                  = "backend"
-  max_image_count               = 10
+  max_image_count               = 5
   enable_vulnerability_scanning = true
   encryption_type               = "KMS"
   image_tag_mutability          = "IMMUTABLE"
@@ -2678,6 +2678,40 @@ module "backend_ecs" {
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "backend"
+  }
+}
+
+# The backend's HMAC guard logs each rejected pipeline call once, with its reason. The alert counts
+# the calls that carried a key id, since anyone can send one without, and reads 0 between
+# rejections while the backend logs anything else. A count with a dimension cannot default to 0,
+# so the per-reason one is separate.
+resource "aws_cloudwatch_log_metric_filter" "pipeline_calls_rejected" {
+  name           = "pipeline-calls-rejected-${var.environment}"
+  log_group_name = module.backend_ecs.cloudwatch_log_group_name
+  pattern        = "{ ($.errorCode = \"HMAC_AUTHENTICATION_FAILED\") && ($.reason != \"missing-key-id\") }"
+
+  metric_transformation {
+    name          = "PipelineCallsRejected"
+    namespace     = "OpenJII/Backend"
+    value         = "1"
+    default_value = "0"
+    unit          = "Count"
+  }
+}
+
+resource "aws_cloudwatch_log_metric_filter" "pipeline_call_rejections_by_reason" {
+  name           = "pipeline-call-rejections-by-reason-${var.environment}"
+  log_group_name = module.backend_ecs.cloudwatch_log_group_name
+  pattern        = "{ ($.errorCode = \"HMAC_AUTHENTICATION_FAILED\") && ($.reason = \"*\") }"
+
+  metric_transformation {
+    name      = "PipelineCallRejectionsByReason"
+    namespace = "OpenJII/Backend"
+    value     = "1"
+    unit      = "Count"
+    dimensions = {
+      Reason = "$.reason"
+    }
   }
 }
 

@@ -36,14 +36,19 @@ from openjii.heartbeat import (
     INGEST_LATENCY_METRIC,
     INGESTED_ROWS_METRIC,
     MACRO_BACKLOG_METRIC,
+    MACRO_CAUSES,
+    MACRO_FAILED_ROWS_METRIC,
     MACRO_IDLE_METRIC,
     MACRO_LATENCY_METRIC,
+    MACRO_PROTOCOL_FAILURES_DETAIL,
+    MACRO_PROTOCOL_FAILURES_METRIC,
     MACRO_RESULT_ROWS_METRIC,
     MAX_DETAIL_ROWS,
     MEASUREMENTS_7D_METRIC,
     MEASUREMENTS_24H_METRIC,
     METRICS_AGE_METRIC,
     PATH_BUCKET_MINUTES,
+    PROTOCOL_WINDOW_HOURS,
     SILENT_DEVICES_DETAIL,
     SILENT_DEVICES_METRIC,
     STALE_EXPERIMENTS_DETAIL,
@@ -52,12 +57,14 @@ from openjii.heartbeat import (
     cost_by_component_sql,
     cost_components,
     detail,
+    failed_rows_by_cause_sql,
     heartbeat_key,
     hop,
     latest_full_collection,
     minutes_since,
     observation,
     previous_bucket,
+    protocol_failures_sql,
     run_collectors,
     to_ndjson,
 )
@@ -139,6 +146,7 @@ def usage_point(metric: str, value: float, now: datetime) -> dict:
 
 # COMMAND ----------
 
+
 # DBTITLE 1,Collectors
 def collect_experiment_status(now: datetime) -> list[dict]:
     """Gold materialization age and the stale-experiment roster.
@@ -180,9 +188,7 @@ def collect_experiment_status(now: datetime) -> list[dict]:
         ORDER BY latest_processed_timestamp DESC
         LIMIT {MAX_DETAIL_ROWS}
     """).collect()
-    records.append(
-        detail(STALE_EXPERIMENTS_DETAIL, [row.asDict() for row in roster], total=totals["stale"])
-    )
+    records.append(detail(STALE_EXPERIMENTS_DETAIL, [row.asDict() for row in roster], total=totals["stale"]))
 
     return records
 
@@ -289,7 +295,15 @@ def collect_ingest(now: datetime) -> list[dict]:
           AND ingestion_timestamp >= {sql_time(start)} AND ingestion_timestamp < {sql_time(end)}
     """).first()
 
-    return hop(INGESTED_ROWS_METRIC, INGEST_LATENCY_METRIC, bronze["rows"], bronze["p95"], start, DATA_NAMESPACE, ENVIRONMENT)
+    return hop(
+        INGESTED_ROWS_METRIC,
+        INGEST_LATENCY_METRIC,
+        bronze["rows"],
+        bronze["p95"],
+        start,
+        DATA_NAMESPACE,
+        ENVIRONMENT,
+    )
 
 
 def collect_experiment_rows(now: datetime) -> list[dict]:
@@ -299,7 +313,9 @@ def collect_experiment_rows(now: datetime) -> list[dict]:
 
     versions = commit_versions(EXPERIMENT_RAW_DATA, start, end)
     if versions is None:
-        return hop(EXPERIMENT_ROWS_METRIC, EXPERIMENT_LATENCY_METRIC, 0, None, start, DATA_NAMESPACE, ENVIRONMENT)
+        return hop(
+            EXPERIMENT_ROWS_METRIC, EXPERIMENT_LATENCY_METRIC, 0, None, start, DATA_NAMESPACE, ENVIRONMENT
+        )
 
     gold = spark.sql(f"""
         SELECT count(*) AS rows,
@@ -308,7 +324,15 @@ def collect_experiment_rows(now: datetime) -> list[dict]:
         WHERE _change_type = 'insert'
     """).first()
 
-    return hop(EXPERIMENT_ROWS_METRIC, EXPERIMENT_LATENCY_METRIC, gold["rows"], gold["p95"], start, DATA_NAMESPACE, ENVIRONMENT)
+    return hop(
+        EXPERIMENT_ROWS_METRIC,
+        EXPERIMENT_LATENCY_METRIC,
+        gold["rows"],
+        gold["p95"],
+        start,
+        DATA_NAMESPACE,
+        ENVIRONMENT,
+    )
 
 
 def collect_broker_to_api(now: datetime) -> list[dict]:
@@ -329,7 +353,11 @@ def collect_broker_to_api(now: datetime) -> list[dict]:
     if trip["p95"] is None:
         return []
 
-    return [observation(BROKER_TO_API_LATENCY_METRIC, round(trip["p95"], 1), DATA_NAMESPACE, start, ENVIRONMENT, "Seconds")]
+    return [
+        observation(
+            BROKER_TO_API_LATENCY_METRIC, round(trip["p95"], 1), DATA_NAMESPACE, start, ENVIRONMENT, "Seconds"
+        )
+    ]
 
 
 def collect_macro_results(now: datetime) -> list[dict]:
@@ -345,7 +373,9 @@ def collect_macro_results(now: datetime) -> list[dict]:
 
     versions = commit_versions(EXPERIMENT_MACRO_DATA, start, end)
     if versions is None:
-        return hop(MACRO_RESULT_ROWS_METRIC, MACRO_LATENCY_METRIC, 0, None, start, DATA_NAMESPACE, ENVIRONMENT)
+        return hop(
+            MACRO_RESULT_ROWS_METRIC, MACRO_LATENCY_METRIC, 0, None, start, DATA_NAMESPACE, ENVIRONMENT
+        )
 
     results = f"""
         SELECT raw_id, processed_timestamp, _commit_timestamp AS at
@@ -374,7 +404,15 @@ def collect_macro_results(now: datetime) -> list[dict]:
             FROM macro JOIN gold ON gold.id = macro.raw_id AND gold.processed_timestamp = macro.processed_timestamp
         """).first()["p95"]
 
-    return hop(MACRO_RESULT_ROWS_METRIC, MACRO_LATENCY_METRIC, sources["rows"], p95, start, DATA_NAMESPACE, ENVIRONMENT)
+    return hop(
+        MACRO_RESULT_ROWS_METRIC,
+        MACRO_LATENCY_METRIC,
+        sources["rows"],
+        p95,
+        start,
+        DATA_NAMESPACE,
+        ENVIRONMENT,
+    )
 
 
 def collect_macro_backlog(now: datetime) -> list[dict]:
@@ -391,6 +429,52 @@ def collect_macro_backlog(now: datetime) -> list[dict]:
     """).first()
 
     return [data_point(MACRO_BACKLOG_METRIC, backlog["rows"], now)]
+
+
+def collect_macro_failures(now: datetime) -> list[dict]:
+    """Macro results committed in the last closed half hour that carry an error, per cause,
+    zero for a cause with none so its series never goes quiet."""
+    start, end = previous_bucket(now, PATH_BUCKET_MINUTES)
+
+    failed = {}
+    versions = commit_versions(EXPERIMENT_MACRO_DATA, start, end)
+    if versions is not None:
+        results = f"""
+            SELECT macro_error
+            FROM table_changes('{EXPERIMENT_MACRO_DATA}', {versions[0]}, {versions[1]})
+            WHERE _change_type = 'insert'
+        """
+        failed = {row["cause"]: row["rows"] for row in spark.sql(failed_rows_by_cause_sql(results)).collect()}
+
+    return [
+        observation(
+            MACRO_FAILED_ROWS_METRIC,
+            failed.get(cause, 0),
+            DATA_NAMESPACE,
+            start,
+            ENVIRONMENT,
+            "Count",
+            {"Cause": cause},
+        )
+        for cause in MACRO_CAUSES
+    ]
+
+
+def collect_macro_protocol_failures(now: datetime) -> list[dict]:
+    """Macros failing on one protocol while working on another over the last day, with the
+    roster of each pair."""
+    since = sql_time(now - timedelta(hours=PROTOCOL_WINDOW_HOURS))
+    pairs = [
+        row.asDict()
+        for row in spark.sql(
+            protocol_failures_sql(EXPERIMENT_MACRO_DATA, EXPERIMENT_RAW_DATA, since)
+        ).collect()
+    ]
+
+    return [
+        data_point(MACRO_PROTOCOL_FAILURES_METRIC, len(pairs), now),
+        detail(MACRO_PROTOCOL_FAILURES_DETAIL, pairs),
+    ]
 
 
 def collect_path_idle(now: datetime) -> list[dict]:
@@ -430,7 +514,9 @@ def collect_driver_heap(now: datetime) -> list[dict]:
 def collect_databricks_cost(now: datetime) -> list[dict]:
     """Databricks spend at list price over the last seven complete days, per
     component, zero for one that spent nothing so its series never goes quiet."""
-    spend = {row["component"]: row["usd"] for row in spark.sql(cost_by_component_sql(COST_COMPONENTS)).collect()}
+    spend = {
+        row["component"]: row["usd"] for row in spark.sql(cost_by_component_sql(COST_COMPONENTS)).collect()
+    }
 
     return [
         observation(
@@ -465,6 +551,8 @@ collectors = [
     ("broker_to_api", collect_broker_to_api),
     ("macro_results", collect_macro_results),
     ("macro_backlog", collect_macro_backlog),
+    ("macro_failures", collect_macro_failures),
+    ("macro_protocol_failures", collect_macro_protocol_failures),
     ("path_idle", collect_path_idle),
     ("driver_heap", collect_driver_heap),
     ("databricks_cost", collect_databricks_cost),
