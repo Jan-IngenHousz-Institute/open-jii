@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-import { zListSort, zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
+import {
+  zListFilter,
+  zListSort,
+  zPaginated,
+  zPaginationQuery,
+  zResourceScope,
+} from "../../shared/listing";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zResourceSeries } from "../metrics/metrics.schema";
 import { zVisibility } from "../visibility/visibility.schema";
@@ -62,6 +68,9 @@ export const zWorkbookFilterQuery = z
     filter: z.enum(["my"]).optional().describe("Deprecated alias for scope=related"),
     scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
     sort: zWorkbookSort.optional().describe("Up to two ordered sort criteria"),
+    visibility: zListFilter(zVisibility)
+      .optional()
+      .describe("Filter workbooks by visibility; several values match either"),
   })
   .merge(zPaginationQuery);
 

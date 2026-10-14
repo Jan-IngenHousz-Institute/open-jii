@@ -8,12 +8,15 @@ import { isPaginatedList } from "@repo/api/shared/listing";
 import { useDebounce } from "../../useDebounce";
 import { useListSorting } from "../../useListSorting";
 import { useSearchPending } from "../../useSearchPending";
+import { useWorkbookListFilters } from "./useWorkbookListFilters";
 import { workbooksListQuery } from "./workbooks-list-query";
 
 export function useWorkbooks({ initialSearch = "" }: { initialSearch?: string } = {}) {
   const [search, setSearchState] = useState<string>(initialSearch);
   const [page, setPage] = useState(1);
   const { sort, setSort, toggleSort } = useListSorting(zWorkbookSort);
+  const { visibilities, setVisibilities, clearFilters, hasActiveFilters } =
+    useWorkbookListFilters();
   const [debouncedSearch] = useDebounce(search, 300);
 
   const setSearch = (value: string) => {
@@ -22,7 +25,7 @@ export function useWorkbooks({ initialSearch = "" }: { initialSearch?: string } 
   };
 
   const query = useQuery({
-    ...workbooksListQuery(orpc, { search: debouncedSearch, page, sort }),
+    ...workbooksListQuery(orpc, { search: debouncedSearch, page, sort, visibilities }),
     placeholderData: (prev) => prev,
   });
 
@@ -63,5 +66,15 @@ export function useWorkbooks({ initialSearch = "" }: { initialSearch?: string } 
       toggleSort(field, multi);
       setPage(1);
     },
+    visibilities,
+    setVisibilities: (values: typeof visibilities) => {
+      setVisibilities(values);
+      setPage(1);
+    },
+    clearFilters: () => {
+      clearFilters();
+      setPage(1);
+    },
+    hasActiveFilters,
   };
 }

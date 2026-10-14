@@ -1,5 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
+import type { Visibility } from "@repo/api/domains/visibility/visibility.schema";
 import type { WorkbookSort } from "@repo/api/domains/workbook/workbook.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 import {
@@ -13,6 +14,7 @@ import {
   experiments,
   getTableColumns,
   ilike,
+  inArray,
   isNull,
   macros,
   ne,
@@ -57,6 +59,7 @@ export interface WorkbookFilter {
   /** Narrow to one owning organization (the org profile's resources showcase). */
   organizationId?: string;
   sort?: WorkbookSort;
+  visibilities?: Visibility[];
 }
 
 /** A listing row plus its relevance score, which global search merges on across types. */
@@ -267,6 +270,10 @@ export class WorkbookRepository {
       // each viewer exactly the rows they could already reach.
       if (filter?.organizationId) {
         conditions.push(eq(workbooks.organizationId, filter.organizationId));
+      }
+
+      if (filter?.visibilities?.length) {
+        conditions.push(inArray(workbooks.visibility, filter.visibilities));
       }
 
       if (filter?.scope === "related") {

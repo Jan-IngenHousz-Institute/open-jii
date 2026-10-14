@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "captureContext": {
-    "capturedOn": "2026-10-12",
+    "capturedOn": "2026-10-13",
     "surface": "apps/web on the local development stack",
     "environment": "local",
     "account": "seed@openjii.local and newcomer@openjii.local (seeded development identities)",
@@ -29,7 +29,8 @@
       "notification-settings retaken on 2026-10-06 at 1920x1200 after only categories with a live email producer became switchable: Requests and invitations and Membership and access are on and enabled, the four categories whose notifications do not email yet are off, disabled and labelled Not available yet, and Account security stays checked and locked with Always on. Reviewed at full size with the seeded development identity; no experiment, organization or person is named in the frame. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp. The bell shot is unaffected and was not retaken.",
       "notification-settings retaken on 2026-10-08 at 1920x1200 after project transfers moved onto dispatch and the Project transfers switch went live: Requests and invitations, Membership and access and Project transfers are on and enabled, the three categories whose notifications do not email yet are off, disabled and labelled Not available yet, and Account security stays checked and locked with Always on. Reviewed at full size with the seeded development identity; no experiment, organization or person is named in the frame. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp.",
       "notifications-page captured on 2026-10-08 at 1920x1200 from the local stack with the seeded development identity. The frame shows the All and Unread tabs, the category filter, Mark all read, and one row under each of Today, Yesterday and Earlier. Reviewed at full size. All three rows are seeded: a join request from Otto Outside on Field Trial 2025 — Corn Photosynthesis, and decisions on Greenhouse Tomato Stress Study and Vallei Drought Gradient. No developer-authored row, no credentials and no dev overlays are in frame. Two changes were made to the local data for the shot and both were undone after it: the three seeded rows' timestamps were set to the offsets the seed script writes (5 minutes, 26 hours, 3 days), since this database was seeded in September and all three had aged into Earlier, and four developer-authored transfer rows left by an earlier hand check were held out of frame. The before and after dumps of the table diff clean. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp.",
-      "experiments-list retaken on 2026-10-12 at 1920x1200 from the local stack with the seeded development identity. Reviewed at full size and approved before publishing. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
+      "experiments-list retaken on 2026-10-12 at 1920x1200 from the local stack with the seeded development identity. Reviewed at full size and approved before publishing. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
+      "workbooks-list retaken on 2026-10-13 at 1920x1200 from the local stack with the seeded development identity, showing the Visibility filter button. Reviewed at full size and approved before publishing. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
     ]
   },
   "assets": [
@@ -94,8 +95,8 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 42660,
-      "sha256": "43ed37756f9dd2b856af33fd29f2018d5d62bcce05d4a56c13196d3394a5cd59",
+      "bytes": 33164,
+      "sha256": "139dba97cb19c393d1916e5167296e35275903031d8dd59c46257b33bf388aed",
       "disposition": "published",
       "scope": "Workbooks overview with the Name column sorted ascending"
     },
