@@ -25,7 +25,9 @@ export class DownloadExportUseCase {
     experimentId: string,
     exportId: string,
     userId: string,
-  ): Promise<Result<{ stream: Readable; filename: string; format: ExportFormat }>> {
+  ): Promise<
+    Result<{ stream: Readable; contentLength?: number; filename: string; format: ExportFormat }>
+  > {
     this.logger.debug({
       msg: "Starting export download",
       operation: "downloadExport",
@@ -61,7 +63,8 @@ export class DownloadExportUseCase {
       return downloadResult;
     }
 
-    const { stream, filePath, tableName, format, completedAt } = downloadResult.value;
+    const { stream, contentLength, filePath, tableName, format, completedAt } =
+      downloadResult.value;
 
     const filename = buildExportFilename({
       experimentName: experimentResult.value.name,
@@ -84,6 +87,7 @@ export class DownloadExportUseCase {
 
     return success({
       stream,
+      contentLength,
       filename,
       format,
     });

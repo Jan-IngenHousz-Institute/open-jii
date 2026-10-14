@@ -32,8 +32,8 @@ vi.mock("nodemailer", () => ({
 }));
 
 // Mock email template rendering
-vi.mock("@repo/transactional/render/added-user-notification", () => ({
-  renderAddedUserNotification: vi.fn(),
+vi.mock("@repo/transactional/render/access-granted-notification", () => ({
+  renderAccessGrantedNotification: vi.fn(),
 }));
 
 vi.mock("@repo/transactional/render/transfer-request-confirmation", () => ({

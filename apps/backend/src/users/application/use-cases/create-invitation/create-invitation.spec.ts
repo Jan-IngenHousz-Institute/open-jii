@@ -112,15 +112,16 @@ describe("CreateInvitationUseCase", () => {
     );
 
     expect(emailSpy).toHaveBeenCalledOnce();
-    expect(emailSpy).toHaveBeenCalledWith(
-      experiment.id,
-      "Email Notification Test",
-      expect.any(String),
+    expect(emailSpy).toHaveBeenCalledWith({
+      resourceType: "experiment",
+      resourceId: experiment.id,
+      resourceName: "Email Notification Test",
+      actor: expect.any(String) as string,
       // The email describes the access itself, in the same words the
       // collaborators UI uses.
-      "a contributor who can view and add data",
-      "notify@example.com",
-    );
+      role: "a contributor who can view and add data",
+      email: "notify@example.com",
+    });
   });
 
   it("describes an admin-tier invitation in the email", async () => {
@@ -141,13 +142,14 @@ describe("CreateInvitationUseCase", () => {
       testUserId,
     );
 
-    expect(emailSpy).toHaveBeenCalledWith(
-      experiment.id,
-      "Tiered Email Test",
-      expect.any(String),
-      "a collaborator who can edit",
-      "editor@example.com",
-    );
+    expect(emailSpy).toHaveBeenCalledWith({
+      resourceType: "experiment",
+      resourceId: experiment.id,
+      resourceName: "Tiered Email Test",
+      actor: expect.any(String) as string,
+      role: "a collaborator who can edit",
+      email: "editor@example.com",
+    });
   });
 
   it("should not send email for duplicate invitation", async () => {

@@ -22,7 +22,7 @@ describe("NotificationDispatchService", () => {
   let repository: NotificationRepository;
   let notificationEmail: NotificationEmailService;
   let sendSubmitted: MockInstance<EmailAdapter["sendJoinRequestSubmittedNotification"]>;
-  let sendAdded: MockInstance<EmailAdapter["sendAddedUserNotification"]>;
+  let sendAccessGranted: MockInstance<EmailAdapter["sendAccessGrantedNotification"]>;
   let sendRejected: MockInstance<EmailAdapter["sendJoinRequestRejectedNotification"]>;
   let actorId: string;
   let recipientId: string;
@@ -51,8 +51,8 @@ describe("NotificationDispatchService", () => {
     sendSubmitted = vi
       .spyOn(emailAdapter, "sendJoinRequestSubmittedNotification")
       .mockResolvedValue(success(undefined));
-    sendAdded = vi
-      .spyOn(emailAdapter, "sendAddedUserNotification")
+    sendAccessGranted = vi
+      .spyOn(emailAdapter, "sendAccessGrantedNotification")
       .mockResolvedValue(success(undefined));
     sendRejected = vi
       .spyOn(emailAdapter, "sendJoinRequestRejectedNotification")
@@ -122,7 +122,7 @@ describe("NotificationDispatchService", () => {
 
     assertFailure(result);
     expect(await rowsFor(recipientId)).toHaveLength(0);
-    expect(sendAdded).not.toHaveBeenCalled();
+    expect(sendAccessGranted).not.toHaveBeenCalled();
   });
 
   it("emails every recipient with an address and skips one without", async () => {
@@ -303,7 +303,7 @@ describe("NotificationDispatchService", () => {
 
     assertSuccess(result);
     expect(result.value).toEqual({ created: 1, emailed: 0 });
-    expect(sendAdded).not.toHaveBeenCalled();
+    expect(sendAccessGranted).not.toHaveBeenCalled();
     expect(sendSubmitted).not.toHaveBeenCalled();
   });
 
@@ -362,6 +362,37 @@ describe("NotificationDispatchService", () => {
     expect(second.value).toEqual({ created: 0, emailed: 0 });
     expect(await rowsFor(recipientId)).toHaveLength(1);
     expect(sendRejected).toHaveBeenCalledTimes(1);
+  });
+
+  // The access email needs a resource it can build a page link for. The registry
+  // allows an organization as a notification resource and the page-link map has no
+  // entry for one, so the sender has to refuse rather than email a link that 404s.
+  describe("the access-granted email entry", () => {
+    const grantedContext = (resource: { type: "organization"; id: string } | null) => ({
+      recipientEmail,
+      actorName: "Ada Lovelace",
+      resource,
+      params: { resourceName: "Greenhouse Lab", role: "viewer" },
+    });
+
+    it("refuses an organization resource", async () => {
+      const result = await notificationEmail.send(
+        "resource_access_granted",
+        grantedContext({ type: "organization", id: crypto.randomUUID() }),
+      );
+
+      assertFailure(result);
+      expect(result.error.message).toContain("non-shareable resource");
+      expect(sendAccessGranted).not.toHaveBeenCalled();
+    });
+
+    it("refuses a notification stored with no resource", async () => {
+      const result = await notificationEmail.send("resource_access_granted", grantedContext(null));
+
+      assertFailure(result);
+      expect(result.error.message).toContain("no resource to email about");
+      expect(sendAccessGranted).not.toHaveBeenCalled();
+    });
   });
 
   it("fails and sends nothing when the rows cannot be stored", async () => {

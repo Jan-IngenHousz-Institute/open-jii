@@ -168,13 +168,43 @@ describe("ExperimentDataExportsController", () => {
         .withAuth(testUserId)
         .expect(200);
 
-      expect(response.headers["content-disposition"]).toContain("raw_data.csv");
+      expect(response.headers["content-disposition"]).toBe('attachment; filename="raw_data.csv"');
       expect(response.text).toBe(fileContents);
       expect(downloadExportUseCase.execute).toHaveBeenCalledWith(
         experimentId,
         exportId,
         testUserId,
       );
+    });
+
+    it("should send the first bytes before the source stream ends", async () => {
+      const experimentId = readableExperimentId;
+      const exportId = faker.string.uuid();
+
+      // Never ends, so a handler that drained it before responding would hang.
+      const source = new Readable({ read: () => undefined });
+      source.push("first chunk");
+
+      vi.spyOn(downloadExportUseCase, "execute").mockResolvedValue(
+        success({ stream: source, filename: "raw_data.parquet", format: "parquet" }),
+      );
+
+      const firstChunk = await new Promise<string>((resolve) => {
+        void testApp
+          .get(`/api/v1/experiments/${experimentId}/data/exports/${exportId}`)
+          .withAuth(testUserId)
+          .buffer(false)
+          .parse((res, callback) => {
+            res.once("data", (chunk: Buffer) => {
+              resolve(chunk.toString());
+              callback(null, undefined);
+            });
+          })
+          .end(() => undefined);
+      });
+      source.push(null);
+
+      expect(firstChunk).toBe("first chunk");
     });
 
     // Bodies past the compression threshold, so the encoding decision rests on the type alone.
@@ -199,9 +229,12 @@ describe("ExperimentDataExportsController", () => {
           Array.from({ length: 200 }, (_, index) => ({ col1: index, col2: index })),
         );
 
+        const contentLength = Buffer.byteLength(fileContents);
+
         vi.spyOn(downloadExportUseCase, "execute").mockResolvedValue(
           success({
             stream: Readable.from([Buffer.from(fileContents)]),
+            contentLength,
             filename: `raw_data.${format}`,
             format,
           }),
@@ -215,6 +248,10 @@ describe("ExperimentDataExportsController", () => {
 
         expect(response.headers["content-type"]).toBe(contentType);
         expect(response.headers["content-encoding"]).toBe(encoding);
+        // Compression changes the byte count, so only an untouched body keeps the source size.
+        expect(response.headers["content-length"]).toBe(
+          encoding ? undefined : String(contentLength),
+        );
       },
     );
 
@@ -242,6 +279,17 @@ describe("ExperimentDataExportsController", () => {
         .get(`/api/v1/experiments/${experimentId}/data/exports/${exportId}`)
         .withAuth(testUserId)
         .expect(500);
+    });
+
+    it("should return 400 for an export id that is not a UUID", async () => {
+      const executeSpy = vi.spyOn(downloadExportUseCase, "execute");
+
+      await testApp
+        .get(`/api/v1/experiments/${readableExperimentId}/data/exports/not-a-uuid`)
+        .withAuth(testUserId)
+        .expect(400);
+
+      expect(executeSpy).not.toHaveBeenCalled();
     });
   });
 

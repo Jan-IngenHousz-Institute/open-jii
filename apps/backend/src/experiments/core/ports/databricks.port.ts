@@ -128,6 +128,7 @@ export interface DatabricksPort {
   ): Promise<
     Result<{
       stream: Readable;
+      contentLength?: number;
       filePath: string;
       tableName: string;
       format: ExportFormat;
