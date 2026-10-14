@@ -67,6 +67,7 @@ import {
   UserDto,
   SearchUsersParams,
   UserProfileDto,
+  UserSearchResultDto,
   CreateUserProfileDto,
   UserProfileMetadata,
   SoleAdminResource,
@@ -201,10 +202,10 @@ export class UserRepository {
     });
   }
 
-  async search(params: SearchUsersParams): Promise<Result<UserProfileDto[]>> {
+  async search(params: SearchUsersParams): Promise<Result<UserSearchResultDto[]>> {
     return tryCatch(() => {
       const fullName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
-      const isExactEmail = sql`lower(${users.email}) = lower(${params.query})`;
+      const isExactEmail = sql<boolean>`lower(${users.email}) = lower(${params.query})`;
 
       // Names match loosely: substring (ILIKE) handles prefixes, trigram (%) adds typo
       // tolerance. An address matches only in full, so search cannot enumerate them.
@@ -214,6 +215,7 @@ export class UserRepository {
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
           email: getAnonymizedEmail(),
+          matchedEmail: isExactEmail,
           createdAt: profiles.createdAt,
           bio: getAnonymizedBio(),
           avatarUrl: getAnonymizedAvatarUrl(),

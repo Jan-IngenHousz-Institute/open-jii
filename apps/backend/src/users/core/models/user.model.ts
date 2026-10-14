@@ -47,6 +47,7 @@ export type UpdateUserDto = typeof updateUserSchema._type;
 export type UserDto = typeof selectUserSchema._type;
 export type CreateUserProfileDto = typeof createUserProfileSchema._type;
 export type UserProfileDto = typeof selectUserProfileSchema._type;
+export type UserSearchResultDto = UserProfileDto & { matchedEmail: boolean };
 export type UserProfileMetadata = typeof userProfileMetadataSchema._type;
 
 // Define search parameters type

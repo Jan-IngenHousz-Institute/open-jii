@@ -36902,6 +36902,10 @@
                           }
                         ]
                       },
+                      "matchedEmail": {
+                        "type": "boolean",
+                        "description": "Whether the query exactly matches this account's email, ignoring case"
+                      },
                       "avatarUrl": {
                         "anyOf": [
                           {
@@ -36948,6 +36952,7 @@
                       "firstName",
                       "lastName",
                       "email",
+                      "matchedEmail",
                       "avatarUrl",
                       "organizationRole",
                       "existingGrantRole"
@@ -37262,6 +37267,10 @@
                             "type": "null"
                           }
                         ]
+                      },
+                      "matchedEmail": {
+                        "type": "boolean",
+                        "description": "Whether the query exactly matches this account's email, ignoring case"
                       }
                     },
                     "required": [
@@ -37270,7 +37279,8 @@
                       "lastName",
                       "bio",
                       "activated",
-                      "email"
+                      "email",
+                      "matchedEmail"
                     ]
                   }
                 }

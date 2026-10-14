@@ -375,6 +375,23 @@ describe("UserRepository", () => {
       expect(foundUsers[0].lastName).toBe("Smith");
     });
 
+    it("computes exact-email evidence in the search statement, independently of name matches", async () => {
+      const email = "exact-evidence@example.test";
+      const exactId = await testApp.createTestUser({ name: "Zelda Target", email });
+      const nameId = await testApp.createTestUser({ name: `${email} Candidate` });
+      const select = vi.spyOn(testApp.database, "select");
+      const result = await search(email.toUpperCase());
+      assertSuccess(result);
+      expect(result.value).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ userId: exactId, matchedEmail: true }),
+          expect.objectContaining({ userId: nameId, matchedEmail: false }),
+        ]),
+      );
+      expect(select).toHaveBeenCalledTimes(1);
+      select.mockRestore();
+    });
+
     it("finds a user by their complete email address, in any case", async () => {
       const email = `alice${faker.string.alphanumeric(10).toLowerCase()}@example.com`;
       const userId = await testApp.createTestUser({ name: "Alice Smith", email });

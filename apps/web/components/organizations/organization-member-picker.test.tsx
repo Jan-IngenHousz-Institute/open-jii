@@ -60,6 +60,64 @@ describe("<OrganizationMemberPicker />", () => {
     });
   });
 
+  it("invites the hidden exact match using only the typed address", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.users.searchUsers, {
+      body: [
+        {
+          ...createUserProfile({ userId: "u-1", firstName: "Lin", lastName: "Zhao", email: null }),
+          matchedEmail: true,
+        },
+      ],
+    });
+    const { onSelectionChange } = renderPicker();
+    await user.type(search(), "LIN@uni.edu");
+    await waitFor(() => expect(screen.getByText("Lin Zhao")).toBeInTheDocument());
+    expect(screen.getByText("Lin Zhao").closest("button")).toBeEnabled();
+    expect(screen.queryByText("organizations.invite.sendByEmail")).not.toBeInTheDocument();
+    expect(screen.queryByText("organizations.invite.enterExactEmail")).not.toBeInTheDocument();
+    expect(screen.getByText("common.emailMatched")).toBeInTheDocument();
+    expect(screen.queryByText("LIN@uni.edu")).not.toBeInTheDocument();
+    await user.click(screen.getByText("Lin Zhao"));
+    expect(onSelectionChange).toHaveBeenCalledWith({
+      kind: "user",
+      userId: "u-1",
+      displayName: "Lin Zhao",
+      email: "LIN@uni.edu",
+    });
+  });
+
+  it("does not reuse exact-match evidence after the typed address changes", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.users.searchUsers, {
+      body: [
+        createUserProfile({
+          userId: "u-1",
+          firstName: "Lin",
+          lastName: "Zhao",
+          email: null,
+          matchedEmail: true,
+        }),
+      ],
+    });
+    const { onSelectionChange } = renderPicker();
+    await user.type(search(), "lin@uni.edu");
+    await waitFor(() => expect(screen.getByText("Lin Zhao").closest("button")).toBeEnabled());
+    await user.type(search(), "x");
+    expect(screen.queryByText("Lin Zhao")).not.toBeInTheDocument();
+    expect(onSelectionChange).not.toHaveBeenCalled();
+  });
+
+  it("prompts for two characters without claiming no matches", async () => {
+    const user = userEvent.setup();
+    const spy = server.mount(contract.users.searchUsers, { body: [] });
+    renderPicker();
+    await user.type(search(), "L");
+    await waitFor(() => expect(screen.getByText("common.searchMinCharacters")).toBeInTheDocument());
+    expect(screen.queryByText("organizations.invite.noMatches")).not.toBeInTheDocument();
+    expect(spy.called).toBe(false);
+  });
+
   it("does not browse users without a search term", async () => {
     const user = userEvent.setup();
     const userSpy = server.mount(contract.users.searchUsers, { body: [] });
@@ -129,6 +187,7 @@ describe("<OrganizationMemberPicker />", () => {
           firstName: "Mel",
           lastName: "Member",
           email: "mel@uni.edu",
+          matchedEmail: true,
         }),
       ],
     });
@@ -155,6 +214,7 @@ describe("<OrganizationMemberPicker />", () => {
           firstName: "Mel",
           lastName: "Member",
           email: "mel@uni.edu",
+          matchedEmail: true,
         }),
       ],
     });
@@ -197,6 +257,7 @@ describe("<OrganizationMemberPicker />", () => {
           firstName: "Lin",
           lastName: "Zhao",
           email: "lin@uni.edu",
+          matchedEmail: true,
         }),
       ],
     });
@@ -296,14 +357,14 @@ describe("<OrganizationMemberPicker />", () => {
     expect(onSelectionChange).not.toHaveBeenCalled();
   });
 
-  it("can invite a registered user by exact address when the result's address is redacted", async () => {
+  it("keeps the email invitation option for a name-only match to an address-like query", async () => {
     const user = userEvent.setup();
     server.mount(contract.users.searchUsers, {
       body: [
         createUserProfile({
           userId: "u-1",
-          firstName: "Lin",
-          lastName: "Zhao",
+          firstName: "lin@uni.edu",
+          lastName: "Candidate",
           email: null,
         }),
       ],
@@ -315,7 +376,7 @@ describe("<OrganizationMemberPicker />", () => {
     await waitFor(() =>
       expect(screen.getByText("organizations.invite.sendByEmail")).toBeInTheDocument(),
     );
-    expect(screen.getByText("Lin Zhao").closest("button")).toBeDisabled();
+    expect(screen.getByText("lin@uni.edu Candidate").closest("button")).toBeDisabled();
     await user.click(screen.getByText("organizations.invite.sendByEmail"));
     expect(onSelectionChange).toHaveBeenCalledWith({ kind: "email", email: "lin@uni.edu" });
   });

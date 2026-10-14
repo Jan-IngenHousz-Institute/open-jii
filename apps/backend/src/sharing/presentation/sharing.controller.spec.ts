@@ -7,6 +7,7 @@ import { and, eq, profiles, resourceGrants, teamMembers } from "@repo/database";
 import { AuthorizationService } from "../../authorization/authorization.service";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
+import { SharingRepository } from "../core/repositories/sharing.repository";
 
 /**
  * HTTP-level tests for the sharing controller. Authorization runs through the
@@ -326,6 +327,30 @@ describe("SharingController", () => {
       expect((byFragment.body as GranteeUserDto[]).map((c) => c.userId)).not.toContain(stranger);
     });
 
+    it("computes exact-email evidence in the grantee search statement", async () => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+      const email = "exact-evidence@example.test";
+      const exactId = await testApp.createTestUser({ name: "Zelda Target", email });
+      const nameId = await testApp.createTestUser({ name: `${email} Candidate` });
+      const select = vi.spyOn(testApp.database, "select");
+      const result = await testApp.module
+        .get(SharingRepository)
+        .searchGranteeUsers("macro", macro.id, macro.organizationId, {
+          query: email.toUpperCase(),
+          limit: 20,
+        });
+      expect(result.isSuccess()).toBe(true);
+      if (result.isFailure()) throw result.error;
+      expect(result.value).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ userId: exactId, matchedEmail: true }),
+          expect.objectContaining({ userId: nameId, matchedEmail: false }),
+        ]),
+      );
+      expect(select).toHaveBeenCalledTimes(1);
+      select.mockRestore();
+    });
+
     it("ranks an exact address ahead of more name matches than the page limit", async () => {
       const macro = await testApp.createMacro({ name: "M", createdBy: owner });
       const email = "crowded@example.com";
@@ -341,7 +366,9 @@ describe("SharingController", () => {
         .expect(StatusCodes.OK);
 
       expect(response.body).toHaveLength(20);
-      expect(response.body[0]).toMatchObject({ userId: targetId, email: null });
+      expect(response.body[0]).toMatchObject({ userId: targetId, email: null, matchedEmail: true });
+      for (const candidate of response.body.slice(1))
+        expect(candidate).toMatchObject({ matchedEmail: false });
       expect(response.body.every((candidate) => candidate.email === null)).toBe(true);
     });
 

@@ -7,6 +7,7 @@ import {
   zCreateUserProfileBody,
   zUserIdPathParam,
   zInvitation,
+  zUserSearchResult,
 } from "./user.schema";
 
 describe("User Schema", () => {
@@ -242,5 +243,24 @@ describe("User Schema", () => {
     it("accepts a withheld address", () => {
       expect(zInvitation.parse({ ...invitation, email: null }).email).toBeNull();
     });
+  });
+});
+
+describe("user search exact-match evidence", () => {
+  const row = {
+    userId: "123e4567-e89b-12d3-a456-426614174000",
+    firstName: "Lin",
+    lastName: "Zhao",
+    email: null,
+    bio: null,
+    activated: true,
+  };
+  it("requires explicit evidence even when the address is hidden", () => {
+    expect(zUserSearchResult.safeParse(row).success).toBe(false);
+    expect(zUserSearchResult.parse({ ...row, matchedEmail: true })).toMatchObject({
+      email: null,
+      matchedEmail: true,
+    });
+    expect(zUserSearchResult.parse({ ...row, matchedEmail: false }).matchedEmail).toBe(false);
   });
 });

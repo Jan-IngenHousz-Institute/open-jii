@@ -1,7 +1,15 @@
-import { experimentJoinRequests, organizationMembers, resourceGrants } from "@repo/database";
+import {
+  and,
+  eq,
+  experimentJoinRequests,
+  organizationMembers,
+  resourceGrants,
+  teamMembers,
+} from "@repo/database";
 
 import { AppError, failure } from "../common/utils/fp-utils";
 import { TestHarness } from "../test/test-harness";
+import { AuthorizationService } from "./authorization.service";
 import {
   EmailVisibilityService,
   collaboratorEmail,
@@ -178,6 +186,131 @@ describe("EmailVisibilityService", () => {
       callerId = ownerId;
 
       expect(await sees({ experimentId: experiment.id })).toBe(false);
+    });
+  });
+
+  describe("experiment manage permission parity", () => {
+    const sources = [
+      "owning organization",
+      "user grant",
+      "team grant",
+      "organization grant",
+    ] as const;
+    const roles = ["owner", "admin", "viewer"] as const;
+
+    it.each(sources.flatMap((source) => roles.map((role) => ({ source, role }))))(
+      "$source with $role agrees with AuthorizationService.can and stops revealing after revocation",
+      async ({ source, role }) => {
+        const { experiment } = await experimentWithJoinRequest();
+        const owningOrgId = experiment.organizationId;
+        if (!owningOrgId) throw new Error("Fixture experiment has no owning organization");
+        let revoke: () => Promise<unknown>;
+        if (source === "owning organization") {
+          await testApp.database.insert(organizationMembers).values({
+            organizationId: owningOrgId,
+            userId: callerId,
+            role: role === "viewer" ? "member" : `member,${role}`,
+          });
+          revoke = () =>
+            testApp.database
+              .delete(organizationMembers)
+              .where(
+                and(
+                  eq(organizationMembers.organizationId, owningOrgId),
+                  eq(organizationMembers.userId, callerId),
+                ),
+              );
+        } else {
+          let granteeId = callerId;
+          const granteeType =
+            source === "user grant" ? "user" : source === "team grant" ? "team" : "organization";
+          if (granteeType !== "user") {
+            const orgId = await testApp.createOrganization();
+            if (granteeType === "team") {
+              granteeId = await testApp.createTeam(orgId);
+              await testApp.addTeamMember(granteeId, callerId);
+              revoke = () =>
+                testApp.database
+                  .delete(teamMembers)
+                  .where(and(eq(teamMembers.teamId, granteeId), eq(teamMembers.userId, callerId)));
+            } else {
+              granteeId = orgId;
+              await testApp.addOrganizationMember(orgId, callerId, "member");
+              revoke = () =>
+                testApp.database
+                  .delete(organizationMembers)
+                  .where(
+                    and(
+                      eq(organizationMembers.organizationId, orgId),
+                      eq(organizationMembers.userId, callerId),
+                    ),
+                  );
+            }
+          } else {
+            revoke = () =>
+              testApp.database
+                .delete(resourceGrants)
+                .where(
+                  and(
+                    eq(resourceGrants.resourceId, experiment.id),
+                    eq(resourceGrants.granteeId, callerId),
+                  ),
+                );
+          }
+          await testApp.addResourceGrant({
+            resourceType: "experiment",
+            resourceId: experiment.id,
+            granteeType,
+            granteeId,
+            role,
+          });
+        }
+        const authz = testApp.module.get(AuthorizationService);
+        const check = () =>
+          authz.can(callerId, {
+            resourceType: "experiment",
+            resourceId: experiment.id,
+            action: "manage",
+          });
+        const decision = await check();
+        expect(decision.allow).toBe(role !== "viewer");
+        const execute = vi.spyOn(testApp.database, "execute");
+        expect(await sees({ experimentId: experiment.id })).toBe(decision.allow);
+        expect(execute).toHaveBeenCalledTimes(1);
+        execute.mockRestore();
+        await revoke();
+        expect((await check()).allow).toBe(false);
+        expect(await sees({ experimentId: experiment.id })).toBe(false);
+        expect(await sees()).toBe(false);
+      },
+    );
+
+    it("falls through a viewer user grant to a team admin grant", async () => {
+      const { experiment } = await experimentWithJoinRequest();
+      const orgId = await testApp.createOrganization();
+      const teamId = await testApp.createTeam(orgId);
+      await testApp.addTeamMember(teamId, callerId);
+      await testApp.database.insert(resourceGrants).values([
+        {
+          resourceType: "experiment",
+          resourceId: experiment.id,
+          granteeType: "user",
+          granteeId: callerId,
+          role: "viewer",
+        },
+        {
+          resourceType: "experiment",
+          resourceId: experiment.id,
+          granteeType: "team",
+          granteeId: teamId,
+          role: "admin",
+        },
+      ]);
+      const decision = await testApp.module
+        .get(AuthorizationService)
+        .can(callerId, { resourceType: "experiment", resourceId: experiment.id, action: "manage" });
+      expect(decision).toMatchObject({ allow: true, reason: "resource-grant:team" });
+      expect(await sees({ experimentId: experiment.id })).toBe(decision.allow);
     });
   });
 

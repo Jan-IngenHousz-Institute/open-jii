@@ -6,7 +6,7 @@ import {
 } from "../../../../authorization/email-visibility.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result } from "../../../../common/utils/fp-utils";
-import { UserProfileDto, SearchUsersParams } from "../../../core/models/user.model";
+import { UserSearchResultDto, SearchUsersParams } from "../../../core/models/user.model";
 import { UserRepository } from "../../../core/repositories/user.repository";
 
 @Injectable()
@@ -18,7 +18,10 @@ export class SearchUsersUseCase {
     private readonly emailVisibility: EmailVisibilityService,
   ) {}
 
-  async execute(callerId: string, params: SearchUsersParams): Promise<Result<UserProfileDto[]>> {
+  async execute(
+    callerId: string,
+    params: SearchUsersParams,
+  ): Promise<Result<UserSearchResultDto[]>> {
     this.logger.log({
       msg: "Searching users",
       operation: "searchUsers",
@@ -30,7 +33,7 @@ export class SearchUsersUseCase {
     const result = await this.userRepository.search(params);
 
     result.fold(
-      (users: UserProfileDto[]) => {
+      (users: UserSearchResultDto[]) => {
         this.logger.debug({
           msg: "Users search completed",
           operation: "searchUsers",

@@ -42,6 +42,8 @@ interface UserResultRow {
   userId: string;
   displayName: string;
   email: string | null;
+  invitationEmail: string | null;
+  matchedEmail: boolean;
   firstName: string;
   lastName: string;
   avatarUrl: string | null;
@@ -79,26 +81,39 @@ export function OrganizationMemberPicker({
   const [debouncedSearch, isDebounced] = useDebounce(search);
   const { data: users, isFetching, isError, refetch } = useUserSearch(debouncedSearch);
 
+  const typedEmail = search.trim();
+  const isEmailTerm = emailSchema.safeParse(typedEmail).success;
+  const hasCurrentAnswer =
+    isDebounced && debouncedSearch.trim().toLowerCase() === typedEmail.toLowerCase();
+
   const results = useMemo<UserResultRow[]>(() => {
     const members = new Set(memberUserIds);
     const invited = new Set(pendingInvitationEmails.map((email) => email.toLowerCase()));
 
     return (users ?? [])
-      .filter((user) => !members.has(user.userId) && !invited.has((user.email ?? "").toLowerCase()))
+      .map((user) => ({
+        ...user,
+        invitationEmail:
+          user.email ?? (hasCurrentAnswer && isEmailTerm && user.matchedEmail ? typedEmail : null),
+      }))
+      .filter(
+        (user) =>
+          !members.has(user.userId) && !invited.has((user.invitationEmail ?? "").toLowerCase()),
+      )
       .map<UserResultRow>((user) => ({
         userId: user.userId,
         displayName: (`${user.firstName} ${user.lastName}`.trim() || user.email) ?? user.userId,
         email: user.email,
+        invitationEmail: user.invitationEmail,
+        matchedEmail: hasCurrentAnswer && isEmailTerm && user.matchedEmail,
         firstName: user.firstName,
         lastName: user.lastName,
         avatarUrl: user.avatarUrl ?? null,
       }));
-  }, [users, memberUserIds, pendingInvitationEmails]);
+  }, [users, memberUserIds, pendingInvitationEmails, hasCurrentAnswer, isEmailTerm, typedEmail]);
 
   const isLoading = isFetching || (!isDebounced && !!search);
 
-  const typedEmail = search.trim();
-  const isEmailTerm = emailSchema.safeParse(typedEmail).success;
   const matchesEmail = (addresses: string[]) =>
     addresses.some((address) => address.toLowerCase() === typedEmail.toLowerCase());
   const isMemberAddress = isEmailTerm && matchesEmail(memberEmails);
@@ -108,8 +123,7 @@ export function OrganizationMemberPicker({
   // unfiltered answer on purpose: an address belonging to somebody the results dropped
   // is then explained rather than reported as no match.
   const isRegisteredAddress =
-    isEmailTerm &&
-    (users ?? []).some((user) => (user.email ?? "").toLowerCase() === typedEmail.toLowerCase());
+    isEmailTerm && hasCurrentAnswer && (users ?? []).some((user) => user.matchedEmail);
   // A failed search knows of no account, which is indistinguishable from an address
   // no account holds — so offering the invitation would turn a member into an invite.
   const canInviteByEmail =
@@ -166,6 +180,7 @@ export function OrganizationMemberPicker({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <PickerResults
+          needsMoreCharacters={typedEmail.length < 2}
           results={results}
           isLoading={isLoading}
           isError={isError}
@@ -186,12 +201,12 @@ export function OrganizationMemberPicker({
                   : "noMatch"
           }
           onSelect={(result) => {
-            if (!result.email) return;
+            if (!result.invitationEmail) return;
             onSelectionChange({
               kind: "user",
               userId: result.userId,
               displayName: result.displayName,
-              email: result.email,
+              email: result.invitationEmail,
             });
             setSearch("");
             setOpen(false);
@@ -208,6 +223,7 @@ export function OrganizationMemberPicker({
 }
 
 function PickerResults({
+  needsMoreCharacters,
   results,
   isLoading,
   isError,
@@ -219,6 +235,7 @@ function PickerResults({
   onSelect,
   onSelectEmail,
 }: {
+  needsMoreCharacters: boolean;
   results: UserResultRow[];
   isLoading: boolean;
   isError: boolean;
@@ -231,6 +248,14 @@ function PickerResults({
   onSelectEmail: () => void;
 }) {
   const { t } = useTranslation();
+
+  if (needsMoreCharacters) {
+    return (
+      <div className="text-muted-foreground p-4 text-center text-sm">
+        {t("common.searchMinCharacters")}
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -288,7 +313,7 @@ function PickerResults({
           key={result.userId}
           type="button"
           variant="ghost"
-          disabled={!result.email}
+          disabled={!result.invitationEmail}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onSelect(result)}
           className="hover:bg-muted flex h-auto w-full items-center gap-3 px-3 py-2.5 text-left"
@@ -305,7 +330,11 @@ function PickerResults({
               <div className="text-muted-foreground truncate text-xs">{result.email}</div>
             ) : (
               <div className="text-muted-foreground text-xs">
-                {t("organizations.invite.enterExactEmail")}
+                {t(
+                  result.matchedEmail
+                    ? "common.emailMatched"
+                    : "organizations.invite.enterExactEmail",
+                )}
               </div>
             )}
           </div>

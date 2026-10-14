@@ -56,6 +56,14 @@ export const zUserProfile = z.object({
 
 export const zUserProfileList = z.array(zUserProfile);
 
+export const zUserSearchResult = zUserProfile.extend({
+  matchedEmail: z
+    .boolean()
+    .describe("Whether the query exactly matches this account's email, ignoring case"),
+});
+export const zUserSearchResultList = z.array(zUserSearchResult);
+export type UserSearchResult = z.infer<typeof zUserSearchResult>;
+
 // Path parameters
 export const zUserIdPathParam = z.object({
   id: z.string().uuid().describe("ID of the user"),

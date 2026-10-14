@@ -84,7 +84,9 @@
     "sortUnsorted": "unsorted",
     "sortAscending": "ascending",
     "sortDescending": "descending",
-    "sortSecondary": "secondary sort"
+    "sortSecondary": "secondary sort",
+    "searchMinCharacters": "Type at least 2 characters to search",
+    "emailMatched": "Matches the email you entered"
   },
   "navigation": {
     "experiments": "Experiments",
@@ -343,7 +345,9 @@
     "invite": "Invite",
     "inviteCollaborators": "Invite collaborators",
     "inviteCollaboratorsDescription": "Add an existing user or one of your organizations, or invite someone by email. Existing accounts get access right away; invitees are emailed and join once they accept.",
-    "filterCollaboratorsPlaceholder": "Filter by name or email…"
+    "filterCollaboratorsPlaceholder": "Filter by name or email…",
+    "invitedBy": "Invited by",
+    "unknownInviter": "Unknown inviter"
   },
   "joinCode": {
     "title": "Join code",

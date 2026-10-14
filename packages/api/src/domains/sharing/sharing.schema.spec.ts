@@ -4,6 +4,7 @@ import { zPublishableResourceType } from "../visibility/visibility.schema";
 import {
   zCreateCollaboratorBody,
   zGranteeType,
+  zGranteeUser,
   zGrantRole,
   zResourceGrant,
   zSearchGranteeUsersQuery,
@@ -151,5 +152,25 @@ describe("zSearchGranteeUsersQuery", () => {
 
   it.each([0, 21, 50])("rejects limit %i rather than clamping it", (limit) => {
     expect(zSearchGranteeUsersQuery.safeParse({ ...path, query: "jo", limit }).success).toBe(false);
+  });
+});
+
+describe("grantee search exact-match evidence", () => {
+  const row = {
+    userId: "123e4567-e89b-12d3-a456-426614174000",
+    firstName: "Lin",
+    lastName: "Zhao",
+    email: null,
+    avatarUrl: null,
+    organizationRole: null,
+    existingGrantRole: null,
+  };
+  it("requires explicit evidence even when the address is hidden", () => {
+    expect(zGranteeUser.safeParse(row).success).toBe(false);
+    expect(zGranteeUser.parse({ ...row, matchedEmail: true })).toMatchObject({
+      email: null,
+      matchedEmail: true,
+    });
+    expect(zGranteeUser.parse({ ...row, matchedEmail: false }).matchedEmail).toBe(false);
   });
 });

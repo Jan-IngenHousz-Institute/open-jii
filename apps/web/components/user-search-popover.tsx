@@ -4,7 +4,7 @@ import { Mail, Search, X } from "lucide-react";
 import React, { useState } from "react";
 import { z } from "zod";
 
-import type { UserProfile } from "@repo/api/domains/user/user.schema";
+import type { UserProfile, UserSearchResult } from "@repo/api/domains/user/user.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
@@ -18,8 +18,10 @@ function isValidEmail(value: string): boolean {
   return emailSchema.safeParse(value).success;
 }
 
+type PickerUser = UserProfile & Partial<Pick<UserSearchResult, "matchedEmail">>;
+
 interface UserSearchPopoverProps {
-  availableUsers: UserProfile[];
+  availableUsers: PickerUser[];
   searchValue: string;
   onSearchChange: (value: string) => void;
   isAddingUser: boolean;
@@ -57,7 +59,11 @@ export function UserSearchPopover({
   const isEmailAlreadyExists =
     isEmailSearch && normalizedExistingEmails.includes(searchValue.trim().toLowerCase());
   const hasSelection = !!selectedUser || !!selectedEmail;
-  const canInviteByEmail = isEmailSearch && !!onSelectEmail && !isEmailAlreadyExists;
+  const canInviteByEmail =
+    isEmailSearch &&
+    !!onSelectEmail &&
+    !isEmailAlreadyExists &&
+    !availableUsers.some((user) => user.matchedEmail);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
@@ -223,7 +229,7 @@ function PopoverResults({
   t,
 }: {
   loading: boolean;
-  availableUsers: UserProfile[];
+  availableUsers: PickerUser[];
   canInviteByEmail: boolean;
   isEmailAlreadyExists: boolean;
   searchValue: string;
@@ -231,6 +237,14 @@ function PopoverResults({
   handleSelectEmail: () => void;
   t: (key: string, opts?: Record<string, string>) => string;
 }) {
+  if (searchValue.trim().length < 2) {
+    return (
+      <div className="text-muted-foreground p-4 text-center text-sm">
+        {t("common.searchMinCharacters")}
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="text-muted-foreground p-4 text-center text-sm">{t("common.loading")}</div>
@@ -261,6 +275,9 @@ function PopoverResults({
               <div className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium">
                 {user.firstName} {user.lastName}
               </div>
+              {user.matchedEmail && isValidEmail(email) && (
+                <div className="text-muted-foreground text-xs">{t("common.emailMatched")}</div>
+              )}
               {user.email && (
                 <div className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
                   {user.email}
@@ -296,9 +313,9 @@ function PopoverResults({
 
   return (
     <div className="text-muted-foreground p-4 text-center text-sm">
-      {searchValue
-        ? t("experiments.noUsersFound", { search: searchValue })
-        : t("experiments.startTypingToSearch")}
+      {searchValue.trim().length < 2
+        ? t("common.searchMinCharacters")
+        : t("experiments.noUsersFound", { search: searchValue })}
     </div>
   );
 }

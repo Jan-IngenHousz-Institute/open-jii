@@ -236,6 +236,9 @@ export const zGranteeUser = z.object({
   firstName: z.string(),
   lastName: z.string(),
   email: z.string().nullable(),
+  matchedEmail: z
+    .boolean()
+    .describe("Whether the query exactly matches this account's email, ignoring case"),
   avatarUrl: z.string().nullable(),
   /** Their role in the resource's **owning** organization; `null` if not a member. */
   organizationRole: zOrganizationMemberRole.nullable(),

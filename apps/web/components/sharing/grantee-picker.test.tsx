@@ -91,6 +91,61 @@ describe("<GranteePicker />", () => {
     });
   });
 
+  it("offers only the person for a hidden registered exact email", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.sharing.searchGranteeUsers, {
+      body: [
+        {
+          ...createGranteeUser({ userId: "u-1", firstName: "Lin", lastName: "Zhao", email: null }),
+          matchedEmail: true,
+        },
+      ],
+    });
+    const { onSelectionChange } = renderPicker({ allowEmailInvite: true });
+    await user.type(screen.getByLabelText("sharing.granteeSearchLabel"), "LIN@uni.edu");
+    await waitFor(() => expect(screen.getByText("Lin Zhao")).toBeInTheDocument());
+    expect(screen.queryByText("sharing.sendInviteByEmail")).not.toBeInTheDocument();
+    expect(screen.getByText("common.emailMatched")).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("button").filter((button) => button.textContent.includes("LIN@uni.edu")),
+    ).toHaveLength(0);
+    await user.click(screen.getByText("Lin Zhao"));
+    expect(onSelectionChange.mock.lastCall?.[0]).toMatchObject({
+      kind: "grantee",
+      grantee: { id: "u-1", email: null },
+    });
+  });
+
+  it("retains the email option when only a name matches the address-like query", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.sharing.searchGranteeUsers, {
+      body: [
+        createGranteeUser({
+          userId: "u-1",
+          firstName: "new@uni.edu",
+          lastName: "Candidate",
+          email: null,
+          matchedEmail: false,
+        }),
+      ],
+    });
+    const { onSelectionChange } = renderPicker({ allowEmailInvite: true });
+    await user.type(screen.getByLabelText("sharing.granteeSearchLabel"), "new@uni.edu");
+    await waitFor(() => expect(screen.getByText("sharing.sendInviteByEmail")).toBeInTheDocument());
+    await user.click(screen.getByText("sharing.sendInviteByEmail"));
+    expect(onSelectionChange).toHaveBeenCalledWith({ kind: "email", email: "new@uni.edu" });
+  });
+
+  it("prompts for two characters before searching for people", async () => {
+    const user = userEvent.setup();
+    const spy = server.mount(contract.sharing.searchGranteeUsers, { body: [] });
+    renderPicker();
+    await user.type(screen.getByLabelText("sharing.granteeSearchLabel"), "L");
+    await waitFor(() => expect(screen.getByText("common.searchMinCharacters")).toBeInTheDocument());
+    expect(screen.queryByText("sharing.noUsersFound")).not.toBeInTheDocument();
+    expect(spy.called).toBe(false);
+  });
+
   it("switches to organization grantees and lists the caller's organizations", async () => {
     const user = userEvent.setup();
     const orgSpy = server.mount(contract.sharing.searchGranteeOrganizations, {
@@ -429,6 +484,7 @@ describe("<GranteePicker />", () => {
             firstName: "Lin",
             lastName: "Zhao",
             email: "lin@uni.edu",
+            matchedEmail: true,
           }),
         ],
       });
@@ -458,6 +514,7 @@ describe("<GranteePicker />", () => {
             firstName: "Lin",
             lastName: "Zhao",
             email: "lin@uni.edu",
+            matchedEmail: true,
             organizationRole: "owner",
           }),
         ],

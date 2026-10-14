@@ -84,7 +84,9 @@
     "sortUnsorted": "ongesorteerd",
     "sortAscending": "oplopend",
     "sortDescending": "aflopend",
-    "sortSecondary": "tweede sortering"
+    "sortSecondary": "tweede sortering",
+    "searchMinCharacters": "Typ minimaal 2 tekens om te zoeken",
+    "emailMatched": "Komt overeen met het ingevoerde e-mailadres"
   },
   "navigation": {
     "experiments": "Experimenten",
@@ -343,7 +345,9 @@
     "invite": "Uitnodigen",
     "inviteCollaborators": "Medewerkers uitnodigen",
     "inviteCollaboratorsDescription": "Voeg een bestaande gebruiker of een van uw organisaties toe, of nodig iemand uit per e-mail. Bestaande accounts krijgen direct toegang; uitgenodigden ontvangen een e-mail en doen mee zodra ze accepteren.",
-    "filterCollaboratorsPlaceholder": "Filter op naam of e-mail…"
+    "filterCollaboratorsPlaceholder": "Filter op naam of e-mail…",
+    "invitedBy": "Uitgenodigd door",
+    "unknownInviter": "Onbekende uitnodiger"
   },
   "joinCode": {
     "title": "Deelnamecode",

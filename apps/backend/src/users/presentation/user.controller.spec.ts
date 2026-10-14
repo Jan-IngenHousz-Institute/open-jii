@@ -127,7 +127,9 @@ describe("UserController", () => {
         .expect(StatusCodes.OK);
 
       expect(response.body).toHaveLength(20);
-      expect(response.body[0]).toMatchObject({ userId: targetId, email: null });
+      expect(response.body[0]).toMatchObject({ userId: targetId, email: null, matchedEmail: true });
+      for (const candidate of response.body.slice(1))
+        expect(candidate).toMatchObject({ matchedEmail: false });
       expect(response.body.every((candidate) => candidate.email === null)).toBe(true);
     });
 

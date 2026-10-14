@@ -978,7 +978,7 @@ export class SharingRepository {
         : sql`false`;
 
       const fullName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
-      const isExactEmail = sql`lower(${users.email}) = lower(${params.query})`;
+      const isExactEmail = sql<boolean>`lower(${users.email}) = lower(${params.query})`;
       const isDiscoverable = and(eq(profiles.activated, true), isNull(profiles.deletedAt));
 
       const rows = await this.db
@@ -987,6 +987,7 @@ export class SharingRepository {
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
           email: getAnonymizedEmail(),
+          matchedEmail: isExactEmail,
           avatarUrl: getAnonymizedAvatarUrl(),
           organizationRole: organizationMembers.role,
           existingGrantRole: resourceGrants.role,
@@ -1028,6 +1029,7 @@ export class SharingRepository {
         firstName: r.firstName,
         lastName: r.lastName,
         email: r.email,
+        matchedEmail: r.matchedEmail,
         avatarUrl: r.avatarUrl,
         organizationRole: toOrganizationMemberRole(r.organizationRole),
         existingGrantRole: r.existingGrantRole ? toGrantRole(r.existingGrantRole) : null,
