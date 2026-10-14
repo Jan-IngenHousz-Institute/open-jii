@@ -5,36 +5,46 @@ backend to resolve user metadata, execute macro batches and look up the device r
 is called back for project transfers. A break here does not stop ingestion, it silently degrades
 enrichment, which is why it is worth an alarm rather than a dashboard.
 
+The backend's HMAC guard logs each rejected call once with a `reason`. Metric filters on its log group
+count them twice: `PipelineCallsRejected`, which the alert reads, leaves out `missing-key-id`, since
+anyone can send a call with no key id; `PipelineCallRejectionsByReason` counts every rejection per
+`Reason`. A made-up key id from outside also counts as `unknown-key`, so check the rejections line up
+with the pipeline's calls before suspecting a rotation. The pipeline records a rejected macro batch
+on each of its rows and carries on, which is why nothing else shows the break.
+
 ## Establish the direction
 
 ```bash
-aws logs tail /aws/ecs/backend-service-<env> --since 1h --filter-pattern "HmacGuard"
+aws logs tail /aws/ecs/backend-service-<env> --since 1h --filter-pattern '{ $.errorCode = "HMAC_AUTHENTICATION_FAILED" }'
 ```
 
 Rejections logged by the backend mean Databricks called and was refused. Silence in the backend
 while the pipeline reports failures means the call never arrived, which is a network or URL problem
 rather than an authentication one.
 
-## The rejection message is diagnostic
+## The reason is diagnostic
 
-The guard logs a distinct message for each failure, and they fall into four groups that point
-somewhere different.
+Each reason points somewhere different.
 
-**Key id problems: "Missing API key ID", "Invalid API key ID provided", "API key not found".** The
-two sides are using different credentials. This almost always means a rotation was applied on one
-side only: the backend takes its keys from configuration, Databricks from a secret scope, and they
-are updated by separate mechanisms.
+**`unknown-key`, and `missing-key-id` from the pipeline itself.** The two sides are using different
+credentials. This almost always means a rotation was applied on one side only: the backend takes its
+keys from configuration, Databricks from a secret scope, and they are updated by separate mechanisms.
 
-**"Missing signature or timestamp headers".** The caller is not signing at all. That is a client
-regression or a request that reached the guarded route by a path that bypasses the signing client,
-not a credential problem.
+**`missing-signature`.** The caller sent a key id but did not sign. That is a client regression or a
+request that reached the guarded route by a path that bypasses the signing client, not a credential
+problem.
 
-**"Invalid signature provided" or "Signature comparison failed".** Same key id, different secret,
-or the payload was altered in transit. Check whether the secret scope value matches what the
-backend expects before suspecting anything exotic.
+**`bad-signature`.** Same key id, different secret, or the payload was altered in transit. Check
+whether the secret scope value matches what the backend expects before suspecting anything exotic.
 
-**"Invalid timestamp".** The request is outside the replay window. This is clock drift or a
-genuinely slow call, and it is the only group that can resolve on its own.
+**`stale-timestamp`.** The request is outside the five-minute replay window. This is clock drift or a
+genuinely slow call, and it is the only reason that can resolve on its own.
+
+**`internal-error`.** The guard itself failed, for example reading its configuration, and the call
+got a server error. `backend-5xx` usually fires alongside.
+
+A 403 never reaches the guard: it is the backend's WAF refusing the call first, and it shows only in
+the pipeline's errors (see `macro-failures`).
 
 ## When nothing reaches the backend
 

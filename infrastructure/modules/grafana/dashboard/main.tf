@@ -473,6 +473,92 @@ EOT
       service   = "backend"
     }
   }
+
+  # Catalog entry 19. A rejected call that carried a key id is most likely the pipeline failing to
+  # reach the backend: it records the rejection on each row and carries on, so nothing else shows
+  # it. The metric filter leaves out calls with no key id, since anyone can send one.
+  rule {
+    name      = "Pipeline Calls Rejected"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Backend"
+        metricName = "PipelineCallsRejected"
+        statistic  = "Sum"
+        period     = "300"
+        dimensions = {}
+        matchExact = true
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "max"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "The backend refused calls from the pipeline that carried a key id. Macro results, contributor names and device metadata from those calls are missing."
+      summary          = "Backend is rejecting the pipeline's calls"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/webhook-failures.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["webhook-failures"]
+    }
+    labels = {
+      metric_id = "webhook-failures"
+      severity  = "warning"
+      service   = "backend"
+    }
+  }
 }
 
 # CloudFront Alerts
@@ -2472,6 +2558,88 @@ resource "grafana_rule_group" "lakehouse_freshness" {
       severity  = "warning"
       service   = "lakehouse"
       metric_id = "macro-backlog"
+    }
+  }
+
+  # Catalog entry 100. Counted per closed half hour and stamped at its start, like entry 86, so
+  # two failing half hours in a row are needed: one can be a single rejected batch.
+  rule {
+    name      = "Macro Platform Failures"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Data"
+        metricName = "MacroFailedRows"
+        statistic  = "Sum"
+        dimensions = {
+          Environment = var.environment
+          Cause       = "platform"
+        }
+      })
+
+      relative_time_range {
+        from = 4500
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "45m"
+
+    annotations = {
+      description      = "Macro results are being written with errors from the pipeline, the backend or the sandbox rather than from the macros, so researchers see measurements without their computed values."
+      summary          = "Macros are failing for platform reasons"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/macro-failures.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["macro-platform-failures"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "lakehouse"
+      metric_id = "macro-platform-failures"
     }
   }
 

@@ -74,6 +74,9 @@ passes:
   - date: 2026-10-09
     range: [99, 99]
     note: whether the API reaches each service it depends on, so a dead one shows at a quiet hour
+  - date: 2026-10-12
+    range: [100, 100]
+    note: macro results the platform failed, which commit like successes and never reach the backlog
 
 metrics:
   # Ingest path
@@ -518,15 +521,25 @@ metrics:
 
   - num: 19
     id: webhook-failures
-    name: Webhook failures both directions (HMAC)
+    name: Pipeline calls rejected
     family: observability
+    area: api
     source: aws
     phase: P2
-    active: false
+    active: true
     slots: [alert, exception]
     severity: warning
+    signal:
+      namespace: OpenJII/Backend
+      metric: PipelineCallsRejected
+      stat: Sum
+    baseline: { method: threshold, max: 0 }
     runbook: docs/runbooks/webhook-failures.md
-    notes: Log metric filter on HMAC guard rejections + Databricks-inbound webhook errors. Silent pipeline-to-backend breakage.
+    notes: >-
+      Calls the backend's HMAC guard refused, from a metric filter on the backend's log group. A call
+      with no key id at all is left out: anyone can send one, so it says nothing about the pipeline.
+      PipelineCallRejectionsByReason splits every rejection by Reason. The pipeline records a rejected
+      call on each row it carried and carries on, so nothing else shows it.
 
   - num: 20
     id: dbx-sql-from-backend
@@ -611,6 +624,29 @@ metrics:
     notes: >
       Connections the sandboxes' network refused, counted from REJECT lines in their shared VPC flow
       log. The calibration sandbox's metric counts the same lines, so only the macro one is summed.
+
+  - num: 100
+    id: macro-platform-failures
+    name: Macro results the platform failed
+    family: observability
+    area: sandboxes
+    source: dbx
+    phase: P2
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: OpenJII/Data
+      metric: MacroFailedRows
+      stat: Sum
+      dimensions: { Environment: "${ENVIRONMENT}", Cause: platform }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/macro-failures.md
+    notes: >-
+      Macro results committed per half hour with an error the platform wrote rather than the macro: a
+      call the backend rejected or could not answer, or a sandbox that crashed or returned a broken
+      response. The rows still commit, so the backlog stays at zero. The same metric counts the
+      macro's own errors (Cause macro) and runs with nothing to run on (Cause input).
 
   - num: 24
     id: cloudfront-errors
@@ -1118,12 +1154,23 @@ metrics:
 
   - num: 54
     id: macro-protocol-failure-matrix
-    name: Macro x protocol failure matrix
+    name: Macros failing on one protocol
     family: observability
+    area: sandboxes
     source: dbx
-    phase: P3
-    active: false
-    slots: [weekly]
+    phase: P2
+    active: true
+    slots: [exception]
+    signal:
+      namespace: OpenJII/Data
+      metric: MacroProtocolFailures
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      Macro and protocol pairs over the last day where at least half of at least ten results failed
+      in the macro or its input while the same macro works on another protocol. The heartbeat file's
+      macro_protocol_failures roster names each pair with its attempts, failures and a sample error.
+      Shown rather than alerted, since the fix is the macro's author's.
 
   - num: 55
     id: aging-invitations
