@@ -261,13 +261,13 @@ def _report_outcome(table_rows_arrive: bool) -> tuple[Callable[[dict], None], li
     notified: list[str] = []
     waited_for: list[int] = []
 
-    def wait_for_table_rows(expected_rows: int) -> bool:
+    def wait_until_queryable(expected_rows: int) -> bool:
         waited_for.append(expected_rows)
         return table_rows_arrive
 
     namespace: dict[str, Any] = {
         "notify_uploader": notified.append,
-        "wait_for_table_rows": wait_for_table_rows,
+        "wait_until_queryable": wait_until_queryable,
         "logger": _Logger(),
         "UPLOAD_ID": "upload-1",
         "UPLOADED_DATA_TABLE": "catalog.centrum.experiment_uploaded_data",
@@ -310,19 +310,34 @@ def test_upload_without_rows_is_reported_failed_without_waiting(result: dict) ->
 
 
 class _FakeSpark:
-    def __init__(self, counts: list[int | Exception]) -> None:
-        self.counts = counts
-        self.queries: list[dict] = []
+    """Answers the wait's three queries from scripted results, in the order they are asked."""
+
+    def __init__(self, landed: list[int | Exception], columns: list[str], schemas: list[str | None]) -> None:
+        self.landed = landed
+        self.columns = columns
+        self.schemas = schemas
+        self.args: list[dict] = []
+        self._answer: Any = None
 
     def sql(self, query: str, args: dict) -> "_FakeSpark":
-        self.queries.append(args)
+        self.args.append(args)
+        if "count(*)" in query:
+            landed = self.landed.pop(0)
+            if isinstance(landed, Exception):
+                raise landed
+            self._answer = {"landed": landed}
+        elif "variant_explode" in query:
+            self._answer = [{"key": key} for key in self.columns]
+        else:
+            schema = self.schemas.pop(0)
+            self._answer = None if schema is None else {"upload_schema": schema}
         return self
 
-    def first(self) -> dict:
-        landed = self.counts.pop(0)
-        if isinstance(landed, Exception):
-            raise landed
-        return {"landed": landed}
+    def first(self) -> Any:
+        return self._answer
+
+    def collect(self) -> Any:
+        return self._answer
 
 
 class _QuietLogger:
@@ -341,35 +356,83 @@ class _Clock:
         self.now += seconds
 
 
-def _wait_for_table_rows(spark: _FakeSpark, clock: _Clock) -> Callable[[int], bool]:
+def _schema_field_names() -> Callable[[str], set[str]]:
+    return _task_function("schema_field_names", {})
+
+
+def test_schema_field_names_reads_plain_names() -> None:
+    schema = "OBJECT<device_id: STRING, height: DOUBLE, plot: STRING>"
+
+    assert _schema_field_names()(schema) == {"device_id", "height", "plot"}
+
+
+def test_schema_field_names_reads_quoted_and_nested_names() -> None:
+    # As schema_of_variant writes them: commas, colons and doubled backticks inside quotes.
+    schema = (
+        "OBJECT<`a b`: BIGINT, `back``tick`: BOOLEAN, `c:d`: OBJECT<`x,y`: ARRAY<BIGINT>>, plain: STRING>"
+    )
+
+    assert _schema_field_names()(schema) == {"a b", "back`tick", "c:d", "plain"}
+
+
+def test_schema_field_names_is_empty_for_a_non_object() -> None:
+    assert _schema_field_names()("ARRAY<BIGINT>") == set()
+
+
+def _wait_until_queryable(spark: _FakeSpark, clock: _Clock) -> Callable[[int], bool]:
     namespace: dict[str, Any] = {
         "spark": spark,
         "time": clock,
+        "logger": _QuietLogger(),
+        "EXPERIMENT_ID": "exp-1",
+        "UPLOAD_TABLE_ID": "table-1",
         "UPLOAD_ID": "upload-1",
         "UPLOADED_DATA_TABLE": "catalog.centrum.experiment_uploaded_data",
+        "TABLE_METADATA": "catalog.centrum.experiment_table_metadata",
         "TABLE_WAIT_SECONDS": 60,
         "TABLE_POLL_SECONDS": 15,
-        "logger": _QuietLogger(),
     }
-    return _task_function("wait_for_table_rows", namespace)
+    for helper in (
+        "schema_field_names",
+        "_query_args",
+        "upload_rows_landed",
+        "upload_columns",
+        "listed_columns",
+    ):
+        _task_function(helper, namespace)
+    return _task_function("wait_until_queryable", namespace)
 
 
-def test_waits_until_every_row_of_the_upload_has_landed() -> None:
-    spark = _FakeSpark([0, 3, 5])
-
-    assert _wait_for_table_rows(spark, _Clock())(5) is True
-    assert spark.queries == [{"upload_id": "upload-1"}] * 3
-
-
-def test_gives_up_when_the_rows_do_not_land_in_time() -> None:
-    spark = _FakeSpark([0, 0, 0, 0, 0])
+def test_waits_for_the_table_list_to_show_the_upload_after_its_rows_land() -> None:
+    spark = _FakeSpark(
+        landed=[0, 2],
+        columns=["height", "plot"],
+        schemas=[None, "OBJECT<height: DOUBLE>", "OBJECT<height: DOUBLE, plot: STRING>"],
+    )
     clock = _Clock()
 
-    assert _wait_for_table_rows(spark, clock)(5) is False
+    assert _wait_until_queryable(spark, clock)(2) is True
+    assert clock.now == 45
+    assert spark.args[0] == {
+        "experiment_id": "exp-1",
+        "upload_table_id": "table-1",
+        "upload_id": "upload-1",
+    }
+
+
+def test_gives_up_when_the_table_list_never_shows_the_upload() -> None:
+    spark = _FakeSpark(landed=[2], columns=["plot"], schemas=[None] * 4)
+    clock = _Clock()
+
+    assert _wait_until_queryable(spark, clock)(2) is False
     assert clock.now == 60
 
 
-def test_keeps_waiting_when_a_count_query_fails() -> None:
-    spark = _FakeSpark([RuntimeError("warehouse hiccup"), 5])
+def test_keeps_waiting_when_a_check_fails() -> None:
+    spark = _FakeSpark(
+        landed=[RuntimeError("warehouse hiccup"), 2],
+        columns=["plot"],
+        schemas=["OBJECT<plot: STRING, extra: BIGINT>"],
+    )
 
-    assert _wait_for_table_rows(spark, _Clock())(5) is True
+    assert _wait_until_queryable(spark, _Clock())(2) is True
