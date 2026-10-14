@@ -18,7 +18,7 @@ variable "environment" {
 variable "max_image_count" {
   description = "Maximum number of images to keep in the repository"
   type        = number
-  default     = 10
+  default     = 5
 }
 
 variable "tags" {
