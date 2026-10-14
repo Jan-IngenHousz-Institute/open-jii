@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { revalidateAuth } from "~/app/actions/revalidate";
 
 import { authClient } from "@repo/auth/client";
 
@@ -18,6 +19,10 @@ export function useUpdateUser() {
     onSuccess: async (response) => {
       if (response.data) {
         await queryClient.invalidateQueries({ queryKey: ["auth"] });
+
+        // `registered` decides whether the platform layout redirects to registration, and a
+        // prefetch made before the change would keep replaying that redirect.
+        await revalidateAuth();
       }
     },
   });
