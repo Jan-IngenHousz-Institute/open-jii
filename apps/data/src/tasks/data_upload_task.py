@@ -589,8 +589,8 @@ TABLE_POLL_SECONDS = 15
 
 def schema_field_names(schema: str) -> set[str]:
     """The top-level field names of a schema_of_variant string, such as
-    OBJECT<a: BIGINT, `b c`: OBJECT<`x,y`: STRING>>. Quoted names may hold commas
-    and colons, and a doubled backtick inside them stands for one."""
+    OBJECT<a: BIGINT, `b c`: OBJECT<`x,y`: STRING>>. Quoted names may hold spaces,
+    commas and colons, and a doubled backtick inside them stands for one."""
     if not (schema.startswith("OBJECT<") and schema.endswith(">")):
         return set()
 
@@ -614,17 +614,17 @@ def schema_field_names(schema: str) -> set[str]:
                 name.append(char)
         elif char == "`":
             quoted = True
-        elif char == "<":
+        elif char in "<(":
             depth += 1
-        elif char == ">":
+        elif char in ">)":
             depth -= 1
         elif depth == 0 and char == ":" and reading_name:
-            names.add("".join(name).strip())
+            names.add("".join(name))
             name = []
             reading_name = False
         elif depth == 0 and char == ",":
             reading_name = True
-        elif reading_name:
+        elif reading_name and not char.isspace():
             name.append(char)
         i += 1
     return names
@@ -659,15 +659,17 @@ def upload_columns() -> set[str]:
     return {row["key"] for row in rows}
 
 
-def listed_columns() -> set[str]:
-    """The columns the table list shows for the upload's table, empty while it is not listed."""
+def listed_columns() -> set[str] | None:
+    """The columns the table list shows for the upload's table, None while it is not listed."""
     row = spark.sql(
         f"SELECT upload_schema FROM {TABLE_METADATA} "
         "WHERE experiment_id = :experiment_id AND identifier = :upload_table_id "
         "AND table_type = 'upload'",
         args=_query_args(),
     ).first()
-    if row is None or row["upload_schema"] is None:
+    if row is None:
+        return None
+    if row["upload_schema"] is None:
         return set()
     return schema_field_names(row["upload_schema"])
 
@@ -681,8 +683,10 @@ def wait_until_queryable(expected_rows: int) -> bool:
         try:
             if columns is None and upload_rows_landed(expected_rows):
                 columns = upload_columns()
-            if columns is not None and columns <= listed_columns():
-                return True
+            if columns is not None:
+                listed = listed_columns()
+                if listed is not None and columns <= listed:
+                    return True
         except Exception as e:
             # A failed check is retried at the next poll; raising would rerun the whole upload.
             logger.warning(f"Could not check whether the upload is queryable yet: {e}")

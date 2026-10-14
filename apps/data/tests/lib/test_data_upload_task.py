@@ -309,8 +309,13 @@ def test_upload_without_rows_is_reported_failed_without_waiting(result: dict) ->
     assert notified == ["failed"]
 
 
+# A table-list row whose upload_schema is NULL, as for an upload whose rows have no fields.
+_NULL_SCHEMA = "NULL"
+
+
 class _FakeSpark:
-    """Answers the wait's three queries from scripted results, in the order they are asked."""
+    """Answers the wait's three queries from scripted results, in the order they are asked.
+    A schema of None means the table is not listed yet."""
 
     def __init__(self, landed: list[int | Exception], columns: list[str], schemas: list[str | None]) -> None:
         self.landed = landed
@@ -330,7 +335,10 @@ class _FakeSpark:
             self._answer = [{"key": key} for key in self.columns]
         else:
             schema = self.schemas.pop(0)
-            self._answer = None if schema is None else {"upload_schema": schema}
+            if schema is None:
+                self._answer = None
+            else:
+                self._answer = {"upload_schema": None if schema == _NULL_SCHEMA else schema}
         return self
 
     def first(self) -> Any:
@@ -373,6 +381,16 @@ def test_schema_field_names_reads_quoted_and_nested_names() -> None:
     )
 
     assert _schema_field_names()(schema) == {"a b", "back`tick", "c:d", "plain"}
+
+
+def test_schema_field_names_keeps_spaces_inside_quoted_names() -> None:
+    assert _schema_field_names()("OBJECT<` plot `: STRING, a: BIGINT>") == {" plot ", "a"}
+
+
+def test_schema_field_names_reads_past_commas_in_type_arguments() -> None:
+    schema = "OBJECT<price: DECIMAL(5,1), product: STRING>"
+
+    assert _schema_field_names()(schema) == {"price", "product"}
 
 
 def test_schema_field_names_is_empty_for_a_non_object() -> None:
@@ -436,3 +454,11 @@ def test_keeps_waiting_when_a_check_fails() -> None:
     )
 
     assert _wait_until_queryable(spark, _Clock())(2) is True
+
+
+def test_waits_for_an_upload_without_columns_to_be_listed() -> None:
+    spark = _FakeSpark(landed=[1], columns=[], schemas=[None, _NULL_SCHEMA])
+    clock = _Clock()
+
+    assert _wait_until_queryable(spark, clock)(1) is True
+    assert clock.now == 15
