@@ -24,7 +24,9 @@ afterEach(() => {
 async function failureFor(respond: () => Promise<Response>): Promise<unknown> {
   vi.stubGlobal("fetch", vi.fn(respond));
   return getCredentials().then(
-    () => new Error("getCredentials resolved"),
+    () => {
+      throw new Error("expected getCredentials to fail, but it resolved");
+    },
     (err: unknown) => err,
   );
 }
