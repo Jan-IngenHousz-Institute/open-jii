@@ -38,6 +38,7 @@ from pyspark.sql.types import (
 
 from ambyte import find_byte_folders, load_files_per_byte, process_trace_files
 from openjii.json_scrub import scrub_non_finite_json_value
+from openjii.variant_schema import merged_variant_schema, variant_schema_key
 from enrich.backend_client import BackendClient
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -580,6 +581,7 @@ def main() -> dict:
 
 # DBTITLE 1,Notify the uploader
 UPLOADED_DATA_TABLE = f"{CATALOG_NAME}.centrum.experiment_uploaded_data"
+UPLOADED_DATA_SCHEMAS_TABLE = f"{CATALOG_NAME}.centrum.experiment_uploaded_data_schemas"
 TABLE_METADATA = f"{CATALOG_NAME}.centrum.experiment_table_metadata"
 ENVIRONMENT = (_optional_widget("ENVIRONMENT") or "").lower()
 # The pipeline is continuous, so an upload is usually queryable within minutes; an hour means it is stuck.
@@ -587,106 +589,54 @@ TABLE_WAIT_SECONDS = 60 * 60
 TABLE_POLL_SECONDS = 15
 
 
-def schema_field_names(schema: str) -> set[str]:
-    """The top-level field names of a schema_of_variant string, such as
-    OBJECT<a: BIGINT, `b c`: OBJECT<`x,y`: STRING>>. Quoted names may hold spaces,
-    commas and colons, and a doubled backtick inside them stands for one."""
-    if not (schema.startswith("OBJECT<") and schema.endswith(">")):
-        return set()
-
-    body = schema[len("OBJECT<") : -1]
-    names: set[str] = set()
-    name: list[str] = []
-    reading_name = True
-    quoted = False
-    depth = 0
-    i = 0
-    while i < len(body):
-        char = body[i]
-        if quoted:
-            if char == "`" and body[i + 1 : i + 2] == "`":
-                if reading_name:
-                    name.append("`")
-                i += 1
-            elif char == "`":
-                quoted = False
-            elif reading_name:
-                name.append(char)
-        elif char == "`":
-            quoted = True
-        elif char in "<(":
-            depth += 1
-        elif char in ">)":
-            depth -= 1
-        elif depth == 0 and char == ":" and reading_name:
-            names.add("".join(name))
-            name = []
-            reading_name = False
-        elif depth == 0 and char == ",":
-            reading_name = True
-        elif reading_name and not char.isspace():
-            name.append(char)
-        i += 1
-    return names
+def _upload_table_rows(table: str) -> DataFrame:
+    return spark.table(table).where(
+        (F.col("experiment_id") == EXPERIMENT_ID) & (F.col("upload_table_id") == UPLOAD_TABLE_ID)
+    )
 
 
-def _query_args() -> dict:
-    return {
-        "experiment_id": EXPERIMENT_ID,
-        "upload_table_id": UPLOAD_TABLE_ID,
-        "upload_id": UPLOAD_ID,
-    }
-
-
-def upload_rows_landed(expected_rows: int) -> bool:
-    landed = spark.sql(
-        f"SELECT count(*) AS landed FROM {UPLOADED_DATA_TABLE} "
-        "WHERE experiment_id = :experiment_id AND upload_table_id = :upload_table_id "
-        "AND upload_id = :upload_id",
-        args=_query_args(),
-    ).first()["landed"]
-    return landed >= expected_rows
-
-
-def upload_columns() -> set[str]:
-    rows = spark.sql(
-        f"SELECT DISTINCT field.key AS key FROM {UPLOADED_DATA_TABLE}, "
-        "LATERAL variant_explode(uploaded_data) AS field "
-        "WHERE experiment_id = :experiment_id AND upload_table_id = :upload_table_id "
-        "AND upload_id = :upload_id",
-        args=_query_args(),
-    ).collect()
-    return {row["key"] for row in rows}
-
-
-def listed_columns() -> set[str] | None:
-    """The columns the table list shows for the upload's table, None while it is not listed."""
-    row = spark.sql(
-        f"SELECT upload_schema FROM {TABLE_METADATA} "
-        "WHERE experiment_id = :experiment_id AND identifier = :upload_table_id "
-        "AND table_type = 'upload'",
-        args=_query_args(),
-    ).first()
-    if row is None:
+def upload_schema_keys(expected_rows: int) -> list[str] | None:
+    """The distinct schemas of the upload's rows once all of them are in its table, else None."""
+    rows = _upload_table_rows(UPLOADED_DATA_TABLE).where(F.col("upload_id") == UPLOAD_ID)
+    if rows.count() < expected_rows:
         return None
-    if row["upload_schema"] is None:
-        return set()
-    return schema_field_names(row["upload_schema"])
+    keys = rows.select(variant_schema_key("uploaded_data").alias("schema_key")).distinct()
+    return [row["schema_key"] for row in keys.collect()]
+
+
+def table_list_shows(schema_keys: list[str]) -> bool:
+    """True once the table list has refreshed since the upload's schemas reached the
+    table's samples, which the pipeline merges into the listed schema."""
+    samples = _upload_table_rows(UPLOADED_DATA_SCHEMAS_TABLE)
+    sampled = samples.where(F.col("schema_key").isin(schema_keys)).select("schema_key").distinct()
+    if sampled.count() < len(schema_keys):
+        return False
+
+    merged = samples.agg(merged_variant_schema("sample").alias("schema")).first()["schema"]
+    listed = (
+        spark.table(TABLE_METADATA)
+        .where(
+            (F.col("experiment_id") == EXPERIMENT_ID)
+            & (F.col("identifier") == UPLOAD_TABLE_ID)
+            & (F.col("table_type") == "upload")
+        )
+        .select("upload_schema")
+        .first()
+    )
+    return listed is not None and listed["upload_schema"] == merged
 
 
 def wait_until_queryable(expected_rows: int) -> bool:
     """True once every row of the upload is in its table and the table list shows the
-    table with all of the upload's columns; False if that does not happen in time."""
+    table with the upload's columns; False if that does not happen in time."""
     deadline = time.monotonic() + TABLE_WAIT_SECONDS
-    columns: set[str] | None = None
+    schema_keys: list[str] | None = None
     while time.monotonic() < deadline:
         try:
-            if columns is None and upload_rows_landed(expected_rows):
-                columns = upload_columns()
-            if columns is not None:
-                listed = listed_columns()
-                if listed is not None and columns <= listed:
-                    return True
+            if schema_keys is None:
+                schema_keys = upload_schema_keys(expected_rows)
+            if schema_keys is not None and table_list_shows(schema_keys):
+                return True
         except Exception as e:
             # A failed check is retried at the next poll; raising would rerun the whole upload.
             logger.warning(f"Could not check whether the upload is queryable yet: {e}")

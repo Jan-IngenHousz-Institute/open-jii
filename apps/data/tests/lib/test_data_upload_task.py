@@ -8,6 +8,7 @@ from typing import Any, cast
 import pandas as pd
 import pytest
 from openjii.json_scrub import scrub_non_finite_json_value
+from openjii.variant_schema import merged_variant_schema, variant_schema_key
 from pyspark.sql import Column, DataFrame, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import ArrayType, DataType, DoubleType, FloatType, MapType, StructType
@@ -309,45 +310,6 @@ def test_upload_without_rows_is_reported_failed_without_waiting(result: dict) ->
     assert notified == ["failed"]
 
 
-# A table-list row whose upload_schema is NULL, as for an upload whose rows have no fields.
-_NULL_SCHEMA = "NULL"
-
-
-class _FakeSpark:
-    """Answers the wait's three queries from scripted results, in the order they are asked.
-    A schema of None means the table is not listed yet."""
-
-    def __init__(self, landed: list[int | Exception], columns: list[str], schemas: list[str | None]) -> None:
-        self.landed = landed
-        self.columns = columns
-        self.schemas = schemas
-        self.args: list[dict] = []
-        self._answer: Any = None
-
-    def sql(self, query: str, args: dict) -> "_FakeSpark":
-        self.args.append(args)
-        if "count(*)" in query:
-            landed = self.landed.pop(0)
-            if isinstance(landed, Exception):
-                raise landed
-            self._answer = {"landed": landed}
-        elif "variant_explode" in query:
-            self._answer = [{"key": key} for key in self.columns]
-        else:
-            schema = self.schemas.pop(0)
-            if schema is None:
-                self._answer = None
-            else:
-                self._answer = {"upload_schema": None if schema == _NULL_SCHEMA else schema}
-        return self
-
-    def first(self) -> Any:
-        return self._answer
-
-    def collect(self) -> Any:
-        return self._answer
-
-
 class _QuietLogger:
     def warning(self, _message: str) -> None:
         pass
@@ -364,101 +326,146 @@ class _Clock:
         self.now += seconds
 
 
-def _schema_field_names() -> Callable[[str], set[str]]:
-    return _task_function("schema_field_names", {})
-
-
-def test_schema_field_names_reads_plain_names() -> None:
-    schema = "OBJECT<device_id: STRING, height: DOUBLE, plot: STRING>"
-
-    assert _schema_field_names()(schema) == {"device_id", "height", "plot"}
-
-
-def test_schema_field_names_reads_quoted_and_nested_names() -> None:
-    # As schema_of_variant writes them: commas, colons and doubled backticks inside quotes.
-    schema = (
-        "OBJECT<`a b`: BIGINT, `back``tick`: BOOLEAN, `c:d`: OBJECT<`x,y`: ARRAY<BIGINT>>, plain: STRING>"
+def _uploaded_rows(spark: SparkSession, payloads: list[str], upload_id: str = "upload-1") -> DataFrame:
+    return spark.createDataFrame([(payload,) for payload in payloads], "payload string").select(
+        F.lit("exp-1").alias("experiment_id"),
+        F.lit("table-1").alias("upload_table_id"),
+        F.lit(upload_id).alias("upload_id"),
+        F.expr("parse_json(payload)").alias("uploaded_data"),
     )
 
-    assert _schema_field_names()(schema) == {"a b", "back`tick", "c:d", "plain"}
+
+def _samples(rows: DataFrame) -> DataFrame:
+    # One sample per schema, as the pipeline keeps them.
+    return rows.select(
+        "experiment_id",
+        "upload_table_id",
+        variant_schema_key("uploaded_data").alias("schema_key"),
+        F.col("uploaded_data").alias("sample"),
+    ).dropDuplicates(["experiment_id", "upload_table_id", "schema_key"])
 
 
-def test_schema_field_names_keeps_spaces_inside_quoted_names() -> None:
-    assert _schema_field_names()("OBJECT<` plot `: STRING, a: BIGINT>") == {" plot ", "a"}
+def _table_list(spark: SparkSession, samples: DataFrame | None) -> DataFrame:
+    """The table list as the pipeline last refreshed it: from these samples, or without the table."""
+    if samples is None:
+        return spark.createDataFrame(
+            [], "experiment_id string, identifier string, table_type string, upload_schema string"
+        )
+    return samples.groupBy("experiment_id", "upload_table_id").agg(
+        F.col("upload_table_id").alias("identifier"),
+        F.lit("upload").alias("table_type"),
+        merged_variant_schema("sample").alias("upload_schema"),
+    )
 
 
-def test_schema_field_names_reads_past_commas_in_type_arguments() -> None:
-    schema = "OBJECT<price: DECIMAL(5,1), product: STRING>"
-
-    assert _schema_field_names()(schema) == {"price", "product"}
-
-
-def test_schema_field_names_is_empty_for_a_non_object() -> None:
-    assert _schema_field_names()("ARRAY<BIGINT>") == set()
-
-
-def _wait_until_queryable(spark: _FakeSpark, clock: _Clock) -> Callable[[int], bool]:
+def _queryable_checks(
+    spark: SparkSession, rows: DataFrame, samples: DataFrame, table_list: DataFrame
+) -> dict[str, Any]:
+    rows.createOrReplaceTempView("uploaded_data")
+    samples.createOrReplaceTempView("uploaded_data_schemas")
+    table_list.createOrReplaceTempView("table_metadata")
     namespace: dict[str, Any] = {
         "spark": spark,
-        "time": clock,
-        "logger": _QuietLogger(),
+        "F": F,
+        "DataFrame": DataFrame,
+        "merged_variant_schema": merged_variant_schema,
+        "variant_schema_key": variant_schema_key,
         "EXPERIMENT_ID": "exp-1",
         "UPLOAD_TABLE_ID": "table-1",
         "UPLOAD_ID": "upload-1",
-        "UPLOADED_DATA_TABLE": "catalog.centrum.experiment_uploaded_data",
-        "TABLE_METADATA": "catalog.centrum.experiment_table_metadata",
+        "UPLOADED_DATA_TABLE": "uploaded_data",
+        "UPLOADED_DATA_SCHEMAS_TABLE": "uploaded_data_schemas",
+        "TABLE_METADATA": "table_metadata",
+    }
+    for helper in ("_upload_table_rows", "upload_schema_keys", "table_list_shows"):
+        _task_function(helper, namespace)
+    return namespace
+
+
+def test_upload_schema_keys_waits_for_every_row(spark) -> None:
+    rows = _uploaded_rows(spark, ['{"plot": "A1", "height": 1}', '{"plot": "A2", "height": 2.5}'])
+    checks = _queryable_checks(spark, rows, _samples(rows), _table_list(spark, None))
+
+    assert checks["upload_schema_keys"](3) is None
+    assert len(checks["upload_schema_keys"](2)) == 2
+
+
+def test_table_list_shows_an_upload_once_refreshed_with_its_schemas(spark) -> None:
+    rows = _uploaded_rows(spark, ['{"plot": "A1", "height": 1}', '{"` plot `": "B"}'])
+    samples = _samples(rows)
+    checks = _queryable_checks(spark, rows, samples, _table_list(spark, samples))
+
+    assert checks["table_list_shows"](checks["upload_schema_keys"](2)) is True
+
+
+def test_table_list_does_not_show_an_upload_before_its_table_is_listed(spark) -> None:
+    rows = _uploaded_rows(spark, ['{"plot": "A1"}'])
+    samples = _samples(rows)
+    checks = _queryable_checks(spark, rows, samples, _table_list(spark, None))
+
+    assert checks["table_list_shows"](checks["upload_schema_keys"](1)) is False
+
+
+def test_table_list_does_not_show_an_upload_whose_schemas_are_not_sampled_yet(spark) -> None:
+    earlier = _uploaded_rows(spark, ['{"plot": "A1"}'], upload_id="upload-0")
+    rows = earlier.unionByName(_uploaded_rows(spark, ['{"plot": "A2", "leaf_area": 3.1}']))
+    checks = _queryable_checks(spark, rows, _samples(earlier), _table_list(spark, _samples(earlier)))
+
+    assert checks["table_list_shows"](checks["upload_schema_keys"](1)) is False
+
+
+def test_table_list_does_not_show_an_upload_until_refreshed_after_its_schemas(spark) -> None:
+    earlier = _uploaded_rows(spark, ['{"plot": "A1"}'], upload_id="upload-0")
+    rows = earlier.unionByName(_uploaded_rows(spark, ['{"plot": "A2", "leaf_area": 3.1}']))
+    checks = _queryable_checks(spark, rows, _samples(rows), _table_list(spark, _samples(earlier)))
+
+    assert checks["table_list_shows"](checks["upload_schema_keys"](1)) is False
+
+
+def test_table_list_shows_an_upload_without_fields_once_listed(spark) -> None:
+    rows = _uploaded_rows(spark, ["{}"])
+    samples = _samples(rows)
+
+    unlisted = _queryable_checks(spark, rows, samples, _table_list(spark, None))
+    assert unlisted["table_list_shows"](unlisted["upload_schema_keys"](1)) is False
+
+    listed = _queryable_checks(spark, rows, samples, _table_list(spark, samples))
+    assert listed["table_list_shows"](listed["upload_schema_keys"](1)) is True
+
+
+def _wait_until_queryable(keys: list[list[str] | None | Exception], shows: list[bool], clock: _Clock):
+    def upload_schema_keys(_expected_rows: int) -> list[str] | None:
+        result = keys.pop(0)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    namespace: dict[str, Any] = {
+        "time": clock,
+        "logger": _QuietLogger(),
+        "upload_schema_keys": upload_schema_keys,
+        "table_list_shows": lambda _keys: shows.pop(0),
         "TABLE_WAIT_SECONDS": 60,
         "TABLE_POLL_SECONDS": 15,
     }
-    for helper in (
-        "schema_field_names",
-        "_query_args",
-        "upload_rows_landed",
-        "upload_columns",
-        "listed_columns",
-    ):
-        _task_function(helper, namespace)
     return _task_function("wait_until_queryable", namespace)
 
 
-def test_waits_for_the_table_list_to_show_the_upload_after_its_rows_land() -> None:
-    spark = _FakeSpark(
-        landed=[0, 2],
-        columns=["height", "plot"],
-        schemas=[None, "OBJECT<height: DOUBLE>", "OBJECT<height: DOUBLE, plot: STRING>"],
-    )
+def test_waits_for_the_rows_and_then_the_table_list() -> None:
     clock = _Clock()
 
-    assert _wait_until_queryable(spark, clock)(2) is True
-    assert clock.now == 45
-    assert spark.args[0] == {
-        "experiment_id": "exp-1",
-        "upload_table_id": "table-1",
-        "upload_id": "upload-1",
-    }
+    assert _wait_until_queryable([None, ["k"]], [False, True], clock)(2) is True
+    assert clock.now == 30
 
 
 def test_gives_up_when_the_table_list_never_shows_the_upload() -> None:
-    spark = _FakeSpark(landed=[2], columns=["plot"], schemas=[None] * 4)
     clock = _Clock()
 
-    assert _wait_until_queryable(spark, clock)(2) is False
+    assert _wait_until_queryable([["k"]], [False] * 4, clock)(2) is False
     assert clock.now == 60
 
 
 def test_keeps_waiting_when_a_check_fails() -> None:
-    spark = _FakeSpark(
-        landed=[RuntimeError("warehouse hiccup"), 2],
-        columns=["plot"],
-        schemas=["OBJECT<plot: STRING, extra: BIGINT>"],
-    )
-
-    assert _wait_until_queryable(spark, _Clock())(2) is True
-
-
-def test_waits_for_an_upload_without_columns_to_be_listed() -> None:
-    spark = _FakeSpark(landed=[1], columns=[], schemas=[None, _NULL_SCHEMA])
     clock = _Clock()
 
-    assert _wait_until_queryable(spark, clock)(1) is True
-    assert clock.now == 15
+    assert _wait_until_queryable([RuntimeError("hiccup"), ["k"]], [True], clock)(2) is True
