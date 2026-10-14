@@ -2,7 +2,8 @@ import { OPEN_WORKBOOK_CREATE_EVENT } from "@/components/navigation/site-header/
 import { createWorkbook } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { act, render, screen, waitFor, userEvent } from "@/test/test-utils";
-import { describe, it, expect } from "vitest";
+import * as nav from "next/navigation";
+import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
@@ -257,5 +258,90 @@ describe("ListWorkbooks", () => {
 
     await user.click(screen.getByRole("button", { name: "common.errors.tryAgain" }));
     await waitFor(() => expect(spy.callCount).toBeGreaterThan(1));
+  });
+
+  describe("visibility filter", () => {
+    function openOnUrl(qs: string) {
+      vi.mocked(nav.usePathname).mockReturnValue("/platform/workbooks");
+      vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams(qs));
+    }
+
+    it("offers the filter and hides Clear filters while nothing is picked", () => {
+      server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
+
+      render(<ListWorkbooks />);
+
+      expect(screen.getByRole("button", { name: "workbooks.visibility" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
+    });
+
+    it("lists both visibilities and filters through the URL and the API", async () => {
+      openOnUrl("");
+      const user = userEvent.setup();
+      const replace = vi.mocked(nav.useRouter().replace);
+      replace.mockClear();
+      const spy = server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
+
+      render(<ListWorkbooks />);
+      await user.click(screen.getByRole("button", { name: "workbooks.visibility" }));
+
+      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+        "workbooks.private",
+        "workbooks.public",
+      ]);
+      await user.click(screen.getByRole("option", { name: "workbooks.private" }));
+
+      expect(replace).toHaveBeenLastCalledWith("/platform/workbooks?visibility=private", {
+        scroll: false,
+      });
+      await waitFor(() => {
+        expect(spy.calls.at(-1)?.url).toContain("visibility%5B0%5D=private");
+      });
+      expect(screen.getByRole("button", { name: /workbooks\.visibility/ })).toHaveTextContent("1");
+    });
+
+    it("restores a shared filter and clears it from the toolbar", async () => {
+      openOnUrl("visibility=private,public");
+      const user = userEvent.setup();
+      const replace = vi.mocked(nav.useRouter().replace);
+      replace.mockClear();
+      server.mount(contract.workbooks.listWorkbooks, {
+        body: envelope([createWorkbook({ id: "wb-1", name: "Test WB" })]),
+      });
+
+      render(<ListWorkbooks />);
+
+      expect(screen.getByRole("button", { name: /workbooks\.visibility/ })).toHaveTextContent("2");
+      await waitFor(() =>
+        expect(screen.getByRole("link", { name: "Test WB" })).toBeInTheDocument(),
+      );
+
+      await user.click(screen.getByRole("button", { name: "common.clearFilters" }));
+
+      expect(replace).toHaveBeenLastCalledWith("/platform/workbooks", { scroll: false });
+      expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
+    });
+
+    it("offers to clear the filter when nothing matches it", async () => {
+      openOnUrl("visibility=private");
+      const user = userEvent.setup();
+      server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
+
+      render(<ListWorkbooks />);
+
+      await waitFor(() =>
+        expect(screen.getByText("workbooks.noFilterMatches")).toBeInTheDocument(),
+      );
+      expect(document.querySelector('a[href*="/guide/experiments/workbooks"]')).toBeNull();
+      const clearButtons = screen.getAllByRole("button", { name: "common.clearFilters" });
+      expect(clearButtons).toHaveLength(2);
+
+      await user.click(clearButtons[1]);
+
+      await waitFor(() => {
+        expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
+      });
+      await waitFor(() => expect(screen.getByText("workbooks.noWorkbooks")).toBeInTheDocument());
+    });
   });
 });

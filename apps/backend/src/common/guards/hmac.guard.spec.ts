@@ -1,12 +1,14 @@
 import type { ExecutionContext } from "@nestjs/common";
-import { UnauthorizedException } from "@nestjs/common";
+import { InternalServerErrorException, Logger, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { ExecutionContextHost } from "@nestjs/core/helpers/execution-context-host";
 import { Test } from "@nestjs/testing";
 import type { TestingModule } from "@nestjs/testing";
 import * as crypto from "crypto";
 
 import { stableStringify } from "../utils/stable-json";
 import { HmacGuard } from "./hmac.guard";
+import type { HmacRejectionReason } from "./hmac.guard";
 
 describe("HmacGuard", () => {
   let guard: HmacGuard;
@@ -246,5 +248,88 @@ describe("HmacGuard", () => {
     // Both should throw exceptions when trying to validate with invalid signatures
     expect(() => guard.canActivate(mockContext1)).toThrow(UnauthorizedException);
     expect(() => guard.canActivate(mockContext2)).toThrow(UnauthorizedException);
+  });
+
+  describe("logging", () => {
+    const staleTimestamp = (Math.floor(Date.now() / 1000) - 600).toString();
+    const staleSignature = crypto
+      .createHmac("sha256", mockWebhookSecret)
+      .update(`${staleTimestamp}:${mockBodyString}`)
+      .digest("hex");
+
+    const rejections: { reason: HmacRejectionReason; headers: Record<string, string> }[] = [
+      { reason: "missing-key-id", headers: {} },
+      { reason: "unknown-key", headers: { "x-api-key-id": "unknown-key-id" } },
+      { reason: "unknown-key", headers: { "x-api-key-id": "constructor" } },
+      {
+        reason: "missing-signature",
+        headers: { "x-api-key-id": mockApiKeyId, "x-databricks-timestamp": mockTimestamp },
+      },
+      {
+        reason: "stale-timestamp",
+        headers: {
+          "x-api-key-id": mockApiKeyId,
+          "x-databricks-signature": staleSignature,
+          "x-databricks-timestamp": staleTimestamp,
+        },
+      },
+      {
+        reason: "bad-signature",
+        headers: {
+          "x-api-key-id": mockApiKeyId,
+          "x-databricks-signature": "not-hex",
+          "x-databricks-timestamp": mockTimestamp,
+        },
+      },
+    ];
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it.each(rejections)("logs a $reason rejection exactly once", ({ reason, headers }) => {
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+      const context = new ExecutionContextHost([{ headers, body: mockBody }]);
+
+      expect(() => guard.canActivate(context)).toThrow(UnauthorizedException);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({ reason, errorCode: "HMAC_AUTHENTICATION_FAILED" }),
+      );
+    });
+
+    it("answers 500 when the key configuration cannot be read", () => {
+      const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+      const guardWithoutKeys = new HmacGuard(new ConfigService({}));
+      const context = new ExecutionContextHost([
+        { headers: { "x-api-key-id": mockApiKeyId }, body: mockBody },
+      ]);
+
+      expect(() => guardWithoutKeys.canActivate(context)).toThrow(InternalServerErrorException);
+      expect(error).toHaveBeenCalledWith(expect.objectContaining({ reason: "internal-error" }));
+    });
+
+    it("logs an unreadable webhook secret once, as an internal error", () => {
+      const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+      const guardWithoutSecret = new HmacGuard(
+        new ConfigService({ databricks: { webhookApiKeys: { [mockApiKeyId]: mockApiKey } } }),
+      );
+      const context = new ExecutionContextHost([
+        {
+          headers: {
+            "x-api-key-id": mockApiKeyId,
+            "x-databricks-signature": "abcd",
+            "x-databricks-timestamp": mockTimestamp,
+          },
+          body: mockBody,
+        },
+      ]);
+
+      expect(() => guardWithoutSecret.canActivate(context)).toThrow(InternalServerErrorException);
+      expect(error).toHaveBeenCalledTimes(1);
+      expect(error).toHaveBeenCalledWith(expect.objectContaining({ reason: "internal-error" }));
+      expect(warn).not.toHaveBeenCalled();
+    });
   });
 });

@@ -8,3 +8,7 @@ export interface MacroMessageGroup {
 }
 
 export type MacroOutput = { messages?: MacroMessageGroup } & Record<string, any>;
+
+export function isMacroOutput(value: unknown): value is MacroOutput {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}

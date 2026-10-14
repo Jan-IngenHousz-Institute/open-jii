@@ -9,7 +9,7 @@ import initTranslations from "@repo/i18n/server";
 
 interface WorkbookPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<{ sort?: string; visibility?: string }>;
 }
 
 export async function generateMetadata({
@@ -22,14 +22,16 @@ export async function generateMetadata({
 }
 
 export default async function WorkbookPage({ searchParams }: WorkbookPageProps) {
-  // Only the default view is fetched ahead; a sorted view's input comes from the client's parsing.
-  const { sort } = await searchParams;
+  // Only the default view is fetched ahead; a sorted or filtered view's input comes from the
+  // client's parsing.
+  const { sort, visibility } = await searchParams;
+  const isDefaultView = !sort && !visibility;
 
   return (
     <PageContainer width="fluid" className="space-y-6">
       <ResourceMetricsSummary kind="workbook" />
       <PrefetchedQueries
-        queries={(utils) => (sort ? [] : [workbooksListQuery(utils, { page: 1 })])}
+        queries={(utils) => (isDefaultView ? [workbooksListQuery(utils, { page: 1 })] : [])}
       >
         <ListWorkbooks />
       </PrefetchedQueries>

@@ -223,6 +223,46 @@ describe("WorkbookController", () => {
         ],
       });
     });
+
+    it("passes the indexed visibility array the web client sends", async () => {
+      const executeSpy = vi
+        .spyOn(listWorkbooksUseCase, "executePaginated")
+        .mockResolvedValue(success({ items: [], totalCount: 0 }));
+
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooks))
+        .query("visibility[0]=private&visibility[1]=public&page=1")
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(executeSpy).toHaveBeenCalledWith(
+        1,
+        expect.any(Number),
+        expect.objectContaining({ visibilities: ["private", "public"] }),
+      );
+    });
+
+    it("accepts a single visibility value", async () => {
+      const executeSpy = vi.spyOn(listWorkbooksUseCase, "execute").mockResolvedValue(success([]));
+
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooks))
+        .query({ visibility: "public" })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(executeSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ visibilities: ["public"] }),
+      );
+    });
+
+    it("rejects an unknown visibility", async () => {
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooks))
+        .query({ visibility: "hidden" })
+        .withAuth(testUserId)
+        .expect(StatusCodes.BAD_REQUEST);
+    });
   });
 
   describe("listWorkbooks paginated", () => {

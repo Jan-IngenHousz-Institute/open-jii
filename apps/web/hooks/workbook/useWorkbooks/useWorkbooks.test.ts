@@ -1,7 +1,8 @@
 import { createWorkbook } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, act, waitFor } from "@/test/test-utils";
-import { describe, it, expect } from "vitest";
+import * as nav from "next/navigation";
+import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
@@ -14,6 +15,18 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
   totalPages,
   totalCount: items.length,
 });
+
+function setSearchParams(qs: string): void {
+  vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams(qs));
+}
+
+/** The array params as the API receives them, e.g. `visibility[0]=a&visibility[1]=b`. */
+function arrayParam(url: string, key: string): string[] {
+  const params = new URL(url).searchParams;
+  return [...params.keys()]
+    .filter((name) => name.startsWith(`${key}[`))
+    .map((name) => params.get(name) ?? "");
+}
 
 describe("useWorkbooks", () => {
   it("returns workbooks from the API", async () => {
@@ -123,5 +136,59 @@ describe("useWorkbooks", () => {
     await waitFor(() => {
       expect(result.current.error).toBeTruthy();
     });
+  });
+
+  it("reads the visibility filter from the URL and sends it to the API", async () => {
+    setSearchParams("visibility=private,public");
+    const spy = server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
+
+    const { result } = renderHook(() => useWorkbooks());
+
+    expect(result.current.visibilities).toEqual(["private", "public"]);
+    expect(result.current.hasActiveFilters).toBe(true);
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(arrayParam(spy.calls.at(-1)?.url ?? "", "visibility")).toEqual(["private", "public"]);
+  });
+
+  it("sends no visibility while nothing is picked", async () => {
+    const spy = server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
+
+    const { result } = renderHook(() => useWorkbooks());
+
+    expect(result.current.visibilities).toEqual([]);
+    expect(result.current.hasActiveFilters).toBe(false);
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(arrayParam(spy.calls.at(-1)?.url ?? "", "visibility")).toEqual([]);
+  });
+
+  it("resets to page 1 when visibility changes", () => {
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([], 1, 3) });
+
+    const { result } = renderHook(() => useWorkbooks());
+
+    act(() => result.current.setPage(3));
+    act(() => result.current.setVisibilities(["private"]));
+    expect(result.current.page).toBe(1);
+    expect(result.current.visibilities).toEqual(["private"]);
+  });
+
+  it("clears the filter and resets to page 1, keeping search and sort", () => {
+    setSearchParams("visibility=public");
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([], 1, 3) });
+
+    const { result } = renderHook(() => useWorkbooks({ initialSearch: "soil" }));
+
+    act(() => result.current.toggleSort("name", false));
+    act(() => result.current.setPage(2));
+    act(() => result.current.clearFilters());
+    expect(result.current.page).toBe(1);
+    expect(result.current.visibilities).toEqual([]);
+    expect(result.current.hasActiveFilters).toBe(false);
+    expect(result.current.search).toBe("soil");
+    expect(result.current.sort).toEqual([{ field: "name", direction: "asc" }]);
   });
 });

@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { ListPagination } from "~/components/list-pagination";
 import { OrganizationPicker } from "~/components/organizations/organization-picker";
+import { ClearFiltersButton } from "~/components/overview-table/clear-filters-button";
 import {
   createOverviewTableSorting,
   OverviewTable,
@@ -17,6 +18,7 @@ import { ResetSortingButton } from "~/components/overview-table/reset-sorting-bu
 import { getWorkbookColumns } from "~/components/overview-table/workbook-columns";
 import { useWorkbooks } from "~/hooks/workbook/useWorkbooks/useWorkbooks";
 
+import { zVisibility } from "@repo/api/domains/visibility/visibility.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -29,6 +31,7 @@ import {
 } from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";
 import { Label } from "@repo/ui/components/label";
+import { MultiSelectFilter } from "@repo/ui/components/multi-select-filter";
 import { SearchInput } from "@repo/ui/components/search-input";
 import {
   Select,
@@ -54,6 +57,10 @@ export function ListWorkbooks() {
     sort,
     setSort,
     toggleSort,
+    visibilities,
+    setVisibilities,
+    clearFilters,
+    hasActiveFilters,
   } = useWorkbooks({});
   const { t } = useTranslation(["workbook", "common"]);
   const router = useRouter();
@@ -97,7 +104,23 @@ export function ListWorkbooks() {
             className="w-full md:w-[220px]"
           />
         }
-        filters={<ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />}
+        filters={
+          <>
+            <MultiSelectFilter
+              title={t("workbooks.visibility")}
+              options={zVisibility.options.map((value) => ({
+                value,
+                label: t(`workbooks.${value}`),
+              }))}
+              selected={visibilities}
+              onChange={setVisibilities}
+              emptyLabel={t("common.filterNoResults")}
+              selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
+            />
+            <ClearFiltersButton active={hasActiveFilters} onClear={clearFilters} />
+            <ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />
+          </>
+        }
       />
 
       <div
@@ -121,8 +144,23 @@ export function ListWorkbooks() {
           retryLabel={t("common.errors.tryAgain")}
           getRowKey={(workbook) => workbook.id}
           getRowHref={(workbook) => `/${locale}/platform/workbooks/${workbook.id}`}
-          emptyMessage={t(hasSearch ? "workbooks.noMatches" : "workbooks.noWorkbooks")}
-          emptyHelpPath={!hasSearch ? "/guide/experiments/workbooks" : undefined}
+          emptyMessage={t(
+            hasActiveFilters
+              ? "workbooks.noFilterMatches"
+              : hasSearch
+                ? "workbooks.noMatches"
+                : "workbooks.noWorkbooks",
+          )}
+          emptyHelpPath={
+            !hasSearch && !hasActiveFilters ? "/guide/experiments/workbooks" : undefined
+          }
+          emptyAction={
+            hasActiveFilters && (
+              <Button variant="outline" size="sm" onClick={clearFilters}>
+                {t("common.clearFilters")}
+              </Button>
+            )
+          }
         />
 
         {workbooks && workbooks.items.length > 0 && (
