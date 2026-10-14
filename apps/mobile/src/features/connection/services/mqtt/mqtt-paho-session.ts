@@ -1,5 +1,6 @@
 import { Client, Message } from "paho-mqtt";
 import "react-native-get-random-values";
+import { isApiStatus } from "~/features/experiments/utils/api-error";
 import { ensureDeviceRegistered } from "~/shared/composition/ensure-device-registered";
 import { createLogger } from "~/shared/observability/logger";
 import { getLocalThingName, whenDeviceIdentityLoaded } from "~/shared/stores/device-identity-store";
@@ -122,12 +123,24 @@ export function createPahoSessionFactory(): PahoSessionFactory {
     async connect() {
       const t0 = Date.now();
       log.debug("connect: getCredentials start");
-      const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials().catch((err) => {
-        log.warn("getCredentials failed", { err: err?.message });
-        throw new MqttError("CredentialError", "failed to fetch IoT credentials", {
-          cause: err,
-        });
-      });
+      const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials().catch(
+        (err: unknown) => {
+          log.warn("getCredentials failed", {
+            err: err instanceof Error ? err.message : String(err),
+          });
+          // A refusal a retry cannot fix. Anything else is retried: a request that got no
+          // answer (DNS not back yet, a timeout), a 5xx, or a body that held no credentials.
+          const isRefused = isApiStatus(err, 400, 401, 403, 404);
+          if (isRefused) {
+            throw new MqttError("CredentialError", "failed to fetch IoT credentials", {
+              cause: err,
+            });
+          }
+          throw new MqttError("Disconnected", "could not reach the IoT credentials service", {
+            cause: err,
+          });
+        },
+      );
       const tCreds = Date.now();
 
       // The thing name IS the MQTT client id: the ingest rule's clientid()

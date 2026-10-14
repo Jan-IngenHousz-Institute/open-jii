@@ -1,5 +1,6 @@
+import { ORPCError } from "@orpc/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MqttError } from "~/features/connection/services/mqtt/mqtt-errors";
+import { isRetryableMqttError, MqttError } from "~/features/connection/services/mqtt/mqtt-errors";
 import type { DisconnectReason } from "~/features/connection/services/mqtt/mqtt-paho-session";
 
 // Hoisted mocks so they're in scope before module evaluation. The session
@@ -150,15 +151,46 @@ describe("createPahoSessionFactory", () => {
       expect(session).toBeDefined();
     });
 
-    it("wraps getCredentials failures in a CredentialError", async () => {
-      mockGetCredentials.mockRejectedValueOnce(new Error("cognito boom"));
+    it("treats a refused credentials request as a CredentialError", async () => {
       const { createPahoSessionFactory } = await loadModule();
-      const factory = createPahoSessionFactory();
+      const refusals = [
+        new ORPCError("BAD_REQUEST", { status: 400 }),
+        new ORPCError("UNAUTHORIZED", { status: 401 }),
+        new ORPCError("FORBIDDEN", { status: 403 }),
+        new ORPCError("NOT_FOUND", { status: 404 }),
+        { status: 401, message: "Unauthorized" },
+      ];
 
-      await expect(factory.connect()).rejects.toMatchObject({
-        kind: "CredentialError",
-      });
+      for (const refusal of refusals) {
+        mockGetCredentials.mockRejectedValueOnce(refusal);
+        await expect(createPahoSessionFactory().connect()).rejects.toMatchObject({
+          kind: "CredentialError",
+        });
+      }
       // paho was never reached.
+      expect(FakePahoClient.instances).toHaveLength(0);
+    });
+
+    it("treats a credentials request that got no answer as a retryable disconnect", async () => {
+      const { createPahoSessionFactory } = await loadModule();
+      const failures = [
+        new TypeError("Network request failed"),
+        new Error("fetch failed: java.net.UnknownHostException: Unable to resolve host"),
+        // A captive portal answers 200 with HTML, so the credential fields come back missing.
+        new Error("Missing one or more required AWS credential fields."),
+        new ORPCError("REQUEST_TIMEOUT", { status: 408 }),
+        new ORPCError("TOO_MANY_REQUESTS", { status: 429 }),
+        new ORPCError("SERVICE_UNAVAILABLE", { status: 503 }),
+      ];
+
+      for (const failure of failures) {
+        mockGetCredentials.mockRejectedValueOnce(failure);
+        const error: unknown = await createPahoSessionFactory()
+          .connect()
+          .catch((err: unknown) => err);
+        expect(error).toMatchObject({ kind: "Disconnected" });
+        expect(isRetryableMqttError(error)).toBe(true);
+      }
       expect(FakePahoClient.instances).toHaveLength(0);
     });
 
