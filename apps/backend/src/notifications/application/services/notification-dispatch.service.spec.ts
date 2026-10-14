@@ -18,6 +18,7 @@ import { NotificationRepository } from "../../core/repositories/notification.rep
 import { NotificationDispatchService } from "./notification-dispatch.service";
 import { NotificationEmailService } from "./notification-email.service";
 import { NotificationOutboxWorker } from "./notification-outbox.worker";
+import { NotificationPreferencesService } from "./notification-preferences.service";
 
 describe("NotificationDispatchService", () => {
   const testApp = TestHarness.App;
@@ -114,6 +115,41 @@ describe("NotificationDispatchService", () => {
     expect(result.value.created).toBe(1);
     expect(await rowsFor(recipientId)).toHaveLength(1);
     expect(await rowsFor(actorId)).toHaveLength(0);
+  });
+
+  it("writes nothing when the actor is the only recipient", async () => {
+    const result = await dispatch.dispatch({
+      type: "experiment_join_request_received",
+      recipientIds: [actorId],
+      actorId,
+      resource: experiment,
+      params: { experimentName: "Photosynthesis" },
+    });
+
+    assertSuccess(result);
+    expect(result.value).toEqual({ created: 0, queued: 0 });
+    expect(await rowsFor(actorId)).toHaveLength(0);
+    expect(await deliveriesFor(actorId)).toHaveLength(0);
+  });
+
+  it("keeps the rows and queues nothing when the preferences cannot be read", async () => {
+    vi.spyOn(
+      testApp.module.get(NotificationPreferencesService),
+      "emailEnabledFor",
+    ).mockResolvedValue(failure(AppError.internal("Database unavailable")));
+
+    const result = await dispatch.dispatch({
+      type: "experiment_join_request_received",
+      recipientIds: [recipientId],
+      actorId,
+      resource: experiment,
+      params: { experimentName: "Photosynthesis" },
+    });
+
+    assertSuccess(result);
+    expect(result.value).toEqual({ created: 1, queued: 0 });
+    expect(await rowsFor(recipientId)).toHaveLength(1);
+    expect(await deliveriesFor(recipientId)).toHaveLength(0);
   });
 
   it("refuses params that fail the type's schema and writes nothing", async () => {

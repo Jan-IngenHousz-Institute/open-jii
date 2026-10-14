@@ -343,6 +343,115 @@ describe("NotificationOutboxWorker", () => {
     expect(claim).toHaveBeenCalledTimes(2);
   });
 
+  describe("the paths that only fail", () => {
+    it("drains on the interval and on a nudge", async () => {
+      // The harness hands every spec the quiet subclass, so the real entry points are
+      // exercised on an instance built here. A hand-built one registers no interval,
+      // so nothing it does leaks into the rest of the suite.
+      const real = new NotificationOutboxWorker(
+        deliveryRepository,
+        testApp.module.get(NotificationRepository),
+        testApp.module.get(NotificationEmailService),
+      );
+      const drain = vi.spyOn(real, "drain").mockResolvedValue({ sent: 0, retried: 0, failed: 0 });
+
+      await real.drainOnSchedule();
+      expect(drain).toHaveBeenCalledTimes(1);
+
+      real.nudge();
+      expect(drain).toHaveBeenCalledTimes(2);
+    });
+
+    it("stops the drain when the claim itself fails", async () => {
+      await queueOne();
+      vi.spyOn(deliveryRepository, "claimDue").mockResolvedValue(
+        failure(AppError.internal("Database unavailable")),
+      );
+
+      expect(await worker.drain()).toEqual({ sent: 0, retried: 0, failed: 0 });
+      expect(sendSubmitted).not.toHaveBeenCalled();
+    });
+
+    it("clears the flag when the claim throws, so the next drain still runs", async () => {
+      const queued = await queueOne();
+      vi.spyOn(deliveryRepository, "claimDue").mockRejectedValueOnce(
+        new Error("connection terminated"),
+      );
+
+      expect(await worker.drain()).toEqual({ sent: 0, retried: 0, failed: 0 });
+
+      // The `finally` ran, so the worker is not wedged: the row goes out next time.
+      expect(await worker.drain()).toEqual({ sent: 1, retried: 0, failed: 0 });
+      expect(await deliveryById(queued.id)).toMatchObject({ status: "sent" });
+    });
+
+    it("treats a thrown send as that attempt failing, not as the batch failing", async () => {
+      const queued = await queueOne();
+      vi.spyOn(testApp.module.get(NotificationEmailService), "send").mockRejectedValue(
+        new Error("transport exploded"),
+      );
+
+      expect(await worker.drain()).toEqual({ sent: 0, retried: 1, failed: 0 });
+      expect(await deliveryById(queued.id)).toMatchObject({
+        status: "pending",
+        attempts: 1,
+        lastError: "transport exploded",
+      });
+    });
+
+    it("retries when the recipient cannot be looked up", async () => {
+      const queued = await queueOne();
+      vi.spyOn(testApp.module.get(NotificationRepository), "findUsers").mockResolvedValue(
+        failure(AppError.internal("Database unavailable")),
+      );
+
+      expect(await worker.drain()).toEqual({ sent: 0, retried: 1, failed: 0 });
+      expect(await deliveryById(queued.id)).toMatchObject({
+        status: "pending",
+        attempts: 1,
+        lastError: "Database unavailable",
+      });
+      expect(sendSubmitted).not.toHaveBeenCalled();
+    });
+
+    it("counts a send whose row could not be marked sent, and leaves it to the lease", async () => {
+      const queued = await queueOne();
+      vi.spyOn(deliveryRepository, "markSent").mockResolvedValue(
+        failure(AppError.internal("Database unavailable")),
+      );
+
+      // The email did go out, so the count is honest; the row is still `sending` and
+      // the lease will offer it again, which is the at-least-once trade an outbox makes.
+      expect(await worker.drain()).toEqual({ sent: 1, retried: 0, failed: 0 });
+      expect(sendSubmitted).toHaveBeenCalledTimes(1);
+      expect(await deliveryById(queued.id)).toMatchObject({ status: "sending" });
+    });
+
+    it("counts a retry whose row could not be marked", async () => {
+      await queueOne();
+      sendSubmitted.mockResolvedValue(failure(AppError.internal("Mail server refused")));
+      vi.spyOn(deliveryRepository, "markRetry").mockResolvedValue(
+        failure(AppError.internal("Database unavailable")),
+      );
+
+      expect(await worker.drain()).toEqual({ sent: 0, retried: 1, failed: 0 });
+    });
+
+    it("counts a failure whose row could not be marked", async () => {
+      await queueOne();
+      await testApp.database
+        .update(profiles)
+        .set({ activated: false })
+        .where(eq(profiles.userId, recipientId));
+      vi.spyOn(deliveryRepository, "markFailed").mockResolvedValue(
+        failure(AppError.internal("Database unavailable")),
+      );
+
+      expect(await worker.drain()).toEqual({ sent: 0, retried: 0, failed: 1 });
+      expect(sendSubmitted).not.toHaveBeenCalled();
+    });
+  });
+
   it("leaves no outbox interval on the schedule under the harness", async () => {
     await queueOne();
     const scheduler = testApp.module.get(SchedulerRegistry);
