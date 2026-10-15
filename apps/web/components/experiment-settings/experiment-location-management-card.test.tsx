@@ -172,6 +172,66 @@ describe("ExperimentLocationManagement", () => {
     expect(screen.getByText("2 locations")).toBeInTheDocument();
   });
 
+  it("keeps a removal made while a map click is still geocoding", async () => {
+    const user = userEvent.setup();
+    mountLocations([createLocation({ name: "Keep" }), createLocation({ name: "Removed" })]);
+    server.mount(contract.experiments.geocodeLocation, {
+      body: [createPlace({ label: "Berlin, Germany", latitude: 52.52, longitude: 13.405 })],
+      delay: 200,
+    });
+    const updateSpy = mountUpdate();
+
+    render(<ExperimentLocationManagement experimentId={experimentId} hasAccess />);
+
+    await user.click(await screen.findByRole("button", { name: "Click Map" }));
+    await user.click(screen.getByRole("button", { name: "Remove Location" }));
+
+    await waitFor(() => {
+      expect(updateSpy.callCount).toBe(2);
+    });
+    expect(updateSpy.body).toMatchObject({
+      locations: [{ name: "Keep" }, { name: "Berlin, Germany" }],
+    });
+    expect((updateSpy.body as { locations: unknown[] }).locations).toHaveLength(2);
+  });
+
+  it("adds a location for each of two quick map clicks", async () => {
+    const user = userEvent.setup();
+    mountLocations([createLocation({ name: "Keep" })]);
+    server.mount(contract.experiments.geocodeLocation, {
+      body: [createPlace({ label: "Berlin, Germany", latitude: 52.52, longitude: 13.405 })],
+      delay: 100,
+    });
+    const updateSpy = mountUpdate();
+
+    render(<ExperimentLocationManagement experimentId={experimentId} hasAccess />);
+
+    const clickMap = await screen.findByRole("button", { name: "Click Map" });
+    await user.click(clickMap);
+    await user.click(clickMap);
+
+    await waitFor(() => {
+      expect(updateSpy.callCount).toBe(2);
+    });
+    expect((updateSpy.body as { locations: unknown[] }).locations).toHaveLength(3);
+  });
+
+  it("saves nothing when the map click has no address", async () => {
+    const user = userEvent.setup();
+    mountLocations([createLocation()]);
+    const geocodeSpy = server.mount(contract.experiments.geocodeLocation, { body: [] });
+    const updateSpy = mountUpdate();
+
+    render(<ExperimentLocationManagement experimentId={experimentId} hasAccess />);
+
+    await user.click(await screen.findByRole("button", { name: "Click Map" }));
+
+    await waitFor(() => {
+      expect(geocodeSpy.callCount).toBe(1);
+    });
+    expect(updateSpy.callCount).toBe(0);
+  });
+
   it("passes sidebar title to map", async () => {
     mountLocations();
 

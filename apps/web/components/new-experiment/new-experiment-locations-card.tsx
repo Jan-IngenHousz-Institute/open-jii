@@ -1,8 +1,6 @@
 "use client";
 
 import { SettingsCard } from "@/components/shared/settings-card";
-import { orpc } from "@/lib/orpc";
-import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState, useCallback } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
@@ -11,6 +9,7 @@ import { useTranslation } from "@repo/i18n";
 import type { LocationPoint } from "@repo/ui/components/map";
 import { useIsMobile } from "@repo/ui/hooks/use-mobile";
 
+import { useGeocodeLocationPoint } from "../../hooks/locations/useGeocodeLocationPoint";
 import { useLocationSearch } from "../../hooks/locations/useLocationSearch";
 import { useDebounce } from "../../hooks/useDebounce";
 import { Map } from "../map";
@@ -22,7 +21,7 @@ interface NewExperimentLocationsCardProps {
 export function NewExperimentLocationsCard({ form }: NewExperimentLocationsCardProps) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
-  const queryClient = useQueryClient();
+  const geocodeLocationPoint = useGeocodeLocationPoint();
   const [searchQuery, setSearchQuery] = useState("");
 
   // Watch locations from form
@@ -52,28 +51,12 @@ export function NewExperimentLocationsCard({ form }: NewExperimentLocationsCardP
   // Handle adding location from map click with geocoding
   const handleLocationAdd = useCallback(
     async (latitude: number, longitude: number): Promise<LocationPoint | void> => {
-      const [firstResult] = await queryClient.fetchQuery(
-        orpc.experiments.geocodeLocation.queryOptions({
-          input: { latitude, longitude },
-          retry: 3,
-        }),
-      );
-
-      const newLocation: LocationPoint = {
-        id: Date.now().toString(),
-        name: firstResult.label,
-        latitude,
-        longitude,
-        country: firstResult.country,
-        region: firstResult.region,
-        municipality: firstResult.municipality,
-        postalCode: firstResult.postalCode,
-        address: firstResult.label,
-      };
-
-      handleLocationsChange([...(form.getValues("locations") ?? []), newLocation]);
+      const newLocation = await geocodeLocationPoint(latitude, longitude);
+      if (newLocation) {
+        handleLocationsChange([...(form.getValues("locations") ?? []), newLocation]);
+      }
     },
-    [form, handleLocationsChange, queryClient],
+    [form, handleLocationsChange, geocodeLocationPoint],
   );
 
   // Handle search
