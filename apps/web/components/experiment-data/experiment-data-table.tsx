@@ -95,6 +95,7 @@ export function ExperimentDataTable({
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
   const [sortColumn, setSortColumn] = useState<string | undefined>(defaultSortColumn);
   const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("DESC");
+  const [keepPreviousPage, setKeepPreviousPage] = useState(true);
 
   const {
     filters,
@@ -139,6 +140,8 @@ export function ExperimentDataTable({
 
   const handleSort = useCallback(
     (columnName: string, columnType?: string) => {
+      setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
+      setKeepPreviousPage(false);
       const actualSortColumn = getSortColumnName(columnName, columnType);
       if (sortColumn === actualSortColumn) {
         setSortDirection((prev) => (prev === "ASC" ? "DESC" : "ASC"));
@@ -169,7 +172,7 @@ export function ExperimentDataTable({
     orderDirection: sortDirection,
     filters: activeFilters,
     errorColumn,
-    keepPreviousPage: true,
+    keepPreviousPage,
   });
 
   const viewKey = [
@@ -182,6 +185,7 @@ export function ExperimentDataTable({
   const landedRowIds = useLandedRowIds(tableRows, viewKey);
 
   const handlePaginationChange = useCallback<typeof setPagination>((updaterOrValue) => {
+    setKeepPreviousPage(true);
     setPagination(updaterOrValue);
     setRowSelection({});
   }, []);

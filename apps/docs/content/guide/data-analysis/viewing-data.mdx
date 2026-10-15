@@ -16,11 +16,28 @@ macro produced, and anything uploaded.
   experiment holds many datasets.
 - Select a column heading to sort ascending or descending. When the experiment
   anonymizes contributors, the contributor column sorts by the pseudonym it
-  shows.
+  shows. Changing the sort column or direction returns you to the first page.
 - Use filter chips to narrow rows by one or more columns.
 - Change the rows per page or move through pages.
 - Expand structured values when a cell cannot be read comfortably inline.
 - Select rows to add or remove comments and quality annotations.
+
+Question-answer columns sort numeric-looking answers by value across the whole
+result, including answers already stored as text. For example, ascending order
+puts `1`, `2`, `10`, `100` in that sequence. Numeric answers come first, text
+answers next, and empty, whitespace-only or null answers last in either
+direction. Descending reverses the numbers and text within their groups.
+
+This is automatic for text questions too. An identifier such as `001` sorts as
+one, but stays displayed and exported as `001`. Signed integers and ordinary
+decimals, including `.5` and `1.`, support up to 20 integer digits and 18
+meaningful fractional places. Leading integer zeros and trailing fractional
+zeros do not count toward those limits. Scientific notation such as `1e3`,
+separators such as `1,000`, units such as `12 cm`, and values beyond those limits
+keep text ordering. Original answers are preserved; sorting does not make a text
+column numeric for filters or charts. Uploaded data, custom metadata and macro
+outputs keep their existing ordering. Question answers copied into macro tables
+use the same numeric ordering as the original question-answer columns.
 
 Numeric columns can open a quick table chart. This is useful for checking a
 distribution while cleaning data; it is not a saved analysis.
