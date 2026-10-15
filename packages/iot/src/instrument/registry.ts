@@ -31,14 +31,25 @@ export const BENCH_INSTRUMENTS: readonly BenchInstrumentFactory[] = [
 ];
 
 export interface BenchIdentification {
+  kind: "identified";
   instrument: BenchInstrument;
 
   /** What the port answered, so a caller can match a declared role's handshake against it. */
   reply: string;
 }
 
+export interface BenchUnrecognised {
+  kind: "unrecognised";
+
+  /**
+   * What the port answered the candidates' probes, so an operator can see what is
+   * plugged in instead. Empty when the port stayed silent.
+   */
+  replies: string[];
+}
+
 /**
- * Ask each known instrument in turn; null means nothing recognised the reply.
+ * Ask each known instrument in turn, stopping at the first that recognises its reply.
  *
  * Every candidate writes to the same port, so an identity probe has to end its line in
  * a way any of these consoles will accept. One that left a partial command behind would
@@ -47,21 +58,28 @@ export interface BenchIdentification {
 export async function identifyBenchInstrument(
   transport: ITransportAdapter,
   logger?: Logger,
-): Promise<BenchIdentification | null> {
+): Promise<BenchIdentification | BenchUnrecognised> {
+  const replies: string[] = [];
+
   for (const create of BENCH_INSTRUMENTS) {
     const instrument = create(logger);
     try {
       await instrument.initialize(transport);
       const reply = await instrument.identify();
       if (identityMatches(instrument, reply)) {
-        return { instrument, reply };
+        return { kind: "identified", instrument, reply };
+      }
+
+      const heard = reply.trim();
+      if (heard !== "" && !replies.includes(heard)) {
+        replies.push(heard);
       }
     } catch {
       // A silent or malformed answer just means "not this one".
     }
     // Dropped, not destroyed: destroy() writes to the port, which no mismatched candidate may.
   }
-  return null;
+  return { kind: "unrecognised", replies };
 }
 
 /**

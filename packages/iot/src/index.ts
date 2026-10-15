@@ -132,7 +132,11 @@ export {
   identifyBenchInstrument,
   benchInstrumentForHandshake,
 } from "./instrument/registry";
-export type { BenchInstrumentFactory, BenchIdentification } from "./instrument/registry";
+export type {
+  BenchInstrumentFactory,
+  BenchIdentification,
+  BenchUnrecognised,
+} from "./instrument/registry";
 
 // What a definition may declare, summarised from the registries that decide it.
 export {
