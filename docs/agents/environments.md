@@ -37,8 +37,16 @@ edit, has taken the production pipeline down before.
 A personal API key, created in the platform's account settings, signs requests in as its owner:
 
 - `curl -H "x-api-key: $KEY" https://api.dev.openjii.org/api/v1/...` for the REST API.
-- A Playwright context with `extraHTTPHeaders: { "x-api-key": KEY }` opens `https://dev.openjii.org`
-  already signed in, with no one-time code.
+- In Playwright, add the key only to requests for the dev hosts, never through context-wide
+  `extraHTTPHeaders`, which would send it to every origin a page loads from. With this route the
+  context opens `https://dev.openjii.org` already signed in, with no one-time code:
+
+  ```ts
+  await context.route(/^https:\/\/(api\.)?dev\.openjii\.org\//, (route) =>
+    route.continue({ headers: { ...route.request().headers(), "x-api-key": KEY } }),
+  );
+  ```
+
 - Account-management routes (API keys, passkeys, organization updates) refuse a key and need a real
   sign-in; `packages/auth/src/api-key-session.ts` says why.
 - Dev throttles at roughly 20 to 30 quick requests per key, so pace parallel agents.
