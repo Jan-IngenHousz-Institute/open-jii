@@ -113,8 +113,8 @@ GitHub's ruleset protects `main`: every change arrives through a PR with an appr
 checks, and nobody, admins included, can bypass it. The local `PreToolUse` hook only guards work
 in progress: it blocks `reset --hard`, `clean -f`, `checkout .` and `restore .` while the repo the
 command targets is on `main`. Claude Code runs it from `.claude/settings.json` and Codex from
-`.codex/hooks.json`, which Codex runs once you trust it through `/hooks`.
-`bash .claude/hooks/protect-main.test.sh` checks it. On your own branches nothing is restricted.
+`.codex/hooks.json`, which Codex runs once you trust it through `/hooks`. On your own branches
+nothing is restricted.
 
 ## Pull requests feed releases
 
