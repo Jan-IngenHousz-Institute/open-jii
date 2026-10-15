@@ -4,7 +4,7 @@ export function numericStringOrder(
   direction: "ASC" | "DESC",
   rowId?: string,
 ): string {
-  const trimmed = `trim(BOTH '\t\n\u000b\f\r ' FROM ${value})`;
+  const trimmed = `trim(BOTH concat(char(9), char(10), char(11), char(12), char(13), ' ') FROM ${value})`;
   // Leading integer zeros and trailing fractional zeros do not consume decimal precision.
   // TRY_CAST alone would round extra fractional places, so the pattern checks them first.
   const representable = `${trimmed} RLIKE '^[+-]?(?:0*[0-9]{1,20}(?:[.][0-9]{0,18}0*)?|[.][0-9]{1,18}0*)$'`;
