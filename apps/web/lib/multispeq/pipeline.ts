@@ -40,8 +40,8 @@ export const LED_COLORS: Record<number, string> = {
 
 export interface ProtocolSetEntry {
   label?: string;
-  do_once?: number;
-  do_when?: number[];
+  do_once?: unknown;
+  do_when?: unknown;
   protocol_repeats?: number | string;
   protocols?: number | string;
   pulses?: unknown[];
@@ -502,10 +502,14 @@ export interface MeasurementTimeseries {
   totalDurationUs: number;
 }
 
-function scheduledRepeats(entry: ProtocolSetEntry, repeats: number): number[] | null {
-  if (entry.do_when) return entry.do_when.map((repeat) => repeat - 1);
-  if (!entry.do_once) return null;
-  return [entry.do_once > 0 ? entry.do_once - 1 : repeats + entry.do_once];
+function scheduledRepeats(entry: ProtocolSetEntry, repeats: number): Set<number> | null {
+  if (Array.isArray(entry.do_when)) {
+    return new Set(entry.do_when.filter(isFiniteNumber).map((repeat) => Math.trunc(repeat) - 1));
+  }
+  if (!isFiniteNumber(entry.do_once)) return null;
+  const once = Math.trunc(entry.do_once);
+  if (once === 0) return null;
+  return new Set([once > 0 ? once - 1 : repeats + once]);
 }
 
 function protocolRepeatCount(entry: ProtocolSetEntry, protocol: ProtocolJson, repeat: number) {
@@ -528,14 +532,14 @@ function* protocolOccurrences(
   const recurring = scheduled.some((entry) => entry.repeats === null);
   const selectedRepeats = recurring
     ? []
-    : [...new Set(scheduled.flatMap((entry) => entry.repeats ?? []))]
+    : [...new Set(scheduled.flatMap((entry) => [...(entry.repeats ?? [])]))]
         .filter((repeat) => Number.isInteger(repeat) && repeat >= 0 && repeat < repeats)
         .sort((a, b) => a - b);
   const count = recurring ? repeats : selectedRepeats.length;
   for (let i = 0; i < count; i++) {
     const repeat = recurring ? i : selectedRepeats[i];
     for (const entry of scheduled) {
-      if (entry.repeats !== null && !entry.repeats.includes(repeat)) continue;
+      if (entry.repeats !== null && !entry.repeats.has(repeat)) continue;
       const innerRepeats = protocolRepeatCount(entry.definition, protocol, repeat);
       for (let inner = 0; inner < innerRepeats; inner++) {
         yield { definition: entry.definition, repeat };
@@ -568,7 +572,11 @@ export function measurementToTimeseries(
     let recurring = 0;
     for (const entry of definitions) {
       const count = protocolRepeatCount(entry, protocolJson, 0);
-      if (entry.do_once || entry.do_when) once += count;
+      if (
+        Array.isArray(entry.do_when) ||
+        (isFiniteNumber(entry.do_once) && Math.trunc(entry.do_once) !== 0)
+      )
+        once += count;
       else recurring += count;
     }
     if (recurring > 0) {

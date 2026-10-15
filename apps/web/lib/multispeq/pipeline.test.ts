@@ -875,6 +875,66 @@ describe("set repeat scheduling", () => {
     nonpulsed_lights_brightness: [["@s0"]],
   };
 
+  it.each([
+    { do_when: "invalid" },
+    { do_when: { repeat: 1 } },
+    { do_once: "invalid" },
+    { do_once: NaN },
+    { do_once: Infinity },
+    { do_once: 0.5 },
+  ])("ignores malformed schedule fields in matching and repeat inference: %j", (schedule) => {
+    const decoded = measurementToTimeseries(
+      {
+        sample_raw: [
+          {
+            set: [
+              { label: "ECS", data_raw: [1, 2, 3] },
+              { label: "ECS", data_raw: [4, 5, 6] },
+            ],
+          },
+        ],
+      },
+      { v_arrays: [[10, 20]], _protocol_set_: [{ ...entry, ...schedule }] },
+    );
+    expect(decoded.unmatchedRecords).toBe(0);
+    expect(decoded.outputs.map((r) => r.value)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(
+      decoded.inputs.filter((r) => r.light_type === "actinic").map((r) => r.brightness),
+    ).toEqual([10, 20]);
+  });
+
+  it("filters invalid do_when entries and preserves scheduling with a large list", () => {
+    const schedule = Array.from({ length: 10_000 }, (_, index) => index + 2);
+    const decoded = measurementToTimeseries(
+      {
+        sample_raw: [
+          {
+            set: [
+              { label: "ECS", data_raw: [1, 2, 3] },
+              { label: "ECS", data_raw: [4, 5, 6] },
+            ],
+          },
+        ],
+      },
+      {
+        set_repeats: 3,
+        v_arrays: [[10, 20, 30]],
+        _protocol_set_: [
+          {
+            ...entry,
+            do_once: 1,
+            do_when: [NaN, Infinity, "1", null, 2.9, ...schedule],
+          },
+        ],
+      },
+    );
+    expect(decoded.unmatchedRecords).toBe(0);
+    expect(decoded.outputs.map((r) => r.value)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(
+      decoded.inputs.filter((r) => r.light_type === "actinic").map((r) => r.brightness),
+    ).toEqual([20, 30]);
+  });
+
   it("reports unlabeled measuring records that cannot be matched", () => {
     const decoded = measurementToTimeseries(
       { sample_raw: [{ set: [{ data_raw: [1, 2, 3] }, { label: "ECS", data_raw: [4, 5, 6] }] }] },
