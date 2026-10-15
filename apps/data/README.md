@@ -83,7 +83,7 @@ The Databricks bundle (`databricks.yml`) builds wheels and uploads notebooks via
 
 ## Verify numeric question sorting
 
-The backend orders historical STRING question answers before paging. Run its real
+The backend orders STRING question answers before paging. Run its real
 repository and adapter SQL against this workspace's pinned Spark 4 runtime:
 
 ```bash
@@ -107,8 +107,7 @@ and CI suites. It covers both ANSI modes, source-name collisions, filtered and
 unfiltered paging, DISTINCT and exact numeric boundaries. The optional benchmark
 uses cached parquet data at 100k and 1M rows with full-row and ID-only projections.
 Its lexical comparison uses current generated SQL with numeric classification
-disabled in the test adapter. It does not replay an old checkout. Historical
-negative-control evidence belongs in the OJD-1856 review artifacts.
+disabled in the test adapter.
 
 ### Numeric policy
 

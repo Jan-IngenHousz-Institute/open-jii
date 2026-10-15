@@ -221,7 +221,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         functions: [{ column: "*", function: "count", alias: "measurement_count" }],
       },
       ordering: { column: bucketAlias, direction: "ASC" },
-
       limit,
     });
     if (result.isFailure()) {
@@ -261,7 +260,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         functions: [{ column: "*", function: "count", alias: "measurement_count" }],
       },
       ordering: { column: bucketAlias, direction: "ASC" },
-
       limit,
     });
     if (result.isFailure()) {
@@ -300,7 +298,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       },
       // Newest sightings first, so a hit ceiling can only shed stale rows.
       ordering: { column: "last_seen", direction: "DESC" },
-
       limit,
     });
     if (result.isFailure()) {
@@ -339,7 +336,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         { column: "event_timestamp", operator: "between", value: [from, to] },
       ],
       ordering: { column: "event_timestamp", direction: "DESC" },
-
       limit,
     });
     if (result.isFailure()) {
@@ -378,7 +374,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       ],
       whereConditions: [["experiment_id", experimentId]],
       ordering: { column: "processed_timestamp", direction: "DESC" },
-
       limit,
     });
     if (result.isFailure()) {
@@ -422,7 +417,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         ],
       },
       ordering: { column: "last_data_at", direction: "DESC" },
-
       limit,
     });
     if (result.isFailure()) {
@@ -452,7 +446,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       whereConditions: [["client_id", thingName]],
       filters: [{ column: "event_timestamp", operator: "between", value: [from, to] }],
       ordering: { column: "event_timestamp", direction: "ASC" },
-
       limit,
     });
     if (result.isFailure()) {
@@ -710,7 +703,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       whereConditions: [["client_id", thingName]],
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
       ordering: { column: "timestamp", direction: "DESC" },
-
       limit,
     });
     if (result.isFailure()) {
@@ -1034,7 +1026,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
   async getPublicDailyActivity(days: number): Promise<Result<DailyActivityRow[]>> {
     const result = await this.readMetricsTable("daily_activity", {
       ordering: { column: "date", direction: "DESC" },
-
       limit: days,
     });
     if (result.isFailure()) {
@@ -1148,7 +1139,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     const result = await this.readMetricsTable("parameter_stats", {
       filters: [{ column: "category", operator: "equals", value: category }],
       ordering: { column: "observations", direction: "DESC" },
-
       limit: 1,
     });
     if (result.isFailure()) {
