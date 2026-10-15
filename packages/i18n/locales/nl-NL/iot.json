@@ -965,7 +965,9 @@
         "appliedValue": "{{blocks}} blokken in het record toegepast",
         "onDevice": "Op het apparaat",
         "onDeviceValue": "{{confirmed}} van {{blocks}} blokken bevestigd",
-        "onDeviceUnrecorded": "{{confirmed}} bevestigd, nog niet vastgelegd"
+        "onDeviceUnrecorded": "{{confirmed}} bevestigd, nog niet vastgelegd",
+        "keptOnDevice": "Deze run wordt bewaard in het dossier van het apparaat.",
+        "openDevice": "Open het tabblad Kalibratie"
       },
       "library": {
         "title": "Kalibraties",

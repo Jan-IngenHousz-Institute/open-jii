@@ -526,6 +526,8 @@ describe("CalibrationWizard", { timeout: 20_000 }, () => {
 
     expect(await screen.findByText("iot.calibration.done.rejectedHint")).toBeInTheDocument();
     expect(console.sent).toEqual(["par_raw", "par_raw", "par_raw"]);
+    // On the device's own page the run is already where it is kept.
+    expect(screen.queryByText(/iot\.calibration\.done\.keptOnDevice/)).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "iot.calibration.done.close" }));
     expect(onClose).toHaveBeenCalled();
   });
@@ -1086,6 +1088,29 @@ describe("CalibrationWizard", { timeout: 20_000 }, () => {
       expect(
         await screen.findByRole("button", { name: "iot.calibration.review.approve" }),
       ).toBeInTheDocument();
+    });
+
+    // A bench works on devices the operator never opened, so the end says where the run went.
+    it("points at the device a finished run is kept on", async () => {
+      attachMiniPar([420, 150, 8.33], "a4cf12aa93b0");
+      server.mount(contract.iot.rejectCalibrationRun, {
+        body: createCalibrationRun({ status: "rejected" }),
+      });
+      renderSitting();
+
+      await captureThreePoints();
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.sitting.review" }),
+      );
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.review.reject" }),
+      );
+
+      expect(await screen.findByText(/iot\.calibration\.done\.keptOnDevice/)).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "iot.calibration.done.openDevice" })).toHaveAttribute(
+        "href",
+        `/en-US/platform/devices/${REGISTERED.id}/calibration`,
+      );
     });
 
     // An Ambit's MAC costs a reboot to read, so that family is named by the operator instead.

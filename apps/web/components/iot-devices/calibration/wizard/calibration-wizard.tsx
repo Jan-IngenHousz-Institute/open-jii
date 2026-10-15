@@ -2,6 +2,7 @@
 
 import { CalibrationDevicePicker } from "@/components/calibrations/calibration-device-picker";
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useActiveDeviceCalibration } from "@/hooks/iot/useActiveDeviceCalibration/useActiveDeviceCalibration";
 import { useApproveCalibrationRun } from "@/hooks/iot/useApproveCalibrationRun/useApproveCalibrationRun";
 import type { PhaseResult } from "@/hooks/iot/useCalibrationCapture/useCalibrationCapture";
@@ -12,6 +13,7 @@ import { useCreateCalibrationRun } from "@/hooks/iot/useCreateCalibrationRun/use
 import { useIotDevices } from "@/hooks/iot/useIotDevices/useIotDevices";
 import { useRejectCalibrationRun } from "@/hooks/iot/useRejectCalibrationRun/useRejectCalibrationRun";
 import { useReportDeviceCalibrationWrite } from "@/hooks/iot/useReportDeviceCalibrationWrite/useReportDeviceCalibrationWrite";
+import { useLocale } from "@/hooks/useLocale";
 import { CheckCircle2, CircleDashed, Loader2, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -118,6 +120,7 @@ export function CalibrationWizard({
   onClose,
 }: CalibrationWizardProps) {
   const { t } = useTranslation("iot");
+  const locale = useLocale();
   const isMobile = useIsMobile();
 
   const isWriteOnly = writeSession !== undefined;
@@ -842,6 +845,26 @@ export function CalibrationWizard({
     return isConfirmed ? "confirmed" : "unconfirmed";
   }
 
+  // At a bench the run belongs to a device the operator never opened; on the device's own
+  // page it is already where the run is kept, so there is nothing to point at. The link
+  // follows the recorded run, not whatever unit is on the port by now.
+  function renderWhereKept() {
+    if (!isSitting || run === null) {
+      return null;
+    }
+    return (
+      <p className="text-muted-foreground text-sm">
+        {t("iot.calibration.done.keptOnDevice")}{" "}
+        <IntentLink
+          href={`/${locale}/platform/devices/${run.deviceId}/calibration`}
+          className="text-foreground font-medium underline-offset-4 hover:underline"
+        >
+          {t("iot.calibration.done.openDevice")}
+        </IntentLink>
+      </p>
+    );
+  }
+
   function renderDone() {
     const outcome = outcomeOfSession();
     const hint = {
@@ -876,6 +899,7 @@ export function CalibrationWizard({
           />
           <p className="text-sm">{hint}</p>
         </div>
+        {renderWhereKept()}
         <CalibrationDoneSummary
           payload={payload}
           applied={applied}

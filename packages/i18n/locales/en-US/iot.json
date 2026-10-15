@@ -965,7 +965,9 @@
         "appliedValue": "{{blocks}} blocks applied to the record",
         "onDevice": "On the device",
         "onDeviceValue": "{{confirmed}} of {{blocks}} blocks confirmed",
-        "onDeviceUnrecorded": "{{confirmed}} confirmed, not yet recorded"
+        "onDeviceUnrecorded": "{{confirmed}} confirmed, not yet recorded",
+        "keptOnDevice": "This run is kept on the device's record.",
+        "openDevice": "Open its Calibration tab"
       },
       "library": {
         "title": "Calibrations",

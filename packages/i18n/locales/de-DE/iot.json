@@ -965,7 +965,9 @@
         "appliedValue": "{{blocks}} Blöcke im Datensatz übernommen",
         "onDevice": "Auf dem Gerät",
         "onDeviceValue": "{{confirmed}} von {{blocks}} Blöcken bestätigt",
-        "onDeviceUnrecorded": "{{confirmed}} bestätigt, noch nicht aufgezeichnet"
+        "onDeviceUnrecorded": "{{confirmed}} bestätigt, noch nicht aufgezeichnet",
+        "keptOnDevice": "Dieser Lauf wird im Datensatz des Geräts aufbewahrt.",
+        "openDevice": "Dessen Tab „Kalibrierung“ öffnen"
       },
       "library": {
         "title": "Kalibrierungen",
