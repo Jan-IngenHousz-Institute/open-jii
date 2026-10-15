@@ -1,7 +1,7 @@
 "use client";
 
+import { useIsHydrated } from "@/hooks/useIsHydrated";
 import { formatLocaleNumber } from "@/util/format-locale-number";
-import { useEffect, useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
 
@@ -28,19 +28,17 @@ export function ActivityIndicator({
 }: ActivityIndicatorProps) {
   const { t } = useTranslation("publicMetrics");
 
-  // Rendered after mount: the quiet-state copy depends on the wall clock and
+  // Rendered after hydration: the quiet-state copy depends on the wall clock and
   // would otherwise mismatch between server and client render.
-  const [quietSince, setQuietSince] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (measurements24h > 0 || lastMeasurementAt === null) {
-      return;
-    }
-    const parsed = parseWarehouseTimestamp(lastMeasurementAt);
-    if (parsed !== null) {
-      setQuietSince(new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(parsed));
-    }
-  }, [measurements24h, lastMeasurementAt, locale]);
+  const isHydrated = useIsHydrated();
+  const lastMeasurement =
+    !isHydrated || measurements24h > 0 || lastMeasurementAt === null
+      ? null
+      : parseWarehouseTimestamp(lastMeasurementAt);
+  const quietSince =
+    lastMeasurement === null
+      ? null
+      : new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(lastMeasurement);
 
   if (measurements24h === 0 && quietSince === null) {
     return null;

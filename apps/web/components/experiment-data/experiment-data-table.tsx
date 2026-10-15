@@ -10,7 +10,7 @@ import { useLandedRowIds } from "@/hooks/useLandedRowIds";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { PaginationState, RowSelectionState } from "@tanstack/react-table";
 import { subDays } from "date-fns";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
 import { AddAnnotationDialog } from "~/components/experiment-data/annotations/add-annotation-dialog";
@@ -150,6 +150,16 @@ export function ExperimentDataTable({
     [sortColumn],
   );
 
+  // Filters drop totalPages to 1; snap pageIndex back so the UI doesn't show "page 5 of 1".
+  // Selection is keyed by row id and would point at rows that no longer exist after a filter change.
+  const filtersKey = JSON.stringify(activeFilters);
+  const [filtersKeySeen, setFiltersKeySeen] = useState(filtersKey);
+  if (filtersKeySeen !== filtersKey) {
+    setFiltersKeySeen(filtersKey);
+    setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
+    setRowSelection({});
+  }
+
   const { tableMetadata, tableRows, isLoading, isRefreshing, error } = useExperimentData({
     experimentId,
     page: pagination.pageIndex + 1,
@@ -161,14 +171,6 @@ export function ExperimentDataTable({
     errorColumn,
     keepPreviousPage: true,
   });
-
-  // Filters drop totalPages to 1; snap pageIndex back so the UI doesn't show "page 5 of 1".
-  // Selection is keyed by row id and would point at rows that no longer exist after a filter change.
-  const filtersKey = JSON.stringify(activeFilters);
-  useEffect(() => {
-    setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
-    setRowSelection({});
-  }, [filtersKey]);
 
   const viewKey = [
     pagination.pageIndex,
@@ -184,11 +186,9 @@ export function ExperimentDataTable({
     setRowSelection({});
   }, []);
 
-  useEffect(() => {
-    if (tableMetadata) {
-      setPersistedMetaData(tableMetadata);
-    }
-  }, [tableMetadata]);
+  if (tableMetadata && tableMetadata !== persistedMetaData) {
+    setPersistedMetaData(tableMetadata);
+  }
 
   const columns = persistedMetaData?.rawColumns ?? [];
   const totalPages = persistedMetaData?.totalPages ?? 0;

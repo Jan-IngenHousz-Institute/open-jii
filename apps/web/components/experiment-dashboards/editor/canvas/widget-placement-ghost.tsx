@@ -12,9 +12,12 @@ export function WidgetPlacementGhost() {
   const { tool } = useDashboardEditor();
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
 
+  if (tool === "cursor" && pos !== null) {
+    setPos(null);
+  }
+
   useEffect(() => {
     if (tool === "cursor") {
-      setPos(null);
       return;
     }
     const onMove = (e: PointerEvent) => setPos({ x: e.clientX, y: e.clientY });

@@ -6,7 +6,7 @@ import { useRevokeExperimentJoinCode } from "@/hooks/experiment/join-code/useRev
 import { useLocale } from "@/hooks/useLocale";
 import { formatShortDate } from "@/util/date";
 import { KeyRound } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import type {
   ExperimentJoinCode,
@@ -63,6 +63,10 @@ const DIALOG_QR_SIZE = 256;
 type PendingConfirmation = "regenerate" | "revoke";
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const subscribeNever = () => () => undefined;
+const readOrigin = () => window.location.origin;
+const readServerOrigin = () => "";
 
 const PRESET_BY_DAYS: Partial<Record<number, JoinCodeExpiry>> = { 1: "1d", 7: "7d", 30: "30d" };
 
@@ -162,11 +166,9 @@ function JoinCodeDialogBody({ experimentId }: { experimentId: string }) {
 
   const [expiresIn, setExpiresIn] = useState<JoinCodeExpiry>("7d");
   const [confirming, setConfirming] = useState<PendingConfirmation | null>(null);
-  const [origin, setOrigin] = useState("");
-  const [shouldFocusCode, setShouldFocusCode] = useState(false);
+  const origin = useSyncExternalStore(subscribeNever, readOrigin, readServerOrigin);
+  const shouldFocusCodeRef = useRef(false);
   const codeRef = useRef<HTMLParagraphElement>(null);
-
-  useEffect(() => setOrigin(window.location.origin), []);
 
   const joinCode = query.data?.joinCode ?? null;
   const isExpired = useJoinCodeExpired(joinCode?.expiresAt ?? null, query.dataUpdatedAt);
@@ -176,13 +178,13 @@ function JoinCodeDialogBody({ experimentId }: { experimentId: string }) {
   // container, which is not a thing anyone can act on. Regenerate is deliberately
   // excluded: its confirm returns focus to the button that opened it.
   useEffect(() => {
-    if (!shouldFocusCode || codeRef.current === null) return;
+    if (!shouldFocusCodeRef.current || codeRef.current === null) return;
     codeRef.current.focus();
-    setShouldFocusCode(false);
-  }, [shouldFocusCode, joinCode?.code]);
+    shouldFocusCodeRef.current = false;
+  }, [joinCode?.code]);
 
   const createAndFocusCode = () => {
-    setShouldFocusCode(true);
+    shouldFocusCodeRef.current = true;
     createJoinCode({ id: experimentId, expiresIn });
   };
 

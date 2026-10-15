@@ -11,7 +11,7 @@ import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExper
 import { useExperimentTables } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { useTable } from "@tanstack/react-table";
 import { AlertCircle } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
@@ -68,10 +68,12 @@ export function LoadedTableView({
 
   // Content-hash so identical filters with a new array ref don't reset page.
   const filtersKey = JSON.stringify(mergedFilters ?? []);
-
-  useEffect(() => {
+  const pageResetKey = JSON.stringify([tableName, pageSize, filtersKey]);
+  const [pageResetKeySeen, setPageResetKeySeen] = useState(pageResetKey);
+  if (pageResetKeySeen !== pageResetKey) {
+    setPageResetKeySeen(pageResetKey);
     setPage(1);
-  }, [tableName, pageSize, filtersKey]);
+  }
 
   // Reading only the shown columns spares the warehouse extracting every payload field. A column
   // the table no longer has fails that read, and from then on the widget reads every column rather

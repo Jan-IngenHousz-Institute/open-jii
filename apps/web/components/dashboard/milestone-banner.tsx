@@ -1,8 +1,9 @@
 "use client";
 
 import { usePublicMetrics } from "@/hooks/metrics/usePublicMetrics/usePublicMetrics";
+import { useIsHydrated } from "@/hooks/useIsHydrated";
 import { formatLocaleNumber } from "@/util/format-locale-number";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { MetricsCaption } from "@repo/api/domains/metrics/metrics.schema";
 import { useTranslation } from "@repo/i18n";
@@ -31,12 +32,11 @@ interface MilestoneBannerProps {
 export function MilestoneBanner({ locale }: MilestoneBannerProps) {
   const { t } = useTranslation("publicMetrics");
   const { data } = usePublicMetrics();
-  const [dismissed, setDismissed] = useState<string | null>(null);
-
-  // Read after mount: server and client would otherwise disagree on the markup.
-  useEffect(() => {
-    setDismissed(readDismissed());
-  }, []);
+  const isHydrated = useIsHydrated();
+  // Read after hydration: server and client would otherwise disagree on the markup.
+  const storedDismissed = useMemo(() => (isHydrated ? readDismissed() : null), [isHydrated]);
+  const [dismissedNow, setDismissed] = useState<string | null>(null);
+  const dismissed = dismissedNow ?? storedDismissed;
 
   const milestone = data?.captions.find(isMilestone);
   if (milestone === undefined || dismissed === String(milestone.ordinal)) {

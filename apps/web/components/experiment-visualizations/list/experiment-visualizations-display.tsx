@@ -2,7 +2,7 @@
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
@@ -32,11 +32,9 @@ export default function ExperimentVisualizationsDisplay({
   const [selectedVisualizationId, setSelectedVisualizationId] = useState<string>("");
 
   // Auto-select the first visualization when visualizations are loaded
-  useEffect(() => {
-    if (visualizations.length > 0 && !selectedVisualizationId) {
-      setSelectedVisualizationId(visualizations[0].id);
-    }
-  }, [visualizations, selectedVisualizationId]);
+  if (visualizations.length > 0 && !selectedVisualizationId) {
+    setSelectedVisualizationId(visualizations[0].id);
+  }
 
   const selectedVisualization = visualizations.find((viz) => viz.id === selectedVisualizationId);
 

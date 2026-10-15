@@ -159,3 +159,42 @@ describe("FilterChip", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 });
+
+describe("FilterChip draft sync", () => {
+  const baseProps = {
+    column: stringColumn,
+    experimentId: "exp-1",
+    tableName: "raw_data",
+    onRemove: vi.fn(),
+  };
+
+  it("drafts from the latest filter when it changes while closed", async () => {
+    mountDistinct();
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    const first: ExperimentDataFilter = { column: "label", operator: "equals", value: "hello" };
+    const second: ExperimentDataFilter = { column: "label", operator: "equals", value: "world" };
+    const { rerender } = render(<FilterChip {...baseProps} filter={first} onChange={onChange} />);
+    rerender(<FilterChip {...baseProps} filter={second} onChange={onChange} />);
+
+    await user.click(screen.getByText("world"));
+    await user.click(screen.getByRole("button", { name: "dataFilters.apply" }));
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("keeps the open draft when the filter changes underneath it", async () => {
+    mountDistinct();
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    const first: ExperimentDataFilter = { column: "label", operator: "equals", value: "hello" };
+    const second: ExperimentDataFilter = { column: "label", operator: "equals", value: "world" };
+    const { rerender } = render(<FilterChip {...baseProps} filter={first} onChange={onChange} />);
+
+    await user.click(screen.getByText("hello"));
+    rerender(<FilterChip {...baseProps} filter={second} onChange={onChange} />);
+    await user.click(screen.getByRole("button", { name: "dataFilters.apply" }));
+
+    expect(onChange).toHaveBeenCalledWith(first);
+  });
+});

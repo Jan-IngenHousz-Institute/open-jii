@@ -1,4 +1,4 @@
-import { createLocation } from "@/test/factories";
+import { createLocation, createPlace } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
@@ -11,10 +11,12 @@ vi.mock("../map", () => ({
   Map: ({
     locations,
     onLocationsChange,
+    onLocationAdd,
     sidebarTitle,
   }: {
     locations: { id: string; name: string; latitude: number; longitude: number }[];
     onLocationsChange?: (locs: typeof locations) => void;
+    onLocationAdd?: (lat: number, lng: number) => Promise<(typeof locations)[number] | void>;
     sidebarTitle: string;
   }) => (
     <div role="application" aria-label={sidebarTitle}>
@@ -30,6 +32,14 @@ vi.mock("../map", () => ({
         Add Location
       </button>
       <button onClick={() => onLocationsChange?.(locations.slice(0, -1))}>Remove Location</button>
+      <button
+        onClick={async () => {
+          const added = await onLocationAdd?.(52.52, 13.405);
+          if (added) onLocationsChange?.([...locations, added]);
+        }}
+      >
+        Click Map
+      </button>
     </div>
   ),
 }));
@@ -123,6 +133,43 @@ describe("ExperimentLocationManagement", () => {
     await waitFor(() => {
       expect(updateSpy.callCount).toBe(1);
     });
+  });
+
+  it("geocodes a map click and saves the named location", async () => {
+    const user = userEvent.setup();
+    mountLocations([createLocation()]);
+    server.mount(contract.experiments.geocodeLocation, {
+      body: [
+        createPlace({
+          label: "Berlin, Germany",
+          latitude: 52.52,
+          longitude: 13.405,
+          country: "Germany",
+        }),
+      ],
+    });
+    const updateSpy = mountUpdate();
+
+    render(<ExperimentLocationManagement experimentId={experimentId} hasAccess />);
+
+    await user.click(await screen.findByRole("button", { name: "Click Map" }));
+
+    await waitFor(() => {
+      expect(updateSpy.callCount).toBe(1);
+    });
+    expect(updateSpy.body).toMatchObject({
+      locations: [
+        {},
+        {
+          name: "Berlin, Germany",
+          latitude: 52.52,
+          longitude: 13.405,
+          country: "Germany",
+          addressLabel: "Berlin, Germany",
+        },
+      ],
+    });
+    expect(screen.getByText("2 locations")).toBeInTheDocument();
   });
 
   it("passes sidebar title to map", async () => {

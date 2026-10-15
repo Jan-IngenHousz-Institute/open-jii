@@ -52,7 +52,6 @@ export function useWidgetPlacement({
 
   useEffect(() => {
     if (tool === "cursor") {
-      setSnapTarget(null);
       return;
     }
     const node = containerRef.current;

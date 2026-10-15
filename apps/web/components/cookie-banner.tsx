@@ -1,7 +1,8 @@
 "use client";
 
+import { useIsHydrated } from "@/hooks/useIsHydrated";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { usePostHog } from "~/providers/posthog-context";
 
 import { useTranslation } from "@repo/i18n";
@@ -22,29 +23,28 @@ import { getConsentStatus, setAnalyticsConsent } from "../lib/cookie-consent";
 
 export function CookieBanner() {
   const posthog = usePostHog();
-  const [consentGiven, setConsentGiven] = useState<ConsentStatus | null>(null);
+  const isHydrated = useIsHydrated();
+  const storedConsent = useMemo(() => (isHydrated ? getConsentStatus() : null), [isHydrated]);
+  const [chosenConsent, setChosenConsent] = useState<ConsentStatus | null>(null);
+  const consentGiven = chosenConsent ?? storedConsent;
   const [showManage, setShowManage] = useState(false);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
   const { t } = useTranslation();
 
-  useEffect(() => {
-    setConsentGiven(getConsentStatus());
-  }, []);
-
   const handleAcceptCookies = () => {
     setAnalyticsConsent(posthog, "accepted");
-    setConsentGiven("accepted");
+    setChosenConsent("accepted");
   };
 
   const handleDeclineCookies = () => {
     setAnalyticsConsent(posthog, "rejected");
-    setConsentGiven("rejected");
+    setChosenConsent("rejected");
   };
 
   const handleSavePreferences = () => {
     const status = analyticsEnabled ? "accepted" : "rejected";
     setAnalyticsConsent(posthog, status);
-    setConsentGiven(status);
+    setChosenConsent(status);
     setShowManage(false);
   };
 

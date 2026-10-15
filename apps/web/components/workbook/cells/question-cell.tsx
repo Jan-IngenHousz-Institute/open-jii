@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, Hash, HelpCircle, List, Pencil, Send, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 import type { QuestionCell as QuestionCellType } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
@@ -57,13 +57,15 @@ export function QuestionCellComponent({
 
   const [isAnswering, setIsAnswering] = useState(false);
   const [pendingAnswer, setPendingAnswer] = useState("");
+  const [seenPromptOpen, setSeenPromptOpen] = useState<boolean | undefined>(false);
 
-  useEffect(() => {
+  if (promptOpen !== seenPromptOpen) {
+    setSeenPromptOpen(promptOpen);
     if (promptOpen && !isAnswering) {
       setIsAnswering(true);
       setPendingAnswer(cell.answer ?? "");
     }
-  }, [promptOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   const handleTextChange = useCallback(
     (text: string) => {

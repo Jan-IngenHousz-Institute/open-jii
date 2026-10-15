@@ -5,7 +5,7 @@ import { useMarkNotificationsRead } from "@/hooks/notifications/useMarkNotificat
 import { useNotifications } from "@/hooks/notifications/useNotifications/useNotifications";
 import { useUnreadNotificationCount } from "@/hooks/notifications/useUnreadNotificationCount/useUnreadNotificationCount";
 import { BellOff } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ListPagination } from "~/components/list-pagination";
 
 import type {
@@ -55,11 +55,10 @@ export function NotificationsPage() {
   // under the reader in normal use; snap back into range once a real (non-placeholder)
   // response says so, as every other paged list does.
   const { data, isPlaceholderData } = notifications;
-  useEffect(() => {
-    if (!data || isPlaceholderData) return;
+  if (data && !isPlaceholderData) {
     const maxPage = Math.max(1, data.totalPages);
     if (page > maxPage) setPage(maxPage);
-  }, [data, isPlaceholderData, page]);
+  }
 
   const changeReadState = (value: string) => {
     setReadState(value === "unread" ? "unread" : "all");

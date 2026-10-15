@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { orpc } from "@/lib/orpc";
+import { useQueryClient } from "@tanstack/react-query";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import { useTranslation } from "@repo/i18n";
@@ -9,7 +11,6 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useExperimentLocations } from "../../hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { useExperimentLocationsUpdate } from "../../hooks/experiment/useExperimentLocationsUpdate/useExperimentLocationsUpdate";
-import { useLocationGeocode } from "../../hooks/locations/useLocationGeocode";
 import { useLocationSearch } from "../../hooks/locations/useLocationSearch";
 import { useDebounce } from "../../hooks/useDebounce";
 import { Map } from "../map";
@@ -27,7 +28,6 @@ export function ExperimentLocationManagement({
 }: ExperimentLocationManagementProps) {
   const { t } = useTranslation("experiments");
   const [searchQuery, setSearchQuery] = useState("");
-  const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const { data: locationsData, isLoading } = useExperimentLocations(experimentId);
   const updateLocationsMutation = useExperimentLocationsUpdate();
@@ -51,20 +51,15 @@ export function ExperimentLocationManagement({
     [locations],
   );
 
-  const [editedLocations, setEditedLocations] = useState<LocationPoint[]>([]);
+  const [editedLocations, setEditedLocations] = useState<LocationPoint[]>(mapLocations);
+  const [syncedLocations, setSyncedLocations] = useState(mapLocations);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Geocoding hook for when locations are added via map click
-  const { data: geocodeData, isLoading: geocodeLoading } = useLocationGeocode(
-    pendingLocation?.lat ?? 0,
-    pendingLocation?.lng ?? 0,
-    !!pendingLocation,
-  );
-
   // Sync editedLocations with API locations when data loads
-  useEffect(() => {
+  if (syncedLocations !== mapLocations) {
+    setSyncedLocations(mapLocations);
     setEditedLocations(mapLocations);
-  }, [mapLocations]);
+  }
 
   // Handle search
   const handleSearch = React.useCallback((query: string) => {
@@ -124,47 +119,38 @@ export function ExperimentLocationManagement({
     saveLocations(newLocations);
   };
 
+  const queryClient = useQueryClient();
+  const latestLocationAddRef = useRef(0);
+
   // Handle adding location from map click with geocoding
   const handleLocationAdd = React.useCallback(
-    (latitude: number, longitude: number): Promise<LocationPoint | void> => {
-      // Set pending location to trigger geocoding
-      setPendingLocation({ lat: latitude, lng: longitude });
-
-      // Return a promise that will resolve when geocoding is complete
-      return Promise.resolve();
-    },
-    [],
-  );
-
-  // Effect to handle geocoded location data
-  useEffect(() => {
-    if (geocodeData && pendingLocation) {
-      const geocodeResults = geocodeData;
-      // Use the first result if available, or create a basic location
+    async (latitude: number, longitude: number): Promise<LocationPoint | void> => {
+      const request = ++latestLocationAddRef.current;
+      const geocodeResults = await queryClient.fetchQuery(
+        orpc.experiments.geocodeLocation.queryOptions({
+          input: { latitude, longitude },
+          retry: 3,
+        }),
+      );
+      if (request !== latestLocationAddRef.current) {
+        return;
+      }
       const firstResult = geocodeResults[0];
 
-      const newLocation: LocationPoint = {
+      return {
         id: Date.now().toString(),
         name: firstResult.label,
-        latitude: pendingLocation.lat,
-        longitude: pendingLocation.lng,
+        latitude,
+        longitude,
         country: firstResult.country,
         region: firstResult.region,
         municipality: firstResult.municipality,
         postalCode: firstResult.postalCode,
         address: firstResult.label,
       };
-
-      const updatedLocations = [...editedLocations, newLocation];
-      setEditedLocations(updatedLocations);
-
-      // Auto-save the new location
-      saveLocations(updatedLocations);
-
-      // Clear pending location
-      setPendingLocation(null);
-    }
-  }, [geocodeData, pendingLocation, geocodeLoading, editedLocations, saveLocations]);
+    },
+    [queryClient],
+  );
 
   if (isLoading) {
     return (

@@ -295,3 +295,35 @@ describe("WorkbookUpgradeDialog", () => {
     expect(screen.getByRole("button", { name: /flow\.confirmUpgrade/ })).toBeDisabled();
   });
 });
+
+describe("WorkbookUpgradeDialog reopening", () => {
+  it("forgets a failed entity lookup once closed, so reopening checks again", async () => {
+    mountPinned([{ a: 1 }]);
+    server.mount(contract.workbooks.getWorkbook, {
+      body: createWorkbook({ id: WORKBOOK_ID, cells: [protocolCell] }),
+    });
+    server.mount(contract.protocols.getProtocol, {
+      status: 500,
+      body: { message: "boom", statusCode: 500 },
+    });
+
+    const { rerender, props } = renderDialog();
+    expect(await screen.findByText("flow.upgradeDiff.loadError")).toBeInTheDocument();
+
+    rerender(<WorkbookUpgradeDialog {...props} open={false} />);
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({
+        id: PROTOCOL_ID,
+        name: "My Protocol",
+        code: [{ a: 2 }],
+        family: "multispeq",
+        createdBy: "user-1",
+      }),
+    });
+    rerender(<WorkbookUpgradeDialog {...props} open />);
+
+    await waitFor(() =>
+      expect(screen.getByText("flow.upgradeDiff.verdict.ok")).toBeInTheDocument(),
+    );
+  });
+});
