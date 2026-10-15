@@ -48,7 +48,7 @@
     "dev": "tsc --watch",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "check-types": "tsc --noEmit",
     "codegen": "graphql-codegen -r dotenv/config --config src/codegen.ts",
     "codegen:watch": "graphql-codegen --watch -r dotenv/config --config src/codegen.ts"
   },

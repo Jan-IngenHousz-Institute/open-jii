@@ -85,6 +85,7 @@ describe("ExperimentDataRepository", () => {
         {
           identifier: "raw_data",
           tableType: "static",
+          displayName: null,
           rowCount: 100,
           latestRowAt: null,
           schemaRevision: null,
@@ -466,6 +467,7 @@ describe("ExperimentDataRepository", () => {
         {
           identifier: "raw_data",
           tableType: "static",
+          displayName: null,
           rowCount: 10,
           latestRowAt: null,
           schemaRevision: null,
@@ -518,6 +520,7 @@ describe("ExperimentDataRepository", () => {
         {
           identifier: "raw_data",
           tableType: "static",
+          displayName: null,
           rowCount: 10,
           latestRowAt: null,
           schemaRevision: null,
@@ -698,6 +701,7 @@ describe("ExperimentDataRepository", () => {
         {
           identifier: "raw_data",
           tableType: "static",
+          displayName: null,
           rowCount: 100,
           latestRowAt: null,
           schemaRevision: null,
@@ -902,6 +906,7 @@ describe("ExperimentDataRepository", () => {
         {
           identifier: "macro_123",
           tableType: "macro",
+          displayName: null,
           rowCount: 50,
           latestRowAt: null,
           schemaRevision: null,
@@ -963,6 +968,7 @@ describe("ExperimentDataRepository", () => {
           {
             identifier: "macro_123",
             tableType: "macro",
+            displayName: null,
             rowCount: 50,
             latestRowAt: null,
             schemaRevision: null,
@@ -1034,6 +1040,7 @@ describe("ExperimentDataRepository", () => {
           {
             identifier: "macro_123",
             tableType: "macro",
+            displayName: null,
             rowCount: 50,
             latestRowAt: null,
             schemaRevision: null,
@@ -1044,6 +1051,7 @@ describe("ExperimentDataRepository", () => {
           {
             identifier: "device",
             tableType: "static",
+            displayName: null,
             rowCount: 5,
             latestRowAt: null,
             schemaRevision: null,
@@ -1076,6 +1084,7 @@ describe("ExperimentDataRepository", () => {
         {
           identifier: "macro_123",
           tableType: "macro",
+          displayName: null,
           rowCount: 50,
           latestRowAt: null,
           schemaRevision: null,
@@ -1136,6 +1145,7 @@ describe("ExperimentDataRepository", () => {
         {
           identifier: "raw_data",
           tableType: "static",
+          displayName: null,
           rowCount: 100,
           latestRowAt: null,
           schemaRevision: null,
@@ -1181,6 +1191,7 @@ describe("ExperimentDataRepository", () => {
         {
           identifier: "device",
           tableType: "static",
+          displayName: null,
           rowCount: 10,
           latestRowAt: null,
           schemaRevision: null,
@@ -1229,6 +1240,7 @@ describe("ExperimentDataRepository", () => {
         {
           identifier: "raw_data",
           tableType: "static",
+          displayName: null,
           rowCount: 100,
           latestRowAt: null,
           schemaRevision: null,
@@ -1265,6 +1277,7 @@ describe("ExperimentDataRepository", () => {
     const macroTable: ExperimentTableMetadata = {
       identifier: "macro_123",
       tableType: "macro",
+      displayName: null,
       rowCount: 50,
       latestRowAt: null,
       schemaRevision: null,
@@ -1332,6 +1345,7 @@ describe("ExperimentDataRepository", () => {
           {
             identifier: "upload_1",
             tableType: "upload",
+            displayName: null,
             rowCount: 5,
             latestRowAt: null,
             schemaRevision: null,
@@ -1366,6 +1380,7 @@ describe("ExperimentDataRepository", () => {
           {
             identifier: "upload_1",
             tableType: "upload",
+            displayName: null,
             rowCount: 5,
             latestRowAt: null,
             schemaRevision: null,
@@ -1664,6 +1679,7 @@ describe("ExperimentDataRepository", () => {
         {
           identifier: "raw_data",
           tableType: "static",
+          displayName: null,
           rowCount: 100,
           latestRowAt: null,
           schemaRevision: null,
@@ -1702,6 +1718,7 @@ describe("ExperimentDataRepository", () => {
         {
           identifier: "unknown_table",
           tableType: "static",
+          displayName: null,
           rowCount: 10,
           latestRowAt: null,
           schemaRevision: null,
@@ -1741,6 +1758,7 @@ describe("ExperimentDataRepository", () => {
       {
         identifier: "raw_data",
         tableType: "static",
+        displayName: null,
         rowCount: 10,
         latestRowAt: null,
         schemaRevision: null,

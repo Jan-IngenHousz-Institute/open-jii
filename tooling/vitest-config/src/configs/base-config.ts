@@ -1,5 +1,7 @@
 import { defineConfig } from "vitest/config";
 
+import { coverageEnabled } from "../coverage.js";
+
 export const baseConfig = defineConfig({
   test: {
     coverage: {
@@ -13,7 +15,7 @@ export const baseConfig = defineConfig({
         ],
         "text",
       ],
-      enabled: true,
+      enabled: coverageEnabled,
       exclude: [
         "**/node_modules/**",
         "**/dist/**",

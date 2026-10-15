@@ -53,17 +53,22 @@ export const FormColorInput = React.forwardRef<HTMLDivElement, FormColorInputPro
     ref,
   ) {
     const [draft, setDraft] = useState(value ?? fallback);
+    const [seed, setSeed] = useState({ value, fallback });
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Re-seed when the value changes from outside the picker (palette reset,
     // color-mapping toggle, chart-type switch). Drop any pending debounced
-    // commit first so a stale draft can't overwrite the external update.
+    // commit too so a stale draft can't overwrite the external update.
+    if (seed.value !== value || seed.fallback !== fallback) {
+      setSeed({ value, fallback });
+      setDraft(value ?? fallback);
+    }
+
     useEffect(() => {
       if (timer.current) {
         clearTimeout(timer.current);
         timer.current = null;
       }
-      setDraft(value ?? fallback);
     }, [value, fallback]);
 
     useEffect(

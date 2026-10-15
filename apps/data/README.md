@@ -45,7 +45,7 @@ pnpm test              # pytest
 pnpm test:cov          # pytest + coverage
 pnpm lint              # ruff check
 pnpm format            # ruff format
-pnpm typecheck         # pyright
+pnpm check-types       # pyright
 pnpm build             # uv build --all-packages → dist/*.whl per lib
 pnpm validate:dev      # databricks bundle validate -t dev
 pnpm validate:prod     # databricks bundle validate -t prod

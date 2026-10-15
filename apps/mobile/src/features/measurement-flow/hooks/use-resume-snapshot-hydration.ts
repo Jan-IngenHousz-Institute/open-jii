@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { hasUnresolvedSnapshotCode } from "~/features/measurement-flow/domain/flow-snapshots";
 import { useFlowSnapshotsStore } from "~/features/measurement-flow/stores/use-flow-snapshots-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
@@ -6,18 +6,16 @@ import { hydrateFlowNodes } from "~/features/measurement-flow/utils/hydrate-flow
 
 export type ResumeHydrationState = "ready" | "loading" | "unavailable";
 
+function subscribeToSnapshotsHydration(onChange: () => void): () => void {
+  return useFlowSnapshotsStore.persist.onFinishHydration(onChange);
+}
+
+function snapshotsStoreHasHydrated(): boolean {
+  return useFlowSnapshotsStore.persist.hasHydrated();
+}
+
 function useSnapshotsStoreHydrated(): boolean {
-  const [hydrated, setHydrated] = useState(() => useFlowSnapshotsStore.persist.hasHydrated());
-  useEffect(() => {
-    if (hydrated) return;
-    // Subscribe before re-checking: onFinishHydration does not replay for late
-    // subscribers, so hydration finishing between render and this effect would
-    // otherwise leave the hook on "loading" for good.
-    const unsubscribe = useFlowSnapshotsStore.persist.onFinishHydration(() => setHydrated(true));
-    if (useFlowSnapshotsStore.persist.hasHydrated()) setHydrated(true);
-    return unsubscribe;
-  }, [hydrated]);
-  return hydrated;
+  return useSyncExternalStore(subscribeToSnapshotsHydration, snapshotsStoreHasHydrated);
 }
 
 /**

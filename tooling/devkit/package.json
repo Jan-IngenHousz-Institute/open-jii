@@ -34,7 +34,7 @@
     "release:cms": "tsx src/commands/release-cms.ts",
     "round:read": "tsx src/commands/round-read.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "dotenv": "^16.6.1",

@@ -2,6 +2,7 @@ import nock from "nock";
 
 import { TestHarness } from "../../../test/test-harness";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
+import type { Result } from "../../utils/fp-utils";
 import { DatabricksAdapter } from "./databricks.adapter";
 import { DatabricksAuthService } from "./services/auth/auth.service";
 import { DatabricksConfigService } from "./services/config/config.service";
@@ -764,6 +765,7 @@ describe("DatabricksAdapter", () => {
         tableName,
         format,
         userId,
+        false,
       );
 
       expect(result.isSuccess()).toBe(true);
@@ -792,6 +794,7 @@ describe("DatabricksAdapter", () => {
         "raw_data",
         "csv",
         "user-1",
+        false,
       );
 
       expect(result.isFailure()).toBe(true);
@@ -2833,7 +2836,8 @@ describe("DatabricksAdapter", () => {
 
       assertSuccess(activity);
       expect(activity.value.size).toBe(0);
-      for (const result of [throughput, experiments, firmware, events]) {
+      const lists: Result<unknown[]>[] = [throughput, experiments, firmware, events];
+      for (const result of lists) {
         assertSuccess(result);
         expect(result.value).toEqual([]);
       }
@@ -2964,7 +2968,7 @@ describe("DatabricksAdapter", () => {
     });
 
     it("passes a warehouse failure through every reader", async () => {
-      const readers = [
+      const readers: (() => Promise<Result<unknown>>)[] = [
         () => databricksAdapter.getPublicPlatformTotals(),
         () => databricksAdapter.getPublicDailyActivity(30),
         () => databricksAdapter.getPublicFamilyTotals(),

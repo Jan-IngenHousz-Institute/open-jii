@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface SearchPendingOptions {
   search: string;
@@ -17,9 +17,7 @@ export function useSearchPending({
 }: SearchPendingOptions): boolean {
   const [settledSearch, setSettledSearch] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isFetching) setSettledSearch(debouncedSearch);
-  }, [debouncedSearch, isFetching]);
+  if (!isFetching && settledSearch !== debouncedSearch) setSettledSearch(debouncedSearch);
 
   if (search.trim() === "") return false;
 

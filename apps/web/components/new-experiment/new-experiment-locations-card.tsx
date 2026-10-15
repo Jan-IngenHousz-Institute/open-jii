@@ -1,7 +1,7 @@
 "use client";
 
 import { SettingsCard } from "@/components/shared/settings-card";
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
 import type { CreateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
@@ -9,7 +9,7 @@ import { useTranslation } from "@repo/i18n";
 import type { LocationPoint } from "@repo/ui/components/map";
 import { useIsMobile } from "@repo/ui/hooks/use-mobile";
 
-import { useLocationGeocode } from "../../hooks/locations/useLocationGeocode";
+import { useGeocodeLocationPoint } from "../../hooks/locations/useGeocodeLocationPoint";
 import { useLocationSearch } from "../../hooks/locations/useLocationSearch";
 import { useDebounce } from "../../hooks/useDebounce";
 import { Map } from "../map";
@@ -21,19 +21,12 @@ interface NewExperimentLocationsCardProps {
 export function NewExperimentLocationsCard({ form }: NewExperimentLocationsCardProps) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
+  const geocodeLocationPoint = useGeocodeLocationPoint();
   const [searchQuery, setSearchQuery] = useState("");
-  const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // Watch locations from form
   const watchedLocations = form.watch("locations");
   const locations: LocationPoint[] = useMemo(() => watchedLocations ?? [], [watchedLocations]);
-
-  // Geocoding hook for when locations are added via map click
-  const { data: geocodeData, isLoading: geocodeLoading } = useLocationGeocode(
-    pendingLocation?.lat ?? 0,
-    pendingLocation?.lng ?? 0,
-    !!pendingLocation,
-  );
 
   // Handle locations change
   const handleLocationsChange = useCallback(
@@ -57,42 +50,14 @@ export function NewExperimentLocationsCard({ form }: NewExperimentLocationsCardP
 
   // Handle adding location from map click with geocoding
   const handleLocationAdd = useCallback(
-    (latitude: number, longitude: number): Promise<LocationPoint | void> => {
-      // Set pending location to trigger geocoding
-      setPendingLocation({ lat: latitude, lng: longitude });
-
-      // Return a promise that will resolve when geocoding is complete
-      return Promise.resolve();
+    async (latitude: number, longitude: number): Promise<LocationPoint | void> => {
+      const newLocation = await geocodeLocationPoint(latitude, longitude);
+      if (newLocation) {
+        handleLocationsChange([...(form.getValues("locations") ?? []), newLocation]);
+      }
     },
-    [],
+    [form, handleLocationsChange, geocodeLocationPoint],
   );
-
-  // Effect to handle geocoded location data
-  useEffect(() => {
-    if (geocodeData && pendingLocation) {
-      const geocodeResults = geocodeData;
-      // Use the first result if available, or create a basic location
-      const firstResult = geocodeResults[0];
-
-      const newLocation: LocationPoint = {
-        id: Date.now().toString(),
-        name: firstResult.label,
-        latitude: pendingLocation.lat,
-        longitude: pendingLocation.lng,
-        country: firstResult.country,
-        region: firstResult.region,
-        municipality: firstResult.municipality,
-        postalCode: firstResult.postalCode,
-        address: firstResult.label,
-      };
-
-      const updatedLocations = [...locations, newLocation];
-      handleLocationsChange(updatedLocations);
-
-      // Clear pending location
-      setPendingLocation(null);
-    }
-  }, [geocodeData, pendingLocation, geocodeLoading, locations, handleLocationsChange]);
 
   // Handle search
   const handleSearch = useCallback((query: string) => {

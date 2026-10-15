@@ -4,7 +4,7 @@ import { useOrganizations } from "@/hooks/organization/useOrganizations/useOrgan
 import { useDebounce } from "@/hooks/useDebounce";
 import { useSearchPending } from "@/hooks/useSearchPending";
 import { useUrlState } from "@/hooks/useUrlState";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { zOrganizationSort } from "@repo/api/domains/organization/organization.schema";
 import type { OrganizationVisibility } from "@repo/api/domains/organization/organization.schema";
@@ -71,15 +71,12 @@ export function useOrganizationsList() {
     }),
   );
   const totalPages = Math.max(1, Math.ceil(allOrganizations.length / PAGE_SIZE));
+  if (page > totalPages) setPage(totalPages);
   const currentPage = Math.min(page, totalPages);
   const organizations = allOrganizations.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
   );
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
 
   return {
     search,

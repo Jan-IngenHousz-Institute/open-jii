@@ -39,9 +39,12 @@ function RootLayoutNav({ onReadyChange }: { onReadyChange?: (ready: boolean) => 
   const { session, isLoaded } = useSession();
   const [everLoaded, setEverLoaded] = useState(false);
 
+  if (isLoaded && !everLoaded) {
+    setEverLoaded(true);
+  }
+
   useEffect(() => {
     if (isLoaded) {
-      setEverLoaded(true);
       onReadyChange?.(true);
     }
   }, [isLoaded, onReadyChange]);

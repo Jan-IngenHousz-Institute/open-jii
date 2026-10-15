@@ -1,5 +1,5 @@
 import { useIsFetching } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 export function useEverLoaded(experimentId: string, mounted: boolean): boolean {
   const fetchingCount = useIsFetching({
@@ -7,21 +7,17 @@ export function useEverLoaded(experimentId: string, mounted: boolean): boolean {
     // only scans the key's top level — never matches.
     predicate: (query) => JSON.stringify(query.queryKey).includes(experimentId),
   });
-  const sawFetchingRef = useRef(false);
-  const [everLoaded, setEverLoaded] = useState(false);
+  const [phase, setPhase] = useState<"idle" | "fetching" | "loaded">("idle");
 
-  useEffect(() => {
-    if (!mounted || everLoaded) {
-      return;
-    }
+  if (mounted && phase !== "loaded") {
     if (fetchingCount > 0) {
-      sawFetchingRef.current = true;
-      return;
+      if (phase === "idle") {
+        setPhase("fetching");
+      }
+    } else if (phase === "fetching") {
+      setPhase("loaded");
     }
-    if (sawFetchingRef.current) {
-      setEverLoaded(true);
-    }
-  }, [mounted, fetchingCount, everLoaded]);
+  }
 
-  return everLoaded;
+  return phase === "loaded";
 }

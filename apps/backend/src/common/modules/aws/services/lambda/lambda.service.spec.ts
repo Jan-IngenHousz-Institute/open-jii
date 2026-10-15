@@ -8,6 +8,11 @@ import { AwsLambdaService } from "./lambda.service";
 
 const lambdaMock = mockClient(LambdaClient);
 
+function lambdaPayload(value: unknown) {
+  const text = JSON.stringify(value);
+  return Object.assign(new TextEncoder().encode(text), { transformToString: () => text });
+}
+
 describe("AwsLambdaService", () => {
   const testApp = TestHarness.App;
   let service: AwsLambdaService;
@@ -36,7 +41,7 @@ describe("AwsLambdaService", () => {
 
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
-        Payload: new TextEncoder().encode(JSON.stringify(responsePayload)),
+        Payload: lambdaPayload(responsePayload),
       });
 
       const result = await service.invoke({
@@ -68,7 +73,7 @@ describe("AwsLambdaService", () => {
 
     it("should default StatusCode to 200 when not present in response", async () => {
       lambdaMock.on(InvokeCommand).resolves({
-        Payload: new TextEncoder().encode(JSON.stringify({ ok: true })),
+        Payload: lambdaPayload({ ok: true }),
       });
 
       const result = await service.invoke({
@@ -83,7 +88,7 @@ describe("AwsLambdaService", () => {
     it("should return failure when Lambda response contains FunctionError", async () => {
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
-        Payload: new TextEncoder().encode(JSON.stringify({ error: "boom" })),
+        Payload: lambdaPayload({ error: "boom" }),
         FunctionError: "Unhandled",
       });
 
@@ -130,7 +135,7 @@ describe("AwsLambdaService", () => {
     it("should pass invocationType through to the SDK command", async () => {
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 202,
-        Payload: new TextEncoder().encode(JSON.stringify({})),
+        Payload: lambdaPayload({}),
       });
 
       const result = await service.invoke({
@@ -154,7 +159,7 @@ describe("AwsLambdaService", () => {
     it("should default invocationType to RequestResponse", async () => {
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
-        Payload: new TextEncoder().encode(JSON.stringify({})),
+        Payload: lambdaPayload({}),
       });
 
       await service.invoke({
@@ -177,9 +182,7 @@ describe("AwsLambdaService", () => {
 
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
-        Payload: new TextEncoder().encode(
-          JSON.stringify({ encoding: "gzip+base64", payload: compressed }),
-        ),
+        Payload: lambdaPayload({ encoding: "gzip+base64", payload: compressed }),
       });
 
       const result = await service.invoke({
@@ -196,7 +199,7 @@ describe("AwsLambdaService", () => {
 
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
-        Payload: new TextEncoder().encode(JSON.stringify(responsePayload)),
+        Payload: lambdaPayload(responsePayload),
       });
 
       const result = await service.invoke({
@@ -215,9 +218,7 @@ describe("AwsLambdaService", () => {
 
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
-        Payload: new TextEncoder().encode(
-          JSON.stringify({ encoding: "gzip+base64", payload: compressed }),
-        ),
+        Payload: lambdaPayload({ encoding: "gzip+base64", payload: compressed }),
       });
 
       const result = await service.invoke({
@@ -232,7 +233,7 @@ describe("AwsLambdaService", () => {
 
   describe("local endpoint", () => {
     const LOCAL = "http://localhost:9004";
-    const emptyPayload = () => new TextEncoder().encode(JSON.stringify({}));
+    const emptyPayload = () => lambdaPayload({});
 
     function clientBehind(callIndex: number): LambdaClient {
       const client: unknown = lambdaMock.commandCalls(InvokeCommand)[callIndex].thisValue;

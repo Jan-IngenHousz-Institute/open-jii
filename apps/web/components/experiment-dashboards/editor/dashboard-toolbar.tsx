@@ -2,7 +2,7 @@
 
 import { Database, MoreHorizontal, Palette, Sliders, Trash2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
@@ -83,12 +83,14 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
   const sections = widget ? SECTIONS_BY_WIDGET[widget.type] : [];
   const hasSections = sections.length > 1;
   const [activeSection, setActiveSection] = useState<InspectorSectionKey>("widget");
+  const [sectionWidgetId, setSectionWidgetId] = useState(selectedWidgetId);
 
   // Reset to "widget" on selection swap so the active key always exists
   // in the new section list.
-  useEffect(() => {
+  if (sectionWidgetId !== selectedWidgetId) {
+    setSectionWidgetId(selectedWidgetId);
     setActiveSection("widget");
-  }, [selectedWidgetId]);
+  }
 
   const handleRemove = () => {
     if (!widget) {

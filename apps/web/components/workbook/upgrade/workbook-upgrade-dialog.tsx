@@ -4,7 +4,7 @@ import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkbookVersion";
 import { diffCells } from "@/lib/workbook-diff";
 import { AlertTriangle, ArrowUpCircle, CheckCircle2, Loader2, XCircle } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { WorkbookIssue } from "@repo/api/transforms/validate-workbook";
@@ -103,9 +103,11 @@ export function WorkbookUpgradeDialog({
   const totalRefs = referenced.protocols.size + referenced.macros.size;
 
   const [resolved, setResolved] = useState<Record<string, ResolvedEntity>>({});
-  useEffect(() => {
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (!open) setResolved({});
-  }, [open]);
+  }
   const handleResolved = useCallback((r: ResolvedEntity) => {
     setResolved((prev) => (r.id in prev ? prev : { ...prev, [r.id]: r }));
   }, []);

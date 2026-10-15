@@ -6,6 +6,13 @@ export default [
   ...reactHooks.configs.recommended,
   {
     files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      "react-hooks/set-state-in-effect": "error",
+      "react-hooks/no-deriving-state-in-effects": "error",
+    },
+  },
+  {
+    files: ["**/*.ts", "**/*.tsx"],
     plugins: {
       react: reactPlugin,
     },

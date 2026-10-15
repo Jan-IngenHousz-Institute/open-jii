@@ -1,4 +1,10 @@
-import { assertFailure, assertSuccess, success, failure } from "../../../../common/utils/fp-utils";
+import {
+  AppError,
+  assertFailure,
+  assertSuccess,
+  success,
+  failure,
+} from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort } from "../../../core/ports/aws.port";
@@ -77,10 +83,7 @@ describe("GeocodeLocationUseCase", () => {
   });
 
   it("should return failure when AWS Location Service fails", async () => {
-    const mockError = {
-      message: "AWS Location Service unavailable",
-      code: "AWS_ERROR",
-    };
+    const mockError = new AppError("AWS Location Service unavailable", "AWS_ERROR");
 
     // Mock the AWS Location Port to return failure
     vi.spyOn(awsPort, "geocodeLocation").mockResolvedValue(failure(mockError));

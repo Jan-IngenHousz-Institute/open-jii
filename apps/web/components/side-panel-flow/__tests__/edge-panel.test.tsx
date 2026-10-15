@@ -120,3 +120,21 @@ describe("<EdgeSidePanel />", () => {
     expect(onClose).toHaveBeenCalled();
   });
 });
+
+describe("<EdgeSidePanel /> content sync", () => {
+  it("follows the selected edge while open and keeps the last one while closing", () => {
+    const props = { onClose: vi.fn() };
+    const { rerender } = render(
+      <EdgeSidePanel {...props} open selectedEdge={makeEdge({ data: { label: "first" } })} />,
+    );
+    const input = () => screen.getByPlaceholderText<HTMLInputElement>("edgePanel.labelPlaceholder");
+
+    rerender(
+      <EdgeSidePanel {...props} open selectedEdge={makeEdge({ data: { label: "second" } })} />,
+    );
+    expect(input().value).toBe("second");
+
+    rerender(<EdgeSidePanel {...props} open={false} selectedEdge={null} />);
+    expect(input().value).toBe("second");
+  });
+});

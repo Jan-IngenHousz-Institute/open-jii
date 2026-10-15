@@ -29,7 +29,7 @@
     "db:generate": "turbo --filter @repo/database db:generate",
     "db:studio": "turbo --filter @repo/database db:studio",
     "db:setup": "turbo db:setup",
-    "typecheck": "turbo run typecheck",
+    "typecheck": "turbo run check-types",
     "ui-add": "turbo run ui-add",
     "dev:fb": "turbo run dev --filter=backend --filter=web",
     "local:login": "pnpm --filter @repo/devkit run login --",
@@ -54,6 +54,7 @@
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "@types/node": "catalog:",
     "prettier": "3.5.3",
     "prettier-plugin-tailwindcss": "0.6.12",
     "turbo": "^2.10.5",

@@ -60,6 +60,7 @@ export function PasskeyCreatePrompt({ userId, sessionId }: { userId: string; ses
     if (count >= MAX_PROMPTS) return;
     prompted.current = true;
     localStorage.setItem(shownKey, "true");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- opening follows claiming this session's prompt slot in localStorage, a write render cannot do
     setOpen(true);
   }, [countKey, dismissedKey, passkeys, shownKey, shownKeyPrefix, webAuthnSupported]);
 

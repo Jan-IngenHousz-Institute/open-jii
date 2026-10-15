@@ -1,7 +1,7 @@
 import { SettingsCard } from "@/components/shared/settings-card";
 import type { Edge, Node } from "@xyflow/react";
 import { Info } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -126,6 +126,18 @@ export function ExperimentSidePanel({
   // Keep previous content during transition
   const [displayNodeType, setDisplayNodeType] = useState(nodeType);
   const [currentTitle, setCurrentTitle] = useState(nodeTitle ?? "");
+  const [syncedFrom, setSyncedFrom] = useState({ open, nodeType, nodeTitle });
+  if (
+    syncedFrom.open !== open ||
+    syncedFrom.nodeType !== nodeType ||
+    syncedFrom.nodeTitle !== nodeTitle
+  ) {
+    setSyncedFrom({ open, nodeType, nodeTitle });
+    if (open && nodeType) {
+      setDisplayNodeType(nodeType);
+      setCurrentTitle(nodeTitle ?? "");
+    }
+  }
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isDisabled) return;
@@ -137,14 +149,6 @@ export function ExperimentSidePanel({
   };
 
   const { t } = useTranslation("experiments");
-
-  useEffect(() => {
-    if (open && nodeType) {
-      // Immediately update content when opening
-      setDisplayNodeType(nodeType);
-      setCurrentTitle(nodeTitle ?? "");
-    }
-  }, [open, nodeType, nodeTitle]);
 
   return (
     <>

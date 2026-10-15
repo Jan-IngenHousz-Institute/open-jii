@@ -49,7 +49,7 @@ describe("ListWorkbookVersionsUseCase", () => {
     await versionRepo.create({
       workbookId: workbook.id,
       version: 2,
-      cells: [{ id: "md1", type: "markdown", content: "v2" }],
+      cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
       metadata: {},
       createdBy: userId,
     });

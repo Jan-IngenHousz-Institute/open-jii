@@ -139,6 +139,7 @@ describe("GetExperimentTablesUseCase", () => {
         {
           identifier: ExperimentTableName.RAW_DATA,
           tableType: "static" as const,
+          displayName: null,
           rowCount: 100,
           latestRowAt: null,
           schemaRevision: null,
@@ -233,6 +234,7 @@ describe("GetExperimentTablesUseCase", () => {
           {
             identifier: uploadId,
             tableType: "upload" as const,
+            displayName: null,
             rowCount: 7,
             latestRowAt: null,
             schemaRevision: null,

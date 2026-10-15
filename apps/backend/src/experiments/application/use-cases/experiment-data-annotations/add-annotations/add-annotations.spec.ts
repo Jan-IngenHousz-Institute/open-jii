@@ -285,7 +285,7 @@ describe("AddAnnotations", () => {
           userId: emptyNameUserId,
           firstName: "   ",
           lastName: "   ",
-          image: null,
+          avatarUrl: null,
         },
       ]),
     );

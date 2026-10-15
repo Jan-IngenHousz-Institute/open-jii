@@ -2,11 +2,13 @@
 
 import { MoonIcon, SunIcon } from "@radix-ui/react-icons";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 import { Button } from "./button";
 
 export { ThemeProvider } from "next-themes";
+
+const subscribeToNothing = () => () => undefined;
 
 /**
  * One click flips the effective theme. `system` stays the provider default for a
@@ -34,9 +36,11 @@ export function ThemeToggle({
   showLabel?: boolean;
 }) {
   const { setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false,
+  );
 
   const isDark = resolvedTheme === "dark";
   const actionLabel = !mounted

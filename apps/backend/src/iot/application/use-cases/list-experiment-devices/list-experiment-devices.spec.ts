@@ -299,6 +299,7 @@ describe("ListExperimentDevicesUseCase", () => {
     await repository.addExperiments(device.id, [experiment.id], userId);
 
     const orgReader = await testApp.createTestUser({});
+    if (!experiment.organizationId) throw new Error("Experiment has no owning organization");
     await testApp.addOrganizationMember(experiment.organizationId, orgReader, "member");
 
     const result = await useCase.execute(experiment.id, orgReader, NOW);

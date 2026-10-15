@@ -44,10 +44,12 @@ describe("ListUploadsUseCase", () => {
       userId: testUserId,
     });
 
+    const uploadTableId = faker.string.uuid();
     const mockUploads: UploadMetadata[] = [
       {
         uploadId: faker.string.uuid(),
         experimentId: experiment.id,
+        uploadTableId,
         uploadTableName: "greenhouse_temps",
         sourceKind: "csv",
         status: "running",
@@ -61,6 +63,7 @@ describe("ListUploadsUseCase", () => {
       {
         uploadId: faker.string.uuid(),
         experimentId: experiment.id,
+        uploadTableId,
         uploadTableName: "greenhouse_temps",
         sourceKind: "csv",
         status: "completed",

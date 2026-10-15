@@ -3,7 +3,7 @@
 import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { useLocale } from "@/hooks/useLocale";
 import { ChevronDown, ChevronUp, PanelRightClose, PanelRightOpen } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
@@ -23,6 +23,10 @@ import { ExperimentMembersTrail } from "../experiment-members-trail";
 import { ExperimentLocationsSection } from "./experiment-locations-section";
 
 const DETAILS_PANEL_STORAGE_KEY = "experiment_details_panel_collapsed";
+
+const subscribeNever = () => () => undefined;
+const readStoredCollapsed = () => localStorage.getItem(DETAILS_PANEL_STORAGE_KEY) === "true";
+const readServerCollapsed = () => false;
 
 // The panel is a fixed 24rem. Beside an open sidebar that only leaves a usable
 // column from lg up; at md the row overflowed and `overflow-hidden` clipped the
@@ -90,7 +94,13 @@ export function ExperimentDetailsCard({
   const { t: tSettings } = useTranslation();
   const locale = useLocale();
   const format = useLocalDateFormat("en-US");
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const storedCollapsed = useSyncExternalStore(
+    subscribeNever,
+    readStoredCollapsed,
+    readServerCollapsed,
+  );
+  const [toggledCollapsed, setToggledCollapsed] = useState<boolean | null>(null);
+  const isCollapsed = toggledCollapsed ?? storedCollapsed;
   const [isMobileCollapsed, setIsMobileCollapsed] = useState(true);
   const [transitionsReady, setTransitionsReady] = useState(false);
   const { data: session } = useSession();
@@ -101,8 +111,6 @@ export function ExperimentDetailsCard({
     currentUserId && !canContribute && !isArchived && experiment.visibility === "public";
 
   useEffect(() => {
-    const stored = localStorage.getItem(DETAILS_PANEL_STORAGE_KEY);
-    if (stored === "true") setIsCollapsed(true);
     // Enable transitions only after the initial state is painted
     requestAnimationFrame(() => {
       requestAnimationFrame(() => setTransitionsReady(true));
@@ -111,7 +119,7 @@ export function ExperimentDetailsCard({
 
   const toggleCollapsed = () => {
     const next = !isCollapsed;
-    setIsCollapsed(next);
+    setToggledCollapsed(next);
     localStorage.setItem(DETAILS_PANEL_STORAGE_KEY, String(next));
   };
 

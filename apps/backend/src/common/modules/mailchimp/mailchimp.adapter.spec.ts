@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 
 import { ErrorCodes } from "../../utils/error-codes";
 import { assertFailure, assertSuccess } from "../../utils/fp-utils";
+import type { Result } from "../../utils/fp-utils";
 import type { MailchimpConfigService } from "./config/config.service";
 import type { MailchimpCommunityKind } from "./config/config.types";
 import { MailchimpAdapter } from "./mailchimp.adapter";
@@ -466,7 +467,7 @@ describe("MailchimpAdapter", () => {
     it("returns failure from every operation without making any HTTP call", async () => {
       const { adapter, axiosRef } = buildAdapter("group", false);
 
-      const results = [
+      const results: Result<unknown>[] = [
         await adapter.subscribePending(EMAIL),
         await adapter.subscribeDirect(EMAIL),
         await adapter.unsubscribe(EMAIL),

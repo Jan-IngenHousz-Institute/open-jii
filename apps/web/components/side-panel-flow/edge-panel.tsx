@@ -1,6 +1,6 @@
 import { SettingsCard } from "@/components/shared/settings-card";
 import type { Edge } from "@xyflow/react";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -30,6 +30,13 @@ export function EdgeSidePanel({
 }: EdgeSidePanelProps) {
   // Keep previous content during transition
   const [displayEdge, setDisplayEdge] = useState<Edge | null>(selectedEdge);
+  const [syncedFrom, setSyncedFrom] = useState({ open, selectedEdge });
+  if (syncedFrom.open !== open || syncedFrom.selectedEdge !== selectedEdge) {
+    setSyncedFrom({ open, selectedEdge });
+    if (open && selectedEdge) {
+      setDisplayEdge(selectedEdge);
+    }
+  }
 
   const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isDisabled) return;
@@ -55,13 +62,6 @@ export function EdgeSidePanel({
     const label = edge.data?.label ?? edge.label;
     return typeof label === "string" || typeof label === "number" ? String(label) : "";
   };
-
-  useEffect(() => {
-    if (open && selectedEdge) {
-      // Immediately update content when opening
-      setDisplayEdge(selectedEdge);
-    }
-  }, [open, selectedEdge]);
 
   const { t } = useTranslation("experiments");
   return (

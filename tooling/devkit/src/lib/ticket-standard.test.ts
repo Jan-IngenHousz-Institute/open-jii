@@ -198,6 +198,21 @@ describe("checkTitle", () => {
       "starts with a type prefix; that is a label",
     ]);
   });
+
+  it("refuses an identifier left in the title, which would create a duplicate", () => {
+    expect(checkTitle("OJD-1800: Home shows public research").map((f) => f.detail)).toEqual([
+      'names OJD-1800; start the heading with "OJD-1800 " to update it, or drop it to create a new ticket',
+    ]);
+    expect(checkTitle("Home shows public research (OJD-1800)").map((f) => f.rule)).toEqual([
+      "title",
+    ]);
+    expect(checkTitle("Home shows public research")).toEqual([]);
+    expect(checkTitle("Export timestamps as ISO-8601")).toEqual([]);
+    expect(checkTitle("OJD-1800 Home shows public research")).toEqual([]);
+    expect(checkTitle("OJD-1800 Home shows OJD-1801 research").map((f) => f.rule)).toEqual([
+      "title",
+    ]);
+  });
 });
 
 describe("proseOnly", () => {

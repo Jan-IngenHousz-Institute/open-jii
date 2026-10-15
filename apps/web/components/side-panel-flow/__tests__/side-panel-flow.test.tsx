@@ -511,3 +511,21 @@ describe("<ExperimentSidePanel />", () => {
     expect(props.onEdgeDelete).not.toHaveBeenCalled();
   });
 });
+
+describe("<ExperimentSidePanel /> content sync", () => {
+  it("follows the selected node while open and keeps the last one while closing", () => {
+    const { rerender, props } = renderPanel({ nodeType: "INSTRUCTION", nodeTitle: "Hello" });
+    const input = () =>
+      screen.getByPlaceholderText<HTMLInputElement>("sidePanelFlow.labelPlaceholder");
+
+    rerender(<ExperimentSidePanel {...props} nodeType="MEASUREMENT" nodeTitle="World" />);
+    expect(input().value).toBe("World");
+    expect(screen.queryByText(/Measurement.*sidePanelFlow\.nodePanel/)).toBeTruthy();
+
+    rerender(
+      <ExperimentSidePanel {...props} open={false} nodeType={undefined} nodeTitle={undefined} />,
+    );
+    expect(input().value).toBe("World");
+    expect(screen.queryByText(/Measurement.*sidePanelFlow\.nodePanel/)).toBeTruthy();
+  });
+});

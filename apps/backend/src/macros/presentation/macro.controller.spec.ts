@@ -86,6 +86,8 @@ describe("MacroController", () => {
         description: macroData.description ?? "",
         language: macroData.language,
         code: macroData.code,
+        sortOrder: null,
+        forkedFrom: null,
         organizationId: null,
         visibility: "public",
         createdBy: testUserId,
@@ -203,6 +205,8 @@ describe("MacroController", () => {
         description: "Test Description",
         language: "python",
         code: "cHl0aG9uIGNvZGU=",
+        sortOrder: null,
+        forkedFrom: null,
         organizationId: null,
         visibility: "public",
         createdBy: testUserId,
@@ -326,6 +330,8 @@ describe("MacroController", () => {
           description: "Test Description 1",
           language: "python",
           code: "dGVzdCBjb2RlIDE=", // base64 encoded "test code 1"
+          sortOrder: null,
+          forkedFrom: null,
           organizationId: null,
           visibility: "public",
           createdBy: testUserId,
@@ -340,6 +346,8 @@ describe("MacroController", () => {
           description: "Test Description 2",
           language: "javascript",
           code: "dGVzdCBjb2RlIDI=", // base64 encoded "test code 2"
+          sortOrder: null,
+          forkedFrom: null,
           organizationId: null,
           visibility: "public",
           createdBy: testUserId,
@@ -463,6 +471,8 @@ describe("MacroController", () => {
         description: "Updated Description",
         language: "javascript",
         code: "dXBkYXRlZCBjb2Rl", // base64 encoded "updated code"
+        sortOrder: null,
+        forkedFrom: null,
         organizationId: null,
         visibility: "public",
         createdBy: testUserId,
@@ -527,6 +537,8 @@ describe("MacroController", () => {
         description: "Description",
         language: "python",
         code: "dXBkYXRlZCBjb2RlIHdpdGggZmlsZQ==", // base64 encoded "updated code with file"
+        sortOrder: null,
+        forkedFrom: null,
         organizationId: null,
         visibility: "public",
         createdBy: testUserId,

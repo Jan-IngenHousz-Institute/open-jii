@@ -1297,7 +1297,7 @@ describe("MacroRepository", () => {
       let fetchCallCount = 0;
       const originalTryCache = cachePort.tryCache.bind(cachePort) as CachePort["tryCache"];
       vi.spyOn(cachePort, "tryCache").mockImplementation(
-        <T>(key: string, fetchFn: () => Promise<T>): Promise<T> => {
+        <T>(key: string, fetchFn: () => Promise<T | null>): Promise<T | null> => {
           return originalTryCache(key, () => {
             fetchCallCount++;
             return fetchFn();

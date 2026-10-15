@@ -2,6 +2,11 @@ import type { AxiosError } from "axios";
 
 import { extractAxiosErrorDetails, getAxiosErrorMessage } from "./axios-error";
 
+interface ErrorBody {
+  message?: string;
+  error_description?: string;
+}
+
 describe("axios-error", () => {
   describe("getAxiosErrorMessage", () => {
     it("should handle standard Axios errors", () => {
@@ -64,7 +69,7 @@ describe("axios-error", () => {
           },
         },
         message: "Request failed",
-      } as AxiosError;
+      } as AxiosError<ErrorBody>;
 
       expect(extractAxiosErrorDetails(error)).toEqual("Custom error message");
     });
@@ -77,7 +82,7 @@ describe("axios-error", () => {
           },
         },
         message: "Request failed",
-      } as AxiosError;
+      } as AxiosError<ErrorBody>;
 
       expect(extractAxiosErrorDetails(error)).toEqual("Detailed error description");
     });
@@ -85,13 +90,13 @@ describe("axios-error", () => {
     it("should fall back to error message if no response data", () => {
       const error = {
         message: "Network error",
-      } as AxiosError;
+      } as AxiosError<ErrorBody>;
 
       expect(extractAxiosErrorDetails(error)).toEqual("Network error");
     });
 
     it("should provide default message if no useful information available", () => {
-      const error = {} as AxiosError;
+      const error = {} as AxiosError<ErrorBody>;
       expect(extractAxiosErrorDetails(error)).toEqual("Unknown error");
     });
   });

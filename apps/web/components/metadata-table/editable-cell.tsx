@@ -24,11 +24,13 @@ export function EditableCell({
 }: EditableCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(String(value ?? ""));
+  const [syncedValue, setSyncedValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  if (!Object.is(value, syncedValue)) {
+    setSyncedValue(value);
     setEditValue(String(value ?? ""));
-  }, [value]);
+  }
 
   useEffect(() => {
     if (isEditing && inputRef.current) {

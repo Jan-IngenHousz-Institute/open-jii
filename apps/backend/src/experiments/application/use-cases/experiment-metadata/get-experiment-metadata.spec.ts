@@ -1,4 +1,10 @@
-import { assertFailure, success, failure, AppError } from "../../../../common/utils/fp-utils";
+import {
+  assertSuccess,
+  assertFailure,
+  success,
+  failure,
+  AppError,
+} from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import type { ExperimentMetadataDto } from "../../../core/models/experiment-metadata.model";
 import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
@@ -51,6 +57,7 @@ describe("GetExperimentMetadataUseCase", () => {
     const result = await useCase.execute(experiment.id, testUserId);
 
     expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
     expect(result.value).toEqual([mockMetadata]);
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(metadataRepository.findAllByExperimentId).toHaveBeenCalledWith(experiment.id);
@@ -67,6 +74,7 @@ describe("GetExperimentMetadataUseCase", () => {
     const result = await useCase.execute(experiment.id, testUserId);
 
     expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
     expect(result.value).toEqual([]);
   });
 
@@ -94,6 +102,7 @@ describe("GetExperimentMetadataUseCase", () => {
     const result = await useCase.execute(experiment.id, otherUserId);
 
     expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
     expect(result.value).toEqual([mockMetadata]);
   });
 
