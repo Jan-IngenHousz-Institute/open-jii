@@ -93,6 +93,18 @@ describe("IotCalibrationDefinitionRepository", () => {
     expect(otherFamily.value.map((row) => row.id)).not.toContain(definition.id);
   });
 
+  it("updates a definition and leaves updatedAt to Postgres", async () => {
+    const definition = await createDefinition(userId);
+
+    const updated = await repository.update(definition.id, { name: "Renamed calibration" });
+    assertSuccess(updated);
+    expect(updated.value?.name).toBe("Renamed calibration");
+    expect(updated.value?.updatedAt).toBeInstanceOf(Date);
+    expect(updated.value?.updatedAt.getTime()).toBeGreaterThanOrEqual(
+      definition.updatedAt.getTime(),
+    );
+  });
+
   it("deletes a definition", async () => {
     const definition = await createDefinition(userId);
 

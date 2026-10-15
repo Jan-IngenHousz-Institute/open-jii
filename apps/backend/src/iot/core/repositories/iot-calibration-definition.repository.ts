@@ -179,7 +179,7 @@ export class IotCalibrationDefinitionRepository {
     return tryCatch(async () => {
       const results = await this.database
         .update(calibrationDefinitions)
-        .set({ ...changes, updatedAt: new Date() })
+        .set(changes)
         .where(
           and(
             eq(calibrationDefinitions.id, definitionId),
