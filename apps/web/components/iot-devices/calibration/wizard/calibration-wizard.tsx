@@ -822,8 +822,27 @@ export function CalibrationWizard({
           />
         );
       }
+      // Approving already put the coefficients in force on record; writing them is a separate
+      // choice, and an operator may leave the hardware for later. Not in a session opened only
+      // to write, and not once a write broke off, which may have reached the device in part:
+      // there the way out is to cancel, which claims nothing about the device.
+      const canSkipWrite = !isWriteOnly && writeError === null;
       return (
         <CalibrationWizardActions
+          secondary={
+            canSkipWrite ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStep("done")}
+                disabled={isWriting}
+              >
+                {t("iot.calibration.write.skip")}
+              </Button>
+            ) : (
+              renderCancel()
+            )
+          }
           primary={
             <Button type="button" onClick={() => void write()} disabled={isWriting}>
               {isWriting && <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />}

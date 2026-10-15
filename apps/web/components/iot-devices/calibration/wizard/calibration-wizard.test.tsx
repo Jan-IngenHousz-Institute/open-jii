@@ -585,6 +585,67 @@ describe("CalibrationWizard", { timeout: 20_000 }, () => {
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
 
+  // Approving put the calibration in force on record; the hardware can wait for another day.
+  it("finishes without writing to a device it could write to", async () => {
+    const console = attachMiniPar([420, 150, 8.33]);
+    server.mount(contract.iot.createCalibrationRun, {
+      status: 201,
+      body: createCalibrationRun({ deviceId: DEVICE_ID, definitionId: DEFINITION_ID }),
+    });
+    server.mount(contract.iot.approveCalibrationRun, {
+      status: 201,
+      body: createDeviceCalibration({ deviceId: DEVICE_ID }),
+    });
+    renderWizard();
+
+    await captureThreePoints();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.review.approve" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.write.skip" }),
+    );
+
+    expect(await screen.findByText("iot.calibration.done.notWrittenHint")).toBeInTheDocument();
+    expect(console.sent.some((command) => command.startsWith("cal_par"))).toBe(false);
+  });
+
+  // A coefficient that fails to write is reported, not hidden behind "nothing written".
+  it("reports a write that broke off as not confirmed, with no way to finish as unwritten", async () => {
+    const console = attachMiniPar([420, 150, 8.33]);
+    server.mount(contract.iot.createCalibrationRun, {
+      status: 201,
+      body: createCalibrationRun({ deviceId: DEVICE_ID, definitionId: DEFINITION_ID }),
+    });
+    const applied = createDeviceCalibration({ deviceId: DEVICE_ID });
+    server.mount(contract.iot.approveCalibrationRun, { status: 201, body: applied });
+    // A broken-off write is still recorded as it stands, so the session settles before the end.
+    const reportSpy = server.mount(contract.iot.reportDeviceCalibrationWrite, {
+      body: { ...applied, writtenToDeviceAt: "2026-09-01T10:06:00.000Z" },
+    });
+    renderWizard();
+
+    await captureThreePoints();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.review.approve" }),
+    );
+    const { send } = console.transport;
+    console.transport.send = (payload) =>
+      payload.startsWith("cal_par_intercept")
+        ? Promise.reject(new Error("The device stopped answering"))
+        : send(payload);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.write.action" }),
+    );
+
+    expect(await screen.findByText("iot.calibration.write.failed")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(reportSpy.called).toBe(true);
+    });
+    expect(screen.queryByRole("button", { name: "iot.calibration.write.skip" })).toBeNull();
+    expect(screen.getByRole("button", { name: "iot.calibration.done.close" })).toBeInTheDocument();
+  });
+
   // The coefficients are already on the device when the operator walks away
   // from the check; the write is recorded as it stands, without a verification.
   it("records the write without a check when the operator declines it", async () => {
@@ -995,9 +1056,16 @@ describe("CalibrationWizard", { timeout: 20_000 }, () => {
       expect(screen.queryByRole("radio")).toBeNull();
       await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
 
-      await userEvent.click(
-        await screen.findByRole("button", { name: "iot.calibration.write.action" }),
-      );
+      // Writing is the whole point of this session, so finishing without it is not offered;
+      // leaving is, and it claims nothing about the device.
+      const writeButton = await screen.findByRole("button", {
+        name: "iot.calibration.write.action",
+      });
+      expect(screen.queryByRole("button", { name: "iot.calibration.write.skip" })).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "iot.calibration.cta.cancel" }),
+      ).toBeInTheDocument();
+      await userEvent.click(writeButton);
 
       expect(await screen.findByText("iot.calibration.write.verified")).toBeInTheDocument();
       await waitFor(() => {
