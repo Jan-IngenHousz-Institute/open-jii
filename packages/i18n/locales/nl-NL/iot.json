@@ -1094,6 +1094,14 @@
         "rampRange": "Het instrument neemt {{min}} tot {{max}} {{unit}}.",
         "records": "Legt vast",
         "addRead": "Meting toevoegen",
+        "readKindName": {
+          "instrument": "Vastleggen van een instrument",
+          "operator": "De operator om een waarde vragen"
+        },
+        "readKind": {
+          "instrument": "Het apparaat of een labinstrument beantwoordt een commando.",
+          "operator": "Wordt ingevoerd voordat de instrumenten worden gelezen, zodat die worden gelezen wanneer de waarde wordt vastgelegd."
+        },
         "source": "Van",
         "command": "Commando",
         "reading": "Meetwaarde",

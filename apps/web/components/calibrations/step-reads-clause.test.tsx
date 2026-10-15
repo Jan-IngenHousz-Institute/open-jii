@@ -125,14 +125,37 @@ describe("StepReadsClause", () => {
     }
   });
 
+  async function addFromMenu(user: ReturnType<typeof userEvent.setup>, item: string) {
+    await user.click(screen.getByRole("button", { name: "iot.calibration.procedure.addRead" }));
+    await user.click(await screen.findByRole("menuitem", { name: new RegExp(item) }));
+  }
+
   it("adds a reading of the first source under a column nothing else holds", async () => {
     const { onChange, user } = renderClause([{ ...DEVICE_READ, command: "hello", as: "hello" }]);
 
-    await user.click(screen.getByRole("button", { name: "iot.calibration.procedure.addRead" }));
+    await addFromMenu(user, "iot.calibration.procedure.readKindName.instrument");
 
     expect(onChange).toHaveBeenLastCalledWith([
       { instrument: "dut", command: "hello", as: "hello" },
       { instrument: "dut", command: "hello", as: "hello_2" },
+    ]);
+  });
+
+  // Typed first, the operator's value is what sets off the device read, so nobody confirms
+  // a setup thinking the device will be read later.
+  it("adds an operator's value ahead of the instrument reads", async () => {
+    const { onChange, user } = renderClause([DEVICE_READ, REFERENCE_READ]);
+
+    await addFromMenu(user, "iot.calibration.procedure.readKindName.operator");
+
+    expect(onChange).toHaveBeenLastCalledWith([
+      {
+        operator: "iot.calibration.procedure.operatorReadPrompt",
+        as: "reference",
+        type: "number",
+      },
+      DEVICE_READ,
+      REFERENCE_READ,
     ]);
   });
 

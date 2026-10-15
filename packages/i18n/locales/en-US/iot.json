@@ -1094,6 +1094,14 @@
         "rampRange": "The instrument takes {{min}} to {{max}} {{unit}}.",
         "records": "Records",
         "addRead": "Add reading",
+        "readKindName": {
+          "instrument": "Record from an instrument",
+          "operator": "Ask the operator for a value"
+        },
+        "readKind": {
+          "instrument": "The device or a bench instrument answers a command.",
+          "operator": "Typed before the instruments are read, so they are read when the value is recorded."
+        },
         "source": "From",
         "command": "Command",
         "reading": "Reading",

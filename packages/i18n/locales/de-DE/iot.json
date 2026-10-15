@@ -1094,6 +1094,14 @@
         "rampRange": "Das Instrument nimmt {{min}} bis {{max}} {{unit}}.",
         "records": "Zeichnet auf",
         "addRead": "Messwert hinzufügen",
+        "readKindName": {
+          "instrument": "Von einem Instrument erfassen",
+          "operator": "Den Bediener nach einem Wert fragen"
+        },
+        "readKind": {
+          "instrument": "Das Gerät oder ein Laborinstrument beantwortet einen Befehl.",
+          "operator": "Wird vor den Instrumenten eingegeben, damit diese beim Erfassen des Werts gelesen werden."
+        },
         "source": "Von",
         "command": "Befehl",
         "reading": "Messwert",
