@@ -1,8 +1,9 @@
 # Payload visualization screenshots
 
-PR evidence captured on 2026-10-15 using the real workbook output and Plotly components at openJII commit 98d2602b0. These are local component replays, not screenshots of a deployed feature.
+Captured on 2026-10-15 using real workbook output and Plotly components at commit a63ce3a9632f7183d9df6eb624ab5b6d111ecb20. These are local component replays of saved measurement values.
 
-- donghee-multispeq.png: saved DONGHEE H-O-H 2 workbook output, 12,802 detector readings, protocol family Generic.
-- ambit-measurement.png: saved output from the public Ambit-demo workbook db45c39c-80ef-4ca7-bc84-6651e5f138d1. Real ambit.trace/3 values and explicit timestamps; four optical series of 22 readings and one temperature reading. Sensor identifier removed.
+- donghee-multispeq.png: saved DONGHEE H-O-H 2 workbook output, all 12,802 detector readings, protocol family Generic.
+- ambit-measurement.png: complete measured MPF trace with 180 fluorescence/reference pairs and four temperature readings. Selected for a clear saturating-flash response from the large Ambit field dataset. Signal values range from 404 to 1157; every point and original relative timestamp is retained.
+- ambit-qe.png: complete measured qE_dark_a trace with 390 fluorescence/reference pairs and 12 temperature readings.
 
-The images are standalone PR assets. This branch is not intended for merging.
+Ambit identifiers, location and absolute timestamps were removed from the replay fixture. Ratios use the actual paired readings; no smoothing or curve fabrication is applied. The images are PR evidence. This branch is not intended for merging.
