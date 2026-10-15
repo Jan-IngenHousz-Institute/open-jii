@@ -1,6 +1,7 @@
 "use client";
 
 import { Hand, Microscope, Plus, X } from "lucide-react";
+import { Fragment } from "react";
 
 import type { ProcedureRead } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 import { useTranslation } from "@repo/i18n";
@@ -10,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
+import { cn } from "@repo/ui/lib/utils";
 
 import { InlineChoice } from "./inline-choice";
 import { InlineToken } from "./inline-token";
@@ -130,14 +132,34 @@ export function StepReadsClause({ reads, sources, canEdit, onChange }: StepReads
         ? undefined
         : t("iot.calibration.procedure.nameInvalid");
     const canRemove = canEdit && reads.length > 1;
+    // An operator's reading carries a prompt of up to a sentence, longer than the line it
+    // sits on, so that prompt may wrap; everything else in a reading stays together.
+    const isHeldTogether = "instrument" in read;
 
     return (
       // Held on one line where there is room for it; a phone is narrower than one reading.
-      <span key={index} className="sm:whitespace-nowrap">
+      // The separator sits outside, so a wrapped line never opens on a comma.
+      <Fragment key={index}>
         {index > 0 && <span className="text-muted-foreground">, </span>}
+        <span className={cn(isHeldTogether && "sm:whitespace-nowrap")}>
+          {renderReading(read, index)}
+          <span className="sm:whitespace-nowrap">
+            {renderSource(read, index, columnError, canRemove)}
+          </span>
+        </span>
+      </Fragment>
+    );
+  }
 
-        {renderReading(read, index)}
-
+  /** The tail of a reading: where it comes from, the column it lands in, and its removal. */
+  function renderSource(
+    read: ProcedureRead,
+    index: number,
+    columnError: string | undefined,
+    canRemove: boolean,
+  ) {
+    return (
+      <>
         <span className="text-muted-foreground"> {t("iot.calibration.procedure.from")} </span>
 
         <InlineChoice
@@ -172,7 +194,7 @@ export function StepReadsClause({ reads, sources, canEdit, onChange }: StepReads
             <X className="size-3" aria-hidden />
           </button>
         )}
-      </span>
+      </>
     );
   }
 
