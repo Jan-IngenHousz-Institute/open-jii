@@ -833,6 +833,7 @@
         "choose": "Verfahren",
         "connect": "Verbinden",
         "capture": "Erfassen",
+        "recorded": "Aufgezeichnet",
         "review": "Prüfen",
         "write": "Schreiben",
         "done": "Fertig"
@@ -1250,7 +1251,7 @@
         "review_other": "{{count}} Läufe prüfen",
         "thisSitting": "Diese Sitzung",
         "recordedOf": "{{recorded}} von {{total}} erfasst",
-        "alreadyDone": "{{serial}} war in dieser Sitzung bereits an der Reihe.",
+        "alreadyDone": "{{unit}} war in dieser Sitzung bereits an der Reihe.",
         "whichDevice": "Welches Gerät ist das?",
         "whichDeviceHint": "Die Firmware dieser Einheit meldet über die Konsole keine Kennung, daher muss der Lauf einem von Ihnen benannten Gerät zugeordnet werden."
       },

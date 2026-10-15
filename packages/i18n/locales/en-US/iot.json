@@ -833,6 +833,7 @@
         "choose": "Procedure",
         "connect": "Connect",
         "capture": "Capture",
+        "recorded": "Recorded",
         "review": "Review",
         "write": "Write",
         "done": "Done"
@@ -1250,7 +1251,7 @@
         "review_other": "Review {{count}} runs",
         "thisSitting": "This sitting",
         "recordedOf": "{{recorded}} of {{total}} recorded",
-        "alreadyDone": "{{serial}} has already had its turn in this sitting.",
+        "alreadyDone": "{{unit}} has already had its turn in this sitting.",
         "whichDevice": "Which device is this?",
         "whichDeviceHint": "This unit's firmware does not report an identifier over the console, so the run has to be recorded against a device you name."
       },

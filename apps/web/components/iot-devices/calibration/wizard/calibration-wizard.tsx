@@ -171,7 +171,11 @@ export function CalibrationWizard({
   /** The port said nothing that names it, so the fleet cannot be searched on its behalf. */
   const isUnitUnnamed =
     isSitting && capture.connection !== undefined && onPort.kind !== "registered";
-  const repeated = onPort.kind === "registered" ? unitAlreadyDone(units, onPort.serial) : undefined;
+  // The device this unit is recorded against, however it was named: by its port or by hand.
+  const unitDevice = isSitting
+    ? fleet.data?.find((device) => device.id === runDeviceId)
+    : undefined;
+  const repeated = unitDevice === undefined ? undefined : unitAlreadyDone(units, unitDevice.id);
   const active = useActiveDeviceCalibration(runDeviceId);
   const { operator, rig } = capture;
   const createRun = useCreateCalibrationRun();
@@ -224,13 +228,15 @@ export function CalibrationWizard({
         preInfo: { ...connection.identity.raw },
       });
       setRun(created);
-      if (isSitting && onPort.kind === "registered") {
+      // A unit named by hand counts like one its port named. It keeps the serial it reported,
+      // when it reported one; otherwise its registered serial stands in.
+      if (unitDevice !== undefined) {
         setUnits((done) => [
           ...done,
           {
-            serial: onPort.serial,
-            deviceId: onPort.device.id,
-            deviceName: onPort.device.name,
+            serial: "serial" in onPort ? onPort.serial : unitDevice.serialNumber,
+            deviceId: unitDevice.id,
+            deviceName: unitDevice.name,
             runId: created.id,
             outcome: "recorded",
           },
@@ -524,7 +530,9 @@ export function CalibrationWizard({
         {repeated !== undefined && (
           <Alert>
             <AlertDescription>
-              {t("iot.calibration.sitting.alreadyDone", { serial: repeated.serial })}
+              {t("iot.calibration.sitting.alreadyDone", {
+                unit: repeated.deviceName ?? repeated.serial,
+              })}
             </AlertDescription>
           </Alert>
         )}

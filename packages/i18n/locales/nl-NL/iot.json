@@ -833,6 +833,7 @@
         "choose": "Procedure",
         "connect": "Verbinden",
         "capture": "Vastleggen",
+        "recorded": "Vastgelegd",
         "review": "Beoordelen",
         "write": "Schrijven",
         "done": "Klaar"
@@ -1250,7 +1251,7 @@
         "review_other": "{{count}} metingen beoordelen",
         "thisSitting": "Deze sessie",
         "recordedOf": "{{recorded}} van {{total}} vastgelegd",
-        "alreadyDone": "{{serial}} is in deze sessie al aan de beurt geweest.",
+        "alreadyDone": "{{unit}} is in deze sessie al aan de beurt geweest.",
         "whichDevice": "Welk apparaat is dit?",
         "whichDeviceHint": "De firmware van deze unit meldt geen identificatie via de console, dus de meting moet worden vastgelegd op een apparaat dat jij aanwijst."
       },

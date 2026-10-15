@@ -200,7 +200,10 @@ async function captureThreePoints() {
   await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
   await screen.findByText("iot.calibration.connect.connected");
   await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+  await answerThreePoints();
+}
 
+async function answerThreePoints() {
   for (const reference of ["402.12", "142.92", "6.92"]) {
     await userEvent.click(
       await screen.findByRole("button", { name: "iot.calibration.prompt.continue" }),
@@ -1123,6 +1126,43 @@ describe("CalibrationWizard", { timeout: 20_000 }, () => {
 
       expect(await screen.findByText("iot.calibration.sitting.whichDevice")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "iot.calibration.cta.next" })).toBeDisabled();
+    });
+
+    // A MiniPAR reports no serial, so every one is named by hand; it still counts as done.
+    it("counts a unit the operator named by hand", async () => {
+      attachMiniPar([420, 150, 8.33]);
+      renderSitting();
+
+      await userEvent.click(await screen.findByRole("radio"));
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+      await userEvent.click(await screen.findByRole("radio", { name: /Bench MiniPAR/ }));
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+      await answerThreePoints();
+
+      expect(await screen.findByText("iot.calibration.sitting.recorded")).toBeInTheDocument();
+      expect(screen.getByText("Bench MiniPAR")).toBeInTheDocument();
+      expect(screen.getByText("iot.calibration.sitting.recordedOf")).toBeInTheDocument();
+    });
+
+    // Picking off the wrong side of the table is as easy by hand as by port, and only
+    // catchable before the run.
+    it("warns when the operator names a unit that already had its turn", async () => {
+      attachMiniPar([420, 150, 8.33]);
+      renderSitting();
+
+      await userEvent.click(await screen.findByRole("radio"));
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+      await userEvent.click(await screen.findByRole("radio", { name: /Bench MiniPAR/ }));
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+      await answerThreePoints();
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.sitting.nextUnit" }),
+      );
+      expect(screen.queryByText("iot.calibration.sitting.alreadyDone")).toBeNull();
+
+      await userEvent.click(await screen.findByRole("radio", { name: /Bench MiniPAR/ }));
+
+      expect(await screen.findByText("iot.calibration.sitting.alreadyDone")).toBeInTheDocument();
     });
   });
 });
