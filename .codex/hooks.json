@@ -1,0 +1,17 @@
+{
+  "description": "openJII guardrails, shared with .claude/settings.json",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/protect-main.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
