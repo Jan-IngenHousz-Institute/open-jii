@@ -80,3 +80,51 @@ Earlier versions injected this into `_config.py` at wheel-build time (one wheel 
 `pnpm build` produces wheels for every lib via `uv build --all-packages` (these end up in `dist/`).
 
 The Databricks bundle (`databricks.yml`) builds wheels and uploads notebooks via `databricks bundle deploy`. CI for that is in [.github/workflows/deploy-databricks.yml](../../.github/workflows/deploy-databricks.yml). Pipeline and job definitions themselves live in terraform, not in the bundle.
+
+## Verify numeric question sorting
+
+The backend orders historical STRING question answers before paging. Run its real
+repository and adapter SQL against this workspace's pinned Spark 4 runtime:
+
+```bash
+pnpm build:packages
+SPARK_LOCAL_IP=127.0.0.1 pnpm --filter data verify:numeric-question-sorting --output /tmp/numeric-question-sorting.json
+```
+
+Run `uv sync --frozen` in `apps/data` first if its virtualenv is missing. Java 17
+or 21 and the installed pnpm workspace dependencies are required. Set `JAVA_HOME`
+if the default Java installation is a different version. No database,
+Databricks credentials or running app is needed. The Python runner owns temporary
+local parquet VARIANT tables and calls the current backend emitter in
+`apps/backend/scripts/verify-numeric-question-sorting.ts` over a loopback SQL bridge.
+The emitter invokes the real repository and adapter, including ID-first payload
+assembly and picker truncation. The JSON output records executed SQL, schemas,
+responses, Spark version, ANSI settings and timings. An assertion failure exits
+nonzero. `--skip-perf` runs only correctness checks.
+
+This is an explicit local verification command, outside the default pytest/Vitest
+and CI suites. It covers both ANSI modes, source-name collisions, filtered and
+unfiltered paging, DISTINCT and exact numeric boundaries. The optional benchmark
+uses cached parquet data at 100k and 1M rows with full-row and ID-only projections.
+Its lexical comparison uses current generated SQL with numeric classification
+disabled in the test adapter. It does not replay an old checkout. Historical
+negative-control evidence belongs in the OJD-1856 review artifacts.
+
+### Numeric policy
+
+Signed ASCII base-10 integers and ordinary decimals, including `.5` and `1.`, are
+numeric only when exactly representable as `DECIMAL(38,18)`: at most 20 significant
+integer digits and 18 meaningful fractional places. Leading integer zeros and
+trailing fractional zeros do not consume those budgets. The grammar check runs
+before `try_cast`, which alone would round excess fractional places. Scientific
+notation, separators, units, non-ASCII digits, overflow and excess precision use
+text ordering. Whitespace U+0009 through U+000D and U+0020 is ignored for numeric
+recognition and blank detection; NBSP and other Unicode whitespace use text
+ordering. Returned/exported strings are unchanged.
+
+Numeric answers precede text and blanks/nulls in both directions. Values within
+the numeric and text groups follow the requested direction. Ties use the original
+answer in that direction, then row identity ascending outside DISTINCT. The
+picker deduplicates original strings and strips null/empty values at its existing
+API boundary. Native-typed question fields, other text sources and aggregation
+outputs do not use the STRING-answer classification.

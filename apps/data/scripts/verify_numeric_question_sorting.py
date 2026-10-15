@@ -1,32 +1,30 @@
 #!/usr/bin/env python3
-"""Run from the repo root: JAVA_HOME=<java-21> SPARK_LOCAL_IP=127.0.0.1 \
-PYSPARK_PYTHON=<venv-python> <venv-python> apps/backend/test/numeric-question-sorting/probe.py
+"""Run `pnpm --filter data verify:numeric-question-sorting` from the repo root.
 
-Requires local Spark 4+ and the repo's installed pnpm/ts-node. Uses only synthetic
-local parquet tables and a loopback SQL bridge. --skip-perf runs correctness only.
-An optional --output <file> saves SQL, responses and timings for independent replay.
+Uses the data workspace's pinned Spark runtime and Java 17/21. Executes current
+backend repository/adapter SQL over synthetic local parquet VARIANT tables.
+--skip-perf runs correctness only; --output saves SQL, responses and timings.
+See apps/data/README.md for setup, precision policy and verification limits.
 """
 
 import argparse
-from contextlib import contextmanager
-from decimal import Decimal, localcontext
-from functools import cmp_to_key
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
-from pathlib import Path
 import re
 import statistics
 import subprocess
-import tarfile
 import tempfile
 import threading
 import time
+from decimal import Decimal, localcontext
+from functools import cmp_to_key
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
-from pyspark.sql import SparkSession, functions as F
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
 
-ROOT = Path(__file__).resolve().parents[4]
-HERE = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[3]
 ASCII_SPACE = "\t\n\v\f\r "
 GRAMMAR = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)")
 ANSWERS = [
@@ -85,7 +83,7 @@ ANSWERS = [
     "-Infinity",
     "inf",
     "٣",
-    "１２",
+    "\uff11\uff12",
     "\u00a0",
     "\u00a01\u00a0",
     "apple",
@@ -110,7 +108,8 @@ BASE_COLUMNS = [
     "questions_data",
     "custom_metadata",
 ]
-MACRO_COLUMNS = BASE_COLUMNS + [
+MACRO_COLUMNS = [
+    *BASE_COLUMNS,
     "macro_output",
     "macro_id",
     "raw_id",
@@ -198,9 +197,7 @@ def scenarios():
                     "orderDirection": direction,
                 }
                 if "filtered" in mode:
-                    options["filters"] = [
-                        {"column": "id", "operator": "greater_than", "value": 0}
-                    ]
+                    options["filters"] = [{"column": "id", "operator": "greater_than", "value": 0}]
                 add(
                     f"{mode}-{direction}-{page}",
                     fixture="basic",
@@ -267,9 +264,7 @@ def scenarios():
         options={
             "orderBy": "base_text_answer",
             "columns": ["id", "base_text_answer"],
-            "filters": [
-                {"column": "base_text_answer", "operator": "equals", "value": "001"}
-            ],
+            "filters": [{"column": "base_text_answer", "operator": "equals", "value": "001"}],
             "page": 1,
             "pageSize": 10,
         },
@@ -309,9 +304,10 @@ def scenarios():
                 "pageSize": 100,
             },
         )
-    # SQL snapshots for every unaffected source/type and omitted ordering.
+    # Regression controls for unaffected sources, types and omitted ordering.
     controls = [
         ("no-sort", {}, {}),
+        ("empty-sort", {"orderBy": ""}, {}),
         ("base-text", {"orderBy": "base_text"}, {}),
         ("base-number", {"orderBy": "base_number"}, {}),
         (
@@ -387,22 +383,15 @@ def scenarios():
             control=True,
             **extra,
         )
-    return cases
-
-
-@contextmanager
-def baseline_sources():
-    # Copy only source files into a temporary directory below the backend so package resolution
-    # uses the installed workspace dependencies. The current checkout is never reset or edited.
-    with tempfile.TemporaryDirectory(prefix=".baseline-", dir=HERE) as folder:
-        archive = subprocess.check_output(
-            ["git", "archive", "025284776", "apps/backend/src"], cwd=ROOT
+    for projection, template in [("full", "page-ASC-1"), ("ids", "ids-ASC")]:
+        cases.append(
+            {
+                **next(case for case in cases if case["name"] == template),
+                "name": "perf-lexical-" + projection,
+                "lexical": True,
+            }
         )
-        import io
-
-        with tarfile.open(fileobj=io.BytesIO(archive)) as bundle:
-            bundle.extractall(folder, filter="data")
-        yield str(Path(folder) / "apps/backend/src")
+    return cases
 
 
 class Bridge:
@@ -429,10 +418,7 @@ class Bridge:
                     )
                     self.active = (fixture, target)
                 frame = self.spark.sql(sql)
-                rows = [
-                    [None if v is None else str(v) for v in row]
-                    for row in frame.collect()
-                ]
+                rows = [[None if v is None else str(v) for v in row] for row in frame.collect()]
                 columns = [
                     {
                         "name": field.name,
@@ -451,16 +437,14 @@ class Bridge:
             self.records.append({"scenario": scenario, "sql": sql, "result": data})
             return data
 
-    def run(self, cases, source=None):
+    def run(self, cases):
         bridge = self
 
         class Handler(BaseHTTPRequestHandler):
             def do_POST(self):
                 body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
                 try:
-                    payload = json.dumps(
-                        bridge.execute(body["scenario"], body["sql"])
-                    ).encode()
+                    payload = json.dumps(bridge.execute(body["scenario"], body["sql"])).encode()
                     self.send_response(200)
                 except Exception as error:
                     payload = str(error).encode()
@@ -482,8 +466,6 @@ class Bridge:
                     **os.environ,
                     "NUMERIC_SORT_BRIDGE": f"http://127.0.0.1:{server.server_port}",
                 }
-                if source:
-                    env["NUMERIC_SORT_SOURCE_ROOT"] = source
                 command = [
                     "pnpm",
                     "--filter",
@@ -493,12 +475,10 @@ class Bridge:
                     "--transpile-only",
                     "--compiler-options",
                     '{"module":"Node16","moduleResolution":"Node16","rootDir":"."}',
-                    "test/numeric-question-sorting/emit.ts",
+                    "scripts/verify-numeric-question-sorting.ts",
                     plan.name,
                 ]
-                done = subprocess.run(
-                    command, cwd=ROOT, env=env, text=True, capture_output=True
-                )
+                done = subprocess.run(command, cwd=ROOT, env=env, text=True, capture_output=True)
                 if done.returncode:
                     raise RuntimeError(done.stdout + done.stderr)
                 return json.loads(done.stdout), self.records
@@ -533,9 +513,7 @@ def create_fixtures(spark):
                 i,
                 json.dumps({field: value}),
                 json.dumps({"label": "10" if i % 2 else "2"}),
-                json.dumps(
-                    {"answer": value, "answer_answer": "untouched", "output": value}
-                ),
+                json.dumps({"answer": value, "answer_answer": "untouched", "output": value}),
                 "fixture-table",
                 i,
                 "macro",
@@ -554,9 +532,7 @@ def create_fixtures(spark):
         other = frame.limit(1).withColumn("experiment_id", F.lit("excluded-experiment"))
         frame = frame.unionByName(other)
         if name.startswith("macro"):
-            frame = frame.unionByName(
-                frame.limit(1).withColumn("macro_id", F.lit("excluded-macro"))
-            )
+            frame = frame.unionByName(frame.limit(1).withColumn("macro_id", F.lit("excluded-macro")))
         variants = [
             "questions_data",
             "custom_metadata",
@@ -585,22 +561,13 @@ def create_fixtures(spark):
         spark.table(table).cache().count()
 
 
-def verify(responses, records, cases, baseline=False):
+def verify(responses, records):
     def ids(name):
         return [int(row["id"]) for row in responses[name][0]["data"]["rows"]]
 
-    negatives = {}
     for direction in ["ASC", "DESC"]:
         want_main = [i for i, _ in ordered(ANSWERS, direction)]
         want_basic = [i for i, _ in ordered(BASIC, direction)]
-        if baseline:
-            negatives[f"A01-{direction}"] = ids(f"all-{direction}") != want_main
-            negatives[f"A15-{direction}"] = (
-                sum([ids(f"page-{direction}-{page}") for page in [1, 2, 3, 4]], [])
-                != want_basic
-            )
-            negatives[f"A16-{direction}"] = ids(f"ids-{direction}") != want_basic[:3]
-            continue
         assert ids(f"all-{direction}") == want_main, (
             direction,
             ids(f"all-{direction}"),
@@ -623,25 +590,16 @@ def verify(responses, records, cases, baseline=False):
         assert ids(f"filtered-all-{direction}") == want_basic[:4]
         all_page = responses[f"filtered-all-{direction}"][0]
         assert all_page["data"]["truncated"] and all_page["totalRows"] == len(BASIC)
-        assert [
-            row["answer"] for row in responses[f"all-{direction}"][0]["data"]["rows"]
-        ] == [value for _, value in ordered(ANSWERS, direction)]
+        assert [row["answer"] for row in responses[f"all-{direction}"][0]["data"]["rows"]] == [
+            value for _, value in ordered(ANSWERS, direction)
+        ]
     distinct = list(dict.fromkeys(value for _, value in ordered(BASIC)))
     endpoint = [v for v in distinct if v not in [None, ""]]
-    if baseline:
-        negatives["A18"] = responses["picker"]["values"] != endpoint
-        assert all(negatives.values()), (
-            "Negative control did not detect all legacy failures",
-            negatives,
-        )
-        return negatives
     assert responses["picker"] == {"values": endpoint, "truncated": False}
     assert responses["picker-truncated"] == {"values": distinct[:3], "truncated": True}
     assert ids("equal-original") == [5]
     assert ids("renamed-filter") == [5]
-    expected_contains = [
-        i for i, value in ordered(ANSWERS) if value is not None and "00" in value
-    ]
+    expected_contains = [i for i, value in ordered(ANSWERS) if value is not None and "00" in value]
     assert ids("contains-original") == expected_contains
     for name in [
         "base-collision",
@@ -668,12 +626,13 @@ def verify(responses, records, cases, baseline=False):
         columns = result["columns"]
         field = field_by_scenario.get(name, "answer")
         if any(c["name"] == field for c in columns):
-            assert (
-                next(c["type_text"] for c in columns if c["name"] == field) == "STRING"
-            ), name
+            assert next(c["type_text"] for c in columns if c["name"] == field) == "STRING", name
         assert not any("sort_key" in c["name"] for c in columns)
         if name.startswith("picker"):
             assert len(columns) == 1 and columns[0]["name"] == "answer"
+    assert [r["sql"] for r in records if r["scenario"] == "control-empty-sort"] == [
+        r["sql"] for r in records if r["scenario"] == "control-no-sort"
+    ], "Empty ordering must remain an unordered read"
     # Endpoint string filtering and aggregation are deliberately unchanged.
     grouped = responses["control-aggregate"][0]["data"]["rows"]
     assert sum(int(row["n"]) for row in grouped) == len(BASIC)
@@ -684,7 +643,7 @@ def verify(responses, records, cases, baseline=False):
     return {"scenarios": len(responses), "statements": len(records)}
 
 
-def benchmark(spark, fixed, legacy):
+def benchmark(spark, statements):
     report = []
     # Use actual captured repository SQL for both projections, stripping only LIMIT/OFFSET
     # to measure the same TopK workload across builders with a representative page size.
@@ -701,20 +660,14 @@ def benchmark(spark, fixed, legacy):
         table = f"default.perf_{size}"
         frame.write.mode("overwrite").saveAsTable(table)
         spark.table(table).cache().count()
-        spark.sql(
-            f"CREATE OR REPLACE VIEW default.numeric_sort_raw AS SELECT * FROM {table}"
-        )
+        spark.sql(f"CREATE OR REPLACE VIEW default.numeric_sort_raw AS SELECT * FROM {table}")
         for projection, name in [("full", "page-ASC-1"), ("ids", "ids-ASC")]:
             timings = {}
-            for label, records in [("lexical", legacy), ("numeric", fixed)]:
+            for label, scenario in [("lexical", "perf-lexical-" + projection), ("numeric", name)]:
                 statement = next(
-                    r["sql"]
-                    for r in records
-                    if r["scenario"] == name and "ORDER BY" in r["sql"]
+                    r["sql"] for r in statements if r["scenario"] == scenario and "ORDER BY" in r["sql"]
                 )
-                statement = re.sub(
-                    r"LIMIT [0-9]+(?:\s+OFFSET [0-9]+)?", "LIMIT 100", statement
-                )
+                statement = re.sub(r"LIMIT [0-9]+(?:\s+OFFSET [0-9]+)?", "LIMIT 100", statement)
                 query = spark.sql(statement)
                 query.collect()
                 samples = []
@@ -725,9 +678,7 @@ def benchmark(spark, fixed, legacy):
                 timings[label] = statistics.median(samples)
                 if label == "numeric":
                     plan = query._jdf.queryExecution().executedPlan().toString()
-                    assert (
-                        "TakeOrderedAndProject" in plan and "InMemoryTableScan" in plan
-                    ), plan
+                    assert "TakeOrderedAndProject" in plan and "InMemoryTableScan" in plan, plan
             ratio = timings["numeric"] / timings["lexical"]
             delta = timings["numeric"] - timings["lexical"]
             item = {
@@ -768,75 +719,21 @@ def main():
         report = {"spark": spark.version, "runs": []}
         try:
             create_fixtures(spark)
-            with baseline_sources() as source:
-                for ansi in [True, False]:
-                    spark.conf.set("spark.sql.ansi.enabled", str(ansi).lower())
-                    print(f"Spark {spark.version}, ANSI={ansi}", flush=True)
-                    fixed_responses, fixed_sql = Bridge(spark, cases).run(cases)
-                    verify(fixed_responses, fixed_sql, cases)
-                    base_responses, base_sql = Bridge(spark, cases).run(cases, source)
-                    negative = verify(base_responses, base_sql, cases, baseline=True)
-                    for case in cases:
-                        name = case["name"]
-                        before = [r["sql"] for r in base_sql if r["scenario"] == name]
-                        after = [r["sql"] for r in fixed_sql if r["scenario"] == name]
-                        if case.get("control"):
-                            assert before == after, (
-                                "Unaffected SQL changed",
-                                name,
-                                before,
-                                after,
-                            )
-                        before_count = [
-                            sql for sql in before if sql.startswith("SELECT COUNT")
-                        ]
-                        after_count = [
-                            sql for sql in after if sql.startswith("SELECT COUNT")
-                        ]
-                        assert before_count == after_count, ("Count changed", name)
-                    # Actual DISTINCT output, including blanks and null, not just endpoint filtering.
-                    for direction, scenario in [
-                        ("ASC", "picker"),
-                        ("DESC", "picker-desc"),
-                    ]:
-                        result = next(
-                            r["result"] for r in fixed_sql if r["scenario"] == scenario
-                        )
-                        wanted = list(
-                            dict.fromkeys(
-                                value for _, value in ordered(BASIC, direction)
-                            )
-                        )
-                        assert [row[0] for row in result["rows"]] == wanted, (
-                            direction,
-                            result,
-                            wanted,
-                        )
-                    print(
-                        "PASS base negative controls "
-                        + json.dumps(negative)
-                        + "; unaffected SQL byte-identical",
-                        flush=True,
-                    )
-                    report["runs"].append(
-                        {
-                            "ansi": ansi,
-                            "negative": negative,
-                            "fixedResponses": fixed_responses,
-                            "fixedSQL": fixed_sql,
-                            "baseSQL": base_sql,
-                        }
-                    )
-                assert (
-                    report["runs"][0]["fixedResponses"]
-                    == report["runs"][1]["fixedResponses"]
-                ), "ANSI changed responses"
-                if not args.skip_perf:
-                    report["performance"] = benchmark(spark, fixed_sql, base_sql)
+            for ansi in [True, False]:
+                spark.conf.set("spark.sql.ansi.enabled", str(ansi).lower())
+                print(f"Spark {spark.version}, ANSI={ansi}", flush=True)
+                responses, statements = Bridge(spark, cases).run(cases)
+                verify(responses, statements)
+                for direction, scenario in [("ASC", "picker"), ("DESC", "picker-desc")]:
+                    result = next(r["result"] for r in statements if r["scenario"] == scenario)
+                    wanted = list(dict.fromkeys(value for _, value in ordered(BASIC, direction)))
+                    assert [row[0] for row in result["rows"]] == wanted, (direction, result, wanted)
+                report["runs"].append({"ansi": ansi, "responses": responses, "statements": statements})
+            assert report["runs"][0]["responses"] == report["runs"][1]["responses"], "ANSI changed responses"
+            if not args.skip_perf:
+                report["performance"] = benchmark(spark, statements)
             if args.output:
-                args.output.write_text(
-                    json.dumps(report, indent=2, ensure_ascii=False) + "\n"
-                )
+                args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
             print("PASS numeric question sorting probe", flush=True)
         finally:
             spark.stop()

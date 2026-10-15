@@ -1,39 +1,20 @@
-/** Invoked by probe.py from the repo root; SQL crosses the loopback bridge, never a warehouse. */
+/** SQL bridge for `pnpm --filter data verify:numeric-question-sorting`; never contacts a warehouse. */
 import { Logger } from "@nestjs/common";
 import { fromPartial } from "@total-typescript/shoehorn";
 import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import { resolve } from "node:path";
 import "reflect-metadata";
 
-import type * as AdapterModule from "../../src/common/modules/databricks/databricks.adapter";
-import type { DatabricksConfigService } from "../../src/common/modules/databricks/services/config/config.service";
-import type * as BuilderModule from "../../src/common/modules/databricks/services/query-builder/query-builder.service";
-import type { SchemaData } from "../../src/common/modules/databricks/services/sql/sql.types";
-import type * as ResultModule from "../../src/common/utils/fp-utils";
-import type * as AnonymizerModule from "../../src/experiments/application/services/contributor-anonymizer.service";
-import type { ExperimentTableMetadata } from "../../src/experiments/core/models/experiment-data.model";
-import type { ExperimentDto } from "../../src/experiments/core/models/experiment.model";
-import type { CachePort } from "../../src/experiments/core/ports/cache.port";
-import type { DatabricksPort } from "../../src/experiments/core/ports/databricks.port";
-import type * as RepositoryModule from "../../src/experiments/core/repositories/experiment-data.repository";
-import type { ExperimentDataRepository as Repository } from "../../src/experiments/core/repositories/experiment-data.repository";
-
-const loadSource = createRequire(__filename);
-const source = process.env.NUMERIC_SORT_SOURCE_ROOT ?? resolve(__dirname, "../../src");
-const { DatabricksAdapter } = loadSource(
-  resolve(source, "common/modules/databricks/databricks.adapter"),
-) as typeof AdapterModule;
-const { QueryBuilderService } = loadSource(
-  resolve(source, "common/modules/databricks/services/query-builder/query-builder.service"),
-) as typeof BuilderModule;
-const { ExperimentDataRepository } = loadSource(
-  resolve(source, "experiments/core/repositories/experiment-data.repository"),
-) as typeof RepositoryModule;
-const { ContributorAnonymizerService } = loadSource(
-  resolve(source, "experiments/application/services/contributor-anonymizer.service"),
-) as typeof AnonymizerModule;
-const { success } = loadSource(resolve(source, "common/utils/fp-utils")) as typeof ResultModule;
+import { DatabricksAdapter } from "../src/common/modules/databricks/databricks.adapter";
+import type { DatabricksConfigService } from "../src/common/modules/databricks/services/config/config.service";
+import { QueryBuilderService } from "../src/common/modules/databricks/services/query-builder/query-builder.service";
+import type { SchemaData } from "../src/common/modules/databricks/services/sql/sql.types";
+import { success } from "../src/common/utils/fp-utils";
+import { ContributorAnonymizerService } from "../src/experiments/application/services/contributor-anonymizer.service";
+import type { ExperimentTableMetadata } from "../src/experiments/core/models/experiment-data.model";
+import type { ExperimentDto } from "../src/experiments/core/models/experiment.model";
+import type { CachePort } from "../src/experiments/core/ports/cache.port";
+import type { DatabricksPort } from "../src/experiments/core/ports/databricks.port";
+import { ExperimentDataRepository } from "../src/experiments/core/repositories/experiment-data.repository";
 
 interface Scenario {
   name: string;
@@ -46,7 +27,8 @@ interface Scenario {
   viewColumns: string[];
   picker?: { column: string; limit: number };
   distinctDirection?: "DESC";
-  options: Partial<Parameters<Repository["getTableData"]>[0]>;
+  lexical?: boolean;
+  options: Partial<Parameters<ExperimentDataRepository["getTableData"]>[0]>;
 }
 
 async function main() {
@@ -95,12 +77,19 @@ async function main() {
       CENTRUM_SCHEMA_NAME: "default",
       getExperimentTableMetadata: () => Promise.resolve(success([metadata])),
       getExperimentTableColumns: () => Promise.resolve(success(scenario.viewColumns)),
-      buildExperimentQuery: (params: Parameters<DatabricksPort["buildExperimentQuery"]>[0]) =>
-        adapter.buildExperimentQuery(
-          scenario.distinctDirection
-            ? { ...params, orderDirection: scenario.distinctDirection }
-            : params,
-        ),
+      buildExperimentQuery: (params: Parameters<DatabricksPort["buildExperimentQuery"]>[0]) => {
+        const ordering = params.ordering;
+        return adapter.buildExperimentQuery({
+          ...params,
+          ordering: ordering
+            ? {
+                ...ordering,
+                direction: scenario.distinctDirection ?? ordering.direction,
+                mode: scenario.lexical ? undefined : ordering.mode,
+              }
+            : undefined,
+        });
+      },
       executeSqlQuery: async (_schema: string, sql: string) => {
         const response = await fetch(`${process.env.NUMERIC_SORT_BRIDGE}/sql`, {
           method: "POST",

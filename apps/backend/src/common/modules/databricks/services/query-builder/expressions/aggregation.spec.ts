@@ -192,7 +192,7 @@ describe("wrapWithAggregation", () => {
       aggregation: {
         functions: [{ column: "value", function: "cumsum" }],
       },
-      orderBy: "ts",
+      ordering: { column: "ts" },
     });
     // No groupBy, no row aggregates: keep every base column so non-
     // aggregated series can still find their values, append the cumsum.
@@ -228,8 +228,8 @@ describe("wrapWithAggregation", () => {
         groupBy: [{ column: "device" }],
         functions: [{ column: "value", function: "avg" }],
       },
-      orderBy: "value_avg",
-      orderDirection: "DESC",
+      ordering: { column: "value_avg", direction: "DESC" },
+
       limit: 5,
       offset: 10,
     });
@@ -244,8 +244,7 @@ describe("wrapWithAggregation", () => {
         groupBy: [{ column: "contributor" }],
         functions: [{ column: "value", function: "avg" }],
       },
-      orderBy: "contributor.id",
-      orderByContributorPseudonymSalt: "exp-1",
+      ordering: { column: "contributor.id", mode: { kind: "pseudonym", salt: "exp-1" } },
     });
 
     expect(sql).toContain(

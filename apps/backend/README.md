@@ -46,3 +46,8 @@ pnpm --filter backend docker:down
 
 - [API reference](https://docs.openjii.org/api) — generated REST and MQTT documentation
 - [Architecture docs](https://docs.openjii.org/developers) — data ingestion, medallion layers, design decisions
+
+Numeric question sorting has an additional local Spark check owned by the data
+workspace. See [its setup, command and precision policy](../data/README.md#verify-numeric-question-sorting).
+The backend SQL emitter is in `scripts/verify-numeric-question-sorting.ts`; the
+verification command runs it automatically without warehouse credentials.
