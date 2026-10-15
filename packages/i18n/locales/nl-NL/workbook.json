@@ -92,7 +92,15 @@
     "timeseriesYAxis": "Genormaliseerd signaal",
     "timeseriesActinic": "Actinisch licht (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "Geen detectorwaarden om te plotten",
-    "timeseriesError": "Deze uitvoer kan niet worden gedecodeerd met het bronprotocol"
+    "timeseriesError": "Zonder een compatibel bronprotocol kan de MultispeQ-tijdas niet worden gereconstrueerd. De oorspronkelijke gegevens zijn beschikbaar in JSON.",
+    "ambitTrace": "Ambit-meetreeks",
+    "estimatedTime": "geschatte tijd",
+    "ambitProblems": {
+      "unsupported": "Deze Ambit-versie wordt niet ondersteund. De oorspronkelijke gegevens zijn beschikbaar in JSON.",
+      "invalid": "Deze reeks kan niet worden getoond: waarden, eenheden of tijdstempels ontbreken of zijn ongeldig. De oorspronkelijke gegevens zijn beschikbaar in JSON.",
+      "empty": "Geen meetwaarden om te tonen.",
+      "limit": "Sommige gegevens overschrijden de grafieklimiet. Bekijk het volledige resultaat in JSON."
+    }
   },
   "cells": {
     "command": "Opdracht",

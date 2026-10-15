@@ -82,6 +82,31 @@ Python and JavaScript examples using `json`, `ctx`, and `ctx.$device`.
 
 ![Workbook version history with the current and earlier published versions](/img/guide/web/workbook-version-history.png)
 
+## Inspect measurement outputs
+
+Open **Timeseries** on an output cell to view a supported measurement. openJII
+recognizes the data itself, so a protocol labeled **Generic** can still show a
+MultispeQ or Ambit visualization. This also applies to saved results and to each
+device in a run with several devices.
+
+MultispeQ charts use the source protocol to reconstruct the pulse sequence and
+light settings. Their horizontal axis represents modeled protocol time. A pinned
+workbook uses its saved protocol definition. If the definition is missing or the
+data cannot be decoded, the tab explains the problem instead of inventing a time
+axis.
+
+Ambit `ambit.trace/3` results supply their own timestamps or sampling intervals.
+The chart preserves those relative times and measured values, with separate
+panels for different units such as counts and temperature. Estimated timestamps
+are labeled in the legend. Multiple traces remain separate. Invalid series and
+data beyond the chart limits show an explanation; **JSON** retains the complete
+result.
+
+**Table** and **JSON** remain available for every result. An expandable numeric
+array in the table uses sample index, which is not necessarily elapsed time.
+Ordinary arrays and scalar readings do not acquire a Timeseries tab merely
+because they contain numbers.
+
 ## Edit and publish changes
 
 The workbook's owner, anyone with **Can edit** on the workbook, and owners and

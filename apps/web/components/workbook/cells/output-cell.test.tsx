@@ -1,4 +1,4 @@
-import { createOutputCell, createProtocolCell } from "@/test/factories";
+import { createAmbitTrace, createOutputCell, createProtocolCell } from "@/test/factories";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { formatJson } from "~/lib/json-format";
@@ -34,6 +34,7 @@ vi.mock("@/components/charts/line-chart", async (importOriginal) => {
 interface MockPlotlyTrace {
   name?: string;
   y?: number[];
+  x?: number[];
 }
 
 vi.mock("@/components/charts/plotly-chart", async (importOriginal) => {
@@ -41,12 +42,14 @@ vi.mock("@/components/charts/plotly-chart", async (importOriginal) => {
   const { createElement } = await import("react");
   return {
     ...actual,
-    PlotlyChart: ({ data }: { data: MockPlotlyTrace[] }) =>
+    PlotlyChart: ({ data, layout }: { data: MockPlotlyTrace[]; layout?: unknown }) =>
       createElement(
         "div",
         {
           "data-testid": "plotly-chart",
           "data-series": JSON.stringify(data.map((s) => s.name ?? "")),
+          "data-traces": JSON.stringify(data),
+          "data-layout": JSON.stringify(layout),
         },
         data.map((s) =>
           createElement(
@@ -565,29 +568,36 @@ describe("OutputCellComponent", () => {
       };
     }
 
-    it("does not show the Timeseries tab when there is no source protocol cell", () => {
+    it("offers a diagnostic when raw measurement data has no source protocol", async () => {
       const cell = createOutputCell({ data: multispeqOutput() });
       render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
-      expect(screen.queryByRole("tab", { name: "output.tabTimeseries" })).not.toBeInTheDocument();
+      await userEvent.setup().click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      expect(screen.getByText("output.timeseriesError")).toBeInTheDocument();
     });
 
-    it("does not show the Timeseries tab when the source protocol family is not multispeq", () => {
-      const proto = createProtocolCell();
-      const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
-      useProtocolMock.mockReturnValue({
-        data: { family: "ambyte", code: multispeqProtocolCode() },
-        isLoading: false,
-      });
-      render(
-        <OutputCellComponent
-          cell={cell}
-          onUpdate={onUpdate}
-          onDelete={onDelete}
-          producer={proto}
-        />,
-      );
-      expect(screen.queryByRole("tab", { name: "output.tabTimeseries" })).not.toBeInTheDocument();
-    });
+    it.each(["generic", "ambit", "ambyte", undefined])(
+      "detects MultispeQ data despite family %s",
+      async (family) => {
+        const proto = createProtocolCell();
+        const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
+        useProtocolMock.mockReturnValue({
+          data: { family, code: multispeqProtocolCode() },
+          isLoading: false,
+        });
+        render(
+          <OutputCellComponent
+            cell={cell}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+            producer={proto}
+          />,
+        );
+        await userEvent.setup().click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+        expect(screen.getByTestId("series-ABS · 530 nm (green, body) [10-30]")).toHaveTextContent(
+          "0,0.5,1",
+        );
+      },
+    );
 
     it("does not show the Timeseries tab when output data is not a multispeq payload", () => {
       const proto = createProtocolCell();
@@ -638,12 +648,117 @@ describe("OutputCellComponent", () => {
       );
     });
 
+    it("uses a pinned protocol snapshot instead of the live protocol", async () => {
+      const producer = createProtocolCell();
+      useProtocolMock.mockReturnValue({ data: { code: [] }, isLoading: true });
+      render(
+        <OutputCellComponent
+          cell={createOutputCell({ data: multispeqOutput() })}
+          producer={producer}
+          protocolSnapshot={{ code: multispeqProtocolCode() }}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+        />,
+      );
+      expect(useProtocolMock).toHaveBeenCalledWith(producer.payload.protocolId, false);
+      await userEvent.setup().click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
+    });
+
+    it("does not fetch a live fallback when a pinned protocol is missing", async () => {
+      const producer = createProtocolCell();
+      useProtocolMock.mockReturnValue({
+        data: { code: multispeqProtocolCode() },
+        isLoading: false,
+      });
+      render(
+        <OutputCellComponent
+          cell={createOutputCell({ data: multispeqOutput() })}
+          producer={producer}
+          protocolSnapshot={null}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+        />,
+      );
+      await userEvent.setup().click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      expect(screen.getByText("output.timeseriesError")).toBeInTheDocument();
+      expect(screen.queryByTestId("plotly-chart")).not.toBeInTheDocument();
+    });
+
+    it("plots Ambit values on separate unit axes without a protocol or family", async () => {
+      render(
+        <OutputCellComponent
+          cell={createOutputCell({ data: createAmbitTrace() })}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+        />,
+      );
+      await userEvent.setup().click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      const charts = screen.getAllByTestId("plotly-chart");
+      expect(charts).toHaveLength(2);
+      expect(charts[0]).toHaveAttribute("data-traces", expect.stringContaining('"x":[0,0.1,0.2]'));
+      expect(charts[0]).toHaveAttribute("data-layout", expect.stringContaining('"text":"count"'));
+      expect(charts[0]).toHaveAttribute(
+        "data-layout",
+        expect.stringContaining('"showlegend":true'),
+      );
+      expect(screen.getByTestId("series-fluo_630_signal")).toHaveTextContent("120,160,140");
+      expect(charts[1]).toHaveAttribute("data-layout", expect.stringContaining('"text":"°C"'));
+      expect(screen.getByTestId("series-leaf_temp")).toHaveTextContent("23.5,23.7");
+    });
+
+    it("keeps invalid Ambit series readable in JSON and explains why they cannot be plotted", async () => {
+      const data = createAmbitTrace({ series: { bad: { u: "count", v: [1, 2], t: [0] } } });
+      render(
+        <OutputCellComponent
+          cell={createOutputCell({ data })}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+        />,
+      );
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      expect(screen.getByText("output.ambitProblems.invalid")).toBeInTheDocument();
+      expect(screen.queryByTestId("plotly-chart")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("tab", { name: "output.tabJson" }));
+      expect(document.querySelector("pre")?.textContent).toContain('"ambit.trace/3"');
+    });
+
+    it("detects each device result independently even when primary data is absent", async () => {
+      render(
+        <OutputCellComponent
+          cell={createOutputCell({
+            data: null,
+            deviceResults: [
+              {
+                deviceId: "one",
+                deviceLabel: "Ambit one",
+                family: "generic",
+                data: createAmbitTrace(),
+              },
+              { deviceId: "two", deviceLabel: "Scalar", family: "multispeq", data: { par: 12 } },
+              {
+                deviceId: "three",
+                deviceLabel: "Ambit two",
+                data: { sample: [{ set: [createAmbitTrace()] }] },
+              },
+            ],
+          })}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+        />,
+      );
+      const tabs = screen.getAllByRole("tab", { name: "output.tabTimeseries" });
+      expect(tabs).toHaveLength(2);
+      await userEvent.setup().click(tabs[1]);
+      expect(screen.getAllByTestId("plotly-chart")).toHaveLength(2);
+    });
+
     it("shows a loading placeholder while the source protocol is being fetched", async () => {
       const user = userEvent.setup();
       const proto = createProtocolCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
-      // Family is multispeq so the tab shows; `isLoading: true` triggers the
-      // loading branch in OutputCellTimeseries.
+      // Raw data identifies the visualization before the protocol has loaded.
       useProtocolMock.mockReturnValue({
         data: { family: "multispeq", code: undefined },
         isLoading: true,
@@ -664,9 +779,7 @@ describe("OutputCellComponent", () => {
       const user = userEvent.setup();
       const proto = createProtocolCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
-      // Family is multispeq, isLoading is false, but no protocol code is
-      // available, so measurementToTimeseries can't decode. Falls into the
-      // error branch.
+      // Recognized raw data still needs a source protocol to reconstruct time.
       useProtocolMock.mockReturnValue({
         data: { family: "multispeq", code: undefined },
         isLoading: false,

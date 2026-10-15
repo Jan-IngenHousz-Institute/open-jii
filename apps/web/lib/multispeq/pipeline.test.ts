@@ -787,3 +787,79 @@ describe("isMultispeqOutput", () => {
     ).toBe(true);
   });
 });
+describe("repeated labels within a set repeat", () => {
+  it("advances past empty setup records before matching a measurement", () => {
+    const decoded = measurementToTimeseries(
+      {
+        sample_raw: [
+          {
+            set: [
+              { label: "ABS", data_raw: [] },
+              { label: "ABS", data_raw: [10, 20] },
+              { label: "ABS", data_raw: [] },
+              { label: "ABS", data_raw: [30, 40] },
+            ],
+          },
+        ],
+      },
+      {
+        _protocol_set_: [
+          { label: "ABS", protocols_delay: 1 },
+          {
+            label: "ABS",
+            pulses: [2],
+            pulse_distance: [1000],
+            detectors: [[1]],
+            pulsed_lights: [[1]],
+          },
+        ],
+      },
+    );
+    expect(decoded.outputs.map((r) => r.value)).toEqual([10, 20, 30, 40]);
+    expect(decoded.outputs.map((r) => r.sub_protocol)).toEqual([
+      "ABS #0",
+      "ABS #0",
+      "ABS #1",
+      "ABS #1",
+    ]);
+    expect(decoded.outputs[0]?.timestamp_us).toBe(1000);
+    expect(decoded.totalDurationUs).toBe(1_004_000);
+  });
+
+  it("uses each definition in order without advancing the outer light state early", () => {
+    const entry = {
+      label: "PIRK_ECS",
+      pulse_distance: [1000],
+      detectors: [[3]],
+      pulsed_lights: [[1]],
+      nonpulsed_lights: [[2]],
+      nonpulsed_lights_brightness: [["@s0"]],
+    };
+    const protocol = {
+      v_arrays: [["p_light", 2500]],
+      _protocol_set_: [
+        { ...entry, pulses: [2] },
+        { ...entry, pulses: [3] },
+      ],
+    };
+    const decoded = measurementToTimeseries(
+      {
+        sample_raw: [
+          {
+            set: [
+              { label: "PIRK_ECS", data_raw: [1, 2], pi: [2, 30, 100] },
+              { label: "PIRK_ECS", data_raw: [3, 4, 5], pi: [2, 30, 100] },
+              { label: "PIRK_ECS", data_raw: [6, 7], pi: [2, 2500, 100] },
+              { label: "PIRK_ECS", data_raw: [8, 9, 10], pi: [2, 2500, 100] },
+            ],
+          },
+        ],
+      },
+      protocol,
+    );
+    expect(decoded.outputs.map((r) => r.value)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(
+      decoded.inputs.filter((r) => r.light_type === "actinic").map((r) => r.brightness),
+    ).toEqual([30, 30, 2500, 2500]);
+  });
+});

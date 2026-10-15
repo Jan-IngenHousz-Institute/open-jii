@@ -92,7 +92,15 @@
     "timeseriesYAxis": "Normalisiertes Signal",
     "timeseriesActinic": "Aktinisches Licht (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "Keine Detektor-Messwerte zum Plotten",
-    "timeseriesError": "Diese Ausgabe kann nicht mit dem Quellprotokoll dekodiert werden"
+    "timeseriesError": "Ohne kompatibles Quellprotokoll kann die MultispeQ-Zeitachse nicht rekonstruiert werden. Die Originaldaten sind unter JSON verfügbar.",
+    "ambitTrace": "Ambit-Messreihe",
+    "estimatedTime": "geschätzte Zeit",
+    "ambitProblems": {
+      "unsupported": "Diese Ambit-Version wird nicht unterstützt. Die Originaldaten sind unter JSON verfügbar.",
+      "invalid": "Diese Reihe kann nicht dargestellt werden: Werte, Einheiten oder Zeitstempel fehlen oder sind ungültig. Die Originaldaten sind unter JSON verfügbar.",
+      "empty": "Keine Messwerte zum Darstellen.",
+      "limit": "Einige Daten überschreiten das Diagrammlimit. Das vollständige Ergebnis ist unter JSON verfügbar."
+    }
   },
   "cells": {
     "command": "Befehl",

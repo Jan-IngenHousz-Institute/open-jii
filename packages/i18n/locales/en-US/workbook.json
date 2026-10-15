@@ -97,7 +97,15 @@
     "timeseriesYAxis": "Normalized signal",
     "timeseriesActinic": "Actinic light (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "No detector readings to plot",
-    "timeseriesError": "Cannot decode this output against the source protocol"
+    "timeseriesError": "Cannot reconstruct MultispeQ timing without a compatible source protocol. The original data is available in JSON.",
+    "ambitTrace": "Ambit trace",
+    "estimatedTime": "estimated time",
+    "ambitProblems": {
+      "unsupported": "This Ambit trace version is not supported. The original data is available in JSON.",
+      "invalid": "Cannot plot this series: values, units, or timestamps are missing or invalid. The original data is available in JSON.",
+      "empty": "No readings to plot.",
+      "limit": "Some data exceeds the chart limit. View the complete result in JSON."
+    }
   },
   "cells": {
     "command": "Command",

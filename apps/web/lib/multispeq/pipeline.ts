@@ -501,8 +501,13 @@ export function measurementToTimeseries(
   protocolJson: ProtocolJson,
 ): MeasurementTimeseries {
   const pset = protocolJson._protocol_set_ ?? [];
-  const setByLabel = new Map<string, ProtocolSetEntry>();
-  for (const ps of pset) if (ps.label) setByLabel.set(ps.label, ps);
+  const setByLabel = new Map<string, ProtocolSetEntry[]>();
+  for (const ps of pset) {
+    if (!ps.label) continue;
+    const definitions = setByLabel.get(ps.label) ?? [];
+    definitions.push(ps);
+    setByLabel.set(ps.label, definitions);
+  }
 
   const allRecords = explodeRecords(measurement);
 
@@ -520,25 +525,30 @@ export function measurementToTimeseries(
   const allOutputs: OutputRecord[] = [];
   let tOffset = 0;
   const labelSeen = new Map<string, number>();
+  const plottedLabelSeen = new Map<string, number>();
   let ambientPi: unknown[] | null = null;
 
   for (const row of allRecords) {
-    const psDef = setByLabel.get(row.label);
+    const definitions = setByLabel.get(row.label);
+    const occurrence = labelSeen.get(row.label) ?? 0;
+    const psDef = definitions?.[occurrence % definitions.length];
 
     if (psDef) {
+      labelSeen.set(row.label, occurrence + 1);
       const delayS = psDef.protocols_delay;
       if (isFiniteNumber(delayS) && delayS > 0) tOffset += Math.trunc(delayS * 1_000_000);
     }
 
     if (row.data_raw_len === 0 || !psDef) continue;
 
-    const occurrence = labelSeen.get(row.label) ?? 0;
-    labelSeen.set(row.label, occurrence + 1);
-    const label = repeatedLabels.has(row.label) ? `${row.label} #${occurrence}` : row.label;
+    const plottedOccurrence = plottedLabelSeen.get(row.label) ?? 0;
+    plottedLabelSeen.set(row.label, plottedOccurrence + 1);
+    const label = repeatedLabels.has(row.label) ? `${row.label} #${plottedOccurrence}` : row.label;
 
-    // `@sX` resolves to v_arrays[X][occurrence], so each set repeat picks its
-    // own value (e.g. f_transient runs 20 pulses on repeat 0, 100 on repeat 1).
-    const variables = resolveVariables(protocolJson, occurrence);
+    // A label can occur more than once within a single set repeat. Those
+    // definitions share the outer repeat's @sX values (e.g. Donghee's two ECS runs).
+    const setRepeat = Math.floor(occurrence / definitions.length);
+    const variables = resolveVariables(protocolJson, setRepeat);
 
     let pi: unknown[] | null = null;
     if (row.pi_json) {

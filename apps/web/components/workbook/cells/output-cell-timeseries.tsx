@@ -2,7 +2,8 @@
 
 import { PlotlyChart } from "@/components/charts/plotly-chart";
 import { InsetPanel } from "@/components/shared/inset-panel";
-import { extractMeasurement } from "@/lib/multispeq/detect";
+import { findAmbitTraces } from "@/lib/ambit/timeseries";
+import { isMultispeqOutput, extractMeasurement } from "@/lib/multispeq/detect";
 import type { InputRecord, OutputRecord, ProtocolJson } from "@/lib/multispeq/pipeline";
 import { LED_COLORS, LED_NAMES, measurementToTimeseries } from "@/lib/multispeq/pipeline";
 import { useMemo } from "react";
@@ -15,6 +16,8 @@ import { Card } from "@repo/ui/components/card";
 // into web's package.json just to type a layout object.
 import type { Layout, PlotData, Shape } from "@repo/ui/components/charts/types";
 import { readThemeColor } from "@repo/ui/components/charts/utils";
+
+import { OutputCellAmbitTimeseries } from "./output-cell-ambit-timeseries";
 
 interface OutputCellTimeseriesProps {
   data: unknown;
@@ -272,7 +275,7 @@ function maxBrightness(inputs: InputRecord[]): number {
   return max;
 }
 
-export function OutputCellTimeseries({
+function MultispeqTimeseries({
   data,
   protocolCode,
   loading,
@@ -410,5 +413,16 @@ export function OutputCellTimeseries({
         }}
       />
     </Card>
+  );
+}
+
+export function OutputCellTimeseries(props: OutputCellTimeseriesProps) {
+  const hasMultispeq = isMultispeqOutput(props.data);
+  const hasAmbit = findAmbitTraces(props.data).length > 0;
+  return (
+    <div className="space-y-4">
+      {hasMultispeq && <MultispeqTimeseries {...props} />}
+      {hasAmbit && <OutputCellAmbitTimeseries data={props.data} />}
+    </div>
   );
 }
