@@ -620,7 +620,6 @@ describe("DatabricksAdapter", () => {
         experimentId: "exp-123",
         columns: ["id", "timestamp"],
         ordering: { column: "timestamp", direction: "DESC" },
-
         limit: 100,
         offset: 50,
       });

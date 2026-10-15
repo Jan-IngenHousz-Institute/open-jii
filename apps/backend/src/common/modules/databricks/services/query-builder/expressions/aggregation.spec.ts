@@ -188,7 +188,6 @@ describe("wrapWithAggregation", () => {
         functions: [{ column: "value", function: "avg" }],
       },
       ordering: { column: "value_avg", direction: "DESC" },
-
       limit: 5,
       offset: 10,
     });
