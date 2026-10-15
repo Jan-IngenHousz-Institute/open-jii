@@ -57,7 +57,9 @@ The team runs **no cycles and no estimation**. Do not set estimates or look for 
   relations before any state change, because a sub-issue may be someone else's work.
 - **Everything in `OJD` mirrors to public GitHub**, comments included. A ticket describes the fix.
   What is weak today goes in a project document. Examples stay generic for the same reason.
-- **Agents never query production.** Test data for QA comes from the person, who can reach it.
+- **Agents read production only when the person asks, and never write to it.** Production changes
+  go through a PR, `main`, dev and a release; `docs/agents/environments.md` has the access recipes.
+  Test data for QA comes from the person, who can reach it.
 
 ## When a skill says "publish to the issue tracker"
 

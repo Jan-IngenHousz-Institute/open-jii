@@ -59,6 +59,18 @@ Local development commands that need a credential (a dev session, Linear access)
 
 5. Open a pull request against `main`. Describe the problem and the solution, and follow the release metadata contract below. CI must pass before review.
 
+## Review standards
+
+Lint, types and tests catch the mechanical mistakes. These are the judgement calls a reviewer checks:
+
+- A fix lives in the narrowest layer that owns the problem. When a bug fix spreads across many files, the reviewer asks for the smaller option first.
+- Extend an existing endpoint, hook or component before adding a parallel one.
+- Class names compose with `cn()` and variants with `cva`, not template strings.
+- App and pipeline code does not branch on dev versus prod. Environment differences live in configuration.
+- An effect does not copy props into state or force a refresh; derive the value instead. The React lint rules warn about the common shapes.
+- Postgres sets `updatedAt` through the `timestamps` helper in `packages/database/src/schema.ts`, so app code never passes it.
+- A new datastore, cloud service, dependency family or large vendored drop is agreed with the team before it lands.
+
 ## Pull request and release metadata
 
 GitHub squash merges use the pull request title as the commit subject on `main`. That subject drives semantic-release versioning, so every human-authored PR must use this format:

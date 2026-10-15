@@ -57,8 +57,8 @@ A Linear session stays a Linear session. Do not offer a code branch or a skill e
   changes the meaning of theirs.
 - **After a write, validate and fix.** Check the design against the code, change Linear where it is
   wrong rather than only reporting it, read back what was written, and report what was verified.
-- **Never set a priority and never query production.** The TPM sets priority. Test data comes from
-  the person.
+- **Never set a priority, and read production only when the person asks.** The TPM sets priority.
+  Test data comes from the person.
 
 ## Access
 
