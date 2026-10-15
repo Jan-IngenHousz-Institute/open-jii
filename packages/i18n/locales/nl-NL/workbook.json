@@ -88,6 +88,7 @@
     "closeChart": "Diagram sluiten",
     "expandChart": "Diagram voor {{column}} openen",
     "loadingProtocol": "Protocol laden…",
+    "multispeqTimeseriesXAxis": "Gemodelleerde protocoltijd (s)",
     "timeseriesXAxis": "Tijd (s)",
     "timeseriesYAxis": "Genormaliseerd signaal",
     "timeseriesActinic": "Actinisch licht (µmol m⁻² s⁻¹)",

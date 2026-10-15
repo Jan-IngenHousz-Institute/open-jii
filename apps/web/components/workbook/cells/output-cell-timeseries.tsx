@@ -2,8 +2,7 @@
 
 import { PlotlyChart } from "@/components/charts/plotly-chart";
 import { InsetPanel } from "@/components/shared/inset-panel";
-import { findAmbitTraces } from "@/lib/ambit/timeseries";
-import { isMultispeqOutput, extractMeasurement } from "@/lib/multispeq/detect";
+import { extractMeasurement } from "@/lib/multispeq/detect";
 import type { InputRecord, OutputRecord, ProtocolJson } from "@/lib/multispeq/pipeline";
 import { LED_COLORS, LED_NAMES, measurementToTimeseries } from "@/lib/multispeq/pipeline";
 import { useMemo } from "react";
@@ -351,7 +350,7 @@ function MultispeqTimeseries({
     // legend height vs y-axis height.
     margin: { l: 60, r: 70, t: 30, b: 220 },
     xaxis: {
-      title: { text: t("output.timeseriesXAxis"), font: { size: 12 } },
+      title: { text: t("output.multispeqTimeseriesXAxis"), font: { size: 12 } },
       gridcolor: themeColor("--border"),
       zeroline: false,
       automargin: false,
@@ -416,13 +415,16 @@ function MultispeqTimeseries({
   );
 }
 
-export function OutputCellTimeseries(props: OutputCellTimeseriesProps) {
-  const hasMultispeq = isMultispeqOutput(props.data);
-  const hasAmbit = findAmbitTraces(props.data).length > 0;
+export function OutputCellTimeseries(
+  props: OutputCellTimeseriesProps & {
+    hasMultispeq: boolean;
+    ambitTraces: Record<string, unknown>[];
+  },
+) {
   return (
     <div className="space-y-4">
-      {hasMultispeq && <MultispeqTimeseries {...props} />}
-      {hasAmbit && <OutputCellAmbitTimeseries data={props.data} />}
+      {props.hasMultispeq && <MultispeqTimeseries {...props} />}
+      {props.ambitTraces.length > 0 && <OutputCellAmbitTimeseries data={props.ambitTraces} />}
     </div>
   );
 }

@@ -1,4 +1,9 @@
-import { createAmbitTrace, createOutputCell, createProtocolCell } from "@/test/factories";
+import {
+  createAmbitTrace,
+  createCommandCell,
+  createOutputCell,
+  createProtocolCell,
+} from "@/test/factories";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { formatJson } from "~/lib/json-format";
@@ -645,6 +650,67 @@ describe("OutputCellComponent", () => {
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
       expect(screen.getByTestId("series-ABS · 530 nm (green, body) [10-30]")).toHaveTextContent(
         "0,0.5,1",
+      );
+    });
+
+    it.each(["json", "yaml"] as const)(
+      "decodes a saved %s command without fetching a protocol",
+      async (format) => {
+        const producer = createCommandCell({
+          payload: { format, content: JSON.stringify(multispeqProtocolCode()) },
+        });
+        useProtocolMock.mockReturnValue({ isLoading: true });
+        render(
+          <OutputCellComponent
+            cell={createOutputCell({ data: multispeqOutput(), producedBy: producer.id })}
+            producer={producer}
+            readOnly
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+          />,
+        );
+        await userEvent.setup().click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+        expect(useProtocolMock).toHaveBeenCalledWith("", false);
+        expect(screen.getByTestId("series-ABS · 530 nm (green, body) [10-30]")).toHaveTextContent(
+          "0,0.5,1",
+        );
+        expect(screen.getByTestId("plotly-chart").getAttribute("data-layout")).toContain(
+          "output.multispeqTimeseriesXAxis",
+        );
+      },
+    );
+
+    it("keeps malformed inline commands readable with a timing diagnostic", async () => {
+      render(
+        <OutputCellComponent
+          cell={createOutputCell({ data: multispeqOutput() })}
+          producer={createCommandCell({ payload: { format: "json", content: "{" } })}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+        />,
+      );
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      expect(screen.getByText("output.timeseriesError")).toBeInTheDocument();
+      await user.click(screen.getByRole("tab", { name: "output.tabJson" }));
+      expect(document.querySelector("pre")?.textContent).toContain("data_raw");
+    });
+
+    it("renders both supported instruments in a mixed payload", async () => {
+      render(
+        <OutputCellComponent
+          cell={createOutputCell({ data: { ...multispeqOutput(), data: createAmbitTrace() } })}
+          producer={createCommandCell({
+            payload: { format: "json", content: JSON.stringify(multispeqProtocolCode()) },
+          })}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+        />,
+      );
+      await userEvent.setup().click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      expect(screen.getByTestId("series-ABS · 530 nm (green, body) [10-30]")).toBeInTheDocument();
+      expect(screen.getByTestId("series-output.ambitChannels.fluo_630_signal")).toHaveTextContent(
+        "120,160,140",
       );
     });
 

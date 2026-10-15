@@ -93,6 +93,7 @@
     "closeChart": "Close chart",
     "expandChart": "Expand chart for {{column}}",
     "loadingProtocol": "Loading protocol…",
+    "multispeqTimeseriesXAxis": "Modeled protocol time (s)",
     "timeseriesXAxis": "Time (s)",
     "timeseriesYAxis": "Normalized signal",
     "timeseriesActinic": "Actinic light (µmol m⁻² s⁻¹)",

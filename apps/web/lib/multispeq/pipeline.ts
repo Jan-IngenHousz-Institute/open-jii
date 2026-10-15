@@ -9,7 +9,7 @@
  * `@repo/iot` (`resolveProtocolVariables`), a single origin shared with the
  * mobile protocol estimator.
  */
-import { resolveProtocolVariables } from "@repo/iot";
+import { resolveNumericRef, resolveProtocolVariables } from "@repo/iot";
 
 export const LED_NAMES: Record<number, string> = {
   1: "530 nm (green, body)",
@@ -40,6 +40,10 @@ export const LED_COLORS: Record<number, string> = {
 
 export interface ProtocolSetEntry {
   label?: string;
+  do_once?: number;
+  do_when?: number[];
+  protocol_repeats?: number | string;
+  protocols?: number | string;
   pulses?: unknown[];
   pulse_distance?: unknown[];
   detectors?: unknown[];
@@ -53,6 +57,7 @@ export interface ProtocolSetEntry {
 }
 
 export interface ProtocolJson {
+  set_repeats?: number | string;
   _protocol_set_?: ProtocolSetEntry[];
   v_arrays?: unknown[][];
 }
@@ -496,6 +501,48 @@ export interface MeasurementTimeseries {
   totalDurationUs: number;
 }
 
+function scheduledRepeats(entry: ProtocolSetEntry, repeats: number): number[] | null {
+  if (entry.do_when) return entry.do_when.map((repeat) => repeat - 1);
+  if (!entry.do_once) return null;
+  return [entry.do_once > 0 ? entry.do_once - 1 : repeats + entry.do_once];
+}
+
+function protocolRepeatCount(entry: ProtocolSetEntry, protocol: ProtocolJson, repeat: number) {
+  const ref = entry.protocol_repeats ?? entry.protocols;
+  const count =
+    resolveInt(ref, resolveVariables(protocol, repeat)) ??
+    resolveNumericRef(ref, protocol.v_arrays ?? []);
+  return count != null && Number.isSafeInteger(count) && count > 0 ? count : 1;
+}
+
+function* protocolOccurrences(
+  definitions: ProtocolSetEntry[],
+  repeats: number,
+  protocol: ProtocolJson,
+) {
+  const scheduled = definitions.map((definition) => ({
+    definition,
+    repeats: scheduledRepeats(definition, repeats),
+  }));
+  const recurring = scheduled.some((entry) => entry.repeats === null);
+  const selectedRepeats = recurring
+    ? []
+    : [...new Set(scheduled.flatMap((entry) => entry.repeats ?? []))]
+        .filter((repeat) => Number.isInteger(repeat) && repeat >= 0 && repeat < repeats)
+        .sort((a, b) => a - b);
+  const count = recurring ? repeats : selectedRepeats.length;
+  for (let i = 0; i < count; i++) {
+    const repeat = recurring ? i : selectedRepeats[i];
+    for (const entry of scheduled) {
+      if (entry.repeats !== null && !entry.repeats.includes(repeat)) continue;
+      const innerRepeats = protocolRepeatCount(entry.definition, protocol, repeat);
+      for (let inner = 0; inner < innerRepeats; inner++) {
+        yield { definition: entry.definition, repeat };
+      }
+    }
+  }
+}
+
 export function measurementToTimeseries(
   measurement: MeasurementInput,
   protocolJson: ProtocolJson,
@@ -510,6 +557,37 @@ export function measurementToTimeseries(
   }
 
   const allRecords = explodeRecords(measurement);
+  const recordCounts = new Map<string, number>();
+  for (const row of allRecords) {
+    recordCounts.set(row.label, (recordCounts.get(row.label) ?? 0) + 1);
+  }
+  let inferredRepeats = 1;
+  for (const [label, definitions] of setByLabel) {
+    let once = 0;
+    let recurring = 0;
+    for (const entry of definitions) {
+      const count = protocolRepeatCount(entry, protocolJson, 0);
+      if (entry.do_once || entry.do_when) once += count;
+      else recurring += count;
+    }
+    if (recurring > 0) {
+      inferredRepeats = Math.max(
+        inferredRepeats,
+        Math.ceil(((recordCounts.get(label) ?? 0) - once) / recurring),
+      );
+    }
+  }
+  const declaredRepeats = resolveNumericRef(protocolJson.set_repeats, protocolJson.v_arrays ?? []);
+  const repeats =
+    declaredRepeats != null && Number.isSafeInteger(declaredRepeats) && declaredRepeats > 0
+      ? declaredRepeats
+      : inferredRepeats;
+  const occurrences = new Map(
+    Array.from(setByLabel, ([label, definitions]) => [
+      label,
+      protocolOccurrences(definitions, repeats, protocolJson),
+    ]),
+  );
 
   // Disambiguate repeated labels with " #N" suffixes.
   const labelCounts = new Map<string, number>();
@@ -524,17 +602,14 @@ export function measurementToTimeseries(
   const allInputs: InputRecord[] = [];
   const allOutputs: OutputRecord[] = [];
   let tOffset = 0;
-  const labelSeen = new Map<string, number>();
   const plottedLabelSeen = new Map<string, number>();
   let ambientPi: unknown[] | null = null;
 
   for (const row of allRecords) {
-    const definitions = setByLabel.get(row.label);
-    const occurrence = labelSeen.get(row.label) ?? 0;
-    const psDef = definitions?.[occurrence % definitions.length];
+    const occurrence = occurrences.get(row.label)?.next().value;
+    const psDef = occurrence?.definition;
 
     if (psDef) {
-      labelSeen.set(row.label, occurrence + 1);
       const delayS = psDef.protocols_delay;
       if (isFiniteNumber(delayS) && delayS > 0) tOffset += Math.trunc(delayS * 1_000_000);
     }
@@ -545,10 +620,7 @@ export function measurementToTimeseries(
     plottedLabelSeen.set(row.label, plottedOccurrence + 1);
     const label = repeatedLabels.has(row.label) ? `${row.label} #${plottedOccurrence}` : row.label;
 
-    // A label can occur more than once within a single set repeat. Those
-    // definitions share the outer repeat's @sX values (e.g. Donghee's two ECS runs).
-    const setRepeat = Math.floor(occurrence / definitions.length);
-    const variables = resolveVariables(protocolJson, setRepeat);
+    const variables = resolveVariables(protocolJson, occurrence.repeat);
 
     let pi: unknown[] | null = null;
     if (row.pi_json) {

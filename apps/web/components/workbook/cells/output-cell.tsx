@@ -26,6 +26,7 @@ import type {
   OutputDeviceResult,
   WorkbookCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { resolveInlineCommand } from "@repo/api/transforms/command-payload";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card } from "@repo/ui/components/card";
@@ -118,10 +119,9 @@ function DataTabs({
   // Measurement payloads are mostly long sample arrays, so the layout matters
   // here as much as it does for protocol code. Copy takes what is on screen.
   const jsonText = useMemo(() => formatJson(data, { style }), [data, style]);
-  const showTimeseries = useMemo(
-    () => isMultispeqOutput(data) || findAmbitTraces(data).length > 0,
-    [data],
-  );
+  const hasMultispeq = useMemo(() => isMultispeqOutput(data), [data]);
+  const ambitTraces = useMemo(() => findAmbitTraces(data), [data]);
+  const showTimeseries = hasMultispeq || ambitTraces.length > 0;
   return (
     <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
       <TabsList className="border-border bg-muted h-8 rounded-lg border p-0.5">
@@ -153,6 +153,8 @@ function DataTabs({
         <TabsContent value="timeseries" className="mt-2">
           <OutputCellTimeseries
             data={data}
+            hasMultispeq={hasMultispeq}
+            ambitTraces={ambitTraces}
             protocolCode={protocolCode}
             loading={protocolLoading}
             emptyLabel={t("output.timeseriesEmpty")}
@@ -335,9 +337,21 @@ export function OutputCellComponent({
     sourceProtocolId ?? "",
     !!sourceProtocolId && protocolSnapshot === undefined,
   );
+  const inlineProtocol = useMemo(() => {
+    if (producer?.type !== "command") return undefined;
+    try {
+      return resolveInlineCommand(producer.payload);
+    } catch {
+      return undefined;
+    }
+  }, [producer]);
   const protocolCode =
-    protocolSnapshot !== undefined ? protocolSnapshot?.code : protocolResponse?.code;
-  const loadingProtocol = protocolSnapshot === undefined && protocolLoading;
+    producer?.type === "command"
+      ? inlineProtocol
+      : protocolSnapshot !== undefined
+        ? protocolSnapshot?.code
+        : protocolResponse?.code;
+  const loadingProtocol = !!sourceProtocolId && protocolSnapshot === undefined && protocolLoading;
 
   return (
     <Card padding="none" className="group/output relative mt-1 overflow-hidden">

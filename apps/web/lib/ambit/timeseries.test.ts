@@ -99,6 +99,13 @@ describe("Ambit time series", () => {
     expect(trace.series[0]).toMatchObject({ time: [0, 0.02, 0.025], estimatedTime: true });
   });
 
+  it("reports the trace limit while keeping every point in accepted traces", () => {
+    const results = decodeAmbitTraces(Array.from({ length: 33 }, () => createAmbitTrace()));
+    expect(results).toHaveLength(32);
+    expect(results[31].problems).toContainEqual({ reason: "limit" });
+    expect(results.every((trace) => trace.series[0].values.length === 3)).toBe(true);
+  });
+
   it("reports empty traces and bounds large series without silently truncating them", () => {
     expect(decodeAmbitTraces(createAmbitTrace({ series: {} }))[0].problems).toEqual([
       { reason: "empty" },

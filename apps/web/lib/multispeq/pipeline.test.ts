@@ -863,3 +863,149 @@ describe("repeated labels within a set repeat", () => {
     ).toEqual([30, 30, 2500, 2500]);
   });
 });
+
+describe("set repeat scheduling", () => {
+  const entry = {
+    label: "ECS",
+    pulses: [3],
+    pulse_distance: [1000],
+    detectors: [[1]],
+    pulsed_lights: [[1]],
+    nonpulsed_lights: [[2]],
+    nonpulsed_lights_brightness: [["@s0"]],
+  };
+
+  it("skips a first-only duplicate definition without dropping later readings", () => {
+    const decoded = measurementToTimeseries(
+      {
+        sample_raw: [
+          {
+            set: [
+              { label: "ECS", data_raw: [1, 2] },
+              { label: "ECS", data_raw: [3, 4, 5] },
+              { label: "ECS", data_raw: [6, 7, 8] },
+            ],
+          },
+        ],
+      },
+      {
+        set_repeats: 2,
+        v_arrays: [[30, 2500]],
+        _protocol_set_: [{ ...entry, do_once: 1, pulses: [2] }, entry],
+      },
+    );
+    expect(decoded.outputs.map((r) => r.value)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(
+      decoded.inputs.filter((r) => r.light_type === "actinic").map((r) => r.brightness),
+    ).toEqual([30, 30, 2500]);
+  });
+
+  it("runs last-only duplicates with the final repeat's variables", () => {
+    const decoded = measurementToTimeseries(
+      {
+        sample_raw: [
+          {
+            set: [
+              { label: "ECS", data_raw: [1, 2, 3] },
+              { label: "ECS", data_raw: [4, 5] },
+              { label: "ECS", data_raw: [6, 7, 8] },
+              { label: "FINAL", data_raw: [9, 10, 11] },
+            ],
+          },
+        ],
+      },
+      {
+        set_repeats: "#l0",
+        v_arrays: [[30, 2500]],
+        _protocol_set_: [
+          { ...entry, do_once: -1, pulses: [2] },
+          entry,
+          { ...entry, label: "FINAL", do_once: -1 },
+        ],
+      },
+    );
+    expect(decoded.outputs.map((r) => r.value)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    expect(
+      decoded.inputs.filter((r) => r.light_type === "actinic").map((r) => r.brightness),
+    ).toEqual([30, 2500, 2500, 2500]);
+  });
+
+  it("keeps inner protocol repetitions on the same definition and outer repeat", () => {
+    const decoded = measurementToTimeseries(
+      {
+        sample_raw: [
+          {
+            set: [
+              { label: "ECS", data_raw: [1, 2] },
+              { label: "ECS", data_raw: [3, 4] },
+              { label: "ECS", data_raw: [5, 6, 7] },
+            ],
+          },
+        ],
+      },
+      {
+        set_repeats: 1,
+        v_arrays: [[30]],
+        _protocol_set_: [{ ...entry, protocol_repeats: 2, pulses: [2] }, entry],
+      },
+    );
+    expect(decoded.outputs.map((r) => r.value)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(
+      decoded.inputs.filter((r) => r.light_type === "actinic").map((r) => r.brightness),
+    ).toEqual([30, 30, 30]);
+  });
+
+  it("honors do_when before do_once and ignores anonymous skip records", () => {
+    const decoded = measurementToTimeseries(
+      {
+        sample_raw: [
+          {
+            set: [
+              { s: 0 },
+              { s: 0 },
+              { label: "ECS", data_raw: [1, 2, 3] },
+              { s: 1 },
+              { label: "ECS", data_raw: [4, 5, 6] },
+              { label: "FINAL", data_raw: [7, 8, 9] },
+            ],
+          },
+        ],
+      },
+      {
+        set_repeats: 3,
+        v_arrays: [[10, 20, 30]],
+        _protocol_set_: [
+          { ...entry, do_once: 1, do_when: [2, 3] },
+          { ...entry, label: "FINAL", do_once: 3 },
+        ],
+      },
+    );
+    expect(decoded.outputs.map((r) => r.value)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(
+      decoded.inputs.filter((r) => r.light_type === "actinic").map((r) => r.brightness),
+    ).toEqual([20, 30, 30]);
+  });
+
+  it("runs both first-only and last-only entries in a single repeat", () => {
+    const decoded = measurementToTimeseries(
+      {
+        sample_raw: [
+          {
+            set: [
+              { label: "ECS", data_raw: [1, 2, 3] },
+              { label: "ECS", data_raw: [4, 5, 6] },
+            ],
+          },
+        ],
+      },
+      {
+        set_repeats: 1,
+        _protocol_set_: [
+          { ...entry, do_once: 1 },
+          { ...entry, do_once: -1 },
+        ],
+      },
+    );
+    expect(decoded.outputs.map((r) => r.value)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+});

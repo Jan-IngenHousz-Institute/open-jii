@@ -88,6 +88,7 @@
     "closeChart": "Diagramm schließen",
     "expandChart": "Diagramm für {{column}} öffnen",
     "loadingProtocol": "Protokoll wird geladen…",
+    "multispeqTimeseriesXAxis": "Modellierte Protokollzeit (s)",
     "timeseriesXAxis": "Zeit (s)",
     "timeseriesYAxis": "Normalisiertes Signal",
     "timeseriesActinic": "Aktinisches Licht (µmol m⁻² s⁻¹)",
