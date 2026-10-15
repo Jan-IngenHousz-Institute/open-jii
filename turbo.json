@@ -34,7 +34,7 @@
       "env": ["DATABASE_URL", "DB_HOST", "DB_PORT", "DB_NAME", "DB_CREDENTIALS"]
     },
     "check-types": {
-      "dependsOn": ["^check-types"]
+      "dependsOn": ["^build", "^check-types"]
     },
     "dev": {
       "dependsOn": ["^build"],
