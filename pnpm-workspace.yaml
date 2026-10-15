@@ -3,6 +3,8 @@ packages:
   - "packages/*"
   - "tooling/*"
 
+engineStrict: true
+
 allowBuilds:
   "@swc/core": true
   better-sqlite3: true
