@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Runs protect-main.sh against throwaway repos: bash .claude/hooks/protect-main.test.sh
 set -uo pipefail
+unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
+  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_PREFIX
 
 HOOK="$(cd "$(dirname "$0")" && pwd)/protect-main.sh"
 TMP=$(mktemp -d)
@@ -45,6 +47,15 @@ check 0 "$M" "cd $F && git clean -fd"
 check 2 "$F" "cd $M && git clean -fd"
 check 0 "$TMP" "cd on-feature && git reset --hard"
 check 2 "$TMP" "cd on-main && git reset --hard"
+check 2 "$M" "git -C $F fetch; git reset --hard"
+check 0 "$F" "git -C $M fetch; git reset --hard"
+check 2 "$F" "git reset --hard; git -C $M reset --hard"
+check 2 "$M" "git clean --force"
+check 2 "$M" "git clean -n -f"
+check 2 "$M" "git checkout -- ."
+check 0 "$TMP" "git -C on-main -C ../on-feature reset --hard"
+check 0 "$F" "cd $M && git status && cd $F && git reset --hard"
+GIT_DIR="$F/.git" check 2 "$M" "git reset --hard"
 
 [ "$FAILED" -eq 0 ] && echo "protect-main: all cases pass"
 exit "$FAILED"
