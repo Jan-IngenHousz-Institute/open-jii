@@ -110,6 +110,8 @@ export interface QueryParams {
   // Experiment id salt. When set, `orderBy` names a `<contributor>.id` path
   // and rows sort by its pseudonym, the name an anonymized experiment shows.
   orderByContributorPseudonymSalt?: string;
+  /** Preserve STRING values; rowId breaks equal-answer ties outside DISTINCT only. */
+  orderByNumericString?: { rowId?: string };
   limit?: number;
   offset?: number;
 }

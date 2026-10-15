@@ -74,6 +74,7 @@ export interface DatabricksPort {
     orderBy?: string;
     orderDirection?: "ASC" | "DESC";
     orderByContributorPseudonymSalt?: string;
+    orderByNumericString?: { rowId?: string };
     limit?: number;
     offset?: number;
   }): Result<string>;
