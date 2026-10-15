@@ -38,8 +38,9 @@ const rows = answers.map((answer, i) => ({
   sample: `sample-${i + 1}`,
   sample_answer: answer,
 }));
+export const numericSortRowCount = rows.length;
 // These are explicit server orders for browser wiring checks. Spark proves the actual parser.
-const numericAscending = Array.from({ length: 24 }, (_, i) => i + 1);
+const numericAscending = Array.from({ length: numericSortRowCount }, (_, i) => i + 1);
 const numericDescending = [19, ...Array.from({ length: 18 }, (_, i) => 18 - i), 21, 20, 23, 22, 24];
 
 export interface DataRequest {

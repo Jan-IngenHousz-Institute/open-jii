@@ -1,9 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 
-import {
-  cleanupDialogFitExperiment,
-  seedDialogFitExperiment,
-} from "../experiment-data-fixtures.js";
+import { cleanupDataExperiment, seedDataExperiment } from "../experiment-data-fixtures.js";
 import { expect, test } from "../fixtures.js";
 import { dismissCookieBanner, locale } from "../helpers.js";
 import {
@@ -12,16 +9,17 @@ import {
   mockNumericQuestionSorting,
   numericSortExperimentName,
   numericSortFilter,
+  numericSortRowCount,
 } from "../numeric-question-sorting-fixtures.js";
 import type { DataRequest, RequestStep } from "../numeric-question-sorting-fixtures.js";
 
 let experimentId: string;
 test.setTimeout(90_000);
 test.beforeAll(async () => {
-  experimentId = await seedDialogFitExperiment(numericSortExperimentName);
+  experimentId = await seedDataExperiment(numericSortExperimentName);
 });
 test.afterAll(async () => {
-  await cleanupDialogFitExperiment(numericSortExperimentName);
+  await cleanupDataExperiment(numericSortExperimentName);
 });
 
 async function openData(page: Page, filters?: string) {
@@ -55,9 +53,12 @@ async function expectPage(page: Page, request: DataRequest) {
   }));
   await expect.poll(() => renderedRows(page)).toEqual(expected);
   await expect(
-    page.getByText(`Page ${request.page} of ${Math.ceil(24 / Number(request.pageSize))}`, {
-      exact: true,
-    }),
+    page.getByText(
+      `Page ${request.page} of ${Math.ceil(numericSortRowCount / Number(request.pageSize))}`,
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
 }
 
@@ -102,15 +103,23 @@ test("column and direction changes reset page atomically, with a delayed first p
   await expectPage(page, plan[0]);
   expect(requests).toEqual(plan.slice(0, 1));
   await clickStep(page, next(page), requests, plan.slice(0, 2));
+  await page.getByRole("checkbox", { name: "Select row", exact: true }).first().click();
+  await expect(page.getByText("1 row selected", { exact: true })).toBeVisible();
   await heading(page, "answer").click();
   await expect.poll(() => requests).toEqual(plan.slice(0, 3));
-  await expect(page.getByText("Page 1 of 3", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(`Page 1 of ${Math.ceil(numericSortRowCount / 10)}`, { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("table").locator("tbody")).not.toContainText("row-14");
   await expect(
     page.getByRole("table").locator("tbody tr td").filter({ hasText: /^row-/ }),
   ).toHaveCount(0);
+  await expect(page.getByText("No rows selected", { exact: true })).toBeVisible();
   release?.();
   await expectPage(page, plan[2]);
+  await expect(
+    page.getByRole("checkbox", { name: "Select row", exact: true }).first(),
+  ).not.toBeChecked();
   expect(requests).toEqual(plan.slice(0, 3));
   await clickStep(page, next(page), requests, plan.slice(0, 4));
   await clickStep(page, heading(page, "answer"), requests, plan.slice(0, 5));

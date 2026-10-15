@@ -10,9 +10,7 @@ function connect() {
   return postgres(databaseUrl, { connect_timeout: 2, idle_timeout: 1, max: 1 });
 }
 
-export async function cleanupDialogFitExperiment(
-  experimentName = defaultExperimentName,
-): Promise<void> {
+export async function cleanupDataExperiment(experimentName = defaultExperimentName): Promise<void> {
   assertSafeFixtureDatabase();
   const sql = connect();
   try {
@@ -35,10 +33,8 @@ export async function cleanupDialogFitExperiment(
 }
 
 /** An active experiment the seed user administers, so every data dialog is enabled. */
-export async function seedDialogFitExperiment(
-  experimentName = defaultExperimentName,
-): Promise<string> {
-  await cleanupDialogFitExperiment(experimentName);
+export async function seedDataExperiment(experimentName = defaultExperimentName): Promise<string> {
+  await cleanupDataExperiment(experimentName);
   const sql = connect();
   try {
     return await sql.begin(async (transaction) => {
