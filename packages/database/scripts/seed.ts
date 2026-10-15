@@ -2,6 +2,7 @@ import { db } from "../src/database";
 import { seedCalibrations } from "./seed/calibration.seed";
 import { clearSeedData } from "./seed/clear.seed";
 import { seedContributors } from "./seed/contributor.seed";
+import { seedDashboards } from "./seed/dashboard.seed";
 import { seedDeviceGroups } from "./seed/device-group.seed";
 import { seedExperimentDevices } from "./seed/experiment-device.seed";
 import { seedExperiments } from "./seed/experiment.seed";
@@ -36,6 +37,7 @@ async function main() {
   await seedContributors(createdExperiments);
   await seedFlows(createdExperiments);
   await seedWorkbooks(user, personalOrganizationId, createdExperiments, createdProtocols);
+  await seedDashboards(user, createdExperiments);
 
   const createdDevices = await seedDevices(user, personalOrganizationId);
   await seedExperimentDevices(user, createdDevices, createdExperiments);
