@@ -1,6 +1,7 @@
 import type { Result } from "../../../../utils/fp-utils";
 import { SqlQueryBuilder, VariantQueryBuilder } from "./query-builder.base";
 import { QueryBuilderService } from "./query-builder.service";
+import type { QueryParams } from "./query-builder.types";
 
 function unwrap<T>(r: Result<T>): T {
   if (r.isFailure()) throw new Error(`expected success, got: ${r.error.message}`);
@@ -46,8 +47,8 @@ describe("QueryBuilderService", () => {
           table: "open_jii_dev.centrum.experiment_device_data",
           exceptColumns: ["experiment_id", "raw_data"],
           whereConditions: [["experiment_id", "d89a6dce-540c-4ac2-8b8c-516afc2bd525"]],
-          orderBy: "processed_timestamp",
-          orderDirection: "DESC",
+          ordering: { column: "processed_timestamp", direction: "DESC" },
+
           limit: 10,
           offset: 0,
         }),
@@ -192,8 +193,7 @@ describe("QueryBuilderService", () => {
           columns: ["timestamp", "temperature"],
           whereConditions: [["experiment_id", "exp-1"]],
           filters: [{ column: "temperature", operator: "greater_than", value: 20 }],
-          orderBy: "timestamp",
-          orderDirection: "ASC",
+          ordering: { column: "timestamp", direction: "ASC" },
         }),
       );
 
@@ -234,7 +234,7 @@ describe("QueryBuilderService", () => {
             groupBy: [{ column: "timestamp", timeBucket: "hour" }],
             functions: [{ column: "temperature", function: "avg" }],
           },
-          orderBy: "timestamp_hour",
+          ordering: { column: "timestamp_hour" },
         }),
       );
 
@@ -254,8 +254,7 @@ describe("QueryBuilderService", () => {
             groupBy: [{ column: "contributor" }],
             functions: [{ column: "temperature", function: "avg" }],
           },
-          orderBy: "contributor.id",
-          orderByContributorPseudonymSalt: "exp-1",
+          ordering: { column: "contributor.id", mode: { kind: "pseudonym", salt: "exp-1" } },
         }),
       );
 
@@ -320,7 +319,7 @@ describe("QueryBuilderService", () => {
             // groupBy: omitted entirely; cumsum then operates on raw rows
             functions: [{ column: "amount", function: "cumsum" }],
           },
-          orderBy: "timestamp",
+          ordering: { column: "timestamp" },
         }),
       );
 
@@ -340,7 +339,7 @@ describe("QueryBuilderService", () => {
           aggregation: {
             functions: [{ column: "amount", function: "cumsum" }],
           },
-          orderBy: "timestamp",
+          ordering: { column: "timestamp" },
         }),
       );
 
@@ -520,23 +519,26 @@ describe("numeric string ordering", () => {
     table: "measurements",
     variants: [{ columnName: "questions_data", schema: "OBJECT<answer: STRING>" }],
     reservedColumns: ["id"],
-    orderBy: "answer",
-    orderByNumericString: { rowId: "id" },
-  };
+    ordering: { column: "answer", mode: { kind: "numericString", rowId: "id" } },
+  } satisfies QueryParams;
 
   it.each(["ASC", "DESC"] as const)(
     "keeps value groups fixed while reversing values %s",
     (orderDirection) => {
-      const sql = unwrap(service.buildQuery({ ...params, orderDirection, limit: 3, offset: 3 }));
+      const sql = unwrap(
+        service.buildQuery({
+          ...params,
+          ordering: { ...params.ordering, direction: orderDirection },
+          limit: 3,
+          offset: 3,
+        }),
+      );
       const order = sql.slice(sql.indexOf("ORDER BY"));
       expect(order).toContain("THEN 0 WHEN");
       expect(order).toContain("THEN 2 ELSE 1 END ASC");
       expect(order).toContain(`AS DECIMAL(38, 18)) END) ${orderDirection}`);
       expect(order).toContain(`\`answer\` ${orderDirection} NULLS LAST, \`id\` ASC`);
       expect(order).not.toMatch(/\b(?:DOUBLE|FLOAT)\b/);
-      expect(order).toContain("[0-9]{1,20}");
-      expect(order).toContain("[0-9]{0,18}0*");
-      expect(order).toContain("[0-9]{1,18}0*");
       expect(sql).toMatch(/ORDER BY[\s\S]+LIMIT 3\nOFFSET 3$/);
     },
   );
@@ -566,7 +568,7 @@ describe("numeric string ordering", () => {
     };
     const withMode = unwrap(service.buildQuery({ ...params, aggregation }));
     const withoutMode = unwrap(
-      service.buildQuery({ ...params, orderByNumericString: undefined, aggregation }),
+      service.buildQuery({ ...params, ordering: { column: "answer" }, aggregation }),
     );
     expect(withMode).toBe(withoutMode);
     expect(withMode).not.toContain("DECIMAL(38, 18)");

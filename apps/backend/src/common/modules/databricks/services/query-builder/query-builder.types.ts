@@ -82,6 +82,12 @@ export interface AggregationSpec {
   explode?: ExplodeSpec;
 }
 
+export interface QueryOrdering {
+  column: string;
+  direction?: "ASC" | "DESC";
+  mode?: { kind: "pseudonym"; salt: string } | { kind: "numericString"; rowId?: string };
+}
+
 export interface QueryParams {
   table: string;
   columns?: string[];
@@ -105,13 +111,7 @@ export interface QueryParams {
   // aggregation (the wrapper path doesn't apply here, DISTINCT belongs on
   // the inner SELECT).
   distinct?: boolean;
-  orderBy?: string;
-  orderDirection?: "ASC" | "DESC";
-  // Experiment id salt. When set, `orderBy` names a `<contributor>.id` path
-  // and rows sort by its pseudonym, the name an anonymized experiment shows.
-  orderByContributorPseudonymSalt?: string;
-  /** Preserve STRING values; rowId breaks equal-answer ties outside DISTINCT only. */
-  orderByNumericString?: { rowId?: string };
+  ordering?: QueryOrdering;
   limit?: number;
   offset?: number;
 }

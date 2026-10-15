@@ -619,8 +619,8 @@ describe("DatabricksAdapter", () => {
         tableType: "static",
         experimentId: "exp-123",
         columns: ["id", "timestamp"],
-        orderBy: "timestamp",
-        orderDirection: "DESC",
+        ordering: { column: "timestamp", direction: "DESC" },
+
         limit: 100,
         offset: 50,
       });
