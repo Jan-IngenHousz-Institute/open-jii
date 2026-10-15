@@ -1,5 +1,5 @@
 import { shouldRetryQuery } from "@/util/query-retry";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import {
   createTableColumns,
@@ -38,8 +38,8 @@ export interface UseExperimentDataParams {
   /** Read only these columns, when set, instead of every column the table has. */
   columns?: string[];
   /**
-   * Keep the current page on screen while the next one loads. Only for a caller that remounts per
-   * table, or another table's rows would stand in for the new one's.
+   * Keep the current page while another page of the same view loads. Changed sort, filters,
+   * projection, table, experiment or page size show loading rows instead.
    */
   keepPreviousPage?: boolean;
   formatFunction?: DataRenderFunction;
@@ -104,21 +104,28 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
     [cleanedFilters],
   );
 
+  const input = {
+    id: experimentId,
+    tableName,
+    page,
+    pageSize,
+    orderBy,
+    orderDirection,
+    filters: filtersJson,
+    columns: columns && columns.length > 0 ? columns.join(",") : undefined,
+  };
+  const dataView = JSON.stringify({ ...input, page: undefined });
+
   const { data, isLoading, isPlaceholderData, error } = useQuery(
     orpc.experiments.getExperimentData.queryOptions({
-      input: {
-        id: experimentId,
-        tableName,
-        page,
-        pageSize,
-        orderBy,
-        orderDirection,
-        filters: filtersJson,
-        columns: columns && columns.length > 0 ? columns.join(",") : undefined,
-      },
+      input,
+      meta: { dataView },
       staleTime: STALE_TIME,
       enabled,
-      placeholderData: keepPreviousPage ? keepPreviousData : undefined,
+      placeholderData: keepPreviousPage
+        ? (previous, previousQuery) =>
+            previousQuery?.meta?.dataView === dataView ? previous : undefined
+        : undefined,
       // The experiment's freshness line refreshes changed tables and honours its pause.
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
