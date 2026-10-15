@@ -141,4 +141,25 @@ describe("ExperimentDataTable sorting requests", () => {
     expect(screen.getByText("dataTable.page 1 dataTable.pageOf 2")).toBeInTheDocument();
     expect([...seen, ...sort.calls.map((call) => call.query)]).toEqual(expected);
   });
+  it("clears off-screen row selection when sorting resets the page", async () => {
+    const expected = [query(1, "id", "DESC"), query(2, "id", "DESC"), query(1, "answer", "ASC")];
+    const { seen } = orderedHandler(expected);
+    const user = userEvent.setup();
+    render(<ExperimentDataTable {...props} />);
+    await expectPage(1, 1);
+    await user.click(screen.getByTitle("dataTable.next"));
+    await expectPage(2, 2);
+    await user.click(screen.getByRole("checkbox", { name: "Select row" }));
+    expect(screen.getByRole("checkbox", { name: "Select row" })).toBeChecked();
+    expect(
+      screen.queryByText("experimentDataAnnotations.bulkActions.noRowsSelected"),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("columnheader", { name: "answer" }));
+    await expectPage(1, 3);
+    expect(
+      screen.getByText("experimentDataAnnotations.bulkActions.noRowsSelected"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Select row" })).not.toBeChecked();
+    expect(seen).toEqual(expected);
+  });
 });
