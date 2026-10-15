@@ -220,7 +220,7 @@ describe("RotateIotCredentialsUseCase", () => {
     vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
     vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
     const device = await createDevice("active");
-    vi.spyOn(repo, "update").mockResolvedValue(success(undefined));
+    vi.spyOn(repo, "update").mockResolvedValue(success(null));
 
     const result = await useCase.execute(device.id, userId);
 

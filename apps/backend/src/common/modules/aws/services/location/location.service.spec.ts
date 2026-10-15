@@ -4,6 +4,8 @@ import {
   GetPlaceCommand,
   SearchPlaceIndexForPositionCommand,
 } from "@aws-sdk/client-location";
+import type { Place } from "@aws-sdk/client-location";
+import { fromPartial } from "@total-typescript/shoehorn";
 import { mockClient } from "aws-sdk-client-mock";
 
 import { TestHarness } from "../../../../../test/test-harness";
@@ -131,10 +133,9 @@ describe("AwsLocationService", () => {
       locationMock
         .on(GetPlaceCommand)
         .resolvesOnce({
-          Place: {
+          Place: fromPartial<Place>({
             Label: "Invalid Place",
-            // Missing Geometry
-          },
+          }),
         })
         .resolvesOnce({
           Place: {
@@ -212,6 +213,7 @@ describe("AwsLocationService", () => {
               Municipality: "New York",
               PostalCode: "10001",
             },
+            Distance: 0,
           },
         ],
       });
@@ -278,6 +280,7 @@ describe("AwsLocationService", () => {
               Label: "North Pole",
               Geometry: { Point: [0, 90] },
             },
+            Distance: 0,
           },
         ],
       });
@@ -342,7 +345,7 @@ describe("AwsLocationService", () => {
         .resolvesOnce({
           Place: {
             Label: "Place without geometry",
-            // Missing Geometry.Point
+            Geometry: {},
           },
         })
         .resolvesOnce({

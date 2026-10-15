@@ -221,6 +221,7 @@ describe("ExperimentDeviceController", () => {
     const orgAdmin = await testApp.createTestUser({ name: "Org Admin" });
     const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
     const { experiment } = await testApp.createExperiment({ name: "Org experiment", userId });
+    if (!device.organizationId) throw new Error("Device has no owning organization");
     await testApp.addOrganizationMember(device.organizationId, orgAdmin, "admin");
 
     const response: SuperTestResponse<DeviceOnboardingConfig> = await testApp
@@ -297,6 +298,7 @@ describe("ExperimentDeviceController", () => {
       .withAuth(userId)
       .send({ experimentIds: [experiment.id] })
       .expect(StatusCodes.OK);
+    if (!experiment.organizationId) throw new Error("Experiment has no owning organization");
     await testApp.addOrganizationMember(experiment.organizationId, orgAdmin, "admin");
 
     const listPath = testApp.resolveOrpcPath(contract.experiments.listExperimentDevices, {

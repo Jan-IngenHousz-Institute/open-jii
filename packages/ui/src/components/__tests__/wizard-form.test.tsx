@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import type { Mock } from "vitest";
 import { z } from "zod";
 
 import { WizardForm, WizardStepButtons } from "../wizard-form";
@@ -104,7 +105,7 @@ const Step3 = ({
 );
 
 describe("WizardForm", () => {
-  let onSubmitMock: ReturnType<typeof vi.fn>;
+  let onSubmitMock: Mock<(data: FormValues) => void>;
   let user: ReturnType<typeof userEvent.setup>;
 
   const renderWizardForm = (options = {}) => {

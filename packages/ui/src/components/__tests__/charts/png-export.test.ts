@@ -14,7 +14,12 @@ const drawImage = vi.fn();
 const fillRect = vi.fn();
 const requestedSrcs: string[] = [];
 let cornerPixel: number[];
-let context: { fillStyle: string };
+let context: {
+  drawImage: typeof drawImage;
+  fillRect: typeof fillRect;
+  fillStyle: string;
+  getImageData: () => { data: Uint8ClampedArray };
+};
 let canvas: HTMLCanvasElement;
 let downloaded: { name: string; href: string } | undefined;
 

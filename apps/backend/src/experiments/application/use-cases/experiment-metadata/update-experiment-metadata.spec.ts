@@ -1,4 +1,10 @@
-import { assertFailure, success, failure, AppError } from "../../../../common/utils/fp-utils";
+import {
+  assertSuccess,
+  assertFailure,
+  success,
+  failure,
+  AppError,
+} from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import type {
   ExperimentMetadataDto,
@@ -58,6 +64,7 @@ describe("UpdateExperimentMetadataUseCase", () => {
     const result = await useCase.execute(experiment.id, metadataId, sampleUpdate, testUserId);
 
     expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
     expect(result.value).toEqual(mockResult);
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(metadataRepository.update).toHaveBeenCalledWith(
@@ -118,6 +125,7 @@ describe("UpdateExperimentMetadataUseCase", () => {
     const result = await useCase.execute(experiment.id, metadataId, sampleUpdate, memberId);
 
     expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
     expect(result.value).toEqual(mockResult);
   });
 });

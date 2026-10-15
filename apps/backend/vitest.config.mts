@@ -61,9 +61,8 @@ class LayerSequencer extends BaseSequencer {
 }
 
 export default mergeConfig(
-  baseConfig,
+  mergeConfig(baseConfig, { plugins: [swc.vite()] }),
   defineConfig({
-    plugins: [swc.vite()],
     test: {
       environment: "node",
       globals: true,

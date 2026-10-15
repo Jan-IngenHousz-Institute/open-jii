@@ -435,6 +435,7 @@ describe("AwsAdapter", () => {
         certificateId: "c1",
         certificateArn: "arn:c1",
         certificatePem: "PEM",
+        publicKey: "PUB",
         privateKey: "KEY",
       };
       vi.spyOn(awsIotService, "createKeysAndCertificate").mockResolvedValue(success(cert));

@@ -198,6 +198,7 @@ describe("GetInvitationsUseCase", () => {
     it("withholds the address from an owner of the experiment's organization who did not type it", async () => {
       const { experiment } = await seedWithPendingInvitation();
       const orgAdminId = await testApp.createTestUser({});
+      if (!experiment.organizationId) throw new Error("Experiment has no owning organization");
       await testApp.addOrganizationMember(experiment.organizationId, orgAdminId, "admin");
 
       const result = await useCase.execute("experiment", experiment.id, orgAdminId);

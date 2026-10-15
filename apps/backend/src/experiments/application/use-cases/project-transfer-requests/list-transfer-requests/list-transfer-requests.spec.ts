@@ -41,14 +41,14 @@ describe("ListTransferRequests", () => {
     vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValueOnce(
       success({
         columns: [
-          { name: "request_id", type_name: "STRING", type_text: "STRING" },
-          { name: "user_id", type_name: "STRING", type_text: "STRING" },
-          { name: "user_email", type_name: "STRING", type_text: "STRING" },
-          { name: "source_platform", type_name: "STRING", type_text: "STRING" },
-          { name: "project_id_old", type_name: "STRING", type_text: "STRING" },
-          { name: "project_url_old", type_name: "STRING", type_text: "STRING" },
-          { name: "status", type_name: "STRING", type_text: "STRING" },
-          { name: "requested_at", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+          { name: "request_id", type_name: "STRING", type_text: "STRING", position: 0 },
+          { name: "user_id", type_name: "STRING", type_text: "STRING", position: 1 },
+          { name: "user_email", type_name: "STRING", type_text: "STRING", position: 2 },
+          { name: "source_platform", type_name: "STRING", type_text: "STRING", position: 3 },
+          { name: "project_id_old", type_name: "STRING", type_text: "STRING", position: 4 },
+          { name: "project_url_old", type_name: "STRING", type_text: "STRING", position: 5 },
+          { name: "status", type_name: "STRING", type_text: "STRING", position: 6 },
+          { name: "requested_at", type_name: "TIMESTAMP", type_text: "TIMESTAMP", position: 7 },
         ],
         rows: [
           [
@@ -101,14 +101,14 @@ describe("ListTransferRequests", () => {
     vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValueOnce(
       success({
         columns: [
-          { name: "request_id", type_name: "STRING", type_text: "STRING" },
-          { name: "user_id", type_name: "STRING", type_text: "STRING" },
-          { name: "user_email", type_name: "STRING", type_text: "STRING" },
-          { name: "source_platform", type_name: "STRING", type_text: "STRING" },
-          { name: "project_id_old", type_name: "STRING", type_text: "STRING" },
-          { name: "project_url_old", type_name: "STRING", type_text: "STRING" },
-          { name: "status", type_name: "STRING", type_text: "STRING" },
-          { name: "requested_at", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+          { name: "request_id", type_name: "STRING", type_text: "STRING", position: 0 },
+          { name: "user_id", type_name: "STRING", type_text: "STRING", position: 1 },
+          { name: "user_email", type_name: "STRING", type_text: "STRING", position: 2 },
+          { name: "source_platform", type_name: "STRING", type_text: "STRING", position: 3 },
+          { name: "project_id_old", type_name: "STRING", type_text: "STRING", position: 4 },
+          { name: "project_url_old", type_name: "STRING", type_text: "STRING", position: 5 },
+          { name: "status", type_name: "STRING", type_text: "STRING", position: 6 },
+          { name: "requested_at", type_name: "TIMESTAMP", type_text: "TIMESTAMP", position: 7 },
         ],
         rows: [],
         totalRows: 0,
@@ -130,14 +130,14 @@ describe("ListTransferRequests", () => {
     vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValueOnce(
       success({
         columns: [
-          { name: "request_id", type_name: "STRING", type_text: "STRING" },
-          { name: "user_id", type_name: "STRING", type_text: "STRING" },
-          { name: "user_email", type_name: "STRING", type_text: "STRING" },
-          { name: "source_platform", type_name: "STRING", type_text: "STRING" },
-          { name: "project_id_old", type_name: "STRING", type_text: "STRING" },
-          { name: "project_url_old", type_name: "STRING", type_text: "STRING" },
-          { name: "status", type_name: "STRING", type_text: "STRING" },
-          { name: "requested_at", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+          { name: "request_id", type_name: "STRING", type_text: "STRING", position: 0 },
+          { name: "user_id", type_name: "STRING", type_text: "STRING", position: 1 },
+          { name: "user_email", type_name: "STRING", type_text: "STRING", position: 2 },
+          { name: "source_platform", type_name: "STRING", type_text: "STRING", position: 3 },
+          { name: "project_id_old", type_name: "STRING", type_text: "STRING", position: 4 },
+          { name: "project_url_old", type_name: "STRING", type_text: "STRING", position: 5 },
+          { name: "status", type_name: "STRING", type_text: "STRING", position: 6 },
+          { name: "requested_at", type_name: "TIMESTAMP", type_text: "TIMESTAMP", position: 7 },
         ],
         rows: [
           [

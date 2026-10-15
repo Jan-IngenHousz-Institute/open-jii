@@ -54,8 +54,12 @@ export function FormSlider({
         max={max}
         step={step}
         value={[local]}
-        onValueChange={(values) => setLocal(values[0])}
-        onValueCommit={(values) => onCommit(values[0])}
+        onValueChange={([value]) => {
+          if (value !== undefined) setLocal(value);
+        }}
+        onValueCommit={([value]) => {
+          if (value !== undefined) onCommit(value);
+        }}
       />
       <FormMessage />
     </FormItem>

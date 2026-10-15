@@ -43,7 +43,7 @@ describe("IsWorkbookUpgradableUseCase", () => {
 
   /** Publish v1 of `workbook` so subsequent calls have something to
    *  compare the live cells against. */
-  async function publishV1(workbook: WorkbookDto) {
+  async function publishV1(workbook: Pick<WorkbookDto, "id">) {
     const result = await publishVersion.execute(workbook.id, userId);
     assertSuccess(result);
     return result.value;

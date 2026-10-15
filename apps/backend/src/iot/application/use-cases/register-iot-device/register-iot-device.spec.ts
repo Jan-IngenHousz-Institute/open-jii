@@ -22,7 +22,11 @@ describe("RegisterIotDeviceUseCase", () => {
   let awsAdapter: AwsAdapter;
   let userId: string;
 
-  const body = { serialNumber: "E8:F6:0A:B1:1D:D4", name: "Sensor 1", deviceType: "ambyte" };
+  const body = {
+    serialNumber: "E8:F6:0A:B1:1D:D4",
+    name: "Sensor 1",
+    deviceType: "ambyte" as const,
+  };
 
   beforeAll(async () => {
     await testApp.setup();

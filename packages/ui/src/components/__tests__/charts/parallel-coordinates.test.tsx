@@ -156,8 +156,7 @@ describe("ParallelCoordinates", () => {
           cmax: 3,
           cmid: 2,
           colorbar: {
-            title: "Custom Scale",
-            titleside: "top",
+            title: { text: "Custom Scale", side: "top" },
             thickness: 30,
             len: 0.9,
             x: 1.1,
@@ -180,8 +179,7 @@ describe("ParallelCoordinates", () => {
       cmax: 3,
       cmid: 2,
       colorbar: {
-        title: "Custom Scale",
-        titleside: "top",
+        title: { text: "Custom Scale", side: "top" },
         thickness: 30,
         len: 0.9,
         x: 1.1,

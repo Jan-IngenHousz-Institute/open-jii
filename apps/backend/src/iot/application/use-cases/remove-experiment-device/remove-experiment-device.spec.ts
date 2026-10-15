@@ -67,6 +67,7 @@ describe("RemoveExperimentDeviceUseCase", () => {
     const device = await bindDevice(experiment.id);
 
     const orgAdmin = await testApp.createTestUser({});
+    if (!experiment.organizationId) throw new Error("Experiment has no owning organization");
     await testApp.addOrganizationMember(experiment.organizationId, orgAdmin, "admin");
 
     const result = await useCase.execute(experiment.id, device.id, orgAdmin);
