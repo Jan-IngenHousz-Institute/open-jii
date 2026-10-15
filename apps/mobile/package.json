@@ -24,7 +24,6 @@
     "build:submit": "pnpm dlx eas-cli build -p android --profile production --clear-cache --non-interactive --auto-submit",
     "prebuild:check": "expo prebuild --platform android --no-install",
     "lint": "eslint 'src/**/*' --fix",
-    "typecheck": "tsc --noEmit",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

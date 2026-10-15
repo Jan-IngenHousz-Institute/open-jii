@@ -18,6 +18,7 @@
   },
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
+    "check-types": "tsc --noEmit -p tsconfig.json",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "dev": "tsc --watch & pnpm db:studio",
     "lint": "eslint",

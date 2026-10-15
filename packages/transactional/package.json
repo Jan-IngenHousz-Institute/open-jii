@@ -64,7 +64,7 @@
     "export": "email export",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@contentful/rich-text-react-renderer": "16.0.2",

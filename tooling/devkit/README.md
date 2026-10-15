@@ -428,7 +428,7 @@ an `import.meta.url` guard, so the tests never spawn a process or reach the netw
 
 ```bash
 pnpm --filter @repo/devkit test
-pnpm --filter @repo/devkit typecheck
+pnpm --filter @repo/devkit check-types
 ```
 
 `src/hooks.test.ts` is the exception: it runs the docs-reminder hook from `.claude/hooks` against
