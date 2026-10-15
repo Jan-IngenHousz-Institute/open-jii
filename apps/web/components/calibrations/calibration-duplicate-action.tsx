@@ -1,8 +1,11 @@
 "use client";
 
-import { useAllCalibrationDefinitions } from "@/hooks/iot/useAllCalibrationDefinitions/useAllCalibrationDefinitions";
+import { useAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
+import { calibrationDefinitionsQuery } from "@/hooks/iot/useAllCalibrationDefinitions/calibration-definitions-query";
 import { useCreateCalibrationDefinition } from "@/hooks/iot/useCreateCalibrationDefinition/useCreateCalibrationDefinition";
 import { useLocale } from "@/hooks/useLocale";
+import { orpc } from "@/lib/orpc";
+import { useQueryClient } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { parseApiError } from "~/util/apiError";
@@ -18,21 +21,35 @@ interface CalibrationDuplicateActionProps {
   definition: CalibrationDefinitionDetail;
 }
 
-/** A run freezes its definition, so duplicating is the only route to the next revision. */
+/**
+ * The route to a definition of one's own: a run freezes the one it recorded, and someone
+ * else's can be read but not changed. The copy lands in the caller's own organization.
+ */
 export function CalibrationDuplicateAction({ definition }: CalibrationDuplicateActionProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
   const router = useRouter();
 
-  const definitions = useAllCalibrationDefinitions();
+  const queryClient = useQueryClient();
+  const autosave = useAutosaveStatus();
+  // The copy is made from what is saved, so an edit still waiting on autosave would be left out.
+  const isSaving = autosave?.status === "dirty" || autosave?.status === "saving";
   const { mutate: create, isPending } = useCreateCalibrationDefinition({
     onSuccess: (created) => {
       router.push(`/${locale}/platform/calibrations/${created.id}`);
     },
   });
 
-  function handleDuplicate() {
-    const taken = (definitions.data ?? []).map((candidate) => candidate.name);
+  async function handleDuplicate() {
+    // Fetched on demand: the names in use matter for the copy's name and nothing else here.
+    let taken: string[];
+    try {
+      const definitions = await queryClient.fetchQuery(calibrationDefinitionsQuery(orpc));
+      taken = definitions.map((candidate) => candidate.name);
+    } catch (error) {
+      toast({ description: parseApiError(error)?.message, variant: "destructive" });
+      return;
+    }
 
     create(
       {
@@ -55,7 +72,12 @@ export function CalibrationDuplicateAction({ definition }: CalibrationDuplicateA
   }
 
   return (
-    <Button variant="outline" size="sm" onClick={handleDuplicate} disabled={isPending}>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => void handleDuplicate()}
+      disabled={isPending || isSaving}
+    >
       <Copy className="mr-2 h-4 w-4" />
       {t("iot.calibration.detail.duplicate")}
     </Button>
