@@ -24,6 +24,7 @@ import {
   tearDownOrganizationGrants,
   tearDownTeamGrants,
 } from "./lifecycle";
+import { withoutOtherUsersEmails } from "./member-emails";
 
 // Re-exported so the raced-delete refusal is reachable on its own.
 export { rethrowAsOrganizationInUse } from "./lifecycle";
@@ -34,6 +35,7 @@ export { hasAccountForEmail } from "./guards";
 /** The read paths this plugin re-authorizes. Matched by exact equality. */
 const LIST_INVITATIONS_PATH = "/organization/list-invitations";
 const GET_FULL_ORGANIZATION_PATH = "/organization/get-full-organization";
+const ORGANIZATION_PATH_PREFIX = "/organization/";
 
 /**
  * Wrap one plugin endpoint, keeping the `path` and `options` properties Better Auth's
@@ -279,6 +281,17 @@ export const openJiiOrganization = () => {
 
             const { invitations: _withheld, ...rest } = returned;
             ctx.context.returned = rest;
+          }),
+        },
+        {
+          // Last, so it also covers whatever the hooks above leave in place.
+          matcher: (ctx: { path?: string }) =>
+            ctx.path?.startsWith(ORGANIZATION_PATH_PREFIX) ?? false,
+          handler: createAuthMiddleware(async (ctx) => {
+            const returned = ctx.context.returned;
+            if (typeof returned !== "object" || returned === null) return;
+            const session = await getSessionFromCtx(ctx);
+            ctx.context.returned = withoutOtherUsersEmails(returned, session?.user.id ?? null);
           }),
         },
       ],

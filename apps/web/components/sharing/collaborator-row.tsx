@@ -220,15 +220,17 @@ function PersonRow({
               </Badge>
             )}
           </div>
-          <span className="text-muted-foreground truncate text-xs">
-            {isTeam
-              ? // The head count is the one thing a team row carries that a name does
-                // not: it is how many people this single grant actually admits.
-                t("sharing.teamMemberCount", { count: collaborator.grantee.memberCount ?? 0 })
-              : isOrganization
-                ? t("sharing.granteeTypeOrganization")
-                : collaborator.grantee.email}
-          </span>
+          {(isTeam || isOrganization || collaborator.grantee.email) && (
+            <span className="text-muted-foreground truncate text-xs">
+              {isTeam
+                ? // The head count is the one thing a team row carries that a name does
+                  // not: it is how many people this single grant actually admits.
+                  t("sharing.teamMemberCount", { count: collaborator.grantee.memberCount ?? 0 })
+                : isOrganization
+                  ? t("sharing.granteeTypeOrganization")
+                  : collaborator.grantee.email}
+            </span>
+          )}
         </div>
       </div>
 

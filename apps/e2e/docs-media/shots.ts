@@ -100,7 +100,60 @@ async function assertNoSecretVisible(page: Page): Promise<void> {
   }
 }
 
+const privacyCaptureEmail = process.env.E2E_PRIVACY_CAPTURE_EMAIL;
+const privacyExperimentName =
+  process.env.E2E_PRIVACY_CAPTURE_EXPERIMENT ?? "Access Showcase Experiment";
+const privacyOrganizationName =
+  process.env.E2E_PRIVACY_CAPTURE_ORGANIZATION ?? "Access Showcase Lab";
+
+const privacyShots: readonly Shot[] = privacyCaptureEmail
+  ? [
+      {
+        slug: "experiment-registered-invite",
+        publish: "img/guide/web/experiment-registered-invite.webp",
+        frame: "desktop",
+        route: async () =>
+          `/platform/experiments/${await experimentId(privacyExperimentName)}/collaborators`,
+        async prepare(page) {
+          await page.getByRole("button", { name: "Invite", exact: true }).click();
+          await page.getByRole("dialog").getByRole("textbox").first().fill(privacyCaptureEmail);
+          await page.getByText("Matches the email you entered", { exact: true }).waitFor();
+          await settle(page, 1200);
+        },
+        scope: "Exact-address search offers a registered person whose email is hidden",
+      },
+      {
+        slug: "organization-registered-invite",
+        publish: "img/guide/web/organization-registered-invite.webp",
+        frame: "desktop",
+        route: async () =>
+          `/platform/organizations/${await organizationId(privacyOrganizationName)}/members`,
+        async prepare(page) {
+          await page.getByRole("button", { name: "Invite", exact: true }).click();
+          await page.getByRole("dialog").getByRole("textbox").first().fill(privacyCaptureEmail);
+          await page.getByText("Matches the email you entered", { exact: true }).waitFor();
+          await settle(page);
+        },
+        scope: "An exact address makes one registered organization invitee selectable",
+      },
+      {
+        slug: "experiment-hidden-invitations",
+        publish: "img/guide/web/experiment-hidden-invitations.webp",
+        frame: "desktop",
+        route: async () =>
+          `/platform/experiments/${await experimentId(privacyExperimentName)}/collaborators`,
+        async prepare(page) {
+          await page.getByRole("tab", { name: /Invited/ }).click();
+          await page.getByText("Address hidden", { exact: true }).first().waitFor();
+          await settle(page);
+        },
+        scope: "Hidden experiment invitations carry safe inviter, date and reference",
+      },
+    ]
+  : [];
+
 export const SHOTS: readonly Shot[] = [
+  ...privacyShots,
   // ------------------------------------------- tier 1: shell, overviews, access
   {
     slug: "dashboard",

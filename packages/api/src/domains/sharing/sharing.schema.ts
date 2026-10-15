@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { zPeopleSearchLimit, zPeopleSearchTerm } from "../user/people-search.schema";
+
 /**
  * Every value of the `resource_grants.resource_type` enum. Devices and device
  * groups are shareable but never publishable, see `zPublishableResourceType`.
@@ -217,15 +219,8 @@ export const zGranteeOrganizationList = z.array(zGranteeOrganization);
 
 /** Same discoverability rule as the global user search; scoped to one resource. */
 export const zSearchGranteeUsersQuery = zCollaboratorsPathParams.extend({
-  query: z.string().optional().describe("Name or email substring to match"),
-  limit: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(50)
-    .optional()
-    .default(20)
-    .describe("Maximum number of users to return"),
+  query: zPeopleSearchTerm,
+  limit: zPeopleSearchLimit,
 });
 
 /** An organization role as the picker reads it, strongest token first. */
@@ -241,6 +236,9 @@ export const zGranteeUser = z.object({
   firstName: z.string(),
   lastName: z.string(),
   email: z.string().nullable(),
+  matchedEmail: z
+    .boolean()
+    .describe("Whether the query exactly matches this account's email, ignoring case"),
   avatarUrl: z.string().nullable(),
   /** Their role in the resource's **owning** organization; `null` if not a member. */
   organizationRole: zOrganizationMemberRole.nullable(),

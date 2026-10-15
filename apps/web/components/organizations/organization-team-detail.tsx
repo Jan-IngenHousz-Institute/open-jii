@@ -299,7 +299,9 @@ export function OrganizationTeamDetail({
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{displayName}</p>
-                  <p className="text-muted-foreground truncate text-xs">{member.email}</p>
+                  {member.email && (
+                    <p className="text-muted-foreground truncate text-xs">{member.email}</p>
+                  )}
                 </div>
                 {canManage && (
                   <Button

@@ -3,6 +3,10 @@ import { Injectable } from "@nestjs/common";
 import type { GranteeUserDto, SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
+import {
+  EmailVisibilityService,
+  flatEmail,
+} from "../../../../authorization/email-visibility.service";
 import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
 import { SharingRepository } from "../../../core/repositories/sharing.repository";
 
@@ -16,13 +20,14 @@ export class SearchGranteeUsersUseCase {
   constructor(
     private readonly authz: AuthorizationService,
     private readonly repo: SharingRepository,
+    private readonly emailVisibility: EmailVisibilityService,
   ) {}
 
   async execute(
     userId: string,
     resourceType: SharingResourceType,
     resourceId: string,
-    params: { query?: string; limit: number },
+    params: { query: string; limit: number },
   ): Promise<Result<GranteeUserDto[]>> {
     const decision = await this.authz.can(userId, { resourceType, resourceId, action: "share" });
     if (!decision.allow) {
@@ -36,6 +41,10 @@ export class SearchGranteeUsersUseCase {
     // The organization the decision was resolved against, never a fresh read: a
     // transfer landing between the two would annotate candidates with their roles in
     // an organization nobody authorized against.
-    return this.repo.searchGranteeUsers(resourceType, resourceId, decision.organizationId, params);
+    return this.emailVisibility.redactAll(
+      userId,
+      await this.repo.searchGranteeUsers(resourceType, resourceId, decision.organizationId, params),
+      flatEmail(),
+    );
   }
 }

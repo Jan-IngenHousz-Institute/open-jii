@@ -47,13 +47,14 @@ export type UpdateUserDto = typeof updateUserSchema._type;
 export type UserDto = typeof selectUserSchema._type;
 export type CreateUserProfileDto = typeof createUserProfileSchema._type;
 export type UserProfileDto = typeof selectUserProfileSchema._type;
+export type UserSearchResultDto = UserProfileDto & { matchedEmail: boolean };
 export type UserProfileMetadata = typeof userProfileMetadataSchema._type;
 
 // Define search parameters type
 export interface SearchUsersParams {
-  query?: string;
-  limit?: number;
-  offset?: number;
+  query: string;
+  limit: number;
+  offset: number;
 }
 
 // A resource for which the user is the last answerable person — i.e. a blocker for

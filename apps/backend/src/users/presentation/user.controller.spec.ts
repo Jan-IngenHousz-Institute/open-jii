@@ -4,11 +4,12 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api/contract";
 import type {
   UserList,
-  UserProfileList,
+  UserSearchResultList,
   User,
   DeletionBlockersResponse,
 } from "@repo/api/domains/user/user.schema";
 import type { ErrorResponse } from "@repo/api/shared/errors";
+import { eq, users } from "@repo/database";
 
 import { failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
@@ -55,28 +56,18 @@ describe("UserController", () => {
       expect(response.body).toEqual([]);
     });
 
-    it("should return a list of users without query parameters", async () => {
-      // Create some test users
-      const user1Id = await testApp.createTestUser({
-        name: "Alice Smith",
-        email: "alice@example.com",
-      });
-      const user2Id = await testApp.createTestUser({
-        name: "Bob Johnson",
-        email: "bob@example.com",
-      });
-
-      const response: SuperTestResponse<UserProfileList> = await testApp
+    it.each([
+      ["no query", {}],
+      ["a one-character query", { query: "a" }],
+      ["a one-character query padded with spaces", { query: "  a  " }],
+      ["a limit above 20", { query: "ab", limit: 21 }],
+      ["a zero limit", { query: "ab", limit: 0 }],
+    ])("rejects %s with 400 rather than listing users", async (_label, query) => {
+      await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
-        .expect(StatusCodes.OK);
-
-      expect(response.body.length).toBeGreaterThanOrEqual(3); // At least the 3 users we created
-
-      const userIds = response.body.map((u) => u.userId);
-      expect(userIds).toContain(testUserId);
-      expect(userIds).toContain(user1Id);
-      expect(userIds).toContain(user2Id);
+        .query(query)
+        .expect(StatusCodes.BAD_REQUEST);
     });
 
     it("should search users by name", async () => {
@@ -93,7 +84,7 @@ describe("UserController", () => {
         email: "bob@example.com",
       });
 
-      const response: SuperTestResponse<UserProfileList> = await testApp
+      const response: SuperTestResponse<UserSearchResultList> = await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ query: firstName })
@@ -103,28 +94,64 @@ describe("UserController", () => {
       expect(`${response.body[0].firstName} ${response.body[0].lastName}`).toBe(
         `${firstName} Smith`,
       );
+      expect(response.body[0].email).toBeNull();
+      expect(JSON.stringify(response.body)).not.toContain(`${firstName.toLowerCase()}@example.com`);
     });
 
-    it("should search users by email", async () => {
-      // Create users with specific emails
-      const email = `alice${faker.string.alphanumeric(10)}@example.com`;
-      await testApp.createTestUser({
-        name: "Alice Smith",
-        email,
-      });
-      await testApp.createTestUser({
-        name: "Bob Johnson",
-        email: "bob@example.com",
-      });
+    it("resolves a complete address without echoing it", async () => {
+      const email = `alice${faker.string.alphanumeric(10).toLowerCase()}@example.com`;
+      const userId = await testApp.createTestUser({ name: "Alice Smith", email });
 
-      const response: SuperTestResponse<UserList> = await testApp
+      const response: SuperTestResponse<UserSearchResultList> = await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ query: email })
         .expect(StatusCodes.OK);
 
-      expect(response.body).toHaveLength(1);
-      expect(response.body[0].email).toBe(email);
+      expect(response.body.map((user) => user.userId)).toEqual([userId]);
+      expect(response.body[0].email).toBeNull();
+      expect(JSON.stringify(response.body).toLowerCase()).not.toContain(email);
+    });
+
+    it("ranks an exact address ahead of more name matches than the page limit", async () => {
+      const email = "crowded@example.com";
+      const targetId = await testApp.createTestUser({ name: "Zelda Target", email });
+      for (let i = 0; i < 21; i++) {
+        await testApp.createTestUser({ name: `${email} Candidate ${i}` });
+      }
+
+      const response: SuperTestResponse<UserSearchResultList> = await testApp
+        .get(testApp.resolveOrpcPath(contract.users.searchUsers))
+        .withAuth(testUserId)
+        .query({ query: email.toUpperCase(), limit: 20 })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toHaveLength(20);
+      expect(response.body[0]).toMatchObject({ userId: targetId, email: null, matchedEmail: true });
+      for (const candidate of response.body.slice(1))
+        expect(candidate).toMatchObject({ matchedEmail: false });
+      expect(response.body.every((candidate) => candidate.email === null)).toBe(true);
+    });
+
+    it("shows an organization admin their members' addresses", async () => {
+      const orgId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(orgId, testUserId, "admin");
+      const firstName = `Member${faker.string.alphanumeric(10)}`;
+      const memberId = await testApp.createTestUser({
+        name: `${firstName} Smith`,
+        email: "member@example.com",
+      });
+      await testApp.addOrganizationMember(orgId, memberId, "member");
+
+      const response: SuperTestResponse<UserSearchResultList> = await testApp
+        .get(testApp.resolveOrpcPath(contract.users.searchUsers))
+        .withAuth(testUserId)
+        .query({ query: firstName })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual([
+        expect.objectContaining({ userId: memberId, email: "member@example.com" }),
+      ]);
     });
 
     it("should search users with partial name match", async () => {
@@ -139,7 +166,7 @@ describe("UserController", () => {
         email: `${firstName.toLowerCase()}.johnson@example.com`,
       });
 
-      const response: SuperTestResponse<UserProfileList> = await testApp
+      const response: SuperTestResponse<UserSearchResultList> = await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ query: firstName })
@@ -156,26 +183,26 @@ describe("UserController", () => {
       const userIds: string[] = [];
       for (let i = 0; i < 5; i++) {
         const userId = await testApp.createTestUser({
-          name: `User ${i}`,
+          name: `Pagewright ${i}`,
           email: `user${i}@example.com`,
         });
         userIds.push(userId);
       }
 
       // Get first 2 users
-      const firstPageResponse: SuperTestResponse<UserProfileList> = await testApp
+      const firstPageResponse: SuperTestResponse<UserSearchResultList> = await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
-        .query({ limit: 2, offset: 0 })
+        .query({ query: "Pagewright", limit: 2, offset: 0 })
         .expect(StatusCodes.OK);
 
       expect(firstPageResponse.body).toHaveLength(2);
 
       // Get next 2 users
-      const secondPageResponse: SuperTestResponse<UserProfileList> = await testApp
+      const secondPageResponse: SuperTestResponse<UserSearchResultList> = await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
-        .query({ limit: 2, offset: 2 })
+        .query({ query: "Pagewright", limit: 2, offset: 2 })
         .expect(StatusCodes.OK);
 
       expect(secondPageResponse.body).toHaveLength(2);
@@ -201,12 +228,13 @@ describe("UserController", () => {
       await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
+        .query({ query: "ab" })
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
   });
 
   describe("getUser", () => {
-    it("should return a user by ID", async () => {
+    it("should return a user by ID without their address", async () => {
       const userEmail = faker.internet.email();
       const userId = await testApp.createTestUser({ email: userEmail });
 
@@ -219,10 +247,34 @@ describe("UserController", () => {
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
-      expect(response.body).toMatchObject({
-        id: userId,
-        email: userEmail,
-      });
+      expect(response.body).toMatchObject({ id: userId, email: null });
+      expect(JSON.stringify(response.body)).not.toContain(userEmail);
+    });
+
+    it("returns a member's address to an owner of their organization", async () => {
+      const orgId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(orgId, testUserId, "owner");
+      const memberId = await testApp.createTestUser({ email: "member@example.com" });
+      await testApp.addOrganizationMember(orgId, memberId, "member");
+
+      const response: SuperTestResponse<User> = await testApp
+        .get(testApp.resolveOrpcPath(contract.users.getUser, { id: memberId }))
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.email).toBe("member@example.com");
+    });
+
+    it.each([
+      ["deactivated", { activated: false }],
+      ["deleted", { deletedAt: new Date() }],
+    ])("answers 404 for a %s user, like an unknown id", async (_label, options) => {
+      const userId = await testApp.createTestUser(options);
+
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.users.getUser, { id: userId }))
+        .withAuth(testUserId)
+        .expect(StatusCodes.NOT_FOUND);
     });
 
     it("should return 404 if user does not exist", async () => {
@@ -267,7 +319,7 @@ describe("UserController", () => {
 
       const response: SuperTestResponse<User> = await testApp
         .get(path)
-        .withAuth(testUserId)
+        .withAuth(userId)
         .expect(StatusCodes.OK);
 
       expect(response.body).toMatchObject({
@@ -294,7 +346,7 @@ describe("UserController", () => {
 
       expect(response.body).toMatchObject({
         id: otherUserId,
-        email: "other@example.com",
+        email: null,
         name: "Other User",
       });
     });
@@ -430,23 +482,18 @@ describe("UserController", () => {
       // Act: account deletion is self-service, so the caller is the account holder.
       await testApp.delete(path).withAuth(userToDeleteId).expect(StatusCodes.NO_CONTENT);
 
-      // Assert: verify user was soft-deleted (row still exists but PII scrubbed).
-      // Read it back as a different, still-live user.
-      const getUserPath = testApp.resolveOrpcPath(contract.users.getUser, {
-        id: userToDeleteId,
-      });
+      // Assert: the row survives with its PII scrubbed, and nobody else can look it up.
+      const [row] = await testApp.database
+        .select({ email: users.email, name: users.name })
+        .from(users)
+        .where(eq(users.id, userToDeleteId));
+      expect(row.email).toMatch(/^deleted-/);
+      expect(row.name).toBe("Deleted User");
 
-      const response: SuperTestResponse<User> = await testApp
-        .get(getUserPath)
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.users.getUser, { id: userToDeleteId }))
         .withAuth(testUserId)
-        .expect(StatusCodes.OK);
-
-      expect(response.body).toMatchObject({
-        id: userToDeleteId,
-      });
-      expect(response.body.email).not.toBe("delete-me@example.com"); // Anonymized
-      expect(response.body.email).toMatch(/^deleted-/); // Starts with deleted- prefix
-      expect(response.body.name).toBe("Deleted User");
+        .expect(StatusCodes.NOT_FOUND);
     });
 
     it("should return 403 when deleting another user's account, leaving it intact", async () => {
@@ -468,16 +515,12 @@ describe("UserController", () => {
         });
 
       // The target account must be untouched — not merely un-erased, but unscrubbed.
-      const getUserPath = testApp.resolveOrpcPath(contract.users.getUser, {
-        id: otherUserId,
-      });
-      const response: SuperTestResponse<User> = await testApp
-        .get(getUserPath)
-        .withAuth(testUserId)
-        .expect(StatusCodes.OK);
-
-      expect(response.body.email).toBe("not-yours@example.com");
-      expect(response.body.name).toBe("Other User");
+      const [row] = await testApp.database
+        .select({ email: users.email, name: users.name })
+        .from(users)
+        .where(eq(users.id, otherUserId));
+      expect(row.email).toBe("not-yours@example.com");
+      expect(row.name).toBe("Other User");
     });
 
     it("should return 403, not 404, for an account id that does not exist", async () => {

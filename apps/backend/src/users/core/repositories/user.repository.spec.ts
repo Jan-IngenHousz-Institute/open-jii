@@ -344,31 +344,8 @@ describe("UserRepository", () => {
   });
 
   describe("search", () => {
-    it("should search users without any query parameters", async () => {
-      // Arrange
-      const user1Id = await testApp.createTestUser({
-        name: "Alice Smith",
-        email: "alice@example.com",
-      });
-      const user2Id = await testApp.createTestUser({
-        name: "Bob Johnson",
-        email: "bob@example.com",
-      });
-
-      // Act
-      const result = await repository.search({});
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      const foundUsers = result.value;
-      expect(foundUsers.length).toBeGreaterThanOrEqual(3); // At least the 3 created users
-
-      const userIds = foundUsers.map((u) => u.userId);
-      expect(userIds).toContain(testUserId);
-      expect(userIds).toContain(user1Id);
-      expect(userIds).toContain(user2Id);
-    });
+    const search = (query: string, page: { limit?: number; offset?: number } = {}) =>
+      repository.search({ query, limit: page.limit ?? 20, offset: page.offset ?? 0 });
 
     it("should search users by name", async () => {
       // Arrange
@@ -387,7 +364,7 @@ describe("UserRepository", () => {
       });
 
       // Act
-      const result = await repository.search({ query: firstName });
+      const result = await search(firstName);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -398,29 +375,52 @@ describe("UserRepository", () => {
       expect(foundUsers[0].lastName).toBe("Smith");
     });
 
-    it("should search users by email", async () => {
-      // Arrange
-      // The term is matched against names too, so it carries a unique local part for the
-      // same reason the name searches do.
-      const email = `alice${faker.string.alphanumeric(10)}@example.com`;
-      await testApp.createTestUser({
-        name: "Alice Smith",
-        email,
-      });
-      await testApp.createTestUser({
-        name: "Bob Johnson",
-        email: "bob@example.com",
-      });
-
-      // Act
-      const result = await repository.search({ query: email });
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
+    it("computes exact-email evidence in the search statement, independently of name matches", async () => {
+      const email = "exact-evidence@example.test";
+      const exactId = await testApp.createTestUser({ name: "Zelda Target", email });
+      const nameId = await testApp.createTestUser({ name: `${email} Candidate` });
+      const select = vi.spyOn(testApp.database, "select");
+      const result = await search(email.toUpperCase());
       assertSuccess(result);
-      const foundUsers = result.value;
-      expect(foundUsers.length).toBe(1);
-      expect(foundUsers[0].email).toBe(email);
+      expect(result.value).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ userId: exactId, matchedEmail: true }),
+          expect.objectContaining({ userId: nameId, matchedEmail: false }),
+        ]),
+      );
+      expect(select).toHaveBeenCalledTimes(1);
+      select.mockRestore();
+    });
+
+    it("finds a user by their complete email address, in any case", async () => {
+      const email = `alice${faker.string.alphanumeric(10).toLowerCase()}@example.com`;
+      const userId = await testApp.createTestUser({ name: "Alice Smith", email });
+      await testApp.createTestUser({ name: "Bob Johnson", email: "bob@example.com" });
+
+      const exact = await search(email);
+      const upperCased = await search(email.toUpperCase());
+
+      assertSuccess(exact);
+      assertSuccess(upperCased);
+      expect(exact.value.map((user) => user.userId)).toEqual([userId]);
+      expect(upperCased.value.map((user) => user.userId)).toEqual([userId]);
+    });
+
+    it.each([
+      ["a local-part fragment", "zorptas"],
+      ["the whole local part", "zorptastic"],
+      ["the domain", "@zorpmail.example"],
+      ["an address missing one character", "zorptastic@zorpmail.exampl"],
+    ])("does not match an address by %s", async (_label, query) => {
+      const userId = await testApp.createTestUser({
+        name: "Zelda Quux",
+        email: "zorptastic@zorpmail.example",
+      });
+
+      const result = await search(query);
+
+      assertSuccess(result);
+      expect(result.value.map((user) => user.userId)).not.toContain(userId);
     });
 
     it("should search users with partial name match", async () => {
@@ -436,7 +436,7 @@ describe("UserRepository", () => {
       });
 
       // Act
-      const result = await repository.search({ query: firstName });
+      const result = await search(firstName);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -448,44 +448,30 @@ describe("UserRepository", () => {
 
     it("should apply limit and offset for pagination", async () => {
       // Arrange
-      const userIds: string[] = [];
-
       for (let i = 0; i < 5; i++) {
-        const userId = await testApp.createTestUser({
-          name: `User ${i}`,
+        await testApp.createTestUser({
+          name: `Pagewright ${i}`,
           email: `user${i}@example.com`,
         });
-
-        userIds.push(userId);
       }
 
-      // Act - get first 2 users
-      const firstPageResult = await repository.search({ limit: 2, offset: 0 });
+      // Act
+      const firstPageResult = await search("Pagewright", { limit: 2, offset: 0 });
+      const secondPageResult = await search("Pagewright", { limit: 2, offset: 2 });
 
       // Assert
-      expect(firstPageResult.isSuccess()).toBe(true);
       assertSuccess(firstPageResult);
-      const firstPageUsers = firstPageResult.value;
-      expect(firstPageUsers.length).toBe(2);
-
-      // Act - get next 2 users
-      const secondPageResult = await repository.search({ limit: 2, offset: 2 });
-
-      // Assert
-      expect(secondPageResult.isSuccess()).toBe(true);
       assertSuccess(secondPageResult);
-      const secondPageUsers = secondPageResult.value;
-      expect(secondPageUsers.length).toBe(2);
-
-      // Ensure no overlap
-      const firstPageIds = firstPageUsers.map((u) => u.userId);
-      const secondPageIds = secondPageUsers.map((u) => u.userId);
+      expect(firstPageResult.value.length).toBe(2);
+      expect(secondPageResult.value.length).toBe(2);
+      const firstPageIds = firstPageResult.value.map((u) => u.userId);
+      const secondPageIds = secondPageResult.value.map((u) => u.userId);
       expect(firstPageIds.some((id) => secondPageIds.includes(id))).toBe(false);
     });
 
     it("should return empty array if no users match the search query", async () => {
       // Act
-      const result = await repository.search({ query: "nonexistentuser" });
+      const result = await search("nonexistentuser");
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -499,22 +485,10 @@ describe("UserRepository", () => {
         email: "barnaby@example.com",
       });
 
-      const result = await repository.search({ query: "figglesworth", limit: 20 });
+      const result = await search("figglesworth");
 
       assertSuccess(result);
       expect(result.value.some((user) => user.lastName === "Figglesworth")).toBe(true);
-    });
-
-    it("should search users by an email substring", async () => {
-      const userId = await testApp.createTestUser({
-        name: "Zelda Quux",
-        email: "zorptastic@example.com",
-      });
-
-      const result = await repository.search({ query: "zorptastic", limit: 20 });
-
-      assertSuccess(result);
-      expect(result.value.some((user) => user.userId === userId)).toBe(true);
     });
 
     it("should tolerate a typo via trigram matching", async () => {
@@ -523,7 +497,7 @@ describe("UserRepository", () => {
         email: "maxwell@example.com",
       });
 
-      const result = await repository.search({ query: "thornbery", limit: 20 });
+      const result = await search("thornbery");
 
       assertSuccess(result);
       expect(result.value.some((user) => user.lastName === "Thornberry")).toBe(true);
@@ -535,13 +509,13 @@ describe("UserRepository", () => {
         email: "prefixcase@example.com",
       });
 
-      const result = await repository.search({ query: "barn", limit: 20 });
+      const result = await search("barn");
 
       assertSuccess(result);
       expect(result.value.some((user) => user.firstName === "Barnaby")).toBe(true);
     });
 
-    it("should exclude deactivated and soft-deleted users", async () => {
+    it("should exclude deactivated and soft-deleted users, by name and by address", async () => {
       await testApp.createTestUser({
         name: "Ghosty Inactive",
         email: "inactive@example.com",
@@ -553,36 +527,42 @@ describe("UserRepository", () => {
         deletedAt: new Date(),
       });
 
-      const inactiveResult = await repository.search({ query: "ghosty", limit: 20 });
-      const deletedResult = await repository.search({ query: "removed", limit: 20 });
+      const results = await Promise.all(
+        ["ghosty", "removed", "inactive@example.com", "removed@example.com"].map((query) =>
+          search(query),
+        ),
+      );
 
-      assertSuccess(inactiveResult);
-      assertSuccess(deletedResult);
-      expect(inactiveResult.value.some((user) => user.firstName === "Ghosty")).toBe(false);
-      expect(deletedResult.value.some((user) => user.firstName === "Removed")).toBe(false);
+      for (const result of results) {
+        assertSuccess(result);
+        expect(
+          result.value.some((user) => ["Ghosty", "Removed", "Unknown"].includes(user.firstName)),
+        ).toBe(false);
+      }
     });
+  });
 
-    it("excludes deactivated and soft-deleted users from the no-query listing too", async () => {
-      const inactive = await testApp.createTestUser({
-        name: "Ghosty Inactive",
-        email: "inactive-noquery@example.com",
-        activated: false,
-      });
-      const removed = await testApp.createTestUser({
-        name: "Removed Person",
-        email: "removed-noquery@example.com",
-        deletedAt: new Date(),
-      });
+  describe("findDiscoverable", () => {
+    it("resolves a live, activated account", async () => {
+      const userId = await testApp.createTestUser({});
 
-      // The empty-query branch previously applied no visibility predicates at
-      // all, listing every profile including deactivated/soft-deleted ones.
-      const result = await repository.search({ limit: 100 });
+      const result = await repository.findDiscoverable(userId);
 
       assertSuccess(result);
-      const ids = result.value.map((u) => u.userId);
-      expect(ids).not.toContain(inactive);
-      expect(ids).not.toContain(removed);
-      expect(ids).toContain(testUserId);
+      expect(result.value?.id).toBe(userId);
+    });
+
+    it.each([
+      ["deactivated", { activated: false }],
+      ["soft-deleted", { deletedAt: new Date() }],
+      ["without a profile", { createProfile: false }],
+    ])("does not resolve an account %s", async (_label, options) => {
+      const userId = await testApp.createTestUser(options);
+
+      const result = await repository.findDiscoverable(userId);
+
+      assertSuccess(result);
+      expect(result.value).toBeNull();
     });
   });
 

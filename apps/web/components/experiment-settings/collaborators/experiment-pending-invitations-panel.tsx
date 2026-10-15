@@ -1,6 +1,7 @@
 "use client";
 
 import { StatusBadge } from "@/components/shared/status-badge";
+import { formatShortDate } from "@/util/date";
 import { Mail, X } from "lucide-react";
 
 import type { Invitation } from "@repo/api/domains/user/user.schema";
@@ -24,7 +25,7 @@ export function ExperimentPendingInvitationsPanel({
   isArchived = false,
   canRevoke,
 }: ExperimentPendingInvitationsPanelProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { mutate: revokeInvitation } = useUserInvitationRevoke();
 
   const handleRevoke = (invitation: Invitation) => {
@@ -65,8 +66,22 @@ export function ExperimentPendingInvitationsPanel({
             <Mail className="text-muted-foreground h-4 w-4" />
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <span className="text-foreground truncate text-sm font-medium" title={invitation.email}>
-              {invitation.email}
+            <span
+              className="text-foreground truncate text-sm font-medium"
+              title={invitation.email ?? undefined}
+            >
+              {invitation.email ?? t("experimentSettings.addressHidden")}
+            </span>
+            <span className="text-muted-foreground flex flex-wrap items-center gap-x-1 text-xs">
+              {t("experimentSettings.invitedBy")}{" "}
+              <span>{invitation.invitedByName ?? t("experimentSettings.unknownInviter")}</span>
+              <span aria-hidden="true">·</span>
+              <time dateTime={invitation.createdAt}>
+                {formatShortDate(invitation.createdAt, i18n.language)}
+              </time>
+              {invitation.email === null && (
+                <span title={invitation.id}>· {invitation.id.slice(0, 8)}</span>
+              )}
             </span>
             <StatusBadge tone="published">{t("experimentSettings.pendingInvite")}</StatusBadge>
           </div>

@@ -55,24 +55,33 @@ meaning the share adds nothing to access the person already has.
   than "read-only".
 </Callout>
 
-![The Collaborators tab with access levels and the Invite button](/img/guide/web/collaborators.webp)
+Email addresses are shown only where needed. You can see your own address.
+Organization owners and admins can see their organization's members' addresses.
+Someone managing an experiment can see the address on a pending request to
+join it, but managing the experiment alone does not reveal collaborators'
+addresses. An experiment invitation's address is visible only to the person who
+sent it. Organization invitations have a separate rule: that organization's
+owners and admins can also see their invitees' addresses.
+Other people appear without an address. Inviting by an exact email address
+still works.
 
 ## Invite a collaborator
 
 Open your experiment and go to the **Collaborators** tab, then select **Invite**.
 One search field covers every way of adding someone:
 
-- **A user** — search by name or email and select them. They get access
+- **A user** — search by name or exact email and select them. They get access
   immediately at the level you choose. The search shows up to 20 matching
-  people, each with their email address under their name. They hear about it
-  in their notification bell, with an email while **Membership and access** is
-  switched on under **Account → Notifications**. Changing their level later, or
-  removing them, reaches the bell too, with no email.
+  people. They hear about it in their notification bell, with an email while
+  **Membership and access** is switched on under **Account → Notifications**.
+  Changing their level later, or removing them, reaches the bell too, with no email.
 - **An organization** — switch **Share with** to _Organization_ and pick one of
   your own. Everyone in that organization gets the level you choose.
-- **Someone by email** — type an email address that is not yet on openJII and
-  choose **Send invite by email**. They receive an email, and they join the
-  experiment at the chosen level once they create an account.
+- **Someone by email** — type their full address. If no account appears, choose
+  **Send invite by email**. They join at the chosen level when they next sign in,
+  creating an account first if needed. If the address matches an existing account, select the person
+  instead. The result says **Matches the email you entered** without showing
+  a hidden address. They get access immediately.
 
 Choose the access level in the same dialog. New collaborators default to **Can
 view**, which is the level that lets them contribute.
@@ -81,22 +90,14 @@ The Collaborators tab groups people into three sub-tabs:
 
 - **Collaborators** — the users and organizations the experiment is shared with
   directly, each with their level.
-- **Invited** — pending email invitations, each showing the level it will confer.
+- **Invited** — pending email invitations, each showing the level it will confer,
+  who sent it and the date. These details help distinguish invitations when
+  their addresses are hidden. Hidden invitations also show a short reference
+  so you can tell apart invitations sent by the same person on the same day.
   Revoke one before it is accepted and re-invite if you need to change that level.
 - **Requests** — pending requests to join (see below).
 
 The filter above the tabs narrows all three lists at once.
-
-<Callout type="info">
-  **Coming in an upcoming release: fewer email addresses on show.** The picker and the lists will
-  stop showing everyone's address. You will always see your own email. Organization owners and
-  admins will see their organization's members' emails. Someone who manages an experiment will see
-  the email of a person with a pending request to join that experiment, on that request only.
-  Managing an experiment will not reveal its collaborators' emails. The person who sent an
-  invitation will see its address; for an organization invitation, that organization's owners and
-  admins will also see it. Other addresses will be hidden. Inviting someone by typing their exact
-  email address will keep working.
-</Callout>
 
 ## Requests to join a public experiment
 

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { zExperimentStatus } from "../experiment/experiment.schema";
 import { zShareableRole, zSharingResourceType } from "../sharing/sharing.schema";
+import { zPeopleSearchLimit, zPeopleSearchTerm } from "./people-search.schema";
 
 export const zUser = z.object({
   id: z.string().uuid(),
@@ -17,15 +18,8 @@ export const zUser = z.object({
 export const zUserList = z.array(zUser);
 
 export const zSearchUsersQuery = z.object({
-  query: z.string().optional().describe("Search query for name or email"),
-  limit: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(100)
-    .optional()
-    .default(50)
-    .describe("Maximum number of users to return"),
+  query: zPeopleSearchTerm,
+  limit: zPeopleSearchLimit,
   offset: z.coerce
     .number()
     .int()
@@ -61,6 +55,15 @@ export const zUserProfile = z.object({
 });
 
 export const zUserProfileList = z.array(zUserProfile);
+
+export const zUserSearchResult = zUserProfile.extend({
+  matchedEmail: z
+    .boolean()
+    .describe("Whether the query exactly matches this account's email, ignoring case"),
+});
+export const zUserSearchResultList = z.array(zUserSearchResult);
+export type UserSearchResult = z.infer<typeof zUserSearchResult>;
+export type UserSearchResultList = z.infer<typeof zUserSearchResultList>;
 
 // Path parameters
 export const zUserIdPathParam = z.object({
@@ -164,7 +167,8 @@ export const zInvitation = z.object({
   id: z.string().uuid(),
   resourceType: zInvitationResourceType,
   resourceId: z.string().uuid().nullable(),
-  email: z.string().email(),
+  /** The invitee's address, shown only to whoever created the invitation. */
+  email: z.string().email().nullable(),
   /** Access tier granted on acceptance. */
   tier: zInvitationTier,
   status: zInvitationStatus,

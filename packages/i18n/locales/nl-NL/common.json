@@ -84,7 +84,9 @@
     "sortUnsorted": "ongesorteerd",
     "sortAscending": "oplopend",
     "sortDescending": "aflopend",
-    "sortSecondary": "tweede sortering"
+    "sortSecondary": "tweede sortering",
+    "searchMinCharacters": "Typ minimaal 2 tekens om te zoeken",
+    "emailMatched": "Komt overeen met het ingevoerde e-mailadres"
   },
   "navigation": {
     "experiments": "Experimenten",
@@ -302,6 +304,7 @@
     "experimentUnarchivedError": null,
     "remove": null,
     "pendingInvite": "Uitnodiging in afwachting",
+    "addressHidden": "Adres verborgen",
     "invitationRevoked": "Uitnodiging succesvol ingetrokken",
     "revoke": "Intrekken",
     "collaborators": "Medewerkers",
@@ -342,7 +345,9 @@
     "invite": "Uitnodigen",
     "inviteCollaborators": "Medewerkers uitnodigen",
     "inviteCollaboratorsDescription": "Voeg een bestaande gebruiker of een van uw organisaties toe, of nodig iemand uit per e-mail. Bestaande accounts krijgen direct toegang; uitgenodigden ontvangen een e-mail en doen mee zodra ze accepteren.",
-    "filterCollaboratorsPlaceholder": "Filter op naam of e-mail…"
+    "filterCollaboratorsPlaceholder": "Filter op naam of e-mail…",
+    "invitedBy": "Uitgenodigd door",
+    "unknownInviter": "Onbekende uitnodiger"
   },
   "joinCode": {
     "title": "Deelnamecode",
@@ -692,7 +697,7 @@
     "invite": {
       "action": "Uitnodigen",
       "title": "Iemand uitnodigen",
-      "description": "Zoek iemand met een account of typ een adres zonder account. In beide gevallen wordt een uitnodiging verstuurd.",
+      "description": "Zoek op naam of voer een volledig e-mailadres in. Als het adres verborgen is, moet je het volledig invoeren om een uitnodiging te versturen.",
       "roleLabel": "Rol",
       "submit": "Uitnodiging versturen",
       "sending": "Versturen…",
@@ -712,6 +717,7 @@
       "searchFailed": "Zoeken naar personen is mislukt.",
       "alreadyMember": "Deze persoon is al lid van deze organisatie",
       "alreadyInvited": "Voor dit adres is al een uitnodiging verstuurd",
+      "enterExactEmail": "Voer het volledige e-mailadres in om deze persoon uit te nodigen",
       "mustAccept": "{{name}} wordt uitgenodigd als {{role}} en doet mee zodra de uitnodiging is geaccepteerd.",
       "sendByEmail": "Uitnodiging per e-mail sturen",
       "label": "Uitgenodigd",

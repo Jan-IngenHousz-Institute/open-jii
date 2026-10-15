@@ -1,5 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import {
+  EmailVisibilityService,
+  nestedUserEmail,
+} from "../../../../authorization/email-visibility.service";
 import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
 import type { OrganizationJoinRequestDto } from "../../../core/models/organization-join-request.model";
 import { canManageMembership, canViewOrganization } from "../../../core/organization-access";
@@ -14,6 +18,7 @@ export class ListOrganizationJoinRequestsUseCase {
   constructor(
     private readonly organizationRepository: OrganizationRepository,
     private readonly joinRequestRepository: OrganizationJoinRequestRepository,
+    private readonly emailVisibility: EmailVisibilityService,
   ) {}
 
   async execute(
@@ -39,6 +44,10 @@ export class ListOrganizationJoinRequestsUseCase {
       return failure(AppError.forbidden("Only owners and admins can review join requests"));
     }
 
-    return this.joinRequestRepository.listByOrganization(organizationId);
+    return this.emailVisibility.redactAll(
+      userId,
+      await this.joinRequestRepository.listByOrganization(organizationId),
+      nestedUserEmail(),
+    );
   }
 }

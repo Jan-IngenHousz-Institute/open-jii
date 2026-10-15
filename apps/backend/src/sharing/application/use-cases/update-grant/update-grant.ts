@@ -7,6 +7,10 @@ import type {
 } from "@repo/api/domains/sharing/sharing.schema";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
+import {
+  EmailVisibilityService,
+  collaboratorEmail,
+} from "../../../../authorization/email-visibility.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
@@ -24,6 +28,7 @@ export class UpdateGrantUseCase {
   constructor(
     private readonly authz: AuthorizationService,
     private readonly repo: SharingRepository,
+    private readonly emailVisibility: EmailVisibilityService,
     private readonly notifications: NotificationDispatchService,
   ) {}
 
@@ -63,7 +68,11 @@ export class UpdateGrantUseCase {
     }
 
     const ownership = await this.authz.getOwnership(resourceType, resourceId);
-    return this.repo.list(resourceType, resourceId, ownership?.organizationId ?? null);
+    return this.emailVisibility.redactAllAfterWrite(
+      userId,
+      await this.repo.list(resourceType, resourceId, ownership?.organizationId ?? null),
+      collaboratorEmail(),
+    );
   }
 
   /**
