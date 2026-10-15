@@ -685,7 +685,7 @@ describe("OutputCellComponent", () => {
       expect(screen.queryByTestId("plotly-chart")).not.toBeInTheDocument();
     });
 
-    it("plots Ambit values on separate unit axes without a protocol or family", async () => {
+    it("shows unpaired raw channels with descriptive axes and preserves values", async () => {
       render(
         <OutputCellComponent
           cell={createOutputCell({ data: createAmbitTrace() })}
@@ -694,17 +694,59 @@ describe("OutputCellComponent", () => {
         />,
       );
       await userEvent.setup().click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      expect(screen.getByText("output.ambitRatioUnavailable.missing")).toBeInTheDocument();
       const charts = screen.getAllByTestId("plotly-chart");
       expect(charts).toHaveLength(2);
-      expect(charts[0]).toHaveAttribute("data-traces", expect.stringContaining('"x":[0,0.1,0.2]'));
-      expect(charts[0]).toHaveAttribute("data-layout", expect.stringContaining('"text":"count"'));
-      expect(charts[0]).toHaveAttribute(
-        "data-layout",
-        expect.stringContaining('"showlegend":true'),
+      expect(screen.getByTestId("series-output.ambitChannels.fluo_630_signal")).toHaveTextContent(
+        "120,160,140",
       );
-      expect(screen.getByTestId("series-fluo_630_signal")).toHaveTextContent("120,160,140");
-      expect(charts[1]).toHaveAttribute("data-layout", expect.stringContaining('"text":"°C"'));
-      expect(screen.getByTestId("series-leaf_temp")).toHaveTextContent("23.5,23.7");
+      expect(screen.getByTestId("series-output.ambitChannels.leaf_temp")).toHaveTextContent(
+        "23.5,23.7",
+      );
+      expect(charts[1]).toHaveAttribute(
+        "data-layout",
+        expect.stringContaining("output.ambitChannels.fluo_630_signal (output.ambitCounts)"),
+      );
+      expect(charts[1]).toHaveAttribute("data-traces", expect.stringContaining('"x":[0,0.1,0.2]'));
+    });
+
+    it("leads with fluorescence/reference and summarizes a single temperature reading", async () => {
+      const data = createAmbitTrace({
+        series: {
+          fluo_630_signal: { u: "count", t: [0, 0.1, 0.4], v: [10, 60, 80] },
+          fluo_630_ref: { u: "count", t: [0, 0.1, 0.4], v: [100, 200, 400] },
+          leaf_temp: { u: "Cel", t: [0], v: [25.1] },
+        },
+      });
+      render(
+        <OutputCellComponent
+          cell={createOutputCell({ data })}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+        />,
+      );
+      await userEvent.setup().click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      expect(screen.getByTestId("series-output.ambitChannels.fluorescence")).toHaveTextContent(
+        "0.1,0.3,0.2",
+      );
+      expect(screen.getAllByTestId("plotly-chart")[0]).toHaveAttribute(
+        "data-layout",
+        expect.stringContaining("output.ambitRatioAxis"),
+      );
+      expect(screen.getByText(/25.1 °C/)).toBeInTheDocument();
+      expect(screen.queryByTestId("series-output.ambitChannels.leaf_temp")).not.toBeInTheDocument();
+      expect(screen.getByText("output.ambitRawChannels").closest("details")).not.toHaveAttribute(
+        "open",
+      );
+      expect(screen.getAllByTestId("plotly-chart")).toHaveLength(1);
+      const user = userEvent.setup();
+      await user.click(screen.getByText("output.ambitRawChannels"));
+      await waitFor(() => expect(screen.getAllByTestId("plotly-chart")).toHaveLength(3));
+      expect(screen.getByTestId("series-output.ambitChannels.fluo_630_signal")).toHaveTextContent(
+        "10,60,80",
+      );
+      await user.click(screen.getByText("output.ambitRawChannels"));
+      await waitFor(() => expect(screen.getAllByTestId("plotly-chart")).toHaveLength(1));
     });
 
     it("keeps invalid Ambit series readable in JSON and explains why they cannot be plotted", async () => {

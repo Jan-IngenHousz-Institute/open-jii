@@ -100,6 +100,28 @@
       "invalid": "Deze reeks kan niet worden getoond: waarden, eenheden of tijdstempels ontbreken of zijn ongeldig. De oorspronkelijke gegevens zijn beschikbaar in JSON.",
       "empty": "Geen meetwaarden om te tonen.",
       "limit": "Sommige gegevens overschrijden de grafieklimiet. Bekijk het volledige resultaat in JSON."
+    },
+    "ambitCounts": "telwaarden",
+    "ambitRatioAxis": "Fluorescentie / referentie",
+    "ambitRawChannels": "Ruwe detectorkanalen",
+    "ambitSingleReading": "Enkele meting op {{time}} s",
+    "ambitReadings": "{{count}} meetwaarden",
+    "ambitRatioExplanation": "Fluorescentiesignaal gedeeld door de referentie op dezelfde tijdstippen. Dit is een signaalverhouding, geen Fv/Fm.",
+    "ambitReferenceFilled": "{{count}} referentiewaarden van nul gebruiken de gemiddelde gemeten referentie, volgens de Ambyte-traceanalyse.",
+    "ambitRatioUnavailable": {
+      "missing": "Er is geen fluorescentie-referentiepaar beschikbaar. De ruwe detectorkanalen staan hieronder.",
+      "unaligned": "De tijdstippen van fluorescentie en referentie komen niet overeen. De ruwe kanalen worden apart weergegeven; er wordt geen verhouding afgeleid.",
+      "invalid": "Het referentiekanaal levert geen geldige fluorescentieverhouding op. De ruwe kanalen blijven beschikbaar."
+    },
+    "ambitChannels": {
+      "fluorescence": "Fluorescentie",
+      "fluo_630_signal": "Fluorescentiedetector · 630 nm",
+      "fluo_630_ref": "Referentiedetector · 630 nm",
+      "refl_730_signal": "Reflectiedetector · 730 nm",
+      "refl_730_ref": "Referentiedetector · 730 nm",
+      "ambient_sun_vis": "Zichtbaar omgevingslicht",
+      "ambient_leaf_ir": "Infraroodsignaal van het blad",
+      "leaf_temp": "Bladtemperatuur"
     }
   },
   "cells": {

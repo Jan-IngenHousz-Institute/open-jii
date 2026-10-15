@@ -105,6 +105,28 @@
       "invalid": "Cannot plot this series: values, units, or timestamps are missing or invalid. The original data is available in JSON.",
       "empty": "No readings to plot.",
       "limit": "Some data exceeds the chart limit. View the complete result in JSON."
+    },
+    "ambitCounts": "counts",
+    "ambitRatioAxis": "Fluorescence / reference",
+    "ambitRawChannels": "Raw detector channels",
+    "ambitSingleReading": "Single reading at {{time}} s",
+    "ambitReadings": "{{count}} readings",
+    "ambitRatioExplanation": "Fluorescence signal divided by its reference at the same timestamps. This is a signal ratio, not Fv/Fm.",
+    "ambitReferenceFilled": "{{count}} zero reference readings use the mean measured reference, following the Ambyte trace analysis.",
+    "ambitRatioUnavailable": {
+      "missing": "A fluorescence/reference pair is not available. Raw detector channels are shown below.",
+      "unaligned": "Fluorescence and reference timestamps do not match. Raw channels are shown separately; no ratio is inferred.",
+      "invalid": "The reference channel cannot produce a valid fluorescence ratio. Raw channels remain available."
+    },
+    "ambitChannels": {
+      "fluorescence": "Fluorescence",
+      "fluo_630_signal": "Fluorescence detector · 630 nm",
+      "fluo_630_ref": "Reference detector · 630 nm",
+      "refl_730_signal": "Reflectance detector · 730 nm",
+      "refl_730_ref": "Reference detector · 730 nm",
+      "ambient_sun_vis": "Ambient visible light",
+      "ambient_leaf_ir": "Leaf infrared signal",
+      "leaf_temp": "Leaf temperature"
     }
   },
   "cells": {

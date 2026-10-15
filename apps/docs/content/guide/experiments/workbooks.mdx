@@ -96,11 +96,17 @@ data cannot be decoded, the tab explains the problem instead of inventing a time
 axis.
 
 Ambit `ambit.trace/3` results supply their own timestamps or sampling intervals.
-The chart preserves those relative times and measured values, with separate
-panels for different units such as counts and temperature. Estimated timestamps
-are labeled in the legend. Multiple traces remain separate. Invalid series and
-data beyond the chart limits show an explanation; **JSON** retains the complete
-result.
+The main plot shows **Fluorescence / reference**, dividing the 630 nm signal by
+its reference at matching timestamps. This is a signal ratio, not Fv/Fm. Zero
+reference readings use the mean measured reference, as in the Ambyte trace
+analysis; the chart states when this substitution is used. Missing, invalid, or
+misaligned reference channels show an explanation and the raw channels instead.
+
+Temperature has its own plot in °C. A single reading appears as a value with its
+time. Expand **Raw detector channels** to inspect each channel on its own scale
+with the original values. Estimated timing is labeled in the chart heading.
+Multiple traces remain separate. Invalid series and data beyond the chart limits
+show an explanation; **JSON** retains the complete result.
 
 **Table** and **JSON** remain available for every result. An expandable numeric
 array in the table uses sample index, which is not necessarily elapsed time.

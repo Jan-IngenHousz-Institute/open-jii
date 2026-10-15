@@ -100,6 +100,28 @@
       "invalid": "Diese Reihe kann nicht dargestellt werden: Werte, Einheiten oder Zeitstempel fehlen oder sind ungültig. Die Originaldaten sind unter JSON verfügbar.",
       "empty": "Keine Messwerte zum Darstellen.",
       "limit": "Einige Daten überschreiten das Diagrammlimit. Das vollständige Ergebnis ist unter JSON verfügbar."
+    },
+    "ambitCounts": "Zählwerte",
+    "ambitRatioAxis": "Fluoreszenz / Referenz",
+    "ambitRawChannels": "Rohe Detektorkanäle",
+    "ambitSingleReading": "Einzelmessung bei {{time}} s",
+    "ambitReadings": "{{count}} Messwerte",
+    "ambitRatioExplanation": "Fluoreszenzsignal geteilt durch die Referenz zum selben Zeitpunkt. Dies ist ein Signalverhältnis, nicht Fv/Fm.",
+    "ambitReferenceFilled": "{{count}} Referenzwerte von null werden durch den Mittelwert der gemessenen Referenz ersetzt, entsprechend der Ambyte-Spurenanalyse.",
+    "ambitRatioUnavailable": {
+      "missing": "Ein Fluoreszenz-Referenz-Paar ist nicht verfügbar. Die rohen Detektorkanäle werden unten angezeigt.",
+      "unaligned": "Die Zeitstempel von Fluoreszenz und Referenz stimmen nicht überein. Die Rohkanäle werden getrennt dargestellt; es wird kein Verhältnis abgeleitet.",
+      "invalid": "Der Referenzkanal liefert kein gültiges Fluoreszenzverhältnis. Die Rohkanäle bleiben verfügbar."
+    },
+    "ambitChannels": {
+      "fluorescence": "Fluoreszenz",
+      "fluo_630_signal": "Fluoreszenzdetektor · 630 nm",
+      "fluo_630_ref": "Referenzdetektor · 630 nm",
+      "refl_730_signal": "Reflexionsdetektor · 730 nm",
+      "refl_730_ref": "Referenzdetektor · 730 nm",
+      "ambient_sun_vis": "Sichtbares Umgebungslicht",
+      "ambient_leaf_ir": "Infrarotsignal des Blatts",
+      "leaf_temp": "Blatttemperatur"
     }
   },
   "cells": {
