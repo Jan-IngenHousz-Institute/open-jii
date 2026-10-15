@@ -209,7 +209,7 @@ export function checkTitle(title: string): Finding[] {
   if (/^[A-Z][A-Z -]*:/.test(title)) {
     findings.push({ rule: "title", detail: "starts with a type prefix; that is a label" });
   }
-  const named = /\bOJD-\d+\b/.exec(title)?.[0];
+  const named = /\bOJD-\d+\b/.exec(title.replace(/^OJD-\d+\s+/, ""))?.[0];
   if (named) {
     findings.push({
       rule: "title",

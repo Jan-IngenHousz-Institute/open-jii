@@ -208,6 +208,10 @@ describe("checkTitle", () => {
     ]);
     expect(checkTitle("Home shows public research")).toEqual([]);
     expect(checkTitle("Export timestamps as ISO-8601")).toEqual([]);
+    expect(checkTitle("OJD-1800 Home shows public research")).toEqual([]);
+    expect(checkTitle("OJD-1800 Home shows OJD-1801 research").map((f) => f.rule)).toEqual([
+      "title",
+    ]);
   });
 });
 
