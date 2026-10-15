@@ -60,6 +60,21 @@ describe("ThrottledCard", () => {
     expect(screen.getByText("Too many attempts. Try again in 15s.")).toBeTruthy();
   });
 
+  it("restarts the countdown when a new refusal arrives", () => {
+    const { rerender } = render(
+      <ThrottledCard throttledAt={Date.now() - 90_000} onRetry={vi.fn()} />,
+    );
+    expect(screen.getByText("Too many attempts. You can try again now.")).toBeTruthy();
+
+    rerender(<ThrottledCard throttledAt={Date.now()} onRetry={vi.fn()} />);
+    expect(screen.getByText("Too many attempts. Try again in 60s.")).toBeTruthy();
+
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(screen.getByText("Too many attempts. Try again in 59s.")).toBeTruthy();
+  });
+
   it("offers Retry at once for a refusal older than the window", () => {
     render(<ThrottledCard throttledAt={Date.now() - 90_000} onRetry={vi.fn()} />);
 

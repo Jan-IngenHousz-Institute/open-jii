@@ -49,10 +49,15 @@ export function CommentModal({
   const { sheetRef, renderBackdrop } = useBottomSheetController({ visible });
   const insets = useSafeAreaInsets();
 
+  const [prevOpen, setPrevOpen] = useState({ visible, initialText });
+  if (prevOpen.visible !== visible || prevOpen.initialText !== initialText) {
+    setPrevOpen({ visible, initialText });
+    if (visible) setInputKey((key) => key + 1);
+  }
+
   useEffect(() => {
     if (visible) {
       textRef.current = initialText;
-      setInputKey((key) => key + 1);
     }
   }, [visible, initialText]);
 

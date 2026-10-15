@@ -49,6 +49,11 @@ export function DeviceSheet() {
   const { handleConnect, handleDisconnect, connectingDeviceId } = useDeviceSheetActions();
 
   const [showAllDevices, setShowAllDevices] = useState(false);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen);
+    if (!isOpen) setShowAllDevices(false);
+  }
   const { data: bluetoothPermissionGranted = true, refetch: refreshBluetoothPermission } = useQuery(
     {
       queryKey: ["bluetooth-permission"],
@@ -68,10 +73,6 @@ export function DeviceSheet() {
   // show every device directly instead of an empty list above "See more".
   const collapseUnnamed = named.length > 0 && !showAllDevices;
   const visibleDevices = collapseUnnamed ? named : [...named, ...unnamed];
-
-  useEffect(() => {
-    if (!isOpen) setShowAllDevices(false);
-  }, [isOpen]);
 
   const handleAllowBluetooth = useCallback(async () => {
     const granted = await requestBluetoothPermission();

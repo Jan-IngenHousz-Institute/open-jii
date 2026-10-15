@@ -15,13 +15,16 @@ interface ThrottledCardProps {
   onRetry: () => void;
 }
 
-export function ThrottledCard({ throttledAt, onRetry }: ThrottledCardProps) {
+export function ThrottledCard(props: ThrottledCardProps) {
+  return <ThrottledCountdown key={props.throttledAt} {...props} />;
+}
+
+function ThrottledCountdown({ throttledAt, onRetry }: ThrottledCardProps) {
   const { t } = useTranslation(["common", "experiments"]);
   const retryAt = throttledAt + THROTTLE_WINDOW_MS;
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    setNow(Date.now());
     const timer = setInterval(() => {
       const current = Date.now();
       setNow(current);
