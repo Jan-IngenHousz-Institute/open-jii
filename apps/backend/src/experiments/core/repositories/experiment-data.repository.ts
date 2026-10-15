@@ -170,7 +170,7 @@ export class ExperimentDataRepository {
     // pseudonyms; tag contributor id filters so the SQL compares the pseudonym
     // (recomputed in-query) instead of the raw id the client never receives.
     const effectiveFilters = this.pseudonymizeContributorFilters(experiment, filters);
-    const orderingResult = await this.contributorOrdering(
+    const orderingResult = await this.requestedOrdering(
       experiment,
       tableName,
       orderBy,
@@ -489,11 +489,11 @@ export class ExperimentDataRepository {
   }
 
   /**
-   * Sort an anonymized experiment's contributor column by the pseudonym it shows rather than the
-   * real name, whose order would leak. The FE sorts contributors by a `<column>.name` path; the
-   * column's type is checked, so another struct's `name` field keeps its own order.
+   * Build the requested ordering. An absent `orderBy` or an empty string means no sort.
+   * An anonymized experiment's contributor column sorts by its displayed pseudonym, since ordering
+   * by the real name would leak it. The column's type is checked before mapping a `.name` path.
    */
-  private async contributorOrdering(
+  private async requestedOrdering(
     experiment: ExperimentDto,
     tableName: string,
     orderBy: string | undefined,

@@ -149,7 +149,6 @@ describe("ExperimentDataRepository", () => {
         variants: undefined,
         exceptColumns: ["experiment_id", "questions_data", "custom_metadata"],
         ordering: undefined,
-
         limit: 5,
         offset: 0,
       });
@@ -764,7 +763,6 @@ describe("ExperimentDataRepository", () => {
         reservedColumns: VIEW_COLUMNS,
         exceptColumns: ["experiment_id", "custom_metadata"],
         ordering: undefined,
-
         limit: DATA_QUERY_MAX_LIMIT + 1,
         offset: undefined,
       });
@@ -959,7 +957,6 @@ describe("ExperimentDataRepository", () => {
           "custom_metadata",
         ],
         ordering: undefined,
-
         limit: 5,
         offset: 0,
       });
@@ -1137,7 +1134,6 @@ describe("ExperimentDataRepository", () => {
           "custom_metadata",
         ],
         ordering: undefined,
-
         limit: 5,
         offset: 0,
       });
@@ -1183,7 +1179,6 @@ describe("ExperimentDataRepository", () => {
         variants: undefined,
         exceptColumns: ["experiment_id", "questions_data", "custom_metadata"],
         ordering: undefined,
-
         limit: 5,
         offset: 0,
       });
@@ -1232,7 +1227,6 @@ describe("ExperimentDataRepository", () => {
         variants: undefined,
         exceptColumns: ["experiment_id"],
         ordering: undefined,
-
         limit: 5,
         offset: 0,
       });
@@ -1799,7 +1793,6 @@ describe("ExperimentDataRepository", () => {
           columns: ["site"],
           distinct: true,
           ordering: { column: "site", direction: "ASC" },
-
           limit: 11,
         }),
       );

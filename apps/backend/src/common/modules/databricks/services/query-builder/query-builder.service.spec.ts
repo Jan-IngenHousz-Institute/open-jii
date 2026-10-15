@@ -48,7 +48,6 @@ describe("QueryBuilderService", () => {
           exceptColumns: ["experiment_id", "raw_data"],
           whereConditions: [["experiment_id", "d89a6dce-540c-4ac2-8b8c-516afc2bd525"]],
           ordering: { column: "processed_timestamp", direction: "DESC" },
-
           limit: 10,
           offset: 0,
         }),
