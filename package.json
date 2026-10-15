@@ -54,6 +54,7 @@
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "@types/node": "catalog:",
     "prettier": "3.5.3",
     "prettier-plugin-tailwindcss": "0.6.12",
     "turbo": "^2.10.5",
