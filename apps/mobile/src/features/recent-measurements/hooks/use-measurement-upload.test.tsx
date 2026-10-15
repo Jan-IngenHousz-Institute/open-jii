@@ -27,9 +27,14 @@ vi.mock("~/shared/measurements/measurement-topic", () => ({
 vi.mock("~/features/recent-measurements/services/export-measurements", () => ({
   exportSingleMeasurementToFile: vi.fn(),
 }));
-vi.mock("~/shared/measurements/client-metadata", () => ({
-  getClientMetadata: () => ({ client_model: "NX789J", client_os: "Android" }),
+vi.mock("react-native", () => ({ Platform: { OS: "android" } }));
+vi.mock("expo-device", () => ({
+  modelName: "SM-A165F",
+  manufacturer: "samsung",
+  osName: "samsung/a16nseea/a16:16/build:user/release-keys",
+  osVersion: "16",
 }));
+vi.mock("expo-application", () => ({ nativeApplicationVersion: "2.73.2" }));
 vi.mock("~/shared/ui/AlertDialog", () => ({ showAlert: vi.fn() }));
 vi.mock("sonner-native", () => ({ toast: { error: vi.fn() } }));
 vi.mock("~/shared/i18n", () => ({ useTranslation: () => ({ t: (k: string) => k }) }));
@@ -132,6 +137,17 @@ describe("useMeasurementUpload", () => {
       "minipar",
       undefined,
     ]);
+
+    for (const [measurement, status] of calls) {
+      expect(status).toBe("pending");
+      expect(measurement.measurementResult).toMatchObject({
+        client_model: "SM-A165F",
+        client_manufacturer: "samsung",
+        client_os: "Android",
+        client_os_version: "16",
+        client_app_version: "2.73.2",
+      });
+    }
 
     const runIds = calls.map(([m]) => m.measurementResult.workbook_run_id);
     expect(runIds).toEqual(["run-attempt-1", "run-attempt-1", "run-attempt-1"]);

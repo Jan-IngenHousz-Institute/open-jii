@@ -92,6 +92,8 @@ A transitional legacy channel with a trailing `{protocolId}` level remains route
 
 Mobile workbook uploads carry `workbook_version_id` and one `workbook_run_id` shared across the run's measurements, including questions-only uploads. For mobile uploads, the topic's `{sensorType}` is `mobile`, `{sensorVersion}` is the app version and `{sensorId}` is the phone's local IoT Thing name. The phone uses that same Thing name as its MQTT client ID. The broker-authenticated ID is distinct from self-reported `device_*` sensor details and `client_*` phone details in the payload.
 
+Both device measurements and questions-only uploads capture the phone's model, manufacturer, OS, OS version, and app version in the optional `client_*` payload fields before saving locally. Android uses `client_os: "Android"`; `client_os_version` retains the OS release number. Missing native values are omitted. Questions-only uploads carry these phone details without adding sensor or protocol fields. Queued rows retain the metadata captured when they were saved, so this does not backfill older uploads.
+
 The exact channel parameters and message schema are maintained in the [MQTT API reference](/api/mqtt). Do not copy the deployed broker endpoint from examples: obtain environment-specific connection details and credentials through the supported application flow. For MQTT topic fundamentals, wildcards, and naming best practices, [HiveMQ's MQTT Essentials on topics](https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/) is a good primer.
 
 ## Client-side durability
