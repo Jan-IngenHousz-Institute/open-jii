@@ -894,6 +894,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     orderBy?: string;
     orderDirection?: "ASC" | "DESC";
     orderByContributorPseudonymSalt?: string;
+    orderByNumericString?: { rowId?: string };
     limit?: number;
     offset?: number;
   }): Result<string> {

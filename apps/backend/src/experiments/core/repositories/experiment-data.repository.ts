@@ -673,7 +673,21 @@ export class ExperimentDataRepository {
     } = options;
     const { metadata, variants, exceptColumns, reservedColumns } = shape;
 
+    const numericAnswer =
+      orderBy !== undefined &&
+      !aggregation &&
+      FlattenedFields.resolve(
+        reservedColumns,
+        variants.map(({ columnName, schema, suffix }) => ({ column: columnName, schema, suffix })),
+      ).some(
+        ({ key, column, field }) =>
+          key === orderBy && column === "questions_data" && field.type.toUpperCase() === "STRING",
+      );
+
     return this.databricksPort.buildExperimentQuery({
+      ...(numericAnswer
+        ? { orderByNumericString: { rowId: reservedColumns.includes(ROW_ID) ? ROW_ID : undefined } }
+        : {}),
       tableName: metadata.identifier,
       tableType: metadata.tableType,
       experimentId,

@@ -513,3 +513,62 @@ describe("QueryBuilderService", () => {
     });
   });
 });
+
+describe("numeric string ordering", () => {
+  const service = new QueryBuilderService();
+  const params = {
+    table: "measurements",
+    variants: [{ columnName: "questions_data", schema: "OBJECT<answer: STRING>" }],
+    reservedColumns: ["id"],
+    orderBy: "answer",
+    orderByNumericString: { rowId: "id" },
+  };
+
+  it.each(["ASC", "DESC"] as const)(
+    "keeps value groups fixed while reversing values %s",
+    (orderDirection) => {
+      const sql = unwrap(service.buildQuery({ ...params, orderDirection, limit: 3, offset: 3 }));
+      const order = sql.slice(sql.indexOf("ORDER BY"));
+      expect(order).toContain("THEN 0 WHEN");
+      expect(order).toContain("THEN 2 ELSE 1 END ASC");
+      expect(order).toContain(`AS DECIMAL(38, 18)) END) ${orderDirection}`);
+      expect(order).toContain(`\`answer\` ${orderDirection} NULLS LAST, \`id\` ASC`);
+      expect(order).not.toMatch(/\b(?:DOUBLE|FLOAT)\b/);
+      expect(order).toContain("[0-9]{1,20}");
+      expect(order).toContain("[0-9]{0,18}0*");
+      expect(order).toContain("[0-9]{1,18}0*");
+      expect(sql).toMatch(/ORDER BY[\s\S]+LIMIT 3\nOFFSET 3$/);
+    },
+  );
+
+  it("resolves unprojected sort keys to extraction SQL in an id-only read", () => {
+    const sql = unwrap(service.buildQuery({ ...params, columns: ["id"] }));
+    expect(sql).toMatch(/^SELECT `id`\n/);
+    const order = sql.slice(sql.indexOf("ORDER BY"));
+    expect(order).toContain(
+      "try_variant_get(`questions_data`, '$[\\\"answer\\\"]', 'STRING')".replaceAll('\\"', '"'),
+    );
+    expect(order).not.toContain("`answer`");
+    expect(order).toMatch(/, `id` ASC$/);
+  });
+
+  it("does not add row identity to DISTINCT or its projection", () => {
+    const sql = unwrap(service.buildQuery({ ...params, columns: ["answer"], distinct: true }));
+    expect(sql).toMatch(/^SELECT DISTINCT try_variant_get/);
+    expect(sql).not.toContain("`id`");
+    expect(sql).toContain("`answer` ASC NULLS LAST");
+  });
+
+  it("excludes numeric classification from aggregation ordering", () => {
+    const aggregation = {
+      groupBy: [{ column: "answer" }],
+      functions: [{ column: "id", function: "count" as const, alias: "n" }],
+    };
+    const withMode = unwrap(service.buildQuery({ ...params, aggregation }));
+    const withoutMode = unwrap(
+      service.buildQuery({ ...params, orderByNumericString: undefined, aggregation }),
+    );
+    expect(withMode).toBe(withoutMode);
+    expect(withMode).not.toContain("DECIMAL(38, 18)");
+  });
+});

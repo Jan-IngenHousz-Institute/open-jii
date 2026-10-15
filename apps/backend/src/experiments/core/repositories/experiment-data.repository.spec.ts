@@ -2043,4 +2043,137 @@ describe("ExperimentDataRepository", () => {
       expect(result.error.code).toBe("NOT_FOUND");
     });
   });
+  describe("question answer sorting policy", () => {
+    const empty = { columns: [], rows: [], totalRows: 0, truncated: false };
+    const params = {
+      experimentId: faker.string.uuid(),
+      experiment: mockExperiment,
+      page: 1,
+      pageSize: 5,
+    };
+
+    it.each([
+      { source: "question", orderBy: "q", questionsSchema: "OBJECT<q: STRING>", numeric: true },
+      {
+        source: "base collision",
+        orderBy: "id_answer",
+        questionsSchema: "OBJECT<id: STRING>",
+        numeric: true,
+      },
+      {
+        source: "case collision",
+        orderBy: "ID_answer",
+        questionsSchema: "OBJECT<ID: STRING>",
+        numeric: true,
+      },
+      {
+        source: "macro collision",
+        orderBy: "q_answer_2",
+        questionsSchema: "OBJECT<q: STRING>",
+        macroSchema: "OBJECT<q: STRING, q_answer: STRING>",
+        numeric: true,
+      },
+      {
+        source: "native integer",
+        orderBy: "q",
+        questionsSchema: "OBJECT<q: BIGINT>",
+        numeric: false,
+      },
+      {
+        source: "native double",
+        orderBy: "q",
+        questionsSchema: "OBJECT<q: DOUBLE>",
+        numeric: false,
+      },
+      {
+        source: "native boolean",
+        orderBy: "q",
+        questionsSchema: "OBJECT<q: BOOLEAN>",
+        numeric: false,
+      },
+      {
+        source: "mixed types",
+        orderBy: "q",
+        questionsSchema: "OBJECT<q: VARIANT>",
+        numeric: false,
+      },
+      {
+        source: "macro output",
+        orderBy: "q",
+        questionsSchema: "OBJECT<q: STRING>",
+        macroSchema: "OBJECT<q: STRING>",
+        numeric: false,
+      },
+      {
+        source: "metadata answer suffix",
+        orderBy: "q_answer",
+        questionsSchema: "OBJECT<q: STRING>",
+        customMetadataSchema: "OBJECT<q_answer: STRING>",
+        numeric: false,
+      },
+    ])(
+      "uses the resolved source for $source",
+      async ({ orderBy, questionsSchema, macroSchema, customMetadataSchema, numeric }) => {
+        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+          success([
+            {
+              identifier: "fixture",
+              tableType: "macro",
+              displayName: null,
+              rowCount: 100,
+              latestRowAt: null,
+              schemaRevision: null,
+              questionsSchema,
+              macroSchema,
+              customMetadataSchema,
+            },
+          ]),
+        );
+        const build = vi
+          .spyOn(databricksPort, "buildExperimentQuery")
+          .mockReturnValue(success("SELECT 1"));
+        vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(empty));
+        const result = await repository.getTableData({ ...params, tableName: "fixture", orderBy });
+        assertSuccess(result);
+        expect(build.mock.calls[0][0].orderByNumericString).toEqual(
+          numeric ? { rowId: "id" } : undefined,
+        );
+      },
+    );
+
+    it("applies the same policy to the distinct picker", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([
+          {
+            identifier: "raw_data",
+            tableType: "static",
+            displayName: null,
+            rowCount: 100,
+            latestRowAt: null,
+            schemaRevision: null,
+            questionsSchema: "OBJECT<q: STRING>",
+          },
+        ]),
+      );
+      const build = vi
+        .spyOn(databricksPort, "buildExperimentQuery")
+        .mockReturnValue(success("SELECT 1"));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(empty));
+      const result = await repository.getDistinctColumnValues({
+        ...params,
+        tableName: "raw_data",
+        column: "q",
+        limit: 5,
+      });
+      assertSuccess(result);
+      expect(build).toHaveBeenCalledWith(
+        expect.objectContaining({
+          distinct: true,
+          columns: ["q"],
+          orderByNumericString: { rowId: "id" },
+          limit: 6,
+        }),
+      );
+    });
+  });
 });

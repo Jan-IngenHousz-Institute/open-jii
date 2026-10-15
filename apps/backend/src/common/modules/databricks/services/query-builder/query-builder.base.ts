@@ -1,6 +1,7 @@
 import { buildAggregateExpression } from "./expressions/aggregation";
 import { buildCumsumExpression } from "./expressions/cumsum";
 import { buildFilterCondition, contributorPseudonym } from "./expressions/filter";
+import { numericStringOrder } from "./expressions/numeric-string-order";
 import { buildTimeBucketExpression } from "./expressions/time-bucket";
 import { buildWidthBucketExpression } from "./expressions/width-bucket";
 import type {
@@ -286,6 +287,7 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     column: string;
     direction: "ASC" | "DESC";
     contributorPseudonymSalt?: string;
+    numericString?: { rowId?: string };
   };
   private limitValue?: number;
   private offsetValue?: number;
@@ -327,8 +329,9 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     column: string,
     direction: "ASC" | "DESC" = "ASC",
     contributorPseudonymSalt?: string,
+    numericString?: { rowId?: string },
   ): this {
-    this.ordering = { column, direction, contributorPseudonymSalt };
+    this.ordering = { column, direction, contributorPseudonymSalt, numericString };
     return this;
   }
 
@@ -365,7 +368,17 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     const where =
       this.whereConditions.length > 0 ? `WHERE ${this.whereConditions.join(" AND ")}` : "";
     const order = this.ordering
-      ? `ORDER BY ${this.sortExpression(this.ordering)} ${this.ordering.direction}`
+      ? `ORDER BY ${
+          this.ordering.numericString
+            ? numericStringOrder(
+                this.orderTarget(this.ordering.column),
+                this.ordering.direction,
+                !this.isDistinct && this.ordering.numericString.rowId
+                  ? this.escapeIdentifier(this.ordering.numericString.rowId)
+                  : undefined,
+              )
+            : `${this.sortExpression(this.ordering)} ${this.ordering.direction}`
+        }`
       : "";
     const limitClause = this.limitValue ? `LIMIT ${this.limitValue}` : "";
     const offsetClause = this.offsetValue ? `OFFSET ${this.offsetValue}` : "";
