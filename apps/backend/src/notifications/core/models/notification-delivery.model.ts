@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import type { notificationDeliveries, notifications } from "@repo/database";
 
-export const DELIVERY_STATUSES = ["pending", "sending", "sent", "failed"] as const;
+/**
+ * `skipped` is for an email nobody could receive — no deliverable address — as against
+ * `failed`, which is one that should have gone and did not.
+ */
+export const DELIVERY_STATUSES = ["pending", "sending", "sent", "skipped", "failed"] as const;
 
 export type DeliveryStatus = (typeof DELIVERY_STATUSES)[number];
 

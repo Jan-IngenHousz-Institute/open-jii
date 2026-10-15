@@ -30,6 +30,10 @@ async function bootstrap() {
     });
   }
 
+  // Only the running service: the signal listeners these register would accumulate
+  // across spec files, and the harness closes its application itself.
+  app.enableShutdownHooks();
+
   await app.listen(process.env.PORT ?? 3020);
 }
 

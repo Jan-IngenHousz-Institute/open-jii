@@ -23,7 +23,7 @@ import {
   sql,
   users,
 } from "@repo/database";
-import type { DatabaseInstance, SQL } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
@@ -74,12 +74,15 @@ export class NotificationRepository {
    * One statement per chunk, returning only the rows that were actually written: a row
    * whose dedupe key is already taken is skipped, and the caller emails nobody about it.
    */
-  async insertMany(rows: NotificationInsertRow[]): Promise<Result<NotificationInsertedRow[]>> {
+  async insertMany(
+    rows: NotificationInsertRow[],
+    handle: DbOrTx = this.database,
+  ): Promise<Result<NotificationInsertedRow[]>> {
     return tryCatch(async () => {
       const inserted: NotificationInsertedRow[] = [];
 
       for (let start = 0; start < rows.length; start += INSERT_CHUNK_SIZE) {
-        const written = await this.database
+        const written = await handle
           .insert(notifications)
           .values(rows.slice(start, start + INSERT_CHUNK_SIZE))
           .onConflictDoNothing()

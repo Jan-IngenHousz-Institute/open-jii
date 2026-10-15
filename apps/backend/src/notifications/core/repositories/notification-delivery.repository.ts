@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 
 import { and, eq, notificationDeliveries, notifications, sql } from "@repo/database";
-import type { DatabaseInstance } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import { zDeliveryStatus } from "../models/notification-delivery.model";
@@ -22,6 +22,11 @@ import type {
 type ClaimedDeliveryRow = Omit<ClaimedDelivery, "status" | "claimedAt"> & {
   status: string;
   claimedAt: string;
+};
+
+/** The columns an outcome sets; a time among them may be the database's own clock. */
+type OutcomeValues = Partial<Omit<typeof notificationDeliveries.$inferInsert, "nextAttemptAt">> & {
+  nextAttemptAt?: Date | SQL;
 };
 
 /** What a later write has to still hold for it to land: a row, and the claim on it. */
@@ -50,13 +55,19 @@ export class NotificationDeliveryRepository {
     private readonly database: DatabaseInstance,
   ) {}
 
-  /** One statement per chunk; the rows land `pending` and due now. */
-  async insertMany(rows: NotificationDeliveryInsertRow[]): Promise<Result<string[]>> {
+  /**
+   * One statement per chunk; the rows land `pending` and due now. Takes a handle so
+   * the bell rows and the emails they owe can be written in one transaction.
+   */
+  async insertMany(
+    rows: NotificationDeliveryInsertRow[],
+    handle: DbOrTx = this.database,
+  ): Promise<Result<string[]>> {
     return tryCatch(async () => {
       const ids: string[] = [];
 
       for (let start = 0; start < rows.length; start += INSERT_CHUNK_SIZE) {
-        const written = await this.database
+        const written = await handle
           .insert(notificationDeliveries)
           .values(rows.slice(start, start + INSERT_CHUNK_SIZE))
           .returning({ id: notificationDeliveries.id });
@@ -137,15 +148,32 @@ export class NotificationDeliveryRepository {
     return this.writeOutcome(claim, { status: "sent", sentAt: at, claimedAt: null });
   }
 
-  /** Back to `pending` and unclaimed, so the next drain that reaches its turn picks it up. */
+  /**
+   * Back to `pending` and unclaimed, due `delayMs` from now. The deadline is set by the
+   * database clock, the one `claimDue` compares against, so a drifted task cannot put a
+   * row out of reach or make it due early.
+   */
   async markRetry(
     claim: DeliveryClaim,
-    outcome: { attempts: number; nextAttemptAt: Date; lastError: string },
+    outcome: { attempts: number; delayMs: number; lastError: string },
   ): Promise<Result<boolean>> {
     return this.writeOutcome(claim, {
       status: "pending",
       attempts: outcome.attempts,
-      nextAttemptAt: outcome.nextAttemptAt,
+      nextAttemptAt: sql`(now() AT TIME ZONE 'UTC') + make_interval(secs => ${outcome.delayMs / 1000})`,
+      claimedAt: null,
+      lastError: outcome.lastError,
+    });
+  }
+
+  /** Nobody could receive this one, so it is set aside rather than counted as a failure. */
+  async markSkipped(
+    claim: DeliveryClaim,
+    outcome: { attempts: number; lastError: string },
+  ): Promise<Result<boolean>> {
+    return this.writeOutcome(claim, {
+      status: "skipped",
+      attempts: outcome.attempts,
       claimedAt: null,
       lastError: outcome.lastError,
     });
@@ -172,7 +200,7 @@ export class NotificationDeliveryRepository {
    */
   private async writeOutcome(
     claim: DeliveryClaim,
-    values: Partial<typeof notificationDeliveries.$inferInsert>,
+    values: OutcomeValues,
   ): Promise<Result<boolean>> {
     return tryCatch(async () => {
       const written = await this.database

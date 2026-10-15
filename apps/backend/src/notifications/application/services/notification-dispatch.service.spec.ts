@@ -397,7 +397,7 @@ describe("NotificationDispatchService", () => {
     expect(sendSubmitted).not.toHaveBeenCalled();
   });
 
-  it("keeps every row when the deliveries cannot be stored", async () => {
+  it("writes no row at all when the deliveries cannot be stored", async () => {
     const otherId = await testApp.createTestUser({ email: "other@example.com" });
     vi.spyOn(deliveryRepository, "insertMany").mockResolvedValue(
       failure(AppError.internal("Database unavailable")),
@@ -411,11 +411,11 @@ describe("NotificationDispatchService", () => {
       params: { experimentName: "Photosynthesis" },
     });
 
-    // The bell row is the thing that must never be lost, so dispatch still succeeds.
-    assertSuccess(result);
-    expect(result.value).toEqual({ created: 2, queued: 0 });
-    expect(await rowsFor(recipientId)).toHaveLength(1);
-    expect(await rowsFor(otherId)).toHaveLength(1);
+    // The bell rows and the emails they owe are one write, so a half of it that
+    // fails takes the other half with it rather than leaving a silent notification.
+    assertFailure(result);
+    expect(await rowsFor(recipientId)).toHaveLength(0);
+    expect(await rowsFor(otherId)).toHaveLength(0);
     expect(await deliveriesFor(recipientId)).toHaveLength(0);
     expect(await deliveriesFor(otherId)).toHaveLength(0);
   });
@@ -488,6 +488,31 @@ describe("NotificationDispatchService", () => {
       expect(result.error.message).toContain("no resource to email about");
       expect(sendAccessGranted).not.toHaveBeenCalled();
     });
+  });
+
+  it("writes both rows on a replay after a first attempt rolled back", async () => {
+    const send = {
+      type: "experiment_join_request_received" as const,
+      recipientIds: [recipientId],
+      actorId,
+      resource: experiment,
+      params: { experimentName: "Photosynthesis" },
+      dedupeKey: "one-event",
+    };
+    const deliveryInsert = vi.spyOn(deliveryRepository, "insertMany");
+
+    deliveryInsert.mockResolvedValueOnce(failure(AppError.internal("Database unavailable")));
+    assertFailure(await dispatch.dispatch(send));
+    // Nothing survived the first attempt, dedupe key included.
+    expect(await rowsFor(recipientId)).toHaveLength(0);
+
+    const replay = await dispatch.dispatch(send);
+
+    // So the replay is not deduped against a row that was rolled back.
+    assertSuccess(replay);
+    expect(replay.value).toEqual({ created: 1, queued: 1 });
+    expect(await rowsFor(recipientId)).toHaveLength(1);
+    expect(await deliveriesFor(recipientId)).toHaveLength(1);
   });
 
   it("fails and queues nothing when the rows cannot be stored", async () => {

@@ -567,8 +567,9 @@ describe("OrganizationJoinRequestsController", () => {
 
       expect(response.body.status).toBe("approved");
       expect(await membershipRows(organizationId, requesterId)).toEqual([{ role: "member" }]);
-      // The row is in before the email is owed, so a refused queue loses nothing.
-      expect(await rowsFor(requesterId)).toHaveLength(1);
+      // The decision stands; the telling is all-or-nothing, so a delivery that could
+      // not be written takes its notification row with it.
+      expect(await rowsFor(requesterId)).toHaveLength(0);
       expect(await deliveriesFor(requesterId)).toEqual([]);
     });
 

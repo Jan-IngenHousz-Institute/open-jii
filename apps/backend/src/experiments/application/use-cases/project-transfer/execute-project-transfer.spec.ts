@@ -387,9 +387,11 @@ describe("ExecuteProjectTransferUseCase", () => {
       const payload = buildPayload();
       const result = await useCase.execute(payload);
 
+      // The transfer stands; the telling is all-or-nothing, so a delivery that could
+      // not be written takes its notification row with it.
       assertSuccess(result);
       expect(result.value.success).toBe(true);
-      expect(await notificationsFor(testUserId)).toHaveLength(1);
+      expect(await notificationsFor(testUserId)).toHaveLength(0);
       expect(await deliveriesFor(testUserId)).toHaveLength(0);
     });
 

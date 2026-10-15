@@ -2,6 +2,7 @@ import { SchedulerRegistry } from "@nestjs/schedule";
 import type { MockInstance } from "vitest";
 
 import {
+  sql as sqlRaw,
   createSecondaryDatabase,
   eq,
   notificationDeliveries,
@@ -11,6 +12,7 @@ import {
 } from "@repo/database";
 
 import { EmailAdapter } from "../../../common/modules/email/services/email.adapter";
+import { ErrorCodes } from "../../../common/utils/error-codes";
 import { AppError, assertSuccess, failure, success } from "../../../common/utils/fp-utils";
 import { claimedRow } from "../../../test/notification-deliveries";
 import { TestHarness } from "../../../test/test-harness";
@@ -21,6 +23,13 @@ import { NotificationEmailService } from "./notification-email.service";
 import { LEASE_MS, NotificationOutboxWorker, OUTBOX_INTERVAL } from "./notification-outbox.worker";
 
 const MINUTE = 60_000;
+
+const IMPATIENT_DEADLINE_MS = 50;
+
+/** The worker with a deadline a spec can wait out, so an attempt that hangs can be seen. */
+class ImpatientWorker extends NotificationOutboxWorker {
+  protected override readonly attemptDeadlineMs = IMPATIENT_DEADLINE_MS;
+}
 
 describe("NotificationOutboxWorker", () => {
   const testApp = TestHarness.App;
@@ -86,6 +95,20 @@ describe("NotificationOutboxWorker", () => {
 
   const deliveryRows = () => testApp.database.select().from(notificationDeliveries);
 
+  /**
+   * How far out a row is due, measured by the clock that set it. `next_attempt_at` is
+   * written by the database and compared against the database, so a task clock offset
+   * from it would make this read wrong in a way production never sees.
+   */
+  const dueInMs = async (id: string) => {
+    const [row] = await testApp.database.execute<{ ms: string }>(
+      sqlRaw`SELECT (extract(epoch from ${notificationDeliveries.nextAttemptAt} - (now() AT TIME ZONE 'UTC')) * 1000)::bigint::text AS ms
+             FROM ${notificationDeliveries}
+             WHERE ${notificationDeliveries.id} = ${id}`,
+    );
+    return Number(row.ms);
+  };
+
   const deliveryById = async (id: string) => {
     const [row] = await testApp.database
       .select()
@@ -105,7 +128,7 @@ describe("NotificationOutboxWorker", () => {
 
     const counts = await worker.drain();
 
-    expect(counts).toEqual({ sent: 1, retried: 0, failed: 0 });
+    expect(counts).toEqual({ sent: 1, retried: 0, deferred: 0, skipped: 0, failed: 0 });
     expect(sendSubmitted).toHaveBeenCalledExactlyOnceWith(
       experiment.id,
       "Photosynthesis",
@@ -122,17 +145,16 @@ describe("NotificationOutboxWorker", () => {
   it("puts a row back to pending a minute out when the adapter fails", async () => {
     const queued = await queueOne();
     sendSubmitted.mockResolvedValue(failure(AppError.internal("Mail server refused")));
-    const before = Date.now();
-
     const counts = await worker.drain();
 
-    expect(counts).toEqual({ sent: 0, retried: 1, failed: 0 });
+    expect(counts).toEqual({ sent: 0, retried: 1, deferred: 0, skipped: 0, failed: 0 });
     const row = await deliveryById(queued.id);
     expect(row).toMatchObject({ status: "pending", attempts: 1, claimedAt: null, sentAt: null });
     expect(row.lastError).toContain("Mail server refused");
     // A minute out, give or take however long the drain itself took.
-    expect(row.nextAttemptAt.getTime() - before).toBeGreaterThanOrEqual(MINUTE - 1_000);
-    expect(row.nextAttemptAt.getTime() - before).toBeLessThan(MINUTE + 30_000);
+    const dueIn = await dueInMs(queued.id);
+    expect(dueIn).toBeGreaterThan(MINUTE - 30_000);
+    expect(dueIn).toBeLessThanOrEqual(MINUTE);
 
     // The bell row is untouched whatever the mail server does.
     expect(await testApp.database.select().from(notifications)).toHaveLength(1);
@@ -145,7 +167,7 @@ describe("NotificationOutboxWorker", () => {
 
     const counts = await worker.drain();
 
-    expect(counts).toEqual({ sent: 0, retried: 0, failed: 1 });
+    expect(counts).toEqual({ sent: 0, retried: 0, deferred: 0, skipped: 0, failed: 1 });
     expect(await deliveryById(queued.id)).toMatchObject({
       status: "failed",
       attempts: 5,
@@ -161,7 +183,13 @@ describe("NotificationOutboxWorker", () => {
       claimedAt: new Date(Date.now() - 6 * MINUTE),
     });
 
-    expect(await worker.drain()).toEqual({ sent: 1, retried: 0, failed: 0 });
+    expect(await worker.drain()).toEqual({
+      sent: 1,
+      retried: 0,
+      deferred: 0,
+      skipped: 0,
+      failed: 0,
+    });
     // The claim counted the attempt the task that died never finished.
     expect(await deliveryById(abandoned.id)).toMatchObject({ status: "sent", attempts: 1 });
   });
@@ -175,11 +203,17 @@ describe("NotificationOutboxWorker", () => {
       claimedAt: new Date(Date.now() - 6 * MINUTE),
     });
 
-    expect(await worker.drain()).toEqual({ sent: 0, retried: 0, failed: 1 });
+    expect(await worker.drain()).toEqual({
+      sent: 0,
+      retried: 0,
+      deferred: 0,
+      skipped: 0,
+      failed: 1,
+    });
     expect(await deliveryById(stuck.id)).toMatchObject({
       status: "failed",
       attempts: 6,
-      lastError: "Abandoned 5 times",
+      lastError: "Gave up after 5 attempts",
     });
     expect(sendSubmitted).not.toHaveBeenCalled();
   });
@@ -191,12 +225,18 @@ describe("NotificationOutboxWorker", () => {
       claimedAt: new Date(Date.now() - MINUTE),
     });
 
-    expect(await worker.drain()).toEqual({ sent: 0, retried: 0, failed: 0 });
+    expect(await worker.drain()).toEqual({
+      sent: 0,
+      retried: 0,
+      deferred: 0,
+      skipped: 0,
+      failed: 0,
+    });
     expect(await deliveryById(inFlight.id)).toMatchObject({ status: "sending" });
     expect(sendSubmitted).not.toHaveBeenCalled();
   });
 
-  it("fails a recipient deactivated after dispatch without calling the adapter", async () => {
+  it("skips a recipient deactivated after dispatch without calling the adapter", async () => {
     const queued = await queueOne();
     await testApp.database
       .update(profiles)
@@ -205,17 +245,18 @@ describe("NotificationOutboxWorker", () => {
 
     const counts = await worker.drain();
 
-    expect(counts).toEqual({ sent: 0, retried: 0, failed: 1 });
+    expect(counts).toEqual({ sent: 0, retried: 0, deferred: 0, skipped: 1, failed: 0 });
     expect(await deliveryById(queued.id)).toMatchObject({
-      status: "failed",
-      // Permanent: waiting will not make a deactivated recipient deliverable.
+      // Set aside rather than failed: nobody could have received it, and waiting
+      // will not make a deactivated recipient deliverable.
+      status: "skipped",
       attempts: 1,
       lastError: "Recipient has no deliverable email address",
     });
     expect(sendSubmitted).not.toHaveBeenCalled();
   });
 
-  it("fails a recipient whose account was closed after dispatch, without calling the adapter", async () => {
+  it("skips a recipient whose account was closed after dispatch, without calling the adapter", async () => {
     const queued = await queueOne();
     // What account deletion really writes: `deleted_at` set, the address rewritten to a
     // stand-in that passes a syntax check, and `activated` left alone.
@@ -228,9 +269,15 @@ describe("NotificationOutboxWorker", () => {
       .set({ email: `deleted-${recipientId}@example.com` })
       .where(eq(users.id, recipientId));
 
-    expect(await worker.drain()).toEqual({ sent: 0, retried: 0, failed: 1 });
+    expect(await worker.drain()).toEqual({
+      sent: 0,
+      retried: 0,
+      deferred: 0,
+      skipped: 1,
+      failed: 0,
+    });
     expect(await deliveryById(queued.id)).toMatchObject({
-      status: "failed",
+      status: "skipped",
       attempts: 1,
       lastError: "Recipient has no deliverable email address",
     });
@@ -245,16 +292,19 @@ describe("NotificationOutboxWorker", () => {
       .update(notifications)
       .set({ type: "a_type_from_a_newer_deploy" })
       .where(eq(notifications.id, queued.notificationId));
-    const before = Date.now();
-
-    expect(await worker.drain()).toEqual({ sent: 0, retried: 1, failed: 0 });
+    expect(await worker.drain()).toEqual({
+      sent: 0,
+      retried: 1,
+      deferred: 0,
+      skipped: 0,
+      failed: 0,
+    });
 
     const row = await deliveryById(queued.id);
     expect(row).toMatchObject({ status: "pending", attempts: 1, claimedAt: null });
     expect(row.lastError).toBe("Unknown notification type a_type_from_a_newer_deploy");
     // A minute out, so the task that does know the type gets its turn.
-    expect(row.nextAttemptAt.getTime() - before).toBeGreaterThanOrEqual(MINUTE - 1_000);
-    expect(row.nextAttemptAt.getTime() - before).toBeLessThan(MINUTE + 30_000);
+    expect(await dueInMs(queued.id)).toBeGreaterThan(MINUTE - 30_000);
     expect(sendSubmitted).not.toHaveBeenCalled();
   });
 
@@ -266,14 +316,18 @@ describe("NotificationOutboxWorker", () => {
       .update(notifications)
       .set({ params: {} })
       .where(eq(notifications.id, queued.notificationId));
-    const before = Date.now();
-
-    expect(await worker.drain()).toEqual({ sent: 0, retried: 1, failed: 0 });
+    expect(await worker.drain()).toEqual({
+      sent: 0,
+      retried: 1,
+      deferred: 0,
+      skipped: 0,
+      failed: 0,
+    });
 
     const row = await deliveryById(queued.id);
     expect(row).toMatchObject({ status: "pending", attempts: 1, claimedAt: null });
     expect(row.lastError).toBe("Stored params do not match the type's schema");
-    expect(row.nextAttemptAt.getTime() - before).toBeGreaterThanOrEqual(MINUTE - 1_000);
+    expect(await dueInMs(queued.id)).toBeGreaterThan(MINUTE - 30_000);
     expect(sendSubmitted).not.toHaveBeenCalled();
   });
 
@@ -285,15 +339,18 @@ describe("NotificationOutboxWorker", () => {
       .update(notifications)
       .set({ type: "data_export_completed" })
       .where(eq(notifications.id, queued.notificationId));
-    const before = Date.now();
-
-    expect(await worker.drain()).toEqual({ sent: 0, retried: 1, failed: 0 });
+    expect(await worker.drain()).toEqual({
+      sent: 0,
+      retried: 1,
+      deferred: 0,
+      skipped: 0,
+      failed: 0,
+    });
 
     const row = await deliveryById(queued.id);
     expect(row).toMatchObject({ status: "pending", attempts: 1, claimedAt: null });
     expect(row.lastError).toBe("No email for notification type data_export_completed");
-    expect(row.nextAttemptAt.getTime() - before).toBeGreaterThanOrEqual(MINUTE - 1_000);
-    expect(row.nextAttemptAt.getTime() - before).toBeLessThan(MINUTE + 30_000);
+    expect(await dueInMs(queued.id)).toBeGreaterThan(MINUTE - 30_000);
     expect(sendSubmitted).not.toHaveBeenCalled();
   });
 
@@ -337,8 +394,8 @@ describe("NotificationOutboxWorker", () => {
 
     const first = await worker.drain();
 
-    expect(first).toEqual({ sent: 1, retried: 0, failed: 0 });
-    expect(reentrant.counts).toEqual({ sent: 0, retried: 0, failed: 0 });
+    expect(first).toEqual({ sent: 1, retried: 0, deferred: 0, skipped: 0, failed: 0 });
+    expect(reentrant.counts).toEqual({ sent: 0, retried: 0, deferred: 0, skipped: 0, failed: 0 });
     // The re-entrant drain never reached the database: one claim that found the row,
     // one that found nothing, and nothing at all from the second call.
     expect(claim).toHaveBeenCalledTimes(2);
@@ -354,7 +411,9 @@ describe("NotificationOutboxWorker", () => {
         testApp.module.get(NotificationRepository),
         testApp.module.get(NotificationEmailService),
       );
-      const drain = vi.spyOn(real, "drain").mockResolvedValue({ sent: 0, retried: 0, failed: 0 });
+      const drain = vi
+        .spyOn(real, "drain")
+        .mockResolvedValue({ sent: 0, retried: 0, deferred: 0, skipped: 0, failed: 0 });
 
       await real.drainOnSchedule();
       expect(drain).toHaveBeenCalledTimes(1);
@@ -369,7 +428,13 @@ describe("NotificationOutboxWorker", () => {
         failure(AppError.internal("Database unavailable")),
       );
 
-      expect(await worker.drain()).toEqual({ sent: 0, retried: 0, failed: 0 });
+      expect(await worker.drain()).toEqual({
+        sent: 0,
+        retried: 0,
+        deferred: 0,
+        skipped: 0,
+        failed: 0,
+      });
       expect(sendSubmitted).not.toHaveBeenCalled();
     });
 
@@ -379,10 +444,22 @@ describe("NotificationOutboxWorker", () => {
         new Error("connection terminated"),
       );
 
-      expect(await worker.drain()).toEqual({ sent: 0, retried: 0, failed: 0 });
+      expect(await worker.drain()).toEqual({
+        sent: 0,
+        retried: 0,
+        deferred: 0,
+        skipped: 0,
+        failed: 0,
+      });
 
       // The `finally` ran, so the worker is not wedged: the row goes out next time.
-      expect(await worker.drain()).toEqual({ sent: 1, retried: 0, failed: 0 });
+      expect(await worker.drain()).toEqual({
+        sent: 1,
+        retried: 0,
+        deferred: 0,
+        skipped: 0,
+        failed: 0,
+      });
       expect(await deliveryById(queued.id)).toMatchObject({ status: "sent" });
     });
 
@@ -392,7 +469,13 @@ describe("NotificationOutboxWorker", () => {
         new Error("transport exploded"),
       );
 
-      expect(await worker.drain()).toEqual({ sent: 0, retried: 1, failed: 0 });
+      expect(await worker.drain()).toEqual({
+        sent: 0,
+        retried: 1,
+        deferred: 0,
+        skipped: 0,
+        failed: 0,
+      });
       expect(await deliveryById(queued.id)).toMatchObject({
         status: "pending",
         attempts: 1,
@@ -406,13 +489,157 @@ describe("NotificationOutboxWorker", () => {
         failure(AppError.internal("Database unavailable")),
       );
 
-      expect(await worker.drain()).toEqual({ sent: 0, retried: 1, failed: 0 });
+      expect(await worker.drain()).toEqual({
+        sent: 0,
+        retried: 1,
+        deferred: 0,
+        skipped: 0,
+        failed: 0,
+      });
       expect(await deliveryById(queued.id)).toMatchObject({
         status: "pending",
         attempts: 1,
         lastError: "Database unavailable",
       });
       expect(sendSubmitted).not.toHaveBeenCalled();
+    });
+
+    it("gives up on an attempt that outlasts its deadline", async () => {
+      const queued = await queueOne();
+      // A send that never settles: the socket is up and the far end says nothing.
+      vi.spyOn(testApp.module.get(NotificationEmailService), "send").mockReturnValue(
+        new Promise(() => undefined),
+      );
+
+      // A deadline this spec can wait for; the real one is three minutes.
+      const impatient = new ImpatientWorker(
+        deliveryRepository,
+        testApp.module.get(NotificationRepository),
+        testApp.module.get(NotificationEmailService),
+      );
+
+      expect(await impatient.drain()).toEqual({
+        sent: 0,
+        retried: 1,
+        deferred: 0,
+        skipped: 0,
+        failed: 0,
+      });
+      expect(await deliveryById(queued.id)).toMatchObject({
+        status: "pending",
+        attempts: 1,
+        lastError: `Attempt exceeded ${IMPATIENT_DEADLINE_MS / 1000} s`,
+      });
+    });
+
+    it("claims nothing new once the task is shutting down, and waits for the attempt in flight", async () => {
+      const first = await queueOne();
+      await queueOne(await testApp.createTestUser({ email: "second@example.com" }));
+      const stopped: { promise?: Promise<void> } = {};
+      // Its own instance: `stopping` is one-way, as it is in a task that is going away.
+      const stoppingWorker = new NotificationOutboxWorker(
+        deliveryRepository,
+        testApp.module.get(NotificationRepository),
+        testApp.module.get(NotificationEmailService),
+      );
+
+      // Shutdown is called while the first row is mid-send, as a signal would.
+      sendSubmitted.mockImplementationOnce(() => {
+        stopped.promise = stoppingWorker.onApplicationShutdown();
+        return Promise.resolve(success(undefined));
+      });
+
+      const counts = await stoppingWorker.drain();
+      await stopped.promise;
+
+      // The row in flight was seen through to its outcome; the other was left queued.
+      expect(counts).toEqual({ sent: 1, retried: 0, deferred: 0, skipped: 0, failed: 0 });
+      expect(await deliveryById(first.id)).toMatchObject({ status: "sent" });
+      expect((await deliveryRows()).filter((row) => row.status === "pending")).toHaveLength(1);
+    });
+
+    /** What the adapter hands back when our relay could not be reached at all. */
+    const relayDown = () =>
+      failure(
+        AppError.internal(
+          "Failed to send email: connect ECONNREFUSED 127.0.0.1:1025",
+          ErrorCodes.EMAIL_RELAY_UNREACHABLE,
+        ),
+      );
+
+    it("waits out an unreachable relay without spending an attempt", async () => {
+      const queued = await queueOne();
+      sendSubmitted.mockResolvedValue(relayDown());
+
+      expect(await worker.drain()).toEqual({
+        sent: 0,
+        retried: 0,
+        deferred: 1,
+        skipped: 0,
+        failed: 0,
+      });
+      const row = await deliveryById(queued.id);
+      expect(row).toMatchObject({
+        status: "pending",
+        attempts: 0,
+        claimedAt: null,
+        lastError: "Failed to send email: connect ECONNREFUSED 127.0.0.1:1025",
+      });
+      // Five minutes out, by the clock that will decide when it is due.
+      const dueIn = await dueInMs(queued.id);
+      expect(dueIn).toBeGreaterThan(5 * MINUTE - 30_000);
+      expect(dueIn).toBeLessThanOrEqual(5 * MINUTE);
+    });
+
+    it("does not let an outage push a row on its last attempt into failed", async () => {
+      const queued = await queueOne();
+      await setDelivery(queued.id, { attempts: 4 });
+      sendSubmitted.mockResolvedValue(relayDown());
+
+      expect(await worker.drain()).toEqual({
+        sent: 0,
+        retried: 0,
+        deferred: 1,
+        skipped: 0,
+        failed: 0,
+      });
+      // Still one try left: the relay being down said nothing about this email.
+      expect(await deliveryById(queued.id)).toMatchObject({ status: "pending", attempts: 4 });
+    });
+
+    it("stops claiming after three unreachable sends in a row, and picks up again next time", async () => {
+      const queued = [await queueOne()];
+      for (let index = 0; index < 3; index += 1) {
+        queued.push(
+          await queueOne(await testApp.createTestUser({ email: `relay-${index}@example.com` })),
+        );
+      }
+      sendSubmitted.mockResolvedValue(relayDown());
+
+      expect(await worker.drain()).toEqual({
+        sent: 0,
+        retried: 0,
+        deferred: 3,
+        skipped: 0,
+        failed: 0,
+      });
+      // The fourth was never claimed: no attempt, no claim, still due now.
+      const untouched = (await deliveryRows()).filter(
+        (row) => row.status === "pending" && row.lastError === null,
+      );
+      expect(untouched).toHaveLength(1);
+      expect(untouched[0]).toMatchObject({ attempts: 0, claimedAt: null });
+
+      // The relay is back; the next drain finds the one left and sends it.
+      sendSubmitted.mockResolvedValue(success(undefined));
+      expect(await worker.drain()).toEqual({
+        sent: 1,
+        retried: 0,
+        deferred: 0,
+        skipped: 0,
+        failed: 0,
+      });
+      expect(await deliveryById(untouched[0].id)).toMatchObject({ status: "sent" });
     });
 
     it("counts a send whose row could not be marked sent, and leaves it to the lease", async () => {
@@ -423,7 +650,13 @@ describe("NotificationOutboxWorker", () => {
 
       // The email did go out, so the count is honest; the row is still `sending` and
       // the lease will offer it again, which is the at-least-once trade an outbox makes.
-      expect(await worker.drain()).toEqual({ sent: 1, retried: 0, failed: 0 });
+      expect(await worker.drain()).toEqual({
+        sent: 1,
+        retried: 0,
+        deferred: 0,
+        skipped: 0,
+        failed: 0,
+      });
       expect(sendSubmitted).toHaveBeenCalledTimes(1);
       expect(await deliveryById(queued.id)).toMatchObject({ status: "sending" });
     });
@@ -436,12 +669,18 @@ describe("NotificationOutboxWorker", () => {
       const stale = claimedRow(claimed.value);
 
       await setDelivery(stale.id, { claimedAt: new Date(Date.now() - 6 * MINUTE) });
-      expect(await worker.drain()).toEqual({ sent: 1, retried: 0, failed: 0 });
+      expect(await worker.drain()).toEqual({
+        sent: 1,
+        retried: 0,
+        deferred: 0,
+        skipped: 0,
+        failed: 0,
+      });
 
       // The stalled task finally comes back and records the failure it saw.
       const late = await deliveryRepository.markRetry(stale, {
         attempts: 1,
-        nextAttemptAt: new Date(Date.now() + MINUTE),
+        delayMs: MINUTE,
         lastError: "Mail server refused",
       });
 
@@ -459,22 +698,69 @@ describe("NotificationOutboxWorker", () => {
         failure(AppError.internal("Database unavailable")),
       );
 
-      expect(await worker.drain()).toEqual({ sent: 0, retried: 1, failed: 0 });
+      expect(await worker.drain()).toEqual({
+        sent: 0,
+        retried: 1,
+        deferred: 0,
+        skipped: 0,
+        failed: 0,
+      });
     });
 
     it("counts a failure whose row could not be marked", async () => {
+      const queued = await queueOne();
+      await setDelivery(queued.id, { attempts: 4 });
+      sendSubmitted.mockResolvedValue(failure(AppError.internal("Mail server refused")));
+      vi.spyOn(deliveryRepository, "markFailed").mockResolvedValue(
+        failure(AppError.internal("Database unavailable")),
+      );
+
+      expect(await worker.drain()).toEqual({
+        sent: 0,
+        retried: 0,
+        deferred: 0,
+        skipped: 0,
+        failed: 1,
+      });
+    });
+
+    it("counts a skip whose row could not be marked", async () => {
       await queueOne();
       await testApp.database
         .update(profiles)
         .set({ activated: false })
         .where(eq(profiles.userId, recipientId));
-      vi.spyOn(deliveryRepository, "markFailed").mockResolvedValue(
+      vi.spyOn(deliveryRepository, "markSkipped").mockResolvedValue(
         failure(AppError.internal("Database unavailable")),
       );
 
-      expect(await worker.drain()).toEqual({ sent: 0, retried: 0, failed: 1 });
+      expect(await worker.drain()).toEqual({
+        sent: 0,
+        retried: 0,
+        deferred: 0,
+        skipped: 1,
+        failed: 0,
+      });
       expect(sendSubmitted).not.toHaveBeenCalled();
     });
+  });
+
+  it("looks once more when a nudge lands during the last claim", async () => {
+    const claim = vi.spyOn(deliveryRepository, "claimDue");
+    // A real worker: the one the harness hands out has its nudge silenced.
+    const nudgeable = new NotificationOutboxWorker(
+      deliveryRepository,
+      testApp.module.get(NotificationRepository),
+      testApp.module.get(NotificationEmailService),
+    );
+
+    // Nothing is queued, so the first claim comes back empty; the nudge arriving in
+    // that moment is the row a producer queued just after it was looked for.
+    const drained = nudgeable.drain();
+    nudgeable.nudge();
+
+    expect(await drained).toEqual({ sent: 0, retried: 0, deferred: 0, skipped: 0, failed: 0 });
+    expect(claim.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
   it("leaves no outbox interval on the schedule under the harness", async () => {

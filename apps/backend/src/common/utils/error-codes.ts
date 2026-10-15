@@ -64,6 +64,7 @@ export enum ErrorCodes {
   // Location: src/common/modules/email/
   EMAIL_SEND_FAILED = "EMAIL_SEND_FAILED", // Email sending failed
   EMAIL_TRANSPORT_VERIFY_FAILED = "EMAIL_TRANSPORT_VERIFY_FAILED", // SMTP login check failed
+  EMAIL_RELAY_UNREACHABLE = "EMAIL_RELAY_UNREACHABLE", // Could not reach the mail relay at all
 
   // ==================== Mailchimp / Newsletter ====================
   // Location: src/common/modules/mailchimp/

@@ -1,4 +1,10 @@
-import { createSecondaryDatabase, eq, notificationDeliveries, notifications } from "@repo/database";
+import {
+  createSecondaryDatabase,
+  eq,
+  notificationDeliveries,
+  notifications,
+  sql as sqlRaw,
+} from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { claimedRow } from "../../../test/notification-deliveries";
@@ -206,7 +212,7 @@ describe("NotificationDeliveryRepository", () => {
 
       const late = await repository.markRetry(stale, {
         attempts: 1,
-        nextAttemptAt: new Date(Date.now() + MINUTE),
+        delayMs: MINUTE,
         lastError: "a stalled task catching up",
       });
 
@@ -214,6 +220,56 @@ describe("NotificationDeliveryRepository", () => {
       assertSuccess(late);
       expect(await rowById(stale.id)).toMatchObject({ status: "sent", attempts: 1 });
       expect(late.value).toBe(false);
+    });
+
+    it("writes nothing from a stale claim while the replacement is still sending", async () => {
+      await seedDelivery();
+      const first = await repository.claimDue(LEASE_MS);
+      assertSuccess(first);
+      const stale = claimedRow(first.value);
+
+      // Handed on by the lease and still in flight: the replacement has not recorded
+      // an outcome yet, so the row is `sending` under somebody else's claim.
+      await setDelivery(stale.id, { claimedAt: new Date(Date.now() - 6 * MINUTE) });
+      const second = await repository.claimDue(LEASE_MS);
+      assertSuccess(second);
+      const held = claimedRow(second.value);
+
+      const sent = await repository.markSent(stale, new Date());
+      const retried = await repository.markRetry(stale, {
+        attempts: 3,
+        delayMs: MINUTE,
+        lastError: "a stalled task catching up",
+      });
+      const failed = await repository.markFailed(stale, { attempts: 5, lastError: "too late" });
+
+      assertSuccess(sent);
+      assertSuccess(retried);
+      assertSuccess(failed);
+      // The row still belongs to the task that holds it, untouched by all three.
+      expect(await rowById(stale.id)).toMatchObject({
+        status: "sending",
+        claimedAt: held.claimedAt,
+        attempts: held.attempts,
+      });
+      expect([sent.value, retried.value, failed.value]).toEqual([false, false, false]);
+    });
+
+    it("parses the claim stamp to the instant the row holds, whatever the session zone", async () => {
+      await seedDelivery();
+      const claimed = await repository.claimDue(LEASE_MS);
+      assertSuccess(claimed);
+      const claim = claimedRow(claimed.value);
+
+      // Read as an epoch by the database itself, so the comparison owes nothing to
+      // how this process or this session happens to be offset from UTC.
+      const [{ epochMs }] = await testApp.database.execute<{ epochMs: string }>(
+        sqlRaw`SELECT (extract(epoch from ${notificationDeliveries.claimedAt}) * 1000)::bigint::text AS "epochMs"
+               FROM ${notificationDeliveries}
+               WHERE ${notificationDeliveries.id} = ${claim.id}`,
+      );
+
+      expect(claim.claimedAt.getTime()).toBe(Number(epochMs));
     });
 
     it("writes nothing when the row is no longer sending", async () => {

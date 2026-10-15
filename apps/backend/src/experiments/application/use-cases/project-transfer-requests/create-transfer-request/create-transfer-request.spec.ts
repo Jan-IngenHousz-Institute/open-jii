@@ -164,11 +164,13 @@ describe("CreateTransferRequest", () => {
     // Act
     const result = await useCase.execute(testUserId, testUserEmail, input);
 
-    // Assert - should still succeed
+    // Assert - the transfer request stands; the telling is all-or-nothing, so a
+    // delivery that could not be written takes its notification row with it.
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value.status).toBe("pending");
-    expect(await notificationsFor(testUserId)).toHaveLength(1);
+    expect(await notificationsFor(testUserId)).toHaveLength(0);
+    expect(await deliveriesFor(testUserId)).toHaveLength(0);
   });
 
   it("should return internal error when repository fails to create request", async () => {
