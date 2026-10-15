@@ -875,6 +875,15 @@ describe("set repeat scheduling", () => {
     nonpulsed_lights_brightness: [["@s0"]],
   };
 
+  it("reports unlabeled measuring records that cannot be matched", () => {
+    const decoded = measurementToTimeseries(
+      { sample_raw: [{ set: [{ data_raw: [1, 2, 3] }, { label: "ECS", data_raw: [4, 5, 6] }] }] },
+      { set_repeats: 1, _protocol_set_: [{ ...entry, label: undefined }, entry] },
+    );
+    expect(decoded.unmatchedRecords).toBe(1);
+    expect(decoded.outputs.map((r) => r.value)).toEqual([4, 5, 6]);
+  });
+
   it("reports recorded entries left over after a shortened protocol schedule", () => {
     const decoded = measurementToTimeseries(
       {
