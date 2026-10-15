@@ -332,13 +332,15 @@ submit(blocks)
               values: ["a first light level", "a second light level", "darkness"],
             },
             settleMs: 1000,
+            // The reference is typed first, so the device is read when the operator records it
+            // rather than the moment they confirm the setup.
             read: [
-              { instrument: "dut", command: "par_raw", as: "par_raw" },
               {
                 operator: "Enter the PAR value shown by the reference sensor",
                 as: "par_ref",
                 type: "number",
               },
+              { instrument: "dut", command: "par_raw", as: "par_raw" },
             ],
           },
         ],
@@ -349,12 +351,12 @@ submit(blocks)
             series: "par_check",
             prompt: "Keep both sensors in the same light for the check reading.",
             read: [
-              { instrument: "dut", command: "par", as: "par" },
               {
                 operator: "Enter the PAR value shown by the reference sensor",
                 as: "par_ref",
                 type: "number",
               },
+              { instrument: "dut", command: "par", as: "par" },
             ],
           },
         ],
@@ -436,6 +438,11 @@ submit(blocks)
             },
             settleMs: 1000,
             read: [
+              {
+                operator: "Enter the PAR value shown by the reference sensor",
+                as: "par_ref",
+                type: "number",
+              },
               // Basic counts, which is what the firmware multiplies its stored coefficients
               // by. Fitting the raw counts instead scales every later reading by the
               // gain and integration time the sweep happened to run at.
@@ -443,11 +450,6 @@ submit(blocks)
               // The coefficients are only valid at the gain and integration time they were
               // derived at, so every point carries the settings it was taken at.
               { instrument: "dut", command: "status", as: "settings" },
-              {
-                operator: "Enter the PAR value shown by the reference sensor",
-                as: "par_ref",
-                type: "number",
-              },
             ],
           },
         ],
@@ -463,12 +465,12 @@ submit(blocks)
             },
             settleMs: 1000,
             read: [
-              { instrument: "dut", command: "spec", as: "spec" },
               {
                 operator: "Enter the PAR value shown by the reference sensor",
                 as: "par_ref",
                 type: "number",
               },
+              { instrument: "dut", command: "spec", as: "spec" },
             ],
           },
         ],

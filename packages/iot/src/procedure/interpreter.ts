@@ -11,7 +11,7 @@ import {
   ProcedureRigError,
   ProcedureStopped,
 } from "./operator";
-import type { OperatorPort, ProcedureProgress } from "./operator";
+import type { OperatorPort, ProcedureProgress, PromptNext } from "./operator";
 import { DUT_ROLE, SWEEP_STIMULUS_COLUMN, isInstrumentRead, isInstrumentStimulus } from "./types";
 import type {
   CaptureProcedure,
@@ -125,7 +125,7 @@ class ProcedureRunner {
       });
       try {
         this.stopIfRequested();
-        await this.runStep(step);
+        await this.runStep(step, steps.slice(index + 1));
       } catch (error) {
         throw new ProcedureAborted(error instanceof Error ? error : new Error(String(error)), {
           payload: this.payload,
@@ -171,10 +171,15 @@ class ProcedureRunner {
     }
   }
 
-  private async runStep(step: ProcedureStep): Promise<void> {
+  /** `following` is the steps after this one, so an operator step can say what it sets off. */
+  private async runStep(step: ProcedureStep, following: ProcedureStep[]): Promise<void> {
     switch (step.kind) {
       case "operator": {
-        const accepted = await this.context.operator.acknowledge(step.prompt, step.confirm);
+        const accepted = await this.context.operator.acknowledge(
+          step.prompt,
+          step.confirm,
+          this.readsAfterStep(following),
+        );
         if (!accepted) throw new ProcedureDeclined(step.prompt);
         return;
       }
@@ -208,7 +213,11 @@ class ProcedureRunner {
 
     for (let attempt = 1; ; attempt++) {
       if (step.prompt) {
-        const accepted = await this.context.operator.acknowledge(step.prompt);
+        const accepted = await this.context.operator.acknowledge(
+          step.prompt,
+          undefined,
+          instrumentReadsBefore(step.read),
+        );
         if (!accepted) {
           return this.skipOrFail(step, `operator declined: ${step.prompt}`, step.prompt);
         }
@@ -310,7 +319,11 @@ class ProcedureRunner {
   private async applyStimulus(step: SweepStep, index: number): Promise<boolean> {
     if (!isInstrumentStimulus(step.stimulus)) {
       const value = step.stimulus.values[index];
-      return this.context.operator.acknowledge(interpolate(step.stimulus.operator, value));
+      return this.context.operator.acknowledge(
+        interpolate(step.stimulus.operator, value),
+        undefined,
+        instrumentReadsBefore(step.read),
+      );
     }
 
     await this.applySetpoint(
@@ -332,18 +345,24 @@ class ProcedureRunner {
   /** `value` is the sweep setpoint the reads are taken at; a read step has none. */
   private async takeReads(reads: ProcedureRead[], value?: SetpointValue): Promise<SeriesRow> {
     const row: SeriesRow = {};
-    for (const read of reads) {
-      row[read.as] = await this.takeOneRead(read, value);
+    for (const [index, read] of reads.entries()) {
+      row[read.as] = await this.takeOneRead(read, value, reads.slice(index + 1));
     }
     return row;
   }
 
+  /** `following` is the rest of the step's reads, so an operator is told what answering sets off. */
   private async takeOneRead(
     read: ProcedureRead,
-    value?: SetpointValue,
+    value: SetpointValue | undefined,
+    following: ProcedureRead[],
   ): Promise<SeriesCell | null> {
     if (!isInstrumentRead(read)) {
-      return this.context.operator.readValue(interpolate(read.operator, value), read.type);
+      return this.context.operator.readValue(
+        interpolate(read.operator, value),
+        read.type,
+        instrumentReadsBefore(following),
+      );
     }
 
     const target = this.context.rig[read.instrument]?.read;
@@ -430,6 +449,41 @@ class ProcedureRunner {
    * An absent instrument skips an optional step and aborts a required one. A decline is
    * the operator's, not the rig's, and is raised as one so the wizard can say so.
    */
+  /**
+   * What acknowledging a standalone operator step sets off: the reads of the next step that
+   * runs without asking. Settles and setpoints are passed over, and so is an optional step the
+   * rig cannot serve, since it is skipped without asking. A step with its own prompt says so
+   * itself, and a required step the rig cannot serve ends the run before reading anything.
+   */
+  private readsAfterStep(following: ProcedureStep[]): PromptNext {
+    for (const step of following) {
+      if (step.kind === "settle" || step.kind === "set") {
+        continue;
+      }
+      if (step.kind === "operator") {
+        return { reads: [] };
+      }
+
+      const unavailable =
+        this.missingRole(step.read) ??
+        (step.kind === "sweep" && isInstrumentStimulus(step.stimulus)
+          ? this.missingSetpointRole(step.stimulus.instrument)
+          : undefined);
+      if (unavailable !== undefined) {
+        if (step.optional) {
+          continue;
+        }
+        return { reads: [] };
+      }
+
+      if (step.kind === "read") {
+        return step.prompt ? { reads: [] } : instrumentReadsBefore(step.read);
+      }
+      return isInstrumentStimulus(step.stimulus) ? instrumentReadsBefore(step.read) : { reads: [] };
+    }
+    return { reads: [] };
+  }
+
   private skipOrFail(step: ReadStep | SweepStep, reason: string, declinedPrompt?: string): void {
     if (!step.optional) {
       throw declinedPrompt === undefined
@@ -459,6 +513,18 @@ class ProcedureRunner {
   private report(event: ProcedureProgress): void {
     this.context.onProgress?.(event);
   }
+}
+
+/** The instrument columns a prompt's answer goes on to read before the run asks anything again. */
+function instrumentReadsBefore(reads: ProcedureRead[]): PromptNext {
+  const following: string[] = [];
+  for (const read of reads) {
+    if (!isInstrumentRead(read)) {
+      break;
+    }
+    following.push(read.as);
+  }
+  return { reads: following };
 }
 
 /** The sweep setpoint, as it may be written into a prompt, a read command, or a protocol's strings. */

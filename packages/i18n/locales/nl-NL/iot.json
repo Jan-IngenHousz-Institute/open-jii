@@ -875,6 +875,8 @@
         "continue": "Doorgaan",
         "submit": "Vastleggen",
         "decline": "Ik kan deze stap niet uitvoeren",
+        "readsOnContinue": "Doorgaan leest daarna {{columns}} zonder opnieuw te vragen, dus zet eerst alles klaar.",
+        "readsOnRecord": "Vastleggen leest daarna {{columns}} zonder opnieuw te vragen.",
         "confirmReading": "Deze meting behouden?",
         "confirmReadingAt": "Meting bij {{stimulus}} behouden?",
         "keepReading": "Behouden",

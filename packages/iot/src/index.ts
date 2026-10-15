@@ -190,7 +190,12 @@ export {
   ProcedureRigError,
   ProcedureStopped,
 } from "./procedure/operator";
-export type { OperatorPort, OperatorReading, ProcedureProgress } from "./procedure/operator";
+export type {
+  OperatorPort,
+  OperatorReading,
+  ProcedureProgress,
+  PromptNext,
+} from "./procedure/operator";
 export {
   requiredSeriesNames,
   requiredRoles,

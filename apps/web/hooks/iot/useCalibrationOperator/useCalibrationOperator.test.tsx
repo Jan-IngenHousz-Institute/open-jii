@@ -32,10 +32,16 @@ describe("useCalibrationOperator", () => {
 
     let answer: Promise<number | string> | undefined;
     act(() => {
-      answer = result.current.port.readValue("Enter the reference reading", "number");
+      answer = result.current.port.readValue("Enter the reference reading", "number", {
+        reads: ["par_raw"],
+      });
     });
 
-    expect(result.current.pending).toMatchObject({ kind: "readValue", type: "number" });
+    expect(result.current.pending).toMatchObject({
+      kind: "readValue",
+      type: "number",
+      next: { reads: ["par_raw"] },
+    });
 
     act(() => {
       const pending = result.current.pending;

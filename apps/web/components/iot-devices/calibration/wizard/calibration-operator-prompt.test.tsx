@@ -18,6 +18,55 @@ describe("CalibrationOperatorPrompt", () => {
     expect(resolve).toHaveBeenCalledWith(true);
   });
 
+  // The device is read the moment the button is pressed; an operator who expects that at a
+  // later prompt sets up too late and the point is taken against the wrong conditions.
+  it("says that continuing reads the device straight away", () => {
+    render(
+      <CalibrationOperatorPrompt
+        request={{
+          kind: "acknowledge",
+          prompt: "Set up a first light level",
+          next: { reads: ["par_raw"] },
+          resolve: vi.fn(),
+        }}
+      />,
+    );
+
+    expect(screen.getByText("iot.calibration.prompt.readsOnContinue")).toBeInTheDocument();
+  });
+
+  it("says that recording a value also reads the device", () => {
+    render(
+      <CalibrationOperatorPrompt
+        request={{
+          kind: "readValue",
+          prompt: "Enter the PAR value shown by the reference sensor",
+          type: "number",
+          next: { reads: ["par_raw"] },
+          resolve: vi.fn(),
+          reject: vi.fn(),
+        }}
+      />,
+    );
+
+    expect(screen.getByText("iot.calibration.prompt.readsOnRecord")).toBeInTheDocument();
+  });
+
+  it("says nothing about reads when nothing is read straight after", () => {
+    render(
+      <CalibrationOperatorPrompt
+        request={{
+          kind: "acknowledge",
+          prompt: "Set up a first light level",
+          next: { reads: [] },
+          resolve: vi.fn(),
+        }}
+      />,
+    );
+
+    expect(screen.queryByText("iot.calibration.prompt.readsOnContinue")).toBeNull();
+  });
+
   it("declines an instruction the operator cannot carry out", async () => {
     const resolve = vi.fn();
     render(

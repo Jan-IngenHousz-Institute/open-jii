@@ -875,6 +875,8 @@
         "continue": "Continue",
         "submit": "Record",
         "decline": "I can't do this step",
+        "readsOnContinue": "Continue goes on to read {{columns}} without asking again, so set everything up first.",
+        "readsOnRecord": "Record goes on to read {{columns}} without asking again.",
         "confirmReading": "Keep this reading?",
         "confirmReadingAt": "Keep this reading at {{stimulus}}?",
         "keepReading": "Keep",
