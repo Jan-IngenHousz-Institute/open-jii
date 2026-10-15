@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Badge } from "./badge";
 import { FormItem, FormLabel, FormMessage } from "./form";
@@ -34,12 +34,14 @@ export function FormSlider({
 }: FormSliderProps) {
   const initial = value ?? fallback;
   const [local, setLocal] = useState(initial);
+  const [seed, setSeed] = useState(initial);
 
   // Re-seed when the form value changes from outside the slider (e.g.
   // autosave bounce, programmatic reset, chart-type switch).
-  useEffect(() => {
+  if (!Object.is(seed, initial)) {
+    setSeed(initial);
     setLocal(initial);
-  }, [initial]);
+  }
 
   return (
     <FormItem>

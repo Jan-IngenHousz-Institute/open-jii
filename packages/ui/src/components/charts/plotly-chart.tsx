@@ -10,7 +10,7 @@ import type {
   Font,
   PlotlyHTMLElement,
 } from "plotly.js";
-import React, { useEffect, useRef, useState, Suspense, lazy } from "react";
+import React, { useEffect, useRef, useState, useSyncExternalStore, Suspense, lazy } from "react";
 import type { PlotParams } from "react-plotly.js";
 
 import { cn } from "../../lib/utils";
@@ -92,15 +92,14 @@ const PlotLoadingComponent = () => (
 );
 
 // Hook to detect if we're on the client side
-const useIsClient = () => {
-  const [isClient, setIsClient] = useState(false);
+const subscribeToNothing = () => () => undefined;
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  return isClient;
-};
+const useIsClient = () =>
+  useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false,
+  );
 
 export interface PlotlyChartProps extends Omit<PlotParams, "className"> {
   className?: string;

@@ -159,20 +159,20 @@ const MapViewController = ({
   fitBoundsOnMapLoad?: boolean;
 }) => {
   const map = useMap();
-  const [hasInitiallyFit, setHasInitiallyFit] = useState(false);
+  const hasInitiallyFit = useRef(false);
 
   // Fit bounds on initial load if enabled and locations are available
   useEffect(() => {
-    if (fitBoundsOnMapLoad && !hasInitiallyFit && locations && locations.length > 0) {
+    if (fitBoundsOnMapLoad && !hasInitiallyFit.current && locations && locations.length > 0) {
       const bounds = L.latLngBounds(locations.map((loc) => [loc.latitude, loc.longitude]));
       map.fitBounds(bounds, {
         padding: [50, 50],
         maxZoom: 15,
         animate: true,
       });
-      setHasInitiallyFit(true);
+      hasInitiallyFit.current = true;
     }
-  }, [map, locations, fitBoundsOnMapLoad, hasInitiallyFit]);
+  }, [map, locations, fitBoundsOnMapLoad]);
 
   useEffect(() => {
     if (shouldPan) {
