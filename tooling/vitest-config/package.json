@@ -6,6 +6,7 @@
   "exports": {
     ".": "./dist/index.js",
     "./base": "./dist/configs/base-config.js",
+    "./coverage": "./dist/coverage.js",
     "./ui": "./dist/configs/ui-config.js",
     "./setup": "./dist/setup.js",
     "./mobile": "./dist/mobile-rn.js"
