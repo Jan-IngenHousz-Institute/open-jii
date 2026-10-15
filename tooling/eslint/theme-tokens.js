@@ -75,8 +75,8 @@ export const reactHooksDirectives = [
     plugins: { "react-hooks": reactHooks },
     rules: {
       "react-hooks/exhaustive-deps": "warn",
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/no-deriving-state-in-effects": "warn",
+      "react-hooks/set-state-in-effect": "error",
+      "react-hooks/no-deriving-state-in-effects": "error",
     },
   },
 ];
