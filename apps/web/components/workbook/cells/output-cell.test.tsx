@@ -696,6 +696,41 @@ describe("OutputCellComponent", () => {
       expect(document.querySelector("pre")?.textContent).toContain("data_raw");
     });
 
+    it("shows a protocol mismatch instead of silently omitting extra records", async () => {
+      const code = multispeqProtocolCode();
+      const producer = createCommandCell({
+        payload: {
+          format: "json",
+          content: JSON.stringify([{ ...code[0], set_repeats: 1 }]),
+        },
+      });
+      render(
+        <OutputCellComponent
+          cell={createOutputCell({
+            data: {
+              sample_raw: [
+                {
+                  set: [
+                    { label: "ABS", data_raw: [10, 20, 30] },
+                    { label: "ABS", data_raw: [40, 50, 60] },
+                  ],
+                },
+              ],
+            },
+          })}
+          producer={producer}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+        />,
+      );
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      expect(screen.getByRole("status")).toHaveTextContent("output.multispeqProtocolMismatch");
+      expect(screen.queryByTestId("plotly-chart")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("tab", { name: "output.tabJson" }));
+      expect(document.querySelector("pre")?.textContent).toContain("60");
+    });
+
     it("renders both supported instruments in a mixed payload", async () => {
       render(
         <OutputCellComponent

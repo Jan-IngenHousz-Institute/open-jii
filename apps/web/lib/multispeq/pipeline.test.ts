@@ -875,6 +875,36 @@ describe("set repeat scheduling", () => {
     nonpulsed_lights_brightness: [["@s0"]],
   };
 
+  it("reports recorded entries left over after a shortened protocol schedule", () => {
+    const decoded = measurementToTimeseries(
+      {
+        sample_raw: [
+          {
+            set: [
+              { label: "ECS", data_raw: [1, 2, 3] },
+              { label: "ECS", data_raw: [4, 5, 6] },
+            ],
+          },
+        ],
+      },
+      { set_repeats: 1, _protocol_set_: [entry] },
+    );
+    expect(decoded.unmatchedRecords).toBe(1);
+    expect(decoded.outputs.map((r) => r.value)).toEqual([1, 2, 3]);
+  });
+
+  it.each([
+    [1, 2],
+    [1, 2, 3, 4],
+  ])("rejects a whole record whose length differs from the protocol: %j", (...dataRaw) => {
+    const decoded = measurementToTimeseries(
+      { sample_raw: [{ set: [{ label: "ECS", data_raw: dataRaw }] }] },
+      { set_repeats: 1, _protocol_set_: [entry] },
+    );
+    expect(decoded.unmatchedRecords).toBe(1);
+    expect(decoded.outputs).toEqual([]);
+  });
+
   it("skips a first-only duplicate definition without dropping later readings", () => {
     const decoded = measurementToTimeseries(
       {

@@ -492,6 +492,7 @@ export function explodeRecords(measurement: MeasurementInput): SubProtocolRecord
 }
 
 export interface MeasurementTimeseries {
+  unmatchedRecords: number;
   inputs: InputRecord[];
   outputs: OutputRecord[];
   /** Total duration in microseconds, sum of declared sub-protocol durations
@@ -602,6 +603,7 @@ export function measurementToTimeseries(
   const allInputs: InputRecord[] = [];
   const allOutputs: OutputRecord[] = [];
   let tOffset = 0;
+  let unmatchedRecords = 0;
   const plottedLabelSeen = new Map<string, number>();
   let ambientPi: unknown[] | null = null;
 
@@ -614,13 +616,20 @@ export function measurementToTimeseries(
       if (isFiniteNumber(delayS) && delayS > 0) tOffset += Math.trunc(delayS * 1_000_000);
     }
 
-    if (row.data_raw_len === 0 || !psDef) continue;
+    if (row.data_raw_len === 0) continue;
+    if (!psDef) {
+      unmatchedRecords++;
+      continue;
+    }
+    const variables = resolveVariables(protocolJson, occurrence.repeat);
+    if (predictDataRawLength(psDef, variables) !== row.data_raw_len) {
+      unmatchedRecords++;
+      continue;
+    }
 
     const plottedOccurrence = plottedLabelSeen.get(row.label) ?? 0;
     plottedLabelSeen.set(row.label, plottedOccurrence + 1);
     const label = repeatedLabels.has(row.label) ? `${row.label} #${plottedOccurrence}` : row.label;
-
-    const variables = resolveVariables(protocolJson, occurrence.repeat);
 
     let pi: unknown[] | null = null;
     if (row.pi_json) {
@@ -717,5 +726,5 @@ export function measurementToTimeseries(
     tOffset -= zeroOffset;
   }
 
-  return { inputs: allInputs, outputs: allOutputs, totalDurationUs: tOffset };
+  return { inputs: allInputs, outputs: allOutputs, totalDurationUs: tOffset, unmatchedRecords };
 }

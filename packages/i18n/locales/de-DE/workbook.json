@@ -88,6 +88,7 @@
     "closeChart": "Diagramm schließen",
     "expandChart": "Diagramm für {{column}} öffnen",
     "loadingProtocol": "Protokoll wird geladen…",
+    "multispeqProtocolMismatch": "{{count}} aufgezeichnete Teilprotokolle stimmen nicht mit der Protokolldefinition überein. Eine zuverlässige Zeitreihe kann nicht rekonstruiert werden. Alle Messwerte bleiben unter JSON verfügbar.",
     "multispeqTimeseriesXAxis": "Modellierte Protokollzeit (s)",
     "timeseriesXAxis": "Zeit (s)",
     "timeseriesYAxis": "Normalisiertes Signal",

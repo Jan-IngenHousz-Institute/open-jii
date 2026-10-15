@@ -93,6 +93,7 @@
     "closeChart": "Close chart",
     "expandChart": "Expand chart for {{column}}",
     "loadingProtocol": "Loading protocol…",
+    "multispeqProtocolMismatch": "{{count}} recorded sub-protocols do not match the protocol definition. A reliable time series cannot be reconstructed. All readings remain available in JSON.",
     "multispeqTimeseriesXAxis": "Modeled protocol time (s)",
     "timeseriesXAxis": "Time (s)",
     "timeseriesYAxis": "Normalized signal",

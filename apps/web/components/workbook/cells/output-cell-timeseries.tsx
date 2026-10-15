@@ -319,6 +319,16 @@ function MultispeqTimeseries({
     );
   }
 
+  if (decoded.unmatchedRecords > 0) {
+    return (
+      <InsetPanel padding="none" className="text-muted-foreground p-4 text-xs">
+        <p role="status">
+          {t("output.multispeqProtocolMismatch", { count: decoded.unmatchedRecords })}
+        </p>
+      </InsetPanel>
+    );
+  }
+
   const groups = groupOutputs(decoded.outputs);
   if (groups.length === 0) {
     return (

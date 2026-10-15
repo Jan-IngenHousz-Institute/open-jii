@@ -88,6 +88,7 @@
     "closeChart": "Diagram sluiten",
     "expandChart": "Diagram voor {{column}} openen",
     "loadingProtocol": "Protocol laden…",
+    "multispeqProtocolMismatch": "{{count}} opgenomen subprotocollen komen niet overeen met de protocoldefinitie. Een betrouwbare tijdreeks kan niet worden gereconstrueerd. Alle meetwaarden blijven beschikbaar in JSON.",
     "multispeqTimeseriesXAxis": "Gemodelleerde protocoltijd (s)",
     "timeseriesXAxis": "Tijd (s)",
     "timeseriesYAxis": "Genormaliseerd signaal",

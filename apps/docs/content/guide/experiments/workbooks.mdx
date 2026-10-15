@@ -94,7 +94,8 @@ light settings. Inline JSON or YAML command outputs use the command stored in th
 cell. The axis is labeled **Modeled protocol time (s)**. A pinned
 workbook uses its saved protocol definition. If the definition is missing or the
 data cannot be decoded, the tab explains the problem instead of inventing a time
-axis.
+axis. If recorded sub-protocols no longer match the definition, the chart reports
+the mismatch and leaves every reading available in **JSON**.
 
 Ambit `ambit.trace/3` results supply their own timestamps or sampling intervals.
 The main plot shows **Fluorescence / reference**, dividing the 630 nm signal by
