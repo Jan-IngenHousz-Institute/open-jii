@@ -17,9 +17,9 @@ import { contract } from "@repo/api/contract";
 
 import { CalibrationDuplicateAction } from "./calibration-duplicate-action";
 
-/** Stands in for the definition page while an edit waits on its autosave. */
+/** Stands in for the definition page holding an edit it has not saved. */
 function UnsavedEdit() {
-  useReportAutosaveStatus({ status: "dirty", error: null });
+  useReportAutosaveStatus({ status: "dirty", error: null, hasUnsavedChanges: true });
   return null;
 }
 

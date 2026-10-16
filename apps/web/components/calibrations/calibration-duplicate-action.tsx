@@ -33,8 +33,8 @@ export function CalibrationDuplicateAction({ definition }: CalibrationDuplicateA
 
   const queryClient = useQueryClient();
   const autosave = useAutosaveStatus();
-  // The copy is made from what is saved, so an edit still waiting on autosave would be left out.
-  const isSaving = autosave?.status === "dirty" || autosave?.status === "saving";
+  // The copy is made from what is saved, so an edit that has not saved would be left out.
+  const hasUnsavedEdit = autosave?.hasUnsavedChanges ?? false;
   const { mutate: create } = useCreateCalibrationDefinition({
     onSuccess: (created) => {
       router.push(`/${locale}/platform/calibrations/${created.id}`);
@@ -85,7 +85,7 @@ export function CalibrationDuplicateAction({ definition }: CalibrationDuplicateA
       variant="outline"
       size="sm"
       onClick={() => void handleDuplicate()}
-      disabled={isDuplicating || isSaving}
+      disabled={isDuplicating || hasUnsavedEdit}
     >
       <Copy className="mr-2 h-4 w-4" />
       {t("iot.calibration.detail.duplicate")}
