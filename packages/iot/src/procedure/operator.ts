@@ -40,12 +40,21 @@ export class ProcedureStopped extends Error {
   }
 }
 
+/**
+ * What the run does by itself the moment a prompt is answered: the columns it reads from
+ * instruments next, in order, up to the next thing it has to ask for. An operator who
+ * cannot see this assumes the device is read at some later prompt and sets up too late.
+ */
+export interface PromptNext {
+  reads: string[];
+}
+
 export interface OperatorPort {
   /** When `confirm` is set the operator must type that exact token; returning false declines the step. */
-  acknowledge(prompt: string, confirm?: string): Promise<boolean>;
+  acknowledge(prompt: string, confirm?: string, next?: PromptNext): Promise<boolean>;
 
   /** Ask for a value the rig cannot measure, such as a handheld meter reading. */
-  readValue(prompt: string, type: "number" | "text"): Promise<number | string>;
+  readValue(prompt: string, type: "number" | "text", next?: PromptNext): Promise<number | string>;
 
   /**
    * Offer a reading the operator just produced by hand. Returning false takes the point

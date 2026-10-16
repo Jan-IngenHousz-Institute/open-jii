@@ -1,5 +1,6 @@
 "use client";
 
+import { CalibrationDeleteAction } from "@/components/calibrations/calibration-delete-action";
 import { CalibrationDuplicateAction } from "@/components/calibrations/calibration-duplicate-action";
 import { CalibrationLayoutContent } from "@/components/calibrations/calibration-layout-content";
 import { PlatformHeaderDetail } from "@/components/navigation/site-header/platform-header-context";
@@ -52,8 +53,12 @@ export default function CalibrationDefinitionLayout({
     </Button>
   );
 
-  // A definition a run has closed is read-only, so the next revision starts as a copy.
-  const canDuplicate = data !== undefined && data.runCount > 0 && !isBench;
+  // A copy is how anyone takes a definition they cannot change, closed by a run or someone
+  // else's, into one of their own.
+  const canDuplicate = data !== undefined && !isBench;
+  // The server refuses to delete a definition a run points at, so it is not offered then.
+  const canDelete =
+    data !== undefined && data.capabilities.canManage && data.runCount === 0 && !isBench;
 
   const benchAction = support.serial ? (
     benchButton
@@ -73,6 +78,7 @@ export default function CalibrationDefinitionLayout({
     </Button>
   ) : (
     <>
+      {canDelete && <CalibrationDeleteAction definition={data} />}
       {canDuplicate && <CalibrationDuplicateAction definition={data} />}
       {benchAction}
     </>

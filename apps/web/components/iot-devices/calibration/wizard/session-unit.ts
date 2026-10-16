@@ -8,6 +8,7 @@ export interface SessionUnit {
   reason?: string;
 }
 
-export function unitAlreadyDone(units: SessionUnit[], serial: string): SessionUnit | undefined {
-  return units.find((unit) => unit.serial === serial);
+/** By device, not by serial: a unit the operator names by hand has no serial of its own to match. */
+export function unitAlreadyDone(units: SessionUnit[], deviceId: string): SessionUnit | undefined {
+  return units.find((unit) => unit.deviceId === deviceId);
 }

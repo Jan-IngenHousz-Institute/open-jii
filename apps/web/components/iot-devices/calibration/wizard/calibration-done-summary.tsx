@@ -37,22 +37,26 @@ export function CalibrationDoneSummary({
   const facts: [string, string][] = [];
 
   if (points > 0) {
+    // Each noun takes its own count, since a language may inflect both.
     facts.push([
       t("iot.calibration.done.measured"),
-      t("iot.calibration.done.measuredValue", { series: series.length, points }),
+      t("iot.calibration.done.measuredValue", {
+        readings: t("iot.calibration.done.readingCount", { count: points }),
+        series: t("iot.calibration.done.seriesCount", { count: series.length }),
+      }),
     ]);
   }
   if (applied !== null) {
     facts.push([
       t("iot.calibration.done.applied"),
-      t("iot.calibration.done.appliedValue", { blocks }),
+      t("iot.calibration.done.appliedValue", { count: blocks }),
     ]);
   }
   if (results !== null) {
     facts.push([
       t("iot.calibration.done.onDevice"),
       isReported
-        ? t("iot.calibration.done.onDeviceValue", { confirmed, blocks })
+        ? t("iot.calibration.done.onDeviceValue", { confirmed, count: blocks })
         : t("iot.calibration.done.onDeviceUnrecorded", { confirmed }),
     ]);
   }

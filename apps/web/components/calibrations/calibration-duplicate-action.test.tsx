@@ -1,4 +1,8 @@
 import {
+  AutosaveStatusProvider,
+  useReportAutosaveStatus,
+} from "@/components/shared/autosave/autosave-status-context";
+import {
   createCalibrationDefinition,
   createCalibrationDefinitionDetail,
   createCalibrationDefinitionSummary,
@@ -12,6 +16,18 @@ import { describe, expect, it } from "vitest";
 import { contract } from "@repo/api/contract";
 
 import { CalibrationDuplicateAction } from "./calibration-duplicate-action";
+
+/** Stands in for the definition page holding an edit it has not saved. */
+function UnsavedEdit() {
+  useReportAutosaveStatus({ status: "dirty", error: null, hasUnsavedChanges: true });
+  return null;
+}
+
+/** Stands in for the definition page while an edit taken back to the saved value is still saving. */
+function SaveLanding() {
+  useReportAutosaveStatus({ status: "saving", error: null, hasUnsavedChanges: false });
+  return null;
+}
 
 const definition = createCalibrationDefinitionDetail({
   name: "PAR bench",
@@ -68,5 +84,73 @@ describe("CalibrationDuplicateAction", () => {
     await waitFor(() => {
       expect(spy.body).toMatchObject({ name: "PAR bench (copy) 2" });
     });
+  });
+
+  // The button sits on every definition page; the list is only worth fetching to name a copy.
+  it("fetches the names in use only when asked to copy", async () => {
+    const list = server.mount(contract.iot.listCalibrationDefinitions, { body: [] });
+    server.mount(contract.iot.createCalibrationDefinition, {
+      body: createCalibrationDefinition(),
+    });
+
+    render(<CalibrationDuplicateAction definition={definition} />);
+    await screen.findByRole("button", { name: /duplicate/i });
+    expect(list.called).toBe(false);
+
+    await userEvent.click(screen.getByRole("button", { name: /duplicate/i }));
+
+    await waitFor(() => {
+      expect(list.called).toBe(true);
+    });
+  });
+
+  // Naming the copy waits on the list, and a click in that wait would make a second copy.
+  it("makes one copy when clicked again while it names the copy", async () => {
+    let release: () => void = () => undefined;
+    const inFlight = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.mount(contract.iot.listCalibrationDefinitions, { body: [], unblock: inFlight });
+    const create = server.mount(contract.iot.createCalibrationDefinition, {
+      body: createCalibrationDefinition(),
+    });
+    const user = userEvent.setup();
+
+    render(<CalibrationDuplicateAction definition={definition} />);
+    const button = screen.getByRole("button", { name: /duplicate/i });
+    await user.click(button);
+
+    expect(button).toBeDisabled();
+    await user.click(button);
+
+    release();
+    await waitFor(() => {
+      expect(create.called).toBe(true);
+    });
+    expect(create.callCount).toBe(1);
+  });
+
+  // The copy is made from what is saved, so an edit still waiting on autosave would be lost.
+  it("waits for an unsaved edit before it can copy", () => {
+    render(
+      <AutosaveStatusProvider>
+        <UnsavedEdit />
+        <CalibrationDuplicateAction definition={definition} />
+      </AutosaveStatusProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: /duplicate/i })).toBeDisabled();
+  });
+
+  // The save still landing changes what is saved, so the copy would miss what comes of it.
+  it("waits for a save that is still landing", () => {
+    render(
+      <AutosaveStatusProvider>
+        <SaveLanding />
+        <CalibrationDuplicateAction definition={definition} />
+      </AutosaveStatusProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: /duplicate/i })).toBeDisabled();
   });
 });

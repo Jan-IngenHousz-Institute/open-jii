@@ -201,6 +201,16 @@ export function CalibrationConnectStep({
     );
   }
 
+  // Replies arrive deduplicated, so each is its own key. A device that streams can answer a
+  // probe with kilobytes, so each is held to two lines and keeps the rest in its title.
+  function renderReply(reply: string) {
+    return (
+      <span key={reply} title={reply} className="mt-1 line-clamp-2 break-all font-mono text-xs">
+        {reply}
+      </span>
+    );
+  }
+
   function renderRoleRefusal(role: RigRole) {
     const status = role.status;
     switch (status.kind) {
@@ -220,7 +230,10 @@ export function CalibrationConnectStep({
       case "unrecognised":
         return (
           <Alert variant="destructive">
-            <AlertDescription>{t("iot.calibration.connect.roleUnrecognised")}</AlertDescription>
+            <AlertDescription>
+              {t("iot.calibration.connect.roleUnrecognised")}
+              {status.replies.map(renderReply)}
+            </AlertDescription>
           </Alert>
         );
       case "failed":
