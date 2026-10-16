@@ -8,6 +8,7 @@ import { orpc } from "@/lib/orpc";
 import { useQueryClient } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import type { CalibrationDefinitionDetail } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
@@ -34,13 +35,17 @@ export function CalibrationDuplicateAction({ definition }: CalibrationDuplicateA
   const autosave = useAutosaveStatus();
   // The copy is made from what is saved, so an edit still waiting on autosave would be left out.
   const isSaving = autosave?.status === "dirty" || autosave?.status === "saving";
-  const { mutate: create, isPending } = useCreateCalibrationDefinition({
+  const { mutate: create } = useCreateCalibrationDefinition({
     onSuccess: (created) => {
       router.push(`/${locale}/platform/calibrations/${created.id}`);
     },
   });
+  // Spans the names fetch as well as the create, which a mutation's isPending does not.
+  const [isDuplicating, setIsDuplicating] = useState(false);
 
   async function handleDuplicate() {
+    setIsDuplicating(true);
+
     // Fetched on demand: the names in use matter for the copy's name and nothing else here.
     let taken: string[];
     try {
@@ -48,6 +53,7 @@ export function CalibrationDuplicateAction({ definition }: CalibrationDuplicateA
       taken = definitions.map((candidate) => candidate.name);
     } catch (error) {
       toast({ description: parseApiError(error)?.message, variant: "destructive" });
+      setIsDuplicating(false);
       return;
     }
 
@@ -67,6 +73,9 @@ export function CalibrationDuplicateAction({ definition }: CalibrationDuplicateA
         onError: (error) => {
           toast({ description: parseApiError(error)?.message, variant: "destructive" });
         },
+        onSettled: () => {
+          setIsDuplicating(false);
+        },
       },
     );
   }
@@ -76,7 +85,7 @@ export function CalibrationDuplicateAction({ definition }: CalibrationDuplicateA
       variant="outline"
       size="sm"
       onClick={() => void handleDuplicate()}
-      disabled={isPending || isSaving}
+      disabled={isDuplicating || isSaving}
     >
       <Copy className="mr-2 h-4 w-4" />
       {t("iot.calibration.detail.duplicate")}

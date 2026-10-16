@@ -98,6 +98,32 @@ describe("CalibrationDuplicateAction", () => {
     });
   });
 
+  // Naming the copy waits on the list, and a click in that wait would make a second copy.
+  it("makes one copy when clicked again while it names the copy", async () => {
+    let release: () => void = () => undefined;
+    const inFlight = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.mount(contract.iot.listCalibrationDefinitions, { body: [], unblock: inFlight });
+    const create = server.mount(contract.iot.createCalibrationDefinition, {
+      body: createCalibrationDefinition(),
+    });
+    const user = userEvent.setup();
+
+    render(<CalibrationDuplicateAction definition={definition} />);
+    const button = screen.getByRole("button", { name: /duplicate/i });
+    await user.click(button);
+
+    expect(button).toBeDisabled();
+    await user.click(button);
+
+    release();
+    await waitFor(() => {
+      expect(create.called).toBe(true);
+    });
+    expect(create.callCount).toBe(1);
+  });
+
   // The copy is made from what is saved, so an edit still waiting on autosave would be lost.
   it("waits for an unsaved edit before it can copy", () => {
     render(
