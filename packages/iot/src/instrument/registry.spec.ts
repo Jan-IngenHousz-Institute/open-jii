@@ -127,6 +127,22 @@ describe("bench instrument registry", () => {
     expect(result.replies).toContain("KEITHLEY INSTRUMENTS,MODEL 2450,04123456,1.7.12b");
   });
 
+  // A supply that echoes the query answers with the echo first, and the candidate reads
+  // only that line; the identity that tells what is plugged in comes after it.
+  it("keeps every line the port sent when a candidate read only the first", async () => {
+    const transport = createMockTransport();
+    vi.mocked(transport.send).mockImplementation((sent: string) => {
+      if (sent === KIPRIM_COMMANDS.IDENTIFY) {
+        setTimeout(() => transport.simulateData("*IDN?\nACME,PSU-3005,0042,1.2\n"), 0);
+      }
+      return Promise.resolve();
+    });
+
+    const result = unrecognised(await identifyBenchInstrument(transport));
+
+    expect(result.replies).toEqual(["*IDN?", "ACME,PSU-3005,0042,1.2"]);
+  });
+
   // A candidate that names itself in two commands fails as a whole when the second goes
   // unanswered, but the port did answer the first.
   it("keeps what the port answered before a probe's later command went unanswered", async () => {

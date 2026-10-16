@@ -60,12 +60,6 @@ export async function identifyBenchInstrument(
   logger?: Logger,
 ): Promise<BenchIdentification | BenchUnrecognised> {
   const replies: string[] = [];
-  const keep = (heard: string) => {
-    const line = heard.trim();
-    if (line !== "" && !replies.includes(line)) {
-      replies.push(line);
-    }
-  };
 
   for (const create of BENCH_INSTRUMENTS) {
     const instrument = create(logger);
@@ -73,16 +67,20 @@ export async function identifyBenchInstrument(
     try {
       await instrument.initialize(probe);
       const reply = await instrument.identify();
-      probe.stop();
       if (identityMatches(instrument, reply)) {
+        probe.stop();
         return { kind: "identified", instrument, reply };
       }
-
-      keep(reply);
     } catch {
-      // A silent or malformed answer just means "not this one", but a probe that failed
-      // halfway may still have heard the port say something.
-      probe.stop().forEach(keep);
+      // A silent or malformed answer just means "not this one".
+    }
+
+    // What the port said rather than what the candidate made of it: a candidate may read one
+    // line of several, or fail at its second command after the port answered its first.
+    for (const line of probe.stop()) {
+      if (!replies.includes(line)) {
+        replies.push(line);
+      }
     }
     // Dropped, not destroyed: destroy() writes to the port, which no mismatched candidate may.
   }
@@ -128,10 +126,13 @@ class ProbeRecorder implements ITransportAdapter {
     return this.transport.disconnect();
   }
 
-  /** Ends recording and returns the lines heard. */
+  /** Ends recording and returns the lines heard, trimmed, without blank ones. */
   stop(): string[] {
     this.isRecording = false;
-    return this.heard.split(/\r?\n/);
+    return this.heard
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== "");
   }
 }
 
