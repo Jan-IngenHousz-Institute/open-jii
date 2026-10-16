@@ -30,8 +30,7 @@
       "notification-settings retaken on 2026-10-08 at 1920x1200 after project transfers moved onto dispatch and the Project transfers switch went live: Requests and invitations, Membership and access and Project transfers are on and enabled, the three categories whose notifications do not email yet are off, disabled and labelled Not available yet, and Account security stays checked and locked with Always on. Reviewed at full size with the seeded development identity; no experiment, organization or person is named in the frame. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp.",
       "notifications-page captured on 2026-10-08 at 1920x1200 from the local stack with the seeded development identity. The frame shows the All and Unread tabs, the category filter, Mark all read, and one row under each of Today, Yesterday and Earlier. Reviewed at full size. All three rows are seeded: a join request from Otto Outside on Field Trial 2025 — Corn Photosynthesis, and decisions on Greenhouse Tomato Stress Study and Vallei Drought Gradient. No developer-authored row, no credentials and no dev overlays are in frame. Two changes were made to the local data for the shot and both were undone after it: the three seeded rows' timestamps were set to the offsets the seed script writes (5 minutes, 26 hours, 3 days), since this database was seeded in September and all three had aged into Earlier, and four developer-authored transfer rows left by an earlier hand check were held out of frame. The before and after dumps of the table diff clean. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp.",
       "experiments-list retaken on 2026-10-12 at 1920x1200 from the local stack with the seeded development identity. Reviewed at full size and approved before publishing. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
-      "workbooks-list retaken on 2026-10-13 at 1920x1200 from the local stack with the seeded development identity, showing the Visibility filter button. Reviewed at full size and approved before publishing. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
-      "dashboard retaken on 2026-10-16 at 1920x1200 from the local stack with the seeded development identity, after the home moved to a main column and a side column. It shows the welcome notice, Recently opened with five seeded resources of four types and the type chips, Public research with seeded experiments and synthetic @example.org fixture authors, and one seeded unread notification beside them. Reviewed at full size: no credentials, precise locations or dev overlays. The CMS is unreachable locally, so no blog posts or release notes appear. WebP at quality 90 with metadata omitted using Pillow, this machine having neither cwebp nor an ffmpeg with libwebp."
+      "workbooks-list retaken on 2026-10-13 at 1920x1200 from the local stack with the seeded development identity, showing the Visibility filter button. Reviewed at full size and approved before publishing. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
     ]
   },
   "assets": [
@@ -41,10 +40,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 114686,
-      "sha256": "9790e5639d80a903a512fcc163061fb8a5f1a3e99e8b56979dc0578c0aa0c2ed",
+      "bytes": 165406,
+      "sha256": "fc86d6b4fec4dc5b21cb9835ab1aae56f06170582b6d1a766502dc12b04b141c",
       "disposition": "published",
-      "scope": "Home: welcome notice, Recently opened across types with its type chips, Public research, and unread notifications beside them"
+      "scope": "Authenticated dashboard: welcome card, recently opened experiments, recently updated public experiments and compact contextual header"
     },
     {
       "path": "/img/guide/web/dashboard-first-work.webp",
