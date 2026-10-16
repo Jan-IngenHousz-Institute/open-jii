@@ -44,6 +44,7 @@ graph TD;
 | `enable_enhanced_monitoring` | Enable RDS Enhanced Monitoring             | `bool`    | `false`                 | ❌ No   |
 | `backup_retention_period`    | Number of days to retain backups           | `number`  | `7`                     | ❌ No   |
 | `performance_insights_retention_period` | Performance Insights retention  | `number`  | `7`                     | ❌ No   |
+| `log_retention_days` | CloudWatch retention for the exported PostgreSQL logs | `number` | `365` | ❌ No |
 | `skip_final_snapshot`        | Skip final snapshot on deletion            | `bool`    | `false`                 | ❌ No   |
 | `snapshot_identifier`        | Snapshot identifier (ARN) to restore the Aurora cluster from. Used for disaster recovery scenarios when restoring from AWS Backup cross-region snapshots. When null, creates a fresh cluster. | `string` | `null` | ❌ No |
 | `enable_kms_key_rotation`    | Enable automatic KMS key rotation          | `bool`    | `true`                  | ❌ No   |

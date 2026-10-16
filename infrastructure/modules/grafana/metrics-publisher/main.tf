@@ -74,6 +74,18 @@ resource "aws_iam_role_policy" "metrics_publisher" {
 # -------------------------
 # Lambda Function
 # -------------------------
+resource "aws_cloudwatch_log_group" "metrics_publisher" {
+  name              = "/aws/lambda/${var.environment}-metrics-publisher"
+  retention_in_days = var.log_retention_days
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    ManagedBy   = "terraform"
+    Component   = "grafana-metrics-publisher"
+  }
+}
+
 resource "aws_lambda_function" "metrics_publisher" {
   filename         = "${path.module}/lambda/function.zip"
   source_code_hash = filebase64sha256("${path.module}/lambda/function.zip")
@@ -107,6 +119,8 @@ resource "aws_lambda_function" "metrics_publisher" {
     ManagedBy   = "terraform"
     Component   = "grafana-metrics-publisher"
   }
+
+  depends_on = [aws_cloudwatch_log_group.metrics_publisher]
 }
 
 # -------------------------
