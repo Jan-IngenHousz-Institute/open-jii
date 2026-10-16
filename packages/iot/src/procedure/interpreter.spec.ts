@@ -1049,10 +1049,11 @@ describe("runCaptureProcedure", () => {
 
       await runCaptureProcedure(AMBIT_PROCEDURE, context({ rig, operator: port }));
 
+      // Both sweeps are driven by the rig, so the run asks nothing until the dark fixture.
       expect(port.acknowledge).toHaveBeenCalledWith(
         "Confirm MiniPAR placement and optical alignment",
         undefined,
-        { reads: ["par_raw", "par_ref"] },
+        { reads: ["par_raw", "par_ref", "par_over_led"] },
       );
       expect(port.acknowledge).toHaveBeenCalledWith("Install the dark fixture", "DARK", {
         reads: ["channels"],
@@ -1103,6 +1104,82 @@ describe("runCaptureProcedure", () => {
       await runCaptureProcedure(procedure, context({ rig: { dut }, operator: port }));
 
       expect(port.acknowledge).toHaveBeenCalledWith("Place the sensor", undefined, { reads: [] });
+    });
+
+    const SPECTRUM_READ: ProcedureRead = { instrument: "dut", command: "spec_raw", as: "spec_raw" };
+
+    it("follows a prompt through every later step that runs without asking", async () => {
+      const { order, port, dut } = recordingBench();
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }],
+        steps: [
+          { kind: "operator", prompt: "Place the sensor" },
+          { kind: "read", series: "par", read: [DEVICE_READ] },
+          { kind: "read", series: "spectrum", read: [SPECTRUM_READ] },
+        ],
+      };
+
+      await runCaptureProcedure(procedure, context({ rig: { dut }, operator: port }));
+
+      expect(order).toEqual(["acknowledge", "read par_raw", "read spec_raw"]);
+      expect(port.acknowledge).toHaveBeenCalledWith("Place the sensor", undefined, {
+        reads: ["par_raw", "spec_raw"],
+      });
+    });
+
+    it("says an entry that ends an unprompted step sets off the next step's reads", async () => {
+      const { order, port, dut } = recordingBench();
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }],
+        steps: [
+          { kind: "read", series: "par", read: [DEVICE_READ, REFERENCE_ENTRY] },
+          { kind: "read", series: "spectrum", read: [SPECTRUM_READ] },
+        ],
+      };
+
+      await runCaptureProcedure(procedure, context({ rig: { dut }, operator: port }));
+
+      expect(order).toEqual(["read par_raw", "readValue", "read spec_raw"]);
+      expect(port.readValue).toHaveBeenCalledWith("Enter the reference reading", "number", {
+        reads: ["spec_raw"],
+      });
+    });
+
+    // The rig moves on to its next point unasked, so an entry after the device read sets
+    // off that point's read; at the last point it sets off whatever follows the sweep.
+    it("says an entry in a sweep the rig drives sets off the next point's reads", async () => {
+      const { order, port, dut } = recordingBench();
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }, { role: "lamp", handshake: "KIPRIM" }],
+        steps: [
+          {
+            kind: "sweep",
+            series: "par_sweep",
+            stimulus: { instrument: "lamp", set: "current_a", values: [0.8, 2.4] },
+            read: [DEVICE_READ, REFERENCE_ENTRY],
+          },
+          { kind: "read", series: "spectrum", read: [SPECTRUM_READ] },
+        ],
+      };
+
+      await runCaptureProcedure(
+        procedure,
+        context({ rig: { dut, lamp: setpointTarget() }, operator: port }),
+      );
+
+      expect(order).toEqual([
+        "read par_raw",
+        "readValue",
+        "read par_raw",
+        "readValue",
+        "read spec_raw",
+      ]);
+      expect(port.readValue).toHaveBeenNthCalledWith(1, "Enter the reference reading", "number", {
+        reads: ["par_raw"],
+      });
+      expect(port.readValue).toHaveBeenNthCalledWith(2, "Enter the reference reading", "number", {
+        reads: ["spec_raw"],
+      });
     });
 
     it("says what a read step's prompt sets off", async () => {

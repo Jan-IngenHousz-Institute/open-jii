@@ -171,14 +171,14 @@ class ProcedureRunner {
     }
   }
 
-  /** `following` is the steps after this one, so an operator step can say what it sets off. */
+  /** `following` is the steps after this one, so a prompt can say what answering it sets off. */
   private async runStep(step: ProcedureStep, following: ProcedureStep[]): Promise<void> {
     switch (step.kind) {
       case "operator": {
         const accepted = await this.context.operator.acknowledge(
           step.prompt,
           step.confirm,
-          this.readsAfterStep(following),
+          this.readsUntilAsked([], following),
         );
         if (!accepted) throw new ProcedureDeclined(step.prompt);
         return;
@@ -190,10 +190,10 @@ class ProcedureRunner {
         await this.runSetStep(step);
         return;
       case "read":
-        await this.runReadStep(step);
+        await this.runReadStep(step, following);
         return;
       case "sweep":
-        await this.runSweepStep(step);
+        await this.runSweepStep(step, following);
         return;
     }
   }
@@ -207,7 +207,7 @@ class ProcedureRunner {
     await this.applySetpoint(step.instrument, step.set, step.value);
   }
 
-  private async runReadStep(step: ReadStep): Promise<void> {
+  private async runReadStep(step: ReadStep, following: ProcedureStep[]): Promise<void> {
     const unavailable = this.missingRole(step.read);
     if (unavailable) return this.skipOrFail(step, unavailable);
 
@@ -216,14 +216,15 @@ class ProcedureRunner {
         const accepted = await this.context.operator.acknowledge(
           step.prompt,
           undefined,
-          instrumentReadsBefore(step.read),
+          this.readsUntilAsked(step.read, null),
         );
         if (!accepted) {
           return this.skipOrFail(step, `operator declined: ${step.prompt}`, step.prompt);
         }
       }
 
-      const row = await this.takeReads(step.read);
+      // A prompted step's row is confirmed; an unprompted one runs straight on.
+      const row = await this.takeReads(step.read, undefined, step.prompt ? null : following);
 
       // Only a step the operator was asked to set up can be set up again.
       const isKept =
@@ -245,7 +246,7 @@ class ProcedureRunner {
     }
   }
 
-  private async runSweepStep(step: SweepStep): Promise<void> {
+  private async runSweepStep(step: SweepStep, following: ProcedureStep[]): Promise<void> {
     const unavailable =
       this.missingRole(step.read) ??
       (isInstrumentStimulus(step.stimulus)
@@ -282,7 +283,10 @@ class ProcedureRunner {
 
           if (step.settleMs) await this.pause(step.settleMs);
 
-          const row = await this.takeReads(step.read, value);
+          // A point the operator drove is confirmed; the rig goes on to its next point.
+          const isLastPoint = index === values.length - 1;
+          const afterRow = isOperatorDriven ? null : isLastPoint ? following : [step, ...following];
+          const row = await this.takeReads(step.read, value, afterRow);
           row[SWEEP_STIMULUS_COLUMN] = value;
 
           const isKept =
@@ -322,7 +326,7 @@ class ProcedureRunner {
       return this.context.operator.acknowledge(
         interpolate(step.stimulus.operator, value),
         undefined,
-        instrumentReadsBefore(step.read),
+        this.readsUntilAsked(step.read, null),
       );
     }
 
@@ -342,26 +346,34 @@ class ProcedureRunner {
     await target.applySetpoint(name, value);
   }
 
-  /** `value` is the sweep setpoint the reads are taken at; a read step has none. */
-  private async takeReads(reads: ProcedureRead[], value?: SetpointValue): Promise<SeriesRow> {
+  /**
+   * `value` is the sweep setpoint the reads are taken at; a read step has none. `afterRow`
+   * is what runs on once the row is taken, as `readsUntilAsked` takes it.
+   */
+  private async takeReads(
+    reads: ProcedureRead[],
+    value: SetpointValue | undefined,
+    afterRow: ProcedureStep[] | null,
+  ): Promise<SeriesRow> {
     const row: SeriesRow = {};
     for (const [index, read] of reads.entries()) {
-      row[read.as] = await this.takeOneRead(read, value, reads.slice(index + 1));
+      row[read.as] = await this.takeOneRead(read, value, reads.slice(index + 1), afterRow);
     }
     return row;
   }
 
-  /** `following` is the rest of the step's reads, so an operator is told what answering sets off. */
+  /** `rest` is the rest of the row, so an operator is told what answering sets off. */
   private async takeOneRead(
     read: ProcedureRead,
     value: SetpointValue | undefined,
-    following: ProcedureRead[],
+    rest: ProcedureRead[],
+    afterRow: ProcedureStep[] | null,
   ): Promise<SeriesCell | null> {
     if (!isInstrumentRead(read)) {
       return this.context.operator.readValue(
         interpolate(read.operator, value),
         read.type,
-        instrumentReadsBefore(following),
+        this.readsUntilAsked(rest, afterRow),
       );
     }
 
@@ -446,38 +458,58 @@ class ProcedureRunner {
   }
 
   /**
-   * What acknowledging a standalone operator step sets off: the reads of the next step that
-   * runs without asking. Settles and setpoints are passed over, and so is an optional step the
-   * rig cannot serve, since it is skipped without asking. A step with its own prompt says so
-   * itself, and a required step the rig cannot serve ends the run before reading anything.
+   * The instrument columns read before the operator is next asked anything: the rest of
+   * this row, then whatever runs on without asking. `afterRow` is null when the operator
+   * confirms the row, which asks.
    */
-  private readsAfterStep(following: ProcedureStep[]): PromptNext {
-    for (const step of following) {
-      if (step.kind === "settle" || step.kind === "set") {
-        continue;
-      }
-      if (step.kind === "operator") {
-        return { reads: [] };
-      }
+  private readsUntilAsked(rest: ProcedureRead[], afterRow: ProcedureStep[] | null): PromptNext {
+    const columns: string[] = [];
+    const isAsked = collectInstrumentReads(rest, columns);
 
-      const unavailable =
-        this.missingRole(step.read) ??
-        (step.kind === "sweep" && isInstrumentStimulus(step.stimulus)
-          ? this.missingSetpointRole(step.stimulus.instrument)
-          : undefined);
-      if (unavailable !== undefined) {
-        if (step.optional) {
-          continue;
+    if (!isAsked && afterRow !== null) {
+      for (const step of afterRow) {
+        if (!this.runsOnUnasked(step, columns)) {
+          break;
         }
-        return { reads: [] };
       }
-
-      if (step.kind === "read") {
-        return step.prompt ? { reads: [] } : instrumentReadsBefore(step.read);
-      }
-      return isInstrumentStimulus(step.stimulus) ? instrumentReadsBefore(step.read) : { reads: [] };
     }
-    return { reads: [] };
+
+    return { reads: [...new Set(columns)] };
+  }
+
+  /**
+   * Adds the columns `step` reads before it asks, and says whether the run goes on past it
+   * without asking. An optional step the rig cannot serve is skipped unasked; a required
+   * one ends the run.
+   */
+  private runsOnUnasked(step: ProcedureStep, columns: string[]): boolean {
+    switch (step.kind) {
+      case "settle":
+        return true;
+      case "set":
+        return this.missingSetpointRole(step.instrument) === undefined;
+      case "operator":
+        return false;
+      case "read":
+      case "sweep": {
+        const unavailable =
+          this.missingRole(step.read) ??
+          (step.kind === "sweep" && isInstrumentStimulus(step.stimulus)
+            ? this.missingSetpointRole(step.stimulus.instrument)
+            : undefined);
+        if (unavailable !== undefined) {
+          return step.optional === true;
+        }
+
+        const asksFirst =
+          step.kind === "read" ? step.prompt !== undefined : !isInstrumentStimulus(step.stimulus);
+        if (asksFirst) {
+          return false;
+        }
+        // Every point of a sweep the rig drives reads the same columns.
+        return !collectInstrumentReads(step.read, columns);
+      }
+    }
   }
 
   /**
@@ -515,16 +547,15 @@ class ProcedureRunner {
   }
 }
 
-/** The instrument columns a prompt's answer goes on to read before the run asks anything again. */
-function instrumentReadsBefore(reads: ProcedureRead[]): PromptNext {
-  const following: string[] = [];
+/** Adds the instrument columns read ahead of the first operator read, and says whether one was reached. */
+function collectInstrumentReads(reads: ProcedureRead[], columns: string[]): boolean {
   for (const read of reads) {
     if (!isInstrumentRead(read)) {
-      break;
+      return true;
     }
-    following.push(read.as);
+    columns.push(read.as);
   }
-  return { reads: following };
+  return false;
 }
 
 /** The sweep setpoint, as it may be written into a prompt, a read command, or a protocol's strings. */
