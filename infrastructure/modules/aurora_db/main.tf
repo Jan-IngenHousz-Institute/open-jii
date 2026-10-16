@@ -136,6 +136,11 @@ resource "aws_rds_cluster_parameter_group" "aurora_security" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "postgresql" {
+  name              = "/aws/rds/cluster/${var.cluster_identifier}/postgresql"
+  retention_in_days = var.log_retention_days
+}
+
 resource "aws_rds_cluster" "rds_cluster_aurora" {
   # Basic cluster configuration
   cluster_identifier = var.cluster_identifier
@@ -185,6 +190,8 @@ resource "aws_rds_cluster" "rds_cluster_aurora" {
     "Environment" = var.environment
     "Project"     = "open-jii"
   }
+
+  depends_on = [aws_cloudwatch_log_group.postgresql]
 }
 
 resource "aws_rds_cluster_instance" "rds_cluster_instance_aurora" {

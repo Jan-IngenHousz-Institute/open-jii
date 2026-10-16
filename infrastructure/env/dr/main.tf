@@ -619,7 +619,7 @@ module "opennext_waf" {
   service_name       = "opennext"
   environment        = var.environment
   rate_limit         = 2500
-  log_retention_days = 30
+  log_retention_days = 365
 
   managed_rules_excluded_paths = ["/ingest"]
 
@@ -637,7 +637,7 @@ module "backend_waf" {
   service_name       = "backend"
   environment        = var.environment
   rate_limit         = 500
-  log_retention_days = 30
+  log_retention_days = 365
 
   large_body_bypass_routes = [
     {
@@ -666,7 +666,7 @@ module "docs_waf" {
   service_name       = "docs"
   environment        = var.environment
   rate_limit         = 500
-  log_retention_days = 30
+  log_retention_days = 365
 
   tags = {
     Environment = var.environment
