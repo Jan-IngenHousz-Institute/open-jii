@@ -2,6 +2,7 @@
 
 import { CalibrationDevicePicker } from "@/components/calibrations/calibration-device-picker";
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useActiveDeviceCalibration } from "@/hooks/iot/useActiveDeviceCalibration/useActiveDeviceCalibration";
 import { useApproveCalibrationRun } from "@/hooks/iot/useApproveCalibrationRun/useApproveCalibrationRun";
 import type { PhaseResult } from "@/hooks/iot/useCalibrationCapture/useCalibrationCapture";
@@ -12,6 +13,7 @@ import { useCreateCalibrationRun } from "@/hooks/iot/useCreateCalibrationRun/use
 import { useIotDevices } from "@/hooks/iot/useIotDevices/useIotDevices";
 import { useRejectCalibrationRun } from "@/hooks/iot/useRejectCalibrationRun/useRejectCalibrationRun";
 import { useReportDeviceCalibrationWrite } from "@/hooks/iot/useReportDeviceCalibrationWrite/useReportDeviceCalibrationWrite";
+import { useLocale } from "@/hooks/useLocale";
 import { CheckCircle2, CircleDashed, Loader2, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -118,6 +120,7 @@ export function CalibrationWizard({
   onClose,
 }: CalibrationWizardProps) {
   const { t } = useTranslation("iot");
+  const locale = useLocale();
   const isMobile = useIsMobile();
 
   const isWriteOnly = writeSession !== undefined;
@@ -168,7 +171,11 @@ export function CalibrationWizard({
   /** The port said nothing that names it, so the fleet cannot be searched on its behalf. */
   const isUnitUnnamed =
     isSitting && capture.connection !== undefined && onPort.kind !== "registered";
-  const repeated = onPort.kind === "registered" ? unitAlreadyDone(units, onPort.serial) : undefined;
+  // The device this unit is recorded against, however it was named: by its port or by hand.
+  const unitDevice = isSitting
+    ? fleet.data?.find((device) => device.id === runDeviceId)
+    : undefined;
+  const repeated = unitDevice === undefined ? undefined : unitAlreadyDone(units, unitDevice.id);
   const active = useActiveDeviceCalibration(runDeviceId);
   const { operator, rig } = capture;
   const createRun = useCreateCalibrationRun();
@@ -221,13 +228,15 @@ export function CalibrationWizard({
         preInfo: { ...connection.identity.raw },
       });
       setRun(created);
-      if (isSitting && onPort.kind === "registered") {
+      // A unit named by hand counts like one its port named. It keeps the serial it reported,
+      // when it reported one; otherwise its registered serial stands in.
+      if (unitDevice !== undefined) {
         setUnits((done) => [
           ...done,
           {
-            serial: onPort.serial,
-            deviceId: onPort.device.id,
-            deviceName: onPort.device.name,
+            serial: "serial" in onPort ? onPort.serial : unitDevice.serialNumber,
+            deviceId: unitDevice.id,
+            deviceName: unitDevice.name,
             runId: created.id,
             outcome: "recorded",
           },
@@ -521,7 +530,9 @@ export function CalibrationWizard({
         {repeated !== undefined && (
           <Alert>
             <AlertDescription>
-              {t("iot.calibration.sitting.alreadyDone", { serial: repeated.serial })}
+              {t("iot.calibration.sitting.alreadyDone", {
+                unit: repeated.deviceName ?? repeated.serial,
+              })}
             </AlertDescription>
           </Alert>
         )}
@@ -811,8 +822,27 @@ export function CalibrationWizard({
           />
         );
       }
+      // Approving already put the coefficients in force on record; writing them is a separate
+      // choice, and an operator may leave the hardware for later. Not in a session opened only
+      // to write, and not once a write broke off, which may have reached the device in part:
+      // there the way out is to cancel, which claims nothing about the device.
+      const canSkipWrite = !isWriteOnly && writeError === null;
       return (
         <CalibrationWizardActions
+          secondary={
+            canSkipWrite ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStep("done")}
+                disabled={isWriting}
+              >
+                {t("iot.calibration.write.skip")}
+              </Button>
+            ) : (
+              renderCancel()
+            )
+          }
           primary={
             <Button type="button" onClick={() => void write()} disabled={isWriting}>
               {isWriting && <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />}
@@ -840,6 +870,26 @@ export function CalibrationWizard({
     if (!isReported) return "unrecorded";
     const isConfirmed = Object.values(writeResults).every((result) => result.verified);
     return isConfirmed ? "confirmed" : "unconfirmed";
+  }
+
+  // At a bench the run belongs to a device the operator never opened; on the device's own
+  // page it is already where the run is kept, so there is nothing to point at. The link
+  // follows the recorded run, not whatever unit is on the port by now.
+  function renderWhereKept() {
+    if (!isSitting || run === null) {
+      return null;
+    }
+    return (
+      <p className="text-muted-foreground text-sm">
+        {t("iot.calibration.done.keptOnDevice")}{" "}
+        <IntentLink
+          href={`/${locale}/platform/devices/${run.deviceId}/calibration`}
+          className="text-foreground font-medium underline-offset-4 hover:underline"
+        >
+          {t("iot.calibration.done.openDevice")}
+        </IntentLink>
+      </p>
+    );
   }
 
   function renderDone() {
@@ -876,6 +926,7 @@ export function CalibrationWizard({
           />
           <p className="text-sm">{hint}</p>
         </div>
+        {renderWhereKept()}
         <CalibrationDoneSummary
           payload={payload}
           applied={applied}

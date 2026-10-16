@@ -10,6 +10,7 @@ import { contract } from "@repo/api/contract";
 import { AutosaveIndicator } from "../shared/autosave/autosave-indicator";
 import { AutosaveStatusProvider } from "../shared/autosave/autosave-status-context";
 import { CalibrationDefinitionDetail } from "./calibration-definition-detail";
+import { CalibrationDuplicateAction } from "./calibration-duplicate-action";
 
 // A sweep draws its points, and Plotly has no business in jsdom. Mocked at the wrapper,
 // because that is where the dynamic import happens.
@@ -109,6 +110,76 @@ describe("CalibrationDefinitionDetail", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 1500));
     expect(update.called).toBe(false);
+  });
+
+  // A copy is made from what is saved, so an edit held back for any reason would be lost
+  // to the copy and to the navigation that follows it.
+  describe("holding Duplicate back", () => {
+    function renderWithDuplicate() {
+      render(
+        <AutosaveStatusProvider>
+          <AutosaveIndicator />
+          <CalibrationDuplicateAction definition={definition} />
+          <CalibrationDefinitionDetail />
+        </AutosaveStatusProvider>,
+      );
+    }
+
+    async function changeSlopeLimit() {
+      await userEvent.click(
+        within(rowFor("slope")).getByRole("button", { name: "iot.calibration.produces.max" }),
+      );
+      const slope = within(rowFor("slope")).getByRole("textbox", {
+        name: "iot.calibration.produces.max",
+      });
+      await userEvent.clear(slope);
+      await userEvent.type(slope, "12");
+      await userEvent.tab();
+    }
+
+    function duplicateButton() {
+      return screen.getByRole("button", { name: "iot.calibration.detail.duplicate" });
+    }
+
+    it("while a draft cannot be saved", async () => {
+      mountDefinition();
+      renderWithDuplicate();
+      await screen.findByText("iot.calibration.detail.rig");
+      expect(duplicateButton()).toBeEnabled();
+
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.rig.handshake" }));
+      await userEvent.clear(screen.getByRole("textbox", { name: "iot.calibration.rig.handshake" }));
+      await userEvent.tab();
+
+      expect(await screen.findByText("iot.calibration.detail.notSaving")).toBeInTheDocument();
+      expect(duplicateButton()).toBeDisabled();
+    });
+
+    it("after its save failed", async () => {
+      server.mount(contract.iot.getCalibrationDefinition, { body: definition });
+      server.mount(contract.iot.updateCalibrationDefinition, { status: 500 });
+      renderWithDuplicate();
+      await screen.findByText("iot.calibration.detail.rig");
+
+      await changeSlopeLimit();
+
+      expect(
+        await screen.findByText("autosave.failed", undefined, { timeout: 3000 }),
+      ).toBeInTheDocument();
+      expect(duplicateButton()).toBeDisabled();
+    });
+
+    it("only until the edit is saved", async () => {
+      const update = mountDefinition();
+      renderWithDuplicate();
+      await screen.findByText("iot.calibration.detail.rig");
+
+      await changeSlopeLimit();
+
+      expect(duplicateButton()).toBeDisabled();
+      await waitFor(() => expect(update.called).toBe(true), { timeout: 3000 });
+      await waitFor(() => expect(duplicateButton()).toBeEnabled());
+    });
   });
 
   it("offers nothing to change to a reader", async () => {

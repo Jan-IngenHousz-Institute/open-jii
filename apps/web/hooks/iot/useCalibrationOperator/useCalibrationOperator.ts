@@ -2,19 +2,21 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 
-import type { OperatorPort, OperatorReading } from "@repo/iot";
+import type { OperatorPort, OperatorReading, PromptNext } from "@repo/iot";
 
 export type OperatorRequest =
   | {
       kind: "acknowledge";
       prompt: string;
       confirm?: string;
+      next?: PromptNext;
       resolve: (accepted: boolean) => void;
     }
   | {
       kind: "readValue";
       prompt: string;
       type: "number" | "text";
+      next?: PromptNext;
       resolve: (value: number | string) => void;
       reject: (reason: Error) => void;
     }
@@ -37,12 +39,13 @@ export function useCalibrationOperator() {
 
   const port = useMemo<OperatorPort>(
     () => ({
-      acknowledge: (prompt, confirm) =>
+      acknowledge: (prompt, confirm, next) =>
         new Promise<boolean>((resolve) => {
           const request: OperatorRequest = {
             kind: "acknowledge",
             prompt,
             confirm,
+            next,
             resolve: (accepted) => {
               settle();
               resolve(accepted);
@@ -51,12 +54,13 @@ export function useCalibrationOperator() {
           pendingRef.current = request;
           setPending(request);
         }),
-      readValue: (prompt, type) =>
+      readValue: (prompt, type, next) =>
         new Promise<number | string>((resolve, reject) => {
           const request: OperatorRequest = {
             kind: "readValue",
             prompt,
             type,
+            next,
             resolve: (value) => {
               settle();
               resolve(value);
