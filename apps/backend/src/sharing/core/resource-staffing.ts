@@ -414,6 +414,52 @@ export async function findOwningOrgOwnerIds(
   return rows.map((r) => r.user_id);
 }
 
+/**
+ * Who can decide for a resource: admin/owner grant holders plus the owning org's
+ * living owners. The owners are usually the only ones — a creator holds no grant,
+ * so grants alone would name nobody on a personal-workspace resource.
+ * Team/org grants are excluded: no individual person behind them. Deactivated and
+ * closed accounts are excluded too, as the organization deciders are.
+ */
+export async function findResourceAdminIds(
+  tx: DbOrTx,
+  resourceType: SharingResourceType,
+  resourceId: string,
+): Promise<string[]> {
+  const [granted, ownerIds] = await Promise.all([
+    tx
+      .select({ userId: resourceGrants.granteeId })
+      .from(resourceGrants)
+      .where(
+        and(
+          eq(resourceGrants.resourceType, resourceType),
+          eq(resourceGrants.resourceId, resourceId),
+          eq(resourceGrants.granteeType, "user"),
+          inArray(resourceGrants.role, [...STAFFING_GRANT_ROLES]),
+        ),
+      ),
+    findOwningOrgOwnerIds(tx, resourceType, resourceId),
+  ]);
+
+  // An owner who also holds an admin grant is in both sets — name them once.
+  const candidates = [...new Set([...granted.map((row) => row.userId), ...ownerIds])];
+  if (candidates.length === 0) return [];
+
+  const living = await tx
+    .select({ id: users.id })
+    .from(users)
+    .leftJoin(profiles, eq(profiles.userId, users.id))
+    .where(
+      and(
+        inArray(users.id, candidates),
+        sql`(${profiles.activated} IS NULL OR ${profiles.activated} = true)`,
+        sql`${profiles.deletedAt} IS NULL`,
+      ),
+    );
+
+  return living.map((row) => row.id);
+}
+
 /** Whether anybody living owns the organization this resource belongs to. */
 async function hasLivingOwningOrgOwner(
   tx: DbOrTx,

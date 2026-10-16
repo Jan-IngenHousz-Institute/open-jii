@@ -1,17 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import {
-  and,
-  desc,
-  eq,
-  experimentJoinRequests,
-  inArray,
-  profiles,
-  resourceGrants,
-  sql,
-  STAFFING_GRANT_ROLES,
-  users,
-} from "@repo/database";
+import { and, desc, eq, experimentJoinRequests, profiles, users } from "@repo/database";
 import type { DatabaseInstance, DbOrTx } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -21,7 +10,7 @@ import {
   getAnonymizedEmail,
   getAnonymizedAvatarUrl,
 } from "../../../common/utils/profile-anonymization";
-import { findOwningOrgOwnerIds } from "../../../sharing/core/resource-staffing";
+import { findResourceAdminIds } from "../../../sharing/core/resource-staffing";
 import { insertJoinGrant } from "../join-grant";
 import type {
   ExperimentJoinRequestDto,
@@ -252,47 +241,8 @@ export class ExperimentJoinRequestRepository {
     });
   }
 
-  /**
-   * Who can decide a join request: admin/owner grant holders plus the owning org's
-   * living owners. The owners are usually the only ones — a creator holds no grant,
-   * so grants alone would notify nobody on a personal-workspace experiment.
-   * Team/org grants are excluded: no individual person behind them. Deactivated and
-   * closed accounts are excluded too, as the organization deciders are.
-   */
+  /** Who can decide a join request on this experiment. */
   async listAdminIds(experimentId: string): Promise<Result<string[]>> {
-    return tryCatch(async () => {
-      const [granted, ownerIds] = await Promise.all([
-        this.database
-          .select({ userId: resourceGrants.granteeId })
-          .from(resourceGrants)
-          .where(
-            and(
-              eq(resourceGrants.resourceType, "experiment"),
-              eq(resourceGrants.resourceId, experimentId),
-              eq(resourceGrants.granteeType, "user"),
-              inArray(resourceGrants.role, [...STAFFING_GRANT_ROLES]),
-            ),
-          ),
-        findOwningOrgOwnerIds(this.database, "experiment", experimentId),
-      ]);
-
-      // An owner who also holds an admin grant is in both sets — notify them once.
-      const candidates = [...new Set([...granted.map((row) => row.userId), ...ownerIds])];
-      if (candidates.length === 0) return [];
-
-      const living = await this.database
-        .select({ id: users.id })
-        .from(users)
-        .leftJoin(profiles, eq(profiles.userId, users.id))
-        .where(
-          and(
-            inArray(users.id, candidates),
-            sql`(${profiles.activated} IS NULL OR ${profiles.activated} = true)`,
-            sql`${profiles.deletedAt} IS NULL`,
-          ),
-        );
-
-      return living.map((row) => row.id);
-    });
+    return tryCatch(() => findResourceAdminIds(this.database, "experiment", experimentId));
   }
 }

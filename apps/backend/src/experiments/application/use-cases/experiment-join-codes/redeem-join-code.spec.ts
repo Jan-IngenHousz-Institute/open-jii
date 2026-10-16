@@ -7,11 +7,14 @@ import {
   experimentJoinCodes,
   experimentJoinRequests,
   experiments,
+  notificationDeliveries,
+  notifications,
   resourceGrants,
 } from "@repo/database";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
+import { NotificationRepository } from "../../../../notifications/core/repositories/notification.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
 import { CreateJoinCodeUseCase } from "./create-join-code";
@@ -301,5 +304,71 @@ describe("RedeemJoinCodeUseCase", () => {
     const grants = await grantsFor(experiment.id, studentId);
     expect(grants).toHaveLength(1);
     expect(grants[0].createdBy).toBeNull();
+  });
+
+  describe("notifying the experiment's admins", () => {
+    const allNotifications = () => testApp.database.select().from(notifications);
+
+    async function seedCodeWithGrantAdmin() {
+      const seeded = await seedCode();
+      const grantAdminId = await testApp.createTestUser({ email: "grant-admin@example.com" });
+      await testApp.addExperimentAdmin(seeded.experiment.id, grantAdminId);
+      return { ...seeded, grantAdminId };
+    }
+
+    it("tells every admin who joined, and emails nobody", async () => {
+      const { experiment, code, grantAdminId } = await seedCodeWithGrantAdmin();
+
+      assertSuccess(await useCase.execute(code.code, studentId));
+
+      const rows = await allNotifications();
+      expect(rows.map((row) => row.recipientId).sort()).toEqual([organizerId, grantAdminId].sort());
+      for (const row of rows) {
+        expect(row).toMatchObject({
+          type: "experiment_joined_with_code",
+          actorId: studentId,
+          resourceType: "experiment",
+          resourceId: experiment.id,
+          params: { experimentName: experiment.name },
+        });
+      }
+      expect(await testApp.database.select().from(notificationDeliveries)).toEqual([]);
+    });
+
+    it("writes nothing more when the same person scans again", async () => {
+      const { code } = await seedCodeWithGrantAdmin();
+      assertSuccess(await useCase.execute(code.code, studentId));
+
+      assertSuccess(await useCase.execute(code.code, studentId));
+
+      expect(await allNotifications()).toHaveLength(2);
+    });
+
+    it("writes nothing for someone already in the owning organization", async () => {
+      const organizationId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(organizationId, organizerId, "owner");
+      await testApp.addOrganizationMember(organizationId, studentId, "member");
+      const { code } = await seedCode({ organizationId });
+
+      const result = await useCase.execute(code.code, studentId);
+
+      assertSuccess(result);
+      expect(result.value.outcome).toBe("already_member");
+      expect(await allNotifications()).toEqual([]);
+    });
+
+    it("still joins when the notification cannot be stored", async () => {
+      const { experiment, code } = await seedCodeWithGrantAdmin();
+      vi.spyOn(testApp.module.get(NotificationRepository), "insertMany").mockResolvedValue(
+        failure(AppError.internal("notifications unavailable")),
+      );
+
+      const result = await useCase.execute(code.code, studentId);
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ experimentId: experiment.id, outcome: "joined" });
+      expect(await grantsFor(experiment.id, studentId)).toHaveLength(1);
+      expect(await allNotifications()).toEqual([]);
+    });
   });
 });

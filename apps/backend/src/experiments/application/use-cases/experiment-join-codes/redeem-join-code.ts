@@ -5,6 +5,7 @@ import type { RedeemJoinCodeResponse } from "@repo/api/domains/experiment/join-c
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import { isLivingUser, lockUserAccount } from "../../../../sharing/core/resource-staffing";
 import { insertJoinGrant } from "../../../core/join-grant";
 import { ExperimentJoinCodeRepository } from "../../../core/repositories/experiment-join-code.repository";
@@ -12,6 +13,12 @@ import { ExperimentJoinRequestRepository } from "../../../core/repositories/expe
 import { joinCodeNotFound, joinCodeRefusal } from "./join-code-validity";
 
 const ACCOUNT_UNAVAILABLE_MESSAGE = "This account is not available to join experiments";
+
+type Redemption = RedeemJoinCodeResponse & {
+  /** Whether this redemption wrote the grant, which is what makes it a join. */
+  granted: boolean;
+  experimentName: string;
+};
 
 @Injectable()
 export class RedeemJoinCodeUseCase {
@@ -21,6 +28,7 @@ export class RedeemJoinCodeUseCase {
     private readonly joinCodeRepository: ExperimentJoinCodeRepository,
     private readonly joinRequestRepository: ExperimentJoinRequestRepository,
     private readonly authz: AuthorizationService,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   /**
@@ -41,8 +49,9 @@ export class RedeemJoinCodeUseCase {
   async execute(code: string, userId: string): Promise<Result<RedeemJoinCodeResponse>> {
     this.logger.log({ msg: "Redeeming a join code", operation: "redeem-join-code", userId });
 
+    let redemption: Redemption;
     try {
-      return success(await this.redeem(code, userId));
+      redemption = await this.redeem(code, userId);
     } catch (error) {
       if (error instanceof AppError) {
         return failure(error);
@@ -57,9 +66,18 @@ export class RedeemJoinCodeUseCase {
       });
       return failure(AppError.internal("Failed to redeem join code"));
     }
+
+    const { experimentId, outcome, granted, experimentName } = redemption;
+    // After the commit: dispatch writes on the root handle, which the open
+    // transaction would be holding.
+    if (granted) {
+      await this.notify(experimentId, experimentName, userId);
+    }
+
+    return success({ experimentId, outcome });
   }
 
-  private redeem(code: string, userId: string): Promise<RedeemJoinCodeResponse> {
+  private redeem(code: string, userId: string): Promise<Redemption> {
     return this.joinCodeRepository.transaction(async (tx) => {
       // Unlocked, and only to learn which experiment to lock. `experiment_id` is
       // written once at insert and never rewritten, so it cannot go stale; every
@@ -107,7 +125,12 @@ export class RedeemJoinCodeUseCase {
         tx,
       );
       if (decision.allow) {
-        return { experimentId: experiment.id, outcome: "already_member" as const };
+        return {
+          experimentId: experiment.id,
+          outcome: "already_member" as const,
+          granted: false,
+          experimentName: experiment.name,
+        };
       }
 
       if (!(await isLivingUser(tx, userId))) {
@@ -131,7 +154,49 @@ export class RedeemJoinCodeUseCase {
         await this.joinCodeRepository.incrementRedemptionCount(tx, joinCode.id);
       }
 
-      return { experimentId: experiment.id, outcome: "joined" as const };
+      return {
+        experimentId: experiment.id,
+        outcome: "joined" as const,
+        granted,
+        experimentName: experiment.name,
+      };
     });
+  }
+
+  /** Tell the experiment's admins who joined. A failure here leaves the join standing. */
+  private async notify(
+    experimentId: string,
+    experimentName: string,
+    userId: string,
+  ): Promise<void> {
+    const adminIds = await this.joinRequestRepository.listAdminIds(experimentId);
+    if (adminIds.isFailure()) {
+      this.logger.error({
+        msg: "Failed to look up the admins to notify about a join, the join still stands",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "redeem-join-code",
+        experimentId,
+        error: adminIds.error,
+      });
+      return;
+    }
+
+    const dispatched = await this.notifications.dispatch({
+      type: "experiment_joined_with_code",
+      recipientIds: adminIds.value,
+      actorId: userId,
+      resource: { type: "experiment", id: experimentId },
+      params: { experimentName },
+    });
+
+    if (dispatched.isFailure()) {
+      this.logger.error({
+        msg: "Failed to notify admins of a join, the join still stands",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "redeem-join-code",
+        experimentId,
+        error: dispatched.error,
+      });
+    }
   }
 }
