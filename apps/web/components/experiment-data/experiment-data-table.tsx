@@ -139,6 +139,8 @@ export function ExperimentDataTable({
 
   const handleSort = useCallback(
     (columnName: string, columnType?: string) => {
+      setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
+      setRowSelection({});
       const actualSortColumn = getSortColumnName(columnName, columnType);
       if (sortColumn === actualSortColumn) {
         setSortDirection((prev) => (prev === "ASC" ? "DESC" : "ASC"));

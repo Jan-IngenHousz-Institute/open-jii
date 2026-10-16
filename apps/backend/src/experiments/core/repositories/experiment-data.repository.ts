@@ -9,7 +9,9 @@ import { isDecimalType, isNumericType } from "@repo/api/transforms/column-type-u
 import type {
   AggregationSpec,
   FilterCondition,
+  QueryOrdering,
 } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
+import type { FlattenedField } from "../../../common/modules/databricks/services/query-builder/schema/flattened-fields";
 import { FlattenedFields } from "../../../common/modules/databricks/services/query-builder/schema/flattened-fields";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError, tryCatch } from "../../../common/utils/fp-utils";
@@ -57,9 +59,7 @@ interface ReadTrace {
 interface PageQuery {
   columns?: string[];
   filters?: FilterCondition[];
-  orderBy?: string;
-  orderDirection: "ASC" | "DESC";
-  orderByContributorPseudonymSalt?: string;
+  ordering?: QueryOrdering;
   limit: number;
   offset: number;
 }
@@ -170,7 +170,12 @@ export class ExperimentDataRepository {
     // pseudonyms; tag contributor id filters so the SQL compares the pseudonym
     // (recomputed in-query) instead of the raw id the client never receives.
     const effectiveFilters = this.pseudonymizeContributorFilters(experiment, filters);
-    const orderingResult = await this.pseudonymizeContributorOrder(experiment, tableName, orderBy);
+    const orderingResult = await this.requestedOrdering(
+      experiment,
+      tableName,
+      orderBy,
+      orderDirection,
+    );
     if (orderingResult.isFailure()) {
       return orderingResult;
     }
@@ -183,8 +188,7 @@ export class ExperimentDataRepository {
       const queryResult = this.buildQuery(experimentId, shape, {
         filters: effectiveFilters,
         aggregation,
-        ...ordering,
-        orderDirection,
+        ordering,
         limit: ceiling + 1,
       });
       if (queryResult.isFailure()) {
@@ -229,8 +233,7 @@ export class ExperimentDataRepository {
           this.pageData(experimentId, shape, read, {
             columns,
             filters: effectiveFilters,
-            ...ordering,
-            orderDirection,
+            ordering,
             limit: pageSize,
             offset,
           }),
@@ -266,8 +269,7 @@ export class ExperimentDataRepository {
       const queryResult = this.buildQuery(experimentId, shape, {
         columns,
         filters: effectiveFilters,
-        ...ordering,
-        orderDirection,
+        ordering,
         limit: ceiling + 1,
       });
       if (queryResult.isFailure()) {
@@ -296,8 +298,7 @@ export class ExperimentDataRepository {
     const usedPageSize = pageSize ?? 5;
     const offset = (usedPage - 1) * usedPageSize;
     const pageResult = await this.pageData(experimentId, shape, read, {
-      ...ordering,
-      orderDirection,
+      ordering,
       limit: usedPageSize,
       offset,
     });
@@ -343,8 +344,7 @@ export class ExperimentDataRepository {
     const queryResult = this.buildQuery(experimentId, shapeResult.value, {
       columns: [column],
       distinct: true,
-      orderBy: column,
-      orderDirection: "ASC",
+      ordering: { column, direction: "ASC" },
       // +1 so we can detect truncation: if the SQL returned exactly limit+1
       // rows, the column has more values than we returned.
       limit: limit + 1,
@@ -489,18 +489,20 @@ export class ExperimentDataRepository {
   }
 
   /**
-   * Sort an anonymized experiment's contributor column by the pseudonym it shows rather than the
-   * real name, whose order would leak. The FE sorts contributors by a `<column>.name` path; the
-   * column's type is checked, so another struct's `name` field keeps its own order.
+   * Build the requested ordering. An absent `orderBy` or an empty string means no sort.
+   * An anonymized experiment's contributor column sorts by its displayed pseudonym, since ordering
+   * by the real name would leak it. The column's type is checked before mapping a `.name` path.
    */
-  private async pseudonymizeContributorOrder(
+  private async requestedOrdering(
     experiment: ExperimentDto,
     tableName: string,
-    orderBy?: string,
-  ): Promise<Result<{ orderBy?: string; orderByContributorPseudonymSalt?: string }>> {
-    const path = orderBy === undefined ? null : /^([^.]+)\.name$/.exec(orderBy);
+    orderBy: string | undefined,
+    direction: "ASC" | "DESC",
+  ): Promise<Result<QueryOrdering | undefined>> {
+    if (!orderBy) return success(undefined);
+    const path = /^([^.]+)\.name$/.exec(orderBy);
     if (!experiment.anonymizeContributors || path === null) {
-      return success({ orderBy });
+      return success({ column: orderBy, direction });
     }
 
     const columnsResult = await this.getTableColumns({ experimentId: experiment.id, tableName });
@@ -512,10 +514,14 @@ export class ExperimentDataRepository {
       (column) => column.name === path[1] && column.type_text === WellKnownColumnTypes.CONTRIBUTOR,
     );
     if (!isContributorColumn) {
-      return success({ orderBy });
+      return success({ column: orderBy, direction });
     }
 
-    return success({ orderBy: `${path[1]}.id`, orderByContributorPseudonymSalt: experiment.id });
+    return success({
+      column: `${path[1]}.id`,
+      direction,
+      mode: { kind: "pseudonym", salt: experiment.id },
+    });
   }
 
   /**
@@ -653,25 +659,34 @@ export class ExperimentDataRepository {
       filters?: FilterCondition[];
       aggregation?: AggregationSpec;
       distinct?: boolean;
-      orderBy?: string;
-      orderDirection?: "ASC" | "DESC";
-      orderByContributorPseudonymSalt?: string;
+      ordering?: QueryOrdering;
       limit?: number;
       offset?: number;
     } = {},
   ): Result<string> {
-    const {
-      columns,
-      filters,
-      aggregation,
-      distinct,
-      orderBy,
-      orderDirection,
-      orderByContributorPseudonymSalt,
-      limit,
-      offset,
-    } = options;
+    const { columns, filters, aggregation, distinct, ordering, limit, offset } = options;
     const { metadata, variants, exceptColumns, reservedColumns } = shape;
+
+    let effectiveOrdering = ordering;
+    if (
+      ordering &&
+      !aggregation &&
+      !ordering.mode &&
+      this.flattenedFields(shape).some(
+        ({ key, column, field }) =>
+          key === ordering.column &&
+          column === "questions_data" &&
+          field.type.toUpperCase() === "STRING",
+      )
+    ) {
+      effectiveOrdering = {
+        ...ordering,
+        mode: {
+          kind: "numericString",
+          rowId: reservedColumns.includes(ROW_ID) ? ROW_ID : undefined,
+        },
+      };
+    }
 
     return this.databricksPort.buildExperimentQuery({
       tableName: metadata.identifier,
@@ -684,24 +699,26 @@ export class ExperimentDataRepository {
       filters,
       aggregation,
       distinct,
-      orderBy,
-      orderDirection,
-      orderByContributorPseudonymSalt,
+      ordering: effectiveOrdering,
       limit,
       offset,
     });
   }
 
+  private flattenedFields(shape: TableShape): FlattenedField<VariantColumn>[] {
+    return FlattenedFields.resolve(
+      shape.reservedColumns,
+      shape.variants.map(({ columnName, schema, suffix }) => ({
+        column: columnName,
+        schema,
+        suffix,
+      })),
+    );
+  }
+
   /** Result columns a name clash renamed, keyed by the name they read as. */
   private renamedColumns(shape: TableShape): RenamedColumns {
-    const sources = shape.variants.map(({ columnName, schema, suffix }) => ({
-      column: columnName,
-      schema,
-      suffix,
-    }));
-    const renamed = FlattenedFields.resolve(shape.reservedColumns, sources).filter(
-      ({ key, field }) => key !== field.name,
-    );
+    const renamed = this.flattenedFields(shape).filter(({ key, field }) => key !== field.name);
     return new Map(
       renamed.map(({ key, column, field }) => [key, { name: field.name, source: column }]),
     );
