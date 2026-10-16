@@ -765,5 +765,29 @@ describe("AcceptPendingInvitationsUseCase", () => {
       expect(found.value?.status).toBe("accepted");
       expect(await acceptedNotifications()).toEqual([]);
     });
+
+    it("still counts the acceptance when the experiment cannot be named", async () => {
+      const { experiment } = await seedInvitation();
+      const inviteeId = await testApp.createTestUser({ email: inviteeEmail });
+      vi.spyOn(invitationRepo, "findResourceName").mockResolvedValue(
+        failure(AppError.internal("names unavailable")),
+      );
+
+      const result = await useCase.execute(inviteeId, inviteeEmail);
+
+      assertSuccess(result);
+      expect(result.value).toBe(1);
+      const grants = await testApp.database
+        .select()
+        .from(resourceGrants)
+        .where(
+          and(
+            eq(resourceGrants.resourceId, experiment.id),
+            eq(resourceGrants.granteeId, inviteeId),
+          ),
+        );
+      expect(grants).toHaveLength(1);
+      expect(await acceptedNotifications()).toEqual([]);
+    });
   });
 });
