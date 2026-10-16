@@ -80,7 +80,8 @@ export type ExperimentSearchRow = ExperimentDto & {
 };
 
 /** A listing row the caller has opened, with when and the role they hold on it. */
-export type RecentlyOpenedExperimentRow = ExperimentSearchRow & {
+export type RecentlyOpenedExperimentRow = Pick<ExperimentDto, "id" | "name" | "status"> & {
+  organizationName: string | null;
   openedAt: Date;
   callerRole: ResourceRoleName | null;
 };
@@ -633,16 +634,15 @@ export class ExperimentRepository {
 
   /**
    * The caller's visited experiments, most recently opened first. The listing's own
-   * access and scope conditions apply, so a visit the caller can no longer open, or
-   * one outside `scope`, never comes back.
+   * access conditions apply, so a visit the caller can no longer open, or an archived
+   * experiment, never comes back.
    */
   async findRecentlyOpened(
     userId: string,
     limit: number,
-    scope?: ResourceScope,
   ): Promise<Result<RecentlyOpenedExperimentRow[]>> {
-    return tryCatch(async () => {
-      const { where, fields } = this.buildListing(userId, scope);
+    return tryCatch(() => {
+      const { where } = this.buildListing(userId);
 
       const callerRole = resourceRoleExpression({
         database: this.database,
@@ -653,7 +653,14 @@ export class ExperimentRepository {
       });
 
       return this.database
-        .select({ ...fields, openedAt: resourceVisits.visitedAt, callerRole })
+        .select({
+          id: experiments.id,
+          name: experiments.name,
+          status: experiments.status,
+          organizationName: owningOrganizationNameSql("experiments"),
+          openedAt: resourceVisits.visitedAt,
+          callerRole,
+        })
         .from(experiments)
         .innerJoin(
           resourceVisits,
@@ -663,7 +670,6 @@ export class ExperimentRepository {
             eq(resourceVisits.resourceId, experiments.id),
           ),
         )
-        .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
         .where(where)
         .orderBy(desc(resourceVisits.visitedAt), asc(experiments.id))
         .limit(limit);

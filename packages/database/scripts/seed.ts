@@ -36,7 +36,12 @@ async function main() {
   const createdExperiments = await seedExperiments(user, personalOrganizationId);
   await seedContributors(createdExperiments);
   await seedFlows(createdExperiments);
-  await seedWorkbooks(user, personalOrganizationId, createdExperiments, createdProtocols);
+  const createdWorkbooks = await seedWorkbooks(
+    user,
+    personalOrganizationId,
+    createdExperiments,
+    createdProtocols,
+  );
   await seedDashboards(user, createdExperiments);
 
   const createdDevices = await seedDevices(user, personalOrganizationId);
@@ -46,7 +51,12 @@ async function main() {
   await seedCalibrations(user, personalOrganizationId, createdDevices);
 
   await seedNotifications(user, createdExperiments);
-  await seedVisits(user, createdExperiments);
+  await seedVisits(user, {
+    experiments: createdExperiments,
+    protocols: createdProtocols,
+    macros: createdMacros,
+    workbooks: createdWorkbooks,
+  });
 
   console.log("Seed complete!");
 }

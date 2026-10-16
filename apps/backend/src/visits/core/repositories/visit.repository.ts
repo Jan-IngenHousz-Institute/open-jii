@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
+import type { VisitedResourceType } from "@repo/api/domains/visit/visit.schema";
 import { and, desc, eq, resourceVisits, sql } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
@@ -16,7 +17,11 @@ export class VisitRepository {
   ) {}
 
   /** Moves the resource to the user's most recent visit, then drops the oldest past the cap. */
-  async recordExperiment(userId: string, experimentId: string): Promise<Result<void>> {
+  async record(
+    userId: string,
+    resourceType: VisitedResourceType,
+    resourceId: string,
+  ): Promise<Result<void>> {
     return tryCatch(async () => {
       await this.database.transaction(async (tx) => {
         // All visit writers for one user take the same lock. Without it, two tabs can
@@ -32,8 +37,8 @@ export class VisitRepository {
           .insert(resourceVisits)
           .values({
             userId,
-            resourceType: "experiment",
-            resourceId: experimentId,
+            resourceType,
+            resourceId,
             visitedAt,
           })
           .onConflictDoUpdate({

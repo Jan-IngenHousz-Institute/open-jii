@@ -46,17 +46,17 @@
   },
   "dashboard": {
     "milestone": "The community recorded measurement {{ordinal}} on {{date}}.",
-    "dismiss": "Dismiss",
     "activity": {
+      "title": "Your last 30 days",
       "label": "Your measurements",
-      "experimentsLabel": "Active experiments",
-      "contributors_one": "{{count}} contributor",
-      "contributors_other": "{{count}} contributors",
-      "communityLabel": "Community",
+      "contributors_one": "<b>{{count}}</b> contributor",
+      "contributors_other": "<b>{{count}}</b> contributors",
       "trend": "Daily measurements",
-      "communityNote": "Across the whole platform",
-      "devices_one": "{{count}} device reporting",
-      "devices_other": "{{count}} devices reporting"
+      "devices_one": "<b>{{count}}</b> device",
+      "devices_other": "<b>{{count}}</b> devices",
+      "activeExperiments_one": "<b>{{count}}</b> active experiment",
+      "activeExperiments_other": "<b>{{count}}</b> active experiments",
+      "community": "Community <b>{{value}}</b>"
     }
   },
   "experiment": {

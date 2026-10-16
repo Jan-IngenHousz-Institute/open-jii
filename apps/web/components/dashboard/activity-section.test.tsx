@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { ResearchActivityPanel } from "./research-activity-panel";
+import { ActivitySection } from "./activity-section";
 
 const WINDOW_DAYS = 30;
 
@@ -53,44 +53,57 @@ const platform = {
   computedAt: "2026-08-30T12:48:55.000Z",
 };
 
-describe("ResearchActivityPanel", () => {
+describe("ActivitySection", () => {
   it("leads with the reader's own activity and its trend", async () => {
     server.mount(contract.metrics.getScopedMetrics, { body: mine });
     server.mount(contract.metrics.getPublicMetrics, { body: platform });
 
-    render(<ResearchActivityPanel locale="en-US" />);
+    render(<ActivitySection locale="en-US" />);
 
     expect(await screen.findByText("60.1K")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "dashboard.activity.title" })).toBeInTheDocument();
     expect(screen.getByText("dashboard.activity.label")).toBeInTheDocument();
-    expect(screen.getByText("dashboard.activity.experimentsLabel")).toBeInTheDocument();
     expect(screen.getByText("+20%")).toBeInTheDocument();
+    expect(screen.getByText("dashboard.activity.activeExperiments")).toBeInTheDocument();
+    expect(screen.getByText("dashboard.activity.contributors")).toBeInTheDocument();
   });
 
-  it("puts the community beside the reader rather than in a footnote", async () => {
+  it("does not colour an unchanged month as a rise", async () => {
+    server.mount(contract.metrics.getScopedMetrics, {
+      body: { ...mine, scoped: { ...mine.scoped, previousMeasurements: 60_120 } },
+    });
+    server.mount(contract.metrics.getPublicMetrics, { body: platform });
+
+    render(<ActivitySection locale="en-US" />);
+
+    expect(await screen.findByText("0%")).toHaveClass("bg-muted");
+  });
+
+  it("puts the community total beside the reader's figures", async () => {
     server.mount(contract.metrics.getScopedMetrics, { body: mine });
     server.mount(contract.metrics.getPublicMetrics, { body: platform });
 
-    render(<ResearchActivityPanel locale="en-US" />);
+    render(<ActivitySection locale="en-US" />);
 
-    expect(await screen.findByText("dashboard.activity.communityLabel")).toBeInTheDocument();
-    expect(screen.getByText("18.9M")).toBeInTheDocument();
+    const total = await screen.findByText("dashboard.activity.community");
+    expect(total.closest("li")).toHaveAttribute("title", "18,883,130");
   });
 
-  it("drops the community card when the platform snapshot is missing", async () => {
+  it("drops the community total when the platform snapshot is missing", async () => {
     server.mount(contract.metrics.getScopedMetrics, { body: mine });
     server.mount(contract.metrics.getPublicMetrics, { body: { ...platform, community: null } });
 
-    render(<ResearchActivityPanel locale="en-US" />);
+    render(<ActivitySection locale="en-US" />);
 
     await screen.findByText("60.1K");
-    expect(screen.queryByText("dashboard.activity.communityLabel")).not.toBeInTheDocument();
+    expect(screen.queryByText("dashboard.activity.community")).not.toBeInTheDocument();
   });
 
-  it("holds the band's shape while the figures are still loading", async () => {
+  it("holds the section's place while the figures are still loading", async () => {
     server.mount(contract.metrics.getScopedMetrics, { body: mine, delay: "infinite" });
     server.mount(contract.metrics.getPublicMetrics, { body: platform });
 
-    const { container } = render(<ResearchActivityPanel locale="en-US" />);
+    const { container } = render(<ActivitySection locale="en-US" />);
 
     await waitFor(() => {
       expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
@@ -104,7 +117,7 @@ describe("ResearchActivityPanel", () => {
     });
     server.mount(contract.metrics.getPublicMetrics, { body: platform });
 
-    const { container } = render(<ResearchActivityPanel locale="en-US" />);
+    const { container } = render(<ActivitySection locale="en-US" />);
 
     await waitFor(() => {
       expect(container).toBeEmptyDOMElement();
@@ -117,7 +130,7 @@ describe("ResearchActivityPanel", () => {
     });
     server.mount(contract.metrics.getPublicMetrics, { body: platform });
 
-    const { container } = render(<ResearchActivityPanel locale="en-US" />);
+    const { container } = render(<ActivitySection locale="en-US" />);
 
     await waitFor(() => {
       expect(container).toBeEmptyDOMElement();

@@ -11,8 +11,6 @@ import {
   zExperimentListResponse,
   zHomeExperiments,
   zHomeExperimentsQuery,
-  zRecentlyOpenedExperimentList,
-  zRecentlyOpenedExperimentsQuery,
   zUpdateExperimentBody,
 } from "./experiment.schema";
 
@@ -25,10 +23,6 @@ export const experimentContract = {
     .route({ method: "GET", path: "/api/v1/experiments", successStatus: 200 })
     .input(zExperimentFilterQuery)
     .output(zExperimentListResponse),
-  listRecentlyOpenedExperiments: oc
-    .route({ method: "GET", path: "/api/v1/experiments/recently-opened", successStatus: 200 })
-    .input(zRecentlyOpenedExperimentsQuery)
-    .output(zRecentlyOpenedExperimentList),
   listHomeExperiments: oc
     .route({ method: "GET", path: "/api/v1/experiments/home", successStatus: 200 })
     .input(zHomeExperimentsQuery)

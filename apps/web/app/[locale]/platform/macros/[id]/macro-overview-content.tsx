@@ -9,6 +9,7 @@ import { InlineEditableDescription } from "@/components/shared/inline-editable-d
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
+import { useRecordVisit } from "@/hooks/visits/useRecordVisit/useRecordVisit";
 import { decodeBase64, encodeBase64 } from "@/util/base64";
 import { CodeIcon } from "lucide-react";
 import { use, useCallback, useState } from "react";
@@ -24,6 +25,7 @@ interface MacroOverviewPageProps {
 export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useMacro(id);
+  useRecordVisit("macro", id, Boolean(data));
   const { t } = useTranslation(["macro", "common"]);
   const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(id);
 

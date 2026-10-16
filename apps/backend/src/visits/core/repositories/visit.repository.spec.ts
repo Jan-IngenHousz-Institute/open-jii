@@ -46,12 +46,23 @@ describe("VisitRepository", () => {
         visitedAt: earlier,
       });
 
-      const result = await repository.recordExperiment(testUserId, experiment.id);
+      const result = await repository.record(testUserId, "experiment", experiment.id);
 
       assertSuccess(result);
       const rows = await visitsOf(testUserId);
       expect(rows).toHaveLength(1);
       expect(rows[0].visitedAt.getTime()).toBeGreaterThan(earlier.getTime());
+    });
+
+    it("records the type it is given", async () => {
+      const protocol = await testApp.createProtocol({ name: "Opened", createdBy: testUserId });
+
+      const result = await repository.record(testUserId, "protocol", protocol.id);
+
+      assertSuccess(result);
+      expect(await visitsOf(testUserId)).toEqual([
+        expect.objectContaining({ resourceType: "protocol", resourceId: protocol.id }),
+      ]);
     });
 
     it("drops the oldest visits past the cap, and only the caller's", async () => {
@@ -84,7 +95,7 @@ describe("VisitRepository", () => {
         userId: testUserId,
       });
 
-      const result = await repository.recordExperiment(testUserId, latest.id);
+      const result = await repository.record(testUserId, "experiment", latest.id);
 
       assertSuccess(result);
       const kept = (await visitsOf(testUserId)).map((row) => row.resourceId);
@@ -117,8 +128,8 @@ describe("VisitRepository", () => {
       });
 
       const results = await Promise.all([
-        repository.recordExperiment(testUserId, first.id),
-        secondaryRepository.recordExperiment(testUserId, second.id),
+        repository.record(testUserId, "experiment", first.id),
+        secondaryRepository.record(testUserId, "experiment", second.id),
       ]);
 
       results.forEach(assertSuccess);

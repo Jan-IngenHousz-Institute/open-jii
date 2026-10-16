@@ -8,6 +8,7 @@ import type { ProtocolCode } from "@/components/shared/protocol-code-panel";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
+import { useRecordVisit } from "@/hooks/visits/useRecordVisit/useRecordVisit";
 import { use, useCallback, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
@@ -21,6 +22,7 @@ interface ProtocolOverviewPageProps {
 export default function ProtocolOverviewPage({ params }: ProtocolOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useProtocol(id);
+  useRecordVisit("protocol", id, Boolean(data));
   const { t } = useTranslation();
   const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(id);
 
