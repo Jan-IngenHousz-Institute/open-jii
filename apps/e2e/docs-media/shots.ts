@@ -161,7 +161,7 @@ export const SHOTS: readonly Shot[] = [
     frame: "desktop",
     route: "/platform",
     scope:
-      "Authenticated dashboard: welcome card, experiments selected from real visits or related work, compact contextual header",
+      "Home: welcome notice, Recently opened across types with its type chips, Public research, and unread notifications beside them",
   },
   {
     slug: "dashboard-first-work",
@@ -169,7 +169,7 @@ export const SHOTS: readonly Shot[] = [
     frame: "desktop",
     route: "/platform",
     session: "newcomer",
-    scope: "Dashboard with no accessible related experiments and the three first-work cards",
+    scope: "Home for a researcher with no related experiments, with the three Get started cards",
   },
   {
     slug: "experiments-list",
@@ -223,7 +223,7 @@ export const SHOTS: readonly Shot[] = [
     publish: "img/guide/web/report-issue.webp",
     frame: "desktop",
     route: "/platform",
-    scope: "Report bug action in the dashboard welcome card",
+    scope: "Report a bug link under the last section of Home's side column",
   },
   {
     slug: "create-experiment-details",
@@ -357,7 +357,7 @@ export const SHOTS: readonly Shot[] = [
       await page.keyboard.press("ControlOrMeta+k");
       await settle(page, 1200);
     },
-    scope: "Command palette open over the dashboard",
+    scope: "Command palette open over Home",
   },
   {
     slug: "cheatsheet",

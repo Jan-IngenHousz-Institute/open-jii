@@ -69,23 +69,12 @@ export const zExperimentList = z.array(zExperimentListEntry);
  */
 export const zExperimentCallerRole = z.enum(["owner", "admin", "viewer", "member"]);
 
-const zRecentlyOpenedExperiment = zExperimentListEntry.extend({
-  /** When the caller last opened the experiment's overview. */
-  openedAt: z.string().datetime(),
-  /** Null when no role reaches the caller, such as on a public experiment. */
-  callerRole: zExperimentCallerRole.nullable(),
-});
-
-export const zRecentlyOpenedExperimentList = z.array(zRecentlyOpenedExperiment);
-
 const zRelatedHomeExperiment = zExperimentListEntry.extend({
   callerRole: zExperimentCallerRole.nullable(),
 });
 
-export const zHomeExperiments = z.discriminatedUnion("source", [
-  z.object({ source: z.literal("recently-opened"), experiments: zRecentlyOpenedExperimentList }),
-  z.object({ source: z.literal("related"), experiments: z.array(zRelatedHomeExperiment) }),
-]);
+/** The caller's related experiments, newest update first, for a home with no visits yet. */
+export const zHomeExperiments = z.object({ experiments: z.array(zRelatedHomeExperiment) });
 
 export const DEFAULT_HOME_EXPERIMENTS_LIMIT = 3;
 
@@ -330,7 +319,6 @@ export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
 export type Experiment = z.infer<typeof zExperiment>;
 export type ExperimentListItem = z.infer<typeof zExperimentListEntry>;
 export type ExperimentCallerRole = z.infer<typeof zExperimentCallerRole>;
-export type RecentlyOpenedExperiment = z.infer<typeof zRecentlyOpenedExperiment>;
 export type RelatedHomeExperiment = z.infer<typeof zRelatedHomeExperiment>;
 export type HomeExperiments = z.infer<typeof zHomeExperiments>;
 export type ExperimentList = z.infer<typeof zExperimentList>;
@@ -507,14 +495,6 @@ export const zExperimentFilterQuery = z
 
 export const zExperimentPaginatedList = zPaginated(zExperimentListEntry);
 
-export const zRecentlyOpenedExperimentsQuery = z.object({
-  scope: zResourceScope.optional().describe("Which slice of the opened experiments to return"),
-  limit: z.coerce.number().int().min(1).max(20).optional().describe("Rows to return, 3 by default"),
-});
-
-/** Applied server-side when the caller sends no `limit`. */
-export const DEFAULT_RECENTLY_OPENED_LIMIT = 3;
-
 /** Array when the caller sent no `page`, envelope when they did. */
 export const zExperimentListResponse = z.union([zExperimentList, zExperimentPaginatedList]);
 
@@ -531,7 +511,6 @@ export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
 export type ExperimentFilter = ExperimentFilterQuery["filter"];
 export type ExperimentPaginatedList = z.infer<typeof zExperimentPaginatedList>;
 export type ExperimentListResponse = z.infer<typeof zExperimentListResponse>;
-export type RecentlyOpenedExperimentsQuery = z.infer<typeof zRecentlyOpenedExperimentsQuery>;
 export type ExperimentAccess = z.infer<typeof zExperimentAccess>;
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;
 export type ExperimentIdPathParam = z.infer<typeof zExperimentIdPathParam>;

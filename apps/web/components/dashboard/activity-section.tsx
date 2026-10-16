@@ -1,32 +1,33 @@
 "use client";
 
 import { MetricStatCard } from "@/components/metrics/metric-stat-card";
-import { MetricTrendCard } from "@/components/metrics/metric-trend-card";
-import { metricsBandGrid } from "@/components/metrics/metrics-band-grid";
-import { MetricsBandSkeleton } from "@/components/metrics/metrics-band-skeleton";
+import { TrendSparkline } from "@/components/metrics/trend-sparkline";
 import { useMyScopedMetrics } from "@/hooks/metrics/useMyScopedMetrics/useMyScopedMetrics";
 import { usePublicMetrics } from "@/hooks/metrics/usePublicMetrics/usePublicMetrics";
 import { formatLocaleNumber } from "@/util/format-locale-number";
 
 import { useTranslation } from "@repo/i18n";
+import { Skeleton } from "@repo/ui/components/skeleton";
 
-interface ResearchActivityPanelProps {
+import { DashboardSection } from "./dashboard-section";
+
+interface ActivitySectionProps {
   locale: string;
 }
 
 /** The reader's own 30 days, with the community beside it rather than as the headline. */
-export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
+export function ActivitySection({ locale }: ActivitySectionProps) {
   const { t } = useTranslation("publicMetrics");
   const { data: mine, isPending } = useMyScopedMetrics();
   const { data: platform } = usePublicMetrics();
 
   if (isPending) {
-    return <MetricsBandSkeleton cards={4} grid={metricsBandGrid} />;
+    return <Skeleton aria-busy="true" className="h-56" />;
   }
 
   const scoped = mine?.scoped ?? null;
 
-  // No band rather than a row of zeros, as on the list pages.
+  // Nothing rather than a row of zeros, as on the list pages.
   if (scoped === null || scoped.measurements30d === 0) {
     return null;
   }
@@ -38,23 +39,10 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
   const windowDays = scoped.activity.length;
   const window = t("window", { days: windowDays });
   const community = platform?.community ?? null;
-
   const peak = scoped.peak;
-  const dailyAverage = Math.round(scoped.measurements30d / windowDays);
-
-  const renderCommunity = (measurements30d: number) => (
-    <MetricStatCard
-      locale={locale}
-      label={t("dashboard.activity.communityLabel")}
-      value={compact.format(measurements30d)}
-      title={formatLocaleNumber(measurements30d, locale)}
-      note={t("dashboard.activity.communityNote")}
-      context={window}
-    />
-  );
 
   return (
-    <section className={metricsBandGrid}>
+    <DashboardSection id="last-30-days" title={t("dashboard.activity.title")}>
       <MetricStatCard
         locale={locale}
         label={t("dashboard.activity.label")}
@@ -73,29 +61,33 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
                 date: day.format(new Date(`${peak.date}T00:00:00Z`)),
               })
         }
-      />
-      <MetricStatCard
-        locale={locale}
-        label={t("dashboard.activity.experimentsLabel")}
-        value={formatLocaleNumber(scoped.activeExperiments30d, locale)}
-        note={t("dashboard.activity.contributors", { count: scoped.contributors30d })}
-        context={
-          scoped.devices30d === null
-            ? window
-            : t("dashboard.activity.devices", { count: scoped.devices30d })
+        chart={
+          <TrendSparkline
+            days={scoped.activity}
+            mark="bars"
+            peakDate={peak?.date ?? null}
+            seriesName={t("dashboard.activity.trend")}
+            locale={locale}
+            className="h-10 w-full"
+          />
         }
       />
-      {community === null ? null : renderCommunity(community.measurements30d)}
-      <MetricTrendCard
-        label={t("dailyAverage")}
-        value={compact.format(dailyAverage)}
-        title={formatLocaleNumber(dailyAverage, locale)}
-        seriesName={t("dashboard.activity.trend")}
-        days={scoped.activity}
-        peakDate={peak?.date ?? null}
-        locale={locale}
-        footer={t("activeDays", { active: scoped.activeDays, total: windowDays })}
-      />
-    </section>
+
+      <ul className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        <li>{t("dashboard.activity.activeExperiments", { count: scoped.activeExperiments30d })}</li>
+        <li>{t("dashboard.activity.contributors", { count: scoped.contributors30d })}</li>
+        {scoped.devices30d === null ? null : (
+          <li>{t("dashboard.activity.devices", { count: scoped.devices30d })}</li>
+        )}
+        {community === null ? null : (
+          <li title={formatLocaleNumber(community.measurements30d, locale)}>
+            {t("dashboard.activity.communityLabel")}{" "}
+            <span className="text-foreground font-medium tabular-nums">
+              {compact.format(community.measurements30d)}
+            </span>
+          </li>
+        )}
+      </ul>
+    </DashboardSection>
   );
 }

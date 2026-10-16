@@ -1,3 +1,11 @@
+import type { StatusTone } from "@/components/shared/status-badge";
+import { getExperimentStatusBadgeTone } from "@/util/experiment-status";
+import { getMacroLanguageBadgeTone, getMacroLanguageLabel } from "@/util/macro-language";
+import { getSensorFamilyBadgeTone, getSensorFamilyLabel } from "@/util/sensor-family";
+
+import type { ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
+import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
 /**
@@ -47,3 +55,47 @@ export const RESOURCE_TYPE_COLOR: Record<SharingResourceType, string> = {
   device_group: "bg-secondary",
   calibration_definition: "bg-chart-5",
 };
+
+/** The fields {@link resourceMetaBadge} reads, per type that has a badge. */
+type BadgedResource =
+  | { type: "experiment"; status: ExperimentStatus }
+  | { type: "protocol"; family: SensorFamily }
+  | { type: "macro"; language: MacroLanguage }
+  | { type: "device"; deviceType: SensorFamily }
+  | { type: "workbook" | "device_group" | "calibration_definition" };
+
+/** A row's one type-specific fact, in the colour that value wears on its own listing. */
+export function resourceMetaBadge(
+  resource: BadgedResource,
+  t: (key: string) => string,
+): { label: string; tone: StatusTone } | null {
+  switch (resource.type) {
+    case "experiment":
+      return {
+        label: t(`organizations.resources.status.${resource.status}`),
+        tone: getExperimentStatusBadgeTone(resource.status),
+      };
+    case "protocol":
+      return {
+        label: getSensorFamilyLabel(resource.family),
+        tone: getSensorFamilyBadgeTone(resource.family),
+      };
+    case "macro":
+      return {
+        label: getMacroLanguageLabel(resource.language),
+        tone: getMacroLanguageBadgeTone(resource.language),
+      };
+    case "device":
+      return {
+        label: getSensorFamilyLabel(resource.deviceType),
+        tone: getSensorFamilyBadgeTone(resource.deviceType),
+      };
+    // A workbook has no second fact. A group does, its roster size, but that is a
+    // quantity rather than a category, so it has no colour of its own to wear and
+    // reads as footer text beside the type instead.
+    case "workbook":
+    case "device_group":
+    case "calibration_definition":
+      return null;
+  }
+}

@@ -2,35 +2,35 @@ import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { DashboardSection } from "./dashboard-section";
+import { SeeAllLink } from "./see-all-link";
 
 describe("DashboardSection", () => {
-  it("renders title and children", () => {
+  it("names the section by its heading and renders its content", () => {
     render(
-      <DashboardSection title="Recent" seeAllLabel="See all" seeAllHref="/all" locale="en-US">
+      <DashboardSection id="recent" title="Recent" meta="2 unread">
         <p>Child content</p>
       </DashboardSection>,
     );
 
-    expect(screen.getByRole("heading", { name: "Recent" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /Recent/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Recent 2 unread" })).toBeInTheDocument();
     expect(screen.getByText("Child content")).toBeInTheDocument();
   });
 
-  it("renders see-all links with correct href", () => {
+  it("puts the action beside the heading", () => {
     render(
       <DashboardSection
+        id="projects"
         title="Projects"
-        seeAllLabel="View all"
-        seeAllHref="/projects"
-        locale="en-US"
+        action={<SeeAllLink href="/en-US/projects">View all</SeeAllLink>}
       >
         <div />
       </DashboardSection>,
     );
 
-    const links = screen.getAllByRole("link", { name: "View all" });
-    expect(links.length).toBeGreaterThan(0);
-    for (const link of links) {
-      expect(link).toHaveAttribute("href", "/projects");
-    }
+    expect(screen.getByRole("link", { name: "View all" })).toHaveAttribute(
+      "href",
+      "/en-US/projects",
+    );
   });
 });

@@ -905,23 +905,13 @@
     }
   },
   "dashboard": {
-    "title": "Dashboard",
+    "title": "Startseite",
     "welcome": "Willkommen bei openJII",
-    "transferBannerTitle": null,
-    "transferBannerDescription": null,
-    "transferBannerDescriptionItalic": null,
-    "transferBannerButton": null,
-    "reportBugButton": null,
     "recentExperiments": "Kürzliche Experimente",
     "recentArticles": "Neueste Blogbeiträge",
-    "recentlyOpenedExperiments": "Zuletzt geöffnet",
     "seeAll": "Alle ansehen",
     "statistics": "Statistiken",
     "quickActions": "Schnellaktionen",
-    "noBlogPosts": "Keine Blogbeiträge vorhanden",
-    "errorLoadingBlogPosts": "Fehler beim Laden der Blogbeiträge",
-    "recentPublicExperiments": "Kürzlich aktualisierte öffentliche Experimente",
-    "noPublicExperiments": "Noch keine öffentlichen Experimente.",
     "publicExperimentsLoadFailed": "Öffentliche Experimente konnten nicht geladen werden.",
     "publicExperimentsStale": "Seit dem {{date}} wurde kein öffentliches Experiment aktualisiert.",
     "browsePublicExperiments": "Öffentliche Experimente durchsuchen",
@@ -940,8 +930,24 @@
       }
     },
     "yourExperiments": "Ihre Experimente",
-    "userExperimentsLoadFailed": "Ihre Experimente konnten nicht geladen werden.",
-    "userExperimentsRetry": "Erneut versuchen"
+    "recentlyOpened": "Zuletzt geöffnet",
+    "recentlyOpenedLoadFailed": "Ihre zuletzt geöffneten Inhalte konnten nicht geladen werden.",
+    "typeFilterLabel": "Einen Typ anzeigen",
+    "allTypes": "Alle",
+    "seeAllType": {
+      "experiment": "Alle Experimente ansehen",
+      "protocol": "Alle Protokolle ansehen",
+      "macro": "Alle Makros ansehen",
+      "workbook": "Alle Arbeitsmappen ansehen"
+    },
+    "workbookVersion": "Version {{version}}",
+    "publicResearch": "Öffentliche Forschung",
+    "getStarted": "Erste Schritte",
+    "welcomeNotice": "Willkommen bei openJII. Setzen Sie Ihre Forschung ohne Unterbrechung fort; übertragen Sie jetzt Ihre Daten.",
+    "requestTransfer": "Übertragung anfordern",
+    "dismiss": "Schließen",
+    "feedback": "Funktioniert etwas nicht? <bug>Fehler melden</bug> oder <feature>eine Funktion vorschlagen</feature>.",
+    "userExperimentsLoadFailed": "Ihre Experimente konnten nicht geladen werden."
   },
   "auth": {
     "login": "Anmelden",

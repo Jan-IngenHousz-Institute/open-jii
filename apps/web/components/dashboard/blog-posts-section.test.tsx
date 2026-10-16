@@ -19,42 +19,45 @@ vi.mock("~/lib/contentful", () => ({
 }));
 
 vi.mock("@repo/cms/article", () => ({
-  ArticleTileGrid: (props: { articles: unknown[] }) => (
-    <div data-testid="article-grid">{props.articles.length} articles</div>
+  ArticleTileGrid: (props: { articles: unknown[]; horizontal?: boolean }) => (
+    <div data-testid="article-grid" data-horizontal={String(props.horizontal)}>
+      {props.articles.length} articles
+    </div>
   ),
 }));
 
 describe("BlogPostsSection", () => {
-  it("renders articles", async () => {
+  it("renders the posts as tiles under a heading that links to the blog", async () => {
     mockGqlClient.pageBlogPostCollection.mockResolvedValue({
       pageBlogPostCollection: {
         items: [{ sys: { id: "1" } }, { sys: { id: "2" } }],
       },
     });
 
-    const ui = await BlogPostsSection({ locale: "en-US" });
-    render(ui);
+    const section = await BlogPostsSection({ locale: "en-US" });
+    if (!section) throw new Error("Expected the section to render");
+    render(section);
 
+    expect(screen.getByRole("heading", { name: "dashboard.recentArticles" })).toBeInTheDocument();
     expect(screen.getByTestId("article-grid")).toHaveTextContent("2 articles");
+    expect(screen.getByTestId("article-grid")).toHaveAttribute("data-horizontal", "true");
+    expect(screen.getByRole("link", { name: "dashboard.seeAll" })).toHaveAttribute(
+      "href",
+      "/en-US/blog",
+    );
   });
 
-  it("shows empty state when no posts", async () => {
+  it("renders nothing when there are no posts", async () => {
     mockGqlClient.pageBlogPostCollection.mockResolvedValue({
       pageBlogPostCollection: { items: [] },
     });
 
-    const ui = await BlogPostsSection({ locale: "en-US" });
-    render(ui);
-
-    expect(screen.getByText("dashboard.noBlogPosts")).toBeInTheDocument();
+    expect(await BlogPostsSection({ locale: "en-US" })).toBeNull();
   });
 
-  it("shows error state on failure", async () => {
+  it("renders nothing when the CMS fails", async () => {
     mockGqlClient.pageBlogPostCollection.mockRejectedValue(new Error("fail"));
 
-    const ui = await BlogPostsSection({ locale: "en-US" });
-    render(ui);
-
-    expect(screen.getByText("dashboard.errorLoadingBlogPosts")).toBeInTheDocument();
+    expect(await BlogPostsSection({ locale: "en-US" })).toBeNull();
   });
 });

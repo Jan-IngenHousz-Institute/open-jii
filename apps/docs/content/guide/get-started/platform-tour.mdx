@@ -1,6 +1,6 @@
 ---
 title: "A tour of the platform"
-description: "Find your way around the openJII web platform: the sidebar, command palette, keyboard shortcuts, and notifications."
+description: "Find your way around the openJII web platform: the sidebar, Home, command palette, keyboard shortcuts, and notifications."
 ---
 
 {/* verified: code@dd523e0f3 2026-10-07 */}
@@ -30,7 +30,7 @@ experiments, protocols, macros, workbooks, and organizations you can access.
 Matches from every resource type share one relevance-ranked list, so the closest
 match appears first. Select a result to open it without reaching for the mouse.
 
-![Command palette open over the dashboard](/img/chrome-refresh/command-palette.webp)
+![Command palette open over Home](/img/chrome-refresh/command-palette.webp)
 
 ## Keyboard shortcuts
 
@@ -88,65 +88,97 @@ available on its own as those notifications are added.
 
 ![The Notifications tab in account settings, with one email switch per category](/img/guide/web/account-security/notification-settings.webp)
 
-## Your experiments and recently opened work
+## Home
 
-Before you open any related experiments, the first row on the dashboard shows
-up to three under **Your experiments**, newest update first. Related experiments
-include work you created, work shared with you, and work in your organizations.
-You must still have access, and archived experiments do not appear. Tied updates
-keep a stable order. Each card shows its update date and your strongest current
-role, such as Owner, Admin, Viewer or Member. Authorship alone does not give you
-a role or access to a private experiment.
+Home is the page you land on after signing in, and **Home** at the top of the
+sidebar brings you back to it. On a wide window it has two columns. The main
+column holds what you opened recently, public research and blog posts, and the
+narrower column beside it holds your unread notifications, your last 30 days,
+what is new on the platform and where to report a problem. On a narrow window
+or a phone the sections stack in one column, with your unread notifications
+first. A section with nothing to show is left out, heading and all.
 
-Once you open an eligible experiment's overview, the title changes to
-**Recently opened**. The row shows up to three experiments you actually opened,
-newest visit first, with the date you opened each one. It does not fill spare
-places with unvisited work. Opening unrelated public research does not add it
-here. Returning to Home or reloading preserves your visit history. If none of
-your visited experiments is still accessible and nonarchived, the row returns
-to **Your experiments**. **See all** opens the experiments list.
+![Home with Recently opened and Public research in the main column and unread notifications beside them](/img/guide/web/dashboard.webp)
 
-If you have no accessible related experiments, the row offers three places to
-start: **Create an experiment** opens the new experiment form, **Join an
-organization** opens the organizations list, where you can ask to join a public
-organization, and **Browse public research** opens the experiments list filtered to public
-experiments, with the search box ready to type in.
+A notice can sit above the sections, one at a time. When the community passes
+a measurement milestone, the notice marks it. Otherwise it welcomes you and
+links to **Request transfer**, where you ask to bring a project over from
+PhotosynQ (see [Project transfers](/guide/sharing/project-transfers)). Close a
+notice with its × and it stays closed in that browser.
 
-While the row loads, it shows placeholders. If it cannot load your experiments,
-it shows an error and **Try again**. A failed request never means you have no
-work. Leaving Home and returning checks your current access again, so a card
-disappears if someone revoked your access.
+### Recently opened
 
-## Recently updated public experiments
+**Recently opened** lists the five experiments, protocols, macros and workbooks
+you opened most recently, newest first. Opening the overview page of any of
+them counts as a visit. Each row shows the type, one detail that suits it, your
+role when you hold one, and when you opened it. The detail is an experiment's
+status and organization, a protocol's device family, a macro's language or a
+workbook's latest published version. The role is Owner, Admin, Member or Viewer,
+and it is blank for public work you reached without one. Something you can no
+longer open, something deleted and an archived experiment all drop out of the
+list. The platform keeps your last 50 visits across every type.
 
-Below your own experiments, the dashboard shows up to six public experiments,
-newest update first, each with the date it was last updated. An update means
-someone changed the experiment itself: its details, locations, flow or
-workbook. Making it public or moving it to another organization also counts.
-New measurements do not. Embargoed experiments stay private until the embargo
-ends, so they never appear here.
+Once you have opened more than one type, chips under the heading narrow the
+list: **All**, then one for each type you have opened. Picking a type shows its
+five newest and a link to that type's own list, such as **See all protocols**.
+Your browser remembers the choice, and goes back to **All** when nothing of that
+type is left to show.
 
-When no public experiment has been updated for 30 days, the section says so and
-shows the date of the latest update. **See all** opens the experiments list
-filtered to public experiments.
+Before your first visit, the section shows **Your experiments** instead: work
+you created, work shared with you and work in your organizations, newest update
+first, with the date of each update. **See all** opens the experiments list.
+
+### Get started
+
+If you have no experiments yet, **Get started** sits at the top of Home with
+three places to begin. **Create an experiment** opens the new experiment form,
+**Join an organization** opens the organizations list, where you can ask to join
+a public organization, and **Browse public research** opens the experiments list
+filtered to public experiments, with the search box ready to type in.
+
+### Public research and blog posts
+
+**Public research** shows recently updated public experiments, newest update
+first, as many as fill its rows evenly. An update means someone changed the
+experiment itself: its details, locations, flow or workbook. Making it public or
+moving it to another organization also counts. New measurements do not.
+Embargoed experiments stay private until the embargo ends, so they never appear
+here. When no public experiment has been updated for 30 days, the section says
+so and shows the date of the latest update. **See all** opens the experiments
+list filtered to public experiments.
+
+**Recent blog posts** shows the three newest posts from the openJII blog in one
+row, and **See all** opens the blog.
+
+### Beside the main column
+
+**Notifications** lists up to five unread notifications, and its heading counts
+every unread one, as the bell does. Opening one marks it read and takes you to
+what it is about. The section is gone when nothing is unread, and **See all**
+opens the Notifications page.
+
+**Your last 30 days** compares the measurements your experiments recorded with
+the 30 days before, shows a bar for each of those days, and counts the
+experiments that were active and the contributors and devices that recorded. It ends with what
+the whole community recorded over the same period.
+
+**What's new** lists the two newest release notes, and **See all** opens the
+What's new panel. Under it, **Report a bug** opens
+[Getting help](/guide/reference/getting-help) and **request a feature** opens
+the ideas board on GitHub.
 
 ## Platform activity
 
-Several pages carry a row of activity cards covering the last 30 days. On the
-dashboard they show what your own experiments recorded, how many were active
-and the people and devices behind them, what the community recorded over the
-same period, and a daily average with the days behind it. The experiment,
-protocol, macro and workbook lists carry the same row for that kind, including
-the busiest one, and each row in the table draws its own activity strip. An
-experiment's overview page has the same row under its description.
+Several pages carry a row of activity cards covering the last 30 days. The
+experiment, protocol, macro and workbook lists carry one for that kind,
+including the busiest one, and each row in the table draws its own activity
+strip. An experiment's overview page has the same row under its description,
+and Home sums up your own in **Your last 30 days**.
 
 Contributors and devices are counted separately because measurements arrive by
 two routes: the mobile app records who took a measurement, while a logger
 publishes on its own and names nobody. An experiment fed only by loggers shows
 the devices that reported rather than a contributor count.
-
-When the community crosses a measurement milestone, a banner above the
-dashboard marks it until you dismiss it.
 
 The figures come from the platform metrics pipeline, which refreshes them every
 hour, and the platform caches them for up to another hour. Anything with

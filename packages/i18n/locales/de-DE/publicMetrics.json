@@ -46,17 +46,17 @@
   },
   "dashboard": {
     "milestone": "Die Community erfasste Messung {{ordinal}} am {{date}}.",
-    "dismiss": "Schließen",
     "activity": {
+      "title": "Deine letzten 30 Tage",
       "label": "Deine Messungen",
-      "experimentsLabel": "Aktive Experimente",
       "contributors_one": "{{count}} Mitwirkender",
       "contributors_other": "{{count}} Mitwirkende",
       "communityLabel": "Community",
       "trend": "Tägliche Messungen",
-      "communityNote": "Auf der gesamten Plattform",
       "devices_one": "{{count}} Gerät sendet",
-      "devices_other": "{{count}} Geräte senden"
+      "devices_other": "{{count}} Geräte senden",
+      "activeExperiments_one": "{{count}} aktives Experiment",
+      "activeExperiments_other": "{{count}} aktive Experimente"
     }
   },
   "experiment": {

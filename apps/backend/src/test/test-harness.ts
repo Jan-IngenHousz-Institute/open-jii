@@ -593,7 +593,7 @@ export class TestHarness {
   public async addResourceVisit(data: {
     userId: string;
     resourceId: string;
-    resourceType?: "experiment";
+    resourceType?: "experiment" | "protocol" | "macro" | "workbook";
     visitedAt?: Date;
   }) {
     const [visit] = await this.database

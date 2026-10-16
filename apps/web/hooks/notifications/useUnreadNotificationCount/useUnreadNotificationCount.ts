@@ -1,7 +1,8 @@
 import { usePrincipal } from "@/components/auth/principal-context";
-import { withPrincipal } from "@/hooks/principal-query-key";
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
+
+import { unreadCountQuery } from "./unread-count-query";
 
 const POLL_INTERVAL_MS = 60_000;
 
@@ -9,12 +10,10 @@ const POLL_INTERVAL_MS = 60_000;
 export const useUnreadNotificationCount = () => {
   const { userId, isPending: isSessionPending } = usePrincipal();
 
-  return useQuery(
-    orpc.notifications.getUnreadNotificationCount.queryOptions({
-      queryKey: withPrincipal(orpc.notifications.getUnreadNotificationCount.queryKey(), userId),
-      enabled: !isSessionPending,
-      refetchInterval: POLL_INTERVAL_MS,
-      refetchOnWindowFocus: true,
-    }),
-  );
+  return useQuery({
+    ...unreadCountQuery(orpc, userId),
+    enabled: !isSessionPending,
+    refetchInterval: POLL_INTERVAL_MS,
+    refetchOnWindowFocus: true,
+  });
 };

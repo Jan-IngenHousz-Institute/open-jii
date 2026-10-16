@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "../../src/database";
 import { protocols, macros, experiments, workbooks, workbookVersions } from "../../src/schema";
-import type { SeedExperiment, SeedProtocol, SeedUser } from "./types";
+import type { SeedExperiment, SeedProtocol, SeedUser, SeedWorkbook } from "./types";
 
 /** Workbooks with a published version, pinned to the experiments that chart real data. */
 export async function seedWorkbooks(
@@ -52,6 +52,7 @@ export async function seedWorkbooks(
     },
   ];
 
+  const createdWorkbooks: SeedWorkbook[] = [];
   for (const wb of workbookSeeds) {
     const cells = [
       {
@@ -79,6 +80,7 @@ export async function seedWorkbooks(
         organizationId: personalOrganizationId,
       })
       .returning();
+    createdWorkbooks.push(workbook);
 
     const [version] = await db
       .insert(workbookVersions)
@@ -104,4 +106,5 @@ export async function seedWorkbooks(
   }
 
   console.log(`  Created ${workbookSeeds.length} workbooks (pinned versions)`);
+  return createdWorkbooks;
 }
