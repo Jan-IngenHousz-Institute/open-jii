@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { z } from "zod";
 
 import { NOTIFICATION_TYPES } from "@repo/api/domains/notification/notification.schema";
@@ -7,11 +7,15 @@ import type {
   NotificationResourceType,
   NotificationType,
 } from "@repo/api/domains/notification/notification.schema";
+import type { DatabaseInstance } from "@repo/database";
 
 import { ErrorCodes } from "../../../common/utils/error-codes";
-import { AppError, Result, failure, success } from "../../../common/utils/fp-utils";
+import { AppError, Result, failure, success, tryCatch } from "../../../common/utils/fp-utils";
+import { DELIVERY_CHANNEL_EMAIL } from "../../core/models/notification-delivery.model";
+import { NotificationDeliveryRepository } from "../../core/repositories/notification-delivery.repository";
 import { NotificationRepository } from "../../core/repositories/notification.repository";
 import { NotificationEmailService } from "./notification-email.service";
+import { NotificationOutboxWorker } from "./notification-outbox.worker";
 import { NotificationPreferencesService } from "./notification-preferences.service";
 
 export interface DispatchInput<T extends NotificationType> {
@@ -30,23 +34,27 @@ export interface DispatchInput<T extends NotificationType> {
 }
 
 /**
- * The one way an event becomes a notification: it stores a row per recipient and then
- * sends that type's email. Producers call this and carry on — a failure here is logged
- * and never fails the action that caused it.
+ * The one way an event becomes a notification: it stores a row per recipient and
+ * queues that type's email for the worker to send. Producers call this and carry on —
+ * a failure here is logged and never fails the action that caused it.
  */
 @Injectable()
 export class NotificationDispatchService {
   private readonly logger = new Logger(NotificationDispatchService.name);
 
   constructor(
+    @Inject("DATABASE")
+    private readonly database: DatabaseInstance,
     private readonly notificationRepository: NotificationRepository,
+    private readonly notificationDeliveries: NotificationDeliveryRepository,
     private readonly notificationEmail: NotificationEmailService,
     private readonly notificationPreferences: NotificationPreferencesService,
+    private readonly outbox: NotificationOutboxWorker,
   ) {}
 
   async dispatch<T extends NotificationType>(
     input: DispatchInput<T>,
-  ): Promise<Result<{ created: number; emailed: number }>> {
+  ): Promise<Result<{ created: number; queued: number }>> {
     const definition = NOTIFICATION_TYPES[input.type];
     const parsed = definition.params.safeParse(input.params);
 
@@ -73,122 +81,145 @@ export class NotificationDispatchService {
     const recipientIds = [...new Set(input.recipientIds)].filter((id) => id !== actorId);
 
     if (recipientIds.length === 0) {
-      return success({ created: 0, emailed: 0 });
+      return success({ created: 0, queued: 0 });
     }
 
     const resource = input.resource ?? null;
 
-    const insertResult = await this.notificationRepository.insertMany(
-      recipientIds.map((recipientId) => ({
-        recipientId,
-        type: input.type,
-        actorId,
-        resourceType: resource?.type ?? null,
-        resourceId: resource?.id ?? null,
-        params,
-        dedupeKey: input.dedupeKey ?? null,
-      })),
+    // Decided before anything is written, so the bell rows and the emails they owe go
+    // in together: a reader never sees a notification whose delivery row is still
+    // coming, or a delivery row whose notification was rolled back.
+    const emailRecipients = await this.emailRecipients(input, definition, recipientIds);
+
+    const written = await tryCatch(() =>
+      this.database.transaction(async (tx) => {
+        const created = await this.notificationRepository.insertMany(
+          recipientIds.map((recipientId) => ({
+            recipientId,
+            type: input.type,
+            actorId,
+            resourceType: resource?.type ?? null,
+            resourceId: resource?.id ?? null,
+            params,
+            dedupeKey: input.dedupeKey ?? null,
+          })),
+          tx,
+        );
+
+        if (created.isFailure()) {
+          throw created.error;
+        }
+
+        const deliveries = created.value
+          .filter((row) => emailRecipients?.has(row.recipientId) === true)
+          .map((row) => ({ notificationId: row.id, channel: DELIVERY_CHANNEL_EMAIL }));
+
+        if (deliveries.length === 0) {
+          return { created: created.value.length, queued: 0 };
+        }
+
+        const queued = await this.notificationDeliveries.insertMany(deliveries, tx);
+
+        if (queued.isFailure()) {
+          throw queued.error;
+        }
+
+        return { created: created.value.length, queued: queued.value.length };
+      }),
     );
 
-    if (insertResult.isFailure()) {
+    if (written.isFailure()) {
       this.logger.error({
-        msg: "Failed to store notifications",
+        msg: "Failed to store notifications, nothing was written",
         errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
         operation: "dispatch-notification",
         type: input.type,
-        error: insertResult.error,
+        error: written.error,
       });
-      return insertResult;
+      return written;
     }
 
-    // Rows are in before any email leaves, so a mail-server failure loses nothing.
-    const created = insertResult.value;
+    if (written.value.queued === 0) {
+      return success(written.value);
+    }
 
+    // Not awaited: the request returns now and the email leaves within a second,
+    // instead of waiting up to a poll interval.
+    this.outbox.nudge();
+
+    return success(written.value);
+  }
+
+  /**
+   * Who among the recipients is owed an email, by recipient id: the type's rule, the
+   * saved preference and a deliverable address, in that order. `null` means the type
+   * emails nobody. A lookup that fails costs this event its emails and nothing more —
+   * the bell rows still go in, which is the thing that must never be lost.
+   */
+  private async emailRecipients<T extends NotificationType>(
+    input: DispatchInput<T>,
+    definition: (typeof NOTIFICATION_TYPES)[T],
+    recipientIds: string[],
+  ): Promise<Set<string> | null> {
     if (
-      created.length === 0 ||
       input.suppressEmail === true ||
       definition.channels.email === "never" ||
       !this.notificationEmail.hasEmail(input.type)
     ) {
-      return success({ created: created.length, emailed: 0 });
+      return null;
     }
 
     // A `preference` type emails only those with the category switched on, saved or by
-    // default; `always` ignores the switch. Rows are already in, so a failed lookup
-    // costs the emails of this event and nothing else.
+    // default; `always` ignores the switch. The worker never reads preferences, so a
+    // switch flipped after this point does not hold the email back.
     let emailEnabled: Set<string> | null = null;
     if (definition.channels.email === "preference") {
       const enabled = await this.notificationPreferences.emailEnabledFor(
-        created.map((row) => row.recipientId),
+        recipientIds,
         definition.category,
       );
       if (enabled.isFailure()) {
         this.logger.error({
-          msg: "Failed to read notification preferences, rows were still stored",
+          msg: "Failed to read notification preferences, no email will be queued",
           errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
           operation: "dispatch-notification",
           type: input.type,
           error: enabled.error,
         });
-        return success({ created: created.length, emailed: 0 });
+        return null;
       }
       emailEnabled = enabled.value;
     }
 
-    const usersResult = await this.notificationRepository.findUsers([
-      ...new Set([...created.map((row) => row.recipientId), ...(actorId ? [actorId] : [])]),
-    ]);
+    // Only to know whether there is an address worth queueing for; the worker reads the
+    // recipient again at send time, which is what keeps a since-deactivated one unsent.
+    const users = await this.notificationRepository.findUsers(recipientIds);
 
-    if (usersResult.isFailure()) {
+    if (users.isFailure()) {
       this.logger.error({
-        msg: "Failed to look up notification recipients, rows were still stored",
+        msg: "Failed to look up notification recipients, no email will be queued",
         errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
         operation: "dispatch-notification",
         type: input.type,
-        error: usersResult.error,
+        error: users.error,
       });
-      return success({ created: created.length, emailed: 0 });
+      return null;
     }
 
-    const byId = new Map(usersResult.value.map((user) => [user.id, user]));
-    const actor = actorId === null ? undefined : byId.get(actorId);
-    const actorName = actor ? `${actor.firstName} ${actor.lastName}` : null;
+    const owed = new Set<string>();
 
-    let emailed = 0;
-
-    for (const row of created) {
-      if (emailEnabled && !emailEnabled.has(row.recipientId)) {
+    for (const user of users.value) {
+      if (emailEnabled && !emailEnabled.has(user.id)) {
         continue;
       }
-      const recipientEmail = byId.get(row.recipientId)?.email;
       // An ORCID sign-in that shares no address stores the ORCID id in `users.email`,
       // so the stored value is not always something the mail server can deliver to.
-      if (!recipientEmail || !z.string().email().safeParse(recipientEmail).success) {
+      if (!user.email || !z.string().email().safeParse(user.email).success) {
         continue;
       }
-
-      const sent = await this.notificationEmail.send(input.type, {
-        recipientEmail,
-        actorName,
-        resource,
-        params: parsed.data as NotificationParams<T>,
-      });
-
-      if (sent.isFailure()) {
-        this.logger.error({
-          msg: "Failed to send a notification email, the notification was still stored",
-          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-          operation: "dispatch-notification",
-          type: input.type,
-          recipientId: row.recipientId,
-          error: sent.error,
-        });
-        continue;
-      }
-
-      emailed += 1;
+      owed.add(user.id);
     }
 
-    return success({ created: created.length, emailed });
+    return owed;
   }
 }

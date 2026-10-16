@@ -26,7 +26,7 @@ function useCaseWith(overrides: { invitee?: unknown; organization?: unknown } = 
   const findName = vi
     .fn()
     .mockResolvedValue(overrides.organization ?? success("Photosynthesis Lab"));
-  const dispatch = vi.fn().mockResolvedValue(success({ created: 1, emailed: 1 }));
+  const dispatch = vi.fn().mockResolvedValue(success({ created: 1, queued: 1 }));
 
   const useCase = new NotifyOrganizationInviteeUseCase(
     { findIdByEmail } as unknown as UserRepository,

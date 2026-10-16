@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { StatusCodes } from "http-status-codes";
 
 import { eq, notifications, resourceGrants } from "@repo/database";
@@ -12,6 +11,7 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { queuedDeliveriesFor } from "../../../../test/notification-deliveries";
 import { TestHarness } from "../../../../test/test-harness";
 import { SharingRepository } from "../../../core/repositories/sharing.repository";
 import { UpdateGrantUseCase } from "./update-grant";
@@ -82,6 +82,8 @@ describe("updateGrant", () => {
   // no email: the category's email is reserved for being given access in the first
   // place.
   describe("notifying the grantee", () => {
+    const deliveriesFor = (userId: string) => queuedDeliveriesFor(testApp.database, userId);
+
     const notificationsFor = (userId: string) =>
       testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
 
@@ -111,7 +113,8 @@ describe("updateGrant", () => {
         resourceId: macro.id,
         params: { resourceName: name, role: "admin" },
       });
-      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+      // A level change owes no email, so there is nothing for the worker to pick up.
+      expect(await deliveriesFor(collaborator)).toEqual([]);
     });
 
     it("says nothing when the role is set to what it already was", async () => {
@@ -131,7 +134,7 @@ describe("updateGrant", () => {
       );
 
       expect(await notificationsFor(collaborator)).toEqual([]);
-      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+      expect(await deliveriesFor(collaborator)).toEqual([]);
     });
 
     // Both ways the telling can fail leave the role change itself standing.

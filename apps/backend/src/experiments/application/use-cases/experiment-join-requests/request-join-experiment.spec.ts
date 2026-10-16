@@ -6,6 +6,7 @@ import { eq, notifications } from "@repo/database";
 import { EmailAdapter } from "../../../../common/modules/email/services/email.adapter";
 import { assertSuccess, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { queuedDeliveriesFor } from "../../../../test/notification-deliveries";
 import { TestHarness } from "../../../../test/test-harness";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
 import { RequestJoinExperimentUseCase } from "./request-join-experiment";
@@ -62,7 +63,7 @@ describe("RequestJoinExperimentUseCase", () => {
     return experiment;
   }
 
-  it("notifies every admin and the owning org's owner, and mails each once", async () => {
+  it("notifies every admin and the owning org's owner, and queues one email each", async () => {
     const experiment = await seedExperiment();
 
     const result = await useCase.execute(experiment.id, requesterUserId, "let me in");
@@ -85,21 +86,18 @@ describe("RequestJoinExperimentUseCase", () => {
     // The requester hears nothing about their own request.
     expect(await notificationsFor(requesterUserId)).toHaveLength(0);
 
-    expect(emailAdapter.sendJoinRequestSubmittedNotification).toHaveBeenCalledTimes(2);
-    expect(emailAdapter.sendJoinRequestSubmittedNotification).toHaveBeenCalledWith(
-      experiment.id,
-      experiment.name,
-      "Joe Requester",
-      "owner@example.com",
-      "let me in",
-    );
-    expect(emailAdapter.sendJoinRequestSubmittedNotification).toHaveBeenCalledWith(
-      experiment.id,
-      experiment.name,
-      "Joe Requester",
-      "second-admin@example.com",
-      "let me in",
-    );
+    // The email is owed, not sent: the worker picks the row up and renders it.
+    for (const adminId of [ownerUserId, secondAdminUserId]) {
+      expect(await queuedDeliveriesFor(testApp.database, adminId)).toEqual([
+        {
+          notificationId: (await notificationsFor(adminId))[0].id,
+          type: "experiment_join_request_received",
+          channel: "email",
+          status: "pending",
+        },
+      ]);
+    }
+    expect(emailAdapter.sendJoinRequestSubmittedNotification).not.toHaveBeenCalled();
   });
 
   it("leaves the message out of the params when the requester sent none", async () => {
