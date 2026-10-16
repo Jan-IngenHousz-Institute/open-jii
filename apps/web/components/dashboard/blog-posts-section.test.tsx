@@ -27,7 +27,8 @@ describe("BlogPostsSection", () => {
             sys: { id: "1" },
             slug: "spring",
             title: "What's new this spring",
-            publishedDate: "2026-06-22T00:00:00.000Z",
+            // Midnight in Amsterdam is the evening before in UTC; the tile keeps the entered day.
+            publishedDate: "2026-06-22T00:00:00.000+02:00",
             featuredImage: null,
           },
           {

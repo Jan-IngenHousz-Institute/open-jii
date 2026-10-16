@@ -23,11 +23,11 @@ export function NotificationsSection() {
   const count = useUnreadNotificationCount();
   const markRead = useMarkNotificationsRead();
 
-  const items = unread.data?.items ?? [];
-  if (items.length === 0) return null;
+  const page = unread.data;
+  if (page === undefined || page.items.length === 0) return null;
 
-  // The bell's count, so the two never disagree; the list stops at five, and stands in until it loads.
-  const unreadCount = count.data?.count ?? items.length;
+  // The bell's count, so the two never disagree; the list's own total stands in until it loads.
+  const unreadCount = count.data?.count ?? page.totalCount;
 
   const openNotification = (notification: Notification) => {
     markRead.mutate({ ids: [notification.id] });
@@ -48,7 +48,7 @@ export function NotificationsSection() {
         <SeeAllLink href={`/${locale}/platform/notifications`}>{t("dashboard.seeAll")}</SeeAllLink>
       }
     >
-      <ul className="divide-border divide-y border-t">{items.map(renderRow)}</ul>
+      <ul className="divide-border divide-y border-t">{page.items.map(renderRow)}</ul>
     </DashboardSection>
   );
 }

@@ -148,6 +148,7 @@ export function NotificationRow({ notification, onOpen, layout = "feed" }: Notif
   });
 
   const handleOpen = () => onOpen(notification);
+  const time = <LocalTime value={notification.createdAt} locale={locale} isRelative />;
   const isRail = layout === "rail";
   const rowClass = isRail
     ? "hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-hidden grid w-full grid-cols-[1.375rem_minmax(0,1fr)] items-start gap-2.5 rounded-sm py-2 text-left transition-colors"
@@ -172,9 +173,7 @@ export function NotificationRow({ notification, onOpen, layout = "feed" }: Notif
           ) : null}
           {message}
         </p>
-        <p className="text-muted-foreground text-xs">
-          <LocalTime value={notification.createdAt} locale={locale} isRelative />
-        </p>
+        <p className="text-muted-foreground text-xs">{time}</p>
       </div>
     </>
   );
@@ -191,9 +190,7 @@ export function NotificationRow({ notification, onOpen, layout = "feed" }: Notif
         <p className={cn("text-sm", isUnread ? "font-medium" : "text-muted-foreground")}>
           {message}
         </p>
-        <p className="text-muted-foreground mt-0.5 text-xs">
-          <LocalTime value={notification.createdAt} locale={locale} isRelative />
-        </p>
+        <p className="text-muted-foreground mt-0.5 text-xs">{time}</p>
       </div>
     </>
   );

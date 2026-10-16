@@ -42,11 +42,10 @@ export function RecentlyOpenedRow({ resource, at, kind }: RecentlyOpenedRowProps
       ? t("dashboard.workbookVersion", { version: resource.latestVersion })
       : null;
   const detail = resource.type === "experiment" ? resource.organizationName : versionLabel;
-  const when = format.relative(at);
   const timeLabel =
     kind === "opened"
-      ? tExperiments("openedOn", { when })
-      : tExperiments("updatedOn", { date: when });
+      ? tExperiments("openedOn", { when: format.relative(at) })
+      : tExperiments("updatedOn", { date: format.date(at) });
 
   return (
     <li className="border-border/60 @container border-b py-3 last:border-b-0">

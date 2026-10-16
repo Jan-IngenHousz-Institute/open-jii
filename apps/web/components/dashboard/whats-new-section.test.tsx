@@ -5,7 +5,11 @@ import { describe, expect, it, vi } from "vitest";
 import { WhatsNewSection } from "./whats-new-section";
 
 const entries = [
-  { id: "note-1", title: "Choose which notifications arrive by email", publishedAt: "2026-10-02" },
+  {
+    id: "note-1",
+    title: "Choose which notifications arrive by email",
+    publishedAt: "2026-10-02T00:00:00.000+02:00",
+  },
   { id: "note-2", title: "Sort any list by up to two columns", publishedAt: "2026-09-24" },
 ];
 
@@ -18,6 +22,8 @@ describe("WhatsNewSection", () => {
 
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
     expect(screen.getByText("Sort any list by up to two columns")).toBeInTheDocument();
+    // The day as entered, not the UTC moment it falls on.
+    expect(screen.getByText("Oct 2")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "dashboard.seeAll" }));
     expect(opened).toHaveBeenCalledTimes(1);

@@ -6,11 +6,11 @@ import type { VisitedResourceType } from "@repo/api/domains/visit/visit.schema";
 export const RECENTLY_OPENED_LIMIT = 5;
 
 /**
- * Client options for the reads behind the reader's own rows. Access can change between
- * visits, so nothing outlives the home and a row the reader has since lost never shows from
- * an earlier mount's cache. The server's prefetched answer is fresh, hence the stale time.
+ * Client options for the reads behind the reader's own rows. Visits and access change
+ * between two looks at the home, so nothing is kept once it unmounts and every mount reads
+ * again, one the router replays from its cache included.
  */
-export const READ_EACH_VISIT = { gcTime: 0, staleTime: 30_000, retry: false };
+export const READ_EACH_VISIT = { gcTime: 0, staleTime: 0, retry: false };
 
 /** One type's newest visits, or every type's with none given. */
 export const recentlyOpenedQuery = (utils: QueryUtils, type?: VisitedResourceType) =>

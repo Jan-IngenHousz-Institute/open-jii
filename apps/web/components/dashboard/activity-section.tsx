@@ -42,7 +42,7 @@ export function ActivitySection({ locale }: ActivitySectionProps) {
     current: scoped.measurements30d,
     previous: scoped.previousMeasurements,
   });
-  const isRising = change !== null && change >= 0;
+  const isRising = change !== null && change > 0;
   const changeLabel =
     change === null
       ? null

@@ -68,6 +68,17 @@ describe("ActivitySection", () => {
     expect(screen.getByText("dashboard.activity.contributors")).toBeInTheDocument();
   });
 
+  it("does not colour an unchanged month as a rise", async () => {
+    server.mount(contract.metrics.getScopedMetrics, {
+      body: { ...mine, scoped: { ...mine.scoped, previousMeasurements: 60_120 } },
+    });
+    server.mount(contract.metrics.getPublicMetrics, { body: platform });
+
+    render(<ActivitySection locale="en-US" />);
+
+    expect(await screen.findByText("0%")).toHaveClass("bg-muted");
+  });
+
   it("puts the community total beside the reader's figures", async () => {
     server.mount(contract.metrics.getScopedMetrics, { body: mine });
     server.mount(contract.metrics.getPublicMetrics, { body: platform });

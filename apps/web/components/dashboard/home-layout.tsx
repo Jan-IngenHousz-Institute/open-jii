@@ -30,7 +30,7 @@ export function HomeLayout({ sections }: { sections: HomeSection[] }) {
 
   // A group whose sections all render nothing is empty, and hiding it keeps its gap away.
   const mainClassName = "flex min-w-0 flex-col gap-8 empty:hidden";
-  // The rail reads as one column split by rules rather than spaced apart, as the sketch draws it.
+  // The rail reads as one column split by rules; the main column spaces its sections apart.
   const railClassName =
     "divide-border flex min-w-0 flex-col divide-y empty:hidden [&>*:first-child]:pt-0 [&>*:last-child]:pb-0 [&>*]:py-5";
 

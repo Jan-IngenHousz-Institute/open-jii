@@ -25,8 +25,9 @@ export function WhatsNewSection({ entries, locale }: WhatsNewSectionProps) {
 
   if (entries.length === 0) return null;
 
-  // Release notes carry a day, not a moment, so UTC renders the same on the server and here.
+  // The day as the editor entered it: its offset could move the moment to another day in UTC.
   const day = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", timeZone: "UTC" });
+  const dayOf = (value: string) => day.format(new Date(`${value.slice(0, 10)}T00:00:00Z`));
 
   const openPanel = () => window.dispatchEvent(new Event(WHATS_NEW_OPEN_EVENT));
 
@@ -34,7 +35,7 @@ export function WhatsNewSection({ entries, locale }: WhatsNewSectionProps) {
     <li key={entry.id} className="flex items-baseline justify-between gap-3">
       <span className="text-foreground min-w-0">{entry.title}</span>
       <time dateTime={entry.publishedAt} className="text-muted-foreground shrink-0 text-xs">
-        {day.format(new Date(entry.publishedAt))}
+        {dayOf(entry.publishedAt)}
       </time>
     </li>
   );

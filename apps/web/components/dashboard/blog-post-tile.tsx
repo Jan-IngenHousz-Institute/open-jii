@@ -11,11 +11,11 @@ interface BlogPostTileProps {
 /** A post as its picture with the date and title over it, three to a row. */
 export function BlogPostTile({ post, locale }: BlogPostTileProps) {
   const image = post.featuredImage;
-  // A post carries a day, not a moment, so UTC reads the same wherever it renders.
+  // The day as the editor entered it: its offset could move the moment to another day in UTC.
   const published =
     typeof post.publishedDate === "string"
       ? new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(
-          new Date(post.publishedDate),
+          new Date(`${post.publishedDate.slice(0, 10)}T00:00:00Z`),
         )
       : null;
 
@@ -29,7 +29,8 @@ export function BlogPostTile({ post, locale }: BlogPostTileProps) {
           src={image.url}
           alt={image.title ?? ""}
           fill
-          sizes="(max-width: 768px) 100vw, 25vw"
+          // One tile spans the column only while the column is narrow; three share it otherwise.
+          sizes="(max-width: 800px) 100vw, 320px"
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
       ) : null}

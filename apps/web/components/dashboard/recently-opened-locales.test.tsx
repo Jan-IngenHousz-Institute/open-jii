@@ -98,7 +98,8 @@ describe("Recently opened translations", () => {
 
     await screen.findByRole("heading", { name: "Je experimenten" });
     expect(screen.getByText("Kijker")).toBeInTheDocument();
-    expect(screen.getByText(/^Bijgewerkt/)).toBeInTheDocument();
+    // A date, which "Aktualisiert am" in German needs, rather than a relative time.
+    expect(screen.getByText(/^Bijgewerkt/)).not.toHaveTextContent(/geleden/);
     expect(screen.queryByText(/^Geopend/)).toBeNull();
   });
 
