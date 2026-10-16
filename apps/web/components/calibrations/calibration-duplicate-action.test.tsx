@@ -23,6 +23,12 @@ function UnsavedEdit() {
   return null;
 }
 
+/** Stands in for the definition page while an edit taken back to the saved value is still saving. */
+function SaveLanding() {
+  useReportAutosaveStatus({ status: "saving", error: null, hasUnsavedChanges: false });
+  return null;
+}
+
 const definition = createCalibrationDefinitionDetail({
   name: "PAR bench",
   family: "minipar",
@@ -129,6 +135,18 @@ describe("CalibrationDuplicateAction", () => {
     render(
       <AutosaveStatusProvider>
         <UnsavedEdit />
+        <CalibrationDuplicateAction definition={definition} />
+      </AutosaveStatusProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: /duplicate/i })).toBeDisabled();
+  });
+
+  // The save still landing changes what is saved, so the copy would miss what comes of it.
+  it("waits for a save that is still landing", () => {
+    render(
+      <AutosaveStatusProvider>
+        <SaveLanding />
         <CalibrationDuplicateAction definition={definition} />
       </AutosaveStatusProvider>,
     );
