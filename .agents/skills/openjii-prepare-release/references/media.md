@@ -1,7 +1,8 @@
 # Capture release media
 
 Start with a shot list tied to included changes: route/screen, state, theme, viewport, intended note
-and what the frame proves. Do not capture pending UI from an older dev deployment and label it as
+and what the frame proves. [The release note guide](release-notes.md#pictures) decides which changes
+get a picture. Do not capture pending UI from an older dev deployment and label it as
 the candidate. Record the app SHA/build, URL or native version, timestamp, account type, flag state,
 file path and review status. An unknown deployed SHA is a gap in evidence.
 
