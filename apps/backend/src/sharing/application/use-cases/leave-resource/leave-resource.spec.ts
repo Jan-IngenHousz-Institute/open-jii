@@ -11,7 +11,13 @@ import {
 } from "@repo/database";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
-import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
+import {
+  AppError,
+  assertFailure,
+  assertSuccess,
+  failure,
+  success,
+} from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { NotificationRepository } from "../../../../notifications/core/repositories/notification.repository";
 import { TestHarness } from "../../../../test/test-harness";
@@ -431,6 +437,45 @@ describe("leaveResource", () => {
       const viewer = await addViewer("macro", macro.id);
       vi.spyOn(testApp.module.get(NotificationRepository), "insertMany").mockResolvedValue(
         failure(AppError.internal("notifications unavailable")),
+      );
+
+      assertSuccess(await leave.execute(viewer, "macro", macro.id));
+
+      expect(await grantsFor("macro", macro.id, viewer)).toHaveLength(0);
+      expect(await allNotifications()).toEqual([]);
+    });
+
+    it("still leaves when the resource name cannot be read", async () => {
+      const macro = await testApp.createMacro({ name: "Name Down", createdBy: owner });
+      const viewer = await addViewer("macro", macro.id);
+      vi.spyOn(testApp.module.get(SharingRepository), "findResourceName").mockResolvedValue(
+        failure(AppError.internal("names unavailable")),
+      );
+
+      assertSuccess(await leave.execute(viewer, "macro", macro.id));
+
+      expect(await grantsFor("macro", macro.id, viewer)).toHaveLength(0);
+      expect(await allNotifications()).toEqual([]);
+    });
+
+    it("still leaves when the resource has no name to read", async () => {
+      const macro = await testApp.createMacro({ name: "Name Gone", createdBy: owner });
+      const viewer = await addViewer("macro", macro.id);
+      vi.spyOn(testApp.module.get(SharingRepository), "findResourceName").mockResolvedValue(
+        success(null),
+      );
+
+      assertSuccess(await leave.execute(viewer, "macro", macro.id));
+
+      expect(await grantsFor("macro", macro.id, viewer)).toHaveLength(0);
+      expect(await allNotifications()).toEqual([]);
+    });
+
+    it("still leaves when the admins cannot be looked up", async () => {
+      const macro = await testApp.createMacro({ name: "Admins Down", createdBy: owner });
+      const viewer = await addViewer("macro", macro.id);
+      vi.spyOn(testApp.module.get(SharingRepository), "listAdminIds").mockResolvedValue(
+        failure(AppError.internal("admins unavailable")),
       );
 
       assertSuccess(await leave.execute(viewer, "macro", macro.id));

@@ -370,5 +370,19 @@ describe("RedeemJoinCodeUseCase", () => {
       expect(await grantsFor(experiment.id, studentId)).toHaveLength(1);
       expect(await allNotifications()).toEqual([]);
     });
+
+    it("still joins when the admins cannot be looked up", async () => {
+      const { experiment, code } = await seedCodeWithGrantAdmin();
+      vi.spyOn(joinRequestRepository, "listAdminIds").mockResolvedValue(
+        failure(AppError.internal("admins unavailable")),
+      );
+
+      const result = await useCase.execute(code.code, studentId);
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ experimentId: experiment.id, outcome: "joined" });
+      expect(await grantsFor(experiment.id, studentId)).toHaveLength(1);
+      expect(await allNotifications()).toEqual([]);
+    });
   });
 });
