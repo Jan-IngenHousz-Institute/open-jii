@@ -82,6 +82,39 @@ Python and JavaScript examples using `json`, `ctx`, and `ctx.$device`.
 
 ![Workbook version history with the current and earlier published versions](/img/guide/web/workbook-version-history.png)
 
+## Inspect measurement outputs
+
+Open **Timeseries** on an output cell to view a supported measurement. openJII
+recognizes the data itself, so a protocol labeled **Generic** can still show a
+MultispeQ or Ambit visualization. This also applies to saved results and to each
+device in a run with several devices.
+
+MultispeQ charts use the source protocol to reconstruct the pulse sequence and
+light settings. Inline JSON or YAML command outputs use the command stored in the
+cell. The axis is labeled **Modeled protocol time (s)**. A pinned
+workbook uses its saved protocol definition. If the definition is missing or the
+data cannot be decoded, the tab explains the problem instead of inventing a time
+axis. If recorded sub-protocols no longer match the definition, the chart reports
+the mismatch and leaves every reading available in **JSON**.
+
+Ambit `ambit.trace/3` results supply their own timestamps or sampling intervals.
+The main plot shows **Fluorescence / reference**, dividing the 630 nm signal by
+its reference at matching timestamps. This is a signal ratio, not Fv/Fm. Zero
+reference readings use the mean measured reference, as in the Ambyte trace
+analysis; the chart states when this substitution is used. Missing, invalid, or
+misaligned reference channels show an explanation and the raw channels instead.
+
+Temperature has its own plot in °C. A single reading appears as a value with its
+time. Expand **Raw detector channels** to inspect each channel on its own scale
+with the original values. Estimated timing is labeled in the chart heading.
+Multiple traces remain separate. Invalid series and data beyond the chart limits
+show an explanation; **JSON** retains the complete result.
+
+**Table** and **JSON** remain available for every result. An expandable numeric
+array in the table uses sample index, which is not necessarily elapsed time.
+Ordinary arrays and scalar readings do not acquire a Timeseries tab merely
+because they contain numbers.
+
 ## Edit and publish changes
 
 The workbook's owner, anyone with **Can edit** on the workbook, and owners and

@@ -345,6 +345,7 @@ const SortableCellGroup = memo(function SortableCellGroup({
                 promptedQuestionId={promptedQuestionId}
                 onQuestionAnswered={onQuestionAnswered}
                 readOnly={readOnly}
+                entitySnapshots={entitySnapshots}
               />
             </div>
           </div>

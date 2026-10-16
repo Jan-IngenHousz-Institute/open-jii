@@ -1389,3 +1389,24 @@ export function createDeviceGroupMember(
     ...overrides,
   };
 }
+interface AmbitTraceFixture {
+  schema: string;
+  sensor_id: string;
+  device: string;
+  time: { duration_ms: number };
+  series: Record<string, unknown>;
+}
+
+export function createAmbitTrace(overrides: Partial<AmbitTraceFixture> = {}): AmbitTraceFixture {
+  return {
+    schema: "ambit.trace/3",
+    sensor_id: "fixture-sensor",
+    device: "Test Ambit",
+    time: { duration_ms: 300 },
+    series: {
+      fluo_630_signal: { u: "count", t0: 0, dt: 0.1, v: [120, 160, 140] },
+      leaf_temp: { u: "Cel", t: [0.05, 0.25], v: [23.5, 23.7] },
+    },
+    ...overrides,
+  };
+}

@@ -152,13 +152,24 @@ describe("ProtocolPicker", () => {
 
   it("shows loading and error feedback instead of an empty result", async () => {
     const user = userEvent.setup();
-    const spy = server.mount(contract.protocols.listProtocols, { status: 500, delay: 50 });
+    let releaseError: () => void = () => undefined;
+    const errorResponse = new Promise<void>((resolve) => {
+      releaseError = resolve;
+    });
+    const spy = server.mount(contract.protocols.listProtocols, {
+      status: 500,
+      unblock: errorResponse,
+    });
 
     renderPicker();
-    await user.click(screen.getByRole("button", { name: /add protocol/i }));
+    try {
+      await user.click(screen.getByRole("button", { name: /add protocol/i }));
 
-    expect(screen.getByRole("status")).toHaveTextContent("Loading protocols...");
-    expect(screen.queryByText("No protocols available")).not.toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent("Loading protocols...");
+      expect(screen.queryByText("No protocols available")).not.toBeInTheDocument();
+    } finally {
+      releaseError();
+    }
     expect(await screen.findByText("Unable to load protocols.")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Try again" }));

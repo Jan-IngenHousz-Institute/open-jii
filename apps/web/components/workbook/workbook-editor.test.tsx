@@ -4,6 +4,7 @@ import {
   createMarkdownCell,
   createOutputCell,
   createProtocolCell,
+  createProtocolDetail,
   createQuestionCell,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
@@ -26,6 +27,16 @@ vi.mock("./workbook-code-editor", () => ({
     <pre data-testid="code-editor">{value}</pre>
   ),
 }));
+
+vi.mock("@/components/charts/plotly-chart", async (importOriginal) => {
+  const actual: Record<string, unknown> = await importOriginal();
+  return {
+    ...actual,
+    PlotlyChart: ({ data }: { data: unknown }) => (
+      <div data-testid="plotly-chart" data-traces={JSON.stringify(data)} />
+    ),
+  };
+});
 
 function renderEditor(overrides: Partial<Parameters<typeof WorkbookEditor>[0]> = {}) {
   const onCellsChange = vi.fn();
@@ -184,6 +195,50 @@ describe("WorkbookEditor — header gating", () => {
 });
 
 describe("WorkbookEditor — cell rendering", () => {
+  it("plots pinned Design output from the saved protocol without fetching the edited live protocol", async () => {
+    const savedDefinition = {
+      label: "ABS",
+      pulses: [3],
+      pulse_distance: [1000],
+      detectors: [[3]],
+      pulsed_lights: [[1]],
+    };
+    const savedCode = [{ _protocol_set_: [savedDefinition] }];
+    const liveProtocol = createProtocolDetail({
+      family: "generic",
+      code: [{ _protocol_set_: [{ ...savedDefinition, pulses: [4] }] }],
+    });
+    const liveFetch = server.mount(contract.protocols.getProtocol, { body: liveProtocol });
+    const producer = createProtocolCell({
+      payload: { protocolId: liveProtocol.id, version: 1, name: liveProtocol.name },
+    });
+    const output = createOutputCell({
+      producedBy: producer.id,
+      data: { sample_raw: [{ set: [{ label: "ABS", data_raw: [10, 20, 30] }] }] },
+    });
+
+    renderEditor({
+      cells: [producer, output],
+      readOnly: true,
+      entitySnapshots: {
+        protocols: { [liveProtocol.id]: { code: savedCode, family: "generic" } },
+        macros: {},
+      },
+    });
+
+    expect(JSON.parse(screen.getByTestId("code-editor").textContent)).toEqual(savedCode);
+    await userEvent.setup().click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+
+    const chart = await screen.findByTestId("plotly-chart");
+    expect(JSON.parse(chart.getAttribute("data-traces") ?? "")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "ABS · 530 nm (green, body) [10-30]", y: [0, 0.5, 1] }),
+      ]),
+    );
+    expect(screen.queryByText("output.multispeqProtocolMismatch")).not.toBeInTheDocument();
+    expect(liveFetch.callCount).toBe(0);
+  });
+
   it("assigns sequential execution numbers to executable cells only", () => {
     const cells: WorkbookCell[] = [
       createMarkdownCell({ id: "md" }),
