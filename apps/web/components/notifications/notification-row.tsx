@@ -130,9 +130,11 @@ const TYPE_PATH: Record<NotificationType, (resource: NotificationResource) => st
 interface NotificationRowProps {
   notification: Notification;
   onOpen: (notification: Notification) => void;
+  /** The bell and the page list rows edge to edge; the home's side column sets the icon in a disc. */
+  layout?: "feed" | "rail";
 }
 
-export function NotificationRow({ notification, onOpen }: NotificationRowProps) {
+export function NotificationRow({ notification, onOpen, layout = "feed" }: NotificationRowProps) {
   const { t } = useTranslation("notifications");
   const locale = useLocale();
 
@@ -146,10 +148,38 @@ export function NotificationRow({ notification, onOpen }: NotificationRowProps) 
   });
 
   const handleOpen = () => onOpen(notification);
-  const rowClass =
-    "hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-hidden flex w-full items-start gap-3 px-4 py-3 text-left transition-colors";
+  const isRail = layout === "rail";
+  const rowClass = isRail
+    ? "hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-hidden grid w-full grid-cols-[1.375rem_minmax(0,1fr)] items-start gap-2.5 rounded-sm py-2 text-left transition-colors"
+    : "hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-hidden flex w-full items-start gap-3 px-4 py-3 text-left transition-colors";
 
-  const content = (
+  const railContent = (
+    <>
+      <span
+        aria-hidden="true"
+        className="bg-secondary text-secondary-foreground grid size-[1.375rem] place-items-center rounded-full"
+      >
+        <Icon className="size-3" />
+      </span>
+      <div className="min-w-0">
+        <p className={cn("text-sm", !isUnread && "text-muted-foreground")}>
+          {isUnread ? (
+            <span
+              aria-hidden="true"
+              data-testid="notification-unread-dot"
+              className="bg-primary mr-1.5 inline-block size-1.5 rounded-full align-middle"
+            />
+          ) : null}
+          {message}
+        </p>
+        <p className="text-muted-foreground text-xs">
+          <LocalTime value={notification.createdAt} locale={locale} isRelative />
+        </p>
+      </div>
+    </>
+  );
+
+  const feedContent = (
     <>
       <span
         aria-hidden="true"
@@ -171,14 +201,14 @@ export function NotificationRow({ notification, onOpen }: NotificationRowProps) 
   if (path) {
     return (
       <IntentLink href={`/${locale}/platform/${path}`} onClick={handleOpen} className={rowClass}>
-        {content}
+        {isRail ? railContent : feedContent}
       </IntentLink>
     );
   }
 
   return (
     <button type="button" onClick={handleOpen} className={rowClass}>
-      {content}
+      {isRail ? railContent : feedContent}
     </button>
   );
 }

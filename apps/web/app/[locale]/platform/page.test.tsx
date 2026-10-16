@@ -106,7 +106,7 @@ describe("PlatformHome", () => {
     expect(queries).toContain('"listHomeExperiments"');
     expect(queries).toContain('"visibility":"public"');
     expect(queries).toContain('"readState":"unread"');
-    expect(queries).toContain('"getUnreadNotificationCount"');
+    expect(queries).not.toContain('"getUnreadNotificationCount"');
     expect(queries).toContain('"principal":"user-1"');
   });
 });

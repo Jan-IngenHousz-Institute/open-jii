@@ -74,8 +74,8 @@ describe("ActivitySection", () => {
 
     render(<ActivitySection locale="en-US" />);
 
-    expect(await screen.findByText("dashboard.activity.communityLabel")).toBeInTheDocument();
-    expect(screen.getByText("18.9M")).toBeInTheDocument();
+    const total = await screen.findByText("dashboard.activity.community");
+    expect(total.closest("li")).toHaveAttribute("title", "18,883,130");
   });
 
   it("drops the community total when the platform snapshot is missing", async () => {
@@ -85,7 +85,7 @@ describe("ActivitySection", () => {
     render(<ActivitySection locale="en-US" />);
 
     await screen.findByText("60.1K");
-    expect(screen.queryByText("dashboard.activity.communityLabel")).not.toBeInTheDocument();
+    expect(screen.queryByText("dashboard.activity.community")).not.toBeInTheDocument();
   });
 
   it("holds the section's place while the figures are still loading", async () => {

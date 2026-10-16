@@ -18,19 +18,26 @@ vi.mock("~/lib/contentful", () => ({
   getContentfulClients: mockGetContentfulClients,
 }));
 
-vi.mock("@repo/cms/article", () => ({
-  ArticleTileGrid: (props: { articles: unknown[]; horizontal?: boolean }) => (
-    <div data-testid="article-grid" data-horizontal={String(props.horizontal)}>
-      {props.articles.length} articles
-    </div>
-  ),
-}));
-
 describe("BlogPostsSection", () => {
-  it("renders the posts as tiles under a heading that links to the blog", async () => {
+  it("renders each post as a tile with its date, under a heading that links to the blog", async () => {
     mockGqlClient.pageBlogPostCollection.mockResolvedValue({
       pageBlogPostCollection: {
-        items: [{ sys: { id: "1" } }, { sys: { id: "2" } }],
+        items: [
+          {
+            sys: { id: "1" },
+            slug: "spring",
+            title: "What's new this spring",
+            publishedDate: "2026-06-22T00:00:00.000Z",
+            featuredImage: null,
+          },
+          {
+            sys: { id: "2" },
+            slug: "hackathon",
+            title: "Reflection on the hackathon",
+            publishedDate: "2026-03-30T00:00:00.000Z",
+            featuredImage: null,
+          },
+        ],
       },
     });
 
@@ -39,8 +46,12 @@ describe("BlogPostsSection", () => {
     render(section);
 
     expect(screen.getByRole("heading", { name: "dashboard.recentArticles" })).toBeInTheDocument();
-    expect(screen.getByTestId("article-grid")).toHaveTextContent("2 articles");
-    expect(screen.getByTestId("article-grid")).toHaveAttribute("data-horizontal", "true");
+    expect(screen.getByRole("link", { name: /What's new this spring/ })).toHaveAttribute(
+      "href",
+      "/en-US/blog/spring",
+    );
+    expect(screen.getByText("June 22, 2026")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Reflection on the hackathon/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "dashboard.seeAll" })).toHaveAttribute(
       "href",
       "/en-US/blog",

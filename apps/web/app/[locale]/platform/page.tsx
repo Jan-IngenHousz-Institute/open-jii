@@ -19,7 +19,6 @@ import type { WhatsNewEntry } from "@/components/dashboard/whats-new-section";
 import { PrefetchedQueries } from "@/components/server-prefetch/prefetched-queries";
 import { fetchWebReleaseNotes } from "@/components/whats-new/fetch-release-notes";
 import { notificationsListQuery } from "@/hooks/notifications/useNotifications/notifications-list-query";
-import { unreadCountQuery } from "@/hooks/notifications/useUnreadNotificationCount/unread-count-query";
 import type { Metadata } from "next";
 import { auth } from "~/app/actions/auth";
 
@@ -75,11 +74,12 @@ export default async function PlatformHome({ params }: PlatformPageProps) {
         recentlyOpenedQuery(utils),
         homeExperimentsQuery(utils),
         publicExperimentsQuery(utils),
+        // Not the unread count: the sidebar's bell reads that key, and it hydrates before the page.
         notificationsListQuery(utils, userId, UNREAD_NOTIFICATIONS_INPUT),
-        unreadCountQuery(utils, userId),
       ]}
     >
-      <div className="flex flex-col gap-6">
+      {/* The shell widens pages on very large screens; the home keeps its columns readable. */}
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <HomeNotice locale={locale} />
         <GetStartedSection />
         <HomeLayout sections={sections} />

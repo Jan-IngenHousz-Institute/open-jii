@@ -29,18 +29,24 @@ export function HomeLayout({ sections }: { sections: HomeSection[] }) {
   );
 
   // A group whose sections all render nothing is empty, and hiding it keeps its gap away.
-  const groupClassName = "flex min-w-0 flex-col gap-8 empty:hidden";
+  const mainClassName = "flex min-w-0 flex-col gap-8 empty:hidden";
+  // The rail reads as one column split by rules rather than spaced apart, as the sketch draws it.
+  const railClassName =
+    "divide-border flex min-w-0 flex-col divide-y empty:hidden [&>*:first-child]:pt-0 [&>*:last-child]:pb-0 [&>*]:py-5";
 
   return (
     <div className="@container">
       <div className="@4xl:grid @4xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] @4xl:grid-rows-[auto_1fr] @4xl:items-start @4xl:gap-x-10 @4xl:gap-y-0 flex flex-col gap-8">
-        <div className={`@4xl:col-[2] @4xl:row-[1] @4xl:mb-8 ${groupClassName}`}>
+        <div data-home-lead className={`@4xl:col-[2] @4xl:row-[1] @4xl:pb-5 ${railClassName}`}>
           {lead.map(renderSection)}
         </div>
-        <div className={`@4xl:col-[1] @4xl:row-[1/3] ${groupClassName}`}>
+        <div className={`@4xl:col-[1] @4xl:row-[1/3] ${mainClassName}`}>
           {rest.filter((section) => section.column === "main").map(renderSection)}
         </div>
-        <div className={`@4xl:col-[2] @4xl:row-[2] ${groupClassName}`}>
+        {/* A rule under the rail's head, but only while it shows anything. */}
+        <div
+          className={`@4xl:col-[2] @4xl:row-[2] @4xl:[[data-home-lead]:not(:empty)~&]:border-t @4xl:[[data-home-lead]:not(:empty)~&]:pt-5 ${railClassName}`}
+        >
           {rest.filter((section) => section.column === "rail").map(renderSection)}
         </div>
       </div>

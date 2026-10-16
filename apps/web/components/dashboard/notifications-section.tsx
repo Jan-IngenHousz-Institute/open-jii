@@ -8,7 +8,6 @@ import { useLocale } from "@/hooks/useLocale";
 
 import type { Notification } from "@repo/api/domains/notification/notification.schema";
 import { useTranslation } from "@repo/i18n";
-import { Card } from "@repo/ui/components/card";
 
 import { UNREAD_NOTIFICATIONS_INPUT } from "./dashboard-queries";
 import { DashboardSection } from "./dashboard-section";
@@ -27,7 +26,7 @@ export function NotificationsSection() {
   const items = unread.data?.items ?? [];
   if (items.length === 0) return null;
 
-  // The bell's count, so the two never disagree; the list stops at five.
+  // The bell's count, so the two never disagree; the list stops at five, and stands in until it loads.
   const unreadCount = count.data?.count ?? items.length;
 
   const openNotification = (notification: Notification) => {
@@ -36,7 +35,7 @@ export function NotificationsSection() {
 
   const renderRow = (notification: Notification) => (
     <li key={notification.id}>
-      <NotificationRow notification={notification} onOpen={openNotification} />
+      <NotificationRow notification={notification} onOpen={openNotification} layout="rail" />
     </li>
   );
 
@@ -49,9 +48,7 @@ export function NotificationsSection() {
         <SeeAllLink href={`/${locale}/platform/notifications`}>{t("dashboard.seeAll")}</SeeAllLink>
       }
     >
-      <Card className="gap-0 overflow-hidden py-0">
-        <ul className="divide-y">{items.map(renderRow)}</ul>
-      </Card>
+      <ul className="divide-border divide-y border-t">{items.map(renderRow)}</ul>
     </DashboardSection>
   );
 }

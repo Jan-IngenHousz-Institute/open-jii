@@ -49,14 +49,14 @@
     "activity": {
       "title": "Jouw afgelopen 30 dagen",
       "label": "Jouw metingen",
-      "contributors_one": "{{count}} bijdrager",
-      "contributors_other": "{{count}} bijdragers",
-      "communityLabel": "Community",
+      "contributors_one": "<b>{{count}}</b> bijdrager",
+      "contributors_other": "<b>{{count}}</b> bijdragers",
       "trend": "Dagelijkse metingen",
-      "devices_one": "{{count}} apparaat rapporteert",
-      "devices_other": "{{count}} apparaten rapporteren",
-      "activeExperiments_one": "{{count}} actief experiment",
-      "activeExperiments_other": "{{count}} actieve experimenten"
+      "devices_one": "<b>{{count}}</b> apparaat",
+      "devices_other": "<b>{{count}}</b> apparaten",
+      "activeExperiments_one": "<b>{{count}}</b> actief experiment",
+      "activeExperiments_other": "<b>{{count}}</b> actieve experimenten",
+      "community": "Community <b>{{value}}</b>"
     }
   },
   "experiment": {

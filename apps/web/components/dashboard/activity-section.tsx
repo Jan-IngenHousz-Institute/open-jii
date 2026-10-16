@@ -1,13 +1,15 @@
 "use client";
 
-import { MetricStatCard } from "@/components/metrics/metric-stat-card";
+import { displayableChange } from "@/components/metrics/metric-stat-card";
 import { TrendSparkline } from "@/components/metrics/trend-sparkline";
 import { useMyScopedMetrics } from "@/hooks/metrics/useMyScopedMetrics/useMyScopedMetrics";
 import { usePublicMetrics } from "@/hooks/metrics/usePublicMetrics/usePublicMetrics";
 import { formatLocaleNumber } from "@/util/format-locale-number";
 
 import { useTranslation } from "@repo/i18n";
+import { Trans } from "@repo/i18n/client";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import { cn } from "@repo/ui/lib/utils";
 
 import { DashboardSection } from "./dashboard-section";
 
@@ -22,7 +24,7 @@ export function ActivitySection({ locale }: ActivitySectionProps) {
   const { data: platform } = usePublicMetrics();
 
   if (isPending) {
-    return <Skeleton aria-busy="true" className="h-56" />;
+    return <Skeleton aria-busy="true" className="h-48" />;
   }
 
   const scoped = mine?.scoped ?? null;
@@ -33,58 +35,103 @@ export function ActivitySection({ locale }: ActivitySectionProps) {
   }
 
   const compact = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
-  // Warehouse days are UTC.
-  const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
-
   const windowDays = scoped.activity.length;
-  const window = t("window", { days: windowDays });
   const community = platform?.community ?? null;
-  const peak = scoped.peak;
+
+  const change = displayableChange({
+    current: scoped.measurements30d,
+    previous: scoped.previousMeasurements,
+  });
+  const isRising = change !== null && change >= 0;
+  const changeLabel =
+    change === null
+      ? null
+      : new Intl.NumberFormat(locale, {
+          style: "percent",
+          maximumFractionDigits: 0,
+          signDisplay: "exceptZero",
+        }).format(change);
+
+  const figure = <b className="text-foreground font-semibold tabular-nums" />;
 
   return (
     <DashboardSection id="last-30-days" title={t("dashboard.activity.title")}>
-      <MetricStatCard
+      <div className="flex flex-col gap-1">
+        <span className="text-muted-foreground text-xs font-medium">
+          {t("dashboard.activity.label")}
+        </span>
+        <span
+          className="flex items-baseline gap-2"
+          title={formatLocaleNumber(scoped.measurements30d, locale)}
+        >
+          <span className="text-2xl font-bold tabular-nums tracking-tight">
+            {compact.format(scoped.measurements30d)}
+          </span>
+          {changeLabel === null ? null : (
+            <span
+              className={cn(
+                "rounded-full px-1.5 text-xs font-semibold tabular-nums",
+                isRising
+                  ? "bg-status-active text-status-active-foreground"
+                  : "bg-muted text-muted-foreground",
+              )}
+            >
+              {changeLabel}
+            </span>
+          )}
+        </span>
+        <span className="text-muted-foreground text-xs">
+          {t("previousWindow", {
+            value: compact.format(scoped.previousMeasurements),
+            days: windowDays,
+          })}
+        </span>
+      </div>
+
+      <TrendSparkline
+        days={scoped.activity}
+        mark="line"
+        peakDate={scoped.peak?.date ?? null}
+        seriesName={t("dashboard.activity.trend")}
         locale={locale}
-        label={t("dashboard.activity.label")}
-        value={compact.format(scoped.measurements30d)}
-        title={formatLocaleNumber(scoped.measurements30d, locale)}
-        comparison={{ current: scoped.measurements30d, previous: scoped.previousMeasurements }}
-        note={t("previousWindow", {
-          value: compact.format(scoped.previousMeasurements),
-          days: windowDays,
-        })}
-        context={
-          peak === null
-            ? window
-            : t("peak", {
-                value: compact.format(peak.measurements),
-                date: day.format(new Date(`${peak.date}T00:00:00Z`)),
-              })
-        }
-        chart={
-          <TrendSparkline
-            days={scoped.activity}
-            mark="bars"
-            peakDate={peak?.date ?? null}
-            seriesName={t("dashboard.activity.trend")}
-            locale={locale}
-            className="h-10 w-full"
-          />
-        }
+        className="h-11 w-full"
       />
 
-      <ul className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-sm">
-        <li>{t("dashboard.activity.activeExperiments", { count: scoped.activeExperiments30d })}</li>
-        <li>{t("dashboard.activity.contributors", { count: scoped.contributors30d })}</li>
+      <ul className="text-muted-foreground flex flex-wrap gap-x-3.5 gap-y-1.5 border-t pt-2 text-xs">
+        <li>
+          <Trans
+            t={t}
+            i18nKey="dashboard.activity.activeExperiments"
+            count={scoped.activeExperiments30d}
+            components={{ b: figure }}
+          />
+        </li>
+        <li>
+          <Trans
+            t={t}
+            i18nKey="dashboard.activity.contributors"
+            count={scoped.contributors30d}
+            components={{ b: figure }}
+          />
+        </li>
         {scoped.devices30d === null ? null : (
-          <li>{t("dashboard.activity.devices", { count: scoped.devices30d })}</li>
+          <li>
+            <Trans
+              t={t}
+              i18nKey="dashboard.activity.devices"
+              count={scoped.devices30d}
+              components={{ b: figure }}
+            />
+          </li>
         )}
         {community === null ? null : (
           <li title={formatLocaleNumber(community.measurements30d, locale)}>
-            {t("dashboard.activity.communityLabel")}{" "}
-            <span className="text-foreground font-medium tabular-nums">
-              {compact.format(community.measurements30d)}
-            </span>
+            <Trans
+              t={t}
+              i18nKey="dashboard.activity.community"
+              values={{ value: compact.format(community.measurements30d) }}
+              components={{ b: figure }}
+            />
           </li>
         )}
       </ul>

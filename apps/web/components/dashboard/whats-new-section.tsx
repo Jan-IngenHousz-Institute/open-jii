@@ -1,7 +1,6 @@
 "use client";
 
 import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
-import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 
 import { useTranslation } from "@repo/i18n";
 
@@ -23,9 +22,11 @@ interface WhatsNewSectionProps {
 export function WhatsNewSection({ entries, locale }: WhatsNewSectionProps) {
   const { t } = useTranslation();
   const { t: tNavigation } = useTranslation("navigation");
-  const format = useLocalDateFormat(locale);
 
   if (entries.length === 0) return null;
+
+  // Release notes carry a day, not a moment, so UTC renders the same on the server and here.
+  const day = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", timeZone: "UTC" });
 
   const openPanel = () => window.dispatchEvent(new Event(WHATS_NEW_OPEN_EVENT));
 
@@ -33,7 +34,7 @@ export function WhatsNewSection({ entries, locale }: WhatsNewSectionProps) {
     <li key={entry.id} className="flex items-baseline justify-between gap-3">
       <span className="text-foreground min-w-0">{entry.title}</span>
       <time dateTime={entry.publishedAt} className="text-muted-foreground shrink-0 text-xs">
-        {format.date(entry.publishedAt)}
+        {day.format(new Date(entry.publishedAt))}
       </time>
     </li>
   );

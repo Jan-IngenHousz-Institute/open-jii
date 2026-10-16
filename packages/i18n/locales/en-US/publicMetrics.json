@@ -49,14 +49,14 @@
     "activity": {
       "title": "Your last 30 days",
       "label": "Your measurements",
-      "contributors_one": "{{count}} contributor",
-      "contributors_other": "{{count}} contributors",
-      "communityLabel": "Community",
+      "contributors_one": "<b>{{count}}</b> contributor",
+      "contributors_other": "<b>{{count}}</b> contributors",
       "trend": "Daily measurements",
-      "devices_one": "{{count}} device reporting",
-      "devices_other": "{{count}} devices reporting",
-      "activeExperiments_one": "{{count}} active experiment",
-      "activeExperiments_other": "{{count}} active experiments"
+      "devices_one": "<b>{{count}}</b> device",
+      "devices_other": "<b>{{count}}</b> devices",
+      "activeExperiments_one": "<b>{{count}}</b> active experiment",
+      "activeExperiments_other": "<b>{{count}}</b> active experiments",
+      "community": "Community <b>{{value}}</b>"
     }
   },
   "experiment": {
