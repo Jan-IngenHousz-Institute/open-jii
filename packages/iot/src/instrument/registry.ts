@@ -60,26 +60,79 @@ export async function identifyBenchInstrument(
   logger?: Logger,
 ): Promise<BenchIdentification | BenchUnrecognised> {
   const replies: string[] = [];
+  const keep = (heard: string) => {
+    const line = heard.trim();
+    if (line !== "" && !replies.includes(line)) {
+      replies.push(line);
+    }
+  };
 
   for (const create of BENCH_INSTRUMENTS) {
     const instrument = create(logger);
+    const probe = new ProbeRecorder(transport);
     try {
-      await instrument.initialize(transport);
+      await instrument.initialize(probe);
       const reply = await instrument.identify();
+      probe.stop();
       if (identityMatches(instrument, reply)) {
         return { kind: "identified", instrument, reply };
       }
 
-      const heard = reply.trim();
-      if (heard !== "" && !replies.includes(heard)) {
-        replies.push(heard);
-      }
+      keep(reply);
     } catch {
-      // A silent or malformed answer just means "not this one".
+      // A silent or malformed answer just means "not this one", but a probe that failed
+      // halfway may still have heard the port say something.
+      probe.stop().forEach(keep);
     }
     // Dropped, not destroyed: destroy() writes to the port, which no mismatched candidate may.
   }
   return { kind: "unrecognised", replies };
+}
+
+/** Enough for any identity banner, and a cap on a port that streams while it is probed. */
+const MAX_PROBE_TRANSCRIPT = 2_000;
+
+/**
+ * Hands a candidate the port and keeps what the port sends while it probes, so a probe
+ * that fails at its second command still shows the answer to its first. An identified
+ * instrument goes on using this transport, so recording ends with the probe.
+ */
+class ProbeRecorder implements ITransportAdapter {
+  private heard = "";
+  private isRecording = true;
+
+  constructor(private readonly transport: ITransportAdapter) {}
+
+  isConnected(): boolean {
+    return this.transport.isConnected();
+  }
+
+  send(data: string): Promise<void> {
+    return this.transport.send(data);
+  }
+
+  onDataReceived(callback: (data: string) => void): void {
+    this.transport.onDataReceived((data) => {
+      if (this.isRecording) {
+        this.heard = (this.heard + data).slice(0, MAX_PROBE_TRANSCRIPT);
+      }
+      callback(data);
+    });
+  }
+
+  onStatusChanged(callback: (connected: boolean, error?: Error) => void): void {
+    this.transport.onStatusChanged(callback);
+  }
+
+  disconnect(): Promise<void> {
+    return this.transport.disconnect();
+  }
+
+  /** Ends recording and returns the lines heard. */
+  stop(): string[] {
+    this.isRecording = false;
+    return this.heard.split(/\r?\n/);
+  }
 }
 
 /**

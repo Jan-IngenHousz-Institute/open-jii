@@ -127,6 +127,22 @@ describe("bench instrument registry", () => {
     expect(result.replies).toContain("KEITHLEY INSTRUMENTS,MODEL 2450,04123456,1.7.12b");
   });
 
+  // A candidate that names itself in two commands fails as a whole when the second goes
+  // unanswered, but the port did answer the first.
+  it("keeps what the port answered before a probe's later command went unanswered", async () => {
+    const transport = createMockTransport();
+    vi.mocked(transport.send).mockImplementation((sent: string) => {
+      if (sent === "hello\n") {
+        setTimeout(() => transport.simulateData("MiniPAR,1.1,1.03\n"), 0);
+      }
+      return Promise.resolve();
+    });
+
+    const result = unrecognised(await identifyBenchInstrument(transport));
+
+    expect(result.replies).toEqual(["MiniPAR,1.1,1.03"]);
+  });
+
   // Every candidate asks the same port in turn, so the operator waiting on Connect pays
   // the sum of them. Each gets the probe budget, not its own working timeout.
   it("reports a silent port rather than hanging, within the probe budget", async () => {
