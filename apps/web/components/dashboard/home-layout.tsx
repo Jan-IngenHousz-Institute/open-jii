@@ -11,7 +11,8 @@ export interface HomeSection {
 /**
  * The home's sections as one ordered list, which is also the order they stack in below the
  * two-column width and the order a keyboard or screen reader meets them at any width. From
- * that width the main sections fill the left column and the rail sections the right one.
+ * that width the main sections fill the left two thirds and the rail sections the right
+ * third, as on an organization's overview.
  * Rail sections listed before the first main section head the rail; any listed after it
  * follow the whole main column in one column, so list them after the main sections.
  *
@@ -32,7 +33,7 @@ export function HomeLayout({ sections }: { sections: HomeSection[] }) {
 
   return (
     <div className="@container">
-      <div className="@4xl:grid @4xl:grid-cols-[minmax(0,1fr)_20rem] @4xl:grid-rows-[auto_1fr] @4xl:items-start @4xl:gap-x-10 @4xl:gap-y-0 flex flex-col gap-8">
+      <div className="@4xl:grid @4xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] @4xl:grid-rows-[auto_1fr] @4xl:items-start @4xl:gap-x-10 @4xl:gap-y-0 flex flex-col gap-8">
         <div className={`@4xl:col-[2] @4xl:row-[1] @4xl:mb-8 ${groupClassName}`}>
           {lead.map(renderSection)}
         </div>
