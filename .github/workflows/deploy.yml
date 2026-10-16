@@ -81,13 +81,22 @@ jobs:
           BASE: ${{ github.event.before }}
           HEAD: ${{ inputs.ref || github.sha }}
         run: |
+          # Did this push change infrastructure/ or the SQL views OpenTofu reads from apps/data?
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          # OpenTofu reads the serving views' SQL from apps/data.
-          elif git diff --name-only "$BASE" "$HEAD" | grep -qE '^(infrastructure/|apps/data/src/views/)'; then
-            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "No previous push to compare with (manual run or new branch), so infrastructure counts as changed."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Comparing ${BASE:0:7}..${HEAD:0:7}"
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD" | grep -E '^(infrastructure/|apps/data/src/views/)' || true)
+          if [ -n "$CHANGED" ]; then
+            echo "Infrastructure changed:"
+            echo "$CHANGED" | sed 's/^/  /'
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           else
-            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No infrastructure changes."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Setup Node.js and pnpm
