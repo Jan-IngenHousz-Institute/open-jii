@@ -44,6 +44,7 @@ on:
 concurrency:
   group: production-deploy-${{ inputs.environment }}
   cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: read
