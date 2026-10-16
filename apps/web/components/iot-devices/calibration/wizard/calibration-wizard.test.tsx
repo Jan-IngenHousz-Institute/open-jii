@@ -200,7 +200,10 @@ async function captureThreePoints() {
   await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
   await screen.findByText("iot.calibration.connect.connected");
   await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+  await answerThreePoints();
+}
 
+async function answerThreePoints() {
   for (const reference of ["402.12", "142.92", "6.92"]) {
     await userEvent.click(
       await screen.findByRole("button", { name: "iot.calibration.prompt.continue" }),
@@ -526,6 +529,8 @@ describe("CalibrationWizard", { timeout: 20_000 }, () => {
 
     expect(await screen.findByText("iot.calibration.done.rejectedHint")).toBeInTheDocument();
     expect(console.sent).toEqual(["par_raw", "par_raw", "par_raw"]);
+    // On the device's own page the run is already where it is kept.
+    expect(screen.queryByText(/iot\.calibration\.done\.keptOnDevice/)).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "iot.calibration.done.close" }));
     expect(onClose).toHaveBeenCalled();
   });
@@ -578,6 +583,67 @@ describe("CalibrationWizard", { timeout: 20_000 }, () => {
 
     expect(await screen.findByText("iot.calibration.write.verified")).toBeInTheDocument();
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+
+  // Approving put the calibration in force on record; the hardware can wait for another day.
+  it("finishes without writing to a device it could write to", async () => {
+    const console = attachMiniPar([420, 150, 8.33]);
+    server.mount(contract.iot.createCalibrationRun, {
+      status: 201,
+      body: createCalibrationRun({ deviceId: DEVICE_ID, definitionId: DEFINITION_ID }),
+    });
+    server.mount(contract.iot.approveCalibrationRun, {
+      status: 201,
+      body: createDeviceCalibration({ deviceId: DEVICE_ID }),
+    });
+    renderWizard();
+
+    await captureThreePoints();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.review.approve" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.write.skip" }),
+    );
+
+    expect(await screen.findByText("iot.calibration.done.notWrittenHint")).toBeInTheDocument();
+    expect(console.sent.some((command) => command.startsWith("cal_par"))).toBe(false);
+  });
+
+  // A coefficient that fails to write is reported, not hidden behind "nothing written".
+  it("reports a write that broke off as not confirmed, with no way to finish as unwritten", async () => {
+    const console = attachMiniPar([420, 150, 8.33]);
+    server.mount(contract.iot.createCalibrationRun, {
+      status: 201,
+      body: createCalibrationRun({ deviceId: DEVICE_ID, definitionId: DEFINITION_ID }),
+    });
+    const applied = createDeviceCalibration({ deviceId: DEVICE_ID });
+    server.mount(contract.iot.approveCalibrationRun, { status: 201, body: applied });
+    // A broken-off write is still recorded as it stands, so the session settles before the end.
+    const reportSpy = server.mount(contract.iot.reportDeviceCalibrationWrite, {
+      body: { ...applied, writtenToDeviceAt: "2026-09-01T10:06:00.000Z" },
+    });
+    renderWizard();
+
+    await captureThreePoints();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.review.approve" }),
+    );
+    const { send } = console.transport;
+    console.transport.send = (payload) =>
+      payload.startsWith("cal_par_intercept")
+        ? Promise.reject(new Error("The device stopped answering"))
+        : send(payload);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.write.action" }),
+    );
+
+    expect(await screen.findByText("iot.calibration.write.failed")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(reportSpy.called).toBe(true);
+    });
+    expect(screen.queryByRole("button", { name: "iot.calibration.write.skip" })).toBeNull();
+    expect(screen.getByRole("button", { name: "iot.calibration.done.close" })).toBeInTheDocument();
   });
 
   // The coefficients are already on the device when the operator walks away
@@ -990,9 +1056,16 @@ describe("CalibrationWizard", { timeout: 20_000 }, () => {
       expect(screen.queryByRole("radio")).toBeNull();
       await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
 
-      await userEvent.click(
-        await screen.findByRole("button", { name: "iot.calibration.write.action" }),
-      );
+      // Writing is the whole point of this session, so finishing without it is not offered;
+      // leaving is, and it claims nothing about the device.
+      const writeButton = await screen.findByRole("button", {
+        name: "iot.calibration.write.action",
+      });
+      expect(screen.queryByRole("button", { name: "iot.calibration.write.skip" })).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "iot.calibration.cta.cancel" }),
+      ).toBeInTheDocument();
+      await userEvent.click(writeButton);
 
       expect(await screen.findByText("iot.calibration.write.verified")).toBeInTheDocument();
       await waitFor(() => {
@@ -1088,6 +1161,29 @@ describe("CalibrationWizard", { timeout: 20_000 }, () => {
       ).toBeInTheDocument();
     });
 
+    // A bench works on devices the operator never opened, so the end says where the run went.
+    it("points at the device a finished run is kept on", async () => {
+      attachMiniPar([420, 150, 8.33], "a4cf12aa93b0");
+      server.mount(contract.iot.rejectCalibrationRun, {
+        body: createCalibrationRun({ status: "rejected" }),
+      });
+      renderSitting();
+
+      await captureThreePoints();
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.sitting.review" }),
+      );
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.review.reject" }),
+      );
+
+      expect(await screen.findByText(/iot\.calibration\.done\.keptOnDevice/)).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "iot.calibration.done.openDevice" })).toHaveAttribute(
+        "href",
+        `/en-US/platform/devices/${REGISTERED.id}/calibration`,
+      );
+    });
+
     // An Ambit's MAC costs a reboot to read, so that family is named by the operator instead.
     it("asks which device a unit is when the port cannot name it", async () => {
       attachMiniPar([420, 150, 8.33]);
@@ -1098,6 +1194,43 @@ describe("CalibrationWizard", { timeout: 20_000 }, () => {
 
       expect(await screen.findByText("iot.calibration.sitting.whichDevice")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "iot.calibration.cta.next" })).toBeDisabled();
+    });
+
+    // A MiniPAR reports no serial, so every one is named by hand; it still counts as done.
+    it("counts a unit the operator named by hand", async () => {
+      attachMiniPar([420, 150, 8.33]);
+      renderSitting();
+
+      await userEvent.click(await screen.findByRole("radio"));
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+      await userEvent.click(await screen.findByRole("radio", { name: /Bench MiniPAR/ }));
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+      await answerThreePoints();
+
+      expect(await screen.findByText("iot.calibration.sitting.recorded")).toBeInTheDocument();
+      expect(screen.getByText("Bench MiniPAR")).toBeInTheDocument();
+      expect(screen.getByText("iot.calibration.sitting.recordedOf")).toBeInTheDocument();
+    });
+
+    // Picking off the wrong side of the table is as easy by hand as by port, and only
+    // catchable before the run.
+    it("warns when the operator names a unit that already had its turn", async () => {
+      attachMiniPar([420, 150, 8.33]);
+      renderSitting();
+
+      await userEvent.click(await screen.findByRole("radio"));
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+      await userEvent.click(await screen.findByRole("radio", { name: /Bench MiniPAR/ }));
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+      await answerThreePoints();
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.sitting.nextUnit" }),
+      );
+      expect(screen.queryByText("iot.calibration.sitting.alreadyDone")).toBeNull();
+
+      await userEvent.click(await screen.findByRole("radio", { name: /Bench MiniPAR/ }));
+
+      expect(await screen.findByText("iot.calibration.sitting.alreadyDone")).toBeInTheDocument();
     });
   });
 });

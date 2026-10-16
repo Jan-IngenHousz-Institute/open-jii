@@ -26,7 +26,7 @@ export type RigRoleStatus =
   | { kind: "connecting" }
   | { kind: "connected"; model: string; reply: string }
   | { kind: "mismatch"; model: string; reply: string }
-  | { kind: "unrecognised" }
+  | { kind: "unrecognised"; replies: string[] }
   | { kind: "failed"; message: string };
 
 export interface RigRole {
@@ -212,9 +212,9 @@ export function useCalibrationRig(
         transport = await openSerialPort();
         const identification = await identifyBenchInstrument(transport);
 
-        if (!identification) {
+        if (identification.kind === "unrecognised") {
           await releasePort(transport);
-          report({ kind: "unrecognised" });
+          report({ kind: "unrecognised", replies: identification.replies });
           return;
         }
 

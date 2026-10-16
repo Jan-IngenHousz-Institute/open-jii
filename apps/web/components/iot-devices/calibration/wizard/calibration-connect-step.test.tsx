@@ -154,10 +154,23 @@ describe("CalibrationConnectStep", () => {
     ).toBeInTheDocument();
   });
 
-  it("says when nothing on the port identified itself", () => {
-    renderStep(stubRig([role({ status: { kind: "unrecognised" } })]));
+  // Without the reply, a third-party unit that answers differently than expected cannot
+  // be told apart from a dead port.
+  it("says when nothing on the port identified itself, and what it answered", () => {
+    renderStep(
+      stubRig([
+        role({
+          status: {
+            kind: "unrecognised",
+            replies: ["DATALOGGER, 8 channel, 2.1", "error:unknown_command"],
+          },
+        }),
+      ]),
+    );
 
     expect(screen.getByText("iot.calibration.connect.roleUnrecognised")).toBeInTheDocument();
+    expect(screen.getByText("DATALOGGER, 8 channel, 2.1")).toBeInTheDocument();
+    expect(screen.getByText("error:unknown_command")).toBeInTheDocument();
   });
 
   it("says why a port could not be opened", () => {

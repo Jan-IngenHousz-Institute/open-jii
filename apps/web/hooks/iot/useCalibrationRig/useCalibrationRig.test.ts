@@ -56,6 +56,13 @@ function replyOf(status: RigRoleStatus | undefined): string {
   return status.reply;
 }
 
+function repliesOf(status: RigRoleStatus | undefined): string[] {
+  if (status?.kind !== "unrecognised") {
+    throw new Error(`A ${status?.kind ?? "missing"} role was recognised, or never probed`);
+  }
+  return status.replies;
+}
+
 describe("useCalibrationRig", () => {
   beforeEach(() => {
     mockOpenSerialPort.mockReset();
@@ -130,14 +137,14 @@ describe("useCalibrationRig", () => {
     expect(port.sent.at(-1)).toBe(KIPRIM_COMMANDS.setCurrent(0));
   });
 
-  it("reports a port nothing identified, and closes it", async () => {
+  it("reports a port nothing identified with what it answered, and closes it", async () => {
     const port = unknownPort("DATALOGGER, 8 channel, 2.1");
     mockOpenSerialPort.mockResolvedValue(port.transport);
 
     const { result } = renderHook(() => useCalibrationRig(PROCEDURE, undefined));
     await act(() => result.current.connectRole("lamp"));
 
-    expect(statusOf(result.current, "lamp")).toEqual({ kind: "unrecognised" });
+    expect(repliesOf(statusOf(result.current, "lamp"))).toContain("DATALOGGER, 8 channel, 2.1");
     expect(result.current.bindings.lamp).toBeUndefined();
     expect(port.transport.isConnected()).toBe(false);
   });

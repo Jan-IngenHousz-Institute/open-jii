@@ -31,14 +31,25 @@ export const BENCH_INSTRUMENTS: readonly BenchInstrumentFactory[] = [
 ];
 
 export interface BenchIdentification {
+  kind: "identified";
   instrument: BenchInstrument;
 
   /** What the port answered, so a caller can match a declared role's handshake against it. */
   reply: string;
 }
 
+export interface BenchUnrecognised {
+  kind: "unrecognised";
+
+  /**
+   * What the port answered the candidates' probes, so an operator can see what is
+   * plugged in instead. Empty when the port stayed silent.
+   */
+  replies: string[];
+}
+
 /**
- * Ask each known instrument in turn; null means nothing recognised the reply.
+ * Ask each known instrument in turn, stopping at the first that recognises its reply.
  *
  * Every candidate writes to the same port, so an identity probe has to end its line in
  * a way any of these consoles will accept. One that left a partial command behind would
@@ -47,21 +58,82 @@ export interface BenchIdentification {
 export async function identifyBenchInstrument(
   transport: ITransportAdapter,
   logger?: Logger,
-): Promise<BenchIdentification | null> {
+): Promise<BenchIdentification | BenchUnrecognised> {
+  const replies: string[] = [];
+
   for (const create of BENCH_INSTRUMENTS) {
     const instrument = create(logger);
+    const probe = new ProbeRecorder(transport);
     try {
-      await instrument.initialize(transport);
+      await instrument.initialize(probe);
       const reply = await instrument.identify();
       if (identityMatches(instrument, reply)) {
-        return { instrument, reply };
+        probe.stop();
+        return { kind: "identified", instrument, reply };
       }
     } catch {
       // A silent or malformed answer just means "not this one".
     }
+
+    // What the port said rather than what the candidate made of it: a candidate may read one
+    // line of several, or fail at its second command after the port answered its first.
+    for (const line of probe.stop()) {
+      if (!replies.includes(line)) {
+        replies.push(line);
+      }
+    }
     // Dropped, not destroyed: destroy() writes to the port, which no mismatched candidate may.
   }
-  return null;
+  return { kind: "unrecognised", replies };
+}
+
+/** Enough for any identity banner, and a cap on a port that streams while it is probed. */
+const MAX_PROBE_TRANSCRIPT = 2_000;
+
+/**
+ * Hands a candidate the port and keeps what the port sends while it probes, so a probe
+ * that fails at its second command still shows the answer to its first. An identified
+ * instrument goes on using this transport, so recording ends with the probe.
+ */
+class ProbeRecorder implements ITransportAdapter {
+  private heard = "";
+  private isRecording = true;
+
+  constructor(private readonly transport: ITransportAdapter) {}
+
+  isConnected(): boolean {
+    return this.transport.isConnected();
+  }
+
+  send(data: string): Promise<void> {
+    return this.transport.send(data);
+  }
+
+  onDataReceived(callback: (data: string) => void): void {
+    this.transport.onDataReceived((data) => {
+      if (this.isRecording) {
+        this.heard = (this.heard + data).slice(0, MAX_PROBE_TRANSCRIPT);
+      }
+      callback(data);
+    });
+  }
+
+  onStatusChanged(callback: (connected: boolean, error?: Error) => void): void {
+    this.transport.onStatusChanged(callback);
+  }
+
+  disconnect(): Promise<void> {
+    return this.transport.disconnect();
+  }
+
+  /** Ends recording and returns the lines heard, trimmed, without blank ones. */
+  stop(): string[] {
+    this.isRecording = false;
+    return this.heard
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== "");
+  }
 }
 
 /**
