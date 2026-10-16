@@ -446,10 +446,6 @@ class ProcedureRunner {
   }
 
   /**
-   * An absent instrument skips an optional step and aborts a required one. A decline is
-   * the operator's, not the rig's, and is raised as one so the wizard can say so.
-   */
-  /**
    * What acknowledging a standalone operator step sets off: the reads of the next step that
    * runs without asking. Settles and setpoints are passed over, and so is an optional step the
    * rig cannot serve, since it is skipped without asking. A step with its own prompt says so
@@ -484,6 +480,10 @@ class ProcedureRunner {
     return { reads: [] };
   }
 
+  /**
+   * An absent instrument skips an optional step and aborts a required one. A decline is
+   * the operator's, not the rig's, and is raised as one so the wizard can say so.
+   */
   private skipOrFail(step: ReadStep | SweepStep, reason: string, declinedPrompt?: string): void {
     if (!step.optional) {
       throw declinedPrompt === undefined
