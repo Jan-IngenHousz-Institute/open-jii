@@ -4,6 +4,7 @@ import { EmailModule } from "../common/modules/email/services/email.module";
 // Services
 import { NotificationDispatchService } from "./application/services/notification-dispatch.service";
 import { NotificationEmailService } from "./application/services/notification-email.service";
+import { NotificationOutboxWorker } from "./application/services/notification-outbox.worker";
 import { NotificationPreferencesService } from "./application/services/notification-preferences.service";
 // Use Cases
 import { GetNotificationPreferencesUseCase } from "./application/use-cases/get-notification-preferences/get-notification-preferences";
@@ -13,6 +14,7 @@ import { MarkAllNotificationsReadUseCase } from "./application/use-cases/mark-al
 import { MarkNotificationsReadUseCase } from "./application/use-cases/mark-notifications-read/mark-notifications-read";
 import { UpdateNotificationPreferenceUseCase } from "./application/use-cases/update-notification-preference/update-notification-preference";
 // Repositories
+import { NotificationDeliveryRepository } from "./core/repositories/notification-delivery.repository";
 import { NotificationRepository } from "./core/repositories/notification.repository";
 // Controllers
 import { NotificationController } from "./presentation/notification.controller";
@@ -23,11 +25,13 @@ import { NotificationController } from "./presentation/notification.controller";
   providers: [
     // Repositories
     NotificationRepository,
+    NotificationDeliveryRepository,
 
     // Services
     NotificationDispatchService,
     NotificationEmailService,
     NotificationPreferencesService,
+    NotificationOutboxWorker,
 
     // Use cases
     ListNotificationsUseCase,

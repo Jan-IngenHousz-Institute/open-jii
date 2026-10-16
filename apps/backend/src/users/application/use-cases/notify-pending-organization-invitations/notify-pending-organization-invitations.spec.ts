@@ -11,6 +11,7 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import type { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { queuedDeliveriesFor } from "../../../../test/notification-deliveries";
 import { TestHarness } from "../../../../test/test-harness";
 import type { PendingOrganizationInvitation } from "../../../core/models/user.model";
 import type { UserRepository } from "../../../core/repositories/user.repository";
@@ -30,7 +31,7 @@ const invitation = (
 /** The repository decides which invitations are waiting; this stubs its answer. */
 function useCaseWith(pending: unknown) {
   const findPendingOrganizationInvitationsToNotify = vi.fn().mockResolvedValue(pending);
-  const dispatch = vi.fn().mockResolvedValue(success({ created: 1, emailed: 0 }));
+  const dispatch = vi.fn().mockResolvedValue(success({ created: 1, queued: 0 }));
 
   const useCase = new NotifyPendingOrganizationInvitationsUseCase(
     { findPendingOrganizationInvitationsToNotify } as unknown as UserRepository,
@@ -196,7 +197,7 @@ describe("catching up against the real tables", () => {
     ]);
   });
 
-  it("sends no email, because the invitation email went out at invite time", async () => {
+  it("queues no email, because the invitation email went out at invite time", async () => {
     const inviteeId = await testApp.createTestUser({ email: INVITEE_EMAIL });
     await seedInvitation();
 
@@ -204,6 +205,7 @@ describe("catching up against the real tables", () => {
 
     // The invitee has an activated profile, so only `suppressEmail` keeps this quiet.
     expect(await rowsFor(inviteeId)).toHaveLength(1);
+    expect(await queuedDeliveriesFor(testApp.database, inviteeId)).toEqual([]);
     expect(sendInvitation).not.toHaveBeenCalled();
   });
 

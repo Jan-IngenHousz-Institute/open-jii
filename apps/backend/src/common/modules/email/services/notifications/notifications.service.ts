@@ -44,6 +44,42 @@ const RESOURCE_KIND_LABEL: Record<SharingResourceType, string> = {
   calibration_definition: "calibration definition",
 };
 
+/**
+ * Every one of these must stay well under the outbox worker's lease. The lease hands
+ * a row to another task once a claim is older than it, on the premise that no send
+ * takes that long; nodemailer's own defaults are longer (ten minutes of socket
+ * inactivity), so without these a stalled socket lets a second task send the same
+ * email while the first is still waiting on it.
+ */
+export const MAIL_TRANSPORT_TIMEOUTS_MS = {
+  connectionTimeout: 30_000,
+  greetingTimeout: 30_000,
+  socketTimeout: 60_000,
+} as const;
+
+/**
+ * The nodemailer error codes that mean the relay could not be reached at all — no
+ * connection, no greeting, a socket that died or a name that would not resolve — as
+ * opposed to a relay that answered and refused the message. These are nodemailer's own
+ * transient set (`ETIMEDOUT`, `ESOCKET`, `ECONNECTION`, which also covers a relay that
+ * greets with 421 and closes) plus `EDNS`. `ETLS` and `EAUTH` are left out on purpose:
+ * a certificate or a credential that is wrong stays wrong, and has to surface as a
+ * failure rather than wait forever as an outage.
+ */
+const RELAY_UNREACHABLE_CODES: ReadonlySet<string> = new Set([
+  "ECONNECTION",
+  "ETIMEDOUT",
+  "ESOCKET",
+  "EDNS",
+]);
+
+/**
+ * The timeouts have to travel in `createTransport`'s first argument, beside the url:
+ * its second argument is per-message defaults, which would take them without complaint
+ * and leave the connection on nodemailer's own ten-minute socket default.
+ */
+export const mailTransportOptions = (url: string) => ({ url, ...MAIL_TRANSPORT_TIMEOUTS_MS });
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -52,7 +88,7 @@ export class NotificationsService {
 
   /* v8 ignore next 3 */
   protected createMailTransport(serverConfig: string) {
-    return createTransport(serverConfig);
+    return createTransport(mailTransportOptions(serverConfig));
   }
 
   /* v8 ignore next 5 */
@@ -162,6 +198,28 @@ export class NotificationsService {
     }
   }
 
+  /**
+   * What a send that threw becomes, logged once at the level it deserves. A relay that
+   * could not be reached at all gets its own code, so a caller can wait out the outage
+   * instead of spending an attempt on it, and it is a warning: every send during an
+   * outage fails the same way, and none of them is the email's fault. Anything else
+   * keeps the mapping and the error level every send has always had. The message is
+   * the same either way.
+   */
+  private sendFailure(error: unknown, log: Record<string, unknown>): AppError {
+    const message = `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`;
+    const code =
+      typeof error === "object" && error !== null && "code" in error ? error.code : undefined;
+
+    if (typeof code === "string" && RELAY_UNREACHABLE_CODES.has(code)) {
+      this.logger.warn(log);
+      return AppError.internal(message, ErrorCodes.EMAIL_RELAY_UNREACHABLE);
+    }
+
+    this.logger.error({ ...log, errorCode: ErrorCodes.EMAIL_SEND_FAILED });
+    return apiErrorMapper(message);
+  }
+
   /** Where an organization lives in the web app — the link every org email points at. */
   private organizationUrl(organizationId: string): { host: string; url: string; baseUrl: string } {
     const baseUrl = this.emailConfigService.getBaseUrl();
@@ -215,19 +273,14 @@ export class NotificationsService {
           status: "success",
         });
       },
-      (error) => {
-        this.logger.error({
+      (error) =>
+        this.sendFailure(error, {
           msg: "Failed to send organization invitation notification",
-          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
           operation: "sendOrganizationInvitationNotification",
           email: recipientEmail,
           organizationId,
           error,
-        });
-        return apiErrorMapper(
-          `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
-        );
-      },
+        }),
     );
   }
 
@@ -265,19 +318,14 @@ export class NotificationsService {
           status: "success",
         });
       },
-      (error) => {
-        this.logger.error({
+      (error) =>
+        this.sendFailure(error, {
           msg: "Failed to send organization join request submitted notification",
-          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
           operation: "sendOrganizationJoinRequestSubmittedNotification",
           email: recipientEmail,
           organizationId,
           error,
-        });
-        return apiErrorMapper(
-          `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
-        );
-      },
+        }),
     );
   }
 
@@ -311,19 +359,14 @@ export class NotificationsService {
           status: "success",
         });
       },
-      (error) => {
-        this.logger.error({
+      (error) =>
+        this.sendFailure(error, {
           msg: "Failed to send organization join request approved notification",
-          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
           operation: "sendOrganizationJoinRequestApprovedNotification",
           email: requesterEmail,
           organizationId,
           error,
-        });
-        return apiErrorMapper(
-          `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
-        );
-      },
+        }),
     );
   }
 
@@ -356,19 +399,14 @@ export class NotificationsService {
           status: "success",
         });
       },
-      (error) => {
-        this.logger.error({
+      (error) =>
+        this.sendFailure(error, {
           msg: "Failed to send organization join request rejected notification",
-          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
           operation: "sendOrganizationJoinRequestRejectedNotification",
           email: requesterEmail,
           organizationId,
           error,
-        });
-        return apiErrorMapper(
-          `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
-        );
-      },
+        }),
     );
   }
 
@@ -431,20 +469,15 @@ export class NotificationsService {
           status: "success",
         });
       },
-      (error) => {
-        this.logger.error({
+      (error) =>
+        this.sendFailure(error, {
           msg: "Failed to send access granted notification email",
-          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
           operation: "sendAccessGrantedNotification",
           email,
           resourceType,
           resourceId,
           error,
-        });
-        return apiErrorMapper(
-          `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
-        );
-      },
+        }),
     );
   }
 
@@ -509,19 +542,14 @@ export class NotificationsService {
           status: "success",
         });
       },
-      (error) => {
-        this.logger.error({
+      (error) =>
+        this.sendFailure(error, {
           msg: "Failed to send transfer request confirmation email",
-          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
           operation: "sendTransferRequestConfirmation",
           email,
           projectId: projectIdOld,
           error,
-        });
-        return apiErrorMapper(
-          `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
-        );
-      },
+        }),
     );
   }
 
@@ -582,19 +610,14 @@ export class NotificationsService {
           status: "success",
         });
       },
-      (error) => {
-        this.logger.error({
+      (error) =>
+        this.sendFailure(error, {
           msg: "Failed to send project transfer complete email",
-          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
           operation: "sendProjectTransferComplete",
           email,
           experimentId,
           error,
-        });
-        return apiErrorMapper(
-          `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
-        );
-      },
+        }),
     );
   }
 
@@ -662,19 +685,14 @@ export class NotificationsService {
           status: "success",
         });
       },
-      (error) => {
-        this.logger.error({
+      (error) =>
+        this.sendFailure(error, {
           msg: "Failed to send join request submitted notification",
-          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
           operation: "sendJoinRequestSubmittedNotification",
           email: adminEmail,
           experimentId,
           error,
-        });
-        return apiErrorMapper(
-          `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
-        );
-      },
+        }),
     );
   }
 
@@ -736,19 +754,14 @@ export class NotificationsService {
           status: "success",
         });
       },
-      (error) => {
-        this.logger.error({
+      (error) =>
+        this.sendFailure(error, {
           msg: "Failed to send join request rejected notification",
-          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
           operation: "sendJoinRequestRejectedNotification",
           email: requesterEmail,
           experimentId,
           error,
-        });
-        return apiErrorMapper(
-          `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
-        );
-      },
+        }),
     );
   }
 }

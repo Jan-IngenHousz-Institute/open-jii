@@ -27,6 +27,7 @@ import * as schema from "@repo/database/schema";
 
 import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { success } from "../common/utils/fp-utils";
+import { queuedDeliveriesFor } from "../test/notification-deliveries";
 import { TestHarness } from "../test/test-harness";
 import { NotifyOrganizationInviteeUseCase } from "./application/use-cases/notify-organization-invitee/notify-organization-invitee";
 import { OrganizationAuthHook } from "./presentation/hooks/organization-auth.hook";
@@ -1095,6 +1096,8 @@ describe("organization plugin configuration and protection hooks", () => {
       const rowsFor = (userId: string) =>
         testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
 
+      const deliveriesFor = (userId: string) => queuedDeliveriesFor(testApp.database, userId);
+
       /**
        * A signed-in invitee with an activated profile. `signIn` goes through Better
        * Auth, which writes no `profiles` row, and dispatch reads addresses through
@@ -1143,7 +1146,7 @@ describe("organization plugin configuration and protection hooks", () => {
         ]);
       });
 
-      it("emails the account holder from the backend, once", async () => {
+      it("queues the account holder's email from the backend, once", async () => {
         const { owner, org } = await orgWithAdmin();
         const invitee = await activatedInvitee();
 
@@ -1152,14 +1155,11 @@ describe("organization plugin configuration and protection hooks", () => {
           headers: owner.headers,
         });
 
-        expect(sendInvitation).toHaveBeenCalledExactlyOnceWith(
-          org.id,
-          "Photosynthesis Lab",
-          // Dispatch resolves the actor's name; these accounts carry no profile name.
-          expect.any(String),
-          "member",
-          invitee.email,
-        );
+        expect(await deliveriesFor(invitee.userId)).toMatchObject([
+          { type: "organization_invitation_received", channel: "email", status: "pending" },
+        ]);
+        // Nothing leaves the invite request itself; the worker sends from that row.
+        expect(sendInvitation).not.toHaveBeenCalled();
       });
 
       it("tells nobody and emails nobody when the address has no account", async () => {
@@ -1175,6 +1175,7 @@ describe("organization plugin configuration and protection hooks", () => {
         // address a row or a dispatch email to.
         expect(sendInvitation).not.toHaveBeenCalled();
         expect(await testApp.database.select().from(notifications)).toEqual([]);
+        expect(await deliveriesFor(owner.userId)).toEqual([]);
       });
 
       /**
@@ -1243,7 +1244,7 @@ describe("organization plugin configuration and protection hooks", () => {
         } as unknown as AuthHookContext);
 
         expect(await rowsFor(invitee.userId)).toHaveLength(1);
-        expect(sendInvitation).toHaveBeenCalledTimes(1);
+        expect(await deliveriesFor(invitee.userId)).toHaveLength(1);
       });
 
       it("writes a second row after a cancel and a fresh invite", async () => {

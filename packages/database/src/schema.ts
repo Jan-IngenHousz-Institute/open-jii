@@ -599,6 +599,35 @@ export const notificationPreferences = pgTable(
   (table) => [primaryKey({ columns: [table.userId, table.category, table.channel] })],
 );
 
+// One row per email owed for a notification. Nothing rendered is stored: the worker
+// re-reads the recipient and actor at send time, so a Contentful edit or a changed
+// address is picked up until the moment of sending. `channel` and `status` are text,
+// validated at the edges like `notifications.type`.
+export const notificationDeliveries = pgTable(
+  "notification_deliveries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    notificationId: uuid("notification_id")
+      .references(() => notifications.id, { onDelete: "cascade" })
+      .notNull(),
+    channel: text("channel").notNull(),
+    status: text("status").default("pending").notNull(),
+    attempts: integer("attempts").default(0).notNull(),
+    nextAttemptAt: timestamp("next_attempt_at")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
+    claimedAt: timestamp("claimed_at"),
+    sentAt: timestamp("sent_at"),
+    lastError: text("last_error"),
+    ...timestamps,
+  },
+  (table) => [
+    // The claim's "pending and due, or a claim past its lease" scan.
+    index("notification_deliveries_due_idx").on(table.status, table.nextAttemptAt),
+    index("notification_deliveries_notification_idx").on(table.notificationId),
+  ],
+);
+
 // Protocols Table
 export const protocols = pgTable(
   "protocols",

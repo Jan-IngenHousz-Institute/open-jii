@@ -23,7 +23,7 @@ import {
   sql,
   users,
 } from "@repo/database";
-import type { DatabaseInstance, SQL } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
@@ -74,12 +74,15 @@ export class NotificationRepository {
    * One statement per chunk, returning only the rows that were actually written: a row
    * whose dedupe key is already taken is skipped, and the caller emails nobody about it.
    */
-  async insertMany(rows: NotificationInsertRow[]): Promise<Result<NotificationInsertedRow[]>> {
+  async insertMany(
+    rows: NotificationInsertRow[],
+    handle: DbOrTx = this.database,
+  ): Promise<Result<NotificationInsertedRow[]>> {
     return tryCatch(async () => {
       const inserted: NotificationInsertedRow[] = [];
 
       for (let start = 0; start < rows.length; start += INSERT_CHUNK_SIZE) {
-        const written = await this.database
+        const written = await handle
           .insert(notifications)
           .values(rows.slice(start, start + INSERT_CHUNK_SIZE))
           .onConflictDoNothing()
@@ -95,7 +98,10 @@ export class NotificationRepository {
   /**
    * Who to address, for the recipients of a dispatch and its actor. A deactivated
    * profile yields no address and an anonymised name, so nothing identifying leaves
-   * the platform on their behalf.
+   * the platform on their behalf. A closed account yields no address either: deletion
+   * sets `deleted_at` and rewrites `users.email` to a `deleted-…@example.com` stand-in
+   * without touching `activated`, which the anonymising projection alone would hand
+   * out as a deliverable address.
    */
   async findUsers(ids: string[]): Promise<Result<NotificationUserDto[]>> {
     return tryCatch(async () => {
@@ -106,7 +112,9 @@ export class NotificationRepository {
       return this.database
         .select({
           id: users.id,
-          email: getAnonymizedEmail(),
+          email: sql<
+            string | null
+          >`CASE WHEN ${profiles.deletedAt} IS NULL THEN ${getAnonymizedEmail()} ELSE NULL END`,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
         })

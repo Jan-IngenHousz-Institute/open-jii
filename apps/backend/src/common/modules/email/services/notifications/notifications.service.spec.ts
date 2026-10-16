@@ -1,9 +1,18 @@
+import { Logger } from "@nestjs/common";
 import type { MockInstance } from "vitest";
 
+import {
+  ATTEMPT_DEADLINE_MS,
+  LEASE_MS,
+} from "../../../../../notifications/application/services/notification-outbox.worker";
 import { TestHarness } from "../../../../../test/test-harness";
 import { ErrorCodes } from "../../../../utils/error-codes";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
-import { NotificationsService } from "./notifications.service";
+import {
+  MAIL_TRANSPORT_TIMEOUTS_MS,
+  NotificationsService,
+  mailTransportOptions,
+} from "./notifications.service";
 
 function spyOnProtected(instance: object, method: string): MockInstance {
   return vi.spyOn(instance as unknown as Record<string, unknown>, method as never);
@@ -203,6 +212,90 @@ describe("NotificationsService", () => {
 
       assertFailure(result);
       expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+    });
+
+    /** A transport that fails the way nodemailer does: an `Error` carrying its `code`. */
+    const failingWith = (message: string, fields: Record<string, unknown>) => ({
+      sendMail: vi.fn().mockImplementation(() => {
+        throw Object.assign(new Error(message), fields);
+      }),
+    });
+
+    const share = () =>
+      service.sendAccessGrantedNotification({
+        resourceType: "macro",
+        resourceId: MOCK_RESOURCE_ID,
+        resourceName: MOCK_RESOURCE_NAME,
+        actor: MOCK_ACTOR,
+        role: "a collaborator who can edit",
+        email: MOCK_EMAIL,
+      });
+
+    it("names a relay it could not reach, so a caller can wait out the outage", async () => {
+      mockCreateTransport.mockReturnValue(
+        failingWith("connect ECONNREFUSED 127.0.0.1:1025", { code: "ECONNECTION" }),
+      );
+
+      const result = await share();
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.EMAIL_RELAY_UNREACHABLE);
+      // The message is the one every failed send has always carried.
+      expect(result.error.message).toBe(
+        "Failed to send email: connect ECONNREFUSED 127.0.0.1:1025",
+      );
+    });
+
+    it("does not call a relay that answered and refused the message unreachable", async () => {
+      // The relay was reached and said no: a counted failure, not an outage.
+      mockCreateTransport.mockReturnValue(
+        failingWith("Can't send mail - all recipients were rejected: 550 5.1.1 unknown user", {
+          code: "EENVELOPE",
+          responseCode: 550,
+        }),
+      );
+
+      const result = await share();
+
+      assertFailure(result);
+      expect(result.error.code).not.toBe(ErrorCodes.EMAIL_RELAY_UNREACHABLE);
+    });
+
+    it("logs an unreachable relay as a warning, not an error", async () => {
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+      const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+      mockCreateTransport.mockReturnValue(
+        failingWith("connect ECONNREFUSED 127.0.0.1:1025", { code: "ECONNECTION" }),
+      );
+
+      await share();
+
+      // Every send during an outage fails the same way; none of them is an error.
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({ operation: "sendAccessGrantedNotification" }),
+      );
+      expect(error).not.toHaveBeenCalled();
+    });
+
+    it("logs a refused message as an error", async () => {
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+      const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+      mockCreateTransport.mockReturnValue(
+        failingWith("Can't send mail - all recipients were rejected: 550 5.1.1 unknown user", {
+          code: "EENVELOPE",
+          responseCode: 550,
+        }),
+      );
+
+      await share();
+
+      expect(error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: "sendAccessGrantedNotification",
+          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
+        }),
+      );
+      expect(warn).not.toHaveBeenCalled();
     });
 
     it("reports a failed send as a failure rather than throwing", async () => {
@@ -1051,6 +1144,33 @@ describe("NotificationsService", () => {
       assertFailure(result);
       expect(result.error.code).toBe(ErrorCodes.EMAIL_TRANSPORT_VERIFY_FAILED);
       expect(result.error.message).toContain("535 Authentication failed");
+    });
+  });
+
+  describe("the transport's timeouts", () => {
+    it("travel beside the url, and stay under the outbox lease", () => {
+      // Shape first: the options and the url are one object, so they cannot end up in
+      // createTransport's second argument, where nodemailer treats them as per-message
+      // defaults and silently keeps its own ten-minute socket timeout.
+      expect(mailTransportOptions("smtp://127.0.0.1:1025")).toEqual({
+        url: "smtp://127.0.0.1:1025",
+        ...MAIL_TRANSPORT_TIMEOUTS_MS,
+      });
+
+      // The lease hands a row to another task after this long on the premise that no
+      // send outlives it; that premise holds only while each timeout is under it.
+      for (const timeout of Object.values(MAIL_TRANSPORT_TIMEOUTS_MS)) {
+        expect(timeout).toBeLessThan(LEASE_MS);
+      }
+
+      // And one attempt is given up on before the lease, so the slowest a send can
+      // legitimately be — all three timeouts in turn — has to fit inside that.
+      const slowestSend = Object.values(MAIL_TRANSPORT_TIMEOUTS_MS).reduce(
+        (total, timeout) => total + timeout,
+        0,
+      );
+      expect(slowestSend).toBeLessThan(ATTEMPT_DEADLINE_MS);
+      expect(ATTEMPT_DEADLINE_MS).toBeLessThan(LEASE_MS);
     });
   });
 });
