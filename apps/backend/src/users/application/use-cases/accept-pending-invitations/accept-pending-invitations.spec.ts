@@ -3,6 +3,8 @@ import {
   createSecondaryDatabase,
   eq,
   experiments,
+  notificationDeliveries,
+  notifications,
   profiles,
   resourceGrants,
 } from "@repo/database";
@@ -14,6 +16,7 @@ import {
   AppError,
   success,
 } from "../../../../common/utils/fp-utils";
+import { NotificationRepository } from "../../../../notifications/core/repositories/notification.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
@@ -641,6 +644,126 @@ describe("AcceptPendingInvitationsUseCase", () => {
       assertSuccess(result);
       expect(result.value).toBe(1);
       expect(await directGrantsFor(experiment.id, inviteeId)).toHaveLength(1);
+    });
+  });
+
+  describe("notifying the inviter", () => {
+    const inviteeEmail = "notified-invitee@example.com";
+
+    const acceptedNotifications = () =>
+      testApp.database
+        .select()
+        .from(notifications)
+        .where(eq(notifications.type, "experiment_invitation_accepted"));
+
+    async function seedInvitation() {
+      const name = `Invited Exp ${crypto.randomUUID()}`;
+      const { experiment } = await testApp.createExperiment({ name, userId: testUserId });
+      vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
+      const created = await createUseCase.execute(
+        "experiment",
+        experiment.id,
+        inviteeEmail,
+        { tier: "viewer" },
+        testUserId,
+      );
+      assertSuccess(created);
+      return { experiment, name, invitationId: created.value.id };
+    }
+
+    it("tells the inviter who accepted, and emails nobody", async () => {
+      const { experiment, name } = await seedInvitation();
+      const inviteeId = await testApp.createTestUser({ email: inviteeEmail });
+
+      assertSuccess(await useCase.execute(inviteeId, inviteeEmail));
+
+      expect(await acceptedNotifications()).toMatchObject([
+        {
+          recipientId: testUserId,
+          actorId: inviteeId,
+          resourceType: "experiment",
+          resourceId: experiment.id,
+          params: { experimentName: name },
+        },
+      ]);
+      expect(await testApp.database.select().from(notificationDeliveries)).toEqual([]);
+    });
+
+    it("tells nobody when the inviter lost share access after inviting", async () => {
+      const ownerId = await testApp.createTestUser({ email: "lost-access-owner@example.com" });
+      const { experiment } = await testApp.createExperiment({
+        name: "Lost Access Exp",
+        userId: ownerId,
+      });
+      const grant = await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId: testUserId,
+        role: "admin",
+      });
+      vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
+      assertSuccess(
+        await createUseCase.execute(
+          "experiment",
+          experiment.id,
+          inviteeEmail,
+          { tier: "viewer" },
+          testUserId,
+        ),
+      );
+      await testApp.removeResourceGrant(grant.id);
+      const inviteeId = await testApp.createTestUser({ email: inviteeEmail });
+
+      const result = await useCase.execute(inviteeId, inviteeEmail);
+
+      assertSuccess(result);
+      expect(result.value).toBe(0);
+      expect(await acceptedNotifications()).toEqual([]);
+    });
+
+    it("tells nobody when the claim was lost to a revocation", async () => {
+      await seedInvitation();
+      const inviteeId = await testApp.createTestUser({ email: inviteeEmail });
+      vi.spyOn(invitationRepo, "acceptInvitation").mockResolvedValue(success("not-pending"));
+
+      const result = await useCase.execute(inviteeId, inviteeEmail);
+
+      assertSuccess(result);
+      expect(result.value).toBe(0);
+      expect(await acceptedNotifications()).toEqual([]);
+    });
+
+    it("tells nobody when the experiment was archived before acceptance", async () => {
+      const { experiment } = await seedInvitation();
+      await testApp.database
+        .update(experiments)
+        .set({ status: "archived" })
+        .where(eq(experiments.id, experiment.id));
+      const inviteeId = await testApp.createTestUser({ email: inviteeEmail });
+
+      const result = await useCase.execute(inviteeId, inviteeEmail);
+
+      assertSuccess(result);
+      expect(result.value).toBe(0);
+      expect(await acceptedNotifications()).toEqual([]);
+    });
+
+    it("still counts the acceptance when the notification cannot be stored", async () => {
+      const { invitationId } = await seedInvitation();
+      const inviteeId = await testApp.createTestUser({ email: inviteeEmail });
+      vi.spyOn(testApp.module.get(NotificationRepository), "insertMany").mockResolvedValue(
+        failure(AppError.internal("notifications unavailable")),
+      );
+
+      const result = await useCase.execute(inviteeId, inviteeEmail);
+
+      assertSuccess(result);
+      expect(result.value).toBe(1);
+      const found = await invitationRepo.findById(invitationId);
+      assertSuccess(found);
+      expect(found.value?.status).toBe("accepted");
+      expect(await acceptedNotifications()).toEqual([]);
     });
   });
 });
