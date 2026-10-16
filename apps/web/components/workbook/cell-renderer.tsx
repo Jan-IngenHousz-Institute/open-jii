@@ -112,6 +112,11 @@ export function CellRenderer({
           onDelete={onDelete}
           readOnly={readOnly}
           producer={producer}
+          protocolSnapshot={
+            entitySnapshots && producer?.type === "protocol"
+              ? (entitySnapshots.protocols[producer.payload.protocolId] ?? null)
+              : undefined
+          }
         />
       );
     case "branch":

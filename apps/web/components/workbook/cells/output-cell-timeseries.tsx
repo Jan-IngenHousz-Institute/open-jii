@@ -16,6 +16,8 @@ import { Card } from "@repo/ui/components/card";
 import type { Layout, PlotData, Shape } from "@repo/ui/components/charts/types";
 import { readThemeColor } from "@repo/ui/components/charts/utils";
 
+import { OutputCellAmbitTimeseries } from "./output-cell-ambit-timeseries";
+
 interface OutputCellTimeseriesProps {
   data: unknown;
   protocolCode: unknown;
@@ -272,7 +274,7 @@ function maxBrightness(inputs: InputRecord[]): number {
   return max;
 }
 
-export function OutputCellTimeseries({
+function MultispeqTimeseries({
   data,
   protocolCode,
   loading,
@@ -317,6 +319,16 @@ export function OutputCellTimeseries({
     );
   }
 
+  if (decoded.unmatchedRecords > 0) {
+    return (
+      <InsetPanel padding="none" className="text-muted-foreground p-4 text-xs">
+        <p role="status">
+          {t("output.multispeqProtocolMismatch", { count: decoded.unmatchedRecords })}
+        </p>
+      </InsetPanel>
+    );
+  }
+
   const groups = groupOutputs(decoded.outputs);
   if (groups.length === 0) {
     return (
@@ -348,7 +360,7 @@ export function OutputCellTimeseries({
     // legend height vs y-axis height.
     margin: { l: 60, r: 70, t: 30, b: 220 },
     xaxis: {
-      title: { text: t("output.timeseriesXAxis"), font: { size: 12 } },
+      title: { text: t("output.multispeqTimeseriesXAxis"), font: { size: 12 } },
       gridcolor: themeColor("--border"),
       zeroline: false,
       automargin: false,
@@ -410,5 +422,19 @@ export function OutputCellTimeseries({
         }}
       />
     </Card>
+  );
+}
+
+export function OutputCellTimeseries(
+  props: OutputCellTimeseriesProps & {
+    hasMultispeq: boolean;
+    ambitTraces: Record<string, unknown>[];
+  },
+) {
+  return (
+    <div className="space-y-4">
+      {props.hasMultispeq && <MultispeqTimeseries {...props} />}
+      {props.ambitTraces.length > 0 && <OutputCellAmbitTimeseries data={props.ambitTraces} />}
+    </div>
   );
 }

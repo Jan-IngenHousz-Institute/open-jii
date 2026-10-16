@@ -22,11 +22,19 @@ export function extractMeasurement(data: unknown): MeasurementInput | null {
 
   if ("sample_raw" in obj) {
     const raw = obj.sample_raw;
-    if (typeof raw === "string" || Array.isArray(raw)) {
+    let parsed: unknown = raw;
+    if (typeof raw === "string") {
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+    if (Array.isArray(parsed) && looksLikeSampleRaw(parsed)) {
       return {
         measurement_id: typeof obj.measurement_id === "string" ? obj.measurement_id : null,
         project_id: typeof obj.project_id === "string" ? obj.project_id : null,
-        sample_raw: raw,
+        sample_raw: parsed,
       };
     }
   }

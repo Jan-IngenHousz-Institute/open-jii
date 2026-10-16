@@ -88,11 +88,45 @@
     "closeChart": "Diagramm schließen",
     "expandChart": "Diagramm für {{column}} öffnen",
     "loadingProtocol": "Protokoll wird geladen…",
+    "multispeqProtocolMismatch_one": "{{count}} aufgezeichnetes Teilprotokoll kann der Protokolldefinition nicht zugeordnet werden. Eine zuverlässige Zeitreihe kann nicht rekonstruiert werden. Alle Messwerte bleiben unter JSON verfügbar.",
+    "multispeqProtocolMismatch_other": "{{count}} aufgezeichnete Teilprotokolle können der Protokolldefinition nicht zugeordnet werden. Eine zuverlässige Zeitreihe kann nicht rekonstruiert werden. Alle Messwerte bleiben unter JSON verfügbar.",
+    "multispeqTimeseriesXAxis": "Modellierte Protokollzeit (s)",
     "timeseriesXAxis": "Zeit (s)",
     "timeseriesYAxis": "Normalisiertes Signal",
     "timeseriesActinic": "Aktinisches Licht (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "Keine Detektor-Messwerte zum Plotten",
-    "timeseriesError": "Diese Ausgabe kann nicht mit dem Quellprotokoll dekodiert werden"
+    "timeseriesError": "Ohne kompatibles Quellprotokoll kann die MultispeQ-Zeitachse nicht rekonstruiert werden. Die Originaldaten sind unter JSON verfügbar.",
+    "ambitTrace": "Ambit-Messreihe",
+    "estimatedTime": "geschätzte Zeit",
+    "ambitProblems": {
+      "unsupported": "Diese Ambit-Version wird nicht unterstützt. Die Originaldaten sind unter JSON verfügbar.",
+      "invalid": "Diese Reihe kann nicht dargestellt werden: Werte, Einheiten oder Zeitstempel fehlen oder sind ungültig. Die Originaldaten sind unter JSON verfügbar.",
+      "empty": "Keine Messwerte zum Darstellen.",
+      "limit": "Einige Daten überschreiten das Diagrammlimit. Das vollständige Ergebnis ist unter JSON verfügbar."
+    },
+    "ambitCounts": "Zählwerte",
+    "ambitRatioAxis": "Fluoreszenz / Referenz",
+    "ambitRawChannels": "Rohe Detektorkanäle",
+    "ambitSingleReading": "Einzelmessung bei {{time}} s",
+    "ambitReadings": "{{count}} Messwerte",
+    "ambitRatioExplanation": "Fluoreszenzsignal geteilt durch die Referenz zum selben Zeitpunkt. Dies ist ein Signalverhältnis, nicht Fv/Fm.",
+    "ambitReferenceFilled_one": "{{count}} Referenzwert von null wird durch den Mittelwert der gemessenen Referenz ersetzt, entsprechend der Ambyte-Spurenanalyse.",
+    "ambitReferenceFilled_other": "{{count}} Referenzwerte von null werden durch den Mittelwert der gemessenen Referenz ersetzt, entsprechend der Ambyte-Spurenanalyse.",
+    "ambitRatioUnavailable": {
+      "missing": "Ein Fluoreszenz-Referenz-Paar ist nicht verfügbar. Die rohen Detektorkanäle werden unten angezeigt.",
+      "unaligned": "Die Zeitstempel von Fluoreszenz und Referenz stimmen nicht überein. Die Rohkanäle werden getrennt dargestellt; es wird kein Verhältnis abgeleitet.",
+      "invalid": "Der Referenzkanal liefert kein gültiges Fluoreszenzverhältnis. Die Rohkanäle bleiben verfügbar."
+    },
+    "ambitChannels": {
+      "fluorescence": "Fluoreszenz",
+      "fluo_630_signal": "Fluoreszenzdetektor · 630 nm",
+      "fluo_630_ref": "Referenzdetektor · 630 nm",
+      "refl_730_signal": "Reflexionsdetektor · 730 nm",
+      "refl_730_ref": "Referenzdetektor · 730 nm",
+      "ambient_sun_vis": "Sichtbares Umgebungslicht",
+      "ambient_leaf_ir": "Infrarotsignal des Blatts",
+      "leaf_temp": "Blatttemperatur"
+    }
   },
   "cells": {
     "command": "Befehl",
