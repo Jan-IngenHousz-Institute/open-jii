@@ -31,7 +31,11 @@ function Harness({ carousel }: { carousel: RotatableCarousel }) {
 
   return (
     <>
-      <div data-testid="carousel" {...rotation.holdHandlers}>
+      <div
+        data-testid="carousel"
+        data-rotating={String(rotation.isRotating)}
+        {...rotation.holdHandlers}
+      >
         <button type="button" onClick={rotation.toggleRunning}>
           {rotation.isRunning ? "pause" : "play"}
         </button>
@@ -144,6 +148,20 @@ describe("useCarouselRotation", () => {
     wait(INTERVAL_MS * 3);
 
     expect(carousel.scrollNext).not.toHaveBeenCalled();
+  });
+
+  it("reports itself still while held, though the reader's play stays on", () => {
+    const carousel = fakeCarousel(3);
+    render(<Harness carousel={carousel} />);
+
+    act(() => screen.getByRole("button", { name: "last" }).focus());
+
+    expect(screen.getByTestId("carousel")).toHaveAttribute("data-rotating", "false");
+    expect(screen.getByRole("button", { name: "pause" })).toBeInTheDocument();
+
+    act(() => screen.getByRole("button", { name: "outside" }).focus());
+
+    expect(screen.getByTestId("carousel")).toHaveAttribute("data-rotating", "true");
   });
 
   it("stops when the reader pauses it, and goes on when they resume", () => {

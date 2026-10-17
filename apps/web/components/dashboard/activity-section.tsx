@@ -220,8 +220,8 @@ export function ActivitySection({ locale }: ActivitySectionProps) {
           setApi={setApi}
           opts={{ loop: true }}
           aria-label={t("dashboard.activity.title")}
-          // A slide revealed while rotating would talk over the reader; once paused, it is read.
-          aria-live={rotation.isRunning ? "off" : "polite"}
+          // A slide revealed while rotating would talk over the reader; once held or paused, it is read.
+          aria-live={rotation.isRotating ? "off" : "polite"}
         >
           <CarouselContent>{slides.map(renderSlide)}</CarouselContent>
         </Carousel>

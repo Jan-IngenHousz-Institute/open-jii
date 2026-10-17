@@ -25,7 +25,10 @@ export function useCarouselRotation(api: RotatableCarousel | undefined, interval
   const [isFocused, setFocused] = useState(false);
   const [choice, setChoice] = useState<"auto" | "paused" | "playing">("auto");
 
+  // Running is the reader's play or pause; rotating is whether slides move right now, which a
+  // mouse over the carousel or focus inside it holds while running stays on.
   const isRunning = choice === "playing" || (choice === "auto" && !prefersReducedMotion);
+  const isRotating = isRunning && !isHovered && !isFocused;
 
   useEffect(() => {
     if (!api) {
@@ -42,15 +45,14 @@ export function useCarouselRotation(api: RotatableCarousel | undefined, interval
 
   // Keyed on the selected slide, so each slide gets the whole interval, picked by hand or not.
   useEffect(() => {
-    const canAdvance =
-      api !== undefined && isRunning && !isHovered && !isFocused && api.scrollSnapList().length > 1;
+    const canAdvance = api !== undefined && isRotating && api.scrollSnapList().length > 1;
     if (!canAdvance) {
       return;
     }
 
     const timer = window.setTimeout(() => api.scrollNext(prefersReducedMotion), intervalMs);
     return () => window.clearTimeout(timer);
-  }, [api, isRunning, isHovered, isFocused, selected, intervalMs, prefersReducedMotion]);
+  }, [api, isRotating, selected, intervalMs, prefersReducedMotion]);
 
   const toggleRunning = () => setChoice(isRunning ? "paused" : "playing");
   const showSlide = (index: number) => api?.scrollTo(index, prefersReducedMotion);
@@ -76,6 +78,7 @@ export function useCarouselRotation(api: RotatableCarousel | undefined, interval
   return {
     selected,
     isRunning,
+    isRotating,
     toggleRunning,
     showSlide,
     holdHandlers: { onPointerEnter, onPointerLeave, onFocus, onBlur },
