@@ -49,7 +49,14 @@ export default async function PlatformHome({ params }: PlatformPageProps) {
   const whatsNew: WhatsNewEntry[] = releaseNotes
     .flatMap((note) =>
       note.title && typeof note.publishedAt === "string"
-        ? [{ id: note.sys.id, title: note.title, publishedAt: note.publishedAt }]
+        ? [
+            {
+              id: note.sys.id,
+              title: note.title,
+              publishedAt: note.publishedAt,
+              slug: note.slug ?? null,
+            },
+          ]
         : [],
     )
     .slice(0, WHATS_NEW_ENTRIES);
