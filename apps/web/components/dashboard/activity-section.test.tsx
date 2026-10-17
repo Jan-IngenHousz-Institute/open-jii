@@ -1,6 +1,7 @@
+import { stubIntersectionObserver } from "@/test/intersection-observer";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
@@ -54,29 +55,12 @@ const platform = {
   computedAt: "2026-08-30T12:48:55.000Z",
 };
 
-// Embla watches its slides with an IntersectionObserver, which jsdom lacks. The stub is
-// unstubbed afterwards: test files share a worker here.
-beforeAll(() => {
-  vi.stubGlobal(
-    "IntersectionObserver",
-    class {
-      observe() {
-        /* noop */
-      }
-      unobserve() {
-        /* noop */
-      }
-      disconnect() {
-        /* noop */
-      }
-      takeRecords() {
-        return [];
-      }
-    },
-  );
+// Embla watches its slides with an IntersectionObserver, which jsdom lacks.
+beforeEach(() => {
+  stubIntersectionObserver();
 });
 
-afterAll(() => {
+afterEach(() => {
   vi.unstubAllGlobals();
 });
 
@@ -99,16 +83,18 @@ describe("ActivitySection", () => {
     render(<ActivitySection locale="en-US" />);
 
     await screen.findByText("60.1K");
-    await waitFor(() =>
-      expect(screen.getAllByRole("group").map((slide) => slide.getAttribute("aria-label"))).toEqual(
-        [
-          "dashboard.activity.label",
-          "dailyAverage",
-          "dashboard.activity.experimentsLabel",
-          "dashboard.activity.communityLabel",
-        ],
-      ),
-    );
+    const slides = screen.getAllByRole("group", { hidden: true });
+    expect(slides.map((slide) => slide.getAttribute("aria-label"))).toEqual([
+      "dashboard.activity.label",
+      "dailyAverage",
+      "dashboard.activity.experimentsLabel",
+      "dashboard.activity.communityLabel",
+    ]);
+    // Only the slide on screen reaches a screen reader or Tab.
+    expect(screen.getAllByRole("group").map((slide) => slide.getAttribute("aria-label"))).toEqual([
+      "dashboard.activity.label",
+    ]);
+    expect(slides[1]).toHaveAttribute("inert");
     expect(screen.getAllByRole("button", { name: "dashboard.activity.show" })).toHaveLength(4);
     expect(screen.getByText("dashboard.activity.institutions")).toBeInTheDocument();
   });

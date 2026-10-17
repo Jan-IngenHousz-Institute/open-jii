@@ -1,7 +1,7 @@
 "use client";
 
-import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
+import Link from "next/link";
 
 import { useTranslation } from "@repo/i18n";
 
@@ -39,14 +39,16 @@ export function WhatsNewSection({ entries, locale }: WhatsNewSectionProps) {
 
   const renderTitle = (entry: WhatsNewEntry) =>
     entry.slug ? (
-      <IntentLink
+      // A new tab never reads this tab's router cache, so prefetching would be wasted.
+      <Link
         href={`/${locale}/releases/${entry.slug}`}
+        prefetch={false}
         target="_blank"
         rel="noopener noreferrer"
         className="text-foreground hover:text-primary min-w-0 transition-colors hover:underline"
       >
         {entry.title}
-      </IntentLink>
+      </Link>
     ) : (
       <span className="text-foreground min-w-0">{entry.title}</span>
     );

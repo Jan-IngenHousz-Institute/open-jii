@@ -7,8 +7,8 @@ import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
 interface ActivityCarouselControlsProps {
-  /** One per slide, naming it for the dot that shows it. */
-  labels: string[];
+  /** One dot per slide, named for the slide it shows. */
+  slides: { key: string; label: string }[];
   selected: number;
   onSelect: (index: number) => void;
   isRunning: boolean;
@@ -17,7 +17,7 @@ interface ActivityCarouselControlsProps {
 
 /** A dot per slide, and the pause that stops the rotation. */
 export function ActivityCarouselControls({
-  labels,
+  slides,
   selected,
   onSelect,
   isRunning,
@@ -25,19 +25,19 @@ export function ActivityCarouselControls({
 }: ActivityCarouselControlsProps) {
   const { t } = useTranslation("publicMetrics");
 
-  // The dot is drawn small, but the button around it is a full target.
-  const renderDot = (label: string, index: number) => {
+  // The dot is drawn small, but the button around it is a full 24 pixel target.
+  const renderDot = (slide: { key: string; label: string }, index: number) => {
     const isSelected = index === selected;
     const showSlide = () => onSelect(index);
 
     return (
       <button
-        key={label}
+        key={slide.key}
         type="button"
         onClick={showSlide}
-        aria-label={t("dashboard.activity.show", { name: label })}
+        aria-label={t("dashboard.activity.show", { name: slide.label })}
         aria-current={isSelected}
-        className="grid size-5 place-items-center"
+        className="grid size-6 place-items-center"
       >
         <span
           className={cn(
@@ -51,7 +51,7 @@ export function ActivityCarouselControls({
 
   return (
     <div className="flex items-center justify-between">
-      <div className="-ml-1.5 flex items-center">{labels.map(renderDot)}</div>
+      <div className="-ml-2 flex items-center">{slides.map(renderDot)}</div>
       <Button
         type="button"
         variant="ghost"

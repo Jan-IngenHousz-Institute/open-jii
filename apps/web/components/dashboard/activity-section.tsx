@@ -196,33 +196,43 @@ export function ActivitySection({ locale }: ActivitySectionProps) {
     });
   }
 
-  const showSlide = (index: number) => api?.scrollTo(index);
+  // Slides off screen stay out of reach, so a screen reader or Tab meets only the one showing.
+  const renderSlide = (slide: Slide, index: number) => {
+    const isHidden = index !== rotation.selected;
 
-  const renderSlide = (slide: Slide) => (
-    <CarouselItem key={slide.key} aria-label={slide.label}>
-      {slide.content}
-    </CarouselItem>
-  );
+    return (
+      <CarouselItem
+        key={slide.key}
+        aria-label={slide.label}
+        aria-hidden={isHidden}
+        inert={isHidden}
+      >
+        {slide.content}
+      </CarouselItem>
+    );
+  };
 
   return (
     <DashboardSection id="last-30-days" title={t("dashboard.activity.title")}>
-      <Carousel
-        setApi={setApi}
-        opts={{ loop: true }}
-        aria-label={t("dashboard.activity.title")}
-        // Rotating slides would talk over the reader; a paused one is announced.
-        aria-live={rotation.isRunning ? "off" : "polite"}
-        {...rotation.holdHandlers}
-      >
-        <CarouselContent>{slides.map(renderSlide)}</CarouselContent>
-      </Carousel>
-      <ActivityCarouselControls
-        labels={slides.map((slide) => slide.label)}
-        selected={rotation.selected}
-        onSelect={showSlide}
-        isRunning={rotation.isRunning}
-        onToggleRunning={rotation.toggleRunning}
-      />
+      {/* Around the controls too, so reaching for a dot or the pause holds the slide still. */}
+      <div className="flex flex-col gap-3" {...rotation.holdHandlers}>
+        <Carousel
+          setApi={setApi}
+          opts={{ loop: true }}
+          aria-label={t("dashboard.activity.title")}
+          // A slide revealed while rotating would talk over the reader; once paused, it is read.
+          aria-live={rotation.isRunning ? "off" : "polite"}
+        >
+          <CarouselContent>{slides.map(renderSlide)}</CarouselContent>
+        </Carousel>
+        <ActivityCarouselControls
+          slides={slides}
+          selected={rotation.selected}
+          onSelect={rotation.showSlide}
+          isRunning={rotation.isRunning}
+          onToggleRunning={rotation.toggleRunning}
+        />
+      </div>
     </DashboardSection>
   );
 }
