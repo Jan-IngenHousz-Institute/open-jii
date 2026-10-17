@@ -4,19 +4,21 @@ import { displayableChange } from "@/components/metrics/metric-stat-card";
 import { TrendSparkline } from "@/components/metrics/trend-sparkline";
 import { useMyScopedMetrics } from "@/hooks/metrics/useMyScopedMetrics/useMyScopedMetrics";
 import { usePublicMetrics } from "@/hooks/metrics/usePublicMetrics/usePublicMetrics";
-import { useCarouselRotation } from "@/hooks/useCarouselRotation";
 import { formatLocaleNumber } from "@/util/format-locale-number";
-import { useState } from "react";
 import type { ReactNode } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Trans } from "@repo/i18n/client";
-import { Carousel, CarouselContent, CarouselItem } from "@repo/ui/components/carousel";
-import type { CarouselApi } from "@repo/ui/components/carousel";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselDots,
+  CarouselItem,
+  CarouselRotationToggle,
+} from "@repo/ui/components/carousel";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { cn } from "@repo/ui/lib/utils";
 
-import { ActivityCarouselControls } from "./activity-carousel-controls";
 import { ActivitySlide } from "./activity-slide";
 import { DashboardSection } from "./dashboard-section";
 
@@ -38,8 +40,6 @@ export function ActivitySection({ locale }: ActivitySectionProps) {
   const { t } = useTranslation("publicMetrics");
   const { data: mine, isPending } = useMyScopedMetrics();
   const { data: platform } = usePublicMetrics();
-  const [api, setApi] = useState<CarouselApi>();
-  const rotation = useCarouselRotation(api, ROTATE_INTERVAL_MS);
 
   if (isPending) {
     return <Skeleton aria-busy="true" className="h-48" />;
@@ -196,43 +196,32 @@ export function ActivitySection({ locale }: ActivitySectionProps) {
     });
   }
 
-  // Slides off screen stay out of reach, so a screen reader or Tab meets only the one showing.
-  const renderSlide = (slide: Slide, index: number) => {
-    const isHidden = index !== rotation.selected;
-
-    return (
-      <CarouselItem
-        key={slide.key}
-        aria-label={slide.label}
-        aria-hidden={isHidden}
-        inert={isHidden}
-      >
-        {slide.content}
-      </CarouselItem>
-    );
-  };
+  const renderSlide = (slide: Slide, index: number) => (
+    <CarouselItem key={slide.key} index={index} aria-label={slide.label}>
+      {slide.content}
+    </CarouselItem>
+  );
 
   return (
     <DashboardSection id="last-30-days" title={t("dashboard.activity.title")}>
-      {/* Around the controls too, so reaching for a dot or the pause holds the slide still. */}
-      <div className="flex flex-col gap-3" {...rotation.holdHandlers}>
-        <Carousel
-          setApi={setApi}
-          opts={{ loop: true }}
-          aria-label={t("dashboard.activity.title")}
-          // A slide revealed while rotating would talk over the reader; once held or paused, it is read.
-          aria-live={rotation.isRotating ? "off" : "polite"}
-        >
-          <CarouselContent>{slides.map(renderSlide)}</CarouselContent>
-        </Carousel>
-        <ActivityCarouselControls
-          slides={slides}
-          selected={rotation.selected}
-          onSelect={rotation.showSlide}
-          isRunning={rotation.isRunning}
-          onToggleRunning={rotation.toggleRunning}
-        />
-      </div>
+      <Carousel
+        rotateEvery={ROTATE_INTERVAL_MS}
+        opts={{ loop: true }}
+        aria-label={t("dashboard.activity.title")}
+        className="flex flex-col gap-3"
+      >
+        <CarouselContent>{slides.map(renderSlide)}</CarouselContent>
+        <div className="flex items-center justify-between">
+          <CarouselDots
+            labels={slides.map((slide) => t("dashboard.activity.show", { name: slide.label }))}
+            className="-ml-2"
+          />
+          <CarouselRotationToggle
+            pauseLabel={t("dashboard.activity.pause")}
+            resumeLabel={t("dashboard.activity.resume")}
+          />
+        </div>
+      </Carousel>
     </DashboardSection>
   );
 }
