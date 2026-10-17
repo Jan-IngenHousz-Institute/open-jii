@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import type { MetricsCaption } from "@repo/api/domains/metrics/metrics.schema";
 import { useTranslation } from "@repo/i18n";
+import { useRotation } from "@repo/ui/hooks/use-rotation";
 
 const ROTATE_INTERVAL_MS = 5000;
 
@@ -27,7 +28,6 @@ function formatBytes(bytes: number, locale: string): string {
 export function CaptionRotator({ captions, locale }: CaptionRotatorProps) {
   const { t } = useTranslation("publicMetrics");
   const [index, setIndex] = useState(0);
-  const [held, setHeld] = useState(false);
 
   const format = (value: number) => new Intl.NumberFormat(locale).format(value);
 
@@ -78,36 +78,20 @@ export function CaptionRotator({ captions, locale }: CaptionRotatorProps) {
 
   const rendered = captions.map(renderCaption).filter((text): text is string => text !== null);
 
-  useEffect(() => {
-    if (held || rendered.length < 2) {
-      return;
-    }
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      return;
-    }
-    const timer = setInterval(
-      () => setIndex((current) => (current + 1) % rendered.length),
-      ROTATE_INTERVAL_MS,
-    );
-    return () => clearInterval(timer);
-  }, [held, rendered.length]);
+  const showNext = () => setIndex((current) => (current + 1) % rendered.length);
+  const rotation = useRotation({
+    intervalMs: ROTATE_INTERVAL_MS,
+    onAdvance: showNext,
+    position: index,
+    canRotate: rendered.length > 1,
+  });
 
   if (rendered.length === 0) {
     return null;
   }
 
-  const holdRotation = () => setHeld(true);
-  const resumeRotation = () => setHeld(false);
-
   return (
-    <p
-      className="text-muted-foreground text-sm italic"
-      onMouseEnter={holdRotation}
-      onMouseLeave={resumeRotation}
-      onFocus={holdRotation}
-      onBlur={resumeRotation}
-      tabIndex={0}
-    >
+    <p className="text-muted-foreground text-sm italic" tabIndex={0} {...rotation.holdHandlers}>
       {rendered[index % rendered.length]}
     </p>
   );

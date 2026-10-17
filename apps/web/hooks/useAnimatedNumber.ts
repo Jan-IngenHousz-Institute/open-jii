@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+import { usePrefersReducedMotion } from "@repo/ui/hooks/use-prefers-reduced-motion";
+
 const DURATION_MS = 700;
 
 /**
@@ -12,6 +14,7 @@ export function useAnimatedNumber(value: number, resetKey?: string): number {
   const [shown, setShown] = useState({ value, key: resetKey });
   const onScreen = useRef(value);
   const keyOnScreen = useRef(resetKey);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const isNewSubject = shown.key !== resetKey;
   const isFillingIn = shown.value === 0 && value !== 0;
@@ -28,11 +31,10 @@ export function useAnimatedNumber(value: number, resetKey?: string): number {
       return;
     }
 
-    const isInstant = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const startedAt = performance.now();
 
     let frame = requestAnimationFrame(function step(now) {
-      const progress = isInstant ? 1 : Math.min(1, (now - startedAt) / DURATION_MS);
+      const progress = prefersReducedMotion ? 1 : Math.min(1, (now - startedAt) / DURATION_MS);
       const next = Math.round(from + (value - from) * (1 - (1 - progress) ** 3));
       onScreen.current = next;
       setShown({ value: next, key: resetKey });
@@ -41,7 +43,7 @@ export function useAnimatedNumber(value: number, resetKey?: string): number {
       }
     });
     return () => cancelAnimationFrame(frame);
-  }, [value, resetKey]);
+  }, [value, resetKey, prefersReducedMotion]);
 
   return shown.value;
 }

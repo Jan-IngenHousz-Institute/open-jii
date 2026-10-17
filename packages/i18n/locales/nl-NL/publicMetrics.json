@@ -56,7 +56,13 @@
       "devices_other": "<b>{{count}}</b> apparaten",
       "activeExperiments_one": "<b>{{count}}</b> actief experiment",
       "activeExperiments_other": "<b>{{count}}</b> actieve experimenten",
-      "community": "Community <b>{{value}}</b>"
+      "experimentsLabel": "Actieve experimenten",
+      "communityLabel": "Metingen van de community",
+      "institutions_one": "<b>{{count}}</b> instelling",
+      "institutions_other": "<b>{{count}}</b> instellingen",
+      "show": "{{name}} tonen",
+      "pause": "Cijfers pauzeren",
+      "resume": "Cijfers hervatten"
     }
   },
   "experiment": {

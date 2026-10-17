@@ -1,6 +1,7 @@
+import { stubIntersectionObserver } from "@/test/intersection-observer";
 import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
@@ -24,6 +25,7 @@ const mine = {
     measurements30d: 60_120,
     activeExperiments30d: 3,
     contributors30d: 5,
+    devices30d: 2,
     activity,
     previousMeasurements: 50_100,
     activeDays: WINDOW_DAYS,
@@ -53,8 +55,17 @@ const platform = {
   computedAt: "2026-08-30T12:48:55.000Z",
 };
 
+// Embla watches its slides with an IntersectionObserver, which jsdom lacks.
+beforeEach(() => {
+  stubIntersectionObserver();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe("ActivitySection", () => {
-  it("leads with the reader's own activity and its trend", async () => {
+  it("leads with the reader's own measurements and how they changed", async () => {
     server.mount(contract.metrics.getScopedMetrics, { body: mine });
     server.mount(contract.metrics.getPublicMetrics, { body: platform });
 
@@ -62,10 +73,54 @@ describe("ActivitySection", () => {
 
     expect(await screen.findByText("60.1K")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "dashboard.activity.title" })).toBeInTheDocument();
-    expect(screen.getByText("dashboard.activity.label")).toBeInTheDocument();
-    expect(screen.getByText("+20%")).toBeInTheDocument();
-    expect(screen.getByText("dashboard.activity.activeExperiments")).toBeInTheDocument();
-    expect(screen.getByText("dashboard.activity.contributors")).toBeInTheDocument();
+    expect(screen.getByText("+20%")).toHaveClass("bg-status-active");
+  });
+
+  it("offers a slide per figure, the community's last, with a dot for each", async () => {
+    server.mount(contract.metrics.getScopedMetrics, { body: mine });
+    server.mount(contract.metrics.getPublicMetrics, { body: platform });
+
+    render(<ActivitySection locale="en-US" />);
+
+    await screen.findByText("60.1K");
+    const slides = screen.getAllByRole("group", { hidden: true });
+    expect(slides.map((slide) => slide.getAttribute("aria-label"))).toEqual([
+      "dashboard.activity.label",
+      "dailyAverage",
+      "dashboard.activity.experimentsLabel",
+      "dashboard.activity.communityLabel",
+    ]);
+    // Only the slide on screen reaches a screen reader or Tab.
+    expect(screen.getAllByRole("group").map((slide) => slide.getAttribute("aria-label"))).toEqual([
+      "dashboard.activity.label",
+    ]);
+    expect(slides[1]).toHaveAttribute("inert");
+    expect(screen.getAllByRole("button", { name: "dashboard.activity.show" })).toHaveLength(4);
+    expect(screen.getByText("dashboard.activity.institutions")).toBeInTheDocument();
+  });
+
+  it("leaves the community slide out when the platform snapshot is missing", async () => {
+    server.mount(contract.metrics.getScopedMetrics, { body: mine });
+    server.mount(contract.metrics.getPublicMetrics, { body: { ...platform, community: null } });
+
+    render(<ActivitySection locale="en-US" />);
+
+    await screen.findByText("60.1K");
+    expect(screen.getAllByRole("button", { name: "dashboard.activity.show" })).toHaveLength(3);
+    expect(screen.queryByText("dashboard.activity.institutions")).not.toBeInTheDocument();
+  });
+
+  it("lets the reader stop and restart the rotation", async () => {
+    server.mount(contract.metrics.getScopedMetrics, { body: mine });
+    server.mount(contract.metrics.getPublicMetrics, { body: platform });
+    const user = userEvent.setup();
+
+    render(<ActivitySection locale="en-US" />);
+
+    await user.click(await screen.findByRole("button", { name: "dashboard.activity.pause" }));
+    await user.click(screen.getByRole("button", { name: "dashboard.activity.resume" }));
+
+    expect(screen.getByRole("button", { name: "dashboard.activity.pause" })).toBeInTheDocument();
   });
 
   it("does not colour an unchanged month as a rise", async () => {
@@ -77,26 +132,6 @@ describe("ActivitySection", () => {
     render(<ActivitySection locale="en-US" />);
 
     expect(await screen.findByText("0%")).toHaveClass("bg-muted");
-  });
-
-  it("puts the community total beside the reader's figures", async () => {
-    server.mount(contract.metrics.getScopedMetrics, { body: mine });
-    server.mount(contract.metrics.getPublicMetrics, { body: platform });
-
-    render(<ActivitySection locale="en-US" />);
-
-    const total = await screen.findByText("dashboard.activity.community");
-    expect(total.closest("li")).toHaveAttribute("title", "18,883,130");
-  });
-
-  it("drops the community total when the platform snapshot is missing", async () => {
-    server.mount(contract.metrics.getScopedMetrics, { body: mine });
-    server.mount(contract.metrics.getPublicMetrics, { body: { ...platform, community: null } });
-
-    render(<ActivitySection locale="en-US" />);
-
-    await screen.findByText("60.1K");
-    expect(screen.queryByText("dashboard.activity.community")).not.toBeInTheDocument();
   });
 
   it("holds the section's place while the figures are still loading", async () => {

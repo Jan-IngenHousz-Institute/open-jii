@@ -9,8 +9,14 @@ const entries = [
     id: "note-1",
     title: "Choose which notifications arrive by email",
     publishedAt: "2026-10-02T00:00:00.000+02:00",
+    slug: "email-notifications",
   },
-  { id: "note-2", title: "Sort any list by up to two columns", publishedAt: "2026-09-24" },
+  {
+    id: "note-2",
+    title: "Sort any list by up to two columns",
+    publishedAt: "2026-09-24",
+    slug: null,
+  },
 ];
 
 describe("WhatsNewSection", () => {
@@ -28,6 +34,17 @@ describe("WhatsNewSection", () => {
     await userEvent.click(screen.getByRole("button", { name: "dashboard.seeAll" }));
     expect(opened).toHaveBeenCalledTimes(1);
     window.removeEventListener(WHATS_NEW_OPEN_EVENT, opened);
+  });
+
+  it("links a note to its own page in a new tab, and lists one without a page as text", () => {
+    render(<WhatsNewSection entries={entries} locale="en-US" />);
+
+    const link = screen.getByRole("link", { name: "Choose which notifications arrive by email" });
+    expect(link).toHaveAttribute("href", "/en-US/releases/email-notifications");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(
+      screen.queryByRole("link", { name: "Sort any list by up to two columns" }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders nothing without notes", () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
+import Link from "next/link";
 
 import { useTranslation } from "@repo/i18n";
 
@@ -11,6 +12,8 @@ export interface WhatsNewEntry {
   id: string;
   title: string;
   publishedAt: string;
+  /** The note's own page; a note without one is listed but not linked. */
+  slug: string | null;
 }
 
 interface WhatsNewSectionProps {
@@ -18,7 +21,10 @@ interface WhatsNewSectionProps {
   locale: string;
 }
 
-/** The newest release notes by title; See all opens the What's new panel beside the page. */
+/**
+ * The newest release notes by title, each opening its own page in a new tab as the What's new
+ * panel's entries do. See all opens that panel beside the page.
+ */
 export function WhatsNewSection({ entries, locale }: WhatsNewSectionProps) {
   const { t } = useTranslation();
   const { t: tNavigation } = useTranslation("navigation");
@@ -31,9 +37,25 @@ export function WhatsNewSection({ entries, locale }: WhatsNewSectionProps) {
 
   const openPanel = () => window.dispatchEvent(new Event(WHATS_NEW_OPEN_EVENT));
 
+  const renderTitle = (entry: WhatsNewEntry) =>
+    entry.slug ? (
+      // A new tab never reads this tab's router cache, so prefetching would be wasted.
+      <Link
+        href={`/${locale}/releases/${entry.slug}`}
+        prefetch={false}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-foreground hover:text-primary min-w-0 transition-colors hover:underline"
+      >
+        {entry.title}
+      </Link>
+    ) : (
+      <span className="text-foreground min-w-0">{entry.title}</span>
+    );
+
   const renderEntry = (entry: WhatsNewEntry) => (
     <li key={entry.id} className="flex items-baseline justify-between gap-3">
-      <span className="text-foreground min-w-0">{entry.title}</span>
+      {renderTitle(entry)}
       <time dateTime={entry.publishedAt} className="text-muted-foreground shrink-0 text-xs">
         {dayOf(entry.publishedAt)}
       </time>

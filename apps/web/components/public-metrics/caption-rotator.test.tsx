@@ -29,6 +29,18 @@ describe("CaptionRotator", () => {
     expect(screen.getByText("captions.endurance")).toBeInTheDocument();
   });
 
+  it("holds the caption while it has focus", () => {
+    vi.useFakeTimers();
+    render(<CaptionRotator captions={captions} locale="en-US" />);
+
+    act(() => screen.getByText("captions.streak").focus());
+    act(() => {
+      vi.advanceTimersByTime(15_000);
+    });
+
+    expect(screen.getByText("captions.streak")).toBeInTheDocument();
+  });
+
   it("renders nothing for an empty pool", () => {
     const { container } = render(<CaptionRotator captions={[]} locale="en-US" />);
 
