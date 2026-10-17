@@ -153,8 +153,24 @@ describe("useRotation", () => {
     expect(position()).toBe("0");
 
     fireEvent.click(screen.getByRole("button", { name: "play" }));
-    act(() => screen.getByRole("button", { name: "outside" }).focus());
     wait();
+    expect(position()).toBe("1");
+  });
+
+  it("goes on when play is pressed from inside, with focus and the mouse still there", () => {
+    render(<Harness count={3} />);
+    const toggle = screen.getByRole("button", { name: "pause" });
+
+    fireEvent.click(toggle);
+    fireEvent.pointerEnter(screen.getByTestId("content"), { pointerType: "mouse" });
+    act(() => toggle.focus());
+    fireEvent.click(toggle);
+    wait();
+    expect(position()).toBe("1");
+
+    // Focus arriving somewhere else inside holds it again.
+    act(() => screen.getByRole("button", { name: "inside" }).focus());
+    wait(3);
     expect(position()).toBe("1");
   });
 
@@ -165,8 +181,9 @@ describe("useRotation", () => {
     wait(3);
     expect(position()).toBe("0");
 
-    fireEvent.click(screen.getByRole("button", { name: "play" }));
-    act(() => screen.getByRole("button", { name: "outside" }).focus());
+    const toggle = screen.getByRole("button", { name: "play" });
+    act(() => toggle.focus());
+    fireEvent.click(toggle);
     wait();
     expect(position()).toBe("1");
   });

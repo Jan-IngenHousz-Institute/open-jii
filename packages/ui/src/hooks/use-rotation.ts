@@ -42,7 +42,17 @@ export function useRotation({ intervalMs, onAdvance, position, canRotate }: UseR
     return () => window.clearTimeout(timer);
   }, [isRotating, position, intervalMs]);
 
-  const toggleRunning = () => setChoice(isRunning ? "paused" : "playing");
+  const toggleRunning = () => {
+    if (isRunning) {
+      setChoice("paused");
+      return;
+    }
+
+    // Play is pressed from inside the held element, so it outranks the hold the press made.
+    setHovered(false);
+    setFocused(false);
+    setChoice("playing");
+  };
 
   // A touch also fires pointer enter, with no leave until the next tap elsewhere, so only a
   // mouse counts as hovering.

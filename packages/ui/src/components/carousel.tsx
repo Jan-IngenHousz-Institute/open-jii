@@ -113,10 +113,19 @@ const Carousel = React.forwardRef<
       [api, prefersReducedMotion],
     );
 
+    // Without `loop` the last slide has no next one, so rotation starts over.
+    const showNextOrFirst = () => {
+      if (api?.canScrollNext()) {
+        scrollNext();
+      } else {
+        scrollTo(0);
+      }
+    };
+
     const isRotatable = rotateEvery !== undefined;
     const rotation = useRotation({
       intervalMs: rotateEvery ?? 0,
-      onAdvance: scrollNext,
+      onAdvance: showNextOrFirst,
       position: selected,
       canRotate: isRotatable && slideCount > 1,
     });
