@@ -5,19 +5,37 @@ import { TrendSparkline } from "@/components/metrics/trend-sparkline";
 import { useMyScopedMetrics } from "@/hooks/metrics/useMyScopedMetrics/useMyScopedMetrics";
 import { usePublicMetrics } from "@/hooks/metrics/usePublicMetrics/usePublicMetrics";
 import { formatLocaleNumber } from "@/util/format-locale-number";
+import type { ReactNode } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Trans } from "@repo/i18n/client";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselDots,
+  CarouselItem,
+  CarouselRotationToggle,
+} from "@repo/ui/components/carousel";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { cn } from "@repo/ui/lib/utils";
 
+import { ActivitySlide } from "./activity-slide";
 import { DashboardSection } from "./dashboard-section";
+
+/** Each slide carries a figure, a few notes and often a chart, more than a one-line caption. */
+const ROTATE_INTERVAL_MS = 6000;
 
 interface ActivitySectionProps {
   locale: string;
 }
 
-/** The reader's own 30 days, with the community beside it rather than as the headline. */
+interface Slide {
+  key: string;
+  label: string;
+  content: ReactNode;
+}
+
+/** The reader's own 30 days a figure at a time, with the community's as the last one. */
 export function ActivitySection({ locale }: ActivitySectionProps) {
   const { t } = useTranslation("publicMetrics");
   const { data: mine, isPending } = useMyScopedMetrics();
@@ -35,8 +53,12 @@ export function ActivitySection({ locale }: ActivitySectionProps) {
   }
 
   const compact = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
+  // Warehouse days are UTC.
+  const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
   const windowDays = scoped.activity.length;
   const community = platform?.community ?? null;
+  const peak = scoped.peak;
+  const dailyAverage = Math.round(scoped.measurements30d / windowDays);
 
   const change = displayableChange({
     current: scoped.measurements30d,
@@ -53,88 +75,153 @@ export function ActivitySection({ locale }: ActivitySectionProps) {
         }).format(change);
 
   const figure = <b className="text-foreground font-semibold tabular-nums" />;
+  const countLine = (key: string, count: number) => (
+    <span key={key}>
+      <Trans t={t} i18nKey={`dashboard.activity.${key}`} count={count} components={{ b: figure }} />
+    </span>
+  );
 
-  return (
-    <DashboardSection id="last-30-days" title={t("dashboard.activity.title")}>
-      <div className="flex flex-col gap-1">
-        <span className="text-muted-foreground text-xs font-medium">
-          {t("dashboard.activity.label")}
-        </span>
-        <span
-          className="flex items-baseline gap-2"
+  const changeBadge =
+    changeLabel === null ? null : (
+      <span
+        className={cn(
+          "rounded-full px-1.5 text-xs font-semibold tabular-nums",
+          isRising
+            ? "bg-status-active text-status-active-foreground"
+            : "bg-muted text-muted-foreground",
+        )}
+      >
+        {changeLabel}
+      </span>
+    );
+
+  const slides: Slide[] = [
+    {
+      key: "measurements",
+      label: t("dashboard.activity.label"),
+      content: (
+        <ActivitySlide
+          label={t("dashboard.activity.label")}
+          value={compact.format(scoped.measurements30d)}
           title={formatLocaleNumber(scoped.measurements30d, locale)}
-        >
-          <span className="text-2xl font-bold tabular-nums tracking-tight">
-            {compact.format(scoped.measurements30d)}
-          </span>
-          {changeLabel === null ? null : (
-            <span
-              className={cn(
-                "rounded-full px-1.5 text-xs font-semibold tabular-nums",
-                isRising
-                  ? "bg-status-active text-status-active-foreground"
-                  : "bg-muted text-muted-foreground",
-              )}
-            >
-              {changeLabel}
-            </span>
-          )}
-        </span>
-        <span className="text-muted-foreground text-xs">
-          {t("previousWindow", {
+          badge={changeBadge}
+          notes={t("previousWindow", {
             value: compact.format(scoped.previousMeasurements),
             days: windowDays,
           })}
-        </span>
-      </div>
-
-      <TrendSparkline
-        days={scoped.activity}
-        mark="line"
-        peakDate={scoped.peak?.date ?? null}
-        seriesName={t("dashboard.activity.trend")}
-        locale={locale}
-        className="h-11 w-full"
-      />
-
-      <ul className="text-muted-foreground flex flex-wrap gap-x-3.5 gap-y-1.5 border-t pt-2 text-xs">
-        <li>
-          <Trans
-            t={t}
-            i18nKey="dashboard.activity.activeExperiments"
-            count={scoped.activeExperiments30d}
-            components={{ b: figure }}
-          />
-        </li>
-        <li>
-          <Trans
-            t={t}
-            i18nKey="dashboard.activity.contributors"
-            count={scoped.contributors30d}
-            components={{ b: figure }}
-          />
-        </li>
-        {scoped.devices30d === null ? null : (
-          <li>
-            <Trans
-              t={t}
-              i18nKey="dashboard.activity.devices"
-              count={scoped.devices30d}
-              components={{ b: figure }}
+          chart={
+            <TrendSparkline
+              days={scoped.activity}
+              mark="line"
+              peakDate={null}
+              seriesName={t("dashboard.activity.trend")}
+              locale={locale}
+              className="h-11 w-full"
             />
-          </li>
-        )}
-        {community === null ? null : (
-          <li title={formatLocaleNumber(community.measurements30d, locale)}>
-            <Trans
-              t={t}
-              i18nKey="dashboard.activity.community"
-              values={{ value: compact.format(community.measurements30d) }}
-              components={{ b: figure }}
+          }
+        />
+      ),
+    },
+    {
+      key: "daily",
+      label: t("dailyAverage"),
+      content: (
+        <ActivitySlide
+          label={t("dailyAverage")}
+          value={compact.format(dailyAverage)}
+          title={formatLocaleNumber(dailyAverage, locale)}
+          notes={
+            <>
+              {peak === null ? null : (
+                <span>
+                  {t("peak", {
+                    value: compact.format(peak.measurements),
+                    date: day.format(new Date(`${peak.date}T00:00:00Z`)),
+                  })}
+                </span>
+              )}
+              <span>{t("activeDays", { active: scoped.activeDays, total: windowDays })}</span>
+            </>
+          }
+          chart={
+            <TrendSparkline
+              days={scoped.activity}
+              mark="bars"
+              peakDate={peak?.date ?? null}
+              seriesName={t("dashboard.activity.trend")}
+              locale={locale}
+              className="h-11 w-full"
             />
-          </li>
-        )}
-      </ul>
+          }
+        />
+      ),
+    },
+    {
+      key: "experiments",
+      label: t("dashboard.activity.experimentsLabel"),
+      content: (
+        <ActivitySlide
+          label={t("dashboard.activity.experimentsLabel")}
+          value={formatLocaleNumber(scoped.activeExperiments30d, locale)}
+          notes={
+            <>
+              {countLine("contributors", scoped.contributors30d)}
+              {scoped.devices30d === null ? null : countLine("devices", scoped.devices30d)}
+            </>
+          }
+        />
+      ),
+    },
+  ];
+
+  if (community !== null) {
+    slides.push({
+      key: "community",
+      label: t("dashboard.activity.communityLabel"),
+      content: (
+        <ActivitySlide
+          label={t("dashboard.activity.communityLabel")}
+          value={compact.format(community.measurements30d)}
+          title={formatLocaleNumber(community.measurements30d, locale)}
+          notes={
+            <>
+              {countLine("activeExperiments", community.activeExperiments30d)}
+              {countLine("contributors", community.contributors30d)}
+              {countLine("devices", community.devices30d)}
+              {countLine("institutions", community.institutions30d)}
+            </>
+          }
+        />
+      ),
+    });
+  }
+
+  const renderSlide = (slide: Slide, index: number) => (
+    <CarouselItem key={slide.key} index={index} aria-label={slide.label}>
+      {slide.content}
+    </CarouselItem>
+  );
+
+  return (
+    <DashboardSection id="last-30-days" title={t("dashboard.activity.title")}>
+      <Carousel
+        rotateEvery={ROTATE_INTERVAL_MS}
+        opts={{ loop: true }}
+        aria-label={t("dashboard.activity.title")}
+        className="flex flex-col gap-3"
+      >
+        <CarouselContent>{slides.map(renderSlide)}</CarouselContent>
+        <div className="flex items-center justify-between">
+          <CarouselDots
+            labels={slides.map((slide) => t("dashboard.activity.show", { name: slide.label }))}
+            className="-ml-2"
+          />
+          <CarouselRotationToggle
+            pauseLabel={t("dashboard.activity.pause")}
+            resumeLabel={t("dashboard.activity.resume")}
+          />
+        </div>
+      </Carousel>
     </DashboardSection>
   );
 }

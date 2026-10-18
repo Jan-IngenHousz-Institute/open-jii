@@ -56,7 +56,13 @@
       "devices_other": "<b>{{count}}</b> Geräte",
       "activeExperiments_one": "<b>{{count}}</b> aktives Experiment",
       "activeExperiments_other": "<b>{{count}}</b> aktive Experimente",
-      "community": "Community <b>{{value}}</b>"
+      "experimentsLabel": "Aktive Experimente",
+      "communityLabel": "Messungen der Community",
+      "institutions_one": "<b>{{count}}</b> Einrichtung",
+      "institutions_other": "<b>{{count}}</b> Einrichtungen",
+      "show": "{{name}} anzeigen",
+      "pause": "Kennzahlen anhalten",
+      "resume": "Kennzahlen fortsetzen"
     }
   },
   "experiment": {

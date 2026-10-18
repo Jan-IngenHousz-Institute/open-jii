@@ -68,8 +68,20 @@ describe("NotificationsSection", () => {
     );
   });
 
-  it("renders nothing while nothing is unread", async () => {
-    const list = server.mount(contract.notifications.listNotifications, { body: page([]) });
+  it("stays in place when nothing is unread, saying so, with See all", async () => {
+    server.mount(contract.notifications.listNotifications, { body: page([]) });
+    server.mount(contract.notifications.getUnreadNotificationCount, { body: { count: 0 } });
+
+    render(<NotificationsSection />);
+
+    expect(await screen.findByText("empty.title")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "title" })).toBeInTheDocument();
+    expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "dashboard.seeAll" })).toBeInTheDocument();
+  });
+
+  it("renders nothing when the list cannot be read, rather than claiming nothing is unread", async () => {
+    const list = server.mount(contract.notifications.listNotifications, { status: 500 });
     server.mount(contract.notifications.getUnreadNotificationCount, { body: { count: 0 } });
 
     const { container } = render(<NotificationsSection />);
