@@ -13,7 +13,10 @@ import { UNREAD_NOTIFICATIONS_INPUT } from "./dashboard-queries";
 import { DashboardSection } from "./dashboard-section";
 import { SeeAllLink } from "./see-all-link";
 
-/** What is waiting for the reader. Absent while nothing is unread. */
+/**
+ * What is waiting for the reader. It stays when nothing is unread, so it keeps its place and
+ * does not vanish from under the reader who opens the last one.
+ */
 export function NotificationsSection() {
   const { t } = useTranslation();
   const { t: tNotifications } = useTranslation("notifications");
@@ -23,9 +26,13 @@ export function NotificationsSection() {
   const count = useUnreadNotificationCount();
   const markRead = useMarkNotificationsRead();
 
+  // A list still loading or failed is left out rather than shown as caught up.
   const page = unread.data;
-  if (page === undefined || page.items.length === 0) return null;
+  if (page === undefined) {
+    return null;
+  }
 
+  const isCaughtUp = page.items.length === 0;
   // The bell's count, so the two never disagree; the list's own total stands in until it loads.
   const unreadCount = count.data?.count ?? page.totalCount;
 
@@ -39,16 +46,24 @@ export function NotificationsSection() {
     </li>
   );
 
+  const content = isCaughtUp ? (
+    <p className="text-muted-foreground border-border border-t pt-3 text-sm">
+      {tNotifications("empty.title")}
+    </p>
+  ) : (
+    <ul className="divide-border divide-y border-t">{page.items.map(renderRow)}</ul>
+  );
+
   return (
     <DashboardSection
       id="notifications"
       title={tNotifications("title")}
-      meta={tNotifications("unreadCount", { count: unreadCount })}
+      meta={isCaughtUp ? null : tNotifications("unreadCount", { count: unreadCount })}
       action={
         <SeeAllLink href={`/${locale}/platform/notifications`}>{t("dashboard.seeAll")}</SeeAllLink>
       }
     >
-      <ul className="divide-border divide-y border-t">{page.items.map(renderRow)}</ul>
+      {content}
     </DashboardSection>
   );
 }
