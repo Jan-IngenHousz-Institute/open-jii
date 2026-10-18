@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FocusEvent, PointerEvent } from "react";
 
 import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
@@ -31,14 +31,19 @@ export function useRotation({ intervalMs, onAdvance, position, canRotate }: UseR
   const isRunning = choice === "playing" || (choice === "auto" && !prefersReducedMotion);
   const isRotating = canRotate && isRunning && !isHovered && !isFocused;
 
-  const advance = useEffectEvent(onAdvance);
+  // A ref rather than useEffectEvent: React 19.2.3 never refreshes an effect event inside a
+  // forwardRef or memo component, such as the carousel, which would keep its first callback.
+  const latestAdvance = useRef(onAdvance);
+  useEffect(() => {
+    latestAdvance.current = onAdvance;
+  });
 
   useEffect(() => {
     if (!isRotating) {
       return;
     }
 
-    const timer = window.setTimeout(() => advance(), intervalMs);
+    const timer = window.setTimeout(() => latestAdvance.current(), intervalMs);
     return () => window.clearTimeout(timer);
   }, [isRotating, position, intervalMs]);
 

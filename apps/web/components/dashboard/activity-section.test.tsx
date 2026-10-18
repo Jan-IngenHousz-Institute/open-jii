@@ -134,6 +134,24 @@ describe("ActivitySection", () => {
     expect(await screen.findByText("0%")).toHaveClass("bg-muted");
   });
 
+  it("leaves out what it cannot say: a change from an empty month, a busiest day, devices", async () => {
+    server.mount(contract.metrics.getScopedMetrics, {
+      body: {
+        ...mine,
+        scoped: { ...mine.scoped, previousMeasurements: 0, peak: null, devices30d: null },
+      },
+    });
+    server.mount(contract.metrics.getPublicMetrics, { body: platform });
+
+    render(<ActivitySection locale="en-US" />);
+
+    await screen.findByText("60.1K");
+    expect(screen.queryByText(/%$/)).not.toBeInTheDocument();
+    expect(screen.queryByText("peak")).not.toBeInTheDocument();
+    // The community's devices remain; the reader's are unknown.
+    expect(screen.getAllByText("dashboard.activity.devices")).toHaveLength(1);
+  });
+
   it("holds the section's place while the figures are still loading", async () => {
     server.mount(contract.metrics.getScopedMetrics, { body: mine, delay: "infinite" });
     server.mount(contract.metrics.getPublicMetrics, { body: platform });
