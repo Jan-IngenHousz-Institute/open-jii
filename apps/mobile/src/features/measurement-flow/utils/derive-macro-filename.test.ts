@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { deriveMacroFilename } from "./derive-macro-filename";
 
-// Must match backend generateHashedFilename byte-for-byte, or the measurement's
-// macro routing key (sample.macros) points at the wrong table.
+// Must match backend generateHashedFilename byte-for-byte, or the upload's
+// macros[].filename points at the wrong table.
 function backendFilename(macroId: string): string {
   return `macro_${createHash("sha256").update(macroId).digest("hex").substring(0, 12)}`;
 }
