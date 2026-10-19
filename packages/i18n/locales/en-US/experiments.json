@@ -502,5 +502,26 @@
     "fieldsCount": "{{filled}} of {{total}}",
     "license": "Data license:",
     "licenseNone": "None chosen"
+  },
+  "layout": {
+    "tabLabel": "Layout",
+    "title": "Layout",
+    "description": "The plots in this experiment, where each one sits, and what it is called.",
+    "loading": "Loading the layout...",
+    "empty": "No layout yet",
+    "emptyDescription": "Set up the plots in this experiment so every measurement can be tied to one.",
+    "setupTitle": "Set up the layout",
+    "setupDescription": "Name what one unit is, then give the field its rows and columns.",
+    "levelName": "Unit name",
+    "levelNameHelp": "What one unit is called, such as plot, tray or pot.",
+    "rows": "Rows",
+    "columns": "Columns",
+    "identifierPattern": "Identifiers run from {{first}} to {{last}}, row letter first.",
+    "generate": "Generate {{count}} units",
+    "paste": "Paste identifiers",
+    "gridTitle": "{{level}} grid",
+    "summary": "{{active}} in use, {{gaps}} gaps",
+    "gap": "A gap in the field, with no unit",
+    "gapShort": "Gap"
   }
 }

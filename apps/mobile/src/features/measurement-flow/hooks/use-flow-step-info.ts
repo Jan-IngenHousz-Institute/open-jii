@@ -2,13 +2,16 @@ import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-
 import { isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
 import type { FlowNode, FlowNodeType } from "~/shared/measurements/flow-node";
 
+import { useIsPlotStepShowing } from "../screens/measurement-flow-screen/components/flow-nodes/plot-node/next-plot";
+
 export type StepTypeKey =
   | "instruction"
   | "question"
   | "measurement"
   | "analysis"
   | "review"
-  | "completed";
+  | "completed"
+  | "plot";
 
 export interface FlowStepInfo {
   /** 1-indexed step number to display in the hero. */
@@ -80,14 +83,16 @@ export function useFlowStepInfo(): FlowStepInfo {
   const experimentId = useMeasurementFlowStore((s) => s.experimentId);
   const isQuestionsSubmitPending = useMeasurementFlowStore((s) => s.isQuestionsSubmitPending);
   const isFlowFinished = useMeasurementFlowStore((s) => s.isFlowFinished);
+  const isPlotStepShowing = useIsPlotStepShowing();
 
-  return deriveStepInfo(
+  const info = deriveStepInfo(
     flowNodes,
     currentFlowStep,
     experimentId,
     isQuestionsSubmitPending,
     isFlowFinished,
   );
+  return isPlotStepShowing ? { ...info, stepTypeKey: "plot" } : info;
 }
 
 export { deriveStepInfo as __testing_deriveStepInfo };

@@ -55,7 +55,8 @@
       "measurement": "Measurement",
       "analysis": "Analysis",
       "review": "Review answers",
-      "completed": "Completed"
+      "completed": "Completed",
+      "plot": "Plot"
     },
     "exitLabel": "Exit",
     "branchPathA11y": "Active branch path: {{label}}"
@@ -273,5 +274,15 @@
     "header": {
       "title": "Measurement Results"
     }
+  },
+  "plotNode": {
+    "title": "Next plot",
+    "position": "Row {{row}}, column {{column}}",
+    "treatment": "Treatment",
+    "block": "Block",
+    "genotype": "Genotype",
+    "hint": "Walk to this plot and check its label before you measure.",
+    "confirm": "This is the plot",
+    "reject": "Not this plot"
   }
 }

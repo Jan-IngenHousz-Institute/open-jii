@@ -7,6 +7,7 @@ import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-
 
 import { ExperimentSelectionStep } from "./experiment-selection-step";
 import { QuestionsOnlySubmitNode } from "./flow-nodes/questions-only-submit-node";
+import { useIsPlotStepShowing } from "./flow-nodes/plot-node/next-plot";
 import { ActiveState } from "./flow-states/active-state";
 import { EmptyState } from "./flow-states/empty-state";
 import { LoadingState } from "./flow-states/loading-state";
@@ -18,6 +19,7 @@ export function MeasurementFlowContainer() {
   const isFlowInitialized = flowNodes.length > 0;
   const currentNode = flowNodes[currentFlowStep];
   const insets = useSafeAreaInsets();
+  const isPlotStepShowing = useIsPlotStepShowing();
 
   useIterationStateSync(flowNodes);
   // Cold-start resume: gate until protocol/macro code is re-attached.
@@ -64,7 +66,8 @@ export function MeasurementFlowContainer() {
   // its own bottom inset. Measurement/analysis nodes render their own action
   // bar instead, so the card must supply the inset for those.
   const navButtonsCarryInset =
-    currentNode.type === "instruction" || currentNode.type === "question";
+    !isPlotStepShowing &&
+    (currentNode.type === "instruction" || currentNode.type === "question");
 
   return (
     <View

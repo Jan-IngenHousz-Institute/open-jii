@@ -93,6 +93,7 @@ export function ExperimentLayoutShell({ children }: ExperimentLayoutShellProps) 
     if (pathname.includes("/analysis")) return "analysis";
     if (pathname.includes("/dashboards")) return "dashboards";
     if (pathname.endsWith("/design")) return "design";
+    if (pathname.endsWith("/layout")) return "layout";
     if (pathname.includes("/collaborators")) return "collaborators";
     if (pathname.includes("/devices")) return "devices";
     return "overview";
@@ -147,6 +148,11 @@ export function ExperimentLayoutShell({ children }: ExperimentLayoutShellProps) 
           <NavTabsTrigger value="design" asChild>
             <IntentLink prefetchWhileVisible href={`/${locale}/platform/experiments/${id}/design`}>
               {t("flow.tabLabel")}
+            </IntentLink>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="layout" asChild>
+            <IntentLink prefetchWhileVisible href={`/${locale}/platform/experiments/${id}/layout`}>
+              {t("layout.tabLabel")}
             </IntentLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="collaborators" asChild>

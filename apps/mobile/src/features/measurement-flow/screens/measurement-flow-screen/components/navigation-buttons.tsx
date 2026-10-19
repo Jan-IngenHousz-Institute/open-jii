@@ -9,6 +9,7 @@ import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 
 import { BackButton } from "./back-button";
+import { useIsPlotStepShowing } from "./flow-nodes/plot-node/next-plot";
 import { NextButton } from "./next-button";
 
 export function NavigationButtons() {
@@ -35,6 +36,7 @@ export function NavigationButtons() {
   const currentAnswer = useFlowAnswersStore((s) =>
     currentNode?.type === "question" ? s.getAnswer(iterationCount, currentNode.id) : undefined,
   );
+  const isPlotStepShowing = useIsPlotStepShowing();
   const isInstructionOrQuestion =
     currentNode?.type === "instruction" || currentNode?.type === "question";
 
@@ -44,6 +46,7 @@ export function NavigationButtons() {
   // instruction/question anyway).
   const shouldShowNavigationButtons =
     !!experimentId &&
+    !isPlotStepShowing &&
     isInstructionOrQuestion &&
     currentNode?.type !== "branch" &&
     !isQuestionsSubmitPending;
