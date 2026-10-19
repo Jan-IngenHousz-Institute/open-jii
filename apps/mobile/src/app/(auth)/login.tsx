@@ -381,7 +381,7 @@ export default function LoginScreen() {
                       value={value}
                       onChangeText={onChange}
                       length={6}
-                      editable={!verifyLoading && online !== false}
+                      editable={!verifyLoading}
                       autoFocus
                       error={!!errors.otp}
                     />

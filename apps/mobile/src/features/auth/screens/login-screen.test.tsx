@@ -7,8 +7,12 @@ import LoginScreen from "~/app/(auth)/login";
 import auth from "~/shared/i18n/locales/en-US/auth.json";
 import common from "~/shared/i18n/locales/en-US/common.json";
 import { Button } from "~/shared/ui/Button";
+import { OTPInput } from "~/shared/ui/OTPInput";
 
-const { probe } = vi.hoisted(() => ({ probe: vi.fn<() => Promise<boolean>>() }));
+const { probe, verifyEmailOTP } = vi.hoisted(() => ({
+  probe: vi.fn<() => Promise<boolean>>(),
+  verifyEmailOTP: vi.fn(),
+}));
 
 // The native harness's Keyboard prefix mock also matches KeyboardAvoidingView.
 vi.mock("react-native", async (importOriginal) => {
@@ -26,7 +30,7 @@ vi.mock("~/features/auth/hooks/use-login", () => ({
     startGitHubLogin: vi.fn(),
     startOrcidLogin: vi.fn(),
     sendEmailOTP: vi.fn(),
-    verifyEmailOTP: vi.fn(),
+    verifyEmailOTP,
     githubLoading: false,
     orcidLoading: false,
     emailLoading: false,
@@ -57,6 +61,7 @@ let client: QueryClient;
 beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   probe.mockReset();
+  verifyEmailOTP.mockReset();
 });
 
 afterEach(() => {
@@ -159,5 +164,34 @@ describe("login connection message", () => {
     await waitFor(() => expect(buttonDisabled(common.tryAgain)).toBe(false));
     expect(screen.getByText(common.serverUnreachable)).toBeTruthy();
     expect(screen.getByPlaceholderText(auth.emailPlaceholder).props.editable).toBe(true);
+  });
+
+  it("lets the code be typed while unreachable and submits it once the server answers", async () => {
+    vi.useFakeTimers();
+    try {
+      probe.mockResolvedValue(true);
+      renderLogin();
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      fireEvent.changeText(
+        screen.getByPlaceholderText(auth.emailPlaceholder),
+        "field@example.test",
+      );
+      fireEvent.press(screen.getByText(auth.continueWithEmail));
+      await act(() => vi.advanceTimersByTimeAsync(0));
+
+      probe.mockResolvedValue(false);
+      await act(() => vi.advanceTimersByTimeAsync(2000));
+      expect(screen.getByText(common.serverUnreachable)).toBeTruthy();
+      const otp = screen.UNSAFE_getByType(OTPInput);
+      expect(otp.props.editable).toBe(true);
+      await act(() => Promise.resolve(otp.props.onChangeText("123456")));
+      expect(verifyEmailOTP).not.toHaveBeenCalled();
+
+      probe.mockResolvedValue(true);
+      await act(() => vi.advanceTimersByTimeAsync(2000));
+      expect(verifyEmailOTP).toHaveBeenCalledExactlyOnceWith("field@example.test", "123456");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
