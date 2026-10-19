@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import React from "react";
 import { TouchableOpacity } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import LoginScreen from "~/app/(auth)/login";
+import LoginScreen from "~/features/auth/screens/login-screen";
 import auth from "~/shared/i18n/locales/en-US/auth.json";
 import common from "~/shared/i18n/locales/en-US/common.json";
 import { Button } from "~/shared/ui/Button";
