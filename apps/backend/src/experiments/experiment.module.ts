@@ -23,6 +23,7 @@ import { WorkbookModule } from "../workbooks/workbook.module";
 // Services
 import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
+import { ExportRunReconcilerService } from "./application/services/export-run-reconciler.service";
 import { MultipartUploadService } from "./application/services/multipart-upload.service";
 import { AttachWorkbookUseCase } from "./application/use-cases/attach-workbook/attach-workbook";
 // Use Cases
@@ -37,7 +38,8 @@ import { UpdateExperimentDashboardUseCase } from "./application/use-cases/experi
 import { AddAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
 import { DeleteAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/delete-annotations/delete-annotations";
 import { UpdateAnnotationUseCase } from "./application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
-import { DownloadExportUseCase } from "./application/use-cases/experiment-data-exports/download-export";
+import { CarryOverExportsUseCase } from "./application/use-cases/experiment-data-exports/carry-over-exports";
+import { GetExportDownloadLinksUseCase } from "./application/use-cases/experiment-data-exports/get-export-download-links";
 import { InitiateExportUseCase } from "./application/use-cases/experiment-data-exports/initiate-export";
 import { ListExportsUseCase } from "./application/use-cases/experiment-data-exports/list-exports";
 import { ListUploadsUseCase } from "./application/use-cases/experiment-data-uploads/list-uploads";
@@ -113,6 +115,7 @@ import { ExperimentDataAnnotationsController } from "./presentation/experiment-d
 import { ExperimentDataExportsController } from "./presentation/experiment-data-exports.controller";
 import { ExperimentDataUploadsController } from "./presentation/experiment-data-uploads.controller";
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
+import { ExperimentExportCarryOverWebhookController } from "./presentation/experiment-export-carry-over-webhook.controller";
 import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
 import { ExperimentJoinCodeRedemptionController } from "./presentation/experiment-join-code-redemption.controller";
 import { ExperimentJoinCodesController } from "./presentation/experiment-join-codes.controller";
@@ -159,6 +162,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ProjectTransferRequestsController,
     ProjectTransferWebhookController,
     ExperimentUploadWebhookController,
+    ExperimentExportCarryOverWebhookController,
   ],
   providers: [
     // Port implementations
@@ -221,6 +225,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
 
     // Services
     EmbargoProcessorService,
+    ExportRunReconcilerService,
     ContributorAnonymizerService,
     MultipartUploadService,
 
@@ -243,7 +248,8 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     NotifyUploadOutcomeUseCase,
     InitiateExportUseCase,
     ListExportsUseCase,
-    DownloadExportUseCase,
+    GetExportDownloadLinksUseCase,
+    CarryOverExportsUseCase,
 
     ListExperimentContributorsUseCase,
 

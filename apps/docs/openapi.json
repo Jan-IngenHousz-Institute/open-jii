@@ -3411,13 +3411,128 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "status": {
+                    "exportId": {
                       "type": "string",
-                      "description": "Export status"
+                      "format": "uuid"
+                    },
+                    "experimentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "tableName": {
+                      "type": "string"
+                    },
+                    "format": {
+                      "enum": [
+                        "csv",
+                        "ndjson",
+                        "json-array",
+                        "parquet",
+                        "xlsx"
+                      ],
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "queued",
+                        "pending",
+                        "running",
+                        "completed",
+                        "failed",
+                        "expired"
+                      ],
+                      "type": "string"
+                    },
+                    "rowCount": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "totalBytes": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "partCount": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "errorCode": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "no_data",
+                            "too_many_rows_for_format",
+                            "unknown"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "completedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
-                    "status"
+                    "exportId",
+                    "experimentId",
+                    "tableName",
+                    "format",
+                    "status",
+                    "rowCount",
+                    "totalBytes",
+                    "partCount",
+                    "errorCode",
+                    "createdBy",
+                    "createdAt",
+                    "completedAt",
+                    "expiresAt"
                   ]
                 }
               }
@@ -3464,15 +3579,8 @@
                         "type": "object",
                         "properties": {
                           "exportId": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "format": "uuid"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
+                            "type": "string",
+                            "format": "uuid"
                           },
                           "experimentId": {
                             "type": "string",
@@ -3497,19 +3605,10 @@
                               "pending",
                               "running",
                               "completed",
-                              "failed"
+                              "failed",
+                              "expired"
                             ],
                             "type": "string"
-                          },
-                          "filePath": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
                           },
                           "rowCount": {
                             "anyOf": [
@@ -3521,10 +3620,35 @@
                               }
                             ]
                           },
-                          "fileSize": {
+                          "totalBytes": {
                             "anyOf": [
                               {
                                 "type": "integer"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "partCount": {
+                            "anyOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "errorCode": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "no_data",
+                                  "too_many_rows_for_format",
+                                  "unknown"
+                                ],
+                                "type": "string"
                               },
                               {
                                 "type": "null"
@@ -3549,6 +3673,17 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "expiresAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -3557,18 +3692,101 @@
                           "tableName",
                           "format",
                           "status",
-                          "filePath",
                           "rowCount",
-                          "fileSize",
+                          "totalBytes",
+                          "partCount",
+                          "errorCode",
                           "createdBy",
                           "createdAt",
-                          "completedAt"
+                          "completedAt",
+                          "expiresAt"
                         ]
                       }
                     }
                   },
                   "required": [
                     "exports"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/data/exports/{exportId}/links": {
+      "get": {
+        "operationId": "experiments.getExportDownloadLinks",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          },
+          {
+            "name": "exportId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the export"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "parts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "index": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "fileName": {
+                            "type": "string",
+                            "description": "Name the browser saves the part under"
+                          },
+                          "sizeBytes": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "url": {
+                            "type": "string",
+                            "format": "uri",
+                            "description": "Short-lived signed link that downloads the part from storage"
+                          }
+                        },
+                        "required": [
+                          "index",
+                          "fileName",
+                          "sizeBytes",
+                          "url"
+                        ]
+                      }
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the links stop working"
+                    }
+                  },
+                  "required": [
+                    "parts",
+                    "expiresAt"
                   ]
                 }
               }
@@ -15009,6 +15227,140 @@
                   },
                   "required": [
                     "success"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/data-export-carry-over": {
+      "post": {
+        "operationId": "experiments.carryOverExports",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "exports": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "exportId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "experimentId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "tableName": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "format": {
+                          "enum": [
+                            "csv",
+                            "ndjson",
+                            "json-array",
+                            "parquet",
+                            "xlsx"
+                          ],
+                          "type": "string"
+                        },
+                        "anonymizeContributors": {
+                          "type": "boolean"
+                        },
+                        "jobRunId": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "rowCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "parts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "sizeBytes": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "sizeBytes"
+                            ]
+                          },
+                          "minItems": 1
+                        },
+                        "createdBy": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "User who started the export"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "When the export run started"
+                        },
+                        "completedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "When the export run finished"
+                        }
+                      },
+                      "required": [
+                        "exportId",
+                        "experimentId",
+                        "tableName",
+                        "format",
+                        "anonymizeContributors",
+                        "jobRunId",
+                        "rowCount",
+                        "parts",
+                        "createdBy",
+                        "createdAt",
+                        "completedAt"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 100
+                  }
+                },
+                "required": [
+                  "exports"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "imported": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Exports recorded by this call"
+                    }
+                  },
+                  "required": [
+                    "imported"
                   ]
                 }
               }
