@@ -28,8 +28,6 @@ export function useLoginFlow() {
     // Resolve the freshly-signed-in userId so the profile prefetch has a target.
     const session = await authClient.getSession().catch(() => null);
     const userId = session?.data?.user?.id;
-    if (!userId) return;
-
     void prefetchOfflineData(queryClient, userId);
     void ensureDeviceRegistered();
   };

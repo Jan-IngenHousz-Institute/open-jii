@@ -103,11 +103,11 @@ describe.each(["GitHub", "ORCID"] as const)("%s sign-in", (provider) => {
     expect(toastError).not.toHaveBeenCalled();
   });
 
-  it.each(["missing user", "session request fails"])(
-    "skips prefetch and registration when %s despite a cookie",
+  it.each(["returns no user", "fails"])(
+    "still prefetches and registers when the session request %s after a token was stored",
     async (outcome) => {
-      getCookie.mockReturnValue("better-auth.dev.session_token=stale");
-      if (outcome === "session request fails") {
+      getCookie.mockReturnValue("better-auth.dev.session_token=valid");
+      if (outcome === "fails") {
         getSession.mockRejectedValue(new Error("offline"));
       }
       const { result } = renderHook(() => useLoginFlow(), { wrapper });
@@ -116,8 +116,8 @@ describe.each(["GitHub", "ORCID"] as const)("%s sign-in", (provider) => {
         await start(result.current);
       });
 
-      expect(prefetchOfflineData).not.toHaveBeenCalled();
-      expect(ensureDeviceRegistered).not.toHaveBeenCalled();
+      expect(prefetchOfflineData).toHaveBeenCalledExactlyOnceWith(queryClient, undefined);
+      expect(ensureDeviceRegistered).toHaveBeenCalledTimes(1);
       expect(toastError).not.toHaveBeenCalled();
     },
   );
