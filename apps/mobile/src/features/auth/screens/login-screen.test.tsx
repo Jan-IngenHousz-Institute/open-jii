@@ -86,7 +86,7 @@ describe("login connection message", () => {
     for (const title of [auth.continueWithEmail, auth.github, auth.orcid]) {
       expect(buttonDisabled(title)).toBe(true);
     }
-    expect(buttonDisabled(common.tryAgain)).toBe(false);
+    expect(buttonDisabled(common.retry)).toBe(false);
 
     let finishRetry!: (online: boolean) => void;
     probe.mockImplementationOnce(
@@ -95,10 +95,10 @@ describe("login connection message", () => {
           finishRetry = resolve;
         }),
     );
-    fireEvent.press(screen.getByText(common.tryAgain));
+    fireEvent.press(screen.getByText(common.retry));
     await waitFor(() => expect(screen.getByText(common.checkingConnection)).toBeTruthy());
     expect(probe).toHaveBeenCalledTimes(3);
-    expect(buttonDisabled(common.tryAgain)).toBe(true);
+    expect(buttonDisabled(common.retry)).toBe(true);
     expect(screen.getByText(common.serverUnreachable)).toBeTruthy();
 
     act(() => finishRetry(true));
@@ -118,7 +118,7 @@ describe("login connection message", () => {
 
     await waitFor(() => expect(probe).toHaveBeenCalledTimes(3), { timeout: 3000 });
     expect(screen.queryByText(common.checkingConnection)).toBeNull();
-    expect(buttonDisabled(common.tryAgain)).toBe(false);
+    expect(buttonDisabled(common.retry)).toBe(false);
   });
 
   it("starts a new probe when Try again is pressed during a pending poll", async () => {
@@ -135,7 +135,7 @@ describe("login connection message", () => {
           finishRetry = resolve;
         }),
     );
-    fireEvent.press(screen.getByText(common.tryAgain));
+    fireEvent.press(screen.getByText(common.retry));
     await waitFor(() => expect(probe).toHaveBeenCalledTimes(4));
     expect(screen.getByText(common.checkingConnection)).toBeTruthy();
 
@@ -149,9 +149,9 @@ describe("login connection message", () => {
     renderLogin();
     await waitFor(() => expect(screen.getByText(common.serverUnreachable)).toBeTruthy());
 
-    fireEvent.press(screen.getByText(common.tryAgain));
+    fireEvent.press(screen.getByText(common.retry));
     await waitFor(() => expect(probe).toHaveBeenCalledTimes(4));
-    await waitFor(() => expect(buttonDisabled(common.tryAgain)).toBe(false));
+    await waitFor(() => expect(buttonDisabled(common.retry)).toBe(false));
     expect(screen.getByText(common.serverUnreachable)).toBeTruthy();
     expect(screen.getByPlaceholderText(auth.emailPlaceholder).props.editable).toBe(true);
   });

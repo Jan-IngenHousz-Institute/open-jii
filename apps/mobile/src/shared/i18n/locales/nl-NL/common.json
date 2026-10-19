@@ -13,7 +13,6 @@
   "close": "Sluiten",
   "loading": "Laden…",
   "serverUnreachable": "Kan openJII niet bereiken. Controleer je internetverbinding en probeer het opnieuw.",
-  "tryAgain": "Opnieuw proberen",
   "checkingConnection": "Verbinding wordt gecontroleerd…",
   "errorGeneric": "Er ging iets mis",
   "errorTitle": "Fout",

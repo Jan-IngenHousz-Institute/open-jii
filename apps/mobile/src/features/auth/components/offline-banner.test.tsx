@@ -27,7 +27,7 @@ describe("OfflineBanner", () => {
     render(<OfflineBanner online={false} checking={false} onRetry={onRetry} />);
 
     expect(screen.queryByText(common.checkingConnection)).toBeNull();
-    fireEvent.press(screen.getByText(common.tryAgain));
+    fireEvent.press(screen.getByText(common.retry));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 

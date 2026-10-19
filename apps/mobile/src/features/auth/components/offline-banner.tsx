@@ -32,12 +32,12 @@ export function OfflineBanner({ online, checking, onRetry }: OfflineBannerProps)
         </Text>
       )}
       <Button
-        title={t("tryAgain")}
+        title={t("retry")}
         variant="surface"
         onPress={onRetry}
         isLoading={checking}
         accessibilityRole="button"
-        accessibilityLabel={checking ? t("checkingConnection") : t("tryAgain")}
+        accessibilityLabel={checking ? t("checkingConnection") : t("retry")}
         accessibilityState={{ busy: checking, disabled: checking }}
       />
     </View>
