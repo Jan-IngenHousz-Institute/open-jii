@@ -104,10 +104,20 @@ nonzero. `--skip-perf` runs only correctness checks.
 
 This is an explicit local verification command, outside the default pytest/Vitest
 and CI suites. It covers both ANSI modes, source-name collisions, filtered and
-unfiltered paging, DISTINCT and exact numeric boundaries. The optional benchmark
-uses cached parquet data at 100k and 1M rows with full-row and ID-only projections.
-Its lexical comparison uses current generated SQL with numeric classification
-disabled in the test adapter.
+unfiltered paging, every page of the main fixture, chart reads, DISTINCT, exact
+numeric boundaries, and sources or base columns named like the builder's hidden
+sort keys.
+
+The benchmark times repository statements exactly as emitted, with their LIMIT and
+OFFSET, against the same statements with numeric classification disabled in the
+test adapter. It runs ID-only and payload projections in both directions: first
+pages (`LIMIT 100`) at 100k and 1M cached parquet rows, and deep pages
+(`LIMIT 100 OFFSET 100000`) and chart reads (`LIMIT 100001`) at 1M. Each statement
+gets one warmup and five interleaved timed samples; the median is reported. Every
+1M cell fails above 5x or 2 s over its lexical control. The numeric statements are
+also checked to sort by keys computed once per row below the sort.
+One complete default run, correctness and benchmark, takes about two and a half
+minutes on the two-core `local[2]` session it starts.
 
 ### Numeric policy
 
