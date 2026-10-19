@@ -67,6 +67,7 @@ class BackendClient:
     WEBHOOK_MACRO_BATCH_PATH = "/api/v1/macros/execute-batch"
     WEBHOOK_IOT_REGISTRY_PATH = "/api/v1/iot/devices/registry"
     WEBHOOK_DATA_UPLOAD_PATH = "/api/v1/webhooks/data-upload"
+    WEBHOOK_DATA_EXPORT_CARRY_OVER_PATH = "/api/v1/webhooks/data-export-carry-over"
     DEVICE_REGISTRY_BATCH_SIZE = 500
     DEVICE_REGISTRY_RETRY_DELAYS = (1, 2)
     DEVICE_REGISTRY_REQUEST_TIMEOUT = 5
@@ -515,6 +516,10 @@ class BackendClient:
     def notify_upload_outcome(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Tell the backend whether an upload's rows reached its table, so it notifies the uploader."""
         return self._make_request_with_retries(self.WEBHOOK_DATA_UPLOAD_PATH, payload)
+
+    def carry_over_exports(self, exports: list[dict[str, Any]]) -> dict[str, Any]:
+        """Record exports copied from the old export volume, so they appear in the export list."""
+        return self._make_request_with_retries(self.WEBHOOK_DATA_EXPORT_CARRY_OVER_PATH, {"exports": exports})
 
     def _make_request_with_retries(self, endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
         """``_make_request``, tried again after each transient failure."""
