@@ -83,10 +83,14 @@ export class ExperimentDataExportsRepository {
         return { record: experimentExportSchema.parse(inserted[0]), created: true };
       }
 
+      // Whoever joins hears how the export ends, as its creator does.
+      const joiner = sql`${input.createdBy}::uuid`;
       const inFlight = (
         await this.database
-          .select()
-          .from(experimentExports)
+          .update(experimentExports)
+          .set({
+            watcherIds: sql`CASE WHEN ${joiner} = ${experimentExports.createdBy} OR ${joiner} = ANY(${experimentExports.watcherIds}) THEN ${experimentExports.watcherIds} ELSE array_append(${experimentExports.watcherIds}, ${joiner}) END`,
+          })
           .where(
             and(
               eq(experimentExports.experimentId, input.experimentId),
@@ -96,10 +100,10 @@ export class ExperimentDataExportsRepository {
               inArray(experimentExports.status, IN_FLIGHT_EXPORT_STATUSES),
             ),
           )
-          .limit(1)
+          .returning()
       ).at(0);
 
-      // The run it collided with ended between the insert and this read.
+      // The run it collided with ended between the insert and this update.
       if (!inFlight) {
         throw AppError.conflict("The previous export of this table just finished; start it again");
       }
@@ -188,14 +192,14 @@ export class ExperimentDataExportsRepository {
 
   /**
    * Finishes an in-flight export from its manifest. Null when another task finished it first,
-   * so only the caller that gets the row back announces the outcome.
+   * so only the caller that gets the row back announces the outcome. Retention counts from the
+   * run's start, which is before any file was written, so the record never outlives its files.
    */
   async complete(
     exportId: string,
     manifest: ExportManifest,
   ): Promise<Result<ExperimentExportDto | null>> {
     return tryCatch(async () => {
-      const completedAt = new Date();
       const row = (
         await this.database
           .update(experimentExports)
@@ -204,8 +208,10 @@ export class ExperimentDataExportsRepository {
             rowCount: manifest.rowCount,
             totalBytes: manifest.parts.reduce((total, part) => total + part.sizeBytes, 0),
             parts: manifest.parts,
-            completedAt,
-            expiresAt: new Date(completedAt.getTime() + EXPORT_RETENTION_DAYS * DAY_MS),
+            completedAt: new Date(),
+            expiresAt: new Date(
+              new Date(manifest.snapshotAt).getTime() + EXPORT_RETENTION_DAYS * DAY_MS,
+            ),
           })
           .where(
             and(
@@ -258,7 +264,9 @@ export class ExperimentDataExportsRepository {
 
   /**
    * Records exports written before this table existed. Rows whose experiment or creator is gone
-   * are skipped, and a repeated call records nothing twice. Returns how many were recorded.
+   * are skipped, and a repeated call records nothing twice. A run this table already failed,
+   * because it ran the old notebook during a deploy, is replaced by its carried-over export.
+   * Returns how many were recorded.
    */
   async insertCarriedOver(exports: CarriedOverExport[]): Promise<Result<number>> {
     return tryCatch(async () => {
@@ -275,28 +283,41 @@ export class ExperimentDataExportsRepository {
       const experimentSet = new Set(knownExperiments.map((row) => row.id));
       const userSet = new Set(knownUsers.map((row) => row.id));
 
-      const rows = exports
-        .filter((record) => experimentSet.has(record.experimentId) && userSet.has(record.createdBy))
-        .map(
-          (record): NewExportRow => ({
-            ...record,
-            status: "completed",
-            totalBytes: record.parts.reduce((total, part) => total + part.sizeBytes, 0),
-            expiresAt: new Date(record.createdAt.getTime() + EXPORT_RETENTION_DAYS * DAY_MS),
-          }),
-        );
+      const kept = exports.filter(
+        (record) => experimentSet.has(record.experimentId) && userSet.has(record.createdBy),
+      );
+      const rows = kept.map(
+        (record): NewExportRow => ({
+          ...record,
+          status: "completed",
+          totalBytes: record.parts.reduce((total, part) => total + part.sizeBytes, 0),
+          expiresAt: new Date(record.createdAt.getTime() + EXPORT_RETENTION_DAYS * DAY_MS),
+        }),
+      );
 
       if (rows.length === 0) {
         return 0;
       }
 
-      const inserted = await this.database
-        .insert(experimentExports)
-        .values(rows)
-        .onConflictDoNothing({ target: experimentExports.id })
-        .returning({ id: experimentExports.id });
+      return this.database.transaction(async (tx) => {
+        await tx.delete(experimentExports).where(
+          and(
+            eq(experimentExports.status, "failed"),
+            inArray(
+              experimentExports.jobRunId,
+              kept.map((record) => record.jobRunId),
+            ),
+          ),
+        );
 
-      return inserted.length;
+        const inserted = await tx
+          .insert(experimentExports)
+          .values(rows)
+          .onConflictDoNothing({ target: experimentExports.id })
+          .returning({ id: experimentExports.id });
+
+        return inserted.length;
+      });
     });
   }
 }

@@ -6,13 +6,15 @@ import {
   JobResultState,
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
 import { AppError, assertSuccess, failure, success } from "../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../notifications/application/services/notification-dispatch.service";
 import { TestHarness } from "../../../test/test-harness";
-import type { ExportManifest } from "../../core/models/experiment-data-exports.model";
+import type { ExportFormat, ExportManifest } from "../../core/models/experiment-data-exports.model";
 import { AWS_PORT } from "../../core/ports/aws.port";
 import type { AwsPort } from "../../core/ports/aws.port";
 import { DATABRICKS_PORT } from "../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../core/ports/databricks.port";
 import { ExperimentDataExportsRepository } from "../../core/repositories/experiment-data-exports.repository";
+import { ExperimentRepository } from "../../core/repositories/experiment.repository";
 import { ExportRunReconcilerService } from "./export-run-reconciler.service";
 
 const RUN_ID = 4242;
@@ -38,11 +40,14 @@ describe("ExportRunReconcilerService", () => {
   let userId: string;
   let experimentId: string;
 
-  async function exportInFlight(jobRunId: number | null = RUN_ID) {
+  async function exportInFlight(
+    jobRunId: number | null = RUN_ID,
+    format: ExportFormat = "parquet",
+  ) {
     const recorded = await exportsRepository.createOrJoinInFlight({
       experimentId,
       tableName: "raw_data",
-      format: "parquet",
+      format,
       anonymizeContributors: false,
       createdBy: userId,
     });
@@ -70,7 +75,7 @@ describe("ExportRunReconcilerService", () => {
       exportId,
       format: "parquet",
       rowCount,
-      snapshotAt: "2026-10-19T13:18:50+00:00",
+      snapshotAt: new Date().toISOString(),
       parts:
         rowCount === 0
           ? []
@@ -172,7 +177,6 @@ describe("ExportRunReconcilerService", () => {
     ["missing", success(null)],
     ["unreadable", success("{not json")],
     ["for another export", success(manifest("11111111-1111-1111-1111-111111111111"))],
-    ["unreachable", failure(AppError.internal("Access denied", "AWS_S3_READ_FAILED"))],
   ])("fails a succeeded run whose manifest is %s", async (_case, readResult) => {
     const exportId = await exportInFlight();
     vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(
@@ -183,6 +187,23 @@ describe("ExportRunReconcilerService", () => {
     await reconciler.reconcile();
 
     expect(await stored(exportId)).toMatchObject({ status: "failed", errorCode: "unknown" });
+  });
+
+  it("reads a manifest the bucket would not hand over again on the next pass", async () => {
+    const exportId = await exportInFlight();
+    vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(
+      success(run(JobLifecycleState.TERMINATED, JobResultState.SUCCESS)),
+    );
+    vi.spyOn(awsPort, "readExportObject")
+      .mockResolvedValueOnce(failure(AppError.internal("Slow Down", "AWS_S3_READ_FAILED")))
+      .mockResolvedValueOnce(success(manifest(exportId)));
+
+    await reconciler.reconcile();
+    expect((await stored(exportId)).status).toBe("queued");
+    expect(await notificationsFor(userId)).toHaveLength(0);
+
+    await reconciler.reconcile();
+    expect((await stored(exportId)).status).toBe("completed");
   });
 
   it("fails a failed run with the reason its last attempt raised", async () => {
@@ -246,7 +267,7 @@ describe("ExportRunReconcilerService", () => {
 
   it.each([
     [JobLifecycleState.TERMINATED, JobResultState.CANCELED],
-    [JobLifecycleState.TERMINATED, JobResultState.TIMEOUT],
+    [JobLifecycleState.TERMINATED, JobResultState.FAILED],
     [JobLifecycleState.INTERNAL_ERROR, undefined],
     [JobLifecycleState.SKIPPED, undefined],
   ])("fails a %s %s run", async (lifeCycleState, resultState) => {
@@ -260,26 +281,112 @@ describe("ExportRunReconcilerService", () => {
     expect((await stored(exportId)).status).toBe("failed");
   });
 
-  it("fails an export whose run was never started once the grace period has passed", async () => {
-    const stale = await exportInFlight(null);
-    await testApp.database
-      .update(experimentExports)
-      .set({ createdAt: new Date(Date.now() - 10 * 60_000) })
-      .where(eq(experimentExports.id, stale));
-    const statusCheck = vi.spyOn(databricksPort, "getJobRunStatus");
+  it("starts the run of an export whose trigger never recorded one", async () => {
+    const exportId = await exportInFlight(null);
+    const trigger = vi
+      .spyOn(databricksPort, "triggerDataExportJob")
+      .mockResolvedValue(success({ run_id: 77, number_in_job: 1 }));
 
     await reconciler.reconcile();
 
-    expect(await stored(stale)).toMatchObject({ status: "failed", errorCode: "unknown" });
-    expect(statusCheck).not.toHaveBeenCalled();
+    expect(trigger).toHaveBeenCalledWith({
+      exportId,
+      experimentId,
+      tableName: "raw_data",
+      format: "parquet",
+      userId,
+      anonymizeContributors: false,
+    });
+    expect(await stored(exportId)).toMatchObject({ status: "queued", jobRunId: 77 });
   });
 
-  it("leaves a just-recorded export without a run alone", async () => {
+  it("keeps trying to start a run until the export is a quarter of an hour old", async () => {
     const fresh = await exportInFlight(null);
+    const stale = await exportInFlight(null, "csv");
+    await testApp.database
+      .update(experimentExports)
+      .set({ createdAt: new Date(Date.now() - 20 * 60_000) })
+      .where(eq(experimentExports.id, stale));
+    vi.spyOn(databricksPort, "triggerDataExportJob").mockResolvedValue(
+      failure(AppError.internal("Databricks unavailable")),
+    );
 
     await reconciler.reconcile();
 
     expect((await stored(fresh)).status).toBe("queued");
+    expect(await stored(stale)).toMatchObject({ status: "failed", errorCode: "unknown" });
+  });
+
+  it("gives up on a run that has been in flight for two days", async () => {
+    const exportId = await exportInFlight();
+    await testApp.database
+      .update(experimentExports)
+      .set({ createdAt: new Date(Date.now() - 49 * 60 * 60_000) })
+      .where(eq(experimentExports.id, exportId));
+    const statusCheck = vi.spyOn(databricksPort, "getJobRunStatus");
+
+    await reconciler.reconcile();
+
+    expect(await stored(exportId)).toMatchObject({ status: "failed", errorCode: "unknown" });
+    expect(statusCheck).not.toHaveBeenCalled();
+  });
+
+  it("follows the other exports when one of them throws", async () => {
+    const broken = await exportInFlight();
+    const healthy = await exportInFlight(RUN_ID + 1, "csv");
+    vi.spyOn(databricksPort, "getJobRunStatus").mockImplementation((runId) =>
+      runId === RUN_ID
+        ? Promise.reject(new Error("socket hang up"))
+        : Promise.resolve(success(run(JobLifecycleState.RUNNING))),
+    );
+
+    await reconciler.reconcile();
+
+    expect((await stored(broken)).status).toBe("queued");
+    expect((await stored(healthy)).status).toBe("running");
+  });
+
+  it("tells everyone who asked for the export how it ended", async () => {
+    const exportId = await exportInFlight();
+    const joinerId = await testApp.createTestUser({});
+    await exportsRepository.createOrJoinInFlight({
+      experimentId,
+      tableName: "raw_data",
+      format: "parquet",
+      anonymizeContributors: false,
+      createdBy: joinerId,
+    });
+    vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(
+      success(run(JobLifecycleState.TERMINATED, JobResultState.SUCCESS)),
+    );
+    vi.spyOn(awsPort, "readExportObject").mockResolvedValue(success(manifest(exportId)));
+
+    await reconciler.reconcile();
+
+    expect(await notificationsFor(userId)).toHaveLength(1);
+    expect(await notificationsFor(joinerId)).toEqual([
+      expect.objectContaining({ type: "data_export_completed" }),
+    ]);
+  });
+
+  it("notifies once when two backend tasks finish the same export at the same time", async () => {
+    const exportId = await exportInFlight();
+    vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(
+      success(run(JobLifecycleState.TERMINATED, JobResultState.SUCCESS)),
+    );
+    vi.spyOn(awsPort, "readExportObject").mockResolvedValue(success(manifest(exportId)));
+    const otherTask = new ExportRunReconcilerService(
+      exportsRepository,
+      testApp.module.get(ExperimentRepository),
+      databricksPort,
+      awsPort,
+      testApp.module.get(NotificationDispatchService),
+    );
+
+    await Promise.all([reconciler.reconcile(), otherTask.reconcile()]);
+
+    expect((await stored(exportId)).status).toBe("completed");
+    expect(await notificationsFor(userId)).toHaveLength(1);
   });
 
   it("tries again on the next pass when the run cannot be read", async () => {

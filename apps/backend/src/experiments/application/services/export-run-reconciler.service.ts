@@ -33,8 +33,11 @@ export const EXPORT_RECONCILE_INTERVAL = "export-run-reconciler";
 
 const INTERVAL_MS = 30_000;
 
-/** An export with no run this long after it was recorded lost its trigger to a crash. */
-const UNTRIGGERED_GRACE_MS = 5 * 60_000;
+/** An export whose run still cannot be started this long after it was recorded is given up. */
+const UNTRIGGERED_LIMIT_MS = 15 * 60_000;
+
+/** No export runs this long, queue included, so a run this old can no longer be followed. */
+const IN_FLIGHT_LIMIT_MS = 48 * 60 * 60_000;
 
 /** The notebook raises `ExportError`, whose message starts with this marker. */
 const EXPORT_ERROR_MARKER = /EXPORT_ERROR\[([a-z_]+)\]/;
@@ -42,7 +45,13 @@ const EXPORT_ERROR_MARKER = /EXPORT_ERROR\[([a-z_]+)\]/;
 type RunOutcome =
   | { kind: "in-flight"; status: ExportStatus }
   | { kind: "succeeded" }
-  | { kind: "failed" };
+  | { kind: "failed" }
+  | { kind: "unrecognised" };
+
+type ManifestRead =
+  | { kind: "found"; manifest: ExportManifest }
+  | { kind: "unusable" }
+  | { kind: "unreachable" };
 
 /**
  * Follows every in-flight export's job run and finishes the export when the run ends: from its
@@ -78,6 +87,17 @@ export class ExportRunReconcilerService {
     this.reconciling = true;
 
     try {
+      // First, so retention never waits on Databricks.
+      const expired = await this.exportsRepository.expireDue(new Date());
+      if (expired.isFailure()) {
+        this.logger.error({
+          msg: "Could not expire exports past their retention",
+          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+          operation: "reconcileExports",
+          error: expired.error.message,
+        });
+      }
+
       const inFlight = await this.exportsRepository.findInFlight();
       if (inFlight.isFailure()) {
         this.logger.error({
@@ -90,29 +110,38 @@ export class ExportRunReconcilerService {
       }
 
       for (const record of inFlight.value) {
-        await this.reconcileExport(record);
-      }
-
-      const expired = await this.exportsRepository.expireDue(new Date());
-      if (expired.isFailure()) {
-        this.logger.error({
-          msg: "Could not expire exports past their retention",
-          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-          operation: "reconcileExports",
-          error: expired.error.message,
-        });
+        await this.reconcileExportSafely(record);
       }
     } finally {
       this.reconciling = false;
     }
   }
 
+  /** One export that throws is tried again next pass, without holding up the rest. */
+  private async reconcileExportSafely(record: ExperimentExportDto): Promise<void> {
+    try {
+      await this.reconcileExport(record);
+    } catch (error) {
+      this.logger.error({
+        msg: "Could not follow an export; trying again on the next pass",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "reconcileExports",
+        exportId: record.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   private async reconcileExport(record: ExperimentExportDto): Promise<void> {
+    const age = Date.now() - record.createdAt.getTime();
+
+    if (age > IN_FLIGHT_LIMIT_MS) {
+      await this.finishAsFailed(record, "unknown");
+      return;
+    }
+
     if (record.jobRunId === null) {
-      const isAbandoned = Date.now() - record.createdAt.getTime() > UNTRIGGERED_GRACE_MS;
-      if (isAbandoned) {
-        await this.finishAsFailed(record, "unknown");
-      }
+      await this.startRun(record, age);
       return;
     }
 
@@ -130,6 +159,16 @@ export class ExportRunReconcilerService {
 
     const outcome = this.runOutcome(run.value);
 
+    if (outcome.kind === "unrecognised") {
+      this.logger.warn({
+        msg: "An export's job run is in a state this service does not know",
+        operation: "reconcileExports",
+        exportId: record.id,
+        lifeCycleState: run.value.state.life_cycle_state,
+      });
+      return;
+    }
+
     if (outcome.kind === "in-flight") {
       if (outcome.status !== record.status) {
         await this.exportsRepository.updateInFlightStatus(record.id, outcome.status);
@@ -143,6 +182,39 @@ export class ExportRunReconcilerService {
     }
 
     await this.finishFromManifest(record);
+  }
+
+  /**
+   * Starts the run of an export whose trigger never recorded one, after a timeout or a crash.
+   * Run-now is idempotent on the export id, so a run Databricks already accepted comes back
+   * instead of a second one starting.
+   */
+  private async startRun(record: ExperimentExportDto, age: number): Promise<void> {
+    const triggered = await this.databricksPort.triggerDataExportJob({
+      exportId: record.id,
+      experimentId: record.experimentId,
+      tableName: record.tableName,
+      format: record.format,
+      userId: record.createdBy,
+      anonymizeContributors: record.anonymizeContributors,
+    });
+
+    if (triggered.isSuccess()) {
+      await this.exportsRepository.attachRun(record.id, triggered.value.run_id);
+      return;
+    }
+
+    if (age > UNTRIGGERED_LIMIT_MS) {
+      await this.finishAsFailed(record, "unknown");
+      return;
+    }
+
+    this.logger.warn({
+      msg: "Could not start an export's run; trying again on the next pass",
+      operation: "reconcileExports",
+      exportId: record.id,
+      error: triggered.error.message,
+    });
   }
 
   private runOutcome(run: DatabricksJobRunStatusResponse): RunOutcome {
@@ -163,6 +235,8 @@ export class ExportRunReconcilerService {
       case JobLifecycleState.SKIPPED:
       case JobLifecycleState.INTERNAL_ERROR:
         return { kind: "failed" };
+      default:
+        return { kind: "unrecognised" };
     }
   }
 
@@ -188,13 +262,18 @@ export class ExportRunReconcilerService {
   }
 
   private async finishFromManifest(record: ExperimentExportDto): Promise<void> {
-    const manifest = await this.readManifest(record);
+    const read = await this.readManifest(record);
 
-    if (manifest === null) {
+    if (read.kind === "unreachable") {
+      return;
+    }
+
+    if (read.kind === "unusable") {
       await this.finishAsFailed(record, "unknown");
       return;
     }
 
+    const { manifest } = read;
     if (manifest.rowCount === 0) {
       await this.finishAsFailed(record, "no_data");
       return;
@@ -217,24 +296,36 @@ export class ExportRunReconcilerService {
     }
   }
 
-  /** The run's manifest, or null when it is missing, unreadable, or lists no files. */
-  private async readManifest(record: ExperimentExportDto): Promise<ExportManifest | null> {
+  /**
+   * The run's manifest. A manifest that is missing, malformed, for another export or lists no
+   * files is unusable; one the bucket would not hand over is tried again next pass.
+   */
+  private async readManifest(record: ExperimentExportDto): Promise<ManifestRead> {
     const text = await this.awsPort.readExportObject(exportObjectKey(record, MANIFEST_FILE_NAME));
-    if (text.isFailure() || text.value === null) {
+    if (text.isFailure()) {
       this.logger.warn({
-        msg: "A succeeded export run left no readable manifest",
+        msg: "Could not read a succeeded export's manifest; trying again on the next pass",
         operation: "reconcileExports",
         exportId: record.id,
-        error: text.isFailure() ? text.error.message : "missing",
+        error: text.error.message,
       });
-      return null;
+      return { kind: "unreachable" };
+    }
+
+    if (text.value === null) {
+      this.logger.warn({
+        msg: "A succeeded export run left no manifest",
+        operation: "reconcileExports",
+        exportId: record.id,
+      });
+      return { kind: "unusable" };
     }
 
     let parsed: unknown;
     try {
       parsed = JSON.parse(text.value);
     } catch {
-      return null;
+      return { kind: "unusable" };
     }
 
     const manifest = exportManifestSchema.safeParse(parsed);
@@ -243,7 +334,7 @@ export class ExportRunReconcilerService {
       manifest.data.exportId === record.id &&
       (manifest.data.rowCount === 0 || manifest.data.parts.length > 0);
 
-    return isUsable ? manifest.data : null;
+    return isUsable ? { kind: "found", manifest: manifest.data } : { kind: "unusable" };
   }
 
   private async finishAsFailed(
@@ -267,7 +358,10 @@ export class ExportRunReconcilerService {
     }
   }
 
-  /** Tells whoever started the export how it ended; a failed notification never undoes it. */
+  /**
+   * Tells whoever asked for the export how it ended, its creator and anyone who joined it.
+   * A failed notification never undoes the outcome.
+   */
   private async announce(record: ExperimentExportDto): Promise<void> {
     const experiment = await this.experimentRepository.findOne(record.experimentId);
     if (experiment.isFailure() || experiment.value === null) {
@@ -275,7 +369,7 @@ export class ExportRunReconcilerService {
     }
 
     const target = {
-      recipientIds: [record.createdBy],
+      recipientIds: [...new Set([record.createdBy, ...record.watcherIds])],
       resource: { type: "experiment", id: record.experimentId },
     } satisfies Pick<
       Parameters<NotificationDispatchService["dispatch"]>[0],

@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import { zUpdateExperimentBody } from "../experiment.schema";
 import {
   zExperimentExportDownloadLinksResponse,
+  zExperimentExportPart,
   zExperimentExportRecord,
+  zExperimentExportStatus,
   zExperimentInitiateExportBody,
   zExperimentInitiateExportResponse,
   zExperimentListExportsQuery,
@@ -93,18 +95,31 @@ describe("Export Data Schemas", () => {
   });
 
   it("zExperimentExportRecord accepts all valid statuses", () => {
-    for (const status of [
-      "queued",
-      "pending",
-      "running",
-      "completed",
-      "failed",
-      "expired",
-    ] as const) {
+    for (const status of zExperimentExportStatus.options) {
       expect(zExperimentExportRecord.parse({ ...runningRecord, status })).toEqual({
         ...runningRecord,
         status,
       });
+    }
+  });
+
+  it("zExperimentInitiateExportBody takes table identifiers and refuses anything path-like", () => {
+    for (const tableName of ["raw_data", "device", "182c8c4c-41d1-4eba-a0af-34635f7773d7"]) {
+      expect(zExperimentInitiateExportBody.parse({ tableName, format: "csv" }).tableName).toBe(
+        tableName,
+      );
+    }
+    for (const tableName of ["", "../raw_data", "raw data", "a/b", "x".repeat(129)]) {
+      expect(() => zExperimentInitiateExportBody.parse({ tableName, format: "csv" })).toThrow();
+    }
+  });
+
+  it("zExperimentExportPart takes Spark and Excel file names and refuses anything path-like", () => {
+    for (const name of ["part-00000-tid-1-c000.csv.gz", "part-00000.xlsx", "raw_data.xlsx"]) {
+      expect(zExperimentExportPart.parse({ name, sizeBytes: 1 }).name).toBe(name);
+    }
+    for (const name of ["", ".", "..", "../x.csv", "a/b.csv", "a b.csv"]) {
+      expect(() => zExperimentExportPart.parse({ name, sizeBytes: 1 })).toThrow();
     }
   });
 

@@ -17,13 +17,27 @@ export const zExperimentExportErrorCode = z.enum([
   "unknown",
 ]);
 
+// An export's table name and its file names become storage paths, so both are plain identifiers.
+export const zExperimentExportTableName = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^[A-Za-z0-9_-]+$/, "Table names are letters, digits, underscores and hyphens");
+
 export const zExperimentExportPart = z.object({
-  name: z.string().min(1),
+  name: z
+    .string()
+    .min(1)
+    .max(255)
+    .regex(
+      /^(?!\.\.?$)[A-Za-z0-9._-]+$/,
+      "File names are letters, digits, dots, underscores and hyphens",
+    ),
   sizeBytes: z.number().int().nonnegative(),
 });
 
 export const zExperimentInitiateExportBody = z.object({
-  tableName: z.string().describe("Name of the table to export"),
+  tableName: zExperimentExportTableName.describe("Name of the table to export"),
   format: zExperimentExportFormat.describe("Export format"),
   anonymizeContributors: z
     .boolean()
@@ -34,7 +48,7 @@ export const zExperimentInitiateExportBody = z.object({
 });
 
 export const zExperimentListExportsQuery = z.object({
-  tableName: z.string().describe("Name of the table"),
+  tableName: zExperimentExportTableName.describe("Name of the table"),
 });
 
 export const zExperimentExportRecord = z.object({

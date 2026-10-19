@@ -37,7 +37,7 @@ describe("GetExportDownloadLinksUseCase", () => {
       exportId,
       format: "csv",
       rowCount: 1_500_000,
-      snapshotAt: "2026-10-19T13:18:50+00:00",
+      snapshotAt: new Date().toISOString(),
       parts,
     });
     return exportId;
@@ -133,6 +133,19 @@ describe("GetExportDownloadLinksUseCase", () => {
     expect(result.error.code).toBe("EXPORT_EXPIRED");
   });
 
+  it("refuses a completed export past its expiry before the reconciler marks it expired", async () => {
+    const exportId = await exportWithParts([{ name: "part-00000.csv.gz", sizeBytes: 10 }]);
+    await testApp.database
+      .update(experimentExports)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(eq(experimentExports.id, exportId));
+
+    const result = await useCase.execute(experimentId, exportId);
+
+    assertFailure(result);
+    expect(result.error.code).toBe("EXPORT_EXPIRED");
+  });
+
   it("returns not found for an export of another experiment", async () => {
     const exportId = await exportWithParts([{ name: "part-00000.csv.gz", sizeBytes: 10 }]);
     const { experiment: other } = await testApp.createExperiment({ name: "Other", userId });
@@ -160,5 +173,6 @@ describe("GetExportDownloadLinksUseCase", () => {
 
     assertFailure(result);
     expect(result.error.code).toBe("AWS_S3_PRESIGN_FAILED");
+    expect(result.error.message).toBe("Could not prepare the download links");
   });
 });

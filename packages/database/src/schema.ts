@@ -561,6 +561,11 @@ export const experimentExports = pgTable(
     createdBy: uuid("created_by")
       .references(() => users.id)
       .notNull(),
+    // Whoever asked for the same export while it ran; they hear how it ended too.
+    watcherIds: uuid("watcher_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
     completedAt: timestamp("completed_at"),
     expiresAt: timestamp("expires_at"),
     ...timestamps,

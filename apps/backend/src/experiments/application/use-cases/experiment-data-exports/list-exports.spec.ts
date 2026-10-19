@@ -44,7 +44,7 @@ describe("ListExportsUseCase", () => {
       exportId: recorded.value.record.id,
       format: "parquet",
       rowCount: 2_000_000,
-      snapshotAt: "2026-10-19T13:18:50+00:00",
+      snapshotAt: new Date().toISOString(),
       parts: [
         { name: "part-00000.snappy.parquet", sizeBytes: 900 },
         { name: "part-00001.snappy.parquet", sizeBytes: 100 },

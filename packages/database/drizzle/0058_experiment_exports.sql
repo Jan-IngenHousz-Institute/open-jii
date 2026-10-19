@@ -14,6 +14,7 @@ CREATE TABLE "experiment_exports" (
 	"parts" jsonb,
 	"error_code" "experiment_export_error_code",
 	"created_by" uuid NOT NULL,
+	"watcher_ids" uuid[] DEFAULT '{}'::uuid[] NOT NULL,
 	"completed_at" timestamp,
 	"expires_at" timestamp,
 	"created_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL,
