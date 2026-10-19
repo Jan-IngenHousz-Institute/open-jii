@@ -1,6 +1,6 @@
 import { refreshSession } from "~/features/auth/api/refresh.api";
-import { getCachedSession } from "~/features/auth/hooks/use-session";
 import { getAuthClient } from "~/features/auth/services/auth";
+import { getCachedSession } from "~/features/auth/services/session-cache";
 import { configureAuthRefresh } from "~/shared/api/orpc-fetch";
 
 // Wires the auth feature into the shared fetcher's 401 seam. Imported for
