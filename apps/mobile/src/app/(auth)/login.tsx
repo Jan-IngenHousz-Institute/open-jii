@@ -16,13 +16,13 @@ import {
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useLoginFlow } from "~/features/auth/hooks/use-login";
+import { useLoginConnection } from "~/features/auth/hooks/use-login-connection";
 import { EnvironmentSelector } from "~/features/profile/widgets/environment-selector";
 import { useTranslation } from "~/shared/i18n";
 import { getEnvVar } from "~/shared/stores/environment-store";
 import { Button } from "~/shared/ui/Button";
 import { Input } from "~/shared/ui/Input";
 import { OTPInput } from "~/shared/ui/OTPInput";
-import { useIsOnline } from "~/shared/ui/hooks/use-is-online";
 import { useMultiTapReveal } from "~/shared/ui/hooks/use-multi-tap-reveal";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
@@ -35,16 +35,39 @@ interface LoginFormValues {
 
 interface OfflineBannerProps {
   online: boolean | undefined;
+  checking: boolean;
+  onRetry: () => void;
 }
 
-function OfflineBanner({ online }: OfflineBannerProps) {
+function OfflineBanner({ online, checking, onRetry }: OfflineBannerProps) {
   const { warningFg } = useThemeColors();
   const { t } = useTranslation();
   if (online !== false) return null;
   return (
-    <View className="mb-4 flex-row items-center gap-2 rounded-lg bg-amber-100 p-3 dark:bg-amber-900/30">
-      <MaterialIcons name="wifi-off" size={18} color={warningFg} />
-      <Text className="flex-1 text-sm text-amber-800 dark:text-amber-200">{t("offline")}</Text>
+    <View className="bg-warning/10 mb-6 w-full gap-3 rounded-lg p-4">
+      <View className="flex-row items-start gap-3" accessibilityLiveRegion="polite">
+        <MaterialIcons name="wifi-off" size={24} color={warningFg} />
+        <Text className="flex-1 text-base text-amber-800 dark:text-amber-200">
+          {t("serverUnreachable")}
+        </Text>
+      </View>
+      {checking && (
+        <Text
+          className="text-sm text-amber-800 dark:text-amber-200"
+          accessibilityLiveRegion="polite"
+        >
+          {t("checkingConnection")}
+        </Text>
+      )}
+      <Button
+        title={t("tryAgain")}
+        variant="surface"
+        onPress={onRetry}
+        isLoading={checking}
+        accessibilityRole="button"
+        accessibilityLabel={checking ? t("checkingConnection") : t("tryAgain")}
+        accessibilityState={{ busy: checking, disabled: checking }}
+      />
     </View>
   );
 }
@@ -115,7 +138,7 @@ export default function LoginScreen() {
     verifyLoading,
   } = useLoginFlow();
 
-  const { data: online } = useIsOnline();
+  const { data: online, isFetching: checkingConnection, refetch } = useLoginConnection();
 
   const { isVisible: showEnvSelector, handleTap: handleHeaderTap } = useMultiTapReveal({
     tapsRequired: 4,
@@ -251,7 +274,11 @@ export default function LoginScreen() {
           <View className="w-full">
             {showEnvSelector && <EnvironmentSelector />}
 
-            <OfflineBanner online={online} />
+            <OfflineBanner
+              online={online}
+              checking={checkingConnection}
+              onRetry={() => void refetch({ cancelRefetch: false })}
+            />
 
             {!showOTPInput ? (
               <>
@@ -274,7 +301,7 @@ export default function LoginScreen() {
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoCorrect={false}
-                      editable={!emailLoading && online !== false}
+                      editable={!emailLoading}
                       error={errors.email?.message}
                       containerStyle={{ marginBottom: 12 }}
                     />
