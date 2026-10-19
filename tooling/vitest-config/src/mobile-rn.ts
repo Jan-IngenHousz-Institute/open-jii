@@ -65,7 +65,9 @@ try {
 } catch {}
 var tmpDir = os.tmpdir();
 var cacheDirBase = path.join(tmpDir, "vrn");
-var version = `${reactNativeVersion}_${pluginVersion}`;
+// Bump when mock matching or a mock's code changes: cached transforms outlive both.
+var harnessRevision = 2;
+var version = `${reactNativeVersion}_${pluginVersion}_${harnessRevision}`;
 var cacheDir = path.join(cacheDirBase, version);
 if (!fs.existsSync(cacheDir)) {
   fs.mkdirSync(cacheDir, { recursive: true });
@@ -82,7 +84,12 @@ try {
 } catch {}
 var root = process.cwd();
 var mocked: Array<{ path: string; code: string }> = [];
-var getMocked = (filePath: string) => mocked.find((entry) => filePath.includes(entry.path));
+// Match on the module id plus its extension, so Keyboard/Keyboard does not also
+// claim Keyboard/KeyboardAvoidingView.
+var getMocked = (filePath: string) => {
+  const p = normalize(filePath);
+  return mocked.find((entry) => p.includes(`/${entry.path}.`));
+};
 var transformCode = (code: string) => {
   const result = removeTypes(code, { all: true }).toString();
   return esbuild.transformSync(result, {

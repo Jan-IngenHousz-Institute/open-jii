@@ -14,16 +14,6 @@ const { probe, verifyEmailOTP } = vi.hoisted(() => ({
   verifyEmailOTP: vi.fn(),
 }));
 
-// The native harness's Keyboard prefix mock also matches KeyboardAvoidingView.
-vi.mock("react-native", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-native")>();
-  return new Proxy(actual, {
-    get(target, key) {
-      return key === "KeyboardAvoidingView" ? target.View : Reflect.get(target, key);
-    },
-  });
-});
-
 vi.mock("~/shared/device/is-online", () => ({ isOnline: probe }));
 vi.mock("~/features/auth/hooks/use-login", () => ({
   useLoginFlow: () => ({
