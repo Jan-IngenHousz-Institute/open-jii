@@ -4,6 +4,7 @@ import type {
   TransferResourceResponse,
   TransferableResourceType,
 } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.schema";
+import { isPersonalOrgSlug } from "@repo/database";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
@@ -116,20 +117,20 @@ export class TransferResourceOrgUseCase {
     sourceOrganizationId: string | null,
     targetOrganizationId: string,
   ): Promise<void> {
-    const [members, name, organizationName] = await Promise.all([
+    const [members, name, organization] = await Promise.all([
       this.repo.listMemberIds(resourceType, resourceId, sourceOrganizationId),
       this.repo.findResourceName(resourceType, resourceId),
-      this.repo.findOrganizationName(targetOrganizationId),
+      this.repo.findOrganization(targetOrganizationId),
     ]);
 
     if (
       members.isFailure() ||
       name.isFailure() ||
       name.value === null ||
-      organizationName.isFailure() ||
-      organizationName.value === null
+      organization.isFailure() ||
+      organization.value === null
     ) {
-      const failed = [members, name, organizationName].find((result) => result.isFailure());
+      const failed = [members, name, organization].find((result) => result.isFailure());
       this.logger.error({
         msg: "Could not read who had access or what to call it, nobody was notified of the move",
         errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
@@ -146,7 +147,11 @@ export class TransferResourceOrgUseCase {
       recipientIds: members.value,
       actorId,
       resource: { type: resourceType, id: resourceId },
-      params: { resourceName: name.value, organizationName: organizationName.value },
+      params: {
+        resourceName: name.value,
+        organizationName: organization.value.name,
+        organizationKind: isPersonalOrgSlug(organization.value.slug) ? "personal" : "organization",
+      },
     });
 
     if (dispatched.isFailure()) {

@@ -489,7 +489,11 @@ describe("TransferResourceOrgUseCase", () => {
             actorId: audience.actor,
             resourceType,
             resourceId,
-            params: { resourceName: "Moving Target", organizationName: "Receiving Lab" },
+            params: {
+              resourceName: "Moving Target",
+              organizationName: "Receiving Lab",
+              organizationKind: "organization",
+            },
           })),
         );
         expect(await audienceDeliveries(testApp, audience)).toEqual({
@@ -511,7 +515,7 @@ describe("TransferResourceOrgUseCase", () => {
       expect(await testApp.database.select().from(notifications)).toEqual([]);
     });
 
-    it("names the mover's personal workspace when the resource moves there", async () => {
+    it("marks a move into the mover's personal workspace as personal", async () => {
       const resourceId = await sharedResource("macro");
       const personal = await testApp.personalOrganizationId(audience.actor);
       const [workspace] = await testApp.database
@@ -525,6 +529,7 @@ describe("TransferResourceOrgUseCase", () => {
       expect(row.params).toEqual({
         resourceName: "Moving Target",
         organizationName: workspace.name,
+        organizationKind: "personal",
       });
     });
 

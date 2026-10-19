@@ -807,8 +807,15 @@ export class SharingRepository {
     );
   }
 
-  findOrganizationName(organizationId: string): Promise<Result<string | null>> {
-    return tryCatch(async () => (await this.owningOrganization(organizationId))?.name ?? null);
+  findOrganization(organizationId: string): Promise<Result<{ name: string; slug: string } | null>> {
+    return tryCatch(async () => {
+      const rows = await this.db
+        .select({ name: organizations.name, slug: organizations.slug })
+        .from(organizations)
+        .where(eq(organizations.id, organizationId))
+        .limit(1);
+      return rows.at(0) ?? null;
+    });
   }
 
   /**

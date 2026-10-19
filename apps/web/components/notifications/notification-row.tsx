@@ -142,9 +142,11 @@ export function NotificationRow({ notification, onOpen, layout = "feed" }: Notif
   const path = TYPE_PATH[notification.type](notification.resource);
   const isUnread = notification.readAt === null;
   // `replace` keeps stored params apart from i18next's own options, so a future param
-  // named `count` or `context` interpolates instead of changing how `t` behaves.
+  // named `count` or `context` interpolates instead of changing how `t` behaves. The
+  // one option set on purpose is `context`, which picks a move's `_personal` copy.
   const message = t(`types.${notification.type}`, {
     replace: { ...notification.params, actor: notification.actor?.name ?? t("someone") },
+    context: notification.params.organizationKind === "personal" ? "personal" : undefined,
   });
 
   const handleOpen = () => onOpen(notification);

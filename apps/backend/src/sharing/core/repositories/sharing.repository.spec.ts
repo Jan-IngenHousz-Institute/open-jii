@@ -227,18 +227,20 @@ describe("SharingRepository", () => {
     });
   });
 
-  describe("findOrganizationName", () => {
-    it("names an existing organization", async () => {
-      const org = await testApp.createOrganization("Field Station North");
+  describe("findOrganization", () => {
+    it("returns an existing organization's name and slug", async () => {
+      const org = await testApp.createOrganization("Field Station North", {
+        slug: "field-station-north",
+      });
 
-      const result = await repository.findOrganizationName(org);
+      const result = await repository.findOrganization(org);
 
       assertSuccess(result);
-      expect(result.value).toBe("Field Station North");
+      expect(result.value).toEqual({ name: "Field Station North", slug: "field-station-north" });
     });
 
     it("returns null for an unknown id", async () => {
-      const result = await repository.findOrganizationName(crypto.randomUUID());
+      const result = await repository.findOrganization(crypto.randomUUID());
 
       assertSuccess(result);
       expect(result.value).toBeNull();
