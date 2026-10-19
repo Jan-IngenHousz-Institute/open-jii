@@ -143,7 +143,7 @@ export default function LoginScreen() {
   const [retryingConnection, setRetryingConnection] = useState(false);
   const retryConnection = () => {
     setRetryingConnection(true);
-    void refetch({ cancelRefetch: false }).finally(() => setRetryingConnection(false));
+    void refetch().finally(() => setRetryingConnection(false));
   };
 
   const { isVisible: showEnvSelector, handleTap: handleHeaderTap } = useMultiTapReveal({

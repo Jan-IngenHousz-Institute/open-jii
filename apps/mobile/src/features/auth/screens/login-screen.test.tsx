@@ -126,6 +126,29 @@ describe("login connection message", () => {
     expect(buttonDisabled(common.tryAgain)).toBe(false);
   });
 
+  it("starts a new probe when Try again is pressed during a pending poll", async () => {
+    probe.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
+    probe.mockImplementationOnce(() => new Promise(() => undefined));
+    renderLogin();
+    await waitFor(() => expect(screen.getByText(common.serverUnreachable)).toBeTruthy());
+    await waitFor(() => expect(probe).toHaveBeenCalledTimes(3), { timeout: 3000 });
+
+    let finishRetry!: (online: boolean) => void;
+    probe.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishRetry = resolve;
+        }),
+    );
+    fireEvent.press(screen.getByText(common.tryAgain));
+    await waitFor(() => expect(probe).toHaveBeenCalledTimes(4));
+    expect(screen.getByText(common.checkingConnection)).toBeTruthy();
+
+    act(() => finishRetry(true));
+    await waitFor(() => expect(screen.queryByText(common.serverUnreachable)).toBeNull());
+    expect(screen.queryByText(common.checkingConnection)).toBeNull();
+  });
+
   it("keeps the message and retry available when both retry probes fail", async () => {
     probe.mockResolvedValue(false);
     renderLogin();
