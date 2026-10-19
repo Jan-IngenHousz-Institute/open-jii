@@ -803,7 +803,7 @@ export class SharingRepository {
     owningOrganizationId?: string | null,
   ): Promise<Result<string[]>> {
     return tryCatch(() =>
-      findResourceMemberIds(this.db, resourceType, resourceId, owningOrganizationId),
+      findResourceMemberIds(this.db, resourceType, resourceId, { owningOrganizationId }),
     );
   }
 

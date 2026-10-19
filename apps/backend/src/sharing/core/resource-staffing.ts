@@ -24,7 +24,7 @@ import {
   users,
   workbooks,
 } from "@repo/database";
-import type { AnyColumn, DbOrTx, SQL, Transaction } from "@repo/database";
+import type { AnyColumn, DbOrTx, GrantRole, SQL, Transaction } from "@repo/database";
 
 import { AppError } from "../../common/utils/fp-utils";
 import { roleTokenIncludes as orgRoleIncludes } from "../../common/utils/role-tokens";
@@ -414,52 +414,6 @@ export async function findOwningOrgOwnerIds(
   return rows.map((r) => r.user_id);
 }
 
-/**
- * Who can decide for a resource: admin/owner grant holders plus the owning org's
- * living owners. The owners are usually the only ones — a creator holds no grant,
- * so grants alone would name nobody on a personal-workspace resource.
- * Team/org grants are excluded: no individual person behind them. Deactivated and
- * closed accounts are excluded too, as the organization deciders are.
- */
-export async function findResourceAdminIds(
-  tx: DbOrTx,
-  resourceType: SharingResourceType,
-  resourceId: string,
-): Promise<string[]> {
-  const [granted, ownerIds] = await Promise.all([
-    tx
-      .select({ userId: resourceGrants.granteeId })
-      .from(resourceGrants)
-      .where(
-        and(
-          eq(resourceGrants.resourceType, resourceType),
-          eq(resourceGrants.resourceId, resourceId),
-          eq(resourceGrants.granteeType, "user"),
-          inArray(resourceGrants.role, [...STAFFING_GRANT_ROLES]),
-        ),
-      ),
-    findOwningOrgOwnerIds(tx, resourceType, resourceId),
-  ]);
-
-  // An owner who also holds an admin grant is in both sets — name them once.
-  const candidates = [...new Set([...granted.map((row) => row.userId), ...ownerIds])];
-  if (candidates.length === 0) return [];
-
-  const living = await tx
-    .select({ id: users.id })
-    .from(users)
-    .leftJoin(profiles, eq(profiles.userId, users.id))
-    .where(
-      and(
-        inArray(users.id, candidates),
-        sql`(${profiles.activated} IS NULL OR ${profiles.activated} = true)`,
-        sql`${profiles.deletedAt} IS NULL`,
-      ),
-    );
-
-  return living.map((row) => row.id);
-}
-
 async function findOrgOwnerIds(tx: DbOrTx, organizationId: string | null): Promise<string[]> {
   if (!organizationId) return [];
 
@@ -470,23 +424,26 @@ async function findOrgOwnerIds(tx: DbOrTx, organizationId: string | null): Promi
 }
 
 /**
- * Everyone who reaches a resource through a direct user grant, at any role, or by
- * owning the organization that owns it — the people a deletion or a move takes
- * something from. Viewers count because they lose access too. Access through an
- * organization role below owner, or through a team or organization grant, does
- * not: the same depth every resource notification stops at. Deactivated and
- * closed accounts are dropped.
+ * The people with a direct stake in a resource: every holder of a user grant on it,
+ * at `roles` or at any role when that is omitted, plus the living owners of the
+ * organization that owns it. The owners are usually the only ones — a creator holds
+ * no grant on what they create, so grants alone would name nobody on a
+ * personal-workspace resource. Team and organization grants are left out, as are
+ * organization members below owner: there is no individual person behind a group
+ * grant, and every resource notification stops at that depth. Deactivated and closed
+ * accounts are dropped.
  *
- * `owningOrganizationId` overrides the resource's own: once a move has written,
- * the row names the receiving organization, not the one that lost it. `null`
- * means no owners.
+ * `owningOrganizationId` overrides the resource's own: once a move has written, the
+ * row names the receiving organization, not the one that lost it. `null` means no
+ * owners.
  */
 export async function findResourceMemberIds(
   tx: DbOrTx,
   resourceType: SharingResourceType,
   resourceId: string,
-  owningOrganizationId?: string | null,
+  options: { roles?: readonly GrantRole[]; owningOrganizationId?: string | null } = {},
 ): Promise<string[]> {
+  const { roles, owningOrganizationId } = options;
   const [granted, ownerIds] = await Promise.all([
     tx
       .select({ userId: resourceGrants.granteeId })
@@ -496,6 +453,7 @@ export async function findResourceMemberIds(
           eq(resourceGrants.resourceType, resourceType),
           eq(resourceGrants.resourceId, resourceId),
           eq(resourceGrants.granteeType, "user"),
+          roles ? inArray(resourceGrants.role, [...roles]) : undefined,
         ),
       ),
     owningOrganizationId === undefined
@@ -503,6 +461,7 @@ export async function findResourceMemberIds(
       : findOrgOwnerIds(tx, owningOrganizationId),
   ]);
 
+  // An owner who also holds a grant is in both sets — name them once.
   const candidates = [...new Set([...granted.map((row) => row.userId), ...ownerIds])];
   if (candidates.length === 0) return [];
 
@@ -519,6 +478,15 @@ export async function findResourceMemberIds(
     );
 
   return living.map((row) => row.id);
+}
+
+/** The admin-only view, read by the join, leave and join-request notifications. */
+export function findResourceAdminIds(
+  tx: DbOrTx,
+  resourceType: SharingResourceType,
+  resourceId: string,
+): Promise<string[]> {
+  return findResourceMemberIds(tx, resourceType, resourceId, { roles: STAFFING_GRANT_ROLES });
 }
 
 /** Whether anybody living owns the organization this resource belongs to. */
