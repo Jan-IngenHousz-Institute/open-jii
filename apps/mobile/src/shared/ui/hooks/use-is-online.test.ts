@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider, onlineManager } from "@tanstack/react
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { deferred } from "~/shared/testing/deferred";
 
 import { useIsOnline } from "./use-is-online";
 
@@ -27,40 +28,32 @@ afterEach(() => {
 });
 
 describe("useIsOnline({ confirm: true })", () => {
-  it("waits for two consecutive missed probes before reporting unreachable", async () => {
-    let finishConfirmation!: (online: boolean) => void;
-    probe.mockResolvedValueOnce(false).mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          finishConfirmation = resolve;
-        }),
-    );
-
-    const { result } = renderHook(
+  // Read every field during render so TanStack's tracked props notify on each change.
+  const renderConfirmed = () =>
+    renderHook(
       () => {
         const { data, isFetching, refetch } = useIsOnline({ confirm: true });
         return { data, isFetching, refetch };
       },
       { wrapper },
     );
+
+  it("waits for two consecutive missed probes before reporting unreachable", async () => {
+    const confirmation = deferred<boolean>();
+    probe.mockResolvedValueOnce(false).mockReturnValueOnce(confirmation.promise);
+    const { result } = renderConfirmed();
 
     await waitFor(() => expect(probe).toHaveBeenCalledTimes(2));
     expect(result.current.data).toBeUndefined();
     expect(result.current.isFetching).toBe(true);
 
-    act(() => finishConfirmation(false));
+    act(() => confirmation.resolve(false));
     await waitFor(() => expect(result.current.data).toBe(false));
   });
 
   it("does not report a slow connection as unreachable after one missed probe", async () => {
     probe.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
-    const { result } = renderHook(
-      () => {
-        const { data, isFetching, refetch } = useIsOnline({ confirm: true });
-        return { data, isFetching, refetch };
-      },
-      { wrapper },
-    );
+    const { result } = renderConfirmed();
 
     await waitFor(() => expect(result.current.data).toBe(true));
 
@@ -75,47 +68,39 @@ describe("useIsOnline({ confirm: true })", () => {
   it("retries immediately even when the global online manager is offline", async () => {
     onlineManager.setOnline(false);
     probe.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
-    const { result } = renderHook(
-      () => {
-        const { data, isFetching, refetch } = useIsOnline({ confirm: true });
-        return { data, isFetching, refetch };
-      },
-      { wrapper },
-    );
+    const { result } = renderConfirmed();
     await waitFor(() => expect(result.current.data).toBe(false));
 
-    let finishRetry!: (online: boolean) => void;
-    probe.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          finishRetry = resolve;
-        }),
-    );
+    const retry = deferred<boolean>();
+    probe.mockReturnValueOnce(retry.promise);
     act(() => {
-      void result.current.refetch({ cancelRefetch: false });
+      void result.current.refetch();
     });
     await waitFor(() => expect(result.current.isFetching).toBe(true));
     expect(probe).toHaveBeenCalledTimes(3);
     expect(result.current.data).toBe(false);
 
-    act(() => finishRetry(true));
+    act(() => retry.resolve(true));
     await waitFor(() => expect(result.current.data).toBe(true));
     expect(result.current.isFetching).toBe(false);
   });
 
   it("recovers automatically on the next poll after one successful probe", async () => {
-    probe.mockResolvedValueOnce(false).mockResolvedValueOnce(false).mockResolvedValue(true);
-    const { result } = renderHook(
-      () => {
-        const { data, isFetching, refetch } = useIsOnline({ confirm: true });
-        return { data, isFetching, refetch };
-      },
-      { wrapper },
-    );
-    await waitFor(() => expect(result.current.data).toBe(false));
+    vi.useFakeTimers();
+    try {
+      probe.mockResolvedValueOnce(false).mockResolvedValueOnce(false).mockResolvedValue(true);
+      const { result } = renderConfirmed();
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      expect(result.current.data).toBe(false);
 
-    await waitFor(() => expect(result.current.data).toBe(true), { timeout: 3000 });
-    expect(probe).toHaveBeenCalledTimes(3);
+      await act(() => vi.advanceTimersByTimeAsync(1999));
+      expect(probe).toHaveBeenCalledTimes(2);
+      await act(() => vi.advanceTimersByTimeAsync(1));
+      await vi.waitFor(() => expect(result.current.data).toBe(true));
+      expect(probe).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
