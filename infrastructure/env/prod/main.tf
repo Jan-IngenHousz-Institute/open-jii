@@ -1397,7 +1397,8 @@ module "data_downloads_volume" {
 }
 
 # Export files live in this environment's own bucket so the backend can sign
-# GetObject URLs for them; the lifecycle rule is the export retention
+# GetObject URLs for them. Records expire after 30 days; the files a day later,
+# since S3 counts from when each part was written and rounds up to midnight UTC
 module "data_exports_s3" {
   source      = "../../modules/s3"
   bucket_name = "open-jii-data-exports-${var.environment}"
@@ -1409,7 +1410,7 @@ module "data_exports_s3" {
       id                                     = "expire-data-exports"
       status                                 = "Enabled"
       transitions                            = []
-      expiration_days                        = 30
+      expiration_days                        = 31
       abort_incomplete_multipart_upload_days = 1
     }
   ]
@@ -1458,7 +1459,7 @@ module "data_exports_volume" {
   catalog_name     = module.databricks_catalog.catalog_name
   schema_name      = "centrum"
   volume_name      = "exports"
-  storage_location = "${module.data_exports_external_location.external_location_url}exports"
+  storage_location = "s3://${module.data_exports_s3.bucket_id}/exports"
   comment          = "External volume for experiment data exports, written in parts with a manifest"
 
   grants = {
@@ -1472,7 +1473,7 @@ module "data_exports_volume" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [databricks_grants.centrum_schema]
+  depends_on = [databricks_grants.centrum_schema, module.data_exports_external_location]
 }
 
 module "data_imports_volume" {
