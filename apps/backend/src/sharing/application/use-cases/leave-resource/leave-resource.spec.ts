@@ -1,11 +1,27 @@
 import { StatusCodes } from "http-status-codes";
 
-import { and, eq, profiles, resourceGrants } from "@repo/database";
+import {
+  and,
+  deviceGroups,
+  eq,
+  notificationDeliveries,
+  notifications,
+  profiles,
+  resourceGrants,
+} from "@repo/database";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import {
+  AppError,
+  assertFailure,
+  assertSuccess,
+  failure,
+  success,
+} from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
+import { NotificationRepository } from "../../../../notifications/core/repositories/notification.repository";
 import { TestHarness } from "../../../../test/test-harness";
+import { SharingRepository } from "../../../core/repositories/sharing.repository";
 import { LeaveResourceUseCase } from "./leave-resource";
 
 /**
@@ -313,5 +329,159 @@ describe("leaveResource", () => {
         })
       ).allow,
     ).toBe(false);
+  });
+
+  describe("notifying the resource's admins", () => {
+    const allNotifications = () => testApp.database.select().from(notifications);
+
+    async function addViewer(resourceType: "macro" | "device_group", resourceId: string) {
+      const viewer = await testApp.createTestUser({ name: "Leaving Viewer" });
+      await testApp.addResourceGrant({
+        resourceType,
+        resourceId,
+        granteeType: "user",
+        granteeId: viewer,
+        role: "viewer",
+      });
+      return viewer;
+    }
+
+    it("tells every admin of a macro who left, and emails nobody", async () => {
+      const name = `Macro ${crypto.randomUUID()}`;
+      const macro = await testApp.createMacro({ name, createdBy: owner });
+      const coAdmin = await testApp.createTestUser({ name: "Co Admin" });
+      await testApp.addResourceAdmin("macro", macro.id, coAdmin);
+      const viewer = await addViewer("macro", macro.id);
+
+      assertSuccess(await leave.execute(viewer, "macro", macro.id));
+
+      const rows = await allNotifications();
+      expect(rows.map((row) => row.recipientId).sort()).toEqual([owner, coAdmin].sort());
+      for (const row of rows) {
+        expect(row).toMatchObject({
+          type: "resource_member_left",
+          actorId: viewer,
+          resourceType: "macro",
+          resourceId: macro.id,
+          params: { resourceName: name },
+        });
+      }
+      expect(await testApp.database.select().from(notificationDeliveries)).toEqual([]);
+    });
+
+    it("stores a device group as the resource left", async () => {
+      const [group] = await testApp.database
+        .insert(deviceGroups)
+        .values({
+          name: "Left Group",
+          organizationId: await testApp.personalOrganizationId(owner),
+          createdBy: owner,
+        })
+        .returning();
+      const viewer = await addViewer("device_group", group.id);
+
+      assertSuccess(await leave.execute(viewer, "device_group", group.id));
+
+      expect(await allNotifications()).toMatchObject([
+        {
+          type: "resource_member_left",
+          recipientId: owner,
+          actorId: viewer,
+          resourceType: "device_group",
+          resourceId: group.id,
+          params: { resourceName: "Left Group" },
+        },
+      ]);
+    });
+
+    it("looks nothing up and tells nobody when the caller holds no grant", async () => {
+      const macro = await testApp.createMacro({ name: "No Grant", createdBy: owner });
+      const reader = await testApp.createTestUser({ name: "Reader" });
+      const sharingRepo = testApp.module.get(SharingRepository);
+      const findName = vi.spyOn(sharingRepo, "findResourceName");
+      const listAdmins = vi.spyOn(sharingRepo, "listAdminIds");
+
+      const result = await leave.execute(reader, "macro", macro.id);
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(StatusCodes.NOT_FOUND);
+      expect(findName).not.toHaveBeenCalled();
+      expect(listAdmins).not.toHaveBeenCalled();
+      expect(await allNotifications()).toEqual([]);
+    });
+
+    it("tells nobody when the last admin's departure is refused", async () => {
+      const macro = await testApp.createMacro({ name: "Husk", createdBy: owner });
+      const keeper = await testApp.createTestUser({ name: "Keeper" });
+      await testApp.addResourceAdmin("macro", macro.id, keeper);
+      // Not cover for the invariant, but still somebody who would hear of a leave.
+      const neverOnboarded = await testApp.createTestUser({
+        name: "Never Onboarded",
+        createProfile: false,
+      });
+      await testApp.addResourceAdmin("macro", macro.id, neverOnboarded);
+      await testApp.database
+        .update(profiles)
+        .set({ deletedAt: new Date() })
+        .where(eq(profiles.userId, owner));
+
+      const result = await leave.execute(keeper, "macro", macro.id);
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(await allNotifications()).toEqual([]);
+    });
+
+    it("still leaves when the notification cannot be stored", async () => {
+      const macro = await testApp.createMacro({ name: "Dispatch Down", createdBy: owner });
+      const viewer = await addViewer("macro", macro.id);
+      vi.spyOn(testApp.module.get(NotificationRepository), "insertMany").mockResolvedValue(
+        failure(AppError.internal("notifications unavailable")),
+      );
+
+      assertSuccess(await leave.execute(viewer, "macro", macro.id));
+
+      expect(await grantsFor("macro", macro.id, viewer)).toHaveLength(0);
+      expect(await allNotifications()).toEqual([]);
+    });
+
+    it("still leaves when the resource name cannot be read", async () => {
+      const macro = await testApp.createMacro({ name: "Name Down", createdBy: owner });
+      const viewer = await addViewer("macro", macro.id);
+      vi.spyOn(testApp.module.get(SharingRepository), "findResourceName").mockResolvedValue(
+        failure(AppError.internal("names unavailable")),
+      );
+
+      assertSuccess(await leave.execute(viewer, "macro", macro.id));
+
+      expect(await grantsFor("macro", macro.id, viewer)).toHaveLength(0);
+      expect(await allNotifications()).toEqual([]);
+    });
+
+    it("still leaves when the resource has no name to read", async () => {
+      const macro = await testApp.createMacro({ name: "Name Gone", createdBy: owner });
+      const viewer = await addViewer("macro", macro.id);
+      vi.spyOn(testApp.module.get(SharingRepository), "findResourceName").mockResolvedValue(
+        success(null),
+      );
+
+      assertSuccess(await leave.execute(viewer, "macro", macro.id));
+
+      expect(await grantsFor("macro", macro.id, viewer)).toHaveLength(0);
+      expect(await allNotifications()).toEqual([]);
+    });
+
+    it("still leaves when the admins cannot be looked up", async () => {
+      const macro = await testApp.createMacro({ name: "Admins Down", createdBy: owner });
+      const viewer = await addViewer("macro", macro.id);
+      vi.spyOn(testApp.module.get(SharingRepository), "listAdminIds").mockResolvedValue(
+        failure(AppError.internal("admins unavailable")),
+      );
+
+      assertSuccess(await leave.execute(viewer, "macro", macro.id));
+
+      expect(await grantsFor("macro", macro.id, viewer)).toHaveLength(0);
+      expect(await allNotifications()).toEqual([]);
+    });
   });
 });

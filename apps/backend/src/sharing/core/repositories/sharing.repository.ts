@@ -70,6 +70,7 @@ import type {
 } from "../models/sharing.model";
 import {
   assertResourceStaysStaffed,
+  findResourceAdminIds,
   findStaffedResource,
   isLivingUser,
   livingOrgAdminIdsSql,
@@ -780,6 +781,14 @@ export class SharingRepository {
         .limit(1);
       return rows.at(0)?.name ?? null;
     });
+  }
+
+  /**
+   * Who can decide for a resource. Unscoped like the name: read only after the
+   * caller's write on this resource has succeeded.
+   */
+  listAdminIds(resourceType: SharingResourceType, resourceId: string): Promise<Result<string[]>> {
+    return tryCatch(() => findResourceAdminIds(this.db, resourceType, resourceId));
   }
 
   /**
