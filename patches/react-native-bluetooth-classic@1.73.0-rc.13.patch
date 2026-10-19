@@ -1,0 +1,76 @@
+diff --git a/android/src/main/java/kjd/reactnative/bluetooth/RNBluetoothClassicModule.java b/android/src/main/java/kjd/reactnative/bluetooth/RNBluetoothClassicModule.java
+index 56a30b67c42c6649843abadb12d23512ffe722f7..5b47d0a8643f5c80ed429062a0a28c307b02ba71 100644
+--- a/android/src/main/java/kjd/reactnative/bluetooth/RNBluetoothClassicModule.java
++++ b/android/src/main/java/kjd/reactnative/bluetooth/RNBluetoothClassicModule.java
+@@ -358,7 +358,19 @@ public class RNBluetoothClassicModule
+         if (BuildConfig.DEBUG)
+             Log.d(TAG, "onHostDestroy: stop discovery, connections and unregister receivers");
+ 
+-        mAdapter.cancelDiscovery();
++        safeCancelDiscovery();
++    }
++
++    // Runs on the activity lifecycle, where a SecurityException (BLUETOOTH_SCAN
++    // denied) would crash the app instead of rejecting a promise.
++    private boolean safeCancelDiscovery() {
++        if (mAdapter == null) return false;
++        try {
++            return mAdapter.cancelDiscovery();
++        } catch (SecurityException e) {
++            Log.w(TAG, "cancelDiscovery without BLUETOOTH_SCAN permission", e);
++            return false;
++        }
+     }
+     // endregion
+ 
+@@ -516,7 +528,20 @@ public class RNBluetoothClassicModule
+             getReactApplicationContext().registerReceiver(mDiscoveryReceiver,
+                     DiscoveryReceiver.intentFilter());
+ 
+-            mAdapter.startDiscovery();
++            // A receiver left registered after a failed start makes the next
++            // onHostPause call cancelDiscovery, which crashes without permission.
++            String failure = null;
++            try {
++                if (!mAdapter.startDiscovery()) failure = "startDiscovery returned false";
++            } catch (SecurityException e) {
++                failure = e.getMessage();
++            }
++            if (failure != null) {
++                getReactApplicationContext().unregisterReceiver(mDiscoveryReceiver);
++                mDiscoveryReceiver = null;
++                promise.reject(Exceptions.DISCOVERY_FAILED.name(),
++                        Exceptions.DISCOVERY_FAILED.message(failure));
++            }
+         }
+     }
+ 
+@@ -553,7 +578,12 @@ public class RNBluetoothClassicModule
+             promise.reject(Exceptions.BLUETOOTH_NOT_ENABLED.name(),
+                     Exceptions.BLUETOOTH_NOT_ENABLED.message());
+         } else {
+-            promise.resolve(mAdapter.cancelDiscovery());
++            try {
++                promise.resolve(mAdapter.cancelDiscovery());
++            } catch (SecurityException e) {
++                promise.reject(Exceptions.DISCOVERY_FAILED.name(),
++                        Exceptions.DISCOVERY_FAILED.message(e.getMessage()));
++            }
+         }
+     }
+ 
+@@ -1114,8 +1144,12 @@ public class RNBluetoothClassicModule
+         }
+ 
+         if (mDiscoveryReceiver != null) {
+-            mAdapter.cancelDiscovery();
+-            getReactApplicationContext().unregisterReceiver(mDiscoveryReceiver);
++            safeCancelDiscovery();
++            try {
++                getReactApplicationContext().unregisterReceiver(mDiscoveryReceiver);
++            } catch (IllegalArgumentException e) {
++                // Already unregistered by the receiver when discovery finished.
++            }
+             mDiscoveryReceiver = null;
+         }
+     }
