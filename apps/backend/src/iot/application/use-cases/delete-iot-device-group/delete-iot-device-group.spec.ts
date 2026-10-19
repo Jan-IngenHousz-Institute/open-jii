@@ -3,6 +3,13 @@ import { faker } from "@faker-js/faker";
 import { and, deviceGroups, eq, resourceGrants } from "@repo/database";
 
 import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
+import {
+  audienceDeliveries,
+  audienceNotifications,
+  grantResourceAudience,
+  heardByAllButTheActor,
+  seedResourceAudience,
+} from "../../../../test/resource-audience";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotDeviceGroupRepository } from "../../../core/repositories/iot-device-group.repository";
 import { CreateIotDeviceGroupUseCase } from "../create-iot-device-group/create-iot-device-group";
@@ -80,5 +87,35 @@ describe("DeleteIotDeviceGroupUseCase", () => {
     const result = await useCase.execute(faker.string.uuid(), userId);
 
     assertFailure(result);
+  });
+
+  it("tells the grantees and the owner, not the deleter, and queues their emails", async () => {
+    const audience = await seedResourceAudience(testApp);
+    const [group] = await testApp.database
+      .insert(deviceGroups)
+      .values({
+        name: "North Field Sensors",
+        organizationId: audience.organizationId,
+        createdBy: audience.owner,
+      })
+      .returning();
+    const resourceId = group.id;
+    await grantResourceAudience(testApp, audience, "device_group", resourceId);
+
+    assertSuccess(await useCase.execute(resourceId, audience.actor));
+
+    expect(await audienceNotifications(testApp, audience)).toEqual(
+      heardByAllButTheActor(audience, (recipientId) => ({
+        type: "resource_deleted",
+        recipientId,
+        actorId: audience.actor,
+        resourceType: "device_group",
+        resourceId,
+        params: { resourceName: "North Field Sensors" },
+      })),
+    );
+    expect(await audienceDeliveries(testApp, audience)).toEqual(
+      heardByAllButTheActor(audience, () => ({ type: "resource_deleted", status: "pending" })),
+    );
   });
 });

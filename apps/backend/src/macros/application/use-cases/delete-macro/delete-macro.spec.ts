@@ -1,4 +1,18 @@
+import { notifications } from "@repo/database";
+
 import { assertFailure, assertSuccess, AppError, failure } from "../../../../common/utils/fp-utils";
+import { NotificationRepository } from "../../../../notifications/core/repositories/notification.repository";
+import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
+import {
+  audienceDeliveries,
+  audienceNotifications,
+  deliveriesFor,
+  grantResourceAudience,
+  heardByAllButTheActor,
+  notificationsFor,
+  seedResourceAudience,
+} from "../../../../test/resource-audience";
+import type { ResourceAudience } from "../../../../test/resource-audience";
 import { TestHarness } from "../../../../test/test-harness";
 import type { CreateMacroDto } from "../../../core/models/macro.model";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
@@ -95,6 +109,116 @@ describe("DeleteMacroUseCase", () => {
 
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
+  });
+
+  describe("notifying everyone with access", () => {
+    let audience: ResourceAudience;
+    let macroId: string;
+
+    beforeEach(async () => {
+      audience = await seedResourceAudience(testApp);
+      macroId = (
+        await testApp.createMacro({
+          name: "Leaf Spectra",
+          createdBy: audience.owner,
+          organizationId: audience.organizationId,
+        })
+      ).id;
+      await grantResourceAudience(testApp, audience, "macro", macroId);
+    });
+
+    it("tells the grantees and the owner, not the deleter, and queues their emails", async () => {
+      assertSuccess(await useCase.execute(macroId, audience.actor));
+
+      expect(await audienceNotifications(testApp, audience)).toEqual(
+        heardByAllButTheActor(audience, (recipientId) => ({
+          type: "resource_deleted",
+          recipientId,
+          actorId: audience.actor,
+          resourceType: "macro",
+          resourceId: macroId,
+          params: { resourceName: "Leaf Spectra" },
+        })),
+      );
+      expect(await audienceDeliveries(testApp, audience)).toEqual(
+        heardByAllButTheActor(audience, () => ({ type: "resource_deleted", status: "pending" })),
+      );
+    });
+
+    it("stores the row but queues no email for a viewer who switched the category off", async () => {
+      assertSuccess(
+        await testApp.module
+          .get(NotificationRepository)
+          .upsertPreference(audience.viewer, "experiments_and_resources", "email", false),
+      );
+
+      assertSuccess(await useCase.execute(macroId, audience.actor));
+
+      expect(await notificationsFor(testApp, audience.viewer)).toHaveLength(1);
+      expect(await deliveriesFor(testApp, audience.viewer)).toEqual([]);
+    });
+
+    it("tells nobody reached only through an organization role or a team", async () => {
+      const orgAdmin = await testApp.createTestUser({ name: "Org Admin" });
+      await testApp.addOrganizationMember(audience.organizationId, orgAdmin, "admin");
+      const team = await testApp.createTeam(audience.organizationId);
+      const teamMember = await testApp.createTestUser({ name: "Team Member" });
+      await testApp.addTeamMember(team, teamMember);
+      await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macroId,
+        granteeType: "team",
+        granteeId: team,
+        role: "viewer",
+      });
+
+      assertSuccess(await useCase.execute(macroId, audience.actor));
+
+      expect(await notificationsFor(testApp, orgAdmin)).toEqual([]);
+      expect(await notificationsFor(testApp, teamMember)).toEqual([]);
+    });
+
+    it("writes nothing for a macro that does not exist", async () => {
+      assertFailure(await useCase.execute(crypto.randomUUID(), audience.actor));
+
+      expect(await testApp.database.select().from(notifications)).toEqual([]);
+    });
+
+    it("writes nothing when the delete fails", async () => {
+      vi.spyOn(macroRepository, "delete").mockResolvedValue(
+        failure(AppError.internal("Database deletion failed")),
+      );
+
+      assertFailure(await useCase.execute(macroId, audience.actor));
+
+      expect(await testApp.database.select().from(notifications)).toEqual([]);
+    });
+
+    it("still deletes when the notification cannot be stored", async () => {
+      vi.spyOn(testApp.module.get(NotificationRepository), "insertMany").mockResolvedValue(
+        failure(AppError.internal("notifications unavailable")),
+      );
+
+      assertSuccess(await useCase.execute(macroId, audience.actor));
+
+      const found = await macroRepository.findById(macroId);
+      assertSuccess(found);
+      expect(found.value).toBeNull();
+      expect(await testApp.database.select().from(notifications)).toEqual([]);
+    });
+
+    it("still deletes, telling nobody, when the members cannot be read", async () => {
+      vi.spyOn(testApp.module.get(SharingRepository), "listMemberIds").mockResolvedValue(
+        failure(AppError.internal("members unavailable")),
+      );
+
+      assertSuccess(await useCase.execute(macroId, audience.actor));
+
+      const found = await macroRepository.findById(macroId);
+      assertSuccess(found);
+      expect(found.value).toBeNull();
+      expect(await testApp.database.select().from(notifications)).toEqual([]);
+    });
   });
 
   // Authorization (creator/org/grant checks) now lives in the @CanAccess route

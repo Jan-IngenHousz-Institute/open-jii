@@ -10,6 +10,8 @@ import { AwsModule } from "../common/modules/aws/aws.module";
 import { CacheAdapter } from "../common/modules/cache/cache.adapter";
 import { CacheModule } from "../common/modules/cache/cache.module";
 import { MetricsModule } from "../metrics/metrics.module";
+import { NotificationModule } from "../notifications/notification.module";
+import { SharingModule } from "../sharing/sharing.module";
 import { MacroSandboxService } from "./application/services/macro-sandbox.service";
 // Use Cases
 import { AddCompatibleProtocolsUseCase } from "./application/use-cases/add-compatible-protocols/add-compatible-protocols";
@@ -35,7 +37,14 @@ import { MacroWebhookController } from "./presentation/macro-webhook.controller"
 import { MacroController } from "./presentation/macro.controller";
 
 @Module({
-  imports: [MetricsModule, AnalyticsModule, AwsModule, CacheModule],
+  imports: [
+    MetricsModule,
+    AnalyticsModule,
+    AwsModule,
+    CacheModule,
+    SharingModule,
+    NotificationModule,
+  ],
   controllers: [MacroController, MacroWebhookController],
   providers: [
     // Ports and Adapters

@@ -2,6 +2,13 @@ import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-cal
 import { and, eq, resourceGrants, upsertGrant } from "@repo/database";
 
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import {
+  audienceDeliveries,
+  audienceNotifications,
+  grantResourceAudience,
+  heardByAllButTheActor,
+  seedResourceAudience,
+} from "../../../../test/resource-audience";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotCalibrationDefinitionRepository } from "../../../core/repositories/iot-calibration-definition.repository";
 import { IotCalibrationRunRepository } from "../../../core/repositories/iot-calibration-run.repository";
@@ -130,5 +137,33 @@ describe("DeleteCalibrationDefinitionUseCase", () => {
     assertFailure(result);
     expect(result.error.statusCode).toBe(400);
     expect(result.error.message).toContain("has runs and cannot be deleted");
+  });
+
+  it("tells the grantees and the owner, not the deleter, and queues their emails", async () => {
+    const audience = await seedResourceAudience(testApp);
+    const resourceId = (
+      await testApp.createCalibrationDefinition({
+        name: "PAR Baseline",
+        createdBy: audience.owner,
+        organizationId: audience.organizationId,
+      })
+    ).id;
+    await grantResourceAudience(testApp, audience, "calibration_definition", resourceId);
+
+    assertSuccess(await useCase.execute(resourceId, audience.actor));
+
+    expect(await audienceNotifications(testApp, audience)).toEqual(
+      heardByAllButTheActor(audience, (recipientId) => ({
+        type: "resource_deleted",
+        recipientId,
+        actorId: audience.actor,
+        resourceType: "calibration_definition",
+        resourceId,
+        params: { resourceName: "PAR Baseline" },
+      })),
+    );
+    expect(await audienceDeliveries(testApp, audience)).toEqual(
+      heardByAllButTheActor(audience, () => ({ type: "resource_deleted", status: "pending" })),
+    );
   });
 });

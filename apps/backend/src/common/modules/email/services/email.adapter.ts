@@ -32,6 +32,15 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     return this.notificationService.sendAccessGrantedNotification(input);
   }
 
+  async sendResourceDeletedNotification(input: {
+    resourceType: SharingResourceType;
+    resourceName: string;
+    actor: string;
+    email: string;
+  }): Promise<Result<void>> {
+    return this.notificationService.sendResourceDeletedNotification(input);
+  }
+
   async sendTransferRequestConfirmation(
     email: string,
     projectIdOld: string,

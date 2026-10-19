@@ -71,6 +71,7 @@ import type {
 import {
   assertResourceStaysStaffed,
   findResourceAdminIds,
+  findResourceMemberIds,
   findStaffedResource,
   isLivingUser,
   livingOrgAdminIdsSql,
@@ -789,6 +790,25 @@ export class SharingRepository {
    */
   listAdminIds(resourceType: SharingResourceType, resourceId: string): Promise<Result<string[]>> {
     return tryCatch(() => findResourceAdminIds(this.db, resourceType, resourceId));
+  }
+
+  /**
+   * Everyone a deletion or move of this resource takes something from. Read
+   * before a delete, while the grants and the owning organization still exist;
+   * after a move, pass the organization that lost it.
+   */
+  listMemberIds(
+    resourceType: SharingResourceType,
+    resourceId: string,
+    owningOrganizationId?: string | null,
+  ): Promise<Result<string[]>> {
+    return tryCatch(() =>
+      findResourceMemberIds(this.db, resourceType, resourceId, owningOrganizationId),
+    );
+  }
+
+  findOrganizationName(organizationId: string): Promise<Result<string | null>> {
+    return tryCatch(async () => (await this.owningOrganization(organizationId))?.name ?? null);
   }
 
   /**

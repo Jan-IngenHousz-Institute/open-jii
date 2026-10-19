@@ -460,6 +460,67 @@ export async function findResourceAdminIds(
   return living.map((row) => row.id);
 }
 
+async function findOrgOwnerIds(tx: DbOrTx, organizationId: string | null): Promise<string[]> {
+  if (!organizationId) return [];
+
+  const rows = await tx.execute<{ user_id: string }>(
+    livingOrgOwnerIdsSql(sql`${organizationId}::uuid`),
+  );
+  return rows.map((r) => r.user_id);
+}
+
+/**
+ * Everyone who reaches a resource through a direct user grant, at any role, or by
+ * owning the organization that owns it — the people a deletion or a move takes
+ * something from. Viewers count because they lose access too. Access through an
+ * organization role below owner, or through a team or organization grant, does
+ * not: the same depth every resource notification stops at. Deactivated and
+ * closed accounts are dropped.
+ *
+ * `owningOrganizationId` overrides the resource's own: once a move has written,
+ * the row names the receiving organization, not the one that lost it. `null`
+ * means no owners.
+ */
+export async function findResourceMemberIds(
+  tx: DbOrTx,
+  resourceType: SharingResourceType,
+  resourceId: string,
+  owningOrganizationId?: string | null,
+): Promise<string[]> {
+  const [granted, ownerIds] = await Promise.all([
+    tx
+      .select({ userId: resourceGrants.granteeId })
+      .from(resourceGrants)
+      .where(
+        and(
+          eq(resourceGrants.resourceType, resourceType),
+          eq(resourceGrants.resourceId, resourceId),
+          eq(resourceGrants.granteeType, "user"),
+        ),
+      ),
+    owningOrganizationId === undefined
+      ? findOwningOrgOwnerIds(tx, resourceType, resourceId)
+      : findOrgOwnerIds(tx, owningOrganizationId),
+  ]);
+
+  const candidates = [...new Set([...granted.map((row) => row.userId), ...ownerIds])];
+  if (candidates.length === 0) return [];
+
+  const living = await tx
+    .select({ id: users.id })
+    .from(users)
+    .leftJoin(profiles, eq(profiles.userId, users.id))
+    .where(
+      and(
+        inArray(users.id, candidates),
+        sql`(${profiles.activated} IS NULL OR ${profiles.activated} = true)`,
+        sql`${profiles.deletedAt} IS NULL`,
+      ),
+    );
+
+  return living.map((row) => row.id);
+}
+
 /** Whether anybody living owns the organization this resource belongs to. */
 async function hasLivingOwningOrgOwner(
   tx: DbOrTx,

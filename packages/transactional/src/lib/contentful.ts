@@ -18,7 +18,8 @@ export type CmsEmailType =
   | "organization-invitation"
   | "organization-join-request-submitted"
   | "organization-join-request-approved"
-  | "organization-join-request-rejected";
+  | "organization-join-request-rejected"
+  | "resource-deleted-notification";
 
 export interface CmsEmail {
   internalName: string;

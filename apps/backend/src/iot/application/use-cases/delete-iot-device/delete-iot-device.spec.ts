@@ -10,6 +10,13 @@ import {
   failure,
   success,
 } from "../../../../common/utils/fp-utils";
+import {
+  audienceDeliveries,
+  audienceNotifications,
+  grantResourceAudience,
+  heardByAllButTheActor,
+  seedResourceAudience,
+} from "../../../../test/resource-audience";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { DeleteIotDeviceUseCase } from "./delete-iot-device";
@@ -196,5 +203,33 @@ describe("DeleteIotDeviceUseCase", () => {
 
     assertFailure(result);
     expect(result.error.message).toBe("db delete failed");
+  });
+
+  it("tells the grantees and the owner, not the deleter, and queues their emails", async () => {
+    const audience = await seedResourceAudience(testApp);
+    const resourceId = (
+      await testApp.createIotDevice({
+        name: "Greenhouse MultispeQ",
+        createdBy: audience.owner,
+        organizationId: audience.organizationId,
+      })
+    ).id;
+    await grantResourceAudience(testApp, audience, "device", resourceId);
+
+    assertSuccess(await useCase.execute(resourceId, audience.actor));
+
+    expect(await audienceNotifications(testApp, audience)).toEqual(
+      heardByAllButTheActor(audience, (recipientId) => ({
+        type: "resource_deleted",
+        recipientId,
+        actorId: audience.actor,
+        resourceType: "device",
+        resourceId,
+        params: { resourceName: "Greenhouse MultispeQ" },
+      })),
+    );
+    expect(await audienceDeliveries(testApp, audience)).toEqual(
+      heardByAllButTheActor(audience, () => ({ type: "resource_deleted", status: "pending" })),
+    );
   });
 });

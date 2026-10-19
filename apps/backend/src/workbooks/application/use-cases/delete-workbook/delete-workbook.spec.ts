@@ -1,4 +1,11 @@
 import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
+import {
+  audienceDeliveries,
+  audienceNotifications,
+  grantResourceAudience,
+  heardByAllButTheActor,
+  seedResourceAudience,
+} from "../../../../test/resource-audience";
 import { TestHarness } from "../../../../test/test-harness";
 import { WorkbookRepository } from "../../../core/repositories/workbook.repository";
 import { GetWorkbookUseCase } from "../get-workbook/get-workbook";
@@ -73,5 +80,33 @@ describe("DeleteWorkbookUseCase", () => {
     assertFailure(result);
     expect(result.error.statusCode).toBe(500);
     vi.restoreAllMocks();
+  });
+
+  it("tells the grantees and the owner, not the deleter, and queues their emails", async () => {
+    const audience = await seedResourceAudience(testApp);
+    const resourceId = (
+      await testApp.createWorkbook({
+        name: "Season Report",
+        createdBy: audience.owner,
+        organizationId: audience.organizationId,
+      })
+    ).id;
+    await grantResourceAudience(testApp, audience, "workbook", resourceId);
+
+    assertSuccess(await useCase.execute(resourceId, audience.actor));
+
+    expect(await audienceNotifications(testApp, audience)).toEqual(
+      heardByAllButTheActor(audience, (recipientId) => ({
+        type: "resource_deleted",
+        recipientId,
+        actorId: audience.actor,
+        resourceType: "workbook",
+        resourceId,
+        params: { resourceName: "Season Report" },
+      })),
+    );
+    expect(await audienceDeliveries(testApp, audience)).toEqual(
+      heardByAllButTheActor(audience, () => ({ type: "resource_deleted", status: "pending" })),
+    );
   });
 });

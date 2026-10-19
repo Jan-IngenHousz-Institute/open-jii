@@ -1,6 +1,13 @@
 import { faker } from "@faker-js/faker";
 
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import {
+  audienceDeliveries,
+  audienceNotifications,
+  grantResourceAudience,
+  heardByAllButTheActor,
+  seedResourceAudience,
+} from "../../../../test/resource-audience";
 import { TestHarness } from "../../../../test/test-harness";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
 import { DeleteProtocolUseCase } from "./delete-protocol";
@@ -76,5 +83,33 @@ describe("DeleteProtocolUseCase", () => {
       message: "Protocol not found",
       statusCode: 404,
     });
+  });
+
+  it("tells the grantees and the owner, not the deleter, and queues their emails", async () => {
+    const audience = await seedResourceAudience(testApp);
+    const resourceId = (
+      await testApp.createProtocol({
+        name: "Dark Adaptation",
+        createdBy: audience.owner,
+        organizationId: audience.organizationId,
+      })
+    ).id;
+    await grantResourceAudience(testApp, audience, "protocol", resourceId);
+
+    assertSuccess(await useCase.execute(resourceId, audience.actor));
+
+    expect(await audienceNotifications(testApp, audience)).toEqual(
+      heardByAllButTheActor(audience, (recipientId) => ({
+        type: "resource_deleted",
+        recipientId,
+        actorId: audience.actor,
+        resourceType: "protocol",
+        resourceId,
+        params: { resourceName: "Dark Adaptation" },
+      })),
+    );
+    expect(await audienceDeliveries(testApp, audience)).toEqual(
+      heardByAllButTheActor(audience, () => ({ type: "resource_deleted", status: "pending" })),
+    );
   });
 });

@@ -6,7 +6,9 @@ import type {
 } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.schema";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import {
   NOT_A_TARGET_MEMBER_MESSAGE,
   SharingRepository,
@@ -35,6 +37,7 @@ export class TransferResourceOrgUseCase {
   constructor(
     private readonly authz: AuthorizationService,
     private readonly repo: SharingRepository,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   async execute(
@@ -86,6 +89,8 @@ export class TransferResourceOrgUseCase {
       return failure(transferred.error);
     }
 
+    await this.notify(userId, resourceType, resourceId, sourceOrganizationId, targetOrganizationId);
+
     this.logger.log({
       msg: "Transferred a resource to another organization",
       operation: "transfer-resource-organization",
@@ -97,5 +102,62 @@ export class TransferResourceOrgUseCase {
     });
 
     return success({ resourceType, resourceId, organizationId: targetOrganizationId });
+  }
+
+  /**
+   * Tell everyone the move takes something from. The owners are the losing
+   * organization's: the resource row already names the receiving one. A failure
+   * here leaves the move standing.
+   */
+  private async notify(
+    actorId: string,
+    resourceType: TransferableResourceType,
+    resourceId: string,
+    sourceOrganizationId: string | null,
+    targetOrganizationId: string,
+  ): Promise<void> {
+    const [members, name, organizationName] = await Promise.all([
+      this.repo.listMemberIds(resourceType, resourceId, sourceOrganizationId),
+      this.repo.findResourceName(resourceType, resourceId),
+      this.repo.findOrganizationName(targetOrganizationId),
+    ]);
+
+    if (
+      members.isFailure() ||
+      name.isFailure() ||
+      name.value === null ||
+      organizationName.isFailure() ||
+      organizationName.value === null
+    ) {
+      const failed = [members, name, organizationName].find((result) => result.isFailure());
+      this.logger.error({
+        msg: "Could not read who had access or what to call it, nobody was notified of the move",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "transfer-resource-organization",
+        resourceType,
+        resourceId,
+        ...(failed?.isFailure() ? { error: failed.error } : {}),
+      });
+      return;
+    }
+
+    const dispatched = await this.notifications.dispatch({
+      type: "resource_moved_organization",
+      recipientIds: members.value,
+      actorId,
+      resource: { type: resourceType, id: resourceId },
+      params: { resourceName: name.value, organizationName: organizationName.value },
+    });
+
+    if (dispatched.isFailure()) {
+      this.logger.error({
+        msg: "Failed to notify members, the resource was still moved",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "transfer-resource-organization",
+        resourceType,
+        resourceId,
+        error: dispatched.error,
+      });
+    }
   }
 }
