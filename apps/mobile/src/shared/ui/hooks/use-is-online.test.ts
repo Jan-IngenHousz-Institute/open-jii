@@ -3,7 +3,7 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useLoginConnection } from "./use-login-connection";
+import { useIsOnline } from "./use-is-online";
 
 const { probe } = vi.hoisted(() => ({ probe: vi.fn<() => Promise<boolean>>() }));
 
@@ -26,7 +26,7 @@ afterEach(() => {
   onlineManager.setOnline(true);
 });
 
-describe("useLoginConnection", () => {
+describe("useIsOnline({ confirm: true })", () => {
   it("waits for two consecutive missed probes before reporting unreachable", async () => {
     let finishConfirmation!: (online: boolean) => void;
     probe.mockResolvedValueOnce(false).mockImplementationOnce(
@@ -38,7 +38,7 @@ describe("useLoginConnection", () => {
 
     const { result } = renderHook(
       () => {
-        const { data, isFetching, refetch } = useLoginConnection();
+        const { data, isFetching, refetch } = useIsOnline({ confirm: true });
         return { data, isFetching, refetch };
       },
       { wrapper },
@@ -56,7 +56,7 @@ describe("useLoginConnection", () => {
     probe.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
     const { result } = renderHook(
       () => {
-        const { data, isFetching, refetch } = useLoginConnection();
+        const { data, isFetching, refetch } = useIsOnline({ confirm: true });
         return { data, isFetching, refetch };
       },
       { wrapper },
@@ -77,7 +77,7 @@ describe("useLoginConnection", () => {
     probe.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
     const { result } = renderHook(
       () => {
-        const { data, isFetching, refetch } = useLoginConnection();
+        const { data, isFetching, refetch } = useIsOnline({ confirm: true });
         return { data, isFetching, refetch };
       },
       { wrapper },
@@ -107,7 +107,7 @@ describe("useLoginConnection", () => {
     probe.mockResolvedValueOnce(false).mockResolvedValueOnce(false).mockResolvedValue(true);
     const { result } = renderHook(
       () => {
-        const { data, isFetching, refetch } = useLoginConnection();
+        const { data, isFetching, refetch } = useIsOnline({ confirm: true });
         return { data, isFetching, refetch };
       },
       { wrapper },
@@ -116,5 +116,16 @@ describe("useLoginConnection", () => {
 
     await waitFor(() => expect(result.current.data).toBe(true), { timeout: 3000 });
     expect(probe).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("useIsOnline()", () => {
+  it("keeps reporting offline after a single missed probe", async () => {
+    probe.mockResolvedValueOnce(false).mockResolvedValue(true);
+    const { result } = renderHook(() => useIsOnline(), { wrapper });
+
+    await waitFor(() => expect(result.current.data).toBe(false));
+    expect(probe).toHaveBeenCalledTimes(1);
+    expect(client.getQueryCache().find({ queryKey: ["is-online"], exact: true })).toBeDefined();
   });
 });

@@ -16,13 +16,13 @@ import {
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useLoginFlow } from "~/features/auth/hooks/use-login";
-import { useLoginConnection } from "~/features/auth/hooks/use-login-connection";
 import { EnvironmentSelector } from "~/features/profile/widgets/environment-selector";
 import { useTranslation } from "~/shared/i18n";
 import { getEnvVar } from "~/shared/stores/environment-store";
 import { Button } from "~/shared/ui/Button";
 import { Input } from "~/shared/ui/Input";
 import { OTPInput } from "~/shared/ui/OTPInput";
+import { useIsOnline } from "~/shared/ui/hooks/use-is-online";
 import { useMultiTapReveal } from "~/shared/ui/hooks/use-multi-tap-reveal";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
@@ -138,7 +138,7 @@ export default function LoginScreen() {
     verifyLoading,
   } = useLoginFlow();
 
-  const { data: online, refetch } = useLoginConnection();
+  const { data: online, refetch } = useIsOnline({ confirm: true });
   // Background polls also fetch; only a retry the user started shows progress.
   const [retryingConnection, setRetryingConnection] = useState(false);
   const retryConnection = () => {
