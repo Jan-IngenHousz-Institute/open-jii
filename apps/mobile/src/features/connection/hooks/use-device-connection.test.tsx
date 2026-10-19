@@ -5,7 +5,7 @@ import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Device } from "~/shared/types/device";
 
-import { isConnectInFlight, useConnectToDevice } from "./use-device-connection";
+import { isConnectInFlight, useAllDevices, useConnectToDevice } from "./use-device-connection";
 
 const mocks = vi.hoisted(() => ({
   transportConnect: vi.fn(),
@@ -13,10 +13,24 @@ const mocks = vi.hoisted(() => ({
   setLastConnectedDevice: vi.fn(),
   serialDevices: [] as { deviceId: number; vendorId: number; productId: number }[],
   serialListError: undefined as Error | undefined,
+  hasBluetoothPermission: vi.fn<() => Promise<boolean>>(),
+  cancelDiscovery: vi.fn<() => Promise<boolean>>(),
+  getBondedDevices: vi.fn<() => Promise<{ address: string; name: string }[]>>(),
+  getConnectedDevices: vi.fn<() => Promise<{ address: string; name: string }[]>>(),
+  startDiscovery: vi.fn<() => Promise<unknown[]>>(),
 }));
 
 vi.mock("react-native-bluetooth-classic", () => ({
-  default: { onDeviceDiscovered: () => ({ remove: () => undefined }) },
+  default: {
+    onDeviceDiscovered: () => ({ remove: () => undefined }),
+    cancelDiscovery: () => mocks.cancelDiscovery(),
+    getBondedDevices: () => mocks.getBondedDevices(),
+    getConnectedDevices: () => mocks.getConnectedDevices(),
+    startDiscovery: () => mocks.startDiscovery(),
+  },
+}));
+vi.mock("~/features/connection/services/request-bluetooth-permissions", () => ({
+  hasBluetoothPermission: () => mocks.hasBluetoothPermission(),
 }));
 vi.mock(
   "~/features/connection/services/device-connection-manager/android-serial-port-connection/open-serial-port-connection",
@@ -157,5 +171,65 @@ describe("useConnectToDevice", () => {
 
     expect(mocks.transportConnect).toHaveBeenCalledWith(device);
     expect(mocks.addDevice).toHaveBeenCalledWith(device);
+  });
+});
+
+describe("useAllDevices", () => {
+  const bonded = { address: "00:11:22:33:44:55", name: "MultispeQ" };
+
+  beforeEach(() => {
+    mocks.serialDevices = [{ deviceId: 2002, vendorId: 0x1a86, productId: 0x55d4 }];
+    mocks.serialListError = undefined;
+    mocks.hasBluetoothPermission.mockReset().mockResolvedValue(true);
+    mocks.cancelDiscovery.mockReset().mockResolvedValue(true);
+    mocks.getBondedDevices.mockReset().mockResolvedValue([bonded]);
+    mocks.getConnectedDevices.mockReset().mockResolvedValue([]);
+    mocks.startDiscovery.mockReset().mockResolvedValue([]);
+  });
+
+  async function refetch() {
+    const hook = renderHook(() => useAllDevices());
+    await act(async () => {
+      await hook.result.current.refetch();
+    });
+    return hook;
+  }
+
+  it("never touches Bluetooth without the scan permission, but still lists USB devices", async () => {
+    mocks.hasBluetoothPermission.mockResolvedValue(false);
+
+    const { result } = await refetch();
+
+    expect(mocks.startDiscovery).not.toHaveBeenCalled();
+    expect(mocks.cancelDiscovery).not.toHaveBeenCalled();
+    expect(mocks.getBondedDevices).not.toHaveBeenCalled();
+    expect(mocks.getConnectedDevices).not.toHaveBeenCalled();
+    expect(result.current.data.map((d) => d.id)).toEqual(["2002"]);
+    expect(result.current.isFetching).toBe(false);
+  });
+
+  it("treats a failed permission check as no permission", async () => {
+    mocks.hasBluetoothPermission.mockRejectedValue(new Error("PermissionsAndroid unavailable"));
+
+    await refetch();
+
+    expect(mocks.startDiscovery).not.toHaveBeenCalled();
+  });
+
+  it("seeds bonded devices and scans when the permission is granted", async () => {
+    const { result } = await refetch();
+
+    expect(mocks.startDiscovery).toHaveBeenCalledTimes(1);
+    expect(result.current.data.map((d) => d.id)).toEqual(
+      expect.arrayContaining(["2002", bonded.address]),
+    );
+  });
+
+  it("stops fetching when the scan is rejected", async () => {
+    mocks.startDiscovery.mockRejectedValue(new Error("DISCOVERY_FAILED"));
+
+    const { result } = await refetch();
+
+    expect(result.current.isFetching).toBe(false);
   });
 });

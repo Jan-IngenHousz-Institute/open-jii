@@ -5,21 +5,9 @@
  * Better Auth can't validate the session and returns null — in that case
  * we fall back to the SecureStore cache written by the expo client plugin.
  */
-import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import { useAuthClient } from "~/features/auth/services/auth";
-
-const SESSION_CACHE_KEY = "openjii_session_data";
-
-function getCachedSession() {
-  const raw = SecureStore.getItem(SESSION_CACHE_KEY);
-  if (!raw || raw === "{}") return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
+import { clearCachedSession, getCachedSession } from "~/features/auth/services/session-cache";
 
 export function useSession() {
   const authClient = useAuthClient();
@@ -63,7 +51,7 @@ export function useSession() {
     error,
     user: activeSession?.user,
     signOut: async () => {
-      SecureStore.setItem(SESSION_CACHE_KEY, "{}");
+      clearCachedSession();
       try {
         await authClient.signOut();
       } catch {
