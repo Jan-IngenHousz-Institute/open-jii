@@ -20,6 +20,8 @@ export function configureAuthRefresh(handler: AuthRefreshHandler): void {
 // generous for any real call and fails fast otherwise.
 export const FETCH_TIMEOUT_MS = 10_000;
 
+const SAFE_METHODS = new Set(["GET", "HEAD"]);
+
 // oRPC builds the Request; this wrapper mirrors the previous ts-rest fetcher:
 // inject the session cookie, enforce a 10s timeout, forward upstream aborts
 // (React Query unmount), and retry once after a single-flight session refresh
@@ -67,8 +69,11 @@ export async function orpcFetch(
         await handler.signOut();
       }
     } else if (hasSessionToken(handler.getCookie())) {
-      // Sent before a sign-in stored its token: try once under the new session.
-      result = await send(handler.getCookie());
+      // Sent before a sign-in stored its token. Only a read is replayed under the
+      // new session; a write was meant for whoever the app showed when it started.
+      if (SAFE_METHODS.has(request.method)) {
+        result = await send(handler.getCookie());
+      }
     } else if (handler.hasCachedSession()) {
       // Signing out with no session would wipe an OAuth sign-in in progress, but
       // a cached session whose cookie has expired must still be cleared.

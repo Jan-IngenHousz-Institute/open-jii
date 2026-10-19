@@ -180,6 +180,29 @@ describe("orpcFetch", () => {
     },
   );
 
+  it.each(["POST", "PUT", "PATCH", "DELETE"])(
+    "returns a %s 401 untouched when a session appeared after it was sent",
+    async (method) => {
+      mockGetCookie.mockReturnValue("");
+      mockHasCachedSession.mockReturnValue(true);
+      mockFetch.mockImplementationOnce(() => {
+        mockGetCookie.mockReturnValue(NEW_SESSION);
+        return Promise.resolve(new Response(null, { status: 401 }));
+      });
+      const request = new Request("https://api.test/v1/x", {
+        method,
+        body: JSON.stringify({ message: "User A requests membership" }),
+      });
+
+      const result = await orpcFetch(request, undefined);
+
+      expect(result.status).toBe(401);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockRefreshSession).not.toHaveBeenCalled();
+      expect(mockSignOut).not.toHaveBeenCalled();
+    },
+  );
+
   it("attaches the Cookie header when a session cookie is present", async () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }));
     mockGetCookie.mockReturnValue("better-auth.dev.session_token=abc");
