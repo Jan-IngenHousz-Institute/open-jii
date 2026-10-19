@@ -61,6 +61,10 @@ ROWS_PER_PART = 1_000_000
 DRIVER_FORMAT_MAX_ROWS = 1_048_575
 EXCEL_MAX_COLUMNS = 16_384
 
+# Formats Spark writes in parts, with the reader that lists the files a write committed.
+SPARK_FORMAT_READERS = {"csv": "text", "ndjson": "text", "parquet": "parquet"}
+WRITES_IN_PARTS = FORMAT in SPARK_FORMAT_READERS
+
 
 class ExportError(Exception):
     """A failure the platform explains to the user; the backend finds the code in the run's error."""
@@ -91,6 +95,8 @@ def check_driver_format_limits(export_format: str, row_count: int, column_count:
 
 
 def build_manifest(export_id: str, export_format: str, row_count: int, snapshot_at: str, parts: list) -> dict:
+    """``rowCount`` is the count taken when the export started; rows that arrive while it runs
+    may or may not be in the files."""
     return {
         "exportId": export_id,
         "format": export_format,
@@ -175,18 +181,14 @@ def flatten_complex_columns(df):
     return df
 
 
-def write_parts(df, row_count):
+def write_parts(df):
     """
-    Write the table to OUTPUT_PATH. Spark formats are written by several tasks at once, one part
-    each; coalescing after the loader's sort keeps the parts in row order.
+    Write the table to OUTPUT_PATH. Spark formats write one part per partition of ``df``, which
+    the loader split into ranges of the table's sort column, so the parts follow the rows' order.
     """
-    parts = part_count(row_count)
-    log(f"Writing {row_count} rows as {parts} part(s)")
-
     if FORMAT == "csv":
         (
             flatten_complex_columns(df)
-            .coalesce(parts)
             .write.mode("overwrite")
             .option("header", True)
             .option("escape", '"')
@@ -194,9 +196,9 @@ def write_parts(df, row_count):
             .csv(OUTPUT_PATH)
         )
     elif FORMAT == "ndjson":
-        df.coalesce(parts).write.mode("overwrite").option("compression", "gzip").json(OUTPUT_PATH)
+        df.write.mode("overwrite").option("compression", "gzip").json(OUTPUT_PATH)
     elif FORMAT == "parquet":
-        df.coalesce(parts).write.mode("overwrite").parquet(OUTPUT_PATH)
+        df.write.mode("overwrite").parquet(OUTPUT_PATH)
     elif FORMAT == "json-array":
         # Rows stream to a local temp file one at a time, so the driver never holds the whole
         # export. The ", " separator matches json.dumps(list). Uploaded via the Files API:
@@ -229,9 +231,19 @@ def write_parts(df, row_count):
         raise ValueError(f"Unsupported format: {FORMAT}")
 
 
+def committed_names(directory):
+    """Names of the files a Spark write committed. A task attempt that failed after writing can
+    leave a file behind that the commit never listed."""
+    reader = spark.read.format(SPARK_FORMAT_READERS[FORMAT])
+    return {path.rsplit("/", 1)[-1] for path in reader.load(directory).inputFiles()}
+
+
 def list_parts(directory):
-    files = sorted((f for f in dbutils.fs.ls(directory) if is_part_file(f.name)), key=lambda f: f.name)
-    return [{"name": f.name, "sizeBytes": f.size} for f in files]
+    files = [f for f in dbutils.fs.ls(directory) if is_part_file(f.name)]
+    if WRITES_IN_PARTS:
+        committed = committed_names(directory)
+        files = [f for f in files if f.name in committed]
+    return [{"name": f.name, "sizeBytes": f.size} for f in sorted(files, key=lambda f: f.name)]
 
 
 def write_manifest(manifest):
@@ -248,22 +260,29 @@ def write_manifest(manifest):
 # COMMAND ----------
 
 # DBTITLE 1,Main Execution
-def main():
-    df = load_experiment_table(
+def load(parts=None):
+    return load_experiment_table(
         experiment_id=EXPERIMENT_ID,
         table_name=TABLE_NAME,
         catalog_name=CATALOG_NAME,
         schema_name="centrum",
+        parts=parts,
     )
-    row_count = df.count()
+
+
+def main():
+    row_count = load().count()
     log(f"Loaded {row_count} rows")
 
     parts = []
     if row_count > 0:
+        parts_planned = part_count(row_count) if WRITES_IN_PARTS else 1
+        log(f"Writing {row_count} rows as {parts_planned} part(s)")
+        df = load(parts_planned if WRITES_IN_PARTS else None)
         check_driver_format_limits(FORMAT, row_count, len(df.columns))
         if ANONYMIZE_CONTRIBUTORS:
             df = anonymize_contributors(df, EXPERIMENT_ID)
-        write_parts(df, row_count)
+        write_parts(df)
         parts = list_parts(OUTPUT_PATH)
 
     manifest = build_manifest(EXPORT_ID, FORMAT, row_count, SNAPSHOT_AT, parts)

@@ -1,5 +1,6 @@
 {
   "run_name": "Export carry-over ({ENV})",
+  "run_as": { "service_principal_name": "{NODE_SP_APP_ID}" },
   "tasks": [
     {
       "task_key": "export_carry_over",

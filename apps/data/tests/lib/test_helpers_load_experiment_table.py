@@ -62,10 +62,17 @@ def _load(table_name: str, schema: str):
     return load_experiment_table("e1", table_name, _CATALOG, schema_name=schema)
 
 
-def test_upload_table_reads_its_own_uploaded_rows_in_upload_order(schema: str) -> None:
+def test_upload_table_reads_its_own_uploaded_rows_ordered_by_upload_time(schema: str) -> None:
     rows = _load("upload-1", schema).collect()
 
     assert [(row.plot, row["yield"]) for row in rows] == [("C1", 3.0), ("A1", 2.5)]
+
+
+def test_parts_split_the_rows_into_that_many_partitions_in_row_order(schema: str) -> None:
+    table = load_experiment_table("e1", "upload-1", _CATALOG, schema_name=schema, parts=2)
+
+    assert table.rdd.getNumPartitions() == 2
+    assert [row.plot for row in table.collect()] == ["C1", "A1"]
 
 
 def test_upload_table_drops_its_bookkeeping_and_raw_payload_columns(schema: str) -> None:
