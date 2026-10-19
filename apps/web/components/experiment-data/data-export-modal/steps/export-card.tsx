@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDateTime } from "@/util/date";
 import { formatLocaleNumber } from "@/util/format-locale-number";
 import {
   Calendar,
@@ -26,16 +27,6 @@ import { ExportDownloadButton } from "./export-download-button";
 import { ExportPartsList } from "./export-parts-list";
 import { ExportStatusBadge } from "./export-status-badge";
 
-const formatDateTime = (dateString: string | null): string => {
-  if (!dateString) return "";
-  return new Date(dateString).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-};
-
 export function ExportCard({
   export: exportRecord,
   experimentId,
@@ -48,6 +39,7 @@ export function ExportCard({
   const { t } = useTranslation("experimentData");
   const locale = useLocale();
   const [showFiles, setShowFiles] = React.useState(false);
+  const filesId = React.useId();
 
   const isCompleted = exportRecord.status === "completed";
   const partCount = exportRecord.partCount ?? 0;
@@ -63,7 +55,10 @@ export function ExportCard({
   if (exportRecord.rowCount != null) {
     metaItems.push({
       icon: Rows3,
-      label: `${formatLocaleNumber(exportRecord.rowCount, locale)} ${t("experimentData.exportModal.rows").toLowerCase()}`,
+      label: t("experimentData.exportModal.rowCount", {
+        count: exportRecord.rowCount,
+        formatted: formatLocaleNumber(exportRecord.rowCount, locale),
+      }),
     });
   }
   if (exportRecord.totalBytes != null) {
@@ -75,12 +70,12 @@ export function ExportCard({
       label: t("experimentData.exportModal.parts", { count: partCount }),
     });
   }
-  metaItems.push({ icon: Calendar, label: formatDateTime(exportRecord.createdAt) });
+  metaItems.push({ icon: Calendar, label: formatDateTime(exportRecord.createdAt, locale) });
   if (isCompleted && exportRecord.expiresAt) {
     metaItems.push({
       icon: TimerOff,
       label: t("experimentData.exportModal.expiresOn", {
-        date: formatDateTime(exportRecord.expiresAt),
+        date: formatDateTime(exportRecord.expiresAt, locale),
       }),
     });
   }
@@ -115,10 +110,21 @@ export function ExportCard({
         </div>
 
         {isCompleted && !isMultiPart && (
-          <ExportDownloadButton experimentId={experimentId} exportId={exportRecord.exportId} />
+          <ExportDownloadButton
+            experimentId={experimentId}
+            exportId={exportRecord.exportId}
+            tableName={exportRecord.tableName}
+          />
         )}
         {isMultiPart && (
-          <Button variant="ghost" size="sm" className="shrink-0 gap-1" onClick={toggleFiles}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0 gap-1"
+            aria-expanded={showFiles}
+            aria-controls={filesId}
+            onClick={toggleFiles}
+          >
             {showFiles ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             {showFiles
               ? t("experimentData.exportModal.hideFiles")
@@ -129,7 +135,11 @@ export function ExportCard({
 
       {failureReason && <p className="text-destructive text-xs">{failureReason}</p>}
       {isMultiPart && showFiles && (
-        <ExportPartsList experimentId={experimentId} exportId={exportRecord.exportId} />
+        <ExportPartsList
+          id={filesId}
+          experimentId={experimentId}
+          exportId={exportRecord.exportId}
+        />
       )}
     </Card>
   );

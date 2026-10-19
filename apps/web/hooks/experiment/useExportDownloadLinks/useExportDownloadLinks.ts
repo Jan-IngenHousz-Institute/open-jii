@@ -1,18 +1,32 @@
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
+import { parseApiError } from "~/util/apiError";
 
-/** Signed links work for 15 minutes, so they are fetched again well before they stop. */
-const LINKS_REFRESH_MS = 10 * 60_000;
+/** Fresh links are fetched this long before the ones on screen stop working. */
+const REFRESH_MARGIN_MS = 5 * 60_000;
+const MIN_REFRESH_MS = 30_000;
 
 /** Query options for an export's signed part links, shared by the hook and one-off fetches. */
 export function exportDownloadLinksQuery(experimentId: string, exportId: string) {
   return orpc.experiments.getExportDownloadLinks.queryOptions({
     input: { id: experimentId, exportId },
-    staleTime: LINKS_REFRESH_MS,
+    retry: false,
   });
 }
 
-/** An export's signed part links, kept fresh while they are on screen. */
+/** True when the links were refused because the export's files are gone. */
+export function isExportExpiredError(error: unknown): boolean {
+  return parseApiError(error)?.code === "EXPORT_EXPIRED";
+}
+
+function untilRefresh(expiresAt: string | undefined): number | false {
+  if (!expiresAt) {
+    return false;
+  }
+  return Math.max(Date.parse(expiresAt) - Date.now() - REFRESH_MARGIN_MS, MIN_REFRESH_MS);
+}
+
+/** An export's signed part links, fetched fresh when shown and again before they stop working. */
 export const useExportDownloadLinks = ({
   experimentId,
   exportId,
@@ -22,6 +36,7 @@ export const useExportDownloadLinks = ({
 }) => {
   return useQuery({
     ...exportDownloadLinksQuery(experimentId, exportId),
-    refetchInterval: LINKS_REFRESH_MS,
+    refetchOnMount: "always",
+    refetchInterval: (query) => untilRefresh(query.state.data?.expiresAt),
   });
 };
