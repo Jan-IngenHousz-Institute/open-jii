@@ -55,6 +55,7 @@ export enum ErrorCodes {
   AWS_IOT_LIST_PRINCIPALS_FAILED = "AWS_IOT_LIST_PRINCIPALS_FAILED", // IoT ListThingPrincipals failed
   AWS_IOT_SEARCH_INDEX_FAILED = "AWS_IOT_SEARCH_INDEX_FAILED", // IoT fleet-index connectivity search failed
   AWS_S3_PRESIGN_FAILED = "AWS_S3_PRESIGN_FAILED", // S3 pre-signed URL generation failed
+  AWS_S3_READ_FAILED = "AWS_S3_READ_FAILED", // S3 object could not be read
   AWS_CLOUDWATCH_READ_FAILED = "AWS_CLOUDWATCH_READ_FAILED", // CloudWatch GetMetricData failed
   AWS_CLOUDWATCH_PUBLISH_FAILED = "AWS_CLOUDWATCH_PUBLISH_FAILED", // CloudWatch PutMetricData failed
   AWS_RDS_DESCRIBE_FAILED = "AWS_RDS_DESCRIBE_FAILED", // RDS DescribeDBClusters failed

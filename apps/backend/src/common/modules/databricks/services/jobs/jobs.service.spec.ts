@@ -412,4 +412,48 @@ describe("DatabricksJobsService", () => {
       expect(result.error.message).toContain("Failed to get job run status");
     });
   });
+
+  describe("getJobRunOutput", () => {
+    it("returns a task run's error and trace", async () => {
+      const taskRunId = 907183647783172;
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .get(DatabricksJobsService.JOBS_ENDPOINT + "/runs/get-output")
+        .query({ run_id: taskRunId })
+        .reply(200, {
+          error: "ExportError: EXPORT_ERROR[no_data] nothing to export",
+          error_trace: "Traceback (most recent call last): ...",
+        });
+
+      const result = await jobsService.getJobRunOutput(taskRunId);
+
+      assertSuccess(result);
+      expect(result.value.error).toBe("ExportError: EXPORT_ERROR[no_data] nothing to export");
+      expect(result.value.error_trace).toContain("Traceback");
+    });
+
+    it("should handle API errors when getting a job run's output", async () => {
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .get(DatabricksJobsService.JOBS_ENDPOINT + "/runs/get-output")
+        .query({ run_id: 1 })
+        .reply(400, { message: "Retrieving the output of a job run is not supported" });
+
+      const result = await jobsService.getJobRunOutput(1);
+
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to get job run output");
+    });
+  });
 });

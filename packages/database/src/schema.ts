@@ -512,6 +512,71 @@ export const experimentJoinCodes = pgTable(
   ],
 );
 
+export const experimentExportStatusEnum = pgEnum("experiment_export_status", [
+  "queued",
+  "pending",
+  "running",
+  "completed",
+  "failed",
+  "expired",
+]);
+
+export const experimentExportFormatEnum = pgEnum("experiment_export_format", [
+  "csv",
+  "ndjson",
+  "json-array",
+  "parquet",
+  "xlsx",
+]);
+
+export const experimentExportErrorCodeEnum = pgEnum("experiment_export_error_code", [
+  "no_data",
+  "too_many_rows_for_format",
+  "unknown",
+]);
+
+export interface ExperimentExportPart {
+  name: string;
+  sizeBytes: number;
+}
+
+// Experiment Data Exports Table. The export job writes the files; this row is the only record
+// of them, created before the job starts and moved along by the backend as the run progresses.
+export const experimentExports = pgTable(
+  "experiment_exports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    experimentId: uuid("experiment_id")
+      .references(() => experiments.id, { onDelete: "cascade" })
+      .notNull(),
+    tableName: text("table_name").notNull(),
+    format: experimentExportFormatEnum("format").notNull(),
+    anonymizeContributors: boolean("anonymize_contributors").notNull(),
+    status: experimentExportStatusEnum("status").default("queued").notNull(),
+    jobRunId: bigint("job_run_id", { mode: "number" }),
+    rowCount: bigint("row_count", { mode: "number" }),
+    totalBytes: bigint("total_bytes", { mode: "number" }),
+    parts: postgresJsJsonb("parts").$type<ExperimentExportPart[]>(),
+    errorCode: experimentExportErrorCodeEnum("error_code"),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    completedAt: timestamp("completed_at"),
+    expiresAt: timestamp("expires_at"),
+    ...timestamps,
+  },
+  (table) => [
+    index("experiment_exports_table_idx").on(table.experimentId, table.tableName, table.createdAt),
+    // One export in flight per table, format and anonymisation; a second request joins it.
+    uniqueIndex("experiment_exports_in_flight_uniq")
+      .on(table.experimentId, table.tableName, table.format, table.anonymizeContributors)
+      .where(sql`${table.status} IN ('queued', 'pending', 'running')`),
+    index("experiment_exports_in_flight_idx")
+      .on(table.status)
+      .where(sql`${table.status} IN ('queued', 'pending', 'running')`),
+  ],
+);
+
 // Organization Join Requests Table
 export const organizationJoinRequests = pgTable(
   "organization_join_requests",
