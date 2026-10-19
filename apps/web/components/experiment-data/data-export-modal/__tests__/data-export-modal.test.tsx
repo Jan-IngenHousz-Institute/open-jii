@@ -37,11 +37,7 @@ function mountExportHandlers(initiateOverrides?: {
 }) {
   const spy = server.mount(contract.experiments.initiateExport, {
     body: createExportRecord({ status: "queued" }),
-    ...(initiateOverrides as {
-      status?: 201 | 400 | 403 | 404 | 500;
-      body?: { status: "queued" } | { message: string };
-      delay?: number | "infinite";
-    }),
+    ...initiateOverrides,
   });
   server.mount(contract.experiments.listExports, { body: { exports: [] } });
   return spy;
