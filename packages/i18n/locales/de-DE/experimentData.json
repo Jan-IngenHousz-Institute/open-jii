@@ -31,7 +31,8 @@
         "pending": "Ausstehend",
         "running": "Vorbereitung",
         "completed": "Abgeschlossen",
-        "failed": "Fehlgeschlagen"
+        "failed": "Fehlgeschlagen",
+        "expired": "Abgelaufen"
       },
       "created": "Erstellt",
       "completed": "Abgeschlossen",
@@ -44,7 +45,6 @@
       "loadingExports": "Exporte werden geladen...",
       "format": "Format",
       "exportTitle": "Export #{{number}}",
-      "failedTooltip": "Kein Handlungsbedarf — dieser Fehler wird untersucht und behoben. Der Export wird hier mit dem korrekten Status erneut angezeigt, sobald das Problem gelöst ist.",
       "createNew": "Neuen Export erstellen",
       "creating": "Export wird erstellt...",
       "createExport": "Export erstellen",
@@ -57,7 +57,33 @@
       "creationError": "Export konnte nicht erstellt werden",
       "backToList": "Zurück zu Exporten",
       "anonymizeContributors": "Mitwirkende in der exportierten Datei anonymisieren",
-      "overridingDefault": "überschreibt Experimentstandard"
+      "overridingDefault": "überschreibt Experimentstandard",
+      "formats": {
+        "csv": "CSV",
+        "ndjson": "NDJSON",
+        "json-array": "JSON-Array",
+        "parquet": "Parquet",
+        "xlsx": "Excel"
+      },
+      "errors": {
+        "no_data": "Die Tabelle enthielt keine Zeilen zum Exportieren.",
+        "too_many_rows_for_format": "Die Tabelle hat mehr Zeilen, als dieses Format aufnehmen kann. Exportieren Sie sie stattdessen als CSV oder Parquet.",
+        "unknown": "Der Export ist fehlgeschlagen. Starten Sie ihn erneut und wenden Sie sich an den Support, falls er weiterhin fehlschlägt."
+      },
+      "parts_one": "{{count}} Datei",
+      "parts_other": "{{count}} Dateien",
+      "expiresOn": "Verfügbar bis {{date}}",
+      "showFiles": "Dateien anzeigen",
+      "hideFiles": "Dateien ausblenden",
+      "downloadPart": "Datei {{number}} herunterladen",
+      "loadingLinks": "Download-Links werden vorbereitet...",
+      "linksError": "Die Download-Links konnten nicht vorbereitet werden. Versuchen Sie es erneut.",
+      "copyLinks": "Alle Links kopieren",
+      "linksCopied": "Links kopiert. Sie sind 15 Minuten gültig.",
+      "linksHint": "Jeder Link ist 15 Minuten gültig. Um alle Dateien auf einmal zu laden, speichern Sie die kopierten Links in einer Datei und führen Sie wget -i darauf aus.",
+      "activityTitle": "Export von {{name}} ({{format}})",
+      "exportReady": "Der Export von {{name}} steht zum Download bereit.",
+      "exportFailed": "Der Export von {{name}} ist fehlgeschlagen."
     },
     "uploadDataModal": {
       "title": "Daten hochladen",

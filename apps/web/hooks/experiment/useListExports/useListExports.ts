@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ExperimentListExportsResponse } from "@repo/api/domains/experiment/exports/experiment-exports.schema";
 
 const POLL_MS = 15_000;
-const FINISHED_STATUSES = new Set(["completed", "failed"]);
+const FINISHED_STATUSES = new Set(["completed", "failed", "expired"]);
 
 function hasUnfinishedExport(data: ExperimentListExportsResponse | undefined): boolean {
   return data?.exports.some((record) => !FINISHED_STATUSES.has(record.status)) ?? false;

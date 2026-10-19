@@ -1,4 +1,4 @@
-import { createExperiment } from "@/test/factories";
+import { createExperiment, createExportRecord } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -36,7 +36,7 @@ function mountExportHandlers(initiateOverrides?: {
   delay?: number | "infinite";
 }) {
   const spy = server.mount(contract.experiments.initiateExport, {
-    body: { status: "queued" as const },
+    body: createExportRecord({ status: "queued" }),
     ...(initiateOverrides as {
       status?: 201 | 400 | 403 | 404 | 500;
       body?: { status: "queued" } | { message: string };
