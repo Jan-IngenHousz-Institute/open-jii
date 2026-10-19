@@ -41,6 +41,7 @@ import {
   accounts,
   experimentDashboards,
   experimentVisualizations,
+  experimentExports,
   experimentJoinCodes,
   experimentJoinRequests,
   resourceGrants,
@@ -52,8 +53,10 @@ import {
 
 import { AppModule } from "../app.module";
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
+import { ExportRunReconcilerService } from "../experiments/application/services/export-run-reconciler.service";
 import { NotificationOutboxWorker } from "../notifications/application/services/notification-outbox.worker";
 import { MockAnalyticsAdapter } from "./mocks/adapters/analytics.adapter.mock";
+import { QuietExportRunReconcilerService } from "./quiet-export-run-reconciler";
 import { QuietNotificationOutboxWorker } from "./quiet-notification-outbox.worker";
 
 // Ensure test environment is loaded
@@ -116,6 +119,9 @@ export class TestHarness {
       moduleBuilder
         .overrideProvider(NotificationOutboxWorker)
         .useClass(QuietNotificationOutboxWorker);
+      moduleBuilder
+        .overrideProvider(ExportRunReconcilerService)
+        .useClass(QuietExportRunReconcilerService);
 
       for (const [name, { real, mock }] of Object.entries(ADAPTERS) as [
         AdapterKey,
@@ -219,6 +225,7 @@ export class TestHarness {
     // Cascades with experiments, but the `code` unique index spans every row, so a
     // leftover would collide with a later test rather than merely linger.
     await this.database.delete(experimentJoinCodes).execute();
+    await this.database.delete(experimentExports).execute();
     await this.database.delete(experimentMembers).execute();
     await this.database.delete(experimentLocations).execute();
     // Dashboards/visualizations reference experiments, delete before experiments

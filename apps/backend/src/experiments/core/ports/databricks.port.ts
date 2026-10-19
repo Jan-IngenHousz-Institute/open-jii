@@ -1,8 +1,7 @@
-import type { Readable } from "stream";
-
 import type { UploadFileResponse } from "../../../common/modules/databricks/services/files/files.types";
 import type {
   DatabricksHealthCheck,
+  DatabricksJobRunOutputResponse,
   DatabricksJobRunResponse,
   DatabricksJobRunStatusResponse,
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
@@ -15,9 +14,20 @@ import type {
   StatementParameter,
 } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { Result } from "../../../common/utils/fp-utils";
-import type { ExportFormat, ExportMetadata } from "../models/experiment-data-exports.model";
+import type { ExportFormat } from "../models/experiment-data-exports.model";
 import type { UploadMetadata } from "../models/experiment-data-uploads.model";
 import type { ExperimentTableMetadata } from "../models/experiment-data.model";
+
+// `anonymizeContributors` is the resolved setting, the experiment's default or the export's
+// override; when true the job rewrites contributor cells to deterministic pseudonyms.
+export interface DataExportJobInput {
+  exportId: string;
+  experimentId: string;
+  tableName: string;
+  format: ExportFormat;
+  userId: string;
+  anonymizeContributors: boolean;
+}
 
 // Semantic input for the data upload job trigger. The adapter maps these onto
 // SOURCE_KIND-specific widget keys; `experimentName` only feeds the ambyte
@@ -109,48 +119,14 @@ export interface DatabricksPort {
   /** Run status for any Databricks job by runId. */
   getJobRunStatus(runId: number): Promise<Result<DatabricksJobRunStatusResponse>>;
 
-  /**
-   * Trigger the data export job. `anonymizeContributors` is the resolved
-   * boolean (experiment default vs per-export override); when true the job
-   * rewrites contributor struct cells to deterministic pseudonyms.
-   */
-  triggerDataExportJob(
-    experimentId: string,
-    tableName: string,
-    format: string,
-    userId: string,
-    anonymizeContributors: boolean,
-  ): Promise<Result<DatabricksJobRunResponse>>;
-
-  streamExport(
-    exportId: string,
-    experimentId: string,
-  ): Promise<
-    Result<{
-      stream: Readable;
-      contentLength?: number;
-      filePath: string;
-      tableName: string;
-      format: ExportFormat;
-      completedAt: string | null;
-    }>
-  >;
-
-  /** Completed export metadata for an experiment table from Delta Lake. */
-  getExportMetadata(experimentId: string, tableName: string): Promise<Result<SchemaData>>;
-
-  /** Active (in-progress) exports from job runs. */
-  getActiveExports(experimentId: string, tableName: string): Promise<Result<ExportMetadata[]>>;
+  /** Output of one task run, which carries a failed notebook's error. */
+  getJobRunOutput(taskRunId: number): Promise<Result<DatabricksJobRunOutputResponse>>;
 
   /**
-   * Failed exports from completed job runs.
-   * `completedExportRunIds` is used to deduplicate against the completed exports table.
+   * Trigger the data export job for an export the backend already recorded. The run reuses
+   * `exportId` as its folder and idempotency token, so a repeated trigger starts no second run.
    */
-  getFailedExports(
-    experimentId: string,
-    tableName: string,
-    completedExportRunIds: Set<number>,
-  ): Promise<Result<ExportMetadata[]>>;
+  triggerDataExportJob(input: DataExportJobInput): Promise<Result<DatabricksJobRunResponse>>;
 
   /**
    * Get completed upload metadata rows for an experiment from the Delta history table.

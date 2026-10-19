@@ -1,18 +1,15 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { Readable } from "stream";
 
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { zExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
 
-import { isExportFormat } from "../../../experiments/core/models/experiment-data-exports.model";
-import type {
-  ExportFormat,
-  ExportMetadata,
-} from "../../../experiments/core/models/experiment-data-exports.model";
 import type { UploadMetadata } from "../../../experiments/core/models/experiment-data-uploads.model";
 import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
-import type { DataUploadJobInput } from "../../../experiments/core/ports/databricks.port";
+import type {
+  DataExportJobInput,
+  DataUploadJobInput,
+} from "../../../experiments/core/ports/databricks.port";
 import type { DatabricksPort as HealthDatabricksPort } from "../../../health/core/ports/databricks.port";
 import type { DeviceLifecycleEventRow } from "../../../iot/core/models/device-lifecycle-event.model";
 import type {
@@ -134,245 +131,28 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     return this.jobsService.getJobRunStatus(runId);
   }
 
+  /** Output of one task run, which carries a failed notebook's error. */
+  async getJobRunOutput(taskRunId: number) {
+    return this.jobsService.getJobRunOutput(taskRunId);
+  }
+
   /**
    * Trigger the data export job. Booleans are stringified because Databricks
    * job widgets are string-only on the wire; the PySpark task parses them back.
    */
-  async triggerDataExportJob(
-    experimentId: string,
-    tableName: string,
-    format: string,
-    userId: string,
-    anonymizeContributors: boolean,
-  ): Promise<Result<DatabricksJobRunResponse>> {
+  async triggerDataExportJob(input: DataExportJobInput): Promise<Result<DatabricksJobRunResponse>> {
     const jobParams = {
-      EXPERIMENT_ID: experimentId,
-      TABLE_NAME: tableName,
-      FORMAT: format,
-      USER_ID: userId,
+      EXPORT_ID: input.exportId,
+      EXPERIMENT_ID: input.experimentId,
+      TABLE_NAME: input.tableName,
+      FORMAT: input.format,
+      USER_ID: input.userId,
       CATALOG_NAME: this.configService.getCatalogName(),
-      ANONYMIZE_CONTRIBUTORS: anonymizeContributors ? "true" : "false",
+      ANONYMIZE_CONTRIBUTORS: input.anonymizeContributors ? "true" : "false",
     };
 
     const jobId = this.configService.getDataExportJobIdAsNumber();
-    return this.jobsService.triggerJob(jobId, jobParams);
-  }
-
-  async streamExport(
-    exportId: string,
-    experimentId: string,
-  ): Promise<
-    Result<{
-      stream: Readable;
-      contentLength?: number;
-      filePath: string;
-      tableName: string;
-      format: ExportFormat;
-      completedAt: string | null;
-    }>
-  > {
-    this.logger.log({
-      msg: "Streaming export by ID",
-      operation: "streamExport",
-      exportId,
-      experimentId,
-    });
-
-    const queryResult = this.queryBuilder.buildQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_export_metadata`,
-      whereConditions: [
-        ["export_id", exportId],
-        ["experiment_id", experimentId],
-      ],
-      limit: 1,
-    });
-    if (queryResult.isFailure()) {
-      return queryResult;
-    }
-
-    const metadataResult = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
-
-    if (metadataResult.isFailure()) {
-      return metadataResult;
-    }
-
-    const schemaData = metadataResult.value;
-
-    if (schemaData.rows.length === 0) {
-      this.logger.warn({
-        msg: "Export not found",
-        operation: "streamExport",
-        exportId,
-      });
-      return failure(AppError.notFound("Export not found"));
-    }
-
-    const filePathIndex = schemaData.columns.findIndex((col) => col.name === "file_path");
-    const tableNameIndex = schemaData.columns.findIndex((col) => col.name === "table_name");
-    const formatIndex = schemaData.columns.findIndex((col) => col.name === "format");
-    const completedAtIndex = schemaData.columns.findIndex((col) => col.name === "completed_at");
-    const filePath = schemaData.rows[0][filePathIndex];
-    const tableName = schemaData.rows[0][tableNameIndex];
-    const format = schemaData.rows[0][formatIndex];
-    const completedAt = completedAtIndex >= 0 ? schemaData.rows[0][completedAtIndex] : null;
-
-    if (!filePath) {
-      this.logger.error({
-        msg: "Export has no file path",
-        operation: "streamExport",
-        exportId,
-      });
-      return failure(AppError.internal("Export file path is missing"));
-    }
-
-    if (!tableName) {
-      this.logger.error({
-        msg: "Export has no table name",
-        operation: "streamExport",
-        exportId,
-      });
-      return failure(AppError.internal("Export table name is missing"));
-    }
-
-    const hasKnownFormat = format !== null && isExportFormat(format);
-    if (!hasKnownFormat) {
-      this.logger.error({
-        msg: "Export has an unknown format",
-        operation: "streamExport",
-        exportId,
-        format,
-      });
-      return failure(AppError.internal("Export format is unknown"));
-    }
-
-    const downloadResult = await this.filesService.download(filePath);
-
-    if (downloadResult.isFailure()) {
-      return downloadResult;
-    }
-
-    return success({
-      stream: downloadResult.value.stream,
-      contentLength: downloadResult.value.contentLength,
-      filePath,
-      tableName,
-      format,
-      completedAt: completedAt ?? null,
-    });
-  }
-
-  async getExportMetadata(experimentId: string, tableName: string): Promise<Result<SchemaData>> {
-    this.logger.log({
-      msg: "Fetching completed exports from Delta Lake",
-      operation: "getExportMetadata",
-      experimentId,
-      tableName,
-    });
-
-    const queryResult = this.queryBuilder.buildQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_export_metadata`,
-      whereConditions: [
-        ["experiment_id", experimentId],
-        ["table_name", tableName],
-      ],
-      orderBy: "created_at",
-      orderDirection: "DESC",
-    });
-    if (queryResult.isFailure()) {
-      return queryResult;
-    }
-
-    const completedResult = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
-
-    if (completedResult.isFailure()) {
-      return failure(completedResult.error);
-    }
-
-    this.logger.log({
-      msg: "Completed exports fetched successfully",
-      operation: "getExportMetadata",
-      experimentId,
-      tableName,
-      count: completedResult.value.rows.length,
-    });
-
-    return completedResult;
-  }
-
-  async getActiveExports(
-    experimentId: string,
-    tableName: string,
-  ): Promise<Result<ExportMetadata[]>> {
-    const jobId = this.configService.getDataExportJobIdAsNumber();
-    const runsResult = await this.jobsService.listActiveRunsWithParams(jobId);
-    if (runsResult.isFailure()) {
-      return failure(runsResult.error);
-    }
-
-    const exports: ExportMetadata[] = [];
-    for (const { run, params, status } of runsResult.value) {
-      if (params.EXPERIMENT_ID !== experimentId || params.TABLE_NAME !== tableName) {
-        continue;
-      }
-      if (!params.USER_ID) {
-        continue;
-      }
-      exports.push({
-        exportId: null,
-        experimentId: params.EXPERIMENT_ID,
-        tableName: params.TABLE_NAME,
-        format: params.FORMAT as ExportFormat,
-        status,
-        filePath: null,
-        rowCount: null,
-        fileSize: null,
-        createdBy: params.USER_ID,
-        createdAt: new Date(run.start_time).toISOString(),
-        completedAt: run.end_time ? new Date(run.end_time).toISOString() : null,
-        jobRunId: run.run_id,
-      });
-    }
-    return success(exports);
-  }
-
-  async getFailedExports(
-    experimentId: string,
-    tableName: string,
-    completedExportRunIds: Set<number>,
-  ): Promise<Result<ExportMetadata[]>> {
-    const jobId = this.configService.getDataExportJobIdAsNumber();
-    const runsResult = await this.jobsService.listFailedRunsWithParams(
-      jobId,
-      completedExportRunIds,
-    );
-    if (runsResult.isFailure()) {
-      return failure(runsResult.error);
-    }
-
-    const exports: ExportMetadata[] = [];
-    for (const { run, params } of runsResult.value) {
-      if (params.EXPERIMENT_ID !== experimentId || params.TABLE_NAME !== tableName) {
-        continue;
-      }
-      if (!params.USER_ID) {
-        continue;
-      }
-      exports.push({
-        exportId: null,
-        experimentId: params.EXPERIMENT_ID,
-        tableName: params.TABLE_NAME,
-        format: params.FORMAT as ExportFormat,
-        status: "failed",
-        filePath: null,
-        rowCount: null,
-        fileSize: null,
-        createdBy: params.USER_ID,
-        createdAt: new Date(run.start_time).toISOString(),
-        completedAt: run.end_time ? new Date(run.end_time).toISOString() : null,
-        jobRunId: run.run_id,
-      });
-    }
-    return success(exports);
+    return this.jobsService.triggerJob(jobId, jobParams, input.exportId);
   }
 
   /**

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { zUpdateExperimentBody } from "../experiment.schema";
 import {
-  zExperimentDownloadExportResponse,
+  zExperimentExportDownloadLinksResponse,
   zExperimentExportRecord,
   zExperimentInitiateExportBody,
   zExperimentInitiateExportResponse,
@@ -15,6 +15,32 @@ const uuidB = "22222222-2222-2222-2222-222222222222";
 const uuidC = "33333333-3333-3333-3333-333333333333";
 const isoTime = "2024-01-15T10:00:00Z";
 const isoTime2 = "2024-01-15T11:00:00Z";
+
+const completedRecord = {
+  exportId: uuidA,
+  experimentId: uuidB,
+  tableName: "raw_data",
+  format: "parquet",
+  status: "completed",
+  rowCount: 2_500_000,
+  totalBytes: 2_000_000_000,
+  partCount: 3,
+  errorCode: null,
+  createdBy: uuidC,
+  createdAt: isoTime,
+  completedAt: isoTime2,
+  expiresAt: "2024-02-14T10:00:00Z",
+};
+
+const runningRecord = {
+  ...completedRecord,
+  status: "running",
+  rowCount: null,
+  totalBytes: null,
+  partCount: null,
+  completedAt: null,
+  expiresAt: null,
+};
 
 describe("Export Data Schemas", () => {
   it("zExperimentInitiateExportBody accepts valid input", () => {
@@ -41,13 +67,8 @@ describe("Export Data Schemas", () => {
     expect(() => zExperimentInitiateExportBody.parse({})).toThrow();
   });
 
-  it("zExperimentInitiateExportResponse valid", () => {
-    const res = { status: "pending" };
-    expect(zExperimentInitiateExportResponse.parse(res)).toEqual(res);
-  });
-
-  it("zExperimentInitiateExportResponse rejects empty status", () => {
-    expect(() => zExperimentInitiateExportResponse.parse({})).toThrow();
+  it("zExperimentInitiateExportResponse is the created export's record", () => {
+    expect(zExperimentInitiateExportResponse.parse(runningRecord)).toEqual(runningRecord);
   });
 
   it("zExperimentListExportsQuery valid", () => {
@@ -59,110 +80,52 @@ describe("Export Data Schemas", () => {
     expect(() => zExperimentListExportsQuery.parse({})).toThrow();
   });
 
-  it("zExperimentExportRecord accepts complete record", () => {
-    const record = {
-      exportId: uuidA,
-      experimentId: uuidB,
-      tableName: "raw_data",
-      format: "csv",
-      status: "completed",
-      filePath: "/path/to/file.csv",
-      rowCount: 1000,
-      fileSize: 50000,
-      createdBy: uuidC,
-      createdAt: isoTime,
-      completedAt: isoTime2,
-    };
-    expect(zExperimentExportRecord.parse(record)).toEqual(record);
+  it("zExperimentExportRecord accepts a completed record", () => {
+    expect(zExperimentExportRecord.parse(completedRecord)).toEqual(completedRecord);
   });
 
-  it("zExperimentExportRecord accepts nullable fields as null", () => {
-    const record = {
-      exportId: null,
-      experimentId: uuidB,
-      tableName: "raw_data",
-      format: "ndjson",
-      status: "running",
-      filePath: null,
-      rowCount: null,
-      fileSize: null,
-      createdBy: uuidC,
-      createdAt: isoTime,
-      completedAt: null,
-    };
-    expect(zExperimentExportRecord.parse(record)).toEqual(record);
+  it("zExperimentExportRecord accepts an unfinished record without sizes", () => {
+    expect(zExperimentExportRecord.parse(runningRecord)).toEqual(runningRecord);
+  });
+
+  it("zExperimentExportRecord requires an export id", () => {
+    expect(() => zExperimentExportRecord.parse({ ...runningRecord, exportId: null })).toThrow();
   });
 
   it("zExperimentExportRecord accepts all valid statuses", () => {
-    const base = {
-      exportId: null,
-      experimentId: uuidB,
-      tableName: "t1",
-      format: "csv",
-      filePath: null,
-      rowCount: null,
-      fileSize: null,
-      createdBy: uuidC,
-      createdAt: isoTime,
-      completedAt: null,
-    };
-    for (const status of ["queued", "pending", "running", "completed", "failed"] as const) {
-      expect(zExperimentExportRecord.parse({ ...base, status })).toEqual({ ...base, status });
+    for (const status of [
+      "queued",
+      "pending",
+      "running",
+      "completed",
+      "failed",
+      "expired",
+    ] as const) {
+      expect(zExperimentExportRecord.parse({ ...runningRecord, status })).toEqual({
+        ...runningRecord,
+        status,
+      });
     }
   });
 
+  it("zExperimentExportRecord carries the reason a failed export gives", () => {
+    const failed = { ...runningRecord, status: "failed", errorCode: "too_many_rows_for_format" };
+    expect(zExperimentExportRecord.parse(failed)).toEqual(failed);
+    expect(() => zExperimentExportRecord.parse({ ...failed, errorCode: "disk_full" })).toThrow();
+  });
+
   it("zExperimentExportRecord rejects invalid status", () => {
-    const record = {
-      exportId: uuidA,
-      experimentId: uuidB,
-      tableName: "raw_data",
-      format: "csv",
-      status: "cancelled",
-      filePath: null,
-      rowCount: null,
-      fileSize: null,
-      createdBy: uuidC,
-      createdAt: isoTime,
-      completedAt: null,
-    };
-    expect(() => zExperimentExportRecord.parse(record)).toThrow();
+    expect(() =>
+      zExperimentExportRecord.parse({ ...runningRecord, status: "cancelled" }),
+    ).toThrow();
   });
 
   it("zExperimentExportRecord rejects invalid format", () => {
-    const record = {
-      exportId: uuidA,
-      experimentId: uuidB,
-      tableName: "raw_data",
-      format: "xml",
-      status: "completed",
-      filePath: null,
-      rowCount: null,
-      fileSize: null,
-      createdBy: uuidC,
-      createdAt: isoTime,
-      completedAt: null,
-    };
-    expect(() => zExperimentExportRecord.parse(record)).toThrow();
+    expect(() => zExperimentExportRecord.parse({ ...completedRecord, format: "xml" })).toThrow();
   });
 
   it("zExperimentListExportsResponse valid with exports", () => {
-    const response = {
-      exports: [
-        {
-          exportId: uuidA,
-          experimentId: uuidB,
-          tableName: "raw_data",
-          format: "csv",
-          status: "completed",
-          filePath: "/path/to/file.csv",
-          rowCount: 100,
-          fileSize: 5000,
-          createdBy: uuidC,
-          createdAt: isoTime,
-          completedAt: isoTime2,
-        },
-      ],
-    };
+    const response = { exports: [runningRecord, completedRecord] };
     expect(zExperimentListExportsResponse.parse(response)).toEqual(response);
   });
 
@@ -175,11 +138,33 @@ describe("Export Data Schemas", () => {
     expect(() => zExperimentListExportsResponse.parse({})).toThrow();
   });
 
-  it("zExperimentDownloadExportResponse accepts any value", () => {
-    // z.unknown() accepts anything
-    expect(zExperimentDownloadExportResponse.parse("binary data")).toBe("binary data");
-    expect(zExperimentDownloadExportResponse.parse(null)).toBe(null);
-    expect(zExperimentDownloadExportResponse.parse(42)).toBe(42);
+  it("zExperimentExportDownloadLinksResponse lists one signed link per part", () => {
+    const response = {
+      parts: [
+        {
+          index: 0,
+          fileName: "trial_raw_data_20240115_part-1-of-2.parquet",
+          sizeBytes: 900,
+          url: "https://bucket.s3.amazonaws.com/part-00000.parquet?X-Amz-Signature=abc",
+        },
+        {
+          index: 1,
+          fileName: "trial_raw_data_20240115_part-2-of-2.parquet",
+          sizeBytes: 100,
+          url: "https://bucket.s3.amazonaws.com/part-00001.parquet?X-Amz-Signature=def",
+        },
+      ],
+      expiresAt: isoTime2,
+    };
+    expect(zExperimentExportDownloadLinksResponse.parse(response)).toEqual(response);
+  });
+
+  it("zExperimentExportDownloadLinksResponse rejects a part without a link", () => {
+    const response = {
+      parts: [{ index: 0, fileName: "a.csv.gz", sizeBytes: 1, url: "not a url" }],
+      expiresAt: isoTime2,
+    };
+    expect(() => zExperimentExportDownloadLinksResponse.parse(response)).toThrow();
   });
 });
 
