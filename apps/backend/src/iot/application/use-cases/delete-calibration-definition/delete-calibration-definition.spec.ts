@@ -1,7 +1,16 @@
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
-import { and, eq, resourceGrants, upsertGrant } from "@repo/database";
+import {
+  and,
+  calibrationDefinitions,
+  eq,
+  notifications,
+  resourceGrants,
+  upsertGrant,
+} from "@repo/database";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
+import { NotificationRepository } from "../../../../notifications/core/repositories/notification.repository";
+import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
 import {
   audienceDeliveries,
   audienceNotifications,
@@ -139,7 +148,8 @@ describe("DeleteCalibrationDefinitionUseCase", () => {
     expect(result.error.message).toContain("has runs and cannot be deleted");
   });
 
-  it("tells the grantees and the owner, not the deleter, and queues their emails", async () => {
+  /** One calibration definition in an organization, shared with an admin and a viewer. */
+  async function sharedDefinition() {
     const audience = await seedResourceAudience(testApp);
     const resourceId = (
       await testApp.createCalibrationDefinition({
@@ -149,6 +159,11 @@ describe("DeleteCalibrationDefinitionUseCase", () => {
       })
     ).id;
     await grantResourceAudience(testApp, audience, "calibration_definition", resourceId);
+    return { audience, resourceId };
+  }
+
+  it("tells the grantees and the owner, not the deleter, and queues their emails", async () => {
+    const { audience, resourceId } = await sharedDefinition();
 
     assertSuccess(await useCase.execute(resourceId, audience.actor));
 
@@ -165,5 +180,56 @@ describe("DeleteCalibrationDefinitionUseCase", () => {
     expect(await audienceDeliveries(testApp, audience)).toEqual(
       heardByAllButTheActor(audience, () => ({ type: "resource_deleted", status: "pending" })),
     );
+  });
+
+  it("still deletes, telling nobody, when the members cannot be read", async () => {
+    const { audience, resourceId } = await sharedDefinition();
+    vi.spyOn(testApp.module.get(SharingRepository), "listMemberIds").mockResolvedValue(
+      failure(AppError.internal("members unavailable")),
+    );
+
+    assertSuccess(await useCase.execute(resourceId, audience.actor));
+
+    expect(
+      await testApp.database
+        .select()
+        .from(calibrationDefinitions)
+        .where(eq(calibrationDefinitions.id, resourceId)),
+    ).toEqual([]);
+    expect(await testApp.database.select().from(notifications)).toEqual([]);
+  });
+
+  it("still deletes, telling nobody, when the resource cannot be named", async () => {
+    const { audience, resourceId } = await sharedDefinition();
+    vi.spyOn(testApp.module.get(SharingRepository), "findResourceName").mockResolvedValue(
+      failure(AppError.internal("names unavailable")),
+    );
+
+    assertSuccess(await useCase.execute(resourceId, audience.actor));
+
+    expect(
+      await testApp.database
+        .select()
+        .from(calibrationDefinitions)
+        .where(eq(calibrationDefinitions.id, resourceId)),
+    ).toEqual([]);
+    expect(await testApp.database.select().from(notifications)).toEqual([]);
+  });
+
+  it("still deletes when the notification cannot be stored", async () => {
+    const { audience, resourceId } = await sharedDefinition();
+    vi.spyOn(testApp.module.get(NotificationRepository), "insertMany").mockResolvedValue(
+      failure(AppError.internal("notifications unavailable")),
+    );
+
+    assertSuccess(await useCase.execute(resourceId, audience.actor));
+
+    expect(
+      await testApp.database
+        .select()
+        .from(calibrationDefinitions)
+        .where(eq(calibrationDefinitions.id, resourceId)),
+    ).toEqual([]);
+    expect(await testApp.database.select().from(notifications)).toEqual([]);
   });
 });

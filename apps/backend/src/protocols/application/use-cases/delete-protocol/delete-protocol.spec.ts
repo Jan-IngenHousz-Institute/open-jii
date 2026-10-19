@@ -1,6 +1,10 @@
 import { faker } from "@faker-js/faker";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { eq, notifications, protocols } from "@repo/database";
+
+import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
+import { NotificationRepository } from "../../../../notifications/core/repositories/notification.repository";
+import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
 import {
   audienceDeliveries,
   audienceNotifications,
@@ -85,7 +89,8 @@ describe("DeleteProtocolUseCase", () => {
     });
   });
 
-  it("tells the grantees and the owner, not the deleter, and queues their emails", async () => {
+  /** One protocol in an organization, shared with an admin and a viewer. */
+  async function sharedProtocol() {
     const audience = await seedResourceAudience(testApp);
     const resourceId = (
       await testApp.createProtocol({
@@ -95,6 +100,11 @@ describe("DeleteProtocolUseCase", () => {
       })
     ).id;
     await grantResourceAudience(testApp, audience, "protocol", resourceId);
+    return { audience, resourceId };
+  }
+
+  it("tells the grantees and the owner, not the deleter, and queues their emails", async () => {
+    const { audience, resourceId } = await sharedProtocol();
 
     assertSuccess(await useCase.execute(resourceId, audience.actor));
 
@@ -111,5 +121,33 @@ describe("DeleteProtocolUseCase", () => {
     expect(await audienceDeliveries(testApp, audience)).toEqual(
       heardByAllButTheActor(audience, () => ({ type: "resource_deleted", status: "pending" })),
     );
+  });
+
+  it("still deletes, telling nobody, when the members cannot be read", async () => {
+    const { audience, resourceId } = await sharedProtocol();
+    vi.spyOn(testApp.module.get(SharingRepository), "listMemberIds").mockResolvedValue(
+      failure(AppError.internal("members unavailable")),
+    );
+
+    assertSuccess(await useCase.execute(resourceId, audience.actor));
+
+    expect(
+      await testApp.database.select().from(protocols).where(eq(protocols.id, resourceId)),
+    ).toEqual([]);
+    expect(await testApp.database.select().from(notifications)).toEqual([]);
+  });
+
+  it("still deletes when the notification cannot be stored", async () => {
+    const { audience, resourceId } = await sharedProtocol();
+    vi.spyOn(testApp.module.get(NotificationRepository), "insertMany").mockResolvedValue(
+      failure(AppError.internal("notifications unavailable")),
+    );
+
+    assertSuccess(await useCase.execute(resourceId, audience.actor));
+
+    expect(
+      await testApp.database.select().from(protocols).where(eq(protocols.id, resourceId)),
+    ).toEqual([]);
+    expect(await testApp.database.select().from(notifications)).toEqual([]);
   });
 });

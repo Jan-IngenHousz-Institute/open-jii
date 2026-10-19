@@ -533,6 +533,18 @@ describe("TransferResourceOrgUseCase", () => {
       });
     });
 
+    it("still moves the resource, telling nobody, when the members cannot be read", async () => {
+      const resourceId = await sharedResource("macro");
+      vi.spyOn(testApp.module.get(SharingRepository), "listMemberIds").mockResolvedValue(
+        failure(AppError.internal("members unavailable")),
+      );
+
+      assertSuccess(await useCase.execute(audience.actor, "macro", resourceId, receivingOrg));
+
+      expect(await owningOrgOf(resourceId)).toBe(receivingOrg);
+      expect(await testApp.database.select().from(notifications)).toEqual([]);
+    });
+
     it("still moves the resource when the notification cannot be stored", async () => {
       const resourceId = await sharedResource("macro");
       vi.spyOn(testApp.module.get(NotificationRepository), "insertMany").mockResolvedValue(
