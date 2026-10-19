@@ -1,26 +1,24 @@
 # Databricks notebook source
 # DBTITLE 1,Data Export Task
-# Standalone task to export experiment table data in multiple formats (CSV, NDJSON, JSON Array, Parquet, Excel)
-# This task runs independently and outputs files to Unity Catalog volumes
+# Exports one experiment table in parts to the exports volume and describes the parts in
+# manifest.json. The backend creates the export id, follows the run, and reads the manifest
+# once the run succeeds, so this task writes no metadata of its own.
 
 # COMMAND ----------
 
 # DBTITLE 1,Imports
-import json
 import io
+import json
+import math
 import tempfile
-import uuid
-from datetime import datetime
-from typing import Optional
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.functions import to_json, col, lit, expr, when, struct
-from pyspark.sql.types import StructType, ArrayType, MapType, VariantType, StringType
-from pyspark.dbutils import DBUtils
+from datetime import datetime, timezone
 
-# Import openjii utilities
-import sys
-sys.path.append("/Workspace/Repos/open-jii/apps/data/src/lib/openjii")
 from openjii.helpers import load_experiment_table
+from pyspark.dbutils import DBUtils
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.functions import col, expr, lit, struct, to_json, when
+from pyspark.sql.types import ArrayType, MapType, StringType, StructType, VariantType
+
 
 # Use print() for logging - Databricks captures stdout/stderr from the
 # driver on the compute cluster, but the Python logging module is often
@@ -31,74 +29,79 @@ def log(msg: str, level: str = "INFO"):
 # COMMAND ----------
 
 # DBTITLE 1,Task Configuration
-# Required parameters
+EXPORT_ID = dbutils.widgets.get("EXPORT_ID")
 EXPERIMENT_ID = dbutils.widgets.get("EXPERIMENT_ID")
 TABLE_NAME = dbutils.widgets.get("TABLE_NAME")
 CATALOG_NAME = dbutils.widgets.get("CATALOG_NAME")
 FORMAT = dbutils.widgets.get("FORMAT").lower()  # csv, ndjson, json-array, parquet, or xlsx
-USER_ID = dbutils.widgets.get("USER_ID")  # User who initiated the export
-ENVIRONMENT = dbutils.widgets.get("ENVIRONMENT") if dbutils.widgets.get("ENVIRONMENT") else "DEV"
 try:
     ANONYMIZE_CONTRIBUTORS = (dbutils.widgets.get("ANONYMIZE_CONTRIBUTORS") or "").lower() == "true"
 except Exception:
     ANONYMIZE_CONTRIBUTORS = False
 
-# Generate unique export ID within the task
-EXPORT_ID = str(uuid.uuid4())
-
 spark = SparkSession.builder.getOrCreate()
 dbutils = DBUtils(spark)
 
-# Metadata table for tracking exports
-EXPORT_METADATA_TABLE = f"{CATALOG_NAME}.centrum.experiment_export_metadata"
+# A retry of this run reuses the export id, so it overwrites the same folder.
+OUTPUT_PATH = f"/Volumes/{CATALOG_NAME}/centrum/exports/{EXPERIMENT_ID}/{TABLE_NAME}/{FORMAT}/{EXPORT_ID}"
+MANIFEST_NAME = "manifest.json"
+SNAPSHOT_AT = datetime.now(timezone.utc).isoformat()
 
-# Generate write timestamp
-write_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-# Output paths
-# Structure: /Volumes/{catalog}/centrum/data-exports/{experiment_id}/{table_name}/{format}/{export_id}/
-VOLUME_BASE_PATH = f"/Volumes/{CATALOG_NAME}/centrum/data-exports"
-OUTPUT_BASE_PATH = f"{VOLUME_BASE_PATH}/{EXPERIMENT_ID}/{TABLE_NAME}/{FORMAT}"
-OUTPUT_PATH = f"{OUTPUT_BASE_PATH}/{EXPORT_ID}"
-
-log(f"Exporting data for experiment: {EXPERIMENT_ID}")
-log(f"Table name: {TABLE_NAME}")
-log(f"Format: {FORMAT}")
-log(f"Export ID: {EXPORT_ID}")
-log(f"Catalog: {CATALOG_NAME}")
-log(f"Output path: {OUTPUT_PATH}")
+log(f"Exporting {TABLE_NAME} of experiment {EXPERIMENT_ID} as {FORMAT} to {OUTPUT_PATH}")
 log(f"Anonymise contributors: {ANONYMIZE_CONTRIBUTORS}")
 
 # COMMAND ----------
 
-# DBTITLE 1,Load Data
-def load_data():
-    """
-    Load experiment data using openjii utility.
-    This handles all variant parsing and column selection automatically.
-    """
-    try:
-        log("Loading experiment data using openjii utility")
-        
-        # Use openjii utility to load data with proper variant parsing
-        df = load_experiment_table(
-            experiment_id=EXPERIMENT_ID,
-            table_name=TABLE_NAME,
-            catalog_name=CATALOG_NAME,
-            schema_name="centrum"
+# DBTITLE 1,Limits and Manifest
+# About 0.8 GiB of parquet per part at the row width of a large macro table.
+ROWS_PER_PART = 1_000_000
+
+# Excel caps a sheet at 1,048,576 rows including the header and at 16,384 columns. JSON array
+# shares the row cap, because both formats are built on the driver one row at a time.
+DRIVER_FORMAT_MAX_ROWS = 1_048_575
+EXCEL_MAX_COLUMNS = 16_384
+
+
+class ExportError(Exception):
+    """A failure the platform explains to the user; the backend finds the code in the run's error."""
+
+    def __init__(self, code: str, detail: str):
+        super().__init__(f"EXPORT_ERROR[{code}] {detail}")
+
+
+def part_count(row_count: int) -> int:
+    return max(1, math.ceil(row_count / ROWS_PER_PART))
+
+
+def check_driver_format_limits(export_format: str, row_count: int, column_count: int) -> None:
+    if export_format not in ("xlsx", "json-array"):
+        return
+
+    if row_count > DRIVER_FORMAT_MAX_ROWS:
+        raise ExportError(
+            "too_many_rows_for_format",
+            f"{row_count} rows exceed the {DRIVER_FORMAT_MAX_ROWS}-row limit of {export_format}",
         )
-        
-        row_count = df.count()
-        log(f"Loaded {row_count} rows with parsed variants")
-        
-        if row_count == 0:
-            log("No data found matching the criteria", "WARN")
-        
-        return df, row_count
-    
-    except Exception as e:
-        log(f"Error loading data: {e}", "ERROR")
-        raise
+
+    if export_format == "xlsx" and column_count > EXCEL_MAX_COLUMNS:
+        raise ExportError(
+            "too_many_rows_for_format",
+            f"{column_count} columns exceed Excel's {EXCEL_MAX_COLUMNS}-column limit",
+        )
+
+
+def build_manifest(export_id: str, export_format: str, row_count: int, snapshot_at: str, parts: list) -> dict:
+    return {
+        "exportId": export_id,
+        "format": export_format,
+        "rowCount": row_count,
+        "snapshotAt": snapshot_at,
+        "parts": parts,
+    }
+
+
+def is_part_file(name: str) -> bool:
+    return not name.startswith(("_", ".")) and name != MANIFEST_NAME
 
 # COMMAND ----------
 
@@ -158,12 +161,7 @@ def anonymize_contributors(df: DataFrame, experiment_id: str) -> DataFrame:
 
 # COMMAND ----------
 
-# DBTITLE 1,Export Data
-# Excel worksheets are hard-capped at 1,048,576 rows (incl. header) and 16,384 columns.
-EXCEL_MAX_ROWS = 1_048_576
-EXCEL_MAX_COLUMNS = 16_384
-
-
+# DBTITLE 1,Write Parts
 def flatten_complex_columns(df):
     """
     Serialise struct/array/map columns to JSON strings and cast VARIANT to string.
@@ -177,222 +175,102 @@ def flatten_complex_columns(df):
     return df
 
 
-def export_data(df, row_count):
+def write_parts(df, row_count):
     """
-    Export data in the requested format
+    Write the table to OUTPUT_PATH. Spark formats are written by several tasks at once, one part
+    each; coalescing after the loader's sort keeps the parts in row order.
     """
-    try:
-        log(f"Exporting to {FORMAT.upper()}: {OUTPUT_PATH}")
-        
-        if FORMAT == "csv":
-            df = flatten_complex_columns(df)
-            df.coalesce(1).write.mode("overwrite").option("header", True).option("escape", '"').csv(OUTPUT_PATH)
-        elif FORMAT == "ndjson":
-            # Write as newline-delimited JSON (NDJSON/JSONL)
-            # Each line is a valid JSON object, which is standard for big data exports
-            # and compatible with most data processing tools
-            df.coalesce(1).write.mode("overwrite").json(OUTPUT_PATH)
-        elif FORMAT == "json-array":
-            # Write as a proper JSON array: [{}, {}, ...]
-            # Rows stream to a local temp file one at a time, so the driver never holds
-            # the whole export. The ", " separator matches json.dumps(list).
-            # We write into a Spark-style partitioned directory so the output layout
-            # (single data file + _SUCCESS marker) matches csv/ndjson/parquet, which
-            # keeps get_export_file_path() and the downstream download flow consistent.
-            # Uploaded via the Files API: dbutils.fs.put sends the whole file as one
-            # gRPC message, which serverless caps at 128 MiB.
-            from databricks.sdk import WorkspaceClient
-            w = WorkspaceClient()
-            with tempfile.TemporaryFile() as payload:
-                payload.write(b"[")
-                for index, row in enumerate(df.toLocalIterator()):
-                    if index > 0:
-                        payload.write(b", ")
-                    payload.write(json.dumps(row.asDict(recursive=True), default=str).encode("utf-8"))
-                payload.write(b"]")
-                payload.seek(0)
-                w.files.create_directory(OUTPUT_PATH)
-                w.files.upload(f"{OUTPUT_PATH}/part-00000.json", payload, overwrite=True)
-            w.files.upload(f"{OUTPUT_PATH}/_SUCCESS", io.BytesIO(b""), overwrite=True)
-        elif FORMAT == "parquet":
-            df.coalesce(1).write.mode("overwrite").parquet(OUTPUT_PATH)
-        elif FORMAT == "xlsx":
-            if row_count >= EXCEL_MAX_ROWS:
-                raise ValueError(
-                    f"Export has {row_count} rows, which exceeds Excel's {EXCEL_MAX_ROWS}-row "
-                    "limit per sheet. Use CSV or Parquet for datasets this large."
-                )
-            column_count = len(df.columns)
-            if column_count > EXCEL_MAX_COLUMNS:
-                raise ValueError(
-                    f"Export has {column_count} columns, which exceeds Excel's {EXCEL_MAX_COLUMNS}-column "
-                    "limit per sheet. Use CSV or Parquet for tables this wide."
-                )
-            # Serverless has no Spark Excel writer; build the workbook in memory and upload it
-            # via the Files API (binary-safe, uses the volume's UC grant like csv/parquet).
-            from databricks.sdk import WorkspaceClient
-            w = WorkspaceClient()
-            df = flatten_complex_columns(df)
-            buf = io.BytesIO()
-            df.toPandas().to_excel(buf, index=False, engine="openpyxl")
-            buf.seek(0)
+    parts = part_count(row_count)
+    log(f"Writing {row_count} rows as {parts} part(s)")
+
+    if FORMAT == "csv":
+        (
+            flatten_complex_columns(df)
+            .coalesce(parts)
+            .write.mode("overwrite")
+            .option("header", True)
+            .option("escape", '"')
+            .option("compression", "gzip")
+            .csv(OUTPUT_PATH)
+        )
+    elif FORMAT == "ndjson":
+        df.coalesce(parts).write.mode("overwrite").option("compression", "gzip").json(OUTPUT_PATH)
+    elif FORMAT == "parquet":
+        df.coalesce(parts).write.mode("overwrite").parquet(OUTPUT_PATH)
+    elif FORMAT == "json-array":
+        # Rows stream to a local temp file one at a time, so the driver never holds the whole
+        # export. The ", " separator matches json.dumps(list). Uploaded via the Files API:
+        # dbutils.fs.put sends the whole file as one gRPC message, which serverless caps at 128 MiB.
+        from databricks.sdk import WorkspaceClient
+
+        w = WorkspaceClient()
+        with tempfile.TemporaryFile() as payload:
+            payload.write(b"[")
+            for index, row in enumerate(df.toLocalIterator()):
+                if index > 0:
+                    payload.write(b", ")
+                payload.write(json.dumps(row.asDict(recursive=True), default=str).encode("utf-8"))
+            payload.write(b"]")
+            payload.seek(0)
             w.files.create_directory(OUTPUT_PATH)
-            w.files.upload(f"{OUTPUT_PATH}/{TABLE_NAME}.xlsx", buf, overwrite=True)
-            w.files.upload(f"{OUTPUT_PATH}/_SUCCESS", io.BytesIO(b""), overwrite=True)
-        else:
-            raise ValueError(f"Unsupported format: {FORMAT}")
-        
-        log(f"{FORMAT.upper()} export completed")
-        return OUTPUT_PATH
-    
-    except Exception as e:
-        log(f"Error exporting data: {e}", "ERROR")
-        raise
+            w.files.upload(f"{OUTPUT_PATH}/part-00000.json", payload, overwrite=True)
+    elif FORMAT == "xlsx":
+        # Serverless has no Spark Excel writer; build the workbook in memory and upload it
+        # via the Files API (binary-safe, uses the volume's UC grant like csv/parquet).
+        from databricks.sdk import WorkspaceClient
 
-# COMMAND ----------
-
-# DBTITLE 1,Get File Path
-def _strip_dbfs_prefix(path):
-    """
-    Strip the "dbfs:" prefix that Spark/dbutils adds to file paths.
-    The Databricks Files API (used by the backend for downloads) requires
-    plain /Volumes/... paths, so we normalise them here before persisting.
-    """
-    if path and path.startswith("dbfs:"):
-        return path[len("dbfs:"):]
-    return path
+        w = WorkspaceClient()
+        buf = io.BytesIO()
+        flatten_complex_columns(df).toPandas().to_excel(buf, index=False, engine="openpyxl")
+        buf.seek(0)
+        w.files.create_directory(OUTPUT_PATH)
+        w.files.upload(f"{OUTPUT_PATH}/part-00000.xlsx", buf, overwrite=True)
+    else:
+        raise ValueError(f"Unsupported format: {FORMAT}")
 
 
-def get_export_file_path(directory_path):
-    """
-    Get the actual file path from the export directory.
-    Returns a clean path with the dbfs: prefix stripped.
-    """
-    try:
-        # List files in the directory
-        files = dbutils.fs.ls(directory_path)
-        
-        # Filter out metadata files and get actual data files
-        data_files = [
-            f.path for f in files 
-            if not f.name.startswith("_") and not f.name.startswith(".")
-        ]
-        
-        if data_files:
-            # For single file output, return the file path
-            # For multi-part output, return the directory path
-            if len(data_files) == 1:
-                log("Found single data file")
-                return _strip_dbfs_prefix(data_files[0])
-            else:
-                log(f"Found {len(data_files)} data files")
-                return _strip_dbfs_prefix(directory_path)
-        else:
-            log(f"No data files found in {directory_path}", "WARN")
-            return _strip_dbfs_prefix(directory_path)
-            
-    except Exception as e:
-        log(f"Error listing files: {e}", "ERROR")
-        return _strip_dbfs_prefix(directory_path)
+def list_parts(directory):
+    files = sorted((f for f in dbutils.fs.ls(directory) if is_part_file(f.name)), key=lambda f: f.name)
+    return [{"name": f.name, "sizeBytes": f.size} for f in files]
 
-# COMMAND ----------
 
-# DBTITLE 1,Create Export Metadata on Completion
-def create_export_metadata(file_path, row_count):
-    """
-    Create export metadata record with completion status.
-    This is called ONLY when the export completes successfully.
-    In-progress exports are tracked via Databricks job runs API, not in this table.
-    """
-    try:
-        log(f"Creating export metadata for export_id: {EXPORT_ID}")
-        
-        # Calculate file size if possible
-        try:
-            files = dbutils.fs.ls(file_path)
-            file_size = sum(f.size for f in files if not f.name.startswith("_") and not f.name.startswith("."))
-        except Exception as e:
-            log(f"Could not calculate file size: {e}", "WARN")
-            file_size = None
-        
-        # Get current timestamp
-        completed_at = datetime.now()
-        
-        # Insert metadata record with status='completed'
-        if file_size is not None:
-            insert_query = f"""
-            INSERT INTO {EXPORT_METADATA_TABLE}
-            (export_id, experiment_id, table_name, format, status, file_path, row_count, file_size, created_by, created_at, completed_at)
-            VALUES ('{EXPORT_ID}', '{EXPERIMENT_ID}', '{TABLE_NAME}', '{FORMAT}', 'completed', '{file_path}', {row_count}, {file_size}, '{USER_ID}', '{completed_at.isoformat()}', '{completed_at.isoformat()}')
-            """
-        else:
-            insert_query = f"""
-            INSERT INTO {EXPORT_METADATA_TABLE}
-            (export_id, experiment_id, table_name, format, status, file_path, row_count, created_by, created_at, completed_at)
-            VALUES ('{EXPORT_ID}', '{EXPERIMENT_ID}', '{TABLE_NAME}', '{FORMAT}', 'completed', '{file_path}', {row_count}, '{USER_ID}', '{completed_at.isoformat()}', '{completed_at.isoformat()}')
-            """
-        
-        spark.sql(insert_query)
-        
-        log("Export metadata created successfully with status='completed'")
-        
-    except Exception as e:
-        log(f"Error creating export metadata: {e}", "ERROR")
-        # Don't fail the job if metadata creation fails
-        pass
+def write_manifest(manifest):
+    from databricks.sdk import WorkspaceClient
+
+    w = WorkspaceClient()
+    w.files.create_directory(OUTPUT_PATH)
+    w.files.upload(
+        f"{OUTPUT_PATH}/{MANIFEST_NAME}",
+        io.BytesIO(json.dumps(manifest).encode("utf-8")),
+        overwrite=True,
+    )
 
 # COMMAND ----------
 
 # DBTITLE 1,Main Execution
 def main():
-    """
-    Main execution function
-    """
-    log("=" * 80)
-    log("Starting data export task")
-    log("=" * 80)
-    
-    # Load data
-    df, row_count = load_data()
+    df = load_experiment_table(
+        experiment_id=EXPERIMENT_ID,
+        table_name=TABLE_NAME,
+        catalog_name=CATALOG_NAME,
+        schema_name="centrum",
+    )
+    row_count = df.count()
+    log(f"Loaded {row_count} rows")
 
-    if row_count == 0:
-        log("No data to export", "WARN")
-        dbutils.notebook.exit({"status": "no_data", "row_count": 0})
-        return
+    parts = []
+    if row_count > 0:
+        check_driver_format_limits(FORMAT, row_count, len(df.columns))
+        if ANONYMIZE_CONTRIBUTORS:
+            df = anonymize_contributors(df, EXPERIMENT_ID)
+        write_parts(df, row_count)
+        parts = list_parts(OUTPUT_PATH)
 
-    if ANONYMIZE_CONTRIBUTORS:
-        df = anonymize_contributors(df, EXPERIMENT_ID)
+    manifest = build_manifest(EXPORT_ID, FORMAT, row_count, SNAPSHOT_AT, parts)
+    write_manifest(manifest)
+    log(f"Wrote {len(parts)} part(s) and the manifest")
 
-    # Export data in requested format
-    output_path = export_data(df, row_count)
-    
-    # Get actual file path
-    file_path = get_export_file_path(output_path)
-    
-    # Create export metadata record
-    create_export_metadata(file_path, row_count)
-    
-    # Prepare output
-    output = {
-        "status": "success",
-        "row_count": row_count,
-        "experiment_id": EXPERIMENT_ID,
-        "table_name": TABLE_NAME,
-        "format": FORMAT,
-        "export_id": EXPORT_ID,
-        "write_time": write_time,
-        "file_path": file_path,
-    }
-    
-    log("=" * 80)
-    log("Data export task completed successfully")
-    log(f"Total rows exported: {row_count}")
-    log(f"Format: {FORMAT.upper()}")
-    log(f"File path: {file_path}")
-    log("=" * 80)
-    
-    # Return results as notebook exit value
-    dbutils.notebook.exit(output)
+    dbutils.notebook.exit(json.dumps(manifest))
 
-# Run main
+
 main()
