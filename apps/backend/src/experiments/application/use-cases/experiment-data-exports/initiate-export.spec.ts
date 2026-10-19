@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { eq, experimentExports } from "@repo/database";
+import { experimentExports } from "@repo/database";
 
 import {
   assertFailure,
@@ -130,10 +130,10 @@ describe("InitiateExportUseCase", () => {
     expect(await storedExports()).toHaveLength(0);
   });
 
-  it("marks the export failed when its run cannot be started", async () => {
+  it("leaves the export queued for the reconciler when its run cannot be started", async () => {
     const { experiment } = await testApp.createExperiment({ name: "Broken", userId: testUserId });
     vi.spyOn(databricksPort, "triggerDataExportJob").mockResolvedValue(
-      failure(AppError.internal("Job trigger failed")),
+      failure(AppError.internal("Job trigger timed out")),
     );
 
     const result = await useCase.execute(experiment.id, testUserId, {
@@ -141,29 +141,24 @@ describe("InitiateExportUseCase", () => {
       format: "csv",
     });
 
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(500);
+    assertSuccess(result);
+    expect(result.value.status).toBe("queued");
     const [stored] = await storedExports();
-    expect(stored).toMatchObject({ status: "failed", errorCode: "unknown", jobRunId: null });
+    expect(stored).toMatchObject({ status: "queued", jobRunId: null, errorCode: null });
   });
 
-  it("lets a new export start after a failed trigger", async () => {
-    const { experiment } = await testApp.createExperiment({ name: "Retry", userId: testUserId });
-    vi.spyOn(databricksPort, "triggerDataExportJob")
-      .mockResolvedValueOnce(failure(AppError.internal("Job trigger failed")))
-      .mockResolvedValueOnce(success({ run_id: 7, number_in_job: 1 }));
+  it("adds whoever asks for an export already in flight to the people told how it ends", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Shared", userId: testUserId });
+    const colleagueId = await testApp.createTestUser({});
+    vi.spyOn(databricksPort, "triggerDataExportJob").mockResolvedValue(
+      success({ run_id: 7, number_in_job: 1 }),
+    );
 
     await useCase.execute(experiment.id, testUserId, { tableName: "raw_data", format: "csv" });
-    const retried = await useCase.execute(experiment.id, testUserId, {
-      tableName: "raw_data",
-      format: "csv",
-    });
+    await useCase.execute(experiment.id, colleagueId, { tableName: "raw_data", format: "csv" });
+    await useCase.execute(experiment.id, colleagueId, { tableName: "raw_data", format: "csv" });
 
-    assertSuccess(retried);
-    const [row] = await testApp.database
-      .select()
-      .from(experimentExports)
-      .where(eq(experimentExports.id, retried.value.exportId));
-    expect(row.jobRunId).toBe(7);
+    const [stored] = await storedExports();
+    expect(stored).toMatchObject({ createdBy: testUserId, watcherIds: [colleagueId] });
   });
 });

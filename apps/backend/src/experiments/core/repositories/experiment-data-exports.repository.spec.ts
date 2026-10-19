@@ -10,6 +10,9 @@ import type { CarriedOverExport, NewExport } from "./experiment-data-exports.rep
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// When the job started, an hour ago, so the records it completes are well within retention.
+const SNAPSHOT_AT = new Date(Date.now() - 60 * 60_000).toISOString();
+
 describe("ExperimentDataExportsRepository", () => {
   const testApp = TestHarness.App;
   let repository: ExperimentDataExportsRepository;
@@ -32,7 +35,7 @@ describe("ExperimentDataExportsRepository", () => {
       exportId,
       format: "parquet",
       rowCount: 1_500_000,
-      snapshotAt: "2026-10-19T13:18:50+00:00",
+      snapshotAt: SNAPSHOT_AT,
       parts: [
         { name: "part-00000.snappy.parquet", sizeBytes: 3_000_000_000 },
         { name: "part-00001.snappy.parquet", sizeBytes: 1_000_000_000 },
@@ -175,24 +178,21 @@ describe("ExperimentDataExportsRepository", () => {
       expect(finishedRow.status).toBe("failed");
     });
 
-    it("completes from the manifest with sizes beyond 32 bits and a 30-day expiry", async () => {
+    it("completes from the manifest with sizes beyond 32 bits, expiring 30 days after the run began", async () => {
       const record = await created();
 
       const result = await repository.complete(record.id, manifest(record.id));
 
       assertSuccess(result);
-      const completed = result.value;
-      expect(completed).toMatchObject({
+      expect(result.value).toMatchObject({
         status: "completed",
         rowCount: 1_500_000,
         totalBytes: 4_000_000_000,
         parts: manifest(record.id).parts,
         errorCode: null,
+        expiresAt: new Date(Date.parse(SNAPSHOT_AT) + 30 * DAY_MS),
       });
-      expect(completed?.completedAt).toBeInstanceOf(Date);
-      const retention =
-        (completed?.expiresAt?.getTime() ?? 0) - (completed?.completedAt?.getTime() ?? 0);
-      expect(retention).toBe(30 * DAY_MS);
+      expect(result.value?.completedAt).toBeInstanceOf(Date);
     });
 
     it("lets only the first finisher claim an export", async () => {
@@ -284,6 +284,20 @@ describe("ExperimentDataExportsRepository", () => {
         totalBytes: 27_457_507_736,
         expiresAt: new Date(record.createdAt.getTime() + 30 * DAY_MS),
       });
+    });
+
+    it("replaces the failed record of a run that wrote its export the old way", async () => {
+      const failedByDeploy = await created();
+      await repository.attachRun(failedByDeploy.id, 200436574855526);
+      await repository.fail(failedByDeploy.id, "unknown");
+      const record = carried();
+
+      const result = await repository.insertCarriedOver([record]);
+
+      assertSuccess(result);
+      expect(result.value).toBe(1);
+      const rows = await testApp.database.select().from(experimentExports);
+      expect(rows.map((row) => [row.id, row.status])).toEqual([[record.id, "completed"]]);
     });
 
     it("skips exports whose experiment or creator is gone, and records nothing twice", async () => {

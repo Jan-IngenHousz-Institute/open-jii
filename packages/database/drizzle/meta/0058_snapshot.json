@@ -1,5 +1,5 @@
 {
-  "id": "64a12cf1-0c39-4773-ae58-0e4573a12dad",
+  "id": "71fdddfd-8e5e-4da7-abb3-c6eaad37f8c8",
   "prevId": "a9bd9afe-eab2-4763-9f62-7adbb09b0555",
   "version": "7",
   "dialect": "postgresql",
@@ -1506,6 +1506,13 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "watcher_ids": {
+          "name": "watcher_ids",
+          "type": "uuid[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::uuid[]"
         },
         "completed_at": {
           "name": "completed_at",

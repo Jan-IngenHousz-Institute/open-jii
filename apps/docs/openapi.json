@@ -3453,6 +3453,9 @@
                 "properties": {
                   "tableName": {
                     "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9_-]+$",
                     "description": "Name of the table to export"
                   },
                   "format": {
@@ -3635,6 +3638,9 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_-]+$",
               "description": "Name of the table"
             },
             "allowEmptyValue": true,
@@ -15375,7 +15381,9 @@
                         },
                         "tableName": {
                           "type": "string",
-                          "minLength": 1
+                          "minLength": 1,
+                          "maxLength": 128,
+                          "pattern": "^[A-Za-z0-9_-]+$"
                         },
                         "format": {
                           "enum": [
@@ -15405,7 +15413,9 @@
                             "properties": {
                               "name": {
                                 "type": "string",
-                                "minLength": 1
+                                "minLength": 1,
+                                "maxLength": 255,
+                                "pattern": "^(?!\\.\\.?$)[A-Za-z0-9._-]+$"
                               },
                               "sizeBytes": {
                                 "type": "integer",
@@ -15417,7 +15427,8 @@
                               "sizeBytes"
                             ]
                           },
-                          "minItems": 1
+                          "minItems": 1,
+                          "maxItems": 10000
                         },
                         "createdBy": {
                           "type": "string",

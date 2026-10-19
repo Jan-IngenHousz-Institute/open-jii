@@ -9,6 +9,9 @@ import type { IotUploadUrl, SignedDownloadUrl } from "./s3.types";
 
 const PRESIGNED_URL_EXPIRY_SECONDS = 900; // 15 minutes
 
+// Long enough for a download manager to start every part of a large export in turn.
+const EXPORT_DOWNLOAD_EXPIRY_SECONDS = 3600;
+
 @Injectable()
 export class AwsS3Service {
   private readonly s3Client: S3Client;
@@ -18,8 +21,17 @@ export class AwsS3Service {
   }
 
   // Separated from the callers so tests can spy on this method (ESM exports are not configurable).
-  protected createSignedUrl(command: PutObjectCommand | GetObjectCommand): Promise<string> {
-    return getSignedUrl(this.s3Client, command, { expiresIn: PRESIGNED_URL_EXPIRY_SECONDS });
+  protected createSignedUrl(
+    command: PutObjectCommand | GetObjectCommand,
+    expiresIn = PRESIGNED_URL_EXPIRY_SECONDS,
+  ): Promise<string> {
+    return getSignedUrl(this.s3Client, command, { expiresIn });
+  }
+
+  /** A signed URL stops working when the credentials that signed it expire, whatever it says. */
+  protected async signingCredentialsExpiry(): Promise<Date | undefined> {
+    const credentials = await this.s3Client.config.credentials();
+    return credentials.expiration;
   }
 
   async getIotUploadUrl(experimentId: string): Promise<Result<IotUploadUrl>> {
@@ -54,9 +66,11 @@ export class AwsS3Service {
           ResponseContentDisposition: `attachment; filename="${fileName}"`,
         });
 
-        const url = await this.createSignedUrl(command);
+        const url = await this.createSignedUrl(command, EXPORT_DOWNLOAD_EXPIRY_SECONDS);
+        const signedExpiry = Date.now() + EXPORT_DOWNLOAD_EXPIRY_SECONDS * 1000;
+        const credentialsExpiry = (await this.signingCredentialsExpiry())?.getTime() ?? Infinity;
 
-        return { url, expiresAt: new Date(Date.now() + PRESIGNED_URL_EXPIRY_SECONDS * 1000) };
+        return { url, expiresAt: new Date(Math.min(signedExpiry, credentialsExpiry)) };
       },
       (error) => this.toAppError(error, ErrorCodes.AWS_S3_PRESIGN_FAILED),
     );
