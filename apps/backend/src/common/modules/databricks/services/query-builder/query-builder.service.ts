@@ -49,10 +49,7 @@ export class QueryBuilderService {
       return success(
         wrapWithAggregation(innerSql, {
           aggregation: params.aggregation,
-          ordering:
-            params.ordering?.mode?.kind === "numericString"
-              ? { ...params.ordering, mode: undefined }
-              : params.ordering,
+          ordering: params.ordering,
           limit: params.limit,
           offset: params.offset,
         }),
