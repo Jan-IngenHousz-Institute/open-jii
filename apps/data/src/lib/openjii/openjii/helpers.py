@@ -112,7 +112,8 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
     Returns
     -------
     dict
-        Keys: identifier, macro_schema, questions_schema, custom_metadata_schema.
+        Keys: identifier, table_type, macro_schema, questions_schema, custom_metadata_schema,
+        upload_schema.
     """
     from pyspark.sql import SparkSession
     from pyspark.sql.functions import col
@@ -122,7 +123,14 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
     metadata_df = (
         spark.table(f"{catalog_name}.{schema_name}.experiment_table_metadata")
         .filter((col("experiment_id") == experiment_id) & (col("identifier") == identifier))
-        .select("identifier", "macro_schema", "questions_schema", "custom_metadata_schema")
+        .select(
+            "identifier",
+            "table_type",
+            "macro_schema",
+            "questions_schema",
+            "custom_metadata_schema",
+            "upload_schema",
+        )
     )
 
     rows = metadata_df.collect()
@@ -132,9 +140,11 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
     row = rows[0]
     return {
         "identifier": row.identifier,
+        "table_type": row.table_type,
         "macro_schema": row.macro_schema,
         "questions_schema": row.questions_schema,
         "custom_metadata_schema": row.custom_metadata_schema,
+        "upload_schema": row.upload_schema,
     }
 
 
@@ -147,9 +157,10 @@ _TABLE_CONFIG = {
 }
 
 _MACRO_EXCLUDE_COLS = ["raw_id", "macro_id", "macro_name", "macro_filename", "date"]
+_UPLOAD_EXCLUDE_COLS = ["upload_table_id", "upload_table_name", "upload_id"]
 
 # The suffixes the platform's data table gives the same clashes, so an export names them alike.
-_PAYLOAD_SUFFIXES = {"macro_output": "output", "questions_data": "answer"}
+_PAYLOAD_SUFFIXES = {"macro_output": "output", "questions_data": "answer", "uploaded_data": "upload"}
 
 
 def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="centrum"):
@@ -176,9 +187,12 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
 
     macro_schema = normalize_schema(metadata["macro_schema"])
     questions_schema = normalize_schema(metadata["questions_schema"])
+    upload_schema = normalize_schema(metadata["upload_schema"])
 
-    # Resolve table type: known names map directly, anything else is a macro.
-    table_type = table_name if table_name in _TABLE_CONFIG else "macro"
+    # Static tables are named by their identifier; macro and upload tables share one source each.
+    table_type = table_name if metadata["table_type"] == "static" else metadata["table_type"]
+    if table_type not in _TABLE_CONFIG:
+        raise ValueError(f"Unknown table type for experiment {experiment_id}, identifier {table_name}")
     source_name, order_col = _TABLE_CONFIG[table_type]
 
     source_table = f"{catalog_name}.{schema_name}.{source_name}"
@@ -187,11 +201,25 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
     if table_type == "macro":
         df = df.filter(col("macro_id") == table_name)
 
+    if table_type == "upload":
+        df = df.filter(col("upload_table_id") == table_name)
+
     parsed = []
     exclude_cols = ["experiment_id"]
 
     if table_type == "macro":
         exclude_cols.extend(_MACRO_EXCLUDE_COLS)
+
+    if table_type == "upload":
+        exclude_cols.extend(_UPLOAD_EXCLUDE_COLS)
+
+    if table_type == "upload" and upload_schema:
+        df = df.withColumn(
+            "parsed_uploaded_data",
+            from_json(col("uploaded_data").cast("string"), upload_schema),
+        )
+        parsed.append(("parsed_uploaded_data", _PAYLOAD_SUFFIXES["uploaded_data"]))
+        exclude_cols.extend(["uploaded_data", "parsed_uploaded_data"])
 
     if table_type == "macro" and macro_schema:
         df = df.withColumn(
