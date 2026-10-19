@@ -19,6 +19,7 @@ import time
 from decimal import Decimal, localcontext
 from functools import cmp_to_key
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from itertools import pairwise
 from pathlib import Path
 
 from pyspark.sql import SparkSession
@@ -117,6 +118,33 @@ MACRO_COLUMNS = [
     "macro_filename",
     "date",
 ]
+# The builder's first-choice sort key names, and source columns that clash with them in any case.
+SORT_KEYS = [
+    "__numeric_order_group",
+    "__numeric_order_decimal",
+    "__numeric_order_value",
+    "__numeric_order_row",
+]
+BASE_COLLISIONS = [
+    "__Numeric_Order_Group",
+    "__NUMERIC_ORDER_DECIMAL",
+    "__numeric_order_Value",
+    "__numeric_order_row",
+    "__numeric_order_value_1",
+]
+QUESTION_COLLISIONS = "OBJECT<" + ", ".join(f"{name}: STRING" for name in ["answer", *SORT_KEYS]) + ">"
+# Benchmark reads per projection and page shape; the deep page and chart read keep their OFFSET
+# and LIMIT exactly as the repository emits them.
+PERF_CELLS = {
+    ("ids", "first"): {"rowCount": 200001, "options": {"page": 1, "pageSize": 100}},
+    ("ids", "deep"): {"rowCount": 200001, "options": {"page": 1001, "pageSize": 100}},
+    ("ids", "chart"): {"options": {"columns": ["id"], "limit": 100000}},
+    ("payload", "first"): {"options": {"page": 1, "pageSize": 100}},
+    ("payload", "deep"): {"options": {"page": 1001, "pageSize": 100}},
+    ("payload", "chart"): {"options": {"columns": ["id", "answer"], "limit": 100000}},
+}
+PERF_ROWS = {"first": 100, "deep": 100, "chart": 100001}
+PERF_SAMPLES = 5
 UPLOAD_COLUMNS = [
     "id",
     "experiment_id",
@@ -139,7 +167,7 @@ def classification(value):
     return 1, None
 
 
-def ordered(answers, direction="ASC"):
+def comparator(direction="ASC"):
     def compare(left, right):
         li, lv = left
         ri, rv = right
@@ -156,7 +184,11 @@ def ordered(answers, direction="ASC"):
             return sign * ((lv > rv) - (lv < rv))
         return (li > ri) - (li < ri)
 
-    return sorted(enumerate(answers, 1), key=cmp_to_key(compare))
+    return compare
+
+
+def ordered(answers, direction="ASC"):
+    return sorted(enumerate(answers, 1), key=cmp_to_key(comparator(direction)))
 
 
 def scenarios():
@@ -304,6 +336,80 @@ def scenarios():
                 "pageSize": 100,
             },
         )
+    for direction in ["ASC", "DESC"]:
+        # Every page of the main fixture, across the numeric, text and blank groups, then past it.
+        for mode, row_count in [("deep", len(ANSWERS)), ("deep-late-payload", 200001)]:
+            for page in range(1, 9):
+                add(
+                    f"{mode}-{direction}-{page}",
+                    rowCount=row_count,
+                    options={
+                        "page": page,
+                        "pageSize": 10,
+                        "orderBy": "answer",
+                        "orderDirection": direction,
+                    },
+                )
+        add(
+            f"oversized-{direction}",
+            options={
+                "columns": ["id", "answer"],
+                "limit": 1000,
+                "orderBy": "answer",
+                "orderDirection": direction,
+            },
+        )
+        # A chart's read: projected X and Y, user filters, every matching row up to its limit.
+        add(
+            f"chart-{direction}",
+            options={
+                "columns": ["id", "answer", "base_number"],
+                "filters": [
+                    {"column": "base_number", "operator": "greater_than", "value": 1},
+                    {"column": "answer", "operator": "contains", "value": "0"},
+                ],
+                "limit": 20,
+                "orderBy": "answer",
+                "orderDirection": direction,
+            },
+        )
+        for fixture, extra, field in [
+            ("collide-question", {"questionsSchema": QUESTION_COLLISIONS}, SORT_KEYS[0]),
+            ("collide-base", {"viewColumns": [*BASE_COLUMNS, *BASE_COLLISIONS]}, BASE_COLLISIONS[0]),
+        ]:
+            reads = {
+                "star": {"page": 1, "pageSize": 100},
+                "with-sort": {"columns": ["id", "answer", field], "page": 1, "pageSize": 100},
+                "without-sort": {"columns": ["id", field], "page": 1, "pageSize": 100},
+                "ids-1": {"page": 1, "pageSize": 4},
+                "ids-2": {"page": 2, "pageSize": 4},
+            }
+            for read, options in reads.items():
+                add(
+                    f"{fixture}-{read}-{direction}",
+                    fixture=fixture,
+                    rowCount=200001 if read.startswith("ids") else len(BASIC),
+                    options={**options, "orderBy": "answer", "orderDirection": direction},
+                    **extra,
+                )
+            add(
+                f"{fixture}-picker-{direction}",
+                fixture=fixture,
+                picker={"column": "answer", "limit": 100},
+                **({"distinctDirection": "DESC"} if direction == "DESC" else {}),
+                **extra,
+            )
+    add(
+        "collide-question-by-field",
+        fixture="collide-question",
+        questionsSchema=QUESTION_COLLISIONS,
+        options={"orderBy": SORT_KEYS[2], "page": 1, "pageSize": 100},
+    )
+    add(
+        "aggregate-empty",
+        fixture="basic",
+        options={"page": 1, "pageSize": 100, "orderBy": "answer", "aggregation": {}},
+    )
     # Regression controls for unaffected sources, types and omitted ordering.
     controls = [
         ("no-sort", {}, {}),
@@ -383,15 +489,21 @@ def scenarios():
             control=True,
             **extra,
         )
-    for projection, template in [("full", "page-ASC-1"), ("ids", "ids-ASC")]:
-        cases.append(
-            {
-                **next(case for case in cases if case["name"] == template),
-                "name": "perf-lexical-" + projection,
-                "lexical": True,
-            }
-        )
+    for (projection, shape), cell in PERF_CELLS.items():
+        for direction in ["ASC", "DESC"]:
+            for variant in ["numeric", "lexical"]:
+                add(
+                    perf_name(variant, projection, shape, direction),
+                    fixture="basic",
+                    rowCount=cell.get("rowCount", len(BASIC)),
+                    options={**cell["options"], "orderBy": "answer", "orderDirection": direction},
+                    lexical=variant == "lexical",
+                )
     return cases
+
+
+def perf_name(variant, projection, shape, direction):
+    return f"perf-{variant}-{projection}-{shape}-{direction}"
 
 
 class Bridge:
@@ -497,13 +609,25 @@ def create_fixtures(spark):
         "macro": BASIC,
         "macro-simple": BASIC,
         "upload": BASIC,
+        "collide-question": BASIC,
+        "collide-base": BASIC,
     }
-    for name, answers in definitions.items():
+
+    def questions(name, i, value):
+        if name == "collide-question":
+            return {
+                "answer": value,
+                **{key: f"{key}:{i}" for key in SORT_KEYS},
+                SORT_KEYS[2]: BASIC[::-1][i - 1],
+            }
         field = {
             "base-collision": "base_text",
             "case-collision": "BASE_TEXT",
             "odd": ODD_FIELD,
         }.get(name, "answer")
+        return {field: value}
+
+    for name, answers in definitions.items():
         rows = [
             (
                 i,
@@ -511,7 +635,7 @@ def create_fixtures(spark):
                 float(i),
                 "10" if i % 2 else "2",
                 i,
-                json.dumps({field: value}),
+                json.dumps(questions(name, i, value)),
                 json.dumps({"label": "10" if i % 2 else "2"}),
                 json.dumps({"answer": value, "answer_answer": "untouched", "output": value}),
                 "fixture-table",
@@ -548,6 +672,10 @@ def create_fixtures(spark):
             if name.startswith("macro")
             else BASE_COLUMNS
         )
+        if name == "collide-base":
+            for column in BASE_COLLISIONS:
+                frame = frame.withColumn(column, F.concat(F.lit(column + ":"), F.col("id").cast("string")))
+            columns = [*BASE_COLUMNS, *BASE_COLLISIONS]
         frame.select(*columns).write.mode("overwrite").saveAsTable(
             "default.fixture_" + name.replace("-", "_")
         )
@@ -621,18 +749,22 @@ def verify(responses, records):
     for record in records:
         name, result = record["scenario"], record["result"]
         assert result["totalRows"] == len(result["rows"])
+        names = [c["name"].lower() for c in result["columns"]]
+        assert len(names) == len(set(names)), (name, names)
+        hidden = sort_key_names(record["sql"])
+        assert not hidden.intersection(names), (name, hidden, names)
         if name.startswith("control-") or record["sql"].startswith("SELECT COUNT"):
             continue
         columns = result["columns"]
         field = field_by_scenario.get(name, "answer")
         if any(c["name"] == field for c in columns):
             assert next(c["type_text"] for c in columns if c["name"] == field) == "STRING", name
-        assert not any("sort_key" in c["name"] for c in columns)
-        if name.startswith("picker"):
+        if "picker" in name:
             assert len(columns) == 1 and columns[0]["name"] == "answer"
     assert [r["sql"] for r in records if r["scenario"] == "control-empty-sort"] == [
         r["sql"] for r in records if r["scenario"] == "control-no-sort"
     ], "Empty ordering must remain an unordered read"
+    verify_sprint_3(responses, records)
     # Endpoint string filtering and aggregation are deliberately unchanged.
     grouped = responses["control-aggregate"][0]["data"]["rows"]
     assert sum(int(row["n"]) for row in grouped) == len(BASIC)
@@ -643,59 +775,156 @@ def verify(responses, records):
     return {"scenarios": len(responses), "statements": len(records)}
 
 
+def sort_key_names(sql):
+    """Lower-cased names the outer query drops, when the read sorts by projected keys."""
+    head = re.match(r"SELECT \* EXCEPT \(([^)]*)\)\nFROM \(\n", sql)
+    if head is None:
+        return set()
+    return {name.strip().strip("`").lower() for name in head.group(1).split(",")}
+
+
+def verify_sprint_3(responses, records):
+    def rows(name):
+        return responses[name][0]["data"]["rows"]
+
+    def ids(name):
+        return [int(row["id"]) for row in rows(name)]
+
+    for direction in ["ASC", "DESC"]:
+        main = ordered(ANSWERS, direction)
+        basic = [i for i, _ in ordered(BASIC, direction)]
+        for mode in ["deep", "deep-late-payload"]:
+            for page in range(1, 9):
+                name = f"{mode}-{direction}-{page}"
+                want = main[(page - 1) * 10 : page * 10]
+                assert ids(name) == [i for i, _ in want], (name, ids(name), want)
+                assert [row["answer"] for row in rows(name)] == [v for _, v in want], name
+        oversized = responses[f"oversized-{direction}"][0]
+        assert ids(f"oversized-{direction}") == [i for i, _ in main]
+        assert not oversized["data"]["truncated"] and oversized["totalRows"] == len(ANSWERS)
+        matching = [(i, v) for i, v in main if i > 1 and v is not None and "0" in v]
+        chart = responses[f"chart-{direction}"][0]
+        assert [c["name"] for c in chart["data"]["columns"]] == ["id", "answer", "base_number"]
+        assert [(int(r["id"]), r["answer"]) for r in rows(f"chart-{direction}")] == matching[:20]
+        assert all(r["base_number"] == r["id"] for r in rows(f"chart-{direction}"))
+        assert chart["data"]["truncated"] == (len(matching) > 20)
+        assert chart["totalRows"] == len(matching)
+        endpoint = [v for v in dict.fromkeys(v for _, v in ordered(BASIC, direction)) if v not in [None, ""]]
+        for fixture, collisions in [("collide-question", SORT_KEYS), ("collide-base", BASE_COLLISIONS)]:
+            for read in ["star", "with-sort", "without-sort"]:
+                name = f"{fixture}-{read}-{direction}"
+                assert ids(name) == basic, (name, ids(name), basic)
+            assert ids(f"{fixture}-ids-1-{direction}") == basic[:4]
+            assert ids(f"{fixture}-ids-2-{direction}") == basic[4:8]
+            assert responses[f"{fixture}-picker-{direction}"] == {"values": endpoint, "truncated": False}
+            star = rows(f"{fixture}-star-{direction}")
+            for column in collisions:
+                if column == SORT_KEYS[2] and fixture == "collide-question":
+                    assert [r[column] for r in star] == [BASIC[::-1][i - 1] for i in basic]
+                else:
+                    assert [r[column] for r in star] == [f"{column}:{i}" for i in basic], column
+            assert [r[collisions[0]] for r in rows(f"{fixture}-without-sort-{direction}")] == [
+                f"{collisions[0]}:{i}" for i in basic
+            ]
+    assert ids("collide-question-by-field") == [i for i, _ in ordered(BASIC[::-1])]
+    assert ids("aggregate-empty") == [i for i, _ in ordered(BASIC)]
+    presorted = [r for r in records if sort_key_names(r["sql"])]
+    assert presorted, "Numeric reads must sort by projected keys"
+    for record in records:
+        if record["scenario"].startswith(("collide-", "perf-numeric")) and "ORDER BY" in record["sql"]:
+            assert sort_key_names(record["sql"]), record["scenario"]
+
+
+def perf_table(spark, size):
+    frame = spark.range(size).selectExpr(
+        "id + 1 AS id",
+        "'fixture-experiment' AS experiment_id",
+        "cast(id AS double) AS timestamp",
+        "'label' AS base_text",
+        "id AS base_number",
+        "parse_json(to_json(named_struct('answer', CASE WHEN id % 10 = 0 THEN '' WHEN id % 10 = 1 THEN 'text' WHEN id % 10 = 2 THEN NULL ELSE cast((id * 17) % 100000 AS string) END))) AS questions_data",
+        "parse_json('{}') AS custom_metadata",
+    )
+    table = f"default.perf_{size}"
+    frame.write.mode("overwrite").saveAsTable(table)
+    spark.table(table).cache().count()
+    spark.sql(f"CREATE OR REPLACE VIEW default.numeric_sort_raw AS SELECT * FROM {table}")
+    return table
+
+
+def perf_statement(statements, name):
+    return next(r["sql"] for r in statements if r["scenario"] == name and "ORDER BY" in r["sql"])
+
+
+def interleaved(spark, variants, samples=PERF_SAMPLES):
+    """One warmup per statement, then timed samples taken in turn, so drift hits every variant."""
+    results = {label: spark.sql(sql).collect() for label, sql in variants.items()}
+    timings = {label: [] for label in variants}
+    for _ in range(samples):
+        for label, sql in variants.items():
+            start = time.perf_counter()
+            spark.sql(sql).collect()
+            timings[label].append(time.perf_counter() - start)
+    return {
+        label: {"median": statistics.median(timings[label]), "samples": timings[label]} for label in variants
+    }, results
+
+
+def sort_plan(spark, sql):
+    """The physical plan, checked to sort by attributes computed once per row below the sort."""
+    plan = spark.sql(sql)._jdf.queryExecution().executedPlan().toString()
+    sort = next(line for line in plan.splitlines() if "TakeOrderedAndProject" in line)
+    order = sort[sort.index("orderBy=") : sort.index("], output=")]
+    assert "RLIKE" not in order and "try_cast" not in order, plan
+    assert "__numeric_order_group" in order and "InMemoryTableScan" in plan, plan
+    below = plan[plan.index(sort) + len(sort) :]
+    assert "Project [" in below and "RLIKE" in below, plan
+    return plan
+
+
+def in_order(rows, direction):
+    compare = comparator(direction)
+    pairs = [(int(row["id"]), row["answer"]) for row in rows]
+    return all(compare(a, b) <= 0 for a, b in pairwise(pairs))
+
+
 def benchmark(spark, statements):
+    """Time repository SQL as emitted, against the same SQL with numeric classification off.
+    First pages run at 100k and 1M rows; deep pages and chart reads at 1M."""
     report = []
-    # Use actual captured repository SQL for both projections, stripping only LIMIT/OFFSET
-    # to measure the same TopK workload across builders with a representative page size.
     for size in [100000, 1000000]:
-        frame = spark.range(size).selectExpr(
-            "id + 1 AS id",
-            "'fixture-experiment' AS experiment_id",
-            "cast(id AS double) AS timestamp",
-            "'label' AS base_text",
-            "id AS base_number",
-            "parse_json(to_json(named_struct('answer', CASE WHEN id % 10 = 0 THEN '' WHEN id % 10 = 1 THEN 'text' WHEN id % 10 = 2 THEN NULL ELSE cast((id * 17) % 100000 AS string) END))) AS questions_data",
-            "parse_json('{}') AS custom_metadata",
-        )
-        table = f"default.perf_{size}"
-        frame.write.mode("overwrite").saveAsTable(table)
-        spark.table(table).cache().count()
-        spark.sql(f"CREATE OR REPLACE VIEW default.numeric_sort_raw AS SELECT * FROM {table}")
-        for projection, name in [("full", "page-ASC-1"), ("ids", "ids-ASC")]:
-            timings = {}
-            for label, scenario in [("lexical", "perf-lexical-" + projection), ("numeric", name)]:
-                statement = next(
-                    r["sql"] for r in statements if r["scenario"] == scenario and "ORDER BY" in r["sql"]
-                )
-                statement = re.sub(r"LIMIT [0-9]+(?:\s+OFFSET [0-9]+)?", "LIMIT 100", statement)
-                query = spark.sql(statement)
-                query.collect()
-                samples = []
-                for _ in range(3):
-                    start = time.perf_counter()
-                    spark.sql(statement).collect()
-                    samples.append(time.perf_counter() - start)
-                timings[label] = statistics.median(samples)
-                if label == "numeric":
-                    plan = query._jdf.queryExecution().executedPlan().toString()
-                    assert "TakeOrderedAndProject" in plan and "InMemoryTableScan" in plan, plan
-            ratio = timings["numeric"] / timings["lexical"]
-            delta = timings["numeric"] - timings["lexical"]
-            item = {
-                "rows": size,
-                "projection": projection,
-                **timings,
-                "ratio": ratio,
-                "delta": delta,
-                "plan": "TakeOrderedAndProject over cached parquet VARIANT InMemoryTableScan",
-            }
-            report.append(item)
-            print("PERF " + json.dumps(item), flush=True)
-            assert size != 1000000 or (ratio <= 5 and delta <= 2), (
-                "Performance threshold exceeded; investigate or escalate",
-                item,
-            )
+        table = perf_table(spark, size)
+        for (projection, shape), _cell in PERF_CELLS.items():
+            if size != 1000000 and shape != "first":
+                continue
+            for direction in ["ASC", "DESC"]:
+                variants = {
+                    label: perf_statement(statements, perf_name(label, projection, shape, direction))
+                    for label in ["lexical", "numeric"]
+                }
+                timings, results = interleaved(spark, variants)
+                expected_rows = min(PERF_ROWS[shape], size)
+                assert len(results["numeric"]) == len(results["lexical"]) == expected_rows, shape
+                if projection == "payload":
+                    assert in_order(results["numeric"], direction), (shape, direction)
+                sort_plan(spark, variants["numeric"])
+                lexical, numeric = timings["lexical"]["median"], timings["numeric"]["median"]
+                item = {
+                    "rows": size,
+                    "projection": projection,
+                    "shape": shape,
+                    "direction": direction,
+                    "lexical": lexical,
+                    "numeric": numeric,
+                    "ratio": numeric / lexical,
+                    "delta": numeric - lexical,
+                    "samples": {label: t["samples"] for label, t in timings.items()},
+                }
+                report.append(item)
+                print("PERF " + json.dumps(item), flush=True)
         spark.catalog.uncacheTable(table)
+    exceeded = [i for i in report if i["rows"] == 1000000 and (i["ratio"] > 5 or i["delta"] > 2)]
+    assert not exceeded, ("Performance threshold exceeded; investigate or escalate", exceeded)
     return report
 
 
@@ -704,6 +933,7 @@ def main():
     parser.add_argument("--skip-perf", action="store_true")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+    started = time.perf_counter()
     with tempfile.TemporaryDirectory(prefix="numeric-sort-spark-") as warehouse:
         spark = (
             SparkSession.builder.master("local[2]")
@@ -731,10 +961,11 @@ def main():
                 report["runs"].append({"ansi": ansi, "responses": responses, "statements": statements})
             assert report["runs"][0]["responses"] == report["runs"][1]["responses"], "ANSI changed responses"
             if not args.skip_perf:
+                spark.conf.set("spark.sql.ansi.enabled", "true")
                 report["performance"] = benchmark(spark, statements)
             if args.output:
                 args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
-            print("PASS numeric question sorting probe", flush=True)
+            print(f"PASS numeric question sorting probe in {time.perf_counter() - started:.0f} s", flush=True)
         finally:
             spark.stop()
 
