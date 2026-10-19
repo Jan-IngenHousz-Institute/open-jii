@@ -103,24 +103,93 @@ describe.each(["GitHub", "ORCID"] as const)("%s sign-in", (provider) => {
     expect(toastError).not.toHaveBeenCalled();
   });
 
-  it.each(["returns no user", "fails"])(
-    "still prefetches and registers when the session request %s after a token was stored",
-    async (outcome) => {
-      getCookie.mockReturnValue("better-auth.dev.session_token=valid");
-      if (outcome === "fails") {
-        getSession.mockRejectedValue(new Error("offline"));
-      }
-      const { result } = renderHook(() => useLoginFlow(), { wrapper });
+  async function signIn() {
+    const { result } = renderHook(() => useLoginFlow(), { wrapper });
+    await act(async () => {
+      await start(result.current);
+    });
+  }
 
-      await act(async () => {
-        await start(result.current);
-      });
+  it("skips prefetch and registration when the server reports no session for the token", async () => {
+    getCookie.mockReturnValue("better-auth.dev.session_token=revoked");
+    getSession.mockResolvedValue({ data: null, error: null });
+
+    await signIn();
+
+    expect(prefetchOfflineData).not.toHaveBeenCalled();
+    expect(ensureDeviceRegistered).not.toHaveBeenCalled();
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it("skips both after a cancel that left a revoked token beside the OAuth state", async () => {
+    getCookie.mockReturnValue(
+      "better-auth.dev.session_token=revoked; better-auth.dev.oauth_state=pending",
+    );
+    getSession.mockImplementation(() => {
+      getCookie.mockReturnValue("better-auth.dev.oauth_state=pending");
+      return Promise.resolve({ data: null, error: null });
+    });
+
+    await signIn();
+
+    expect(prefetchOfflineData).not.toHaveBeenCalled();
+    expect(ensureDeviceRegistered).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["rejects", () => getSession.mockRejectedValue(new Error("offline"))],
+    [
+      "returns an error",
+      () => getSession.mockResolvedValue({ data: null, error: { status: 503 } }),
+    ],
+  ])(
+    "still prefetches and registers with no user id when the session lookup %s",
+    async (_outcome, arrange) => {
+      getCookie.mockReturnValue("better-auth.dev.session_token=valid");
+      arrange();
+
+      await signIn();
 
       expect(prefetchOfflineData).toHaveBeenCalledExactlyOnceWith(queryClient, undefined);
       expect(ensureDeviceRegistered).toHaveBeenCalledTimes(1);
       expect(toastError).not.toHaveBeenCalled();
     },
   );
+
+  it("still prefetches and registers when the session lookup times out", async () => {
+    vi.useFakeTimers();
+    try {
+      getCookie.mockReturnValue("better-auth.dev.session_token=valid");
+      getSession.mockReturnValue(new Promise(() => undefined));
+      const { result } = renderHook(() => useLoginFlow(), { wrapper });
+
+      await act(async () => {
+        void start(result.current);
+        await vi.advanceTimersByTimeAsync(7_999);
+      });
+      expect(prefetchOfflineData).not.toHaveBeenCalled();
+
+      await act(() => vi.advanceTimersByTimeAsync(1));
+      expect(prefetchOfflineData).toHaveBeenCalledExactlyOnceWith(queryClient, undefined);
+      expect(ensureDeviceRegistered).toHaveBeenCalledTimes(1);
+      expect(getSession.mock.calls[0][0].fetchOptions.signal.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("skips both when a failed lookup also removed the session token", async () => {
+    getCookie.mockReturnValue("better-auth.dev.session_token=valid");
+    getSession.mockImplementation(() => {
+      getCookie.mockReturnValue("");
+      return Promise.reject(new Error("offline"));
+    });
+
+    await signIn();
+
+    expect(prefetchOfflineData).not.toHaveBeenCalled();
+    expect(ensureDeviceRegistered).not.toHaveBeenCalled();
+  });
 
   it("allows a successful second attempt immediately after cancellation", async () => {
     const { result } = renderHook(() => useLoginFlow(), { wrapper });
