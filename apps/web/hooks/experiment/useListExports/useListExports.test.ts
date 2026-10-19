@@ -34,6 +34,18 @@ describe("useListExports", () => {
     expect(spy.callCount).toBe(callsWhenFinished);
   });
 
+  it("stops polling once the only unfinished export has expired", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const expired = createExportRecord({ experimentId, tableName, status: "expired" });
+    const spy = server.mount(contract.experiments.listExports, { body: { exports: [expired] } });
+
+    const { result } = renderHook(() => useListExports({ experimentId, tableName }));
+    await waitFor(() => expect(result.current.data?.exports[0]?.status).toBe("expired"));
+
+    await act(() => vi.advanceTimersByTimeAsync(60_000));
+    expect(spy.callCount).toBe(1);
+  });
+
   it("fetches exports", async () => {
     const mockExports = [
       createExportRecord({
@@ -42,9 +54,8 @@ describe("useListExports", () => {
         tableName,
         format: "csv",
         status: "completed",
-        filePath: "/path/to/file.csv",
         rowCount: 100,
-        fileSize: 1024,
+        totalBytes: 1024,
         createdAt: "2024-01-01T00:00:00Z",
         completedAt: "2024-01-01T00:05:00Z",
       }),
@@ -83,34 +94,5 @@ describe("useListExports", () => {
     await waitFor(() => {
       expect(result.current.error).toBeTruthy();
     });
-  });
-
-  it("handles active exports without exportId", async () => {
-    const mockExports = [
-      createExportRecord({
-        exportId: null,
-        experimentId,
-        tableName,
-        format: "ndjson",
-        status: "running",
-        filePath: null,
-        rowCount: null,
-        fileSize: null,
-        createdAt: "2024-01-01T00:00:00Z",
-        completedAt: null,
-      }),
-    ];
-
-    server.mount(contract.experiments.listExports, {
-      body: { exports: mockExports },
-    });
-
-    const { result } = renderHook(() => useListExports({ experimentId, tableName }));
-
-    await waitFor(() => {
-      expect(result.current.data?.exports).toEqual(mockExports);
-    });
-    expect(result.current.data?.exports[0]?.exportId).toBeNull();
-    expect(result.current.data?.exports[0]?.status).toBe("running");
   });
 });

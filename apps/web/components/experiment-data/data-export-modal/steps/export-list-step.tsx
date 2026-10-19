@@ -1,29 +1,13 @@
 "use client";
 
 import { useTrackExports } from "@/components/activity/use-track-exports";
-import { StatusBadge } from "@/components/shared/status-badge";
-import { formatLocaleNumber } from "@/util/format-locale-number";
-import {
-  FileText,
-  Download,
-  Clock,
-  Calendar,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  Plus,
-  Rows3,
-  HardDrive,
-  Check,
-} from "lucide-react";
+import { Check, Download, Loader2, Plus } from "lucide-react";
 import * as React from "react";
-import { env } from "~/env";
 import { useListExports } from "~/hooks/experiment/useListExports/useListExports";
-import { useLocale } from "~/hooks/useLocale";
 import { parseApiError } from "~/util/apiError";
-import { formatFileSize } from "~/util/format-file-size";
 
 import type {
+  ExperimentExportFormat,
   ExperimentExportRecord,
   ExperimentInitiateExportBody,
 } from "@repo/api/domains/experiment/experiment.schema";
@@ -39,14 +23,10 @@ import {
 } from "@repo/ui/components/dropdown-menu";
 import { ScrollArea } from "@repo/ui/components/scroll-area";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@repo/ui/components/tooltip";
 
 import type { CreationStatus } from "../data-export-modal";
+import { EXPORT_FORMATS, EXPORT_FORMAT_LABEL_KEYS } from "../export-format-label-keys";
+import { ExportCard } from "./export-card";
 
 interface ExportListStepProps {
   experimentId: string;
@@ -56,175 +36,6 @@ interface ExportListStepProps {
   onClose: () => void;
   creationStatus?: CreationStatus;
 }
-
-const ExportStatusBadge = ({ status }: { status: ExperimentExportRecord["status"] }) => {
-  const { t } = useTranslation("experimentData");
-
-  const statusConfig = {
-    queued: {
-      icon: Clock,
-      tone: "archived" as const,
-      label: t("experimentData.exportModal.status.queued"),
-      spin: false,
-    },
-    pending: {
-      icon: Clock,
-      tone: "stale" as const,
-      label: t("experimentData.exportModal.status.pending"),
-      spin: false,
-    },
-    running: {
-      icon: Loader2,
-      tone: "published" as const,
-      label: t("experimentData.exportModal.status.running"),
-      spin: true,
-    },
-    completed: {
-      icon: CheckCircle2,
-      tone: "active" as const,
-      label: t("experimentData.exportModal.status.completed"),
-      spin: false,
-    },
-    failed: {
-      icon: XCircle,
-      tone: "destructive" as const,
-      label: t("experimentData.exportModal.status.failed"),
-      spin: false,
-    },
-  };
-
-  const config = status in statusConfig ? statusConfig[status] : statusConfig.pending;
-  const Icon = config.icon;
-
-  return (
-    <StatusBadge tone={config.tone}>
-      <Icon className={`h-3 w-3 ${config.spin ? "animate-spin" : ""}`} />
-      {config.label}
-    </StatusBadge>
-  );
-};
-
-const FORMAT_LABELS: Record<string, string> = {
-  csv: "CSV",
-  ndjson: "NDJSON",
-  "json-array": "JSON Array",
-  parquet: "Parquet",
-  xlsx: "Excel",
-};
-
-const formatDateTime = (dateString: string | null): string => {
-  if (!dateString) return "";
-  return new Date(dateString).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-};
-
-const ExportCard = ({
-  export: exportRecord,
-  experimentId,
-  index,
-}: {
-  export: ExperimentExportRecord;
-  experimentId: string;
-  index: number;
-}) => {
-  const { t } = useTranslation("experimentData");
-  const locale = useLocale();
-
-  // A plain link lets the browser stream the file to disk instead of holding it in the tab.
-  const downloadUrl =
-    exportRecord.status === "completed" && exportRecord.exportId
-      ? `${env.NEXT_PUBLIC_API_URL}/api/v1/experiments/${experimentId}/data/exports/${exportRecord.exportId}`
-      : undefined;
-  const isFailed = exportRecord.status === "failed";
-  const dateTime = formatDateTime(exportRecord.createdAt);
-
-  // Collect metadata items to render inline
-  const metaItems: { icon: React.ElementType; label: string }[] = [];
-
-  metaItems.push({
-    icon: FileText,
-    label: FORMAT_LABELS[exportRecord.format] ?? exportRecord.format,
-  });
-
-  if (exportRecord.rowCount != null) {
-    metaItems.push({
-      icon: Rows3,
-      label: `${formatLocaleNumber(exportRecord.rowCount, locale)} ${t("experimentData.exportModal.rows").toLowerCase()}`,
-    });
-  }
-
-  if (exportRecord.fileSize != null) {
-    metaItems.push({
-      icon: HardDrive,
-      label: formatFileSize(exportRecord.fileSize),
-    });
-  }
-
-  const card = (
-    <Card className="min-h-[56px] flex-row items-center gap-3 px-3 py-2.5">
-      <div className="bg-muted shrink-0 rounded-md p-1.5">
-        <FileText className="text-muted-foreground h-4 w-4" />
-      </div>
-
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <div className="flex items-center gap-2">
-          <span className="text-foreground text-sm font-semibold">
-            {t("experimentData.exportModal.exportTitle", { number: index })}
-          </span>
-          <ExportStatusBadge status={exportRecord.status} />
-        </div>
-
-        <div className="text-muted-foreground flex items-center gap-3 text-xs">
-          {metaItems.map((item, i) => {
-            const MetaIcon = item.icon;
-            return (
-              <span key={i} className="inline-flex items-center gap-1">
-                <MetaIcon className="h-3 w-3" />
-                {item.label}
-              </span>
-            );
-          })}
-          {dateTime && (
-            <span className="inline-flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {dateTime}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {downloadUrl && (
-        <Button variant="ghost" size="icon" asChild className="h-8 w-8 shrink-0">
-          <a href={downloadUrl} aria-label={t("experimentData.exportModal.downloadExport")}>
-            <Download className="text-muted-foreground h-4 w-4" />
-          </a>
-        </Button>
-      )}
-    </Card>
-  );
-
-  if (isFailed) {
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>{card}</TooltipTrigger>
-          <TooltipContent
-            side="top"
-            className="bg-popover text-popover-foreground max-w-xs border text-center shadow-md"
-          >
-            {t("experimentData.exportModal.failedTooltip")}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  }
-
-  return card;
-};
 
 export function ExportListStep({
   experimentId,
@@ -238,9 +49,23 @@ export function ExportListStep({
   const { data, isLoading, error } = useListExports({ experimentId, tableName });
   const exports = data?.exports ?? [];
 
-  // Mirror every poll into the global activity context so the topbar bell
-  // shows export status without the user keeping this modal open.
+  // Mirror every poll into the activity context, which toasts when an export finishes.
   useTrackExports({ experimentId, tableName, displayName, exports });
+
+  const renderExport = (exportRecord: ExperimentExportRecord, index: number) => (
+    <ExportCard
+      key={exportRecord.exportId}
+      export={exportRecord}
+      experimentId={experimentId}
+      index={exports.length - index}
+    />
+  );
+
+  const renderFormatItem = (format: ExperimentExportFormat) => (
+    <DropdownMenuItem key={format} onClick={() => onCreateExport(format)}>
+      {t(EXPORT_FORMAT_LABEL_KEYS[format])}
+    </DropdownMenuItem>
+  );
 
   if (error) {
     const errorMessage =
@@ -297,16 +122,7 @@ export function ExportListStep({
         ) : (
           exports.length > 0 && (
             <ScrollArea className="max-h-[280px]">
-              <div className="space-y-2">
-                {exports.map((exportRecord, index) => (
-                  <ExportCard
-                    key={exportRecord.exportId ?? `export-${index}`}
-                    export={exportRecord}
-                    experimentId={experimentId}
-                    index={exports.length - index}
-                  />
-                ))}
-              </div>
+              <div className="space-y-2">{exports.map(renderExport)}</div>
             </ScrollArea>
           )
         )}
@@ -338,13 +154,7 @@ export function ExportListStep({
               align="end"
               className="min-w-[var(--radix-dropdown-menu-trigger-width)]"
             >
-              <DropdownMenuItem onClick={() => onCreateExport("csv")}>CSV</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onCreateExport("ndjson")}>NDJSON</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onCreateExport("json-array")}>
-                JSON Array
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onCreateExport("parquet")}>Parquet</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onCreateExport("xlsx")}>Excel</DropdownMenuItem>
+              {EXPORT_FORMATS.map(renderFormatItem)}
             </DropdownMenuContent>
           </DropdownMenu>
         )}

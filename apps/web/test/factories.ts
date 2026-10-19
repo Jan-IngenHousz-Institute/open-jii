@@ -820,12 +820,14 @@ export function createExportRecord(
     tableName: "raw_data",
     format: "csv",
     status: "completed",
-    filePath: `/exports/export-${exportSeq}.csv`,
     rowCount: 100,
-    fileSize: 1024,
+    totalBytes: 1024,
+    partCount: 1,
+    errorCode: null,
     createdBy: "user-1",
     createdAt: "2024-01-01T00:00:00Z",
     completedAt: "2024-01-01T00:05:00Z",
+    expiresAt: "2024-01-31T00:05:00Z",
     ...overrides,
   };
 }

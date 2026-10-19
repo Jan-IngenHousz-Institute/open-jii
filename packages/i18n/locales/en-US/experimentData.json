@@ -31,7 +31,8 @@
         "pending": "Pending",
         "running": "Preparing",
         "completed": "Completed",
-        "failed": "Failed"
+        "failed": "Failed",
+        "expired": "Expired"
       },
       "created": "Created",
       "completed": "Completed",
@@ -44,7 +45,6 @@
       "loadingExports": "Loading exports...",
       "format": "Format",
       "exportTitle": "Export #{{number}}",
-      "failedTooltip": "No action needed — this failure will be investigated and resolved. The export will reappear here with the correct status once the issue is fixed.",
       "createNew": "Create New Export",
       "creating": "Creating export...",
       "createExport": "Create Export",
@@ -57,7 +57,33 @@
       "creationError": "Failed to create export",
       "backToList": "Back to exports",
       "anonymizeContributors": "Anonymize contributors in the exported file",
-      "overridingDefault": "overrides experiment default"
+      "overridingDefault": "overrides experiment default",
+      "formats": {
+        "csv": "CSV",
+        "ndjson": "NDJSON",
+        "json-array": "JSON Array",
+        "parquet": "Parquet",
+        "xlsx": "Excel"
+      },
+      "errors": {
+        "no_data": "The table had no rows to export.",
+        "too_many_rows_for_format": "The table has more rows than this format can hold. Export it as CSV or Parquet instead.",
+        "unknown": "The export failed. Start it again, and contact support if it keeps failing."
+      },
+      "parts_one": "{{count}} file",
+      "parts_other": "{{count}} files",
+      "expiresOn": "Available until {{date}}",
+      "showFiles": "Show files",
+      "hideFiles": "Hide files",
+      "downloadPart": "Download file {{number}}",
+      "loadingLinks": "Preparing download links...",
+      "linksError": "The download links could not be prepared. Try again.",
+      "copyLinks": "Copy all links",
+      "linksCopied": "Links copied. They work for 15 minutes.",
+      "linksHint": "Each link works for 15 minutes. To fetch every file at once, save the copied links to a file and run wget -i on it.",
+      "activityTitle": "Export of {{name}} ({{format}})",
+      "exportReady": "Export of {{name}} is ready to download.",
+      "exportFailed": "Export of {{name}} failed."
     },
     "uploadDataModal": {
       "title": "Upload data",
