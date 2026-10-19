@@ -155,20 +155,30 @@ describe("orpcFetch", () => {
     expect(mockSignOut).toHaveBeenCalledTimes(1);
   });
 
-  it("does not sign out a new session when an earlier anonymous request returns 401", async () => {
-    mockGetCookie.mockReturnValue("");
-    mockHasCachedSession.mockReturnValue(true);
-    mockFetch.mockImplementationOnce(() => {
-      mockGetCookie.mockReturnValue(NEW_SESSION);
-      return Promise.resolve(new Response(null, { status: 401 }));
-    });
+  it.each([200, 401])(
+    "resends once under a session that appeared after an anonymous request, which returns %i",
+    async (status) => {
+      mockGetCookie.mockReturnValue("");
+      mockHasCachedSession.mockReturnValue(true);
+      mockFetch
+        .mockImplementationOnce(() => {
+          mockGetCookie.mockReturnValue(NEW_SESSION);
+          return Promise.resolve(new Response(null, { status: 401 }));
+        })
+        .mockResolvedValueOnce(new Response(null, { status }));
 
-    const result = await orpcFetch(makeRequest(), undefined);
+      const result = await orpcFetch(makeRequest(), undefined);
 
-    expect(result.status).toBe(401);
-    expect(mockRefreshSession).not.toHaveBeenCalled();
-    expect(mockSignOut).not.toHaveBeenCalled();
-  });
+      expect(result.status).toBe(status);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const firstHeaders: Headers = mockFetch.mock.calls[0][1].headers;
+      const retryHeaders: Headers = mockFetch.mock.calls[1][1].headers;
+      expect(firstHeaders.get("Cookie")).toBeNull();
+      expect(retryHeaders.get("Cookie")).toBe(NEW_SESSION);
+      expect(mockRefreshSession).not.toHaveBeenCalled();
+      expect(mockSignOut).not.toHaveBeenCalled();
+    },
+  );
 
   it("attaches the Cookie header when a session cookie is present", async () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }));

@@ -66,7 +66,10 @@ export async function orpcFetch(
       if (result.status === 401 && sentCurrentSession()) {
         await handler.signOut();
       }
-    } else if (!hasSessionToken(handler.getCookie()) && handler.hasCachedSession()) {
+    } else if (hasSessionToken(handler.getCookie())) {
+      // Sent before a sign-in stored its token: try once under the new session.
+      result = await send(handler.getCookie());
+    } else if (handler.hasCachedSession()) {
       // Signing out with no session would wipe an OAuth sign-in in progress, but
       // a cached session whose cookie has expired must still be cleared.
       await handler.signOut();
