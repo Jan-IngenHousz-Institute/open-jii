@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasSessionToken } from "~/shared/api/session-cookie";
+import { getSessionToken, hasSessionToken } from "~/shared/api/session-cookie";
 
 describe("hasSessionToken", () => {
   it.each([
@@ -19,5 +19,13 @@ describe("hasSessionToken", () => {
     "better-auth.dev.session_data=abc",
   ])("rejects %j", (cookie) => {
     expect(hasSessionToken(cookie)).toBe(false);
+  });
+
+  it("returns the token value without the cookie name", () => {
+    expect(
+      getSessionToken(
+        "better-auth.dev.oauth_state=x; __Secure-better-auth.prod.session_token=t.sig",
+      ),
+    ).toBe("t.sig");
   });
 });

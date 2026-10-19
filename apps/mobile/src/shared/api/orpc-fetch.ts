@@ -1,4 +1,4 @@
-import { hasSessionToken } from "~/shared/api/session-cookie";
+import { getSessionToken, hasSessionToken } from "~/shared/api/session-cookie";
 
 // Auth seam, injected by shared/composition/auth-wiring.ts at module load so
 // shared/api carries no dependency on the auth feature.
@@ -53,16 +53,23 @@ export async function orpcFetch(
 
   // On 401, try a single-flight session re-validation before giving up.
   if (result.status === 401 && authHandler) {
-    const sentSession = hasSessionToken(cookie);
-    if (sentSession && (await authHandler.refreshSession())) {
-      result = await send(authHandler.getCookie());
-    }
-    // Signing out with no session would wipe an OAuth sign-in in progress, but
-    // a cached session whose cookie has expired must still be cleared.
-    const staleSession =
-      !sentSession && !hasSessionToken(authHandler.getCookie()) && authHandler.hasCachedSession();
-    if (result.status === 401 && (sentSession || staleSession)) {
-      await authHandler.signOut();
+    const handler = authHandler;
+    const sentToken = getSessionToken(cookie);
+    // A 401 for a session that has since been replaced says nothing about the
+    // current one. Better Auth keeps the token when getSession slides it.
+    const sentCurrentSession = () => getSessionToken(handler.getCookie()) === sentToken;
+    if (sentToken) {
+      if (!sentCurrentSession()) return result;
+      if ((await handler.refreshSession()) && sentCurrentSession()) {
+        result = await send(handler.getCookie());
+      }
+      if (result.status === 401 && sentCurrentSession()) {
+        await handler.signOut();
+      }
+    } else if (!hasSessionToken(handler.getCookie()) && handler.hasCachedSession()) {
+      // Signing out with no session would wipe an OAuth sign-in in progress, but
+      // a cached session whose cookie has expired must still be cleared.
+      await handler.signOut();
     }
   }
 

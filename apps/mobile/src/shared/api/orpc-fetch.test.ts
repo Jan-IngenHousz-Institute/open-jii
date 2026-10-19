@@ -6,6 +6,7 @@ const mockRefreshSession = vi.fn();
 const mockSignOut = vi.fn();
 const mockHasCachedSession = vi.fn<() => boolean>();
 const SESSION = "better-auth.dev.session_token=cookie";
+const NEW_SESSION = "better-auth.dev.session_token=new-session";
 const mockGetCookie = vi.fn<() => string | null | undefined>(() => SESSION);
 
 vi.stubGlobal("fetch", mockFetch);
@@ -57,12 +58,12 @@ describe("orpcFetch", () => {
   });
 
   it("sends the refreshed cookie when retrying an authenticated request", async () => {
-    mockGetCookie.mockReturnValue("better-auth.dev.session_token=original");
+    const refreshed = `${SESSION}; better-auth.dev.session_data=fresh`;
     mockFetch
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
       .mockResolvedValueOnce(new Response(null, { status: 200 }));
     mockRefreshSession.mockImplementationOnce(() => {
-      mockGetCookie.mockReturnValue("better-auth.dev.session_token=refreshed");
+      mockGetCookie.mockReturnValue(refreshed);
       return Promise.resolve(true);
     });
 
@@ -70,9 +71,40 @@ describe("orpcFetch", () => {
 
     const originalHeaders: Headers = mockFetch.mock.calls[0][1].headers;
     const retryHeaders: Headers = mockFetch.mock.calls[1][1].headers;
-    expect(originalHeaders.get("Cookie")).toBe("better-auth.dev.session_token=original");
-    expect(retryHeaders.get("Cookie")).toBe("better-auth.dev.session_token=refreshed");
+    expect(originalHeaders.get("Cookie")).toBe(SESSION);
+    expect(retryHeaders.get("Cookie")).toBe(refreshed);
   });
+
+  it("leaves a newer session alone when a request sent with an older token returns 401", async () => {
+    mockFetch.mockImplementationOnce(() => {
+      mockGetCookie.mockReturnValue(NEW_SESSION);
+      return Promise.resolve(new Response(null, { status: 401 }));
+    });
+
+    const result = await orpcFetch(makeRequest(), undefined);
+
+    expect(result.status).toBe(401);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockRefreshSession).not.toHaveBeenCalled();
+    expect(mockSignOut).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])(
+    "neither resends nor signs out when the session changes during a refresh that returns %s",
+    async (refreshed) => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 401 }));
+      mockRefreshSession.mockImplementationOnce(() => {
+        mockGetCookie.mockReturnValue(NEW_SESSION);
+        return Promise.resolve(refreshed);
+      });
+
+      const result = await orpcFetch(makeRequest(), undefined);
+
+      expect(result.status).toBe(401);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockSignOut).not.toHaveBeenCalled();
+    },
+  );
 
   it("signs out when the refresh succeeds but the retry is still 401", async () => {
     mockFetch.mockResolvedValue(new Response(null, { status: 401 }));
@@ -127,7 +159,7 @@ describe("orpcFetch", () => {
     mockGetCookie.mockReturnValue("");
     mockHasCachedSession.mockReturnValue(true);
     mockFetch.mockImplementationOnce(() => {
-      mockGetCookie.mockReturnValue("better-auth.dev.session_token=new-session");
+      mockGetCookie.mockReturnValue(NEW_SESSION);
       return Promise.resolve(new Response(null, { status: 401 }));
     });
 
