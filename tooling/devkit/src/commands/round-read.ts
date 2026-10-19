@@ -417,6 +417,11 @@ export async function readRound(
 ): Promise<Round> {
   const unavailable: string[] = [];
   const rules = rulesOf(await client.get(rulesPath));
+  // Every environment has rules, so none means the read failed or the token cannot see their
+  // folder; a round that reported it as quiet would hide anything firing.
+  if (rules.length === 0) {
+    unavailable.push("alert rules: the rules read returned none, so what is firing is unknown");
+  }
 
   let changes: StateChange[] = [];
   const range = `from=${window.from.getTime()}&to=${window.to.getTime()}`;
