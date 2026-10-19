@@ -96,7 +96,7 @@ def test_carry_over_exports_posts_a_signed_batch(client: BackendClient) -> None:
     responses.add(
         responses.POST,
         f"{BASE_URL}/api/v1/webhooks/data-export-carry-over",
-        json={"imported": 1},
+        json={"success": True, "imported": 1},
         status=201,
     )
     exports = [
@@ -115,7 +115,7 @@ def test_carry_over_exports_posts_a_signed_batch(client: BackendClient) -> None:
         }
     ]
 
-    assert client.carry_over_exports(exports) == {"imported": 1}
+    assert client.carry_over_exports(exports) == {"success": True, "imported": 1}
 
     sent = responses.calls[0].request
     assert sent.body is not None
