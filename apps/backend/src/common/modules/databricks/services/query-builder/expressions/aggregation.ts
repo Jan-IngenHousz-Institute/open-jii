@@ -59,7 +59,10 @@ export function buildAggregateExpression(
   };
 }
 
-/** The outer sort key, as the pseudonym of a contributor id when the experiment anonymizes. */
+/**
+ * The outer sort key, as the pseudonym of a contributor id when the experiment anonymizes. Numeric
+ * string ordering ranks stored answers, not aggregated outputs, so it is not applied here.
+ */
 function sortTarget(
   builder: BaseQueryBuilder,
   ordering: QueryOrdering | undefined,

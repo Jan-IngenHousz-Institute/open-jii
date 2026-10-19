@@ -2178,5 +2178,89 @@ describe("ExperimentDataRepository", () => {
         }),
       );
     });
+
+    const rawData: ExperimentTableMetadata = {
+      identifier: "raw_data",
+      tableType: "static",
+      displayName: null,
+      rowCount: 100,
+      latestRowAt: null,
+      schemaRevision: null,
+      questionsSchema: "OBJECT<q: STRING>",
+    };
+
+    it.each(["ASC", "DESC"] as const)(
+      "orders a chart's filtered rows by answer value %s before the ceiling",
+      async (orderDirection) => {
+        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+          success([rawData]),
+        );
+        const execute = vi
+          .spyOn(databricksPort, "executeSqlQuery")
+          .mockResolvedValue(success(empty));
+        const filters = [{ column: "q", operator: "contains" as const, value: "0" }];
+
+        const result = await repository.getTableData({
+          experimentId: params.experimentId,
+          experiment: mockExperiment,
+          tableName: "raw_data",
+          columns: ["id", "q"],
+          filters,
+          orderBy: "q",
+          orderDirection,
+          limit: 10,
+        });
+
+        assertSuccess(result);
+        const sql = execute.mock.calls[0][1];
+        expect(sql).toMatch(/^SELECT \* EXCEPT \(`__numeric_order_group`, /);
+        expect(sql).toContain(
+          "\nSELECT `id`, try_variant_get(`questions_data`, '$[\"q\"]', 'STRING') AS `q`, ",
+        );
+        expect(sql).toContain("LIKE '%0%'");
+        expect(sql).toContain(
+          `ORDER BY \`__numeric_order_group\` ASC, (\`__numeric_order_decimal\`) ${orderDirection}, \`__numeric_order_value\` ${orderDirection} NULLS LAST, \`__numeric_order_row\` ASC\nLIMIT 11`,
+        );
+      },
+    );
+
+    it("orders a grouped answer by the plain output", async () => {
+      const aggregation = {
+        groupBy: [{ column: "q" }],
+        functions: [{ column: "id", function: "count" as const }],
+      };
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([rawData]));
+      const execute = vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(empty));
+
+      const result = await repository.getTableData({
+        experimentId: params.experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        aggregation,
+        orderBy: "q",
+        orderDirection: "DESC",
+      });
+
+      assertSuccess(result);
+      const sql = execute.mock.calls[0][1];
+      expect(sql).toMatch(/ORDER BY `q` DESC LIMIT 100001$/);
+      expect(sql).not.toContain("DECIMAL(38, 18)");
+      expect(sql).not.toContain("__numeric_order");
+    });
+
+    it("reads an empty aggregation as rows ordered by answer value", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([rawData]));
+      const execute = vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(empty));
+
+      const result = await repository.getTableData({
+        ...params,
+        tableName: "raw_data",
+        aggregation: {},
+        orderBy: "q",
+      });
+
+      assertSuccess(result);
+      expect(execute.mock.calls[0][1]).toMatch(/^SELECT \* EXCEPT \(`__numeric_order_group`, /);
+    });
   });
 });

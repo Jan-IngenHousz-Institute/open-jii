@@ -670,7 +670,6 @@ export class ExperimentDataRepository {
     let effectiveOrdering = ordering;
     if (
       ordering &&
-      !aggregation &&
       !ordering.mode &&
       this.flattenedFields(shape).some(
         ({ key, column, field }) =>

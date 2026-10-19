@@ -210,6 +210,23 @@ describe("wrapWithAggregation", () => {
     );
   });
 
+  it.each([
+    ["a group", { groupBy: [{ column: "answer" }], functions: [] }],
+    ["a window", { functions: [{ column: "value", function: "cumsum" as const }] }],
+  ])(
+    "orders %s by the plain output when numeric string ordering is requested",
+    (_, aggregation) => {
+      const ordering = { column: "answer", direction: "DESC" as const };
+      const sql = wrapWithAggregation("SELECT * FROM t", {
+        aggregation,
+        ordering: { ...ordering, mode: { kind: "numericString", rowId: "id" } },
+      });
+
+      expect(sql).toBe(wrapWithAggregation("SELECT * FROM t", { aggregation, ordering }));
+      expect(sql).toMatch(/ORDER BY `answer` DESC$/);
+    },
+  );
+
   it("throws when called with empty aggregation content", () => {
     expect(() => wrapWithAggregation("SELECT * FROM t", { aggregation: {} })).toThrow(
       /without aggregation content/,

@@ -1,7 +1,12 @@
 import { buildAggregateExpression } from "./expressions/aggregation";
 import { buildCumsumExpression } from "./expressions/cumsum";
 import { buildFilterCondition, contributorPseudonym } from "./expressions/filter";
-import { numericStringOrder } from "./expressions/numeric-string-order";
+import {
+  numericStringKeys,
+  numericStringOrder,
+  numericStringOrdering,
+} from "./expressions/numeric-string-order";
+import type { NumericStringKeys } from "./expressions/numeric-string-order";
 import { buildTimeBucketExpression } from "./expressions/time-bucket";
 import { buildWidthBucketExpression } from "./expressions/width-bucket";
 import type {
@@ -16,6 +21,8 @@ import { FlattenedFields } from "./schema/flattened-fields";
 import type { FlattenedField, FlattenedSource } from "./schema/flattened-fields";
 import { VariantSchema } from "./schema/variant-schema";
 import type { VariantField } from "./schema/variant-schema";
+
+const SORT_KEYS = ["group", "decimal", "value", "rowId"] as const;
 
 export abstract class BaseQueryBuilder {
   protected isDistinct = false;
@@ -357,22 +364,56 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
       : this.starProjection();
     const where =
       this.whereConditions.length > 0 ? `WHERE ${this.whereConditions.join(" AND ")}` : "";
-    const order = this.ordering
-      ? `ORDER BY ${this.buildOrdering(this.ordering, this.orderTarget(this.ordering.column))}`
-      : "";
     const limitClause = this.limitValue ? `LIMIT ${this.limitValue}` : "";
     const offsetClause = this.offsetValue ? `OFFSET ${this.offsetValue}` : "";
 
-    return [
+    if (this.ordering?.mode?.kind === "numericString") {
+      const { direction = "ASC", mode } = this.ordering;
+      const rowId = !this.isDistinct && mode.rowId ? this.escapeIdentifier(mode.rowId) : undefined;
+      const keys = numericStringKeys(this.columnExpression(this.ordering.column), rowId);
+      const names = this.sortKeyNames();
+      const sortedBy: NumericStringKeys = {
+        group: names.group,
+        decimal: names.decimal,
+        value: names.value,
+        rowId: rowId === undefined ? undefined : names.rowId,
+      };
+      const hidden = SORT_KEYS.flatMap((key) => {
+        const name = sortedBy[key];
+        return name === undefined ? [] : [{ sql: `${keys[key]} AS ${name}`, name }];
+      });
+
+      // An expression sort key is re-evaluated in every comparison, so the inner query computes
+      // the keys once per row and the outer one sorts by them and drops them.
+      return this.joinClauses([
+        `SELECT * EXCEPT (${hidden.map(({ name }) => name).join(", ")})`,
+        "FROM (",
+        `${selectKeyword} ${[projection, ...hidden.map(({ sql }) => sql)].join(", ")}`,
+        `FROM ${this.fromClause}`,
+        where,
+        ")",
+        `ORDER BY ${numericStringOrdering(sortedBy, direction)}`,
+        limitClause,
+        offsetClause,
+      ]);
+    }
+
+    const order = this.ordering
+      ? `ORDER BY ${this.buildOrdering(this.ordering, this.orderTarget(this.ordering.column))}`
+      : "";
+
+    return this.joinClauses([
       `${selectKeyword} ${projection}`,
       `FROM ${this.fromClause}`,
       where,
       order,
       limitClause,
       offsetClause,
-    ]
-      .filter((clause) => clause.length > 0)
-      .join("\n");
+    ]);
+  }
+
+  private joinClauses(clauses: string[]): string {
+    return clauses.filter((clause) => clause.length > 0).join("\n");
   }
 
   /** Every base column but the raw VARIANTs, then every flattened field under the name it reads
@@ -414,6 +455,31 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     const isField = this.fieldExpressions().has(column);
     const isProjected = this.selectColumns === undefined || this.selectColumns.includes(column);
     return isField && isProjected ? this.quoteName(column) : this.columnExpression(column);
+  }
+
+  /** Quoted names for the numeric sort keys, unlike any name the table or the read can hold.
+   *  Spark resolves names case-insensitively. */
+  private sortKeyNames(): Record<(typeof SORT_KEYS)[number], string> {
+    const taken = new Set(
+      [
+        ...this.reservedColumns,
+        ...this.exceptColumns,
+        ...(this.selectColumns ?? []),
+        ...this.variantColumns.map(({ column }) => column),
+        ...this.flattenedFields().map(({ key }) => key),
+        ...(this.ordering ? [this.ordering.column] : []),
+      ].map((name) => name.toLowerCase()),
+    );
+    for (let suffix = 0; ; suffix++) {
+      const names = SORT_KEYS.map((key) => {
+        const name = `__numeric_order_${key === "rowId" ? "row" : key}`;
+        return suffix === 0 ? name : `${name}_${suffix}`;
+      });
+      if (names.every((name) => !taken.has(name.toLowerCase()))) {
+        const [group, decimal, value, rowId] = names.map((name) => this.quoteName(name));
+        return { group, decimal, value, rowId };
+      }
+    }
   }
 
   /** Output name to extraction SQL. */
