@@ -10,6 +10,11 @@ interface InFlightRefresh {
 // shares a validation of its own session, never one begun for an older sign-in.
 const refreshesInFlight = new Map<string, InFlightRefresh>();
 
+// A late settle or timeout must not evict a newer refresh for the same token.
+function release(token: string, entry: InFlightRefresh) {
+  if (refreshesInFlight.get(token) === entry) refreshesInFlight.delete(token);
+}
+
 // Bounded so an offline `getSession` can't keep the fetcher stuck on a 401
 // retry beyond the per-request fetch budget.
 const REFRESH_TIMEOUT_MS = 8_000;
@@ -28,8 +33,9 @@ const REFRESH_TIMEOUT_MS = 8_000;
  *
  * Each caller is bounded by REFRESH_TIMEOUT_MS via Promise.race; the
  * timeout also aborts the shared upstream fetch through fetchOptions.signal
- * so the underlying request actually stops, and the in-flight entry stays tied
- * to that upstream call (not the race) so concurrent callers always dedupe.
+ * so the underlying request actually stops. The in-flight entry is released
+ * when its upstream settles or a caller's timeout fires, whichever comes
+ * first, so an upstream that ignores the abort cannot block later refreshes.
  */
 export async function refreshSession(): Promise<boolean> {
   const authClient = getAuthClient();
@@ -37,28 +43,30 @@ export async function refreshSession(): Promise<boolean> {
   let refresh = refreshesInFlight.get(token);
   if (!refresh) {
     const controller = new AbortController();
-    const upstream = authClient
-      .getSession({
-        query: { disableCookieCache: true },
-        fetchOptions: { signal: controller.signal },
-      })
-      .then((res) => !!res?.data?.session)
-      .catch(() => false)
-      .finally(() => {
-        refreshesInFlight.delete(token);
-      });
-    refresh = { upstream, controller };
+    const created: InFlightRefresh = {
+      controller,
+      upstream: authClient
+        .getSession({
+          query: { disableCookieCache: true },
+          fetchOptions: { signal: controller.signal },
+        })
+        .then((res) => !!res?.data?.session)
+        .catch(() => false)
+        .finally(() => release(token, created)),
+    };
+    refresh = created;
     refreshesInFlight.set(token, refresh);
   }
 
-  const { upstream, controller } = refresh;
-  return Promise.race([
-    upstream,
-    new Promise<boolean>((resolve) =>
-      setTimeout(() => {
-        controller.abort();
-        resolve(false);
-      }, REFRESH_TIMEOUT_MS),
-    ),
-  ]);
+  const entry = refresh;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<boolean>((resolve) => {
+    timeoutId = setTimeout(() => {
+      entry.controller.abort();
+      // An upstream that ignores the abort must not hold the token's slot forever.
+      release(token, entry);
+      resolve(false);
+    }, REFRESH_TIMEOUT_MS);
+  });
+  return Promise.race([entry.upstream, timeout]).finally(() => clearTimeout(timeoutId));
 }
