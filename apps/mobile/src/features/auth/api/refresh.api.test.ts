@@ -1,15 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { refreshSession } from "~/features/auth/api/refresh.api";
+import { deferred } from "~/shared/testing/deferred";
 
-const { mockGetSession } = vi.hoisted(() => ({ mockGetSession: vi.fn() }));
+const { mockGetSession, mockGetCookie } = vi.hoisted(() => ({
+  mockGetSession: vi.fn(),
+  mockGetCookie: vi.fn<() => string>(),
+}));
 
 vi.mock("~/features/auth/services/auth", () => ({
-  getAuthClient: () => ({ getSession: mockGetSession }),
+  getAuthClient: () => ({ getSession: mockGetSession, getCookie: mockGetCookie }),
 }));
 
 describe("refreshSession", () => {
   beforeEach(() => {
     mockGetSession.mockReset();
+    mockGetCookie.mockReset();
+    mockGetCookie.mockReturnValue("better-auth.dev.session_token=token-a");
   });
 
   it("returns true when getSession resolves with a valid session", async () => {
@@ -110,5 +116,19 @@ describe("refreshSession", () => {
     expect(await p1).toBe(true);
     expect(await p2).toBe(true);
     expect(mockGetSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts a separate refresh for a session token that changed mid-flight", async () => {
+    const first = deferred<{ data: null }>();
+    mockGetSession.mockReturnValueOnce(first.promise);
+    const forTokenA = refreshSession();
+
+    mockGetCookie.mockReturnValue("better-auth.dev.session_token=token-b");
+    mockGetSession.mockResolvedValueOnce({ data: { session: { id: "s-b" } } });
+    expect(await refreshSession()).toBe(true);
+    expect(mockGetSession).toHaveBeenCalledTimes(2);
+
+    first.resolve({ data: null });
+    expect(await forTokenA).toBe(false);
   });
 });
