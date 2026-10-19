@@ -7,6 +7,7 @@ import {
   verifyEmailLoginOtp,
 } from "~/features/auth/api/login.api";
 import { getAuthClient } from "~/features/auth/services/auth";
+import { hasSessionToken } from "~/shared/api/session-cookie";
 import { ensureDeviceRegistered } from "~/shared/composition/ensure-device-registered";
 import { prefetchOfflineData } from "~/shared/composition/prefetch-offline-data";
 import { useTranslation } from "~/shared/i18n";
@@ -21,8 +22,8 @@ export function useLoginFlow() {
   const prefetch = async () => {
     const authClient = getAuthClient();
     // Expo resolves cancelled OAuth as a redirect response; only a completed
-    // sign-in writes a session token. An OAuth state cookie alone is insufficient.
-    if (!/(?:^|;\s*)[^=;]+\.session_token=[^;]+/.test(authClient.getCookie() ?? "")) return;
+    // sign-in writes a session token.
+    if (!hasSessionToken(authClient.getCookie())) return;
 
     // Resolve the freshly-signed-in userId so the profile prefetch has a target.
     const session = await authClient.getSession().catch(() => null);

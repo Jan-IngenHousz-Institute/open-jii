@@ -11,7 +11,7 @@ import { useAuthClient } from "~/features/auth/services/auth";
 
 const SESSION_CACHE_KEY = "openjii_session_data";
 
-function getCachedSession() {
+export function getCachedSession() {
   const raw = SecureStore.getItem(SESSION_CACHE_KEY);
   if (!raw || raw === "{}") return null;
   try {

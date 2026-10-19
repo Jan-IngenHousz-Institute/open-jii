@@ -1,7 +1,10 @@
+import { hasSessionToken } from "~/shared/api/session-cookie";
+
 // Auth seam, injected by shared/composition/auth-wiring.ts at module load so
 // shared/api carries no dependency on the auth feature.
 export interface AuthRefreshHandler {
   getCookie(): string | null | undefined;
+  hasCachedSession(): boolean;
   refreshSession(): Promise<boolean>;
   signOut(): Promise<void>;
 }
@@ -49,12 +52,16 @@ export async function orpcFetch(
   let result = await send(cookie);
 
   // On 401, try a single-flight session re-validation before giving up.
-  if (result.status === 401 && cookie && authHandler) {
-    const refreshed = await authHandler.refreshSession();
-    if (refreshed) {
+  if (result.status === 401 && authHandler) {
+    const sentSession = hasSessionToken(cookie);
+    if (sentSession && (await authHandler.refreshSession())) {
       result = await send(authHandler.getCookie());
     }
-    if (result.status === 401) {
+    // Signing out with no session would wipe an OAuth sign-in in progress, but
+    // a cached session whose cookie has expired must still be cleared.
+    const staleSession =
+      !sentSession && !hasSessionToken(authHandler.getCookie()) && authHandler.hasCachedSession();
+    if (result.status === 401 && (sentSession || staleSession)) {
       await authHandler.signOut();
     }
   }
