@@ -33,16 +33,26 @@ exports keep their existing behavior.
    - **JSON Array** for a single JSON collection;
    - **Parquet** for typed, columnar analysis in Python, R, or lakehouse tools;
    - **Excel** for an `.xlsx` workbook.
-5. Create the export. It is queued and prepared in the background.
+5. Create the export. It is queued and prepared in the background, and you get a
+   notification when it is ready or has failed, so you can close the dialog meanwhile.
 6. Return to the export list and download it when its status is **Completed**.
 
 Each export in the list shows its number, its status (**Queued**, **Pending**,
-**Preparing**, **Completed** or **Failed**), its format and when it was created,
-with the row count and file size once they are known. Only a completed export
-has a download button, and the file then downloads through your browser, which
-shows its progress. The list covers the dataset's exports by everyone who can
-open the experiment, not only yours. Download a completed export when you need it
-rather than counting on the list to keep it.
+**Preparing**, **Completed**, **Failed** or **Expired**), its format and when it was
+created, with the row count and size once they are known. A failed export says why it
+failed. Excel and JSON Array exports, for example, hold at most 1,048,575 rows, so a
+larger table has to be exported as CSV, NDJSON or Parquet. The list covers the
+dataset's exports by everyone who can open the experiment, not only yours.
+
+A completed export has a download button. A large export is split into several files
+of about a million rows each. **Show files** lists them, each with its own download,
+and **Copy all links** copies their links for a download manager or `wget -i`. The
+links work for 15 minutes, so open the list again if they have run out. CSV and NDJSON
+files are compressed with gzip and end in `.csv.gz` or `.json.gz`. Python and R read
+them as they are; unzip them first to open them in a spreadsheet.
+
+An export is kept for 30 days. After that it shows as **Expired** and can no longer be
+downloaded, so create a new export when you need the data again.
 
 {/* NEEDS-LIVE-CHECK: create and download all five formats from a representative dataset; compare row counts, contributor anonymization, nested/raw values, and export-vs-table values. */}
 ![The Export Dataset dialog with all five formats and the contributor-anonymization option](/img/guide/web/export-dialog.png)
@@ -60,8 +70,11 @@ rather than counting on the list to keep it.
   question's `date` becomes `date_answer`.
 - Prefer Parquet when types and large columnar datasets matter; prefer CSV only
   when flattening and spreadsheet compatibility are acceptable.
+- Read the files of a multi-part export together, in the order of their part numbers.
+  For Parquet, `pandas.read_parquet` and R's `arrow::open_dataset` both accept a
+  folder holding every part.
 
 <Callout type="info">
-  Export creation is asynchronous. Follow an export in the dataset's export list, and download it
-  once its status is **Completed**.
+  Export creation is asynchronous. You are notified when an export is ready, and you can follow it
+  in the dataset's export list. Download it within 30 days of its completion.
 </Callout>

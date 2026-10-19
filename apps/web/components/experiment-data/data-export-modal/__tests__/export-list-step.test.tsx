@@ -3,7 +3,6 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import type React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { env } from "~/env";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentExportRecord } from "@repo/api/domains/experiment/experiment.schema";
@@ -27,25 +26,54 @@ const completedExport = createExportRecord({
   tableName: "raw_data",
   format: "csv",
   status: "completed",
-  filePath: "/path/to/file.csv",
   rowCount: 100,
-  fileSize: 1024,
+  totalBytes: 1024,
+  partCount: 1,
   createdAt: "2024-01-01T00:00:00Z",
   completedAt: "2024-01-01T00:05:00Z",
 });
 
+const multiPartExport = createExportRecord({
+  exportId: "export-2",
+  experimentId: "exp-123",
+  format: "parquet",
+  status: "completed",
+  rowCount: 32_117_212,
+  totalBytes: 27_457_507_736,
+  partCount: 2,
+});
+
 const runningExport = createExportRecord({
-  exportId: null,
+  exportId: "export-3",
   experimentId: "exp-123",
   tableName: "raw_data",
   format: "ndjson",
   status: "running",
-  filePath: null,
   rowCount: null,
-  fileSize: null,
+  totalBytes: null,
+  partCount: null,
   createdAt: "2024-01-01T00:00:00Z",
   completedAt: null,
+  expiresAt: null,
 });
+
+const twoPartLinks = {
+  parts: [
+    {
+      index: 0,
+      fileName: "trial_raw-data_20240101_000500_part-1-of-2.parquet",
+      sizeBytes: 20_000_000_000,
+      url: "https://exports.s3.test/part-00000.parquet?X-Amz-Signature=a",
+    },
+    {
+      index: 1,
+      fileName: "trial_raw-data_20240101_000500_part-2-of-2.parquet",
+      sizeBytes: 7_457_507_736,
+      url: "https://exports.s3.test/part-00001.parquet?X-Amz-Signature=b",
+    },
+  ],
+  expiresAt: "2024-01-01T00:20:00Z",
+};
 
 const mountExports = (exports: ExperimentExportRecord[]) =>
   server.mount(contract.experiments.listExports, {
@@ -101,8 +129,9 @@ describe("ExportListStep", () => {
     await waitFor(() => {
       expect(screen.getByText("experimentData.exportModal.exportCount")).toBeInTheDocument();
     });
-    expect(screen.getByText("CSV")).toBeInTheDocument();
+    expect(screen.getByText("experimentData.exportModal.formats.csv")).toBeInTheDocument();
     expect(screen.getByText(/100/)).toBeInTheDocument();
+    expect(screen.getByText("experimentData.exportModal.expiresOn")).toBeInTheDocument();
   });
 
   it("keeps Create Export outside the scrolling list so it stays in view", async () => {
@@ -114,7 +143,7 @@ describe("ExportListStep", () => {
       expect(screen.getByText("experimentData.exportModal.exportCount")).toBeInTheDocument();
     });
     const body = screen.getByTestId("dialog-body");
-    expect(within(body).getByText("CSV")).toBeInTheDocument();
+    expect(within(body).getByText("experimentData.exportModal.formats.csv")).toBeInTheDocument();
     expect(body).not.toContainElement(
       screen.getByRole("button", { name: "experimentData.exportModal.createExport" }),
     );
@@ -128,7 +157,10 @@ describe("ExportListStep", () => {
     await waitFor(() => {
       expect(screen.getByText("experimentData.exportModal.status.running")).toBeInTheDocument();
     });
-    expect(screen.getByText("NDJSON")).toBeInTheDocument();
+    expect(screen.getByText("experimentData.exportModal.formats.ndjson")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "experimentData.exportModal.downloadExport" }),
+    ).not.toBeInTheDocument();
   });
 
   it("calls onClose when close button is clicked", async () => {
@@ -163,7 +195,9 @@ describe("ExportListStep", () => {
     );
 
     // Click CSV option
-    await user.click(await screen.findByRole("menuitem", { name: "CSV" }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: "experimentData.exportModal.formats.csv" }),
+    );
 
     expect(onCreateExport).toHaveBeenCalledWith("csv");
   });
@@ -183,36 +217,107 @@ describe("ExportListStep", () => {
       screen.getByRole("button", { name: /experimentData\.exportModal\.createExport/i }),
     );
 
-    await user.click(await screen.findByRole("menuitem", { name: "Excel" }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: "experimentData.exportModal.formats.xlsx" }),
+    );
 
     expect(onCreateExport).toHaveBeenCalledWith("xlsx");
   });
 
-  it("links the download button to the export endpoint", async () => {
+  it("fetches a fresh signed link when a single-file export is downloaded", async () => {
     mountExports([completedExport]);
-
-    render(<ExportListStep {...defaultProps} />);
-
-    const downloadLink = await screen.findByRole("link", {
-      name: "experimentData.exportModal.downloadExport",
+    const links = server.mount(contract.experiments.getExportDownloadLinks, {
+      body: { parts: [twoPartLinks.parts[0]], expiresAt: twoPartLinks.expiresAt },
     });
 
-    expect(downloadLink).toHaveAttribute(
-      "href",
-      `${env.NEXT_PUBLIC_API_URL}/api/v1/experiments/exp-123/data/exports/export-1`,
-    );
-  });
-
-  it("offers no download for an export that has not completed", async () => {
-    mountExports([runningExport]);
-
     render(<ExportListStep {...defaultProps} />);
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "experimentData.exportModal.downloadExport" }),
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("NDJSON")).toBeInTheDocument();
+      expect(links.called).toBe(true);
     });
+    expect(links.params).toEqual({ id: "exp-123", exportId: "export-1" });
+    expect(links.callCount).toBe(1);
+  });
 
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  it("lists each file of a multi-part export with its own signed link", async () => {
+    mountExports([multiPartExport]);
+    server.mount(contract.experiments.getExportDownloadLinks, { body: twoPartLinks });
+
+    render(<ExportListStep {...defaultProps} />);
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: /experimentData\.exportModal\.showFiles/ }),
+    );
+
+    const fileLinks = await screen.findAllByRole("link", {
+      name: "experimentData.exportModal.downloadPart",
+    });
+    expect(fileLinks.map((link) => link.getAttribute("href"))).toEqual(
+      twoPartLinks.parts.map((part) => part.url),
+    );
+    expect(screen.getByText(twoPartLinks.parts[1].fileName)).toBeInTheDocument();
+  });
+
+  it("copies every file link of a multi-part export, one per line", async () => {
+    mountExports([multiPartExport]);
+    server.mount(contract.experiments.getExportDownloadLinks, { body: twoPartLinks });
+
+    render(<ExportListStep {...defaultProps} />);
+
+    const user = userEvent.setup();
+    // `userEvent.setup()` installs its own clipboard stub, so this has to land after it.
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      writable: true,
+      configurable: true,
+    });
+    await user.click(
+      await screen.findByRole("button", { name: /experimentData\.exportModal\.showFiles/ }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /experimentData\.exportModal\.copyLinks/ }),
+    );
+
+    expect(writeText).toHaveBeenCalledWith(twoPartLinks.parts.map((part) => part.url).join("\n"));
+  });
+
+  it("says why an export failed", async () => {
+    mountExports([
+      createExportRecord({
+        status: "failed",
+        errorCode: "too_many_rows_for_format",
+        format: "xlsx",
+      }),
+    ]);
+
+    render(<ExportListStep {...defaultProps} />);
+
+    expect(
+      await screen.findByText("experimentData.exportModal.errors.too_many_rows_for_format"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "experimentData.exportModal.downloadExport" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows an expired export without a download", async () => {
+    mountExports([createExportRecord({ status: "expired" })]);
+
+    render(<ExportListStep {...defaultProps} />);
+
+    expect(
+      await screen.findByText("experimentData.exportModal.status.expired"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "experimentData.exportModal.downloadExport" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows creating state", async () => {

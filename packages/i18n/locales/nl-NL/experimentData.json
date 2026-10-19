@@ -31,7 +31,8 @@
         "pending": "In behandeling",
         "running": "Voorbereiden",
         "completed": "Voltooid",
-        "failed": "Mislukt"
+        "failed": "Mislukt",
+        "expired": "Verlopen"
       },
       "created": "Gemaakt",
       "completed": "Voltooid",
@@ -44,7 +45,6 @@
       "loadingExports": "Exports laden...",
       "format": "Formaat",
       "exportTitle": "Export #{{number}}",
-      "failedTooltip": "Geen actie nodig — deze fout wordt onderzocht en opgelost. De export verschijnt hier opnieuw met de juiste status zodra het probleem is verholpen.",
       "createNew": "Nieuwe export maken",
       "creating": "Export maken...",
       "createExport": "Export maken",
@@ -57,7 +57,33 @@
       "creationError": "Export aanmaken mislukt",
       "backToList": "Terug naar exports",
       "anonymizeContributors": "Bijdragers anonimiseren in het geëxporteerde bestand",
-      "overridingDefault": "overschrijft experimentstandaard"
+      "overridingDefault": "overschrijft experimentstandaard",
+      "formats": {
+        "csv": "CSV",
+        "ndjson": "NDJSON",
+        "json-array": "JSON-array",
+        "parquet": "Parquet",
+        "xlsx": "Excel"
+      },
+      "errors": {
+        "no_data": "De tabel had geen rijen om te exporteren.",
+        "too_many_rows_for_format": "De tabel heeft meer rijen dan dit formaat kan bevatten. Exporteer hem in plaats daarvan als CSV of Parquet.",
+        "unknown": "De export is mislukt. Start hem opnieuw en neem contact op met support als het blijft mislukken."
+      },
+      "parts_one": "{{count}} bestand",
+      "parts_other": "{{count}} bestanden",
+      "expiresOn": "Beschikbaar tot {{date}}",
+      "showFiles": "Bestanden tonen",
+      "hideFiles": "Bestanden verbergen",
+      "downloadPart": "Bestand {{number}} downloaden",
+      "loadingLinks": "Downloadlinks worden voorbereid...",
+      "linksError": "De downloadlinks konden niet worden voorbereid. Probeer het opnieuw.",
+      "copyLinks": "Alle links kopiëren",
+      "linksCopied": "Links gekopieerd. Ze werken 15 minuten.",
+      "linksHint": "Elke link werkt 15 minuten. Om alle bestanden in één keer op te halen, sla je de gekopieerde links op in een bestand en voer je wget -i daarop uit.",
+      "activityTitle": "Export van {{name}} ({{format}})",
+      "exportReady": "De export van {{name}} staat klaar om te downloaden.",
+      "exportFailed": "De export van {{name}} is mislukt."
     },
     "uploadDataModal": {
       "title": "Gegevens uploaden",
