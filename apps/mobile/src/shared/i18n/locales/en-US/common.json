@@ -12,7 +12,6 @@
   "back": "Back",
   "close": "Close",
   "loading": "Loading…",
-  "offline": "You are offline. Please connect to the internet to log in.",
   "serverUnreachable": "Can't reach openJII. Check your internet connection and try again.",
   "tryAgain": "Try again",
   "checkingConnection": "Checking connection…",

@@ -115,6 +115,17 @@ describe("login connection message", () => {
     }
   });
 
+  it("keeps retry available and quiet while a background poll is in flight", async () => {
+    probe.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
+    probe.mockImplementation(() => new Promise(() => undefined));
+    renderLogin();
+    await waitFor(() => expect(screen.getByText(common.serverUnreachable)).toBeTruthy());
+
+    await waitFor(() => expect(probe).toHaveBeenCalledTimes(3), { timeout: 3000 });
+    expect(screen.queryByText(common.checkingConnection)).toBeNull();
+    expect(buttonDisabled(common.tryAgain)).toBe(false);
+  });
+
   it("keeps the message and retry available when both retry probes fail", async () => {
     probe.mockResolvedValue(false);
     renderLogin();

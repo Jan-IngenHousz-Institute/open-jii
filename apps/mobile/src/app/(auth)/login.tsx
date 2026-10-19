@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   View,
@@ -138,7 +138,13 @@ export default function LoginScreen() {
     verifyLoading,
   } = useLoginFlow();
 
-  const { data: online, isFetching: checkingConnection, refetch } = useLoginConnection();
+  const { data: online, refetch } = useLoginConnection();
+  // Background polls also fetch; only a retry the user started shows progress.
+  const [retryingConnection, setRetryingConnection] = useState(false);
+  const retryConnection = () => {
+    setRetryingConnection(true);
+    void refetch({ cancelRefetch: false }).finally(() => setRetryingConnection(false));
+  };
 
   const { isVisible: showEnvSelector, handleTap: handleHeaderTap } = useMultiTapReveal({
     tapsRequired: 4,
@@ -276,8 +282,8 @@ export default function LoginScreen() {
 
             <OfflineBanner
               online={online}
-              checking={checkingConnection}
-              onRetry={() => void refetch({ cancelRefetch: false })}
+              checking={retryingConnection}
+              onRetry={retryConnection}
             />
 
             {!showOTPInput ? (
