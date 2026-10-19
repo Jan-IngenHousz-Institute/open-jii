@@ -19,11 +19,16 @@ export function useLoginFlow() {
   const queryClient = useQueryClient();
 
   const prefetch = async () => {
+    const authClient = getAuthClient();
+    // Expo resolves cancelled OAuth as a redirect response; only a completed
+    // sign-in writes a session token. An OAuth state cookie alone is insufficient.
+    if (!/(?:^|;\s*)[^=;]+\.session_token=[^;]+/.test(authClient.getCookie() ?? "")) return;
+
     // Resolve the freshly-signed-in userId so the profile prefetch has a target.
-    const session = await getAuthClient()
-      .getSession()
-      .catch(() => null);
+    const session = await authClient.getSession().catch(() => null);
     const userId = session?.data?.user?.id;
+    if (!userId) return;
+
     void prefetchOfflineData(queryClient, userId);
     void ensureDeviceRegistered();
   };

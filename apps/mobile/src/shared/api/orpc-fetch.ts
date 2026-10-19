@@ -25,7 +25,8 @@ export async function orpcFetch(
   request: Request,
   init: RequestInit | undefined,
 ): Promise<Response> {
-  const send = () => {
+  const cookie = authHandler?.getCookie();
+  const send = (requestCookie: string | null | undefined) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
@@ -36,9 +37,8 @@ export async function orpcFetch(
     }
 
     const headers = new Headers(request.headers);
-    const cookie = authHandler?.getCookie();
-    if (cookie) {
-      headers.set("Cookie", cookie);
+    if (requestCookie) {
+      headers.set("Cookie", requestCookie);
     }
 
     return fetch(request.clone(), { signal: controller.signal, headers }).finally(() =>
@@ -46,13 +46,13 @@ export async function orpcFetch(
     );
   };
 
-  let result = await send();
+  let result = await send(cookie);
 
   // On 401, try a single-flight session re-validation before giving up.
-  if (result.status === 401 && authHandler) {
+  if (result.status === 401 && cookie && authHandler) {
     const refreshed = await authHandler.refreshSession();
     if (refreshed) {
-      result = await send();
+      result = await send(authHandler.getCookie());
     }
     if (result.status === 401) {
       await authHandler.signOut();

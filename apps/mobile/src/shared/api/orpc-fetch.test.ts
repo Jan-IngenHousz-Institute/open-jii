@@ -51,6 +51,24 @@ describe("orpcFetch", () => {
     expect(mockSignOut).not.toHaveBeenCalled();
   });
 
+  it("sends the refreshed cookie when retrying an authenticated request", async () => {
+    mockGetCookie.mockReturnValue("sessionToken=original");
+    mockFetch
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+    mockRefreshSession.mockImplementationOnce(() => {
+      mockGetCookie.mockReturnValue("sessionToken=refreshed");
+      return Promise.resolve(true);
+    });
+
+    await orpcFetch(makeRequest(), undefined);
+
+    const originalHeaders: Headers = mockFetch.mock.calls[0][1].headers;
+    const retryHeaders: Headers = mockFetch.mock.calls[1][1].headers;
+    expect(originalHeaders.get("Cookie")).toBe("sessionToken=original");
+    expect(retryHeaders.get("Cookie")).toBe("sessionToken=refreshed");
+  });
+
   it("signs out when the refresh succeeds but the retry is still 401", async () => {
     mockFetch.mockResolvedValue(new Response(null, { status: 401 }));
     mockRefreshSession.mockResolvedValueOnce(true);
@@ -71,6 +89,35 @@ describe("orpcFetch", () => {
     expect(mockRefreshSession).toHaveBeenCalledTimes(1);
     expect(mockFetch).toHaveBeenCalledTimes(1); // no retry when refresh fails
     expect(mockSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([undefined, null, ""])(
+    "does not refresh or sign out on 401 when the request had cookie %j",
+    async (cookie) => {
+      mockGetCookie.mockReturnValue(cookie);
+      mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
+
+      const result = await orpcFetch(makeRequest(), undefined);
+
+      expect(result.status).toBe(401);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockRefreshSession).not.toHaveBeenCalled();
+      expect(mockSignOut).not.toHaveBeenCalled();
+    },
+  );
+
+  it("does not sign out a new session when an earlier anonymous request returns 401", async () => {
+    mockGetCookie.mockReturnValue("");
+    mockFetch.mockImplementationOnce(() => {
+      mockGetCookie.mockReturnValue("sessionToken=new-session");
+      return Promise.resolve(new Response(null, { status: 401 }));
+    });
+
+    const result = await orpcFetch(makeRequest(), undefined);
+
+    expect(result.status).toBe(401);
+    expect(mockRefreshSession).not.toHaveBeenCalled();
+    expect(mockSignOut).not.toHaveBeenCalled();
   });
 
   it("attaches the Cookie header when a session cookie is present", async () => {
