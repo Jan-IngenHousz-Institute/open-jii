@@ -8,6 +8,7 @@ import { closeAllSerialPorts } from "~/features/connection/services/device-conne
 import { listMockDevices } from "~/features/connection/services/multispeq/mock-device/list-mock-devices";
 import { closeAllMockDevices } from "~/features/connection/services/multispeq/mock-device/mock-device-registry";
 import { mockDevicesEnabled } from "~/features/connection/services/multispeq/mock-device/mock-devices-enabled";
+import { hasBluetoothPermission } from "~/features/connection/services/request-bluetooth-permissions";
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import type { Device } from "~/shared/types/device";
 
@@ -164,12 +165,15 @@ export function useAllDevices() {
 
   const refetch = useCallback(async () => {
     setIsFetching(true);
-    await RNBluetoothClassic.cancelDiscovery().catch(() => undefined);
+    // Scanning without BLUETOOTH_SCAN crashes the app on its next pause; USB
+    // serial and mock devices still list without it.
+    const bluetoothAllowed = await hasBluetoothPermission().catch(() => false);
+    if (bluetoothAllowed) await RNBluetoothClassic.cancelDiscovery().catch(() => undefined);
     // Seed with already-known devices (serial first) so the list isn't empty.
     const [serial, bonded, connected, mocks] = await Promise.allSettled([
       listSerialPortDevices(),
-      RNBluetoothClassic.getBondedDevices(),
-      RNBluetoothClassic.getConnectedDevices(),
+      bluetoothAllowed ? RNBluetoothClassic.getBondedDevices() : Promise.resolve([]),
+      bluetoothAllowed ? RNBluetoothClassic.getConnectedDevices() : Promise.resolve([]),
       mockDevicesEnabled ? listMockDevices() : Promise.resolve([]),
     ]);
     // Bail if the sheet closed during the await: don't seed or restart a scan
@@ -189,9 +193,9 @@ export function useAllDevices() {
     ].reduce<Device[]>(mergeDevice, []);
     setData(seed);
     try {
-      await RNBluetoothClassic.startDiscovery();
+      if (bluetoothAllowed) await RNBluetoothClassic.startDiscovery();
     } catch {
-      // No permission or scan failure; seeded/streamed results stay.
+      // Scan failure; seeded/streamed results stay.
     } finally {
       if (mountedRef.current) setIsFetching(false);
     }

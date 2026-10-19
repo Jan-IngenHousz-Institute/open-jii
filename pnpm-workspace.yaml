@@ -40,6 +40,7 @@ overrides:
 patchedDependencies:
   react-native-usb-serialport-for-android: patches/react-native-usb-serialport-for-android.patch
   "@better-auth/expo@1.6.23": patches/@better-auth__expo@1.6.23.patch
+  react-native-bluetooth-classic@1.73.0-rc.13: patches/react-native-bluetooth-classic@1.73.0-rc.13.patch
 
 catalog:
   axios: 1.20.0
