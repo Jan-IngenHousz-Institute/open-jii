@@ -35,10 +35,9 @@ very precise numbers, scientific notation such as `1e3`, separators such as
 `1,000`, and units such as `12 cm` sort as text. Sorting preserves the original
 answers and does not make a text column numeric for filters or charts.
 
-Charts without aggregation read their rows in X-axis order. When the X axis is a
-question-answer column, points and categories follow the order above, and a chart
-that stops at its row limit keeps the first rows in that order. Charts with
-aggregation keep their existing order.
+A chart without aggregation that requests its rows sorted by a question-answer
+column, usually its X axis, receives them in this order. Charts with aggregation
+keep their existing order.
 
 String columns from uploaded data, custom metadata and macro outputs sort as
 text. Question answers copied into macro tables sort numerically by the same
