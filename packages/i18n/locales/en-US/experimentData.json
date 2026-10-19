@@ -36,7 +36,6 @@
       },
       "created": "Created",
       "completed": "Completed",
-      "rows": "Rows",
       "size": "Size",
       "unknownError": "An unknown error occurred",
       "error": "Error",
@@ -67,7 +66,7 @@
       },
       "errors": {
         "no_data": "The table had no rows to export.",
-        "too_many_rows_for_format": "The table has more rows than this format can hold. Export it as CSV or Parquet instead.",
+        "too_many_rows_for_format": "The table is larger than this format holds: at most 1,048,575 rows, and for Excel 16,384 columns. Export it as CSV, NDJSON or Parquet instead.",
         "unknown": "The export failed. Start it again, and contact support if it keeps failing."
       },
       "parts_one": "{{count}} file",
@@ -79,11 +78,15 @@
       "loadingLinks": "Preparing download links...",
       "linksError": "The download links could not be prepared. Try again.",
       "copyLinks": "Copy all links",
-      "linksCopied": "Links copied. They work for 15 minutes.",
-      "linksHint": "Each link works for 15 minutes. To fetch every file at once, save the copied links to a file and run wget -i on it.",
+      "linksCopied": "Links copied. Each download has to start before {{time}}.",
+      "linksHint": "Each download has to start before {{time}}. To fetch every file under its own name, save the copied links as links.txt and run: xargs -n 1 curl -fOJ < links.txt",
       "activityTitle": "Export of {{name}} ({{format}})",
       "exportReady": "Export of {{name}} is ready to download.",
-      "exportFailed": "Export of {{name}} failed."
+      "exportFailed": "Export of {{name}} failed.",
+      "rowCount_one": "{{formatted}} row",
+      "rowCount_other": "{{formatted}} rows",
+      "copyFailed": "The links could not be copied.",
+      "linkExpired": "This export has expired. Create a new export to download the data."
     },
     "uploadDataModal": {
       "title": "Upload data",

@@ -36,7 +36,6 @@
       },
       "created": "Gemaakt",
       "completed": "Voltooid",
-      "rows": "Rijen",
       "size": "Grootte",
       "unknownError": "Er is een onbekende fout opgetreden",
       "error": "Fout",
@@ -67,7 +66,7 @@
       },
       "errors": {
         "no_data": "De tabel had geen rijen om te exporteren.",
-        "too_many_rows_for_format": "De tabel heeft meer rijen dan dit formaat kan bevatten. Exporteer hem in plaats daarvan als CSV of Parquet.",
+        "too_many_rows_for_format": "De tabel is groter dan dit formaat kan bevatten: hooguit 1.048.575 rijen, en voor Excel 16.384 kolommen. Exporteer hem in plaats daarvan als CSV, NDJSON of Parquet.",
         "unknown": "De export is mislukt. Start hem opnieuw en neem contact op met support als het blijft mislukken."
       },
       "parts_one": "{{count}} bestand",
@@ -79,11 +78,15 @@
       "loadingLinks": "Downloadlinks worden voorbereid...",
       "linksError": "De downloadlinks konden niet worden voorbereid. Probeer het opnieuw.",
       "copyLinks": "Alle links kopiëren",
-      "linksCopied": "Links gekopieerd. Ze werken 15 minuten.",
-      "linksHint": "Elke link werkt 15 minuten. Om alle bestanden in één keer op te halen, sla je de gekopieerde links op in een bestand en voer je wget -i daarop uit.",
+      "linksCopied": "Links gekopieerd. Elke download moet vóór {{time}} beginnen.",
+      "linksHint": "Elke download moet vóór {{time}} beginnen. Om alle bestanden onder hun eigen naam op te halen, sla je de gekopieerde links op als links.txt en voer je uit: xargs -n 1 curl -fOJ < links.txt",
       "activityTitle": "Export van {{name}} ({{format}})",
       "exportReady": "De export van {{name}} staat klaar om te downloaden.",
-      "exportFailed": "De export van {{name}} is mislukt."
+      "exportFailed": "De export van {{name}} is mislukt.",
+      "rowCount_one": "{{formatted}} rij",
+      "rowCount_other": "{{formatted}} rijen",
+      "copyFailed": "De links konden niet worden gekopieerd.",
+      "linkExpired": "Deze export is verlopen. Maak een nieuwe export om de gegevens te downloaden."
     },
     "uploadDataModal": {
       "title": "Gegevens uploaden",

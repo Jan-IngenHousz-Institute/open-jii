@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { contract } from "@repo/api/contract";
 import type { ExperimentExportRecord } from "@repo/api/domains/experiment/experiment.schema";
 import type * as DialogModule from "@repo/ui/components/dialog";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ExportListStep } from "../steps/export-list-step";
 
@@ -130,7 +131,7 @@ describe("ExportListStep", () => {
       expect(screen.getByText("experimentData.exportModal.exportCount")).toBeInTheDocument();
     });
     expect(screen.getByText("experimentData.exportModal.formats.csv")).toBeInTheDocument();
-    expect(screen.getByText(/100/)).toBeInTheDocument();
+    expect(screen.getByText("experimentData.exportModal.rowCount")).toBeInTheDocument();
     expect(screen.getByText("experimentData.exportModal.expiresOn")).toBeInTheDocument();
   });
 
@@ -286,6 +287,82 @@ describe("ExportListStep", () => {
     );
 
     expect(writeText).toHaveBeenCalledWith(twoPartLinks.parts.map((part) => part.url).join("\n"));
+  });
+
+  it("says the export has expired when its links are refused as expired", async () => {
+    mountExports([completedExport]);
+    server.mount(contract.experiments.getExportDownloadLinks, {
+      status: 404,
+      body: {
+        defined: false,
+        code: "NOT_FOUND",
+        status: 404,
+        message: "This export has expired",
+        data: { code: "EXPORT_EXPIRED" },
+      },
+    });
+
+    render(<ExportListStep {...defaultProps} />);
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "experimentData.exportModal.downloadExport" }),
+    );
+
+    await waitFor(() => {
+      expect(toast).toHaveBeenCalledWith({
+        description: "experimentData.exportModal.linkExpired",
+        variant: "destructive",
+      });
+    });
+  });
+
+  it("says so when the links cannot be copied", async () => {
+    mountExports([multiPartExport]);
+    server.mount(contract.experiments.getExportDownloadLinks, { body: twoPartLinks });
+
+    render(<ExportListStep {...defaultProps} />);
+
+    const user = userEvent.setup();
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn().mockRejectedValue(new Error("Write permission denied")) },
+      writable: true,
+      configurable: true,
+    });
+    await user.click(
+      await screen.findByRole("button", { name: /experimentData\.exportModal\.showFiles/ }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /experimentData\.exportModal\.copyLinks/ }),
+    );
+
+    await waitFor(() => {
+      expect(toast).toHaveBeenCalledWith({
+        description: "experimentData.exportModal.copyFailed",
+        variant: "destructive",
+      });
+    });
+  });
+
+  it("hides the files of a multi-part export again", async () => {
+    mountExports([multiPartExport]);
+    server.mount(contract.experiments.getExportDownloadLinks, { body: twoPartLinks });
+
+    render(<ExportListStep {...defaultProps} />);
+
+    const user = userEvent.setup();
+    const toggle = await screen.findByRole("button", {
+      name: /experimentData\.exportModal\.showFiles/,
+    });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await user.click(toggle);
+    await screen.findAllByRole("link", { name: "experimentData.exportModal.downloadPart" });
+
+    await user.click(
+      screen.getByRole("button", { name: /experimentData\.exportModal\.hideFiles/ }),
+    );
+
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("says why an export failed", async () => {

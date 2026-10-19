@@ -34,16 +34,20 @@ describe("useExportDownloadLinks", () => {
     expect(spy.params).toEqual({ id: "exp-1", exportId: "export-1" });
   });
 
-  it("fetches fresh links before the old ones stop working", async () => {
+  it("fetches fresh links five minutes before the old ones stop working", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    const spy = server.mount(contract.experiments.getExportDownloadLinks, { body: links });
+    const expiringSoon = { ...links, expiresAt: new Date(Date.now() + 6 * 60_000).toISOString() };
+    const spy = server.mount(contract.experiments.getExportDownloadLinks, { body: expiringSoon });
 
     const { result } = renderHook(() =>
       useExportDownloadLinks({ experimentId: "exp-1", exportId: "export-1" }),
     );
-    await waitFor(() => expect(result.current.data).toEqual(links));
+    await waitFor(() => expect(result.current.data).toEqual(expiringSoon));
 
-    await act(() => vi.advanceTimersByTimeAsync(10 * 60_000));
+    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    expect(spy.callCount).toBe(1);
+
+    await act(() => vi.advanceTimersByTimeAsync(40_000));
     await waitFor(() => expect(spy.callCount).toBe(2));
   });
 });

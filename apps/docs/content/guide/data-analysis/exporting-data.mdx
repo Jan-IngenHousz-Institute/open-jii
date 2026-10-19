@@ -45,11 +45,17 @@ larger table has to be exported as CSV, NDJSON or Parquet. The list covers the
 dataset's exports by everyone who can open the experiment, not only yours.
 
 A completed export has a download button. A large export is split into several files
-of about a million rows each. **Show files** lists them, each with its own download,
-and **Copy all links** copies their links for a download manager or `wget -i`. The
-links work for 15 minutes, so open the list again if they have run out. CSV and NDJSON
-files are compressed with gzip and end in `.csv.gz` or `.json.gz`. Python and R read
-them as they are; unzip them first to open them in a spreadsheet.
+of about a million rows each, in row order. **Show files** lists them, each with its own
+download, and **Copy all links** copies their links for a download tool. Each download
+has to start before the time the list shows, about an hour after it opened. To fetch
+every file under its own name, save the copied links as `links.txt` and run
+`xargs -n 1 curl -fOJ < links.txt`. If a download stops partway and will not resume,
+start it again from **Show files**, which always has fresh links.
+
+CSV and NDJSON files are compressed with gzip and end in `.csv.gz` or `.json.gz`. Python
+and R read them as they are; decompress them first to open them in a spreadsheet.
+Exports made before this storage existed were carried over as they were, so theirs are
+single uncompressed files.
 
 An export is kept for 30 days. After that it shows as **Expired** and can no longer be
 downloaded, so create a new export when you need the data again.

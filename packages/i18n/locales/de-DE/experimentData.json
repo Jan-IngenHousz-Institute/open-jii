@@ -36,7 +36,6 @@
       },
       "created": "Erstellt",
       "completed": "Abgeschlossen",
-      "rows": "Zeilen",
       "size": "Größe",
       "unknownError": "Ein unbekannter Fehler ist aufgetreten",
       "error": "Fehler",
@@ -67,7 +66,7 @@
       },
       "errors": {
         "no_data": "Die Tabelle enthielt keine Zeilen zum Exportieren.",
-        "too_many_rows_for_format": "Die Tabelle hat mehr Zeilen, als dieses Format aufnehmen kann. Exportieren Sie sie stattdessen als CSV oder Parquet.",
+        "too_many_rows_for_format": "Die Tabelle ist größer, als dieses Format aufnehmen kann: höchstens 1.048.575 Zeilen und bei Excel 16.384 Spalten. Exportieren Sie sie stattdessen als CSV, NDJSON oder Parquet.",
         "unknown": "Der Export ist fehlgeschlagen. Starten Sie ihn erneut und wenden Sie sich an den Support, falls er weiterhin fehlschlägt."
       },
       "parts_one": "{{count}} Datei",
@@ -79,11 +78,15 @@
       "loadingLinks": "Download-Links werden vorbereitet...",
       "linksError": "Die Download-Links konnten nicht vorbereitet werden. Versuchen Sie es erneut.",
       "copyLinks": "Alle Links kopieren",
-      "linksCopied": "Links kopiert. Sie sind 15 Minuten gültig.",
-      "linksHint": "Jeder Link ist 15 Minuten gültig. Um alle Dateien auf einmal zu laden, speichern Sie die kopierten Links in einer Datei und führen Sie wget -i darauf aus.",
+      "linksCopied": "Links kopiert. Jeder Download muss vor {{time}} beginnen.",
+      "linksHint": "Jeder Download muss vor {{time}} beginnen. Um alle Dateien unter ihrem eigenen Namen zu laden, speichern Sie die kopierten Links als links.txt und führen Sie aus: xargs -n 1 curl -fOJ < links.txt",
       "activityTitle": "Export von {{name}} ({{format}})",
       "exportReady": "Der Export von {{name}} steht zum Download bereit.",
-      "exportFailed": "Der Export von {{name}} ist fehlgeschlagen."
+      "exportFailed": "Der Export von {{name}} ist fehlgeschlagen.",
+      "rowCount_one": "{{formatted}} Zeile",
+      "rowCount_other": "{{formatted}} Zeilen",
+      "copyFailed": "Die Links konnten nicht kopiert werden.",
+      "linkExpired": "Dieser Export ist abgelaufen. Erstellen Sie einen neuen Export, um die Daten herunterzuladen."
     },
     "uploadDataModal": {
       "title": "Daten hochladen",

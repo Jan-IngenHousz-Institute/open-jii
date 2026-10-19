@@ -1,3 +1,4 @@
+import { createExportRecord } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
@@ -9,7 +10,7 @@ import { useInitiateExport } from "./useInitiateExport";
 describe("useInitiateExport", () => {
   it("sends POST request", async () => {
     const spy = server.mount(contract.experiments.initiateExport, {
-      body: { status: "initiated" },
+      body: createExportRecord({ status: "queued" }),
     });
 
     const { result } = renderHook(() => useInitiateExport());
@@ -32,7 +33,7 @@ describe("useInitiateExport", () => {
 
   it("forwards the correct request body", async () => {
     const spy = server.mount(contract.experiments.initiateExport, {
-      body: { status: "initiated" },
+      body: createExportRecord({ status: "queued" }),
     });
 
     const { result } = renderHook(() => useInitiateExport());
@@ -48,7 +49,7 @@ describe("useInitiateExport", () => {
 
   it("forwards different table names and formats", async () => {
     const spy = server.mount(contract.experiments.initiateExport, {
-      body: { status: "initiated" },
+      body: createExportRecord({ status: "queued" }),
     });
 
     const { result } = renderHook(() => useInitiateExport());
@@ -64,7 +65,7 @@ describe("useInitiateExport", () => {
 
   it("calls custom onSuccess callback after mutation succeeds", async () => {
     server.mount(contract.experiments.initiateExport, {
-      body: { status: "initiated" },
+      body: createExportRecord({ status: "queued" }),
     });
 
     const onSuccess = vi.fn();
@@ -82,7 +83,7 @@ describe("useInitiateExport", () => {
 
   it("does not throw when custom onSuccess is not provided", async () => {
     server.mount(contract.experiments.initiateExport, {
-      body: { status: "initiated" },
+      body: createExportRecord({ status: "queued" }),
     });
 
     const { result } = renderHook(() => useInitiateExport());
