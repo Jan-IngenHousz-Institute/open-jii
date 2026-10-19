@@ -48,6 +48,6 @@ export class CarryOverExportsUseCase {
       imported: recorded.value,
     });
 
-    return success({ imported: recorded.value });
+    return success({ success: true, imported: recorded.value });
   }
 }

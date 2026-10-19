@@ -24,6 +24,7 @@ export const zExperimentExportCarryOverPayload = z.object({
 });
 
 export const zExperimentExportCarryOverResponse = z.object({
+  success: z.boolean(),
   imported: z.number().int().nonnegative().describe("Exports recorded by this call"),
 });
 

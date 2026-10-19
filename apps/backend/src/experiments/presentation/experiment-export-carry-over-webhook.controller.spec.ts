@@ -82,7 +82,7 @@ describe("ExperimentExportCarryOverWebhookController", () => {
 
     const response = await post({ exports: [record] }).expect(StatusCodes.CREATED);
 
-    expect(response.body).toEqual({ imported: 1 });
+    expect(response.body).toEqual({ success: true, imported: 1 });
     const rows = await testApp.database.select().from(experimentExports);
     expect(rows).toEqual([
       expect.objectContaining({
@@ -100,7 +100,7 @@ describe("ExperimentExportCarryOverWebhookController", () => {
     await post(batch).expect(StatusCodes.CREATED);
     const repeat = await post(batch).expect(StatusCodes.CREATED);
 
-    expect(repeat.body).toEqual({ imported: 0 });
+    expect(repeat.body).toEqual({ success: true, imported: 0 });
   });
 
   it("rejects a request with a wrong signature", async () => {
