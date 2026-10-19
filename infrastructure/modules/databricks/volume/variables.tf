@@ -19,6 +19,12 @@ variable "comment" {
   default     = ""
 }
 
+variable "storage_location" {
+  description = "S3 path inside an external location; set it to create an external volume, leave it null for a managed one"
+  type        = string
+  default     = null
+}
+
 variable "grants" {
   description = "Map of principals to their permissions on the volume"
   type = map(object({
