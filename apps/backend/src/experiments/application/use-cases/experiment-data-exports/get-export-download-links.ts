@@ -14,7 +14,7 @@ import { ExperimentRepository } from "../../../core/repositories/experiment.repo
 
 /**
  * Signs one short-lived link per part of a completed export, so the browser downloads the
- * files straight from storage. Links are signed per request; they outlive no page visit.
+ * files straight from storage. Links are signed per request.
  */
 @Injectable()
 export class GetExportDownloadLinksUseCase {
@@ -58,7 +58,10 @@ export class GetExportDownloadLinksUseCase {
     if (!record) {
       return failure(AppError.notFound("Export not found"));
     }
-    if (record.status === "expired") {
+    const hasExpired =
+      record.status === "expired" ||
+      (record.expiresAt !== null && record.expiresAt.getTime() <= Date.now());
+    if (hasExpired) {
       return failure(AppError.notFound("This export has expired", "EXPORT_EXPIRED"));
     }
     if (record.status !== "completed" || !record.parts) {
@@ -100,7 +103,19 @@ export class GetExportDownloadLinksUseCase {
 
     for (const { url, ...link } of signed) {
       if (url.isFailure()) {
-        return failure(url.error);
+        this.logger.error({
+          msg: "Could not sign an export part's download link",
+          errorCode: ErrorCodes.AWS_S3_PRESIGN_FAILED,
+          operation: "getExportDownloadLinks",
+          exportId: record.id,
+          error: url.error.message,
+        });
+        return failure(
+          AppError.internal(
+            "Could not prepare the download links",
+            ErrorCodes.AWS_S3_PRESIGN_FAILED,
+          ),
+        );
       }
 
       links.push({ ...link, url: url.value.url });

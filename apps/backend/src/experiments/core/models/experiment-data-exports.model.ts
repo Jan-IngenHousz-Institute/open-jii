@@ -36,7 +36,7 @@ export const exportManifestSchema = z.object({
   exportId: z.string().uuid(),
   format: zExperimentExportFormat,
   rowCount: z.number().int().nonnegative(),
-  snapshotAt: z.string(),
+  snapshotAt: z.string().datetime({ offset: true }),
   parts: z.array(zExperimentExportPart),
 });
 

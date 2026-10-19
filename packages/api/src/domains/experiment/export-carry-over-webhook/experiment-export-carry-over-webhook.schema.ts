@@ -3,17 +3,18 @@ import { z } from "zod";
 import {
   zExperimentExportFormat,
   zExperimentExportPart,
+  zExperimentExportTableName,
 } from "../exports/experiment-exports.schema";
 
 export const zExperimentExportCarryOverRecord = z.object({
   exportId: z.string().uuid(),
   experimentId: z.string().uuid(),
-  tableName: z.string().min(1),
+  tableName: zExperimentExportTableName,
   format: zExperimentExportFormat,
   anonymizeContributors: z.boolean(),
   jobRunId: z.number().int().positive(),
   rowCount: z.number().int().positive(),
-  parts: z.array(zExperimentExportPart).min(1),
+  parts: z.array(zExperimentExportPart).min(1).max(10_000),
   createdBy: z.string().uuid().describe("User who started the export"),
   createdAt: z.string().datetime().describe("When the export run started"),
   completedAt: z.string().datetime().describe("When the export run finished"),

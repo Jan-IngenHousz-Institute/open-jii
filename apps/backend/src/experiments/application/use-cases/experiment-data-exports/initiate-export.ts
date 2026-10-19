@@ -14,7 +14,7 @@ import { ExperimentRepository } from "../../../core/repositories/experiment.repo
 
 /**
  * Records an export and starts its job run without waiting for it. The run's progress reaches
- * the record through the export run reconciler.
+ * the record through the export run reconciler, which also starts any run this could not.
  */
 @Injectable()
 export class InitiateExportUseCase {
@@ -92,22 +92,30 @@ export class InitiateExportUseCase {
         anonymizeContributors,
       });
 
+      // A trigger that failed or timed out is retried by the export run reconciler, which
+      // finds the run Databricks may already have accepted under the same export id.
       if (triggered.isFailure()) {
-        this.logger.error({
-          msg: "Failed to start the export job",
+        this.logger.warn({
+          msg: "Could not start the export job; the reconciler will try again",
           errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
           operation: "initiateExport",
           experimentId,
           exportId: record.id,
           error: triggered.error.message,
         });
-        await this.exportsRepository.fail(record.id, "unknown");
-        return failure(AppError.internal("Failed to initiate export"));
+        return success(toExportRecord(record));
       }
 
       const attached = await this.exportsRepository.attachRun(record.id, triggered.value.run_id);
       if (attached.isFailure()) {
-        return failure(attached.error);
+        this.logger.warn({
+          msg: "Could not record the export's run; the reconciler will find it",
+          operation: "initiateExport",
+          experimentId,
+          exportId: record.id,
+          error: attached.error.message,
+        });
+        return success(toExportRecord(record));
       }
 
       this.logger.log({

@@ -21,13 +21,21 @@ const exportsConfig = {
 
 /** Records what it was asked to sign instead of signing, which needs credentials. */
 class RecordingSignerS3Service extends AwsS3Service {
-  readonly signed: GetObjectCommand[] = [];
+  readonly signed: { command: GetObjectCommand; expiresIn: number | undefined }[] = [];
+  credentialsExpiry: Date | undefined = undefined;
 
-  protected override createSignedUrl(command: PutObjectCommand | GetObjectCommand) {
+  protected override createSignedUrl(
+    command: PutObjectCommand | GetObjectCommand,
+    expiresIn?: number,
+  ) {
     if (command instanceof GetObjectCommand) {
-      this.signed.push(command);
+      this.signed.push({ command, expiresIn });
     }
     return Promise.resolve("https://test-data-exports-bucket.s3.test/signed");
+  }
+
+  protected override signingCredentialsExpiry() {
+    return Promise.resolve(this.credentialsExpiry);
   }
 }
 
@@ -128,8 +136,8 @@ describe("AwsS3Service export objects", () => {
 
       assertSuccess(result);
       expect(result.value.url).toBe("https://test-data-exports-bucket.s3.test/signed");
-      expect(result.value.expiresAt.getTime()).toBeGreaterThan(Date.now());
-      expect(service.signed.map((command) => command.input)).toEqual([
+      expect(result.value.expiresAt.getTime()).toBeGreaterThan(Date.now() + 59 * 60_000);
+      expect(service.signed.map(({ command }) => command.input)).toEqual([
         {
           Bucket: "test-data-exports-bucket",
           Key: "exports/e/raw_data/csv/x/part-00000.csv.gz",
@@ -137,6 +145,20 @@ describe("AwsS3Service export objects", () => {
             'attachment; filename="trial_raw-data_20261019_133841_part-1-of-2.csv.gz"',
         },
       ]);
+      expect(service.signed[0].expiresIn).toBe(3600);
+    });
+
+    it("reports when the signing credentials expire if that comes before the link's own expiry", async () => {
+      const service = await exportsService();
+      service.credentialsExpiry = new Date(Date.now() + 6 * 60_000);
+
+      const result = await service.getExportDownloadUrl(
+        "exports/e/raw_data/csv/x/part",
+        "a.csv.gz",
+      );
+
+      assertSuccess(result);
+      expect(result.value.expiresAt).toEqual(service.credentialsExpiry);
     });
   });
 

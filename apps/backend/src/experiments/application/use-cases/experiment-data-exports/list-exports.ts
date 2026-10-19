@@ -42,7 +42,15 @@ export class ListExportsUseCase {
 
     const exportsResult = await this.exportsRepository.listForTable(experimentId, query.tableName);
     if (exportsResult.isFailure()) {
-      return failure(exportsResult.error);
+      this.logger.error({
+        msg: "Failed to list exports",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "listExports",
+        experimentId,
+        tableName: query.tableName,
+        error: exportsResult.error.message,
+      });
+      return failure(AppError.internal("Failed to list exports"));
     }
 
     return success({ exports: exportsResult.value.map(toExportRecord) });
