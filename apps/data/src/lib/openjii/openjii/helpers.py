@@ -163,12 +163,16 @@ _UPLOAD_EXCLUDE_COLS = ["upload_table_id", "upload_table_name", "upload_id"]
 _PAYLOAD_SUFFIXES = {"macro_output": "output", "questions_data": "answer", "uploaded_data": "upload"}
 
 
-def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="centrum"):
+def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="centrum", parts=None):
     """Load experiment data with proper variant parsing and column selection.
 
     Handles fetching variant schemas, loading from the correct source table,
-    parsing VARIANT columns (macro_output, questions_data), selecting columns,
-    and ordering by the right timestamp column.
+    parsing VARIANT columns (macro_output, questions_data, uploaded_data), selecting
+    columns, and ordering by the right timestamp column.
+
+    With ``parts``, the rows are split by ranges of that column into that many
+    partitions, each sorted, so writing them gives that many files whose order is
+    the rows' order. Without it the rows are sorted as one.
     """
     from pyspark.sql import SparkSession
     from pyspark.sql.functions import col, from_json
@@ -237,7 +241,10 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
         parsed.append(("parsed_questions_data", _PAYLOAD_SUFFIXES["questions_data"]))
         exclude_cols.extend(["questions_data", "parsed_questions_data"])
 
-    return flatten_parsed_payloads(df, parsed, exclude_cols).orderBy(order_col)
+    flattened = flatten_parsed_payloads(df, parsed, exclude_cols)
+    if parts is None:
+        return flattened.orderBy(order_col)
+    return flattened.repartitionByRange(parts, col(order_col)).sortWithinPartitions(order_col)
 
 
 def flatten_parsed_payloads(df, parsed, exclude_cols):

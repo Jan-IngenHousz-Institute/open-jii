@@ -5,13 +5,18 @@
 # list. It reads what each export was from the export job's run history, so exports whose
 # metadata row was never written are carried over too. Running it again copies nothing twice.
 #
-# Run once per environment, after the release that adds export records:
+# Run once per environment, after the release that adds export records and once no export run
+# started before that release is still active:
 #
-#   sed -e "s/{ENV}/prod/g" -e "s/{EXPORT_JOB_ID}/<job id>/g" \
-#     apps/data/src/tasks/export_carry_over.submit.json \
-#     | databricks jobs submit --json @- -p <profile>
+#   sed -e "s/{ENV}/prod/g" -e "s/{EXPORT_JOB_ID}/<export job id>/g" \
+#     -e "s/{NODE_SP_APP_ID}/<node service principal application id>/g" \
+#     apps/data/src/tasks/export_carry_over.submit.json > /tmp/export-carry-over.json
+#   databricks jobs submit --json @/tmp/export-carry-over.json --no-wait -p <profile>
 #
-# Delete this notebook, its submit spec and the old volume once the run is verified.
+# The run acts as the node service principal, which holds the volume and secret grants, so the
+# submitter needs the Service Principal User role on it. The run fails if any export could not
+# be carried over; its log names each one. Delete this notebook, its submit spec and the old
+# volume once the run is verified.
 
 # COMMAND ----------
 
@@ -121,9 +126,11 @@ def legacy_output(run):
     return parse_legacy_output(output.notebook_output.result if output.notebook_output else None)
 
 
-def list_parts(directory: str) -> list:
-    files = sorted((f for f in dbutils.fs.ls(directory) if is_part_file(f.name)), key=lambda f: f.name)
-    return [{"name": f.name, "sizeBytes": f.size} for f in files]
+def list_parts(directory: str, committed=None) -> list:
+    files = [f for f in dbutils.fs.ls(directory) if is_part_file(f.name)]
+    if committed is not None:
+        files = [f for f in files if f.name in committed]
+    return [{"name": f.name, "sizeBytes": f.size} for f in sorted(files, key=lambda f: f.name)]
 
 
 def exists(path: str) -> bool:
@@ -138,11 +145,13 @@ def copy_export(old_dir: str, new_dir: str, export_format: str, row_count: int) 
     """Copies one export and writes its manifest; returns its parts."""
     if export_format == "parquet":
         # Rewritten rather than copied, so a large file arrives cut into parts like a new export.
+        # The old export is one file read in order, so neighbouring splits stay neighbours.
         spark.read.parquet(old_dir).coalesce(part_count(row_count)).write.mode("overwrite").parquet(new_dir)
-    else:
-        for name in (f.name for f in dbutils.fs.ls(old_dir) if is_part_file(f.name)):
-            dbutils.fs.cp(f"{old_dir}/{name}", f"{new_dir}/{name}")
+        committed = {path.rsplit("/", 1)[-1] for path in spark.read.parquet(new_dir).inputFiles()}
+        return list_parts(new_dir, committed)
 
+    for name in (f.name for f in dbutils.fs.ls(old_dir) if is_part_file(f.name)):
+        dbutils.fs.cp(f"{old_dir}/{name}", f"{new_dir}/{name}")
     return list_parts(new_dir)
 
 
@@ -194,6 +203,7 @@ def main():
     since = datetime.now(timezone.utc) - timedelta(days=DAYS)
     records = []
     skipped = 0
+    failed = 0
 
     for run in finished_runs(int(since.timestamp() * 1000)):
         params = {p.name: p.value for p in (run.job_parameters or [])}
@@ -205,8 +215,9 @@ def main():
         try:
             record = carry_over(run, params, output)
         except Exception as error:
-            log(f"Could not carry over run {run.run_id}: {error}", "ERROR")
-            record = None
+            log(f"Could not carry over run {run.run_id} (export {output['export_id']}): {error}", "ERROR")
+            failed += 1
+            continue
 
         if record is None:
             skipped += 1
@@ -222,8 +233,10 @@ def main():
     )
     recorded = sum(client.carry_over_exports(batch)["imported"] for batch in batches(records, BATCH_SIZE))
 
-    summary = {"carriedOver": len(records), "recorded": recorded, "skipped": skipped}
+    summary = {"carriedOver": len(records), "recorded": recorded, "skipped": skipped, "failed": failed}
     log(f"Done: {summary}")
+    if failed:
+        raise RuntimeError(f"{failed} export(s) could not be carried over; the log names each one")
     dbutils.notebook.exit(json.dumps(summary))
 
 
