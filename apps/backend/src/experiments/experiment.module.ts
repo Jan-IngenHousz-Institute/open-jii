@@ -25,6 +25,7 @@ import { ContributorAnonymizerService } from "./application/services/contributor
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 import { ExportRunReconcilerService } from "./application/services/export-run-reconciler.service";
 import { MultipartUploadService } from "./application/services/multipart-upload.service";
+import { UploadRunReconcilerService } from "./application/services/upload-run-reconciler.service";
 import { AttachWorkbookUseCase } from "./application/use-cases/attach-workbook/attach-workbook";
 // Use Cases
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
@@ -222,6 +223,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExportRunReconcilerService,
     ContributorAnonymizerService,
     MultipartUploadService,
+    UploadRunReconcilerService,
 
     // General experiment use cases
     CreateExperimentUseCase,

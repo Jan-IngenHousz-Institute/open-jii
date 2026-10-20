@@ -65,4 +65,19 @@ describe("NotificationRow", () => {
       screen.getByText("Ada Lovelace moved Leaf Spectra to Field Station North"),
     ).toBeInTheDocument();
   });
+
+  it("names the table a failed upload was headed for", async () => {
+    await renderRow({
+      ...moved("organization"),
+      type: "data_upload_failed",
+      category: "data_jobs",
+      actor: null,
+      resource: { type: "experiment", id: "00000000-0000-4000-8000-0000000000cc" },
+      params: { experimentName: "Drought trial", tableName: "leaf_traits" },
+    });
+
+    expect(
+      screen.getByText("Your upload of leaf_traits to Drought trial failed"),
+    ).toBeInTheDocument();
+  });
 });
