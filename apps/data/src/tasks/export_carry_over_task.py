@@ -25,10 +25,11 @@ import ast
 import io
 import json
 import math
+import re
 from datetime import datetime, timedelta, timezone
 
 from databricks.sdk import WorkspaceClient
-from enrich.backend_client import BackendClient
+from enrich.backend_client import BackendClient, BackendIntegrationError
 from pyspark.dbutils import DBUtils
 from pyspark.sql import SparkSession
 
@@ -58,6 +59,11 @@ NEW_ROOT = f"/Volumes/{CATALOG_NAME}/centrum/exports"
 ROWS_PER_PART = 1_000_000
 MANIFEST_NAME = "manifest.json"
 BATCH_SIZE = 50
+
+# The backend's rules for a carried-over export, so one bad record fails alone, not its batch.
+TABLE_NAME_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+PART_NAME_PATTERN = re.compile(r"^(?!\.\.?$)[A-Za-z0-9._-]{1,255}$")
+MAX_PARTS = 10_000
 
 
 def parse_legacy_output(result):
@@ -100,6 +106,16 @@ def carried_record(params: dict, output: dict, run_id: int, start_ms: int, end_m
         "createdAt": iso_utc(start_ms),
         "completedAt": iso_utc(end_ms),
     }
+
+
+def is_acceptable(record: dict) -> bool:
+    parts = record["parts"]
+    return (
+        bool(TABLE_NAME_PATTERN.match(record["tableName"]))
+        and record["rowCount"] > 0
+        and 0 < len(parts) <= MAX_PARTS
+        and all(PART_NAME_PATTERN.match(part["name"]) for part in parts)
+    )
 
 
 def batches(items: list, size: int):
@@ -221,6 +237,9 @@ def main():
 
         if record is None:
             skipped += 1
+        elif not is_acceptable(record):
+            log(f"Export {record['exportId']} has a name or parts the backend would refuse", "ERROR")
+            failed += 1
         else:
             records.append(record)
             log(f"Carried over export {record['exportId']} ({len(record['parts'])} part(s))")
@@ -231,7 +250,13 @@ def main():
         api_key_id=dbutils.secrets.get(scope=scope, key="webhook_api_key_id"),
         webhook_secret=dbutils.secrets.get(scope=scope, key="webhook_secret"),
     )
-    recorded = sum(client.carry_over_exports(batch)["imported"] for batch in batches(records, BATCH_SIZE))
+    recorded = 0
+    for batch in batches(records, BATCH_SIZE):
+        try:
+            recorded += client.carry_over_exports(batch)["imported"]
+        except BackendIntegrationError as error:
+            log(f"The backend refused a batch of {len(batch)} export(s): {error}", "ERROR")
+            failed += len(batch)
 
     summary = {"carriedOver": len(records), "recorded": recorded, "skipped": skipped, "failed": failed}
     log(f"Done: {summary}")

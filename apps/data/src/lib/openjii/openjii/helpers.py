@@ -148,7 +148,9 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
     }
 
 
-# Table type configuration: (source_table_name, order_by_column)
+# Table type configuration: (source_table_name, order_by_column). Rows that share the order
+# column, such as every row of one upload, are ordered by _TIEBREAK_COLUMN, which every source has.
+_TIEBREAK_COLUMN = "id"
 _TABLE_CONFIG = {
     "raw_data": ("enriched_experiment_raw_data", "timestamp"),
     "device": ("experiment_device_data_view", "processed_timestamp"),
@@ -242,9 +244,10 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
         exclude_cols.extend(["questions_data", "parsed_questions_data"])
 
     flattened = flatten_parsed_payloads(df, parsed, exclude_cols)
+    order = [order_col, _TIEBREAK_COLUMN]
     if parts is None:
-        return flattened.orderBy(order_col)
-    return flattened.repartitionByRange(parts, col(order_col)).sortWithinPartitions(order_col)
+        return flattened.orderBy(*order)
+    return flattened.repartitionByRange(parts, *[col(name) for name in order]).sortWithinPartitions(*order)
 
 
 def flatten_parsed_payloads(df, parsed, exclude_cols):

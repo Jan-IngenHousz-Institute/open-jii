@@ -20,6 +20,8 @@ _TABLES = {
            CAST(NULL AS STRING)),
           ('e1', 'upload-1', 'upload', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING),
            'OBJECT<plot: STRING, yield: DOUBLE>'),
+          ('e1', 'upload-big', 'upload', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING),
+           'OBJECT<plot: STRING, yield: DOUBLE>'),
           ('e1', 'mystery', 'static', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING),
            CAST(NULL AS STRING))
         AS t(experiment_id, identifier, table_type, macro_schema, questions_schema, custom_metadata_schema,
@@ -34,14 +36,19 @@ _TABLES = {
           (3L, 'e1', 'upload-1', 'Field trial', 'up-a', TIMESTAMP'2026-10-01 09:00:00',
            parse_json('{"plot": "C1", "yield": 3.0}'))
         AS t(id, experiment_id, upload_table_id, upload_table_name, upload_id, uploaded_at, uploaded_data)
+        UNION ALL
+        -- One upload of 300 rows, which all share its upload time.
+        SELECT 100L + id, 'e1', 'upload-big', 'Big trial', 'up-c', TIMESTAMP'2026-10-02 08:00:00',
+          parse_json(concat('{"plot": "P', CAST(id AS STRING), '", "yield": 1.0}'))
+        FROM range(300)
     """,
     # A macro whose id equals an upload table's, so a loader that reads upload tables as macros
     # returns this row instead of the uploaded ones.
     "enriched_experiment_macro_data": """
         SELECT * FROM VALUES
-          ('e1', 'macro-1', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.7}')),
-          ('e1', 'upload-1', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.1}'))
-        AS t(experiment_id, macro_id, timestamp, macro_output)
+          (1L, 'e1', 'macro-1', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.7}')),
+          (2L, 'e1', 'upload-1', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.1}'))
+        AS t(id, experiment_id, macro_id, timestamp, macro_output)
     """,
 }
 
@@ -73,6 +80,15 @@ def test_parts_split_the_rows_into_that_many_partitions_in_row_order(schema: str
 
     assert table.rdd.getNumPartitions() == 2
     assert [row.plot for row in table.collect()] == ["C1", "A1"]
+
+
+def test_parts_split_rows_that_share_their_upload_time(schema: str) -> None:
+    table = load_experiment_table("e1", "upload-big", _CATALOG, schema_name=schema, parts=3)
+
+    sizes = table.rdd.glom().map(len).collect()
+    assert len(sizes) == 3
+    assert all(size > 0 for size in sizes)
+    assert [row.id for row in table.collect()] == list(range(100, 400))
 
 
 def test_upload_table_drops_its_bookkeeping_and_raw_payload_columns(schema: str) -> None:
