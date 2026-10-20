@@ -1,6 +1,7 @@
 import { MetadataTable } from "@/components/metadata-table/metadata-table";
 import type { MetadataColumn, MetadataRow } from "@/components/metadata-table/types";
 import { useExperimentMetadataCreate } from "@/hooks/experiment/useExperimentMetadataCreate/useExperimentMetadataCreate";
+import { useExperimentLayout } from "@/hooks/experiment/useExperimentLayout/useExperimentLayout";
 import { useExperimentMetadataUpdate } from "@/hooks/experiment/useExperimentMetadataUpdate/useExperimentMetadataUpdate";
 import {
   ArrowLeft,
@@ -14,6 +15,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 
+import { LAYOUT_PLOT_MATCH_TARGET } from "@repo/api/domains/experiment/layout/experiment-layout.schema";
 import { MATCHABLE_MEASUREMENT_COLUMNS } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
 import type { ExperimentMetadata } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
 import { useTranslation } from "@repo/i18n/client";
@@ -34,6 +36,7 @@ import { cn } from "@repo/ui/lib/utils";
 
 import type { MetadataFormValues } from "./form-helpers";
 import { toWirePayload } from "./form-helpers";
+import { LayoutSheetMatchPreview } from "./layout-sheet-match-preview";
 import { useMetadataImport } from "./use-metadata-import";
 
 type SaveStatus = "idle" | "saving" | "saved";
@@ -73,6 +76,20 @@ export function MetadataEditView({
   const columns = watch("columns");
   const rows = watch("rows");
   const identifierColumnId = watch("identifierColumnId");
+  const matchTarget = watch("experimentQuestionId");
+
+  const { data: layout } = useExperimentLayout(experimentId);
+  const isPlotMatch = matchTarget === LAYOUT_PLOT_MATCH_TARGET && identifierColumnId !== "";
+  const sheetIdentifiers = useMemo(
+    () =>
+      isPlotMatch
+        ? rows.flatMap((row) => {
+            const value = row[identifierColumnId];
+            return typeof value === "string" || typeof value === "number" ? [String(value)] : [];
+          })
+        : [],
+    [isPlotMatch, rows, identifierColumnId],
+  );
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -314,7 +331,9 @@ export function MetadataEditView({
                 <Select
                   value={field.value}
                   onValueChange={field.onChange}
-                  disabled={questionOptions.length === 0 && measurementColumnOptions.length === 0}
+                  disabled={
+                    !layout && questionOptions.length === 0 && measurementColumnOptions.length === 0
+                  }
                 >
                   <SelectTrigger id="metadata-match-target">
                     <SelectValue
@@ -324,6 +343,12 @@ export function MetadataEditView({
                     />
                   </SelectTrigger>
                   <SelectContent>
+                    {layout && (
+                      <SelectGroup>
+                        <SelectLabel>{t("layout.sheetMatch.group")}</SelectLabel>
+                        <SelectItem value={LAYOUT_PLOT_MATCH_TARGET}>{layout.levelName}</SelectItem>
+                      </SelectGroup>
+                    )}
                     {questionOptions.length > 0 && (
                       <SelectGroup>
                         <SelectLabel>
@@ -358,6 +383,13 @@ export function MetadataEditView({
             />
             {errors.experimentQuestionId?.message && (
               <p className="text-destructive text-xs">{errors.experimentQuestionId.message}</p>
+            )}
+            {isPlotMatch && layout && (
+              <LayoutSheetMatchPreview
+                experimentId={experimentId}
+                identifiers={sheetIdentifiers}
+                levelName={layout.levelName}
+              />
             )}
           </div>
         </DialogBody>

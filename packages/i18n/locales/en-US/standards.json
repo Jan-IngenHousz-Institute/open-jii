@@ -1,1 +1,120 @@
-{}
+{
+  "export": {
+    "miappe": "MIAPPE (ISA-Tab)",
+    "fillable": "{{filled}} of {{total}} fields can be filled"
+  },
+  "readiness": {
+    "title": "Standards readiness",
+    "seeAll": "See where this experiment stands"
+  },
+  "standard": {
+    "fair": {
+      "name": "FAIR",
+      "purpose": "Scores how easily others can find, open and reuse a published dataset."
+    },
+    "crop-ontology": {
+      "name": "Crop Ontology",
+      "purpose": "Gives each measured trait a shared name, method and scale."
+    },
+    "common-greenhouse-ontology": {
+      "name": "Common Greenhouse Ontology",
+      "purpose": "Names greenhouse and growth chamber setups in shared terms."
+    },
+    "miappe": {
+      "name": "MIAPPE",
+      "purpose": "The minimum information checklist for plant phenotyping that repositories ask for."
+    },
+    "brapi": {
+      "name": "BrAPI",
+      "purpose": "The API plant breeding tools speak, so they can read this experiment directly."
+    },
+    "ogc-sensorthings": {
+      "name": "OGC SensorThings",
+      "purpose": "An open standard for serving sensor readings to other tools."
+    },
+    "openaire-floor": {
+      "name": "OpenAIRE floor",
+      "purpose": "The record fields a dataset needs before OpenAIRE can harvest its DOI."
+    }
+  },
+  "state": {
+    "not-assessed": "Not assessed",
+    "not-applicable": "Not applicable yet",
+    "partial": "Partial",
+    "partialCount": "Partial, {{filled}} of {{total}}",
+    "met": "Met"
+  },
+  "reason": {
+    "no-published-dataset": "No dataset is published yet, so there is nothing to score",
+    "columns-without-term_one": "{{count}} described column carries no term yet",
+    "columns-without-term_other": "{{count}} described columns carry no term yet",
+    "unit-without-greenhouse-term": "The layout's unit, {{unitName}}, carries no greenhouse term",
+    "fields-not-fillable_one": "{{count}} field cannot be filled yet, so the validator does not pass",
+    "fields-not-fillable_other": "{{count}} fields cannot be filled yet, so the validator does not pass",
+    "calls-pass": "All {{count}} calls answer and pass the conformance tool",
+    "under-evaluation": "Under evaluation: the platform has not decided whether to serve it",
+    "funding-missing": "Funding is missing, and {{fromDataset}} fields come from a published dataset",
+    "fields-from-dataset_one": "{{count}} field comes from a published dataset, and none is published yet",
+    "fields-from-dataset_other": "{{count}} fields come from a published dataset, and none is published yet"
+  },
+  "panel": {
+    "filledCount": "{{filled}} of {{total}} fields filled",
+    "filled": "Filled",
+    "missing": "Missing",
+    "from": "From {{source}}"
+  },
+  "section": {
+    "investigation": "Investigation",
+    "study": "Study",
+    "people": "People",
+    "biological-material": "Biological material",
+    "experimental-factors": "Experimental factors",
+    "observation-units": "Observation units",
+    "observed-variables": "Observed variables"
+  },
+  "field": {
+    "title": "Title",
+    "description": "Description",
+    "license": "License",
+    "start-date": "Start date",
+    "end-date": "End date",
+    "experimental-design": "Experimental design",
+    "growth-facility": "Growth facility",
+    "observation-unit-level": "Observation unit level",
+    "site-name": "Experimental site name",
+    "country": "Country",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "person-name": "Person name",
+    "orcid": "ORCID iD",
+    "organism": "Organism",
+    "biological-material-id": "Biological material ID",
+    "experimental-factor": "Experimental factor",
+    "observation-unit-id": "Observation unit ID",
+    "variable-name": "Variable name",
+    "trait": "Trait",
+    "method": "Method",
+    "scale": "Scale"
+  },
+  "source": {
+    "experiment": "the experiment",
+    "study-details": "Study details",
+    "layout": "the layout",
+    "data-dictionary": "the data dictionary",
+    "profile": "author profiles"
+  },
+  "missingReason": {
+    "authors-without-orcid_one": "{{count}} author has no connected ORCID iD",
+    "authors-without-orcid_other": "{{count}} authors have no connected ORCID iD",
+    "columns-not-described_one": "{{count}} column is not described",
+    "columns-not-described_other": "{{count}} columns are not described",
+    "no-plot-genotype": "No plot carries a genotype",
+    "no-location": "The experiment has no location"
+  },
+  "fix": {
+    "connect-orcid": "Connect ORCID",
+    "describe-columns": "Describe columns",
+    "open-layout": "Open Layout",
+    "add-location": "Add a location"
+  }
+}

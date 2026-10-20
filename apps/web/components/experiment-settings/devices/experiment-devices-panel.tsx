@@ -33,6 +33,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { ExperimentDeviceDetail } from "./experiment-device-detail";
 import { ExperimentDevicesList } from "./experiment-devices-list";
 import { summarizeExperimentDevices } from "./experiment-devices-summary";
+import { PlaceOnPlotDialog } from "./place-on-plot-dialog";
 
 export function ExperimentDevicesPanel({ experimentId }: { experimentId: string }) {
   const { t } = useTranslation("iot");
@@ -42,6 +43,7 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
   const { data, isLoading, isError, refetch } = useExperimentDevices(experimentId);
 
   const [detaching, setDetaching] = useState<ExperimentDeviceIdentity | null>(null);
+  const [placing, setPlacing] = useState<ExperimentDeviceIdentity | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
   const { mutate: detach, isPending: isDetaching } = useExperimentDeviceRemove({
@@ -138,8 +140,19 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
           window={data.window}
           pipelineUnavailable={data.pipelineUnavailable}
           onRequestDetach={setDetaching}
+          onRequestPlace={setPlacing}
         />
       </div>
+
+      {placing !== null && (
+        <PlaceOnPlotDialog
+          experimentId={experimentId}
+          device={placing}
+          onClose={() => {
+            setPlacing(null);
+          }}
+        />
+      )}
 
       <AlertDialog
         open={detaching !== null}

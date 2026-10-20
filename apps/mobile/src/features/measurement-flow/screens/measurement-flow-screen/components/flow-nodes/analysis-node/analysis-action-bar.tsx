@@ -34,6 +34,8 @@ interface AnalysisActionBarProps {
   onScrollToTop: () => void;
   onRetry: () => void;
   onUpload: () => void;
+  /** Offered in an experiment with a layout: saves the reading and measures the same plot again. */
+  onMeasureAgain?: () => void;
 }
 
 export function AnalysisActionBar({
@@ -42,9 +44,32 @@ export function AnalysisActionBar({
   onScrollToTop,
   onRetry,
   onUpload,
+  onMeasureAgain,
 }: AnalysisActionBarProps) {
   const { colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
+
+  const discardButton = (
+    <Button
+      title={t("measurementFlow:analysis.actionBar.discardRetry")}
+      onPress={onRetry}
+      variant="tertiary"
+      style={{ flex: 1, height: 44, borderColor: "transparent" }}
+    />
+  );
+
+  const acceptButton = (
+    <Button
+      title={
+        isUploading
+          ? t("measurementFlow:analysis.actionBar.uploading")
+          : t("measurementFlow:analysis.actionBar.acceptData")
+      }
+      onPress={onUpload}
+      disabled={isUploading}
+      style={{ flex: 1, height: 44 }}
+    />
+  );
 
   return (
     <View className="relative w-full py-3">
@@ -61,24 +86,27 @@ export function AnalysisActionBar({
           <ChevronUp size={20} color={`${colors.onSurface}CC`} />
         </TouchableOpacity>
       )}
-      <View className="flex-row gap-4">
-        <Button
-          title={t("measurementFlow:analysis.actionBar.discardRetry")}
-          onPress={onRetry}
-          variant="tertiary"
-          style={{ flex: 1, height: 44, borderColor: "transparent" }}
-        />
-        <Button
-          title={
-            isUploading
-              ? t("measurementFlow:analysis.actionBar.uploading")
-              : t("measurementFlow:analysis.actionBar.acceptData")
-          }
-          onPress={onUpload}
-          disabled={isUploading}
-          style={{ flex: 1, height: 44 }}
-        />
-      </View>
+      {onMeasureAgain ? (
+        // Three labels crowd one row on a phone, so Discard & retry takes its own.
+        <View className="gap-3">
+          <View className="flex-row">{discardButton}</View>
+          <View className="flex-row gap-4">
+            <Button
+              title={t("measurementFlow:analysis.actionBar.measureAgain")}
+              onPress={onMeasureAgain}
+              disabled={isUploading}
+              variant="outline"
+              style={{ flex: 1, height: 44 }}
+            />
+            {acceptButton}
+          </View>
+        </View>
+      ) : (
+        <View className="flex-row gap-4">
+          {discardButton}
+          {acceptButton}
+        </View>
+      )}
     </View>
   );
 }

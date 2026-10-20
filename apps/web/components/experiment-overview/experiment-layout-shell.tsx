@@ -22,6 +22,7 @@ export function ExperimentLayoutShell({ children }: ExperimentLayoutShellProps) 
   const { t: tCommon } = useTranslation("common");
   const { t: tSettings } = useTranslation();
   const { t: tIot } = useTranslation("iot");
+  const { t: tDatasets } = useTranslation("datasets");
   const locale = useLocale();
 
   // Access check
@@ -89,6 +90,7 @@ export function ExperimentLayoutShell({ children }: ExperimentLayoutShellProps) 
 
   const getActiveTab = () => {
     const base = `/${locale}/platform/experiments/${id}`;
+    if (pathname.startsWith(`${base}/datasets`)) return "datasets";
     if (pathname.startsWith(`${base}/data`)) return "data";
     if (pathname.includes("/analysis")) return "analysis";
     if (pathname.includes("/dashboards")) return "dashboards";
@@ -166,6 +168,14 @@ export function ExperimentLayoutShell({ children }: ExperimentLayoutShellProps) 
           <NavTabsTrigger value="devices" asChild>
             <IntentLink prefetchWhileVisible href={`/${locale}/platform/experiments/${id}/devices`}>
               {tIot("iot.experimentDevices.tabLabel")}
+            </IntentLink>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="datasets" asChild>
+            <IntentLink
+              prefetchWhileVisible
+              href={`/${locale}/platform/experiments/${id}/datasets`}
+            >
+              {tDatasets("tab.label")}
             </IntentLink>
           </NavTabsTrigger>
         </NavTabsList>

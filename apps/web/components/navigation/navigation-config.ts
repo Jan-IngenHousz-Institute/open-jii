@@ -6,6 +6,7 @@ import {
   Building2,
   CirclePlus,
   Code,
+  Database,
   FileSliders,
   HelpCircle,
   LifeBuoy,
@@ -43,6 +44,7 @@ export const iconMap = {
   Leaf,
   FileSliders,
   Code,
+  Database,
   Settings,
   LogOut,
   User,
@@ -87,6 +89,13 @@ export const mainNavigation = {
         url: (locale: string) => `/${locale}/platform/experiments`,
       },
     ] as NavLink[],
+  },
+  datasets: {
+    titleKey: "sidebar.datasets",
+    namespace: "datasets",
+    url: (locale: string) => `/${locale}/platform/datasets`,
+    icon: "Database",
+    items: [] as NavLink[],
   },
   // A group rather than a link, because calibration is something done to a device and
   // belongs beside the fleet rather than in the library with protocols and macros. Only

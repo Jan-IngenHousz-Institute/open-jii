@@ -24,6 +24,22 @@ export const zExperimentVisibility = z.enum(["private", "public"]);
 /** SPDX identifiers of the licenses the platform offers for datasets. */
 export const zDataLicense = z.enum(["CC0-1.0", "CC-BY-4.0"]);
 
+/** Who funded the study, as DataCite records it: only the funder is required. */
+export const zFundingReference = z.object({
+  funderName: z
+    .string()
+    .trim()
+    .min(1, "The funder is required")
+    .max(255, "The funder must be at most 255 characters"),
+  awardNumber: z
+    .string()
+    .trim()
+    .max(64, "The grant or award number must be at most 64 characters")
+    .nullable(),
+});
+
+export const zFundingReferenceList = z.array(zFundingReference);
+
 export const zExperiment = z.object({
   id: z.string().uuid(),
   name: z.string(),
@@ -52,6 +68,7 @@ export const zExperiment = z.object({
   updatedAt: z.string().datetime(),
   data: zExperimentData.optional(),
   locations: zExperimentLocationList.optional(),
+  fundingReferences: zFundingReferenceList.optional(),
 });
 
 /**
@@ -326,7 +343,8 @@ export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
 export type ExperimentMembershipStatus = z.infer<typeof zExperimentMembershipStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
 export type DataLicense = z.infer<typeof zDataLicense>;
-export type Experiment = z.infer<typeof zExperiment>;
+export type FundingReference = z.infer<typeof zFundingReference>;
+export type Experiment =z.infer<typeof zExperiment>;
 export type ExperimentListItem = z.infer<typeof zExperimentListEntry>;
 export type ExperimentCallerRole = z.infer<typeof zExperimentCallerRole>;
 export type RelatedHomeExperiment = z.infer<typeof zRelatedHomeExperiment>;
@@ -498,6 +516,9 @@ export const zUpdateExperimentBody = z.object({
     .describe("Updated experimental design description"),
   growthFacility: z.string().nullable().optional().describe("Updated growth facility description"),
   license: zDataLicense.nullable().optional().describe("Updated dataset license"),
+  fundingReferences: zFundingReferenceList
+    .optional()
+    .describe("Updated funding references, replacing the stored list"),
   status: zExperimentStatus.optional().describe("Updated experiment status"),
   // `visibility` is deliberately absent: publishing is one-way and goes through the
   // dedicated `setVisibility` route. Allowing it here would permit public→private.

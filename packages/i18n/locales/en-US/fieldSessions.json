@@ -1,1 +1,134 @@
-{}
+{
+  "gridTitle": "{{level}} grid",
+  "gap": "A gap in the field, with no unit",
+  "gapShort": "Gap",
+  "plotCount_one": "{{count}} plot",
+  "plotCount_other": "{{count}} plots",
+  "coverage": "{{measured}} of {{total}}",
+  "walkingOrder": {
+    "title": "Walking order",
+    "description": "How measurers walk the field. Every phone receives it when a session starts.",
+    "strategies": {
+      "byRow": {
+        "label": "By row",
+        "description": "Walks the layout row by row. Rows measured late in the day differ in light and heat from rows measured early."
+      },
+      "serpentine": {
+        "label": "Serpentine",
+        "description": "Walks row by row and turns back at each row end. It saves walking but keeps the time-of-day risk of by row."
+      },
+      "randomByBlock": {
+        "label": "Random by block",
+        "description": "Shuffles the plots within each block from a seed. Time of day no longer follows the layout inside a block."
+      },
+      "treatmentBalanced": {
+        "label": "Treatment-balanced",
+        "description": "Spreads every treatment evenly across the walk from a seed. No treatment is measured mostly early or mostly late."
+      }
+    },
+    "save": "Save",
+    "previewDescription": "{{count}} plots in walking order",
+    "balance": "Every {{window}} plots in a row hold each treatment {{expected}} times, give or take one",
+    "unbalanced": "Part of the walk holds a treatment more often than the balance allows",
+    "seed": "Seed: {{seed}}",
+    "regenerate": "Regenerate"
+  },
+  "divide": {
+    "title": "Divide the field",
+    "description": "Give each measurer a share of the walking order. Each share becomes the assignment their phone receives.",
+    "measurers": "Measurers",
+    "split": "Split",
+    "splits": {
+      "equalShares": "Equal shares along the walking order",
+      "rowBands": "Row bands"
+    },
+    "splitHints": {
+      "equalShares": "Or row bands, which keep every block with one measurer.",
+      "rowBands": "Or equal shares, which cut the walking order into even parts."
+    },
+    "paint": "Paint by hand",
+    "paintHint": "Pick a measurer, then click or drag over plots to move them into that share.",
+    "paintInto": "Paint into",
+    "sharePlots_one": "{{count}} plot, rows {{first}} to {{last}}",
+    "sharePlots_other": "{{count}} plots, rows {{first}} to {{last}}",
+    "sharePlotsCount_one": "{{count}} plot",
+    "sharePlotsCount_other": "{{count}} plots",
+    "balanced": "Balanced",
+    "oneTreatment": "One treatment",
+    "oneTreatmentWarning": "A share of one treatment ties this measurer to that treatment.",
+    "noOverlap": "No plot is in two shares.",
+    "regenerate": "Regenerate split",
+    "save": "Save assignments",
+    "gridDescription": "{{count}} plots, bordered by share"
+  },
+  "live": {
+    "title": "Live progress",
+    "updated": "Updated {{time}}",
+    "measuredOf": "{{measured}} of {{total}} measured",
+    "skippedToDo": "{{skipped}} skipped, {{toDo}} to do",
+    "lastUpload": "Last upload {{time}}",
+    "noUpload": "No upload yet",
+    "byTreatment": "By treatment",
+    "byGenotype": "By genotype",
+    "gridDescription": "{{measured}} of {{total}} plots measured",
+    "legendMeasured": "Measured",
+    "legendNotMeasured": "Not measured yet",
+    "legendSkipped": "Skipped"
+  },
+  "overview": {
+    "title": "Sessions ended today",
+    "allUploaded": "All phones uploaded",
+    "waitingCount_one": "{{count}} phone waiting",
+    "waitingCount_other": "{{count}} phones waiting",
+    "readings_one": "{{count}} reading",
+    "readings_other": "{{count}} readings",
+    "phones_one": "{{count}} phone",
+    "phones_other": "{{count}} phones",
+    "repeats_one": "{{count}} repeat",
+    "repeats_other": "{{count}} repeats",
+    "summary": "{{readings}} received from {{phones}}. {{covered}} of {{total}} plots covered, {{skipped}} skipped, {{repeats}}, {{offPlan}} off-plan.",
+    "coveredBar": "{{covered}} of {{total}} plots covered",
+    "columns": {
+      "measurer": "Measurer",
+      "assigned": "Assigned",
+      "measured": "Measured",
+      "skipped": "Skipped",
+      "repeats": "Repeats",
+      "offPlan": "Off-plan",
+      "lastUpload": "Last upload"
+    },
+    "countWithPlots": "{{count}}: {{plots}}",
+    "skipWithReason": "{{plot}}, {{reason}}",
+    "skipReasons": {
+      "plantMissing": "Plant missing",
+      "flooded": "Flooded",
+      "couldNotReach": "Could not reach",
+      "other": "Other"
+    },
+    "waiting": "Waiting for upload",
+    "fieldMap": "Field map",
+    "coverageTitle": "Coverage by treatment",
+    "coverageLine": "{{measured}} of {{total}}",
+    "missing": "Missing {{plots}}",
+    "measuredTwice_one": "{{count}} plot measured twice",
+    "measuredTwice_other": "{{count}} plots measured twice",
+    "measuredTwiceHint": "{{plots}} hold readings from two phones. A person decides which reading stands.",
+    "openNeedsReview": "Open Needs review",
+    "legendMeasured": "Measured",
+    "legendSkipped": "Skipped",
+    "legendOffPlan": "Off-plan reading"
+  },
+  "review": {
+    "title": "Needs review",
+    "description": "Plots that two phones both measured. Decide which reading stands.",
+    "unresolved_one": "{{count}} unresolved",
+    "unresolved_other": "{{count}} unresolved",
+    "plot": "Plot {{plot}}",
+    "explanation": "Two phones measured {{plot}} and nobody asked for a repeat.",
+    "reading": "{{phone}} at {{time}}",
+    "keepOne": "Keep one",
+    "keepBoth": "Keep both as repeats",
+    "move": "Move to another plot",
+    "marker": "Needs review"
+  }
+}

@@ -22,6 +22,7 @@ import {
 } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
 
+import { LayoutTermSelect } from "./layout-term-select";
 import { rowLetter } from "./row-letter";
 
 interface LayoutSetupCardProps {
@@ -32,7 +33,12 @@ export function LayoutSetupCard({ layout }: LayoutSetupCardProps) {
   const { t } = useTranslation("experiments");
   const form = useForm<ExperimentLayoutSetup>({
     resolver: zodResolver(zExperimentLayoutSetup),
-    defaultValues: { levelName: layout.levelName, rows: layout.rows, columns: layout.columns },
+    defaultValues: {
+      levelName: layout.levelName,
+      levelTerm: layout.levelTerm ?? null,
+      rows: layout.rows,
+      columns: layout.columns,
+    },
   });
 
   const rows = form.watch("rows");
@@ -60,6 +66,20 @@ export function LayoutSetupCard({ layout }: LayoutSetupCardProps) {
                   </FormControl>
                   <FormDescription>{t("layout.levelNameHelp")}</FormDescription>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="levelTerm"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("layout.term.label")}</FormLabel>
+                  <FormControl>
+                    <LayoutTermSelect value={field.value} onChange={field.onChange} />
+                  </FormControl>
+                  <FormDescription>{t("layout.term.help")}</FormDescription>
                 </FormItem>
               )}
             />

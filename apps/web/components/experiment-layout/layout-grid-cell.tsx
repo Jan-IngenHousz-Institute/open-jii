@@ -4,23 +4,42 @@ import { cn } from "@repo/ui/lib/utils";
 
 interface LayoutGridCellProps {
   unit: ExperimentUnit | undefined;
+  isSelected: boolean;
+  onSelect: (unit: ExperimentUnit) => void;
 }
 
-export function LayoutGridCell({ unit }: LayoutGridCellProps) {
+export function LayoutGridCell({ unit, isSelected, onSelect }: LayoutGridCellProps) {
   const { t } = useTranslation("experiments");
-  const isGap = !unit?.active;
+
+  if (unit === undefined || !unit.active) {
+    return (
+      <div
+        title={t("layout.gap")}
+        className="text-muted-foreground flex h-10 items-center justify-center rounded-md border border-dashed bg-transparent text-xs font-medium"
+      >
+        {t("layout.gapShort")}
+      </div>
+    );
+  }
+
+  const handleClick = () => {
+    onSelect(unit);
+  };
 
   return (
-    <div
-      title={isGap ? t("layout.gap") : unit.identifier}
+    <button
+      type="button"
+      title={unit.identifier}
+      aria-pressed={isSelected}
+      onClick={handleClick}
       className={cn(
-        "flex h-10 items-center justify-center rounded-md border text-xs font-medium",
-        isGap
-          ? "text-muted-foreground border-dashed bg-transparent"
-          : "bg-primary/5 border-primary/20 text-foreground",
+        "flex h-10 items-center justify-center rounded-md border text-xs font-medium transition-colors",
+        isSelected
+          ? "bg-primary text-primary-foreground border-primary"
+          : "bg-primary/5 border-primary/20 text-foreground hover:bg-primary/10",
       )}
     >
-      {isGap ? t("layout.gapShort") : unit.identifier}
-    </div>
+      {unit.identifier}
+    </button>
   );
 }

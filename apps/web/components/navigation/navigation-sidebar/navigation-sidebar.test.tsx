@@ -25,6 +25,7 @@ const navigationData = {
   navExperiments: [
     { title: "Experiments", url: "/en/platform/experiments", icon: "Leaf", items: [] },
   ],
+  navDatasets: [{ title: "Datasets", url: "/en/platform/datasets", icon: "Database", items: [] }],
   navDevices: [{ title: "Devices", url: "/en/platform/devices", icon: "RadioReceiver", items: [] }],
   navWorkbooks: [
     { title: "Workbooks", url: "/en/platform/workbooks", icon: "BookOpen", items: [] },

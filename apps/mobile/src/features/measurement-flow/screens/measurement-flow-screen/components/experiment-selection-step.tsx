@@ -17,6 +17,7 @@ import { usePrecachedExperimentData } from "~/features/experiments/hooks/use-pre
 import { useRecentExperimentActivity } from "~/features/experiments/hooks/use-recent-experiment-activity";
 import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
 import { isApiStatus } from "~/features/experiments/utils/api-error";
+import { SessionStartSheet } from "~/features/measurement-flow/components/session-start-sheet";
 import { useExperimentsFlowMeta } from "~/features/measurement-flow/hooks/use-experiments-flow-meta";
 import { useLoadExperimentFlow } from "~/features/measurement-flow/hooks/use-load-experiment-flow";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
@@ -30,6 +31,8 @@ import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { ellipsize } from "~/shared/utils/ellipsize";
 
 import { ExperimentCard } from "./experiment-card";
+import { useExampleLayout } from "./flow-nodes/plot-node/next-plot";
+import { isScaffoldScreenOn, startScaffoldScreen } from "./flow-nodes/plot-node/scaffold-screen";
 import { OfflineModeIndicator } from "./offline-mode-indicator";
 
 export function ExperimentSelectionStep() {
@@ -79,11 +82,31 @@ export function ExperimentSelectionStep() {
   const isConnected = !!connectedDevice;
   const showDeviceBanner = !!selectedExperimentId && requiresDevice && !isConnected;
 
-  const handleStart = () => {
+  const exampleLayout = useExampleLayout();
+  const [isSessionSheetOpen, setIsSessionSheetOpen] = React.useState(false);
+  const isSessionSheetOn = isScaffoldScreenOn("d3-session-start");
+
+  const startFlow = () => {
     if (!selectedExperimentId || !experimentFlowReady) return;
     clearHistory();
     setExperimentId(selectedExperimentId, selectedExperiment?.label);
+    startScaffoldScreen();
   };
+
+  const handleStart = () => {
+    if (isSessionSheetOn) {
+      setIsSessionSheetOpen(true);
+      return;
+    }
+    startFlow();
+  };
+
+  const handleSessionStart = () => {
+    setIsSessionSheetOpen(false);
+    startFlow();
+  };
+
+  const closeSessionSheet = () => setIsSessionSheetOpen(false);
 
   return (
     <View className="flex-1">
@@ -224,6 +247,16 @@ export function ExperimentSelectionStep() {
           size="lg"
         />
       </View>
+
+      {isSessionSheetOn && exampleLayout ? (
+        <SessionStartSheet
+          isOpen={isSessionSheetOpen}
+          assignedPlots={exampleLayout.field.plots.length}
+          totalPlots={exampleLayout.field.plots.length}
+          onStart={handleSessionStart}
+          onClose={closeSessionSheet}
+        />
+      ) : null}
     </View>
   );
 }

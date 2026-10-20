@@ -25,11 +25,11 @@ const studyDetailsOnOverview: TicketShot = {
     const readiness = page
       .getByRole("heading", { name: "Standards readiness", exact: true })
       .locator("xpath=..");
-    const idHeading = page.getByRole("heading", { name: "Experiment ID", exact: true });
+    const cardHeading = page.getByRole("heading", { name: "Details", exact: true });
 
     const marker = new ChangeMarker(page);
     await marker.mark([studySection(page), readiness], "New", "inside-right");
-    return marker.frame([idHeading, readiness], 24);
+    return marker.frame([cardHeading, readiness], 24);
   },
 };
 
@@ -41,6 +41,14 @@ const studyDetailsDialog: TicketShot = {
     await studySection(page).getByRole("button", { name: "Edit" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.waitFor();
+
+    // The Funding section is A2's change, so A1's dialog is shown without it.
+    await dialog.getByRole("region", { name: "Funding" }).evaluate((section) => section.remove());
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    });
 
     const marker = new ChangeMarker(page);
     return marker.frame([dialog], 16);

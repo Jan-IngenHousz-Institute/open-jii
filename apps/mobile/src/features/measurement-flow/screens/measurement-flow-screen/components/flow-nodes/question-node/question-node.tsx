@@ -11,6 +11,7 @@ import { Input } from "~/shared/ui/Input";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { QRScannerModal } from "~/shared/ui/qr-scanner/qr-scanner-modal";
 
+import { ConfirmedPlotCard } from "../plot-node/confirmed-plot-card";
 import { AutoProceededSummary } from "./auto-proceeded-summary";
 import { MultipleChoiceQuestion } from "./question-types/multiple-choice-question";
 import { NumberQuestion } from "./question-types/number-question";
@@ -136,6 +137,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
   return (
     <View className="flex-1 gap-4 rounded-xl px-4 pt-4">
       <AutoProceededSummary currentNodeId={node.id} iterationCount={iterationCount} />
+      <ConfirmedPlotCard />
       <Text className="text-foreground text-lg font-bold">{content.text}</Text>
       <QRScannerModal
         visible={qrScannerVisible}

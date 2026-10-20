@@ -1,6 +1,7 @@
 "use client";
 
 import { useTrackExports } from "@/components/activity/use-track-exports";
+import { MiappeExportMenuItem } from "@/components/experiment-standards/miappe-export-menu-item";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatLocaleNumber } from "@/util/format-locale-number";
 import {
@@ -345,6 +346,7 @@ export function ExportListStep({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onCreateExport("parquet")}>Parquet</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onCreateExport("xlsx")}>Excel</DropdownMenuItem>
+              <MiappeExportMenuItem experimentId={experimentId} />
             </DropdownMenuContent>
           </DropdownMenu>
         )}

@@ -28,10 +28,13 @@ import {
 } from "@repo/api/transforms/build-cell-namespace";
 import { toDeviceContext } from "@repo/api/transforms/device-context";
 
+import { usePlotStepStore } from "../plot-node/next-plot";
+import { isScaffoldScreenOn } from "../plot-node/scaffold-screen";
 import { hydrateCells } from "../utils/hydrate-cells";
 import { AnalysisActionBar, useScrollToTop } from "./analysis-action-bar";
 import { AnalysisMacroResult } from "./analysis-macro-result";
 import { AnalysisSummaryCard } from "./analysis-summary-card";
+import { RepeatMarker } from "./repeat-marker";
 
 const log = createLogger("analysis-node");
 
@@ -289,6 +292,19 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     previousStep();
   };
 
+  // Scaffold: Measure again counts the repeat and goes back without saving, until readings carry
+  // an ordinal.
+  const isMeasureAgainOn = isScaffoldScreenOn("d5-measure-again");
+  const repeat = usePlotStepStore((s) => s.repeat);
+  const confirmedPlot = usePlotStepStore((s) => s.confirmedPlot);
+  const measureAgain = usePlotStepStore((s) => s.measureAgain);
+  const repeatPlot = isMeasureAgainOn && repeat > 1 ? confirmedPlot : null;
+
+  const handleMeasureAgain = () => {
+    measureAgain();
+    previousStep();
+  };
+
   const { scrollViewRef, hasScrolled, handleScroll, scrollToTop } = useScrollToTop();
 
   return (
@@ -305,6 +321,8 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
           </Text>
           <CircleCheckBig size={16} />
         </View>
+
+        {repeatPlot ? <RepeatMarker repeat={repeat} plot={repeatPlot.identifier} /> : null}
 
         <AnalysisSummaryCard
           experimentName={experimentName}
@@ -357,6 +375,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
         onScrollToTop={scrollToTop}
         onRetry={handleRetry}
         onUpload={handleAccept}
+        onMeasureAgain={isMeasureAgainOn ? handleMeasureAgain : undefined}
       />
 
       <MeasurementQuestionsModal

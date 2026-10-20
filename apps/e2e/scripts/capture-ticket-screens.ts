@@ -15,6 +15,7 @@ import path from "node:path";
 import { preparePage } from "../capture-page.js";
 import { locale } from "../helpers.js";
 import { PinnedFeatureFlags } from "../pinned-feature-flags.js";
+import { HideOtherProjects } from "../ticket-screens/hide-other-projects.js";
 import { HideTestPrefixes } from "../ticket-screens/hide-test-prefixes.js";
 import { SHOTS, SHOTS_BY_SLUG } from "../ticket-screens/shots.js";
 import type { TicketShot } from "../ticket-screens/shots.js";
@@ -62,6 +63,7 @@ async function captureShot(
   try {
     // Installed first so it answers last: a shot's own fixtures win, and it cleans the rest.
     await new HideTestPrefixes().install(page);
+    await new HideOtherProjects(shot.slug).install(page);
     if (shot.featureFlags) await new PinnedFeatureFlags(shot.featureFlags).install(page);
     for (const fixture of shot.fixtures ?? []) await fixture.install(page);
 

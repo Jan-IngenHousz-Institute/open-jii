@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 
-import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  Experiment,
+  FundingReference,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
@@ -24,14 +27,18 @@ export function ExperimentStudyDetailsSection({
 }: ExperimentStudyDetailsSectionProps) {
   const { t } = useTranslation("experiments");
   const licenseLabel = useDataLicenseLabel();
+  const { t: tStudy } = useTranslation("studyMetadata");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const canEdit = hasAccess && !isArchived;
   const hasPeriod = Boolean(experiment.startDate ?? experiment.endDate);
   const notSet = t("studyDetails.dateNotSet");
   const period = `${experiment.startDate ?? notSet} → ${experiment.endDate ?? notSet}`;
+  const fundingReferences = experiment.fundingReferences ?? [];
+  const hasFunding = fundingReferences.length > 0;
   const hasAnyDetail =
     hasPeriod ||
+    hasFunding ||
     Boolean(experiment.organism) ||
     Boolean(experiment.growthFacility) ||
     Boolean(experiment.experimentalDesign) ||
@@ -45,6 +52,17 @@ export function ExperimentStudyDetailsSection({
       </p>
     </div>
   );
+
+  const renderFundingReference = (reference: FundingReference, index: number) => {
+    const text = reference.awardNumber
+      ? tStudy("funding.reference", { funder: reference.funderName, award: reference.awardNumber })
+      : reference.funderName;
+    return (
+      <p key={index} className="truncate text-sm" title={text}>
+        {text}
+      </p>
+    );
+  };
 
   return (
     <>
@@ -68,6 +86,12 @@ export function ExperimentStudyDetailsSection({
               renderRow(t("studyDetails.experimentalDesign"), experiment.experimentalDesign)}
             {experiment.license &&
               renderRow(t("studyDetails.license"), licenseLabel(experiment.license))}
+            {hasFunding && (
+              <div>
+                <p className="text-muted-foreground text-xs">{tStudy("funding.title")}</p>
+                {fundingReferences.map(renderFundingReference)}
+              </div>
+            )}
           </div>
         ) : (
           <p className="text-muted-foreground text-sm italic">{t("studyDetails.empty")}</p>

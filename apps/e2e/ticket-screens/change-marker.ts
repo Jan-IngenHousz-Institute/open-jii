@@ -8,7 +8,7 @@ export interface Box {
 }
 
 /** Where the tag sits, chosen so it never covers the thing it points at. */
-export type TagPlacement = "above" | "below" | "inside-right" | "outside-left";
+export type TagPlacement = "above" | "below" | "inside-right" | "inside-top-right" | "outside-left";
 
 const MARK_COLOR = "#EA580C";
 
@@ -44,26 +44,31 @@ export class ChangeMarker {
           zIndex: "2147483646",
         });
 
-        const isBeside = placement === "inside-right" || placement === "outside-left";
-        const top = isBeside
-          ? box.y + box.height / 2 - 11
-          : placement === "below"
-            ? box.y + box.height + pad + 4
-            : box.y - pad - 22;
-        const right =
-          placement === "inside-right"
-            ? `${window.innerWidth - (box.x + box.width) + 6}px`
-            : placement === "outside-left"
-              ? `${window.innerWidth - box.x + pad + 6}px`
-              : "auto";
+        const tops: Record<typeof placement, number> = {
+          above: box.y - pad - 22,
+          below: box.y + box.height + pad + 4,
+          "inside-right": box.y + box.height / 2 - 11,
+          "inside-top-right": box.y + 8,
+          // Outside a tall target such as a drawer, the tag sits by its top rather than mid-page.
+          "outside-left": box.y + Math.min(box.height / 2 - 11, 12),
+        };
+        const insideRight = `${window.innerWidth - (box.x + box.width) + 6}px`;
+        const rights: Record<typeof placement, string | null> = {
+          above: null,
+          below: null,
+          "inside-right": insideRight,
+          "inside-top-right": insideRight,
+          "outside-left": `${window.innerWidth - box.x + pad + 6}px`,
+        };
+        const right = rights[placement];
 
         const tag = document.createElement("div");
         tag.textContent = label;
         Object.assign(tag.style, {
           position: "fixed",
-          left: isBeside ? "auto" : `${box.x - pad}px`,
-          right,
-          top: `${top}px`,
+          left: right === null ? `${box.x - pad}px` : "auto",
+          right: right ?? "auto",
+          top: `${tops[placement]}px`,
           background: color,
           color: "white",
           font: "600 11px/1 Inter, system-ui, sans-serif",

@@ -6,7 +6,7 @@ import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate, formatRelativeTime } from "@/util/date";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
-import { ExternalLink, Lock, Unlink } from "lucide-react";
+import { ExternalLink, Lock, MapPin, Unlink } from "lucide-react";
 
 import type {
   ExperimentDeviceEntry,
@@ -23,6 +23,7 @@ interface ExperimentDeviceDetailProps {
   window: { from: string; to: string };
   pipelineUnavailable: boolean;
   onRequestDetach: (device: ExperimentDeviceIdentity) => void;
+  onRequestPlace: (device: ExperimentDeviceIdentity) => void;
 }
 
 export function ExperimentDeviceDetail({
@@ -31,8 +32,10 @@ export function ExperimentDeviceDetail({
   window,
   pipelineUnavailable,
   onRequestDetach,
+  onRequestPlace,
 }: ExperimentDeviceDetailProps) {
   const { t } = useTranslation("iot");
+  const { t: tLayout } = useTranslation("experiments");
   const locale = useLocale();
 
   const device = entry.device;
@@ -70,6 +73,18 @@ export function ExperimentDeviceDetail({
           )}
           {device !== null && (
             <ConnectivityDot connectivity={entry.connectivity} deviceType={device.deviceType} />
+          )}
+          {entry.binding !== null && device !== null && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                onRequestPlace(device);
+              }}
+            >
+              <MapPin className="mr-1.5 size-4" aria-hidden />
+              {tLayout("layout.placement.title")}
+            </Button>
           )}
           {entry.binding !== null && device !== null && (
             <Button

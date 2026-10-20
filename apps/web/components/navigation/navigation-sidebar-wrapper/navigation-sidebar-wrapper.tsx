@@ -29,6 +29,11 @@ export async function NavigationSidebarWrapper({
     namespaces: ["iot"],
   });
 
+  const { t: tDatasets } = await initTranslations({
+    locale,
+    namespaces: ["datasets"],
+  });
+
   // With calibration flagged off, Devices has only its overview left, so it goes back to
   // being a plain link rather than a group of one.
   const deviceChildren = mainNavigation.devices.children.filter(
@@ -60,6 +65,15 @@ export async function NavigationSidebarWrapper({
           title: tNavigation(item.titleKey, { ns: item.namespace }),
           url: item.url(locale),
         })),
+      },
+    ],
+    navDatasets: [
+      {
+        title: tDatasets(mainNavigation.datasets.titleKey),
+        url: mainNavigation.datasets.url(locale),
+        icon: mainNavigation.datasets.icon,
+        isActive: true,
+        items: [],
       },
     ],
     navDevices: [

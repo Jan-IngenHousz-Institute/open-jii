@@ -53,6 +53,7 @@ interface NavigationItem {
 interface NavigationData {
   navDashboard: NavigationItem[];
   navExperiments: NavigationItem[];
+  navDatasets: NavigationItem[];
   navDevices: NavigationItem[];
   navWorkbooks: NavigationItem[];
   navOrganizations: NavigationItem[];
@@ -109,12 +110,13 @@ export function AppSidebar({
     children: item.children?.map(mapItem),
   });
 
-  // Kept as six named sections though they render as one flat list: each holds a
+  // Kept as seven named sections though they render as one flat list: each holds a
   // single top-level row, so a label would only repeat the row beneath it, and the
   // docs sidebar this follows separates sections with a label rather than with air.
   const sections: { key: string; items: MappedNavItem[] }[] = [
     { key: "dashboard", items: navigationData.navDashboard.map(mapItem) },
     { key: "experiments", items: navigationData.navExperiments.map(mapItem) },
+    { key: "datasets", items: navigationData.navDatasets.map(mapItem) },
     { key: "devices", items: navigationData.navDevices.map(mapItem) },
     { key: "workbooks", items: navigationData.navWorkbooks.map(mapItem) },
     { key: "organizations", items: navigationData.navOrganizations.map(mapItem) },

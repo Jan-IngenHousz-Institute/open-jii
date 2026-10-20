@@ -522,6 +522,78 @@
     "gridTitle": "{{level}} grid",
     "summary": "{{active}} in use, {{gaps}} gaps",
     "gap": "A gap in the field, with no unit",
-    "gapShort": "Gap"
+    "gapShort": "Gap",
+    "plot": {
+      "searchPlaceholder": "Find by name",
+      "clearSearch": "Clear search",
+      "title": "{{level}} {{identifier}}",
+      "description": "Where it sits and where each value came from.",
+      "close": "Close",
+      "row": "Row",
+      "column": "Column",
+      "position": "Position",
+      "noPosition": "No position yet",
+      "attributes": "Attributes",
+      "source": {
+        "layout": "From the layout",
+        "sheet": "From the sheet \"{{sheet}}\"",
+        "edit": "From the sheet \"{{sheet}}\", edited after upload"
+      }
+    },
+    "term": {
+      "label": "Term",
+      "help": "Optional. A Common Greenhouse Ontology term tells an export what kind of unit this is.",
+      "none": "No term",
+      "selected": "{{label}} ({{id}})",
+      "searchPlaceholder": "Search the Common Greenhouse Ontology",
+      "ontology": "Common Greenhouse Ontology",
+      "noMatches": "No term matches this name."
+    },
+    "anchor": {
+      "title": "Anchor on map",
+      "description": "Place the outer corner of {{level}} {{identifier}}, then give the grid's bearing and the size of one {{level}}. Each value is optional.",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "bearing": "Bearing (degrees)",
+      "bearingHelp": "The direction row A runs, clockwise from north.",
+      "plotWidth": "Width (m)",
+      "plotLength": "Length (m)",
+      "plotSizeHelp": "Width runs along row A, length down column 1.",
+      "corner": "{{identifier}} corner",
+      "mapHelp": "Click the map to move the corner.",
+      "save": "Save anchor"
+    },
+    "sheetMatch": {
+      "group": "Layout",
+      "checking": "Checking the sheet against the layout...",
+      "summary": "{{matched}}, {{unmatched}} and {{withoutRow}}.",
+      "matched_one": "{{count}} row matched",
+      "matched_other": "{{count}} rows matched",
+      "unmatched_one": "{{count}} row names no {{level}} ({{names}})",
+      "unmatched_other": "{{count}} rows name no {{level}} ({{names}})",
+      "unmatchedNone": "every row names a {{level}}",
+      "withoutRow_one": "{{count}} has no row ({{names}})",
+      "withoutRow_other": "{{count}} have no row ({{names}})",
+      "withoutRowNone": "no {{level}} is without a row",
+      "duplicates": "{{names}} appear more than once, and the first row of each wins.",
+      "moreNames": "{{names}} and {{count}} more"
+    },
+    "placement": {
+      "title": "Place on plot",
+      "description": "The sensor stands on the plot from the start date. Moving or removing it later ends the placement and keeps its history.",
+      "device": "Device",
+      "channel": "Channel",
+      "channelOf": "{{channel}} of {{count}}",
+      "wholeDevice": "Whole device",
+      "channelHelp": "Each of the gateway's sensors is placed on its own.",
+      "plot": "Plot",
+      "plotPlaceholder": "Choose a plot",
+      "plotSearch": "Search plots",
+      "plotEmpty": "No plot has that name.",
+      "startDate": "Start date",
+      "startDateHelp": "Readings from this date on carry the plot.",
+      "cancel": "Cancel",
+      "place": "Place"
+    }
   }
 }

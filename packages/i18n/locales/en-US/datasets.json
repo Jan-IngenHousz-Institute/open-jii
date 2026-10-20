@@ -1,1 +1,232 @@
-{}
+{
+  "sidebar": {
+    "datasets": "Datasets"
+  },
+  "tab": {
+    "label": "Datasets",
+    "title": "Datasets",
+    "description": "Frozen, citable copies of this experiment's data. The experiment itself stays editable.",
+    "loading": "Loading datasets..."
+  },
+  "state": {
+    "draft": "Draft",
+    "published": "Published",
+    "superseded": "Superseded",
+    "withdrawn": "Withdrawn"
+  },
+  "deposit": {
+    "uploading": "Uploading",
+    "registering": "Registering",
+    "verifying": "Verifying",
+    "deposited": "Deposited",
+    "failed": "Deposit failed"
+  },
+  "environment": {
+    "sandbox": "Sandbox",
+    "production": "Production"
+  },
+  "licenses": {
+    "cc0": "CC0 1.0",
+    "ccBy": "CC BY 4.0"
+  },
+  "list": {
+    "publish": "Publish a dataset",
+    "emptyTitle": "No datasets yet",
+    "empty": "A dataset is a frozen, citable copy of this experiment's data. Publishing one leaves the experiment itself editable.",
+    "loadError": "Could not load the datasets.",
+    "retry": "Try again",
+    "columns": {
+      "version": "Version",
+      "title": "Title",
+      "state": "State",
+      "date": "Date",
+      "doi": "DOI"
+    },
+    "version": "Version {{version}}",
+    "started": "Started {{date}}",
+    "published": "Published {{date}}",
+    "withdrawn": "Withdrawn {{date}}",
+    "noDoi": "No DOI yet",
+    "supersedes": "Supersedes version {{version}}"
+  },
+  "publish": {
+    "title": "Publish a dataset",
+    "subtitle": "Version {{version}} of {{experiment}}",
+    "loading": "Loading the draft...",
+    "next": "Next",
+    "back": "Back",
+    "steps": {
+      "scope": "Scope",
+      "curate": "Curate",
+      "describe": "Describe",
+      "license": "License and access",
+      "check": "Check",
+      "freeze": "Freeze and deposit"
+    }
+  },
+  "scope": {
+    "title": "What this dataset will hold",
+    "description": "The whole experiment is in scope. Readings you exclude in Curate are left out.",
+    "readings": "Readings",
+    "readingsDetail_one": "Every reading in the experiment, {{count}} so far",
+    "readingsDetail_other": "Every reading in the experiment, {{count}} so far",
+    "dictionary": "Data dictionary",
+    "dictionaryDetail": "Every column the experiment produced, with its description",
+    "layout": "Layout",
+    "layoutDetail": "The plots and where they sit",
+    "studyDetails": "Study details",
+    "studyDetailsDetail": "Dates, organism, design, facility and license",
+    "versionTitle": "Version {{version}}",
+    "versionDetail": "This dataset becomes version {{version}}. Earlier versions stay as they were published."
+  },
+  "curate": {
+    "title": "Flagged readings",
+    "description": "Readings flagged on the Data tab or in the app. An excluded reading is left out of the dataset's files and recorded with its reason, and it stays in the experiment.",
+    "columns": {
+      "plot": "Plot",
+      "flag": "Flag",
+      "comment": "Comment",
+      "flaggedBy": "Flagged by",
+      "exclude": "Exclude"
+    },
+    "noComment": "No comment",
+    "noPlot": "No plot",
+    "flaggedOn": "{{name}}, {{date}}",
+    "excludeLabel": "Exclude the reading on {{plot}}",
+    "excludedCount_one": "{{count}} reading will be left out of the dataset.",
+    "excludedCount_other": "{{count}} readings will be left out of the dataset.",
+    "none": "No readings are flagged, so the dataset holds every reading."
+  },
+  "describe": {
+    "detailsTitle": "Title and description",
+    "detailsDescription": "Prefilled from the experiment. Edit them for this dataset.",
+    "titleLabel": "Title",
+    "descriptionLabel": "Description",
+    "authorsTitle": "Authors",
+    "authorsDescription": "The dataset is cited with its authors in this order. Drag a row to move it.",
+    "addAuthor": "Add an author",
+    "addMember": "From the experiment's members",
+    "addByName": "By name",
+    "addedByName": "Added by name",
+    "noAffiliation": "No affiliation",
+    "orcidLabel": "ORCID iD {{orcid}}",
+    "orcidMark": "iD",
+    "reorder": "Move {{name}}",
+    "remove": "Remove {{name}}",
+    "limitationsLabel": "Limitations (optional)",
+    "limitationsHelp": "What a reader should know before reusing this data, such as gaps or conditions it does not cover."
+  },
+  "license": {
+    "title": "Data license",
+    "description": "Prefilled from the study details. The data is published under this license.",
+    "cc0Detail": "No rights reserved. Anyone may reuse the data without giving credit.",
+    "ccByDetail": "Anyone may reuse the data as long as they credit the authors.",
+    "metadataNote": "The dataset's metadata is always published under CC0, whatever the data license.",
+    "rightToPublish": "I have the right to publish this data under the chosen license."
+  },
+  "access": {
+    "title": "Access",
+    "description": "The title, authors and citation are public as soon as the dataset is published. Choose when its files open.",
+    "open": "Open now",
+    "openDetail": "Anyone can download the files once the dataset is published.",
+    "embargoed": "Embargo until a date",
+    "embargoedDetail": "The files open by themselves on the date, for example when the paper is out.",
+    "date": "Files open on",
+    "pickDate": "Pick a date"
+  },
+  "check": {
+    "floorTitle": "OpenAIRE floor",
+    "floorDescription": "What OpenAIRE, the European open-science catalogue, needs before it harvests the dataset. A missing field blocks freezing.",
+    "floorComplete": "Complete",
+    "floorMissing_one": "{{count}} field missing",
+    "floorMissing_other": "{{count}} fields missing",
+    "floorBlocked": "Fill every OpenAIRE floor field before freezing the dataset.",
+    "floorFields": {
+      "title": "Title",
+      "creators": "Creators",
+      "publisher": "Publisher",
+      "year": "Year",
+      "type": "Type",
+      "license": "License",
+      "access": "Access",
+      "funding": "Funding"
+    },
+    "standardsTitle": "Standards",
+    "standardsDescription": "Each standard warns about what it still lacks and never blocks freezing.",
+    "standards": {
+      "miappe": "MIAPPE",
+      "brapi": "BrAPI",
+      "cropOntology": "Crop Ontology",
+      "greenhouseOntology": "Common Greenhouse Ontology",
+      "sensorThings": "OGC SensorThings",
+      "fair": "FAIR"
+    },
+    "verdicts": {
+      "met": "Met",
+      "partial": "Partial",
+      "partialCount": "Partial, {{filled}} of {{total}}",
+      "notApplicable": "Not applicable yet",
+      "notAssessed": "Not assessed"
+    }
+  },
+  "freeze": {
+    "title": "Freeze and deposit",
+    "readings_one": "Freezing writes {{count}} reading, counted {{time}}, to files whose bytes never change.",
+    "readings_other": "Freezing writes {{count}} readings, counted {{time}}, to files whose bytes never change.",
+    "neverChanges": "A published dataset never changes. A mistake found later becomes a new version.",
+    "submit": "Freeze and deposit"
+  },
+  "page": {
+    "kind": "Dataset",
+    "loading": "Loading the dataset...",
+    "notFound": "This dataset does not exist or is not published.",
+    "version": "Version {{version}}",
+    "published": "Published",
+    "license": "License",
+    "doi": "DOI",
+    "frozenNotice": "This is a frozen dataset of a live experiment, so its files never change. The live experiment itself needs an openJII account.",
+    "citeAs": "Cite as",
+    "copy": "Copy citation",
+    "copied": "Citation copied",
+    "description": "Description",
+    "funding": "Funding",
+    "fundingEntry": "{{funder}}, grant {{award}}",
+    "files": "Files",
+    "download": "Download",
+    "fileKinds": {
+      "snapshot": "Readings",
+      "dataDictionary": "Data dictionary",
+      "miappe": "MIAPPE file",
+      "roCrate": "RO-Crate"
+    },
+    "withdrawnTitle": "This dataset was withdrawn on {{date}}",
+    "withdrawnReason": "Reason: {{reason}}",
+    "withdrawnFiles": "Its files are no longer served. The citation and DOI stay, so existing references still resolve here."
+  },
+  "catalogue": {
+    "title": "Datasets",
+    "description": "Every published dataset on openJII, each a frozen, citable copy of an experiment's data.",
+    "mine": "Only my datasets, drafts included",
+    "columns": {
+      "title": "Dataset",
+      "license": "License",
+      "date": "Date",
+      "doi": "DOI"
+    },
+    "empty": "No datasets are published yet.",
+    "loadError": "Could not load the datasets.",
+    "retry": "Try again"
+  },
+  "publications": {
+    "title": "Publications",
+    "edit": "Edit",
+    "empty": "No publications linked.",
+    "byline": "{{authors}}, {{year}}",
+    "relations": {
+      "IsSupplementedBy": "Is supplemented by",
+      "Cites": "Cites",
+      "References": "References",
+      "Documents": "Documents"
+    }
+  }
+}

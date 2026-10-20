@@ -94,8 +94,10 @@
     "actionBar": {
       "discardRetry": "Discard & retry",
       "uploading": "Uploading...",
-      "acceptData": "Accept data"
+      "acceptData": "Accept data",
+      "measureAgain": "Measure again"
     },
+    "repeatMarker": "Repeat {{repeat}} of plot {{plot}}",
     "macroResult": {
       "noDataTitle": "No Measurement Data",
       "noDataMessage": "Please complete the measurement step first",
@@ -283,6 +285,46 @@
     "genotype": "Genotype",
     "hint": "Walk to this plot and check its label before you measure.",
     "confirm": "This is the plot",
-    "reject": "Not this plot"
+    "reject": "Not this plot",
+    "skip": "Skip",
+    "walkPosition": "{{position}} of {{total}}",
+    "walkNext": "Then {{plots}}",
+    "showFieldGrid": "Show field grid"
+  },
+  "plotPicker": {
+    "title": "Pick the plot you are at",
+    "hint": "Tap the plot you are standing at.",
+    "picked": "{{plot}} picked",
+    "namedPlot": "Named plot",
+    "measured": "Measured this session",
+    "cancel": "Cancel"
+  },
+  "skipSheet": {
+    "title": "Why skip plot {{plot}}?",
+    "plantMissing": "Plant missing",
+    "flooded": "Flooded",
+    "couldNotReach": "Could not reach",
+    "other": "Other",
+    "cancel": "Cancel"
+  },
+  "sessionSheet": {
+    "plots": "Your plots for this session: {{assigned}} of {{total}}",
+    "offline": "This session works offline from here.",
+    "start": "Start"
+  },
+  "confirmedPlot": {
+    "attributes": "{{treatment}}, {{genotype}}"
+  },
+  "fieldGrid": {
+    "title": "Field grid",
+    "doneCount": "{{done}} of {{total}}",
+    "doneLabel": "plots done in your share",
+    "remaining": "{{skipped}} skipped, {{toDo}} to do",
+    "legendDone": "Done",
+    "legendSkipped": "Skipped",
+    "legendCurrent": "Current",
+    "legendOtherShare": "{{name}}'s share",
+    "current": "Current plot {{plot}}, {{treatment}}",
+    "back": "Back to measuring"
   }
 }

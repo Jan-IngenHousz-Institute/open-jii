@@ -8,12 +8,8 @@ import { BranchNode } from "../flow-nodes/branch-node/branch-node";
 import { CommandNode } from "../flow-nodes/command-node/command-node";
 import { InstructionNode } from "../flow-nodes/instruction-node";
 import { MeasurementNode } from "../flow-nodes/measurement-node/measurement-node";
-import {
-  useIsPlotStepShowing,
-  useNextPlot,
-  usePlotStepStore,
-} from "../flow-nodes/plot-node/next-plot";
-import { PlotNode } from "../flow-nodes/plot-node/plot-node";
+import { useExampleLayout, useIsPlotStepShowing } from "../flow-nodes/plot-node/next-plot";
+import { PlotStep } from "../flow-nodes/plot-node/plot-step";
 import { QuestionNode } from "../flow-nodes/question-node/question-node";
 
 interface ActiveStateProps {
@@ -70,19 +66,13 @@ export function ActiveState({ currentNode }: ActiveStateProps) {
   const isDispatchTarget = useMeasurementFlowStore(
     (s) => s.devicePlan?.some((p) => p.targetCellId === currentNode.id) ?? false,
   );
-  const iterationCount = useMeasurementFlowStore((s) => s.iterationCount);
-  const nextPlot = useNextPlot();
+  const exampleLayout = useExampleLayout();
   const isPlotStepShowing = useIsPlotStepShowing();
-  const confirmPlot = usePlotStepStore((s) => s.confirm);
 
-  if (isPlotStepShowing && nextPlot) {
+  if (isPlotStepShowing && exampleLayout) {
     return (
       <View className="flex-1">
-        <PlotNode
-          plot={nextPlot}
-          onConfirm={() => confirmPlot(iterationCount)}
-          onReject={() => confirmPlot(iterationCount)}
-        />
+        <PlotStep layout={exampleLayout} />
       </View>
     );
   }

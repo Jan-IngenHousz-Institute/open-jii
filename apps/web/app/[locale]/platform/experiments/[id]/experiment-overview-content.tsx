@@ -97,13 +97,13 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           description={experiment.description ?? ""}
           hasAccess={hasAccess}
         />
-        <ExperimentReadinessSummary experimentId={id} experiment={experiment} />
         <ExperimentActivityPulse experimentId={id} />
         <ExperimentLinkedWorkbook
           workbookId={experiment.workbookId}
           workbookVersionId={experiment.workbookVersionId}
         />
         <ExperimentDataInventory experimentId={id} />
+        <ExperimentReadinessSummary experimentId={id} experiment={experiment} />
 
         <ExperimentDashboardsDisplay experimentId={id} hasAccess={hasAccess} />
       </div>

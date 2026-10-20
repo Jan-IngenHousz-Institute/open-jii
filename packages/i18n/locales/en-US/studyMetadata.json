@@ -1,1 +1,61 @@
-{}
+{
+  "funding": {
+    "title": "Funding",
+    "funder": "Funder",
+    "funderPlaceholder": "e.g. a research council or foundation",
+    "awardNumber": "Grant or award number",
+    "awardNumberPlaceholder": "Optional",
+    "empty": "No funding added",
+    "add": "Add funding",
+    "addAnother": "Add another",
+    "remove": "Remove this funding reference",
+    "reference": "{{funder}}, {{award}}"
+  },
+  "dataView": {
+    "label": "Data view",
+    "tables": "Tables",
+    "dictionary": "Dictionary"
+  },
+  "dictionary": {
+    "describedCount": "{{described}} of {{total}} columns described",
+    "producerInstrument": "Instrument, workbook version {{version}}",
+    "producerMacro": "Macro, {{name}}",
+    "producerUnknown": "Unknown producer",
+    "column": "Column",
+    "type": "Type",
+    "rows": "Rows",
+    "status": "Status",
+    "trait": "Trait",
+    "described": "Described",
+    "notDescribed": "Not yet described",
+    "typeNumber": "Number",
+    "typeText": "Text",
+    "typeBoolean": "Yes or no",
+    "typeTimestamp": "Date and time",
+    "loadFailed": "The column list could not be loaded."
+  },
+  "describe": {
+    "trait": "Trait",
+    "traitPlaceholder": "What the column measures",
+    "method": "Method",
+    "methodPlaceholder": "How it was measured",
+    "scale": "Scale",
+    "scalePlaceholder": "e.g. percent, or a score from 1 to 9",
+    "unit": "Unit",
+    "unitPlaceholder": "e.g. %",
+    "findTerm": "Add a Crop Ontology term (optional)",
+    "termSearchPlaceholder": "Search terms by name",
+    "termSearchHint": "Type at least two letters to search.",
+    "noTerms": "No terms match.",
+    "removeTerm": "Remove this term",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "Description saved"
+  },
+  "suggestion": {
+    "title": "Suggested from other experiments",
+    "usedBy_one": "Used by {{count}} other experiment",
+    "usedBy_other": "Used by {{count}} other experiments",
+    "accept": "Accept"
+  }
+}

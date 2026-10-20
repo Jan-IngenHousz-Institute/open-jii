@@ -2,13 +2,18 @@
 
 import { useExperimentUpdate } from "@/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus, Trash2 } from "lucide-react";
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 import { parseApiError } from "~/util/apiError";
 
 import type { DataLicense, Experiment } from "@repo/api/domains/experiment/experiment.schema";
-import { validateStudyDates, zDataLicense } from "@repo/api/domains/experiment/experiment.schema";
+import {
+  validateStudyDates,
+  zDataLicense,
+  zFundingReferenceList,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -48,6 +53,7 @@ const studyDetailsFormSchema = z
     experimentalDesign: z.string().nullable(),
     growthFacility: z.string().nullable(),
     license: zDataLicense.nullable(),
+    fundingReferences: zFundingReferenceList,
   })
   .superRefine((val, ctx) => {
     validateStudyDates(val.startDate, val.endDate, ctx);
@@ -64,6 +70,7 @@ const experimentToFormValues = (experiment: Experiment): StudyDetailsFormValues 
   experimentalDesign: experiment.experimentalDesign,
   growthFacility: experiment.growthFacility,
   license: experiment.license,
+  fundingReferences: experiment.fundingReferences ?? [],
 });
 
 interface ExperimentStudyDetailsDialogProps {
@@ -80,12 +87,16 @@ export function ExperimentStudyDetailsDialog({
   onOpenChange,
 }: ExperimentStudyDetailsDialogProps) {
   const { t } = useTranslation("experiments");
+  const { t: tStudy } = useTranslation("studyMetadata");
   const { mutateAsync: updateExperiment, isPending } = useExperimentUpdate();
 
   const form = useForm<StudyDetailsFormValues>({
     resolver: zodResolver(studyDetailsFormSchema),
     defaultValues: experimentToFormValues(experiment),
   });
+
+  const funding = useFieldArray({ control: form.control, name: "fundingReferences" });
+  const hasFunding = funding.fields.length > 0;
 
   useEffect(() => {
     if (open) {
@@ -102,6 +113,53 @@ export function ExperimentStudyDetailsDialog({
     (onChange: (value: string | null) => void) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       onChange(event.target.value || null);
+
+  const handleAddFunding = () => funding.append({ funderName: "", awardNumber: null });
+
+  const renderFundingRow = (row: { id: string }, index: number) => (
+    <div key={row.id} className="flex items-start gap-2">
+      <FormField
+        control={form.control}
+        name={`fundingReferences.${index}.funderName`}
+        render={({ field }) => (
+          <FormItem className="flex-1">
+            <FormLabel>{tStudy("funding.funder")}</FormLabel>
+            <FormControl>
+              <Input {...field} placeholder={tStudy("funding.funderPlaceholder")} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name={`fundingReferences.${index}.awardNumber`}
+        render={({ field }) => (
+          <FormItem className="flex-1">
+            <FormLabel>{tStudy("funding.awardNumber")}</FormLabel>
+            <FormControl>
+              <Input
+                value={field.value ?? ""}
+                onChange={handleOptionalChange(field.onChange)}
+                placeholder={tStudy("funding.awardNumberPlaceholder")}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="mt-[22px] shrink-0"
+        aria-label={tStudy("funding.remove")}
+        onClick={() => funding.remove(index)}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
 
   const onSubmit = async (values: StudyDetailsFormValues) => {
     // Every field is sent; an emptied field is null so the stored value clears.
@@ -251,6 +309,21 @@ export function ExperimentStudyDetailsDialog({
                 </FormItem>
               )}
             />
+
+            <section aria-labelledby="study-details-funding" className="space-y-3 border-t pt-4">
+              <h3 id="study-details-funding" className="text-sm font-semibold">
+                {tStudy("funding.title")}
+              </h3>
+              {hasFunding ? (
+                funding.fields.map(renderFundingRow)
+              ) : (
+                <p className="text-muted-foreground text-sm">{tStudy("funding.empty")}</p>
+              )}
+              <Button type="button" variant="outline" size="sm" onClick={handleAddFunding}>
+                <Plus className="mr-1 h-3.5 w-3.5" />
+                {hasFunding ? tStudy("funding.addAnother") : tStudy("funding.add")}
+              </Button>
+            </section>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
