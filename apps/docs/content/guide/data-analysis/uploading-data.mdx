@@ -12,7 +12,7 @@ a new table or adds rows to a table that an earlier upload created.
 ## Upload files
 
 1. Open the experiment's **Data** tab and choose **Upload Data**.
-2. Choose **New upload**.
+2. Choose **New upload** and pick the format of your files.
 3. Choose where the data lands:
    - **Create new table** and give it a name. The name starts with a letter and uses
      only letters, digits and underscores, at most 63 characters. Creating a table
@@ -51,8 +51,9 @@ You get a notification when an upload completes or fails, so you do not have to 
 dialog open.
 
 A file that cannot be read, or that holds no rows, is left out without failing the rest
-of the upload. A completed upload says how many files it left out and names each one
-with the reason, so you can fix those files and upload them again to the same table.
+of the upload; for an Ambyte upload, that is a whole `Ambyte_N` folder. A completed upload
+says what it left out and names each file or folder with the reason, so you can fix them
+and upload them again to the same table.
 
 An upload fails when none of its files matched the chosen format, when no rows could be
 read from them, or when the transfer from your browser stopped before every file arrived.
@@ -60,6 +61,7 @@ It also fails when the table has not shown the new rows within an hour; those ro
 still appear later.
 
 <Callout type="info">
-  Uploads made before October 2026 were carried over into the list with their status, but without
-  the files they left out.
+  Uploads made before October 2026 are listed with the time they finished as their start time, and
+  without the files they left out. Uploads from then that failed before adding any rows are not
+  listed.
 </Callout>
