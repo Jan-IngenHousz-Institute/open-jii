@@ -9,7 +9,8 @@
   "steps": {
     "allMet": "Every standard this trial follows is met, so publishing is open.",
     "publishWaits_one": "Waits for the step above",
-    "publishWaits_other": "Waits for the {{count}} steps above"
+    "publishWaits_other": "Waits for the {{count}} steps above",
+    "publishReady": "Nothing waits, so a dataset can be published."
   },
   "fix": {
     "add-location": "Add a location",
@@ -30,12 +31,16 @@
     "cancel": "Cancel",
     "save": "Save"
   },
-  "gate": {
-    "title_one": "Publishing waits for {{count}} step",
-    "title_other": "Publishing waits for {{count}} steps",
-    "description_one": "This trial follows {{names}}, so a dataset can be published once it is met.",
-    "description_other": "This trial follows {{names}}, so a dataset can be published once they are met.",
-    "seeSteps": "See the steps"
+  "summary": {
+    "line": "{{follows}} {{progress}}",
+    "follows": "Follows {{names}}.",
+    "followsFloor": "Follows only {{floor}}.",
+    "steps_one": "{{count}} step before publishing.",
+    "steps_other": "{{count}} steps before publishing.",
+    "needsFunding": "Publishing needs funding first.",
+    "ready": "Publishing is ready.",
+    "seeSteps": "See the steps",
+    "openDatasets": "Open Datasets"
   },
   "check": {
     "title": "Standards this trial follows",

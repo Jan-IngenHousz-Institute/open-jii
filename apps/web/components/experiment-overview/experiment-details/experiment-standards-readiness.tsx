@@ -1,6 +1,8 @@
 "use client";
 
 import { STANDARDS_READINESS_ANCHOR } from "@/components/experiment-overview/experiment-readiness-summary";
+import { ConceptDReadinessSummary } from "@/components/experiment-standards/concepts/d/concept-d-readiness-summary";
+import { useSearchParams } from "next/navigation";
 import { useExperimentStandardsReadiness } from "~/hooks/experiment/useExperimentStandardsReadiness/useExperimentStandardsReadiness";
 
 import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
@@ -36,6 +38,12 @@ export function ExperimentStandardsReadiness({ experiment }: ExperimentStandards
   const licenseLabel = useDataLicenseLabel();
   const { t: tStandards } = useTranslation("standards");
   const { data: readiness } = useExperimentStandardsReadiness(experiment.id);
+  // Scaffold: ?readiness=d says here what the trial follows, and its steps live on Datasets.
+  const isConceptD = useSearchParams().get("readiness") === "d";
+
+  if (isConceptD) {
+    return <ConceptDReadinessSummary experimentId={experiment.id} />;
+  }
 
   const { filled, total } = countStudyDescriptors(experiment);
 

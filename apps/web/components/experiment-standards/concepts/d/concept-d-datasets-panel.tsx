@@ -1,8 +1,9 @@
 "use client";
 
 import { ExperimentDatasetsPanel } from "@/components/datasets/experiment-datasets-panel";
+import { useExperimentDatasets } from "@/hooks/dataset/useExperimentDatasets/useExperimentDatasets";
 
-import { PublishGateBanner } from "./publish-gate-banner";
+import { TrialFollowsBlock } from "./trial-follows-block";
 import { useFollowedReadiness } from "./use-followed-readiness";
 import { useFollowedStandards } from "./use-followed-standards";
 
@@ -11,30 +12,31 @@ interface ConceptDDatasetsPanelProps {
   canPublish: boolean;
 }
 
-/** Concept D on the Datasets tab: publishing waits until the standards the trial follows are met. */
+/**
+ * Concept D on the Datasets tab: what the trial follows and its steps sit above the list, and
+ * Publish is their last row, so the list below carries no Publish of its own.
+ */
 export function ConceptDDatasetsPanel({ experimentId, canPublish }: ConceptDDatasetsPanelProps) {
-  const { followed } = useFollowedStandards();
+  const { followed, setFollowed } = useFollowedStandards();
   const readiness = useFollowedReadiness(experimentId, followed);
+  const { data: datasets } = useExperimentDatasets(experimentId);
 
-  const hasStepsLeft = readiness !== undefined && readiness.stepsBeforePublishing.length > 0;
-  // Closed until readiness answers too, so Publish never opens for a moment and then closes.
-  const isPublishOpen = readiness !== undefined && !hasStepsLeft;
+  const draft = datasets?.find((dataset) => dataset.state === "draft");
 
   return (
     <>
-      {canPublish && hasStepsLeft ? (
-        <PublishGateBanner
+      {readiness ? (
+        <TrialFollowsBlock
           experimentId={experimentId}
+          readiness={readiness}
           followed={followed}
-          waitingOn={readiness.waitingOn}
-          stepCount={readiness.stepsBeforePublishing.length}
+          onFollowedChange={setFollowed}
+          canPublish={canPublish}
+          draft={draft}
         />
       ) : null}
 
-      <ExperimentDatasetsPanel
-        experimentId={experimentId}
-        canPublish={canPublish && isPublishOpen}
-      />
+      <ExperimentDatasetsPanel experimentId={experimentId} canPublish={false} />
     </>
   );
 }

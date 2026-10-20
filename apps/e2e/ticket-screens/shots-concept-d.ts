@@ -110,8 +110,6 @@ const publishFlow = pathsFixture((experiment) => ({
   },
 }));
 
-const overviewFixtures = [trialTables, readiness, miappeFields, noLinkedWorkbook];
-
 async function overviewWithConcept(): Promise<string> {
   return `${await overviewRoute()}?readiness=d`;
 }
@@ -129,15 +127,15 @@ function tabStrip(page: Page): Locator {
   return page.locator("[role='tablist']").first();
 }
 
-/** The details card beside the concept, so the crop spans the whole Overview. */
+/** The details card, which carries the Overview's part of the concept. */
 function detailsCard(page: Page): Locator {
   return page
     .locator("h3", { hasText: /^Details$/ })
     .locator("xpath=ancestor::div[contains(concat(' ', @class, ' '), ' rounded-xl ')][1]");
 }
 
-function conceptSection(page: Page): Locator {
-  return page.locator("#standards-readiness");
+function followsBlock(page: Page): Locator {
+  return page.getByTestId("trial-follows");
 }
 
 /** Waits out an opening zoom, which would otherwise skew the outline drawn around a part of it. */
@@ -155,60 +153,63 @@ async function blurFocus(page: Page): Promise<void> {
   });
 }
 
-async function waitForOverview(page: Page): Promise<Locator> {
-  const section = conceptSection(page);
-  await section.getByText("Waits for the 4 steps above").waitFor();
-  await page.getByText("Glycine max").waitFor();
-  return section;
-}
-
 const overviewShot: TicketShot = {
   slug: "b8-concept-d-overview",
   route: overviewWithConcept,
-  fixtures: overviewFixtures,
-  viewport: { width: 1440, height: 1700 },
+  fixtures: [trialTables, readiness, miappeFields, noLinkedWorkbook],
+  viewport: { width: 1440, height: 1500 },
   prepare: async (page) => {
-    const section = await waitForOverview(page);
+    const summary = page.getByTestId("concept-d-readiness-summary");
+    await summary.getByText("4 steps before publishing").waitFor();
+    await page.getByText("Glycine max").waitFor();
 
     const marker = new ChangeMarker(page);
-    await marker.mark(section, TAG, "above");
-    return marker.frame([tabStrip(page), detailsCard(page), section], 24);
+    await marker.mark(summary, TAG, "outside-left");
+    return marker.frame([tabStrip(page), detailsCard(page)], 24);
+  },
+};
+
+/** The Datasets tab with the block and the list loaded. */
+async function waitForDatasets(page: Page): Promise<Locator> {
+  const block = followsBlock(page);
+  await block.getByText("Waits for the 4 steps above").waitFor();
+  await page.getByTestId("experiment-datasets").getByText("Draft").waitFor();
+  return block;
+}
+
+const blockShot: TicketShot = {
+  slug: "f5-concept-d-gate",
+  route: datasetsWithConcept,
+  fixtures: [draftList, readiness, miappeFields],
+  viewport: { width: 1440, height: 1400 },
+  prepare: async (page) => {
+    const block = await waitForDatasets(page);
+    const list = page.getByTestId("experiment-datasets");
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(block, TAG, "above");
+    return marker.frame([tabStrip(page), block, list], 24);
   },
 };
 
 const chooseShot: TicketShot = {
-  slug: "b8-concept-d-choose",
-  route: overviewWithConcept,
-  fixtures: overviewFixtures,
-  viewport: { width: 1440, height: 1700 },
+  slug: "f5-concept-d-choose",
+  route: datasetsWithConcept,
+  fixtures: [draftList, readiness, miappeFields],
+  viewport: { width: 1440, height: 1400 },
   prepare: async (page) => {
-    const section = await waitForOverview(page);
-    await section.getByRole("button", { name: "Change", exact: true }).click();
+    const block = await waitForDatasets(page);
+    await block.getByRole("button", { name: "Change", exact: true }).click();
 
     const dialog = page.locator("[role='dialog']", { hasText: "What this trial follows" });
     await dialog.getByText("Not offered yet").waitFor();
     await settled(dialog);
     await blurFocus(page);
-
-    const marker = new ChangeMarker(page);
-    await marker.mark(dialog, TAG, "above");
-    return marker.frame([tabStrip(page), detailsCard(page), section, dialog], 24);
-  },
-};
-
-const gateShot: TicketShot = {
-  slug: "f5-concept-d-gate",
-  route: datasetsWithConcept,
-  fixtures: [draftList, readiness, miappeFields],
-  viewport: { width: 1440, height: 1000 },
-  prepare: async (page) => {
-    const banner = page.getByTestId("publish-gate");
-    await banner.getByText("Publishing waits for 4 steps").waitFor();
     const list = page.getByTestId("experiment-datasets");
 
     const marker = new ChangeMarker(page);
-    await marker.mark(banner, TAG, "above");
-    return marker.frame([tabStrip(page), banner, list], 24);
+    await marker.mark(dialog, TAG, "above");
+    return marker.frame([tabStrip(page), block, list, dialog], 24);
   },
 };
 
@@ -253,7 +254,7 @@ const checkShot: TicketShot = {
 
 export const SHOTS_CONCEPT_D: readonly TicketShot[] = [
   overviewShot,
+  blockShot,
   chooseShot,
-  gateShot,
   checkShot,
 ];

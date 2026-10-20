@@ -1,21 +1,19 @@
 "use client";
 
 import type { ReadinessStep } from "@/components/experiment-standards/concepts/readiness-steps";
+import type { ReactNode } from "react";
 
 import { FollowedStepRow } from "./followed-step-row";
-import { WaitingPublishRow } from "./waiting-publish-row";
 
 interface FollowedStepListProps {
   experimentId: string;
   /** The steps before publishing, ranked. */
   steps: ReadinessStep[];
-  /** Publishing, last: held while any step above remains. */
-  publishStep?: ReadinessStep;
+  /** A last row after the steps, such as the publish action. */
+  children?: ReactNode;
 }
 
-export function FollowedStepList({ experimentId, steps, publishStep }: FollowedStepListProps) {
-  const isPublishWaiting = steps.length > 0;
-
+export function FollowedStepList({ experimentId, steps, children }: FollowedStepListProps) {
   const renderStep = (step: ReadinessStep, index: number) => (
     <FollowedStepRow
       key={step.action}
@@ -25,17 +23,10 @@ export function FollowedStepList({ experimentId, steps, publishStep }: FollowedS
     />
   );
 
-  const renderPublish = (step: ReadinessStep) =>
-    isPublishWaiting ? (
-      <WaitingPublishRow step={step} waitingFor={steps.length} />
-    ) : (
-      renderStep(step, steps.length)
-    );
-
   return (
     <ol>
       {steps.map(renderStep)}
-      {publishStep ? renderPublish(publishStep) : null}
+      {children}
     </ol>
   );
 }
