@@ -2,13 +2,19 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
+import { ResourceDeletedNotifier } from "../../../../notifications/application/services/resource-deleted-notifier";
+import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
 import { WorkbookRepository } from "../../../core/repositories/workbook.repository";
 
 @Injectable()
 export class DeleteWorkbookUseCase {
   private readonly logger = new Logger(DeleteWorkbookUseCase.name);
 
-  constructor(private readonly workbookRepository: WorkbookRepository) {}
+  constructor(
+    private readonly workbookRepository: WorkbookRepository,
+    private readonly sharingRepository: SharingRepository,
+    private readonly deletionNotifier: ResourceDeletedNotifier,
+  ) {}
 
   async execute(id: string, userId: string): Promise<Result<void>> {
     this.logger.log({
@@ -35,6 +41,8 @@ export class DeleteWorkbookUseCase {
       return failure(AppError.notFound("Workbook not found"));
     }
 
+    const members = await this.sharingRepository.listMemberIds("workbook", id);
+
     const deleteResult = await this.workbookRepository.delete(id);
 
     if (deleteResult.isFailure()) {
@@ -47,6 +55,16 @@ export class DeleteWorkbookUseCase {
         error: deleteResult.error.message,
       });
       return deleteResult;
+    }
+
+    if (deleteResult.value.length > 0) {
+      await this.deletionNotifier.notify({
+        operation: "deleteWorkbook",
+        actorId: userId,
+        resource: { type: "workbook", id },
+        name: workbookResult.value.name,
+        members,
+      });
     }
 
     this.logger.log({

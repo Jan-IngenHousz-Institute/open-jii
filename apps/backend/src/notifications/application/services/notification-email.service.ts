@@ -142,6 +142,18 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
             failure(AppError.internal("Access notification on a non-shareable resource")),
           ),
   ),
+  // No `aboutResource`: a deleted resource has no page to link back to.
+  resource_deleted: (email, { params, actorName, recipientEmail, resource }) =>
+    resource && isSharingResourceType(resource.type)
+      ? email.sendResourceDeletedNotification({
+          resourceType: resource.type,
+          resourceName: params.resourceName,
+          actor: actorName ?? "Someone",
+          email: recipientEmail,
+        })
+      : Promise.resolve(
+          failure(AppError.internal("Deletion notification without a shareable resource")),
+        ),
   // No `aboutResource`: the request is about a PhotosynQ project, not a platform resource.
   project_transfer_requested: (email, { params, recipientEmail }) =>
     email.sendTransferRequestConfirmation(recipientEmail, params.projectId, params.projectUrl),

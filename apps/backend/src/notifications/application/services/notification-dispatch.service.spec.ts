@@ -490,6 +490,52 @@ describe("NotificationDispatchService", () => {
     });
   });
 
+  describe("the deletion email entry", () => {
+    const deletedContext = (
+      resource: { type: "device_group" | "organization"; id: string } | null,
+      actorName: string | null = "Ada Lovelace",
+    ) => ({
+      recipientEmail,
+      actorName,
+      resource,
+      params: { resourceName: "Greenhouse sensors" },
+    });
+
+    let sendDeleted: MockInstance<EmailAdapter["sendResourceDeletedNotification"]>;
+
+    beforeEach(() => {
+      sendDeleted = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendResourceDeletedNotification")
+        .mockResolvedValue(success(undefined));
+    });
+
+    it("sends the resource's type, name and actor, with a fallback for a missing actor", async () => {
+      const result = await notificationEmail.send(
+        "resource_deleted",
+        deletedContext({ type: "device_group", id: crypto.randomUUID() }, null),
+      );
+
+      assertSuccess(result);
+      expect(sendDeleted).toHaveBeenCalledWith({
+        resourceType: "device_group",
+        resourceName: "Greenhouse sensors",
+        actor: "Someone",
+        email: recipientEmail,
+      });
+    });
+
+    it.each([
+      ["an organization resource", { type: "organization" as const, id: crypto.randomUUID() }],
+      ["no resource", null],
+    ])("refuses %s", async (_, resource) => {
+      const result = await notificationEmail.send("resource_deleted", deletedContext(resource));
+
+      assertFailure(result);
+      expect(result.error.message).toContain("without a shareable resource");
+      expect(sendDeleted).not.toHaveBeenCalled();
+    });
+  });
+
   it("writes both rows on a replay after a first attempt rolled back", async () => {
     const send = {
       type: "experiment_join_request_received" as const,
