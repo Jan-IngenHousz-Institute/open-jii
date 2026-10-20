@@ -26,7 +26,8 @@ resource "aws_iam_policy" "databricks_write" {
 
 # Lets the backend ECS task role read manifests and sign GetObject URLs for
 # export parts, so downloads go straight from S3 to the browser. ListBucket is
-# what makes a missing manifest a 404 rather than a 403
+# what makes a missing manifest a 404 rather than a 403; it carries no prefix
+# condition, because a GetObject request has no prefix for one to match
 resource "aws_iam_policy" "backend_read" {
   name = "open_jii_${var.environment}_backend_data_exports_read"
 
@@ -42,9 +43,6 @@ resource "aws_iam_policy" "backend_read" {
         Effect   = "Allow"
         Action   = ["s3:ListBucket"]
         Resource = var.bucket_arn
-        Condition = {
-          StringLike = { "s3:prefix" = ["exports/*"] }
-        }
       }
     ]
   })

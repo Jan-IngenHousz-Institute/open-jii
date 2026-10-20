@@ -568,6 +568,8 @@ export const experimentExports = pgTable(
       .default(sql`'{}'::uuid[]`),
     completedAt: timestamp("completed_at"),
     expiresAt: timestamp("expires_at"),
+    // Set once whoever asked has been told how the export ended; until then each pass tries again.
+    announcedAt: timestamp("announced_at"),
     ...timestamps,
   },
   (table) => [

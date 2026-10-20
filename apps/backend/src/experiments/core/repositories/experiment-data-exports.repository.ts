@@ -6,7 +6,9 @@ import {
   eq,
   experimentExports,
   experiments,
+  gt,
   inArray,
+  isNull,
   lt,
   sql,
   users,
@@ -249,6 +251,33 @@ export class ExperimentDataExportsRepository {
     });
   }
 
+  /** Finished exports whose outcome nobody has been told about yet, finished after `since`. */
+  async findUnannounced(since: Date): Promise<Result<ExperimentExportDto[]>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select()
+        .from(experimentExports)
+        .where(
+          and(
+            inArray(experimentExports.status, ["completed", "failed"]),
+            isNull(experimentExports.announcedAt),
+            gt(experimentExports.completedAt, since),
+          ),
+        );
+
+      return rows.map((row) => experimentExportSchema.parse(row));
+    });
+  }
+
+  async markAnnounced(exportId: string): Promise<Result<void>> {
+    return tryCatch(async () => {
+      await this.database
+        .update(experimentExports)
+        .set({ announcedAt: new Date() })
+        .where(eq(experimentExports.id, exportId));
+    });
+  }
+
   /** Marks completed exports whose files the bucket has deleted; returns how many. */
   async expireDue(now: Date): Promise<Result<number>> {
     return tryCatch(async () => {
@@ -292,6 +321,8 @@ export class ExperimentDataExportsRepository {
           status: "completed",
           totalBytes: record.parts.reduce((total, part) => total + part.sizeBytes, 0),
           expiresAt: new Date(record.createdAt.getTime() + EXPORT_RETENTION_DAYS * DAY_MS),
+          // Their outcome is weeks old, so nobody is told about it now.
+          announcedAt: new Date(),
         }),
       );
 
