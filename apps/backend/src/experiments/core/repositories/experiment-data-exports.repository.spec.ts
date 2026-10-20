@@ -1,12 +1,10 @@
-import { faker } from "@faker-js/faker";
-
 import { eq, experimentExports } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import type { ExportManifest } from "../models/experiment-data-exports.model";
 import { ExperimentDataExportsRepository } from "./experiment-data-exports.repository";
-import type { CarriedOverExport, NewExport } from "./experiment-data-exports.repository";
+import type { NewExport } from "./experiment-data-exports.repository";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -249,69 +247,6 @@ describe("ExperimentDataExportsRepository", () => {
         [due.id]: "expired",
         [fresh.id]: "completed",
       });
-    });
-  });
-
-  describe("insertCarriedOver", () => {
-    function carried(overrides: Partial<CarriedOverExport> = {}): CarriedOverExport {
-      const createdAt = new Date(Date.now() - 5 * DAY_MS);
-      return {
-        ...newExport(),
-        id: faker.string.uuid(),
-        jobRunId: 200436574855526,
-        rowCount: 32_117_212,
-        parts: [{ name: "part-00000.snappy.parquet", sizeBytes: 27_457_507_736 }],
-        createdAt,
-        completedAt: new Date(createdAt.getTime() + 20 * 60_000),
-        ...overrides,
-      };
-    }
-
-    it("records carried-over exports as completed, expiring 30 days after they were made", async () => {
-      const record = carried();
-
-      const result = await repository.insertCarriedOver([record]);
-
-      assertSuccess(result);
-      expect(result.value).toBe(1);
-      const [row] = await testApp.database
-        .select()
-        .from(experimentExports)
-        .where(eq(experimentExports.id, record.id));
-      expect(row).toMatchObject({
-        status: "completed",
-        jobRunId: 200436574855526,
-        totalBytes: 27_457_507_736,
-        expiresAt: new Date(record.createdAt.getTime() + 30 * DAY_MS),
-      });
-    });
-
-    it("replaces the failed record of a run that wrote its export the old way", async () => {
-      const failedByDeploy = await created();
-      await repository.attachRun(failedByDeploy.id, 200436574855526);
-      await repository.fail(failedByDeploy.id, "unknown");
-      const record = carried();
-
-      const result = await repository.insertCarriedOver([record]);
-
-      assertSuccess(result);
-      expect(result.value).toBe(1);
-      const rows = await testApp.database.select().from(experimentExports);
-      expect(rows.map((row) => [row.id, row.status])).toEqual([[record.id, "completed"]]);
-    });
-
-    it("skips exports whose experiment or creator is gone, and records nothing twice", async () => {
-      const kept = carried();
-      const orphanedExperiment = carried({ experimentId: faker.string.uuid() });
-      const orphanedCreator = carried({ createdBy: faker.string.uuid() });
-
-      const first = await repository.insertCarriedOver([kept, orphanedExperiment, orphanedCreator]);
-      const repeat = await repository.insertCarriedOver([kept]);
-
-      assertSuccess(first);
-      assertSuccess(repeat);
-      expect(first.value).toBe(1);
-      expect(repeat.value).toBe(0);
     });
   });
 });

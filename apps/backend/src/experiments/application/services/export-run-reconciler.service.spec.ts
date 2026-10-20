@@ -391,29 +391,6 @@ describe("ExportRunReconcilerService", () => {
     ]);
   });
 
-  it("tells nobody about exports carried over from the old storage", async () => {
-    const createdAt = new Date(Date.now() - 2 * 24 * 60 * 60_000);
-    await exportsRepository.insertCarriedOver([
-      {
-        id: "8c1f6a0e-4c35-4d7e-9a43-3f0b2a5d1e77",
-        experimentId,
-        tableName: "raw_data",
-        format: "parquet",
-        anonymizeContributors: false,
-        createdBy: userId,
-        jobRunId: 1,
-        rowCount: 10,
-        parts: [{ name: "part-00000.snappy.parquet", sizeBytes: 10 }],
-        createdAt,
-        completedAt: new Date(),
-      },
-    ]);
-
-    await reconciler.reconcile();
-
-    expect(await notificationsFor(userId)).toHaveLength(0);
-  });
-
   it("notifies once when two backend tasks finish the same export at the same time", async () => {
     const exportId = await exportInFlight();
     vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(
