@@ -55,6 +55,9 @@ export const LEAF_READING_WORKBOOK: FlowNode[] = [
   },
 ];
 
+/** When the example reading was taken, inside the example trial's season. */
+export const LEAF_READING_TIME = "2026-07-14T10:12:00.000+02:00";
+
 /** What a mock device sends for one leaf reading. */
 export const LEAF_READING_RESULT: ScanResult = {
   leaf_temperature: 24.6,

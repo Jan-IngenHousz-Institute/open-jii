@@ -30,6 +30,7 @@ import { toDeviceContext } from "@repo/api/transforms/device-context";
 
 import { usePlotStepStore } from "../plot-node/next-plot";
 import { isScaffoldScreenOn } from "../plot-node/scaffold-screen";
+import { LEAF_READING_TIME } from "../plot-node/scaffold-workbooks";
 import { hydrateCells } from "../utils/hydrate-cells";
 import { AnalysisActionBar, useScrollToTop } from "./analysis-action-bar";
 import { AnalysisMacroResult } from "./analysis-macro-result";
@@ -186,7 +187,10 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
   // Capture the display timestamp once so it stays stable across re-renders.
   // The upload handler captures its own fresh timestamp independently.
   // eslint-disable-next-line react-hooks/exhaustive-deps -- scanResult is an intentional trigger to re-capture the timestamp on new scans
-  const displayTimestamp = useMemo(() => getSyncedLocalISO(), [scanResult]);
+  const displayTimestamp = useMemo(
+    () => (isScaffoldScreenOn("d5-measure-again") ? LEAF_READING_TIME : getSyncedLocalISO()),
+    [scanResult],
+  );
 
   // Synthetic StoredMeasurement for the live scan preview, not saved yet.
   // status "successful" hides the comment button in the modal.
