@@ -38,7 +38,6 @@ import { UpdateExperimentDashboardUseCase } from "./application/use-cases/experi
 import { AddAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
 import { DeleteAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/delete-annotations/delete-annotations";
 import { UpdateAnnotationUseCase } from "./application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
-import { CarryOverExportsUseCase } from "./application/use-cases/experiment-data-exports/carry-over-exports";
 import { GetExportDownloadLinksUseCase } from "./application/use-cases/experiment-data-exports/get-export-download-links";
 import { InitiateExportUseCase } from "./application/use-cases/experiment-data-exports/initiate-export";
 import { ListExportsUseCase } from "./application/use-cases/experiment-data-exports/list-exports";
@@ -115,7 +114,6 @@ import { ExperimentDataAnnotationsController } from "./presentation/experiment-d
 import { ExperimentDataExportsController } from "./presentation/experiment-data-exports.controller";
 import { ExperimentDataUploadsController } from "./presentation/experiment-data-uploads.controller";
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
-import { ExperimentExportCarryOverWebhookController } from "./presentation/experiment-export-carry-over-webhook.controller";
 import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
 import { ExperimentJoinCodeRedemptionController } from "./presentation/experiment-join-code-redemption.controller";
 import { ExperimentJoinCodesController } from "./presentation/experiment-join-codes.controller";
@@ -162,7 +160,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ProjectTransferRequestsController,
     ProjectTransferWebhookController,
     ExperimentUploadWebhookController,
-    ExperimentExportCarryOverWebhookController,
   ],
   providers: [
     // Port implementations
@@ -249,7 +246,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     InitiateExportUseCase,
     ListExportsUseCase,
     GetExportDownloadLinksUseCase,
-    CarryOverExportsUseCase,
 
     ListExperimentContributorsUseCase,
 
