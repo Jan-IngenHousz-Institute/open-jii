@@ -1,5 +1,6 @@
 import ast
 import math
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,10 @@ _TASK_PATH = Path(__file__).parents[2] / "src/tasks/export_carry_over_task.py"
 _NAMES = {
     "ROWS_PER_PART",
     "MANIFEST_NAME",
+    "TABLE_NAME_PATTERN",
+    "PART_NAME_PATTERN",
+    "MAX_PARTS",
+    "is_acceptable",
     "parse_legacy_output",
     "iso_utc",
     "part_count",
@@ -31,7 +36,13 @@ def _defined_name(node: ast.stmt) -> str | None:
 def task() -> dict[str, Any]:
     module = ast.parse(_TASK_PATH.read_text())
     body = [node for node in module.body if _defined_name(node) in _NAMES]
-    namespace: dict[str, Any] = {"ast": ast, "math": math, "datetime": datetime, "timezone": timezone}
+    namespace: dict[str, Any] = {
+        "ast": ast,
+        "math": math,
+        "re": re,
+        "datetime": datetime,
+        "timezone": timezone,
+    }
     exec(compile(ast.Module(body=body, type_ignores=[]), _TASK_PATH, "exec"), namespace)
     return namespace
 
@@ -107,3 +118,34 @@ def test_a_large_parquet_export_is_cut_like_a_new_one(task) -> None:
 
 def test_batches_cover_every_record_once(task) -> None:
     assert list(task["batches"](list(range(7)), 3)) == [[0, 1, 2], [3, 4, 5], [6]]
+
+
+def _record(**overrides: Any) -> dict:
+    return {
+        "exportId": "x1",
+        "tableName": "182c8c4c-41d1-4eba-a0af-34635f7773d7",
+        "rowCount": 10,
+        "parts": [{"name": "part-00000-tid-1-c000.snappy.parquet", "sizeBytes": 1}],
+        **overrides,
+    }
+
+
+def test_accepts_what_the_backend_accepts(task) -> None:
+    assert task["is_acceptable"](_record())
+    assert task["is_acceptable"](
+        _record(tableName="raw_data", parts=[{"name": "raw_data.xlsx", "sizeBytes": 1}])
+    )
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"tableName": "raw data"},
+        {"rowCount": 0},
+        {"parts": []},
+        {"parts": [{"name": "..", "sizeBytes": 1}]},
+        {"parts": [{"name": "a/b.csv", "sizeBytes": 1}]},
+    ],
+)
+def test_refuses_what_the_backend_would_refuse(task, overrides) -> None:
+    assert not task["is_acceptable"](_record(**overrides))
