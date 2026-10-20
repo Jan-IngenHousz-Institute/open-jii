@@ -73,6 +73,7 @@ describe("<ExperimentStudyDetailsSection />", () => {
       experimentalDesign: null,
       growthFacility: null,
       license: null,
+      fundingReferences: [],
     });
   });
 

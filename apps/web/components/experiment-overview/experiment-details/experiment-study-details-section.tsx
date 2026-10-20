@@ -2,10 +2,7 @@
 
 import { useState } from "react";
 
-import type {
-  Experiment,
-  FundingReference,
-} from "@repo/api/domains/experiment/experiment.schema";
+import type { Experiment, FundingReference } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
