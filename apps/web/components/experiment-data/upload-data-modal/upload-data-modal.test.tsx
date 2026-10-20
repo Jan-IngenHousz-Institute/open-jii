@@ -66,7 +66,6 @@ function mountUploadCapture(status = 201) {
           uploadId: "u-1",
           uploadTableId: "11111111-1111-1111-1111-111111111111",
           uploadTableName: "leaf_traits",
-          runId: 99,
           files: [{ fileName: "data.csv", filePath: "/Volumes/x" }],
         },
         { status },
@@ -84,7 +83,7 @@ async function enterCreateView(kind = "csv") {
   );
   await userEvent.click(
     await screen.findByRole("menuitem", {
-      name: `experimentData.uploadDataModal.history.sourceKind.${kind}`,
+      name: `experimentData.uploadDataModal.sourceKind.${kind}`,
     }),
   );
 }
@@ -486,9 +485,7 @@ describe("UploadDataModal", () => {
 
     render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={onOpenChange} />);
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.close" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "common.close" }));
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });

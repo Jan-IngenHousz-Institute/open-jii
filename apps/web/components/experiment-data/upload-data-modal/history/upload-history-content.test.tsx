@@ -1,31 +1,19 @@
+import { createUpload } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
-import React from "react";
 import { describe, expect, it } from "vitest";
-
-import type { ExperimentUploadMetadata } from "@repo/api/domains/experiment/experiment.schema";
 
 import { UploadHistoryContent } from "./upload-history-content";
 
-function makeUpload(id: string, name: string): ExperimentUploadMetadata {
-  return {
-    uploadId: id,
-    experimentId: "exp-1",
-    uploadTableId: "11111111-1111-1111-1111-111111111111",
-    uploadTableName: name,
-    sourceKind: "csv",
-    status: "completed",
-    fileCount: 1,
-    rowCount: 10,
-    createdBy: "user-1",
-    createdAt: "2026-05-13T10:00:00.000Z",
-    completedAt: "2026-05-13T10:05:00.000Z",
-    errorMessage: null,
-  };
-}
-
 describe("UploadHistoryContent", () => {
   it("shows neither the empty state nor cards while loading", () => {
-    render(<UploadHistoryContent isLoading uploads={[makeUpload("u-1", "leaf_traits")]} />);
+    render(
+      <UploadHistoryContent
+        isLoading
+        error={null}
+        uploads={[createUpload({ uploadTableName: "leaf_traits" })]}
+      />,
+    );
+
     expect(
       screen.queryByText("experimentData.uploadDataModal.history.empty"),
     ).not.toBeInTheDocument();
@@ -33,17 +21,32 @@ describe("UploadHistoryContent", () => {
   });
 
   it("renders the empty state when not loading and there are no uploads", () => {
-    render(<UploadHistoryContent isLoading={false} uploads={[]} />);
+    render(<UploadHistoryContent isLoading={false} error={null} uploads={[]} />);
+
     expect(screen.getByText("experimentData.uploadDataModal.history.empty")).toBeInTheDocument();
+  });
+
+  it("renders the error instead of the empty state when the list failed to load", () => {
+    render(<UploadHistoryContent isLoading={false} error={new Error("boom")} uploads={[]} />);
+
+    expect(screen.getByText("experimentData.uploadDataModal.history.error")).toBeInTheDocument();
+    expect(
+      screen.queryByText("experimentData.uploadDataModal.history.empty"),
+    ).not.toBeInTheDocument();
   });
 
   it("renders one card per upload", () => {
     render(
       <UploadHistoryContent
         isLoading={false}
-        uploads={[makeUpload("u-1", "leaf_traits"), makeUpload("u-2", "soil_chem")]}
+        error={null}
+        uploads={[
+          createUpload({ uploadTableName: "leaf_traits" }),
+          createUpload({ uploadTableName: "soil_chem" }),
+        ]}
       />,
     );
+
     expect(screen.getByText("leaf_traits")).toBeInTheDocument();
     expect(screen.getByText("soil_chem")).toBeInTheDocument();
   });
