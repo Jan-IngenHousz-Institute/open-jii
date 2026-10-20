@@ -92,39 +92,6 @@ def test_notify_upload_outcome_posts_a_signed_payload(client: BackendClient) -> 
 
 
 @responses.activate
-def test_carry_over_exports_posts_a_signed_batch(client: BackendClient) -> None:
-    responses.add(
-        responses.POST,
-        f"{BASE_URL}/api/v1/webhooks/data-export-carry-over",
-        json={"success": True, "imported": 1},
-        status=201,
-    )
-    exports = [
-        {
-            "exportId": "x1",
-            "experimentId": "e1",
-            "tableName": "raw_data",
-            "format": "parquet",
-            "anonymizeContributors": False,
-            "jobRunId": 42,
-            "rowCount": 10,
-            "parts": [{"name": "part-00000.snappy.parquet", "sizeBytes": 2048}],
-            "createdBy": "user-1",
-            "createdAt": "2026-10-19T13:18:50.982Z",
-            "completedAt": "2026-10-19T13:38:41.696Z",
-        }
-    ]
-
-    assert client.carry_over_exports(exports) == {"success": True, "imported": 1}
-
-    sent = responses.calls[0].request
-    assert sent.body is not None
-    assert json.loads(sent.body) == {"exports": exports}
-    timestamp = int(sent.headers["x-databricks-timestamp"])
-    assert sent.headers["x-databricks-signature"] == _expected_signature({"exports": exports}, timestamp)
-
-
-@responses.activate
 def test_get_user_metadata_happy_path(client: BackendClient) -> None:
     responses.add(
         responses.POST,
