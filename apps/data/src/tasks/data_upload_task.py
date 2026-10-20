@@ -95,7 +95,8 @@ def rejected_file(path: str, reason: str) -> dict:
 
 def build_outcome(upload_id: str, row_count: int, rejected_files: list, queryable: bool) -> dict:
     """``queryable`` only counts once rows were written."""
-    # Every input either adds rows or is rejected, so no rows and no rejections means none matched.
+    # Every uploaded file, or Ambyte folder, either adds rows or is rejected, so no rows and no
+    # rejections means none matched.
     nothing_matched = row_count == 0 and not rejected_files
 
     if nothing_matched:
@@ -266,12 +267,18 @@ def _read_parquet_files(paths: list[str]) -> tuple[DataFrame | None, list[dict]]
         try:
             # Spark reads UC volumes via /Volumes; strip the dbfs: scheme dbutils adds.
             spark_path = path[len("dbfs:") :] if path.startswith("dbfs:") else path
-            frame = spark.read.parquet(spark_path)
-            if frame.isEmpty():
+            row_json = _serialize_parquet_rows(spark.read.parquet(spark_path))
+
+            # Aggregating over every encoded row decodes every page, so a corrupt file fails here
+            # instead of failing the write of the whole upload.
+            decoded = row_json.agg(
+                F.count(F.lit(1)).alias("rows"),
+                F.sum(F.length("uploaded_data")).alias("json_length"),
+            ).first()
+            if decoded["rows"] == 0:
                 rejected_files.append(rejected_file(path, "no_rows"))
                 continue
 
-            row_json = _serialize_parquet_rows(frame)
             combined = row_json if combined is None else combined.unionByName(row_json)
         except Exception as e:
             logger.error(f"Error parsing {path}: {e}")
@@ -370,6 +377,32 @@ def process_ndjson_upload() -> dict:
 # COMMAND ----------
 
 # DBTITLE 1,Ambyte Processor
+def _find_ambyte_folders(base_path: str) -> tuple[list[str], list[dict]]:
+    """The byte folders discovery finds, and every other top-level folder of the upload as rejected."""
+    try:
+        entries = dbutils.fs.ls(base_path)
+    except Exception as e:
+        raise Exception(f"Ambyte directory not found: {base_path}. Error: {e}")
+
+    try:
+        byte_folders = find_byte_folders(base_path)
+    except Exception as e:
+        raise Exception(f"Error finding byte folders in {base_path}: {e}")
+
+    # Discovery needs all four ambit subfolders or unknown_ambit, while an upload may also hold
+    # traces straight under Ambyte_N or in only some of its ambits.
+    discovered = {os.path.basename(folder.rstrip("/")) for folder in byte_folders}
+    undiscovered = [
+        entry.path
+        for entry in entries
+        if entry.isDir() and os.path.basename(entry.path.rstrip("/")) not in discovered
+    ]
+    for path in undiscovered:
+        logger.warning(f"No byte folder layout in {path}")
+
+    return byte_folders, [rejected_file(path, "unparseable") for path in undiscovered]
+
+
 def _parse_ambyte_folders(
     folders: list[str], year_prefixes: tuple[str, ...]
 ) -> tuple[list[pd.DataFrame], list[dict]]:
@@ -433,21 +466,12 @@ def process_ambyte_upload() -> dict:
         f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/uploads/{UPLOAD_DIRECTORY}"
     )
 
-    try:
-        dbutils.fs.ls(ambyte_base_path)
-    except Exception as e:
-        raise Exception(f"Ambyte directory not found: {ambyte_base_path}. Error: {e}")
-
     logger.info(f"Processing ambyte directory: {ambyte_base_path}")
-
-    try:
-        byte_parent_folders = find_byte_folders(ambyte_base_path)
-    except Exception as e:
-        raise Exception(f"Error finding byte folders in {ambyte_base_path}: {e}")
+    byte_parent_folders, discovery_rejections = _find_ambyte_folders(ambyte_base_path)
 
     if not byte_parent_folders:
         logger.warning(f"No valid byte parent folders found in {ambyte_base_path}")
-        return {"rows_written": 0, "rejected_files": []}
+        return {"rows_written": 0, "rejected_files": discovery_rejections}
 
     logger.info(f"Found {len(byte_parent_folders)} valid byte parent folder(s)")
 
@@ -456,6 +480,7 @@ def process_ambyte_upload() -> dict:
     year_prefixes = (YEAR_PREFIX, str(int(YEAR_PREFIX) - 1))
 
     combined_dataframes, rejected_files = _parse_ambyte_folders(byte_parent_folders, year_prefixes)
+    rejected_files.extend(discovery_rejections)
 
     if not combined_dataframes:
         logger.warning(f"All ambyte processing failed ({len(rejected_files)} folders rejected)")
