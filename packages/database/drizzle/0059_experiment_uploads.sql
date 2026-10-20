@@ -27,4 +27,6 @@ ALTER TABLE "experiment_uploads" ADD CONSTRAINT "experiment_uploads_experiment_i
 ALTER TABLE "experiment_uploads" ADD CONSTRAINT "experiment_uploads_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "experiment_uploads_experiment_idx" ON "experiment_uploads" USING btree ("experiment_id","created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "experiment_uploads_new_table_uniq" ON "experiment_uploads" USING btree ("experiment_id","upload_table_name") WHERE "experiment_uploads"."target_kind" = 'new' AND "experiment_uploads"."status" IN ('receiving', 'queued', 'pending', 'running');--> statement-breakpoint
-CREATE INDEX "experiment_uploads_in_flight_idx" ON "experiment_uploads" USING btree ("status") WHERE "experiment_uploads"."status" IN ('receiving', 'queued', 'pending', 'running');
+CREATE INDEX "experiment_uploads_in_flight_idx" ON "experiment_uploads" USING btree ("status") WHERE "experiment_uploads"."status" IN ('receiving', 'queued', 'pending', 'running');--> statement-breakpoint
+-- Failed-upload notifications stored the table name under fileName before it became tableName.
+UPDATE "notifications" SET "params" = ("params" - 'fileName') || jsonb_build_object('tableName', "params"->>'fileName') WHERE "type" = 'data_upload_failed' AND "params" ? 'fileName';

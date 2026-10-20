@@ -114,7 +114,8 @@ export const zExperimentUploadTargetTable = z.discriminatedUnion("kind", [
 export type ExperimentUploadTargetTable = z.infer<typeof zExperimentUploadTargetTable>;
 
 // Lets a client follow its upload before the response arrives; the backend makes one up when absent.
-const zExperimentUploadClientId = z.string().uuid().optional();
+// Lowercased because Postgres stores a uuid that way and the upload job echoes back what it was sent.
+const zExperimentUploadClientId = z.string().uuid().toLowerCase().optional();
 
 // Form fields shared across the multipart upload boundary. The FE binds this
 // schema to react-hook-form via zodResolver; the BE validates the same shape
@@ -273,7 +274,7 @@ export const UPLOAD_FILENAME_SCHEMAS = {
 export const zExperimentUploadDataBody = z.any();
 
 export const zExperimentUploadDataResponse = z.object({
-  uploadId: z.string().describe("UUID of this upload"),
+  uploadId: z.string().uuid().describe("UUID of this upload"),
   uploadTableId: z
     .string()
     .optional()

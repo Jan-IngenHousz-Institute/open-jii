@@ -291,8 +291,8 @@ export class UploadDataUseCase {
     }
     if (queued.value === null) {
       return failure(
-        AppError.timeout(
-          "The upload took too long to arrive and was stopped; start it again",
+        AppError.conflict(
+          "This upload stopped before its files finished arriving; start it again",
           "UPLOAD_TRANSFER_INTERRUPTED",
         ),
       );
@@ -371,8 +371,9 @@ export class UploadDataUseCase {
     }
   }
 
+  /** The request's own error response tells the uploader, so no notification follows. */
   private async finishAsFailed(ctx: UploadContext, errorCode: UploadErrorCode): Promise<void> {
-    const failed = await this.uploadsRepository.fail(ctx.uploadId, errorCode);
+    const failed = await this.uploadsRepository.failAnnounced(ctx.uploadId, errorCode);
     if (failed.isFailure()) {
       this.logger.error({
         msg: "Could not record a failed upload",

@@ -10,6 +10,8 @@ import {
   zExperimentNdjsonFilename,
   zExperimentParquetFilename,
   zExperimentTsvFilename,
+  zExperimentUploadDataResponse,
+  zExperimentUploadFormFields,
   zExperimentUploadRecord,
   zExperimentUploadSourceKind,
   zExperimentUploadTableName,
@@ -293,6 +295,41 @@ describe("Upload schemas", () => {
           rejectedFiles: [{ name: "a.csv", reason: "too_big" }],
         }).success,
       ).toBe(false);
+    });
+  });
+
+  describe("zExperimentUploadFormFields", () => {
+    it("lowercases the upload id the client sends", () => {
+      const result = zExperimentUploadFormFields.safeParse({
+        targetKind: "new",
+        sourceKind: "csv",
+        targetName: "leaf_traits",
+        uploadId: "8C1F6A0E-4C35-4D7E-9A43-3F0B2A5D1E77",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.uploadId).toBe("8c1f6a0e-4c35-4d7e-9a43-3f0b2a5d1e77");
+      }
+    });
+
+    it("rejects an upload id that is not a UUID", () => {
+      const result = zExperimentUploadFormFields.safeParse({
+        targetKind: "new",
+        sourceKind: "csv",
+        targetName: "leaf_traits",
+        uploadId: "u-2",
+      });
+
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("zExperimentUploadDataResponse", () => {
+    it("rejects an upload id that is not a UUID", () => {
+      expect(zExperimentUploadDataResponse.safeParse({ uploadId: "u-2", files: [] }).success).toBe(
+        false,
+      );
     });
   });
 });

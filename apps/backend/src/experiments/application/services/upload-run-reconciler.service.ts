@@ -132,7 +132,7 @@ export class UploadRunReconcilerService {
     if (record.status === "receiving") {
       const sinceLastFile = Date.now() - record.updatedAt.getTime();
       if (sinceLastFile > RECEIVING_LIMIT_MS) {
-        await this.finishAsFailed(record, "transfer_interrupted");
+        await this.failStalledTransfer(record);
       }
       return;
     }
@@ -353,6 +353,23 @@ export class UploadRunReconcilerService {
     rejectedFiles: ExperimentUploadRejectedFile[] | null = null,
   ): Promise<void> {
     const failed = await this.uploadsRepository.fail(record.id, errorCode, rejectedFiles);
+    if (failed.isFailure()) {
+      this.logger.error({
+        msg: "Could not record a failed upload",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "reconcileUploads",
+        uploadId: record.id,
+        error: failed.error.message,
+      });
+    }
+  }
+
+  /** Rechecked in the write, since the upload's request may have queued it after it was read. */
+  private async failStalledTransfer(record: ExperimentUploadDto): Promise<void> {
+    const failed = await this.uploadsRepository.failStalledTransfer(
+      record.id,
+      new Date(Date.now() - RECEIVING_LIMIT_MS),
+    );
     if (failed.isFailure()) {
       this.logger.error({
         msg: "Could not record a failed upload",
