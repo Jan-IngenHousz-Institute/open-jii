@@ -158,6 +158,8 @@
       },
       "rejectedFiles_one": "{{rejected}} of {{count}} file rejected",
       "rejectedFiles_other": "{{rejected}} of {{count}} files rejected",
+      "rejectedAmbyteFolders_one": "{{count}} Ambyte folder left out",
+      "rejectedAmbyteFolders_other": "{{count}} Ambyte folders left out",
       "rejectionReasons": {
         "unparseable": "{{name}} could not be read",
         "no_rows": "{{name}} has no rows"

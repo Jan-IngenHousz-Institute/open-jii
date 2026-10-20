@@ -1,13 +1,35 @@
 import { useActivity } from "@/components/activity/activity-context";
-import { orpc } from "@/lib/orpc";
-import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
+import { API_URL } from "@/test/msw/mount";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor, act } from "@/test/test-utils";
+import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useListUploads } from "~/hooks/experiment/useListUploads/useListUploads";
 
+import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useExperimentDataUpload } from "./useExperimentDataUpload";
 
 const UPLOAD_ID = "8c1f6a0e-4c35-4d7e-9a43-3f0b2a5d1e77";
+
+function respondToUpload(status: number) {
+  server.use(
+    http.post(`${API_URL}/api/v1/experiments/:id/data/uploads`, () =>
+      status >= 400
+        ? HttpResponse.json({ message: "boom" }, { status })
+        : HttpResponse.json({ uploadId: UPLOAD_ID, files: [] }, { status }),
+    ),
+  );
+}
+
+// A mounted list query, so the test sees what an invalidation actually refetches.
+function useUploadWithList() {
+  return {
+    upload: useExperimentDataUpload(),
+    list: useListUploads("exp-1", { enabled: true }),
+  };
+}
 
 function buildFormData() {
   const fd = new FormData();
@@ -42,14 +64,15 @@ describe("useExperimentDataUpload (mutation)", () => {
   // uploadData is a native streaming endpoint posted via a raw fetch (off the
   // oRPC contract), so the request is asserted against the mocked global fetch.
   it("posts a multipart upload to the generic uploads endpoint", async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({ uploadId: "u-1", files: [{ fileName: "data.csv", filePath: "/x/y" }] }),
-          { status: 201, headers: { "content-type": "application/json" } },
-        ),
-      );
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          uploadId: UPLOAD_ID,
+          files: [{ fileName: "data.csv", filePath: "/x/y" }],
+        }),
+        { status: 201, headers: { "content-type": "application/json" } },
+      ),
+    );
 
     const { result } = renderHook(() => useExperimentDataUpload());
 
@@ -72,7 +95,7 @@ describe("useExperimentDataUpload (mutation)", () => {
     );
     expect(fetchSpy.mock.calls[0]?.[1]?.body).toBeInstanceOf(FormData);
     expect(result.current.data).toEqual({
-      uploadId: "u-1",
+      uploadId: UPLOAD_ID,
       files: [{ fileName: "data.csv", filePath: "/x/y" }],
     });
   });
@@ -105,20 +128,18 @@ describe("useExperimentDataUpload (mutation)", () => {
     expect(result.current.activity.entries[0]).toMatchObject({ id: UPLOAD_ID, status: "failed" });
   });
 
-  it("refreshes the experiment's upload list once the transfer is received", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ uploadId: "u-1", files: [] }), {
-        status: 201,
-        headers: { "content-type": "application/json" },
-      }),
-    );
-    const queryClient = createTestQueryClient();
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+  it("refetches the experiment's upload list once the transfer is received", async () => {
+    const listSpy = server.mount(contract.experiments.listUploads, { body: { uploads: [] } });
+    respondToUpload(201);
 
-    const { result } = renderHook(() => useExperimentDataUpload(), { queryClient });
+    const { result } = renderHook(() => useUploadWithList());
+    await waitFor(() => {
+      expect(result.current.list.isSuccess).toBe(true);
+    });
+    expect(listSpy.callCount).toBe(1);
 
     act(() => {
-      result.current.mutate({
+      result.current.upload.mutate({
         params: { id: "exp-1" },
         body: buildFormData(),
         uploadId: UPLOAD_ID,
@@ -127,26 +148,22 @@ describe("useExperimentDataUpload (mutation)", () => {
     });
 
     await waitFor(() => {
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: orpc.experiments.listUploads.key({ input: { id: "exp-1" } }),
-      });
+      expect(result.current.upload.isSuccess).toBe(true);
     });
+    expect(listSpy.callCount).toBe(2);
   });
 
   it("leaves the upload list alone when the transfer fails", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ message: "boom" }), {
-        status: 500,
-        headers: { "content-type": "application/json" },
-      }),
-    );
-    const queryClient = createTestQueryClient();
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const listSpy = server.mount(contract.experiments.listUploads, { body: { uploads: [] } });
+    respondToUpload(500);
 
-    const { result } = renderHook(() => useExperimentDataUpload(), { queryClient });
+    const { result } = renderHook(() => useUploadWithList());
+    await waitFor(() => {
+      expect(result.current.list.isSuccess).toBe(true);
+    });
 
     act(() => {
-      result.current.mutate({
+      result.current.upload.mutate({
         params: { id: "exp-1" },
         body: buildFormData(),
         uploadId: UPLOAD_ID,
@@ -155,9 +172,9 @@ describe("useExperimentDataUpload (mutation)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.isError).toBe(true);
+      expect(result.current.upload.isError).toBe(true);
     });
-    expect(invalidateSpy).not.toHaveBeenCalled();
+    expect(listSpy.callCount).toBe(1);
   });
 
   it("surfaces a failed response on the mutation result", async () => {
@@ -222,7 +239,7 @@ describe("useExperimentDataUpload (mutation)", () => {
 
     act(() => {
       respond(
-        new Response(JSON.stringify({ uploadId: "u-1", files: [] }), {
+        new Response(JSON.stringify({ uploadId: UPLOAD_ID, files: [] }), {
           status: 201,
           headers: { "content-type": "application/json" },
         }),
@@ -383,6 +400,16 @@ describe("useExperimentDataUpload (validate ambyte)", () => {
       code: "ambyteOversizedFiles",
       count: 1,
     });
+  });
+
+  it("returns tooManyFiles when the folder holds more files than the per-kind cap", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList(
+      Array.from({ length: 1001 }, (_, i) =>
+        makeFile(`trace-${i}.txt`, { relativePath: `Ambyte_1/trace-${i}.txt` }),
+      ),
+    );
+    expect(result.current.validate(files, "ambyte")).toEqual({ code: "tooManyFiles", max: 1000 });
   });
 
   it("returns noFiles when all files are excluded", () => {

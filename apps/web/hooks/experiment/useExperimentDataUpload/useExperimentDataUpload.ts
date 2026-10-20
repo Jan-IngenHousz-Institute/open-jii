@@ -30,7 +30,7 @@ export type UploadValidationResult =
 interface UploadInput {
   params: { id: string };
   body: FormData;
-  /** Also in the body, so the transfer row hands over to the history card for the same upload. */
+  /** The id the backend records the upload under; also sent in the body. */
   uploadId: string;
   /** The target table's name, for the progress row and toasts. */
   label: string;
@@ -88,10 +88,13 @@ function validateAmbyte(files: FileList): UploadValidationResult {
     return { code: "ambyteInvalidStructure" };
   }
 
-  const max = UPLOAD_KIND_CONSTANTS.ambyte.maxFileSize;
-  const oversized = usable.filter((f) => f.size > max).length;
+  const { maxFileSize, maxFileCount } = UPLOAD_KIND_CONSTANTS.ambyte;
+  const oversized = usable.filter((f) => f.size > maxFileSize).length;
   if (oversized > 0) {
     return { code: "ambyteOversizedFiles", count: oversized };
+  }
+  if (usable.length > maxFileCount) {
+    return { code: "tooManyFiles", max: maxFileCount };
   }
 
   return { sourceKind: "ambyte" };
@@ -159,12 +162,12 @@ export const useExperimentDataUpload = () => {
       });
     },
     onSuccess: async (_data, variables) => {
-      trackTransfer(variables, "succeeded");
       toast({
         description: t("experimentData.uploadDataModal.transfer.received", {
           table: variables.label,
         }),
       });
+
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: orpc.experiments.getExperiment.queryKey({ input: { id: variables.params.id } }),
@@ -173,6 +176,9 @@ export const useExperimentDataUpload = () => {
           queryKey: orpc.experiments.listUploads.key({ input: { id: variables.params.id } }),
         }),
       ]);
+
+      // Succeeded only once the refetched list holds the upload's record, so it never drops out of view.
+      trackTransfer(variables, "succeeded");
     },
     onError: (error, variables) => {
       trackTransfer(variables, "failed");
