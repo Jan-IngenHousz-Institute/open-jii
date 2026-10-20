@@ -67,7 +67,10 @@ export function ExportListStep({
     </DropdownMenuItem>
   );
 
-  if (error) {
+  // A failed refetch keeps the list it already has; the error only shows when there is none.
+  const isUnavailable = error !== null && data === undefined;
+
+  if (isUnavailable) {
     const errorMessage =
       parseApiError(error)?.message ?? t("experimentData.exportModal.unknownError");
     return (
