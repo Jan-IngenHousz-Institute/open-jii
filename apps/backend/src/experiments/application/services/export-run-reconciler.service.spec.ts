@@ -369,6 +369,51 @@ describe("ExportRunReconcilerService", () => {
     ]);
   });
 
+  it("announces an outcome on a later pass when its notification could not be stored", async () => {
+    const exportId = await exportInFlight();
+    vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(
+      success(run(JobLifecycleState.TERMINATED, JobResultState.SUCCESS)),
+    );
+    vi.spyOn(awsPort, "readExportObject").mockResolvedValue(success(manifest(exportId)));
+    vi.spyOn(testApp.module.get(NotificationDispatchService), "dispatch").mockResolvedValueOnce(
+      failure(AppError.internal("Database unavailable")),
+    );
+
+    await reconciler.reconcile();
+    expect((await stored(exportId)).status).toBe("completed");
+    expect((await stored(exportId)).announcedAt).toBeNull();
+    expect(await notificationsFor(userId)).toHaveLength(0);
+
+    await reconciler.reconcile();
+    expect((await stored(exportId)).announcedAt).toBeInstanceOf(Date);
+    expect(await notificationsFor(userId)).toEqual([
+      expect.objectContaining({ type: "data_export_completed" }),
+    ]);
+  });
+
+  it("tells nobody about exports carried over from the old storage", async () => {
+    const createdAt = new Date(Date.now() - 2 * 24 * 60 * 60_000);
+    await exportsRepository.insertCarriedOver([
+      {
+        id: "8c1f6a0e-4c35-4d7e-9a43-3f0b2a5d1e77",
+        experimentId,
+        tableName: "raw_data",
+        format: "parquet",
+        anonymizeContributors: false,
+        createdBy: userId,
+        jobRunId: 1,
+        rowCount: 10,
+        parts: [{ name: "part-00000.snappy.parquet", sizeBytes: 10 }],
+        createdAt,
+        completedAt: new Date(),
+      },
+    ]);
+
+    await reconciler.reconcile();
+
+    expect(await notificationsFor(userId)).toHaveLength(0);
+  });
+
   it("notifies once when two backend tasks finish the same export at the same time", async () => {
     const exportId = await exportInFlight();
     vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(
