@@ -1,7 +1,7 @@
 import ast
 import json
+import os
 from collections.abc import Callable
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
@@ -54,19 +54,6 @@ def _serialize_parquet_rows(frame: DataFrame) -> DataFrame:
     exec(compile(ast.Module(body=[function], type_ignores=[]), _TASK_PATH, "exec"), namespace)
     serializer = cast(Callable[[DataFrame], DataFrame], namespace["_serialize_parquet_rows"])
     return serializer(frame)
-
-
-def _insert_upload_metadata(spark: SparkSession, table: str, record: dict) -> None:
-    module = ast.parse(_TASK_PATH.read_text())
-    function = next(
-        node
-        for node in module.body
-        if isinstance(node, ast.FunctionDef) and node.name == "_insert_upload_metadata"
-    )
-    namespace: dict[str, Any] = {"SparkSession": SparkSession}
-    exec(compile(ast.Module(body=[function], type_ignores=[]), _TASK_PATH, "exec"), namespace)
-    insert = cast(Callable[[SparkSession, str, dict], None], namespace["_insert_upload_metadata"])
-    insert(spark, table, record)
 
 
 def _strict_loads(payload: str) -> dict:
@@ -133,47 +120,7 @@ def test_pandas_upload_paths_use_the_shared_serializer() -> None:
         )
     }
 
-    assert callers == {"_process_tabular_upload", "process_ambyte_upload"}
-
-
-@pytest.mark.spark
-def test_upload_metadata_insert_binds_values_as_parameters(spark) -> None:
-    completed_at = datetime(2026, 9, 27, 12, 0, tzinfo=timezone.utc)
-    record = {
-        "upload_id": "u-1",
-        "experiment_id": "e-1",
-        "upload_table_id": "",
-        "upload_table_name": "O'Brien's table",
-        "source_kind": "csv",
-        "status": "failed",
-        "file_count": 1,
-        "row_count": 42,
-        "created_by": "",
-        "created_at": completed_at,
-        "completed_at": completed_at,
-        "error_message": r"a\' OR 1=1 -- ",
-    }
-
-    table = "upload_metadata_rows"
-    spark.sql(f"DROP TABLE IF EXISTS {table}")
-    spark.sql(
-        f"""
-        CREATE TABLE {table} (
-          upload_id STRING, experiment_id STRING, upload_table_id STRING, upload_table_name STRING,
-          source_kind STRING, status STRING, file_count INT, row_count INT, created_by STRING,
-          created_at TIMESTAMP, completed_at TIMESTAMP, error_message STRING
-        ) USING parquet
-        """
-    )
-    _insert_upload_metadata(spark, table, record)
-    _insert_upload_metadata(spark, table, {**record, "error_message": None})
-
-    rows = spark.table(table).orderBy(F.col("error_message").asc_nulls_last()).collect()
-    assert [(row.upload_table_name, row.row_count, row.error_message) for row in rows] == [
-        ("O'Brien's table", 42, r"a\' OR 1=1 -- "),
-        ("O'Brien's table", 42, None),
-    ]
-    spark.sql(f"DROP TABLE {table}")
+    assert callers == {"_parse_tabular_files", "process_ambyte_upload"}
 
 
 @pytest.mark.spark
@@ -253,65 +200,14 @@ def _task_function(name: str, namespace: dict[str, Any]) -> Callable[..., Any]:
     return cast(Callable[..., Any], namespace[name])
 
 
-class _Logger:
-    def error(self, _message: str) -> None:
+class _QuietLogger:
+    def info(self, _message: str) -> None:
         pass
 
-
-def _report_outcome(table_rows_arrive: bool) -> tuple[Callable[[dict], None], list[str], list[int]]:
-    notified: list[str] = []
-    waited_for: list[int] = []
-
-    def wait_until_queryable(expected_rows: int) -> bool:
-        waited_for.append(expected_rows)
-        return table_rows_arrive
-
-    namespace: dict[str, Any] = {
-        "notify_uploader": notified.append,
-        "wait_until_queryable": wait_until_queryable,
-        "logger": _Logger(),
-        "UPLOAD_ID": "upload-1",
-        "UPLOADED_DATA_TABLE": "catalog.centrum.experiment_uploaded_data",
-        "TABLE_WAIT_SECONDS": 3600,
-    }
-    return _task_function("report_outcome", namespace), notified, waited_for
-
-
-def test_upload_is_reported_ready_once_its_rows_are_in_the_table() -> None:
-    report_outcome, notified, waited_for = _report_outcome(table_rows_arrive=True)
-
-    report_outcome({"status": "success", "rows_written": 42})
-
-    assert waited_for == [42]
-    assert notified == ["ready"]
-
-
-def test_upload_is_reported_failed_when_its_rows_never_arrive() -> None:
-    report_outcome, notified, _ = _report_outcome(table_rows_arrive=False)
-
-    report_outcome({"status": "partial", "rows_written": 7})
-
-    assert notified == ["failed"]
-
-
-@pytest.mark.parametrize(
-    "result",
-    [
-        {"status": "error", "error_message": "boom"},
-        {"status": "partial", "rows_written": 0},
-    ],
-)
-def test_upload_without_rows_is_reported_failed_without_waiting(result: dict) -> None:
-    report_outcome, notified, waited_for = _report_outcome(table_rows_arrive=True)
-
-    report_outcome(result)
-
-    assert waited_for == []
-    assert notified == ["failed"]
-
-
-class _QuietLogger:
     def warning(self, _message: str) -> None:
+        pass
+
+    def error(self, _message: str) -> None:
         pass
 
 
@@ -469,3 +365,284 @@ def test_keeps_waiting_when_a_check_fails() -> None:
     clock = _Clock()
 
     assert _wait_until_queryable([RuntimeError("hiccup"), ["k"]], [True], clock)(2) is True
+
+
+def _outcome_helpers() -> dict[str, Any]:
+    namespace: dict[str, Any] = {"os": os}
+    for helper in ("has_committed_output", "rejected_file", "build_outcome"):
+        _task_function(helper, namespace)
+    return namespace
+
+
+@pytest.mark.parametrize(
+    ("row_count", "rejected_files", "queryable", "outcome", "error_code"),
+    [
+        (42, [], True, "completed", None),
+        (42, [{"name": "broken.csv", "reason": "unparseable"}], True, "completed", None),
+        (0, [], False, "failed", "no_files"),
+        (0, [{"name": "header_only.csv", "reason": "no_rows"}], False, "failed", "no_rows"),
+        (42, [], False, "failed", "not_queryable"),
+    ],
+)
+def test_outcome_has_the_shape_the_backend_parses(
+    row_count: int, rejected_files: list[dict], queryable: bool, outcome: str, error_code: str | None
+) -> None:
+    build_outcome = _outcome_helpers()["build_outcome"]
+
+    assert build_outcome("upload-1", row_count, rejected_files, queryable) == {
+        "uploadId": "upload-1",
+        "outcome": outcome,
+        "rowCount": row_count,
+        "rejectedFiles": rejected_files,
+        "errorCode": error_code,
+    }
+
+
+@pytest.mark.spark
+def test_only_a_committed_write_counts_as_written(spark, tmp_path) -> None:
+    has_committed_output = _outcome_helpers()["has_committed_output"]
+    committed = tmp_path / "upload_1"
+    spark.createDataFrame([("A1",)], "plot string").write.parquet(str(committed))
+    crashed = tmp_path / "upload_2"
+    crashed.mkdir()
+    (crashed / "part-00000.snappy.parquet").write_bytes(b"")
+
+    assert has_committed_output(str(committed)) is True
+    assert has_committed_output(str(crashed)) is False
+    assert has_committed_output(str(tmp_path / "upload_3")) is False
+
+
+def _parse_tabular_files(
+    paths: list[str], parser: Callable[[str], pd.DataFrame]
+) -> tuple[list[str], list[dict]]:
+    namespace: dict[str, Any] = {
+        "os": os,
+        "json": json,
+        "pd": pd,
+        "scrub_non_finite_json_value": scrub_non_finite_json_value,
+        "logger": _QuietLogger(),
+    }
+    for helper in ("rejected_file", "_serialize_dataframe_rows", "_parse_tabular_files"):
+        _task_function(helper, namespace)
+    return namespace["_parse_tabular_files"](paths, parser)
+
+
+def test_tabular_files_that_yield_no_rows_are_rejected_with_a_reason(tmp_path) -> None:
+    (tmp_path / "plots.csv").write_text("plot,height\nA1,1.5\nA2,2.5\n")
+    (tmp_path / "header_only.csv").write_text("plot,height\n")
+    (tmp_path / "empty.csv").write_text("")
+    paths = [f"dbfs:{tmp_path / name}" for name in ("plots.csv", "header_only.csv", "empty.csv")]
+
+    payloads, rejected = _parse_tabular_files(paths, pd.read_csv)
+
+    assert [_strict_loads(payload) for payload in payloads] == [
+        {"plot": "A1", "height": 1.5},
+        {"plot": "A2", "height": 2.5},
+    ]
+    assert rejected == [
+        {"name": "header_only.csv", "reason": "no_rows"},
+        {"name": "empty.csv", "reason": "unparseable"},
+    ]
+
+
+def _read_parquet_files(spark: SparkSession, paths: list[str]) -> tuple[DataFrame | None, list[dict]]:
+    namespace: dict[str, Any] = {
+        "spark": spark,
+        "os": os,
+        "logger": _QuietLogger(),
+        "Column": Column,
+        "DataFrame": DataFrame,
+        "DataType": DataType,
+        "ArrayType": ArrayType,
+        "MapType": MapType,
+        "StructType": StructType,
+        "F": F,
+        "DoubleType": DoubleType,
+        "FloatType": FloatType,
+    }
+    for helper in ("rejected_file", "_serialize_parquet_rows", "_read_parquet_files"):
+        _task_function(helper, namespace)
+    return namespace["_read_parquet_files"](paths)
+
+
+@pytest.mark.spark
+def test_parquet_files_that_yield_no_rows_are_rejected_with_a_reason(spark, tmp_path) -> None:
+    pd.DataFrame({"plot": ["A1"], "height": [1.5]}).to_parquet(tmp_path / "plots.parquet")
+    pd.DataFrame({"plot": pd.Series([], dtype=str)}).to_parquet(tmp_path / "empty.parquet")
+    (tmp_path / "broken.parquet").write_text("plot,height\nA1,1.5\n")
+    paths = [f"dbfs:{tmp_path / name}" for name in ("plots.parquet", "empty.parquet", "broken.parquet")]
+
+    combined, rejected = _read_parquet_files(spark, paths)
+
+    assert combined is not None
+    assert [_strict_loads(row.uploaded_data) for row in combined.collect()] == [{"plot": "A1", "height": 1.5}]
+    assert rejected == [
+        {"name": "empty.parquet", "reason": "no_rows"},
+        {"name": "broken.parquet", "reason": "unparseable"},
+    ]
+
+
+def _parse_ambyte_folders(
+    folders: list[str], frames: dict[str, pd.DataFrame | Exception | None]
+) -> tuple[list[pd.DataFrame], list[dict]]:
+    def load_files_per_byte(folder: str, year_prefix: tuple[str, ...]) -> tuple[list[list[list]], str]:
+        return [[["trace"]], [], [], []], folder
+
+    def process_trace_files(folder_name: str, _files_per_byte: list[list[list]]) -> pd.DataFrame | None:
+        frame = frames[folder_name]
+        if isinstance(frame, Exception):
+            raise frame
+        return frame
+
+    namespace: dict[str, Any] = {
+        "os": os,
+        "pd": pd,
+        "logger": _QuietLogger(),
+        "load_files_per_byte": load_files_per_byte,
+        "process_trace_files": process_trace_files,
+    }
+    for helper in ("rejected_file", "_parse_ambyte_folders"):
+        _task_function(helper, namespace)
+    return namespace["_parse_ambyte_folders"](folders, ("2026", "2025"))
+
+
+def test_ambyte_folders_that_yield_no_rows_are_rejected_with_a_reason() -> None:
+    frames, rejected = _parse_ambyte_folders(
+        [
+            "dbfs:/uploads/Ambyte_1/",
+            "dbfs:/uploads/Ambyte_2",
+            "dbfs:/uploads/Ambyte_3",
+            "dbfs:/uploads/Ambyte_4",
+        ],
+        {
+            "Ambyte_1": pd.DataFrame({"PAR": [1.0, 2.0]}),
+            "Ambyte_2": None,
+            "Ambyte_3": pd.DataFrame({"PAR": []}),
+            "Ambyte_4": ValueError("truncated trace"),
+        },
+    )
+
+    assert [len(frame) for frame in frames] == [2]
+    assert rejected == [
+        {"name": "Ambyte_2", "reason": "no_rows"},
+        {"name": "Ambyte_3", "reason": "no_rows"},
+        {"name": "Ambyte_4", "reason": "unparseable"},
+    ]
+
+
+class _Notebook:
+    def __init__(self) -> None:
+        self.exit_value = ""
+
+    def exit(self, value: str) -> None:
+        self.exit_value = value
+
+
+class _DbUtils:
+    def __init__(self) -> None:
+        self.notebook = _Notebook()
+
+
+class _WrittenOutput:
+    """Stands in for ``spark`` where the task counts what an earlier attempt wrote."""
+
+    def __init__(self, rows: int) -> None:
+        self.read = self
+        self.rows = rows
+
+    def parquet(self, _path: str) -> "_WrittenOutput":
+        return self
+
+    def count(self) -> int:
+        return self.rows
+
+
+def _run_main(
+    committed: bool, written_rows: int = 0, processed: dict | None = None, queryable: bool = True
+) -> tuple[dict, int, list[int]]:
+    process_calls: list[None] = []
+    waited_for: list[int] = []
+    dbutils = _DbUtils()
+
+    def process_upload() -> dict | None:
+        process_calls.append(None)
+        return processed
+
+    def wait_until_queryable(expected_rows: int) -> bool:
+        waited_for.append(expected_rows)
+        return queryable
+
+    namespace: dict[str, Any] = {
+        "os": os,
+        "json": json,
+        "logger": _QuietLogger(),
+        "dbutils": dbutils,
+        "spark": _WrittenOutput(written_rows),
+        "has_committed_output": lambda _path: committed,
+        "process_upload": process_upload,
+        "wait_until_queryable": wait_until_queryable,
+        "OUTPUT_PATH": "/Volumes/catalog/centrum/data-imports/exp-1/processed-uploads/upload_upload-1",
+        "UPLOAD_ID": "upload-1",
+        "TABLE_WAIT_SECONDS": 3600,
+    }
+    _task_function("build_outcome", namespace)
+    _task_function("main", namespace)()
+    return json.loads(dbutils.notebook.exit_value), len(process_calls), waited_for
+
+
+def test_a_retry_after_a_committed_write_waits_for_those_rows_instead_of_writing_them_again() -> None:
+    outcome, process_calls, waited_for = _run_main(committed=True, written_rows=42)
+
+    assert process_calls == 0
+    assert waited_for == [42]
+    assert outcome == {
+        "uploadId": "upload-1",
+        "outcome": "completed",
+        "rowCount": 42,
+        "rejectedFiles": [],
+        "errorCode": None,
+    }
+
+
+def test_an_upload_exits_with_the_files_it_rejected() -> None:
+    rejected = [{"name": "broken.csv", "reason": "unparseable"}]
+
+    outcome, process_calls, waited_for = _run_main(
+        committed=False, processed={"rows_written": 7, "rejected_files": rejected}
+    )
+
+    assert process_calls == 1
+    assert waited_for == [7]
+    assert (outcome["outcome"], outcome["rowCount"], outcome["rejectedFiles"]) == ("completed", 7, rejected)
+
+
+def test_an_upload_without_rows_fails_without_waiting() -> None:
+    rejected = [{"name": "header_only.csv", "reason": "no_rows"}]
+
+    outcome, _, waited_for = _run_main(
+        committed=False, processed={"rows_written": 0, "rejected_files": rejected}
+    )
+
+    assert waited_for == []
+    assert (outcome["outcome"], outcome["errorCode"]) == ("failed", "no_rows")
+
+
+def test_an_upload_whose_table_never_lists_it_fails() -> None:
+    outcome, _, _ = _run_main(
+        committed=False, processed={"rows_written": 7, "rejected_files": []}, queryable=False
+    )
+
+    assert (outcome["outcome"], outcome["errorCode"]) == ("failed", "not_queryable")
+
+
+def test_the_outcome_leaves_the_task_only_as_its_exit_value() -> None:
+    module = ast.parse(_TASK_PATH.read_text())
+    imported = {node.module or "" for node in ast.walk(module) if isinstance(node, ast.ImportFrom)}
+    imported |= {
+        alias.name for node in ast.walk(module) if isinstance(node, ast.Import) for alias in node.names
+    }
+    attributes = {node.attr for node in ast.walk(module) if isinstance(node, ast.Attribute)}
+
+    assert not [name for name in imported if name.startswith(("enrich", "requests"))]
+    assert "secrets" not in attributes
+    assert "sql" not in attributes
