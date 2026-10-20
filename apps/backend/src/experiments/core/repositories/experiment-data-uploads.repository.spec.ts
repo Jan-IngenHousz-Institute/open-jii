@@ -11,12 +11,17 @@ import {
   assertFailure,
 } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
+import type { UploadErrorCode } from "../models/experiment-data-uploads.model";
 import type { DatabricksPort } from "../ports/databricks.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import { ExperimentDataUploadsRepository } from "./experiment-data-uploads.repository";
 import type { NewUpload } from "./experiment-data-uploads.repository";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+const NAME_FREEING_ERROR_CODES: UploadErrorCode[] = ["no_files", "no_rows", "transfer_interrupted"];
+
+const NAME_HOLDING_ERROR_CODES: UploadErrorCode[] = ["not_queryable", "unknown"];
 
 describe("ExperimentDataUploadsRepository", () => {
   const testApp = TestHarness.App;
@@ -51,6 +56,13 @@ describe("ExperimentDataUploadsRepository", () => {
       .from(experimentUploads)
       .where(eq(experimentUploads.id, uploadId));
     return row;
+  }
+
+  async function lastActive(uploadId: string, at: Date) {
+    await testApp.database
+      .update(experimentUploads)
+      .set({ updatedAt: at })
+      .where(eq(experimentUploads.id, uploadId));
   }
 
   beforeAll(async () => {
@@ -136,9 +148,50 @@ describe("ExperimentDataUploadsRepository", () => {
       expect(metadata).not.toHaveBeenCalled();
     });
 
-    it("frees a new table's name once the upload creating it has failed", async () => {
+    it.each(NAME_FREEING_ERROR_CODES)(
+      "frees a new table's name once the upload creating it has failed with %s",
+      async (errorCode) => {
+        const first = await created({ uploadTableName: "leaf_traits" });
+        await repository.fail(first.id, errorCode);
+        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([]));
+
+        const result = await repository.validateTargetTable({
+          experimentId,
+          target: { kind: "new", name: "leaf_traits" },
+        });
+
+        assertSuccess(result);
+        expect(result.value.uploadTableName).toBe("leaf_traits");
+      },
+    );
+
+    it.each(NAME_HOLDING_ERROR_CODES)(
+      "keeps a new table's name taken after an upload whose run may have written rows failed with %s",
+      async (errorCode) => {
+        const first = await created({ uploadTableName: "leaf_traits" });
+        await repository.attachRun(first.id, 4242);
+        await repository.fail(first.id, errorCode);
+        const metadata = vi
+          .spyOn(databricksPort, "getExperimentTableMetadata")
+          .mockResolvedValue(success([]));
+
+        const result = await repository.validateTargetTable({
+          experimentId,
+          target: { kind: "new", name: "leaf_traits" },
+        });
+
+        assertFailure(result);
+        expect(result.error.code).toBe("UPLOAD_TABLE_NAME_TAKEN");
+        expect(result.error.message).toBe(
+          "A table named 'leaf_traits' already exists in this experiment",
+        );
+        expect(metadata).not.toHaveBeenCalled();
+      },
+    );
+
+    it("frees a new table's name after an upload that failed before its run started", async () => {
       const first = await created({ uploadTableName: "leaf_traits" });
-      await repository.fail(first.id, "no_files");
+      await repository.fail(first.id, "unknown");
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([]));
 
       const result = await repository.validateTargetTable({
@@ -147,7 +200,6 @@ describe("ExperimentDataUploadsRepository", () => {
       });
 
       assertSuccess(result);
-      expect(result.value.uploadTableName).toBe("leaf_traits");
     });
 
     it("rejects a 'new' target whose name collides with a reserved system table", async () => {
@@ -290,6 +342,22 @@ describe("ExperimentDataUploadsRepository", () => {
 
       assertSuccess(result);
     });
+
+    it("refuses an upload id already in use without showing the query", async () => {
+      const first = await created();
+
+      const second = await repository.create(
+        newUpload({ id: first.id, targetKind: "existing", uploadTableName: "soil_moisture" }),
+      );
+
+      assertFailure(second);
+      expect(second.error).toMatchObject({
+        statusCode: 409,
+        code: "UPLOAD_ID_TAKEN",
+        message: "This upload id is already in use",
+      });
+      expect(await testApp.database.select().from(experimentUploads)).toHaveLength(1);
+    });
   });
 
   describe("markQueued", () => {
@@ -316,13 +384,6 @@ describe("ExperimentDataUploadsRepository", () => {
 
   describe("markFileReceived", () => {
     const anHourAgo = () => new Date(Date.now() - 60 * 60_000);
-
-    async function lastActive(uploadId: string, at: Date) {
-      await testApp.database
-        .update(experimentUploads)
-        .set({ updatedAt: at })
-        .where(eq(experimentUploads.id, uploadId));
-    }
 
     it("moves a receiving upload's last activity to now", async () => {
       const record = await created();
@@ -448,6 +509,70 @@ describe("ExperimentDataUploadsRepository", () => {
       expect(second.value).toBeNull();
     });
 
+    it("leaves a failed upload failed when a completion arrives after it", async () => {
+      const record = await created();
+
+      const first = await repository.fail(record.id, "unknown");
+      const second = await repository.complete(record.id, { rowCount: 10, rejectedFiles: [] });
+
+      assertSuccess(first);
+      assertSuccess(second);
+      expect(second.value).toBeNull();
+      expect(await stored(record.id)).toMatchObject({
+        status: "failed",
+        errorCode: "unknown",
+        rowCount: null,
+      });
+    });
+
+    it("records a failure its request already reported as announced", async () => {
+      const record = await created();
+
+      const result = await repository.failAnnounced(record.id, "no_files");
+
+      assertSuccess(result);
+      expect(result.value).toMatchObject({ status: "failed", errorCode: "no_files" });
+      expect(result.value?.announcedAt).toBeInstanceOf(Date);
+      const unannounced = await repository.findUnannounced(new Date(Date.now() - DAY_MS));
+      assertSuccess(unannounced);
+      expect(unannounced.value).toEqual([]);
+    });
+
+    it("fails a receiving upload that has had no file since the cutoff", async () => {
+      const record = await created();
+      await lastActive(record.id, new Date(Date.now() - 2 * 60 * 60_000));
+
+      const result = await repository.failStalledTransfer(
+        record.id,
+        new Date(Date.now() - 60 * 60_000),
+      );
+
+      assertSuccess(result);
+      expect(result.value).toMatchObject({
+        status: "failed",
+        errorCode: "transfer_interrupted",
+        announcedAt: null,
+      });
+    });
+
+    it("leaves an upload that received a file since the cutoff, or was queued, alone", async () => {
+      const active = await created({ uploadTableName: "active" });
+      const queued = await created({ uploadTableName: "queued" });
+      await repository.markQueued(queued.id, 1);
+      await lastActive(queued.id, new Date(Date.now() - 2 * 60 * 60_000));
+      const cutoff = new Date(Date.now() - 60 * 60_000);
+
+      const activeResult = await repository.failStalledTransfer(active.id, cutoff);
+      const queuedResult = await repository.failStalledTransfer(queued.id, cutoff);
+
+      assertSuccess(activeResult);
+      assertSuccess(queuedResult);
+      expect(activeResult.value).toBeNull();
+      expect(queuedResult.value).toBeNull();
+      expect((await stored(active.id)).status).toBe("receiving");
+      expect((await stored(queued.id)).status).toBe("queued");
+    });
+
     it("records the reason a failed upload gives and the files it rejected", async () => {
       const record = await created();
 
@@ -491,6 +616,22 @@ describe("ExperimentDataUploadsRepository", () => {
 
       assertSuccess(result);
       expect(result.value.map((record) => record.id)).toEqual([pending.id]);
+    });
+
+    it("finds only unannounced uploads that finished after the given time", async () => {
+      const recent = await created({ uploadTableName: "recent" });
+      await repository.fail(recent.id, "unknown");
+      const old = await created({ uploadTableName: "old" });
+      await repository.fail(old.id, "unknown");
+      await testApp.database
+        .update(experimentUploads)
+        .set({ completedAt: new Date(Date.now() - 2 * DAY_MS) })
+        .where(eq(experimentUploads.id, old.id));
+
+      const result = await repository.findUnannounced(new Date(Date.now() - DAY_MS));
+
+      assertSuccess(result);
+      expect(result.value.map((record) => record.id)).toEqual([recent.id]);
     });
   });
 });

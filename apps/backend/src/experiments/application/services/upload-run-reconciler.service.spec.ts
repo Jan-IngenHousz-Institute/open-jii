@@ -1,4 +1,7 @@
 import { faker } from "@faker-js/faker";
+import { readFileSync } from "fs";
+import { resolve } from "path";
+import { z } from "zod";
 
 import { eq, experimentUploads, notifications } from "@repo/database";
 
@@ -13,6 +16,7 @@ import {
 import { AppError, assertSuccess, failure, success } from "../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../notifications/application/services/notification-dispatch.service";
 import { TestHarness } from "../../../test/test-harness";
+import { uploadOutcomeSchema } from "../../core/models/experiment-data-uploads.model";
 import type { UploadOutcome } from "../../core/models/experiment-data-uploads.model";
 import { DATABRICKS_PORT } from "../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../core/ports/databricks.port";
@@ -40,6 +44,14 @@ function run(
 }
 
 const succeededRun = () => run(JobLifecycleState.TERMINATED, JobResultState.SUCCESS);
+
+// Written by the upload job's own tests, so both sides read one set of exit values.
+const OUTCOME_FIXTURES = resolve(
+  __dirname,
+  "../../../../../data/tests/fixtures/upload_outcomes.json",
+);
+
+const zOutcomeFixtures = z.array(z.object({ case: z.string(), outcome: z.unknown() }));
 
 describe("UploadRunReconcilerService", () => {
   const testApp = TestHarness.App;
@@ -96,6 +108,13 @@ describe("UploadRunReconcilerService", () => {
     await testApp.database
       .update(experimentUploads)
       .set({ updatedAt: new Date(Date.now() - minutes * 60_000) })
+      .where(eq(experimentUploads.id, uploadId));
+  }
+
+  async function finishedAgo(uploadId: string, hours: number) {
+    await testApp.database
+      .update(experimentUploads)
+      .set({ completedAt: new Date(Date.now() - hours * 60 * 60_000) })
       .where(eq(experimentUploads.id, uploadId));
   }
 
@@ -385,6 +404,31 @@ describe("UploadRunReconcilerService", () => {
     ]);
   });
 
+  it("leaves a transfer its request queued after the sweep read it as stalled", async () => {
+    const record = await uploadReceiving();
+    await stallTransfer(record.id, 61);
+    const readAsStalled = await uploadsRepository.findInFlight();
+    await uploadsRepository.markQueued(record.id, 2);
+    // Old activity as well, so only the status keeps it from the sweep.
+    await stallTransfer(record.id, 61);
+    vi.spyOn(uploadsRepository, "findInFlight").mockResolvedValue(readAsStalled);
+
+    await reconciler.reconcile();
+
+    expect(await stored(record.id)).toMatchObject({ status: "queued", errorCode: null });
+    expect(await notificationsFor(userId)).toHaveLength(0);
+  });
+
+  it("does not announce a failure the upload's request already reported", async () => {
+    const record = await uploadReceiving();
+    await uploadsRepository.failAnnounced(record.id, "no_files");
+
+    await reconciler.reconcile();
+
+    expect((await stored(record.id)).status).toBe("failed");
+    expect(await notificationsFor(userId)).toHaveLength(0);
+  });
+
   it("gives up on a run that has been in flight for two days", async () => {
     const uploadId = await uploadInFlight();
     await backdate(uploadId, 49 * 60);
@@ -442,6 +486,66 @@ describe("UploadRunReconcilerService", () => {
     expect(await notificationsFor(userId)).toEqual([
       expect.objectContaining({ type: "data_upload_completed" }),
     ]);
+  });
+
+  it("announces only outcomes that finished within the last day", async () => {
+    const recent = await uploadInFlight(RUN_ID, { uploadTableName: "recent" });
+    const old = await uploadInFlight(RUN_ID + 1, { uploadTableName: "old" });
+    await uploadsRepository.fail(recent, "unknown");
+    await uploadsRepository.fail(old, "unknown");
+    await finishedAgo(recent, 23);
+    await finishedAgo(old, 25);
+
+    await reconciler.reconcile();
+
+    expect((await stored(recent)).announcedAt).toBeInstanceOf(Date);
+    expect((await stored(old)).announcedAt).toBeNull();
+    expect(await notificationsFor(userId)).toEqual([
+      expect.objectContaining({
+        type: "data_upload_failed",
+        params: { experimentName: "Drought trial", tableName: "recent" },
+      }),
+    ]);
+  });
+
+  it("lets go of an upload carried over from the old history without a notification", async () => {
+    const [carriedOver] = await testApp.database
+      .insert(experimentUploads)
+      .values({
+        experimentId,
+        sourceKind: "csv",
+        status: "completed",
+        createdBy: userId,
+        completedAt: new Date(),
+      })
+      .returning();
+
+    await reconciler.reconcile();
+
+    expect((await stored(carriedOver.id)).announcedAt).toBeInstanceOf(Date);
+    expect(await notificationsFor(userId)).toHaveLength(0);
+  });
+
+  it("lets go of an upload whose experiment was deleted without a notification", async () => {
+    const uploadId = await uploadInFlight();
+    await uploadsRepository.fail(uploadId, "unknown");
+    vi.spyOn(testApp.module.get(ExperimentRepository), "findOne").mockResolvedValue(success(null));
+
+    await reconciler.reconcile();
+
+    expect((await stored(uploadId)).announcedAt).toBeInstanceOf(Date);
+    expect(await notificationsFor(userId)).toHaveLength(0);
+  });
+
+  it("reads every outcome the upload job's tests exit with", () => {
+    const fixtures = zOutcomeFixtures.parse(JSON.parse(readFileSync(OUTCOME_FIXTURES, "utf-8")));
+
+    const unreadable = fixtures
+      .filter((fixture) => !uploadOutcomeSchema.safeParse(fixture.outcome).success)
+      .map((fixture) => fixture.case);
+
+    expect(fixtures.length).toBeGreaterThan(0);
+    expect(unreadable).toEqual([]);
   });
 
   it("notifies once when two backend tasks finish the same upload at the same time", async () => {
