@@ -9,7 +9,7 @@ import { Result, failure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentDataExportsRepository } from "../../../core/repositories/experiment-data-exports.repository";
 
 /**
- * Records the exports the one-off carry-over notebook copied from the old export volume, so
+ * Records the exports the one-off carry-over copied from the old export volume, so
  * they appear in the export list until they expire like any other.
  */
 @Injectable()
