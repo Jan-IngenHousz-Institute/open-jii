@@ -44,6 +44,10 @@ vi.mock("@repo/transactional/render/project-transfer-complete", () => ({
   renderProjectTransferComplete: vi.fn(),
 }));
 
+vi.mock("@repo/transactional/render/resource-deleted-notification", () => ({
+  renderResourceDeletedNotification: vi.fn(),
+}));
+
 // Mock analytics server
 vi.mock("@repo/analytics/server", async (importOriginal) => ({
   ...(await importOriginal<typeof AnalyticsServer>()),
