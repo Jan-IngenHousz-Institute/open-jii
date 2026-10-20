@@ -1,12 +1,13 @@
 import { useActivity } from "@/components/activity/activity-context";
-import { renderHook, waitFor, act } from "@/test/test-utils";
+import { orpc } from "@/lib/orpc";
+import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useExperimentDataUpload } from "./useExperimentDataUpload";
 
-// ── helpers ─────────────────────────────────────────────────────
+const UPLOAD_ID = "8c1f6a0e-4c35-4d7e-9a43-3f0b2a5d1e77";
 
 function buildFormData() {
   const fd = new FormData();
@@ -33,8 +34,6 @@ function makeFileList(files: File[]): FileList {
   });
 }
 
-// ── hook + mutation ────────────────────────────────────────────
-
 describe("useExperimentDataUpload (mutation)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -58,6 +57,7 @@ describe("useExperimentDataUpload (mutation)", () => {
       result.current.mutate({
         params: { id: "exp-1" },
         body: buildFormData(),
+        uploadId: UPLOAD_ID,
         label: "Leaf traits",
       });
     });
@@ -71,6 +71,93 @@ describe("useExperimentDataUpload (mutation)", () => {
       expect.objectContaining({ method: "POST" }),
     );
     expect(fetchSpy.mock.calls[0]?.[1]?.body).toBeInstanceOf(FormData);
+    expect(result.current.data).toEqual({
+      uploadId: "u-1",
+      files: [{ fileName: "data.csv", filePath: "/x/y" }],
+    });
+  });
+
+  it("fails the transfer when the response does not match the upload contract", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    const { result } = renderHook(() => ({
+      upload: useExperimentDataUpload(),
+      activity: useActivity(),
+    }));
+
+    act(() => {
+      result.current.upload.mutate({
+        params: { id: "exp-1" },
+        body: buildFormData(),
+        uploadId: UPLOAD_ID,
+        label: "Leaf traits",
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.upload.isError).toBe(true);
+    });
+    expect(result.current.activity.entries[0]).toMatchObject({ id: UPLOAD_ID, status: "failed" });
+  });
+
+  it("refreshes the experiment's upload list once the transfer is received", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ uploadId: "u-1", files: [] }), {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    const queryClient = createTestQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useExperimentDataUpload(), { queryClient });
+
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-1" },
+        body: buildFormData(),
+        uploadId: UPLOAD_ID,
+        label: "Leaf traits",
+      });
+    });
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: orpc.experiments.listUploads.key({ input: { id: "exp-1" } }),
+      });
+    });
+  });
+
+  it("leaves the upload list alone when the transfer fails", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ message: "boom" }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    const queryClient = createTestQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useExperimentDataUpload(), { queryClient });
+
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-1" },
+        body: buildFormData(),
+        uploadId: UPLOAD_ID,
+        label: "Leaf traits",
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    expect(invalidateSpy).not.toHaveBeenCalled();
   });
 
   it("surfaces a failed response on the mutation result", async () => {
@@ -87,6 +174,7 @@ describe("useExperimentDataUpload (mutation)", () => {
       result.current.mutate({
         params: { id: "exp-1" },
         body: buildFormData(),
+        uploadId: UPLOAD_ID,
         label: "Leaf traits",
       });
     });
@@ -113,6 +201,7 @@ describe("useExperimentDataUpload (mutation)", () => {
       result.current.upload.mutate({
         params: { id: "exp-1" },
         body: buildFormData(),
+        uploadId: UPLOAD_ID,
         label: "Leaf traits",
       });
     });
@@ -133,7 +222,7 @@ describe("useExperimentDataUpload (mutation)", () => {
 
     act(() => {
       respond(
-        new Response(JSON.stringify({ uploadId: "u-1" }), {
+        new Response(JSON.stringify({ uploadId: "u-1", files: [] }), {
           status: 201,
           headers: { "content-type": "application/json" },
         }),
@@ -141,7 +230,10 @@ describe("useExperimentDataUpload (mutation)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.activity.entries[0]?.status).toBe("succeeded");
+      expect(result.current.activity.entries[0]).toMatchObject({
+        id: UPLOAD_ID,
+        status: "succeeded",
+      });
     });
     expect(toast).toHaveBeenLastCalledWith({
       description: "experimentData.uploadDataModal.transfer.received",
@@ -165,12 +257,13 @@ describe("useExperimentDataUpload (mutation)", () => {
       result.current.upload.mutate({
         params: { id: "exp-1" },
         body: buildFormData(),
+        uploadId: UPLOAD_ID,
         label: "Leaf traits",
       });
     });
 
     await waitFor(() => {
-      expect(result.current.activity.entries[0]?.status).toBe("failed");
+      expect(result.current.activity.entries[0]).toMatchObject({ id: UPLOAD_ID, status: "failed" });
     });
     expect(toast).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -186,8 +279,6 @@ describe("useExperimentDataUpload (mutation)", () => {
   });
 });
 
-// ── stripExcluded ──────────────────────────────────────────────
-
 describe("useExperimentDataUpload (stripExcluded)", () => {
   it("filters .DS_Store and keeps the rest", () => {
     const { result } = renderHook(() => useExperimentDataUpload());
@@ -197,8 +288,6 @@ describe("useExperimentDataUpload (stripExcluded)", () => {
     expect(kept[0].name).toBe("data.csv");
   });
 });
-
-// ── validate (tabular) ─────────────────────────────────────────
 
 describe("useExperimentDataUpload (validate tabular)", () => {
   it("returns the expected kind when all files match", () => {
@@ -255,8 +344,6 @@ describe("useExperimentDataUpload (validate tabular)", () => {
     expect(result.current.validate(files, "csv")).toEqual({ code: "tooManyFiles", max: 100 });
   });
 });
-
-// ── validate (ambyte) ──────────────────────────────────────────
 
 describe("useExperimentDataUpload (validate ambyte)", () => {
   it("accepts a root-level Ambyte_<n> folder", () => {

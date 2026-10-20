@@ -108,7 +108,12 @@
         "rowCount_other": "{{count}} rows"
       },
       "sourceKind": {
-        "label": "Data format"
+        "ambyte": "Ambyte",
+        "csv": "CSV",
+        "tsv": "TSV",
+        "parquet": "Parquet",
+        "json": "JSON",
+        "ndjson": "NDJSON"
       },
       "files": {
         "dropzone": {
@@ -122,8 +127,6 @@
       },
       "validation": {
         "title": "Cannot upload",
-        "noTarget": "Pick or name a target table",
-        "invalidName": "Name must start with a letter; use letters, digits, or underscores (max 63)",
         "noFiles": "Select at least one data file",
         "unsupportedFormat": "'{{fileName}}' is not a supported file format (CSV, TSV, parquet, JSON, NDJSON)",
         "wrongFormat": "'{{fileName}}' is not a {{format}} file",
@@ -139,18 +142,27 @@
         "fallback": "Upload failed"
       },
       "status": {
-        "succeeded": {
-          "title": "Upload succeeded",
-          "description": "Rows are landing in '{{tableName}}'. The table will appear once the pipeline materialises it."
-        },
-        "failed": {
-          "title": "Upload failed",
-          "fallback": "The processing job failed."
-        }
+        "receiving": "Receiving",
+        "queued": "Queued",
+        "pending": "Pending",
+        "running": "Processing",
+        "completed": "Completed",
+        "failed": "Failed"
+      },
+      "errors": {
+        "no_files": "The upload contained no files to process.",
+        "no_rows": "The files contained no rows to add to the table.",
+        "not_queryable": "The rows were added, but the table did not show them within an hour. They may still appear; contact support if they do not.",
+        "transfer_interrupted": "The transfer stopped before all files arrived. Upload the files again.",
+        "unknown": "The upload failed. Start it again, and contact support if it keeps failing."
+      },
+      "rejectedFiles_one": "{{rejected}} of {{count}} file rejected",
+      "rejectedFiles_other": "{{rejected}} of {{count}} files rejected",
+      "rejectionReasons": {
+        "unparseable": "{{name}} could not be read",
+        "no_rows": "{{name}} has no rows"
       },
       "actions": {
-        "cancel": "Cancel",
-        "close": "Close",
         "back": "Back",
         "newUpload": "New upload",
         "upload": "Upload"
@@ -158,29 +170,15 @@
       "history": {
         "title": "Recent uploads",
         "empty": "No uploads yet.",
-        "loading": "Loading uploads…",
+        "error": "Uploads could not be loaded: {{message}}",
+        "unknownError": "An unknown error occurred",
         "uploadCount_one": "{{count}} recent upload",
         "uploadCount_other": "{{count}} recent uploads",
         "uploadTitle": "Upload #{{number}}",
-        "status": {
-          "pending": "Pending",
-          "running": "Processing",
-          "completed": "Completed",
-          "failed": "Failed"
-        },
-        "sourceKind": {
-          "ambyte": "Ambyte",
-          "csv": "CSV",
-          "tsv": "TSV",
-          "parquet": "Parquet",
-          "json": "JSON",
-          "ndjson": "NDJSON"
-        },
-        "rowCount_one": "{{count}} row",
-        "rowCount_other": "{{count}} rows",
+        "rowCount_one": "{{formatted}} row",
+        "rowCount_other": "{{formatted}} rows",
         "fileCount_one": "{{count}} file",
-        "fileCount_other": "{{count}} files",
-        "untargeted": "(no table)"
+        "fileCount_other": "{{count}} files"
       },
       "transfer": {
         "started": "Uploading to {{table}}. You can close this dialog and keep working; keep this tab open until the upload finishes.",
