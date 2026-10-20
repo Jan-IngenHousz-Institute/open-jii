@@ -1,6 +1,14 @@
 import { createExportRecord } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import {
+  act,
+  createTestQueryClient,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+  within,
+} from "@/test/test-utils";
 import type React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -110,6 +118,23 @@ describe("ExportListStep", () => {
     await waitFor(() => {
       expect(screen.getByText(/experimentData\.exportModal\.error/)).toBeInTheDocument();
     });
+  });
+
+  it("keeps the list it has when a later refetch fails", async () => {
+    mountExports([completedExport]);
+    const queryClient = createTestQueryClient();
+
+    render(<ExportListStep {...defaultProps} />, { queryClient });
+    expect(await screen.findByText("experimentData.exportModal.exportCount")).toBeInTheDocument();
+
+    server.mount(contract.experiments.listExports, {
+      body: { message: "Server error" },
+      status: 500,
+    });
+    await act(() => queryClient.refetchQueries());
+
+    expect(screen.getByText("experimentData.exportModal.exportCount")).toBeInTheDocument();
+    expect(screen.queryByText(/experimentData\.exportModal\.error/)).not.toBeInTheDocument();
   });
 
   it("renders empty state when no exports exist", async () => {
