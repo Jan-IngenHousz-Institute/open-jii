@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
-import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { ResourceDeletedNotifier } from "../../../../notifications/application/services/resource-deleted-notifier";
 import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -14,7 +14,7 @@ export class DeleteExperimentUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly sharingRepository: SharingRepository,
-    private readonly notifications: NotificationDispatchService,
+    private readonly deletionNotifier: ResourceDeletedNotifier,
   ) {}
 
   async execute(id: string, userId: string): Promise<Result<void>> {
@@ -49,7 +49,13 @@ export class DeleteExperimentUseCase {
       const deleteResult = await this.experimentRepository.delete(id);
 
       if (deleteResult.isSuccess()) {
-        await this.notify(userId, id, experiment.name, members);
+        await this.deletionNotifier.notify({
+          operation: "deleteExperiment",
+          actorId: userId,
+          resource: { type: "experiment", id },
+          name: experiment.name,
+          members,
+        });
 
         this.logger.log({
           msg: "Experiment deleted successfully",
@@ -68,42 +74,5 @@ export class DeleteExperimentUseCase {
 
       return deleteResult;
     });
-  }
-
-  /** Tell everyone who had access. A failure here leaves the delete standing. */
-  private async notify(
-    actorId: string,
-    experimentId: string,
-    resourceName: string,
-    members: Result<string[]>,
-  ): Promise<void> {
-    if (members.isFailure()) {
-      this.logger.error({
-        msg: "Could not read who had access, nobody was notified of the deletion",
-        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-        operation: "deleteExperiment",
-        experimentId,
-        error: members.error,
-      });
-      return;
-    }
-
-    const dispatched = await this.notifications.dispatch({
-      type: "resource_deleted",
-      recipientIds: members.value,
-      actorId,
-      resource: { type: "experiment", id: experimentId },
-      params: { resourceName },
-    });
-
-    if (dispatched.isFailure()) {
-      this.logger.error({
-        msg: "Failed to notify members, the experiment was still deleted",
-        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-        operation: "deleteExperiment",
-        experimentId,
-        error: dispatched.error,
-      });
-    }
   }
 }

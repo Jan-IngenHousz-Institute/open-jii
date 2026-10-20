@@ -1,8 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
-import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
-import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { ResourceDeletedNotifier } from "../../../../notifications/application/services/resource-deleted-notifier";
 import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort } from "../../../core/ports/aws.port";
@@ -17,7 +16,7 @@ export class DeleteIotDeviceUseCase {
     private readonly awsPort: AwsPort,
     private readonly deviceRepository: IotDeviceRepository,
     private readonly sharingRepository: SharingRepository,
-    private readonly notifications: NotificationDispatchService,
+    private readonly deletionNotifier: ResourceDeletedNotifier,
   ) {}
 
   async execute(deviceId: string, userId: string): Promise<Result<void>> {
@@ -72,56 +71,15 @@ export class DeleteIotDeviceUseCase {
     }
 
     if (deleteResult.value.length > 0) {
-      await this.notify(userId, deviceId, name, members);
+      await this.deletionNotifier.notify({
+        operation: "deleteIotDevice",
+        actorId: userId,
+        resource: { type: "device", id: deviceId },
+        name: name,
+        members,
+      });
     }
 
     return success(undefined);
-  }
-
-  /** Tell everyone who had access. A failure here leaves the delete standing. */
-  private async notify(
-    actorId: string,
-    deviceId: string,
-    name: Result<string | null>,
-    members: Result<string[]>,
-  ): Promise<void> {
-    if (name.isFailure() || name.value === null) {
-      this.logger.error({
-        msg: "Could not name the device, nobody was notified of the deletion",
-        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-        operation: "deleteIotDevice",
-        deviceId,
-        ...(name.isFailure() ? { error: name.error } : {}),
-      });
-      return;
-    }
-    if (members.isFailure()) {
-      this.logger.error({
-        msg: "Could not read who had access, nobody was notified of the deletion",
-        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-        operation: "deleteIotDevice",
-        deviceId,
-        error: members.error,
-      });
-      return;
-    }
-
-    const dispatched = await this.notifications.dispatch({
-      type: "resource_deleted",
-      recipientIds: members.value,
-      actorId,
-      resource: { type: "device", id: deviceId },
-      params: { resourceName: name.value },
-    });
-
-    if (dispatched.isFailure()) {
-      this.logger.error({
-        msg: "Failed to notify members, the device was still deleted",
-        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-        operation: "deleteIotDevice",
-        deviceId,
-        error: dispatched.error,
-      });
-    }
   }
 }

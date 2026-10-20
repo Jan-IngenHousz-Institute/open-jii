@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
-import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { ResourceDeletedNotifier } from "../../../../notifications/application/services/resource-deleted-notifier";
 import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
 import { WorkbookRepository } from "../../../core/repositories/workbook.repository";
 
@@ -13,7 +13,7 @@ export class DeleteWorkbookUseCase {
   constructor(
     private readonly workbookRepository: WorkbookRepository,
     private readonly sharingRepository: SharingRepository,
-    private readonly notifications: NotificationDispatchService,
+    private readonly deletionNotifier: ResourceDeletedNotifier,
   ) {}
 
   async execute(id: string, userId: string): Promise<Result<void>> {
@@ -58,7 +58,13 @@ export class DeleteWorkbookUseCase {
     }
 
     if (deleteResult.value.length > 0) {
-      await this.notify(userId, id, workbookResult.value.name, members);
+      await this.deletionNotifier.notify({
+        operation: "deleteWorkbook",
+        actorId: userId,
+        resource: { type: "workbook", id },
+        name: workbookResult.value.name,
+        members,
+      });
     }
 
     this.logger.log({
@@ -70,42 +76,5 @@ export class DeleteWorkbookUseCase {
     });
 
     return success(undefined);
-  }
-
-  /** Tell everyone who had access. A failure here leaves the delete standing. */
-  private async notify(
-    actorId: string,
-    workbookId: string,
-    resourceName: string,
-    members: Result<string[]>,
-  ): Promise<void> {
-    if (members.isFailure()) {
-      this.logger.error({
-        msg: "Could not read who had access, nobody was notified of the deletion",
-        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-        operation: "deleteWorkbook",
-        workbookId,
-        error: members.error,
-      });
-      return;
-    }
-
-    const dispatched = await this.notifications.dispatch({
-      type: "resource_deleted",
-      recipientIds: members.value,
-      actorId,
-      resource: { type: "workbook", id: workbookId },
-      params: { resourceName },
-    });
-
-    if (dispatched.isFailure()) {
-      this.logger.error({
-        msg: "Failed to notify members, the workbook was still deleted",
-        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-        operation: "deleteWorkbook",
-        workbookId,
-        error: dispatched.error,
-      });
-    }
   }
 }

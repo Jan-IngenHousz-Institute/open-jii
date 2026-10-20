@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
-import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { ResourceDeletedNotifier } from "../../../../notifications/application/services/resource-deleted-notifier";
 import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
 import { ProtocolDto } from "../../../core/models/protocol.model";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
@@ -14,7 +14,7 @@ export class DeleteProtocolUseCase {
   constructor(
     private readonly protocolRepository: ProtocolRepository,
     private readonly sharingRepository: SharingRepository,
-    private readonly notifications: NotificationDispatchService,
+    private readonly deletionNotifier: ResourceDeletedNotifier,
   ) {}
 
   async execute(id: string, userId: string): Promise<Result<ProtocolDto>> {
@@ -63,7 +63,13 @@ export class DeleteProtocolUseCase {
       return failure(AppError.internal("Failed to delete protocol"));
     }
 
-    await this.notify(userId, id, protocol.name, members);
+    await this.deletionNotifier.notify({
+      operation: "deleteProtocol",
+      actorId: userId,
+      resource: { type: "protocol", id },
+      name: protocol.name,
+      members,
+    });
 
     this.logger.log({
       msg: "Successfully deleted protocol",
@@ -72,42 +78,5 @@ export class DeleteProtocolUseCase {
       status: "success",
     });
     return success(protocols[0]);
-  }
-
-  /** Tell everyone who had access. A failure here leaves the delete standing. */
-  private async notify(
-    actorId: string,
-    protocolId: string,
-    resourceName: string,
-    members: Result<string[]>,
-  ): Promise<void> {
-    if (members.isFailure()) {
-      this.logger.error({
-        msg: "Could not read who had access, nobody was notified of the deletion",
-        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-        operation: "deleteProtocol",
-        protocolId,
-        error: members.error,
-      });
-      return;
-    }
-
-    const dispatched = await this.notifications.dispatch({
-      type: "resource_deleted",
-      recipientIds: members.value,
-      actorId,
-      resource: { type: "protocol", id: protocolId },
-      params: { resourceName },
-    });
-
-    if (dispatched.isFailure()) {
-      this.logger.error({
-        msg: "Failed to notify members, the protocol was still deleted",
-        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-        operation: "deleteProtocol",
-        protocolId,
-        error: dispatched.error,
-      });
-    }
   }
 }

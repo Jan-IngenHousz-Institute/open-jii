@@ -1,8 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
-import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { ResourceDeletedNotifier } from "../../../../notifications/application/services/resource-deleted-notifier";
 import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
 import { IotCalibrationDefinitionRepository } from "../../../core/repositories/iot-calibration-definition.repository";
 
@@ -13,7 +12,7 @@ export class DeleteCalibrationDefinitionUseCase {
   constructor(
     private readonly definitionRepository: IotCalibrationDefinitionRepository,
     private readonly sharingRepository: SharingRepository,
-    private readonly notifications: NotificationDispatchService,
+    private readonly deletionNotifier: ResourceDeletedNotifier,
   ) {}
 
   async execute(definitionId: string, userId: string): Promise<Result<void>> {
@@ -47,54 +46,13 @@ export class DeleteCalibrationDefinitionUseCase {
       return failure(AppError.notFound("Calibration definition not found"));
     }
 
-    await this.notify(userId, definitionId, name, members);
-    return success(undefined);
-  }
-
-  /** Tell everyone who had access. A failure here leaves the delete standing. */
-  private async notify(
-    actorId: string,
-    definitionId: string,
-    name: Result<string | null>,
-    members: Result<string[]>,
-  ): Promise<void> {
-    if (name.isFailure() || name.value === null) {
-      this.logger.error({
-        msg: "Could not name the calibration definition, nobody was notified of the deletion",
-        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-        operation: "deleteCalibrationDefinition",
-        definitionId,
-        ...(name.isFailure() ? { error: name.error } : {}),
-      });
-      return;
-    }
-    if (members.isFailure()) {
-      this.logger.error({
-        msg: "Could not read who had access, nobody was notified of the deletion",
-        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-        operation: "deleteCalibrationDefinition",
-        definitionId,
-        error: members.error,
-      });
-      return;
-    }
-
-    const dispatched = await this.notifications.dispatch({
-      type: "resource_deleted",
-      recipientIds: members.value,
-      actorId,
+    await this.deletionNotifier.notify({
+      operation: "deleteCalibrationDefinition",
+      actorId: userId,
       resource: { type: "calibration_definition", id: definitionId },
-      params: { resourceName: name.value },
+      name: name,
+      members,
     });
-
-    if (dispatched.isFailure()) {
-      this.logger.error({
-        msg: "Failed to notify members, the calibration definition was still deleted",
-        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-        operation: "deleteCalibrationDefinition",
-        definitionId,
-        error: dispatched.error,
-      });
-    }
+    return success(undefined);
   }
 }
