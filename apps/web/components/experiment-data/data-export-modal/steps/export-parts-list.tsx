@@ -29,7 +29,7 @@ export function ExportPartsList({
 }) {
   const { t } = useTranslation("experimentData");
   const locale = useLocale();
-  const { data, isPending, isError, error, refetch } = useExportDownloadLinks({
+  const { data, isPending, isError, error } = useExportDownloadLinks({
     experimentId,
     exportId,
   });
@@ -73,13 +73,14 @@ export function ExportPartsList({
     );
   }
 
+  // Written straight from the click: Safari refuses a clipboard write that waits on the network,
+  // and the hook already refreshes these links five minutes before they stop working.
   const handleCopyLinks = async () => {
     try {
-      const links = (await refetch({ throwOnError: true })).data ?? data;
-      await navigator.clipboard.writeText(links.parts.map((part) => part.url).join("\n"));
+      await navigator.clipboard.writeText(data.parts.map((part) => part.url).join("\n"));
       toast({
         description: t("experimentData.exportModal.linksCopied", {
-          time: formatDateTime(links.expiresAt, locale),
+          time: formatDateTime(data.expiresAt, locale),
         }),
       });
     } catch {
