@@ -39,6 +39,9 @@ const UNTRIGGERED_LIMIT_MS = 15 * 60_000;
 /** No export runs this long, queue included, so a run this old can no longer be followed. */
 const IN_FLIGHT_LIMIT_MS = 48 * 60 * 60_000;
 
+/** An outcome that still cannot be announced a day after the export finished is let go. */
+const ANNOUNCE_WINDOW_MS = 24 * 60 * 60_000;
+
 /** The notebook raises `ExportError`, whose message starts with this marker. */
 const EXPORT_ERROR_MARKER = /EXPORT_ERROR\[([a-z_]+)\]/;
 
@@ -112,6 +115,8 @@ export class ExportRunReconcilerService {
       for (const record of inFlight.value) {
         await this.reconcileExportSafely(record);
       }
+
+      await this.announcePending();
     } finally {
       this.reconciling = false;
     }
@@ -288,11 +293,6 @@ export class ExportRunReconcilerService {
         exportId: record.id,
         error: completed.error.message,
       });
-      return;
-    }
-
-    if (completed.value !== null) {
-      await this.announce(completed.value);
     }
   }
 
@@ -350,22 +350,57 @@ export class ExportRunReconcilerService {
         exportId: record.id,
         error: failed.error.message,
       });
+    }
+  }
+
+  /**
+   * Announces every finished export whose outcome nobody has been told about yet, so one that
+   * could not be announced when it finished, or whose task stopped in between, is told on a later
+   * pass. Two tasks announcing the same export store one notification, by its dedupe key.
+   */
+  private async announcePending(): Promise<void> {
+    const pending = await this.exportsRepository.findUnannounced(
+      new Date(Date.now() - ANNOUNCE_WINDOW_MS),
+    );
+    if (pending.isFailure()) {
+      this.logger.error({
+        msg: "Could not read the exports waiting to be announced",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "reconcileExports",
+        error: pending.error.message,
+      });
       return;
     }
 
-    if (failed.value !== null) {
-      await this.announce(failed.value);
+    for (const record of pending.value) {
+      try {
+        const isAnnounced = await this.announce(record);
+        if (isAnnounced) {
+          await this.exportsRepository.markAnnounced(record.id);
+        }
+      } catch (error) {
+        this.logger.error({
+          msg: "Could not announce an export; trying again on the next pass",
+          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+          operation: "reconcileExports",
+          exportId: record.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
 
   /**
    * Tells whoever asked for the export how it ended, its creator and anyone who joined it.
-   * A failed notification never undoes the outcome.
+   * False when the notification could not be stored, so the next pass tries again.
    */
-  private async announce(record: ExperimentExportDto): Promise<void> {
+  private async announce(record: ExperimentExportDto): Promise<boolean> {
     const experiment = await this.experimentRepository.findOne(record.experimentId);
-    if (experiment.isFailure() || experiment.value === null) {
-      return;
+    if (experiment.isFailure()) {
+      return false;
+    }
+    if (experiment.value === null) {
+      return true;
     }
 
     const target = {
@@ -393,11 +428,14 @@ export class ExportRunReconcilerService {
 
     if (dispatched.isFailure()) {
       this.logger.warn({
-        msg: "Could not notify the exporter",
+        msg: "Could not notify the exporter; trying again on the next pass",
         operation: "reconcileExports",
         exportId: record.id,
         error: dispatched.error.message,
       });
+      return false;
     }
+
+    return true;
   }
 }
