@@ -1,6 +1,7 @@
 "use client";
 
 import { ExperimentLayoutPanel } from "@/components/experiment-layout/experiment-layout-panel";
+import { LayoutSessionsSection } from "@/components/experiment-layout/layout-sessions-section";
 import { PageContainer } from "@/components/page-container";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
@@ -33,6 +34,7 @@ export default function ExperimentLayoutContent({ params }: ExperimentLayoutCont
         </div>
 
         <ExperimentLayoutPanel experimentId={id} canEdit={canEdit} />
+        <LayoutSessionsSection experimentId={id} canEdit={canEdit} />
       </PageContainer>
     </EntityLayoutShell>
   );

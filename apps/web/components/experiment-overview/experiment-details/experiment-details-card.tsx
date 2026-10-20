@@ -21,6 +21,7 @@ import { ExperimentVisibilityCard } from "../../experiment-settings/experiment-v
 import { OwningOrganizationField } from "../../organizations/owning-organization-field";
 import { ExperimentMembersTrail } from "../experiment-members-trail";
 import { ExperimentLocationsSection } from "./experiment-locations-section";
+import { ExperimentPublicationsSection } from "./experiment-publications-section";
 import { ExperimentStandardsReadiness } from "./experiment-standards-readiness";
 import { ExperimentStudyDetailsSection } from "./experiment-study-details-section";
 
@@ -201,6 +202,12 @@ export function ExperimentDetailsCard({
                 />
 
                 <ExperimentStandardsReadiness experiment={experiment} />
+
+                <ExperimentPublicationsSection
+                  experimentId={experimentId}
+                  experiment={experiment}
+                  hasAccess={hasAccess}
+                />
 
                 <ExperimentLocationsSection
                   experimentId={experimentId}

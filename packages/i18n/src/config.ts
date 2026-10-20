@@ -37,6 +37,10 @@ export const namespaces = [
   "newsletter",
   "publicMetrics",
   "notifications",
+  "studyMetadata",
+  "standards",
+  "fieldSessions",
+  "datasets",
 ] as const;
 
 export type Namespace = (typeof namespaces)[number];

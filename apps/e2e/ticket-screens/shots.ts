@@ -7,6 +7,12 @@ import { DROUGHT_TRIAL_TABLE } from "./fixture-tables.js";
 import { FixtureWarehouse } from "./fixture-warehouse.js";
 import type { Fixture, Resolvable } from "./fixture.js";
 import { resolve } from "./fixture.js";
+import { SHOTS_A } from "./shots-a.js";
+import { SHOTS_B } from "./shots-b.js";
+import { SHOTS_C } from "./shots-c.js";
+import { SHOTS_D } from "./shots-d.js";
+import { SHOTS_E } from "./shots-e.js";
+import { SHOTS_F } from "./shots-f.js";
 import { STUDY_METADATA_SHOTS } from "./study-metadata-shots.js";
 
 export interface TicketShot {
@@ -49,6 +55,15 @@ const exampleDataTable: TicketShot = {
   },
 };
 
-export const SHOTS: readonly TicketShot[] = [exampleDataTable, ...STUDY_METADATA_SHOTS];
+export const SHOTS: readonly TicketShot[] = [
+  exampleDataTable,
+  ...STUDY_METADATA_SHOTS,
+  ...SHOTS_A,
+  ...SHOTS_B,
+  ...SHOTS_C,
+  ...SHOTS_D,
+  ...SHOTS_E,
+  ...SHOTS_F,
+];
 
 export const SHOTS_BY_SLUG = new Map(SHOTS.map((shot) => [shot.slug, shot]));
