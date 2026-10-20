@@ -8,11 +8,16 @@ import {
   zExperimentUploadFormFields,
   zExperimentUploadSourceKind,
 } from "@repo/api/domains/experiment/experiment.schema";
-import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentUploadSourceKind,
+  ExperimentUploadTargetTable,
+} from "@repo/api/domains/experiment/experiment.schema";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { compactTimestamp } from "../../../../common/utils/datetime";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import type { UploadErrorCode } from "../../../core/models/experiment-data-uploads.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
@@ -30,7 +35,6 @@ export interface UploadDataResult {
   sourceKind: ExperimentUploadSourceKind;
   uploadTableId?: string;
   uploadTableName?: string;
-  runId?: number;
   files: UploadedFileResult[];
 }
 
@@ -53,8 +57,14 @@ interface UploadContext {
   uploadId: string;
   directoryName: string;
   target: ResolvedUploadTarget;
+  createdAt: Date;
 }
 
+/**
+ * Records an upload as its files start arriving, streams them into the experiment's volume and
+ * starts the upload job without waiting for it. The run's progress reaches the record through
+ * the upload run reconciler, which also starts any run this could not.
+ */
 @Injectable()
 export class UploadDataUseCase {
   private readonly logger = new Logger(UploadDataUseCase.name);
@@ -156,10 +166,16 @@ export class UploadDataUseCase {
           return success(undefined);
         }
         successfulUploads.push({ fileName: safeName, filePath: uploadResult.value.filePath });
+        await this.recordFileReceived(state.ctx);
         return success(undefined);
       },
     });
     if (parseResult.isFailure()) {
+      // Failed now rather than by the reconciler's sweep, so a new table's name is free for
+      // the retry straight away.
+      if (state.ctx) {
+        await this.finishAsFailed(state.ctx, "transfer_interrupted");
+      }
       return failure(parseResult.error);
     }
     if (!state.ctx || !state.sourceKind) {
@@ -172,7 +188,12 @@ export class UploadDataUseCase {
     experimentId: string,
     userId: string,
     sourceKind: ExperimentUploadSourceKind,
-    formFields: { targetKind?: string; targetName?: string; uploadTableId?: string },
+    formFields: {
+      targetKind?: string;
+      targetName?: string;
+      uploadTableId?: string;
+      uploadId?: string;
+    },
   ): Promise<Result<UploadContext>> {
     const experimentResult = await this.experimentRepository.findOne(experimentId);
     if (experimentResult.isFailure()) {
@@ -205,10 +226,10 @@ export class UploadDataUseCase {
         );
       }
     }
-    const targetSelection =
+    const targetSelection: ExperimentUploadTargetTable =
       parsedForm.data.targetKind === "new"
-        ? { kind: "new" as const, name: parsedForm.data.targetName }
-        : { kind: "existing" as const, uploadTableId: parsedForm.data.uploadTableId };
+        ? { kind: "new", name: parsedForm.data.targetName }
+        : { kind: "existing", uploadTableId: parsedForm.data.uploadTableId };
     const validated = await this.uploadsRepository.validateTargetTable({
       experimentId,
       target: targetSelection,
@@ -218,9 +239,30 @@ export class UploadDataUseCase {
     }
     const target = validated.value;
 
-    const uploadId = randomUUID();
+    const uploadId = parsedForm.data.uploadId ?? randomUUID();
     const directoryName = `upload_${compactTimestamp()}_${uploadId.slice(0, 8)}`;
-    return success({ experiment, uploadId, directoryName, target });
+
+    const recorded = await this.uploadsRepository.create({
+      id: uploadId,
+      experimentId,
+      uploadTableId: target.uploadTableId,
+      uploadTableName: target.uploadTableName,
+      targetKind: parsedForm.data.targetKind,
+      uploadDirectory: directoryName,
+      sourceKind,
+      createdBy: userId,
+    });
+    if (recorded.isFailure()) {
+      return failure(recorded.error);
+    }
+
+    return success({
+      experiment,
+      uploadId,
+      directoryName,
+      target,
+      createdAt: recorded.value.createdAt,
+    });
   }
 
   private async postexecute(
@@ -239,10 +281,32 @@ export class UploadDataUseCase {
         sourceKind,
         errorDetails,
       });
+      await this.finishAsFailed(ctx, "no_files");
       return failure(AppError.badRequest(`Failed to upload data files. ${errorDetails}`));
     }
 
-    const jobResult = await this.databricksPort.triggerDataUploadJob({
+    const queued = await this.uploadsRepository.markQueued(ctx.uploadId, successfulUploads.length);
+    if (queued.isFailure()) {
+      return failure(queued.error);
+    }
+    if (queued.value === null) {
+      return failure(
+        AppError.timeout(
+          "The upload took too long to arrive and was stopped; start it again",
+          "UPLOAD_TRANSFER_INTERRUPTED",
+        ),
+      );
+    }
+
+    const result = {
+      uploadId: ctx.uploadId,
+      sourceKind,
+      uploadTableId: ctx.target.uploadTableId,
+      uploadTableName: ctx.target.uploadTableName,
+      files: successfulUploads,
+    } satisfies UploadDataResult;
+
+    const triggered = await this.databricksPort.triggerDataUploadJob({
       sourceKind,
       experimentId: ctx.experiment.id,
       experimentName: ctx.experiment.name,
@@ -251,9 +315,33 @@ export class UploadDataUseCase {
       uploadTableId: ctx.target.uploadTableId,
       uploadTableName: ctx.target.uploadTableName,
       userId,
+      createdAt: ctx.createdAt,
     });
-    if (jobResult.isFailure()) {
-      return failure(jobResult.error);
+
+    // A trigger that failed or timed out is retried by the upload run reconciler, which
+    // finds the run Databricks may already have accepted under the same upload id.
+    if (triggered.isFailure()) {
+      this.logger.warn({
+        msg: "Could not start the upload job; the reconciler will try again",
+        errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
+        operation: "uploadData",
+        experimentId: ctx.experiment.id,
+        uploadId: ctx.uploadId,
+        error: triggered.error.message,
+      });
+      return success(result);
+    }
+
+    const attached = await this.uploadsRepository.attachRun(ctx.uploadId, triggered.value.run_id);
+    if (attached.isFailure()) {
+      this.logger.warn({
+        msg: "Could not record the upload's run; the reconciler will find it",
+        operation: "uploadData",
+        experimentId: ctx.experiment.id,
+        uploadId: ctx.uploadId,
+        error: attached.error.message,
+      });
+      return success(result);
     }
 
     this.logger.log({
@@ -262,17 +350,38 @@ export class UploadDataUseCase {
       experimentId: ctx.experiment.id,
       sourceKind,
       uploadId: ctx.uploadId,
-      runId: jobResult.value.run_id,
+      runId: triggered.value.run_id,
       fileCount: successfulUploads.length,
     });
 
-    return success({
-      uploadId: ctx.uploadId,
-      sourceKind,
-      uploadTableId: ctx.target.uploadTableId,
-      uploadTableName: ctx.target.uploadTableName,
-      runId: jobResult.value.run_id,
-      files: successfulUploads,
-    });
+    return success(result);
+  }
+
+  /** Keeps a long transfer that is still making progress clear of the reconciler's sweep. */
+  private async recordFileReceived(ctx: UploadContext): Promise<void> {
+    const recorded = await this.uploadsRepository.markFileReceived(ctx.uploadId);
+    if (recorded.isFailure()) {
+      this.logger.warn({
+        msg: "Could not record a received file",
+        operation: "uploadData",
+        experimentId: ctx.experiment.id,
+        uploadId: ctx.uploadId,
+        error: recorded.error.message,
+      });
+    }
+  }
+
+  private async finishAsFailed(ctx: UploadContext, errorCode: UploadErrorCode): Promise<void> {
+    const failed = await this.uploadsRepository.fail(ctx.uploadId, errorCode);
+    if (failed.isFailure()) {
+      this.logger.error({
+        msg: "Could not record a failed upload",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "uploadData",
+        experimentId: ctx.experiment.id,
+        uploadId: ctx.uploadId,
+        error: failed.error.message,
+      });
+    }
   }
 }

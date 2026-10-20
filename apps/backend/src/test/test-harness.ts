@@ -42,6 +42,7 @@ import {
   experimentDashboards,
   experimentVisualizations,
   experimentExports,
+  experimentUploads,
   experimentJoinCodes,
   experimentJoinRequests,
   resourceGrants,
@@ -54,10 +55,12 @@ import {
 import { AppModule } from "../app.module";
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
 import { ExportRunReconcilerService } from "../experiments/application/services/export-run-reconciler.service";
+import { UploadRunReconcilerService } from "../experiments/application/services/upload-run-reconciler.service";
 import { NotificationOutboxWorker } from "../notifications/application/services/notification-outbox.worker";
 import { MockAnalyticsAdapter } from "./mocks/adapters/analytics.adapter.mock";
 import { QuietExportRunReconcilerService } from "./quiet-export-run-reconciler";
 import { QuietNotificationOutboxWorker } from "./quiet-notification-outbox.worker";
+import { QuietUploadRunReconcilerService } from "./quiet-upload-run-reconciler";
 
 // Ensure test environment is loaded
 config({ path: resolve(__dirname, "../../.env.test") });
@@ -122,6 +125,9 @@ export class TestHarness {
       moduleBuilder
         .overrideProvider(ExportRunReconcilerService)
         .useClass(QuietExportRunReconcilerService);
+      moduleBuilder
+        .overrideProvider(UploadRunReconcilerService)
+        .useClass(QuietUploadRunReconcilerService);
 
       for (const [name, { real, mock }] of Object.entries(ADAPTERS) as [
         AdapterKey,
@@ -226,6 +232,7 @@ export class TestHarness {
     // leftover would collide with a later test rather than merely linger.
     await this.database.delete(experimentJoinCodes).execute();
     await this.database.delete(experimentExports).execute();
+    await this.database.delete(experimentUploads).execute();
     await this.database.delete(experimentMembers).execute();
     await this.database.delete(experimentLocations).execute();
     // Dashboards/visualizations reference experiments, delete before experiments

@@ -15,7 +15,6 @@ import type {
 } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { Result } from "../../../common/utils/fp-utils";
 import type { ExportFormat } from "../models/experiment-data-exports.model";
-import type { UploadMetadata } from "../models/experiment-data-uploads.model";
 import type { ExperimentTableMetadata } from "../models/experiment-data.model";
 
 // `anonymizeContributors` is the resolved setting, the experiment's default or the export's
@@ -30,8 +29,8 @@ export interface DataExportJobInput {
 }
 
 // Semantic input for the data upload job trigger. The adapter maps these onto
-// SOURCE_KIND-specific widget keys; `experimentName` only feeds the ambyte
-// branch but is always carried since every callsite has it.
+// SOURCE_KIND-specific widget keys; `experimentName` and `createdAt` only feed the
+// ambyte branch but are always carried since every callsite has them.
 export interface DataUploadJobInput {
   sourceKind: "ambyte" | "csv" | "tsv" | "parquet" | "xlsx" | "json" | "ndjson";
   experimentId: string;
@@ -41,6 +40,7 @@ export interface DataUploadJobInput {
   uploadTableId: string;
   uploadTableName: string;
   userId: string;
+  createdAt: Date;
 }
 
 export const DATABRICKS_PORT = Symbol("DATABRICKS_PORT");
@@ -112,7 +112,8 @@ export interface DatabricksPort {
 
   /**
    * Trigger the data upload Databricks job (handles all upload source kinds via SOURCE_KIND dispatch).
-   * Pass semantic input; adapter maps to per-kind widget keys.
+   * Pass semantic input; adapter maps to per-kind widget keys. The run reuses `uploadId` as its
+   * idempotency token, so a repeated trigger starts no second run.
    */
   triggerDataUploadJob(input: DataUploadJobInput): Promise<Result<DatabricksJobRunResponse>>;
 
@@ -127,33 +128,4 @@ export interface DatabricksPort {
    * `exportId` as its folder and idempotency token, so a repeated trigger starts no second run.
    */
   triggerDataExportJob(input: DataExportJobInput): Promise<Result<DatabricksJobRunResponse>>;
-
-  /**
-   * Get completed upload metadata rows for an experiment from the Delta history table.
-   * Returns raw SchemaData; the repository maps it to UploadMetadata.
-   * Filters: required experiment_id, optional uploadTableId, optional uploadTableName.
-   */
-  getUploadMetadata(
-    experimentId: string,
-    options?: { uploadTableId?: string; uploadTableName?: string },
-  ): Promise<Result<SchemaData>>;
-
-  /**
-   * Get active (in-progress) uploads from the data upload job's runs.
-   * Filters by EXPERIMENT_ID widget (and optionally uploadTableId / uploadTableName).
-   */
-  getActiveUploads(
-    experimentId: string,
-    options?: { uploadTableId?: string; uploadTableName?: string },
-  ): Promise<Result<UploadMetadata[]>>;
-
-  /**
-   * Get failed uploads from completed job runs (terminated + non-SUCCESS),
-   * deduped against the set of upload_ids already in the Delta history table.
-   */
-  getFailedUploads(
-    experimentId: string,
-    completedUploadIds: Set<string>,
-    options?: { uploadTableId?: string; uploadTableName?: string },
-  ): Promise<Result<UploadMetadata[]>>;
 }

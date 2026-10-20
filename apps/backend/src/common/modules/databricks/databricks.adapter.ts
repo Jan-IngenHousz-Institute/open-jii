@@ -1,9 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import { zExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
 
-import type { UploadMetadata } from "../../../experiments/core/models/experiment-data-uploads.model";
 import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type {
@@ -101,8 +99,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       operation: "triggerDataUploadJob",
       experimentId: input.experimentId,
       sourceKind: input.sourceKind,
-      uploadId: "uploadId" in input ? input.uploadId : undefined,
-      uploadTableName: "uploadTableName" in input ? input.uploadTableName : undefined,
+      uploadId: input.uploadId,
+      uploadTableName: input.uploadTableName,
     });
 
     const jobParams: Record<string, string> = {
@@ -112,18 +110,18 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       UPLOAD_ID: input.uploadId,
       USER_ID: input.userId,
       CATALOG_NAME: this.configService.getCatalogName(),
+      UPLOAD_TABLE_ID: input.uploadTableId,
+      UPLOAD_TABLE_NAME: input.uploadTableName,
     };
-    jobParams.UPLOAD_TABLE_ID = input.uploadTableId;
-    jobParams.UPLOAD_TABLE_NAME = input.uploadTableName;
     if (input.sourceKind === "ambyte") {
       jobParams.EXPERIMENT_NAME = input.experimentName;
-      // Year prefix tracks the calendar year of upload, partitioning the ambyte
-      // volume layout. Sourced from the system clock so it never goes stale.
-      jobParams.YEAR_PREFIX = new Date().getUTCFullYear().toString();
+      // The year the upload was recorded, not the clock's, so a re-trigger from the stored
+      // record sends the same parameters as the first.
+      jobParams.YEAR_PREFIX = input.createdAt.getUTCFullYear().toString();
     }
 
     const jobId = this.configService.getDataUploadJobIdAsNumber();
-    return this.jobsService.triggerJob(jobId, jobParams);
+    return this.jobsService.triggerJob(jobId, jobParams, input.uploadId);
   }
 
   /** Run status for any Databricks job by runId. */
@@ -153,33 +151,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
 
     const jobId = this.configService.getDataExportJobIdAsNumber();
     return this.jobsService.triggerJob(jobId, jobParams, input.exportId);
-  }
-
-  /**
-   * Get completed upload metadata for an experiment from the Delta history table.
-   */
-  async getUploadMetadata(
-    experimentId: string,
-    options?: { uploadTableId?: string; uploadTableName?: string },
-  ): Promise<Result<SchemaData>> {
-    const whereConditions: [string, string][] = [["experiment_id", experimentId]];
-    if (options?.uploadTableId) {
-      whereConditions.push(["upload_table_id", options.uploadTableId]);
-    }
-    if (options?.uploadTableName) {
-      whereConditions.push(["upload_table_name", options.uploadTableName]);
-    }
-    const queryResult = this.queryBuilder.buildQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_upload_metadata`,
-      whereConditions,
-      orderBy: "created_at",
-      orderDirection: "DESC",
-    });
-    if (queryResult.isFailure()) {
-      return queryResult;
-    }
-
-    return this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
   }
 
   /** Last data arrival from gold device_last_activity; lags by pipeline cadence. */
@@ -805,113 +776,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     }
     const parsed = new Date(raw);
     return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
-  }
-
-  /**
-   * Get active (in-progress) uploads for an experiment by querying the data upload job runs.
-   * Filters job-runs API by EXPERIMENT_ID widget (and optionally UPLOAD_TABLE_ID / UPLOAD_TABLE_NAME).
-   */
-  async getActiveUploads(
-    experimentId: string,
-    options?: { uploadTableId?: string; uploadTableName?: string },
-  ): Promise<Result<UploadMetadata[]>> {
-    const jobId = this.configService.getDataUploadJobIdAsNumber();
-    const runsResult = await this.jobsService.listActiveRunsWithParams(jobId);
-    if (runsResult.isFailure()) {
-      return failure(runsResult.error);
-    }
-
-    const uploads: UploadMetadata[] = [];
-    for (const { run, params, status } of runsResult.value) {
-      if (params.EXPERIMENT_ID !== experimentId) {
-        continue;
-      }
-      if (options?.uploadTableId && params.UPLOAD_TABLE_ID !== options.uploadTableId) {
-        continue;
-      }
-      if (options?.uploadTableName && params.UPLOAD_TABLE_NAME !== options.uploadTableName) {
-        continue;
-      }
-      if (!params.UPLOAD_ID || !params.USER_ID) {
-        continue;
-      }
-      const parsedKind = zExperimentUploadSourceKind.safeParse(params.SOURCE_KIND);
-      if (!parsedKind.success) {
-        continue;
-      }
-      uploads.push({
-        uploadId: params.UPLOAD_ID,
-        experimentId: params.EXPERIMENT_ID,
-        uploadTableId: params.UPLOAD_TABLE_ID || null,
-        uploadTableName: params.UPLOAD_TABLE_NAME || null,
-        sourceKind: parsedKind.data,
-        // Upload history doesn't surface "queued" separately; collapse into "pending".
-        status: status === "queued" ? "pending" : status,
-        fileCount: null,
-        rowCount: null,
-        createdBy: params.USER_ID,
-        createdAt: new Date(run.start_time).toISOString(),
-        completedAt: run.end_time ? new Date(run.end_time).toISOString() : null,
-        errorMessage: null,
-      });
-    }
-    return success(uploads);
-  }
-
-  /**
-   * Get failed uploads from completed job runs (terminated + non-SUCCESS),
-   * deduped against the set of upload_ids already in the Delta history table.
-   */
-  async getFailedUploads(
-    experimentId: string,
-    completedUploadIds: Set<string>,
-    options?: { uploadTableId?: string; uploadTableName?: string },
-  ): Promise<Result<UploadMetadata[]>> {
-    const jobId = this.configService.getDataUploadJobIdAsNumber();
-    // Pass an empty run-id set: dedup happens by UPLOAD_ID below since the
-    // upload metadata table keys on it, not on the Databricks run id.
-    const runsResult = await this.jobsService.listFailedRunsWithParams(jobId, new Set());
-    if (runsResult.isFailure()) {
-      return failure(runsResult.error);
-    }
-
-    const uploads: UploadMetadata[] = [];
-    for (const { run, params } of runsResult.value) {
-      if (params.EXPERIMENT_ID !== experimentId) {
-        continue;
-      }
-      if (options?.uploadTableId && params.UPLOAD_TABLE_ID !== options.uploadTableId) {
-        continue;
-      }
-      if (options?.uploadTableName && params.UPLOAD_TABLE_NAME !== options.uploadTableName) {
-        continue;
-      }
-      if (!params.UPLOAD_ID || !params.USER_ID) {
-        continue;
-      }
-      if (completedUploadIds.has(params.UPLOAD_ID)) {
-        continue;
-      }
-      const parsedKind = zExperimentUploadSourceKind.safeParse(params.SOURCE_KIND);
-      if (!parsedKind.success) {
-        continue;
-      }
-      uploads.push({
-        uploadId: params.UPLOAD_ID,
-        experimentId: params.EXPERIMENT_ID,
-        uploadTableId: params.UPLOAD_TABLE_ID || null,
-        uploadTableName: params.UPLOAD_TABLE_NAME || null,
-        sourceKind: parsedKind.data,
-        status: "failed",
-        fileCount: null,
-        rowCount: null,
-        createdBy: params.USER_ID,
-        createdAt: new Date(run.start_time).toISOString(),
-        completedAt: run.end_time ? new Date(run.end_time).toISOString() : null,
-        errorMessage: null,
-      });
-    }
-    return success(uploads);
   }
 
   /**

@@ -6,11 +6,18 @@ import {
   zExperimentUploadRejectedFile,
 } from "@repo/api/domains/experiment/uploads/experiment-uploads.schema";
 import type { ExperimentUploadRecord } from "@repo/api/domains/experiment/uploads/experiment-uploads.schema";
-import type { experimentUploadErrorCodeEnum, experimentUploadStatusEnum } from "@repo/database";
+import type {
+  experimentUploadErrorCodeEnum,
+  experimentUploadSourceKindEnum,
+  experimentUploadStatusEnum,
+  experimentUploadTargetKindEnum,
+} from "@repo/database";
 import { experimentUploads } from "@repo/database";
 
 export type UploadStatus = (typeof experimentUploadStatusEnum.enumValues)[number];
 export type UploadErrorCode = (typeof experimentUploadErrorCodeEnum.enumValues)[number];
+export type UploadSourceKind = (typeof experimentUploadSourceKindEnum.enumValues)[number];
+export type UploadTargetKind = (typeof experimentUploadTargetKindEnum.enumValues)[number];
 
 /** An upload in one of these states still has files arriving or a job run to follow. */
 export const IN_FLIGHT_UPLOAD_STATUSES: UploadStatus[] = [

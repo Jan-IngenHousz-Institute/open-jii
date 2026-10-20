@@ -113,6 +113,9 @@ export const zExperimentUploadTargetTable = z.discriminatedUnion("kind", [
 ]);
 export type ExperimentUploadTargetTable = z.infer<typeof zExperimentUploadTargetTable>;
 
+// Lets a client follow its upload before the response arrives; the backend makes one up when absent.
+const zExperimentUploadClientId = z.string().uuid().optional();
+
 // Form fields shared across the multipart upload boundary. The FE binds this
 // schema to react-hook-form via zodResolver; the BE validates the same shape
 // on the busboy-parsed field map. Files are out of scope (multipart-streamed).
@@ -121,6 +124,7 @@ export const zExperimentUploadFormFields = z.discriminatedUnion("targetKind", [
     targetKind: z.literal("new"),
     sourceKind: zExperimentUploadSourceKind,
     targetName: zExperimentUploadTableName,
+    uploadId: zExperimentUploadClientId,
   }),
   z.object({
     targetKind: z.literal("existing"),
@@ -130,6 +134,7 @@ export const zExperimentUploadFormFields = z.discriminatedUnion("targetKind", [
         error: (issue) => (issue.input === undefined ? "Select a table to append to" : undefined),
       })
       .guid("Select a table to append to"),
+    uploadId: zExperimentUploadClientId,
   }),
 ]);
 export type ExperimentUploadFormFields = z.infer<typeof zExperimentUploadFormFields>;
