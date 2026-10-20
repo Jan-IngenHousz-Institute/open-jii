@@ -49,6 +49,26 @@ describe("WorkbookOverviewPage", () => {
     await waitFor(() => expect(screen.getByText("workbooks.errorLoading")).toBeInTheDocument());
   });
 
+  it("records a visit once the workbook loads", async () => {
+    server.mount(contract.workbooks.getWorkbook, { body: createWorkbookDetail({ id: "wb-1" }) });
+    const visit = server.mount(contract.visits.recordVisit, { status: 204 });
+
+    renderPage();
+
+    await waitFor(() => expect(visit.called).toBe(true));
+    expect(visit.body).toEqual({ resourceType: "workbook", resourceId: "wb-1" });
+  });
+
+  it("records no visit when the workbook fails to load", async () => {
+    server.mount(contract.workbooks.getWorkbook, { status: 500 });
+    const visit = server.mount(contract.visits.recordVisit, { status: 204 });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("workbooks.errorLoading")).toBeInTheDocument());
+    expect(visit.called).toBe(false);
+  });
+
   it("carries the description and the provenance row, which the layout no longer does", async () => {
     server.mount(contract.workbooks.getWorkbook, {
       body: createWorkbookDetail({

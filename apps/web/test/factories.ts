@@ -30,7 +30,6 @@ import type {
   ExperimentFlowGraph,
   ExperimentListItem,
   ExperimentUploadMetadata,
-  RecentlyOpenedExperiment,
   RelatedHomeExperiment,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
@@ -74,6 +73,7 @@ import type {
   ResourceOwnerDto,
 } from "@repo/api/domains/sharing/sharing.schema";
 import type { Invitation, UserSearchResult } from "@repo/api/domains/user/user.schema";
+import type { RecentlyOpenedResource } from "@repo/api/domains/visit/visit.schema";
 import type {
   BranchCell,
   CommandCell,
@@ -115,21 +115,37 @@ export function createExperiment(overrides: Partial<ExperimentListItem> = {}): E
   };
 }
 
-export function createRecentlyOpenedExperiment(
-  overrides: Partial<RecentlyOpenedExperiment> = {},
-): RecentlyOpenedExperiment {
-  return {
-    ...createExperiment(),
-    openedAt: "2025-01-20T00:00:00.000Z",
-    callerRole: "owner",
-    ...overrides,
-  };
-}
-
 export function createHomeExperiment(
   overrides: Partial<RelatedHomeExperiment> = {},
 ): RelatedHomeExperiment {
   return { ...createExperiment(), callerRole: "owner", ...overrides };
+}
+
+/** Each variant's own fields; the shared ones are filled in. */
+type RecentlyOpenedDetail = RecentlyOpenedResource extends infer Row
+  ? Row extends RecentlyOpenedResource
+    ? Omit<Row, "id" | "name" | "openedAt" | "callerRole">
+    : never
+  : never;
+
+let recentlyOpenedSeq = 0;
+
+export function createRecentlyOpenedResource(
+  resource: RecentlyOpenedDetail &
+    Partial<Pick<RecentlyOpenedResource, "id" | "name" | "openedAt" | "callerRole">> = {
+    type: "experiment",
+    status: "active",
+    organizationName: "Plant Physiology Lab",
+  },
+): RecentlyOpenedResource {
+  recentlyOpenedSeq++;
+  return {
+    id: `00000000-0000-4000-8000-${String(recentlyOpenedSeq).padStart(12, "0")}`,
+    name: `Opened ${recentlyOpenedSeq}`,
+    openedAt: "2025-01-20T00:00:00.000Z",
+    callerRole: "owner",
+    ...resource,
+  };
 }
 
 // ── Transfer Request ────────────────────────────────────────────

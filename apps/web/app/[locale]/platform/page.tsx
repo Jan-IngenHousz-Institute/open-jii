@@ -1,20 +1,30 @@
-import { DashboardBanner } from "@/components/dashboard/dashboard-banner";
-import { DashboardSection } from "@/components/dashboard/dashboard-section";
-import { MilestoneBanner } from "@/components/dashboard/milestone-banner";
-import { PublicExperimentsSection } from "@/components/dashboard/public-experiments-section";
-import { ResearchActivityPanel } from "@/components/dashboard/research-activity-panel";
-import { UserExperimentsSection } from "@/components/dashboard/user-experiments-section";
-import { PageContainer } from "@/components/page-container";
-import { PrefetchedQueries } from "@/components/server-prefetch/prefetched-queries";
-import type { Metadata } from "next";
-import { BlogPostsSection } from "~/components/dashboard/blog-posts-section";
+import { ActivitySection } from "@/components/dashboard/activity-section";
+import { BlogPostsSection } from "@/components/dashboard/blog-posts-section";
 import {
+  UNREAD_NOTIFICATIONS_INPUT,
+  homeExperimentsQuery,
   publicExperimentsQuery,
-  userExperimentsQuery,
-} from "~/components/dashboard/dashboard-queries";
-import { env } from "~/env";
+  recentlyOpenedQuery,
+} from "@/components/dashboard/dashboard-queries";
+import { FeedbackLinks } from "@/components/dashboard/feedback-links";
+import { GetStartedSection } from "@/components/dashboard/get-started-section";
+import { HomeLayout } from "@/components/dashboard/home-layout";
+import type { HomeSection } from "@/components/dashboard/home-layout";
+import { HomeNotice } from "@/components/dashboard/home-notice";
+import { NotificationsSection } from "@/components/dashboard/notifications-section";
+import { PublicResearchSection } from "@/components/dashboard/public-research-section";
+import { RecentlyOpenedSection } from "@/components/dashboard/recently-opened-section";
+import { WhatsNewSection } from "@/components/dashboard/whats-new-section";
+import type { WhatsNewEntry } from "@/components/dashboard/whats-new-section";
+import { PrefetchedQueries } from "@/components/server-prefetch/prefetched-queries";
+import { fetchWebReleaseNotes } from "@/components/whats-new/fetch-release-notes";
+import { notificationsListQuery } from "@/hooks/notifications/useNotifications/notifications-list-query";
+import type { Metadata } from "next";
+import { auth } from "~/app/actions/auth";
 
 import initTranslations from "@repo/i18n/server";
+
+const WHATS_NEW_ENTRIES = 2;
 
 interface PlatformPageProps {
   params: Promise<{ locale: string }>;
@@ -27,63 +37,60 @@ export async function generateMetadata({ params }: PlatformPageProps): Promise<M
   return { title: t("title") };
 }
 
-/** Renders the localized dashboard with personal experiments, public updates, and blog posts. */
-export default async function PlatformDashboard({ params }: PlatformPageProps) {
+/**
+ * The researcher's home: what they opened and what is waiting for them first, then public
+ * research. The list below is the one-column order; each entry names its column in two.
+ */
+export default async function PlatformHome({ params }: PlatformPageProps) {
   const { locale } = await params;
-  const { t } = await initTranslations({
-    locale,
-    namespaces: ["common", "dashboard"],
-  });
+  const [session, releaseNotes] = await Promise.all([auth(), fetchWebReleaseNotes(locale)]);
+  const userId = session?.user.id;
+
+  const whatsNew: WhatsNewEntry[] = releaseNotes
+    .flatMap((note) =>
+      note.title && typeof note.publishedAt === "string"
+        ? [
+            {
+              id: note.sys.id,
+              title: note.title,
+              publishedAt: note.publishedAt,
+              slug: note.slug ?? null,
+            },
+          ]
+        : [],
+    )
+    .slice(0, WHATS_NEW_ENTRIES);
+
+  const sections: HomeSection[] = [
+    { key: "notifications", column: "rail", node: <NotificationsSection /> },
+    { key: "recently-opened", column: "main", node: <RecentlyOpenedSection /> },
+    { key: "public-research", column: "main", node: <PublicResearchSection /> },
+    { key: "blog-posts", column: "main", node: <BlogPostsSection locale={locale} /> },
+    { key: "last-30-days", column: "rail", node: <ActivitySection locale={locale} /> },
+    {
+      key: "whats-new",
+      column: "rail",
+      node: <WhatsNewSection entries={whatsNew} locale={locale} />,
+    },
+    { key: "feedback", column: "rail", node: <FeedbackLinks /> },
+  ];
 
   return (
     <PrefetchedQueries
-      queries={(utils) => [userExperimentsQuery(utils), publicExperimentsQuery(utils)]}
+      queries={(utils) => [
+        recentlyOpenedQuery(utils),
+        homeExperimentsQuery(utils),
+        publicExperimentsQuery(utils),
+        // Not the unread count: the sidebar's bell reads that key, and it hydrates before the page.
+        notificationsListQuery(utils, userId, UNREAD_NOTIFICATIONS_INPUT),
+      ]}
     >
-      <PageContainer width="fluid" className="space-y-6">
-        {/* Dashboard Banner */}
-        <DashboardBanner
-          title={t("dashboard.transferBannerTitle")}
-          description={t("dashboard.transferBannerDescription")}
-          descriptionItalic={t("dashboard.transferBannerDescriptionItalic")}
-          descriptionItalicHref={
-            "https://github.com/Jan-IngenHousz-Institute/open-jii/discussions/new?category=ideas"
-          }
-          secondaryButtonLabel={t("dashboard.reportBugButton")}
-          secondaryButtonHref={`${env.NEXT_PUBLIC_DOCS_URL}/guide/reference/getting-help`}
-          buttonLabel={t("dashboard.transferBannerButton")}
-          buttonHref={`/${locale}/platform/transfer-request`}
-          locale={locale}
-        />
-
-        {/* Milestone Moment */}
-        <MilestoneBanner locale={locale} />
-
-        {/* Platform Pulse */}
-        <ResearchActivityPanel locale={locale} />
-
-        {/* First Row - User's Experiments */}
-        <UserExperimentsSection />
-
-        {/* Recently updated public experiments */}
-        <DashboardSection
-          title={t("dashboard.recentPublicExperiments")}
-          seeAllLabel={t("dashboard.seeAll")}
-          seeAllHref="/platform/experiments?visibility=public"
-          locale={locale}
-        >
-          <PublicExperimentsSection />
-        </DashboardSection>
-
-        {/* Recent Blog Posts */}
-        <DashboardSection
-          title={t("dashboard.recentArticles")}
-          seeAllLabel={t("dashboard.seeAll")}
-          seeAllHref="/blog"
-          locale={locale}
-        >
-          <BlogPostsSection locale={locale} />
-        </DashboardSection>
-      </PageContainer>
+      {/* The shell widens pages on very large screens; the home keeps its columns readable. */}
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+        <HomeNotice locale={locale} />
+        <GetStartedSection />
+        <HomeLayout sections={sections} />
+      </div>
     </PrefetchedQueries>
   );
 }

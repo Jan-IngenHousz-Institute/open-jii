@@ -905,23 +905,13 @@
     }
   },
   "dashboard": {
-    "title": "Dashboard",
+    "title": "Home",
     "welcome": "Welcome to openJII",
-    "transferBannerTitle": "Welcome to openJII",
-    "transferBannerDescription": "Continue your research without interruption; transfer your data now, report a bug or ",
-    "transferBannerDescriptionItalic": "request a new feature",
-    "transferBannerButton": "Request transfer",
-    "reportBugButton": "Report bug",
     "recentExperiments": "Recent Experiments",
     "recentArticles": "Recent blog posts",
-    "recentlyOpenedExperiments": "Recently opened",
     "seeAll": "See all",
     "statistics": "Statistics",
     "quickActions": "Quick Actions",
-    "noBlogPosts": "No blog posts available",
-    "errorLoadingBlogPosts": "Error loading blog posts",
-    "recentPublicExperiments": "Recently updated public experiments",
-    "noPublicExperiments": "No public experiments yet.",
     "publicExperimentsLoadFailed": "Could not load public experiments.",
     "publicExperimentsStale": "No public experiment has been updated since {{date}}.",
     "browsePublicExperiments": "Browse public experiments",
@@ -940,8 +930,24 @@
       }
     },
     "yourExperiments": "Your experiments",
-    "userExperimentsLoadFailed": "Could not load your experiments.",
-    "userExperimentsRetry": "Try again"
+    "recentlyOpened": "Recently opened",
+    "recentlyOpenedLoadFailed": "Could not load what you opened recently.",
+    "typeFilterLabel": "Show one type",
+    "allTypes": "All",
+    "seeAllType": {
+      "experiment": "See all experiments",
+      "protocol": "See all protocols",
+      "macro": "See all macros",
+      "workbook": "See all workbooks"
+    },
+    "workbookVersion": "Version {{version}}",
+    "publicResearch": "Public research",
+    "getStarted": "Get started",
+    "welcomeNotice": "Welcome to openJII. Continue your research without interruption; transfer your data now.",
+    "requestTransfer": "Request transfer",
+    "dismiss": "Dismiss",
+    "feedback": "Something not working? <bug>Report a bug</bug> or <feature>request a feature</feature>.",
+    "userExperimentsLoadFailed": "Could not load your experiments."
   },
   "auth": {
     "login": "Sign in",

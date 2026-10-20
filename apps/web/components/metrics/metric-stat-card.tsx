@@ -19,7 +19,11 @@ import {
 // carries anyway.
 const MAX_DISPLAYED_CHANGE = 10;
 
-function displayableChange(comparison?: { current: number; previous: number }): number | null {
+/** The change as a fraction of the previous figure, or null when no percentage says it well. */
+export function displayableChange(comparison?: {
+  current: number;
+  previous: number;
+}): number | null {
   if (comparison === undefined || comparison.previous <= 0) {
     return null;
   }

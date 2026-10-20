@@ -2,40 +2,40 @@ import { createExperiment } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { ExperimentOverviewCard } from "./experiment-overview-card";
+import { ExperimentOverviewCard, hasBadges } from "./experiment-overview-card";
 
-const experiment = createExperiment({ visibility: "public" });
-const renderCard = (visit?: Parameters<typeof ExperimentOverviewCard>[0]["visit"]) =>
+const renderCard = (showUpdatedLabel = false) =>
   render(
     <ExperimentOverviewCard
-      experiment={experiment}
+      experiment={createExperiment({ visibility: "public" })}
       href="/en-US/platform/experiments/1"
       locale="en-US"
       reserveBadgeRow
-      visit={visit}
+      showUpdatedLabel={showUpdatedLabel}
     />,
   );
 
 describe("ExperimentOverviewCard", () => {
-  it("shows the caller's role and when they opened it in place of the update date", () => {
-    renderCard({ openedAt: "2025-01-20T09:30:00.000Z", callerRole: "owner" });
-
-    expect(screen.getByText("callerRoles.owner")).toBeInTheDocument();
-    expect(screen.getByText("openedOn")).toBeInTheDocument();
-    expect(screen.queryByTitle("columns.updated")).not.toBeInTheDocument();
-  });
-
-  it("shows no role when none reaches the caller", () => {
-    renderCard({ openedAt: "2025-01-20T09:30:00.000Z", callerRole: null });
-
-    expect(screen.queryByText(/callerRoles\./)).not.toBeInTheDocument();
-    expect(screen.getByText("openedOn")).toBeInTheDocument();
-  });
-
-  it("keeps the update date without a visit", () => {
+  it("shows the update date", () => {
     renderCard();
 
     expect(screen.getByTitle("columns.updated")).toBeInTheDocument();
-    expect(screen.queryByText("openedOn")).not.toBeInTheDocument();
+    expect(screen.queryByText("updatedOn")).not.toBeInTheDocument();
+  });
+
+  it("labels the update date where no column header says what it is", () => {
+    renderCard(true);
+
+    expect(screen.getByText("updatedOn")).toBeInTheDocument();
+  });
+
+  it("reserves the badge row only for a private or organization-owned experiment", () => {
+    expect(hasBadges(createExperiment({ visibility: "public", organizationName: null }))).toBe(
+      false,
+    );
+    expect(hasBadges(createExperiment({ visibility: "private" }))).toBe(true);
+    expect(hasBadges(createExperiment({ visibility: "public", organizationName: "Lab" }))).toBe(
+      true,
+    );
   });
 });

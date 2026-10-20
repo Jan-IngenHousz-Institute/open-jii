@@ -14,6 +14,7 @@ import {
   or,
   protocolMacros,
   protocols,
+  resourceVisits,
   users,
   sql,
   getTableColumns,
@@ -38,8 +39,10 @@ import {
 import {
   accessibleResourceCondition,
   relatedResourceCondition,
+  resourceRoleExpression,
   resourceTierExpression,
 } from "../../../common/utils/resource-access-scope";
+import type { ResourceRoleName } from "../../../common/utils/resource-access-scope";
 import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import { CreateProtocolDto, UpdateProtocolDto, ProtocolDto } from "../models/protocol.model";
 
@@ -54,6 +57,14 @@ function macroCountSql() {
 
 /** A listing row plus its relevance score, which global search merges on across types. */
 export type ProtocolSearchRow = ProtocolDto & { score: number };
+
+export type RecentlyOpenedProtocolRow = Pick<
+  typeof protocols.$inferSelect,
+  "id" | "name" | "family"
+> & {
+  openedAt: Date;
+  callerRole: ResourceRoleName | null;
+};
 
 function toProtocolRow(result: {
   protocols: unknown;
@@ -243,6 +254,55 @@ export class ProtocolRepository {
       }
 
       return (await query).map(toProtocolRow);
+    });
+  }
+
+  /**
+   * The caller's visited protocols, most recently opened first. The listing's access
+   * condition applies, so a visit the caller can no longer open never comes back.
+   */
+  async findRecentlyOpened(
+    userId: string,
+    limit: number,
+  ): Promise<Result<RecentlyOpenedProtocolRow[]>> {
+    return tryCatch(() => {
+      const callerRole = resourceRoleExpression({
+        database: this.database,
+        resourceType: "protocol",
+        resourceIdColumn: protocols.id,
+        organizationIdColumn: protocols.organizationId,
+        userId,
+      });
+
+      return this.database
+        .select({
+          id: protocols.id,
+          name: protocols.name,
+          family: protocols.family,
+          openedAt: resourceVisits.visitedAt,
+          callerRole,
+        })
+        .from(protocols)
+        .innerJoin(
+          resourceVisits,
+          and(
+            eq(resourceVisits.userId, userId),
+            eq(resourceVisits.resourceType, "protocol"),
+            eq(resourceVisits.resourceId, protocols.id),
+          ),
+        )
+        .where(
+          accessibleResourceCondition({
+            database: this.database,
+            resourceType: "protocol",
+            resourceIdColumn: protocols.id,
+            organizationIdColumn: protocols.organizationId,
+            visibilityColumn: protocols.visibility,
+            userId,
+          }),
+        )
+        .orderBy(desc(resourceVisits.visitedAt), asc(protocols.id))
+        .limit(limit);
     });
   }
 

@@ -905,23 +905,13 @@
     }
   },
   "dashboard": {
-    "title": "Dashboard",
+    "title": "Home",
     "welcome": "Welkom bij openJII",
-    "transferBannerTitle": null,
-    "transferBannerDescription": null,
-    "transferBannerDescriptionItalic": null,
-    "transferBannerButton": null,
-    "reportBugButton": null,
     "recentExperiments": "Recente experimenten",
     "recentArticles": null,
-    "recentlyOpenedExperiments": "Recent geopend",
     "seeAll": null,
     "statistics": "Statistieken",
     "quickActions": "Snelle acties",
-    "noBlogPosts": null,
-    "errorLoadingBlogPosts": null,
-    "recentPublicExperiments": "Recent bijgewerkte openbare experimenten",
-    "noPublicExperiments": "Nog geen openbare experimenten.",
     "publicExperimentsLoadFailed": "Openbare experimenten konden niet worden geladen.",
     "publicExperimentsStale": "Er is sinds {{date}} geen openbaar experiment bijgewerkt.",
     "browsePublicExperiments": "Openbare experimenten bekijken",
@@ -940,8 +930,24 @@
       }
     },
     "yourExperiments": "Je experimenten",
-    "userExperimentsLoadFailed": "Je experimenten konden niet worden geladen.",
-    "userExperimentsRetry": "Opnieuw proberen"
+    "recentlyOpened": "Recent geopend",
+    "recentlyOpenedLoadFailed": "Wat je onlangs hebt geopend, kon niet worden geladen.",
+    "typeFilterLabel": "Eén type tonen",
+    "allTypes": "Alle",
+    "seeAllType": {
+      "experiment": "Alle experimenten bekijken",
+      "protocol": "Alle protocollen bekijken",
+      "macro": "Alle macro's bekijken",
+      "workbook": "Alle werkmappen bekijken"
+    },
+    "workbookVersion": "Versie {{version}}",
+    "publicResearch": "Openbaar onderzoek",
+    "getStarted": "Aan de slag",
+    "welcomeNotice": "Welkom bij openJII. Zet je onderzoek zonder onderbreking voort; zet je gegevens nu over.",
+    "requestTransfer": "Overdracht aanvragen",
+    "dismiss": "Sluiten",
+    "feedback": "Werkt er iets niet? <bug>Meld een fout</bug> of <feature>vraag een functie aan</feature>.",
+    "userExperimentsLoadFailed": "Je experimenten konden niet worden geladen."
   },
   "auth": {
     "login": "Inloggen",

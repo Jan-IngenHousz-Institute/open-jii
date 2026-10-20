@@ -175,6 +175,25 @@ describe("ProtocolOverviewPage", () => {
     expect(screen.getByText("errors.failedToLoadProtocol")).toBeInTheDocument();
   });
 
+  it("records a visit once the protocol loads", async () => {
+    const visit = server.mount(contract.visits.recordVisit, { status: 204 });
+
+    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+
+    await waitFor(() => expect(visit.called).toBe(true));
+    expect(visit.body).toEqual({ resourceType: "protocol", resourceId: "proto-1" });
+  });
+
+  it("records no visit when the protocol fails to load", async () => {
+    server.mount(contract.protocols.getProtocol, { status: 500 });
+    const visit = server.mount(contract.visits.recordVisit, { status: 204 });
+
+    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+
+    await waitFor(() => expect(screen.getByTestId("error-display")).toBeInTheDocument());
+    expect(visit.called).toBe(false);
+  });
+
   it("should render the sidebar and main content area on success", async () => {
     server.mount(contract.protocols.getProtocol, { body: mockProtocol });
 

@@ -5,6 +5,7 @@ import { WorkbookMetaRow } from "@/components/workbook-overview/workbook-meta-ro
 import { WorkbookDescription } from "@/components/workbook/workbook-description";
 import { WorkbookDraftEditor } from "@/components/workbook/workbook-draft-editor";
 import { workspaceBleed } from "@/components/workspace-band";
+import { useRecordVisit } from "@/hooks/visits/useRecordVisit/useRecordVisit";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { use } from "react";
 
@@ -18,6 +19,7 @@ interface WorkbookOverviewPageProps {
 export default function WorkbookOverviewPage({ params }: WorkbookOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useWorkbook(id);
+  useRecordVisit("workbook", id, Boolean(data));
   const { t } = useTranslation(["workbook", "common"]);
 
   if (isLoading) {

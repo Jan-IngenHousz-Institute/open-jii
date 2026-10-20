@@ -708,6 +708,9 @@ module "backend_warehouse" {
   name             = "Backend API"
   cluster_size     = "2X-Small"
   max_num_clusters = 2
+  # A stopped warehouse takes about 12 s to answer, so a researcher's first page after a quiet
+  # minute would wait for it.
+  auto_stop_mins = 5
 
   providers = {
     databricks.workspace = databricks.workspace
