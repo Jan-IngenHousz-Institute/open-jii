@@ -1,5 +1,7 @@
 "use client";
 
+import { ColumnReadinessChips } from "@/components/experiment-standards/concepts/c/column-readiness-chips";
+import { useIsReadinessConceptC } from "@/components/experiment-standards/concepts/c/use-is-readiness-concept-c";
 import { useLocale } from "@/hooks/useLocale";
 import { formatLocaleNumber } from "@/util/format-locale-number";
 
@@ -28,6 +30,7 @@ interface ColumnDictionaryRowProps {
 export function ColumnDictionaryRow({ column, onSelect }: ColumnDictionaryRowProps) {
   const { t } = useTranslation("studyMetadata");
   const locale = useLocale();
+  const isReadinessConceptC = useIsReadinessConceptC();
 
   const labelKey = typeLabelKey(column.type);
   const typeLabel = labelKey ? t(labelKey) : column.type;
@@ -61,6 +64,7 @@ export function ColumnDictionaryRow({ column, onSelect }: ColumnDictionaryRowPro
         {traitTerm && (
           <span className="text-muted-foreground ml-2 font-mono text-xs">{traitTerm.id}</span>
         )}
+        {isReadinessConceptC && !isDescribed && <ColumnReadinessChips />}
       </TableCell>
     </TableRow>
   );

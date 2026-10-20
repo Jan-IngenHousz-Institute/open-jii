@@ -1,9 +1,11 @@
 "use client";
 
 import { ExperimentDatasetsPanel } from "@/components/datasets/experiment-datasets-panel";
+import { ConceptDDatasetsPanel } from "@/components/experiment-standards/concepts/d/concept-d-datasets-panel";
 import { PageContainer } from "@/components/page-container";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
+import { useSearchParams } from "next/navigation";
 import { use } from "react";
 
 import { useTranslation } from "@repo/i18n";
@@ -19,6 +21,8 @@ export default function ExperimentDatasetsContent({ params }: ExperimentDatasets
 
   // An archived experiment accepts no other change, so it publishes no dataset either.
   const canPublish = Boolean(accessData?.hasAccess) && accessData?.experiment.status !== "archived";
+  // Scaffold: ?readiness=d holds publishing until the standards the trial follows are met.
+  const isConceptD = useSearchParams().get("readiness") === "d";
 
   return (
     <EntityLayoutShell
@@ -33,7 +37,11 @@ export default function ExperimentDatasetsContent({ params }: ExperimentDatasets
           <p className="text-muted-foreground text-sm">{t("tab.description")}</p>
         </div>
 
-        <ExperimentDatasetsPanel experimentId={id} canPublish={canPublish} />
+        {isConceptD ? (
+          <ConceptDDatasetsPanel experimentId={id} canPublish={canPublish} />
+        ) : (
+          <ExperimentDatasetsPanel experimentId={id} canPublish={canPublish} />
+        )}
       </PageContainer>
     </EntityLayoutShell>
   );

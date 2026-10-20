@@ -116,5 +116,27 @@
     "describe-columns": "Describe columns",
     "open-layout": "Open Layout",
     "add-location": "Add a location"
+  },
+  "destination": {
+    "fair": "FAIR score",
+    "crop-ontology": "Shared trait names",
+    "common-greenhouse-ontology": "Greenhouse vocabulary",
+    "miappe": "Phenotyping repositories",
+    "brapi": "Breeding tools",
+    "ogc-sensorthings": "Sensor platforms",
+    "openaire-floor": "DOI and OpenAIRE"
+  },
+  "step": {
+    "add-location": "Add where the trial ran",
+    "describe-columns_one": "Describe {{count}} column",
+    "describe-columns_other": "Describe {{count}} columns",
+    "add-terms_one": "Give {{count}} trait a Crop Ontology term",
+    "add-terms_other": "Give {{count}} traits a Crop Ontology term",
+    "connect-orcid_one": "Ask {{count}} author to connect ORCID",
+    "connect-orcid_other": "Ask {{count}} authors to connect ORCID",
+    "open-layout": "Complete the layout",
+    "publish-dataset": "Publish a dataset",
+    "fields_one": "{{count}} field",
+    "fields_other": "{{count}} fields"
   }
 }

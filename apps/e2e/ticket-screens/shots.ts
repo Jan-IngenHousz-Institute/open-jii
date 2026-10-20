@@ -13,6 +13,10 @@ import { SHOTS_C } from "./shots-c.js";
 import { SHOTS_D } from "./shots-d.js";
 import { SHOTS_E } from "./shots-e.js";
 import { SHOTS_F } from "./shots-f.js";
+import { SHOTS_CONCEPT_A } from "./shots-concept-a.js";
+import { SHOTS_CONCEPT_B } from "./shots-concept-b.js";
+import { SHOTS_CONCEPT_C } from "./shots-concept-c.js";
+import { SHOTS_CONCEPT_D } from "./shots-concept-d.js";
 import { STUDY_METADATA_SHOTS } from "./study-metadata-shots.js";
 
 export interface TicketShot {
@@ -64,6 +68,10 @@ export const SHOTS: readonly TicketShot[] = [
   ...SHOTS_D,
   ...SHOTS_E,
   ...SHOTS_F,
+  ...SHOTS_CONCEPT_A,
+  ...SHOTS_CONCEPT_B,
+  ...SHOTS_CONCEPT_C,
+  ...SHOTS_CONCEPT_D,
 ];
 
 export const SHOTS_BY_SLUG = new Map(SHOTS.map((shot) => [shot.slug, shot]));

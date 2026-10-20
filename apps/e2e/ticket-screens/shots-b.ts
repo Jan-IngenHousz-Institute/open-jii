@@ -9,7 +9,7 @@ import type { Fixture, Resolvable } from "./fixture.js";
 import { resolve } from "./fixture.js";
 import type { TicketShot } from "./shots.js";
 
-const DROUGHT_TRIAL: Resolvable = () => experimentId("Drought trial (example data)");
+export const DROUGHT_TRIAL: Resolvable = () => experimentId("Drought trial (example data)");
 
 /** Answers one experiment sub-path, whatever the experiment id, with a fixed body. */
 function experimentRoute(subPath: string, body: unknown): Fixture {
@@ -87,7 +87,7 @@ const DAILY_MEANS_TABLE: FixtureTable = {
   rows: dailyMeanRows(),
 };
 
-const trialTables = new FixtureWarehouse(DROUGHT_TRIAL, [RAW_DATA_TABLE, DAILY_MEANS_TABLE]);
+export const trialTables = new FixtureWarehouse(DROUGHT_TRIAL, [RAW_DATA_TABLE, DAILY_MEANS_TABLE]);
 
 type FieldSource = "experiment" | "study-details" | "layout" | "data-dictionary" | "profile";
 
@@ -148,11 +148,11 @@ const MIAPPE_FIELDS = {
   ],
 };
 
-const miappeFields = experimentRoute("/standards/miappe/fields", MIAPPE_FIELDS);
+export const miappeFields = experimentRoute("/standards/miappe/fields", MIAPPE_FIELDS);
 const noExports = experimentRoute("/data/exports", { exports: [] });
 
 /** The seed links a wheat workbook the example field does not have, so the trial shows none. */
-const noLinkedWorkbook: Fixture = {
+export const noLinkedWorkbook: Fixture = {
   install: async (page) => {
     await page.route(
       (url) => url.pathname.startsWith("/api/v1/workbooks/"),
@@ -256,9 +256,9 @@ const READINESS = {
   ],
 };
 
-const readiness = experimentRoute("/standards", READINESS);
+export const readiness = experimentRoute("/standards", READINESS);
 
-async function overviewRoute(): Promise<string> {
+export async function overviewRoute(): Promise<string> {
   return `/platform/experiments/${await resolve(DROUGHT_TRIAL)}`;
 }
 

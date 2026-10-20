@@ -1,0 +1,51 @@
+{
+  "follows": {
+    "title": "This trial follows",
+    "change": "Change",
+    "progress": "{{filled}} of {{total}}",
+    "detail": "{{standard}} · {{progress}}",
+    "required": "Required to publish"
+  },
+  "steps": {
+    "allMet": "Every standard this trial follows is met, so publishing is open.",
+    "publishWaits_one": "Waits for the step above",
+    "publishWaits_other": "Waits for the {{count}} steps above"
+  },
+  "fix": {
+    "add-location": "Add a location",
+    "describe-columns": "Describe",
+    "add-terms": "Add terms",
+    "connect-orcid": "Remind them",
+    "open-layout": "Open Layout",
+    "publish-dataset": "Publish"
+  },
+  "choose": {
+    "title": "What this trial follows",
+    "description": "Publishing a dataset waits until every standard this trial follows is met. Measuring, editing and private exports never wait.",
+    "follow": "Follow",
+    "following": "Following",
+    "alreadyMet": "Already met",
+    "notOffered": "Not offered yet",
+    "afterPublishing": "Scored after publishing",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "gate": {
+    "title_one": "Publishing waits for {{count}} step",
+    "title_other": "Publishing waits for {{count}} steps",
+    "description_one": "This trial follows {{names}}, so a dataset can be published once it is met.",
+    "description_other": "This trial follows {{names}}, so a dataset can be published once they are met.",
+    "seeSteps": "See the steps"
+  },
+  "check": {
+    "title": "Standards this trial follows",
+    "description_one": "This trial follows {{names}}, so freezing waits until it is met.",
+    "description_other": "This trial follows {{names}}, so freezing waits until they are met.",
+    "allMet": "Every standard this trial follows is met.",
+    "stepsLeft_one": "{{count}} step left",
+    "stepsLeft_other": "{{count}} steps left",
+    "met": "Met",
+    "blocked": "Finish these steps, or change what this trial follows, before freezing the dataset.",
+    "change": "Change what this trial follows"
+  }
+}

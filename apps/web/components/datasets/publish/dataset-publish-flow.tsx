@@ -1,8 +1,9 @@
 "use client";
 
+import { ConceptDCheckStep } from "@/components/experiment-standards/concepts/d/concept-d-check-step";
 import { useDatasetPublish } from "@/hooks/dataset/useDatasetPublish/useDatasetPublish";
 import { useLocale } from "@/hooks/useLocale";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 import type { DefaultValues } from "react-hook-form";
 
@@ -39,6 +40,9 @@ export function DatasetPublishFlow({ dataset, experiment }: DatasetPublishFlowPr
   const router = useRouter();
   const locale = useLocale();
   const datasetId = dataset.id;
+  const experimentId = dataset.experimentId;
+  // Scaffold: ?readiness=d makes the standards the trial follows hold the freeze.
+  const isConceptD = useSearchParams().get("readiness") === "d";
 
   const { mutate: publish, isPending } = useDatasetPublish({
     onSuccess: (published) => {
@@ -54,6 +58,9 @@ export function DatasetPublishFlow({ dataset, experiment }: DatasetPublishFlowPr
       return <CurateStep {...props} datasetId={datasetId} />;
     }
     function Check(props: WizardStepProps<PublishDatasetForm>) {
+      if (isConceptD) {
+        return <ConceptDCheckStep {...props} datasetId={datasetId} experimentId={experimentId} />;
+      }
       return <CheckStep {...props} datasetId={datasetId} />;
     }
     function Freeze(props: WizardStepProps<PublishDatasetForm>) {
@@ -76,7 +83,7 @@ export function DatasetPublishFlow({ dataset, experiment }: DatasetPublishFlowPr
       { title: t("publish.steps.check"), validationSchema: checkSchema, component: Check },
       { title: t("publish.steps.freeze"), validationSchema: freezeSchema, component: Freeze },
     ];
-  }, [t, datasetId]);
+  }, [t, datasetId, experimentId, isConceptD]);
 
   // A Draft saves as the researcher goes, so the flow resumes from what it holds, and an empty
   // field falls back to the experiment it was started from.

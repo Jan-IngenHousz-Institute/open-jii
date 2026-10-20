@@ -1,5 +1,7 @@
 "use client";
 
+import { LocationReadinessHint } from "@/components/experiment-standards/concepts/c/location-readiness-hint";
+import { useIsReadinessConceptC } from "@/components/experiment-standards/concepts/c/use-is-readiness-concept-c";
 import { useMemo, useState } from "react";
 
 import type { ExperimentLocation } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
@@ -34,6 +36,7 @@ export function ExperimentLocationsSection({
 }: ExperimentLocationsSectionProps) {
   const { t } = useTranslation("experiments");
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  const isReadinessConceptC = useIsReadinessConceptC();
 
   const mapLocations: LocationPoint[] = useMemo(
     () =>
@@ -86,6 +89,13 @@ export function ExperimentLocationsSection({
             </p>
           )}
         </div>
+        {isReadinessConceptC && locations.length === 0 && (
+          <LocationReadinessHint
+            experimentId={experimentId}
+            canAdd={hasAccess && !isArchived}
+            onAdd={() => setIsLocationDialogOpen(true)}
+          />
+        )}
         {locations.length > 0 && (
           <div className="relative h-[140px] w-full overflow-hidden rounded-md">
             <div
