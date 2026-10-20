@@ -48,6 +48,14 @@ vi.mock("@repo/transactional/render/resource-deleted-notification", () => ({
   renderResourceDeletedNotification: vi.fn(),
 }));
 
+vi.mock("@repo/transactional/render/organization-role-changed", () => ({
+  renderOrganizationRoleChanged: vi.fn(),
+}));
+
+vi.mock("@repo/transactional/render/organization-membership-removed", () => ({
+  renderOrganizationMembershipRemoved: vi.fn(),
+}));
+
 // Mock analytics server
 vi.mock("@repo/analytics/server", async (importOriginal) => ({
   ...(await importOriginal<typeof AnalyticsServer>()),

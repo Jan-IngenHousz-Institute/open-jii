@@ -209,6 +209,37 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     );
   }
 
+  async sendOrganizationRoleChangedNotification(input: {
+    organizationId: string;
+    organizationName: string;
+    actor: string;
+    role: string;
+    email: string;
+  }): Promise<Result<void>> {
+    this.logger.log({
+      msg: "Sending organization role changed notification",
+      operation: "sendOrganizationRoleChangedNotification",
+      organizationId: input.organizationId,
+      email: input.email,
+    });
+
+    return this.notificationService.sendOrganizationRoleChangedNotification(input);
+  }
+
+  async sendOrganizationMembershipRemovedNotification(input: {
+    organizationName: string;
+    actor: string;
+    email: string;
+  }): Promise<Result<void>> {
+    this.logger.log({
+      msg: "Sending organization membership removed notification",
+      operation: "sendOrganizationMembershipRemovedNotification",
+      email: input.email,
+    });
+
+    return this.notificationService.sendOrganizationMembershipRemovedNotification(input);
+  }
+
   verifyTransport(): Promise<Result<void>> {
     return this.notificationService.verifyTransport();
   }

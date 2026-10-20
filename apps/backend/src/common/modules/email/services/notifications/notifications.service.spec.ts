@@ -1193,6 +1193,145 @@ describe("NotificationsService", () => {
     });
   });
 
+  describe("sendOrganizationRoleChangedNotification", () => {
+    const MOCK_ORGANIZATION_ID = "org-123";
+    const MOCK_ORGANIZATION_NAME = "Photosynthesis Lab";
+    let mockRenderOrganizationRoleChangedEmail: MockInstance;
+
+    beforeEach(() => {
+      mockRenderOrganizationRoleChangedEmail = spyOnProtected(
+        service,
+        "renderOrganizationRoleChangedEmail",
+      ).mockResolvedValue({
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("renders the role template with the worded role and the organization's page", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendOrganizationRoleChangedNotification({
+        organizationId: MOCK_ORGANIZATION_ID,
+        organizationName: MOCK_ORGANIZATION_NAME,
+        actor: MOCK_ACTOR,
+        role: "an admin of",
+        email: MOCK_EMAIL,
+      });
+
+      assertSuccess(result);
+      expect(mockRenderOrganizationRoleChangedEmail).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        organizationName: MOCK_ORGANIZATION_NAME,
+        organizationUrl: `http://localhost:3000/platform/organizations/${MOCK_ORGANIZATION_ID}`,
+        actor: MOCK_ACTOR,
+        role: "an admin of",
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: `Your role in ${MOCK_ORGANIZATION_NAME} changed on the openJII Platform`,
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("treats a rejected address as a failure", async () => {
+      mockCreateTransport.mockReturnValue({
+        sendMail: vi.fn().mockReturnValue({
+          messageId: "test-message-id",
+          accepted: [],
+          rejected: [MOCK_EMAIL],
+          pending: [],
+        }),
+      });
+
+      const result = await service.sendOrganizationRoleChangedNotification({
+        organizationId: MOCK_ORGANIZATION_ID,
+        organizationName: MOCK_ORGANIZATION_NAME,
+        actor: MOCK_ACTOR,
+        role: "a member of",
+        email: MOCK_EMAIL,
+      });
+
+      assertFailure(result);
+      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+    });
+  });
+
+  describe("sendOrganizationMembershipRemovedNotification", () => {
+    const MOCK_ORGANIZATION_NAME = "Photosynthesis Lab";
+    let mockRenderOrganizationMembershipRemovedEmail: MockInstance;
+
+    beforeEach(() => {
+      mockRenderOrganizationMembershipRemovedEmail = spyOnProtected(
+        service,
+        "renderOrganizationMembershipRemovedEmail",
+      ).mockResolvedValue({
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("renders the removal template with no link and sends it to the address", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendOrganizationMembershipRemovedNotification({
+        organizationName: MOCK_ORGANIZATION_NAME,
+        actor: MOCK_ACTOR,
+        email: MOCK_EMAIL,
+      });
+
+      assertSuccess(result);
+      expect(mockRenderOrganizationMembershipRemovedEmail).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        organizationName: MOCK_ORGANIZATION_NAME,
+        actor: MOCK_ACTOR,
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: `You were removed from ${MOCK_ORGANIZATION_NAME} on the openJII Platform`,
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("treats a rejected address as a failure", async () => {
+      mockCreateTransport.mockReturnValue({
+        sendMail: vi.fn().mockReturnValue({
+          messageId: "test-message-id",
+          accepted: [],
+          rejected: [MOCK_EMAIL],
+          pending: [],
+        }),
+      });
+
+      const result = await service.sendOrganizationMembershipRemovedNotification({
+        organizationName: MOCK_ORGANIZATION_NAME,
+        actor: MOCK_ACTOR,
+        email: MOCK_EMAIL,
+      });
+
+      assertFailure(result);
+      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+    });
+  });
+
   describe("verifyTransport", () => {
     it("succeeds when the SMTP server accepts the login", async () => {
       mockCreateTransport.mockReturnValue({ verify: vi.fn().mockResolvedValue(true) });

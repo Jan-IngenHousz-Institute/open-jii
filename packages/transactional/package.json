@@ -58,6 +58,14 @@
     "./render/resource-deleted-notification": {
       "types": "./dist/render/resource-deleted-notification.d.ts",
       "default": "./dist/render/resource-deleted-notification.js"
+    },
+    "./render/organization-role-changed": {
+      "types": "./dist/render/organization-role-changed.d.ts",
+      "default": "./dist/render/organization-role-changed.js"
+    },
+    "./render/organization-membership-removed": {
+      "types": "./dist/render/organization-membership-removed.d.ts",
+      "default": "./dist/render/organization-membership-removed.js"
     }
   },
   "scripts": {

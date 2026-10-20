@@ -11,6 +11,7 @@ import { zSharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { EmailAdapter } from "../../../common/modules/email/services/email.adapter";
 import { describeAccess } from "../../../common/utils/access-wording";
 import { AppError, Result, failure, success } from "../../../common/utils/fp-utils";
+import { describeOrganizationRole } from "../../../organizations/core/organization-access";
 
 export interface NotificationEmailContext<T extends NotificationType> {
   recipientEmail: string;
@@ -124,6 +125,23 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
         recipientEmail,
       ),
   ),
+  organization_role_changed: aboutResource(
+    (organizationId, email, { params, actorName, recipientEmail }) =>
+      email.sendOrganizationRoleChangedNotification({
+        organizationId,
+        organizationName: params.organizationName,
+        actor: actorName ?? "Someone",
+        role: describeOrganizationRole(params.role),
+        email: recipientEmail,
+      }),
+  ),
+  // No `aboutResource`: a removed member can no longer open the organization.
+  organization_membership_removed: (email, { params, actorName, recipientEmail }) =>
+    email.sendOrganizationMembershipRemovedNotification({
+      organizationName: params.organizationName,
+      actor: actorName ?? "Someone",
+      email: recipientEmail,
+    }),
   resource_access_granted: aboutResource(
     (resourceId, email, { params, actorName, recipientEmail, resource }) =>
       resource && isSharingResourceType(resource.type)

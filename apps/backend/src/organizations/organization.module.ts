@@ -23,7 +23,10 @@ import { ListOrganizationResourcesUseCase } from "./application/use-cases/list-o
 import { ListOrganizationTeamGrantsUseCase } from "./application/use-cases/list-organization-team-grants/list-organization-team-grants";
 import { ListOrganizationTeamsUseCase } from "./application/use-cases/list-organization-teams/list-organization-teams";
 import { ListOrganizationsUseCase } from "./application/use-cases/list-organizations/list-organizations";
+import { NotifyOrganizationInvitationAcceptedUseCase } from "./application/use-cases/notify-organization-invitation-accepted/notify-organization-invitation-accepted";
 import { NotifyOrganizationInviteeUseCase } from "./application/use-cases/notify-organization-invitee/notify-organization-invitee";
+import { NotifyOrganizationMemberRemovedUseCase } from "./application/use-cases/notify-organization-member-removed/notify-organization-member-removed";
+import { NotifyOrganizationRoleChangedUseCase } from "./application/use-cases/notify-organization-role-changed/notify-organization-role-changed";
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { OrganizationJoinRequestRepository } from "./core/repositories/organization-join-request.repository";
 import { OrganizationRepository } from "./core/repositories/organization.repository";
@@ -76,6 +79,9 @@ import { OrganizationController } from "./presentation/organization.controller";
     CancelMyOrganizationJoinRequestUseCase,
     DecideOrganizationJoinRequestUseCase,
     NotifyOrganizationInviteeUseCase,
+    NotifyOrganizationInvitationAcceptedUseCase,
+    NotifyOrganizationRoleChangedUseCase,
+    NotifyOrganizationMemberRemovedUseCase,
     OrganizationAuthHook,
   ],
   // Global search composes the directory read, on the same visibility boundary the

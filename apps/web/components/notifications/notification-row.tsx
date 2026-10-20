@@ -127,6 +127,12 @@ const TYPE_PATH: Record<NotificationType, (resource: NotificationResource) => st
   passkey_added: fixedPage("account/security"),
 };
 
+/** A move into a personal workspace and a role change each carry their own copy. */
+const copyContext = (notification: Notification): string | undefined => {
+  if (notification.type === "organization_role_changed") return notification.params.role;
+  return notification.params.organizationKind === "personal" ? "personal" : undefined;
+};
+
 interface NotificationRowProps {
   notification: Notification;
   onOpen: (notification: Notification) => void;
@@ -143,10 +149,10 @@ export function NotificationRow({ notification, onOpen, layout = "feed" }: Notif
   const isUnread = notification.readAt === null;
   // `replace` keeps stored params apart from i18next's own options, so a future param
   // named `count` or `context` interpolates instead of changing how `t` behaves. The
-  // one option set on purpose is `context`, which picks a move's `_personal` copy.
+  // one option set on purpose is `context`, which picks a type's variant copy.
   const message = t(`types.${notification.type}`, {
     replace: { ...notification.params, actor: notification.actor?.name ?? t("someone") },
-    context: notification.params.organizationKind === "personal" ? "personal" : undefined,
+    context: copyContext(notification),
   });
 
   const handleOpen = () => onOpen(notification);
