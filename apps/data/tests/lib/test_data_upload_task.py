@@ -2,18 +2,35 @@ import ast
 import json
 import os
 from collections.abc import Callable
+from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
 
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
+from ambyte import ambyte_parsing, find_byte_folders
 from openjii.json_scrub import scrub_non_finite_json_value
 from openjii.variant_schema import merged_variant_schema, variant_schema_key
 from pyspark.sql import Column, DataFrame, SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.types import ArrayType, DataType, DoubleType, FloatType, MapType, StructType
+from pyspark.sql.types import (
+    ArrayType,
+    DataType,
+    DoubleType,
+    FloatType,
+    LongType,
+    MapType,
+    StringType,
+    StructField,
+    StructType,
+    TimestampType,
+)
 
 _TASK_PATH = Path(__file__).parents[2] / "src/tasks/data_upload_task.py"
+_OUTCOMES_PATH = Path(__file__).parents[1] / "fixtures/upload_outcomes.json"
 
 
 def _serialize_dataframe_rows(frame: pd.DataFrame) -> list[str]:
@@ -374,28 +391,21 @@ def _outcome_helpers() -> dict[str, Any]:
     return namespace
 
 
-@pytest.mark.parametrize(
-    ("row_count", "rejected_files", "queryable", "outcome", "error_code"),
-    [
-        (42, [], True, "completed", None),
-        (42, [{"name": "broken.csv", "reason": "unparseable"}], True, "completed", None),
-        (0, [], False, "failed", "no_files"),
-        (0, [{"name": "header_only.csv", "reason": "no_rows"}], False, "failed", "no_rows"),
-        (42, [], False, "failed", "not_queryable"),
-    ],
-)
-def test_outcome_has_the_shape_the_backend_parses(
-    row_count: int, rejected_files: list[dict], queryable: bool, outcome: str, error_code: str | None
-) -> None:
+def test_outcomes_match_the_contract_the_backend_parses() -> None:
     build_outcome = _outcome_helpers()["build_outcome"]
-
-    assert build_outcome("upload-1", row_count, rejected_files, queryable) == {
-        "uploadId": "upload-1",
-        "outcome": outcome,
-        "rowCount": row_count,
-        "rejectedFiles": rejected_files,
-        "errorCode": error_code,
+    upload_id = "8c1f6a0e-4c35-4d7e-9a43-3f0b2a5d1e77"
+    built = {
+        "completed_with_rejected_file": build_outcome(
+            upload_id, 42, [{"name": "broken.csv", "reason": "unparseable"}], True
+        ),
+        "no_files": build_outcome(upload_id, 0, [], False),
+        "no_rows": build_outcome(upload_id, 0, [{"name": "header_only.csv", "reason": "no_rows"}], False),
+        "not_queryable": build_outcome(upload_id, 42, [], False),
     }
+
+    contract = json.loads(_OUTCOMES_PATH.read_text())
+
+    assert [{"case": case, "outcome": outcome} for case, outcome in built.items()] == contract
 
 
 @pytest.mark.spark
@@ -482,6 +492,33 @@ def test_parquet_files_that_yield_no_rows_are_rejected_with_a_reason(spark, tmp_
     ]
 
 
+def _corrupt_second_row_group(path: Path) -> None:
+    column = pq.ParquetFile(path).metadata.row_group(1).column(0)
+    with path.open("r+b") as file:
+        file.seek(column.dictionary_page_offset or column.data_page_offset)
+        file.write(b"\xff" * 64)
+
+
+@pytest.mark.spark
+def test_a_parquet_file_corrupt_past_its_first_row_is_rejected_and_the_rest_are_written(
+    spark, tmp_path
+) -> None:
+    pd.DataFrame({"plot": ["A1"], "height": [1.5]}).to_parquet(tmp_path / "plots.parquet")
+    corrupt = tmp_path / "corrupt.parquet"
+    pq.write_table(pa.table({"plot": [f"B{i}" for i in range(1000)]}), str(corrupt), row_group_size=500)
+    _corrupt_second_row_group(corrupt)
+    assert not spark.read.parquet(str(corrupt)).isEmpty()
+    paths = [f"dbfs:{tmp_path / name}" for name in ("plots.parquet", "corrupt.parquet")]
+
+    combined, rejected = _read_parquet_files(spark, paths)
+    assert combined is not None
+    combined.write.parquet(str(tmp_path / "output"))
+    written = spark.read.parquet(str(tmp_path / "output")).collect()
+
+    assert rejected == [{"name": "corrupt.parquet", "reason": "unparseable"}]
+    assert [_strict_loads(row.uploaded_data) for row in written] == [{"plot": "A1", "height": 1.5}]
+
+
 def _parse_ambyte_folders(
     folders: list[str], frames: dict[str, pd.DataFrame | Exception | None]
 ) -> tuple[list[pd.DataFrame], list[dict]]:
@@ -528,6 +565,130 @@ def test_ambyte_folders_that_yield_no_rows_are_rejected_with_a_reason() -> None:
         {"name": "Ambyte_3", "reason": "no_rows"},
         {"name": "Ambyte_4", "reason": "unparseable"},
     ]
+
+
+class _FileInfo:
+    def __init__(self, path: str, is_dir: bool) -> None:
+        self.path = path
+        self.is_dir = is_dir
+
+    def isDir(self) -> bool:
+        return self.is_dir
+
+
+class _Volumes:
+    """Serves ``dbutils.fs`` for /Volumes paths from a local directory, listing as ``dbfs:`` paths."""
+
+    def __init__(self, root: Path) -> None:
+        self.root = root
+
+    def ls(self, path: str) -> list[_FileInfo]:
+        local = self.root / path.removeprefix("dbfs:").lstrip("/")
+        return [
+            _FileInfo(f"dbfs:/{child.relative_to(self.root)}{'/' if child.is_dir() else ''}", child.is_dir())
+            for child in sorted(local.iterdir())
+        ]
+
+    def mkdirs(self, _path: str) -> None:
+        pass
+
+
+def _process_ambyte_upload(
+    spark: SparkSession, monkeypatch: pytest.MonkeyPatch, root: Path, traces: list[str]
+) -> tuple[dict, list[str]]:
+    upload = root / "Volumes/catalog/centrum/data-imports/exp-1/uploads/upload_1"
+    for trace in traces:
+        (upload / trace).parent.mkdir(parents=True, exist_ok=True)
+        (upload / trace).write_text("")
+
+    dbutils = SimpleNamespace(fs=_Volumes(root))
+    monkeypatch.setattr(ambyte_parsing, "dbutils", dbutils)
+    parsed: list[str] = []
+
+    def parse_ambyte_folders(folders: list[str], _year_prefixes: tuple[str, ...]):
+        parsed.extend(os.path.basename(folder) for folder in folders)
+        return [pd.DataFrame({"PAR": [1.0]}) for _ in folders], []
+
+    namespace: dict[str, Any] = {
+        "os": os,
+        "json": json,
+        "pd": pd,
+        "spark": spark,
+        "dbutils": dbutils,
+        "logger": _QuietLogger(),
+        "datetime": datetime,
+        "timezone": timezone,
+        "LongType": LongType,
+        "StringType": StringType,
+        "StructField": StructField,
+        "StructType": StructType,
+        "TimestampType": TimestampType,
+        "find_byte_folders": find_byte_folders,
+        "scrub_non_finite_json_value": scrub_non_finite_json_value,
+        "_parse_ambyte_folders": parse_ambyte_folders,
+        "YEAR_PREFIX": "2026",
+        "UPLOAD_TABLE_NAME": "traces",
+        "UPLOAD_TABLE_ID": "table-1",
+        "CATALOG_NAME": "catalog",
+        "EXPERIMENT_ID": "exp-1",
+        "UPLOAD_DIRECTORY": "upload_1",
+        "UPLOAD_ID": "upload-1",
+        "USER_ID": "user-1",
+        "PROCESSED_UPLOADS_PATH": str(root / "processed-uploads"),
+        "OUTPUT_PATH": str(root / "processed-uploads/upload_upload-1"),
+    }
+    for helper in (
+        "rejected_file",
+        "_serialize_dataframe_rows",
+        "_find_ambyte_folders",
+        "process_ambyte_upload",
+    ):
+        _task_function(helper, namespace)
+    return namespace["process_ambyte_upload"](), parsed
+
+
+@pytest.mark.spark
+def test_ambyte_folders_discovery_does_not_find_are_rejected_next_to_the_rows(
+    spark, monkeypatch, tmp_path
+) -> None:
+    result, parsed = _process_ambyte_upload(
+        spark,
+        monkeypatch,
+        tmp_path,
+        [
+            *(f"Ambyte_1/{ambit}/20260101-120000_.txt" for ambit in "1234"),
+            "Ambyte_2/20260101-120000_.txt",
+            "Ambyte_3/1/20260101-120000_.txt",
+            "unknown_ambyte/unknown_ambit/20260101-120000_.txt",
+        ],
+    )
+
+    assert parsed == ["Ambyte_1", "unknown_ambyte"]
+    assert result == {
+        "rows_written": 2,
+        "rejected_files": [
+            {"name": "Ambyte_2", "reason": "unparseable"},
+            {"name": "Ambyte_3", "reason": "unparseable"},
+        ],
+    }
+
+
+@pytest.mark.spark
+def test_an_ambyte_upload_without_a_discoverable_folder_names_every_folder(
+    spark, monkeypatch, tmp_path
+) -> None:
+    result, parsed = _process_ambyte_upload(
+        spark, monkeypatch, tmp_path, ["Ambyte_2/20260101-120000_.txt", "unknown_ambyte/notes.txt"]
+    )
+
+    assert parsed == []
+    assert result == {
+        "rows_written": 0,
+        "rejected_files": [
+            {"name": "Ambyte_2", "reason": "unparseable"},
+            {"name": "unknown_ambyte", "reason": "unparseable"},
+        ],
+    }
 
 
 class _Notebook:
