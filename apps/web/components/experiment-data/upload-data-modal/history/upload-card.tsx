@@ -76,7 +76,11 @@ export function UploadCard({ upload, index }: { upload: ExperimentUploadRecord; 
 
       {failureReason && <p className="text-destructive text-xs">{failureReason}</p>}
       {hasRejectedFiles && (
-        <UploadRejectedFiles rejectedFiles={upload.rejectedFiles} fileCount={upload.fileCount} />
+        <UploadRejectedFiles
+          sourceKind={upload.sourceKind}
+          rejectedFiles={upload.rejectedFiles}
+          fileCount={upload.fileCount}
+        />
       )}
     </Card>
   );

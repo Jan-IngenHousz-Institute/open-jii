@@ -35,6 +35,21 @@ describe("UploadHistoryContent", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("keeps the uploads it has when a later poll fails", () => {
+    render(
+      <UploadHistoryContent
+        isLoading={false}
+        error={new Error("boom")}
+        uploads={[createUpload({ uploadTableName: "leaf_traits" })]}
+      />,
+    );
+
+    expect(screen.getByText("leaf_traits")).toBeInTheDocument();
+    expect(
+      screen.queryByText("experimentData.uploadDataModal.history.error"),
+    ).not.toBeInTheDocument();
+  });
+
   it("renders one card per upload", () => {
     render(
       <UploadHistoryContent

@@ -19,7 +19,10 @@ export function UploadHistoryContent({ isLoading, error, uploads }: UploadHistor
     <UploadCard key={upload.uploadId} upload={upload} index={uploads.length - index} />
   );
 
-  if (error) {
+  const hasUploads = uploads.length > 0;
+
+  // A failed poll keeps the last list it had, which says more than the error does.
+  if (error && !hasUploads) {
     return <UploadHistoryError error={error} />;
   }
 
@@ -27,7 +30,7 @@ export function UploadHistoryContent({ isLoading, error, uploads }: UploadHistor
     return <UploadHistoryLoading />;
   }
 
-  if (uploads.length === 0) {
+  if (!hasUploads) {
     return <UploadHistoryEmpty />;
   }
 

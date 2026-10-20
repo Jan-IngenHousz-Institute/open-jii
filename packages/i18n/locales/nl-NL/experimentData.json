@@ -158,6 +158,8 @@
       },
       "rejectedFiles_one": "{{rejected}} van {{count}} bestand geweigerd",
       "rejectedFiles_other": "{{rejected}} van {{count}} bestanden geweigerd",
+      "rejectedAmbyteFolders_one": "{{count}} Ambyte-map weggelaten",
+      "rejectedAmbyteFolders_other": "{{count}} Ambyte-mappen weggelaten",
       "rejectionReasons": {
         "unparseable": "{{name}} kon niet worden gelezen",
         "no_rows": "{{name}} bevat geen rijen"

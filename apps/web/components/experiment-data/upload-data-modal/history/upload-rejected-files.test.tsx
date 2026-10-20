@@ -16,6 +16,7 @@ describe("UploadRejectedFiles", () => {
   it("counts the rejected files against every file in the upload", () => {
     render(
       <UploadRejectedFiles
+        sourceKind="csv"
         rejectedFiles={[
           { name: "broken.csv", reason: "unparseable" },
           { name: "empty.csv", reason: "no_rows" },
@@ -32,6 +33,7 @@ describe("UploadRejectedFiles", () => {
   it("names each rejected file with its reason", () => {
     render(
       <UploadRejectedFiles
+        sourceKind="csv"
         rejectedFiles={[
           { name: "broken.csv", reason: "unparseable" },
           { name: "empty.csv", reason: "no_rows" },
@@ -50,6 +52,7 @@ describe("UploadRejectedFiles", () => {
   it("counts against the rejected files alone when the file count is unknown", () => {
     render(
       <UploadRejectedFiles
+        sourceKind="csv"
         rejectedFiles={[{ name: "broken.csv", reason: "unparseable" }]}
         fileCount={null}
       />,
@@ -58,5 +61,20 @@ describe("UploadRejectedFiles", () => {
     expect(
       screen.getByText('experimentData.uploadDataModal.rejectedFiles {"rejected":1,"count":1}'),
     ).toBeInTheDocument();
+  });
+
+  it("counts an Ambyte upload's rejected folders without the file total", () => {
+    render(
+      <UploadRejectedFiles
+        sourceKind="ambyte"
+        rejectedFiles={[{ name: "Ambyte_3", reason: "no_rows" }]}
+        fileCount={840}
+      />,
+    );
+
+    expect(
+      screen.getByText('experimentData.uploadDataModal.rejectedAmbyteFolders {"count":1}'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/uploadDataModal\.rejectedFiles/)).not.toBeInTheDocument();
   });
 });

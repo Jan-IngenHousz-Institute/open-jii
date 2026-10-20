@@ -98,6 +98,27 @@ describe("UploadCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("counts an Ambyte upload's rejections in folders, not files", () => {
+    render(
+      <UploadCard
+        upload={createUpload({
+          sourceKind: "ambyte",
+          status: "completed",
+          fileCount: 840,
+          rejectedFiles: [{ name: "Ambyte_3", reason: "unparseable" }],
+        })}
+        index={1}
+      />,
+    );
+
+    expect(
+      screen.getByText("experimentData.uploadDataModal.rejectedAmbyteFolders"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("experimentData.uploadDataModal.rejectedFiles"),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows no rejected files when every file was accepted", () => {
     render(<UploadCard upload={createUpload({ rejectedFiles: [] })} index={1} />);
 
