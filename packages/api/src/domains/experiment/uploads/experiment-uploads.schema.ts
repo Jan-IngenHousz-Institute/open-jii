@@ -281,7 +281,6 @@ export const zExperimentUploadDataResponse = z.object({
     .string()
     .optional()
     .describe("User-chosen display name for the upload table. Present for target-backed uploads."),
-  runId: z.number().int().optional().describe("Databricks job run id for status polling"),
   files: z.array(
     z.object({
       fileName: z.string(),
@@ -290,21 +289,42 @@ export const zExperimentUploadDataResponse = z.object({
   ),
 });
 
-export const zExperimentUploadHistoryStatus = z.enum(["pending", "running", "completed", "failed"]);
+export const zExperimentUploadStatus = z.enum([
+  "receiving",
+  "queued",
+  "pending",
+  "running",
+  "completed",
+  "failed",
+]);
 
-export const zExperimentUploadMetadata = z.object({
-  uploadId: z.string(),
-  experimentId: z.string(),
-  uploadTableId: z.string().nullable(),
+export const zExperimentUploadErrorCode = z.enum([
+  "no_files",
+  "no_rows",
+  "not_queryable",
+  "transfer_interrupted",
+  "unknown",
+]);
+
+export const zExperimentUploadRejectedFile = z.object({
+  name: z.string(),
+  reason: z.enum(["unparseable", "no_rows"]),
+});
+
+export const zExperimentUploadRecord = z.object({
+  uploadId: z.string().uuid(),
+  experimentId: z.string().uuid(),
+  uploadTableId: z.string().uuid().nullable(),
   uploadTableName: z.string().nullable(),
   sourceKind: zExperimentUploadSourceKind,
-  status: zExperimentUploadHistoryStatus,
+  status: zExperimentUploadStatus,
   fileCount: z.number().int().nullable(),
   rowCount: z.number().int().nullable(),
-  createdBy: z.string(),
-  createdAt: z.string(),
-  completedAt: z.string().nullable(),
-  errorMessage: z.string().nullable(),
+  rejectedFiles: z.array(zExperimentUploadRejectedFile),
+  errorCode: zExperimentUploadErrorCode.nullable(),
+  createdBy: z.string().uuid(),
+  createdAt: z.string().datetime(),
+  completedAt: z.string().datetime().nullable(),
 });
 
 export const zExperimentListUploadsQuery = z.object({
@@ -313,12 +333,14 @@ export const zExperimentListUploadsQuery = z.object({
 });
 
 export const zExperimentListUploadsResponse = z.object({
-  uploads: z.array(zExperimentUploadMetadata),
+  uploads: z.array(zExperimentUploadRecord),
 });
 export type ExperimentUploadSourceKind = z.infer<typeof zExperimentUploadSourceKind>;
 export type ExperimentUploadDataBody = z.infer<typeof zExperimentUploadDataBody>;
 export type ExperimentUploadDataResponse = z.infer<typeof zExperimentUploadDataResponse>;
-export type ExperimentUploadHistoryStatus = z.infer<typeof zExperimentUploadHistoryStatus>;
-export type ExperimentUploadMetadata = z.infer<typeof zExperimentUploadMetadata>;
+export type ExperimentUploadStatus = z.infer<typeof zExperimentUploadStatus>;
+export type ExperimentUploadErrorCode = z.infer<typeof zExperimentUploadErrorCode>;
+export type ExperimentUploadRejectedFile = z.infer<typeof zExperimentUploadRejectedFile>;
+export type ExperimentUploadRecord = z.infer<typeof zExperimentUploadRecord>;
 export type ExperimentListUploadsQuery = z.infer<typeof zExperimentListUploadsQuery>;
 export type ExperimentListUploadsResponse = z.infer<typeof zExperimentListUploadsResponse>;
