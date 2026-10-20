@@ -1,18 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import {
-  and,
-  desc,
-  eq,
-  experimentExports,
-  experiments,
-  gt,
-  inArray,
-  isNull,
-  lt,
-  sql,
-  users,
-} from "@repo/database";
+import { and, desc, eq, experimentExports, gt, inArray, isNull, lt, sql } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -31,8 +19,6 @@ import type {
 
 const LIST_LIMIT = 50;
 
-type NewExportRow = typeof experimentExports.$inferInsert;
-
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface NewExport {
@@ -41,15 +27,6 @@ export interface NewExport {
   format: ExportFormat;
   anonymizeContributors: boolean;
   createdBy: string;
-}
-
-export interface CarriedOverExport extends NewExport {
-  id: string;
-  jobRunId: number;
-  rowCount: number;
-  parts: ExportManifest["parts"];
-  createdAt: Date;
-  completedAt: Date;
 }
 
 @Injectable()
@@ -288,67 +265,6 @@ export class ExperimentDataExportsRepository {
         .returning({ id: experimentExports.id });
 
       return rows.length;
-    });
-  }
-
-  /**
-   * Records exports written before this table existed. Rows whose experiment or creator is gone
-   * are skipped, and a repeated call records nothing twice. A run this table already failed,
-   * because it ran the old notebook during a deploy, is replaced by its carried-over export.
-   * Returns how many were recorded.
-   */
-  async insertCarriedOver(exports: CarriedOverExport[]): Promise<Result<number>> {
-    return tryCatch(async () => {
-      const experimentIds = [...new Set(exports.map((record) => record.experimentId))];
-      const userIds = [...new Set(exports.map((record) => record.createdBy))];
-
-      const [knownExperiments, knownUsers] = await Promise.all([
-        this.database
-          .select({ id: experiments.id })
-          .from(experiments)
-          .where(inArray(experiments.id, experimentIds)),
-        this.database.select({ id: users.id }).from(users).where(inArray(users.id, userIds)),
-      ]);
-      const experimentSet = new Set(knownExperiments.map((row) => row.id));
-      const userSet = new Set(knownUsers.map((row) => row.id));
-
-      const kept = exports.filter(
-        (record) => experimentSet.has(record.experimentId) && userSet.has(record.createdBy),
-      );
-      const rows = kept.map(
-        (record): NewExportRow => ({
-          ...record,
-          status: "completed",
-          totalBytes: record.parts.reduce((total, part) => total + part.sizeBytes, 0),
-          expiresAt: new Date(record.createdAt.getTime() + EXPORT_RETENTION_DAYS * DAY_MS),
-          // Their outcome is weeks old, so nobody is told about it now.
-          announcedAt: new Date(),
-        }),
-      );
-
-      if (rows.length === 0) {
-        return 0;
-      }
-
-      return this.database.transaction(async (tx) => {
-        await tx.delete(experimentExports).where(
-          and(
-            eq(experimentExports.status, "failed"),
-            inArray(
-              experimentExports.jobRunId,
-              kept.map((record) => record.jobRunId),
-            ),
-          ),
-        );
-
-        const inserted = await tx
-          .insert(experimentExports)
-          .values(rows)
-          .onConflictDoNothing({ target: experimentExports.id })
-          .returning({ id: experimentExports.id });
-
-        return inserted.length;
-      });
     });
   }
 }

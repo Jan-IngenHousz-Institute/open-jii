@@ -4,7 +4,6 @@ import { experimentDataAnnotationsContract } from "./domains/experiment/data-ann
 import { experimentDataContract } from "./domains/experiment/data/experiment-data.contract";
 import { experimentDevicesContract } from "./domains/experiment/devices/experiment-devices.contract";
 import { experimentContract } from "./domains/experiment/experiment.contract";
-import { experimentExportCarryOverWebhookContract } from "./domains/experiment/export-carry-over-webhook/experiment-export-carry-over-webhook.contract";
 import { experimentExportsContract } from "./domains/experiment/exports/experiment-exports.contract";
 import { experimentFlowsContract } from "./domains/experiment/flows/experiment-flows.contract";
 import { experimentJoinCodesContract } from "./domains/experiment/join-codes/experiment-join-codes.contract";
@@ -61,7 +60,6 @@ export const contract = {
     ...experimentTransferRequestsContract,
     ...experimentProjectTransferWebhookContract,
     ...experimentUploadWebhookContract,
-    ...experimentExportCarryOverWebhookContract,
   },
   health: healthContract,
   iot: {
