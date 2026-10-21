@@ -7,6 +7,7 @@ import {
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { DEMO_JOIN_APPROVAL_ERROR } from "../../../core/models/organization-join-request.model";
 import type { OrganizationJoinRequestDto } from "../../../core/models/organization-join-request.model";
 import { ORGANIZATION_FULL_MESSAGE } from "../../../core/models/organization-member.model";
 import { canManageMembership, canViewOrganization } from "../../../core/organization-access";
@@ -76,6 +77,12 @@ export class DecideOrganizationJoinRequestUseCase {
       return failure(AppError.conflict("Join request is no longer pending", ErrorCodes.CONFLICT));
     }
 
+    if (decision === "approve" && access.type === "demo") {
+      return failure(
+        AppError.forbidden(DEMO_JOIN_APPROVAL_ERROR.message, DEMO_JOIN_APPROVAL_ERROR.code),
+      );
+    }
+
     const decided =
       decision === "approve"
         ? await this.approve(organizationId, requestId, existing, currentUserId)
@@ -105,6 +112,11 @@ export class DecideOrganizationJoinRequestUseCase {
         error: approveResult.error,
       });
       return failure(AppError.internal("Failed to approve join request"));
+    }
+    if (approveResult.value.outcome === "demo-organization") {
+      return failure(
+        AppError.forbidden(DEMO_JOIN_APPROVAL_ERROR.message, DEMO_JOIN_APPROVAL_ERROR.code),
+      );
     }
     if (approveResult.value.outcome === "not-pending") {
       return failure(AppError.conflict("Join request is no longer pending", ErrorCodes.CONFLICT));

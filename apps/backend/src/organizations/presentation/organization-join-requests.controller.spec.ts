@@ -24,6 +24,7 @@ import { NotificationDeliveryRepository } from "../../notifications/core/reposit
 import { queuedDeliveriesFor } from "../../test/notification-deliveries";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
+import { OrganizationJoinRequestRepository } from "../core/repositories/organization-join-request.repository";
 import { OrganizationRepository } from "../core/repositories/organization.repository";
 
 describe("OrganizationJoinRequestsController", () => {
@@ -377,6 +378,65 @@ describe("OrganizationJoinRequestsController", () => {
           ),
         );
     }
+
+    it.each([false, true])(
+      "refuses approval after Demo conversion, including stale access=%s, but permits rejection",
+      async (staleAccess) => {
+        const organizationId = await seedOrg("public");
+        const requestId = await seedPendingRequest(organizationId);
+        const repository = testApp.module.get(OrganizationRepository);
+        const ordinaryAccess = await repository.findAccess(organizationId, ownerId);
+        await testApp.database
+          .update(organizations)
+          .set({ type: "demo" })
+          .where(eq(organizations.id, organizationId));
+        if (staleAccess) vi.spyOn(repository, "findAccess").mockResolvedValueOnce(ordinaryAccess);
+
+        const refused = await testApp
+          .patch(decidePath(organizationId, requestId))
+          .withAuth(ownerId)
+          .send({ decision: "approve" })
+          .expect(StatusCodes.FORBIDDEN);
+        expect(refused.body).toMatchObject({
+          data: { code: "DEMO_JOIN_REQUEST_APPROVAL_DISABLED" },
+        });
+        expect(await membershipRows(organizationId, requesterId)).toEqual([]);
+        const [pending] = await testApp.database
+          .select()
+          .from(organizationJoinRequests)
+          .where(eq(organizationJoinRequests.id, requestId));
+        expect(pending).toMatchObject({ status: "pending", decidedBy: null, decidedAt: null });
+        expect(await rowsFor(requesterId)).toEqual([]);
+
+        const rejected = await testApp
+          .patch(decidePath(organizationId, requestId))
+          .withAuth(ownerId)
+          .send({ decision: "reject" })
+          .expect(StatusCodes.OK);
+        expect(rejected.body).toMatchObject({ status: "rejected" });
+        expect(await membershipRows(organizationId, requesterId)).toEqual([]);
+      },
+    );
+
+    it("the repository refuses a Demo approval independently of the use-case check", async () => {
+      const organizationId = await seedOrg("public");
+      const requestId = await seedPendingRequest(organizationId);
+      await testApp.database
+        .update(organizations)
+        .set({ type: "demo" })
+        .where(eq(organizations.id, organizationId));
+      const result = await testApp.module
+        .get(OrganizationJoinRequestRepository)
+        .approve(requestId, requesterId, organizationId, ownerId);
+      expect(result.isSuccess()).toBe(true);
+      if (result.isSuccess()) expect(result.value).toEqual({ outcome: "demo-organization" });
+      expect(await membershipRows(organizationId, requesterId)).toEqual([]);
+      const [request] = await testApp.database
+        .select()
+        .from(organizationJoinRequests)
+        .where(eq(organizationJoinRequests.id, requestId));
+      expect(request.status).toBe("pending");
+    });
 
     it("approve admits the requester as a plain member and notifies them", async () => {
       const organizationId = await seedOrg("public");

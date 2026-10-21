@@ -43,7 +43,8 @@ export type CreateJoinRequestOutcome =
 export type ApproveOrganizationJoinRequestOutcome =
   | { outcome: "approved"; request: OrganizationJoinRequestDto }
   | { outcome: "not-pending" }
-  | { outcome: "organization-full" };
+  | { outcome: "organization-full" }
+  | { outcome: "demo-organization" };
 
 const joinRequestSelectFields = {
   id: organizationJoinRequests.id,
@@ -199,7 +200,9 @@ export class OrganizationJoinRequestRepository {
    * the role they already hold — and an organization at its membership cap refuses
    * instead of being walked past it.
    *
-   * The claim still comes first, so a request somebody else already decided admits
+   * Lock the organization before request/member rows so a concurrent Demo conversion
+   * cannot pass the type check and then admit a requester into a Demo organization.
+   * The claim comes before admission, so a request somebody else already decided admits
    * nobody. A cap refusal then puts it back: an approval the cap turned away is one the
    * reviewer can take again once a seat frees up, not a decision already recorded.
    */
@@ -211,6 +214,14 @@ export class OrganizationJoinRequestRepository {
   ): Promise<Result<ApproveOrganizationJoinRequestOutcome>> {
     return tryCatch(async () => {
       const claimed = await this.database.transaction(async (tx) => {
+        const [organization] = await tx
+          .select({ type: organizations.type })
+          .from(organizations)
+          .where(eq(organizations.id, organizationId))
+          .for("update");
+        if (!organization) return "not-pending" as const;
+        if (organization.type === "demo") return "demo-organization" as const;
+
         const updated = await tx
           .update(organizationJoinRequests)
           .set({ status: "approved", decidedBy, decidedAt: new Date() })
