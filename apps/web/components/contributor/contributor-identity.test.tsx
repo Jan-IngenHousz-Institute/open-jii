@@ -1,9 +1,57 @@
+import { mockRealTranslations, TEST_LOCALES } from "@/test/real-i18n";
 import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { ContributorIdentity } from "./contributor-identity";
 
 describe("<ContributorIdentity />", () => {
+  it.each(TEST_LOCALES)(
+    "localizes measured guest and former-guest attribution in %s",
+    async (locale) => {
+      const i18n = await mockRealTranslations(locale);
+      const { rerender } = render(
+        <ContributorIdentity
+          data={{
+            id: "guest",
+            name: "Synthetic",
+            avatar: null,
+            isGuest: true,
+            isFormerGuest: false,
+          }}
+        />,
+      );
+      expect(
+        screen.getByText(i18n.t("members.displayName", { context: "guest", name: "Synthetic" })),
+      ).toBeInTheDocument();
+      rerender(
+        <ContributorIdentity
+          data={JSON.stringify({
+            id: "former",
+            name: "Old cached name",
+            avatar: null,
+            isGuest: true,
+            isFormerGuest: true,
+          })}
+        />,
+      );
+      expect(
+        screen.getByText(i18n.t("members.displayName", { context: "formerGuest", name: "" })),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Old cached name")).not.toBeInTheDocument();
+      rerender(
+        <ContributorIdentity
+          data={{
+            id: "researcher",
+            name: "Researcher",
+            avatar: null,
+            isGuest: false,
+            isFormerGuest: false,
+          }}
+        />,
+      );
+      expect(screen.getByText("Researcher")).toBeInTheDocument();
+    },
+  );
   it("renders the contributor name from a struct payload", () => {
     render(<ContributorIdentity data={{ id: "u1", name: "Jane Doe", avatar: null }} />);
     expect(screen.getByText("Jane Doe")).toBeInTheDocument();

@@ -23,6 +23,7 @@ import { WorkbookModule } from "../workbooks/workbook.module";
 // Services
 import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
+import { MeasuredContributorAttributionService } from "./application/services/measured-contributor-attribution.service";
 import { MultipartUploadService } from "./application/services/multipart-upload.service";
 import { AttachWorkbookUseCase } from "./application/use-cases/attach-workbook/attach-workbook";
 // Use Cases
@@ -222,6 +223,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     // Services
     EmbargoProcessorService,
     ContributorAnonymizerService,
+    MeasuredContributorAttributionService,
     MultipartUploadService,
 
     // General experiment use cases

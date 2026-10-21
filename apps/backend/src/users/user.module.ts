@@ -33,6 +33,7 @@ import { SearchUsersUseCase } from "./application/use-cases/search-users/search-
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { EMAIL_PORT } from "./core/ports/email.port";
 import { GUEST_PURGE_SIGNAL } from "./core/ports/guest-purge-signal.port";
+import { USER_PRESENCE_PORT } from "./core/ports/user-presence.port";
 import { PlatformAdminRepository } from "./core/repositories/platform-admin.repository";
 import { InvitationRepository } from "./core/repositories/user-invitation.repository";
 import { UserRepository } from "./core/repositories/user.repository";
@@ -68,6 +69,7 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
     { provide: GUEST_PURGE_SIGNAL, useExisting: ErrorReporterService },
     // Repositories
     UserRepository,
+    { provide: USER_PRESENCE_PORT, useExisting: UserRepository },
     PlatformAdminRepository,
     InvitationRepository,
 
@@ -109,6 +111,7 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
     UserAuthHook,
   ],
   exports: [
+    USER_PRESENCE_PORT,
     UserRepository,
     GetUsersMetadataUseCase,
     InvitationRepository,

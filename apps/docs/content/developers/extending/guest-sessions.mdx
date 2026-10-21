@@ -111,8 +111,14 @@ Auto-admission and retirement use database triggers and produce no notifications
 
 Member and contributor APIs return raw names with `isGuest` and `isFormerGuest`
 flags. Web renders the guest label through translation context. Current relational
-projections return `isFormerGuest: false`; post-purge enrichment supplies that
-signal where available. Existing gold contributor caches are unchanged and may
+projections return `isFormerGuest: false`. Measurement-data reads derive guest
+attribution from the pipeline's server-derived `is_guest` column and check current
+account presence through the users domain. A missing guest account clears the
+cached name and avatar and sets `isFormerGuest: true`. Paged, projected, grouped
+and filter-value reads use this boundary. Educational pseudonyms keep their
+existing behavior. The shared web renderer translates the labels.
+
+Existing gold contributor caches are unchanged and may
 retain an earlier guest name after the account is removed. Their retention is an
 explicit gap for privacy review, separate from account cleanup.
 
