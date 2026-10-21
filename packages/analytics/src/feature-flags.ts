@@ -36,6 +36,7 @@ export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
 export interface FlagUser {
   id: string;
   email: string;
+  isAnonymous?: boolean;
 }
 
 /**
@@ -47,8 +48,10 @@ export interface FlagUser {
  */
 export function flagPersonProperties(user: {
   email?: string;
+  isAnonymous?: boolean;
   organizationIds: readonly string[];
-}): { email: string; organization_ids: string } | { organization_ids: string } {
+}): Record<string, string> {
   const organization_ids = user.organizationIds.join(",");
+  if (user.isAnonymous) return { organization_ids, is_guest: "true" };
   return user.email ? { email: user.email, organization_ids } : { organization_ids };
 }

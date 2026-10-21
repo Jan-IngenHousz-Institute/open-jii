@@ -5,6 +5,7 @@ import type { PostHogServerClient } from "./server";
 import {
   evaluateFeatureFlag,
   isFeatureFlagEnabled,
+  isDemoModeEnabled,
   reportException,
   tagUnreportedExceptions,
 } from "./server";
@@ -138,5 +139,11 @@ describe("evaluateFeatureFlag", () => {
     expect(await isFeatureFlagEnabled(FEATURE_FLAGS.CALIBRATION, "ana@example.com")).toBe(
       FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.CALIBRATION],
     );
+  });
+});
+
+describe("demo mode", () => {
+  it("fails closed if no analytics client is initialized", async () => {
+    expect(await isDemoModeEnabled()).toBe(false);
   });
 });

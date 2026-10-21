@@ -48,6 +48,47 @@ describe("usePostHogAuth", () => {
     storedConsent?.mockRestore();
   });
 
+  it("never sends a guest email and preserves the same identity on conversion after consent", async () => {
+    const guest = createSession({
+      user: { id: "guest-id", email: "synthetic@guest.openjii.invalid", isAnonymous: true },
+    });
+    mockSession(guest);
+    storedConsent = storeConsent("rejected");
+    const { rerender } = renderHook(() => usePostHogAuth());
+    await waitFor(() =>
+      expect(posthog.setPersonPropertiesForFlags).toHaveBeenCalledWith(
+        { organization_ids: "org-qa,org-lab", is_guest: "true" },
+        true,
+      ),
+    );
+    expect(posthog.identify).not.toHaveBeenCalled();
+    storedConsent.mockRestore();
+    storedConsent = storeConsent("accepted");
+    act(() => setConsentStatus("accepted"));
+    await waitFor(() =>
+      expect(posthog.identify).toHaveBeenCalledWith("guest-id", { is_guest: true }),
+    );
+    expect(JSON.stringify(vi.mocked(posthog.identify).mock.calls)).not.toContain(
+      "guest.openjii.invalid",
+    );
+    expect(JSON.stringify(vi.mocked(posthog.setPersonProperties).mock.calls)).not.toContain(
+      "guest.openjii.invalid",
+    );
+    mockSession(
+      createSession({
+        user: { id: "guest-id", email: "researcher@example.test", isAnonymous: false },
+      }),
+    );
+    rerender();
+    await waitFor(() =>
+      expect(posthog.identify).toHaveBeenLastCalledWith("guest-id", {
+        email: "researcher@example.test",
+        is_guest: false,
+      }),
+    );
+    expect(posthog.reset).not.toHaveBeenCalled();
+  });
+
   it("waits for PostHog to load, then brings it up to date", async () => {
     vi.mocked(usePostHog).mockReturnValue(null);
     mockSession(session);
