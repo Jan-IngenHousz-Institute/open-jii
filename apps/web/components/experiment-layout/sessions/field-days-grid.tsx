@@ -32,7 +32,7 @@ export function FieldDaysGrid({ plan, description, markOf, shares }: FieldDaysGr
   const entries = PLOT_MARKS.filter((mark) => shown.has(mark));
 
   const renderCell = (unit: ExperimentUnit | undefined) =>
-    unit === undefined || !unit.active ? (
+    !unit?.active ? (
       <PlotStateCell kind="gap" />
     ) : (
       <PlotStateCell

@@ -68,9 +68,9 @@ export class FieldPlan {
 
   /** The plot the app starts from in layout order, before any strategy is saved. */
   get firstInLayout(): string {
-    const [first] = [...this.plots].sort(
-      (a, b) => (a.row ?? 0) - (b.row ?? 0) || (a.column ?? 0) - (b.column ?? 0),
-    );
+    const first = [...this.plots]
+      .sort((a, b) => (a.row ?? 0) - (b.row ?? 0) || (a.column ?? 0) - (b.column ?? 0))
+      .at(0);
     return first?.identifier ?? "";
   }
 
@@ -132,7 +132,7 @@ export class FieldPlan {
     const positions = unitIds
       .flatMap((unitId) => this.positions.get(unitId) ?? [])
       .sort((a, b) => a - b);
-    const first = positions[0];
+    const first = positions.at(0);
     const last = positions.at(-1);
     const isUnbroken =
       first !== undefined && last !== undefined && last - first + 1 === positions.length;

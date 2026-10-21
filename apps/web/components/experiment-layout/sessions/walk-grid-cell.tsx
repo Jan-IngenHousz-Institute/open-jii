@@ -41,7 +41,7 @@ export function WalkGridCell({
 }: WalkGridCellProps) {
   const { t } = useTranslation("fieldSessions");
 
-  if (unit === undefined || !unit.active) {
+  if (!unit?.active) {
     return <PlotStateCell kind="gap" />;
   }
 

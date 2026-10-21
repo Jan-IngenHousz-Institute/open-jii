@@ -3,9 +3,8 @@ import React from "react";
 import { Text, View } from "react-native";
 import { useShallow } from "zustand/react/shallow";
 import { useHomeContinueAction } from "~/features/home/hooks/use-home-continue-action";
+import { useBetweenPlots } from "~/features/measurement-flow/hooks/use-between-plots";
 import { useFlowStepInfo } from "~/features/measurement-flow/hooks/use-flow-step-info";
-import { exampleLayout } from "~/features/measurement-flow/screens/measurement-flow-screen/components/flow-nodes/plot-node/next-plot";
-import { isScaffoldScreenOn } from "~/features/measurement-flow/screens/measurement-flow-screen/components/flow-nodes/plot-node/scaffold-screen";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
@@ -29,8 +28,7 @@ export function HomeContinueCard() {
   const colors = useThemeColors();
 
   // Scaffold: in an experiment with a layout the card stays up between plots and names the next one.
-  const betweenPlots =
-    isScaffoldScreenOn("d3-continue-card") && exampleLayout ? exampleLayout : undefined;
+  const betweenPlots = useBetweenPlots();
 
   // Show the card when an experiment is active and the user has moved past the
   // picker (currentFlowStep > 0) or is on the questions-only submit screen.

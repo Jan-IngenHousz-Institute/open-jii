@@ -186,9 +186,9 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
 
   // Capture the display timestamp once so it stays stable across re-renders.
   // The upload handler captures its own fresh timestamp independently.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- scanResult is an intentional trigger to re-capture the timestamp on new scans
   const displayTimestamp = useMemo(
     () => (isScaffoldScreenOn("d5-measure-again") ? LEAF_READING_TIME : getSyncedLocalISO()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- scanResult is an intentional trigger to re-capture the timestamp on new scans
     [scanResult],
   );
 

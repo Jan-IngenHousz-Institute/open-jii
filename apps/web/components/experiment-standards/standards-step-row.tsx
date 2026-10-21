@@ -39,7 +39,7 @@ export function StandardsStepRow({
   const isFixShown = fix !== null && (canFix || isOwnAction);
   // A step tied to no standard either holds every dataset or, like skipped plots, only informs.
   const hasStandards = step.standards.length > 0 || step.holdsFreeze;
-  const [firstStandard] = step.standards;
+  const firstStandard = step.standards.at(0);
 
   const handleOpenFields = () => {
     if (firstStandard !== undefined) {
