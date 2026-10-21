@@ -21,6 +21,14 @@ locals {
     }]
   })
 
+  # The feed's lag per table, sent once a minute by a timer next to the agent, into the agent's
+  # namespace, which the instance's role may already write to.
+  feed_metrics_script = templatefile("${path.module}/templates/feed-metrics.sh.tftpl", {
+    environment = var.environment
+    region      = data.aws_region.current.region
+    namespace   = var.metrics_namespace
+  })
+
   # The system logs that ship without a TTL. opentelemetry_span_log defines its own engine and stays
   # empty unless tracing is on.
   system_log_tables = [
@@ -115,6 +123,8 @@ locals {
     }
   })
 }
+
+data "aws_region" "current" {}
 
 data "aws_ssm_parameter" "al2023_arm64" {
   name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64"
@@ -266,6 +276,7 @@ resource "aws_instance" "store" {
     prometheus_config            = local.prometheus_config
     cloudwatch_agent_config_path = local.cloudwatch_agent_config_path
     cloudwatch_agent_config      = local.cloudwatch_agent_config
+    feed_metrics_script          = local.feed_metrics_script
   })
   user_data_replace_on_change = true
 
