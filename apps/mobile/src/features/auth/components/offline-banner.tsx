@@ -37,7 +37,7 @@ export function OfflineBanner({ online, checking, onRetry }: OfflineBannerProps)
         onPress={onRetry}
         isLoading={checking}
         accessibilityRole="button"
-        accessibilityLabel={checking ? t("checkingConnection") : t("retry")}
+        accessibilityLabel={t("connectionRetryLabel", { context: String(checking) })}
         accessibilityState={{ busy: checking, disabled: checking }}
       />
     </View>
