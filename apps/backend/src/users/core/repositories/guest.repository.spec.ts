@@ -1,4 +1,5 @@
 import { zExperimentContributors } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
+import { zOrganizationMembers } from "@repo/api/domains/organization/organization.schema";
 import {
   createSecondaryDatabase,
   db,
@@ -83,7 +84,7 @@ describe("guest quotas and guarded purge", () => {
       ]);
   });
 
-  it("returns raw guest attribution through the public contributor API", async () => {
+  it("keeps anonymous grant targets out of public collaborator credits", async () => {
     const researcher = await app.createTestUser();
     const demo = await app.createOrganization(undefined, { type: "demo", visibility: "public" });
     const guest = await createGuest();
@@ -106,15 +107,30 @@ describe("guest quotas and guarded purge", () => {
       .withAuth(researcher);
     expect(response.status).toBe(200);
     const result = zExperimentContributors.parse(response.body);
-    expect(result.contributors.find(({ userId }) => userId === guest.id)).toEqual({
-      userId: guest.id,
+    expect(result.contributors.find(({ userId }) => userId === guest.id)).toBeUndefined();
+    expect(result.contributors.find(({ userId }) => userId === researcher)).toMatchObject({
+      isGuest: false,
+      isFormerGuest: false,
+    });
+  });
+
+  it("returns raw guest names and attribution flags through the member API", async () => {
+    const researcher = await app.createTestUser();
+    const demo = await app.createOrganization(undefined, { type: "demo", visibility: "public" });
+    await app.addOrganizationMember(demo, researcher, "owner");
+    const guest = await createGuest();
+    const response = await app.get(`/api/v1/organizations/${demo}/members`).withAuth(researcher);
+    expect(response.status).toBe(200);
+    const result = zOrganizationMembers.parse(response.body);
+    expect(result.members.find(({ userId }) => userId === guest.id)).toMatchObject({
       firstName: "Synthetic visitor",
       lastName: "",
+      email: null,
       avatarUrl: null,
       isGuest: true,
       isFormerGuest: false,
     });
-    expect(result.contributors.find(({ userId }) => userId === researcher)).toMatchObject({
+    expect(result.members.find(({ userId }) => userId === researcher)).toMatchObject({
       isGuest: false,
       isFormerGuest: false,
     });
