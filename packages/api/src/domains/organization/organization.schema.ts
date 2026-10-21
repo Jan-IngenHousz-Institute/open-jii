@@ -145,6 +145,8 @@ export const zMyOrganizationList = z.array(zMyOrganization);
 /** Profile fields every people-shaped row in this domain carries. */
 const zOrganizationPerson = z.object({
   userId: z.string().uuid(),
+  isGuest: z.boolean().default(false),
+  isFormerGuest: z.boolean().default(false),
   firstName: z.string(),
   lastName: z.string(),
   // Stored value returned as-is; format-validating on output can 500 the list.
