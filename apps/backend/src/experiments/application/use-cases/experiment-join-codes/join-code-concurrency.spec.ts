@@ -14,10 +14,14 @@ import {
 import type { DatabaseInstance, Transaction } from "@repo/database";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
+import { GUEST_RESOURCE_PORT } from "../../../../authorization/core/ports/guest-resource.port";
+import type { GuestResourcePort } from "../../../../authorization/core/ports/guest-resource.port";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { GuestGrantCleanupRepository } from "../../../../sharing/core/repositories/guest-grant-cleanup.repository";
 import { TestHarness } from "../../../../test/test-harness";
+import { GuestRepository } from "../../../../users/core/repositories/guest.repository";
 import { UserRepository } from "../../../../users/core/repositories/user.repository";
 import { ExperimentJoinCodeRepository } from "../../../core/repositories/experiment-join-code.repository";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
@@ -43,7 +47,11 @@ describe("join code concurrency", () => {
   function onSecondConnection() {
     const joinCodeRepository = new ExperimentJoinCodeRepository(secondary.database);
     const joinRequestRepository = new ExperimentJoinRequestRepository(secondary.database);
-    const authz = new AuthorizationService(secondary.database);
+    const authz = new AuthorizationService(
+      secondary.database,
+      new GuestRepository(secondary.database, new GuestGrantCleanupRepository()),
+      testApp.module.get<GuestResourcePort>(GUEST_RESOURCE_PORT),
+    );
 
     return {
       joinCodeRepository,

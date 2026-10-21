@@ -37,6 +37,14 @@ import {
 import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
 import { AuthorizationService } from "../../../authorization/authorization.service";
+import {
+  accessibleResourceCondition,
+  contributingResourceCondition,
+  relatedResourceCondition,
+  resourceRoleExpression,
+  resourceTierExpression,
+} from "../../../authorization/core/repositories/resource-access-query";
+import type { ResourceRoleName } from "../../../authorization/core/repositories/resource-access-query";
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
   crossTableBonus,
@@ -51,14 +59,6 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
-import {
-  accessibleResourceCondition,
-  contributingResourceCondition,
-  relatedResourceCondition,
-  resourceRoleExpression,
-  resourceTierExpression,
-} from "../../../common/utils/resource-access-scope";
-import type { ResourceRoleName } from "../../../common/utils/resource-access-scope";
 import { userIsSelectableGrantee } from "../../../sharing/core/grantee-selectability";
 import {
   findOwningOrgOwnerIds,
