@@ -23,7 +23,7 @@ async function bootstrap() {
     app.enableCors({
       origin: corsOrigins,
       credentials: true,
-      exposedHeaders: ["Content-Disposition"],
+      exposedHeaders: ["Content-Disposition", "Retry-After", "X-Retry-After"],
       // Lets the browser skip the preflight on repeat writes to the same URL, such as autosave.
       // Two hours is Chrome's ceiling.
       maxAge: 7200,

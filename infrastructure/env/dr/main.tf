@@ -584,6 +584,7 @@ module "backend_ecs" {
     { name = "CORS_ENABLED", value = "true" },
     { name = "CORS_ORIGINS", value = "https://${module.route53.environment_domain}" },
     { name = "COOKIE_DOMAIN", value = ".${var.domain_name}" },
+    { name = "AUTH_CLIENT_ADDRESS_MODE", value = "cloudfront-alb" },
     { name = "ENVIRONMENT_PREFIX", value = var.environment },
     { name = "AWS_LOCATION_PLACE_INDEX_NAME", value = module.location_service.place_index_name },
     { name = "EMAIL_BASE_URL", value = "https://${module.route53.environment_domain}" },
@@ -634,10 +635,11 @@ module "opennext_waf" {
 module "backend_waf" {
   source = "../../modules/waf"
 
-  service_name       = "backend"
-  environment        = var.environment
-  rate_limit         = 500
-  log_retention_days = 365
+  service_name              = "backend"
+  environment               = var.environment
+  rate_limit                = 2500
+  enable_machine_rate_limit = true
+  log_retention_days        = 365
 
   large_body_bypass_routes = [
     {

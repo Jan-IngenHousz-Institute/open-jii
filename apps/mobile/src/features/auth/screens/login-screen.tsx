@@ -145,7 +145,16 @@ export default function LoginScreen() {
 
       const result = await verifyEmailOTP(email, otpValue);
       if (result?.error) {
-        setError("otp", { message: t("auth:errors.expiredOtp") });
+        let message = t("auth:errors.expiredOtp");
+        if (result.error.status === 429) {
+          let context: string | undefined;
+          if (result.error.retryAfterSeconds !== undefined) context = "timed";
+          message = t("auth:errors.rateLimited", {
+            context,
+            count: result.error.retryAfterSeconds,
+          });
+        }
+        setError("otp", { message });
       }
     },
     [email, verifyEmailOTP, clearErrors, setError, t],
@@ -183,7 +192,13 @@ export default function LoginScreen() {
 
     const result = await sendEmailOTP(submittedEmail);
     if (result?.error) {
-      setError("email", { message: result.error.message ?? t("auth:errors.sendFailed") });
+      let message = result.error.message ?? t("auth:errors.sendFailed");
+      if (result.error.status === 429) {
+        let context: string | undefined;
+        if (result.error.retryAfterSeconds !== undefined) context = "timed";
+        message = t("auth:errors.rateLimited", { context, count: result.error.retryAfterSeconds });
+      }
+      setError("email", { message });
       return;
     }
 
@@ -197,7 +212,13 @@ export default function LoginScreen() {
     clearErrors();
     const result = await sendEmailOTP(email);
     if (result?.error) {
-      setError("email", { message: result.error.message ?? t("auth:errors.resendFailed") });
+      let message = result.error.message ?? t("auth:errors.resendFailed");
+      if (result.error.status === 429) {
+        let context: string | undefined;
+        if (result.error.retryAfterSeconds !== undefined) context = "timed";
+        message = t("auth:errors.rateLimited", { context, count: result.error.retryAfterSeconds });
+      }
+      setError("otp", { message });
       return;
     }
 
@@ -365,9 +386,7 @@ export default function LoginScreen() {
                         : "text-jii-primary"
                     }`}
                   >
-                    {countdown > 0
-                      ? t("auth:resendCodeCountdown", { seconds: countdown })
-                      : t("auth:resendCode")}
+                    {t("auth:resendAction", { context: String(countdown > 0), seconds: countdown })}
                   </Text>
                 </Pressable>
               </>

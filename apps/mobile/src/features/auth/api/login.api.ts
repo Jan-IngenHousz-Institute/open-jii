@@ -1,5 +1,7 @@
 import { getAuthClient } from "~/features/auth/services/auth";
 
+import { retryAfterSeconds } from "@repo/auth/rate-limit/retry-after";
+
 export async function signInWithGitHub() {
   const authClient = getAuthClient();
   await authClient.signIn.social({ provider: "github", callbackURL: "/" });
@@ -16,7 +18,18 @@ export async function signInWithOrcid() {
 
 export async function sendEmailLoginOtp(email: string) {
   const authClient = getAuthClient();
-  return authClient.emailOtp.sendVerificationOtp({ email, type: "sign-in" });
+  let retrySeconds: number | undefined;
+  const result = await authClient.emailOtp.sendVerificationOtp(
+    { email, type: "sign-in" },
+    {
+      onError: ({ response }) => {
+        retrySeconds = retryAfterSeconds(response.headers);
+      },
+    },
+  );
+  if (result.error)
+    return { ...result, error: { ...result.error, retryAfterSeconds: retrySeconds } };
+  return result;
 }
 
 export interface VerifyEmailOtpInput {
@@ -26,5 +39,16 @@ export interface VerifyEmailOtpInput {
 
 export async function verifyEmailLoginOtp({ email, code }: VerifyEmailOtpInput) {
   const authClient = getAuthClient();
-  return authClient.signIn.emailOtp({ email, otp: code });
+  let retrySeconds: number | undefined;
+  const result = await authClient.signIn.emailOtp(
+    { email, otp: code },
+    {
+      onError: ({ response }) => {
+        retrySeconds = retryAfterSeconds(response.headers);
+      },
+    },
+  );
+  if (result.error)
+    return { ...result, error: { ...result.error, retryAfterSeconds: retrySeconds } };
+  return result;
 }

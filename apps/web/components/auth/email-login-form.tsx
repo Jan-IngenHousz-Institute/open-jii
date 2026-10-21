@@ -122,6 +122,10 @@ export function EmailLoginForm({
     try {
       const res = await signInEmailMutation.mutateAsync(data.email);
       if (res.error) {
+        emailForm.setError("email", {
+          type: "server",
+          message: res.error.message ?? t("auth.emailSendError"),
+        });
         return;
       }
 
@@ -134,6 +138,7 @@ export function EmailLoginForm({
       setCountdown(RESEND_COOLDOWN_SECONDS);
     } catch {
       emailForm.setError("email", {
+        type: "server",
         message: t("auth.emailSendError", "Something went wrong. Please try again."),
       });
     }
@@ -146,7 +151,9 @@ export function EmailLoginForm({
       const result = await verifyEmailMutation.mutateAsync({ email, code: data.code });
 
       if (result.error) {
-        otpForm.setError("code", { message: errorMessage });
+        let message = errorMessage;
+        if (result.error.status === 429 && result.error.message) message = result.error.message;
+        otpForm.setError("code", { message });
         return;
       }
 
@@ -170,11 +177,16 @@ export function EmailLoginForm({
     if (isPending || countdown > 0) return;
 
     try {
-      await signInEmailMutation.mutateAsync(email);
+      const result = await signInEmailMutation.mutateAsync(email);
+      if (result.error) {
+        otpForm.setError("code", { message: result.error.message ?? t("auth.emailSendError") });
+        return;
+      }
       setCountdown(RESEND_COOLDOWN_SECONDS);
       otpForm.reset();
     } catch {
       emailForm.setError("email", {
+        type: "server",
         message: t("auth.emailSendError", "Something went wrong. Please try again."),
       });
     }
@@ -242,9 +254,7 @@ export function EmailLoginForm({
               disabled={countdown > 0 || isPending}
               aria-label={countdown > 0 ? `Resend code in ${countdown} seconds` : "Resend code"}
             >
-              {countdown > 0
-                ? `${t("auth.resendCode", "Re-send code")} (${countdown}s)`
-                : t("auth.resendCode", "Re-send code")}
+              {t("auth.resendAction", { context: String(countdown > 0), seconds: countdown })}
             </Button>
           </div>
         </form>
@@ -280,7 +290,12 @@ export function EmailLoginForm({
             type="submit"
             variant="default"
             className="w-full"
-            disabled={isPending || (!emailForm.formState.isValid && emailForm.formState.isDirty)}
+            disabled={
+              isPending ||
+              (!emailForm.formState.isValid &&
+                emailForm.formState.isDirty &&
+                emailForm.formState.errors.email?.type !== "server")
+            }
           >
             {isPending ? (
               <>

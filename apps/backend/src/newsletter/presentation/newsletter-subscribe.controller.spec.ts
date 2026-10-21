@@ -19,12 +19,14 @@ describe("NewsletterSubscribeController", () => {
   });
 
   beforeEach(async () => {
+    vi.stubEnv("AUTH_CLIENT_ADDRESS_MODE", "cloudfront-alb");
     await testApp.beforeEach();
     mailchimp = testApp.module.get(MailchimpAdapter);
   });
 
   afterEach(() => {
     testApp.afterEach();
+    vi.unstubAllEnvs();
   });
 
   afterAll(async () => {
@@ -37,7 +39,7 @@ describe("NewsletterSubscribeController", () => {
     const response: SuperTestResponse<NewsletterSubscribeResponse> = await testApp
       .post(subscribePath())
       .withoutAuth()
-      .set("X-Forwarded-For", "203.0.113.10")
+      .set("X-Forwarded-For", "203.0.113.10, 70.132.0.1")
       .send({ email: "visitor@example.com" })
       .expect(StatusCodes.OK);
 
@@ -53,7 +55,7 @@ describe("NewsletterSubscribeController", () => {
     const response: SuperTestResponse<NewsletterSubscribeResponse> = await testApp
       .post(subscribePath())
       .withoutAuth()
-      .set("X-Forwarded-For", "203.0.113.11")
+      .set("X-Forwarded-For", "203.0.113.11, 70.132.0.1")
       .send({ email: "visitor2@example.com" })
       .expect(StatusCodes.OK);
 
@@ -66,7 +68,7 @@ describe("NewsletterSubscribeController", () => {
     const response: SuperTestResponse<NewsletterSubscribeResponse> = await testApp
       .post(subscribePath())
       .withoutAuth()
-      .set("X-Forwarded-For", "203.0.113.12")
+      .set("X-Forwarded-For", "203.0.113.12, 70.132.0.1")
       .send({ email: "visitor3@example.com" })
       .expect(StatusCodes.OK);
 
@@ -77,7 +79,7 @@ describe("NewsletterSubscribeController", () => {
     await testApp
       .post(subscribePath())
       .withoutAuth()
-      .set("X-Forwarded-For", "203.0.113.13")
+      .set("X-Forwarded-For", "203.0.113.13, 70.132.0.1")
       .send({ email: "not-an-email" })
       .expect(StatusCodes.BAD_REQUEST);
   });

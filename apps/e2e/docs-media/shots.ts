@@ -396,6 +396,30 @@ export const SHOTS: readonly Shot[] = [
     scope: "Notifications page with day groups, read-state tabs and the category filter",
   },
   {
+    slug: "login-rate-limit",
+    publish: "img/guide/web/login-rate-limit.webp",
+    frame: "desktop",
+    route: "/login",
+    anonymous: true,
+    async prepare(page) {
+      const api = process.env.E2E_API_URL ?? "http://localhost:3020";
+      if (!["localhost", "127.0.0.1"].includes(new URL(api).hostname)) {
+        throw new Error("Quota captures must use a local backend");
+      }
+      for (let i = 0; i < 3; i++) {
+        await page.request.post(`${api}/api/v1/auth/email-otp/send-verification-otp`, {
+          headers: { origin: new URL(page.url()).origin },
+          data: { email: `capture-${Date.now()}-${i}@example.test`, type: "sign-in" },
+        });
+      }
+      await page.getByPlaceholder(/enter your email/i).fill("quota-demo@example.test");
+      await page.getByRole("button", { name: /continue with email/i }).click();
+      await page.getByText(/too many attempts.*try again in/i).waitFor();
+      await settle(page, 5500);
+    },
+    scope: "Sign-in rate limit with server-provided retry guidance and a synthetic email address",
+  },
+  {
     slug: "login-signup",
     publish: "img/guide/web/login-signup.webp",
     frame: "desktop",

@@ -56,10 +56,13 @@ async function submitEmail(email = "test@example.com") {
   await user.type(emailInput, email);
   await user.click(screen.getByText("auth.continueWithEmail"));
   await waitFor(() =>
-    expect(authClient.emailOtp.sendVerificationOtp).toHaveBeenCalledWith({
-      email,
-      type: "sign-in",
-    }),
+    expect(authClient.emailOtp.sendVerificationOtp).toHaveBeenCalledWith(
+      {
+        email,
+        type: "sign-in",
+      },
+      expect.anything(),
+    ),
   );
   await waitFor(() => expect(screen.getByText("auth.checkEmail")).toBeInTheDocument());
   return user;
@@ -301,7 +304,7 @@ describe("EmailLoginForm", () => {
     await submitEmail();
     const resendButton = screen.getByRole("button", { name: /resend code/i });
     expect(resendButton).toBeDisabled();
-    expect(resendButton.textContent).toContain("(30s)");
+    expect(resendButton).toHaveAttribute("aria-label", "Resend code in 30 seconds");
   });
 
   it("prevents double submission when already pending", async () => {
@@ -316,6 +319,30 @@ describe("EmailLoginForm", () => {
     await user.click(btn);
     await waitFor(() => expect(authClient.emailOtp.sendVerificationOtp).toHaveBeenCalledTimes(1));
   });
+
+  it("keeps the entered code after a rate-limited resend and still verifies it", async () => {
+    render(<EmailLoginForm {...defaultProps} />);
+    const user = await submitEmail();
+    await user.type(screen.getByTestId("otp-input"), "123");
+    await waitFor(
+      () => expect(screen.getByRole("button", { name: /^resend code$/i })).toBeEnabled(),
+      { timeout: 35_000 },
+    );
+    vi.mocked(authClient.emailOtp.sendVerificationOtp).mockResolvedValueOnce({
+      data: null,
+      error: { status: 429, statusText: "Too Many Requests", message: "Please retry later." },
+    });
+    await user.click(screen.getByRole("button", { name: /resend code/i }));
+    await waitFor(() => expect(screen.getByTestId("otp-input")).toHaveValue("123"));
+    await waitFor(() => expect(authClient.emailOtp.sendVerificationOtp).toHaveBeenCalledTimes(2));
+    await user.type(screen.getByTestId("otp-input"), "456");
+    await waitFor(() =>
+      expect(authClient.signIn.emailOtp).toHaveBeenCalledWith(
+        { email: "test@example.com", otp: "123456" },
+        expect.anything(),
+      ),
+    );
+  }, 40_000);
 
   it("handles resend code after countdown with error", async () => {
     render(<EmailLoginForm {...defaultProps} />);
@@ -332,10 +359,13 @@ describe("EmailLoginForm", () => {
     const resendButton = screen.getByRole("button", { name: /resend code/i });
     await user.click(resendButton);
     await waitFor(() =>
-      expect(authClient.emailOtp.sendVerificationOtp).toHaveBeenCalledWith({
-        email: "test@example.com",
-        type: "sign-in",
-      }),
+      expect(authClient.emailOtp.sendVerificationOtp).toHaveBeenCalledWith(
+        {
+          email: "test@example.com",
+          type: "sign-in",
+        },
+        expect.anything(),
+      ),
     );
   });
 });

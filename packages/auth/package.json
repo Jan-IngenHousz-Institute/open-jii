@@ -25,6 +25,18 @@
     "./types": {
       "types": "./src/types.ts",
       "default": "./dist/types.js"
+    },
+    "./client-address": {
+      "types": "./src/client-address.ts",
+      "default": "./dist/client-address.js"
+    },
+    "./rate-limit/rate-limit.repository": {
+      "types": "./src/rate-limit/rate-limit.repository.ts",
+      "default": "./dist/rate-limit/rate-limit.repository.js"
+    },
+    "./rate-limit/retry-after": {
+      "types": "./src/rate-limit/retry-after.ts",
+      "default": "./dist/rate-limit/retry-after.js"
     }
   },
   "private": true,
@@ -46,7 +58,8 @@
     "@repo/transactional": "workspace:*",
     "@simplewebauthn/browser": "13.3.0",
     "better-auth": "1.6.23",
-    "nodemailer": "catalog:"
+    "nodemailer": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

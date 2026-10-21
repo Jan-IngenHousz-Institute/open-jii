@@ -1,3 +1,13 @@
+locals {
+  machine_post_paths = [
+    "/api/v1/macros/execute-batch",
+    "/api/v1/users/metadata",
+    "/api/v1/iot/devices/registry",
+    "/api/v1/webhooks/data-upload",
+    "/api/v1/webhooks/project-transfer",
+  ]
+}
+
 provider "aws" {
   alias  = "us_east_1"
   region = "us-east-1"
@@ -269,11 +279,50 @@ resource "aws_wafv2_web_acl" "main" {
     statement {
       rate_based_statement {
         limit              = var.rate_limit # Requests per 5-minute window per IP
-        aggregate_key_type = "FORWARDED_IP" # Use forwarded IP from header
-        # Alternative: "IP" for X-Forwarded-For header (behind proxy/CDN)
-        forwarded_ip_config {
-          header_name       = "X-Forwarded-For"
-          fallback_behavior = "MATCH" # Use IP from request if header is missing
+        aggregate_key_type = "IP"
+        dynamic "scope_down_statement" {
+          for_each = var.enable_machine_rate_limit ? [1] : []
+          content {
+            not_statement {
+              statement {
+                and_statement {
+                  statement {
+                    byte_match_statement {
+                      search_string         = "POST"
+                      positional_constraint = "EXACTLY"
+                      field_to_match {
+                        method {}
+                      }
+                      text_transformation {
+                        priority = 0
+                        type     = "NONE"
+                      }
+                    }
+                  }
+                  statement {
+                    or_statement {
+                      dynamic "statement" {
+                        for_each = local.machine_post_paths
+                        content {
+                          byte_match_statement {
+                            search_string         = statement.value
+                            positional_constraint = "EXACTLY"
+                            field_to_match {
+                              uri_path {}
+                            }
+                            text_transformation {
+                              priority = 0
+                              type     = "NONE"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -285,6 +334,65 @@ resource "aws_wafv2_web_acl" "main" {
     }
   }
 
+  dynamic "rule" {
+    for_each = var.enable_machine_rate_limit ? [1] : []
+    content {
+      name     = "MachineRateLimitRule"
+      priority = 5
+      action {
+        block {}
+      }
+      statement {
+        rate_based_statement {
+          limit              = 10000
+          aggregate_key_type = "IP"
+          scope_down_statement {
+            and_statement {
+              statement {
+                byte_match_statement {
+                  search_string         = "POST"
+                  positional_constraint = "EXACTLY"
+                  field_to_match {
+                    method {}
+                  }
+                  text_transformation {
+                    priority = 0
+                    type     = "NONE"
+                  }
+                }
+              }
+              statement {
+                or_statement {
+                  dynamic "statement" {
+                    for_each = local.machine_post_paths
+                    content {
+                      byte_match_statement {
+                        search_string         = statement.value
+                        positional_constraint = "EXACTLY"
+                        field_to_match {
+                          uri_path {}
+                        }
+                        text_transformation {
+                          priority = 0
+                          type     = "NONE"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "MachineRateLimitRuleMetric"
+        sampled_requests_enabled   = true
+      }
+    }
+  }
+
   # Geographic blocking - optional security measure
   # Useful for compliance requirements or reducing attack surface
   # Only creates the rule if blocked_countries list is provided
@@ -292,7 +400,7 @@ resource "aws_wafv2_web_acl" "main" {
     for_each = length(var.blocked_countries) > 0 ? [1] : []
     content {
       name     = "GeoBlockRule"
-      priority = 5
+      priority = var.enable_machine_rate_limit ? 6 : 5
 
       action {
         block {}
@@ -318,7 +426,7 @@ resource "aws_wafv2_web_acl" "main" {
     for_each = length(var.large_body_bypass_routes) > 0 ? [1] : []
     content {
       name     = "AllowLargeBodyRule"
-      priority = 6 # Run after all security checks including geographic blocking
+      priority = var.enable_machine_rate_limit ? 7 : 6
 
       action {
         allow {}
