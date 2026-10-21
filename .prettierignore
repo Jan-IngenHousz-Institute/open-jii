@@ -12,3 +12,6 @@ apps/docs/openapi.json
 
 # Compiled @repo/monitoring output copied into the lambda bundles at build time.
 infrastructure/modules/monitoring/*/lambda/lib/
+
+# Expo prebuild and Gradle output; native source is generated and gitignored.
+apps/mobile/android/
