@@ -22,7 +22,8 @@
       "The Offline ready picker was recaptured with the visible Classroom search filter so only the meaningful demo experiment appears; no experiment data was renamed, deleted, or modified.",
       "The two organizations captures (2026-09-15) were taken on an Android emulator (1344x2992) against the local seeded stack as the seed persona otto@orgseed.local; only seeded organization names and a seeded message appear, and the join request shown was not sent. Reviewed and published by Vlad.",
       "The three Discover/join-code captures (2026-09-22) were taken on an Android emulator (1344x2992) against the local seeded stack as the seed persona elif@orgseed.local; only seeded organization and experiment names appear (Canopy Lab, Delta Phenotyping Centre, [Seed] Field Trial 2025), the search term was trial, and the join shown was not sent. Reviewed and published by Vlad.",
-      "discover-demo-organizations recorded on 2026-10-21 against the seeded local stack. The user reviewed and approved this recording before publication; bytes copied from staging without re-encoding. Captured with com.openjii.app.m1local on REDMAGIC 10 Pro; SystemUI demo mode was ignored, so the top 108 source pixels were excluded before the approved recording was staged."
+      "discover-demo-organizations recorded on 2026-10-21 against the seeded local stack. The user reviewed and approved this recording before publication; bytes copied from staging without re-encoding. Captured with com.openjii.app.m1local on REDMAGIC 10 Pro; SystemUI demo mode was ignored, so the top 108 source pixels were excluded before the approved recording was staged.",
+      "demo-experiment-no-join-android was recorded on 2026-10-21 in com.openjii.app.m4local against synthetic local fixtures. The evaluator checked all 23 frames, then the user approved these exact bytes. The top 108 source pixels exclude the OEM status bar; publication copies staging without re-encoding."
     ]
   },
   "assets": [
@@ -122,6 +123,14 @@
       "sha256": "133b006c98d947c9dd3ba50154b42ed8825209ce36c79b2183ef72ce2d6b79af",
       "disposition": "published",
       "scope": "Android Discover shows the Demo badge and organization type; the status bar is excluded"
+    },
+    {
+      "path": "/img/mobile/demo-experiment-no-join-android.webm",
+      "kind": "recording",
+      "sha256": "79f99aaa55476f8e368b32a4e10be4b3b649b7602e80054d413dd6172d593053",
+      "disposition": "published",
+      "recapturedOn": "2026-10-21",
+      "scope": "Synthetic newcomer opens a Demo experiment from Android Discover without a join action; the status bar is excluded"
     }
   ],
   "unmetCaptures": [
