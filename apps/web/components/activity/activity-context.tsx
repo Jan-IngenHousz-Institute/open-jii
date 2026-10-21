@@ -16,7 +16,6 @@ export interface ActivityEntry {
   status: ActivityJobStatus;
   createdAt: string;
   updatedAt: string;
-  resultUrl?: string;
   format?: string;
   experimentId?: string;
 }
@@ -45,7 +44,6 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
         existing.status === entry.status &&
         existing.updatedAt === entry.updatedAt &&
         existing.title === entry.title &&
-        existing.resultUrl === entry.resultUrl &&
         existing.format === entry.format &&
         existing.experimentId === entry.experimentId
       ) {

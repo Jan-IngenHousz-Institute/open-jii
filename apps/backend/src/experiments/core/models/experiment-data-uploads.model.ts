@@ -3,9 +3,8 @@ import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/ex
 export type UploadHistoryStatus = "pending" | "running" | "completed" | "failed";
 
 /**
- * History record for an upload. Mirrors ExportMetadata in shape; in-flight
- * runs are derived from the Databricks job-runs API and joined to completed
- * runs in the Delta history table by upload_id.
+ * History record for an upload. In-flight runs are derived from the Databricks
+ * job-runs API and joined to completed runs in the Delta history table by upload_id.
  */
 export interface UploadMetadata {
   uploadId: string;

@@ -29,5 +29,6 @@ export default registerAs("aws", () => ({
   s3: {
     iotArchiveBucketName: process.env.AWS_IOT_ARCHIVE_BUCKET_NAME,
     largeIotBucketName: process.env.AWS_IOT_LARGE_PAYLOAD_BUCKET_NAME,
+    dataExportsBucketName: process.env.AWS_DATA_EXPORTS_BUCKET_NAME,
   },
 }));

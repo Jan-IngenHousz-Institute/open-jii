@@ -60,7 +60,8 @@ variable "lifecycle_rules" {
       days          = number
       storage_class = string
     }))
-    expiration_days = optional(number)
+    expiration_days                        = optional(number)
+    abort_incomplete_multipart_upload_days = optional(number)
   }))
   default = []
 }

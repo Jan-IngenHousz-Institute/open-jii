@@ -4,15 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import type { ExperimentListExportsResponse } from "@repo/api/domains/experiment/exports/experiment-exports.schema";
 
 const POLL_MS = 15_000;
-const FINISHED_STATUSES = new Set(["completed", "failed"]);
+const FINISHED_STATUSES = new Set(["completed", "failed", "expired"]);
 
 function hasUnfinishedExport(data: ExperimentListExportsResponse | undefined): boolean {
   return data?.exports.some((record) => !FINISHED_STATUSES.has(record.status)) ?? false;
 }
 
 /**
- * Lists a table's exports. Every refetch reads the warehouse, so it polls only while an export
- * is still running; starting a new export invalidates the list, which starts polling again.
+ * Lists a table's exports, polling only while one is still running. Starting a new export
+ * invalidates the list, which starts polling again.
  */
 export const useListExports = ({
   experimentId,

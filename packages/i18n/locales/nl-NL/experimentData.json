@@ -31,11 +31,11 @@
         "pending": "In behandeling",
         "running": "Voorbereiden",
         "completed": "Voltooid",
-        "failed": "Mislukt"
+        "failed": "Mislukt",
+        "expired": "Verlopen"
       },
       "created": "Gemaakt",
       "completed": "Voltooid",
-      "rows": "Rijen",
       "size": "Grootte",
       "unknownError": "Er is een onbekende fout opgetreden",
       "error": "Fout",
@@ -44,7 +44,6 @@
       "loadingExports": "Exports laden...",
       "format": "Formaat",
       "exportTitle": "Export #{{number}}",
-      "failedTooltip": "Geen actie nodig — deze fout wordt onderzocht en opgelost. De export verschijnt hier opnieuw met de juiste status zodra het probleem is verholpen.",
       "createNew": "Nieuwe export maken",
       "creating": "Export maken...",
       "createExport": "Export maken",
@@ -57,7 +56,37 @@
       "creationError": "Export aanmaken mislukt",
       "backToList": "Terug naar exports",
       "anonymizeContributors": "Bijdragers anonimiseren in het geëxporteerde bestand",
-      "overridingDefault": "overschrijft experimentstandaard"
+      "overridingDefault": "overschrijft experimentstandaard",
+      "formats": {
+        "csv": "CSV",
+        "ndjson": "NDJSON",
+        "json-array": "JSON-array",
+        "parquet": "Parquet",
+        "xlsx": "Excel"
+      },
+      "errors": {
+        "no_data": "De tabel had geen rijen om te exporteren.",
+        "too_many_rows_for_format": "De tabel is groter dan dit formaat kan bevatten: hooguit 1.048.575 rijen, en voor Excel 16.384 kolommen. Exporteer hem in plaats daarvan als CSV, NDJSON of Parquet.",
+        "unknown": "De export is mislukt. Start hem opnieuw en neem contact op met support als het blijft mislukken."
+      },
+      "parts_one": "{{count}} bestand",
+      "parts_other": "{{count}} bestanden",
+      "expiresOn": "Beschikbaar tot {{date}}",
+      "showFiles": "Bestanden tonen",
+      "hideFiles": "Bestanden verbergen",
+      "downloadPart": "Bestand {{number}} downloaden",
+      "loadingLinks": "Downloadlinks worden voorbereid...",
+      "linksError": "De downloadlinks konden niet worden voorbereid. Probeer het opnieuw.",
+      "copyLinks": "Alle links kopiëren",
+      "linksCopied": "Links gekopieerd. Elke download moet vóór {{time}} beginnen.",
+      "linksHint": "Elke download moet vóór {{time}} beginnen. Om alle bestanden onder hun eigen naam op te halen, sla je de gekopieerde links op als links.txt en voer je uit: xargs -n 1 curl -fOJ < links.txt",
+      "activityTitle": "Export van {{name}} ({{format}})",
+      "exportReady": "De export van {{name}} staat klaar om te downloaden.",
+      "exportFailed": "De export van {{name}} is mislukt.",
+      "rowCount_one": "{{formatted}} rij",
+      "rowCount_other": "{{formatted}} rijen",
+      "copyFailed": "De links konden niet worden gekopieerd.",
+      "linkExpired": "Deze export is verlopen. Maak een nieuwe export om de gegevens te downloaden."
     },
     "uploadDataModal": {
       "title": "Gegevens uploaden",
