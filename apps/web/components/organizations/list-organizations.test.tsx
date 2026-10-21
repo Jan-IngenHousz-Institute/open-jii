@@ -46,7 +46,7 @@ describe("<ListOrganizations />", () => {
     await screen.findByText("My Lab");
     expect(screen.getByText("Open Lab")).toBeVisible();
     expect(spy.calls.at(-1)?.query.scope).toBe("all");
-    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.getByRole("combobox", { name: "organizations.fields.type" })).toBeVisible();
   });
 
   it("keeps route-wide create out of the collection toolbar", () => {

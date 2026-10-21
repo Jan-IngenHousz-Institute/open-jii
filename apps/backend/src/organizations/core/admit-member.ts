@@ -73,7 +73,7 @@ export async function admitMember(
   },
 ): Promise<AdmitMemberOutcome> {
   const locked = await tx
-    .select({ id: organizations.id })
+    .select({ id: organizations.id, type: organizations.type })
     .from(organizations)
     .where(and(eq(organizations.id, organizationId), isNotPersonalOrgSql()))
     .limit(1)
@@ -107,7 +107,9 @@ export async function admitMember(
 
   // `>=`, matching Better Auth's own check: the limit is how many members an
   // organization may hold, so the hundredth admission is the last one that lands.
-  if (members >= ORGANIZATION_MEMBERSHIP_LIMIT) return "organization-full";
+  if (locked[0].type !== "demo" && members >= ORGANIZATION_MEMBERSHIP_LIMIT) {
+    return "organization-full";
+  }
 
   const inserted = await tx
     .insert(organizationMembers)

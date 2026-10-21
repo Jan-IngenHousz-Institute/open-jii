@@ -5,6 +5,7 @@ import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { Avatar } from "~/shared/ui/Avatar";
 import { Card } from "~/shared/ui/Card";
+import { Tag } from "~/shared/ui/Tag";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { OrganizationMembershipTags } from "~/shared/ui/organization-membership-tag";
 import { organizationTypeLabelKey } from "~/shared/ui/organization-type-label";
@@ -50,6 +51,7 @@ export function OrganizationCard({ organization, onPress }: OrganizationCardProp
               >
                 {organization.name}
               </Text>
+              {organization.type === "demo" && <Tag>{t("organizations:type.demo")}</Tag>}
               <OrganizationMembershipTags
                 visibility={organization.visibility}
                 membershipStatus={organization.membershipStatus}

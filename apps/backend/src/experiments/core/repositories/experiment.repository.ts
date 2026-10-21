@@ -44,7 +44,10 @@ import {
   ftsRank,
   searchScore,
 } from "../../../common/utils/fts";
-import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
+import {
+  owningOrganizationNameSql,
+  owningOrganizationTypeSql,
+} from "../../../common/utils/owning-organization";
 import {
   getAnonymizedAvatarUrl,
   getAnonymizedFirstName,
@@ -356,6 +359,7 @@ export class ExperimentRepository {
       ownerFirstName: getAnonymizedFirstName(),
       ownerLastName: getAnonymizedLastName(),
       organizationName: owningOrganizationNameSql("experiments"),
+      organizationType: owningOrganizationTypeSql("experiments"),
       membersCount: experimentMembersCountSql(),
       membershipStatus: sql<ExperimentMembershipStatus>`CASE
         WHEN ${isMember} THEN 'member'
@@ -658,6 +662,7 @@ export class ExperimentRepository {
           name: experiments.name,
           status: experiments.status,
           organizationName: owningOrganizationNameSql("experiments"),
+          organizationType: owningOrganizationTypeSql("experiments"),
           openedAt: resourceVisits.visitedAt,
           callerRole,
         })
@@ -703,7 +708,10 @@ export class ExperimentRepository {
   async findOne(id: string): Promise<Result<ExperimentDto | null>> {
     return tryCatch(async () => {
       const result = await this.database
-        .select(experimentColumns)
+        .select({
+          ...experimentColumns,
+          organizationType: owningOrganizationTypeSql("experiments"),
+        })
         .from(experiments)
         .where(eq(experiments.id, id))
         .limit(1);
@@ -719,7 +727,10 @@ export class ExperimentRepository {
   async findByName(name: string): Promise<Result<ExperimentDto | null>> {
     return tryCatch(async () => {
       const result = await this.database
-        .select(experimentColumns)
+        .select({
+          ...experimentColumns,
+          organizationType: owningOrganizationTypeSql("experiments"),
+        })
         .from(experiments)
         .where(eq(experiments.name, name))
         .limit(1);
@@ -842,6 +853,7 @@ export class ExperimentRepository {
         ownerFirstName: getAnonymizedFirstName(),
         ownerLastName: getAnonymizedLastName(),
         organizationName: owningOrganizationNameSql("experiments"),
+        organizationType: owningOrganizationTypeSql("experiments"),
         membersCount: experimentMembersCountSql(),
       };
 
@@ -912,7 +924,10 @@ export class ExperimentRepository {
   async findExpiredEmbargoes(): Promise<Result<ExperimentDto[]>> {
     return tryCatch(async () => {
       const result = await this.database
-        .select(experimentColumns)
+        .select({
+          ...experimentColumns,
+          organizationType: owningOrganizationTypeSql("experiments"),
+        })
         .from(experiments)
         .where(
           and(

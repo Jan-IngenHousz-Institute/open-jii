@@ -102,6 +102,7 @@ export class OrganizationJoinRequestRepository {
         FROM ${organizations}
         WHERE ${organizations.id} = ${organizationId}::uuid
           AND ${organizations.visibility} = 'public'
+          AND (${organizations.type} IS NULL OR ${organizations.type}::text <> 'demo')
           AND ${isNotPersonalOrgSql()}
           AND NOT EXISTS (
             SELECT 1 FROM ${organizationMembers}

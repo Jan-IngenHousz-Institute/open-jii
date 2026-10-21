@@ -6,8 +6,14 @@ import { useSearchPending } from "@/hooks/useSearchPending";
 import { useUrlState } from "@/hooks/useUrlState";
 import { useState } from "react";
 
-import { zOrganizationSort } from "@repo/api/domains/organization/organization.schema";
-import type { OrganizationVisibility } from "@repo/api/domains/organization/organization.schema";
+import {
+  zOrganizationType,
+  zOrganizationSort,
+} from "@repo/api/domains/organization/organization.schema";
+import type {
+  OrganizationType,
+  OrganizationVisibility,
+} from "@repo/api/domains/organization/organization.schema";
 
 import { useListSorting } from "../../useListSorting";
 
@@ -19,6 +25,7 @@ export interface OrganizationListItem {
   memberCount: number;
   resourceCount: number;
   visibility: OrganizationVisibility;
+  type?: OrganizationType | null;
   /** Labels the resource count. Derived once here, so `pending_request` is excluded in one place. */
   isMember: boolean;
 }
@@ -35,6 +42,14 @@ export function useOrganizationsList() {
     key: "q",
     serialize: (value) => (value === "" ? null : value),
     parse: (raw) => raw ?? "",
+  });
+  const [type, setTypeState] = useUrlState<OrganizationType | "all">({
+    key: "type",
+    serialize: (value) => (value === "all" ? null : value),
+    parse: (raw) => {
+      const parsed = zOrganizationType.safeParse(raw);
+      return parsed.success ? parsed.data : "all";
+    },
   });
   const [page, setPage] = useState(1);
   const [debouncedSearch] = useDebounce(search);
@@ -56,8 +71,9 @@ export function useOrganizationsList() {
     isFetching: directory.isFetching,
   });
 
-  const allOrganizations: OrganizationListItem[] = (directory.data?.organizations ?? []).map(
-    (organization) => ({
+  const allOrganizations: OrganizationListItem[] = (directory.data?.organizations ?? [])
+    .filter((organization) => type === "all" || organization.type === type)
+    .map((organization) => ({
       id: organization.id,
       name: organization.name,
       description: organization.description,
@@ -66,10 +82,10 @@ export function useOrganizationsList() {
       // Read from the row, not assumed: the directory carries the caller's own private
       // organizations, so hardcoding "public" here would strip their badge.
       visibility: organization.visibility,
+      type: organization.type,
       // `pending_request` is not membership.
       isMember: organization.membershipStatus === "member",
-    }),
-  );
+    }));
   const totalPages = Math.max(1, Math.ceil(allOrganizations.length / PAGE_SIZE));
   if (page > totalPages) setPage(totalPages);
   const currentPage = Math.min(page, totalPages);
@@ -79,6 +95,11 @@ export function useOrganizationsList() {
   );
 
   return {
+    type,
+    setType: (value: OrganizationType | "all") => {
+      setTypeState(value);
+      setPage(1);
+    },
     search,
     setSearch,
     /** The search box's own spinner: a pending term, or the request it triggered. */

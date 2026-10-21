@@ -1,6 +1,7 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
+import { zOrganizationType } from "@repo/api/domains/organization/organization-type.schema";
 import type { experimentStatusEnum, experimentVisibilityEnum } from "@repo/database";
 import { experiments } from "@repo/database";
 
@@ -59,6 +60,7 @@ export const selectExperimentSchema = createSelectSchema(experiments)
     ownerFirstName: z.string().nullable().optional(),
     /** Display name of the owning organization; `null` for a personal workspace. */
     organizationName: z.string().nullish(),
+    organizationType: zOrganizationType.nullable().optional(),
     ownerLastName: z.string().nullable().optional(),
     /** Selected by the listing and the access read, absent from the plain column reads. */
     membersCount: z.number().int().optional(),

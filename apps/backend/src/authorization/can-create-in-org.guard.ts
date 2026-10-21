@@ -9,6 +9,8 @@ import {
 } from "@nestjs/common";
 import type { Request } from "express";
 
+import { db, eq, organizations } from "@repo/database";
+
 import { AuthorizationService } from "./authorization.service";
 
 interface AuthenticatedRequest extends Request {
@@ -30,7 +32,7 @@ export class CanCreateInOrgGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const body = request.body as { organizationId?: unknown } | undefined;
+    const body = request.body as { organizationId?: unknown; visibility?: unknown } | undefined;
     const orgId = body?.organizationId;
     // No explicit target org → defaults to the caller's personal org later.
     if (typeof orgId !== "string" || orgId.length === 0) {
@@ -51,6 +53,16 @@ export class CanCreateInOrgGuard implements CanActivate {
         userId,
       });
       throw new ForbiddenException("You cannot create resources in this organization");
+    }
+    if (body?.visibility === "private") {
+      const targetOrganizations = await db
+        .select({ type: organizations.type })
+        .from(organizations)
+        .where(eq(organizations.id, orgId))
+        .limit(1);
+      if (targetOrganizations.length > 0 && targetOrganizations[0].type === "demo") {
+        throw new ForbiddenException("Demo organizations can only own public resources");
+      }
     }
     return true;
   }

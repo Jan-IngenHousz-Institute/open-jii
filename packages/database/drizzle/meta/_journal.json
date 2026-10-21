@@ -428,6 +428,13 @@
       "when": 1792575966709,
       "tag": "0060_demo_organization_type",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1792575967709,
+      "tag": "0061_demo_public_invariants",
+      "breakpoints": true
     }
   ]
 }

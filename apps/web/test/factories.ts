@@ -108,6 +108,7 @@ export function createExperiment(overrides: Partial<ExperimentListItem> = {}): E
     workbookId: null,
     workbookVersionId: null,
     organizationId: null,
+    organizationType: null,
     ownerFirstName: "John",
     ownerLastName: "Doe",
     membershipStatus: "none",
