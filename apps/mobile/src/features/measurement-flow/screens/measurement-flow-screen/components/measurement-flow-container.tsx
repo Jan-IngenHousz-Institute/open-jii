@@ -6,8 +6,8 @@ import { useResumeSnapshotHydration } from "~/features/measurement-flow/hooks/us
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 
 import { ExperimentSelectionStep } from "./experiment-selection-step";
-import { QuestionsOnlySubmitNode } from "./flow-nodes/questions-only-submit-node";
 import { useIsPlotStepShowing } from "./flow-nodes/plot-node/next-plot";
+import { QuestionsOnlySubmitNode } from "./flow-nodes/questions-only-submit-node";
 import { ActiveState } from "./flow-states/active-state";
 import { EmptyState } from "./flow-states/empty-state";
 import { LoadingState } from "./flow-states/loading-state";
@@ -66,8 +66,7 @@ export function MeasurementFlowContainer() {
   // its own bottom inset. Measurement/analysis nodes render their own action
   // bar instead, so the card must supply the inset for those.
   const navButtonsCarryInset =
-    !isPlotStepShowing &&
-    (currentNode.type === "instruction" || currentNode.type === "question");
+    !isPlotStepShowing && (currentNode.type === "instruction" || currentNode.type === "question");
 
   return (
     <View

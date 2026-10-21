@@ -48,13 +48,23 @@ export function PlacementDatePicker({ id, value, onChange }: PlacementDatePicker
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button id={id} type="button" variant="outline" className="w-full justify-between font-normal">
+        <Button
+          id={id}
+          type="button"
+          variant="outline"
+          className="w-full justify-between font-normal"
+        >
           {label}
           <CalendarIcon className="ml-2 size-4" aria-hidden />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <Calendar mode="single" selected={selected} defaultMonth={selected} onSelect={handleSelect} />
+        <Calendar
+          mode="single"
+          selected={selected}
+          defaultMonth={selected}
+          onSelect={handleSelect}
+        />
       </PopoverContent>
     </Popover>
   );

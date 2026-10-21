@@ -57,7 +57,9 @@ export function PlacementPlotSelect({ id, units, value, onChange }: PlacementPlo
           aria-expanded={open}
           className={cn("w-full justify-between font-normal", !selected && "text-muted-foreground")}
         >
-          <span className="truncate">{selected?.identifier ?? t("layout.placement.plotPlaceholder")}</span>
+          <span className="truncate">
+            {selected?.identifier ?? t("layout.placement.plotPlaceholder")}
+          </span>
           <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
