@@ -2,6 +2,7 @@ import { AuthService } from "@thallesp/nestjs-better-auth";
 import { betterAuth } from "better-auth";
 import { z } from "zod";
 
+import { DISABLED_ADMIN_PATHS } from "@repo/auth/admin";
 import { openJiiGuest } from "@repo/auth/guest";
 import type * as AuthServer from "@repo/auth/server";
 import {
@@ -11,19 +12,24 @@ import {
   eq,
   organizationMembers,
   organizations,
+  notifications,
   profiles,
+  rateLimits,
   sessions,
   users,
+  verifications,
 } from "@repo/database";
 
 import { TestHarness } from "../test/test-harness";
+import guestAuthEndpoints from "./guest-auth-endpoints.json";
 
 const enabled = vi.fn().mockResolvedValue(true);
 const { auth: productionAuth } = await vi.importActual<typeof AuthServer>("@repo/auth/server");
-function createAuth(hooks: typeof productionAuth.options.hooks) {
+function createAuth(hooks: typeof productionAuth.options.hooks, limiterEnabled = false) {
   return betterAuth({
     ...productionAuth.options,
     hooks,
+    rateLimit: { ...productionAuth.options.rateLimit, enabled: limiterEnabled },
     plugins: productionAuth.options.plugins.map((plugin) =>
       plugin.id === "anonymous" ? openJiiGuest({ isDemoEnabled: enabled }) : plugin,
     ),
@@ -73,10 +79,108 @@ describe("anonymous sessions on the production auth boundary", () => {
   });
   beforeEach(async () => {
     await app.beforeEach();
+    await db.delete(rateLimits);
     enabled.mockResolvedValue(true);
   });
   afterEach(() => app.afterEach());
   afterAll(() => app.teardown());
+
+  it("uses the persisted ten-per-minute entry limit and resets the window", async () => {
+    auth = createAuth(
+      app.module.get<AuthService<typeof productionAuth>>(AuthService).instance.options.hooks,
+      true,
+    );
+    const initial = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(initial);
+    const enter = (ip: string, extraAddress = "198.51.100.99") =>
+      auth.handler(
+        new Request(`${base}/sign-in/anonymous`, {
+          method: "POST",
+          headers: {
+            origin: "http://localhost:3000",
+            "content-type": "application/json",
+            "x-forwarded-for": ip,
+            "x-real-ip": extraAddress,
+          },
+          body: JSON.stringify({ name: "Synthetic" }),
+        }),
+      );
+    try {
+      for (let i = 0; i < 10; i++) expect((await enter("192.0.2.1")).status).toBe(200);
+      const limited = await enter("192.0.2.1", "198.51.100.100");
+      expect(limited.status).toBe(429);
+      expect(Number(limited.headers.get("x-retry-after"))).toBeGreaterThan(0);
+      expect((await enter("192.0.2.2")).status).toBe(200);
+      clock.mockReturnValue(initial + 61_000);
+      expect((await enter("192.0.2.1")).status).toBe(200);
+    } finally {
+      clock.mockRestore();
+      auth = createAuth(
+        app.module.get<AuthService<typeof productionAuth>>(AuthService).instance.options.hooks,
+      );
+    }
+  });
+
+  it("classifies all installed auth endpoints and refuses every denied HTTP route without effects", async () => {
+    const actual = Object.entries(auth.api)
+      .map(([name, endpoint]) => ({
+        name,
+        path: endpoint.path || null,
+        methods: Array.isArray(endpoint.options.method)
+          ? endpoint.options.method
+          : [endpoint.options.method],
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    expect(guestAuthEndpoints.map(({ name, path, methods }) => ({ name, path, methods }))).toEqual(
+      actual,
+    );
+    const visitor = await guest();
+    const before = {
+      users: await db.select().from(users),
+      sessions: await db.select().from(sessions),
+      members: await db.select().from(organizationMembers),
+    };
+    for (const endpoint of guestAuthEndpoints) {
+      if (!endpoint.path) {
+        expect(endpoint.classification).toBe("server-only");
+        continue;
+      }
+      expect(endpoint.classification === "unreachable:404").toBe(
+        DISABLED_ADMIN_PATHS.includes(endpoint.path),
+      );
+      if (!["deny:403", "unreachable:404"].includes(endpoint.classification)) continue;
+      for (const method of endpoint.methods) {
+        const path = endpoint.path.replace(/:[^/]+/g, "synthetic");
+        const response = await auth.handler(
+          new Request(`${base}${path}`, {
+            method,
+            headers: {
+              origin: "http://localhost:3000",
+              "content-type": "application/json",
+              cookie: visitor.cookie,
+            },
+            ...(method !== "GET"
+              ? {
+                  body: JSON.stringify({
+                    name: "Synthetic",
+                    email: "unclaimed@example.test",
+                    otp: "000000",
+                    userId: visitor.id,
+                    role: "admin",
+                  }),
+                }
+              : {}),
+          }),
+        );
+        expect(response.status, `${method} ${path}: ${await response.clone().text()}`).toBe(
+          endpoint.classification === "unreachable:404" ? 404 : 403,
+        );
+      }
+    }
+    expect(await db.select().from(users)).toEqual(before.users);
+    expect(await db.select().from(sessions)).toEqual(before.sessions);
+    expect(await db.select().from(organizationMembers)).toEqual(before.members);
+  });
 
   it("creates a named member only in Demo, without a profile or workspace", async () => {
     const demo = await app.createOrganization(undefined, { type: "demo", visibility: "public" });
@@ -93,6 +197,7 @@ describe("anonymous sessions on the production auth boundary", () => {
     expect(
       await db.select().from(organizationMembers).where(eq(organizationMembers.userId, user.id)),
     ).toMatchObject([{ organizationId: demo, role: "member" }]);
+    expect(await db.select().from(notifications)).toEqual([]);
     const [stored] = await db.select().from(users).where(eq(users.id, user.id));
     expect(stored.email).toMatch(/@guest\.openjii\.invalid$/);
     expect(stored.registered).toBe(false);
@@ -106,6 +211,28 @@ describe("anonymous sessions on the production auth boundary", () => {
       headers: new Headers({ cookie: user.cookie }),
     });
     expect(internalSession?.user.email).toMatch(/@guest\.openjii\.invalid$/);
+  });
+
+  it("ignores forged identity fields and accepts a trimmed Unicode name at the limit", async () => {
+    const forgedId = crypto.randomUUID();
+    const name = "é".repeat(60);
+    const response = await post("/sign-in/anonymous", {
+      name: `  ${name}  `,
+      id: forgedId,
+      userId: forgedId,
+      email: "not-used@example.test",
+      isAnonymous: false,
+      role: "admin",
+    });
+    expect(response.status).toBe(200);
+    const body = z
+      .object({ user: z.object({ id: z.string(), name: z.string(), isAnonymous: z.boolean() }) })
+      .parse(await response.json());
+    expect(body.user.id).not.toBe(forgedId);
+    expect(body.user.name).toBe(name);
+    const [stored] = await db.select().from(users).where(eq(users.id, body.user.id));
+    expect(stored).toMatchObject({ isAnonymous: true, role: "user", registered: false, name });
+    expect(stored.email).toMatch(/@guest\.openjii\.invalid$/);
   });
 
   it("uses Guest for an omitted name and refuses invalid names before creating rows", async () => {
@@ -146,6 +273,7 @@ describe("anonymous sessions on the production auth boundary", () => {
     expect(
       await db.select().from(organizationMembers).where(eq(organizationMembers.userId, visitor.id)),
     ).toHaveLength(1);
+    expect(await db.select().from(notifications)).toEqual([]);
   });
 
   it("serializes simultaneous guest and Demo creation across database connections", async () => {
@@ -253,6 +381,25 @@ describe("anonymous sessions on the production auth boundary", () => {
       role: "user",
       registered: false,
     });
+  });
+
+  it("refuses all email entry paths for reserved and authoritative guest addresses", async () => {
+    const visitor = await guest();
+    const address = `legacy-${crypto.randomUUID()}@example.test`;
+    await db.update(users).set({ email: address }).where(eq(users.id, visitor.id));
+    const before = await db.select().from(verifications);
+    for (const email of [address, "synthetic@guest.openjii.invalid"]) {
+      for (const path of [
+        "/email-otp/send-verification-otp",
+        "/send-verification-email",
+        "/email-otp/request-email-change",
+        "/organization/invite-member",
+      ]) {
+        const response = await post(path, { email, type: "sign-in", role: "member" });
+        expect(response.status, path).toBe(403);
+      }
+    }
+    expect(await db.select().from(verifications)).toEqual(before);
   });
 
   it("refuses email repair through the Nest-wired before hook before any user change", async () => {
