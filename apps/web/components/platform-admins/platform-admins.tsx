@@ -1,8 +1,11 @@
 "use client";
 
 import { usePrincipal } from "@/components/auth/principal-context";
+import { withPrincipal } from "@/hooks/principal-query-key";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useLocale } from "@/hooks/useLocale";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
+import { useSearchPending } from "@/hooks/useSearchPending";
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -27,20 +30,49 @@ export function PlatformAdmins() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const term = search.trim();
+  const [debouncedTerm] = useDebounce(term);
   const admins = useQuery({
     ...orpc.users.listPlatformAdmins.queryOptions({ input: {} }),
-    queryKey: ["platform-admins", userId],
+    queryKey: withPrincipal(orpc.users.listPlatformAdmins.queryKey({ input: {} }), userId),
     enabled: allowed,
   });
   const candidates = useQuery({
-    ...orpc.users.searchPlatformAdminCandidates.queryOptions({ input: { search: search.trim() } }),
-    queryKey: ["platform-admin-candidates", userId, search.trim()],
-    enabled: allowed && search.trim().length >= 2,
+    ...orpc.users.searchPlatformAdminCandidates.queryOptions({ input: { search: debouncedTerm } }),
+    queryKey: withPrincipal(
+      orpc.users.searchPlatformAdminCandidates.queryKey({ input: { search: debouncedTerm } }),
+      userId,
+    ),
+    enabled: allowed && debouncedTerm.length >= 2,
+  });
+  const isSearchPending = useSearchPending({
+    search: term,
+    debouncedSearch: debouncedTerm,
+    isFetching: candidates.isFetching,
   });
 
-  const eligibleCandidates = candidates.data?.filter(
-    (candidate) => !admins.data?.some((person) => person.id === candidate.id),
-  );
+  const searching = term.length >= 2;
+  const eligibleCandidates = searching
+    ? candidates.data?.filter(
+        (candidate) => !admins.data?.some((person) => person.id === candidate.id),
+      )
+    : undefined;
+  const dateUnknown = t("platformAdmins.dateUnknown");
+
+  function appointedLabel(appointedAt: string | null): string {
+    if (appointedAt === null) return dateUnknown;
+    return new Date(appointedAt).toLocaleDateString(locale);
+  }
+
+  const searchStatus = describeSearch();
+
+  function describeSearch(): "loading" | "none" | "alreadyAdmin" | undefined {
+    if (!searching) return undefined;
+    if (isSearchPending || candidates.isPending) return "loading";
+    if (candidates.data?.length === 0) return "none";
+    if (eligibleCandidates?.length === 0) return "alreadyAdmin";
+    return undefined;
+  }
 
   useEffect(() => {
     if (access.data && !allowed) router.replace(`/${locale}/platform`);
@@ -55,7 +87,7 @@ export function PlatformAdmins() {
       if (result.error) throw new Error(result.error.message);
       await admins.refetch();
       setSearch("");
-      setNotice(t(role === "admin" ? "platformAdmins.appointed" : "platformAdmins.removed"));
+      setNotice(t("platformAdmins.roleChanged", { context: role }));
     } catch {
       setError(t("platformAdmins.changeFailed"));
     } finally {
@@ -77,7 +109,11 @@ export function PlatformAdmins() {
           {error}
         </p>
       )}
-      {notice && <p role="status">{notice}</p>}
+      {/* Mounted from the start, so a screen reader is already listening when the
+          outcome of an appointment or removal arrives. */}
+      <p role="status" aria-live="polite" className={notice ? undefined : "sr-only"}>
+        {notice}
+      </p>
       <Card className="space-y-4 p-4">
         <h2 className="font-semibold">{t("platformAdmins.current")}</h2>
         {admins.isPending && <p role="status">{t("common.loading")}</p>}
@@ -100,9 +136,7 @@ export function PlatformAdmins() {
                 <Badge variant="secondary">{t("platformAdmins.configured")}</Badge>
               ) : (
                 <p className="text-muted-foreground text-sm">
-                  {person.appointedAt
-                    ? new Date(person.appointedAt).toLocaleDateString(locale)
-                    : t("platformAdmins.dateUnknown")}
+                  {appointedLabel(person.appointedAt)}
                 </p>
               )}
             </div>
@@ -128,21 +162,18 @@ export function PlatformAdmins() {
           maxLength={100}
           onChange={(event) => setSearch(event.target.value)}
         />
-        {search.trim().length >= 2 && candidates.isPending && (
-          <p role="status">{t("common.loading")}</p>
-        )}
-        {candidates.isError && <p role="alert">{t("platformAdmins.searchFailed")}</p>}
-        {search.trim().length >= 2 && candidates.data?.length === 0 && (
-          <p>{t("platformAdmins.noResults")}</p>
-        )}
-        {search.trim().length >= 2 &&
-          candidates.data &&
-          candidates.data.length > 0 &&
-          eligibleCandidates?.length === 0 && <p>{t("platformAdmins.alreadyAdmin")}</p>}
+        <p role="status" aria-live="polite" className={searchStatus ? undefined : "sr-only"}>
+          {searchStatus && t("platformAdmins.searchStatus", { context: searchStatus })}
+        </p>
+        {searching && candidates.isError && <p role="alert">{t("platformAdmins.searchFailed")}</p>}
         {eligibleCandidates?.map((candidate) => (
           <div key={candidate.id} className="flex items-center justify-between gap-3">
             <span className="min-w-0 break-words">{candidate.name}</span>
-            <Button disabled={pending} onClick={() => void setRole(candidate.id, "admin")}>
+            <Button
+              aria-label={t("platformAdmins.appointNamed", { name: candidate.name })}
+              disabled={pending}
+              onClick={() => void setRole(candidate.id, "admin")}
+            >
               {t("platformAdmins.appoint")}
             </Button>
           </div>

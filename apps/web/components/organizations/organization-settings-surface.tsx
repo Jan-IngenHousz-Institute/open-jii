@@ -37,9 +37,27 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
 
 import { OrganizationDangerZone } from "./organization-danger-zone";
-import { ORGANIZATION_TYPES, organizationTypeLabelKey } from "./organization-labels";
+import {
+  ORGANIZATION_TYPES,
+  organizationTypeLabelKey,
+  visibilityKind,
+} from "./organization-labels";
 import { RESOURCE_SEGMENT } from "./organization-resource-meta";
 import { organizationPath } from "./organization-routes";
+
+/** Better Auth refusal codes this screen words itself, as the `saveError` context. */
+const SAVE_ERROR_REASONS: Record<string, string | undefined> = {
+  DEMO_PRIVATE_RESOURCES: "demoPrivateResources",
+  ORGANIZATION_CHANGED: "organization_changed",
+};
+
+/** What a Demo organization may own, and so what a refused conversion asks to publish. */
+const DEMO_PUBLIC_RESOURCE_TYPES: readonly OrganizationResource["type"][] = [
+  "experiment",
+  "workbook",
+  "protocol",
+  "macro",
+];
 
 /** Sentinel for "no type chosen": a Radix select item cannot carry an empty value. */
 const NO_TYPE = "none";
@@ -88,6 +106,11 @@ function OwnerSettingsForm({ organization }: { organization: OrganizationProfile
   const [website, setWebsite] = useState(organization.website ?? "");
   const [location, setLocation] = useState(organization.location ?? "");
 
+  // Choosing Demo is a draft until it is saved, but the card has to say what saving will
+  // do, so Private is ruled out and Public shown as chosen from the moment it is picked.
+  const isDemoDraft = type === "demo";
+  const shownVisibility = isDemoDraft ? "public" : organization.visibility;
+
   const trimmedName = name.trim();
   const slugRejection = organizationSlugRejection(slug);
   const isNameMissing = trimmedName.length === 0;
@@ -133,17 +156,24 @@ function OwnerSettingsForm({ organization }: { organization: OrganizationProfile
       });
       toast({ description: t("organizations.settings.saved") });
     } catch (err) {
-      const demoBlocked = err instanceof AuthClientError && err.code === "DEMO_PRIVATE_RESOURCES";
-      if (demoBlocked) {
+      const reason =
+        err instanceof AuthClientError ? SAVE_ERROR_REASONS[err.code ?? ""] : undefined;
+      if (reason === "demoPrivateResources") {
         const refreshed = await resources.refetch();
         setPrivateResources(
-          refreshed.data?.resources.filter((resource) => resource.visibility === "private") ?? [],
+          refreshed.data?.resources.filter(
+            (resource) =>
+              DEMO_PUBLIC_RESOURCE_TYPES.includes(resource.type) &&
+              resource.visibility === "private",
+          ) ?? [],
         );
       }
+      // A refusal this screen has copy for is shown in the locale; any other keeps the
+      // server's own message ahead of the generic one.
+      let serverMessage = authErrorMessage(err);
+      if (reason) serverMessage = undefined;
       toast({
-        description: demoBlocked
-          ? t("organizations.settings.demoConversionBlocked")
-          : (authErrorMessage(err) ?? t("organizations.settings.saveFailed")),
+        description: serverMessage ?? t("organizations.settings.saveError", { context: reason }),
         variant: "destructive",
       });
     }
@@ -320,11 +350,7 @@ function OwnerSettingsForm({ organization }: { organization: OrganizationProfile
         <div className="space-y-0.5">
           <h3 className="text-sm font-semibold">{t("organizations.visibility.title")}</h3>
           <p className="text-muted-foreground text-xs leading-relaxed">
-            {t(
-              type === "demo"
-                ? "organizations.visibility.demoDescription"
-                : "organizations.visibility.description",
-            )}
+            {t("organizations.visibility.description", { context: type })}
           </p>
         </div>
 
@@ -339,20 +365,18 @@ function OwnerSettingsForm({ organization }: { organization: OrganizationProfile
           <VisibilityCard
             icon={Lock}
             title={t("organizations.visibility.privateLabel")}
-            description={t("organizations.visibility.privateHint")}
-            isSelected={organization.visibility === "private"}
-            disabled={isSaving || organization.type === "demo"}
+            description={t("organizations.visibility.hint", { context: "private" })}
+            isSelected={shownVisibility === "private"}
+            disabled={isSaving || isDemoDraft}
             onSelect={() => void setVisibility("private")}
           />
           <VisibilityCard
             icon={Globe}
             title={t("organizations.visibility.publicLabel")}
-            description={t(
-              type === "demo"
-                ? "organizations.visibility.demoHint"
-                : "organizations.visibility.publicHint",
-            )}
-            isSelected={organization.visibility === "public"}
+            description={t("organizations.visibility.hint", {
+              context: visibilityKind(type, "public"),
+            })}
+            isSelected={shownVisibility === "public"}
             disabled={isSaving}
             onSelect={() => void setVisibility("public")}
           />

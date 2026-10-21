@@ -82,22 +82,16 @@ describe("<ReviewStep />", () => {
   it("says what a private organization is about to be", () => {
     renderReview();
 
-    expect(screen.getByText("organizations.create.privateNote")).toBeInTheDocument();
+    // Which sentence each kind gets is read in the real locales by demo-organization-copy.test.
+    expect(screen.getByText("organizations.create.visibilityNote")).toBeInTheDocument();
     expect(screen.getByText("organizations.visibility.privateLabel")).toBeInTheDocument();
   });
 
   it("says what a public organization is about to be", () => {
     renderReview({ visibility: "public" });
 
-    expect(screen.getByText("organizations.create.publicNote")).toBeInTheDocument();
+    expect(screen.getByText("organizations.create.visibilityNote")).toBeInTheDocument();
     expect(screen.getByText("organizations.visibility.publicLabel")).toBeInTheDocument();
-    expect(screen.queryByText("organizations.create.privateNote")).not.toBeInTheDocument();
-  });
-
-  it("describes public Demo resources without promising join requests", () => {
-    renderReview({ type: "demo", visibility: "public" });
-    expect(screen.getByText("organizations.create.demoNote")).toBeInTheDocument();
-    expect(screen.queryByText("organizations.create.publicNote")).not.toBeInTheDocument();
   });
 
   it("sends each section's edit control back to the step that owns it", async () => {
