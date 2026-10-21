@@ -6,6 +6,8 @@
     "transactional-emails",
     "alert-banners",
     "force-update-gate",
-    "public-navigation"
+    "public-navigation",
+    "guest-sessions",
+    "guest-privacy-draft"
   ]
 }

@@ -4,5 +4,11 @@
     "staged": "apps/docs/.capture/web/platform-admin-roster.webm",
     "ticket": "OJD-2217",
     "date": "2026-10-29"
+  },
+  {
+    "path": "/img/guide/web/guest-demo-public-read.webm",
+    "staged": "apps/docs/.capture/web/guest-demo-public-read.webm",
+    "ticket": "OJD-2231",
+    "date": "2026-10-21"
   }
 ]
