@@ -1,6 +1,9 @@
 import nock from "nock";
 
-import type { DataExportJobInput } from "../../../experiments/core/ports/databricks.port";
+import type {
+  DataExportJobInput,
+  DataUploadJobInput,
+} from "../../../experiments/core/ports/databricks.port";
 import { TestHarness } from "../../../test/test-harness";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
 import type { Result } from "../../utils/fp-utils";
@@ -71,17 +74,18 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("triggerDataUploadJob", () => {
-    it("should successfully trigger data upload job", async () => {
+    it("uses the upload id as the idempotency token and the record's year as the prefix", async () => {
       const mockParams = {
-        sourceKind: "ambyte" as const,
+        sourceKind: "ambyte",
         experimentId: "exp-123",
         experimentName: "Test Experiment",
         uploadDirectory: "upload_2026-01-01",
-        uploadId: "upload-1",
+        uploadId: "8c1f6a0e-4c35-4d7e-9a43-3f0b2a5d1e77",
         uploadTableId: "11111111-1111-1111-1111-111111111111",
         uploadTableName: "ambyte_legacy",
         userId: "user-1",
-      };
+        createdAt: new Date("2025-12-31T23:59:00Z"),
+      } satisfies DataUploadJobInput;
 
       const mockResponse = {
         run_id: 54321,
@@ -99,17 +103,17 @@ describe("DatabricksAdapter", () => {
         token_type: "Bearer",
       });
 
-      // Mock job run-now request - expect CATALOG_NAME to be added to params
-      const expectedYearPrefix = new Date().getUTCFullYear().toString();
       nock(databricksHost)
         .post(
           `${DatabricksJobsService.JOBS_ENDPOINT}/run-now`,
-          (body: { job_parameters?: Record<string, string> }) => {
+          (body: { idempotency_token?: string; job_parameters?: Record<string, string> }) => {
             return (
+              body.idempotency_token === mockParams.uploadId &&
               body.job_parameters?.CATALOG_NAME === "main" &&
               body.job_parameters.EXPERIMENT_ID === "exp-123" &&
               body.job_parameters.SOURCE_KIND === "ambyte" &&
-              body.job_parameters.YEAR_PREFIX === expectedYearPrefix
+              body.job_parameters.UPLOAD_ID === mockParams.uploadId &&
+              body.job_parameters.YEAR_PREFIX === "2025"
             );
           },
         )
@@ -1191,375 +1195,6 @@ describe("DatabricksAdapter", () => {
       );
 
       expect(result.isFailure()).toBe(true);
-    });
-  });
-
-  describe("getUploadMetadata", () => {
-    it("queries experiment_upload_metadata with filters and returns schema data", async () => {
-      const experimentId = "exp-up-1";
-      const uploadTableName = "leaf_traits";
-
-      const sqlService = testApp.module.get(DatabricksSqlService);
-      const querySpy = vi.spyOn(sqlService, "executeSqlQuery").mockResolvedValue(
-        success({
-          columns: [{ name: "upload_id", type_name: "string", type_text: "STRING", position: 0 }],
-          rows: [["u1"]],
-          totalRows: 1,
-          truncated: false,
-        }),
-      );
-
-      const result = await databricksAdapter.getUploadMetadata(experimentId, { uploadTableName });
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value.rows).toHaveLength(1);
-
-      expect(querySpy).toHaveBeenCalledOnce();
-      const [, sql] = querySpy.mock.calls[0];
-      expect(sql).toContain("experiment_upload_metadata");
-      expect(sql).toContain(`'${experimentId}'`);
-      expect(sql).toContain(`'${uploadTableName}'`);
-    });
-
-    it("omits upload_table_name filter when not provided", async () => {
-      const sqlService = testApp.module.get(DatabricksSqlService);
-      const querySpy = vi
-        .spyOn(sqlService, "executeSqlQuery")
-        .mockResolvedValue(success({ columns: [], rows: [], totalRows: 0, truncated: false }));
-
-      await databricksAdapter.getUploadMetadata("exp-up-2");
-
-      const [, sql] = querySpy.mock.calls[0];
-      expect(sql).toContain("experiment_upload_metadata");
-      expect(sql).not.toMatch(/where[\s\S]*upload_table_name\s*=/i);
-    });
-  });
-
-  describe("getActiveUploads", () => {
-    it("filters runs by experiment id and maps lifecycle states to upload statuses", async () => {
-      const experimentId = "exp-up-3";
-      const configService = testApp.module.get(DatabricksConfigService);
-      vi.spyOn(configService, "getDataUploadJobIdAsNumber").mockReturnValue(77);
-
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      nock(databricksHost)
-        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
-        .query(true)
-        .reply(200, {
-          runs: [
-            {
-              run_id: 1,
-              job_id: 77,
-              state: { life_cycle_state: "RUNNING" },
-              start_time: 1700_000_000_000,
-              job_parameters: [
-                { name: "EXPERIMENT_ID", value: experimentId },
-                { name: "UPLOAD_ID", value: "u-running" },
-                { name: "SOURCE_KIND", value: "csv" },
-                { name: "UPLOAD_TABLE_NAME", value: "leaf_traits" },
-                { name: "USER_ID", value: "user-1" },
-              ],
-            },
-            {
-              run_id: 2,
-              job_id: 77,
-              state: { life_cycle_state: "PENDING" },
-              start_time: 1700_000_001_000,
-              job_parameters: [
-                { name: "EXPERIMENT_ID", value: experimentId },
-                { name: "UPLOAD_ID", value: "u-pending" },
-                { name: "SOURCE_KIND", value: "tsv" },
-                { name: "USER_ID", value: "user-1" },
-              ],
-            },
-            {
-              run_id: 3,
-              job_id: 77,
-              state: { life_cycle_state: "RUNNING" },
-              start_time: 1700_000_002_000,
-              job_parameters: [{ name: "EXPERIMENT_ID", value: "other-exp" }],
-            },
-          ],
-          has_more: false,
-        });
-
-      const result = await databricksAdapter.getActiveUploads(experimentId);
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toHaveLength(2);
-      const byId = new Map(result.value.map((u) => [u.uploadId, u]));
-      expect(byId.get("u-running")?.status).toBe("running");
-      expect(byId.get("u-running")?.sourceKind).toBe("csv");
-      expect(byId.get("u-pending")?.status).toBe("pending");
-      expect(byId.get("u-pending")?.sourceKind).toBe("tsv");
-    });
-
-    it("further filters by upload table name when provided", async () => {
-      const experimentId = "exp-up-4";
-      const configService = testApp.module.get(DatabricksConfigService);
-      vi.spyOn(configService, "getDataUploadJobIdAsNumber").mockReturnValue(77);
-
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-      nock(databricksHost)
-        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
-        .query(true)
-        .reply(200, {
-          runs: [
-            {
-              run_id: 1,
-              job_id: 77,
-              state: { life_cycle_state: "RUNNING" },
-              start_time: 1700_000_000_000,
-              job_parameters: [
-                { name: "EXPERIMENT_ID", value: experimentId },
-                { name: "UPLOAD_TABLE_NAME", value: "leaf_traits" },
-                { name: "UPLOAD_ID", value: "u-1" },
-                { name: "USER_ID", value: "user-1" },
-                { name: "SOURCE_KIND", value: "csv" },
-              ],
-            },
-            {
-              run_id: 2,
-              job_id: 77,
-              state: { life_cycle_state: "RUNNING" },
-              start_time: 1700_000_001_000,
-              job_parameters: [
-                { name: "EXPERIMENT_ID", value: experimentId },
-                { name: "UPLOAD_TABLE_NAME", value: "other" },
-                { name: "UPLOAD_ID", value: "u-2" },
-                { name: "USER_ID", value: "user-1" },
-                { name: "SOURCE_KIND", value: "csv" },
-              ],
-            },
-          ],
-          has_more: false,
-        });
-
-      const result = await databricksAdapter.getActiveUploads(experimentId, {
-        uploadTableName: "leaf_traits",
-      });
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toHaveLength(1);
-      expect(result.value[0].uploadId).toBe("u-1");
-    });
-
-    it("propagates job-runs API failures", async () => {
-      const configService = testApp.module.get(DatabricksConfigService);
-      vi.spyOn(configService, "getDataUploadJobIdAsNumber").mockReturnValue(77);
-
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-      nock(databricksHost)
-        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
-        .query(true)
-        .reply(500, { message: "boom" });
-
-      const result = await databricksAdapter.getActiveUploads("exp-up-5");
-
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-    });
-  });
-
-  describe("getActiveUploads filter branches", () => {
-    it("skips runs that are missing UPLOAD_ID or USER_ID widgets (not our runs)", async () => {
-      const experimentId = "exp-up-internal-err";
-      const configService = testApp.module.get(DatabricksConfigService);
-      vi.spyOn(configService, "getDataUploadJobIdAsNumber").mockReturnValue(77);
-
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      nock(databricksHost)
-        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
-        .query(true)
-        .reply(200, {
-          runs: [
-            {
-              run_id: 999,
-              job_id: 77,
-              state: { life_cycle_state: "INTERNAL_ERROR" },
-              start_time: 1700_000_100_000,
-              job_parameters: [
-                { name: "EXPERIMENT_ID", value: experimentId },
-                { name: "SOURCE_KIND", value: "csv" },
-                // UPLOAD_ID + USER_ID deliberately omitted: run wasn't triggered by us.
-              ],
-            },
-          ],
-          has_more: false,
-        });
-
-      const result = await databricksAdapter.getActiveUploads(experimentId);
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toHaveLength(0);
-    });
-
-    it("skips runs whose SOURCE_KIND widget isn't a known kind", async () => {
-      const experimentId = "exp-up-bad-kind";
-      const configService = testApp.module.get(DatabricksConfigService);
-      vi.spyOn(configService, "getDataUploadJobIdAsNumber").mockReturnValue(77);
-
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      nock(databricksHost)
-        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
-        .query(true)
-        .reply(200, {
-          runs: [
-            {
-              run_id: 1000,
-              job_id: 77,
-              state: { life_cycle_state: "RUNNING" },
-              start_time: 1700_000_150_000,
-              job_parameters: [
-                { name: "EXPERIMENT_ID", value: experimentId },
-                { name: "UPLOAD_ID", value: "u-bad" },
-                { name: "USER_ID", value: "user-1" },
-                { name: "SOURCE_KIND", value: "orc" },
-              ],
-            },
-          ],
-          has_more: false,
-        });
-
-      const result = await databricksAdapter.getActiveUploads(experimentId);
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toHaveLength(0);
-    });
-
-    it("skips runs whose lifecycle state isn't queued/pending/running/terminating/internal_error", async () => {
-      const experimentId = "exp-up-skip";
-      const configService = testApp.module.get(DatabricksConfigService);
-      vi.spyOn(configService, "getDataUploadJobIdAsNumber").mockReturnValue(77);
-
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      nock(databricksHost)
-        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
-        .query(true)
-        .reply(200, {
-          runs: [
-            {
-              run_id: 1,
-              job_id: 77,
-              state: { life_cycle_state: "TERMINATED", result_state: "SUCCESS" },
-              start_time: 1700_000_200_000,
-              job_parameters: [{ name: "EXPERIMENT_ID", value: experimentId }],
-            },
-          ],
-          has_more: false,
-        });
-
-      const result = await databricksAdapter.getActiveUploads(experimentId);
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toHaveLength(0);
-    });
-  });
-
-  describe("getFailedUploads", () => {
-    it("returns only terminated non-SUCCESS runs and dedupes against completedUploadIds", async () => {
-      const experimentId = "exp-up-6";
-      const configService = testApp.module.get(DatabricksConfigService);
-      vi.spyOn(configService, "getDataUploadJobIdAsNumber").mockReturnValue(77);
-
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      nock(databricksHost)
-        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
-        .query(true)
-        .reply(200, {
-          runs: [
-            {
-              run_id: 10,
-              job_id: 77,
-              state: { life_cycle_state: "TERMINATED", result_state: "FAILED" },
-              start_time: 1700_000_010_000,
-              end_time: 1700_000_011_000,
-              job_parameters: [
-                { name: "EXPERIMENT_ID", value: experimentId },
-                { name: "UPLOAD_ID", value: "u-fail" },
-                { name: "USER_ID", value: "user-1" },
-                { name: "SOURCE_KIND", value: "csv" },
-              ],
-            },
-            {
-              run_id: 11,
-              job_id: 77,
-              state: { life_cycle_state: "TERMINATED", result_state: "SUCCESS" },
-              start_time: 1700_000_012_000,
-              end_time: 1700_000_013_000,
-              job_parameters: [
-                { name: "EXPERIMENT_ID", value: experimentId },
-                { name: "UPLOAD_ID", value: "u-ok" },
-                { name: "USER_ID", value: "user-1" },
-                { name: "SOURCE_KIND", value: "csv" },
-              ],
-            },
-            {
-              run_id: 12,
-              job_id: 77,
-              state: { life_cycle_state: "TERMINATED", result_state: "FAILED" },
-              start_time: 1700_000_014_000,
-              end_time: 1700_000_015_000,
-              job_parameters: [
-                { name: "EXPERIMENT_ID", value: experimentId },
-                { name: "UPLOAD_ID", value: "u-already-in-delta" },
-                { name: "USER_ID", value: "user-1" },
-                { name: "SOURCE_KIND", value: "csv" },
-              ],
-            },
-          ],
-          has_more: false,
-        });
-
-      const result = await databricksAdapter.getFailedUploads(
-        experimentId,
-        new Set(["u-already-in-delta"]),
-      );
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toHaveLength(1);
-      expect(result.value[0].uploadId).toBe("u-fail");
-      expect(result.value[0].status).toBe("failed");
     });
   });
 

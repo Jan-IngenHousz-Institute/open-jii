@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react";
 
-import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/uploads/experiment-uploads.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { DialogBody, DialogFooter } from "@repo/ui/components/dialog";
@@ -15,6 +15,10 @@ import {
 
 import { UploadHistoryPanel } from "./history/upload-history-panel";
 import { UploadTransferList } from "./history/upload-transfer-list";
+import {
+  UPLOAD_SOURCE_KINDS,
+  UPLOAD_SOURCE_KIND_LABEL_KEYS,
+} from "./upload-source-kind-label-keys";
 
 export interface UploadListViewProps {
   experimentId: string;
@@ -22,16 +26,6 @@ export interface UploadListViewProps {
   onNewUpload: (sourceKind: ExperimentUploadSourceKind) => void;
   onClose: () => void;
 }
-
-// Ambyte is folder-based, so it sits last after the file-based tabular kinds.
-const SOURCE_KIND_ORDER: ExperimentUploadSourceKind[] = [
-  "csv",
-  "tsv",
-  "parquet",
-  "json",
-  "ndjson",
-  "ambyte",
-];
 
 export function UploadListView({
   experimentId,
@@ -41,16 +35,22 @@ export function UploadListView({
 }: UploadListViewProps) {
   const { t } = useTranslation("experimentData");
 
+  const renderSourceKindItem = (sourceKind: ExperimentUploadSourceKind) => (
+    <DropdownMenuItem key={sourceKind} onClick={() => onNewUpload(sourceKind)}>
+      {t(UPLOAD_SOURCE_KIND_LABEL_KEYS[sourceKind])}
+    </DropdownMenuItem>
+  );
+
   return (
     <div className="flex min-h-0 flex-col gap-4">
       <DialogBody className="space-y-4">
-        <UploadTransferList experimentId={experimentId} />
+        <UploadTransferList experimentId={experimentId} enabled={enabled} />
         <UploadHistoryPanel experimentId={experimentId} enabled={enabled} />
       </DialogBody>
 
       <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between">
         <Button variant="outline" onClick={onClose}>
-          {t("experimentData.uploadDataModal.actions.close")}
+          {t("common.close")}
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -63,11 +63,7 @@ export function UploadListView({
             align="end"
             className="min-w-[var(--radix-dropdown-menu-trigger-width)]"
           >
-            {SOURCE_KIND_ORDER.map((kind) => (
-              <DropdownMenuItem key={kind} onClick={() => onNewUpload(kind)}>
-                {t(`experimentData.uploadDataModal.history.sourceKind.${kind}`)}
-              </DropdownMenuItem>
-            ))}
+            {UPLOAD_SOURCE_KINDS.map(renderSourceKindItem)}
           </DropdownMenuContent>
         </DropdownMenu>
       </DialogFooter>

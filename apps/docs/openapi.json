@@ -3851,15 +3851,18 @@
                         "type": "object",
                         "properties": {
                           "uploadId": {
-                            "type": "string"
+                            "type": "string",
+                            "format": "uuid"
                           },
                           "experimentId": {
-                            "type": "string"
+                            "type": "string",
+                            "format": "uuid"
                           },
                           "uploadTableId": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "format": "uuid"
                               },
                               {
                                 "type": "null"
@@ -3890,6 +3893,8 @@
                           },
                           "status": {
                             "enum": [
+                              "receiving",
+                              "queued",
                               "pending",
                               "running",
                               "completed",
@@ -3917,15 +3922,38 @@
                               }
                             ]
                           },
-                          "createdBy": {
-                            "type": "string"
+                          "rejectedFiles": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "enum": [
+                                    "unparseable",
+                                    "no_rows"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "reason"
+                              ]
+                            }
                           },
-                          "createdAt": {
-                            "type": "string"
-                          },
-                          "completedAt": {
+                          "errorCode": {
                             "anyOf": [
                               {
+                                "enum": [
+                                  "no_files",
+                                  "no_rows",
+                                  "not_queryable",
+                                  "transfer_interrupted",
+                                  "unknown"
+                                ],
                                 "type": "string"
                               },
                               {
@@ -3933,10 +3961,19 @@
                               }
                             ]
                           },
-                          "errorMessage": {
+                          "createdBy": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "completedAt": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "format": "date-time"
                               },
                               {
                                 "type": "null"
@@ -3953,10 +3990,11 @@
                           "status",
                           "fileCount",
                           "rowCount",
+                          "rejectedFiles",
+                          "errorCode",
                           "createdBy",
                           "createdAt",
-                          "completedAt",
-                          "errorMessage"
+                          "completedAt"
                         ]
                       }
                     }
@@ -15163,76 +15201,6 @@
                     "macroFilename",
                     "macroName",
                     "flowId"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/webhooks/data-upload": {
-      "post": {
-        "operationId": "experiments.uploadOutcome",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "experimentId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "uploadId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "userId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "User who started the upload"
-                  },
-                  "outcome": {
-                    "enum": [
-                      "ready",
-                      "failed"
-                    ],
-                    "type": "string",
-                    "description": "ready once the upload's rows are in its table, failed when they will not arrive"
-                  },
-                  "uploadTableName": {
-                    "type": "string",
-                    "minLength": 1,
-                    "description": "Table the upload was written to"
-                  }
-                },
-                "required": [
-                  "experimentId",
-                  "uploadId",
-                  "userId",
-                  "outcome",
-                  "uploadTableName"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "success"
                   ]
                 }
               }

@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { faker } from "@faker-js/faker";
 import type { IncomingHttpHeaders } from "http";
-import { Readable } from "stream";
+import { PassThrough, Readable } from "stream";
+
+import { experimentUploads } from "@repo/database";
 
 import {
   AppError,
@@ -18,8 +20,10 @@ import { MultipartUploadService } from "../../services/multipart-upload.service"
 import type { MultipartFile, ParseMultipartInput } from "../../services/multipart-upload.service";
 import { UploadDataUseCase } from "./upload-data";
 
+const BOUNDARY = "----test";
+
 const MULTIPART_HEADERS: IncomingHttpHeaders = {
-  "content-type": "multipart/form-data; boundary=----test",
+  "content-type": `multipart/form-data; boundary=${BOUNDARY}`,
 };
 
 function makeFile(filename: string, content = "h\n1"): MultipartFile {
@@ -61,6 +65,8 @@ describe("UploadDataUseCase", () => {
   let databricksPort: DatabricksPort;
   let uploadsRepository: ExperimentDataUploadsRepository;
   let multipartUploadService: MultipartUploadService;
+
+  const storedUploads = () => testApp.database.select().from(experimentUploads);
 
   beforeAll(async () => {
     await testApp.setup();
@@ -120,7 +126,6 @@ describe("UploadDataUseCase", () => {
     assertSuccess(result);
     expect(result.value.uploadTableId).toBe(STUB_UPLOAD_TABLE_ID);
     expect(result.value.uploadTableName).toBe("greenhouse_temps");
-    expect(result.value.runId).toBe(12345);
     expect(result.value.files).toHaveLength(1);
     expect(result.value.files[0].fileName).toBe("data.csv");
 
@@ -128,15 +133,350 @@ describe("UploadDataUseCase", () => {
       experimentId: experiment.id,
       target: { kind: "new", name: "greenhouse_temps" },
     });
-    expect(databricksPort.triggerDataUploadJob).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sourceKind: "csv",
-        experimentId: experiment.id,
-        uploadTableId: STUB_UPLOAD_TABLE_ID,
-        uploadTableName: "greenhouse_temps",
-        userId: testUserId,
-      }),
+
+    const [stored] = await storedUploads();
+    expect(stored).toMatchObject({
+      id: result.value.uploadId,
+      experimentId: experiment.id,
+      uploadTableId: STUB_UPLOAD_TABLE_ID,
+      uploadTableName: "greenhouse_temps",
+      targetKind: "new",
+      sourceKind: "csv",
+      status: "queued",
+      fileCount: 1,
+      jobRunId: 12345,
+      createdBy: testUserId,
+    });
+    expect(databricksPort.triggerDataUploadJob).toHaveBeenCalledWith({
+      sourceKind: "csv",
+      experimentId: experiment.id,
+      experimentName: experiment.name,
+      uploadDirectory: stored.uploadDirectory,
+      uploadId: result.value.uploadId,
+      uploadTableId: STUB_UPLOAD_TABLE_ID,
+      uploadTableName: "greenhouse_temps",
+      userId: testUserId,
+      createdAt: stored.createdAt,
+    });
+  });
+
+  it("records the upload before the first file is written", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Upload_Recorded_First",
+      userId: testUserId,
+    });
+    vi.spyOn(uploadsRepository, "validateTargetTable").mockResolvedValue(
+      success({ uploadTableId: STUB_UPLOAD_TABLE_ID, uploadTableName: "greenhouse_temps" }),
     );
+    const statusesWhileWriting: string[] = [];
+    vi.spyOn(databricksPort, "uploadExperimentData").mockImplementation(async () => {
+      const rows = await storedUploads();
+      statusesWhileWriting.push(...rows.map((row) => row.status));
+      return success({ filePath: "/Volumes/c/centrum/data-imports/.../file" });
+    });
+
+    mountMultipart(multipartUploadService, async ({ field, file }) => {
+      field("sourceKind", "csv");
+      field("targetKind", "new");
+      field("targetName", "greenhouse_temps");
+      await file(makeFile("data.csv"));
+    });
+
+    await useCase.execute({
+      experimentId: experiment.id,
+      userId: testUserId,
+      requestStream: Readable.from([""]),
+      requestHeaders: MULTIPART_HEADERS,
+    });
+
+    expect(statusesWhileWriting).toEqual(["receiving"]);
+  });
+
+  it("records the upload under the id the client sent, so it can follow the upload early", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Upload_Client_Id",
+      userId: testUserId,
+    });
+    vi.spyOn(uploadsRepository, "validateTargetTable").mockResolvedValue(
+      success({ uploadTableId: STUB_UPLOAD_TABLE_ID, uploadTableName: "greenhouse_temps" }),
+    );
+    const uploadId = faker.string.uuid();
+
+    mountMultipart(multipartUploadService, async ({ field, file }) => {
+      field("sourceKind", "csv");
+      field("targetKind", "new");
+      field("targetName", "greenhouse_temps");
+      field("uploadId", uploadId);
+      await file(makeFile("data.csv"));
+    });
+
+    const result = await useCase.execute({
+      experimentId: experiment.id,
+      userId: testUserId,
+      requestStream: Readable.from([""]),
+      requestHeaders: MULTIPART_HEADERS,
+    });
+
+    assertSuccess(result);
+    expect(result.value.uploadId).toBe(uploadId);
+    expect((await storedUploads()).map((row) => row.id)).toEqual([uploadId]);
+  });
+
+  it("refuses an upload id the client already used", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Upload_Client_Id_Reused",
+      userId: testUserId,
+    });
+    const otherTableId = "33333333-3333-3333-3333-333333333333";
+    vi.spyOn(uploadsRepository, "validateTargetTable")
+      .mockResolvedValueOnce(
+        success({ uploadTableId: STUB_UPLOAD_TABLE_ID, uploadTableName: "greenhouse_temps" }),
+      )
+      .mockResolvedValueOnce(success({ uploadTableId: otherTableId, uploadTableName: "soil" }));
+    const uploadId = faker.string.uuid();
+    const upload = (fields: Record<string, string>) => {
+      mountMultipart(multipartUploadService, async ({ field, file }) => {
+        for (const [name, value] of Object.entries(fields)) {
+          field(name, value);
+        }
+        await file(makeFile("data.csv"));
+      });
+      return useCase.execute({
+        experimentId: experiment.id,
+        userId: testUserId,
+        requestStream: Readable.from([""]),
+        requestHeaders: MULTIPART_HEADERS,
+      });
+    };
+
+    const first = await upload({
+      sourceKind: "csv",
+      targetKind: "new",
+      targetName: "greenhouse_temps",
+      uploadId,
+    });
+    const second = await upload({
+      sourceKind: "csv",
+      targetKind: "existing",
+      uploadTableId: otherTableId,
+      uploadId,
+    });
+
+    assertSuccess(first);
+    assertFailure(second);
+    expect(second.error).toMatchObject({
+      statusCode: 409,
+      code: "UPLOAD_ID_TAKEN",
+      message: "This upload id is already in use",
+    });
+    expect(await storedUploads()).toHaveLength(1);
+  });
+
+  it("records an upload id sent in capitals as the lowercase id the job echoes back", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Upload_Client_Id_Uppercase",
+      userId: testUserId,
+    });
+    vi.spyOn(uploadsRepository, "validateTargetTable").mockResolvedValue(
+      success({ uploadTableId: STUB_UPLOAD_TABLE_ID, uploadTableName: "greenhouse_temps" }),
+    );
+    const uploadId = faker.string.uuid();
+
+    mountMultipart(multipartUploadService, async ({ field, file }) => {
+      field("sourceKind", "csv");
+      field("targetKind", "new");
+      field("targetName", "greenhouse_temps");
+      field("uploadId", uploadId.toUpperCase());
+      await file(makeFile("data.csv"));
+    });
+
+    const result = await useCase.execute({
+      experimentId: experiment.id,
+      userId: testUserId,
+      requestStream: Readable.from([""]),
+      requestHeaders: MULTIPART_HEADERS,
+    });
+
+    assertSuccess(result);
+    expect(result.value.uploadId).toBe(uploadId);
+    expect((await storedUploads()).map((row) => row.id)).toEqual([uploadId]);
+    expect(databricksPort.triggerDataUploadJob).toHaveBeenCalledWith(
+      expect.objectContaining({ uploadId }),
+    );
+  });
+
+  it("notes each file as it arrives, so a long transfer that is still moving is not swept", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Upload_File_Progress",
+      userId: testUserId,
+    });
+    vi.spyOn(uploadsRepository, "validateTargetTable").mockResolvedValue(
+      success({ uploadTableId: STUB_UPLOAD_TABLE_ID, uploadTableName: "greenhouse_temps" }),
+    );
+    const progress = vi.spyOn(uploadsRepository, "markFileReceived");
+
+    mountMultipart(multipartUploadService, async ({ field, file }) => {
+      field("sourceKind", "csv");
+      field("targetKind", "new");
+      field("targetName", "greenhouse_temps");
+      await file(makeFile("first.csv"));
+      await file(makeFile("second.csv"));
+    });
+
+    await useCase.execute({
+      experimentId: experiment.id,
+      userId: testUserId,
+      requestStream: Readable.from([""]),
+      requestHeaders: MULTIPART_HEADERS,
+    });
+
+    expect(progress).toHaveBeenCalledTimes(2);
+  });
+
+  it("refuses a second upload creating the same new table while the first is in flight", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Upload_Same_New_Table",
+      userId: testUserId,
+    });
+    vi.spyOn(uploadsRepository, "validateTargetTable").mockResolvedValue(
+      success({ uploadTableId: STUB_UPLOAD_TABLE_ID, uploadTableName: "greenhouse_temps" }),
+    );
+    const upload = () => {
+      mountMultipart(multipartUploadService, async ({ field, file }) => {
+        field("sourceKind", "csv");
+        field("targetKind", "new");
+        field("targetName", "greenhouse_temps");
+        await file(makeFile("data.csv"));
+      });
+      return useCase.execute({
+        experimentId: experiment.id,
+        userId: testUserId,
+        requestStream: Readable.from([""]),
+        requestHeaders: MULTIPART_HEADERS,
+      });
+    };
+
+    const first = await upload();
+    const second = await upload();
+
+    assertSuccess(first);
+    assertFailure(second);
+    expect(second.error.code).toBe("UPLOAD_TABLE_NAME_TAKEN");
+    expect(databricksPort.uploadExperimentData).toHaveBeenCalledTimes(1);
+    expect(await storedUploads()).toHaveLength(1);
+  });
+
+  it("fails the upload at once when the request breaks off after its files started arriving", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Upload_Broken_Off",
+      userId: testUserId,
+    });
+    vi.spyOn(uploadsRepository, "validateTargetTable").mockResolvedValue(
+      success({ uploadTableId: STUB_UPLOAD_TABLE_ID, uploadTableName: "greenhouse_temps" }),
+    );
+    vi.spyOn(multipartUploadService, "parse").mockImplementation(async (input) => {
+      input.onField("sourceKind", "csv");
+      input.onField("targetKind", "new");
+      input.onField("targetName", "greenhouse_temps");
+      await input.onFile(makeFile("data.csv"));
+      return failure(AppError.badRequest("File 'big.csv' exceeds the maximum allowed size"));
+    });
+
+    const result = await useCase.execute({
+      experimentId: experiment.id,
+      userId: testUserId,
+      requestStream: Readable.from([""]),
+      requestHeaders: MULTIPART_HEADERS,
+    });
+
+    assertFailure(result);
+    expect(result.error.message).toContain("exceeds the maximum allowed size");
+    const [stored] = await storedUploads();
+    expect(stored).toMatchObject({ status: "failed", errorCode: "transfer_interrupted" });
+    expect(stored.announcedAt).toBeInstanceOf(Date);
+    expect(databricksPort.triggerDataUploadJob).not.toHaveBeenCalled();
+  });
+
+  it("fails the upload when the request breaks off while the upload is being recorded", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Upload_Broken_Off_Early",
+      userId: testUserId,
+    });
+    const request = new PassThrough();
+    request.write(
+      [
+        ["sourceKind", "csv"],
+        ["targetKind", "new"],
+        ["targetName", "greenhouse_temps"],
+      ]
+        .map(
+          ([name, value]) =>
+            `--${BOUNDARY}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`,
+        )
+        .join("") +
+        `--${BOUNDARY}\r\nContent-Disposition: form-data; name="files"; filename="data.csv"\r\n` +
+        "Content-Type: text/csv\r\n\r\nh\n1\n",
+    );
+    vi.spyOn(uploadsRepository, "validateTargetTable").mockImplementation(async () => {
+      request.destroy(new Error("aborted"));
+      // Lets the parser see the abort before the upload is recorded.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return success({ uploadTableId: STUB_UPLOAD_TABLE_ID, uploadTableName: "greenhouse_temps" });
+    });
+
+    const result = await useCase.execute({
+      experimentId: experiment.id,
+      userId: testUserId,
+      requestStream: request,
+      requestHeaders: MULTIPART_HEADERS,
+    });
+
+    assertFailure(result);
+    expect(result.error.code).toBe("UPLOAD_PARSE_FAILED");
+    expect(await storedUploads()).toEqual([
+      expect.objectContaining({ status: "failed", errorCode: "transfer_interrupted" }),
+    ]);
+    expect(databricksPort.triggerDataUploadJob).not.toHaveBeenCalled();
+  });
+
+  it("refuses to queue an upload the sweep failed while its files were arriving", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Upload_Swept",
+      userId: testUserId,
+    });
+    vi.spyOn(uploadsRepository, "validateTargetTable").mockResolvedValue(
+      success({ uploadTableId: STUB_UPLOAD_TABLE_ID, uploadTableName: "greenhouse_temps" }),
+    );
+    vi.spyOn(databricksPort, "uploadExperimentData").mockImplementation(async () => {
+      const [receiving] = await storedUploads();
+      await uploadsRepository.fail(receiving.id, "transfer_interrupted");
+      return success({ filePath: "/Volumes/c/centrum/data-imports/.../file" });
+    });
+
+    mountMultipart(multipartUploadService, async ({ field, file }) => {
+      field("sourceKind", "csv");
+      field("targetKind", "new");
+      field("targetName", "greenhouse_temps");
+      await file(makeFile("data.csv"));
+    });
+
+    const result = await useCase.execute({
+      experimentId: experiment.id,
+      userId: testUserId,
+      requestStream: Readable.from([""]),
+      requestHeaders: MULTIPART_HEADERS,
+    });
+
+    assertFailure(result);
+    expect(result.error).toMatchObject({
+      statusCode: 409,
+      code: "UPLOAD_TRANSFER_INTERRUPTED",
+      message: "This upload stopped before its files finished arriving; start it again",
+    });
+    expect(await storedUploads()).toEqual([
+      expect.objectContaining({ status: "failed", errorCode: "transfer_interrupted" }),
+    ]);
+    expect(databricksPort.triggerDataUploadJob).not.toHaveBeenCalled();
   });
 
   it("reads off the rest of a file that Databricks did not take, so the request can end", async () => {
@@ -349,6 +689,9 @@ describe("UploadDataUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("BAD_REQUEST");
     expect(databricksPort.triggerDataUploadJob).not.toHaveBeenCalled();
+    const [stored] = await storedUploads();
+    expect(stored).toMatchObject({ status: "failed", errorCode: "no_files", fileCount: null });
+    expect(stored.announcedAt).toBeInstanceOf(Date);
   });
 
   it("returns forbidden when the experiment is archived", async () => {
@@ -494,7 +837,7 @@ describe("UploadDataUseCase", () => {
     expect(result.error.code).toBe("NOT_FOUND");
   });
 
-  it("surfaces the adapter failure when triggerDataUploadJob fails", async () => {
+  it("leaves the upload queued for the reconciler when its run cannot be started", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Upload_Trigger_Failure",
       userId: testUserId,
@@ -520,9 +863,14 @@ describe("UploadDataUseCase", () => {
       requestHeaders: MULTIPART_HEADERS,
     });
 
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.code).toBe("INTERNAL_ERROR");
-    expect(result.error.message).toContain("trigger failed");
+    assertSuccess(result);
+    const [stored] = await storedUploads();
+    expect(stored).toMatchObject({
+      id: result.value.uploadId,
+      status: "queued",
+      fileCount: 1,
+      jobRunId: null,
+      errorCode: null,
+    });
   });
 });

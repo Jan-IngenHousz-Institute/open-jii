@@ -242,7 +242,7 @@ export const NOTIFICATION_TYPES = {
   data_upload_failed: {
     category: "data_jobs",
     channels: { email: "preference" },
-    params: experiment.extend({ fileName: z.string() }),
+    params: experiment.extend({ tableName: z.string() }),
   },
   api_key_created: {
     category: "account_security",
