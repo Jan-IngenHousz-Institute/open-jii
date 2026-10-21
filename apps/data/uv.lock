@@ -368,10 +368,14 @@ source = { editable = "src/lib/openjii" }
 dependencies = [
     { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pandas", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "requests" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pandas", specifier = ">=2.0" }]
+requires-dist = [
+    { name = "pandas", specifier = ">=2.0" },
+    { name = "requests", specifier = ">=2.31" },
+]
 
 [[package]]
 name = "openjii-data"
