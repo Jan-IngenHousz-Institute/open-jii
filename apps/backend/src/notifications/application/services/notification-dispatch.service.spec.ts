@@ -17,6 +17,8 @@ import {
 } from "../../../common/utils/fp-utils";
 import { queuedDeliveriesFor } from "../../../test/notification-deliveries";
 import { TestHarness } from "../../../test/test-harness";
+import { GUEST_DIRECTORY_PORT } from "../../../users/core/ports/guest-directory.port";
+import type { GuestDirectoryPort } from "../../../users/core/ports/guest-directory.port";
 import { NotificationDeliveryRepository } from "../../core/repositories/notification-delivery.repository";
 import { NotificationRepository } from "../../core/repositories/notification.repository";
 import { NotificationDispatchService } from "./notification-dispatch.service";
@@ -103,6 +105,23 @@ describe("NotificationDispatchService", () => {
 
   afterAll(async () => {
     await testApp.teardown();
+  });
+
+  it("returns a failure without writing if the guest lookup fails", async () => {
+    vi.spyOn(
+      testApp.module.get<GuestDirectoryPort>(GUEST_DIRECTORY_PORT),
+      "findGuestIds",
+    ).mockRejectedValue(new Error("synthetic database outage"));
+    const result = await dispatch.dispatch({
+      type: "experiment_join_request_received",
+      recipientIds: [recipientId],
+      actorId,
+      resource: experiment,
+      params: { experimentName: "Synthetic example" },
+    });
+    assertFailure(result);
+    expect(await rowsFor(recipientId)).toEqual([]);
+    expect(await deliveriesFor(recipientId)).toEqual([]);
   });
 
   it("writes one row per recipient with the type, actor, resource and params", async () => {
