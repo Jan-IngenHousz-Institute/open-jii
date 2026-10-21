@@ -550,6 +550,17 @@
       "slug": "simulated-minipar-web",
       "frame": "desktop",
       "dimensions": "1920x1200"
+    },
+    {
+      "path": "/img/guide/web/guest-demo-public-read.webm",
+      "slug": "guest-demo-public-read",
+      "kind": "recording",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 643713,
+      "sha256": "1a3a57cad092f005ce644c54095b664d34fbc3bba97854fd1ed8d3ba1d8525ed",
+      "disposition": "published",
+      "scope": "A synthetic guest reads the Demo directory, organization, experiment and read-only design"
     }
   ],
   "unmetCaptures": [
