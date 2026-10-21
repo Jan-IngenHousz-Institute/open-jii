@@ -101,7 +101,7 @@ export function useMeasurementUpload() {
     }) => {
       // Reject malformed input instead of resolving as a no-op. `typeof
       // null === "object"` would otherwise slip a null through to
-      // buildUploadPayload() and crash on `"sample" in null`, and a
+      // buildUploadPayload() and crash reading its fields, and a
       // silent success would let the flow advance with nothing saved.
       for (const { rawMeasurement } of results) {
         if (rawMeasurement === null || typeof rawMeasurement !== "object") {

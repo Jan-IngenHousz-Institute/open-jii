@@ -108,8 +108,8 @@ function stripUploadEnvelope(payload: Record<string, unknown>): Record<string, u
   const restored = Object.fromEntries(
     Object.entries(payload).filter(([key]) => !UPLOAD_ENVELOPE_KEYS.has(key)),
   );
-  // buildUploadPayload also injects `macros` (the filename routing list) into
-  // every sample entry; the capture-time entries didn't carry it.
+  // Uploads built by older app versions carry `macros` (the filename routing list) in
+  // every sample entry; the capture-time entries didn't.
   if ("sample" in restored) {
     restored.sample = stripInjectedMacros(restored.sample);
   }
