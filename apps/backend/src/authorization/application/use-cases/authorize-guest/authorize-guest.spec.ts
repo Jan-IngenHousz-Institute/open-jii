@@ -119,7 +119,7 @@ describe("guest route policy", () => {
   );
 
   it.each(["upload", "macro"])(
-    "checks current Demo ownership, the switch and quota for %s",
+    "checks current Demo ownership and the switch before %s execution",
     async (kind) => {
       const upload = kind === "upload";
       const path = upload ? "/api/v1/iot/upload-url" : `/api/v1/macros/${targetId}/execute`;
@@ -127,7 +127,7 @@ describe("guest route policy", () => {
         ? { experimentId: targetId, contentLength: 20 }
         : { data: { sample: [] } };
       expect((await request("POST", path, body)).isSuccess()).toBe(true);
-      expect(takeQuota).toHaveBeenCalledWith(userId, kind);
+      expect(takeQuota).not.toHaveBeenCalled();
       enabled.mockResolvedValue(false);
       expect((await request("POST", path, body)).isFailure()).toBe(true);
       enabled.mockResolvedValue(true);
@@ -142,10 +142,6 @@ describe("guest route policy", () => {
         organizationType: "demo",
         organizationId: userId,
       });
-      takeQuota.mockResolvedValue({ allowed: false, retryAfterSeconds: 100 });
-      const refused = await request("POST", path, body);
-      expect(refused.isFailure()).toBe(true);
-      if (refused.isFailure()) expect(refused.error.statusCode).toBe(429);
     },
   );
 

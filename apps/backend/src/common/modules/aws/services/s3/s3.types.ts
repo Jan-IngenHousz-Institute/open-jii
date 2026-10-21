@@ -3,3 +3,7 @@ export interface IotUploadUrl {
   key: string;
   expiresAt: Date;
 }
+
+export interface GuestUploadOptions {
+  guestContentLength: number;
+}

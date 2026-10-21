@@ -7,15 +7,20 @@ import type {
 import { restoreMacroInputInContext } from "@repo/api/transforms/macro-context-ref";
 import { normalizeMacroInput } from "@repo/api/transforms/normalize-macro-input";
 
+import { DEMO_MODE_PORT } from "../../../../authorization/core/ports/demo-mode.port";
+import type { DemoModePort } from "../../../../authorization/core/ports/demo-mode.port";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import type { Result } from "../../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../../common/utils/fp-utils";
+import { GUEST_IDENTITY_PORT } from "../../../../users/core/ports/guest-identity.port";
+import type { GuestIdentityPort } from "../../../../users/core/ports/guest-identity.port";
 import type { LambdaExecutionPayload } from "../../../core/models/macro-execution.model";
 import {
   emptyEnvelopeError,
   LambdaExecutionResponseSchema,
 } from "../../../core/models/macro-execution.model";
 import { LAMBDA_PORT, LambdaPort } from "../../../core/ports/lambda.port";
+import { GuestMacroAccessRepository } from "../../../core/repositories/guest-access.repository";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 
 @Injectable()
@@ -25,11 +30,15 @@ export class ExecuteMacroUseCase {
   constructor(
     private readonly macroRepository: MacroRepository,
     @Inject(LAMBDA_PORT) private readonly lambdaPort: LambdaPort,
+    @Inject(GUEST_IDENTITY_PORT) private readonly guests: GuestIdentityPort,
+    @Inject(DEMO_MODE_PORT) private readonly demo: DemoModePort,
+    private readonly guestAccess: GuestMacroAccessRepository,
   ) {}
 
   async execute(
     macroId: string,
     request: MacroExecutionRequestBody,
+    userId?: string,
   ): Promise<Result<MacroExecutionResponse>> {
     this.logger.log({
       msg: "Starting single macro execution",
@@ -38,6 +47,22 @@ export class ExecuteMacroUseCase {
       timeout: request.timeout,
     });
 
+    const identity = userId ? await this.guests.findIdentity(userId) : null;
+    if (identity?.isAnonymous) {
+      const owner = await this.guestAccess.findOwnership(macroId);
+      if (
+        owner?.organizationType !== "demo" ||
+        owner.visibility !== "public" ||
+        !(await this.demo.isEnabled())
+      ) {
+        return failure(
+          AppError.forbidden(
+            "Guest macro runs are limited to the available demo",
+            "GUEST_ACTION_FORBIDDEN",
+          ),
+        );
+      }
+    }
     // 1. Fetch the macro script (cached in repository)
     const macroResult = await this.macroRepository.findScriptById(macroId);
     if (macroResult.isFailure()) {
@@ -103,6 +128,18 @@ export class ExecuteMacroUseCase {
       ],
       timeout: request.timeout ?? 30,
     };
+
+    if (userId && identity?.isAnonymous) {
+      const quota = await this.guests.takeQuota(userId, "macro");
+      if (!quota.allowed)
+        return failure(
+          new AppError(
+            `Guest limit reached. Try again in ${quota.retryAfterSeconds} seconds`,
+            "GUEST_RATE_LIMITED",
+            429,
+          ),
+        );
+    }
 
     // 4. Invoke Lambda
     const lambdaResult = await this.lambdaPort.invokeLambda(functionName, payload);

@@ -87,13 +87,6 @@ export class AuthorizeGuestUseCase {
     if (!z.string().uuid().safeParse(id).success) return denied();
     const resource = await this.resources.findOwnership(upload ? "experiment" : "macro", id);
     if (resource?.organizationType !== "demo" || resource.visibility !== "public") return denied();
-    const quota = await this.guests.takeQuota(request.userId, upload ? "upload" : "macro");
-    if (!quota.allowed)
-      return failure(
-        new AppError("Guest limit reached. Try again shortly", "GUEST_RATE_LIMITED", 429, {
-          retryAfterSeconds: quota.retryAfterSeconds,
-        }),
-      );
     return success({ guest: true });
   }
 }

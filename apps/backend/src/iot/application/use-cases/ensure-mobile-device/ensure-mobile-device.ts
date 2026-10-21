@@ -4,6 +4,8 @@ import type { EnsureMobileDeviceBody } from "@repo/api/domains/iot/iot.schema";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { GUEST_IDENTITY_PORT } from "../../../../users/core/ports/guest-identity.port";
+import type { GuestIdentityPort } from "../../../../users/core/ports/guest-identity.port";
 import { IotDeviceDto } from "../../../core/models/iot-device.model";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort } from "../../../core/ports/aws.port";
@@ -25,10 +27,19 @@ export class EnsureMobileDeviceUseCase {
   constructor(
     @Inject(AWS_PORT)
     private readonly awsPort: AwsPort,
+    @Inject(GUEST_IDENTITY_PORT) private readonly guests: GuestIdentityPort,
     private readonly deviceRepository: IotDeviceRepository,
   ) {}
 
   async execute(body: EnsureMobileDeviceBody, userId: string): Promise<Result<IotDeviceDto>> {
+    if ((await this.guests.findIdentity(userId))?.isAnonymous) {
+      return failure(
+        AppError.forbidden(
+          "Device registration and credentials are not available to guests",
+          "GUEST_ACTION_FORBIDDEN",
+        ),
+      );
+    }
     this.logger.log({
       msg: "Ensuring mobile device",
       operation: "ensureMobileDevice",
