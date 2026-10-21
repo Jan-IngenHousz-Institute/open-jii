@@ -22,11 +22,5 @@
     "staged": "apps/docs/.capture/mobile/simulated-multispeq-android.webm",
     "ticket": "OJD-2228",
     "date": "2026-10-21"
-  },
-  {
-    "path": "/img/guide/web/guest-demo-public-read.webm",
-    "staged": "apps/docs/.capture/web/guest-demo-public-read.webm",
-    "ticket": "OJD-2231",
-    "date": "2026-10-21"
   }
 ]

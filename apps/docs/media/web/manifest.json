@@ -511,6 +511,17 @@
       "sha256": "badce83aaed6ea91afdd623b85af3ccfe4c767fa69eb3ccbedd4b12f17d388ba",
       "disposition": "published",
       "scope": "A newcomer opens the seeded Demo examples, read-only workbook and dashboard list; trimmed before the chart-loading screen"
+    },
+    {
+      "path": "/img/guide/web/guest-demo-public-read.webm",
+      "slug": "guest-demo-public-read",
+      "kind": "recording",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 643713,
+      "sha256": "1a3a57cad092f005ce644c54095b664d34fbc3bba97854fd1ed8d3ba1d8525ed",
+      "disposition": "published",
+      "scope": "A synthetic guest reads the Demo directory, organization, experiment and read-only design"
     }
   ],
   "unmetCaptures": [
