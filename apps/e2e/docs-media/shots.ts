@@ -173,6 +173,7 @@ export const SHOTS: readonly Shot[] = [
     route: "/platform/organizations?type=demo",
     async perform(page) {
       page.setDefaultTimeout(15_000);
+      await settle(page, 2000);
       await page.getByRole("link", { name: "openJII Demo", exact: true }).click();
       await page.getByRole("heading", { name: "openJII Demo", exact: true }).waitFor();
       for (const name of [
