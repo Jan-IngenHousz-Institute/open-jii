@@ -88,9 +88,11 @@ export class NotificationDispatchService {
 
     const actorId = input.actorId ?? null;
     // Nobody hears about their own action, and nobody hears about it twice.
-    const guestIds = new Set(
-      await this.guests.findGuestIds([...input.recipientIds, ...(actorId ? [actorId] : [])]),
+    const guests = await tryCatch(() =>
+      this.guests.findGuestIds([...input.recipientIds, ...(actorId ? [actorId] : [])]),
     );
+    if (guests.isFailure()) return guests;
+    const guestIds = new Set(guests.value);
     if (actorId && guestIds.has(actorId)) return success({ created: 0, queued: 0 });
     const recipientIds = [...new Set(input.recipientIds)].filter(
       (id) => id !== actorId && !guestIds.has(id),
