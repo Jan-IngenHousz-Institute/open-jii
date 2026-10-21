@@ -18,6 +18,7 @@ import {
   UPLOAD_CONCURRENCY,
   UPLOAD_RETRY_BACKOFF_MS,
 } from "./upload-constants";
+import { utf8ByteLength } from "./utf8-byte-length";
 
 const log = createLogger("outbox");
 
@@ -62,6 +63,7 @@ export interface OutboxOptions {
   transport: Transport;
   /** Carries the measurements the broker will not accept. */
   largeTransport: Transport;
+  isGuest?: () => Promise<boolean>;
   concurrency?: number;
   retryBackoffMs?: readonly number[];
 }
@@ -78,33 +80,10 @@ function errorKind(err: unknown): string | undefined {
 
 const yieldToEventLoop = (): Promise<void> => new Promise<void>((resolve) => setImmediate(resolve));
 
-// The broker counts UTF-8 bytes while a JS string counts UTF-16 code units, so
-// a measurement carrying non-ASCII comments would measure short and be refused
-// on the wire instead of routed to S3.
-function utf8ByteLength(value: string): number {
-  let bytes = 0;
-
-  for (let i = 0; i < value.length; i++) {
-    const code = value.charCodeAt(i);
-    if (code < 0x80) {
-      bytes += 1;
-    } else if (code < 0x800) {
-      bytes += 2;
-    } else if (code >= 0xd800 && code <= 0xdbff) {
-      // Lead surrogate: the pair encodes to four bytes, so skip its tail.
-      bytes += 4;
-      i++;
-    } else {
-      bytes += 3;
-    }
-  }
-
-  return bytes;
-}
-
 class OutboxImpl implements Outbox {
   private readonly transport: Transport;
   private readonly largeTransport: Transport;
+  private readonly isGuest: () => Promise<boolean>;
   private readonly queue: AsyncQueuer<string>;
   private rehydrating = false;
   private lastRehydrateAt = 0;
@@ -128,6 +107,7 @@ class OutboxImpl implements Outbox {
   constructor(opts: OutboxOptions) {
     this.transport = opts.transport;
     this.largeTransport = opts.largeTransport;
+    this.isGuest = opts.isGuest ?? (() => Promise.resolve(false));
     const concurrency = opts.concurrency ?? UPLOAD_CONCURRENCY;
     const backoff = opts.retryBackoffMs ?? UPLOAD_RETRY_BACKOFF_MS;
     log.info("init", { concurrency, backoffSteps: backoff.length });
@@ -362,8 +342,10 @@ class OutboxImpl implements Outbox {
     const serialized = JSON.stringify(payload);
     const bytes = utf8ByteLength(serialized);
     const overBrokerLimit = bytes > MQTT_PAYLOAD_LIMIT_BYTES;
-    const transport = overBrokerLimit ? this.largeTransport : this.transport;
-    const route = overBrokerLimit ? "s3" : "mqtt";
+    const guest = await this.isGuest();
+    const useS3 = guest || overBrokerLimit;
+    const transport = useS3 ? this.largeTransport : this.transport;
+    const route = useS3 ? "s3" : "mqtt";
 
     trace?.setFields({ bytes, route });
     trace?.event("publish_start");
@@ -372,7 +354,11 @@ class OutboxImpl implements Outbox {
     // Phase 1 - deliver. Only transport errors are classified here, so a
     // later DB-write failure can't be mistaken for a publish failure.
     try {
-      await transport.publish(row.data.topic, payload, { traceId: id, serialized });
+      await transport.publish(row.data.topic, payload, {
+        traceId: id,
+        serialized,
+        ...(guest ? { guest: true } : {}),
+      });
     } catch (err) {
       // A teardown in flight rejects pending publishes; don't reschedule them
       // onto a queue we're about to discard.

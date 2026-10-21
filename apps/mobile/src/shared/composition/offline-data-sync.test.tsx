@@ -56,6 +56,21 @@ afterEach(async () => {
 });
 
 describe("useOfflineDataSync", () => {
+  it("prefetches public guest content without registering the phone", async () => {
+    useSession.mockReturnValue({ user: { id: "guest", isAnonymous: true } });
+    renderHook(() => useOfflineDataSync(), { wrapper });
+    onlineManager.setOnline(false);
+    await act(async () => {
+      onlineManager.setOnline(true);
+      await settleSyncWork();
+    });
+    await act(async () => {
+      appStateHandler.current?.("active");
+      await settleSyncWork();
+    });
+    expect(prefetchOfflineData).toHaveBeenCalled();
+    expect(ensureDeviceRegistered).not.toHaveBeenCalled();
+  });
   it("re-prefetches (throttled) when connectivity returns", async () => {
     renderHook(() => useOfflineDataSync(), { wrapper });
 

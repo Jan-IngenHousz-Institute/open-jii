@@ -15,13 +15,15 @@ export function useOfflineDataSync(): void {
   // Via a ref so the always-on subscriptions don't re-bind on session identity change.
   const userIdRef = useRef(user?.id);
   userIdRef.current = user?.id;
+  const guestRef = useRef(user?.isAnonymous === true);
+  guestRef.current = user?.isAnonymous === true;
 
   useEffect(
     () =>
       onlineManager.subscribe(() => {
         if (onlineManager.isOnline() && userIdRef.current) {
           void prefetchOfflineData(queryClient, userIdRef.current, { throttle: true });
-          void ensureDeviceRegistered({ throttle: true });
+          if (!guestRef.current) void ensureDeviceRegistered({ throttle: true });
         }
       }),
     [queryClient],
@@ -30,7 +32,7 @@ export function useOfflineDataSync(): void {
   useAppState((next) => {
     if (next === "active" && onlineManager.isOnline() && userIdRef.current) {
       void prefetchOfflineData(queryClient, userIdRef.current, { throttle: true });
-      void ensureDeviceRegistered({ throttle: true });
+      if (!guestRef.current) void ensureDeviceRegistered({ throttle: true });
     }
   });
 }

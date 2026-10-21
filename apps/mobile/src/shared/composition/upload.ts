@@ -1,3 +1,4 @@
+import { getAuthClient } from "~/features/auth/services/auth";
 import { createPahoSessionFactory } from "~/features/connection/services/mqtt/mqtt-paho-session";
 import { createTransport } from "~/features/connection/services/mqtt/mqtt-transport";
 import type { Transport } from "~/features/connection/services/mqtt/mqtt-transport";
@@ -61,6 +62,15 @@ export function getOutbox(): Outbox {
   g.outbox ??= createOutbox({
     transport: getTransport(),
     largeTransport: getLargeUploadTransport(),
+    isGuest: async () => {
+      try {
+        const session = await getAuthClient().getSession();
+        // Missing identity takes the authenticated S3 path, whose issuer refuses it.
+        return session.data?.user.isAnonymous !== false;
+      } catch {
+        return true;
+      }
+    },
   });
   return g.outbox;
 }

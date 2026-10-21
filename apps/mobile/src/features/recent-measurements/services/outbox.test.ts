@@ -61,6 +61,7 @@ async function freshOutbox(
     concurrency?: number;
     retryBackoffMs?: readonly number[];
     largeTransport?: Transport;
+    isGuest?: () => Promise<boolean>;
   },
 ) {
   vi.resetModules();
@@ -72,6 +73,7 @@ async function freshOutbox(
   const outbox = outboxMod.createOutbox({
     transport,
     largeTransport: opts?.largeTransport ?? makeTransport(),
+    isGuest: opts?.isGuest,
     concurrency: opts?.concurrency ?? 1,
     retryBackoffMs: opts?.retryBackoffMs ?? [],
   });
@@ -717,6 +719,32 @@ describe("Outbox", () => {
   });
 
   describe("transport routing by payload size", () => {
+    it("uses S3 for a small guest measurement and rechecks identity on the next row", async () => {
+      let guest = true;
+      const mqtt = makeTransport();
+      const large = makeTransport();
+      mockGetMeasurementById.mockImplementation((id: string) =>
+        Promise.resolve(row({ id, result: { value: "é🌱" } })),
+      );
+      const { outbox } = await freshOutbox(mqtt, {
+        largeTransport: large,
+        isGuest: () => Promise.resolve(guest),
+      });
+      await flushTasks();
+      outbox.enqueue("guest-row");
+      await waitUntil(() => large.calls.length === 1, 30);
+      expect(mqtt.calls).toHaveLength(0);
+      large.resolveNext();
+      await flushTasks(20);
+      guest = false;
+      outbox.enqueue("researcher-row");
+      await waitUntil(() => mqtt.calls.length === 1, 30);
+      mqtt.resolveNext();
+      await flushTasks(20);
+      expect(large.calls).toHaveLength(1);
+      outbox.destroy();
+    });
+
     // `{"blob":"<n>","_client_id":"row-1"}` is the serialized payload, and the
     // literal characters around the blob account for the difference.
     const ENVELOPE_CHARS = 32;
