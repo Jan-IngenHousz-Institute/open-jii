@@ -399,12 +399,15 @@ export class UserRepository {
       this.database
         .select({
           userId: profiles.userId,
+          isGuest: sql<boolean>`false`,
+          isFormerGuest: sql<boolean>`false`,
           firstName: profiles.firstName,
           lastName: profiles.lastName,
           avatarUrl: profiles.avatarUrl,
         })
         .from(resourceGrants)
         .innerJoin(profiles, eq(profiles.userId, resourceGrants.granteeId))
+        .innerJoin(users, eq(users.id, profiles.userId))
         .where(
           and(
             eq(resourceGrants.resourceType, resourceType),

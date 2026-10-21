@@ -1091,6 +1091,8 @@ describe("ExperimentController", () => {
         expect(Object.keys(contributor).sort()).toEqual([
           "avatarUrl",
           "firstName",
+          "isFormerGuest",
+          "isGuest",
           "lastName",
           "userId",
         ]);

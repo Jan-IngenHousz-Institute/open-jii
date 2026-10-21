@@ -24,6 +24,8 @@ export class UserWebhookController {
       if (result.isSuccess()) {
         const users = result.value.map((user) => ({
           userId: user.userId,
+          isGuest: user.isGuest,
+          isFormerGuest: user.isFormerGuest,
           firstName: user.firstName,
           lastName: user.lastName,
           avatarUrl: user.avatarUrl,
