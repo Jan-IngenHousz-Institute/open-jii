@@ -17,7 +17,8 @@ function makeQueryClient() {
   return new QueryClient({
     defaultOptions: { queries: { staleTime: FRESH_FOR_MS } },
     mutationCache: new MutationCache({
-      onError: (error) => {
+      onError: (error, _variables, _context, mutation) => {
+        if (mutation.meta?.errorHandledLocally === true) return;
         // oRPC nests the server error payload under ORPCError.data; fall back to
         // the raw error for non-oRPC throws (e.g. the native upload's UploadError).
         const parsedError = parseApiError(error);
