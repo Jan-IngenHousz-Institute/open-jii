@@ -9,8 +9,8 @@ import { zJsonValue } from "@repo/api/domains/protocol/protocol.schema";
 import { zWorkbookCellArrayInput } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { zEntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 
-import { db, type DatabaseInstance } from "../../src/database";
-import { upsertGrant } from "../../src/resource-grants";
+import { db, type DatabaseInstance } from "../../src/postgres/database";
+import { upsertGrant } from "../../src/postgres/resource-grants";
 import {
   experimentDashboards,
   experimentMembers,
@@ -24,9 +24,10 @@ import {
   protocols,
   resourceGrants,
   resourceVisits,
+  teams,
   workbooks,
   workbookVersions,
-} from "../../src/schema";
+} from "../../src/postgres/schema";
 import { DEMO_ORGANIZATION_ID, DEMO_SEED_FIXTURES } from "./constants";
 import type { SeedUser } from "./types";
 
@@ -220,6 +221,21 @@ export async function seedDemoContent(user: SeedUser, database: DatabaseInstance
 
 export async function clearDemoContent(database: DatabaseInstance = db) {
   await database.transaction(async (tx) => {
+    const demoTeams = await tx
+      .select({ id: teams.id })
+      .from(teams)
+      .where(eq(teams.organizationId, DEMO_ORGANIZATION_ID));
+    if (demoTeams.length > 0) {
+      await tx.delete(resourceGrants).where(
+        and(
+          eq(resourceGrants.granteeType, "team"),
+          inArray(
+            resourceGrants.granteeId,
+            demoTeams.map((team) => team.id),
+          ),
+        ),
+      );
+    }
     const exp = await tx
       .select({ id: experiments.id })
       .from(experiments)
