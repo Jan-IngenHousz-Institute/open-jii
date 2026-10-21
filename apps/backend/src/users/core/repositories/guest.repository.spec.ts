@@ -93,16 +93,14 @@ describe("guest quotas and guarded purge", () => {
       organizationId: demo,
       visibility: "public",
     });
-    await db
-      .insert(resourceGrants)
-      .values({
-        resourceType: "experiment",
-        resourceId: experiment.id,
-        granteeType: "user",
-        granteeId: guest.id,
-        role: "viewer",
-        createdBy: researcher,
-      });
+    await db.insert(resourceGrants).values({
+      resourceType: "experiment",
+      resourceId: experiment.id,
+      granteeType: "user",
+      granteeId: guest.id,
+      role: "viewer",
+      createdBy: researcher,
+    });
     const response = await app
       .get(`/api/v1/experiments/${experiment.id}/contributors`)
       .withAuth(researcher);
