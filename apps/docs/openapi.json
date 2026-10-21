@@ -37417,6 +37417,31 @@
         }
       }
     },
+    "/api/v1/users/demo-availability": {
+      "get": {
+        "operationId": "users.getDemoAvailability",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "enabled"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/users/search": {
       "get": {
         "operationId": "users.searchUsers",

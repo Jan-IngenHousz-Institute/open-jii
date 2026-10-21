@@ -32,6 +32,18 @@ vi.mock("../navigation-sidebar/navigation-sidebar", () => ({
 }));
 
 describe("NavigationSidebarWrapper", () => {
+  it("omits the Create organization navigation action for a guest", async () => {
+    const component = await NavigationSidebarWrapper({
+      locale: "en",
+      user: { ...testUser, isAnonymous: true },
+      isCalibrationEnabled: true,
+    });
+    render(component);
+    expect(screen.getByTestId("sidebar-navigationData").textContent).not.toContain(
+      "/organizations/new",
+    );
+  });
+
   it("renders AppSidebar with correct locale", async () => {
     const Component = await NavigationSidebarWrapper({
       locale: "en",

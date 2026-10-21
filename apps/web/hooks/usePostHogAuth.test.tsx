@@ -45,6 +45,7 @@ describe("usePostHogAuth", () => {
   afterEach(() => {
     mockSession(null);
     vi.mocked(posthog.get_property).mockReset();
+    vi.mocked(posthog.get_distinct_id).mockReset();
     storedConsent?.mockRestore();
   });
 
@@ -87,6 +88,26 @@ describe("usePostHogAuth", () => {
       }),
     );
     expect(posthog.reset).not.toHaveBeenCalled();
+  });
+
+  it("resets the previous researcher before identifying a guest on the same browser", async () => {
+    storedConsent = storeConsent("accepted");
+    mockSession(session);
+    const { rerender } = renderHook(() => usePostHogAuth());
+    await waitFor(() =>
+      expect(posthog.identify).toHaveBeenCalledWith("user-ana", { email: "ana@example.com" }),
+    );
+    vi.mocked(posthog.get_property).mockReturnValue("identified");
+    vi.mocked(posthog.get_distinct_id).mockReturnValue("user-ana");
+    mockSession(createSession({ user: { id: "next-guest", isAnonymous: true } }));
+    rerender();
+    await waitFor(() =>
+      expect(posthog.identify).toHaveBeenLastCalledWith("next-guest", { is_guest: true }),
+    );
+    expect(posthog.reset).toHaveBeenCalledOnce();
+    expect(vi.mocked(posthog.reset).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(posthog.identify).mock.invocationCallOrder[1],
+    );
   });
 
   it("waits for PostHog to load, then brings it up to date", async () => {

@@ -22,6 +22,9 @@ import {
 } from "./user.schema";
 
 export const userContract = {
+  getDemoAvailability: oc
+    .route({ method: "GET", path: "/api/v1/users/demo-availability", successStatus: 200 })
+    .output(z.object({ enabled: z.boolean() })),
   searchUsers: oc
     .route({ method: "GET", path: "/api/v1/users/search", successStatus: 200 })
     .input(zSearchUsersQuery)

@@ -332,6 +332,7 @@ vi.mock("posthog-js", () => ({
     identify: vi.fn(),
     reset: vi.fn(),
     get_property: vi.fn(),
+    get_distinct_id: vi.fn(),
     setPersonProperties: vi.fn(),
     setPersonPropertiesForFlags: vi.fn(),
     opt_in_capturing: vi.fn(),

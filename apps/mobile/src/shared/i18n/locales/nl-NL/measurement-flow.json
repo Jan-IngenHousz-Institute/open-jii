@@ -176,7 +176,8 @@
       "partialTitle": "{{failed}} van {{total}} apparaten mislukt",
       "continueWithSuccessful": "Doorgaan met {{count}}",
       "retryFailed": "Mislukte apparaten opnieuw"
-    }
+    },
+    "privacyNote_true": "Metingen, inclusief de locatie als je telefoon die deelt, blijven permanent openbaar. Je gekozen naam staat erbij tot je account na zeven dagen wordt opgeruimd. Daarna staat er “Voormalige gast”."
   },
   "questionNode": {
     "autoProceeded": {

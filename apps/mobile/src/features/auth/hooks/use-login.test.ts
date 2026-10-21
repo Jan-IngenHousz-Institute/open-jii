@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useLoginFlow } from "./use-login";
 
+vi.mock("expo-secure-store", () => ({ getItem: vi.fn(), setItem: vi.fn() }));
+
 const {
   social,
   oauth2,

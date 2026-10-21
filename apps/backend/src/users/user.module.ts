@@ -17,6 +17,7 @@ import { CreateInvitationUseCase } from "./application/use-cases/create-invitati
 import { CreateUserProfileUseCase } from "./application/use-cases/create-user-profile/create-user-profile";
 import { DeleteUserUseCase } from "./application/use-cases/delete-user/delete-user";
 import { GetDeletionBlockersUseCase } from "./application/use-cases/get-deletion-blockers/get-deletion-blockers";
+import { GetDemoAvailabilityUseCase } from "./application/use-cases/get-demo-availability/get-demo-availability";
 import { GetInvitationsUseCase } from "./application/use-cases/get-invitations/get-invitations";
 import { GetPlatformAdminAccessUseCase } from "./application/use-cases/get-platform-admin-access/get-platform-admin-access";
 import { GetUserProfileUseCase } from "./application/use-cases/get-user-profile/get-user-profile";
@@ -38,6 +39,7 @@ import { PlatformAdminRepository } from "./core/repositories/platform-admin.repo
 import { InvitationRepository } from "./core/repositories/user-invitation.repository";
 import { UserRepository } from "./core/repositories/user.repository";
 import { GuestRepositoryModule } from "./guest-repository.module";
+import { DemoAvailabilityController } from "./presentation/demo-availability.controller";
 import { AccountSecurityAuthHook } from "./presentation/hooks/account-security-auth.hook";
 import { UserAuthHook } from "./presentation/hooks/user-auth.hook";
 // Controllers
@@ -58,6 +60,7 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
     forwardRef(() => ExperimentModule),
   ],
   controllers: [
+    DemoAvailabilityController,
     PlatformAdminController,
     UserController,
     UserWebhookController,
@@ -65,6 +68,7 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
     WhatsNewController,
   ],
   providers: [
+    GetDemoAvailabilityUseCase,
     PurgeExpiredGuestsUseCase,
     GuestPurgeProcessorService,
     { provide: GUEST_PURGE_SIGNAL, useExisting: ErrorReporterService },

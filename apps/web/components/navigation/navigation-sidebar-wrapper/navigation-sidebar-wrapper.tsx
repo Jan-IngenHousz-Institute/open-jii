@@ -94,10 +94,12 @@ export async function NavigationSidebarWrapper({
         url: mainNavigation.organizations.url(locale),
         icon: mainNavigation.organizations.icon,
         isActive: true,
-        items: mainNavigation.organizations.items.map((item) => ({
-          title: tNavigation(item.titleKey, { ns: item.namespace }),
-          url: item.url(locale),
-        })),
+        items: mainNavigation.organizations.items
+          .filter(() => !props.user.isAnonymous)
+          .map((item) => ({
+            title: tNavigation(item.titleKey, { ns: item.namespace }),
+            url: item.url(locale),
+          })),
       },
     ],
     navLibrary: [

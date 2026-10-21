@@ -56,17 +56,32 @@ function startConnectivityWatcher() {
 // the importArray OOM). retry sheds the oldest query if a write fails.
 const OFFLINE_CACHE_KEY = "REACT_QUERY_OFFLINE_CACHE_v4";
 
-const asyncStoragePersister = createAsyncStoragePersister({
-  storage: AsyncStorage,
-  key: OFFLINE_CACHE_KEY,
-  retry: removeOldestQuery,
-});
-
 void AsyncStorage.removeItem("REACT_QUERY_OFFLINE_CACHE").catch((err) => {
   log.warn("failed to drop legacy query cache", { err: (err as Error)?.message });
 });
 
-export function ConfiguredQueryClientProvider({ children }) {
+export function ConfiguredQueryClientProvider({ children, identity = "signed-out" }) {
+  const active = useRef(true);
+  const [asyncStoragePersister] = React.useState(() =>
+    createAsyncStoragePersister({
+      storage: {
+        getItem: (key) => AsyncStorage.getItem(key),
+        setItem: (key, value) =>
+          active.current ? AsyncStorage.setItem(key, value) : Promise.resolve(),
+        removeItem: (key) => AsyncStorage.removeItem(key),
+      },
+      key: `${OFFLINE_CACHE_KEY}:${identity}`,
+      retry: removeOldestQuery,
+    }),
+  );
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+      void queryClientRef.current?.cancelQueries();
+      queryClientRef.current?.clear();
+    };
+  }, []);
   const queryClientRef = useRef<QueryClient>(undefined);
 
   useEffect(() => {

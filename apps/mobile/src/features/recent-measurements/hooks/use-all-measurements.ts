@@ -5,6 +5,7 @@ import type { MeasurementCounts } from "~/shared/db/measurements-storage";
 
 import { queryKeys, statusesForFilter } from "../services/measurement-list-cache";
 import type { MeasurementFilter } from "../services/measurement-list-cache";
+import { useMeasurementViewer, measurementViewerKey } from "./use-measurement-viewer";
 
 export type { MeasurementStatus } from "~/shared/db/measurements-storage";
 export type { MeasurementFilter, MeasurementItem } from "../services/measurement-list-cache";
@@ -18,14 +19,16 @@ const EMPTY_COUNTS: MeasurementCounts = {
 };
 
 export function useAllMeasurements(filter: MeasurementFilter = "all") {
+  const viewer = useMeasurementViewer();
   const queryClient = useQueryClient();
 
   // Paginated lean fetch — first page (~1 ms locally) renders immediately.
   // `refetchOnMount: true` is safe now that the queryFn no longer decompresses.
   const listQuery = useInfiniteQuery({
-    queryKey: queryKeys.list(filter),
+    queryKey: [...queryKeys.list(filter), measurementViewerKey(viewer)],
     queryFn: async ({ pageParam }) => {
       const rows = await getMeasurementsList(statusesForFilter(filter), {
+        viewer,
         limit: PAGE_SIZE,
         offset: pageParam,
       });
@@ -64,9 +67,10 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
 // WITHOUT dragging the heavy Recent list + FlashList subtree into every
 // re-render. See OJD-1470.
 export function useMeasurementCounts() {
+  const viewer = useMeasurementViewer();
   const { data: counts = EMPTY_COUNTS } = useQuery({
-    queryKey: queryKeys.counts,
-    queryFn: countMeasurementsByStatus,
+    queryKey: [...queryKeys.counts, measurementViewerKey(viewer)],
+    queryFn: () => countMeasurementsByStatus(viewer),
     networkMode: "always",
     refetchOnMount: true,
   });
@@ -82,10 +86,11 @@ export function useMeasurementCounts() {
 // so React Query only notifies when it FLIPS — pending→successful settles keep
 // the total constant, so the subscriber never re-renders on a tick.
 export function useHasAnyMeasurements(): boolean {
+  const viewer = useMeasurementViewer();
   return (
     useQuery({
-      queryKey: queryKeys.counts,
-      queryFn: countMeasurementsByStatus,
+      queryKey: [...queryKeys.counts, measurementViewerKey(viewer)],
+      queryFn: () => countMeasurementsByStatus(viewer),
       select: (c) => c.pending + c.failed + c.successful > 0,
       networkMode: "always",
       refetchOnMount: true,
@@ -98,10 +103,12 @@ export function useHasAnyMeasurements(): boolean {
 // screen doesn't pay for pagination or burst refetches. Shares the
 // `["measurements"]` key root so invalidations still refresh it.
 export function useTopMeasurements(n: number) {
+  const viewer = useMeasurementViewer();
   const query = useQuery({
-    queryKey: queryKeys.top(n),
+    queryKey: [...queryKeys.top(n), measurementViewerKey(viewer)],
     queryFn: async () => {
       const rows = await getMeasurementsList(statusesForFilter("all"), {
+        viewer,
         limit: n,
         offset: 0,
       });

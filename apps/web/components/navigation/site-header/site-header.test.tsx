@@ -1,8 +1,10 @@
 import { CalibrationFlagProvider } from "@/components/calibrations/calibration-flag-context";
+import { createSession } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { usePathname } from "next/navigation";
 import { describe, it, expect, vi } from "vitest";
 
+import { useSession } from "@repo/auth/client";
 import { SidebarProvider } from "@repo/ui/components/sidebar";
 
 import { PlatformHeaderDetail, PlatformHeaderProvider } from "./platform-header-context";
@@ -27,6 +29,32 @@ function renderHeader(
 }
 
 describe("SiteHeader", () => {
+  it("hides Create organization for guests while researchers retain it", () => {
+    const baseline = vi.mocked(useSession).getMockImplementation();
+    vi.mocked(useSession).mockReturnValue({
+      data: createSession({ user: { isAnonymous: true } }),
+      isPending: false,
+      isRefetching: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    const guest = renderHeader("/en/platform/organizations");
+    expect(
+      screen.queryByRole("link", { name: "organizations.createAction" }),
+    ).not.toBeInTheDocument();
+    guest.unmount();
+    vi.mocked(useSession).mockReturnValue({
+      data: createSession(),
+      isPending: false,
+      isRefetching: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    renderHeader("/en/platform/organizations");
+    expect(screen.getByRole("link", { name: "organizations.createAction" })).toBeInTheDocument();
+    if (baseline) vi.mocked(useSession).mockImplementation(baseline);
+  });
+
   it("renders the sidebar trigger inside a compact 48px header", () => {
     renderHeader("/en/platform/experiments");
 
