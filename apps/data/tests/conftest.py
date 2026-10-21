@@ -63,3 +63,40 @@ def fake_dlt(monkeypatch: pytest.MonkeyPatch) -> Iterator[types.ModuleType]:
 
     monkeypatch.setitem(sys.modules, "dlt", fake)
     yield fake
+
+
+@pytest.fixture
+def fake_dp(monkeypatch: pytest.MonkeyPatch) -> Iterator[types.ModuleType]:
+    """Inject a ``pyspark.pipelines`` that records the sinks and flows a notebook defines.
+
+    ``sinks`` maps a sink's name to its batch function; ``flows`` maps a flow's name to its
+    target and its function.
+    """
+    import pyspark
+
+    fake = types.ModuleType("pyspark.pipelines")
+    sinks: dict = {}
+    flows: dict = {}
+
+    def foreach_batch_sink(name):
+        def register(fn):
+            sinks[name] = fn
+            return fn
+
+        return register
+
+    def append_flow(target, name):
+        def register(fn):
+            flows[name] = (target, fn)
+            return fn
+
+        return register
+
+    fake.sinks = sinks  # type: ignore[attr-defined]
+    fake.flows = flows  # type: ignore[attr-defined]
+    fake.foreach_batch_sink = foreach_batch_sink  # type: ignore[attr-defined]
+    fake.append_flow = append_flow  # type: ignore[attr-defined]
+
+    monkeypatch.setitem(sys.modules, "pyspark.pipelines", fake)
+    monkeypatch.setattr(pyspark, "pipelines", fake, raising=False)
+    yield fake
