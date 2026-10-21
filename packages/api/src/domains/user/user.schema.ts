@@ -85,6 +85,8 @@ export const zUserMetadataWebhookPayload = z.object({
 
 export const zUserMetadata = z.object({
   userId: z.string().guid(),
+  isGuest: z.boolean().default(false),
+  isFormerGuest: z.boolean().default(false),
   firstName: z.string(),
   lastName: z.string(),
   avatarUrl: z.string().nullable(),
