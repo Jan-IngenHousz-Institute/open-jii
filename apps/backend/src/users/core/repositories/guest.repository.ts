@@ -2,8 +2,8 @@ import { Inject, Injectable } from "@nestjs/common";
 
 import { GUEST_HOURLY_LIMIT } from "@repo/api/shared/guest";
 import { deleteStaleAnonymousRateLimits } from "@repo/auth/guest-retention";
-import { and, eq, exists, guestUsage, gt, lt, sessions, sql, users } from "@repo/database";
-import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
+import { and, eq, guestUsage, gt, lt, sessions, sql, users } from "@repo/database";
+import type { DatabaseInstance, DbOrTx } from "@repo/database";
 
 import { GUEST_GRANT_CLEANUP_PORT } from "../../../sharing/core/ports/guest-grant-cleanup.port";
 import type { GuestGrantCleanupPort } from "../../../sharing/core/ports/guest-grant-cleanup.port";
@@ -24,15 +24,6 @@ export class GuestRepository implements GuestIdentityPort {
       .from(users)
       .where(eq(users.id, userId));
     return identities.at(0) ?? null;
-  }
-
-  static guestCondition(database: DatabaseInstance, userId: string): SQL {
-    return exists(
-      database
-        .select()
-        .from(users)
-        .where(and(eq(users.id, userId), eq(users.isAnonymous, true))),
-    );
   }
 
   async hasSession(userId: string, token: string): Promise<boolean> {

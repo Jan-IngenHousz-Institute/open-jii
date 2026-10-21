@@ -1,20 +1,22 @@
 import { Module } from "@nestjs/common";
 
-import { GuestExperimentAccessRepository } from "../experiments/core/repositories/guest-access.repository";
-import { GuestMacroAccessRepository } from "../macros/core/repositories/guest-access.repository";
-import { GuestOrganizationAccessRepository } from "../organizations/core/repositories/guest-access.repository";
-import { GuestProtocolAccessRepository } from "../protocols/core/repositories/guest-access.repository";
-import { GuestWorkbookAccessRepository } from "../workbooks/core/repositories/guest-access.repository";
+import { GuestExperimentAccessModule } from "../experiments/guest-access.module";
+import { GuestMacroAccessModule } from "../macros/guest-access.module";
+import { GuestOrganizationAccessModule } from "../organizations/guest-access.module";
+import { GuestProtocolAccessModule } from "../protocols/guest-access.module";
+import { GuestWorkbookAccessModule } from "../workbooks/guest-access.module";
 import { GUEST_RESOURCE_PORT } from "./core/ports/guest-resource.port";
 import { GuestResourceRepository } from "./core/repositories/guest-resource.repository";
 
 @Module({
+  imports: [
+    GuestExperimentAccessModule,
+    GuestMacroAccessModule,
+    GuestOrganizationAccessModule,
+    GuestProtocolAccessModule,
+    GuestWorkbookAccessModule,
+  ],
   providers: [
-    GuestExperimentAccessRepository,
-    GuestMacroAccessRepository,
-    GuestProtocolAccessRepository,
-    GuestWorkbookAccessRepository,
-    GuestOrganizationAccessRepository,
     GuestResourceRepository,
     { provide: GUEST_RESOURCE_PORT, useExisting: GuestResourceRepository },
   ],

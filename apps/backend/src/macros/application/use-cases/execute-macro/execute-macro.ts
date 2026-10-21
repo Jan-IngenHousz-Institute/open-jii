@@ -8,9 +8,13 @@ import { restoreMacroInputInContext } from "@repo/api/transforms/macro-context-r
 import { normalizeMacroInput } from "@repo/api/transforms/normalize-macro-input";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
+import { DEMO_MODE_PORT } from "../../../../authorization/core/ports/demo-mode.port";
+import type { DemoModePort } from "../../../../authorization/core/ports/demo-mode.port";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import type { Result } from "../../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../../common/utils/fp-utils";
+import { GUEST_IDENTITY_PORT } from "../../../../users/core/ports/guest-identity.port";
+import type { GuestIdentityPort } from "../../../../users/core/ports/guest-identity.port";
 import type { LambdaExecutionPayload } from "../../../core/models/macro-execution.model";
 import {
   emptyEnvelopeError,
@@ -22,6 +26,7 @@ import {
   macroSnapshotKey,
   MacroSnapshotRepository,
 } from "../../../core/repositories/macro-snapshot.repository";
+import { GuestMacroAccessRepository } from "../../../core/repositories/guest-access.repository";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 
 @Injectable()
@@ -33,6 +38,9 @@ export class ExecuteMacroUseCase {
     private readonly macroSnapshotRepository: MacroSnapshotRepository,
     @Inject(LAMBDA_PORT) private readonly lambdaPort: LambdaPort,
     private readonly authz: AuthorizationService,
+    @Inject(GUEST_IDENTITY_PORT) private readonly guests: GuestIdentityPort,
+    @Inject(DEMO_MODE_PORT) private readonly demo: DemoModePort,
+    private readonly guestAccess: GuestMacroAccessRepository,
   ) {}
 
   async execute(
@@ -47,6 +55,22 @@ export class ExecuteMacroUseCase {
       timeout: request.timeout,
     });
 
+    const identity = userId ? await this.guests.findIdentity(userId) : null;
+    if (identity?.isAnonymous) {
+      const owner = await this.guestAccess.findOwnership(macroId);
+      if (
+        owner?.organizationType !== "demo" ||
+        owner.visibility !== "public" ||
+        !(await this.demo.isEnabled())
+      ) {
+        return failure(
+          AppError.forbidden(
+            "Guest macro runs are limited to the available demo",
+            "GUEST_ACTION_FORBIDDEN",
+          ),
+        );
+      }
+    }
     // 1. Fetch the live macro script, or the pinned version's snapshot (both cached)
     const macroResult = request.workbookVersionId
       ? await this.findPinnedScript(macroId, request.workbookVersionId, userId)
@@ -115,6 +139,18 @@ export class ExecuteMacroUseCase {
       ],
       timeout: request.timeout ?? 30,
     };
+
+    if (userId && identity?.isAnonymous) {
+      const quota = await this.guests.takeQuota(userId, "macro");
+      if (!quota.allowed)
+        return failure(
+          new AppError(
+            `Guest limit reached. Try again in ${quota.retryAfterSeconds} seconds`,
+            "GUEST_RATE_LIMITED",
+            429,
+          ),
+        );
+    }
 
     // 4. Invoke Lambda
     const lambdaResult = await this.lambdaPort.invokeLambda(functionName, payload);

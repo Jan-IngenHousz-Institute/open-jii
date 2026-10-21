@@ -14,8 +14,8 @@ import {
 import type { AnyColumn, DatabaseInstance, ResourceType, SQL } from "@repo/database";
 
 import { roleTokenIncludes } from "../../../common/utils/role-tokens";
-import { GuestOrganizationAccessRepository } from "../../../organizations/core/repositories/guest-access.repository";
-import { GuestRepository } from "../../../users/core/repositories/guest.repository";
+import { demoOrganizationCondition } from "../../../organizations/core/repositories/organization-query";
+import { guestCondition } from "../../../users/core/repositories/guest-query";
 
 /**
  * The roles that carry `contribute` on an experiment, as literal values SQL can
@@ -194,8 +194,8 @@ export function contributingResourceCondition(params: {
 
   return and(
     or(
-      not(GuestRepository.guestCondition(params.database, params.userId)),
-      GuestOrganizationAccessRepository.demoCondition(params.database, params.organizationIdColumn),
+      not(guestCondition(params.database, params.userId)),
+      demoOrganizationCondition(params.database, params.organizationIdColumn),
     ),
     or(userGrantExists, teamGrantExists, orgGrantExists, owningOrgMemberExists),
   );
@@ -277,8 +277,8 @@ export function resourceRoleExpression(params: {
   };
 
   return sql<ResourceRoleName | null>`(CASE
-    WHEN ${GuestRepository.guestCondition(params.database, userId)} THEN
-      CASE WHEN ${GuestOrganizationAccessRepository.demoCondition(params.database, params.organizationIdColumn)}
+    WHEN ${guestCondition(params.database, userId)} THEN
+      CASE WHEN ${demoOrganizationCondition(params.database, params.organizationIdColumn)}
         THEN 'member'::text ELSE null::text END
     WHEN ${holds({ grant: ["owner"], owningOrg: ["owner"] })} THEN 'owner'
     WHEN ${holds({ grant: ["admin"], owningOrg: ["admin"] })} THEN 'admin'
@@ -313,6 +313,6 @@ export function accessibleResourceCondition(params: {
   const related = relatedResourceCondition(params);
 
   if (!related || !params.userId) return isPublic;
-  const isGuest = GuestRepository.guestCondition(params.database, params.userId);
+  const isGuest = guestCondition(params.database, params.userId);
   return or(isPublic, and(not(isGuest), related));
 }

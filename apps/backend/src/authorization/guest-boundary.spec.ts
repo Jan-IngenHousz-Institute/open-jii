@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import {
   db,
   eq,
@@ -9,22 +11,29 @@ import {
   users,
 } from "@repo/database";
 
+import { AwsAdapter } from "../common/modules/aws/aws.adapter";
+import { success } from "../common/utils/fp-utils";
+import { LAMBDA_PORT } from "../macros/core/ports/lambda.port";
+import type { LambdaPort } from "../macros/core/ports/lambda.port";
 import { TestHarness } from "../test/test-harness";
 import { AuthorizationService } from "./authorization.service";
 import { guestRouteInventory } from "./core/models/guest-route.model";
+import { DEMO_MODE_PORT } from "./core/ports/demo-mode.port";
+import type { DemoModePort } from "./core/ports/demo-mode.port";
 
 describe("guest authorization HTTP boundary", () => {
   const app = TestHarness.App;
   let visitor: string;
   let researcher: string;
   let ordinary: string;
+  let demo: string;
   let publicExperiment: string;
   let privateExperiment: string;
   beforeAll(() => app.setup());
   beforeEach(async () => {
     await app.beforeEach();
     researcher = await app.createTestUser();
-    await app.createOrganization(undefined, { type: "demo", visibility: "public" });
+    demo = await app.createOrganization(undefined, { type: "demo", visibility: "public" });
     ordinary = await app.createOrganization(undefined, {
       type: "university",
       visibility: "public",
@@ -105,9 +114,10 @@ describe("guest authorization HTTP boundary", () => {
       ](path)
         .withAuth(visitor)
         .send(body);
-      expect([401, 403], `${route.method} ${path}: ${JSON.stringify(response.body)}`).toContain(
-        response.status,
+      expect(response.status, `${route.method} ${path}: ${JSON.stringify(response.body)}`).toBe(
+        403,
       );
+      expect(response.body).toMatchObject({ code: "GUEST_ACTION_FORBIDDEN" });
     }
     expect(await db.select().from(users)).toEqual(before.users);
     expect(await db.select().from(experiments)).toEqual(before.experiments);
@@ -152,6 +162,90 @@ describe("guest authorization HTTP boundary", () => {
     for (const path of paths)
       expect((await app.get(path).withAuth(visitor)).status, path).toBe(403);
   });
+
+  it("issues only Demo guest uploads, enforces size, and caps the 61st before AWS", async () => {
+    vi.spyOn(app.module.get<DemoModePort>(DEMO_MODE_PORT), "isEnabled").mockResolvedValue(true);
+    const signer = vi.spyOn(app.module.get(AwsAdapter), "getIotUploadUrl").mockResolvedValue(
+      success({
+        uploadUrl: "https://example.test/signed",
+        key: "large-iot/demo/guest/synthetic.json",
+        expiresAt: new Date(),
+      }),
+    );
+    const { experiment } = await app.createExperiment({
+      name: "Synthetic demo",
+      userId: researcher,
+      organizationId: demo,
+      visibility: "public",
+    });
+    const post = (experimentId: string, contentLength?: number) =>
+      app
+        .post("/api/v1/iot/upload-url")
+        .withAuth(visitor)
+        .send({ experimentId, ...(contentLength !== undefined ? { contentLength } : {}) });
+    expect((await post(publicExperiment, 20)).status).toBe(403);
+    for (const size of [undefined, 0, -1, 1.5, 1_048_577])
+      expect((await post(experiment.id, size)).status).toBe(400);
+    expect(signer).not.toHaveBeenCalled();
+    for (let i = 0; i < 60; i++) expect((await post(experiment.id, 20)).status).toBe(200);
+    expect(signer).toHaveBeenLastCalledWith(experiment.id, { guestContentLength: 20 });
+    const limited = await post(experiment.id, 20);
+    expect(limited.status).toBe(429);
+    expect(z.object({ message: z.string() }).parse(limited.body).message).toMatch(
+      /Try again in \d+ seconds/,
+    );
+    expect(signer).toHaveBeenCalledTimes(60);
+  }, 30_000);
+
+  it("executes only Demo macros while enabled, with an independent persisted cap", async () => {
+    const flag = vi
+      .spyOn(app.module.get<DemoModePort>(DEMO_MODE_PORT), "isEnabled")
+      .mockResolvedValue(true);
+    const lambda = app.module.get<LambdaPort>(LAMBDA_PORT);
+    const invoke = vi.spyOn(lambda, "invokeLambda").mockResolvedValue(
+      success({
+        statusCode: 200,
+        payload: {
+          status: "success",
+          results: [{ id: "single", success: true, output: { value: 1 } }],
+        },
+      }),
+    );
+    vi.spyOn(lambda, "getFunctionNameForLanguage").mockReturnValue("synthetic-macro");
+    const macro = await app.createMacro({
+      name: "Synthetic demo",
+      createdBy: researcher,
+      organizationId: demo,
+      visibility: "public",
+    });
+    const normal = await app.createMacro({
+      name: "Synthetic ordinary",
+      createdBy: researcher,
+      organizationId: ordinary,
+      visibility: "public",
+    });
+    const run = (id: string) =>
+      app
+        .post(`/api/v1/macros/${id}/execute`)
+        .withAuth(visitor)
+        .send({ data: { value: 1 } });
+    expect((await run(normal.id)).status).toBe(403);
+    flag.mockResolvedValue(false);
+    expect((await run(macro.id)).status).toBe(403);
+    expect(invoke).not.toHaveBeenCalled();
+    flag.mockResolvedValue(true);
+    expect(
+      (
+        await app
+          .post(`/api/v1/macros/${macro.id}/execute`)
+          .withAuth(visitor)
+          .send({ data: { value: 1 }, timeout: -1 })
+      ).status,
+    ).toBe(400);
+    for (let i = 0; i < 60; i++) expect((await run(macro.id)).status).toBe(200);
+    expect((await run(macro.id)).status).toBe(429);
+    expect(invoke).toHaveBeenCalledTimes(60);
+  }, 30_000);
 
   it("a deleted guest cannot use the stale session after purge", async () => {
     await db.delete(resourceGrants).where(eq(resourceGrants.granteeId, visitor));

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import { and, eq, exists, organizations } from "@repo/database";
-import type { AnyColumn, DatabaseInstance, DbOrTx } from "@repo/database";
+import { eq, organizations } from "@repo/database";
+import type { DatabaseInstance, DbOrTx } from "@repo/database";
 
 import type { GuestResourceOwnership } from "../../../authorization/core/ports/guest-resource.port";
 
@@ -22,13 +22,5 @@ export class GuestOrganizationAccessRepository {
       .where(eq(organizations.id, id))
       .limit(1);
     return rows.at(0) ?? null;
-  }
-  static demoCondition(database: DatabaseInstance, organizationId: AnyColumn) {
-    return exists(
-      database
-        .select()
-        .from(organizations)
-        .where(and(eq(organizations.id, organizationId), eq(organizations.type, "demo"))),
-    );
   }
 }

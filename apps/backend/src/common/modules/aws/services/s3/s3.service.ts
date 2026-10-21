@@ -2,10 +2,13 @@ import { S3Client, GetObjectCommand, NoSuchKey, PutObjectCommand } from "@aws-sd
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Injectable } from "@nestjs/common";
 
+import { GUEST_UPLOAD_MAX_BYTES } from "@repo/api/shared/guest";
+
 import { ErrorCodes } from "../../../../utils/error-codes";
 import { AppError, Result, tryCatch } from "../../../../utils/fp-utils";
+import { failure } from "../../../../utils/fp-utils";
 import { AwsConfigService } from "../config/config.service";
-import type { IotUploadUrl, SignedDownloadUrl } from "./s3.types";
+import type { IotUploadUrl, SignedDownloadUrl, GuestUploadOptions } from "./s3.types";
 
 const PRESIGNED_URL_EXPIRY_SECONDS = 900; // 15 minutes
 
@@ -15,9 +18,15 @@ const EXPORT_DOWNLOAD_EXPIRY_SECONDS = 3600;
 @Injectable()
 export class AwsS3Service {
   private readonly s3Client: S3Client;
+  private readonly guestS3Client: S3Client;
 
   constructor(private readonly awsConfig: AwsConfigService) {
     this.s3Client = new S3Client({ region: this.awsConfig.region });
+    // The payload arrives later. Do not sign a checksum of an empty body.
+    this.guestS3Client = new S3Client({
+      region: this.awsConfig.region,
+      requestChecksumCalculation: "WHEN_REQUIRED",
+    });
   }
 
   // Separated from the callers so tests can spy on this method (ESM exports are not configurable).
@@ -25,7 +34,11 @@ export class AwsS3Service {
     command: PutObjectCommand | GetObjectCommand,
     expiresIn = PRESIGNED_URL_EXPIRY_SECONDS,
   ): Promise<string> {
-    return getSignedUrl(this.s3Client, command, { expiresIn });
+    const guest = command instanceof PutObjectCommand && command.input.ContentLength !== undefined;
+    return getSignedUrl(guest ? this.guestS3Client : this.s3Client, command, {
+      expiresIn,
+      ...(guest ? { signableHeaders: new Set(["content-type", "content-length"]) } : {}),
+    });
   }
 
   /** A signed URL stops working when the credentials that signed it expire, whatever it says. */
@@ -34,14 +47,31 @@ export class AwsS3Service {
     return credentials.expiration;
   }
 
-  async getIotUploadUrl(experimentId: string): Promise<Result<IotUploadUrl>> {
+  async getIotUploadUrl(
+    experimentId: string,
+    guest?: GuestUploadOptions,
+  ): Promise<Result<IotUploadUrl>> {
+    if (
+      guest &&
+      (!Number.isInteger(guest.guestContentLength) ||
+        guest.guestContentLength <= 0 ||
+        guest.guestContentLength > GUEST_UPLOAD_MAX_BYTES)
+    ) {
+      return failure(
+        AppError.badRequest("Guest uploads must be at most 1 MiB", "GUEST_UPLOAD_SIZE_INVALID"),
+      );
+    }
     return tryCatch(
       async () => {
-        const key = `large-iot/${experimentId}/${crypto.randomUUID()}.json`;
+        const prefix = guest
+          ? `large-iot/${experimentId.toLowerCase()}/guest`
+          : `large-iot/${experimentId}`;
+        const key = `${prefix}/${crypto.randomUUID()}.json`;
         const command = new PutObjectCommand({
           Bucket: this.awsConfig.s3Config.largeIotBucketName,
           Key: key,
           ContentType: "application/json",
+          ...(guest ? { ContentLength: guest.guestContentLength } : {}),
         });
 
         const uploadUrl = await this.createSignedUrl(command);
