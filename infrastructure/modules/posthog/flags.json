@@ -8,7 +8,14 @@
       "early_exit": false,
       "groups": [
         {
-          "properties": [{ "key": "id", "type": "cohort", "value": 182121, "operator": "in" }],
+          "properties": [
+            {
+              "key": "id",
+              "type": "cohort",
+              "value": 182121,
+              "operator": "in"
+            }
+          ],
           "rollout_percentage": 100
         }
       ]
@@ -19,41 +26,90 @@
     "active": true,
     "continuity": false,
     "tags": [],
-    "filters": { "groups": [{ "rollout_percentage": 0 }] }
+    "filters": {
+      "groups": [
+        {
+          "rollout_percentage": 0
+        }
+      ]
+    }
   },
   "macro-deletion": {
     "name": "Macro deletion",
     "active": false,
     "continuity": false,
     "tags": ["backend", "feature"],
-    "filters": { "groups": [{ "rollout_percentage": 100 }] }
+    "filters": {
+      "groups": [
+        {
+          "rollout_percentage": 100
+        }
+      ]
+    }
   },
   "experiment-deletion": {
     "name": "Experiment Deletion",
     "active": false,
     "continuity": false,
     "tags": ["backend", "experiment"],
-    "filters": { "groups": [{ "rollout_percentage": 100 }] }
+    "filters": {
+      "groups": [
+        {
+          "rollout_percentage": 100
+        }
+      ]
+    }
   },
   "protocol-deletion": {
     "name": "Protocol Deletion",
     "active": false,
     "continuity": false,
     "tags": ["backend", "security"],
-    "filters": { "groups": [{ "rollout_percentage": 100 }] }
+    "filters": {
+      "groups": [
+        {
+          "rollout_percentage": 100
+        }
+      ]
+    }
   },
   "protocol-validation-as-warning": {
     "name": "",
     "active": true,
     "continuity": true,
     "tags": [],
-    "filters": { "groups": [{ "rollout_percentage": 100 }] }
+    "filters": {
+      "groups": [
+        {
+          "rollout_percentage": 100
+        }
+      ]
+    }
   },
   "multi-language": {
     "name": "",
     "active": true,
     "continuity": false,
     "tags": [],
-    "filters": { "groups": [{ "rollout_percentage": 0 }] }
+    "filters": {
+      "groups": [
+        {
+          "rollout_percentage": 0
+        }
+      ]
+    }
+  },
+  "demo-mode": {
+    "name": "Guest demo sessions and execution. Off until the demo rollout is approved.",
+    "active": true,
+    "continuity": false,
+    "tags": ["backend", "demo"],
+    "filters": {
+      "groups": [
+        {
+          "rollout_percentage": 0
+        }
+      ]
+    }
   }
 }

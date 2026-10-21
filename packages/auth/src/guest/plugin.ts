@@ -1,0 +1,112 @@
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
+import { anonymous } from "better-auth/plugins";
+
+import { FEATURE_FLAGS } from "@repo/analytics";
+import { isFeatureFlagEnabled } from "@repo/analytics/server";
+import { GUEST_EMAIL_DOMAIN, isGuestEmail, zGuestName } from "@repo/api/shared/guest";
+
+export async function demoModeEnabled(): Promise<boolean> {
+  return isFeatureFlagEnabled(FEATURE_FLAGS.DEMO_MODE);
+}
+
+export const GUEST_AUTH_PATHS = ["/get-session", "/sign-out", "/update-user"] as const;
+
+function guestName(value: unknown): string {
+  const parsed = zGuestName.safeParse(value ?? "");
+  if (!parsed.success) {
+    throw new APIError("BAD_REQUEST", {
+      code: "INVALID_GUEST_NAME",
+      message: "Use a name of at most 60 characters without a web address",
+    });
+  }
+  return parsed.data;
+}
+
+function bodyFields(body: unknown): Record<string, unknown> {
+  return body !== null && typeof body === "object" && !Array.isArray(body)
+    ? (body as Record<string, unknown>)
+    : {};
+}
+
+export function openJiiGuest({
+  isDemoEnabled = demoModeEnabled,
+}: { isDemoEnabled?: () => Promise<boolean> } = {}) {
+  const plugin = anonymous({
+    emailDomainName: GUEST_EMAIL_DOMAIN,
+    disableDeleteAnonymousUser: true,
+    generateName: (ctx) => Promise.resolve(guestName(bodyFields(ctx.body).name)),
+  });
+  return {
+    ...plugin,
+    hooks: {
+      ...plugin.hooks,
+      before: [
+        {
+          matcher: () => true,
+          handler: createAuthMiddleware(async (ctx) => {
+            const body = bodyFields(ctx.body);
+            if (typeof body.email === "string" && isGuestEmail(body.email)) {
+              throw new APIError("FORBIDDEN", { message: "This address cannot be used" });
+            }
+            const session = await getSessionFromCtx(ctx, { disableCookieCache: true });
+            if (ctx.path === "/sign-in/anonymous") {
+              if (session?.user.isAnonymous) {
+                // Keep the installed plugin's re-entry response; it creates no second user.
+                return;
+              }
+              if (session) {
+                throw new APIError("FORBIDDEN", {
+                  message: "Sign out before starting a guest session",
+                });
+              }
+              if (!(await isDemoEnabled())) {
+                throw new APIError("FORBIDDEN", {
+                  code: "DEMO_DISABLED",
+                  message: "The demo is currently unavailable",
+                });
+              }
+              guestName(body.name);
+              return;
+            }
+            if (!session?.user.isAnonymous) return;
+            if (!GUEST_AUTH_PATHS.some((path) => path === ctx.path)) {
+              throw new APIError("FORBIDDEN", {
+                code: "GUEST_ACTION_FORBIDDEN",
+                message: "This action is not available to guests",
+              });
+            }
+            if (ctx.path === "/update-user") {
+              if (Object.keys(body).length !== 1 || !("name" in body)) {
+                throw new APIError("FORBIDDEN", { message: "Guests can only change their name" });
+              }
+              ctx.body = { name: guestName(body.name) };
+            }
+          }),
+        },
+      ],
+      after: [
+        ...plugin.hooks.after,
+        {
+          matcher: () => true,
+          handler: createAuthMiddleware((ctx) => {
+            const returned: unknown = ctx.context.returned;
+            if (!returned || typeof returned !== "object" || !("user" in returned))
+              return Promise.resolve();
+            const user = returned.user;
+            if (
+              !user ||
+              typeof user !== "object" ||
+              !("isAnonymous" in user) ||
+              !user.isAnonymous
+            ) {
+              return Promise.resolve();
+            }
+            const { email: _email, ...safeUser } = user as Record<string, unknown>;
+            ctx.context.returned = { ...returned, user: safeUser };
+            return Promise.resolve();
+          }),
+        },
+      ],
+    },
+  };
+}

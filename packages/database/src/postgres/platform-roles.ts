@@ -43,20 +43,22 @@ export interface PlatformRoleChange {
 
 interface AccountState {
   registered: boolean;
+  isAnonymous: boolean;
   banned: boolean | null;
   deletedAt: Date | null;
 }
 
 /**
- * The one rule for which accounts hold, grant or receive a platform role: registered, not
- * banned and not deleted. A stored role on any other account is inactive.
+ * The one rule for which accounts hold, grant or receive a platform role: registered, not a
+ * guest, not banned and not deleted. A stored role on any other account is inactive.
  */
 export function isActiveAccount(account: AccountState): boolean {
-  return account.registered && !account.banned && !account.deletedAt;
+  return account.registered && !account.isAnonymous && !account.banned && !account.deletedAt;
 }
 
 const accountState = {
   registered: users.registered,
+  isAnonymous: users.isAnonymous,
   banned: users.banned,
   deletedAt: profiles.deletedAt,
 };
