@@ -2,17 +2,18 @@ import { Inject, Injectable } from "@nestjs/common";
 
 import { GUEST_HOURLY_LIMIT } from "@repo/api/shared/guest";
 import { deleteStaleAnonymousRateLimits } from "@repo/auth/guest-retention";
-import { and, eq, guestUsage, gt, lt, sessions, sql, users } from "@repo/database";
+import { and, eq, guestUsage, gt, inArray, lt, sessions, sql, users } from "@repo/database";
 import type { DatabaseInstance, DbOrTx } from "@repo/database";
 
 import { GUEST_GRANT_CLEANUP_PORT } from "../../../sharing/core/ports/guest-grant-cleanup.port";
 import type { GuestGrantCleanupPort } from "../../../sharing/core/ports/guest-grant-cleanup.port";
 import { GUEST_LIFETIME_MS } from "../models/guest.model";
 import type { GuestPurgeBatch, GuestQuotaDecision, GuestQuotaKind } from "../models/guest.model";
+import type { GuestDirectoryPort } from "../ports/guest-directory.port";
 import type { GuestIdentityPort } from "../ports/guest-identity.port";
 
 @Injectable()
-export class GuestRepository implements GuestIdentityPort {
+export class GuestRepository implements GuestIdentityPort, GuestDirectoryPort {
   constructor(
     @Inject("DATABASE") private readonly database: DatabaseInstance,
     @Inject(GUEST_GRANT_CLEANUP_PORT) private readonly grants: GuestGrantCleanupPort,
@@ -24,6 +25,15 @@ export class GuestRepository implements GuestIdentityPort {
       .from(users)
       .where(eq(users.id, userId));
     return identities.at(0) ?? null;
+  }
+
+  async findGuestIds(userIds: string[]): Promise<string[]> {
+    if (userIds.length === 0) return [];
+    const rows = await this.database
+      .select({ id: users.id })
+      .from(users)
+      .where(and(inArray(users.id, userIds), eq(users.isAnonymous, true)));
+    return rows.map(({ id }) => id);
   }
 
   async hasSession(userId: string, token: string): Promise<boolean> {
@@ -87,7 +97,7 @@ export class GuestRepository implements GuestIdentityPort {
         .where(and(eq(users.isAnonymous, true), lt(users.createdAt, cutoff)))
         .for("update");
       let deleted = 0;
-      const blocked: unknown[] = [];
+      const blocked: GuestPurgeBatch["blocked"] = [];
       for (const guest of expired) {
         try {
           // A savepoint keeps an unexpected RESTRICT row from retaining every other guest.
@@ -100,7 +110,7 @@ export class GuestRepository implements GuestIdentityPort {
             return removed.length;
           });
         } catch (error) {
-          blocked.push(error);
+          blocked.push({ userId: guest.id, error });
         }
       }
       const rateLimitRowsDeleted = await deleteStaleAnonymousRateLimits(tx, cutoff);

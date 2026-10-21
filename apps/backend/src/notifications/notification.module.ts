@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { EmailModule } from "../common/modules/email/services/email.module";
+import { GuestRepositoryModule } from "../users/guest-repository.module";
 // Services
 import { NotificationDispatchService } from "./application/services/notification-dispatch.service";
 import { NotificationEmailService } from "./application/services/notification-email.service";
@@ -21,7 +22,7 @@ import { NotificationRepository } from "./core/repositories/notification.reposit
 import { NotificationController } from "./presentation/notification.controller";
 
 @Module({
-  imports: [EmailModule],
+  imports: [EmailModule, GuestRepositoryModule],
   controllers: [NotificationController],
   providers: [
     // Repositories

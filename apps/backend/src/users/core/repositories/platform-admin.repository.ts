@@ -25,6 +25,7 @@ export class PlatformAdminRepository {
         .where(
           and(
             isNull(profiles.deletedAt),
+            eq(users.isAnonymous, false),
             or(eq(users.role, "admin"), inArray(users.id, configuredAdminUserIds)),
           ),
         )
@@ -49,6 +50,7 @@ export class PlatformAdminRepository {
           and(
             eq(users.registered, true),
             isNull(profiles.deletedAt),
+            eq(users.isAnonymous, false),
             or(ilike(name, term), ilike(users.name, term)),
           ),
         )

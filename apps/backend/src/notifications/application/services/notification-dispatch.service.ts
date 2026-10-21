@@ -11,6 +11,8 @@ import type { DatabaseInstance } from "@repo/database";
 
 import { ErrorCodes } from "../../../common/utils/error-codes";
 import { AppError, Result, failure, success, tryCatch } from "../../../common/utils/fp-utils";
+import { GUEST_DIRECTORY_PORT } from "../../../users/core/ports/guest-directory.port";
+import type { GuestDirectoryPort } from "../../../users/core/ports/guest-directory.port";
 import { DELIVERY_CHANNEL_EMAIL } from "../../core/models/notification-delivery.model";
 import { NotificationDeliveryRepository } from "../../core/repositories/notification-delivery.repository";
 import { NotificationRepository } from "../../core/repositories/notification.repository";
@@ -50,6 +52,7 @@ export class NotificationDispatchService {
     private readonly notificationEmail: NotificationEmailService,
     private readonly notificationPreferences: NotificationPreferencesService,
     private readonly outbox: NotificationOutboxWorker,
+    @Inject(GUEST_DIRECTORY_PORT) private readonly guests: GuestDirectoryPort,
   ) {}
 
   async dispatch<T extends NotificationType>(
@@ -78,7 +81,13 @@ export class NotificationDispatchService {
 
     const actorId = input.actorId ?? null;
     // Nobody hears about their own action, and nobody hears about it twice.
-    const recipientIds = [...new Set(input.recipientIds)].filter((id) => id !== actorId);
+    const guestIds = new Set(
+      await this.guests.findGuestIds([...input.recipientIds, ...(actorId ? [actorId] : [])]),
+    );
+    if (actorId && guestIds.has(actorId)) return success({ created: 0, queued: 0 });
+    const recipientIds = [...new Set(input.recipientIds)].filter(
+      (id) => id !== actorId && !guestIds.has(id),
+    );
 
     if (recipientIds.length === 0) {
       return success({ created: 0, queued: 0 });

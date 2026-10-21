@@ -35,6 +35,7 @@ import {
   sql,
   teamMembers,
   isNull,
+  isNotNull,
   syncPersonalOrganizationName,
   personalOrgSlug,
   personalOrgName,
@@ -74,7 +75,7 @@ import {
   SoleOwnedOrganization,
   PendingOrganizationInvitation,
 } from "../models/user.model";
-import { userDisplayNameSql } from "./user-display-name";
+import { userMetadataFieldsSql, userDisplayNameSql } from "./user-display-name";
 
 /**
  * The two refusals account deletion can produce. Shared with the use case's pre-flight
@@ -191,13 +192,16 @@ export class UserRepository {
       const result = await this.database
         .select({
           userId: users.id,
-          firstName: getAnonymizedFirstName(),
-          lastName: getAnonymizedLastName(),
-          avatarUrl: getAnonymizedAvatarUrl(),
+          ...userMetadataFieldsSql(),
         })
         .from(users)
-        .innerJoin(profiles, eq(users.id, profiles.userId))
-        .where(inArray(users.id, validIds));
+        .leftJoin(profiles, eq(users.id, profiles.userId))
+        .where(
+          and(
+            inArray(users.id, validIds),
+            or(eq(users.isAnonymous, true), isNotNull(profiles.userId)),
+          ),
+        );
 
       return result;
     });
@@ -229,6 +233,7 @@ export class UserRepository {
         .where(
           and(
             eq(profiles.activated, true),
+            eq(users.isAnonymous, false),
             isNull(profiles.deletedAt),
             or(
               trigramMatch(profiles.firstName, params.query),
@@ -407,6 +412,7 @@ export class UserRepository {
             eq(resourceGrants.granteeType, "user"),
             ne(resourceGrants.granteeId, excludeUserId),
             eq(profiles.activated, true),
+            eq(users.isAnonymous, false),
             isNull(profiles.deletedAt),
           ),
         ),

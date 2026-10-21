@@ -5,6 +5,7 @@ import {
   experiments,
   guestUsage,
   organizationMembers,
+  profiles,
   rateLimits,
   resourceGrants,
   sessions,
@@ -12,11 +13,15 @@ import {
   users,
 } from "@repo/database";
 
+import { OrganizationRepository } from "../../../organizations/core/repositories/organization.repository";
 import { GuestGrantCleanupRepository } from "../../../sharing/core/repositories/guest-grant-cleanup.repository";
+import { SharingRepository } from "../../../sharing/core/repositories/sharing.repository";
 import { TestHarness } from "../../../test/test-harness";
 import { PurgeExpiredGuestsUseCase } from "../../application/use-cases/purge-expired-guests/purge-expired-guests";
 import { GUEST_LIFETIME_MS } from "../models/guest.model";
 import { GuestRepository } from "./guest.repository";
+import { PlatformAdminRepository } from "./platform-admin.repository";
+import { UserRepository } from "./user.repository";
 
 async function createGuest(createdAt = new Date()) {
   const [guest] = await db
@@ -44,6 +49,53 @@ describe("guest quotas and guarded purge", () => {
   });
   afterEach(() => app.afterEach());
   afterAll(() => app.teardown());
+
+  it("resolves a guest name without a profile and never exposes its placeholder address", async () => {
+    const demo = await app.createOrganization(undefined, { type: "demo", visibility: "public" });
+    const guest = await createGuest();
+    const metadata = await app.module.get(UserRepository).findUsersByIds([guest.id]);
+    expect(metadata.isSuccess()).toBe(true);
+    if (metadata.isSuccess())
+      expect(metadata.value).toEqual([
+        { userId: guest.id, firstName: "Synthetic visitor (guest)", lastName: "", avatarUrl: null },
+      ]);
+    const roster = await app.module.get(OrganizationRepository).listMembers(demo);
+    expect(roster.isSuccess()).toBe(true);
+    if (roster.isSuccess())
+      expect(roster.value).toMatchObject([
+        {
+          userId: guest.id,
+          firstName: "Synthetic visitor (guest)",
+          lastName: "",
+          email: null,
+          avatarUrl: null,
+        },
+      ]);
+  });
+
+  it("excludes guests from people, sharing and admin search even if legacy profile or role rows exist", async () => {
+    const guest = await createGuest();
+    await db
+      .insert(profiles)
+      .values({ userId: guest.id, firstName: "Synthetic", lastName: "Visitor", activated: true });
+    await db.update(users).set({ registered: true, role: "admin" }).where(eq(users.id, guest.id));
+    for (const query of ["Synthetic", guest.email]) {
+      const people = await app.module.get(UserRepository).search({ query, limit: 20, offset: 0 });
+      if (people.isFailure()) throw people.error;
+      expect(people.value).toEqual([]);
+      const sharing = await app.module
+        .get(SharingRepository)
+        .searchGranteeUsers("experiment", crypto.randomUUID(), null, { query, limit: 20 });
+      if (sharing.isFailure()) throw sharing.error;
+      expect(sharing.value).toEqual([]);
+      const admins = await app.module.get(PlatformAdminRepository).search(query);
+      if (admins.isFailure()) throw admins.error;
+      expect(admins.value).toEqual([]);
+    }
+    const admins = await app.module.get(PlatformAdminRepository).list();
+    if (admins.isFailure()) throw admins.error;
+    expect(admins.value).toEqual([]);
+  });
 
   it.each(["upload", "macro"] as const)(
     "limits %s to 60 across independent connections and resets next hour",
@@ -208,6 +260,8 @@ describe("guest quotas and guarded purge", () => {
     expect(await db.select().from(resourceGrants)).toHaveLength(1);
     expect(await db.select().from(rateLimits)).toHaveLength(0);
     expect(signal.report).toHaveBeenCalledExactlyOnceWith(expect.anything(), {
+      guest_id: guest.id,
+      blocking_table: "experiments",
       operation: "purgeExpiredGuests",
       error_code: "GUEST_PURGE_FAILED",
       $exception_fingerprint: "guest-purge:blocked",

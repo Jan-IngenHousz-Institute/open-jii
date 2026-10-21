@@ -1,7 +1,11 @@
 import type { MockInstance } from "vitest";
 
+import {
+  NOTIFICATION_TYPES,
+  zNotificationType,
+} from "@repo/api/domains/notification/notification.schema";
 import type { NotificationParams } from "@repo/api/domains/notification/notification.schema";
-import { eq, notifications } from "@repo/database";
+import { eq, notifications, users } from "@repo/database";
 
 import { EmailAdapter } from "../../../common/modules/email/services/email.adapter";
 import {
@@ -33,6 +37,32 @@ describe("NotificationDispatchService", () => {
   let recipientId: string;
   let recipientEmail: string;
   const experiment = { type: "experiment" as const, id: crypto.randomUUID() };
+
+  it.each(
+    zNotificationType.options.flatMap((type) => [
+      { type, side: "actor" },
+      { type, side: "recipient" },
+    ]),
+  )("$type creates nothing for a guest $side", async ({ type, side }) => {
+    const id = side === "actor" ? actorId : recipientId;
+    await testApp.database.update(users).set({ isAnonymous: true }).where(eq(users.id, id));
+    const schema = NOTIFICATION_TYPES[type].params;
+    const params = schema.parse(
+      Object.fromEntries(Object.keys(schema.shape).map((key) => [key, "Synthetic"])),
+    );
+    const result = await dispatch.dispatch({
+      type,
+      recipientIds: [recipientId],
+      actorId,
+      resource: experiment,
+      params,
+    });
+    assertSuccess(result);
+    expect(result.value).toEqual({ created: 0, queued: 0 });
+    expect(await rowsFor(recipientId)).toEqual([]);
+    expect(await deliveriesFor(recipientId)).toEqual([]);
+    expect(sendSubmitted).not.toHaveBeenCalled();
+  });
 
   const rowsFor = (userId: string) =>
     testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
