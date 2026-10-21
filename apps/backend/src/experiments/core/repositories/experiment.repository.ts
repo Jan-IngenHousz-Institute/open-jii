@@ -268,7 +268,7 @@ export class ExperimentRepository {
       const granted = rows
         .filter(
           (r): r is typeof r & { userId: string } =>
-            r.userId !== null && (r.profileUserId !== null || r.isGuest === true),
+            r.userId !== null && r.profileUserId !== null && r.isGuest !== true,
         )
         .map(({ userId, firstName, lastName, avatarUrl, isGuest, isFormerGuest }) => ({
           userId,
