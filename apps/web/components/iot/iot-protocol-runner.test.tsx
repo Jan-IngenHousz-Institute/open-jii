@@ -262,9 +262,13 @@ describe("IotProtocolRunner", () => {
     });
 
     it("shows running state while executing protocol", async () => {
-      mockExecuteProtocol.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({ data: "test" }), 100)),
-      );
+      let finishExecution: () => void = () => {
+        throw new Error("Execution not initialized");
+      };
+      const pendingExecution = new Promise((resolve) => {
+        finishExecution = () => resolve({ data: "test" });
+      });
+      mockExecuteProtocol.mockReturnValueOnce(pendingExecution);
 
       const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} />);
@@ -279,6 +283,8 @@ describe("IotProtocolRunner", () => {
       });
 
       expect(runButton).toBeDisabled();
+      finishExecution();
+      await waitFor(() => expect(runButton).not.toBeDisabled());
     });
 
     it("displays success result after successful execution", async () => {
