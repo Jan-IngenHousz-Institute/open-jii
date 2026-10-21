@@ -26,6 +26,12 @@ allow editing the experiment, workbook, protocol, macro or organization. Demo
 experiments do not offer Request to join. An ordinary public experiment keeps
 its existing researcher join flow.
 
+Two web controls still need the guest client milestone. Guests can see Create
+organization and, on ordinary public experiments, Request to join. The server
+refuses both. M5 must hide those controls for guests and remove the join dialog's
+email-notification promise from the guest experience. Researcher joining remains
+unchanged.
+
 On Android, a signed-in researcher visiting a Demo experiment also sees no join
 action. The example below opens a synthetic Demo experiment as a non-member.
 
