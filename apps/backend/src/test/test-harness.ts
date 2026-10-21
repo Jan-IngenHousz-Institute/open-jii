@@ -325,6 +325,7 @@ export class TestHarness {
         emailVerified: false,
         image: null,
         registered: true,
+        banned: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -487,7 +488,8 @@ export class TestHarness {
         | "non_profit"
         | "private_company"
         | "government_agency"
-        | "university";
+        | "university"
+        | "demo";
     } = {},
   ): Promise<string> {
     const [org] = await this.database
