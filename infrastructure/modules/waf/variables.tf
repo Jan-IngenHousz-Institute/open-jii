@@ -23,7 +23,7 @@ variable "blocked_countries" {
 variable "log_retention_days" {
   description = "Number of days to retain WAF logs"
   type        = number
-  default     = 30
+  default     = 365
 }
 
 variable "tags" {

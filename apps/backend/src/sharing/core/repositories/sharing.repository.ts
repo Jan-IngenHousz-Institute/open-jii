@@ -70,6 +70,8 @@ import type {
 } from "../models/sharing.model";
 import {
   assertResourceStaysStaffed,
+  findResourceAdminIds,
+  findResourceMemberIds,
   findStaffedResource,
   isLivingUser,
   livingOrgAdminIdsSql,
@@ -779,6 +781,40 @@ export class SharingRepository {
         .where(eq(table.id, resourceId))
         .limit(1);
       return rows.at(0)?.name ?? null;
+    });
+  }
+
+  /**
+   * Who can decide for a resource. Unscoped like the name: read only after the
+   * caller's write on this resource has succeeded.
+   */
+  listAdminIds(resourceType: SharingResourceType, resourceId: string): Promise<Result<string[]>> {
+    return tryCatch(() => findResourceAdminIds(this.db, resourceType, resourceId));
+  }
+
+  /**
+   * Everyone a deletion or move of this resource takes something from. Read
+   * before a delete, while the grants and the owning organization still exist;
+   * after a move, pass the organization that lost it.
+   */
+  listMemberIds(
+    resourceType: SharingResourceType,
+    resourceId: string,
+    owningOrganizationId?: string | null,
+  ): Promise<Result<string[]>> {
+    return tryCatch(() =>
+      findResourceMemberIds(this.db, resourceType, resourceId, { owningOrganizationId }),
+    );
+  }
+
+  findOrganization(organizationId: string): Promise<Result<{ name: string; slug: string } | null>> {
+    return tryCatch(async () => {
+      const rows = await this.db
+        .select({ name: organizations.name, slug: organizations.slug })
+        .from(organizations)
+        .where(eq(organizations.id, organizationId))
+        .limit(1);
+      return rows.at(0) ?? null;
     });
   }
 

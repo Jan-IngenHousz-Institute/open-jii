@@ -67,3 +67,18 @@ export function normalizeOrgRole(role: string | null | undefined): "owner" | "ad
   if (tokens.includes("admin")) return "admin";
   return "member";
 }
+
+const ORGANIZATION_ROLE_WORDING = {
+  owner: "an owner of",
+  admin: "an admin of",
+  member: "a member of",
+} as const;
+
+/**
+ * The role-change email's "made you {role} {organization}". Must read the same as the
+ * bell's per-role copy for `organization_role_changed`, so a member told by both sees
+ * one sentence.
+ */
+export function describeOrganizationRole(role: string): string {
+  return ORGANIZATION_ROLE_WORDING[normalizeOrgRole(role)];
+}

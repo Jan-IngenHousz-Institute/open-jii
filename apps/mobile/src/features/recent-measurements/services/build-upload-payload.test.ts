@@ -31,7 +31,7 @@ beforeEach(() => {
 });
 
 describe("buildUploadPayload payload construction", () => {
-  it("builds the full payload: user_id, timestamp/timezone, macros, sample injection + compression markers, annotations", () => {
+  it("builds the full payload: user_id, timestamp/timezone, macros, compressed sample, annotations", () => {
     const rawMeasurement = {
       device_id: "d-1",
       sample: [{ v: 1 }, { v: 2 }],
@@ -53,47 +53,33 @@ describe("buildUploadPayload payload construction", () => {
       workbook_run_id: "run-1",
       workbook_version_id: "version-1",
       device_id: "d-1",
-      sample: 'compressed:[{"v":1,"macros":["macro_one.js"]},{"v":2,"macros":["macro_one.js"]}]',
+      sample: 'compressed:[{"v":1},{"v":2}]',
       _sample_encoding: "gzip+base64",
       annotations: [{ type: "comment", content: { text: "hello", flagType: null } }],
     });
-    // Macro filenames are injected into CLONED entries before compression;
-    // the caller's array is never the compression input.
+    // The macros travel only at the top level; the sample is compressed as the device returned it.
     expect(mockCompressSample).toHaveBeenCalledTimes(1);
-    expect(mockCompressSample).toHaveBeenCalledWith([
-      { v: 1, macros: ["macro_one.js"] },
-      { v: 2, macros: ["macro_one.js"] },
-    ]);
+    expect(mockCompressSample).toHaveBeenCalledWith([{ v: 1 }, { v: 2 }]);
     expect(rawMeasurement.sample).toStrictEqual([{ v: 1 }, { v: 2 }]);
     expect(payload.questions).toBe(QUESTIONS);
   });
 
-  it("wraps a single (non-array) sample object for macro injection but compresses it unwrapped", () => {
+  it("compresses a single (non-array) sample object as it is", () => {
     const sample = { v: 1 };
     const payload = buildUploadPayload({ ...baseArgs, rawMeasurement: { sample } });
 
     expect(sample).toStrictEqual({ v: 1 });
-    expect(payload.sample).toBe('compressed:{"v":1,"macros":["macro_one.js"]}');
+    expect(payload.sample).toBe('compressed:{"v":1}');
     expect(payload._sample_encoding).toBe("gzip+base64");
   });
 
-  it("null macro injects empty macros lists and an empty top-level macros array", () => {
+  it("null macro leaves an empty top-level macros array and the sample as it is", () => {
     const rawMeasurement = { sample: [{ v: 1 }] };
     const payload = buildUploadPayload({ ...baseArgs, rawMeasurement, macro: null });
 
     expect(payload.macros).toStrictEqual([]);
     expect(rawMeasurement.sample[0]).toStrictEqual({ v: 1 });
-    expect(payload.sample).toBe('compressed:[{"v":1,"macros":[]}]');
-  });
-
-  it("macro with empty filename still appears in top-level macros but injects [] into samples", () => {
-    const macro = { id: "m-2", name: "No File", filename: "" };
-    const rawMeasurement = { sample: [{ v: 1 }] as { v: number; macros?: string[] }[] };
-    const payload = buildUploadPayload({ ...baseArgs, rawMeasurement, macro });
-
-    expect(payload.macros).toStrictEqual([macro]);
-    expect(rawMeasurement.sample[0].macros).toBeUndefined();
-    expect(mockCompressSample).toHaveBeenCalledWith([{ v: 1, macros: [] }]);
+    expect(payload.sample).toBe('compressed:[{"v":1}]');
   });
 
   it("no sample key: no compression, no _sample_encoding marker", () => {
@@ -147,7 +133,7 @@ describe("buildUploadPayload payload construction", () => {
     expect("workbook_id" in payload).toBe(false);
   });
 
-  it("null sample survives untouched: no injection, no compression, no marker", () => {
+  it("null sample survives untouched: no compression, no marker", () => {
     const payload = buildUploadPayload({ ...baseArgs, rawMeasurement: { sample: null } });
 
     expect(payload.sample).toBeNull();
@@ -155,12 +141,11 @@ describe("buildUploadPayload payload construction", () => {
     expect(mockCompressSample).not.toHaveBeenCalled();
   });
 
-  // Quirk: falsy-but-non-null sample (0, "") skips macro injection (truthiness
-  // guard) yet still gets compressed + marked (`!= null` guard).
+  // Quirk: a falsy-but-non-null sample (0, "") still gets compressed and marked (`!= null` guard).
   it.each([
     [0, "compressed:0"],
     ["", 'compressed:""'],
-  ])("falsy sample %j skips macro injection but is still compressed", (sample, compressed) => {
+  ])("falsy sample %j is still compressed", (sample, compressed) => {
     const payload = buildUploadPayload({ ...baseArgs, rawMeasurement: { sample } });
 
     expect(payload.sample).toBe(compressed);
@@ -239,20 +224,16 @@ describe("...rawMeasurement spread-order semantics", () => {
 });
 
 describe("input purity", () => {
-  it("never mutates the caller's sample entries; payload entries get macros overwritten, not merged", () => {
+  it("never mutates the caller's sample entries and compresses them as they are", () => {
     const entryA = { v: 1 };
-    const entryB = { v: 2, macros: ["pre-existing"] };
+    const entryB = { v: 2 };
     const rawMeasurement = { sample: [entryA, entryB] };
 
     buildUploadPayload({ ...baseArgs, rawMeasurement });
 
     expect(entryA).toStrictEqual({ v: 1 });
-    expect(entryB).toStrictEqual({ v: 2, macros: ["pre-existing"] });
-    // Pre-existing macros on a sample entry are overwritten in the payload.
-    expect(mockCompressSample).toHaveBeenCalledWith([
-      { v: 1, macros: ["macro_one.js"] },
-      { v: 2, macros: ["macro_one.js"] },
-    ]);
+    expect(entryB).toStrictEqual({ v: 2 });
+    expect(mockCompressSample).toHaveBeenCalledWith([{ v: 1 }, { v: 2 }]);
   });
 
   it("leaves rawMeasurement itself unmutated: sample stays the original array, payload gets the compressed string", () => {

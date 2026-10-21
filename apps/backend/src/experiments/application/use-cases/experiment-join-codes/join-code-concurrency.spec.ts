@@ -16,6 +16,7 @@ import type { DatabaseInstance, Transaction } from "@repo/database";
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { assertSuccess } from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import { TestHarness } from "../../../../test/test-harness";
 import { UserRepository } from "../../../../users/core/repositories/user.repository";
 import { ExperimentJoinCodeRepository } from "../../../core/repositories/experiment-join-code.repository";
@@ -49,7 +50,12 @@ describe("join code concurrency", () => {
       joinRequestRepository,
       create: new CreateJoinCodeUseCase(joinCodeRepository),
       revoke: new RevokeJoinCodeUseCase(joinCodeRepository),
-      redeem: new RedeemJoinCodeUseCase(joinCodeRepository, joinRequestRepository, authz),
+      redeem: new RedeemJoinCodeUseCase(
+        joinCodeRepository,
+        joinRequestRepository,
+        authz,
+        testApp.module.get(NotificationDispatchService),
+      ),
     };
   }
 

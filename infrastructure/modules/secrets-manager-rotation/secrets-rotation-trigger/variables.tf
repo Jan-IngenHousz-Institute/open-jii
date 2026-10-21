@@ -23,3 +23,9 @@ variable "secret_arn" {
   description = "Name of the Secrets Manager secret to monitor for rotation"
   type        = string
 }
+
+variable "log_retention_days" {
+  description = "CloudWatch log retention for the force-deployment Lambda's logs"
+  type        = number
+  default     = 30
+}

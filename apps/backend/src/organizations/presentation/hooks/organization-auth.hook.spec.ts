@@ -5,7 +5,10 @@ import { APIError } from "better-auth/api";
 import type { DatabaseInstance } from "@repo/database";
 
 import { AppError, failure, success } from "../../../common/utils/fp-utils";
+import type { NotifyOrganizationInvitationAcceptedUseCase } from "../../application/use-cases/notify-organization-invitation-accepted/notify-organization-invitation-accepted";
 import type { NotifyOrganizationInviteeUseCase } from "../../application/use-cases/notify-organization-invitee/notify-organization-invitee";
+import type { NotifyOrganizationMemberRemovedUseCase } from "../../application/use-cases/notify-organization-member-removed/notify-organization-member-removed";
+import type { NotifyOrganizationRoleChangedUseCase } from "../../application/use-cases/notify-organization-role-changed/notify-organization-role-changed";
 import { OrganizationAuthHook } from "./organization-auth.hook";
 
 /**
@@ -27,11 +30,18 @@ function hookWith(reads: unknown[][]) {
   } as unknown as DatabaseInstance;
 
   const execute = vi.fn().mockResolvedValue(success(undefined));
-  const hook = new OrganizationAuthHook(database, {
-    execute,
-  } as unknown as NotifyOrganizationInviteeUseCase);
+  const accepted = vi.fn().mockResolvedValue(success(undefined));
+  const roleChanged = vi.fn().mockResolvedValue(success(undefined));
+  const removed = vi.fn().mockResolvedValue(success(undefined));
+  const hook = new OrganizationAuthHook(
+    database,
+    { execute } as unknown as NotifyOrganizationInviteeUseCase,
+    { execute: accepted } as unknown as NotifyOrganizationInvitationAcceptedUseCase,
+    { execute: roleChanged } as unknown as NotifyOrganizationRoleChangedUseCase,
+    { execute: removed } as unknown as NotifyOrganizationMemberRemovedUseCase,
+  );
 
-  return { hook, execute };
+  return { hook, execute, accepted, roleChanged, removed };
 }
 
 const contextWith = (body: unknown) => ({ body }) as AuthHookContext;
@@ -131,5 +141,96 @@ describe("notifying an invitee", () => {
     await expect(hook.notifyInvitee(returning(INVITATION))).resolves.toBeUndefined();
 
     expect(warn).toHaveBeenCalledWith(expect.objectContaining({ operation: "notify-invitee" }));
+  });
+});
+
+/**
+ * The three membership after-hooks. `getSessionFromCtx` answers from
+ * `ctx.context.session` when the endpoint's middleware already put one there, so a
+ * session on the context is the signed-in caller.
+ */
+describe("notifying about membership changes", () => {
+  const ACTOR = { user: { id: "actor-1" }, session: { id: "session-1" } };
+
+  const after = (returned: unknown, session: unknown = ACTOR) =>
+    ({ context: { returned, session } }) as unknown as AuthHookContext;
+
+  const ACCEPTED = {
+    invitation: { id: "inv-1", inviterId: "inviter-1", organizationId: "org-1" },
+    member: { id: "member-1", userId: "actor-1", organizationId: "org-1", role: "member" },
+  };
+  const UPDATED = {
+    id: "member-1",
+    userId: "member-user-1",
+    organizationId: "org-1",
+    role: "admin",
+  };
+  const REMOVED = {
+    member: { id: "member-1", userId: "member-user-1", organizationId: "org-1", role: "member" },
+  };
+
+  const cases = [
+    {
+      name: "an accepted invitation",
+      operation: "notify-invitation-accepted",
+      returned: ACCEPTED,
+      expected: ACCEPTED.invitation,
+      call: (hook: OrganizationAuthHook, ctx: AuthHookContext) =>
+        hook.notifyInvitationAccepted(ctx),
+      useCase: (mocks: ReturnType<typeof hookWith>) => mocks.accepted,
+    },
+    {
+      name: "a role change",
+      operation: "notify-role-changed",
+      returned: UPDATED,
+      expected: UPDATED,
+      call: (hook: OrganizationAuthHook, ctx: AuthHookContext) => hook.notifyRoleChanged(ctx),
+      useCase: (mocks: ReturnType<typeof hookWith>) => mocks.roleChanged,
+    },
+    {
+      name: "a removal",
+      operation: "notify-member-removed",
+      returned: REMOVED,
+      expected: REMOVED.member,
+      call: (hook: OrganizationAuthHook, ctx: AuthHookContext) => hook.notifyMemberRemoved(ctx),
+      useCase: (mocks: ReturnType<typeof hookWith>) => mocks.removed,
+    },
+  ];
+
+  describe.each(cases)("after $name", ({ operation, returned, expected, call, useCase }) => {
+    it("hands the use case the row and the session user as the actor", async () => {
+      const mocks = hookWith([]);
+
+      await call(mocks.hook, after(returned));
+
+      expect(useCase(mocks)).toHaveBeenCalledExactlyOnceWith(expected, "actor-1");
+    });
+
+    it("does nothing when the endpoint refused", async () => {
+      const mocks = hookWith([]);
+
+      await expect(
+        call(mocks.hook, after(new APIError("BAD_REQUEST", { message: "refused" }))),
+      ).resolves.toBeUndefined();
+      expect(useCase(mocks)).not.toHaveBeenCalled();
+    });
+
+    it("does nothing for an answer of another shape", async () => {
+      const mocks = hookWith([]);
+
+      await call(mocks.hook, after({ id: "member-1" }));
+
+      expect(useCase(mocks)).not.toHaveBeenCalled();
+    });
+
+    it("swallows a thrown fault and warns under the use case's operation", async () => {
+      const mocks = hookWith([]);
+      useCase(mocks).mockRejectedValue(new Error("connection terminated"));
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+
+      await expect(call(mocks.hook, after(returned))).resolves.toBeUndefined();
+
+      expect(warn).toHaveBeenCalledWith(expect.objectContaining({ operation }));
+    });
   });
 });

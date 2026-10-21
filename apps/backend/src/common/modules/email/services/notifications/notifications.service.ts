@@ -10,7 +10,10 @@ import { renderOrganizationInvitation } from "@repo/transactional/render/organiz
 import { renderOrganizationJoinRequestApproved } from "@repo/transactional/render/organization-join-request-approved";
 import { renderOrganizationJoinRequestRejected } from "@repo/transactional/render/organization-join-request-rejected";
 import { renderOrganizationJoinRequestSubmitted } from "@repo/transactional/render/organization-join-request-submitted";
+import { renderOrganizationMembershipRemoved } from "@repo/transactional/render/organization-membership-removed";
+import { renderOrganizationRoleChanged } from "@repo/transactional/render/organization-role-changed";
 import { renderProjectTransferComplete } from "@repo/transactional/render/project-transfer-complete";
+import { renderResourceDeletedNotification } from "@repo/transactional/render/resource-deleted-notification";
 import { renderTransferRequestConfirmation } from "@repo/transactional/render/transfer-request-confirmation";
 
 import { ErrorCodes } from "../../../../utils/error-codes";
@@ -99,6 +102,13 @@ export class NotificationsService {
   }
 
   /* v8 ignore next 5 */
+  protected renderResourceDeletedNotificationEmail(
+    ...args: Parameters<typeof renderResourceDeletedNotification>
+  ) {
+    return renderResourceDeletedNotification(...args);
+  }
+
+  /* v8 ignore next 5 */
   protected renderTransferRequestConfirmationEmail(
     ...args: Parameters<typeof renderTransferRequestConfirmation>
   ) {
@@ -150,6 +160,20 @@ export class NotificationsService {
     ...args: Parameters<typeof renderOrganizationJoinRequestRejected>
   ) {
     return renderOrganizationJoinRequestRejected(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderOrganizationRoleChangedEmail(
+    ...args: Parameters<typeof renderOrganizationRoleChanged>
+  ) {
+    return renderOrganizationRoleChanged(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderOrganizationMembershipRemovedEmail(
+    ...args: Parameters<typeof renderOrganizationMembershipRemoved>
+  ) {
+    return renderOrganizationMembershipRemoved(...args);
   }
 
   // Logs in to the SMTP server without sending anything.
@@ -410,6 +434,95 @@ export class NotificationsService {
     );
   }
 
+  async sendOrganizationRoleChangedNotification(input: {
+    organizationId: string;
+    organizationName: string;
+    actor: string;
+    role: string;
+    email: string;
+  }) {
+    const { organizationId, organizationName, actor, role, email } = input;
+
+    return await tryCatch(
+      async () => {
+        const { host, url, baseUrl } = this.organizationUrl(organizationId);
+        const { html, text } = await this.renderOrganizationRoleChangedEmail({
+          host,
+          baseUrl,
+          organizationName,
+          organizationUrl: url,
+          actor,
+          role,
+        });
+
+        await this.dispatch({
+          to: email,
+          subject: `Your role in ${organizationName} changed on the openJII Platform`,
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Organization role changed notification sent",
+          operation: "sendOrganizationRoleChangedNotification",
+          email,
+          organizationId,
+          status: "success",
+        });
+      },
+      (error) =>
+        this.sendFailure(error, {
+          msg: "Failed to send organization role changed notification",
+          operation: "sendOrganizationRoleChangedNotification",
+          email,
+          organizationId,
+          error,
+        }),
+    );
+  }
+
+  async sendOrganizationMembershipRemovedNotification(input: {
+    organizationName: string;
+    actor: string;
+    email: string;
+  }) {
+    const { organizationName, actor, email } = input;
+
+    return await tryCatch(
+      async () => {
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { html, text } = await this.renderOrganizationMembershipRemovedEmail({
+          host,
+          baseUrl,
+          organizationName,
+          actor,
+        });
+
+        await this.dispatch({
+          to: email,
+          subject: `You were removed from ${organizationName} on the openJII Platform`,
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Organization membership removed notification sent",
+          operation: "sendOrganizationMembershipRemovedNotification",
+          email,
+          status: "success",
+        });
+      },
+      (error) =>
+        this.sendFailure(error, {
+          msg: "Failed to send organization membership removed notification",
+          operation: "sendOrganizationMembershipRemovedNotification",
+          email,
+          error,
+        }),
+    );
+  }
+
   /**
    * The one email for being given access to anything — a direct share, an approved
    * join request or an invitation by address — whatever the resource.
@@ -476,6 +589,61 @@ export class NotificationsService {
           email,
           resourceType,
           resourceId,
+          error,
+        }),
+    );
+  }
+
+  async sendResourceDeletedNotification(input: {
+    resourceType: SharingResourceType;
+    resourceName: string;
+    actor: string;
+    email: string;
+  }) {
+    const { resourceType, resourceName, actor, email } = input;
+
+    return await tryCatch(
+      async () => {
+        this.logger.log({
+          msg: "Sending resource deleted notification email",
+          operation: "sendResourceDeletedNotification",
+          email,
+          resourceType,
+          actor,
+        });
+
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+
+        const { html, text } = await this.renderResourceDeletedNotificationEmail({
+          host,
+          baseUrl,
+          resourceKind: RESOURCE_KIND_LABEL[resourceType],
+          resourceName,
+          actor,
+        });
+
+        await this.dispatch({
+          to: email,
+          subject: `${resourceName} was deleted on the openJII Platform`,
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Resource deleted notification email sent successfully",
+          operation: "sendResourceDeletedNotification",
+          email,
+          resourceType,
+          status: "success",
+        });
+      },
+      (error) =>
+        this.sendFailure(error, {
+          msg: "Failed to send resource deleted notification email",
+          operation: "sendResourceDeletedNotification",
+          email,
+          resourceType,
           error,
         }),
     );

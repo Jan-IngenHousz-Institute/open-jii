@@ -29,7 +29,7 @@
     "fumadocs-ui": "^16.11.5",
     "js-yaml": "^4.3.2",
     "lucide-react": "^0.507.0",
-    "mermaid": "^11.16.1",
+    "mermaid": "^12.2.0",
     "next": "catalog:",
     "next-themes": "^0.4.6",
     "react": "catalog:react19",

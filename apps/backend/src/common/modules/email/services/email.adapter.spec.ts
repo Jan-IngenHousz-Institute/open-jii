@@ -326,4 +326,61 @@ describe("EmailAdapter", () => {
       );
     });
   });
+
+  describe("sendResourceDeletedNotification", () => {
+    it("delegates to NotificationsService with the input unchanged", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendResourceDeletedNotification")
+        .mockResolvedValue(success(undefined));
+      const input = {
+        resourceType: "device_group" as const,
+        resourceName: "North Field Sensors",
+        actor: "Ada Lovelace",
+        email: "member@example.com",
+      };
+
+      const result = await adapter.sendResourceDeletedNotification(input);
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
+    });
+  });
+
+  describe("sendOrganizationRoleChangedNotification", () => {
+    it("delegates to NotificationsService with the input unchanged", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendOrganizationRoleChangedNotification")
+        .mockResolvedValue(success(undefined));
+      const input = {
+        organizationId: "org-123",
+        organizationName: "Photosynthesis Lab",
+        actor: "Ada Lovelace",
+        role: "an admin of",
+        email: "member@example.com",
+      };
+
+      const result = await adapter.sendOrganizationRoleChangedNotification(input);
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
+    });
+  });
+
+  describe("sendOrganizationMembershipRemovedNotification", () => {
+    it("delegates to NotificationsService with the input unchanged", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendOrganizationMembershipRemovedNotification")
+        .mockResolvedValue(success(undefined));
+      const input = {
+        organizationName: "Photosynthesis Lab",
+        actor: "Ada Lovelace",
+        email: "member@example.com",
+      };
+
+      const result = await adapter.sendOrganizationMembershipRemovedNotification(input);
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
+    });
+  });
 });
