@@ -33,6 +33,13 @@ sign-out and a validated name-only change. Signing in to another account from a
 guest session remains blocked until the conversion milestone supplies a verified
 flow.
 
+Guest HTTP responses expire Better Auth's identity-cache cookie while retaining
+the signed session token. Guest session reads, including those made by the Nest
+auth guard, check the database even when a client sends an older cached cookie.
+After purge, protected reads and writes return 401, and the auth session endpoint
+returns null and expires its cookies. Upload and macro use cases also refuse a
+missing caller before invoking AWS. Researcher identity caching is unchanged.
+
 ## Measurements and limits
 
 Every guest measurement uses the existing signed S3 upload flow, including small
