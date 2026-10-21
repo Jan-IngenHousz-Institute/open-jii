@@ -231,6 +231,7 @@ export function createSession(
     updatedAt: new Date("2025-01-01T00:00:00.000Z"),
     image: null,
     registered: true,
+    isAnonymous: false,
     ...overrides.user,
   };
   return {
@@ -522,6 +523,8 @@ export function createOrganizationMember(
   organizationSeq++;
   return {
     userId: `user-${organizationSeq}`,
+    isGuest: false,
+    isFormerGuest: false,
     firstName: "Grace",
     lastName: "Hopper",
     email: `grace-${organizationSeq}@example.com`,
