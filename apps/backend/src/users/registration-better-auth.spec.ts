@@ -2,11 +2,13 @@ import { betterAuth } from "better-auth";
 import { createAuthEndpoint } from "better-auth/api";
 import { z } from "zod";
 
+import { DISABLED_ADMIN_PATHS } from "@repo/auth/admin";
 import type * as AuthServer from "@repo/auth/server";
 import { db, eq, users, profiles } from "@repo/database";
 
 import { TestHarness } from "../test/test-harness";
 import { CreateUserProfileUseCase } from "./application/use-cases/create-user-profile/create-user-profile";
+import registrationEndpoints from "./registration-endpoints.json";
 
 // TestHarness mocks auth.server; importActual exercises the production configuration.
 const { auth } = await vi.importActual<typeof AuthServer>("@repo/auth/server");
@@ -67,24 +69,58 @@ describe("server-owned registration on the real auth HTTP boundary", () => {
   afterAll(() => testApp.teardown());
 
   it("enumerates every production body endpoint and rejects registration input before routing", async () => {
-    const endpoints = Object.entries(auth.api).filter(([, endpoint]) => "body" in endpoint.options);
+    const endpoints = Object.entries(auth.api).filter(([, endpoint]) => {
+      const method = endpoint.options.method;
+      const methods = Array.isArray(method) ? method : [method];
+      return (
+        "body" in endpoint.options ||
+        methods.some((value) => ["POST", "PUT", "PATCH", "DELETE"].includes(value))
+      );
+    });
     const inventory = endpoints
       .map(([name, endpoint]) => ({
         name,
         path: endpoint.path || null,
         classification: endpoint.path
-          ? "HTTP: registration forbidden"
+          ? DISABLED_ADMIN_PATHS.includes(endpoint.path)
+            ? "unreachable:404"
+            : "HTTP: registration forbidden"
           : "server-only: no HTTP route",
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
-    expect(inventory).toMatchSnapshot();
+    expect(inventory).toEqual(registrationEndpoints);
     for (const [, endpoint] of endpoints) {
       if (!endpoint.path) continue;
-      for (const body of [{ registered: false }, { data: { registered: true } }]) {
+      const before = await db.select().from(users);
+      for (const body of [
+        { registered: false },
+        { data: { registered: true } },
+        { nested: [{ registered: null }] },
+      ]) {
         const response = await auth.handler(request(endpoint.path, body));
-        expect(response.status, endpoint.path).toBe(400);
-        expect(await response.json(), endpoint.path).toEqual(rejection);
+        if (DISABLED_ADMIN_PATHS.includes(endpoint.path)) {
+          expect(response.status, endpoint.path).toBe(404);
+        } else {
+          expect(response.status, endpoint.path).toBe(400);
+          expect(await response.json(), endpoint.path).toEqual(rejection);
+        }
       }
+      for (const form of [new URLSearchParams({ registered: "false" }), new FormData()]) {
+        form.set("registered", "false");
+        const response = await auth.handler(
+          new Request(`${base}${endpoint.path}`, {
+            method: "POST",
+            headers: { origin },
+            body: form,
+          }),
+        );
+        expect(response.status, endpoint.path).toBe(
+          DISABLED_ADMIN_PATHS.includes(endpoint.path) ? 404 : 400,
+        );
+        if (!DISABLED_ADMIN_PATHS.includes(endpoint.path))
+          expect(await response.json()).toEqual(rejection);
+      }
+      expect(await db.select().from(users), endpoint.path).toEqual(before);
     }
   });
 

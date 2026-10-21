@@ -33,6 +33,14 @@
     "./admin": {
       "types": "./src/admin/plugin.ts",
       "default": "./dist/admin/plugin.js"
+    },
+    "./guest": {
+      "types": "./src/guest/plugin.ts",
+      "default": "./dist/guest/plugin.js"
+    },
+    "./guest-retention": {
+      "types": "./src/guest/retention.ts",
+      "default": "./dist/guest/retention.js"
     }
   },
   "private": true,
@@ -54,7 +62,9 @@
     "@repo/transactional": "workspace:*",
     "@simplewebauthn/browser": "13.3.0",
     "better-auth": "1.6.23",
-    "nodemailer": "catalog:"
+    "nodemailer": "catalog:",
+    "@repo/api": "workspace:*",
+    "@repo/analytics": "workspace:*"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

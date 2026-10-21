@@ -70,7 +70,13 @@ export function openJiiAdmin(adminUserIds: string[] = configuredAdminUserIds) {
               .select({ registered: users.registered, role: users.role })
               .from(users)
               .leftJoin(profiles, eq(profiles.userId, users.id))
-              .where(and(eq(users.id, body.userId), isNull(profiles.deletedAt)))
+              .where(
+                and(
+                  eq(users.id, body.userId),
+                  eq(users.isAnonymous, false),
+                  isNull(profiles.deletedAt),
+                ),
+              )
               .limit(1);
             if (targets.length === 0 || !targets[0].registered) {
               throw new APIError("BAD_REQUEST", { message: "Choose a registered researcher" });
