@@ -20,14 +20,21 @@ export function useOfflineDataSync(): void {
   guestRef.current = user?.isAnonymous === true;
 
   useEffect(() => {
-    if (user?.id) void resumeOwnedUploads(user.id);
-  }, [user?.id, user?.isAnonymous]);
+    if (user?.id) {
+      void resumeOwnedUploads(user.id);
+      if (onlineManager.isOnline())
+        void prefetchOfflineData(queryClient, user.id, { isGuest: user.isAnonymous === true });
+    }
+  }, [user?.id, user?.isAnonymous, queryClient]);
 
   useEffect(
     () =>
       onlineManager.subscribe(() => {
         if (onlineManager.isOnline() && userIdRef.current) {
-          void prefetchOfflineData(queryClient, userIdRef.current, { throttle: true });
+          void prefetchOfflineData(queryClient, userIdRef.current, {
+            throttle: true,
+            isGuest: guestRef.current,
+          });
           if (!guestRef.current) void ensureDeviceRegistered({ throttle: true });
         }
       }),
@@ -36,7 +43,10 @@ export function useOfflineDataSync(): void {
 
   useAppState((next) => {
     if (next === "active" && onlineManager.isOnline() && userIdRef.current) {
-      void prefetchOfflineData(queryClient, userIdRef.current, { throttle: true });
+      void prefetchOfflineData(queryClient, userIdRef.current, {
+        throttle: true,
+        isGuest: guestRef.current,
+      });
       if (!guestRef.current) void ensureDeviceRegistered({ throttle: true });
     }
   });

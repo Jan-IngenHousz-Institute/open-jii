@@ -7,8 +7,8 @@ import { listItems } from "@repo/api/shared/listing";
 
 const log = createLogger("prefetch");
 
-let inFlight: Promise<void> | null = null;
-let lastRunAt = 0;
+const runs = new WeakMap<QueryClient, { inFlight: Promise<void> | null; lastRunAt: number }>();
+
 const MIN_RERUN_INTERVAL_MS = 2 * 60 * 1000;
 
 /**
@@ -19,17 +19,25 @@ const MIN_RERUN_INTERVAL_MS = 2 * 60 * 1000;
 export async function prefetchOfflineData(
   queryClient: QueryClient,
   userId?: string,
-  options?: { throttle?: boolean },
+  options?: { throttle?: boolean; isGuest?: boolean },
 ): Promise<void> {
-  if (inFlight) return inFlight;
-  if (options?.throttle && Date.now() - lastRunAt < MIN_RERUN_INTERVAL_MS) return;
+  let state = runs.get(queryClient);
+  if (!state) {
+    state = { inFlight: null, lastRunAt: 0 };
+    runs.set(queryClient, state);
+  }
+  if (state.inFlight) return state.inFlight;
+  if (options?.throttle && Date.now() - state.lastRunAt < MIN_RERUN_INTERVAL_MS) return;
 
-  inFlight = (async () => {
+  state.inFlight = (async () => {
     try {
-      const { failures } = await _prefetchOfflineData(queryClient, userId);
+      const { failures } = await _prefetchOfflineData(
+        queryClient,
+        options?.isGuest ? undefined : userId,
+      );
       // Only a fully-successful run counts as "recent"; a partial run stays
       // eligible for an immediate retry on the next reconnect/foreground.
-      if (failures === 0) lastRunAt = Date.now();
+      if (failures === 0) state.lastRunAt = Date.now();
       trackProductEvent("offline_data:prefetch_finish", {
         status: failures === 0 ? "ok" : "partial",
         failures,
@@ -40,11 +48,11 @@ export async function prefetchOfflineData(
       });
       trackProductEvent("offline_data:prefetch_finish", { status: "failed", failures: 0 });
     } finally {
-      inFlight = null;
+      state.inFlight = null;
     }
   })();
 
-  return inFlight;
+  return state.inFlight;
 }
 
 async function _prefetchOfflineData(

@@ -347,7 +347,8 @@
     "inviteCollaboratorsDescription": "Voeg een bestaande gebruiker of een van uw organisaties toe, of nodig iemand uit per e-mail. Bestaande accounts krijgen direct toegang; uitgenodigden ontvangen een e-mail en doen mee zodra ze accepteren.",
     "filterCollaboratorsPlaceholder": "Filter op naam of e-mail…",
     "invitedBy": "Uitgenodigd door",
-    "unknownInviter": "Onbekende uitnodiger"
+    "unknownInviter": "Onbekende uitnodiger",
+    "requestToJoinSubmit_true": "$t(experimentSettings.requestToJoinSubmitting)"
   },
   "joinCode": {
     "title": "Deelnamecode",
@@ -1556,5 +1557,36 @@
   "provenance": {
     "simulated": "Gesimuleerd",
     "guest": "Gast"
+  },
+  "demo": {
+    "try": "Probeer de demo",
+    "title": "Hoe mogen we je noemen?",
+    "name": "Naam, optioneel",
+    "nameHint": "Gebruik een bijnaam, geen e-mail- of webadres. Gebruik je echte naam alleen als je die openbaar wilt tonen.",
+    "permanent": "Metingen, inclusief de locatie als je telefoon die deelt, blijven permanent openbaar. Je gekozen naam staat erbij tot je account na zeven dagen wordt opgeruimd. Daarna staat er “Voormalige gast”.",
+    "continue": "Verder naar de demo",
+    "cancel": "Annuleren",
+    "terms": "Algemene voorwaarden",
+    "invalidName": "Gebruik een bijnaam van maximaal 60 tekens zonder e-mailadres of webadres.",
+    "entryError": "We konden de demo niet openen. Probeer het opnieuw.",
+    "unavailable": "De demo is momenteel niet beschikbaar. Probeer het later opnieuw.",
+    "noContent": "De demo-experimenten konden niet worden geladen. Probeer het opnieuw zonder een nieuwe sessie te starten.",
+    "retry": "Opnieuw proberen",
+    "banner": "Je probeert de demo als {{name}}. Deze gastsessie duurt zeven dagen.",
+    "leave": "Demo verlaten",
+    "leaveTitle": "De demo verlaten?",
+    "leaveDescription": "Je openbare metingen blijven staan. Je hebt een nieuwe gastsessie nodig om de demo opnieuw te proberen.",
+    "leaveError": "Je bent nog in de demo. Controleer je verbinding en probeer opnieuw te vertrekken.",
+    "offline": "Maak verbinding met internet om de demo te starten.",
+    "unsent_one": "Je hebt {{count}} onverzonden meting. Upload deze voordat je vertrekt, of laat deze op dit apparaat staan tot de gastgegevens worden opgeruimd.",
+    "unsent_other": "Je hebt {{count}} onverzonden metingen. Upload ze voordat je vertrekt, of laat ze op dit apparaat staan tot de gastgegevens worden opgeruimd.",
+    "upload": "Nu uploaden",
+    "leaveAnyway": "Toch verlaten",
+    "uploadError": "Niet alle metingen zijn geüpload. Probeer het opnieuw of kies Toch verlaten.",
+    "expired": "Je demosessie is afgelopen. Maak verbinding met internet om een nieuwe te starten.",
+    "leaveAction": "$t(demo.leave)",
+    "leaveAction_retry": "$t(demo.retry)",
+    "entryError_limited": "Te veel pogingen. Wacht een minuut en probeer het opnieuw.",
+    "entryError_disabled": "$t(demo.unavailable)"
   }
 }

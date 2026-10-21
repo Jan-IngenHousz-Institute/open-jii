@@ -2,6 +2,8 @@ import { Tabs, useRouter } from "expo-router";
 import { FlaskConical, House, Workflow } from "lucide-react-native";
 import { Easing, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { GuestBanner } from "~/features/auth/components/guest-banner";
+import { useSession } from "~/features/auth/hooks/use-session";
 import { DeviceSheet } from "~/features/connection/components/device-sheet";
 import { useAutoReconnect } from "~/features/connection/hooks/use-auto-reconnect";
 import { useDeviceChip } from "~/features/connection/hooks/use-device-chip";
@@ -22,6 +24,7 @@ function HeaderDeviceChip() {
 }
 
 export default function TabLayout() {
+  const { user } = useSession();
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -31,8 +34,16 @@ export default function TabLayout() {
   usePruneExpiredMeasurements();
 
   return (
-    <View className="flex-1">
+    <View
+      className="flex-1"
+      style={{
+        paddingTop: user?.isAnonymous ? insets.top : 0,
+        backgroundColor: themeColors.background,
+      }}
+    >
+      {user?.isAnonymous && <GuestBanner />}
       <Tabs
+        initialRouteName={user?.isAnonymous ? "experiments" : "index"}
         tabBar={(props) => <AnimatedTabBar {...props} hidden={false} />}
         screenOptions={{
           animation: "fade",
@@ -106,7 +117,7 @@ export default function TabLayout() {
           options={{
             title: "Data",
             tabBarIcon: ({ color, size }) => <FlaskConical size={size} color={color} />,
-            href: null,
+            href: user?.isAnonymous ? "/experiments" : null,
           }}
         />
         <Tabs.Screen
@@ -121,7 +132,7 @@ export default function TabLayout() {
       </Tabs>
 
       <DeviceSheet />
-      <WhatsNewSheet />
+      {!user?.isAnonymous && <WhatsNewSheet />}
     </View>
   );
 }

@@ -1,0 +1,115 @@
+---
+title: "Try the demo"
+description: "Explore public experiments without an account or a physical sensor."
+---
+
+These steps apply once **Try the demo** is enabled on the sign-in screen. If the
+button is absent, demo entry is unavailable. You need an internet connection to
+start a guest session.
+
+## Enter on the web
+
+1. Open the sign-in page and choose **Try the demo**, below the passkey button.
+2. Optionally enter a nickname. Leave it blank to use Guest. Do not enter an email
+   or web address. Names can contain up to 60 characters.
+3. Read the notice and terms, then choose **Continue to the demo**.
+
+The demo organization opens with its experiments. A banner shows your nickname,
+the seven-day guest lifetime and **Leave demo**. You can read public content and
+run measurements in demo experiments. Guests cannot create organizations or
+request membership in other experiments.
+
+Measurements you take in the demo stay public permanently. Use synthetic sample
+names and do not enter personal or private research information. If you allow
+location access on Android, your GPS coordinates are included in the measurement.
+Your chosen name appears publicly beside your measurements while the guest account
+exists. After the seven-day account cleanup, they show **Former guest**. Do not use
+your real name unless you want it shown. The name resolves from the current account;
+it is not copied into the permanent measurement rows.
+
+## Enter on Android
+
+On the sign-in screen, choose **Try the demo** below GitHub and ORCID. The same
+nickname prompt opens. After continuing, Data shows the demo experiments. The app
+caches their pinned workbooks for offline use after the first successful load.
+If content could not load, reconnect and retry before relying on it offline.
+
+The guest banner stays on every main tab. Recent lists only measurements taken
+by your current guest session. It does not show a previous guest's measurements
+or another person's cached research.
+
+## Measure without hardware
+
+Open the MultispeQ demo experiment and start its workbook. At the device step,
+choose **Simulated MultispeQ**, connect, then run the measurement. The result is
+marked **Simulated**. Android saves the marked result in Recent; open it to see
+the measurement details. The web also offers simulated Ambit and MiniPAR in their
+corresponding demo experiments.
+
+These sensors replay synthetic placeholder recordings, so the numbers are for
+exploration, not research. See [simulated sensors](/guide/devices-protocols/simulated-sensors)
+for the recording limits.
+
+## Leave the demo
+
+Choose **Leave demo** in the banner and confirm. Publicly uploaded measurements
+remain available, and the guest account is left for the scheduled seven-day
+cleanup. Leaving does not convert it into a researcher account.
+
+On Android, if your current guest has unsent measurements, choose:
+
+- **Upload now** to try uploading while staying signed in. Failed or pending
+  uploads keep the warning visible. Uploading requires an internet connection.
+- **Leave anyway** to discard the local session and leave those unsent rows on
+  the phone for guest cleanup. A later researcher or new guest cannot see or
+  upload them.
+
+Android clears local guest credentials, cached data and selections even offline
+or if the server cannot confirm sign-out. Unsent guest rows expire through the
+app's seven-day cleanup; unsent researcher rows are unaffected.
+
+On the web, leaving requires confirmed sign-out. If the browser is offline or
+sign-out fails, you remain in the demo with a **Try again** action. Your session
+and visible data stay intact until a retry succeeds.
+
+## Offline access and expiry
+
+An existing Android guest can read cached demo content and save measurements
+offline. Uploads and new guest sessions require a connection. Guest access ends
+seven days after the original account creation, even if its session was refreshed.
+At expiry, the app clears local guest access and explains how to start again.
+
+Setting the phone clock back substantially also ends local guest access. Keep
+automatic date and time enabled. Leaving or changing accounts clears prior
+selections and cached query data before another identity is shown.
+
+## Google Play reviewer path
+
+Once demo entry is enabled, no researcher account or sensor is needed for review:
+open **Try the demo**, continue with a nickname, open the MultispeQ demo in Data,
+connect **Simulated MultispeQ**, run a measurement, and inspect its Simulated label
+in Recent. Use **Leave demo** to finish. If a local review build cannot upload to
+AWS, Recent shows the upload failure; that is not proof of a server save.
+
+## Recordings
+
+These recordings are pending review. The Android measurement stays on the phone;
+the upload error comes from the local test environment, where AWS uploads are
+unavailable. It does not demonstrate a successful server save.
+
+<DocsVideo>
+  <video src="/img/guide/web/guest-demo-web.webm" controls width="100%" preload="metadata" />
+</DocsVideo>
+
+<DocsVideo>
+  <video src="/img/mobile/guest-demo-entry-android.webm" controls width="100%" preload="metadata" />
+</DocsVideo>
+
+<DocsVideo>
+  <video
+    src="/img/mobile/guest-demo-measure-leave-android.webm"
+    controls
+    width="100%"
+    preload="metadata"
+  />
+</DocsVideo>

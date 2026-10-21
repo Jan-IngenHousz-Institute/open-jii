@@ -5,6 +5,7 @@ import { Archive, ArrowRightLeft, ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Separator } from "@repo/ui/components/separator";
@@ -85,6 +86,7 @@ function sectionCandidates(locale: string): SectionCandidate[] {
  * the collection they operate on instead of competing with page navigation.
  */
 export function SiteHeader({ locale }: { locale: string }) {
+  const { data: session } = useSession();
   const { t } = useTranslation();
   const pathname = usePathname();
   const detailBreadcrumb = usePlatformHeaderDetail();
@@ -96,7 +98,13 @@ export function SiteHeader({ locale }: { locale: string }) {
   const best = matches.sort((a, b) => b.url.length - a.url.length).at(0);
   const label = best ? t(best.titleKey, { ns: best.namespace }) : null;
   const isCalibrationEnabled = useIsCalibrationEnabled();
-  const actions = overviewActions(pathname, locale, t, isCalibrationEnabled);
+  const actions = overviewActions(
+    pathname,
+    locale,
+    t,
+    isCalibrationEnabled,
+    !!session?.user.isAnonymous,
+  );
 
   return (
     <header
@@ -179,6 +187,7 @@ function overviewActions(
   locale: string,
   t: Translate,
   isCalibrationEnabled: boolean,
+  isGuest: boolean,
 ) {
   if (pathname === `/${locale}/platform/experiments`) {
     const archiveLabel = t("experiments.viewArchived", { ns: "experiments" });
@@ -241,7 +250,7 @@ function overviewActions(
     );
   }
 
-  if (pathname === `/${locale}/platform/organizations`) {
+  if (pathname === `/${locale}/platform/organizations` && !isGuest) {
     return (
       <CreateAction
         href={`/${locale}/platform/organizations/new`}

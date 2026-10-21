@@ -1095,6 +1095,12 @@
     "classification": "deny"
   },
   {
+    "procedure": "users.getDemoAvailability",
+    "method": "GET",
+    "path": "/api/v1/users/demo-availability",
+    "classification": "public-list"
+  },
+  {
     "procedure": "organizations.listMyOrganizations",
     "method": "GET",
     "path": "/api/v1/users/me/organizations",

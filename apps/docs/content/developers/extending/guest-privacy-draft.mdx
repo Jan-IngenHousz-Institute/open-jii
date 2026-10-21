@@ -61,14 +61,15 @@ gastaccount. De privacy officer moet het doel en de bewaartermijnen vóór
 publicatie bevestigen. Deze tekst belooft geen verwijdering van
 beveiligingslogboeken na zeven dagen.
 
-The account cleanup timing describes server records. An offline phone can retain
-cached guest session details until the app refreshes or clears them. The guest
-client milestone must handle expired-session and Leave demo cache clearing.
+The account cleanup timing describes server records. Android clears local guest
+credentials and cached query data on Leave demo, including offline departure,
+and refuses offline guest access at seven days from account creation. Web leaves
+the session visible until server sign-out succeeds.
 
-De termijn voor accountverwijdering betreft servergegevens. Een offline telefoon
-kan gastgegevens uit de sessiecache bewaren totdat de app deze vernieuwt of wist.
-De volgende clientmijlpaal moet verlopen gastsessies en de sessiecache bij
-vertrekken afhandelen.
+De termijn voor accountverwijdering betreft servergegevens. Android wist lokale
+gastgegevens en de querycache bij het verlaten van de demo, ook zonder verbinding.
+Offline gasttoegang vervalt zeven dagen na het aanmaken van het account. Op het
+web blijft de sessie zichtbaar totdat afmelden bij de server is gelukt.
 
 Unsent measurements also remain on the phone. Known guest-owned rows expire
 after seven days. If the app could not establish ownership type at capture, the

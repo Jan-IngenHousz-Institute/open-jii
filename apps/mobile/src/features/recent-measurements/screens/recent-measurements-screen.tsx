@@ -15,6 +15,7 @@ import type {
   MeasurementFilter,
   MeasurementItem,
 } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useMeasurementViewer } from "~/features/recent-measurements/hooks/use-measurement-viewer";
 import { useRecentMeasurementsActions } from "~/features/recent-measurements/hooks/use-recent-measurements-actions";
 import type { MeasurementDaySection } from "~/features/recent-measurements/utils/group-measurements-by-day";
 import { groupMeasurementsByDay } from "~/features/recent-measurements/utils/group-measurements-by-day";
@@ -37,6 +38,7 @@ type ListRow =
 const FLASHLIST_CONTENT_STYLE = { paddingTop: 12, paddingBottom: 16 };
 
 export function RecentMeasurementsScreen() {
+  const viewer = useMeasurementViewer();
   const { colors } = useTheme();
   const navigation = useNavigation();
   const { i18n } = useTranslation(["common", "recentMeasurements"]);
@@ -100,10 +102,13 @@ export function RecentMeasurementsScreen() {
 
   // The list row is lean (no `measurement_result`). Loading the full payload
   // on tap is fast (~5-20 ms locally); see Scenario J in measurements-perf.
-  const openModal = useCallback(async (kind: "questions" | "comment", id: string) => {
-    const full = await getMeasurement(id);
-    if (full) setModal({ kind, measurement: full });
-  }, []);
+  const openModal = useCallback(
+    async (kind: "questions" | "comment", id: string) => {
+      const full = await getMeasurement(id, viewer);
+      if (full) setModal({ kind, measurement: full });
+    },
+    [viewer],
+  );
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {

@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import { Info } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
+import { useSession } from "~/features/auth/hooks/use-session";
 import { useMeasurementCapture } from "~/features/measurement-flow/hooks/use-measurement-capture";
 import { useTranslation } from "~/shared/i18n";
 import type { MeasurementContent } from "~/shared/measurements/flow-node";
@@ -24,6 +25,7 @@ interface MeasurementNodeProps {
 
 export function MeasurementNode({ content, nodeId }: MeasurementNodeProps) {
   const { classes, colors } = useTheme();
+  const { user } = useSession();
   const { t } = useTranslation("measurementFlow");
   const {
     device,
@@ -122,7 +124,9 @@ export function MeasurementNode({ content, nodeId }: MeasurementNodeProps) {
             <View className="bg-muted flex-row items-center gap-2 rounded-lg p-2">
               <Info size={16} color={colors.brand} />
               <Text className={clsx("flex-1 text-sm leading-relaxed", classes.textMuted)}>
-                {t("measurementFlow:measurementNode.privacyNote")}
+                {t("measurementFlow:measurementNode.privacyNote", {
+                  context: String(user?.isAnonymous),
+                })}
               </Text>
             </View>
 

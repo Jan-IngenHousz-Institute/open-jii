@@ -16,7 +16,9 @@ import {
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { OfflineBanner } from "~/features/auth/components/offline-banner";
+import { TryDemo } from "~/features/auth/components/try-demo";
 import { useLoginFlow } from "~/features/auth/hooks/use-login";
+import { hasExpiredGuestSession } from "~/features/auth/services/session-cache";
 import { EnvironmentSelector } from "~/features/profile/widgets/environment-selector";
 import { useTranslation } from "~/shared/i18n";
 import { getEnvVar } from "~/shared/stores/environment-store";
@@ -299,6 +301,13 @@ export default function LoginScreen() {
                   orcidLoading={orcidLoading}
                   online={online}
                 />
+
+                {hasExpiredGuestSession() && (
+                  <Text accessibilityRole="alert" className="text-on-surface my-3">
+                    {t("auth:demo.expired")}
+                  </Text>
+                )}
+                <TryDemo online={online} />
 
                 <Text className="text-inactive mt-6 text-xs leading-[18px]">
                   {t("auth:termsPrefix")}

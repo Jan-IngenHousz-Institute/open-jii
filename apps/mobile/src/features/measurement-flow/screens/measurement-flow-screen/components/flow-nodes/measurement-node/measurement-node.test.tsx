@@ -1,8 +1,15 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import en from "~/shared/i18n/locales/en-US/measurement-flow.json";
+import nl from "~/shared/i18n/locales/nl-NL/measurement-flow.json";
 
 import { MeasurementNode } from "./measurement-node";
+
+const sessionState = vi.hoisted(() => ({ isAnonymous: false, locale: "en-US" }));
+vi.mock("~/features/auth/hooks/use-session", () => ({
+  useSession: () => ({ user: sessionState }),
+}));
 
 // Only the network/native boundaries and deep state children are mocked; the
 // start-scan guards run unmocked, and the protocol is passed via content.
@@ -105,7 +112,17 @@ vi.mock("~/shared/ui/hooks/use-theme", () => ({
 
 // i18n: echo the key so assertions are unambiguous about which toast fired.
 vi.mock("~/shared/i18n", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: { context?: string }) => {
+      if (key === "measurementFlow:measurementNode.privacyNote") {
+        let strings = en;
+        if (sessionState.locale === "nl-NL") strings = nl;
+        if (options?.context === "true") return strings.measurementNode.privacyNote_true;
+        return strings.measurementNode.privacyNote;
+      }
+      return key;
+    },
+  }),
 }));
 
 // The render-state children touch other stores; stub them so the tests focus on
@@ -135,6 +152,8 @@ function round(successes: unknown[], failures: unknown[]) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  sessionState.isAnonymous = false;
+  sessionState.locale = "en-US";
   scanState.isScanning = false;
   scanState.lastRound = undefined;
   useConnectedDevices.mockReturnValue({ data: [DEVICE], refetch: refetchConnectedDevices });
@@ -348,4 +367,20 @@ describe("MeasurementNode in-scan controls", () => {
     await waitFor(() => expect(cancelAll).toHaveBeenCalled());
     expect(resetScan).toHaveBeenCalled();
   });
+});
+
+describe("guest measurement privacy notice", () => {
+  it.each(["en-US", "nl-NL"])(
+    "shows public demo guidance with GPS disclosure and without the researcher full-name claim in %s",
+    (locale) => {
+      sessionState.isAnonymous = true;
+      sessionState.locale = locale;
+      scanState.isScanning = true;
+      let strings = en;
+      if (locale === "nl-NL") strings = nl;
+      render(<MeasurementNode content={content} nodeId="m1" />);
+      expect(screen.getByText(strings.measurementNode.privacyNote_true)).toBeTruthy();
+      expect(screen.queryByText(strings.measurementNode.privacyNote)).toBeNull();
+    },
+  );
 });

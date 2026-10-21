@@ -14,6 +14,8 @@ export function useSignInPasskey() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    // Autofill cancellation is silent; the explicit button owns its translated error.
+    meta: { errorHandledLocally: true },
     mutationFn: async (input?: { autoFill?: boolean }) => {
       // Runtime can resolve undefined despite the client types.
       const response = (await authClient.signIn.passkey(input)) as

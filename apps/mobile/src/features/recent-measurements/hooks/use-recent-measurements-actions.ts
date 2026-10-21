@@ -13,6 +13,8 @@ import { getMeasurementIdsByRunId } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { showAlert } from "~/shared/ui/AlertDialog";
 
+import { useMeasurementViewer } from "./use-measurement-viewer";
+
 type TFn = ReturnType<typeof useTranslation>["t"];
 
 interface ConfirmConfig {
@@ -41,6 +43,7 @@ function confirmAndRun(
 }
 
 export function useRecentMeasurementsActions(filter: MeasurementFilter) {
+  const viewer = useMeasurementViewer();
   const { measurements, invalidate, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useAllMeasurements(filter);
   const {
@@ -113,7 +116,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     async (runId: string, experimentName: string) => {
       let keys: string[];
       try {
-        keys = await getMeasurementIdsByRunId(runId, UNSYNCED_STATUSES);
+        keys = await getMeasurementIdsByRunId(runId, UNSYNCED_STATUSES, viewer);
       } catch {
         toast.error(t("recentMeasurements:alerts.uploadMeasurementError"));
         return;
@@ -139,7 +142,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
             // Membership can drift while the confirmation is open (a settling
             // upload, a new measurement in the same run), so re-resolve instead
             // of acting on the pre-alert snapshot.
-            const fresh = await getMeasurementIdsByRunId(runId, UNSYNCED_STATUSES);
+            const fresh = await getMeasurementIdsByRunId(runId, UNSYNCED_STATUSES, viewer);
             if (fresh.length > 0) await uploadMany(fresh);
           } finally {
             invalidate();
@@ -147,7 +150,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
         },
       });
     },
-    [t, uploadMany, invalidate],
+    [t, uploadMany, invalidate, viewer],
   );
 
   const confirmDeleteRun = useCallback(
@@ -157,7 +160,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
       // confirmation discloses the true (whole-run) count.
       let keys: string[];
       try {
-        keys = await getMeasurementIdsByRunId(runId);
+        keys = await getMeasurementIdsByRunId(runId, undefined, viewer);
       } catch {
         toast.error(t("recentMeasurements:alerts.deleteMeasurementError"));
         return;
@@ -179,7 +182,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
         run: async () => {
           try {
             // Re-resolve on confirm, like confirmSyncRun.
-            const fresh = await getMeasurementIdsByRunId(runId);
+            const fresh = await getMeasurementIdsByRunId(runId, undefined, viewer);
             if (fresh.length > 0) await removeMeasurements(fresh);
           } finally {
             invalidate();
@@ -187,7 +190,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
         },
       });
     },
-    [t, removeMeasurements, invalidate],
+    [t, removeMeasurements, invalidate, viewer],
   );
 
   // Count is supplied by the caller (the toolbar owns the counts subscription

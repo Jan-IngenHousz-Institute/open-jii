@@ -96,6 +96,61 @@ describe("measurements-storage", () => {
     vi.resetModules();
   });
 
+  it("isolates guest rows from other guests and later researchers across reads and actions", async () => {
+    const mod = await import("~/shared/db/measurements-storage");
+    insertRow("a", "pending");
+    insertRow("b", "failed");
+    insertRow("researcher", "successful");
+    insertRow("legacy", "successful");
+    sqlite
+      .prepare("UPDATE measurements SET owner_user_id = ?, owner_is_guest = 1 WHERE id = ?")
+      .run("guest-a", "a");
+    sqlite
+      .prepare("UPDATE measurements SET owner_user_id = ?, owner_is_guest = 1 WHERE id = ?")
+      .run("guest-b", "b");
+    sqlite
+      .prepare("UPDATE measurements SET owner_user_id = ?, owner_is_guest = 0 WHERE id = ?")
+      .run("researcher", "researcher");
+    const a = { userId: "guest-a", isGuest: true };
+    const b = { userId: "guest-b", isGuest: true };
+    const researcher = { userId: "researcher", isGuest: false };
+    expect(
+      (
+        await mod.getMeasurementsList(["pending", "failed", "successful"], {
+          limit: 50,
+          offset: 0,
+          viewer: a,
+        })
+      ).map((r) => r.id),
+    ).toEqual(["a"]);
+    expect(await mod.countMeasurementsByStatus(a)).toEqual({
+      pending: 1,
+      failed: 0,
+      successful: 0,
+    });
+    expect(
+      (await mod.getMeasurements(["pending", "failed", "successful"], a)).map((r) => r.id),
+    ).toEqual(["a"]);
+    expect(
+      (await mod.getMeasurements(["pending", "failed", "successful"], b)).map((r) => r.id),
+    ).toEqual(["b"]);
+    expect(
+      (await mod.getMeasurements(["pending", "failed", "successful"], researcher))
+        .map((r) => r.id)
+        .sort(),
+    ).toEqual(["legacy", "researcher"]);
+    expect(await mod.getMeasurement("a", b)).toBeNull();
+    expect(await mod.getMeasurement("a", researcher)).toBeNull();
+    expect(await mod.getMeasurementIds(["pending", "failed"], b)).toEqual(["b"]);
+    expect(await mod.getMeasurementIds(["pending", "failed"], researcher)).toEqual([]);
+    await mod.removeMeasurement("a", b);
+    await mod.removeMeasurements(["a", "researcher"], b);
+    expect(await mod.getMeasurement("a", a)).not.toBeNull();
+    expect(await mod.getMeasurement("researcher", researcher)).not.toBeNull();
+    expect(await mod.getMeasurementIds(["successful"], a)).toEqual([]);
+    expect(await mod.getMeasurementIds(["successful"], null)).toEqual([]);
+  });
+
   // ---------------------------------------------------------------------------
   // saveMeasurement
   // ---------------------------------------------------------------------------

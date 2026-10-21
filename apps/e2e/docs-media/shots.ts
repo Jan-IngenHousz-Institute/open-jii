@@ -218,6 +218,40 @@ const simulatedSensorShots: readonly Shot[] = [
 
 export const SHOTS: readonly Shot[] = [
   {
+    slug: "guest-demo-web",
+    publish: "img/guide/web/guest-demo-web.webm",
+    frame: "desktop",
+    route: "/login",
+    anonymous: true,
+    async prepare(page) {
+      await page.getByRole("button", { name: "Try the demo", exact: true }).waitFor();
+      await settle(page, 6000);
+    },
+    async perform(page) {
+      await activate(page, /^Try the demo$/);
+      await typeInto(page.getByLabel("Name, optional", { exact: true }), "River");
+      await settle(page, 3500);
+      await activate(page, /^Continue to the demo$/);
+      await page.getByRole("heading", { name: "openJII Demo", exact: true }).waitFor();
+      await settle(page, 1400);
+      await page.getByRole("link", { name: "[Seed] MultispeQ Demo Example", exact: true }).click();
+      await page.getByRole("tab", { name: "Design", exact: true }).click();
+      const replay = simulatedSensorShots[0];
+      await replay.prepare?.(page);
+      await replay.perform?.(page);
+      await page.getByRole("button", { name: "Leave demo", exact: true }).click();
+      await settle(page, 1300);
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: "Leave demo", exact: true })
+        .click();
+      await page.getByRole("heading", { name: "Log in or sign up", exact: true }).waitFor();
+    },
+    tailSeconds: 2,
+    scope:
+      "Guest nickname and permanent-data notice, demo landing, simulated MultispeQ result, and confirmed leave",
+  },
+  {
     slug: "guest-demo-public-read",
     publish: "img/guide/web/guest-demo-public-read.webm",
     frame: "desktop",
