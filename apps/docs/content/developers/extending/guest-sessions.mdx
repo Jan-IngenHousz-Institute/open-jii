@@ -86,6 +86,9 @@ A nightly UTC job removes anonymous accounts strictly older than seven days,
 including sessions, memberships, visits, quotas and guest-addressed grants. It
 also removes stale anonymous-entry rate-limit records. Refreshing a session does
 not restart the account's lifetime. Measurements and Demo resources remain.
+Server deletion cannot erase an offline phone's SecureStore session cache. The
+guest client milestone must clear that cache on Leave demo and handle expired
+guest sessions; researcher offline caches keep their existing behavior.
 
 Deletion is atomic per account. An unexpected owned research row blocks that
 account's deletion and raises the existing heartbeat error signal with
