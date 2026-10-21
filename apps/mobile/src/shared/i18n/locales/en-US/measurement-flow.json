@@ -176,7 +176,8 @@
       "partialTitle": "{{failed}} of {{total}} devices failed",
       "continueWithSuccessful": "Continue with {{count}}",
       "retryFailed": "Retry failed devices"
-    }
+    },
+    "privacyNote_true": "Measurements, including location when your phone shares it, stay public permanently. Your chosen name appears beside them until seven-day account cleanup, then they show “Former guest”."
   },
   "questionNode": {
     "autoProceeded": {

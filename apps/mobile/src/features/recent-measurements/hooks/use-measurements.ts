@@ -3,8 +3,8 @@ import { useCallback } from "react";
 import { queryKeys } from "~/features/recent-measurements/services/measurement-list-cache";
 import { getOutbox } from "~/shared/composition/upload";
 import {
-  clearMeasurements,
   getMeasurementIds,
+  getMeasurement,
   markAsFailed,
   removeMeasurement as removeMeasurementFromStorage,
   removeMeasurements as removeMeasurementsFromStorage,
@@ -18,37 +18,41 @@ import {
   getFlagTypeFromMeasurementResult,
 } from "~/shared/measurements/measurement-annotations";
 
+import { useMeasurementViewer } from "./use-measurement-viewer";
+
 // The row-action functions below are useCallback'd on [queryClient]:
 // row-action callbacks in the list screen hang off these, and a new closure
 // per render would break the memo on every visible row. (`uploadAll` feeds the
 // toolbar instead and stays a plain closure.)
 export function useMeasurements() {
+  const viewer = useMeasurementViewer();
   const queryClient = useQueryClient();
 
   const uploadMutation = useMutation({
     networkMode: "always",
     mutationFn: async () => {
-      getOutbox().enqueueMany(await getMeasurementIds(UNSYNCED_STATUSES));
+      getOutbox().enqueueMany(await getMeasurementIds(UNSYNCED_STATUSES, viewer));
       await queryClient.invalidateQueries({ queryKey: queryKeys.root });
     },
   });
 
   const uploadOne = useCallback(
     async (key: string) => {
-      getOutbox().enqueue(key);
+      if (await getMeasurement(key, viewer)) getOutbox().enqueue(key);
       await queryClient.invalidateQueries({ queryKey: queryKeys.root });
     },
-    [queryClient],
+    [queryClient, viewer],
   );
 
   // Whole workbook run: one enqueue burst, one invalidation.
   const uploadMany = useCallback(
     async (keys: readonly string[]) => {
       if (keys.length === 0) return;
-      getOutbox().enqueueMany(keys);
+      const visible = await Promise.all(keys.map((key) => getMeasurement(key, viewer)));
+      getOutbox().enqueueMany(keys.filter((_, index) => visible[index]));
       await queryClient.invalidateQueries({ queryKey: queryKeys.root });
     },
-    [queryClient],
+    [queryClient, viewer],
   );
 
   const saveMeasurement = useCallback(
@@ -74,35 +78,36 @@ export function useMeasurements() {
 
   const removeMeasurement = useCallback(
     async (key: string) => {
-      await removeMeasurementFromStorage(key);
+      await removeMeasurementFromStorage(key, viewer);
       await queryClient.invalidateQueries({ queryKey: queryKeys.root });
     },
-    [queryClient],
+    [queryClient, viewer],
   );
 
   const removeMeasurements = useCallback(
     async (keys: readonly string[]) => {
       if (keys.length === 0) return;
-      await removeMeasurementsFromStorage(keys);
+      await removeMeasurementsFromStorage(keys, viewer);
       await queryClient.invalidateQueries({ queryKey: queryKeys.root });
     },
-    [queryClient],
+    [queryClient, viewer],
   );
 
   const clearSyncedMeasurements = useCallback(async () => {
-    await clearMeasurements("successful");
+    const ids = await getMeasurementIds(["successful"], viewer);
+    await removeMeasurementsFromStorage(ids, viewer);
     await queryClient.invalidateQueries({ queryKey: queryKeys.root });
-  }, [queryClient]);
+  }, [queryClient, viewer]);
 
   const updateMeasurementComment = useCallback(
     async (key: string, data: Measurement, commentText: string) => {
       const flagType = getFlagTypeFromMeasurementResult(data.measurementResult);
       const annotations = buildAnnotations(commentText, flagType);
       const measurementResult = { ...data.measurementResult, annotations };
-      await updateMeasurement(key, { ...data, measurementResult });
+      await updateMeasurement(key, { ...data, measurementResult }, viewer);
       await queryClient.invalidateQueries({ queryKey: queryKeys.root });
     },
-    [queryClient],
+    [queryClient, viewer],
   );
 
   return {

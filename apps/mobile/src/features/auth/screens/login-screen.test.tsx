@@ -10,6 +10,12 @@ import { deferred } from "~/shared/testing/deferred";
 import { Button } from "~/shared/ui/Button";
 import { OTPInput } from "~/shared/ui/OTPInput";
 
+vi.mock("~/features/auth/services/auth", () => ({ getAuthClient: () => ({ $fetch: vi.fn() }) }));
+vi.mock("~/features/auth/services/session-cache", () => ({
+  acceptNewSession: vi.fn(),
+  hasExpiredGuestSession: () => false,
+}));
+
 const { probe, verifyEmailOTP } = vi.hoisted(() => ({
   probe: vi.fn<() => Promise<boolean>>(),
   verifyEmailOTP: vi.fn(),

@@ -9,6 +9,10 @@ import {
   useMeasurementCounts,
 } from "~/features/recent-measurements/hooks/use-all-measurements";
 
+vi.mock("~/features/auth/hooks/use-session", () => ({
+  useSession: () => ({ user: { id: "researcher", isAnonymous: false } }),
+}));
+
 const { mockGetMeasurementsList, mockCountMeasurementsByStatus, mockGetMeasurementById } =
   vi.hoisted(() => ({
     mockGetMeasurementsList: vi.fn().mockResolvedValue([]),
@@ -97,6 +101,7 @@ describe("useAllMeasurements", () => {
         expect(mockGetMeasurementsList).toHaveBeenCalledWith(["pending", "failed", "successful"], {
           limit: 50,
           offset: 0,
+          viewer: { userId: "researcher", isGuest: false },
         }),
       );
     });
@@ -311,7 +316,7 @@ describe("useAllMeasurements", () => {
       await waitFor(() => expect(result.current.measurements).toHaveLength(60));
       expect(mockGetMeasurementsList).toHaveBeenLastCalledWith(
         ["pending", "failed", "successful"],
-        { limit: 50, offset: 50 },
+        { limit: 50, offset: 50, viewer: { userId: "researcher", isGuest: false } },
       );
     });
   });

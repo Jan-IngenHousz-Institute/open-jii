@@ -20,7 +20,8 @@ export function useLogout() {
     } finally {
       // Always reset the cache so a failed sign-out can't leave stale authed
       // data behind for the next session.
-      queryClient.resetQueries();
+      await queryClient.cancelQueries();
+      queryClient.clear();
     }
   };
 }

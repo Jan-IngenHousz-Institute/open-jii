@@ -20,7 +20,10 @@ import { RowItem } from "~/shared/ui/RowItem";
 
 export function ProfileScreen() {
   const { session } = useSession();
-  const { userProfile } = useGetUserProfile(session?.data.user.id);
+  const { userProfile } = useGetUserProfile(
+    session?.data.user.id,
+    session?.data.user.isAnonymous !== true,
+  );
   const { t } = useTranslation("profile");
   const sheetRef = useRef<BottomSheetModal>(null);
   // Dev tooling only appears when the app points at a non-prod environment.
@@ -38,7 +41,11 @@ export function ProfileScreen() {
       className="bg-background flex-1"
       contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
     >
-      <ProfileIdentity name={displayName} email={user.email} imageUri={user.image} />
+      <ProfileIdentity
+        name={displayName}
+        email={user.isAnonymous ? undefined : user.email}
+        imageUri={user.image}
+      />
       <ProfileHardwareCard />
       <ProfileAccountCard onOpenAppSettings={() => sheetRef.current?.present()} />
 

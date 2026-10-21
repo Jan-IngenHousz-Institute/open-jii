@@ -1,4 +1,5 @@
 import { ActivityProvider } from "@/components/activity/activity-context";
+import { GuestBanner } from "@/components/auth/guest-banner";
 import { PasskeyCreatePrompt } from "@/components/auth/passkey-create-prompt";
 import { PrincipalProvider } from "@/components/auth/principal-context";
 import { CalibrationFlagProvider } from "@/components/calibrations/calibration-flag-context";
@@ -98,6 +99,9 @@ export default async function AppLayout({
               <SidebarInset>
                 <PlatformHeaderProvider>
                   <SiteHeader locale={locale} />
+                  {session.user.isAnonymous && (
+                    <GuestBanner name={session.user.name} locale={locale} />
+                  )}
                   <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 py-4 md:px-6 md:py-6">
                     <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
                       <Suspense>{children}</Suspense>

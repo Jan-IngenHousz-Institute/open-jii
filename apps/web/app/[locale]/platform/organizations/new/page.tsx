@@ -1,6 +1,8 @@
 import { DocsHelpLink } from "@/components/docs-help-link";
 import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { auth } from "~/app/actions/auth";
 
 import initTranslations from "@repo/i18n/server";
 
@@ -25,6 +27,7 @@ export async function generateMetadata({ params }: NewOrganizationPageProps): Pr
  */
 export default async function NewOrganizationPage({ params }: NewOrganizationPageProps) {
   const { locale } = await params;
+  if ((await auth())?.user.isAnonymous) redirect(`/${locale}/platform/organizations`);
   const { t } = await initTranslations({ locale, namespaces: ["common"] });
 
   return (
