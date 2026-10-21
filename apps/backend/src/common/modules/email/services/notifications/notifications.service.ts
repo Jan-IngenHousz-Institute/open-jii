@@ -11,6 +11,7 @@ import { renderOrganizationJoinRequestApproved } from "@repo/transactional/rende
 import { renderOrganizationJoinRequestRejected } from "@repo/transactional/render/organization-join-request-rejected";
 import { renderOrganizationJoinRequestSubmitted } from "@repo/transactional/render/organization-join-request-submitted";
 import { renderProjectTransferComplete } from "@repo/transactional/render/project-transfer-complete";
+import { renderResourceDeletedNotification } from "@repo/transactional/render/resource-deleted-notification";
 import { renderTransferRequestConfirmation } from "@repo/transactional/render/transfer-request-confirmation";
 
 import { ErrorCodes } from "../../../../utils/error-codes";
@@ -96,6 +97,13 @@ export class NotificationsService {
     ...args: Parameters<typeof renderAccessGrantedNotification>
   ) {
     return renderAccessGrantedNotification(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderResourceDeletedNotificationEmail(
+    ...args: Parameters<typeof renderResourceDeletedNotification>
+  ) {
+    return renderResourceDeletedNotification(...args);
   }
 
   /* v8 ignore next 5 */
@@ -476,6 +484,61 @@ export class NotificationsService {
           email,
           resourceType,
           resourceId,
+          error,
+        }),
+    );
+  }
+
+  async sendResourceDeletedNotification(input: {
+    resourceType: SharingResourceType;
+    resourceName: string;
+    actor: string;
+    email: string;
+  }) {
+    const { resourceType, resourceName, actor, email } = input;
+
+    return await tryCatch(
+      async () => {
+        this.logger.log({
+          msg: "Sending resource deleted notification email",
+          operation: "sendResourceDeletedNotification",
+          email,
+          resourceType,
+          actor,
+        });
+
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+
+        const { html, text } = await this.renderResourceDeletedNotificationEmail({
+          host,
+          baseUrl,
+          resourceKind: RESOURCE_KIND_LABEL[resourceType],
+          resourceName,
+          actor,
+        });
+
+        await this.dispatch({
+          to: email,
+          subject: `${resourceName} was deleted on the openJII Platform`,
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Resource deleted notification email sent successfully",
+          operation: "sendResourceDeletedNotification",
+          email,
+          resourceType,
+          status: "success",
+        });
+      },
+      (error) =>
+        this.sendFailure(error, {
+          msg: "Failed to send resource deleted notification email",
+          operation: "sendResourceDeletedNotification",
+          email,
+          resourceType,
           error,
         }),
     );

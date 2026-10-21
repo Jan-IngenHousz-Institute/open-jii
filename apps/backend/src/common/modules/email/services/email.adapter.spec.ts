@@ -326,4 +326,23 @@ describe("EmailAdapter", () => {
       );
     });
   });
+
+  describe("sendResourceDeletedNotification", () => {
+    it("delegates to NotificationsService with the input unchanged", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendResourceDeletedNotification")
+        .mockResolvedValue(success(undefined));
+      const input = {
+        resourceType: "device_group" as const,
+        resourceName: "North Field Sensors",
+        actor: "Ada Lovelace",
+        email: "member@example.com",
+      };
+
+      const result = await adapter.sendResourceDeletedNotification(input);
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
+    });
+  });
 });

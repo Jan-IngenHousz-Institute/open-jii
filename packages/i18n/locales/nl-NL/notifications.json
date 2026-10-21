@@ -81,6 +81,7 @@
     "experiment_made_public": "{{experimentName}} is nu openbaar omdat het embargo is afgelopen",
     "resource_deleted": "{{actor}} heeft {{resourceName}} verwijderd",
     "resource_moved_organization": "{{actor}} heeft {{resourceName}} verplaatst naar {{organizationName}}",
+    "resource_moved_organization_personal": "{{actor}} heeft {{resourceName}} verplaatst naar hun persoonlijke werkruimte",
     "workbook_version_published": "Versie {{version}} van {{workbookName}} is beschikbaar voor {{experimentName}}",
     "calibration_run_awaiting_approval": "Een {{definitionName}}-kalibratie van {{deviceName}} wacht op goedkeuring",
     "calibration_run_approved": "{{actor}} heeft de {{definitionName}}-kalibratie van {{deviceName}} goedgekeurd",
