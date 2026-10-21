@@ -46,6 +46,46 @@ afterEach(() => {
 });
 
 describe("largeUploadTransport", () => {
+  it("declares UTF-8 byte length for every guest upload", async () => {
+    mockGetUploadUrl.mockResolvedValue(target);
+    const payload = { value: "é🌱" };
+    await createLargeUploadTransport().publish(TOPIC, payload, { guest: true });
+    expect(mockGetUploadUrl).toHaveBeenCalledWith({
+      experimentId: EXPERIMENT_ID,
+      contentLength: new TextEncoder().encode(JSON.stringify(payload)).byteLength,
+    });
+  });
+
+  it.each([401, 403, 413, 429])("does not retry a guest issuer refusal %s", async (status) => {
+    mockGetUploadUrl.mockRejectedValue({ status });
+    const error = await createLargeUploadTransport()
+      .publish(TOPIC, { value: 1 }, { guest: true })
+      .catch((error: unknown) => error);
+    expect(error).toMatchObject({ retryable: false });
+    expect(mockGetUploadUrl).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([403, 413, 429])("does not refresh or retry a guest S3 refusal %s", async (status) => {
+    mockGetUploadUrl.mockResolvedValue(target);
+    fetchMock.mockResolvedValue(response(status));
+    const error = await createLargeUploadTransport()
+      .publish(TOPIC, { value: 1 }, { guest: true })
+      .catch((error: unknown) => error);
+    expect(error).toMatchObject({ retryable: false });
+    expect(mockGetUploadUrl).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a guest server outage retryable", async () => {
+    mockGetUploadUrl.mockResolvedValue(target);
+    fetchMock.mockResolvedValue(response(503));
+    const error = await createLargeUploadTransport()
+      .publish(TOPIC, { value: 1 }, { guest: true })
+      .catch((error: unknown) => error);
+    expect(error).toMatchObject({ retryable: true });
+  });
+
   it("mints a URL for the topic's experiment and PUTs the payload", async () => {
     mockGetUploadUrl.mockResolvedValue(target);
     fetchMock.mockResolvedValue(response(200));
