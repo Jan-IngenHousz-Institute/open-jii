@@ -24,6 +24,7 @@ import {
   protocols,
   resourceGrants,
   resourceVisits,
+  teams,
   workbooks,
   workbookVersions,
 } from "../../src/schema";
@@ -220,6 +221,21 @@ export async function seedDemoContent(user: SeedUser, database: DatabaseInstance
 
 export async function clearDemoContent(database: DatabaseInstance = db) {
   await database.transaction(async (tx) => {
+    const demoTeams = await tx
+      .select({ id: teams.id })
+      .from(teams)
+      .where(eq(teams.organizationId, DEMO_ORGANIZATION_ID));
+    if (demoTeams.length > 0) {
+      await tx.delete(resourceGrants).where(
+        and(
+          eq(resourceGrants.granteeType, "team"),
+          inArray(
+            resourceGrants.granteeId,
+            demoTeams.map((team) => team.id),
+          ),
+        ),
+      );
+    }
     const exp = await tx
       .select({ id: experiments.id })
       .from(experiments)
