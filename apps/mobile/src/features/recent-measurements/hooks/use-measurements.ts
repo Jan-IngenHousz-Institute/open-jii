@@ -55,7 +55,7 @@ export function useMeasurements() {
     async (
       upload: Measurement,
       status: MeasurementStatus,
-      owner?: { userId: string; isGuest: boolean } | null,
+      owner?: { userId: string; isGuest: boolean | null } | null,
     ) => {
       const id = await saveMeasurementToStorage(upload, status, owner);
       await queryClient.invalidateQueries({ queryKey: queryKeys.root });

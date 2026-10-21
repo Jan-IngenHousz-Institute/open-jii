@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { eq, and, or, gte, lt, inArray, count, desc } from "drizzle-orm";
+import { eq, and, or, gte, lt, inArray, count, desc, isNull } from "drizzle-orm";
 import { DateTime, Duration } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -106,7 +106,7 @@ async function ensureMigrated(): Promise<void> {
 export async function saveMeasurement(
   upload: Measurement,
   status: MeasurementStatus,
-  owner?: { userId: string; isGuest: boolean } | null,
+  owner?: { userId: string; isGuest: boolean | null } | null,
 ): Promise<string> {
   await ensureMigrated();
   const id = uuidv4();
@@ -120,7 +120,7 @@ export async function saveMeasurement(
         (typeof upload.measurementResult.user_id === "string"
           ? upload.measurementResult.user_id
           : null),
-      ownerIsGuest: owner === null ? null : (owner?.isGuest ?? false),
+      ownerIsGuest: owner === undefined ? false : (owner?.isGuest ?? null),
       topic: upload.topic,
       measurementResult: compressForStorage(upload.measurementResult),
       experimentName: upload.metadata.experimentName,
@@ -134,6 +134,27 @@ export async function saveMeasurement(
     })
     .run();
   return id;
+}
+
+export async function resolveMeasurementOwner(
+  id: string,
+  userId: string,
+  isGuest: boolean,
+): Promise<boolean> {
+  await ensureMigrated();
+  return (
+    db
+      .update(measurements)
+      .set({ ownerIsGuest: isGuest })
+      .where(
+        and(
+          eq(measurements.id, id),
+          eq(measurements.ownerUserId, userId),
+          isNull(measurements.ownerIsGuest),
+        ),
+      )
+      .run().changes === 1
+  );
 }
 
 // Computed at save/update time so the list query never decompresses

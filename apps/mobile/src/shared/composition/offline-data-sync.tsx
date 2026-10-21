@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { ensureDeviceRegistered } from "~/shared/composition/ensure-device-registered";
 import { prefetchOfflineData } from "~/shared/composition/prefetch-offline-data";
+import { resumeOwnedUploads } from "~/shared/composition/resume-owned-uploads";
 import { useAppState } from "~/shared/ui/hooks/use-app-state";
 
 /**
@@ -17,6 +18,10 @@ export function useOfflineDataSync(): void {
   userIdRef.current = user?.id;
   const guestRef = useRef(user?.isAnonymous === true);
   guestRef.current = user?.isAnonymous === true;
+
+  useEffect(() => {
+    if (user?.id) void resumeOwnedUploads(user.id);
+  }, [user?.id, user?.isAnonymous]);
 
   useEffect(
     () =>

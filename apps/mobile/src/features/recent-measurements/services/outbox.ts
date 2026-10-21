@@ -6,6 +6,7 @@ import {
   getMeasurementIds,
   markAsFailed,
   markAsSuccessful,
+  resolveMeasurementOwner,
   UNSYNCED_STATUSES,
 } from "~/shared/db/measurements-storage";
 import { onAppForeground } from "~/shared/device/app-lifecycle";
@@ -349,13 +350,21 @@ class OutboxImpl implements Outbox {
     const overBrokerLimit = bytes > MQTT_PAYLOAD_LIMIT_BYTES;
     const identity = this.getIdentity();
     const ownerId = row.owner?.userId;
-    const capturedGuest = row.owner?.isGuest;
+    let capturedGuest = row.owner?.isGuest;
+    if (!identity || typeof ownerId !== "string" || identity.userId !== ownerId) {
+      trace?.end("ok", { skipped: "owner_not_signed_in" });
+      return;
+    }
+    if (capturedGuest === null) {
+      const resolved = await resolveMeasurementOwner(id, ownerId, identity.isGuest);
+      if (!resolved || this.destroyed) return;
+      capturedGuest = identity.isGuest;
+    }
+    const currentIdentity = this.getIdentity();
     if (
-      !identity ||
-      typeof ownerId !== "string" ||
-      identity.userId !== ownerId ||
       typeof capturedGuest !== "boolean" ||
-      capturedGuest !== identity.isGuest
+      currentIdentity?.userId !== ownerId ||
+      currentIdentity.isGuest !== capturedGuest
     ) {
       trace?.end("ok", { skipped: "owner_not_signed_in" });
       return;

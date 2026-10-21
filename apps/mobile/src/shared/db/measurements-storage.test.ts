@@ -135,6 +135,26 @@ describe("measurements-storage", () => {
       });
     });
 
+    it("resolves an unknown role only for the captured owner and never overwrites it", async () => {
+      const mod = await import("~/shared/db/measurements-storage");
+      const id = await mod.saveMeasurement(
+        { ...mockMeasurement, measurementResult: { user_id: "forged" } },
+        "pending",
+        { userId: "capture-owner", isGuest: null },
+      );
+      expect((await mod.getMeasurementById(id))?.owner).toEqual({
+        userId: "capture-owner",
+        isGuest: null,
+      });
+      expect(await mod.resolveMeasurementOwner(id, "another", false)).toBe(false);
+      expect(await mod.resolveMeasurementOwner(id, "capture-owner", true)).toBe(true);
+      expect(await mod.resolveMeasurementOwner(id, "capture-owner", false)).toBe(false);
+      expect((await mod.getMeasurementById(id))?.owner).toEqual({
+        userId: "capture-owner",
+        isGuest: true,
+      });
+    });
+
     it("inserts a pending row and returns its id (save-first default)", async () => {
       const mod = await import("~/shared/db/measurements-storage");
       const id = await mod.saveMeasurement(mockMeasurement, "pending");

@@ -5,15 +5,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OfflineDataSync, useOfflineDataSync } from "./offline-data-sync";
 
-const { ensureDeviceRegistered, prefetchOfflineData, useSession, appStateHandler } = vi.hoisted(
-  () => ({
-    prefetchOfflineData: vi.fn<() => Promise<void>>(),
-    ensureDeviceRegistered: vi.fn<() => Promise<void>>(),
-    useSession: vi.fn(),
-    appStateHandler: { current: undefined as undefined | ((s: string) => void) },
-  }),
-);
+const {
+  ensureDeviceRegistered,
+  prefetchOfflineData,
+  useSession,
+  resumeOwnedUploads,
+  appStateHandler,
+} = vi.hoisted(() => ({
+  resumeOwnedUploads: vi.fn<() => Promise<void>>(),
+  prefetchOfflineData: vi.fn<() => Promise<void>>(),
+  ensureDeviceRegistered: vi.fn<() => Promise<void>>(),
+  useSession: vi.fn(),
+  appStateHandler: { current: undefined as undefined | ((s: string) => void) },
+}));
 
+vi.mock("~/shared/composition/resume-owned-uploads", () => ({ resumeOwnedUploads }));
 vi.mock("~/shared/composition/prefetch-offline-data", () => ({ prefetchOfflineData }));
 vi.mock("~/shared/composition/ensure-device-registered", () => ({ ensureDeviceRegistered }));
 vi.mock("~/features/auth/hooks/use-session", () => ({ useSession: () => useSession() }));
@@ -32,6 +38,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
 beforeEach(() => {
   vi.clearAllMocks();
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  resumeOwnedUploads.mockResolvedValue(undefined);
   prefetchOfflineData.mockResolvedValue(undefined);
   ensureDeviceRegistered.mockResolvedValue(undefined);
   onlineManager.setOnline(true);
@@ -40,6 +47,7 @@ beforeEach(() => {
 
 function settleSyncWork() {
   return Promise.all([
+    ...resumeOwnedUploads.mock.results.map(({ value }) => value),
     ...prefetchOfflineData.mock.results.map(({ value }) => value),
     ...ensureDeviceRegistered.mock.results.map(({ value }) => value),
   ]);
@@ -56,6 +64,24 @@ afterEach(async () => {
 });
 
 describe("useOfflineDataSync", () => {
+  it("resumes held uploads when their owner signs back in", async () => {
+    useSession.mockReturnValue({ user: undefined });
+    const { rerender } = renderHook(() => useOfflineDataSync(), { wrapper });
+    expect(resumeOwnedUploads).not.toHaveBeenCalled();
+    useSession.mockReturnValue({ user: { id: "returned-owner", isAnonymous: true } });
+    await act(async () => {
+      rerender(undefined);
+      await settleSyncWork();
+    });
+    expect(resumeOwnedUploads).toHaveBeenCalledExactlyOnceWith("returned-owner");
+    useSession.mockReturnValue({ user: { id: "another-owner", isAnonymous: false } });
+    await act(async () => {
+      rerender(undefined);
+      await settleSyncWork();
+    });
+    expect(resumeOwnedUploads).toHaveBeenLastCalledWith("another-owner");
+  });
+
   it("prefetches public guest content without registering the phone", async () => {
     useSession.mockReturnValue({ user: { id: "guest", isAnonymous: true } });
     renderHook(() => useOfflineDataSync(), { wrapper });
