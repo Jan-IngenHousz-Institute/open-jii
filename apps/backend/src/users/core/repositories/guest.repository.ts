@@ -2,23 +2,37 @@ import { Inject, Injectable } from "@nestjs/common";
 
 import { GUEST_HOURLY_LIMIT } from "@repo/api/shared/guest";
 import { deleteStaleAnonymousRateLimits } from "@repo/auth/guest-retention";
-import { and, eq, guestUsage, gt, inArray, lt, sessions, sql, users } from "@repo/database";
-import type { DatabaseInstance } from "@repo/database";
+import { and, eq, exists, guestUsage, gt, lt, sessions, sql, users } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
+import { GUEST_GRANT_CLEANUP_PORT } from "../../../sharing/core/ports/guest-grant-cleanup.port";
+import type { GuestGrantCleanupPort } from "../../../sharing/core/ports/guest-grant-cleanup.port";
 import { GUEST_LIFETIME_MS } from "../models/guest.model";
-import type { GuestPurgeResult, GuestQuotaDecision, GuestQuotaKind } from "../models/guest.model";
+import type { GuestPurgeBatch, GuestQuotaDecision, GuestQuotaKind } from "../models/guest.model";
 import type { GuestIdentityPort } from "../ports/guest-identity.port";
 
 @Injectable()
 export class GuestRepository implements GuestIdentityPort {
-  constructor(@Inject("DATABASE") private readonly database: DatabaseInstance) {}
+  constructor(
+    @Inject("DATABASE") private readonly database: DatabaseInstance,
+    @Inject(GUEST_GRANT_CLEANUP_PORT) private readonly grants: GuestGrantCleanupPort,
+  ) {}
 
-  async findIdentity(userId: string) {
-    const identities = await this.database
+  async findIdentity(userId: string, executor: DbOrTx = this.database) {
+    const identities = await executor
       .select({ id: users.id, isAnonymous: users.isAnonymous, createdAt: users.createdAt })
       .from(users)
       .where(eq(users.id, userId));
     return identities.at(0) ?? null;
+  }
+
+  static guestCondition(database: DatabaseInstance, userId: string): SQL {
+    return exists(
+      database
+        .select()
+        .from(users)
+        .where(and(eq(users.id, userId), eq(users.isAnonymous, true))),
+    );
   }
 
   async hasSession(userId: string, token: string): Promise<boolean> {
@@ -68,33 +82,38 @@ export class GuestRepository implements GuestIdentityPort {
     });
   }
 
-  async purgeExpired(now = new Date()): Promise<GuestPurgeResult> {
+  async purgeExpired(now = new Date()): Promise<GuestPurgeBatch> {
     return this.database.transaction(async (tx) => {
       const [lock] = await tx
         .select({ acquired: sql<boolean>`pg_try_advisory_xact_lock(2234)` })
         .from(sql`generate_series(1, 1)`);
-      if (!lock.acquired) return { skipped: true, deleted: 0, rateLimitRowsDeleted: 0 };
+      if (!lock.acquired)
+        return { skipped: true, deleted: 0, rateLimitRowsDeleted: 0, blocked: [] };
       const cutoff = new Date(now.getTime() - GUEST_LIFETIME_MS);
       const expired = await tx
         .select({ id: users.id })
         .from(users)
         .where(and(eq(users.isAnonymous, true), lt(users.createdAt, cutoff)))
         .for("update");
-      // Resource creator FKs deliberately RESTRICT deletion. An unexpected owned row aborts the
-      // transaction and alerts; no research data is deleted to make the purge succeed.
-      if (expired.length) {
-        await tx.delete(users).where(
-          and(
-            eq(users.isAnonymous, true),
-            inArray(
-              users.id,
-              expired.map(({ id }) => id),
-            ),
-          ),
-        );
+      let deleted = 0;
+      const blocked: unknown[] = [];
+      for (const guest of expired) {
+        try {
+          // A savepoint keeps an unexpected RESTRICT row from retaining every other guest.
+          deleted += await tx.transaction(async (account) => {
+            await this.grants.removeUserGrants(account, guest.id);
+            const removed = await account
+              .delete(users)
+              .where(and(eq(users.id, guest.id), eq(users.isAnonymous, true)))
+              .returning({ id: users.id });
+            return removed.length;
+          });
+        } catch (error) {
+          blocked.push(error);
+        }
       }
       const rateLimitRowsDeleted = await deleteStaleAnonymousRateLimits(tx, cutoff);
-      return { skipped: false, deleted: expired.length, rateLimitRowsDeleted };
+      return { skipped: false, deleted, rateLimitRowsDeleted, blocked };
     });
   }
 }
