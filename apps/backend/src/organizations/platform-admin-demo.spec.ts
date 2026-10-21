@@ -228,6 +228,44 @@ describe("platform admin and Demo security through Better Auth", () => {
     expect(await isPlatformAdmin({ id: target.id })).toBe(false);
   });
 
+  it("returns only id and role and refuses both no-op changes without an audit event", async () => {
+    const configured = await signIn("configured");
+    const target = await signIn("target");
+    configuredAdminUserIds.push(configured.id);
+    const roleEvents = () =>
+      auditLog.mock.calls.filter((args) =>
+        JSON.stringify(args).includes("Platform admin role changed"),
+      );
+    for (const [role, expectedStatus, expectedEvents] of [
+      ["user", 400, 0],
+      ["admin", 200, 1],
+      ["admin", 400, 1],
+      ["user", 200, 2],
+    ] as const) {
+      const response = await call("/admin/set-role", configured, { userId: target.id, role });
+      expect(response.status).toBe(expectedStatus);
+      const body = await response.json();
+      if (expectedStatus === 200) {
+        expect(body).toEqual({ user: { id: target.id, role } });
+      } else {
+        expect(body).toMatchObject({ message: "The researcher already has this role" });
+        expect(body).not.toHaveProperty("user");
+      }
+      expect(JSON.stringify(body)).not.toContain(target.email);
+      expect(JSON.stringify(body)).not.toContain('"email"');
+      expect(roleEvents()).toHaveLength(expectedEvents);
+    }
+    const forbidden = await call("/admin/set-role", configured, {
+      userId: configured.id,
+      role: "admin",
+    });
+    expect(forbidden.status).toBe(403);
+    expect(await forbidden.json()).not.toHaveProperty("user");
+    expect(roleEvents()).toHaveLength(2);
+    const [row] = await db.select({ role: users.role }).from(users).where(eq(users.id, target.id));
+    expect(row.role).toBe("user");
+  });
+
   it.each(["uppercase", "mixed case"])(
     "refuses %s self and configured admin UUIDs",
     async (casing) => {

@@ -67,13 +67,18 @@ export function openJiiAdmin(adminUserIds: string[] = configuredAdminUserIds) {
               });
             }
             const targets = await db
-              .select({ registered: users.registered })
+              .select({ registered: users.registered, role: users.role })
               .from(users)
               .leftJoin(profiles, eq(profiles.userId, users.id))
               .where(and(eq(users.id, body.userId), isNull(profiles.deletedAt)))
               .limit(1);
             if (targets.length === 0 || !targets[0].registered) {
               throw new APIError("BAD_REQUEST", { message: "Choose a registered researcher" });
+            }
+            if ((targets[0].role ?? "user") === body.role) {
+              throw new APIError("BAD_REQUEST", {
+                message: "The researcher already has this role",
+              });
             }
           }),
         },
@@ -84,9 +89,10 @@ export function openJiiAdmin(adminUserIds: string[] = configuredAdminUserIds) {
           matcher: (ctx: { path?: string }) => ctx.path === "/admin/set-role",
           handler: createAuthMiddleware(async (ctx) => {
             if (ctx.context.returned instanceof APIError) return;
+            const body = roleChange(ctx.body);
+            ctx.context.returned = { user: { id: body.userId, role: body.role } };
             const session = await getSessionFromCtx(ctx, { disableCookieCache: true });
             if (!session) return;
-            const body = roleChange(ctx.body);
             ctx.context.logger.info("Platform admin role changed", {
               actorId: session.user.id.toLowerCase(),
               targetId: body.userId,
