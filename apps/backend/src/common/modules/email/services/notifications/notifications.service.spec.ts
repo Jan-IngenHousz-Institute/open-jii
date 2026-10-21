@@ -101,6 +101,61 @@ describe("NotificationsService", () => {
     await testApp.teardown();
   });
 
+  it.each([
+    {
+      name: "access",
+      send: () =>
+        service.sendAccessGrantedNotification({
+          resourceType: "experiment",
+          resourceId: "synthetic",
+          resourceName: "Synthetic",
+          actor: "Synthetic",
+          role: "viewer",
+          email: "synthetic@guest.openjii.invalid",
+        }),
+    },
+    {
+      name: "transfer request",
+      send: () =>
+        service.sendTransferRequestConfirmation(
+          "synthetic@guest.openjii.invalid",
+          "synthetic",
+          "https://example.test",
+        ),
+    },
+    {
+      name: "transfer complete",
+      send: () =>
+        service.sendProjectTransferComplete(
+          "synthetic@guest.openjii.invalid",
+          "synthetic",
+          "Synthetic",
+        ),
+    },
+    {
+      name: "join submitted",
+      send: () =>
+        service.sendJoinRequestSubmittedNotification(
+          "synthetic",
+          "Synthetic",
+          "Synthetic",
+          "synthetic@guest.openjii.invalid",
+        ),
+    },
+    {
+      name: "join rejected",
+      send: () =>
+        service.sendJoinRequestRejectedNotification(
+          "synthetic",
+          "Synthetic",
+          "synthetic@guest.openjii.invalid",
+        ),
+    },
+  ])("never opens SMTP for a guest $name recipient", async ({ send }) => {
+    await send();
+    expect(mockCreateTransport).not.toHaveBeenCalled();
+  });
+
   describe("sendAccessGrantedNotification", () => {
     const MOCK_RESOURCE_ID = "res-123";
     const MOCK_RESOURCE_NAME = "Leaf Area Index";
