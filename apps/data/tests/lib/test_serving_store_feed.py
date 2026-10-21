@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 from openjii.serving_store import feed
-from openjii.serving_store.writer import StoreWriter, Written
+from openjii.serving_store.writer import StoreUnavailable, StoreWriter, Written
 from pyspark.sql import DataFrame, SparkSession
 
 pytestmark = pytest.mark.spark
@@ -78,6 +78,11 @@ def runtimes(monkeypatch: pytest.MonkeyPatch) -> None:
         runtime.ENVIRONMENT = "dev"  # type: ignore[attr-defined]
         monkeypatch.setitem(sys.modules, name, runtime)
     monkeypatch.setattr(feed, "DRIVER_RETRY_DELAYS", (0,))
+
+
+@pytest.fixture(autouse=True)
+def store_answers(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(StoreWriter, "check", lambda self: None)
 
 
 def _settings(spark: SparkSession, switch: str) -> Iterator[None]:
@@ -195,3 +200,30 @@ def test_a_batch_the_store_could_not_take_is_written_again_from_the_driver(
 
     assert attempts == ["uploads", "uploads"]
     assert len(secrets.read) == 6
+
+
+def test_a_store_that_does_not_answer_the_driver_gets_no_batch_until_it_does(
+    spark: SparkSession, fake_dp: types.ModuleType, feed_on: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    answers = iter([StoreUnavailable("the store did not answer"), None])
+    checks: list[str] = []
+    attempts: list[str] = []
+
+    def check(self: StoreWriter) -> None:
+        checks.append(self.key)
+        answer = next(answers)
+        if answer is not None:
+            raise answer
+
+    def write(self: StoreWriter, lines: DataFrame, table: str) -> Written:
+        attempts.append(table)
+        return Written(inserted=1)
+
+    monkeypatch.setattr(StoreWriter, "check", check)
+    monkeypatch.setattr(StoreWriter, "write", write)
+    _load("centrum/serving_store_feed.py", spark, _Secrets())
+
+    fake_dp.sinks["serving_store_uploads"](spark.sql(_UPLOAD_CHANGES), 0)
+
+    assert len(checks) == 2
+    assert attempts == ["uploads"]

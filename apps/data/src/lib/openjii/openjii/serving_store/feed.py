@@ -10,9 +10,10 @@ from typing import Any
 from pyspark.sql import DataFrame, SparkSession
 
 from .tables import StoreTable
-from .writer import StoreWriter
+from .writer import StoreUnavailable, StoreWriter
 
-# Bounds a catch-up batch, so the feed cannot hold the cores ingestion needs for long.
+# Bounds a catch-up batch, so the feed cannot hold the cores ingestion needs for long. Delta reads a
+# commit whole, so one larger than this is still one batch, which the writer streams chunk by chunk.
 MAX_BYTES_PER_TRIGGER = "128m"
 
 # Waits on the driver while the store cannot take a batch. Waiting there holds only the sink's own
@@ -64,21 +65,9 @@ class StoreFeed:
         effect without a restart."""
         lines = table.lines(changes)
         for attempt in itertools.count():
-            try:
-                writer = self.writer()
-            except Exception as error:
-                # A missing scope or key is configuration, fixed by a deploy, like a wrong password.
-                failure = f"no credentials from {self.scope}: {error}"
-            else:
-                written = writer.write(lines, table.name)
-                if written.unfinished == 0:
-                    print(
-                        f"[serving store] {table.name} batch {batch_id}: {written.inserted} inserted, "
-                        f"{written.rejected} rejected",
-                        flush=True,
-                    )
-                    return
-                failure = f"{written.unfinished} rows not sent"
+            failure = self._write_once(table, lines, batch_id)
+            if failure is None:
+                return
 
             delay = DRIVER_RETRY_DELAYS[min(attempt, len(DRIVER_RETRY_DELAYS) - 1)]
             print(
@@ -86,6 +75,30 @@ class StoreFeed:
                 flush=True,
             )
             time.sleep(delay)
+
+    def _write_once(self, table: StoreTable, lines: DataFrame, batch_id: int) -> str | None:
+        """Writes the batch once, returning why some of it did not go, or None when all of it did."""
+        try:
+            writer = self.writer()
+        except Exception as error:
+            # A missing scope or key is configuration, fixed by a deploy, like a wrong password.
+            return f"no credentials from {self.scope}: {error}"
+
+        try:
+            writer.check()
+        except StoreUnavailable as error:
+            return str(error)
+
+        written = writer.write(lines, table.name)
+        if written.unfinished:
+            return f"{written.unfinished} rows not sent"
+
+        print(
+            f"[serving store] {table.name} batch {batch_id}: {written.inserted} inserted, "
+            f"{written.rejected} rejected",
+            flush=True,
+        )
+        return None
 
     def writer(self) -> StoreWriter:
         return StoreWriter(

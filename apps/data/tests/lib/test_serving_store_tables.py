@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 import requests
 from openjii.serving_store.tables import MACRO_RESULTS, MEASUREMENTS, UPLOADS
-from openjii.serving_store.writer import StoreWriter, Written
+from openjii.serving_store.writer import BAD_DATA_CODES, StoreWriter, Written
 from pyspark.sql import DataFrame, SparkSession
 
 pytestmark = pytest.mark.spark
@@ -268,6 +268,20 @@ def test_a_replayed_batch_lands_once_and_a_row_the_store_cannot_read_is_set_asid
 
     assert first == replay == Written(inserted=1, rejected=1)
     assert store.rows(f"SELECT id FROM {_DATABASE}.uploads") == [{"id": 21}]
-    assert store.rows(f"SELECT source_table, commit_version, code, row FROM {_DATABASE}.feed_rejects") == [
-        {"source_table": "uploads", "commit_version": 3, "code": 27, "row": unreadable}
-    ]
+    assert store.rows(
+        f"SELECT source_table, commit_version, code, row FROM {_DATABASE}.feed_rejects"
+        " WHERE source_table = 'uploads'"
+    ) == [{"source_table": "uploads", "commit_version": 3, "code": 27, "row": unreadable}]
+
+
+@pytest.mark.clickhouse
+def test_a_field_the_table_lacks_is_refused_rather_than_dropped(
+    spark: SparkSession, store: _Store, writer: StoreWriter
+) -> None:
+    [line, *_] = [row.line for row in MEASUREMENTS.lines(spark.sql(_RAW_DATA_CHANGES)).collect()]
+    renamed = json.dumps({**json.loads(line), "id": 99, "client_os_release": "15"})
+
+    assert writer.insert(MEASUREMENTS.name, [renamed]) == Written(rejected=1)
+    assert store.rows(f"SELECT id FROM {_DATABASE}.measurements WHERE id = 99") == []
+    [reject] = store.rows(f"SELECT code FROM {_DATABASE}.feed_rejects WHERE source_table = 'measurements'")
+    assert reject["code"] in BAD_DATA_CODES

@@ -23,9 +23,15 @@ CHUNK_BYTES = 8_000_000
 # the same chunks, and so the same dedup tokens, on a cluster of any size.
 WRITE_PARTITIONS = 4
 
-# Waits between an executor's attempts at one insert. After the last, it hands its rows back rather
-# than hold a task slot the pipeline's ingestion needs; the sink then waits on the driver.
+# Waits between an executor's attempts at an insert the store answered with an error. After the last,
+# or as soon as the store does not answer at all, it hands its rows back rather than hold a task slot
+# the pipeline's ingestion needs; the sink then waits on the driver.
 EXECUTOR_RETRY_DELAYS = (1, 2, 5, 10, 15)
+
+# Connecting, then waiting for the answer. One chunk's insert takes seconds, so a store that has
+# been silent for a minute is not about to answer.
+INSERT_TIMEOUT = (5, 60)
+CHECK_TIMEOUT = (5, 10)
 
 # The store could not read the body. Anything else (memory, too many parts, a timeout, a wrong
 # password, a missing table) is the store's state or configuration, and waiting it out is right.
@@ -33,6 +39,9 @@ BAD_DATA_CODES = frozenset({6, 26, 27, 32, 33, 38, 41, 53, 69, 70, 72, 117, 130,
 
 _LONG_DIGITS = re.compile(r"\d{19,}")
 _REJECT_MESSAGE_CHARS = 4_000
+# The store refuses a JSON object over ten times min_chunk_bytes_for_parallel_parsing, 100 MiB by
+# default, and a reject that raised would stop the pipeline. Escaped, a row this long stays under it.
+_REJECT_ROW_CHARS = 16_000_000
 
 
 def storable(line: str) -> str:
@@ -61,7 +70,7 @@ class StoreRefusedData(Exception):
 
 
 class StoreUnavailable(Exception):
-    """The store did not take an insert within an executor's attempts."""
+    """The store did not answer, or did not take an insert within an executor's attempts."""
 
 
 @dataclass(frozen=True)
@@ -101,12 +110,32 @@ class StoreWriter:
             self._session = requests.Session()
         return self._session
 
+    @property
+    def _headers(self) -> dict[str, str]:
+        return {"X-ClickHouse-User": self.user, "X-ClickHouse-Key": self.key}
+
+    def check(self) -> None:
+        """Raises StoreUnavailable unless the store answers a query as this user. The driver checks
+        before each attempt at a batch, so a store that cannot take it costs the executors nothing."""
+        try:
+            response = self.session.get(
+                self.url, params={"query": "SELECT 1"}, headers=self._headers, timeout=CHECK_TIMEOUT
+            )
+        except requests.RequestException as error:
+            raise StoreUnavailable(f"the store did not answer: {type(error).__name__}: {error}") from error
+
+        if not response.ok:
+            code = response.headers.get("X-ClickHouse-Exception-Code", "0")
+            raise StoreUnavailable(
+                f"the store answered HTTP {response.status_code}, code {code}: {response.text[:300]}"
+            )
+
     def write(self, lines: DataFrame, table: str) -> Written:
         """Inserts ``lines`` (one JSON line per row, in column ``line``) from the executors."""
         writer = self
 
         def insert_partition(frames: Iterable[pd.DataFrame]) -> Iterator[pd.DataFrame]:
-            written = writer.insert(table, [line for frame in frames for line in frame["line"]])
+            written = writer.insert(table, (line for frame in frames for line in frame["line"]))
             yield pd.DataFrame(
                 {
                     "inserted": [written.inserted],
@@ -123,19 +152,21 @@ class StoreWriter:
         )
         return Written(inserted or 0, rejected or 0, unfinished or 0)
 
-    def insert(self, table: str, lines: list[str]) -> Written:
-        chunks = list(self._chunks([storable(line) for line in lines]))
+    def insert(self, table: str, lines: Iterable[str]) -> Written:
+        """Inserts ``lines`` chunk by chunk as they arrive, so a task holds one chunk however large
+        its share of the batch."""
+        chunks = self._chunks(storable(line) for line in lines)
         written = Written()
-        for index, chunk in enumerate(chunks):
+        for chunk in chunks:
             try:
                 written += self._insert_chunk(table, chunk)
             except StoreUnavailable as error:
-                unfinished = sum(len(rest) for rest in chunks[index:])
+                unfinished = len(chunk) + sum(len(rest) for rest in chunks)
                 print(f"[serving store] Handing {unfinished} rows of {table} back: {error}", flush=True)
                 return written + Written(unfinished=unfinished)
         return written
 
-    def _chunks(self, lines: list[str]) -> Iterator[list[str]]:
+    def _chunks(self, lines: Iterable[str]) -> Iterator[list[str]]:
         chunk: list[str] = []
         size = 0
         for line in lines:
@@ -180,7 +211,8 @@ class StoreWriter:
 
     def _insert(self, table: str, lines: list[str]) -> None:
         """Inserts the body, raising StoreRefusedData when the store cannot read it and
-        StoreUnavailable when it does not take it within the executor's attempts."""
+        StoreUnavailable when it does not answer or does not take it within the executor's
+        attempts."""
         body = "\n".join(lines).encode()
         params = {
             "query": f"INSERT INTO {self.database}.{table} FORMAT JSONEachRow",
@@ -188,24 +220,27 @@ class StoreWriter:
             "insert_deduplication_token": f"{self.loader}:{table}:{hashlib.sha256(body).hexdigest()}",
             # Rows from many months in one insert are normal after an outage.
             "throw_on_max_partitions_per_insert_block": "0",
+            # A field the table lacks is refused rather than dropped, so it shows in feed_rejects.
+            "input_format_skip_unknown_fields": "0",
         }
-        headers = {"X-ClickHouse-User": self.user, "X-ClickHouse-Key": self.key}
 
         for attempt, delay in enumerate((*EXECUTOR_RETRY_DELAYS, None), start=1):
             try:
                 response = self.session.post(
-                    self.url, params=params, data=body, headers=headers, timeout=(10, 300)
+                    self.url, params=params, data=body, headers=self._headers, timeout=INSERT_TIMEOUT
                 )
             except requests.RequestException as error:
-                failure = f"{type(error).__name__}: {error}"
-            else:
-                if response.ok:
-                    return
-                # The HTTP status cannot tell bad data from a busy store; the exception code can.
-                code = int(response.headers.get("X-ClickHouse-Exception-Code", "0"))
-                if code in BAD_DATA_CODES:
-                    raise StoreRefusedData(code, response.text)
-                failure = f"HTTP {response.status_code}, code {code}: {response.text[:300]}"
+                raise StoreUnavailable(
+                    f"insert into {table} got no answer: {type(error).__name__}: {error}"
+                ) from error
+
+            if response.ok:
+                return
+            # The HTTP status cannot tell bad data from a busy store; the exception code can.
+            code = int(response.headers.get("X-ClickHouse-Exception-Code", "0"))
+            if code in BAD_DATA_CODES:
+                raise StoreRefusedData(code, response.text)
+            failure = f"HTTP {response.status_code}, code {code}: {response.text[:300]}"
 
             if delay is None:
                 raise StoreUnavailable(f"insert into {table} failed {attempt} times, last: {failure}")
@@ -217,12 +252,17 @@ class StoreWriter:
             time.sleep(delay)
 
     def _reject_line(self, table: str, line: str, error: StoreRefusedData) -> str:
+        message = str(error)[:_REJECT_MESSAGE_CHARS]
+        row = line
+        if len(line) > _REJECT_ROW_CHARS:
+            row = line[:_REJECT_ROW_CHARS]
+            message = f"{message} (row cut to its first {_REJECT_ROW_CHARS} of {len(line)} characters)"
         return json.dumps(
             {
                 "source_table": table,
                 "commit_version": json.loads(line)["_commit_version"],
                 "code": error.code,
-                "message": str(error)[:_REJECT_MESSAGE_CHARS],
-                "row": line,
+                "message": message,
+                "row": row,
             }
         )
