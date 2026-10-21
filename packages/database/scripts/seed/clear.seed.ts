@@ -30,6 +30,7 @@ import {
   CONTRIBUTOR_SEEDS,
 } from "./constants";
 import { FIXTURE_ORG_SLUGS } from "./organization.seed";
+import { clearDemoContent } from "./demo.seed";
 
 /**
  * Delete seed users, contributor users, their personal organizations, directory
@@ -37,6 +38,7 @@ import { FIXTURE_ORG_SLUGS } from "./organization.seed";
  * Database errors propagate; completed deletions are not rolled back on failure.
  */
 export async function clearSeedData() {
+  await clearDemoContent();
   // User + profile (seed user)
   const seedUsers = await db
     .select({ id: users.id })
