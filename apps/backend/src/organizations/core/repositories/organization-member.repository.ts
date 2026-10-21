@@ -25,7 +25,9 @@ const ORG_ROLE_RANK = ["member", "admin", "owner"] as const;
 
 @Injectable()
 export class OrganizationMemberRepository implements MemberAdmissionPort {
-  // The caller keeps this lock through its request/invitation transaction.
+  // Lock the organization before membership and invitation rows. Better Auth's
+  // FK checks take FOR KEY SHARE on it; reversing the order can deadlock admission.
+  // The caller keeps the lock through its request/invitation transaction.
   async admit(
     tx: Transaction,
     { organizationId, userId, role }: AdmitMemberInput,
