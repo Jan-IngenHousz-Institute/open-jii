@@ -1501,5 +1501,24 @@
     "previous": "Zurück",
     "next": "Weiter",
     "pageOf": "Seite {{page}} von {{totalPages}}"
+  },
+  "platformAdmins": {
+    "title": "Platform admins",
+    "description": "Platform admins appoint other admins and manage Demo organizations.",
+    "current": "Current admins",
+    "configured": "Set by deployment configuration",
+    "dateUnknown": "Appointment date unavailable",
+    "appoint": "Appoint admin",
+    "remove": "Remove admin",
+    "search": "Find a researcher by name",
+    "noResults": "No registered researchers match.",
+    "loadFailed": "Could not load platform admins.",
+    "searchFailed": "Could not search researchers.",
+    "changeFailed": "Could not change the admin role. Try again.",
+    "appointed": "Platform admin appointed.",
+    "removed": "Platform admin removed.",
+    "retry": "Try again",
+    "removeNamed": "{{name}} als Plattformadmin entfernen",
+    "alreadyAdmin": "Alle gefundenen Forschenden sind bereits Plattformadmins."
   }
 }

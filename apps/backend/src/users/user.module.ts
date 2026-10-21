@@ -15,22 +15,27 @@ import { CreateUserProfileUseCase } from "./application/use-cases/create-user-pr
 import { DeleteUserUseCase } from "./application/use-cases/delete-user/delete-user";
 import { GetDeletionBlockersUseCase } from "./application/use-cases/get-deletion-blockers/get-deletion-blockers";
 import { GetInvitationsUseCase } from "./application/use-cases/get-invitations/get-invitations";
+import { GetPlatformAdminAccessUseCase } from "./application/use-cases/get-platform-admin-access/get-platform-admin-access";
 import { GetUserProfileUseCase } from "./application/use-cases/get-user-profile/get-user-profile";
 import { GetUserUseCase } from "./application/use-cases/get-user/get-user";
 import { GetUsersMetadataUseCase } from "./application/use-cases/get-users-metadata/get-users-metadata";
 import { GetWhatsNewSeenUseCase } from "./application/use-cases/get-whats-new-seen/get-whats-new-seen";
+import { ListPlatformAdminsUseCase } from "./application/use-cases/list-platform-admins/list-platform-admins";
 import { MarkWhatsNewSeenUseCase } from "./application/use-cases/mark-whats-new-seen/mark-whats-new-seen";
 import { NotifyPendingOrganizationInvitationsUseCase } from "./application/use-cases/notify-pending-organization-invitations/notify-pending-organization-invitations";
 import { RevokeInvitationUseCase } from "./application/use-cases/revoke-invitation/revoke-invitation";
+import { SearchPlatformAdminCandidatesUseCase } from "./application/use-cases/search-platform-admin-candidates/search-platform-admin-candidates";
 import { SearchUsersUseCase } from "./application/use-cases/search-users/search-users";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { EMAIL_PORT } from "./core/ports/email.port";
+import { PlatformAdminRepository } from "./core/repositories/platform-admin.repository";
 import { InvitationRepository } from "./core/repositories/user-invitation.repository";
 import { UserRepository } from "./core/repositories/user.repository";
 import { UserAuthHook } from "./presentation/hooks/user-auth.hook";
+// Controllers
+import { PlatformAdminController } from "./presentation/platform-admin.controller";
 import { InvitationController } from "./presentation/user-invitation.controller";
 import { UserWebhookController } from "./presentation/user-webhook.controller";
-// Controllers
 import { UserController } from "./presentation/user.controller";
 import { WhatsNewController } from "./presentation/whats-new.controller";
 
@@ -42,10 +47,17 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
     NotificationModule,
     forwardRef(() => ExperimentModule),
   ],
-  controllers: [UserController, UserWebhookController, InvitationController, WhatsNewController],
+  controllers: [
+    PlatformAdminController,
+    UserController,
+    UserWebhookController,
+    InvitationController,
+    WhatsNewController,
+  ],
   providers: [
     // Repositories
     UserRepository,
+    PlatformAdminRepository,
     InvitationRepository,
 
     // Ports
@@ -61,6 +73,10 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
       provide: NEWSLETTER_PORT,
       useExisting: MailchimpAdapter,
     },
+
+    GetPlatformAdminAccessUseCase,
+    ListPlatformAdminsUseCase,
+    SearchPlatformAdminCandidatesUseCase,
 
     // Use case providers
     DeleteUserUseCase,

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import {
   ChevronDown,
   ChevronUp,
@@ -41,6 +42,7 @@ interface NavUserProps {
 export function NavUser({ user, locale, compact = false }: NavUserProps) {
   const { t } = useTranslation();
   const router = useRouter();
+  const { data: adminAccess } = usePlatformAdmin();
   const [open, setOpen] = useState(false);
   const signOut = useSignOut();
 
@@ -116,6 +118,11 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
             </Link>
           </DropdownMenuItem>
 
+          {adminAccess?.isPlatformAdmin && (
+            <DropdownMenuItem asChild>
+              <Link href={`/${locale}/platform/platform-admins`}>{t("platformAdmins.title")}</Link>
+            </DropdownMenuItem>
+          )}
           {/* SUPPORT */}
           <DropdownMenuItem asChild>
             <Link
@@ -222,6 +229,13 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                 {t("auth.account")}
               </Link>
             </DropdownMenuItem>
+            {adminAccess?.isPlatformAdmin && (
+              <DropdownMenuItem asChild>
+                <Link href={`/${locale}/platform/platform-admins`}>
+                  {t("platformAdmins.title")}
+                </Link>
+              </DropdownMenuItem>
+            )}
 
             {/* SUPPORT */}
             <DropdownMenuItem asChild>

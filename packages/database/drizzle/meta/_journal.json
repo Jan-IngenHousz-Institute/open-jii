@@ -414,6 +414,13 @@
       "when": 1792575964709,
       "tag": "0058_cheerful_flatman",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1792575965709,
+      "tag": "0059_platform_admin_appointments",
+      "breakpoints": true
     }
   ]
 }

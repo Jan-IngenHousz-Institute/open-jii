@@ -1501,5 +1501,24 @@
     "previous": "Vorige",
     "next": "Volgende",
     "pageOf": "Pagina {{page}} van {{totalPages}}"
+  },
+  "platformAdmins": {
+    "title": "Platformbeheerders",
+    "description": "Platformbeheerders benoemen andere beheerders en beheren demo-organisaties.",
+    "current": "Huidige beheerders",
+    "configured": "Ingesteld via de deploymentconfiguratie",
+    "dateUnknown": "Benoemingsdatum niet beschikbaar",
+    "appoint": "Beheerder benoemen",
+    "remove": "Beheerder verwijderen",
+    "search": "Zoek een onderzoeker op naam",
+    "noResults": "Geen geregistreerde onderzoekers gevonden.",
+    "loadFailed": "Platformbeheerders konden niet worden geladen.",
+    "searchFailed": "Onderzoekers konden niet worden gezocht.",
+    "changeFailed": "De beheerdersrol kon niet worden gewijzigd. Probeer het opnieuw.",
+    "appointed": "Platformbeheerder benoemd.",
+    "removed": "Platformbeheerder verwijderd.",
+    "retry": "Opnieuw proberen",
+    "removeNamed": "{{name}} verwijderen als platformbeheerder",
+    "alreadyAdmin": "Alle gevonden onderzoekers zijn al platformbeheerder."
   }
 }

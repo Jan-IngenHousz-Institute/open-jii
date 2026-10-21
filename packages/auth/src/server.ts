@@ -119,6 +119,7 @@ export const auth = betterAuth({
       enabled: true,
     },
     additionalFields: {
+      adminGrantedAt: { type: "date", required: false, input: false },
       registered: {
         type: "boolean",
         defaultValue: false,

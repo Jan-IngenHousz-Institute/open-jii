@@ -165,8 +165,8 @@ function ownsTitleMetadata(source: string): boolean {
 describe("platform metadata ownership inventory", () => {
   const pageRoutes = findPageRoutes(platformDirectory).sort();
 
-  it("covers all 66 current page routes", () => {
-    expect(pageRoutes).toHaveLength(66);
+  it("covers all 67 current page routes", () => {
+    expect(pageRoutes).toHaveLength(67);
   });
 
   it.each(pageRoutes)("gives %s title ownership or a documented redirect exception", (route) => {
