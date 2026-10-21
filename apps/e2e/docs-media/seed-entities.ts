@@ -1,6 +1,13 @@
 import postgres from "postgres";
 
-import { assertSafeFixtureDatabase, databaseUrl, seedEmail } from "../helpers.js";
+import {
+  assertSafeFixtureDatabase,
+  databaseUrl,
+  deleteFixtureOrganization,
+  newcomerEmail,
+  removePlatformAdminRole,
+  seedEmail,
+} from "../helpers.js";
 
 /**
  * Shots address seeded entities by name so the manifest stays readable and
@@ -75,22 +82,8 @@ export async function demoRecordingOrganization(name: string, demo: boolean): Pr
   }
 }
 
-export async function clearDemoTrainingRecording(): Promise<void> {
-  assertSafeFixtureDatabase();
-  const sql = postgres(databaseUrl, { connect_timeout: 2, idle_timeout: 1, max: 1 });
-  try {
-    await sql`delete from organizations where slug = 'demo-training-lab' and name = 'Demo training lab'`;
-  } finally {
-    await sql.end({ timeout: 1 });
-  }
-}
+export const clearDemoTrainingRecording = (): Promise<void> =>
+  deleteFixtureOrganization("demo-training-lab", "Demo training lab");
 
-export async function clearDemoRecordingAppointment(): Promise<void> {
-  assertSafeFixtureDatabase();
-  const sql = postgres(databaseUrl, { connect_timeout: 2, idle_timeout: 1, max: 1 });
-  try {
-    await sql`update users set role = 'user' where email = 'newcomer@openjii.local'`;
-  } finally {
-    await sql.end({ timeout: 1 });
-  }
-}
+export const clearDemoRecordingAppointment = (): Promise<void> =>
+  removePlatformAdminRole(newcomerEmail);

@@ -175,12 +175,10 @@ export const SHOTS: readonly Shot[] = [
       await typeInto(page.getByLabel("Find a researcher by name"), "Newcomer");
       await page.getByText("Newcomer User", { exact: true }).waitFor();
       await settle(page, 1500);
-      await page.getByRole("button", { name: "Appoint admin", exact: true }).click();
+      await page.getByRole("button", { name: "Appoint admin: Newcomer User", exact: true }).click();
       await page.getByText("Platform admin appointed.").waitFor();
       await settle(page, 2500);
-      await page
-        .getByRole("button", { name: "Remove Newcomer User as a platform admin", exact: true })
-        .click();
+      await page.getByRole("button", { name: "Remove admin: Newcomer User", exact: true }).click();
       await page.getByText("Platform admin removed.").waitFor();
       await settle(page, 2000);
     },
@@ -263,16 +261,6 @@ export const SHOTS: readonly Shot[] = [
     },
     scope:
       "A newcomer filters the directory to Demo organizations and opens public work without joining",
-  },
-  {
-    slug: "platform-admins",
-    publish: "img/guide/web/platform-admins.webp",
-    frame: "desktop",
-    route: "/platform/platform-admins",
-    prepare: async (page) => {
-      await page.getByRole("heading", { name: "Current admins" }).waitFor();
-    },
-    scope: "Platform admins and the appointment search, using development accounts",
   },
   ...privacyShots,
   // ------------------------------------------- tier 1: shell, overviews, access

@@ -19,14 +19,28 @@ if ((CROP_TOP > 0)); then
   CAPTURE_FILTER="$STILL_FILTER,$CAPTURE_FILTER"
 fi
 
+PREVIOUS_DEMO_ALLOWED=""
+
+stop_demo_mode() {
+  adb shell am broadcast -a com.android.systemui.demo -e command exit >/dev/null || true
+  if [[ -z "$PREVIOUS_DEMO_ALLOWED" || "$PREVIOUS_DEMO_ALLOWED" == "null" ]]; then
+    adb shell settings delete global sysui_demo_allowed >/dev/null || true
+  else
+    adb shell settings put global sysui_demo_allowed "$PREVIOUS_DEMO_ALLOWED" >/dev/null || true
+  fi
+}
+
 start_demo_mode() {
+  PREVIOUS_DEMO_ALLOWED=$(adb shell settings get global sysui_demo_allowed | tr -d '\r\n')
+  trap stop_demo_mode EXIT
   adb shell settings put global sysui_demo_allowed 1 >/dev/null
-  trap 'adb shell am broadcast -a com.android.systemui.demo -e command exit >/dev/null; adb shell settings put global sysui_demo_allowed 0 >/dev/null' EXIT
   adb shell am broadcast -a com.android.systemui.demo -e command enter >/dev/null
   adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 1200 >/dev/null
   adb shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false >/dev/null
   adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4 >/dev/null
   adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false >/dev/null
+  # SystemUI applies the broadcasts asynchronously; capturing at once can catch the real status bar.
+  sleep 1
   echo "SystemUI demo mode requested. Check the first frame; some OEMs ignore these commands."
   if ((CROP_TOP > 0)); then
     echo "Removing the top $CROP_TOP source pixels from this capture."

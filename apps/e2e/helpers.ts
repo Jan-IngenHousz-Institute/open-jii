@@ -21,6 +21,41 @@ export function assertSafeFixtureDatabase(url = databaseUrl): void {
   );
 }
 
+async function withFixtureDatabase<T>(run: (sql: postgres.Sql) => Promise<T>): Promise<T> {
+  assertSafeFixtureDatabase();
+  const sql = postgres(databaseUrl, { connect_timeout: 2, idle_timeout: 1, max: 1 });
+  try {
+    return await run(sql);
+  } finally {
+    await sql.end({ timeout: 1 });
+  }
+}
+
+/** The id `ADMIN_USER_IDS` must name for the platform admin spec and captures. */
+export async function readSeedUserId(): Promise<string> {
+  const sql = postgres(databaseUrl, { connect_timeout: 2, idle_timeout: 1, max: 1 });
+  try {
+    const rows = await sql<{ id: string }[]>`select id from users where email = ${seedEmail}`;
+    const user = rows.at(0);
+    if (!user) throw new Error(`No ${seedEmail} user; run pnpm --filter database db:seed first`);
+    return user.id;
+  } finally {
+    await sql.end({ timeout: 1 });
+  }
+}
+
+export async function removePlatformAdminRole(email: string): Promise<void> {
+  await withFixtureDatabase(
+    (sql) => sql`update users set role = 'user' where email = ${email} and role = 'admin'`,
+  );
+}
+
+export async function deleteFixtureOrganization(slug: string, name: string): Promise<void> {
+  await withFixtureDatabase(
+    (sql) => sql`delete from organizations where slug = ${slug} and name = ${name}`,
+  );
+}
+
 export async function dismissCookieBanner(page: Page): Promise<void> {
   const button = page.getByRole("button", { name: "Reject all" });
   if (await button.isVisible().catch(() => false)) await button.click();

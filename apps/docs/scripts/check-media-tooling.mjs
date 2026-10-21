@@ -35,6 +35,11 @@ fi
 [[ "$1" == "shell" ]] || exit 0
 shift
 case "$1" in
+  settings)
+    if [[ "$2" == "get" ]]; then
+      printf '%s\\r\\n' "$FAKE_DEMO_ALLOWED"
+    fi
+    ;;
   pm)
     printf 'package:/data/app/openjii/base.apk\n'
     ;;
@@ -93,7 +98,7 @@ printf 'webm\n' > "$output"
   await writeExecutable(path.join(binDirectory, "sleep"), "#!/usr/bin/env bash\nexit 0\n");
 }
 
-async function probeMobileRecording(mode) {
+async function probeMobileRecording(mode, previousDemoAllowed) {
   const root = await mkdtemp(path.join(os.tmpdir(), `openjii-mobile-${mode}-`));
   try {
     const binDirectory = path.join(root, "bin");
@@ -116,6 +121,7 @@ async function probeMobileRecording(mode) {
       env: {
         ...process.env,
         FAKE_ADB_COUNT: count,
+        FAKE_DEMO_ALLOWED: previousDemoAllowed,
         FAKE_ADB_EVENTS: events,
         FAKE_ADB_LOG: log,
         FAKE_ADB_MODE: mode,
@@ -131,7 +137,14 @@ async function probeMobileRecording(mode) {
     assert.ok(commands.includes("command notifications -e visible false"));
     assert.ok(commands.includes("command clock -e hhmm 1200"));
     assert.ok(commands.includes("command exit"));
-    assert.ok(commands.includes("settings put global sysui_demo_allowed 0"));
+    const restored = commands.trim().split("\n").at(-1);
+    assert.equal(
+      restored,
+      previousDemoAllowed === "null"
+        ? "shell settings delete global sysui_demo_allowed"
+        : `shell settings put global sysui_demo_allowed ${previousDemoAllowed}`,
+      "demo mode setting was not restored to its previous value",
+    );
     assert.ok(eventLines.includes("sigint"), "timeout did not send SIGINT");
 
     if (mode === "flushes") {
@@ -148,9 +161,9 @@ async function probeMobileRecording(mode) {
   }
 }
 
-await probeMobileRecording("flushes");
-await probeMobileRecording("stuck");
+await probeMobileRecording("flushes", "1");
+await probeMobileRecording("stuck", "null");
 
 console.log(
-  "Media tooling checks passed: screenrecord waits for SIGINT flush before pull and fails closed on a stuck encoder.",
+  "Media tooling checks passed: screenrecord waits for SIGINT flush before pull, fails closed on a stuck encoder, and restores the demo mode setting.",
 );
