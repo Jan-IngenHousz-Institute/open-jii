@@ -17,6 +17,8 @@ resource "aws_lb" "app_alb" {
   # Strip malformed/non-conforming HTTP headers before they reach the target,
   # reducing request-smuggling surface.
   drop_invalid_header_fields = true
+  xff_header_processing_mode = "append"
+  enable_xff_client_port     = false
 
   # Deletion protection prevents accidental ALB deletion in production
   # Disabled in dev/staging for easier teardown

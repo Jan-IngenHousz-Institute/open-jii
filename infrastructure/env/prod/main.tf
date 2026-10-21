@@ -2596,6 +2596,10 @@ module "backend_ecs" {
       value = ".${var.domain_name}"
     },
     {
+      name  = "AUTH_CLIENT_ADDRESS_MODE"
+      value = "cloudfront-alb"
+    },
+    {
       name  = "ENVIRONMENT_PREFIX"
       value = var.environment
     },
@@ -2753,11 +2757,12 @@ resource "aws_cloudwatch_log_metric_filter" "pipeline_call_rejections_by_reason"
 module "backend_waf" {
   source = "../../modules/waf"
 
-  service_name       = "backend"
-  environment        = var.environment
-  rate_limit         = 500
-  log_retention_days = 365
-  enable_bot_control = true
+  service_name              = "backend"
+  environment               = var.environment
+  rate_limit                = 2500
+  enable_machine_rate_limit = true
+  log_retention_days        = 365
+  enable_bot_control        = true
 
   large_body_bypass_routes = [
     {

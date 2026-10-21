@@ -119,6 +119,18 @@ export const rateLimits = pgTable("rate_limits", {
   lastRequest: bigint("last_request", { mode: "number" }).notNull(),
 });
 
+export const authRateLimitCounters = pgTable(
+  "auth_rate_limit_counters",
+  {
+    key: text("key").primaryKey(),
+    route: text("route").notNull(),
+    count: integer("count").notNull(),
+    lastRequest: bigint("last_request", { mode: "number" }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [index("auth_rate_limit_counters_expiry_idx").on(table.expiresAt)],
+);
+
 // API Keys Table - for the Better Auth api-key plugin. Owner column is
 // referenceId (not userId) in the plugin's model at 1.6.23.
 export const apiKeys = pgTable(

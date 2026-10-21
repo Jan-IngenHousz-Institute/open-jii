@@ -1018,7 +1018,15 @@
     "checkEmail": null,
     "loginWith-passkey": null,
     "lastUsed": null,
-    "passkeyError": null
+    "passkeyError": null,
+    "rateLimited": "Te veel pogingen. Wacht een paar minuten en probeer het opnieuw.",
+    "rateLimited_timed": "Te veel pogingen. Probeer het over {{count}} seconden opnieuw.",
+    "rateLimited_timed_one": "Te veel pogingen. Probeer het over {{count}} seconde opnieuw.",
+    "rateLimited_timed_other": "Te veel pogingen. Probeer het over {{count}} seconden opnieuw.",
+    "resendAction": "$t(auth.resendCode)",
+    "resendAction_true": "$t(auth.resendCode) ({{seconds}}s)",
+    "rateLimited_minutes_one": "Te veel pogingen. Probeer het over {{count}} minuut opnieuw.",
+    "rateLimited_minutes_other": "Te veel pogingen. Probeer het over {{count}} minuten opnieuw."
   },
   "registration": {
     "title": null,

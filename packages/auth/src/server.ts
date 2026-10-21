@@ -10,9 +10,13 @@ import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/databas
 import * as schema from "@repo/database/schema";
 
 import { getApiKeyForSessionCheck } from "./api-key-session";
+import { INTERNAL_CLIENT_ADDRESS_HEADER } from "./client-address";
+import { withClientAddress } from "./client-address-handler";
 import { sendOtpEmail } from "./email/otpEmail";
 import { openJiiOrganization } from "./organization/plugin";
 import { orcidProvider } from "./providers/orcid";
+import { emailSendQuota } from "./rate-limit/email-send-quota";
+import { createRateLimitStorage } from "./rate-limit/storage";
 
 const environmentPrefix = process.env.ENVIRONMENT_PREFIX ?? "dev";
 const clientUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
@@ -37,7 +41,9 @@ if (process.env.AUTH_ORCID_ID && process.env.AUTH_ORCID_SECRET) {
   );
 }
 
-export const auth = betterAuth({
+let authRoutes: string[] = [];
+
+const authInstance = betterAuth({
   logger: {
     level: "info",
     disabled: false,
@@ -90,7 +96,10 @@ export const auth = betterAuth({
   rateLimit: {
     window: 60, // 60 seconds
     max: 100, // 100 requests per window
-    storage: "database", // Use database storage for production reliability
+    customStorage: createRateLimitStorage(db, {
+      secret: () => process.env.AUTH_SECRET ?? "",
+      routes: () => authRoutes,
+    }),
     customRules: {
       // Stricter limits for OTP/email endpoints to prevent abuse
       "/sign-in/email": {
@@ -126,6 +135,7 @@ export const auth = betterAuth({
     },
   },
   advanced: {
+    ipAddress: { ipAddressHeaders: [INTERNAL_CLIENT_ADDRESS_HEADER], ipv6Subnet: 128 },
     cookiePrefix: `better-auth.${environmentPrefix}`,
     ...(cookieDomain
       ? {
@@ -143,6 +153,7 @@ export const auth = betterAuth({
     enabled: false,
   },
   plugins: [
+    emailSendQuota(db, () => process.env.AUTH_SECRET ?? ""),
     expo(), // Add Expo plugin for mobile app support
     emailOTP({
       async sendVerificationOTP({ email, otp }) {
@@ -222,6 +233,10 @@ export const auth = betterAuth({
   // there is no "active organization" concept on the session — new resources
   // default to the creator's personal org (or an explicit organizationId).
   databaseHooks: {
+    session: {
+      create: { before: (session) => Promise.resolve({ data: { ...session, ipAddress: "" } }) },
+      update: { before: (session) => Promise.resolve({ data: { ...session, ipAddress: "" } }) },
+    },
     user: {
       create: {
         after: async (user) => {
@@ -262,5 +277,11 @@ export const auth = betterAuth({
     }),
   },
 });
+
+authRoutes = Object.values(authInstance.api)
+  .map((endpoint) => endpoint.path)
+  .filter((path): path is string => typeof path === "string");
+
+export const auth = { ...authInstance, handler: withClientAddress(authInstance.handler) };
 
 export type Auth = typeof auth;

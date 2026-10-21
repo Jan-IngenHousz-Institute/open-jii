@@ -27,6 +27,8 @@ import { useIsOnline } from "~/shared/ui/hooks/use-is-online";
 import { useMultiTapReveal } from "~/shared/ui/hooks/use-multi-tap-reveal";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
+import { retryAfterTranslation } from "@repo/auth/rate-limit/retry-after";
+
 const RESEND_COOLDOWN_SECONDS = 30;
 
 interface LoginFormValues {
@@ -145,7 +147,14 @@ export default function LoginScreen() {
 
       const result = await verifyEmailOTP(email, otpValue);
       if (result?.error) {
-        setError("otp", { message: t("auth:errors.expiredOtp") });
+        let message = t("auth:errors.expiredOtp");
+        if (result.error.status === 429) {
+          message = t(
+            "auth:errors.rateLimited",
+            retryAfterTranslation(result.error.retryAfterSeconds),
+          );
+        }
+        setError("otp", { message });
       }
     },
     [email, verifyEmailOTP, clearErrors, setError, t],
@@ -183,7 +192,14 @@ export default function LoginScreen() {
 
     const result = await sendEmailOTP(submittedEmail);
     if (result?.error) {
-      setError("email", { message: result.error.message ?? t("auth:errors.sendFailed") });
+      let message = t("auth:errors.sendFailed");
+      if (result.error.status === 429) {
+        message = t(
+          "auth:errors.rateLimited",
+          retryAfterTranslation(result.error.retryAfterSeconds),
+        );
+      }
+      setError("email", { message });
       return;
     }
 
@@ -197,7 +213,14 @@ export default function LoginScreen() {
     clearErrors();
     const result = await sendEmailOTP(email);
     if (result?.error) {
-      setError("email", { message: result.error.message ?? t("auth:errors.resendFailed") });
+      let message = t("auth:errors.resendFailed");
+      if (result.error.status === 429) {
+        message = t(
+          "auth:errors.rateLimited",
+          retryAfterTranslation(result.error.retryAfterSeconds),
+        );
+      }
+      setError("otp", { message });
       return;
     }
 
@@ -365,9 +388,7 @@ export default function LoginScreen() {
                         : "text-jii-primary"
                     }`}
                   >
-                    {countdown > 0
-                      ? t("auth:resendCodeCountdown", { seconds: countdown })
-                      : t("auth:resendCode")}
+                    {t("auth:resendAction", { context: String(countdown > 0), seconds: countdown })}
                   </Text>
                 </Pressable>
               </>

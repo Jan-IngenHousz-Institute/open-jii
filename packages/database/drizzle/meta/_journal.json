@@ -407,6 +407,13 @@
       "when": 1791815895986,
       "tag": "0057_notification_deliveries",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1792614341982,
+      "tag": "0058_auth_rate_limit_counters",
+      "breakpoints": true
     }
   ]
 }

@@ -18,10 +18,13 @@ describe("useVerifyEmail", () => {
 
     await result.current.mutateAsync({ email: "test@example.com", code: "123456" });
 
-    expect(authClient.signIn.emailOtp).toHaveBeenCalledWith({
-      email: "test@example.com",
-      otp: "123456",
-    });
+    expect(authClient.signIn.emailOtp).toHaveBeenCalledWith(
+      {
+        email: "test@example.com",
+        otp: "123456",
+      },
+      expect.anything(),
+    );
     expect(queryClient.getQueryData(["auth", "session"])).toEqual(mockSession);
   });
 });

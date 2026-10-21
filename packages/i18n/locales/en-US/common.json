@@ -1018,7 +1018,15 @@
     "checkEmail": "Check your email for a verification code",
     "loginWith-passkey": "Sign in with a passkey",
     "lastUsed": "Last used",
-    "passkeyError": "Passkey sign-in failed. Please try again."
+    "passkeyError": "Passkey sign-in failed. Please try again.",
+    "rateLimited": "Too many attempts. Wait a few minutes before trying again.",
+    "rateLimited_timed": "Too many attempts. Try again in {{count}} seconds.",
+    "rateLimited_timed_one": "Too many attempts. Try again in {{count}} second.",
+    "rateLimited_timed_other": "Too many attempts. Try again in {{count}} seconds.",
+    "resendAction": "$t(auth.resendCode)",
+    "resendAction_true": "$t(auth.resendCode) ({{seconds}}s)",
+    "rateLimited_minutes_one": "Too many attempts. Try again in {{count}} minute.",
+    "rateLimited_minutes_other": "Too many attempts. Try again in {{count}} minutes."
   },
   "registration": {
     "title": "Registration",

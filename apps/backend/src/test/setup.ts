@@ -6,6 +6,8 @@ import type * as AnalyticsServer from "@repo/analytics/server";
 // Setup environment variables for tests FIRST before any other imports
 config({ path: resolve(__dirname, "../../.env.test") });
 
+process.env.AUTH_CLIENT_ADDRESS_MODE = "local";
+
 const mockGetSession = vi.fn().mockResolvedValue(null);
 
 // Mock Better Auth to prevent database connection during import

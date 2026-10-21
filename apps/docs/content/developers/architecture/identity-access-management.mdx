@@ -30,6 +30,92 @@ transfers, the directory — read [Organizations](/guide/organizations) and
 
 ## Authentication paths
 
+### Client attribution and sign-in quotas
+
+The deployed backend expects CloudFront followed by an ALB. The ALB accepts only
+CloudFront-origin traffic with the configured origin header; the application's
+port accepts only the ALB. CloudFront appends the viewer address to
+`X-Forwarded-For`, then the ALB appends its peer address. The ALB explicitly uses
+append mode without client ports.
+
+`resolveClientAddress` in `packages/auth/src/client-address.ts` validates both
+rightmost addresses and selects the viewer. Earlier entries and alternative
+viewer headers are ignored. The exported auth handler stamps an internal header
+before Better Auth's limiter runs. Newsletter and join-code address throttling
+use this same resolver. Join-code requests with a session keep their user-id key.
+
+`AUTH_CLIENT_ADDRESS_MODE=cloudfront-alb` is set in deployed task definitions.
+An absent or invalid value also selects this protected mode. A request without a
+valid suffix fails with `CLIENT_ADDRESS_UNAVAILABLE` before auth routing. Local
+development explicitly uses `local`, which takes the socket address or localhost
+and ignores forwarded headers. Changing `NODE_ENV` does not change this trust rule.
+
+Address counters use complete IPv4 or IPv6 addresses, matching WAF's source-IP
+aggregation. Users behind one NAT share an address allowance. IPv6 hosts within
+one allocation have separate allowances, so the recipient quota also limits
+email delivery independently of address rotation.
+
+The shared email-send quota permits five attempts per normalized recipient in a
+15-minute window. It covers the enabled OTP send routes and their password-reset
+alias. Rejected attempts do not replace a code or extend the window. Verification
+keeps its separate guess limit. An attacker can exhaust another recipient's resend
+allowance for the window; a code already delivered remains verifiable.
+
+Auth persists HMAC keys in `auth_rate_limit_counters`, with a canonical route id
+and expiry. It stores no raw address or recipient in those counters and suppresses
+session IPs on creation and renewal. Secret rotation creates a new counter
+namespace and resets active allowances. The old `rate_limits` table remains for
+migration compatibility but Better Auth no longer writes it.
+
+Expired counters are removed during consumption. A scheduled caller can also use
+`deleteExpiredRateLimitCounters(database, { now, route })` from
+`@repo/auth/rate-limit/rate-limit.repository`; omit `route` to delete all expired
+counters. Idle deployments retain expired rows until a cleanup runs. This is not
+a guaranteed deletion deadline.
+
+Server-side session reads remain exempt from the auth limiter. Their web-server
+egress still counts toward WAF. A future server-side mutation path or concentrated
+egress needs an attribution review before deployment; forwarded viewer headers
+are not an authenticated identity.
+
+The general WAF rule counts source addresses at CloudFront. Exact machine POST
+routes use a separate cap and are excluded from the general rule. The machine
+rule runs before the terminal large-body allow rule. WAF classifies method and
+path only; the backend still verifies HMAC. Adding an HMAC route requires updating
+the WAF inventory test and reviewing the configured limits and priorities.
+
+#### Verification after deployment
+
+In dev, use two controlled network addresses to verify independent auth limits,
+then repeat with a forged forwarding prefix. Confirm recipient limits survive a
+process restart, a refused resend preserves a delivered code, and new or renewed
+sessions have no stored IP. Never run quota-exhaustion tests against other users.
+
+After production deployment, run these Logs Insights queries over each backend,
+web and docs ACL log group at 24 hours and again at seven days. Keep request
+counts and rule totals in the rollout record; do not publish addresses. The first
+query uses fixed five-minute bins, so investigate near-threshold bursts with a
+sliding-window analysis before deciding to change a limit.
+
+```sql
+fields @log, httpRequest.clientIp as clientIp, action
+| stats count(*) as requests, sum(if(action = "BLOCK", 1, 0)) as blocked
+  by @log, clientIp, bin(5m)
+| stats max(requests) as peakPerClient5m, sum(blocked) as blockedRequests by @log
+```
+
+```sql
+fields @log, action, terminatingRuleId
+| filter action = "BLOCK"
+| filter terminatingRuleId in ["RateLimitRule", "MachineRateLimitRule"]
+| stats count(*) as blockedRequests by @log, terminatingRuleId, httpRequest.uri, bin(5m)
+```
+
+If a legitimate client is blocked, raise the threshold or add a scoped rule
+through a normal PR. OJD-2218 stage 2 must not enable production demos until the
+24-hour check is complete. Infrastructure changes follow the normal deployment
+pipeline; local validation does not apply them.
+
 ### Interactive browser sessions
 
 The web client uses the shared Better Auth server in `packages/auth`.
