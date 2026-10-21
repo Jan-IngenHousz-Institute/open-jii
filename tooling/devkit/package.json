@@ -39,7 +39,7 @@
   "dependencies": {
     "dotenv": "^16.6.1",
     "jsdom": "catalog:testing",
-    "mermaid": "^11.16.1",
+    "mermaid": "^12.2.0",
     "postgres": "^3.4.8"
   },
   "devDependencies": {

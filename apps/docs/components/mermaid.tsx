@@ -39,6 +39,11 @@ export function Mermaid({ chart }: MermaidProps) {
         startOnLoad: false,
         theme: resolvedTheme === "dark" ? "dark" : "default",
         fontFamily: "inherit",
+        // Mermaid 12's defaults (ELK, the neo look, narrower node wrapping) re-lay out the
+        // existing diagrams; these keep the layout they were drawn for.
+        layout: "dagre",
+        look: "classic",
+        flowchart: { wrappingWidth: 200, minNodeWidth: 0 },
       });
 
       return mermaid.render(`${id}-svg`, chart);
