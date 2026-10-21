@@ -83,6 +83,8 @@ export function ExperimentMembersTrail({
             <UserAvatar
               key={contributor.userId}
               avatarUrl={contributor.avatarUrl}
+              isGuest={contributor.isGuest}
+              isFormerGuest={contributor.isFormerGuest}
               firstName={contributor.firstName}
               lastName={contributor.lastName}
               className="ring-background bg-muted h-6 w-6 text-[10px] ring-2"

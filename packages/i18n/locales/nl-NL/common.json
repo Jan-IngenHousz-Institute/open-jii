@@ -1539,5 +1539,18 @@
   "provenance": {
     "simulated": "Gesimuleerd",
     "guest": "Gast"
+  },
+  "guestSession": {
+    "nameLabel": "Naam, optioneel",
+    "nameHint": "Gebruik een bijnaam. Vul geen e-mailadres in.",
+    "accountRetention": "Je gastaccount, naam en sessiegegevens worden na zeven dagen door de nachtelijke opschoning verwijderd. Openbare metingen blijven bewaard.",
+    "permanentMeasurements": "Metingen die je hier doet, blijven permanent in de openbare demo staan.",
+    "quotaHint": "Uploads en analyses staan elk 60 gevalideerde pogingen per klokuur toe. Een poging telt ook als de externe dienst faalt.",
+    "formerGuest": "Voormalige gast"
+  },
+  "members": {
+    "displayName": "{{name}}",
+    "displayName_guest": "{{name}} (gast)",
+    "displayName_formerGuest": "Voormalige gast"
   }
 }

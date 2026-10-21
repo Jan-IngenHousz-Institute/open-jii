@@ -5,6 +5,7 @@ import { useOrganizationMemberRows } from "@/hooks/organization/useOrganizationM
 import { useRemoveOrganizationMember } from "@/hooks/organization/useRemoveOrganizationMember/useRemoveOrganizationMember";
 import { useUpdateOrganizationMemberRole } from "@/hooks/organization/useUpdateOrganizationMemberRole/useUpdateOrganizationMemberRole";
 import { useLocale } from "@/hooks/useLocale";
+import { personDisplayName } from "@/util/person-display-name";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { authErrorMessage } from "~/hooks/organization/auth-organization-result";
@@ -174,8 +175,7 @@ export function OrganizationRoster({
         {normalized.map((member) => {
           const target = { userId: member.userId, role: member.orgRole };
           const isSelf = member.userId === currentUserId;
-          const displayName =
-            `${member.firstName} ${member.lastName}`.trim() || (member.email ?? member.userId);
+          const displayName = personDisplayName(member, t, member.email ?? member.userId);
           // No member row id means a role change would have nothing to address.
           const canAddressRow = memberIdByUserId.has(member.userId);
 

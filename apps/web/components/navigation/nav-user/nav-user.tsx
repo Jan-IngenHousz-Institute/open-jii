@@ -34,6 +34,8 @@ interface NavUserProps {
   user: {
     id: string;
     email: string;
+    name?: string;
+    isAnonymous?: boolean;
   };
   locale: string;
   compact?: boolean;
@@ -46,12 +48,17 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
   const [open, setOpen] = useState(false);
   const signOut = useSignOut();
 
-  const { data: userProfile } = useGetUserProfile(user.id);
+  const { data: userProfile } = useGetUserProfile(user.id, !user.isAnonymous);
   const userProfileBody = userProfile;
-  const displayName =
+  const profileName =
     userProfileBody?.firstName && userProfileBody.lastName
       ? `${userProfileBody.firstName} ${userProfileBody.lastName}`
       : "";
+
+  const userKind = user.isAnonymous ? "guest" : "researcher";
+  let displayName = profileName;
+  if (user.isAnonymous)
+    displayName = t("auth.userDisplayName", { context: userKind, name: user.name ?? "Guest" });
 
   const handleSignOut = async () => {
     await signOut.mutateAsync();
@@ -104,19 +111,21 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
           <DropdownMenuSeparator />
 
           {/* ACCOUNT */}
-          <DropdownMenuItem asChild>
-            <Link
-              href={`/${locale}/platform/account`}
-              className="flex w-full cursor-default items-center"
-            >
-              <Avatar className="bg-muted mr-2 h-4 w-4">
-                <AvatarFallback className="rounded-lg">
-                  <UserIcon className="h-4 w-4" />
-                </AvatarFallback>
-              </Avatar>
-              {t("auth.account")}
-            </Link>
-          </DropdownMenuItem>
+          {!user.isAnonymous && (
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/${locale}/platform/account`}
+                className="flex w-full cursor-default items-center"
+              >
+                <Avatar className="bg-muted mr-2 h-4 w-4">
+                  <AvatarFallback className="rounded-lg">
+                    <UserIcon className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                {t("auth.account")}
+              </Link>
+            </DropdownMenuItem>
+          )}
 
           {adminAccess?.isPlatformAdmin && (
             <DropdownMenuItem asChild>
@@ -216,19 +225,21 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
             <DropdownMenuSeparator />
 
             {/* ACCOUNT */}
-            <DropdownMenuItem asChild>
-              <Link
-                href={`/${locale}/platform/account`}
-                className="flex w-full cursor-default items-center"
-              >
-                <Avatar className="bg-muted mr-2 h-4 w-4">
-                  <AvatarFallback className="rounded-lg">
-                    <UserIcon className="h-4 w-4" />
-                  </AvatarFallback>
-                </Avatar>
-                {t("auth.account")}
-              </Link>
-            </DropdownMenuItem>
+            {!user.isAnonymous && (
+              <DropdownMenuItem asChild>
+                <Link
+                  href={`/${locale}/platform/account`}
+                  className="flex w-full cursor-default items-center"
+                >
+                  <Avatar className="bg-muted mr-2 h-4 w-4">
+                    <AvatarFallback className="rounded-lg">
+                      <UserIcon className="h-4 w-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                  {t("auth.account")}
+                </Link>
+              </DropdownMenuItem>
+            )}
             {adminAccess?.isPlatformAdmin && (
               <DropdownMenuItem asChild>
                 <Link href={`/${locale}/platform/platform-admins`}>

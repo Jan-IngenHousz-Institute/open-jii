@@ -1541,5 +1541,18 @@
   "provenance": {
     "simulated": "Simulated",
     "guest": "Guest"
+  },
+  "guestSession": {
+    "nameLabel": "Name, optional",
+    "nameHint": "Use a nickname. Do not enter an email address.",
+    "accountRetention": "Your guest account, name and session details are removed by the nightly cleanup after seven days. Public measurements remain.",
+    "permanentMeasurements": "Measurements you take here stay in the public demo permanently.",
+    "quotaHint": "Uploads and analysis each allow 60 validated attempts per clock hour. An attempt counts even if the external service fails.",
+    "formerGuest": "Former guest"
+  },
+  "members": {
+    "displayName": "{{name}}",
+    "displayName_guest": "{{name}} (guest)",
+    "displayName_formerGuest": "Former guest"
   }
 }

@@ -83,6 +83,8 @@ export function AppSidebar({
   user: {
     id: string;
     email: string;
+    name?: string;
+    isAnonymous?: boolean;
   };
   releaseDates?: string[];
 }) {

@@ -1536,5 +1536,18 @@
   "provenance": {
     "simulated": "Simuliert",
     "guest": "Gast"
+  },
+  "guestSession": {
+    "nameLabel": "Name, optional",
+    "nameHint": "Verwende einen Spitznamen. Gib keine E-Mail-Adresse ein.",
+    "accountRetention": "Dein Gastkonto, dein Name und deine Sitzungsdaten werden nach sieben Tagen bei der nächtlichen Bereinigung gelöscht. Öffentliche Messungen bleiben erhalten.",
+    "permanentMeasurements": "Messungen, die du hier durchführst, bleiben dauerhaft in der öffentlichen Demo gespeichert.",
+    "quotaHint": "Uploads und Analysen erlauben jeweils 60 geprüfte Versuche pro Uhrstunde. Ein Versuch zählt auch dann, wenn der externe Dienst fehlschlägt.",
+    "formerGuest": "Ehemaliger Gast"
+  },
+  "members": {
+    "displayName": "{{name}}",
+    "displayName_guest": "{{name}} (Gast)",
+    "displayName_formerGuest": "Ehemaliger Gast"
   }
 }
