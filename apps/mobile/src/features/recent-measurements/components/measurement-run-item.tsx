@@ -13,6 +13,7 @@ import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array
 import { formatTimeAgo } from "~/shared/time/format-time-ago";
 import { cn } from "~/shared/ui/cn";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { SimulatedLabel } from "~/shared/ui/simulated-label";
 
 interface MeasurementRunItemProps {
   /** Run row id (`run:<dayKey>:<runId>`, see groupMeasurementsByRun), passed back by the toggle. */
@@ -27,6 +28,7 @@ interface MeasurementRunItemProps {
   failureReason?: string | null;
   questions?: AnswerData[];
   hasComment?: boolean;
+  simulated?: boolean;
   expanded: boolean;
   onToggle: (id: string) => void;
 }
@@ -45,6 +47,7 @@ export const MeasurementRunItem = memo(function MeasurementRunItem({
   failureReason = null,
   questions,
   hasComment = false,
+  simulated = false,
   expanded,
   onToggle,
 }: MeasurementRunItemProps) {
@@ -121,6 +124,7 @@ export const MeasurementRunItem = memo(function MeasurementRunItem({
           </View>
         </View>
 
+        {simulated && <SimulatedLabel />}
         {status === "failed" && <UploadFailureNote reason={failureReason} />}
       </View>
     </Pressable>

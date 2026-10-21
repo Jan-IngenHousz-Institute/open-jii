@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { mountConnectionLifecycle } from "~/features/connection/services/connection-lifecycle";
+import { mountSimulatedDevices } from "~/features/connection/services/simulated-device";
 import { installFlowRehydrationGuard } from "~/features/measurement-flow/stores/flow-rehydration-guard";
 import { queryKeys } from "~/features/recent-measurements/services/measurement-list-cache";
 import { mountOutboxBridge } from "~/features/recent-measurements/services/outbox-to-query-cache-bridge";
@@ -31,12 +32,14 @@ export function AppBootstrap() {
   useEffect(() => {
     const unmountBridge = mountOutboxBridge({ outbox: getOutbox(), queryClient });
     const unmountAnalytics = mountUploadAnalytics(getOutbox());
+    const unmountSimulated = mountSimulatedDevices(queryClient);
     const unmountLifecycle = mountConnectionLifecycle({ queryClient });
     const unmountGuard = installFlowRehydrationGuard();
     return () => {
       unmountBridge();
       unmountAnalytics();
       unmountLifecycle();
+      unmountSimulated();
       unmountGuard();
     };
   }, [queryClient]);

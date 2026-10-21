@@ -5,14 +5,14 @@ import {
   useConnectedDevice,
   useConnectToDevice,
 } from "~/features/connection/hooks/use-device-connection";
-import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
+import { useReconnectDevice } from "~/features/connection/hooks/use-reconnect-device";
 
 /**
  * Automatically attempts to reconnect to the last known device when the app
  * returns to the foreground and no device is currently connected.
  */
 export function useAutoReconnect() {
-  const { lastConnectedDevice } = useDeviceConnectionStore();
+  const lastConnectedDevice = useReconnectDevice();
   const { data: connectedDevice } = useConnectedDevice();
   const { connectToDevice } = useConnectToDevice();
 

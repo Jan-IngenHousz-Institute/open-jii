@@ -72,6 +72,9 @@ export function operatorsForKind(kind: ColumnKind | undefined): OperatorChoice[]
 }
 
 export function operatorsForColumn(column: ExperimentDataColumn | undefined): OperatorChoice[] {
+  if (column?.type_text === "BOOLEAN") {
+    return CATEGORICAL_OPERATORS.filter((op) => op.value === "equals" || op.value === "not_equals");
+  }
   return operatorsForKind(column ? getColumnKind(column.type_text) : undefined);
 }
 
@@ -106,6 +109,7 @@ export function defaultValueForOperator(
 export function defaultOperatorForColumn(
   column: ExperimentDataColumn | undefined,
 ): ExperimentDataFilterOperator {
+  if (column?.type_text === "BOOLEAN") return "equals";
   const kind = column ? getColumnKind(column.type_text) : undefined;
   if (kind === "temporal") {
     return "between";

@@ -21,6 +21,7 @@ import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/t
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { CommentModal } from "~/shared/ui/measurement/comment-modal";
 import { MeasurementQuestionsModal } from "~/shared/ui/measurement/measurement-questions-modal";
+import { SimulatedLabel } from "~/shared/ui/simulated-label";
 
 import {
   buildCellNamespace,
@@ -306,6 +307,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
           <CircleCheckBig size={16} />
         </View>
 
+        {results.some(({ device }) => device?.simulated) && <SimulatedLabel />}
         <AnalysisSummaryCard
           experimentName={experimentName}
           protocolName={

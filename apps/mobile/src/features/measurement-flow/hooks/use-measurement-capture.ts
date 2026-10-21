@@ -163,6 +163,7 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
             id: device.id,
             name: device.name,
             ...(identity?.family ? { family: identity.family } : {}),
+            ...(device.type === "simulated-device" ? { simulated: true } : {}),
             ...(identity?.firmwareVersion ? { firmwareVersion: identity.firmwareVersion } : {}),
             // Bluetooth ids are the sensor's MAC; USB ids are transient.
             ...(device.type === "bluetooth-classic" ? { address: device.id } : {}),

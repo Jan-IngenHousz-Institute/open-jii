@@ -87,6 +87,7 @@ describe("WorkbookHeader", () => {
     const { props } = renderHeader();
 
     const connectButton = screen.getByRole("button", { name: /connect/i });
+    expect(connectButton).toHaveAttribute("aria-label", "iot.workbookBar.connect");
     await user.click(connectButton);
 
     expect(props.onConnect).toHaveBeenCalledOnce();
@@ -235,6 +236,7 @@ describe("WorkbookHeader", () => {
     const { props } = renderHeader();
 
     const runAllButton = screen.getByRole("button", { name: "iot.workbookBar.runAll" });
+    expect(runAllButton).toHaveAttribute("aria-label", "iot.workbookBar.runAll");
     await user.click(runAllButton);
 
     expect(props.onRunAll).toHaveBeenCalledOnce();
@@ -266,6 +268,7 @@ describe("WorkbookHeader", () => {
       screen.queryByRole("button", { name: "iot.workbookBar.runAll" }),
     ).not.toBeInTheDocument();
     const stopButton = screen.getByRole("button", { name: "iot.workbookBar.stop" });
+    expect(stopButton).toHaveAttribute("aria-label", "iot.workbookBar.stop");
     await user.click(stopButton);
 
     expect(props.onStopExecution).toHaveBeenCalledOnce();
@@ -279,6 +282,7 @@ describe("WorkbookHeader", () => {
     });
 
     const clearButton = screen.getByRole("button", { name: "iot.workbookBar.clearAll" });
+    expect(clearButton).toHaveAttribute("aria-label", "iot.workbookBar.clearAll");
     await user.click(clearButton);
 
     expect(props.onClearOutputs).toHaveBeenCalledOnce();

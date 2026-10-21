@@ -50,6 +50,7 @@ describe("buildUploadPayload payload construction", () => {
       timezone: "Europe/Amsterdam",
       user_id: "user-1",
       protocol_id: "protocol-9",
+      simulated: false,
       workbook_run_id: "run-1",
       workbook_version_id: "version-1",
       device_id: "d-1",
@@ -432,5 +433,35 @@ describe("device_address", () => {
     });
 
     expect(payload.device_address).toBe("AA:BB:CC:DD:EE:FF");
+  });
+});
+
+describe("simulation provenance", () => {
+  it("takes the marker and reserved identity from the connection, overriding firmware fields", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      simulated: true,
+      rawMeasurement: {
+        device_id: "firmware-id",
+        device_address: "fake-address",
+        simulated: false,
+        sample: [{}],
+      },
+      fallbackDeviceId: "transient-usb-id",
+    });
+    expect(payload).toMatchObject({
+      simulated: true,
+      device_id: "simulated:multispeq",
+      device_family: "multispeq",
+      protocol_id: "protocol-9",
+      workbook_run_id: "run-1",
+      workbook_version_id: "version-1",
+    });
+    expect(payload.device_address).toBeUndefined();
+  });
+  it("does not trust a simulated flag returned by a physical device", () => {
+    expect(
+      buildUploadPayload({ ...baseArgs, rawMeasurement: { simulated: true, device_id: "real" } }),
+    ).toMatchObject({ simulated: false, device_id: "real" });
   });
 });

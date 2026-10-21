@@ -14,6 +14,7 @@ export interface ScanResultEntry {
     name: string;
     family?: string;
     firmwareVersion?: string;
+    simulated?: boolean;
     /**
      * The sensor's hardware address as seen by this phone, set only when the
      * transport gives a real one (Bluetooth MAC). USB device ids are transient

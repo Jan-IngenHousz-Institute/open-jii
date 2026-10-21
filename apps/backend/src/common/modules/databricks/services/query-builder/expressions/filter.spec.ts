@@ -1,3 +1,5 @@
+import { zExperimentDataQuery } from "@repo/api/domains/experiment/data/experiment-data.schema";
+
 import { SqlQueryBuilder } from "../query-builder.base";
 import type { FilterCondition } from "../query-builder.types";
 import { buildFilterCondition } from "./filter";
@@ -6,6 +8,27 @@ describe("buildFilterCondition", () => {
   // The expression functions take a builder solely for escape primitives;
   // `SqlQueryBuilder` is the simplest concrete instance with no setup.
   const builder = new SqlQueryBuilder();
+
+  it.each([
+    ["is_simulated", true],
+    ["is_simulated", false],
+    ["is_guest", true],
+    ["is_guest", false],
+  ] as const)("compiles the web query for %s=%s as a boolean literal", (column, value) => {
+    for (const operator of ["equals", "not_equals"] as const) {
+      const query = zExperimentDataQuery.parse({
+        tableName: "raw_data",
+        filters: JSON.stringify([{ column, operator, value }]),
+      });
+      expect(query.filters).toHaveLength(1);
+      for (const filter of query.filters ?? []) {
+        expect(typeof filter.value).toBe("boolean");
+        expect(buildFilterCondition(filter, builder)).toBe(
+          `\`${column}\` ${operator === "equals" ? "=" : "<>"} ${value}`,
+        );
+      }
+    }
+  });
 
   it("compiles `equals` to `=` with escaped column and value", () => {
     expect(

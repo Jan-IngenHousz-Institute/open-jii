@@ -1532,5 +1532,9 @@
     "appointNamed": "Admin ernennen: {{name}}",
     "removeNamed": "Admin entfernen: {{name}}",
     "searchStatus_alreadyAdmin": "Alle gefundenen Forschenden sind bereits Plattformadmins."
+  },
+  "provenance": {
+    "simulated": "Simuliert",
+    "guest": "Gast"
   }
 }

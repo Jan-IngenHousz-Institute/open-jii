@@ -29,6 +29,7 @@ export const measurements = sqliteTable(
     // Pre-extracted at save time so the list query never has to decompress
     // measurement_result. Nullable for legacy rows pending backfill.
     questionsText: text("questions_text"),
+    simulated: integer("simulated", { mode: "boolean" }).notNull().default(false),
     hasComment: integer("has_comment", { mode: "boolean" }).notNull().default(false),
     // Local calendar date "YYYY-MM-DD" computed at save time from timestamp + resolved timezone.
     // Used to group the Recent list by day. Nullable for legacy rows pending backfill.

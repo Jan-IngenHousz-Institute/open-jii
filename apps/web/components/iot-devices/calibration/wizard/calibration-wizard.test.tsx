@@ -153,6 +153,7 @@ function mountConnections(overrides: Partial<Connections> = {}): Connections {
   const connections: Connections = {
     connections: [],
     isConnecting: false,
+    simulationAvailable: false,
     error: null,
     connect: vi.fn(() => Promise.resolve()),
     disconnectDevice: vi.fn(() => Promise.resolve()),
@@ -246,6 +247,7 @@ describe("CalibrationWizard", { timeout: 20_000 }, () => {
         },
       ],
       isConnecting: false,
+      simulationAvailable: false,
       error: null,
       connect: vi.fn(() => Promise.resolve()),
       disconnectDevice: vi.fn(() => Promise.resolve()),
@@ -372,6 +374,7 @@ describe("CalibrationWizard", { timeout: 20_000 }, () => {
         },
       ],
       isConnecting: false,
+      simulationAvailable: false,
       error: null,
       connect: vi.fn(() => Promise.resolve()),
       disconnectDevice: vi.fn(() => Promise.resolve()),

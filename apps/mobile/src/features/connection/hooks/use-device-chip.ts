@@ -1,6 +1,6 @@
 import { useBatteryLevel } from "~/features/connection/hooks/use-battery-level";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
-import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
+import { useReconnectDevice } from "~/features/connection/hooks/use-reconnect-device";
 import {
   mobileDevicePrimaryLabel,
   presentMobileDevice,
@@ -15,7 +15,7 @@ import type { DeviceChipProps } from "~/shared/ui/widgets/device-chip";
 export function useDeviceChip(): DeviceChipProps {
   const { t } = useTranslation("connection");
   const { data: connectedDevice } = useConnectedDevice();
-  const lastConnectedDevice = useDeviceConnectionStore((s) => s.lastConnectedDevice);
+  const lastConnectedDevice = useReconnectDevice();
   const batteryLevel = useBatteryLevel();
   const openSheet = useDeviceSheetStore((s) => s.open);
   const identity = useScannerCommandExecutorStore((s) =>

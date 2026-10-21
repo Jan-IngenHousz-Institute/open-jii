@@ -22,6 +22,8 @@ db_annotations AS (
 )
 SELECT
   uploaded.id,
+  false AS is_simulated,
+  false AS is_guest,
   uploaded.experiment_id,
   uploaded.upload_table_id,
   uploaded.upload_table_name,

@@ -1,0 +1,83 @@
+---
+title: "Simulated sensors"
+description: "Try a demo measurement without connecting hardware."
+---
+
+Demo experiments offer simulated sensors that replay a fixed example measurement.
+They are available only in experiments owned by a Demo organization. Ordinary
+experiments keep their physical device connections.
+
+## On the web
+
+1. Open a demo experiment's **Design** tab.
+2. Choose **Simulated MultispeQ**, **Simulated Ambit**, or **Simulated MiniPAR** in
+   the connection selector. Match the sensor to the demo workbook's protocol.
+3. Connect and run the workbook. No Bluetooth or USB permission is needed.
+4. Review the result and its **Simulated** label. Outputs from later macro and
+   question cells retain that label.
+
+A simulator accepts its matching demo protocol. A different protocol reports an
+error rather than returning an unrelated example. Repeating a measurement
+returns the same readings. Each run receives its own workbook output.
+
+Changing experiment disconnects the simulated sensor. Read-only demo workbooks
+can run locally; running them does not edit the published workbook.
+
+### Web examples
+
+<DocsVideo>
+  <video
+    src="/img/guide/web/simulated-multispeq-web.webm"
+    controls
+    width="100%"
+    preload="metadata"
+  />
+</DocsVideo>
+
+<DocsVideo>
+  <video src="/img/guide/web/simulated-ambit-web.webm" controls width="100%" preload="metadata" />
+</DocsVideo>
+
+<DocsVideo>
+  <video src="/img/guide/web/simulated-minipar-web.webm" controls width="100%" preload="metadata" />
+</DocsVideo>
+
+## On Android
+
+Choose a demo experiment and start its measurement flow, then open **Devices** and select **Simulated MultispeQ**.
+Continue through the normal measurement and result steps. Android supports
+MultispeQ simulation only.
+
+The result and its entry in **Recent Measurements** show **Simulated**, including
+when an upload is pending or has failed. The marker stays with the saved payload
+and any later upload. Switching to an ordinary experiment removes the simulated
+connection and hides its reconnect shortcut. Physical devices remain available
+for reconnecting.
+
+The upload error in this recording comes from the local
+test environment, where AWS uploads are unavailable; the measurement remains saved
+on the phone.
+
+<DocsVideo>
+  <video
+    src="/img/mobile/simulated-multispeq-android.webm"
+    controls
+    width="100%"
+    preload="metadata"
+  />
+</DocsVideo>
+
+## What the readings mean
+
+The current recordings are **synthetic placeholders**, awaiting hardware-team
+recordings. They are shaped for each sensor's protocol but are not observations
+from a physical sample. Their firmware version is recorded as `synthetic`, and
+their protocol version as `placeholder-v1`. Do not use these values as research
+measurements or as evidence of instrument performance.
+
+In experiment data tables, **Simulated** (`is_simulated`) marks simulated readings
+and **Guest** (`is_guest`) marks readings uploaded through the guest path. These
+are independent boolean columns: a signed-in user's simulated reading is not a
+guest reading. In the filter picker, choose **Simulated** or **Guest**, then **is**
+or **is not** and **Yes** or **No**. Exports retain both boolean columns. Historical
+readings without these markers default to false.

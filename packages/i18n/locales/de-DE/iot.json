@@ -1273,6 +1273,7 @@
       "mock": "Mock",
       "addDevice": "Gerät hinzufügen",
       "connect": "Verbinden",
+      "connect_true": "$t(iot.workbookBar.addDevice)",
       "disconnected": "Getrennt",
       "deviceCount": "{{count}} Gerät",
       "deviceCount_other": "{{count}} Geräte",
@@ -1287,7 +1288,10 @@
       "downloadWorkbook": "Workbook herunterladen (.jii)",
       "clearAll": "Alle leeren",
       "stop": "Stopp",
-      "runAll": "Alle ausführen"
+      "runAll": "Alle ausführen",
+      "simulatedMultispeq": "Simuliert MultispeQ",
+      "simulatedAmbit": "Simuliert Ambit",
+      "simulatedMinipar": "Simuliert MiniPAR"
     }
   }
 }

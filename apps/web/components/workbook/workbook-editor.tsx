@@ -54,6 +54,7 @@ interface CellExecutionState {
 }
 
 interface WorkbookEditorProps {
+  simulationAvailable?: boolean;
   cells: WorkbookCell[];
   onCellsChange: (cells: WorkbookCell[]) => void;
   title?: string;
@@ -370,6 +371,7 @@ function readPixels(el: Element, name: string): number {
 }
 
 export function WorkbookEditor({
+  simulationAvailable = false,
   cells,
   onCellsChange,
   title,
@@ -599,6 +601,7 @@ export function WorkbookEditor({
     <div ref={headerRef} className="space-y-0">
       {showHeader && (
         <WorkbookHeader
+          simulationAvailable={simulationAvailable}
           title={title ?? "Untitled Workbook"}
           cells={cells}
           isConnected={isConnected ?? false}

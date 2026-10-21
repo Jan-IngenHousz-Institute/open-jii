@@ -122,6 +122,17 @@
       "sha256": "133b006c98d947c9dd3ba50154b42ed8825209ce36c79b2183ef72ce2d6b79af",
       "disposition": "published",
       "scope": "Android Discover shows the Demo badge and organization type; the status bar is excluded"
+    },
+    {
+      "path": "/img/mobile/simulated-multispeq-android.webm",
+      "kind": "recording",
+      "sha256": "7e209613e1b4b2ef194868465a1283ebcb92fa3f3be5859433be15b90f40176c",
+      "bytes": 2033951,
+      "disposition": "published",
+      "recapturedOn": "2026-10-21",
+      "scope": "Simulated MultispeQ measurement and saved result on Android; status bar cropped; local AWS upload error visible.",
+      "dimensions": "1080x2292",
+      "durationSeconds": 44.791
     }
   ],
   "unmetCaptures": [
