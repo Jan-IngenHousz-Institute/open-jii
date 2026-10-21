@@ -6,7 +6,11 @@ import { ORGANIZATION_MEMBERSHIP_LIMIT } from "@repo/database";
 
 import { ac, roles } from "../access";
 import { configuredAdminUserIds } from "../platform-admin";
-import { resolveDemoOrganizationUpdate } from "./demo";
+import {
+  resolveDemoOrganizationUpdate,
+  withDemoOrganizationAdapter,
+  withDemoOrganizationUpdate,
+} from "./demo";
 import {
   assertCanListInvitations,
   assertCanReadOrganization,
@@ -199,8 +203,14 @@ export const openJiiOrganization = (adminIds: readonly string[] = configuredAdmi
 
   return {
     ...plugin,
+    init(context: Parameters<NonNullable<BetterAuthPlugin["init"]>>[0]) {
+      return { context: { adapter: withDemoOrganizationAdapter(context.adapter) } };
+    },
     endpoints: {
       ...plugin.endpoints,
+      updateOrganization: wrapEndpoint(plugin.endpoints.updateOrganization, (_ctx, run) =>
+        withDemoOrganizationUpdate(run),
+      ),
       // A resource transferred in after the pre-delete count hits the `RESTRICT`
       // constraint; this turns Postgres's wording into an answer callers can act on.
       deleteOrganization: wrapEndpoint(plugin.endpoints.deleteOrganization, async (ctx, run) => {

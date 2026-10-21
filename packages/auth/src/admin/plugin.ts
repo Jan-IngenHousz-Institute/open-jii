@@ -1,12 +1,13 @@
 import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { admin } from "better-auth/plugins";
 
-import { db, eq, users } from "@repo/database";
+import { db, and, eq, isNull, profiles, users } from "@repo/database";
 
 import { configuredAdminUserIds, isPlatformAdmin } from "../platform-admin";
 
-export const ALLOWED_ADMIN_PATHS = ["/admin/list-users", "/admin/set-role"] as const;
+export const ALLOWED_ADMIN_PATHS = ["/admin/set-role"] as const;
 export const DISABLED_ADMIN_PATHS = [
+  "/admin/list-users",
   "/admin/get-user",
   "/admin/create-user",
   "/admin/update-user",
@@ -68,7 +69,8 @@ export function openJiiAdmin(adminUserIds: string[] = configuredAdminUserIds) {
             const targets = await db
               .select({ registered: users.registered })
               .from(users)
-              .where(eq(users.id, body.userId))
+              .leftJoin(profiles, eq(profiles.userId, users.id))
+              .where(and(eq(users.id, body.userId), isNull(profiles.deletedAt)))
               .limit(1);
             if (targets.length === 0 || !targets[0].registered) {
               throw new APIError("BAD_REQUEST", { message: "Choose a registered researcher" });

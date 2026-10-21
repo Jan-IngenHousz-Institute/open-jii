@@ -1,4 +1,4 @@
-import { db, eq, users } from "@repo/database";
+import { db, and, eq, isNull, profiles, users } from "@repo/database";
 
 export function parseAdminUserIds(value: string | undefined, warn = console.warn): string[] {
   const ids = new Set<string>();
@@ -31,7 +31,8 @@ export async function isPlatformAdmin(
   const rows = await db
     .select({ role: users.role })
     .from(users)
-    .where(eq(users.id, user.id))
+    .leftJoin(profiles, eq(profiles.userId, users.id))
+    .where(and(eq(users.id, user.id), isNull(profiles.deletedAt)))
     .limit(1);
   return rows.length > 0 && (configuredIds.includes(user.id) || rows[0].role === "admin");
 }

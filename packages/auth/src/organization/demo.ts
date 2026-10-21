@@ -1,6 +1,8 @@
+import type { DBAdapter } from "better-auth";
 import { APIError } from "better-auth/api";
+import { AsyncLocalStorage } from "node:async_hooks";
 
-import { db, eq, organizations, sql } from "@repo/database";
+import { db, eq, organizations, organizationOwnsPrivateResources } from "@repo/database";
 
 import { configuredAdminUserIds, isPlatformAdmin } from "../platform-admin";
 
@@ -17,6 +19,10 @@ export async function resolveDemoOrganizationUpdate(
         .where(eq(organizations.id, organizationId))
         .limit(1)
     : [];
+  const scope = organizationUpdateScope.getStore();
+  if (scope && organizationId && rows[0]) {
+    scope.current = { id: organizationId, type: rows[0].type };
+  }
   const wasDemo = rows.length > 0 && rows[0].type === "demo";
   const becomesDemo = update.type === undefined ? wasDemo : update.type === "demo";
   if (
@@ -31,15 +37,7 @@ export async function resolveDemoOrganizationUpdate(
     throw new APIError("BAD_REQUEST", { message: "Demo organizations must be public" });
   }
   if (organizationId && !wasDemo) {
-    const [row] = await db.execute<{ private: boolean }>(sql`
-      SELECT EXISTS (
-        SELECT 1 FROM experiments WHERE organization_id = ${organizationId}::uuid AND visibility = 'private'
-        UNION ALL SELECT 1 FROM workbooks WHERE organization_id = ${organizationId}::uuid AND visibility = 'private'
-        UNION ALL SELECT 1 FROM protocols WHERE organization_id = ${organizationId}::uuid AND visibility = 'private'
-        UNION ALL SELECT 1 FROM macros WHERE organization_id = ${organizationId}::uuid AND visibility = 'private'
-      ) AS private
-    `);
-    if (row.private) {
+    if (await organizationOwnsPrivateResources(db, organizationId)) {
       throw new APIError("BAD_REQUEST", {
         message: "Publish every experiment, workbook, protocol and macro before choosing Demo",
         code: "DEMO_PRIVATE_RESOURCES",
@@ -47,4 +45,69 @@ export async function resolveDemoOrganizationUpdate(
     }
   }
   return { visibility: "public" };
+}
+
+interface OrganizationSnapshot {
+  id: string;
+  type: typeof organizations.$inferSelect.type;
+}
+const organizationUpdateScope = new AsyncLocalStorage<{ current?: OrganizationSnapshot }>();
+
+export function withDemoOrganizationUpdate<T>(run: () => Promise<T>): Promise<T> {
+  return organizationUpdateScope.run({}, async () => {
+    try {
+      return await run();
+    } catch (error) {
+      for (let current: unknown = error; typeof current === "object" && current !== null; ) {
+        const { code, message, cause } = current as {
+          code?: unknown;
+          message?: unknown;
+          cause?: unknown;
+        };
+        if (
+          code === "23514" &&
+          message === "Publish every experiment, workbook, protocol and macro before choosing Demo"
+        ) {
+          throw new APIError("BAD_REQUEST", {
+            message: "Publish every experiment, workbook, protocol and macro before choosing Demo",
+            code: "DEMO_PRIVATE_RESOURCES",
+          });
+        }
+        if (
+          code === "23514" &&
+          message === "Demo organizations must be public and cannot be personal workspaces"
+        ) {
+          throw new APIError("BAD_REQUEST", { message: "Demo organizations must be public" });
+        }
+        current = cause;
+      }
+      throw error;
+    }
+  });
+}
+
+/** Match the authorized type in the write, including when another request changed it. */
+export function withDemoOrganizationAdapter(adapter: DBAdapter): DBAdapter {
+  return {
+    ...adapter,
+    async update<T>(input: Parameters<DBAdapter["update"]>[0]): Promise<T | null> {
+      const current = organizationUpdateScope.getStore()?.current;
+      if (input.model !== "organization" || !current) return adapter.update<T>(input);
+      const updated = await adapter.update<T>({
+        ...input,
+        where: [
+          ...input.where,
+          { field: "id", value: current.id },
+          { field: "type", value: current.type },
+        ],
+      });
+      if (!updated) {
+        throw new APIError("CONFLICT", {
+          message: "The organization changed. Reload it before saving again.",
+          code: "ORGANIZATION_CHANGED",
+        });
+      }
+      return updated;
+    },
+  };
 }
