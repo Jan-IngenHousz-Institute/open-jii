@@ -29,21 +29,29 @@ disagree, usually a gold column changed without a matching store migration; fix 
 rows pile up, and switch the feed off (`store-feed-stalled`) if it will take a while.
 
 **3. Send them again once the store can take them.** As the admin, whose password is in the Secrets
-Manager secret `openjii-serving-store-<env>-admin`:
+Manager secret `openjii-serving-store-<env>-admin`. A session starts in `/usr/bin`, where it cannot
+write, so work from its home directory, and insert with the settings the feed inserts with:
 
 ```bash
+cd ~
 clickhouse-client --user openjii_monitor --format TSVRaw --query "
   SELECT row FROM store.feed_rejects
   WHERE source_table = '<table>' AND rejected_at BETWEEN '<from>' AND '<to>'" > rejected.jsonl
 clickhouse-client --user openjii_admin --password '<admin password>' \
+  --throw_on_max_partitions_per_insert_block=0 --input_format_skip_unknown_fields=0 \
   --query "INSERT INTO store.<table> FORMAT JSONEachRow" < rejected.jsonl
+```
+
+Only once that insert has succeeded, clear the rows it sent:
+
+```bash
 clickhouse-client --user openjii_admin --password '<admin password>' --query "
   DELETE FROM store.feed_rejects
   WHERE source_table = '<table>' AND rejected_at BETWEEN '<from>' AND '<to>'"
 ```
 
-A row that only the feed's normalisation can fix cannot be sent as it is; it stays missing until a
-reload from gold exists.
+A row that only the feed's normalisation can fix cannot be sent as it is, and neither can one whose
+message says it was cut; both stay missing until a reload from gold exists.
 
 ## Closing
 
