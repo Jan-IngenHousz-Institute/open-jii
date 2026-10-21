@@ -1,0 +1,26 @@
+{
+  "device_name": "Simulated MiniPAR",
+  "device_id": "simulated:minipar",
+  "device_version": "placeholder-v1",
+  "device_firmware": "synthetic",
+  "device_battery": 100,
+  "sample": [
+    {
+      "protocol_id": "placeholder-v1",
+      "set": [
+        {
+          "label": "par",
+          "par": 340.0
+        },
+        {
+          "label": "par",
+          "par": 345.0
+        },
+        {
+          "label": "par",
+          "par": 350.0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "family": "multispeq",
+  "placeholder": true,
+  "recordingVersion": 1,
+  "firmwareVersion": "synthetic",
+  "protocolVersion": "placeholder-v1",
+  "protocolName": "Demo MultispeQ placeholder protocol",
+  "macroName": "Demo MultispeQ analysis",
+  "description": "Synthetic placeholder for hardware-team replacement. Not recorded from a physical sensor or validated for hardware use.",
+  "frameFooter": "",
+  "hello": "MultispeQ Ready\n",
+  "expectedOutput": {
+    "Phi2": 0.707143,
+    "Fs": 410.0,
+    "Fm_prime": 1400.0,
+    "PAR": 350
+  }
+}

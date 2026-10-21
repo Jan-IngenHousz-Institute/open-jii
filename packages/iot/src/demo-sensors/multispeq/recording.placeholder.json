@@ -1,0 +1,20 @@
+{
+  "device_name": "Simulated MultispeQ",
+  "device_id": "simulated:multispeq",
+  "device_version": "placeholder-v1",
+  "device_firmware": "synthetic",
+  "device_battery": 100,
+  "sample": [
+    {
+      "protocol_id": "placeholder-v1",
+      "set": [
+        {
+          "label": "demo_phi2",
+          "data_raw": [400, 420, 410, 1400, 1380, 1420],
+          "light_intensity": 350,
+          "temperature": 23.4
+        }
+      ]
+    }
+  ]
+}
