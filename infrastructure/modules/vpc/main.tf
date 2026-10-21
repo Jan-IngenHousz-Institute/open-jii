@@ -226,6 +226,75 @@ resource "aws_security_group_rule" "metrics_publisher_to_aurora" {
 }
 
 # -------------------------
+# Serving Store Security Group
+# -------------------------
+# Pipeline code on Databricks may only open web ports, so the store serves HTTP on one.
+resource "aws_security_group" "serving_store_sg" {
+  count = var.create_serving_store_resources ? 1 : 0
+
+  name        = "open-jii-serving-store-sg-${var.environment}"
+  description = "Serving store: HTTP from the backend, Databricks compute and migration tasks"
+  vpc_id      = aws_vpc.this.id
+
+  tags = {
+    "Name"        = "open-jii-serving-store-sg-${var.environment}"
+    "Environment" = var.environment
+  }
+}
+
+# Package installs, the SSM agent and the CloudWatch agent all reach out from the instance.
+resource "aws_security_group_rule" "serving_store_egress" {
+  count = var.create_serving_store_resources ? 1 : 0
+
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.serving_store_sg[0].id
+  description       = "Allow the store to reach package repositories and AWS services"
+}
+
+resource "aws_security_group_rule" "serving_store_from_ecs" {
+  count = var.create_serving_store_resources && var.create_ecs_resources ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = var.serving_store_port
+  to_port                  = var.serving_store_port
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.ecs_sg[0].id
+  security_group_id        = aws_security_group.serving_store_sg[0].id
+  description              = "Allow backend ECS tasks to query the store"
+}
+
+# Databricks classic compute runs in the default security group. Serverless compute runs outside the
+# VPC and cannot reach the store.
+resource "aws_security_group_rule" "serving_store_from_databricks" {
+  count = var.create_serving_store_resources ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = var.serving_store_port
+  to_port                  = var.serving_store_port
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.default.id
+  security_group_id        = aws_security_group.serving_store_sg[0].id
+  description              = "Allow Databricks pipelines and jobs to write to the store"
+}
+
+resource "aws_security_group_rule" "serving_store_from_migration" {
+  count = var.create_serving_store_resources && var.create_migration_resources ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = var.serving_store_port
+  to_port                  = var.serving_store_port
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.migration_task_sg[0].id
+  security_group_id        = aws_security_group.serving_store_sg[0].id
+  description              = "Allow migration tasks to apply the store schema"
+}
+
+
+# -------------------------
 # Macro Sandbox Lambda Security Group
 # -------------------------
 # No inbound (Lambda doesn't receive connections).
@@ -300,6 +369,19 @@ resource "aws_security_group_rule" "vpc_endpoint_ingress_from_ecs" {
   source_security_group_id = aws_security_group.ecs_sg[0].id
   security_group_id        = aws_security_group.macro_sandbox_vpc_endpoints[0].id
   description              = "Allow ECS tasks to reach ECR and Logs VPC endpoints"
+}
+
+# Allow the serving store's CloudWatch agent to reach the Logs endpoint (private_dns_enabled is VPC-wide)
+resource "aws_security_group_rule" "vpc_endpoint_ingress_from_serving_store" {
+  count = (var.create_macro_sandbox_resources && var.create_serving_store_resources) ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.serving_store_sg[0].id
+  security_group_id        = aws_security_group.macro_sandbox_vpc_endpoints[0].id
+  description              = "Allow the serving store to reach the Logs VPC endpoint"
 }
 
 # Allow migration tasks to reach the VPC endpoints (private_dns_enabled is VPC-wide)
