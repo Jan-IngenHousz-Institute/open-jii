@@ -528,7 +528,8 @@
       "non_profit": "Gemeinnützige Organisation",
       "private_company": "Privatunternehmen",
       "government_agency": "Behörde",
-      "university": "Universität"
+      "university": "Universität",
+      "demo": "Demo"
     },
     "roles": {
       "owner": "Eigentümer",
@@ -601,7 +602,8 @@
         "listTitle": "Einzuladende Personen",
         "teamsNote": "Teams werden im Tab „Teams“ der Organisation eingerichtet, sobald sie existiert – ein Team ist eine Gruppe ihrer Mitglieder und kann deshalb nicht vorher entstehen.",
         "failed": "Die Organisation wurde erstellt, aber {{names}} konnte nicht eingeladen werden. Versuchen Sie es über den Tab „Mitglieder“ erneut."
-      }
+      },
+      "demoNote": "Diese Demo-Organisation und alle ihre Inhalte sind öffentlich. Sie können ohne Mitgliedschaft angesehen werden; Beitrittsanfragen werden nicht angenommen."
     },
     "directory": {
       "emptyTitle": "Noch keine Organisationen",
@@ -796,7 +798,9 @@
       "saveFailed": "Diese Änderungen konnten nicht gespeichert werden.",
       "title": "Einstellungen",
       "description": "Nur Inhaber können diese ändern. Administratoren verwalten Personen und Teams.",
-      "unsaved": "Nicht gespeicherte Änderungen am Profil."
+      "unsaved": "Nicht gespeicherte Änderungen am Profil.",
+      "demoPrivateResources": "Veröffentliche diese privaten Inhalte, bevor du Demo auswählst.",
+      "demoConversionBlocked": "Veröffentliche alle Experimente, Arbeitsmappen, Protokolle und Makros, bevor du Demo auswählst."
     },
     "visibility": {
       "title": "Sichtbarkeit",
@@ -809,7 +813,9 @@
       "nowPrivate": "Diese Organisation ist jetzt privat",
       "changeFailed": "Die Sichtbarkeit der Organisation konnte nicht geändert werden.",
       "privateHint": "Von außen unsichtbar. Nichtmitglieder erhalten eine „Nicht gefunden“-Seite, und niemand kann eine Beitrittsanfrage stellen.",
-      "publicHint": "Im Verzeichnis aufgeführt. Alle angemeldeten Personen sehen das Profil und seine öffentlichen Ressourcen und können eine Beitrittsanfrage stellen."
+      "publicHint": "Im Verzeichnis aufgeführt. Alle angemeldeten Personen sehen das Profil und seine öffentlichen Ressourcen und können eine Beitrittsanfrage stellen.",
+      "demoDescription": "Demo-Organisationen und alle ihre Experimente, Arbeitsmappen, Protokolle und Makros sind öffentlich. Sie können ohne Mitgliedschaft angesehen werden.",
+      "demoHint": "Im Verzeichnis sichtbar. Alle können die Inhalte ansehen. Demo-Organisationen nehmen keine Beitrittsanfragen an."
     },
     "delete": {
       "description": "Das Löschen einer Organisation kann nicht rückgängig gemacht werden. Ihre Inhalte werden nicht mitgelöscht, sie muss also zuerst leer sein.",
@@ -901,8 +907,10 @@
       "title": "Zusammensetzung der Ressourcen"
     },
     "overview": {
-      "visitorNotice": "Du siehst ein öffentliches Profil. Mitglieder sehen alles, worauf sie Zugriff haben; stelle eine Anfrage, und ein Inhaber entscheidet."
-    }
+      "visitorNotice": "Du siehst ein öffentliches Profil. Mitglieder sehen alles, worauf sie Zugriff haben; stelle eine Anfrage, und ein Inhaber entscheidet.",
+      "demoVisitorNotice": "Du siehst eine Demo-Organisation. Ihre Inhalte sind öffentlich. Der Lesezugriff berechtigt nicht zum Bearbeiten."
+    },
+    "allTypes": "Alle Typen"
   },
   "dashboard": {
     "title": "Startseite",

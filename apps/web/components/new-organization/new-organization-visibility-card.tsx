@@ -22,12 +22,17 @@ interface NewOrganizationVisibilityCardProps {
  */
 export function NewOrganizationVisibilityCard({ form }: NewOrganizationVisibilityCardProps) {
   const { t } = useTranslation();
+  const isDemo = form.watch("type") === "demo";
 
   return (
     // `min-w-0` because this card shares a grid row and would otherwise widen it.
     <SettingsCard
       title={t("organizations.visibility.title")}
-      description={t("organizations.visibility.description")}
+      description={t(
+        isDemo
+          ? "organizations.visibility.demoDescription"
+          : "organizations.visibility.description",
+      )}
     >
       <FormField
         control={form.control}
@@ -45,12 +50,17 @@ export function NewOrganizationVisibilityCard({ form }: NewOrganizationVisibilit
                 title={t("organizations.visibility.privateLabel")}
                 description={t("organizations.visibility.privateHint")}
                 isSelected={field.value === "private"}
+                disabled={isDemo}
                 onSelect={() => field.onChange("private")}
               />
               <VisibilityOption
                 icon={Globe}
                 title={t("organizations.visibility.publicLabel")}
-                description={t("organizations.visibility.publicHint")}
+                description={t(
+                  isDemo
+                    ? "organizations.visibility.demoHint"
+                    : "organizations.visibility.publicHint",
+                )}
                 isSelected={field.value === "public"}
                 onSelect={() => field.onChange("public")}
               />
@@ -69,12 +79,14 @@ function VisibilityOption({
   description,
   isSelected,
   onSelect,
+  disabled,
 }: {
   icon: typeof Lock;
   title: string;
   description: string;
   isSelected: boolean;
   onSelect: () => void;
+  disabled?: boolean;
 }) {
   return (
     <Button
@@ -83,6 +95,7 @@ function VisibilityOption({
       variant="outline"
       aria-checked={isSelected}
       onClick={onSelect}
+      disabled={disabled}
       className={cn(
         "h-auto min-w-0 flex-col items-stretch whitespace-normal p-3.5 text-left font-normal",
         isSelected ? "border-primary bg-primary/5" : "hover:border-primary/60",

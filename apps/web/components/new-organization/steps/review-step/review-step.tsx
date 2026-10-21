@@ -69,7 +69,11 @@ export function ReviewStep({
         ) : (
           <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
         )}
-        {isPublic ? t("organizations.create.publicNote") : t("organizations.create.privateNote")}
+        {formData.type === "demo"
+          ? t("organizations.create.demoNote")
+          : isPublic
+            ? t("organizations.create.publicNote")
+            : t("organizations.create.privateNote")}
       </p>
 
       <WizardStepButtons

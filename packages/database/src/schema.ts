@@ -192,6 +192,7 @@ export const organizationTypeEnum = pgEnum("organization_type", [
   "private_company",
   "government_agency",
   "university",
+  "demo",
 ]);
 
 // Sensor Family Enum

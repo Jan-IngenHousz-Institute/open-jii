@@ -94,6 +94,12 @@ describe("<ReviewStep />", () => {
     expect(screen.queryByText("organizations.create.privateNote")).not.toBeInTheDocument();
   });
 
+  it("describes public Demo resources without promising join requests", () => {
+    renderReview({ type: "demo", visibility: "public" });
+    expect(screen.getByText("organizations.create.demoNote")).toBeInTheDocument();
+    expect(screen.queryByText("organizations.create.publicNote")).not.toBeInTheDocument();
+  });
+
   it("sends each section's edit control back to the step that owns it", async () => {
     const user = userEvent.setup();
     const { goToStep } = renderReview();

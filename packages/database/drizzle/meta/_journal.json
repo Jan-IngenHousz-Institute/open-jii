@@ -421,6 +421,13 @@
       "when": 1792575965709,
       "tag": "0059_platform_admin_appointments",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1792575966709,
+      "tag": "0060_demo_organization_type",
+      "breakpoints": true
     }
   ]
 }

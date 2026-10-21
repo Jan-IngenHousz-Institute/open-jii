@@ -528,7 +528,8 @@
       "non_profit": "Non-profit",
       "private_company": "Private company",
       "government_agency": "Government agency",
-      "university": "University"
+      "university": "University",
+      "demo": "Demo"
     },
     "roles": {
       "owner": "Owner",
@@ -601,7 +602,8 @@
         "listTitle": "People to invite",
         "teamsNote": "Teams are set up from the organization's Teams tab once it exists — a team is a group of its members, so it cannot come first.",
         "failed": "The organization was created, but {{names}} could not be invited. Try again from its Members tab."
-      }
+      },
+      "demoNote": "This Demo organization and all its resources are public. People can browse without joining; join requests are not accepted."
     },
     "directory": {
       "emptyTitle": "No organizations yet",
@@ -796,7 +798,9 @@
       "saveFailed": "Could not save these changes.",
       "title": "Settings",
       "description": "Only owners can change these. Admins manage people and teams.",
-      "unsaved": "Unsaved changes to the profile."
+      "unsaved": "Unsaved changes to the profile.",
+      "demoPrivateResources": "Publish these private resources before choosing Demo.",
+      "demoConversionBlocked": "Publish every experiment, workbook, protocol and macro before choosing Demo."
     },
     "visibility": {
       "title": "Visibility",
@@ -809,7 +813,9 @@
       "nowPrivate": "This organization is now private",
       "changeFailed": "Could not change the organization's visibility.",
       "privateHint": "Invisible from outside. A non-member gets a not-found page, and nobody can ask to join.",
-      "publicHint": "Listed in the directory. Anyone signed in sees the profile and its public resources, and can ask to join."
+      "publicHint": "Listed in the directory. Anyone signed in sees the profile and its public resources, and can ask to join.",
+      "demoDescription": "Demo organizations and every experiment, workbook, protocol and macro they own are public. People can browse them without joining.",
+      "demoHint": "Listed in the directory. Everyone can view its resources. Demo organizations do not accept join requests."
     },
     "delete": {
       "description": "Deleting an organization cannot be undone. Nothing it owns is deleted with it, so it has to be empty first.",
@@ -901,8 +907,10 @@
       "title": "Resource mix"
     },
     "overview": {
-      "visitorNotice": "You are looking at a public profile. Members see everything they have access to; ask to join and an owner decides."
-    }
+      "visitorNotice": "You are looking at a public profile. Members see everything they have access to; ask to join and an owner decides.",
+      "demoVisitorNotice": "You are viewing a Demo organization. Its resources are public. Viewing does not give you permission to edit them."
+    },
+    "allTypes": "All types"
   },
   "dashboard": {
     "title": "Home",
