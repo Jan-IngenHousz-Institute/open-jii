@@ -45,10 +45,14 @@ export function ChipValue({
     );
   }
 
-  const display =
-    typeof filter.value === "boolean"
-      ? t(filter.value ? "common.yes" : "common.no")
-      : formatFilterDisplay(filter, (count) => t("dataFilters.selectedCount", { count }));
+  if (typeof filter.value === "boolean") {
+    return (
+      <span className={className}>
+        {t("dataFilters.booleanValue", { context: String(filter.value) })}
+      </span>
+    );
+  }
+  const display = formatFilterDisplay(filter, (count) => t("dataFilters.selectedCount", { count }));
   return <span className={className}>{display}</span>;
 }
 

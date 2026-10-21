@@ -1457,6 +1457,9 @@
     "renamedExportName": "In geëxporteerde bestanden heet het {{key}}."
   },
   "dataFilters": {
+    "booleanValue": "Waarde",
+    "booleanValue_true": "Ja",
+    "booleanValue_false": "Nee",
     "placeholderSubstring": "Tekenreeks",
     "placeholderValue": "Waarde",
     "placeholderCommaSeparated": "waarde1, waarde2, …",

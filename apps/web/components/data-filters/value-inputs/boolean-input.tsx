@@ -25,8 +25,8 @@ export function BooleanInput({
         <SelectValue placeholder={t("dataFilters.placeholderValue")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="true">{t("common.yes")}</SelectItem>
-        <SelectItem value="false">{t("common.no")}</SelectItem>
+        <SelectItem value="true">{t("dataFilters.booleanValue", { context: "true" })}</SelectItem>
+        <SelectItem value="false">{t("dataFilters.booleanValue", { context: "false" })}</SelectItem>
       </SelectContent>
     </Select>
   );
