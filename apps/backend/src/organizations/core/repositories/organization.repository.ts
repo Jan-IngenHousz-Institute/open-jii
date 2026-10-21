@@ -51,12 +51,8 @@ import {
   searchScore,
   tsQuery,
 } from "../../../common/utils/fts";
-import {
-  getAnonymizedAvatarUrl,
-  getAnonymizedEmail,
-  getAnonymizedFirstName,
-  getAnonymizedLastName,
-} from "../../../common/utils/profile-anonymization";
+import { getAnonymizedEmail } from "../../../common/utils/profile-anonymization";
+import { userMetadataFieldsSql } from "../../../users/core/repositories/user-display-name";
 import type {
   GranteeTeamDto,
   MembershipStatus,

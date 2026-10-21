@@ -20,5 +20,5 @@ export interface GuestPurgeResult {
 }
 
 export interface GuestPurgeBatch extends GuestPurgeResult {
-  blocked: unknown[];
+  blocked: { userId: string; error: unknown }[];
 }
