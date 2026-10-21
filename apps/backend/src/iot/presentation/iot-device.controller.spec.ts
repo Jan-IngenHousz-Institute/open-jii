@@ -8,6 +8,7 @@ import type {
   IotDeviceDetail,
   IotDeviceList,
 } from "@repo/api/domains/iot/iot.schema";
+import { eq, iotDevices } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
@@ -980,10 +981,7 @@ describe("IotDeviceController", () => {
     });
 
     it("returns 403 when registering a device in an organization the caller is not a member of", async () => {
-      const organizationId = faker.string.uuid();
-      const isOrgMemberSpy = vi
-        .spyOn(testApp.module.get(AuthorizationService), "isOrgMember")
-        .mockResolvedValue(false);
+      const organizationId = await testApp.createOrganization();
 
       await testApp
         .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
@@ -991,7 +989,11 @@ describe("IotDeviceController", () => {
         .send({ ...registerBody, organizationId })
         .expect(StatusCodes.FORBIDDEN);
 
-      expect(isOrgMemberSpy).toHaveBeenCalledWith(userId, organizationId);
+      const resources = await testApp.database
+        .select({ id: iotDevices.id })
+        .from(iotDevices)
+        .where(eq(iotDevices.organizationId, organizationId));
+      expect(resources).toHaveLength(0);
     });
   });
 });

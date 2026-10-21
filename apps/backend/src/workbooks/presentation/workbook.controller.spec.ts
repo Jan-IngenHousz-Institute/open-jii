@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type { WorkbookPaginatedList } from "@repo/api/domains/workbook/workbook.schema";
+import { eq, workbooks } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { assertSuccess, success, failure, AppError } from "../../common/utils/fp-utils";
@@ -754,10 +755,7 @@ describe("WorkbookController", () => {
     });
 
     it("returns 403 when creating a workbook in an organization the caller is not a member of", async () => {
-      const organizationId = faker.string.uuid();
-      const isOrgMemberSpy = vi
-        .spyOn(testApp.module.get(AuthorizationService), "isOrgMember")
-        .mockResolvedValue(false);
+      const organizationId = await testApp.createOrganization();
 
       await testApp
         .post(testApp.resolveOrpcPath(contract.workbooks.createWorkbook))
@@ -765,7 +763,11 @@ describe("WorkbookController", () => {
         .send({ name: "Org workbook", organizationId })
         .expect(StatusCodes.FORBIDDEN);
 
-      expect(isOrgMemberSpy).toHaveBeenCalledWith(testUserId, organizationId);
+      const resources = await testApp.database
+        .select({ id: workbooks.id })
+        .from(workbooks)
+        .where(eq(workbooks.organizationId, organizationId));
+      expect(resources).toHaveLength(0);
     });
   });
 });
