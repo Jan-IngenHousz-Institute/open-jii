@@ -1,24 +1,41 @@
 import "dotenv/config";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
 
-import { getClient, db } from "./database";
+import {
+  checkClickHouseMigrations,
+  migrateClickHouse,
+  readClickHouseConfig,
+  waitForClickHouse,
+} from "./clickhouse/migrate";
+import { db } from "./postgres/database";
+import { migratePostgres } from "./postgres/migrate";
 
 async function runMigrations() {
   let exit = 0;
 
   try {
-    // Run the migrations
-    await migrate(db, { migrationsFolder: "drizzle" });
-    console.log("Migrations completed successfully");
+    // Checked before Postgres changes, so a misconfigured or unreachable store leaves both as they were.
+    const clickhouse = readClickHouseConfig(process.env);
+    if (clickhouse) {
+      await checkClickHouseMigrations();
+      await waitForClickHouse(clickhouse);
+    }
+
+    await migratePostgres();
+    console.log("Postgres migrations completed successfully");
+
+    if (clickhouse) {
+      await migrateClickHouse(clickhouse);
+      console.log("ClickHouse migrations completed successfully");
+    } else {
+      console.log("No ClickHouse configured for this environment, so none migrated");
+    }
   } catch (error) {
     console.error("Error running migrations:", error);
     exit = 1;
   } finally {
-    // Close the postgres client
-    await getClient().end();
+    await db.$client.end();
     process.exit(exit);
   }
 }
 
-// Run the migration function
 void runMigrations();

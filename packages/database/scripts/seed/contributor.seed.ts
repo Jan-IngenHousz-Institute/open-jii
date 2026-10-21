@@ -1,9 +1,9 @@
 import { and } from "drizzle-orm";
 
-import { db } from "../../src/database";
-import { ensurePersonalOrganization } from "../../src/organizations";
-import { upsertGrant } from "../../src/resource-grants";
-import { users, profiles, experiments } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import { ensurePersonalOrganization } from "../../src/postgres/organizations";
+import { upsertGrant } from "../../src/postgres/resource-grants";
+import { users, profiles, experiments } from "../../src/postgres/schema";
 import { CONTRIBUTOR_SEEDS } from "./constants";
 import type { SeedExperiment } from "./types";
 

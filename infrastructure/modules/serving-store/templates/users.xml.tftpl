@@ -1,0 +1,22 @@
+<clickhouse>
+    <users>
+        <default remove="remove"/>
+%{ for user in users ~}
+        <${user.name}>
+            <password_sha256_hex>${user.password_sha256}</password_sha256_hex>
+            <networks><ip>::/0</ip></networks>
+            <profile>default</profile>
+            <quota>default</quota>
+%{ if length(user.grants) == 0 ~}
+            <access_management>1</access_management>
+%{ else ~}
+            <grants>
+%{ for grant in user.grants ~}
+                <query>${grant}</query>
+%{ endfor ~}
+            </grants>
+%{ endif ~}
+        </${user.name}>
+%{ endfor ~}
+    </users>
+</clickhouse>

@@ -14,7 +14,7 @@ import type { SQL, SQLWrapper } from "@repo/database";
 
 /** Fixed text-search config (English: stemming + stop-word removal). A single config is intentional
  * — no per-row language tracking. MUST match the `to_tsvector('english', …)` baked into the
- * generated `search_vector` columns (packages/database/src/schema.ts and the 0031 migration). */
+ * generated `search_vector` columns (packages/database/src/postgres/schema.ts and the 0031 migration). */
 const FTS_CONFIG = "english";
 
 /**

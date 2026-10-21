@@ -1,5 +1,5 @@
-import { db } from "../../src/database";
-import { protocols, macros, protocolMacros } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import { protocols, macros, protocolMacros } from "../../src/postgres/schema";
 import type { SeedMacro, SeedProtocol } from "./types";
 
 /** The cross-links, seeded wide enough that a protocol detail page is never empty. */

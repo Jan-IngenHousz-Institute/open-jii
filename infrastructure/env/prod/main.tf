@@ -1919,6 +1919,26 @@ import {
   id = "/aws/rds/cluster/open-jii-${var.environment}-db-cluster/postgresql"
 }
 
+# The ClickHouse store the app reads measurement data from, fed by the pipelines
+module "serving_store" {
+  source = "../../modules/serving-store"
+
+  environment       = var.environment
+  subnet_id         = module.vpc.private_subnets[0]
+  security_group_id = module.vpc.serving_store_security_group_id
+  http_port         = module.vpc.serving_store_port
+
+  instance_type       = "r7g.large"
+  data_volume_size_gb = 200
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "serving-store"
+  }
+}
+
 module "secrets_rotation_trigger" {
   source = "../../modules/secrets-manager-rotation/secrets-rotation-trigger"
 
@@ -2277,7 +2297,11 @@ module "migration_runner_ecs" {
     {
       name      = "DB_CREDENTIALS"
       valueFrom = module.aurora_db.master_user_secret_arn
-    }
+    },
+    {
+      name      = "CLICKHOUSE_CREDENTIALS"
+      valueFrom = module.serving_store.credentials_secret_arns["admin"]
+    },
   ]
 
   # Environment variables for the migration runner
@@ -2293,6 +2317,10 @@ module "migration_runner_ecs" {
     {
       name  = "DB_PORT"
       value = module.aurora_db.cluster_port
+    },
+    {
+      name  = "CLICKHOUSE_URL"
+      value = module.serving_store.url
     },
     {
       name  = "LOG_LEVEL"

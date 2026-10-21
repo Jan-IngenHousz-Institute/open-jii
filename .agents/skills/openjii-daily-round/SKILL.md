@@ -109,7 +109,7 @@ A gauge whose `lastAt` stops well before the window's end has stopped reporting,
 finding in itself; a count that stops means no events, since an absent `Sum` is zero (the catalogue
 entry's statistic says which a signal is).
 
-The level tiles, stat panels numbered 100 plus the entry's `num`, have no limit: say only what
+The level tiles, stat panels numbered 1000 plus the entry's `num`, have no limit: say only what
 moved out of its usual range, and say it as a level, not as a fault. Dev's pipelines have run
 continuously since 23 September, yet its ingest lag still peaks above two hours now and then;
 check the environment before calling anything an incident.

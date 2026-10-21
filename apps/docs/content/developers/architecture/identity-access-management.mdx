@@ -406,27 +406,27 @@ The way out is to transfer or delete each resource.
 
 ## Implementation map
 
-| Concern                                   | Source                                                                        |
-| ----------------------------------------- | ----------------------------------------------------------------------------- |
-| Better Auth server, sessions, plugins     | `packages/auth/src/server.ts`                                                 |
-| Organization plugin, hooks, read gates    | `packages/auth/src/organization/plugin.ts`                                    |
-| Organization lifecycle and grant teardown | `packages/auth/src/organization/lifecycle.ts`                                 |
-| Browser auth client                       | `packages/auth/src/clients/client.web.ts`                                     |
-| API-key session boundary                  | `packages/auth/src/api-key-session.ts`                                        |
-| Shared role/action matrices               | `packages/auth/src/access.ts`                                                 |
-| Personal organization provisioning        | `packages/database/src/organizations.ts`                                      |
-| Resource ownership and grants             | `packages/database/src/schema.ts`, `packages/database/src/resource-grants.ts` |
-| Central resource decisions                | `apps/backend/src/authorization/authorization.service.ts`                     |
-| Controller policy guards                  | `apps/backend/src/authorization/*guard.ts`                                    |
-| Organization reads, join requests         | `apps/backend/src/organizations/`                                             |
-| Nest-side auth hooks                      | `apps/backend/src/organizations/presentation/hooks/`                          |
-| Organization role authority checks        | `apps/backend/src/organizations/core/organization-access.ts`                  |
-| Grant read/write surface                  | `apps/backend/src/sharing/`                                                   |
-| Staffing invariants and row locks         | `apps/backend/src/sharing/core/resource-staffing.ts`                          |
-| Transfer authority gate                   | `apps/backend/src/sharing/core/transfer-authority.ts`                         |
-| One-way visibility transitions            | `apps/backend/src/visibility/`                                                |
-| List-query access scoping                 | `apps/backend/src/common/utils/resource-access-scope.ts`                      |
-| Account security UI                       | `apps/web/components/account-settings/`, `apps/web/components/auth/`          |
+| Concern                                   | Source                                                                                          |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Better Auth server, sessions, plugins     | `packages/auth/src/server.ts`                                                                   |
+| Organization plugin, hooks, read gates    | `packages/auth/src/organization/plugin.ts`                                                      |
+| Organization lifecycle and grant teardown | `packages/auth/src/organization/lifecycle.ts`                                                   |
+| Browser auth client                       | `packages/auth/src/clients/client.web.ts`                                                       |
+| API-key session boundary                  | `packages/auth/src/api-key-session.ts`                                                          |
+| Shared role/action matrices               | `packages/auth/src/access.ts`                                                                   |
+| Personal organization provisioning        | `packages/database/src/postgres/organizations.ts`                                               |
+| Resource ownership and grants             | `packages/database/src/postgres/schema.ts`, `packages/database/src/postgres/resource-grants.ts` |
+| Central resource decisions                | `apps/backend/src/authorization/authorization.service.ts`                                       |
+| Controller policy guards                  | `apps/backend/src/authorization/*guard.ts`                                                      |
+| Organization reads, join requests         | `apps/backend/src/organizations/`                                                               |
+| Nest-side auth hooks                      | `apps/backend/src/organizations/presentation/hooks/`                                            |
+| Organization role authority checks        | `apps/backend/src/organizations/core/organization-access.ts`                                    |
+| Grant read/write surface                  | `apps/backend/src/sharing/`                                                                     |
+| Staffing invariants and row locks         | `apps/backend/src/sharing/core/resource-staffing.ts`                                            |
+| Transfer authority gate                   | `apps/backend/src/sharing/core/transfer-authority.ts`                                           |
+| One-way visibility transitions            | `apps/backend/src/visibility/`                                                                  |
+| List-query access scoping                 | `apps/backend/src/common/utils/resource-access-scope.ts`                                        |
+| Account security UI                       | `apps/web/components/account-settings/`, `apps/web/components/auth/`                            |
 
 For the user-facing workflow, read
 [Account security & API keys](/guide/get-started/account-security-api-keys) and

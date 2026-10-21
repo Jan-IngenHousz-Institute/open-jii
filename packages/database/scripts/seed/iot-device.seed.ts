@@ -1,7 +1,7 @@
 import { and, or } from "drizzle-orm";
 
-import { db } from "../../src/database";
-import { flows, iotDevices } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import { flows, iotDevices } from "../../src/postgres/schema";
 import type { SeedUser } from "./types";
 
 /** Devices across families and statuses; nothing here talks to AWS. */

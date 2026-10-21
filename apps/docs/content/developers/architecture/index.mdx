@@ -43,7 +43,7 @@ The most important dependency boundaries are:
 
 - `packages/api`: Zod schemas, oRPC contracts, OpenAPI generation, and shared API types.
 - `packages/auth`: Better Auth configuration and clients.
-- `packages/database`: Drizzle schema, migrations, and database client.
+- `packages/database`: the Postgres schema, migrations and client (Drizzle), and the serving store's ClickHouse migrations.
 - `packages/iot`: device drivers and transport-independent command execution.
 - `packages/cms`: Contentful client, generated GraphQL SDK, alerts, and public-site components.
 - `packages/transactional`: React Email templates and Contentful-backed rendering.
