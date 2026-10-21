@@ -48,7 +48,17 @@ export function openJiiGuest({
             if (typeof body.email === "string" && isGuestEmail(body.email)) {
               throw new APIError("FORBIDDEN", { message: "This address cannot be used" });
             }
-            const session = await getSessionFromCtx(ctx);
+            let session = await getSessionFromCtx(ctx);
+            if (
+              session?.user.isAnonymous &&
+              (ctx.path === "/get-session" || ctx.path === "/update-user")
+            ) {
+              // Cached guest cookies cannot renew a session whose account was purged.
+              ctx.context.session = null;
+              session = await getSessionFromCtx(ctx, { disableCookieCache: true });
+              if (!session)
+                throw new APIError("UNAUTHORIZED", { message: "This guest session has ended" });
+            }
             if (ctx.path === "/sign-in/anonymous") {
               if (session?.user.isAnonymous) {
                 // Keep the installed plugin's re-entry response; it creates no second user.

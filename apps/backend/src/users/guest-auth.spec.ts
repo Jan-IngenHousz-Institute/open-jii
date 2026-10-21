@@ -347,6 +347,27 @@ describe("anonymous sessions on the production auth boundary", () => {
     ).toEqual(before.members);
   });
 
+  it("does not renew a purged guest from the cached session cookie", async () => {
+    const visitor = await guest();
+    const cached = await auth.handler(
+      new Request(`${base}/get-session`, { headers: { cookie: visitor.cookie } }),
+    );
+    expect(cached.status).toBe(200);
+    const cookie = [visitor.cookie, cookies(cached)].filter(Boolean).join("; ");
+    expect(cookie).toContain("session_data=");
+    await db.delete(users).where(eq(users.id, visitor.id));
+    for (const response of [
+      await post("/update-user", { name: "Must not renew" }, cookie),
+      await auth.handler(new Request(`${base}/get-session`, { headers: { cookie } })),
+    ]) {
+      expect(response.status).toBe(401);
+      expect(
+        response.headers.getSetCookie().filter((value) => /session_data=[^;]/.test(value)),
+      ).toEqual([]);
+    }
+    expect(await db.select().from(sessions).where(eq(sessions.userId, visitor.id))).toHaveLength(0);
+  });
+
   it("fails closed when the demo flag is off or unavailable", async () => {
     enabled.mockResolvedValue(false);
     expect((await post("/sign-in/anonymous")).status).toBe(403);
