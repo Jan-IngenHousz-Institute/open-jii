@@ -255,12 +255,66 @@ resource "aws_wafv2_web_acl" "main" {
     }
   }
 
+  rule {
+    name     = "GuestSessionRateLimit"
+    priority = 4
+
+    action {
+      block {}
+    }
+
+    statement {
+      rate_based_statement {
+        limit                 = 300
+        evaluation_window_sec = 300
+        aggregate_key_type    = "IP"
+
+        scope_down_statement {
+          and_statement {
+            statement {
+              byte_match_statement {
+                search_string         = "/api/v1/auth/sign-in/anonymous"
+                positional_constraint = "EXACTLY"
+                field_to_match {
+                  uri_path {}
+                }
+                text_transformation {
+                  priority = 0
+                  type     = "LOWERCASE"
+                }
+              }
+            }
+            statement {
+              byte_match_statement {
+                search_string         = "POST"
+                positional_constraint = "EXACTLY"
+                field_to_match {
+                  method {}
+                }
+                text_transformation {
+                  priority = 0
+                  type     = "NONE"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "GuestSessionRateLimit"
+      sampled_requests_enabled   = false
+    }
+  }
+
   # Rate limiting protection against DDoS and brute force attacks
   # Blocks IP addresses that exceed the specified request rate within 5-minute windows
   # aggregate_key_type = "IP" means rate limit is per source IP address
   rule {
     name     = "RateLimitRule"
-    priority = 4
+    priority = 5
 
     action {
       block {} # Block requests that exceed the rate limit
@@ -292,7 +346,7 @@ resource "aws_wafv2_web_acl" "main" {
     for_each = length(var.blocked_countries) > 0 ? [1] : []
     content {
       name     = "GeoBlockRule"
-      priority = 5
+      priority = 6
 
       action {
         block {}
@@ -318,7 +372,7 @@ resource "aws_wafv2_web_acl" "main" {
     for_each = length(var.large_body_bypass_routes) > 0 ? [1] : []
     content {
       name     = "AllowLargeBodyRule"
-      priority = 6 # Run after all security checks including geographic blocking
+      priority = 7 # Run after all security checks including geographic blocking
 
       action {
         allow {}
