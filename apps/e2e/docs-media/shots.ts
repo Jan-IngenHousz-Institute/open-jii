@@ -205,10 +205,10 @@ export const SHOTS: readonly Shot[] = [
         .first()
         .click();
       await page.getByRole("heading", { name: "MultispeQ Example", exact: true }).waitFor();
+      await settle(page, 3500);
       if (await page.getByRole("button", { name: /^edit$/i }).isVisible()) {
         throw new Error("Newcomer sees a dashboard edit control");
       }
-      await settle(page, 3500);
     },
     scope:
       "A newcomer finds the three seeded sensor examples, reads the pinned MultispeQ workbook and opens its example dashboard",

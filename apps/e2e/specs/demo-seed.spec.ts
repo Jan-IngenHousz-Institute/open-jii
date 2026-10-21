@@ -28,8 +28,15 @@ test.describe("newcomer reads the public demo seed", () => {
     for (const name of examples) {
       await expect(page.getByRole("link", { name, exact: true })).toBeVisible();
     }
+    await expect(
+      page.getByText(
+        "You are viewing a Demo organization. Its resources are public. Viewing does not give you permission to edit them.",
+        { exact: true },
+      ),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: /request to join/i })).toHaveCount(0);
     await page.getByRole("link", { name: examples[0], exact: true }).click();
+    await expect(page.getByRole("tab", { name: "Design", exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Settings", exact: true })).toHaveCount(0);
     await page.getByRole("tab", { name: "Design", exact: true }).click();
     await expect(
@@ -47,6 +54,12 @@ test.describe("newcomer reads the public demo seed", () => {
       .click();
     await expect(
       page.getByRole("heading", { name: "MultispeQ Example", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        "Synthetic placeholder content. Local charts have no lakehouse data; no real measurements are shown.",
+        { exact: true },
+      ),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: /^edit$/i })).toHaveCount(0);
     await page.setViewportSize({ width: 390, height: 844 });

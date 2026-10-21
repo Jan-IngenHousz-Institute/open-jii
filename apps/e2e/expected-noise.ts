@@ -2,7 +2,7 @@ import type { ConsoleMessage, Page, Request } from "@playwright/test";
 
 const expectedHttpFailures = [
   {
-    // A nonmember with no pending request gets the documented absence response.
+    // useMyJoinRequest treats this 404 as no pending request for a nonmember.
     url: /\/api\/v1\/experiments\/[^/]+\/join-requests\/me(?:[?#]|$)/,
     statuses: new Set([404]),
   },
