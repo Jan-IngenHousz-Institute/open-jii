@@ -726,6 +726,7 @@
       "invitedByAndExpiry": "Uitgenodigd door {{name}} · {{expiry}}"
     },
     "requests": {
+      "approvalNotice_demo": "Demo-organisaties accepteren geen lidmaatschapsverzoeken. Je kunt verzoeken afwijzen die vóór de omzetting nog openstonden.",
       "approveAction": "Goedkeuren",
       "rejectAction": "Afwijzen",
       "approved": "{{name}} is lid geworden van de organisatie",

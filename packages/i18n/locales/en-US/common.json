@@ -726,6 +726,7 @@
       "invitedByAndExpiry": "Invited by {{name}} · {{expiry}}"
     },
     "requests": {
+      "approvalNotice_demo": "Demo organizations don't accept join requests. You can reject requests left pending before conversion.",
       "approveAction": "Approve",
       "rejectAction": "Reject",
       "approved": "{{name}} joined the organization",

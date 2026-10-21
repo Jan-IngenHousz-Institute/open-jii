@@ -726,6 +726,7 @@
       "invitedByAndExpiry": "Eingeladen von {{name}} · {{expiry}}"
     },
     "requests": {
+      "approvalNotice_demo": "Demo-Organisationen nehmen keine Beitrittsanfragen an. Du kannst Anfragen ablehnen, die vor der Umstellung noch offen waren.",
       "approveAction": "Annehmen",
       "rejectAction": "Ablehnen",
       "approved": "{{name}} ist der Organisation beigetreten",
