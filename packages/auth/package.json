@@ -62,13 +62,13 @@
     "@better-auth/api-key": "1.6.23",
     "@better-auth/expo": "1.6.23",
     "@better-auth/passkey": "1.6.23",
+    "@repo/analytics": "workspace:*",
+    "@repo/api": "workspace:*",
     "@repo/database": "workspace:*",
     "@repo/transactional": "workspace:*",
     "@simplewebauthn/browser": "13.3.0",
     "better-auth": "1.6.23",
-    "nodemailer": "catalog:",
-    "@repo/api": "workspace:*",
-    "@repo/analytics": "workspace:*"
+    "nodemailer": "catalog:"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
