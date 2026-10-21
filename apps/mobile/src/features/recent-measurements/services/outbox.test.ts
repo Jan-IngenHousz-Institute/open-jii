@@ -6,6 +6,7 @@ import type { UploadIdentity } from "./outbox";
 const {
   mockGetMeasurementById,
   mockGetMeasurementIds,
+  mockResolveMeasurementOwner,
   mockMarkAsSuccessful,
   mockMarkAsFailed,
   mockOnlineIsOnline,
@@ -14,6 +15,7 @@ const {
 } = vi.hoisted(() => ({
   mockGetMeasurementById: vi.fn(),
   mockGetMeasurementIds: vi.fn(),
+  mockResolveMeasurementOwner: vi.fn(),
   mockMarkAsSuccessful: vi.fn(),
   mockMarkAsFailed: vi.fn(),
   mockOnlineIsOnline: vi.fn(() => true),
@@ -24,6 +26,7 @@ const {
 vi.mock("~/shared/db/measurements-storage", () => ({
   getMeasurementById: mockGetMeasurementById,
   getMeasurementIds: mockGetMeasurementIds,
+  resolveMeasurementOwner: mockResolveMeasurementOwner,
   markAsSuccessful: mockMarkAsSuccessful,
   markAsFailed: mockMarkAsFailed,
   UNSYNCED_STATUSES: ["pending", "failed"],
@@ -170,6 +173,7 @@ describe("Outbox", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetMeasurementIds.mockResolvedValue([]);
+    mockResolveMeasurementOwner.mockResolvedValue(true);
     mockOnlineIsOnline.mockReturnValue(true);
     mockOnlineSubscribe.mockReturnValue(() => undefined);
   });
@@ -749,6 +753,73 @@ describe("Outbox", () => {
       mqtt.resolveNext();
       await flushTasks(20);
       expect(large.calls).toHaveLength(1);
+      outbox.destroy();
+    });
+
+    it.each([false, true])(
+      "resolves an unknown capture role once for its matching owner (%s)",
+      async (guest) => {
+        mockGetMeasurementById.mockResolvedValue({
+          ...row(),
+          owner: { userId: "user-1", isGuest: null },
+        });
+        const transport = makeTransport();
+        const largeTransport = makeTransport();
+        const { outbox } = await freshOutbox(transport, {
+          largeTransport,
+          getIdentity: () => ({ userId: "user-1", isGuest: guest }),
+        });
+        outbox.enqueue("row-1");
+        await waitUntil(() => transport.calls.length + largeTransport.calls.length > 0);
+        expect(mockResolveMeasurementOwner).toHaveBeenCalledExactlyOnceWith(
+          "row-1",
+          "user-1",
+          guest,
+        );
+        expect(transport.calls).toHaveLength(guest ? 0 : 1);
+        expect(largeTransport.calls).toHaveLength(guest ? 1 : 0);
+        (guest ? largeTransport : transport).resolveNext();
+        await flushTasks();
+        outbox.destroy();
+      },
+    );
+
+    it("holds unknown ownership when another account is signed in", async () => {
+      mockGetMeasurementById.mockResolvedValue({
+        ...row(),
+        owner: { userId: "departed", isGuest: null },
+      });
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+      outbox.enqueue("row-1");
+      await flushTasks();
+      expect(mockResolveMeasurementOwner).not.toHaveBeenCalled();
+      expect(transport.calls).toHaveLength(0);
+      expect(mockMarkAsFailed).not.toHaveBeenCalled();
+      outbox.destroy();
+    });
+
+    it("holds a row if the account switches while its unknown role is being resolved", async () => {
+      mockGetMeasurementById.mockResolvedValue({
+        ...row(),
+        owner: { userId: "user-1", isGuest: null },
+      });
+      let active: UploadIdentity = { userId: "user-1", isGuest: true };
+      mockResolveMeasurementOwner.mockImplementation(() => {
+        active = { userId: "another", isGuest: false };
+        return Promise.resolve(true);
+      });
+      const transport = makeTransport();
+      const largeTransport = makeTransport();
+      const { outbox } = await freshOutbox(transport, {
+        largeTransport,
+        getIdentity: () => active,
+      });
+      outbox.enqueue("row-1");
+      await flushTasks();
+      expect(transport.calls).toHaveLength(0);
+      expect(largeTransport.calls).toHaveLength(0);
+      expect(mockMarkAsFailed).not.toHaveBeenCalled();
       outbox.destroy();
     });
 

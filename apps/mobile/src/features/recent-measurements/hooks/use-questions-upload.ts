@@ -46,7 +46,10 @@ export function useQuestionsUpload() {
       workbookVersionId: string;
     }) => {
       const identity = getLocalUploadIdentity();
-      const owner = identity?.userId === userId ? identity : null;
+      const owner = {
+        userId,
+        isGuest: identity?.userId === userId ? identity.isGuest : null,
+      };
       await whenDeviceIdentityLoaded();
       const topic = getMeasurementMqttTopic({ experimentId });
 

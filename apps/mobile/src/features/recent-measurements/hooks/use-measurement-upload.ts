@@ -118,7 +118,10 @@ export function useMeasurementUpload() {
       // Topics carry the phone's thing name; await rehydration structurally
       // rather than relying on upload always happening late in the session.
       const identity = getLocalUploadIdentity();
-      const owner = identity?.userId === userId ? identity : null;
+      const owner = {
+        userId,
+        isGuest: identity?.userId === userId ? identity.isGuest : null,
+      };
       await whenDeviceIdentityLoaded();
 
       // One fix per round: all devices measured at the same physical spot.
