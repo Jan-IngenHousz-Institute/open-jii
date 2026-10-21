@@ -121,6 +121,13 @@ describe("anonymous sessions on the production auth boundary", () => {
     }
   });
 
+  it("rejects the trailing-slash anonymous route without creating a user", async () => {
+    const before = await db.select({ id: users.id }).from(users);
+    const response = await post("/sign-in/anonymous/", { name: "Synthetic visitor" });
+    expect(response.status).toBe(404);
+    expect(await db.select({ id: users.id }).from(users)).toEqual(before);
+  });
+
   it("records the shared two-hop fallback that gates production demo-mode on OJD-2040", async () => {
     auth = createAuth(
       app.module.get<AuthService<typeof productionAuth>>(AuthService).instance.options.hooks,

@@ -274,12 +274,16 @@ resource "aws_wafv2_web_acl" "main" {
             statement {
               byte_match_statement {
                 search_string         = "/api/v1/auth/sign-in/anonymous"
-                positional_constraint = "EXACTLY"
+                positional_constraint = "STARTS_WITH"
                 field_to_match {
                   uri_path {}
                 }
                 text_transformation {
                   priority = 0
+                  type     = "URL_DECODE"
+                }
+                text_transformation {
+                  priority = 1
                   type     = "LOWERCASE"
                 }
               }

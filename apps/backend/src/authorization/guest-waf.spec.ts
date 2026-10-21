@@ -17,7 +17,19 @@ describe("guest entry edge limit", () => {
     expect(rule).toMatch(/aggregate_key_type\s*=\s*"IP"/);
     expect(rule).toContain('search_string         = "/api/v1/auth/sign-in/anonymous"');
     expect(rule).toContain('search_string         = "POST"');
-    expect(rule.match(/positional_constraint\s*=\s*"EXACTLY"/g)).toHaveLength(2);
+    expect(rule.match(/positional_constraint\s*=\s*"EXACTLY"/g)).toHaveLength(1);
+    expect(rule).toMatch(/positional_constraint\s*=\s*"STARTS_WITH"/);
+    expect(rule).toMatch(/priority\s*=\s*0\s+type\s*=\s*"URL_DECODE"/);
+    expect(rule).toMatch(/priority\s*=\s*1\s+type\s*=\s*"LOWERCASE"/);
+    for (const path of [
+      "/api/v1/auth/sign-in/anonymous",
+      "/api/v1/auth/sign-in/anonymous/",
+      "/API/v1/auth/sign-in/%61nonymous/",
+    ]) {
+      expect(
+        decodeURIComponent(path).toLowerCase().startsWith("/api/v1/auth/sign-in/anonymous"),
+      ).toBe(true);
+    }
     expect(rule).toContain("uri_path {}");
     expect(rule).toContain("method {}");
     expect(rule).toContain("and_statement");
