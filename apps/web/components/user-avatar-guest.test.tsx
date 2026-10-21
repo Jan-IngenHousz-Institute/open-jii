@@ -24,6 +24,10 @@ describe("localized guest attribution", () => {
     expect(personDisplayName({ firstName: "Synthetic", isGuest: true }, i18n.t)).toBe(
       guestLabels[locale],
     );
+    rerender(<UserAvatar firstName="Guest" lastName="" isGuest />);
+    expect(
+      screen.getByTitle(i18n.t("members.displayName", { context: "unnamedGuest", name: "" })),
+    ).toBeInTheDocument();
     rerender(<UserAvatar firstName="" lastName="" isGuest isFormerGuest />);
     expect(screen.getByTitle(formerLabels[locale])).toBeInTheDocument();
     expect(personDisplayName({ firstName: "Synthetic", lastName: "Researcher" }, i18n.t)).toBe(

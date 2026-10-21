@@ -55,10 +55,11 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
       ? `${userProfileBody.firstName} ${userProfileBody.lastName}`
       : "";
 
-  const userKind = user.isAnonymous ? "guest" : "researcher";
+  const guestName = user.name?.trim() ?? "";
+  const userKind = guestName && guestName !== "Guest" ? "guest" : "unnamedGuest";
   let displayName = profileName;
   if (user.isAnonymous)
-    displayName = t("auth.userDisplayName", { context: userKind, name: user.name ?? "Guest" });
+    displayName = t("auth.userDisplayName", { context: userKind, name: guestName });
 
   const handleSignOut = async () => {
     await signOut.mutateAsync();

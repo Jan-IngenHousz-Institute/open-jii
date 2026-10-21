@@ -1030,7 +1030,10 @@
     "checkEmail": null,
     "loginWith-passkey": null,
     "lastUsed": null,
-    "passkeyError": null
+    "passkeyError": null,
+    "userDisplayName": "{{name}}",
+    "userDisplayName_guest": "{{name}} (gast)",
+    "userDisplayName_unnamedGuest": "Gast"
   },
   "registration": {
     "title": null,
@@ -1457,9 +1460,6 @@
     "renamedExportName": "In geëxporteerde bestanden heet het {{key}}."
   },
   "dataFilters": {
-    "booleanValue": "Waarde",
-    "booleanValue_true": "Ja",
-    "booleanValue_false": "Nee",
     "placeholderSubstring": "Tekenreeks",
     "placeholderValue": "Waarde",
     "placeholderCommaSeparated": "waarde1, waarde2, …",
@@ -1497,7 +1497,10 @@
     "presetThisMonth": "Deze maand",
     "presetLastMonth": "Vorige maand",
     "presetThisYear": "Dit jaar",
-    "presetYearToDate": "Sinds begin dit jaar"
+    "presetYearToDate": "Sinds begin dit jaar",
+    "booleanValue": "Waarde",
+    "booleanValue_true": "Ja",
+    "booleanValue_false": "Nee"
   },
   "ui": {
     "actions": {
@@ -1532,14 +1535,10 @@
     "loadFailed": "Platformbeheerders konden niet worden geladen.",
     "retry": "Opnieuw proberen"
   },
-  "provenance": {
-    "simulated": "Gesimuleerd",
-    "guest": "Gast"
-  },
   "guestSession": {
     "nameLabel": "Naam, optioneel",
     "nameHint": "Gebruik een bijnaam. Vul geen e-mailadres in.",
-    "accountRetention": "Je gastaccount, naam en sessiegegevens worden na zeven dagen door de nachtelijke opschoning verwijderd. Openbare metingen blijven bewaard.",
+    "accountRetention": "Je gastaccount en sessiegegevens komen na zeven dagen in aanmerking voor nachtelijke verwijdering. Namen in afgeleide bijdragerscaches en metingen op deze telefoon kunnen langer bewaard blijven. Openbare metingen blijven bewaard.",
     "permanentMeasurements": "Metingen die je hier doet, blijven permanent in de openbare demo staan.",
     "quotaHint": "Uploads en analyses staan elk 60 gevalideerde pogingen per klokuur toe. Een poging telt ook als de externe dienst faalt.",
     "formerGuest": "Voormalige gast"
@@ -1547,6 +1546,11 @@
   "members": {
     "displayName": "{{name}}",
     "displayName_guest": "{{name}} (gast)",
-    "displayName_formerGuest": "Voormalige gast"
+    "displayName_formerGuest": "Voormalige gast",
+    "displayName_unnamedGuest": "Gast"
+  },
+  "provenance": {
+    "simulated": "Gesimuleerd",
+    "guest": "Gast"
   }
 }

@@ -14,6 +14,8 @@ export function personDisplayName(
 ): string {
   const name = `${person.firstName ?? ""} ${person.lastName ?? ""}`.trim() || fallback;
   if (!person.isGuest && !person.isFormerGuest) return name;
-  const kind = person.isFormerGuest ? "formerGuest" : "guest";
+  let kind = "guest";
+  if (!name || name === "Guest") kind = "unnamedGuest";
+  if (person.isFormerGuest) kind = "formerGuest";
   return t("members.displayName", { context: kind, name });
 }

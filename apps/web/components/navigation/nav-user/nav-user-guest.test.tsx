@@ -7,6 +7,24 @@ import { SidebarProvider } from "@repo/ui/components/sidebar";
 import { NavUser } from "./nav-user";
 
 describe("guest account label", () => {
+  it.each([
+    { locale: "en-US" as const, label: "Guest" },
+    { locale: "nl-NL" as const, label: "Gast" },
+    { locale: "de-DE" as const, label: "Gast" },
+  ])("localizes the default unnamed guest in $locale", async ({ locale, label }) => {
+    await mockRealTranslations(locale);
+    render(
+      <SidebarProvider>
+        <NavUser
+          user={{ id: "guest", email: "", name: "Guest", isAnonymous: true }}
+          locale={locale}
+        />
+      </SidebarProvider>,
+    );
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("Guest (");
+  });
+
   it.each(TEST_LOCALES)(
     "shows the name and guest marker without an account link in %s",
     async (locale) => {
