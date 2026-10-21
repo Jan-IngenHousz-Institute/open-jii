@@ -32,7 +32,7 @@ export async function isPlatformAdmin(
     .select({ role: users.role })
     .from(users)
     .leftJoin(profiles, eq(profiles.userId, users.id))
-    .where(and(eq(users.id, user.id), isNull(profiles.deletedAt)))
+    .where(and(eq(users.id, user.id), eq(users.isAnonymous, false), isNull(profiles.deletedAt)))
     .limit(1);
   return rows.length > 0 && (configuredIds.includes(user.id) || rows[0].role === "admin");
 }

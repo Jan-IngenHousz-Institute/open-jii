@@ -1,5 +1,6 @@
 import { ORPCError } from "@orpc/client";
 import * as ExpoDevice from "expo-device";
+import { getAuthClient } from "~/features/auth/services/auth";
 import { getApiClient } from "~/shared/api/client";
 import { createLogger } from "~/shared/observability/logger";
 import {
@@ -45,6 +46,8 @@ export async function ensureDeviceRegistered(options?: { throttle?: boolean }): 
 
   state.inFlight = (async () => {
     try {
+      const session = await getAuthClient().getSession();
+      if (!session.data?.user || session.data.user.isAnonymous) return;
       await whenDeviceIdentityLoaded();
       const envName = getEnvName();
       const identity = getDeviceIdentity();

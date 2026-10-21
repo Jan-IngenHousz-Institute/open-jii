@@ -3,6 +3,7 @@
  * Defines all available feature flags and their default values
  */
 export const FEATURE_FLAGS = {
+  DEMO_MODE: "demo-mode",
   MULTI_LANGUAGE: "multi-language",
   PROTOCOL_VALIDATION_AS_WARNING: "protocol-validation-as-warning",
   PROTOCOL_DELETION: "protocol-deletion",
@@ -21,6 +22,7 @@ export type FeatureFlagKey = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS];
  * Use conservative defaults (features disabled) for safety
  */
 export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
+  [FEATURE_FLAGS.DEMO_MODE]: false,
   [FEATURE_FLAGS.MULTI_LANGUAGE]: false, // Default to single language
   [FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING]: true, // Default to warnings enabled
   [FEATURE_FLAGS.PROTOCOL_DELETION]: false, // Default to disabled for safety
@@ -34,6 +36,7 @@ export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
 export interface FlagUser {
   id: string;
   email: string;
+  isAnonymous?: boolean;
 }
 
 /**
@@ -45,8 +48,10 @@ export interface FlagUser {
  */
 export function flagPersonProperties(user: {
   email?: string;
+  isAnonymous?: boolean;
   organizationIds: readonly string[];
-}): { email: string; organization_ids: string } | { organization_ids: string } {
+}): Record<string, string> {
   const organization_ids = user.organizationIds.join(",");
+  if (user.isAnonymous) return { organization_ids, is_guest: "true" };
   return user.email ? { email: user.email, organization_ids } : { organization_ids };
 }

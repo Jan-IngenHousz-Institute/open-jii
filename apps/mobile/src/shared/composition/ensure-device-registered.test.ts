@@ -5,6 +5,10 @@ import { useDeviceIdentityStore } from "~/shared/stores/device-identity-store";
 import { ensureDeviceRegistered } from "./ensure-device-registered";
 
 const mockEnsureMobileDevice = vi.fn();
+const mockSession = vi.fn();
+vi.mock("~/features/auth/services/auth", () => ({
+  getAuthClient: () => ({ getSession: mockSession }),
+}));
 
 vi.mock("~/shared/api/client", () => ({
   getApiClient: () => ({ iot: { ensureMobileDevice: mockEnsureMobileDevice } }),
@@ -23,11 +27,21 @@ function identity() {
 
 beforeEach(() => {
   currentEnv = "dev";
+  mockSession.mockResolvedValue({ data: { user: { id: "researcher", isAnonymous: false } } });
   mockEnsureMobileDevice.mockReset();
   useDeviceIdentityStore.setState({ identities: {}, isLoaded: true });
 });
 
 describe("ensureDeviceRegistered", () => {
+  it.each([{ data: { user: { id: "guest", isAnonymous: true } } }, { data: null }])(
+    "never registers a device without a researcher session",
+    async (session) => {
+      mockSession.mockResolvedValue(session);
+      await ensureDeviceRegistered();
+      expect(mockEnsureMobileDevice).not.toHaveBeenCalled();
+      expect(identity()).toBeUndefined();
+    },
+  );
   it("registers with the minted install id and persists the server identity", async () => {
     mockEnsureMobileDevice.mockResolvedValue({ id: "row-1", thingName: "mobile_abc" });
 

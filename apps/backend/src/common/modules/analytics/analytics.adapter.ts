@@ -43,7 +43,7 @@ export class AnalyticsAdapter implements AnalyticsPort {
     // The same person the web server checks. The browser identifies users by id once they accept
     // cookies and evaluates cookieless before that, so only 0% and 100% rollouts and organization
     // conditions always agree between the browser and the servers.
-    const distinctId = user.email || user.id;
+    const distinctId = user.isAnonymous ? user.id : user.email || user.id;
 
     // Unconfigured, FlagsService answers every flag with its default, so the lookup would be wasted.
     const organizationIds = this.flagsService.isInitialized()
@@ -59,7 +59,7 @@ export class AnalyticsAdapter implements AnalyticsPort {
     return this.flagsService.isFeatureFlagEnabled(
       flagKey,
       distinctId,
-      flagPersonProperties({ email: user.email, organizationIds }),
+      flagPersonProperties({ email: user.email, isAnonymous: user.isAnonymous, organizationIds }),
     );
   }
 

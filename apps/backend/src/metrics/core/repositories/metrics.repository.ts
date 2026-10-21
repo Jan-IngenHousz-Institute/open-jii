@@ -20,9 +20,9 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
+import { accessibleResourceCondition } from "../../../authorization/core/repositories/resource-access-query";
 import { tryCatch } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
-import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 
 const RESOURCE_TABLES = {
   experiment: experiments,

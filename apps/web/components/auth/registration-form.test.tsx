@@ -1,18 +1,24 @@
+import { createSession, createUserProfile as profileFixture } from "@/test/factories";
 import { fireEvent, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { ORPCError } from "@orpc/client";
 import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { revalidateAuth } from "~/app/actions/revalidate";
+
+import { authClient, useSession } from "@repo/auth/client";
 
 import { RegistrationForm } from "../auth/registration-form";
 
 // --- Mocks ---
 const pushMock = vi.fn();
-const { mockSubscribeNewsletter, toastMock } = vi.hoisted(() => ({
+const { mockSubscribeNewsletter, toastMock, getProfileMock } = vi.hoisted(() => ({
   mockSubscribeNewsletter: vi.fn(),
   toastMock: vi.fn(),
+  getProfileMock: vi.fn(),
 }));
 
 vi.mock("~/lib/orpc", () => ({
+  orpcClient: { users: { getUserProfile: getProfileMock } },
   orpc: {
     newsletter: {
       subscribeDirect: {
@@ -23,13 +29,6 @@ vi.mock("~/lib/orpc", () => ({
 }));
 
 vi.mock("@repo/ui/hooks/use-toast", () => ({ toast: toastMock }));
-
-const mockUpdateUserMutate = vi.fn();
-vi.mock("~/hooks/auth/useUpdateUser/useUpdateUser", () => ({
-  useUpdateUser: () => ({
-    mutateAsync: mockUpdateUserMutate,
-  }),
-}));
 
 const mockSendOtpMutate = vi.fn();
 const mockVerifyOtpMutate = vi.fn();
@@ -68,10 +67,15 @@ describe("RegistrationForm", () => {
   };
 
   beforeEach(() => {
+    Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => null });
     vi.mocked(useRouter).mockReturnValue({ push: pushMock } as unknown as ReturnType<
       typeof useRouter
     >);
-    mockUpdateUserMutate.mockResolvedValue({});
+    vi.mocked(authClient.getSession).mockResolvedValue({ data: createSession(), error: null });
+    vi.mocked(useSession).mockReturnValue({ data: createSession(), isPending: false } as ReturnType<
+      typeof useSession
+    >);
+    getProfileMock.mockResolvedValue(profileFixture());
     mockSendOtpMutate.mockResolvedValue({});
     mockVerifyOtpMutate.mockResolvedValue({});
     createUserProfileMock.mockResolvedValue(undefined);
@@ -154,7 +158,7 @@ describe("RegistrationForm", () => {
     });
   });
 
-  it("calls updateUser and pushes router after successful registration", async () => {
+  it("refreshes the session and invalidates auth before navigating after profile saving", async () => {
     render(<RegistrationForm {...defaultProps} />);
 
     const user = userEvent.setup();
@@ -166,8 +170,16 @@ describe("RegistrationForm", () => {
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalled();
-      expect(mockUpdateUserMutate).toHaveBeenCalledWith({ registered: true });
+      expect(authClient.getSession).toHaveBeenCalledWith({ query: { disableCookieCache: true } });
       expect(pushMock).toHaveBeenCalledWith("/dashboard");
+      expect(revalidateAuth).toHaveBeenCalled();
+      expect(authClient.updateUser).not.toHaveBeenCalled();
+      expect(vi.mocked(authClient.getSession).mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(revalidateAuth).mock.invocationCallOrder[0],
+      );
+      expect(vi.mocked(revalidateAuth).mock.invocationCallOrder[0]).toBeLessThan(
+        pushMock.mock.invocationCallOrder[0],
+      );
     });
   });
 
@@ -316,28 +328,37 @@ describe("RegistrationForm", () => {
     expect(await screen.findByText("Custom content")).toBeInTheDocument();
   });
 
-  it("handles updateUser error after profile creation", async () => {
-    mockUpdateUserMutate.mockResolvedValue({
-      error: { message: "Update failed" },
-    });
+  it.each(["error", "missing", "unregistered"])(
+    "does not complete when the refreshed session is %s",
+    async (state) => {
+      vi.mocked(authClient.getSession).mockResolvedValue(
+        state === "error"
+          ? { data: null, error: { message: "Refresh failed", status: 500, statusText: "Error" } }
+          : {
+              data: state === "missing" ? null : createSession({ user: { registered: false } }),
+              error: null,
+            },
+      );
 
-    render(<RegistrationForm {...defaultProps} />);
+      render(<RegistrationForm {...defaultProps} />);
 
-    const user = userEvent.setup();
-    await user.type(screen.getByLabelText("registration.firstName"), "Test");
-    await user.type(screen.getByLabelText("registration.lastName"), "User");
+      const user = userEvent.setup();
+      await user.type(screen.getByLabelText("registration.firstName"), "Test");
+      await user.type(screen.getByLabelText("registration.lastName"), "User");
 
-    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
-    await user.click(screen.getByRole("button", { name: "registration.register" }));
+      await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
+      await user.click(screen.getByRole("button", { name: "registration.register" }));
 
-    await waitFor(() => {
-      expect(createUserProfileMock).toHaveBeenCalled();
-      expect(mockUpdateUserMutate).toHaveBeenCalledWith({ registered: true });
-    });
+      await waitFor(() => {
+        expect(createUserProfileMock).toHaveBeenCalled();
+        expect(authClient.getSession).toHaveBeenCalledWith({ query: { disableCookieCache: true } });
+      });
 
-    // Should not navigate on error
-    expect(pushMock).not.toHaveBeenCalled();
-  });
+      expect(pushMock).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "registration.register" })).toBeEnabled();
+      expect(toastMock).toHaveBeenCalledWith({ description: "registration.errorMessage" });
+    },
+  );
 
   it("handles form submission error and resets pending state", async () => {
     // Create a mock that throws an error
@@ -447,6 +468,60 @@ describe("RegistrationForm", () => {
   });
 
   describe("emailOnly mode", () => {
+    it.each([true, false])(
+      "re-saves the existing profile after email repair (registered=%s)",
+      async (registered) => {
+        vi.mocked(useSession).mockReturnValue({
+          data: createSession({ user: { registered, email: "invalid", emailVerified: true } }),
+          isPending: false,
+        } as ReturnType<typeof useSession>);
+        const profile = profileFixture({
+          firstName: "Legacy",
+          lastName: "Researcher",
+          bio: "Retain this bio",
+          activated: true,
+          avatarUrl: "https://example.test/avatar.png",
+        });
+        getProfileMock.mockResolvedValue(profile);
+        render(<RegistrationForm termsData={termsData} emailOnly />);
+        const user = userEvent.setup();
+        await user.type(screen.getByLabelText("registration.email"), "repair@example.com");
+        await user.click(
+          screen.getByRole("button", { name: "registration.continueWithEmailVerification" }),
+        );
+        const otp = screen.getByRole("textbox");
+        await user.type(otp, "123456");
+        await waitFor(() =>
+          expect(createUserProfileMock).toHaveBeenCalledWith({
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            bio: profile.bio,
+            activated: profile.activated,
+            avatarUrl: profile.avatarUrl,
+          }),
+        );
+        await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/platform"));
+        expect(authClient.updateUser).not.toHaveBeenCalled();
+      },
+    );
+
+    it("does not complete email-only repair without a profile", async () => {
+      getProfileMock.mockRejectedValue(new Error("Profile not found"));
+      render(<RegistrationForm termsData={termsData} emailOnly />);
+      const user = userEvent.setup();
+      await user.type(screen.getByLabelText("registration.email"), "repair@example.com");
+      await user.click(
+        screen.getByRole("button", { name: "registration.continueWithEmailVerification" }),
+      );
+      await user.type(screen.getByRole("textbox"), "123456");
+      await waitFor(() =>
+        expect(toastMock).toHaveBeenCalledWith({ description: "registration.errorMessage" }),
+      );
+      expect(createUserProfileMock).not.toHaveBeenCalled();
+      expect(authClient.getSession).not.toHaveBeenCalled();
+      expect(pushMock).not.toHaveBeenCalled();
+    });
+
     it("renders emailOnly title and description", () => {
       render(<RegistrationForm termsData={termsData} emailOnly />);
 

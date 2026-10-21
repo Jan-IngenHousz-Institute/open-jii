@@ -435,6 +435,13 @@
       "when": 1792575967709,
       "tag": "0061_demo_public_invariants",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1792613953786,
+      "tag": "0062_guest_identity",
+      "breakpoints": true
     }
   ]
 }

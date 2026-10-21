@@ -34,12 +34,14 @@ export const selectUserProfileSchema = createSelectSchema(profiles)
   .extend({
     email: z.string().email().nullable(),
   });
-export const userProfileMetadataSchema = createSelectSchema(profiles).pick({
-  userId: true,
-  firstName: true,
-  lastName: true,
-  avatarUrl: true,
-});
+export const userProfileMetadataSchema = createSelectSchema(profiles)
+  .pick({
+    userId: true,
+    firstName: true,
+    lastName: true,
+    avatarUrl: true,
+  })
+  .extend({ isGuest: z.boolean(), isFormerGuest: z.boolean() });
 
 // Define the types
 export type CreateUserDto = typeof createUserSchema._type;

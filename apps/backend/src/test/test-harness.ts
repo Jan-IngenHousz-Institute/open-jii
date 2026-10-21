@@ -323,6 +323,7 @@ export class TestHarness {
         name: "Test User",
         email: "test@example.com",
         emailVerified: false,
+        isAnonymous: false,
         image: null,
         registered: true,
         banned: false,

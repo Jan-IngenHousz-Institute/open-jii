@@ -16,6 +16,9 @@ import {
 // Stub the production paho-session's native + env imports. Tests construct
 // the Transport directly with a fake session factory, so paho/Cognito/env
 // never actually run — but importing the module triggers them.
+vi.mock("~/shared/composition/ensure-device-registered", () => ({
+  ensureDeviceRegistered: vi.fn(),
+}));
 vi.mock("paho-mqtt", () => ({ Client: vi.fn(), Message: vi.fn() }));
 vi.mock("react-native-get-random-values", () => ({}));
 vi.mock("~/shared/stores/environment-store", () => ({ getEnvVar: () => "stub" }));

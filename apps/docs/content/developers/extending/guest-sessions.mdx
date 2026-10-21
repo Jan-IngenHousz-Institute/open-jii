@@ -1,0 +1,153 @@
+---
+title: "Guest sessions"
+description: "Server permissions, measurement limits and cleanup for the public demo."
+---
+
+Guest sessions use Better Auth anonymous accounts. They have a name but no email
+sign-in, personal workspace, profile or device credentials. This server milestone
+prepares the guest session and measurement transport. The Try the demo entry,
+name dialog and guest banner arrive in the next client milestone; account
+conversion arrives separately.
+
+<DocsVideo>
+  <video controls preload="metadata" src="/img/guide/web/guest-demo-public-read.webm" />
+</DocsVideo>
+
+## Permissions
+
+Guests can read public experiments, workbooks, protocols, macros, dashboards and
+organizations across the platform. Private memberships and sharing grants never
+extend those permissions. Personal feeds, exports, credential issuers, member
+rosters and account administration are denied.
+
+Guests automatically become members of Demo organizations. That membership lets
+them measure in public Demo experiments and run their public macros. It does not
+allow editing the experiment, workbook, protocol, macro or organization. Demo
+experiments do not offer Request to join. An ordinary public experiment keeps
+its existing researcher join flow.
+
+Two web controls still need the guest client milestone. Guests can see Create
+organization and, on ordinary public experiments, Request to join. The server
+refuses both. M5 must hide those controls for guests and remove the join dialog's
+email-notification promise from the guest experience. Researcher joining remains
+unchanged.
+
+On Android, a signed-in researcher visiting a Demo experiment also sees no join
+action. The example below opens a synthetic Demo experiment as a non-member.
+
+<DocsVideo>
+  <video controls preload="metadata" src="/img/mobile/demo-experiment-no-join-android.webm" />
+</DocsVideo>
+
+The reviewed route lists are checked into the backend authorization domain. A
+new route fails the inventory test until it has a classification, and an unknown
+route is refused at runtime. The auth plugin separately permits session reads,
+sign-out and a validated name-only change. Signing in to another account from a
+guest session remains blocked until the conversion milestone supplies a verified
+flow.
+
+Guest HTTP responses expire Better Auth's identity-cache cookie while retaining
+the signed session token. Guest session reads, including those made by the Nest
+auth guard, check the database even when a client sends an older cached cookie.
+After purge, protected reads and writes return 401, and the auth session endpoint
+returns null and expires its cookies. Upload and macro use cases also refuse a
+missing caller before invoking AWS. Researcher identity caching is unchanged.
+
+## Measurements and limits
+
+Every guest measurement uses the existing signed S3 upload flow, including small
+payloads. Keys have exactly this shape:
+
+```text
+large-iot/{experimentUuid}/guest/{uploadUuid}.json
+```
+
+Both UUIDs are server-owned. The issuer signs the declared UTF-8 byte length and
+JSON content type for 15 minutes. Guest payloads must be between one byte and
+1 MiB. Guests receive no MQTT credentials and do not register a mobile device.
+
+The database allows 60 validated upload attempts and, independently, 60 validated
+macro execution attempts per guest per clock hour. The window resets at the next
+UTC hour. An attempt counts even if signing, uploading or Lambda later fails.
+Schema and permission refusals before that boundary do not consume quota. A 429
+includes `data.retryAfterSeconds`.
+
+The local queue stores the capture-time user ID and guest status separately from
+the payload. It publishes only when the same identity is locally signed in. A
+signed-out, unknown or different account holds the row without a network call or
+a terminal failure. Pending and failed guest rows expire locally after seven
+days. Unsent researcher rows retain their existing behavior. If capture could
+not establish the role, the row keeps its owner ID and resolves the role once
+when that same owner returns. An unresolved row can remain beyond seven days;
+cleanup does not guess whether it belongs to a researcher. Same-ID account
+conversion and its historical provenance are reviewed in the conversion milestone.
+
+The mobile guest outbox stops automatic retry
+on authorization, size and quota refusals, while transient failures retain the
+existing retry behavior.
+
+The auth database limiter allows ten guest entries per minute for a recognized
+client address. The current two-hop CloudFront and ALB forwarding shape falls
+back to a shared bucket until OJD-2040 supplies trusted client attribution. The WAF declaration adds a POST-only limit of 300 requests per
+address over five minutes on `/api/v1/auth/sign-in/anonymous`. Address attribution
+still depends on the existing trusted-proxy configuration tracked in OJD-2040.
+A local test does not prove the deployed edge configuration. Keep `demo-mode`
+off in production until OJD-2040 is merged, deployed and proves per-client
+attribution. Until then, the WAF rule is the per-address control.
+
+## Switch and cleanup
+
+The PostHog `demo-mode` flag defaults off. Its personless evaluation emits no flag
+identity event and fails closed after two seconds or a service error. Turning it
+off prevents new guest sessions, uploads and macro runs. Existing guests can
+still read public resources and sign out.
+
+A nightly UTC job removes anonymous accounts strictly older than seven days,
+including sessions, memberships, visits, quotas and guest-addressed grants. It
+also removes stale anonymous-entry rate-limit records. Refreshing a session does
+not restart the account's lifetime. Measurements and Demo resources remain.
+Server deletion cannot erase an offline phone's SecureStore session cache. The
+guest client milestone must clear that cache on Leave demo and handle expired
+guest sessions; researcher offline caches keep their existing behavior.
+
+Deletion is atomic per account. An unexpected owned research row blocks that
+account's deletion and raises the existing heartbeat error signal with
+`GUEST_PURGE_FAILED`, fingerprint `guest-purge:blocked`, the opaque guest ID and
+the blocking table. Other expired accounts still purge. The transaction and its
+per-account savepoint stay in the users repository so sharing-owned grant cleanup
+and the user deletion use the same rollback boundary.
+
+Notification dispatch drops guest actors and recipients before bell or email
+rows exist. The email worker also checks already queued rows. This covers the
+join-code, invitation-acceptance, leave, member-removal and role-change producers.
+Auto-admission and retirement use database triggers and produce no notifications.
+
+Member and contributor APIs return raw names with `isGuest` and `isFormerGuest`
+flags. Web renders the guest label through translation context. Current relational
+projections return `isFormerGuest: false`. Measurement-data reads derive guest
+attribution from the pipeline's server-derived `is_guest` column and check current
+account presence through the users domain. A missing guest account clears the
+cached name and avatar and sets `isFormerGuest: true`. Paged, projected, grouped
+and filter-value reads use this boundary. Educational pseudonyms keep their
+existing behavior. The shared web renderer translates the labels.
+
+Existing gold contributor caches are unchanged and may
+retain an earlier guest name after the account is removed. Their retention is an
+explicit gap for privacy review, separate from account cleanup.
+
+## Verification and release checks
+
+Local tests exercise actual auth routing, independent database connections,
+quota boundaries, the AWS signer and mocked Lambda calls. They do not prove a
+real S3 PUT, deployed WAF rule, lakehouse execution or heartbeat delivery.
+Before release, verify that S3 rejects a body whose size differs from the signed
+length and that a blocked purge reaches the heartbeat inbox.
+
+The existing legacy email-repair hook still rewrites an unregistered real user's
+address before verification. Guests and the reserved placeholder domain are
+blocked before that hook writes. The conversion milestone must replace the
+legacy behavior with verified-flow-only handling.
+
+The [privacy review draft](./guest-privacy-draft) and the shared prompt strings
+require privacy-officer approval before a person publishes the policy in
+Contentful. This PR contributes to OJD-2238; it does not finish those human steps.

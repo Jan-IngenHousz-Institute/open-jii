@@ -218,6 +218,63 @@ const simulatedSensorShots: readonly Shot[] = [
 
 export const SHOTS: readonly Shot[] = [
   {
+    slug: "guest-demo-public-read",
+    publish: "img/guide/web/guest-demo-public-read.webm",
+    frame: "desktop",
+    anonymous: true,
+    route: "/login",
+    async prepare(page) {
+      const webOrigin = new URL(page.url()).origin;
+      const backend = new URL(process.env.E2E_BACKEND_URL ?? "http://localhost:3020");
+      if (!["localhost", "127.0.0.1", "[::1]"].includes(backend.hostname)) {
+        throw new Error("Guest capture requires a local backend");
+      }
+      const response = await page
+        .context()
+        .request.post(new URL("/api/v1/auth/sign-in/anonymous", backend).href, {
+          headers: { origin: webOrigin },
+          data: { name: "Synthetic visitor" },
+        });
+      if (response.status() !== 200) {
+        throw new Error(
+          `Guest entry refused (${response.status()}); enable demo-mode in the local flag service`,
+        );
+      }
+      await page.goto(`${webOrigin}/en-US/platform/organizations?type=demo`, {
+        waitUntil: "networkidle",
+      });
+      await page.getByRole("link", { name: "openJII Demo", exact: true }).waitFor();
+      await page.getByText("Synthetic visitor (guest)", { exact: true }).waitFor();
+    },
+    async perform(page) {
+      page.setDefaultTimeout(15_000);
+      await settle(page, 2000);
+      await page.getByRole("link", { name: "openJII Demo", exact: true }).click();
+      await page.getByRole("heading", { name: "openJII Demo", exact: true }).waitFor();
+      await settle(page, 1800);
+      await page.getByRole("link", { name: "[Seed] MultispeQ Demo Example", exact: true }).click();
+      await page
+        .getByRole("heading", { name: "[Seed] MultispeQ Demo Example", exact: true })
+        .waitFor();
+      await page.getByRole("tab", { name: "Design", exact: true }).waitFor();
+      await settle(page, 2000);
+      if (await page.getByRole("button", { name: /request to join/i }).isVisible()) {
+        throw new Error("Demo experiment offers a join request");
+      }
+      if (await page.getByRole("tab", { name: "Settings", exact: true }).isVisible()) {
+        throw new Error("Guest sees experiment settings");
+      }
+      await page.getByRole("tab", { name: "Design", exact: true }).click();
+      await page
+        .getByText("[Seed] Example: Demo MultispeQ placeholder protocol", { exact: true })
+        .first()
+        .waitFor();
+      await settle(page, 2200);
+    },
+    scope:
+      "A synthetic guest reads the Demo directory and experiment Design, with a localized guest name and no join or edit controls",
+  },
+  {
     slug: "demo-seed-experiments",
     publish: "img/guide/web/demo-seed-experiments.webm",
     frame: "desktop",

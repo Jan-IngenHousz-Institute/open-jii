@@ -11,6 +11,18 @@ beforeEach(() => {
 });
 
 describe("usePostHogIdentity", () => {
+  it("marks a guest by id and updates the same id on conversion without resetting", () => {
+    const { rerender } = renderHook(
+      ({ guest }: { guest: boolean }) => usePostHogIdentity(posthog, "guest-id", guest),
+      {
+        initialProps: { guest: true },
+      },
+    );
+    expect(posthog.identify).toHaveBeenLastCalledWith("guest-id", { is_guest: true });
+    rerender({ guest: false });
+    expect(posthog.identify).toHaveBeenLastCalledWith("guest-id", { is_guest: false });
+    expect(posthog.reset).not.toHaveBeenCalled();
+  });
   it("identifies the signed-in user by id once, however often it renders", () => {
     const { rerender } = renderHook<void, { userId: string | undefined }>(
       ({ userId }) => usePostHogIdentity(posthog, userId),

@@ -12,8 +12,10 @@ import * as schema from "@repo/database/schema";
 import { DISABLED_ADMIN_PATHS, openJiiAdmin } from "./admin/plugin";
 import { getApiKeyForSessionCheck } from "./api-key-session";
 import { sendOtpEmail } from "./email/otpEmail";
+import { openJiiGuest } from "./guest/plugin";
 import { openJiiOrganization } from "./organization/plugin";
 import { orcidProvider } from "./providers/orcid";
+import { serverOwnedRegistration } from "./registration";
 
 const environmentPrefix = process.env.ENVIRONMENT_PREFIX ?? "dev";
 const clientUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
@@ -93,6 +95,7 @@ export const auth = betterAuth({
     max: 100, // 100 requests per window
     storage: "database", // Use database storage for production reliability
     customRules: {
+      "/sign-in/anonymous": { window: 60, max: 10 },
       // Stricter limits for OTP/email endpoints to prevent abuse
       "/sign-in/email": {
         window: 60, // 1 minute
@@ -121,6 +124,7 @@ export const auth = betterAuth({
     additionalFields: {
       adminGrantedAt: { type: "date", required: false, input: false },
       registered: {
+        input: false,
         type: "boolean",
         defaultValue: false,
         required: false,
@@ -147,6 +151,8 @@ export const auth = betterAuth({
   disabledPaths: DISABLED_ADMIN_PATHS,
   plugins: [
     openJiiAdmin(),
+    serverOwnedRegistration(),
+    openJiiGuest(),
     expo(), // Add Expo plugin for mobile app support
     emailOTP({
       async sendVerificationOTP({ email, otp }) {
@@ -230,7 +236,9 @@ export const auth = betterAuth({
       create: {
         after: async (user) => {
           try {
-            await ensurePersonalOrganization(db, { id: user.id, name: user.name });
+            if (!user.isAnonymous) {
+              await ensurePersonalOrganization(db, { id: user.id, name: user.name });
+            }
           } catch (err) {
             console.warn("Failed to provision personal organization for user:", err);
           }

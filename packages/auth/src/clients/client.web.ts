@@ -3,6 +3,7 @@ import { passkeyClient } from "@better-auth/passkey/client";
 import { WebAuthnAbortService } from "@simplewebauthn/browser";
 import {
   adminClient,
+  anonymousClient,
   emailOTPClient,
   genericOAuthClient,
   inferAdditionalFields,
@@ -21,6 +22,7 @@ export const authClient = createAuthClient({
   baseURL: `${BACKEND_URL}/api/v1/auth`,
   plugins: [
     adminClient(),
+    anonymousClient(),
     inferAdditionalFields<typeof auth>(),
     emailOTPClient(),
     genericOAuthClient(), // Required for custom OAuth providers like ORCID

@@ -63,6 +63,7 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   registered: boolean("registered").notNull().default(false),
+  isAnonymous: boolean("is_anonymous").notNull().default(false),
   role: text("role").default("user"),
   banned: boolean("banned").default(false),
   banReason: text("ban_reason"),
@@ -124,6 +125,19 @@ export const rateLimits = pgTable("rate_limits", {
   count: integer("count").notNull().default(0),
   lastRequest: bigint("last_request", { mode: "number" }).notNull(),
 });
+
+export const guestUsage = pgTable(
+  "guest_usage",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: ["upload", "macro"] }).notNull(),
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.kind, t.windowStart] })],
+);
 
 // API Keys Table - for the Better Auth api-key plugin. Owner column is
 // referenceId (not userId) in the plugin's model at 1.6.23.

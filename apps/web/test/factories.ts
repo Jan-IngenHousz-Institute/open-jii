@@ -232,6 +232,7 @@ export function createSession(
     image: null,
     registered: true,
     banned: false,
+    isAnonymous: false,
     ...overrides.user,
   };
   return {
@@ -523,6 +524,8 @@ export function createOrganizationMember(
   organizationSeq++;
   return {
     userId: `user-${organizationSeq}`,
+    isGuest: false,
+    isFormerGuest: false,
     firstName: "Grace",
     lastName: "Hopper",
     email: `grace-${organizationSeq}@example.com`,

@@ -11,6 +11,7 @@ import { GithubModule } from "../common/modules/github/github.module";
 import { ExperimentModule } from "../experiments/experiment.module";
 import { NotificationModule } from "../notifications/notification.module";
 import { SharingModule } from "../sharing/sharing.module";
+import { GuestRepositoryModule } from "../users/guest-repository.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
 import { AddIotDeviceGroupMembersUseCase } from "./application/use-cases/add-iot-device-group-members/add-iot-device-group-members";
 import { ApproveCalibrationRunUseCase } from "./application/use-cases/approve-calibration-run/approve-calibration-run";
@@ -90,6 +91,7 @@ import { IotController } from "./presentation/iot.controller";
 
 @Module({
   imports: [
+    GuestRepositoryModule,
     AwsModule,
     AnalyticsModule,
     DatabricksModule,

@@ -179,6 +179,7 @@ export function ExperimentDetailScreen() {
             status={experiment.status}
             workbookVersionId={experiment.workbookVersionId}
             membershipStatus={membershipStatus}
+            organizationType={experiment.organizationType}
             onRefreshAccess={refetch}
           />
         )}

@@ -1258,6 +1258,12 @@ importers:
       '@better-auth/passkey':
         specifier: 1.6.23
         version: 1.6.23(eedae83e5c5db2c427a9003cc5e2054a)
+      '@repo/analytics':
+        specifier: workspace:*
+        version: link:../analytics
+      '@repo/api':
+        specifier: workspace:*
+        version: link:../api
       '@repo/database':
         specifier: workspace:*
         version: link:../database

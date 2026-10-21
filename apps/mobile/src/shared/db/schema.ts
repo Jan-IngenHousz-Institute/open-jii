@@ -19,6 +19,8 @@ export const measurements = sqliteTable(
     id: text("id").primaryKey(),
     status: text("status", { enum: MEASUREMENT_STATUSES }).notNull(),
     topic: text("topic").notNull(),
+    ownerUserId: text("owner_user_id"),
+    ownerIsGuest: integer("owner_is_guest", { mode: "boolean" }).default(false),
     measurementResult: text("measurement_result").notNull(),
     experimentName: text("experiment_name").notNull(),
     protocolName: text("protocol_name").notNull(),

@@ -34,6 +34,10 @@ import {
 } from "@repo/database";
 import type { AnyColumn, DatabaseInstance, ResourceType, SQL } from "@repo/database";
 
+import {
+  RESOURCE_TIER,
+  accessibleResourceCondition,
+} from "../../../authorization/core/repositories/resource-access-query";
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
   crossTableBonus,
@@ -43,16 +47,8 @@ import {
   searchScore,
   tsQuery,
 } from "../../../common/utils/fts";
-import {
-  getAnonymizedAvatarUrl,
-  getAnonymizedEmail,
-  getAnonymizedFirstName,
-  getAnonymizedLastName,
-} from "../../../common/utils/profile-anonymization";
-import {
-  RESOURCE_TIER,
-  accessibleResourceCondition,
-} from "../../../common/utils/resource-access-scope";
+import { getAnonymizedEmail } from "../../../common/utils/profile-anonymization";
+import { userMetadataFieldsSql } from "../../../users/core/repositories/user-display-name";
 import type {
   GranteeTeamDto,
   MembershipStatus,
@@ -228,10 +224,10 @@ END)`;
 /** Profile columns every people-shaped read in this domain selects. */
 const personFields = {
   userId: users.id,
-  firstName: getAnonymizedFirstName(),
-  lastName: getAnonymizedLastName(),
-  email: getAnonymizedEmail(),
-  avatarUrl: getAnonymizedAvatarUrl(),
+  ...userMetadataFieldsSql(),
+  email: sql<
+    string | null
+  >`CASE WHEN ${users.isAnonymous} THEN NULL ELSE ${getAnonymizedEmail()} END`,
 };
 
 @Injectable()

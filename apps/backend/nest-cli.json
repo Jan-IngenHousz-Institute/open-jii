@@ -5,6 +5,13 @@
   "compilerOptions": {
     "deleteOutDir": true,
     "builder": "swc",
-    "typeCheck": true
+    "typeCheck": true,
+    "assets": [
+      {
+        "include": "authorization/core/models/guest*.json",
+        "outDir": "dist/src",
+        "watchAssets": true
+      }
+    ]
   }
 }

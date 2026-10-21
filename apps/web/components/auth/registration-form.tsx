@@ -7,14 +7,14 @@ import { useRouter } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
+import { revalidateAuth } from "~/app/actions/revalidate";
 import { useSignInEmail } from "~/hooks/auth/useSignInEmail/useSignInEmail";
-import { useUpdateUser } from "~/hooks/auth/useUpdateUser/useUpdateUser";
 import { useVerifyEmail } from "~/hooks/auth/useVerifyEmail/useVerifyEmail";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
-import { orpc } from "~/lib/orpc";
+import { orpc, orpcClient } from "~/lib/orpc";
 import { parseApiError } from "~/util/apiError";
 
-import { useSession } from "@repo/auth/client";
+import { authClient, useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Form } from "@repo/ui/components/form";
@@ -50,7 +50,6 @@ export function RegistrationForm({
   const [pendingEmail, setPendingEmail] = useState("");
   const newsletterOptInRef = useRef(false);
   const { data: session } = useSession();
-  const updateUser = useUpdateUser();
   const sendOtpRegistration = useSignInEmail();
   const verifyOtpRegistration = useVerifyEmail();
   const subscribeNewsletter = useMutation(orpc.newsletter.subscribeDirect.mutationOptions());
@@ -105,13 +104,15 @@ export function RegistrationForm({
   });
 
   const completeRegistration = async (newsletterOptIn = false) => {
-    const res = await updateUser.mutateAsync({ registered: true });
+    const res = await authClient.getSession({ query: { disableCookieCache: true } });
 
-    if (res.error) {
+    if (res.error || !res.data?.user.registered) {
       toast({ description: t("registration.errorMessage") || "Registration failed" });
       setIsPending(false);
       return;
     }
+
+    await revalidateAuth();
 
     if (newsletterOptIn) {
       void subscribeNewsletter.mutateAsync(undefined).catch((error: unknown) => {
@@ -179,9 +180,16 @@ export function RegistrationForm({
           return;
         }
 
-        // Profile already exists, just re-mark as registered.
         if (emailOnly) {
-          await completeRegistration();
+          if (!session?.user.id) throw new Error("No current user");
+          const profile = await orpcClient.users.getUserProfile({ id: session.user.id });
+          await createUserProfile({
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            bio: profile.bio ?? undefined,
+            activated: profile.activated ?? undefined,
+            avatarUrl: profile.avatarUrl,
+          });
           return;
         }
       }

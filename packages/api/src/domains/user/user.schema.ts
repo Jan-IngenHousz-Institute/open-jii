@@ -85,6 +85,13 @@ export const zUserMetadataWebhookPayload = z.object({
 
 export const zUserMetadata = z.object({
   userId: z.string().uuid(),
+  isGuest: z.boolean().default(false),
+  isFormerGuest: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal.",
+    ),
   firstName: z.string(),
   lastName: z.string(),
   avatarUrl: z.string().nullable(),

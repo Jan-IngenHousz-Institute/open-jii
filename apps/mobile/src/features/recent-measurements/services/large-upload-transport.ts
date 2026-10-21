@@ -1,4 +1,5 @@
 import type { PublishMeta, Transport } from "~/features/connection/services/mqtt/mqtt-transport";
+import { apiErrorCode } from "~/features/experiments/utils/api-error";
 import { getApiClient } from "~/shared/api/client";
 import { parseMeasurementTopic } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
@@ -6,6 +7,7 @@ import { getTrace } from "~/shared/observability/trace";
 
 import { LargeUploadError } from "./large-upload-errors";
 import { LARGE_UPLOAD_TIMEOUT_MS } from "./upload-constants";
+import { utf8ByteLength } from "./utf8-byte-length";
 
 const log = createLogger("large-upload");
 
@@ -47,10 +49,12 @@ class LargeUploadTransportImpl implements Transport {
 
     const trace = meta?.traceId ? getTrace(meta.traceId) : undefined;
     const body = meta?.serialized ?? JSON.stringify(payload);
-    trace?.event("large_upload_start", { bytes: body.length, experiment_id: experimentId });
-    log.info("upload start", { experimentId, bytes: body.length });
+    const bytes = utf8ByteLength(body);
+    const guest = meta?.guest === true;
+    trace?.event("large_upload_start", { bytes, experiment_id: experimentId });
+    log.info("upload start", { experimentId, bytes });
 
-    const target = await this.requestTarget(experimentId);
+    const target = await this.requestTarget(experimentId, guest ? bytes : undefined);
     const response = await this.put(target.uploadUrl, body);
     if (response.ok) {
       trace?.event("large_upload_stored", { key: target.key });
@@ -60,19 +64,19 @@ class LargeUploadTransportImpl implements Transport {
 
     // A pre-signed URL lasts 15 minutes and a queued row can outlive that. S3
     // answers a stale signature with 403, which one fresh URL resolves.
-    if (response.status === 403) {
+    if (response.status === 403 && !guest) {
       trace?.event("large_upload_url_expired");
-      const retryTarget = await this.requestTarget(experimentId);
+      const retryTarget = await this.requestTarget(experimentId, guest ? bytes : undefined);
       const retried = await this.put(retryTarget.uploadUrl, body);
       if (retried.ok) {
         trace?.event("large_upload_stored", { key: retryTarget.key, after_refresh: true });
         log.info("upload stored after url refresh", { key: retryTarget.key });
         return;
       }
-      throw this.rejected(retried.status);
+      throw this.rejected(retried.status, guest);
     }
 
-    throw this.rejected(response.status);
+    throw this.rejected(response.status, guest);
   }
 
   destroy(): void {
@@ -85,15 +89,28 @@ class LargeUploadTransportImpl implements Transport {
     this.inFlight.clear();
   }
 
-  private async requestTarget(experimentId: string): Promise<UploadTarget> {
+  private async requestTarget(experimentId: string, contentLength?: number): Promise<UploadTarget> {
     try {
-      return await getApiClient().iot.getUploadUrl({ experimentId });
+      return await getApiClient().iot.getUploadUrl({
+        experimentId,
+        ...(contentLength !== undefined ? { contentLength } : {}),
+      });
     } catch (err) {
       const status = statusOf(err);
       if (status === 401) {
         // orpcFetch already refreshed the session and signed the user out by
         // the time a 401 surfaces here, so retrying inside this window cannot help.
         throw new LargeUploadError("Unauthenticated", "session is no longer valid", false, {
+          cause: err,
+        });
+      }
+      if (status === 413 || (status === 429 && contentLength !== undefined)) {
+        throw new LargeUploadError("Rejected", "guest upload size or quota refused", false, {
+          cause: err,
+        });
+      }
+      if (status === 400 && apiErrorCode(err) === "GUEST_UPLOAD_SIZE_INVALID") {
+        throw new LargeUploadError("TooLarge", "guest uploads are limited to 1 MiB", false, {
           cause: err,
         });
       }
@@ -138,8 +155,8 @@ class LargeUploadTransportImpl implements Transport {
 
   // A throttle or a bad moment in the bucket is worth repeating; any other
   // client error is this request being wrong in a way a repeat will not mend.
-  private rejected(status: number): LargeUploadError {
-    const worthRepeating = status === 429 || status >= 500;
+  private rejected(status: number, guest: boolean): LargeUploadError {
+    const worthRepeating = (!guest && status === 429) || status >= 500;
 
     return new LargeUploadError("Rejected", `S3 refused the upload (${status})`, worthRepeating);
   }

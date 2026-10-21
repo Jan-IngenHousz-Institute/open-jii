@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner-native";
+import { getLocalUploadIdentity } from "~/features/auth/services/local-upload-identity";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
@@ -44,6 +45,11 @@ export function useQuestionsUpload() {
       workbookRunId: string;
       workbookVersionId: string;
     }) => {
+      const identity = getLocalUploadIdentity();
+      const owner = {
+        userId,
+        isGuest: identity?.userId === userId ? identity.isGuest : null,
+      };
       await whenDeviceIdentityLoaded();
       const topic = getMeasurementMqttTopic({ experimentId });
 
@@ -69,7 +75,7 @@ export function useQuestionsUpload() {
 
       let savedId: string;
       try {
-        savedId = await saveMeasurement(measurement, "pending");
+        savedId = await saveMeasurement(measurement, "pending", owner);
       } catch (storageError) {
         log.error("Failed to save answers to local storage", {
           err: (storageError as Error)?.message,

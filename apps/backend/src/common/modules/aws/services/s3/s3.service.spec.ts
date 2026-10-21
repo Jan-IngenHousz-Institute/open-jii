@@ -3,6 +3,7 @@ import type { PutObjectCommand } from "@aws-sdk/client-s3";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import type { AwsConfigService } from "../config/config.service";
 import { AwsS3Service } from "./s3.service";
+import type { GuestUploadOptions } from "./s3.types";
 
 describe("AwsS3Service", () => {
   let service: AwsS3Service;
@@ -18,6 +19,52 @@ describe("AwsS3Service", () => {
   beforeEach(() => {
     service = new AwsS3Service(mockAwsConfig);
   });
+
+  it("signs the exact guest key, UTF-8 size and JSON content type with the real SDK", async () => {
+    vi.stubEnv("AWS_ACCESS_KEY_ID", "synthetic-access-key");
+    vi.stubEnv("AWS_SECRET_ACCESS_KEY", "synthetic-secret-key");
+    class CapturingSigner extends AwsS3Service {
+      command?: PutObjectCommand;
+      protected override createSignedUrl(command: PutObjectCommand, guest?: GuestUploadOptions) {
+        this.command = command;
+        return super.createSignedUrl(command, guest);
+      }
+    }
+    try {
+      const signer = new CapturingSigner(mockAwsConfig);
+      const id = "94D8B584-2D27-46FA-AA6C-8908CE13D521";
+      const size = Buffer.byteLength(JSON.stringify({ value: "é🌱" }), "utf8");
+      const result = await signer.getIotUploadUrl(id, { guestContentLength: size });
+      assertSuccess(result);
+      expect(result.value.key).toMatch(
+        /^large-iot\/94d8b584-2d27-46fa-aa6c-8908ce13d521\/guest\/[0-9a-f-]{36}\.json$/,
+      );
+      expect(signer.command?.input).toMatchObject({
+        Key: result.value.key,
+        ContentType: "application/json",
+        ContentLength: size,
+      });
+      const url = new URL(result.value.uploadUrl);
+      expect(url.searchParams.get("X-Amz-Expires")).toBe("900");
+      expect(url.searchParams.has("x-amz-checksum-crc32")).toBe(false);
+      expect(url.searchParams.get("X-Amz-SignedHeaders")?.split(";")).toEqual(
+        expect.arrayContaining(["content-length", "content-type"]),
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it.each([0, -1, 1.5, 1_048_577, NaN])(
+    "refuses guest size %s before signing",
+    async (guestContentLength) => {
+      const result = await service.getIotUploadUrl("94d8b584-2d27-46fa-aa6c-8908ce13d521", {
+        guestContentLength,
+      });
+      assertFailure(result);
+      expect(result.error.code).toBe("GUEST_UPLOAD_SIZE_INVALID");
+    },
+  );
 
   describe("getIotUploadUrl", () => {
     it("returns a presigned upload URL with key and expiry", async () => {

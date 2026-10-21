@@ -4,6 +4,8 @@ import { grantRoleCan, orgRoleCan } from "@repo/auth/access";
 import type { ResourceAction } from "@repo/auth/access";
 import {
   and,
+  not,
+  sql,
   calibrationDefinitions,
   eq,
   experimentDevices,
@@ -21,6 +23,9 @@ import type { DatabaseInstance, DbOrTx } from "@repo/database";
 import type { ResourceType } from "@repo/database";
 
 import { mayTransferOutOfOrganization } from "../sharing/core/transfer-authority";
+import { guestCondition } from "../users/core/repositories/guest-query";
+import { GUEST_RESOURCE_PORT } from "./core/ports/guest-resource.port";
+import type { GuestResourcePort } from "./core/ports/guest-resource.port";
 
 // Every shareable resource type is org-scoped and resolvable to its owning
 // org + visibility here; the total record makes a new type a compile error.
@@ -77,7 +82,10 @@ export interface ResourceOwnership {
  */
 @Injectable()
 export class AuthorizationService {
-  constructor(@Inject("DATABASE") private readonly db: DatabaseInstance) {}
+  constructor(
+    @Inject("DATABASE") private readonly db: DatabaseInstance,
+    @Inject(GUEST_RESOURCE_PORT) private readonly guestResources: GuestResourcePort,
+  ) {}
 
   /**
    * `executor` lets a caller re-ask this question **inside its own transaction**,
@@ -91,10 +99,25 @@ export class AuthorizationService {
     req: AccessRequest,
     executor: DbOrTx = this.db,
   ): Promise<AccessDecision> {
-    // 1. Resolve the resource's owning org + visibility.
-    const ownership = await this.loadOwnership(req.resourceType, req.resourceId, executor);
-    if (!ownership) {
-      return { allow: false, reason: "not-found", organizationId: null };
+    const ownership = await this.loadOwnership(req.resourceType, req.resourceId, executor, userId);
+    if (!ownership) return { allow: false, reason: "not-found", organizationId: null };
+    if (ownership.isGuest) {
+      const publicKinds = ["experiment", "macro", "protocol", "workbook"] as const;
+      const kind = publicKinds.find((value) => value === req.resourceType);
+      if (!kind) return { allow: false, reason: "forbidden", organizationId: null };
+      const resource = await this.guestResources.findOwnership(kind, req.resourceId, executor);
+      const allow = Boolean(
+        resource?.visibility === "public" &&
+          (req.action === "read" ||
+            (req.resourceType === "experiment" &&
+              req.action === "contribute" &&
+              resource.organizationType === "demo")),
+      );
+      return {
+        allow,
+        reason: allow ? "public" : "forbidden",
+        organizationId: resource?.organizationId ?? null,
+      };
     }
     const organizationId = ownership.organizationId;
 
@@ -133,6 +156,7 @@ export class AuthorizationService {
           eq(resourceGrants.resourceId, req.resourceId),
           eq(resourceGrants.granteeType, "user"),
           eq(resourceGrants.granteeId, userId),
+          not(guestCondition(this.db, userId)),
         ),
       );
     for (const g of userGrants) {
@@ -245,6 +269,7 @@ export class AuthorizationService {
           eq(resourceGrants.resourceId, resourceId),
           eq(resourceGrants.granteeType, "user"),
           eq(resourceGrants.granteeId, userId),
+          not(guestCondition(this.db, userId)),
         ),
       )
       .limit(1);
@@ -297,8 +322,12 @@ export class AuthorizationService {
   }
 
   /** Public accessor for a resource's owning org + visibility (drives sharing UI). */
-  getOwnership(resourceType: ResourceType, resourceId: string): Promise<ResourceOwnership | null> {
-    return this.loadOwnership(resourceType, resourceId);
+  async getOwnership(
+    resourceType: ResourceType,
+    resourceId: string,
+  ): Promise<ResourceOwnership | null> {
+    const row = await this.loadOwnership(resourceType, resourceId);
+    return row ? { organizationId: row.organizationId, visibility: row.visibility } : null;
   }
 
   /** Load owning org + visibility for a resource. Returns null when not found. */
@@ -306,10 +335,15 @@ export class AuthorizationService {
     resourceType: ResourceType,
     resourceId: string,
     executor: DbOrTx = this.db,
-  ): Promise<ResourceOwnership | null> {
+    userId?: string,
+  ): Promise<(ResourceOwnership & { isGuest: boolean }) | null> {
     const table = OWNERSHIP_TABLES[resourceType];
     const rows = await executor
-      .select({ organizationId: table.organizationId, visibility: table.visibility })
+      .select({
+        organizationId: table.organizationId,
+        visibility: table.visibility,
+        isGuest: userId ? guestCondition(executor, userId) : sql<boolean>`false`,
+      })
       .from(table)
       .where(eq(table.id, resourceId))
       .limit(1);
