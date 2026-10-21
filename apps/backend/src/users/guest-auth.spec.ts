@@ -356,15 +356,18 @@ describe("anonymous sessions on the production auth boundary", () => {
     const cookie = [visitor.cookie, cookies(cached)].filter(Boolean).join("; ");
     expect(cookie).toContain("session_data=");
     await db.delete(users).where(eq(users.id, visitor.id));
-    for (const response of [
-      await post("/update-user", { name: "Must not renew" }, cookie),
-      await auth.handler(new Request(`${base}/get-session`, { headers: { cookie } })),
-    ]) {
-      expect(response.status).toBe(401);
-      expect(
-        response.headers.getSetCookie().filter((value) => /session_data=[^;]/.test(value)),
-      ).toEqual([]);
-    }
+    const rename = await post("/update-user", { name: "Must not renew" }, cookie);
+    expect(rename.status).toBe(401);
+    expect(
+      rename.headers.getSetCookie().filter((value) => /session_data=[^;]/.test(value)),
+    ).toEqual([]);
+    const session = await auth.handler(new Request(`${base}/get-session`, { headers: { cookie } }));
+    expect(session.status).toBe(200);
+    expect(await session.json()).toBeNull();
+    expect(session.headers.getSetCookie()).toEqual(
+      expect.arrayContaining([expect.stringMatching(/session_data=;.*Max-Age=0/)]),
+    );
+    await expect(auth.api.getSession({ headers: new Headers({ cookie }) })).resolves.toBeNull();
     expect(await db.select().from(sessions).where(eq(sessions.userId, visitor.id))).toHaveLength(0);
   });
 
