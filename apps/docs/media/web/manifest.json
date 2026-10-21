@@ -522,6 +522,42 @@
       "sha256": "1a3a57cad092f005ce644c54095b664d34fbc3bba97854fd1ed8d3ba1d8525ed",
       "disposition": "published",
       "scope": "A synthetic guest reads the Demo directory, organization, experiment and read-only design"
+    },
+    {
+      "path": "/img/guide/web/simulated-multispeq-web.webm",
+      "kind": "recording",
+      "sha256": "c3528755460aff7df6f43a102f6d628f218bbe00c4128fde78ec65dae2646524",
+      "bytes": 448373,
+      "disposition": "published",
+      "recapturedOn": "2026-10-21",
+      "scope": "Simulated MultispeQ connection, seeded protocol and macro execution with marked results.",
+      "slug": "simulated-multispeq-web",
+      "frame": "desktop",
+      "dimensions": "1920x1200"
+    },
+    {
+      "path": "/img/guide/web/simulated-ambit-web.webm",
+      "kind": "recording",
+      "sha256": "45b963a06c019dd906253285b78bc0d5d03bb0acd3d8dc3c6b76e2ef3057ed9d",
+      "bytes": 464951,
+      "disposition": "published",
+      "recapturedOn": "2026-10-21",
+      "scope": "Simulated Ambit connection, seeded protocol and macro execution with marked results.",
+      "slug": "simulated-ambit-web",
+      "frame": "desktop",
+      "dimensions": "1920x1200"
+    },
+    {
+      "path": "/img/guide/web/simulated-minipar-web.webm",
+      "kind": "recording",
+      "sha256": "68fa6cb00cdf9f3e9b307fe588fdd4c1546dbe055876504df8636793208c2a18",
+      "bytes": 498839,
+      "disposition": "published",
+      "recapturedOn": "2026-10-21",
+      "scope": "Simulated MiniPAR connection, seeded protocol and macro execution with marked results.",
+      "slug": "simulated-minipar-web",
+      "frame": "desktop",
+      "dimensions": "1920x1200"
     }
   ],
   "unmetCaptures": [
