@@ -194,6 +194,11 @@ describe("guest authorization HTTP boundary", () => {
     expect(z.object({ message: z.string() }).parse(limited.body).message).toMatch(
       /Try again in \d+ seconds/,
     );
+    expect(
+      z
+        .object({ data: z.object({ retryAfterSeconds: z.number().int().positive().max(3600) }) })
+        .parse(limited.body).data.retryAfterSeconds,
+    ).toBeGreaterThan(0);
     expect(signer).toHaveBeenCalledTimes(60);
   }, 30_000);
 
@@ -243,7 +248,13 @@ describe("guest authorization HTTP boundary", () => {
       ).status,
     ).toBe(400);
     for (let i = 0; i < 60; i++) expect((await run(macro.id)).status).toBe(200);
-    expect((await run(macro.id)).status).toBe(429);
+    const limited = await run(macro.id);
+    expect(limited.status).toBe(429);
+    expect(
+      z
+        .object({ data: z.object({ retryAfterSeconds: z.number().int().positive().max(3600) }) })
+        .parse(limited.body).data.retryAfterSeconds,
+    ).toBeGreaterThan(0);
     expect(invoke).toHaveBeenCalledTimes(60);
   }, 30_000);
 

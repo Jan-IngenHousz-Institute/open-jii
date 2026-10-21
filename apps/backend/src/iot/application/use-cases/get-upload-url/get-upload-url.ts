@@ -74,6 +74,7 @@ export class GetIotUploadUrlUseCase {
             `Guest limit reached. Try again in ${quota.retryAfterSeconds} seconds`,
             "GUEST_RATE_LIMITED",
             429,
+            { retryAfterSeconds: quota.retryAfterSeconds },
           ),
         );
       return this.awsPort.getIotUploadUrl(experimentResult.value.id, {

@@ -1,6 +1,6 @@
 import { HttpException, Injectable } from "@nestjs/common";
 import type { CanActivate, ExecutionContext } from "@nestjs/common";
-import type { Request, Response } from "express";
+import type { Request } from "express";
 
 import { AuthorizeGuestUseCase } from "./application/use-cases/authorize-guest/authorize-guest";
 
@@ -28,17 +28,6 @@ export class GuestGuard implements CanActivate {
     });
     if (result.isFailure()) {
       const error = result.error;
-      if (
-        error.statusCode === 429 &&
-        typeof error.details === "object" &&
-        error.details !== null &&
-        "retryAfterSeconds" in error.details
-      ) {
-        context
-          .switchToHttp()
-          .getResponse<Response>()
-          .setHeader("Retry-After", String(error.details.retryAfterSeconds));
-      }
       throw new HttpException({ message: error.message, code: error.code }, error.statusCode);
     }
     if (result.value.guest && request.session?.user) request.session.user.isAnonymous = true;
