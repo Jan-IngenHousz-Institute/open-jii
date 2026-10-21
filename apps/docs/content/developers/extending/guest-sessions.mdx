@@ -26,6 +26,13 @@ allow editing the experiment, workbook, protocol, macro or organization. Demo
 experiments do not offer Request to join. An ordinary public experiment keeps
 its existing researcher join flow.
 
+On Android, a signed-in researcher visiting a Demo experiment also sees no join
+action. The example below opens a synthetic Demo experiment as a non-member.
+
+<DocsVideo>
+  <video controls preload="metadata" src="/img/mobile/demo-experiment-no-join-android.webm" />
+</DocsVideo>
+
 The reviewed route lists are checked into the backend authorization domain. A
 new route fails the inventory test until it has a classification, and an unknown
 route is refused at runtime. The auth plugin separately permits session reads,
