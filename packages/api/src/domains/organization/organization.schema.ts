@@ -146,7 +146,12 @@ export const zMyOrganizationList = z.array(zMyOrganization);
 const zOrganizationPerson = z.object({
   userId: z.string().uuid(),
   isGuest: z.boolean().default(false),
-  isFormerGuest: z.boolean().default(false),
+  isFormerGuest: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal.",
+    ),
   firstName: z.string(),
   lastName: z.string(),
   // Stored value returned as-is; format-validating on output can 500 the list.
