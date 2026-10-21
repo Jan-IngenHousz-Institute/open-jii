@@ -75,6 +75,7 @@ import {
   SoleOwnedOrganization,
   PendingOrganizationInvitation,
 } from "../models/user.model";
+import type { UserPresencePort } from "../ports/user-presence.port";
 import { userMetadataFieldsSql } from "./user-display-name";
 
 /**
@@ -88,11 +89,23 @@ export const SOLE_ORGANIZATION_OWNER_MESSAGE =
   "Cannot delete account - you are the only owner of one or more organizations. Please make someone else an owner, or delete those organizations, before deleting your account.";
 
 @Injectable()
-export class UserRepository {
+export class UserRepository implements UserPresencePort {
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
   ) {}
+
+  async findExistingIds(userIds: string[]): Promise<string[]> {
+    const found: string[] = [];
+    for (let offset = 0; offset < userIds.length; offset += 1000) {
+      const rows = await this.database
+        .select({ id: users.id })
+        .from(users)
+        .where(inArray(users.id, userIds.slice(offset, offset + 1000)));
+      found.push(...rows.map(({ id }) => id));
+    }
+    return found;
+  }
 
   async create(createUserDto: CreateUserDto): Promise<Result<UserDto[]>> {
     return tryCatch(() => this.database.insert(users).values(createUserDto).returning());

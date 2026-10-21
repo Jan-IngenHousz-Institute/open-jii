@@ -14,6 +14,7 @@ import { FlattenedFields } from "../../../common/modules/databricks/services/que
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError, tryCatch } from "../../../common/utils/fp-utils";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
+import { MeasuredContributorAttributionService } from "../../application/services/measured-contributor-attribution.service";
 import {
   MACRO_TABLE_CONFIG,
   STATIC_TABLE_CONFIG,
@@ -76,6 +77,8 @@ const ROW_ID = "id";
 
 /** What a read of one table flattens and hides, and the names its base columns hold. */
 interface TableShape {
+  anonymizeContributors?: boolean;
+  hideGuestMarker?: boolean;
   metadata: ExperimentTableMetadata;
   variants: { columnName: VariantColumn; schema: string; suffix: string }[];
   exceptColumns: string[];
@@ -99,6 +102,7 @@ export class ExperimentDataRepository {
     @Inject(CACHE_PORT) private readonly cachePort: CachePort,
     @Inject(SCHEMA_CACHE_PORT) private readonly schemaCache: CachePort,
     private readonly contributorAnonymizer: ContributorAnonymizerService,
+    private readonly measuredContributors: MeasuredContributorAttributionService,
   ) {}
 
   /**
@@ -158,7 +162,14 @@ export class ExperimentDataRepository {
       return shapeResult;
     }
 
-    const shape = shapeResult.value;
+    const shape = {
+      ...shapeResult.value,
+      anonymizeContributors: experiment.anonymizeContributors,
+      hideGuestMarker:
+        (columns?.includes("contributor") === true && !columns.includes("is_guest")) ||
+        (aggregation?.groupBy?.some(({ column }) => column === "contributor") === true &&
+          !aggregation.groupBy.some(({ column }) => column === "is_guest")),
+    };
     const hasAggregation =
       (aggregation?.groupBy?.length ?? 0) > 0 || (aggregation?.functions?.length ?? 0) > 0;
     const hasFilters = (filters?.length ?? 0) > 0;
@@ -249,7 +260,7 @@ export class ExperimentDataRepository {
 
         const totalRows = Number(countResult.value.rows[0]?.[0] ?? 0);
         return success([
-          this.tablePage({
+          await this.tablePage({
             tableName,
             experiment,
             shape,
@@ -310,7 +321,7 @@ export class ExperimentDataRepository {
     this.logRead(read, pageResult.value);
 
     return success([
-      this.tablePage({
+      await this.tablePage({
         tableName,
         experiment,
         shape,
@@ -340,15 +351,22 @@ export class ExperimentDataRepository {
       return shapeResult;
     }
 
-    const queryResult = this.buildQuery(experimentId, shapeResult.value, {
-      columns: [column],
-      distinct: true,
-      orderBy: column,
-      orderDirection: "ASC",
-      // +1 so we can detect truncation: if the SQL returned exactly limit+1
-      // rows, the column has more values than we returned.
-      limit: limit + 1,
-    });
+    const queryResult = this.buildQuery(
+      experimentId,
+      {
+        ...shapeResult.value,
+        anonymizeContributors: experiment.anonymizeContributors,
+      },
+      {
+        columns: [column],
+        distinct: true,
+        orderBy: column,
+        orderDirection: "ASC",
+        // +1 so we can detect truncation: if the SQL returned exactly limit+1
+        // rows, the column has more values than we returned.
+        limit: limit + 1,
+      },
+    );
     if (queryResult.isFailure()) {
       return queryResult;
     }
@@ -366,8 +384,14 @@ export class ExperimentDataRepository {
     // SchemaData.rows is `(string | null)[][]`; single-column response means
     // each row is `[value]`. Drop nulls/blanks so the picker doesn't surface
     // a `(null)` entry.
-    const raw = dataResult.value.rows
-      .map((row) => row[0])
+    const distinctRows = dataResult.value.rows.map((row) =>
+      Object.fromEntries(dataResult.value.columns.map(({ name }, index) => [name, row[index]])),
+    );
+    const attributed = experiment.anonymizeContributors
+      ? distinctRows
+      : await this.measuredContributors.enrichRows(distinctRows, dataResult.value.columns);
+    const raw = attributed
+      .map((row) => row[dataResult.value.columns[0].name])
       .filter((v): v is string => v != null && v !== "");
     const trimmed = raw.slice(0, limit);
 
@@ -672,17 +696,31 @@ export class ExperimentDataRepository {
       offset,
     } = options;
     const { metadata, variants, exceptColumns, reservedColumns } = shape;
+    const guestSource =
+      !shape.anonymizeContributors &&
+      (metadata.identifier === "raw_data" || metadata.tableType === "macro");
+    const projectedColumns =
+      guestSource && columns?.includes("contributor") && !columns.includes("is_guest")
+        ? [...columns, "is_guest"]
+        : columns;
+    const grouped = aggregation?.groupBy;
+    const effectiveAggregation =
+      guestSource &&
+      grouped?.some(({ column }) => column === "contributor") &&
+      !grouped.some(({ column }) => column === "is_guest")
+        ? { ...aggregation, groupBy: [...grouped, { column: "is_guest" }] }
+        : aggregation;
 
     return this.databricksPort.buildExperimentQuery({
       tableName: metadata.identifier,
       tableType: metadata.tableType,
       experimentId,
-      columns,
+      columns: projectedColumns,
       variants: variants.length > 0 ? variants : undefined,
       reservedColumns: reservedColumns.length > 0 ? reservedColumns : undefined,
       exceptColumns: exceptColumns.length > 0 ? exceptColumns : undefined,
       filters,
-      aggregation,
+      aggregation: effectiveAggregation,
       distinct,
       orderBy,
       orderDirection,
@@ -775,7 +813,7 @@ export class ExperimentDataRepository {
         name: tableName,
         catalog_name: experiment.name,
         schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
-        data: this.transformSchemaData(data, experiment, shape),
+        data: await this.transformSchemaData(data, experiment, shape),
         page: 1,
         pageSize: rows.length,
         totalRows: data.totalRows,
@@ -905,7 +943,7 @@ export class ExperimentDataRepository {
     );
   }
 
-  private tablePage(params: {
+  private async tablePage(params: {
     tableName: string;
     experiment: ExperimentDto;
     shape: TableShape;
@@ -913,13 +951,13 @@ export class ExperimentDataRepository {
     pageSize: number;
     rowCount: number;
     data: SchemaData;
-  }): TableDataDto {
+  }): Promise<TableDataDto> {
     const { tableName, experiment, shape, page, pageSize, rowCount, data } = params;
     return {
       name: tableName,
       catalog_name: experiment.name,
       schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
-      data: this.transformSchemaData(data, experiment, shape),
+      data: await this.transformSchemaData(data, experiment, shape),
       page,
       pageSize,
       totalRows: rowCount,
@@ -969,12 +1007,14 @@ export class ExperimentDataRepository {
     });
   }
 
-  private transformSchemaData(
+  private async transformSchemaData(
     schemaData: SchemaData,
     experiment: ExperimentDto,
     shape: TableShape,
-  ): SchemaDataDto {
-    const columns = this.describeColumns(schemaData.columns, shape);
+  ): Promise<SchemaDataDto> {
+    const columns = this.describeColumns(schemaData.columns, shape).filter(
+      ({ name }) => !shape.hideGuestMarker || name !== "is_guest",
+    );
 
     const rows = schemaData.rows.map((row) => {
       const dataRow: Record<string, string | null> = {};
@@ -983,9 +1023,18 @@ export class ExperimentDataRepository {
       });
       return dataRow;
     });
+    const attributed = experiment.anonymizeContributors
+      ? rows
+      : await this.measuredContributors.enrichRows(rows, schemaData.columns);
+    const safeRows = this.contributorAnonymizer.anonymizeRows(
+      attributed,
+      schemaData.columns,
+      experiment,
+    );
+    if (shape.hideGuestMarker) for (const row of safeRows) delete row.is_guest;
     return {
       columns,
-      rows: this.contributorAnonymizer.anonymizeRows(rows, schemaData.columns, experiment),
+      rows: safeRows,
       totalRows: schemaData.totalRows,
       truncated: schemaData.truncated,
     };

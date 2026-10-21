@@ -24,6 +24,7 @@ import { WorkbookModule } from "../workbooks/workbook.module";
 import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 import { ExportRunReconcilerService } from "./application/services/export-run-reconciler.service";
+import { MeasuredContributorAttributionService } from "./application/services/measured-contributor-attribution.service";
 import { MultipartUploadService } from "./application/services/multipart-upload.service";
 import { UploadRunReconcilerService } from "./application/services/upload-run-reconciler.service";
 import { AttachWorkbookUseCase } from "./application/use-cases/attach-workbook/attach-workbook";
@@ -222,6 +223,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     EmbargoProcessorService,
     ExportRunReconcilerService,
     ContributorAnonymizerService,
+    MeasuredContributorAttributionService,
     MultipartUploadService,
     UploadRunReconcilerService,
 
