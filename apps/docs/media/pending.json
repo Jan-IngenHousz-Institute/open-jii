@@ -4,11 +4,5 @@
     "staged": "apps/docs/.capture/web/platform-admin-roster.webm",
     "ticket": "OJD-2217",
     "date": "2026-10-29"
-  },
-  {
-    "path": "/img/mobile/demo-experiment-no-join-android.webm",
-    "staged": "apps/docs/.capture/mobile/demo-experiment-no-join-android.webm",
-    "ticket": "OJD-2231",
-    "date": "2026-10-21"
   }
 ]
