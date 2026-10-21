@@ -4,6 +4,8 @@ import type { AuthHookContext } from "@thallesp/nestjs-better-auth";
 import { APIError, getSessionFromCtx } from "better-auth/api";
 import z from "zod";
 
+import { isGuestEmail } from "@repo/api/shared/guest";
+
 import { AcceptPendingInvitationsUseCase } from "../../application/use-cases/accept-pending-invitations/accept-pending-invitations";
 import { NotifyPendingOrganizationInvitationsUseCase } from "../../application/use-cases/notify-pending-organization-invitations/notify-pending-organization-invitations";
 import { UserRepository } from "../../core/repositories/user.repository";
@@ -21,15 +23,29 @@ export class UserAuthHook {
 
   @BeforeHook("/sign-in/email-otp")
   async handleEmailOtpSignInBefore(ctx: AuthHookContext) {
+    const body = ctx.body as { email?: string };
+    if (typeof body.email === "string" && isGuestEmail(body.email)) {
+      throw new APIError("FORBIDDEN", { message: "This address cannot be used" });
+    }
     const session = await this.getSessionFromCtx(ctx);
     if (!session?.user) return;
 
-    const currentUser = session.user as { id: string; email?: string; registered?: boolean };
+    const currentUser = session.user as {
+      id: string;
+      email?: string;
+      registered?: boolean;
+      isAnonymous?: boolean;
+    };
+    if (currentUser.isAnonymous) {
+      throw new APIError("FORBIDDEN", {
+        code: "GUEST_ACTION_FORBIDDEN",
+        message: "This action is not available to guests",
+      });
+    }
 
     const hasValidEmail = z.string().email().safeParse(currentUser.email).success;
     if (currentUser.registered && hasValidEmail) return;
 
-    const body = ctx.body as { email?: string };
     const { email } = body;
     if (!email) return;
 
@@ -96,7 +112,7 @@ export class UserAuthHook {
       const session = ctx.context.newSession;
       const user = session?.user;
 
-      if (!user?.id || !user.email) return;
+      if (!user?.id || !user.email || user.isAnonymous) return;
 
       // Deliberately no `registered` short-circuit: a first sign-in is the only
       // attempt such a check would ever allow, so any transient failure would be
@@ -131,7 +147,7 @@ export class UserAuthHook {
   private async notifyPendingOrganizationInvitations(ctx: AuthHookContext) {
     try {
       const user = ctx.context.newSession?.user;
-      if (!user?.id || !user.email) return;
+      if (!user?.id || !user.email || user.isAnonymous) return;
 
       await this.notifyPendingInvitationsUseCase.execute(user.id, user.email);
     } catch (error) {

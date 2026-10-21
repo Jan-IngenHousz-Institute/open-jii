@@ -1,3 +1,4 @@
+import { AuthService } from "@thallesp/nestjs-better-auth";
 import { betterAuth } from "better-auth";
 import { z } from "zod";
 
@@ -19,13 +20,17 @@ import { TestHarness } from "../test/test-harness";
 
 const enabled = vi.fn().mockResolvedValue(true);
 const { auth: productionAuth } = await vi.importActual<typeof AuthServer>("@repo/auth/server");
-const auth = betterAuth({
-  ...productionAuth.options,
-  plugins: productionAuth.options.plugins.map((plugin) =>
-    plugin.id === "anonymous" ? openJiiGuest({ isDemoEnabled: enabled }) : plugin,
-  ),
-});
-const base = `${auth.options.baseURL}/api/v1/auth`;
+function createAuth(hooks: typeof productionAuth.options.hooks) {
+  return betterAuth({
+    ...productionAuth.options,
+    hooks,
+    plugins: productionAuth.options.plugins.map((plugin) =>
+      plugin.id === "anonymous" ? openJiiGuest({ isDemoEnabled: enabled }) : plugin,
+    ),
+  });
+}
+let auth: ReturnType<typeof createAuth>;
+const base = `${productionAuth.options.baseURL}/api/v1/auth`;
 
 function post(path: string, body: unknown = {}, cookie = "") {
   return auth.handler(
@@ -59,7 +64,13 @@ async function guest(name?: unknown) {
 
 describe("anonymous sessions on the production auth boundary", () => {
   const app = TestHarness.App;
-  beforeAll(() => app.setup());
+  beforeAll(async () => {
+    await app.setup();
+    // Nest installs its discovered @BeforeHook handlers before plugin hooks.
+    auth = createAuth(
+      app.module.get<AuthService<typeof productionAuth>>(AuthService).instance.options.hooks,
+    );
+  });
   beforeEach(async () => {
     await app.beforeEach();
     enabled.mockResolvedValue(true);
@@ -91,6 +102,10 @@ describe("anonymous sessions on the production auth boundary", () => {
     const sessionBody: unknown = await session.json();
     expect(sessionBody).toMatchObject({ user: { id: user.id, isAnonymous: true } });
     expect(sessionBody).not.toHaveProperty("user.email");
+    const internalSession = await auth.api.getSession({
+      headers: new Headers({ cookie: user.cookie }),
+    });
+    expect(internalSession?.user.email).toMatch(/@guest\.openjii\.invalid$/);
   });
 
   it("uses Guest for an omitted name and refuses invalid names before creating rows", async () => {
@@ -213,7 +228,16 @@ describe("anonymous sessions on the production auth boundary", () => {
 
   it("allows only a validated name change, not image, email, role, keys or linking", async () => {
     const visitor = await guest();
-    expect((await post("/update-user", { name: "Renamed" }, visitor.cookie)).status).toBe(200);
+    for (const [input, expected] of [
+      ["  Ada  ", "Ada"],
+      ["   ", "Guest"],
+      ["", "Guest"],
+      ["Renamed", "Renamed"],
+    ]) {
+      expect((await post("/update-user", { name: input }, visitor.cookie)).status).toBe(200);
+      const [renamed] = await db.select().from(users).where(eq(users.id, visitor.id));
+      expect(renamed.name).toBe(expected);
+    }
     for (const body of [
       { name: "x", image: "https://example.test/a.png" },
       { email: "real@example.test" },
@@ -231,16 +255,52 @@ describe("anonymous sessions on the production auth boundary", () => {
     });
   });
 
+  it("refuses email repair through the Nest-wired before hook before any user change", async () => {
+    const visitor = await guest();
+    const [before] = await db.select().from(users).where(eq(users.id, visitor.id));
+    const victimEmail = `unclaimed-${crypto.randomUUID()}@example.test`;
+    expect(
+      (await post("/sign-in/email-otp", { email: victimEmail, otp: "invalid" }, visitor.cookie))
+        .status,
+    ).toBe(403);
+    expect(auth.options.hooks).toBe(
+      app.module.get<AuthService<typeof productionAuth>>(AuthService).instance.options.hooks,
+    );
+    expect(auth.options.hooks).toHaveProperty("before");
+    expect(await db.select().from(users).where(eq(users.id, visitor.id))).toEqual([before]);
+    const researcherEmail = `researcher-${crypto.randomUUID()}@example.test`;
+    const otp = await auth.api.createVerificationOTP({
+      body: { email: researcherEmail, type: "sign-in" },
+    });
+    const signedIn = await post("/sign-in/email-otp", { email: researcherEmail, otp });
+    const [researcher] = await db.select().from(users).where(eq(users.email, researcherEmail));
+    expect(
+      (
+        await post(
+          "/sign-in/email-otp",
+          { email: "reserved@guest.openjii.invalid", otp: "invalid" },
+          cookies(signedIn),
+        )
+      ).status,
+    ).toBe(403);
+    expect(await db.select().from(users).where(eq(users.id, researcher.id))).toEqual([researcher]);
+    const replacement = `verified-${crypto.randomUUID()}@example.test`;
+    const replacementOtp = await auth.api.createVerificationOTP({
+      body: { email: replacement, type: "sign-in" },
+    });
+    const repaired = await post(
+      "/sign-in/email-otp",
+      { email: replacement, otp: replacementOtp },
+      cookies(signedIn),
+    );
+    expect(repaired.status).toBe(200);
+    const repairedBody: unknown = await repaired.json();
+    expect(repairedBody).toMatchObject({ user: { id: researcher.id, email: replacement } });
+  });
+
   it("never deletes a guest through plugin deletion or any sign-in/callback matcher", async () => {
     await app.createOrganization(undefined, { type: "demo", visibility: "public" });
     const visitor = await guest();
-    const existingEmail = `existing-${crypto.randomUUID()}@example.test`;
-    const otp = await auth.api.createVerificationOTP({
-      body: { email: existingEmail, type: "sign-in" },
-    });
-    expect(
-      (await post("/sign-in/email-otp", { email: existingEmail, otp }, visitor.cookie)).status,
-    ).toBe(403);
     const before = {
       users: await db.select().from(users).where(eq(users.id, visitor.id)),
       sessions: await db.select().from(sessions).where(eq(sessions.userId, visitor.id)),
@@ -249,6 +309,13 @@ describe("anonymous sessions on the production auth boundary", () => {
         .from(organizationMembers)
         .where(eq(organizationMembers.userId, visitor.id)),
     };
+    const existingEmail = `existing-${crypto.randomUUID()}@example.test`;
+    const otp = await auth.api.createVerificationOTP({
+      body: { email: existingEmail, type: "sign-in" },
+    });
+    expect(
+      (await post("/sign-in/email-otp", { email: existingEmail, otp }, visitor.cookie)).status,
+    ).toBe(403);
     const paths = [
       "/delete-anonymous-user",
       "/sign-in/email-otp",

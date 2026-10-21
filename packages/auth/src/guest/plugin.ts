@@ -48,7 +48,7 @@ export function openJiiGuest({
             if (typeof body.email === "string" && isGuestEmail(body.email)) {
               throw new APIError("FORBIDDEN", { message: "This address cannot be used" });
             }
-            const session = await getSessionFromCtx(ctx, { disableCookieCache: true });
+            const session = await getSessionFromCtx(ctx);
             if (ctx.path === "/sign-in/anonymous") {
               if (session?.user.isAnonymous) {
                 // Keep the installed plugin's re-entry response; it creates no second user.
@@ -79,7 +79,7 @@ export function openJiiGuest({
               if (Object.keys(body).length !== 1 || !("name" in body)) {
                 throw new APIError("FORBIDDEN", { message: "Guests can only change their name" });
               }
-              ctx.body = { name: guestName(body.name) };
+              return { context: { body: { name: guestName(body.name) } } };
             }
           }),
         },
@@ -89,6 +89,7 @@ export function openJiiGuest({
         {
           matcher: () => true,
           handler: createAuthMiddleware((ctx) => {
+            if (!ctx.request) return Promise.resolve();
             const returned: unknown = ctx.context.returned;
             if (!returned || typeof returned !== "object" || !("user" in returned))
               return Promise.resolve();
