@@ -1,0 +1,23 @@
+{
+  "device_name": "Simulated Ambit",
+  "device_id": "simulated:ambit",
+  "device_version": "placeholder-v1",
+  "device_firmware": "synthetic",
+  "device_battery": 100,
+  "sample": [
+    {
+      "protocol_id": "placeholder-v1",
+      "set": [
+        {
+          "env": [
+            {
+              "temp_c": 23.1
+            }
+          ],
+          "s_630": [159, 164, 163, 162, 161, 160, 163, 164, 162],
+          "r_630": [4605, 4604, 4603, 4605, 4604, 4603, 4605, 4604, 4603]
+        }
+      ]
+    }
+  ]
+}

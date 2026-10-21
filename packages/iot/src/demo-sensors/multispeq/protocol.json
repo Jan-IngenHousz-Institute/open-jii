@@ -1,0 +1,18 @@
+[
+  {
+    "v_arrays": [],
+    "set_repeats": 1,
+    "_protocol_set_": [
+      {
+        "label": "demo_phi2",
+        "pulses": [3, 3],
+        "pulse_distance": [1000],
+        "pulse_length": [[20]],
+        "pulsed_lights": [[3]],
+        "pulsed_lights_brightness": [[100]],
+        "detectors": [[1]],
+        "environmental": [["light_intensity"], ["temperature_humidity"]]
+      }
+    ]
+  }
+]
