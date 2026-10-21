@@ -3,6 +3,7 @@ import { createTransport } from "nodemailer";
 import Mail from "nodemailer/lib/mailer";
 
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
+import { isGuestEmail } from "@repo/api/shared/guest";
 import { renderAccessGrantedNotification } from "@repo/transactional/render/access-granted-notification";
 import { renderApiKeyCreatedNotification } from "@repo/transactional/render/api-key-created-notification";
 import { renderExperimentMadePublicNotification } from "@repo/transactional/render/experiment-made-public-notification";
@@ -224,6 +225,7 @@ export class NotificationsService {
     html: string;
     text: string;
   }): Promise<void> {
+    if (isGuestEmail(params.to)) return;
     const transport = this.createMailTransport(this.emailConfigService.getServer());
 
     const result = await transport.sendMail({
@@ -811,6 +813,7 @@ export class NotificationsService {
   ) {
     return await tryCatch(
       async () => {
+        if (isGuestEmail(email)) return;
         this.logger.log({
           msg: "Sending transfer request confirmation email",
           operation: "sendTransferRequestConfirmation",
@@ -879,6 +882,7 @@ export class NotificationsService {
   async sendProjectTransferComplete(email: string, experimentId: string, experimentName: string) {
     return await tryCatch(
       async () => {
+        if (isGuestEmail(email)) return;
         this.logger.log({
           msg: "Sending project transfer complete email",
           operation: "sendProjectTransferComplete",
@@ -953,6 +957,7 @@ export class NotificationsService {
   ) {
     return await tryCatch(
       async () => {
+        if (isGuestEmail(adminEmail)) return;
         this.logger.log({
           msg: "Sending join request submitted notification",
           operation: "sendJoinRequestSubmittedNotification",
@@ -1026,6 +1031,7 @@ export class NotificationsService {
   ) {
     return await tryCatch(
       async () => {
+        if (isGuestEmail(requesterEmail)) return;
         this.logger.log({
           msg: "Sending join request rejected notification",
           operation: "sendJoinRequestRejectedNotification",

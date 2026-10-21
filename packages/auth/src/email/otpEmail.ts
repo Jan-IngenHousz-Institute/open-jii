@@ -2,6 +2,8 @@ import { createTransport } from "nodemailer";
 
 import { renderOtpEmail } from "@repo/transactional/render/otp-email";
 
+import { isGuestRecipient } from "../guest/recipient";
+
 interface SendOtpEmailParams {
   to: string;
   otp: string;
@@ -12,6 +14,7 @@ interface SendOtpEmailParams {
 }
 
 export async function sendOtpEmail(params: SendOtpEmailParams) {
+  if (await isGuestRecipient(params.to)) return;
   const { to, otp, emailServer, emailFrom, senderName, baseUrl } = params;
 
   const url = new URL(baseUrl);

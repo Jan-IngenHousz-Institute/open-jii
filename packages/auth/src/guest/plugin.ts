@@ -2,7 +2,9 @@ import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/a
 import { anonymous } from "better-auth/plugins";
 
 import { isDemoModeEnabled } from "@repo/analytics/server";
-import { GUEST_EMAIL_DOMAIN, isGuestEmail, zGuestName } from "@repo/api/shared/guest";
+import { GUEST_EMAIL_DOMAIN, zGuestName } from "@repo/api/shared/guest";
+
+import { isGuestRecipient } from "./recipient";
 
 export async function demoModeEnabled(): Promise<boolean> {
   return isDemoModeEnabled();
@@ -44,7 +46,7 @@ export function openJiiGuest({
           matcher: () => true,
           handler: createAuthMiddleware(async (ctx) => {
             const body = bodyFields(ctx.body);
-            if (typeof body.email === "string" && isGuestEmail(body.email)) {
+            if (typeof body.email === "string" && (await isGuestRecipient(body.email))) {
               throw new APIError("FORBIDDEN", { message: "This address cannot be used" });
             }
             let session = await getSessionFromCtx(ctx);
