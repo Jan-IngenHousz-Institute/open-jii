@@ -536,6 +536,75 @@ describe("NotificationDispatchService", () => {
     });
   });
 
+  describe("the organization membership email entries", () => {
+    const organization = { type: "organization" as const, id: crypto.randomUUID() };
+
+    let sendRoleChanged: MockInstance<EmailAdapter["sendOrganizationRoleChangedNotification"]>;
+    let sendRemoved: MockInstance<EmailAdapter["sendOrganizationMembershipRemovedNotification"]>;
+
+    beforeEach(() => {
+      const emailAdapter = testApp.module.get(EmailAdapter);
+      sendRoleChanged = vi
+        .spyOn(emailAdapter, "sendOrganizationRoleChangedNotification")
+        .mockResolvedValue(success(undefined));
+      sendRemoved = vi
+        .spyOn(emailAdapter, "sendOrganizationMembershipRemovedNotification")
+        .mockResolvedValue(success(undefined));
+    });
+
+    it.each([
+      ["admin", "an admin of"],
+      ["owner", "an owner of"],
+      ["member", "a member of"],
+      ["member,admin", "an admin of"],
+    ])("words the stored role %s as %s, linking to the organization", async (role, wording) => {
+      const result = await notificationEmail.send("organization_role_changed", {
+        recipientEmail,
+        actorName: "Ada Lovelace",
+        resource: organization,
+        params: { organizationName: "Greenhouse Lab", role },
+      });
+
+      assertSuccess(result);
+      expect(sendRoleChanged).toHaveBeenCalledExactlyOnceWith({
+        organizationId: organization.id,
+        organizationName: "Greenhouse Lab",
+        actor: "Ada Lovelace",
+        role: wording,
+        email: recipientEmail,
+      });
+    });
+
+    it("refuses a role change stored with no resource", async () => {
+      const result = await notificationEmail.send("organization_role_changed", {
+        recipientEmail,
+        actorName: "Ada Lovelace",
+        resource: null,
+        params: { organizationName: "Greenhouse Lab", role: "admin" },
+      });
+
+      assertFailure(result);
+      expect(result.error.message).toContain("no resource to email about");
+      expect(sendRoleChanged).not.toHaveBeenCalled();
+    });
+
+    it("sends a removal with no resource, falling back for a missing actor", async () => {
+      const result = await notificationEmail.send("organization_membership_removed", {
+        recipientEmail,
+        actorName: null,
+        resource: null,
+        params: { organizationName: "Greenhouse Lab" },
+      });
+
+      assertSuccess(result);
+      expect(sendRemoved).toHaveBeenCalledExactlyOnceWith({
+        organizationName: "Greenhouse Lab",
+        actor: "Someone",
+        email: recipientEmail,
+      });
+    });
+  });
+
   it("writes both rows on a replay after a first attempt rolled back", async () => {
     const send = {
       type: "experiment_join_request_received" as const,

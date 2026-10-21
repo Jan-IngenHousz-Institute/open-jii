@@ -5,6 +5,8 @@ import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 
 import { renderAccessGrantedNotification } from "../render/access-granted-notification";
+import { renderOrganizationMembershipRemoved } from "../render/organization-membership-removed";
+import { renderOrganizationRoleChanged } from "../render/organization-role-changed";
 import { renderOtpEmail } from "../render/otp-email";
 import { renderProjectTransferComplete } from "../render/project-transfer-complete";
 import { renderResourceDeletedNotification } from "../render/resource-deleted-notification";
@@ -54,6 +56,28 @@ async function main(): Promise<void> {
       baseUrl,
       resourceKind: "device group",
       resourceName: "North Field Sensors",
+      actor: "Jane Doe",
+    }),
+  );
+
+  write(
+    "organization-role-changed",
+    await renderOrganizationRoleChanged({
+      host,
+      baseUrl,
+      organizationName: "Photosynthesis Lab",
+      organizationUrl: `${baseUrl}/en-US/platform/organizations/123`,
+      actor: "Jane Doe",
+      role: "an admin of",
+    }),
+  );
+
+  write(
+    "organization-membership-removed",
+    await renderOrganizationMembershipRemoved({
+      host,
+      baseUrl,
+      organizationName: "Photosynthesis Lab",
       actor: "Jane Doe",
     }),
   );
