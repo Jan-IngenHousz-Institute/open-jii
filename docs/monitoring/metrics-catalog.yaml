@@ -77,6 +77,9 @@ passes:
   - date: 2026-10-12
     range: [100, 100]
     note: macro results the platform failed, which commit like successes and never reach the backlog
+  - date: 2026-10-12
+    range: [101, 103]
+    note: the serving store's health, whether it answers and how full its memory and disk are
 
 metrics:
   # Ingest path
@@ -508,6 +511,74 @@ metrics:
       publishes 1 per Dependency it reaches and 0 per one it does not. The database is read from AWS,
       never connected to, so a paused one counts as reached and stays paused; DependencyPaused says
       which. The board shows the lowest series, so one service down turns the row red.
+
+  - num: 101
+    id: store-answers
+    name: Serving store answering
+    family: observability
+    area: api
+    source: aws
+    phase: P2
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: OpenJII/ServingStore
+      metric: ClickHouseAsyncMetrics_Uptime
+      stat: Maximum
+      unit: seconds
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { nodata: alert }
+    runbook: docs/runbooks/store-answers.md
+    notes: >-
+      ClickHouse's uptime, which the CloudWatch agent on the store's instance scrapes once a minute
+      from ClickHouse's Prometheus endpoint on port 9363. It stops arriving when ClickHouse stops
+      answering or the agent stops shipping, so the dead-man rule fires on its absence, and a drop
+      to near zero on the chart is a restart.
+
+  - num: 102
+    id: store-memory
+    name: Serving store memory
+    family: observability
+    area: api
+    source: aws
+    phase: P2
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: OpenJII/ServingStore
+      metric: mem_used_percent
+      stat: Maximum
+      unit: percent
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: threshold, max: 85 }
+    runbook: docs/runbooks/store-memory.md
+    notes: >-
+      The instance's memory in use, from the CloudWatch agent. ClickHouse caps itself at 90% of
+      RAM by default and refuses queries past the cap, so 85% warns before queries start failing.
+
+  - num: 103
+    id: store-disk
+    name: Serving store disk
+    family: observability
+    area: api
+    source: aws
+    phase: P2
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: OpenJII/ServingStore
+      metric: disk_used_percent
+      stat: Maximum
+      unit: percent
+      dimensions: { Environment: "${ENVIRONMENT}", path: /var/lib/clickhouse, fstype: ext4 }
+    baseline: { method: threshold, max: 80 }
+    runbook: docs/runbooks/store-disk.md
+    notes: >-
+      How full the store's data volume is, from the CloudWatch agent. Growing the volume is an
+      online change, so 80% leaves time to do it without a window.
 
   - num: 18
     id: backend-4xx-split
