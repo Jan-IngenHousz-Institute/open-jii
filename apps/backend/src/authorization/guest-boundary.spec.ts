@@ -1,3 +1,6 @@
+import { RequestMethod } from "@nestjs/common";
+import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants";
+import { ModulesContainer } from "@nestjs/core";
 import { z } from "zod";
 
 import {
@@ -17,7 +20,7 @@ import { LAMBDA_PORT } from "../macros/core/ports/lambda.port";
 import type { LambdaPort } from "../macros/core/ports/lambda.port";
 import { TestHarness } from "../test/test-harness";
 import { AuthorizationService } from "./authorization.service";
-import { guestRouteInventory } from "./core/models/guest-route.model";
+import { guestRouteInventory, guestNativeRouteInventory } from "./core/models/guest-route.model";
 import { DEMO_MODE_PORT } from "./core/ports/demo-mode.port";
 import type { DemoModePort } from "./core/ports/demo-mode.port";
 
@@ -83,6 +86,39 @@ describe("guest authorization HTTP boundary", () => {
   afterEach(() => app.afterEach());
   afterAll(() => app.teardown());
 
+  it("classifies every registered native controller route outside the oRPC inventory", () => {
+    const contractRoutes = new Set(
+      guestRouteInventory.map(({ method, path }) => `${method} ${path}`),
+    );
+    const nativeRoutes: { procedure: string; method: string; path: string }[] = [];
+    for (const module of app.module.get(ModulesContainer).values()) {
+      for (const wrapper of module.controllers.values()) {
+        const controller = wrapper.metatype;
+        if (!controller) continue;
+        const controllerPath = z.string().parse(Reflect.getMetadata(PATH_METADATA, controller));
+        const prototype: unknown = controller.prototype;
+        if (typeof prototype !== "object" || prototype === null) continue;
+        for (const name of Object.getOwnPropertyNames(prototype)) {
+          const handler: unknown = Reflect.get(prototype, name);
+          if (typeof handler !== "function") continue;
+          const rawMethod: unknown = Reflect.getMetadata(METHOD_METADATA, handler);
+          if (rawMethod === undefined) continue;
+          const method = RequestMethod[z.number().int().parse(rawMethod)];
+          const handlerPath = z.string().parse(Reflect.getMetadata(PATH_METADATA, handler));
+          const path = `/${controllerPath}/${handlerPath}`
+            .replace(/\/+/g, "/")
+            .replace(/\/$/, "")
+            .replace(/:([A-Za-z][A-Za-z0-9_]*)/g, "{$1}");
+          if (!contractRoutes.has(`${method} ${path}`))
+            nativeRoutes.push({ procedure: `${controller.name}.${name}`, method, path });
+        }
+      }
+    }
+    expect(nativeRoutes.sort((a, b) => a.procedure.localeCompare(b.procedure))).toEqual(
+      guestNativeRouteInventory.map(({ procedure, method, path }) => ({ procedure, method, path })),
+    );
+  });
+
   it("refuses every deny-classified contract mutation before handler effects", async () => {
     const before = {
       users: await db.select().from(users),
@@ -91,7 +127,7 @@ describe("guest authorization HTTP boundary", () => {
       members: await db.select().from(organizationMembers),
       notifications: await db.select().from(notifications),
     };
-    for (const route of guestRouteInventory.filter(
+    for (const route of [...guestRouteInventory, ...guestNativeRouteInventory].filter(
       ({ method, classification }) => method !== "GET" && classification === "deny",
     )) {
       const path = route.path.replace(/\{[^}]+\}/g, publicExperiment);
@@ -150,17 +186,14 @@ describe("guest authorization HTTP boundary", () => {
   });
 
   it("never exposes credentials or private service feeds, even through GET routes", async () => {
-    const paths = [
-      "/api/v1/iot/credentials",
-      "/api/v1/notifications",
-      "/api/v1/newsletter/status",
-      "/api/v1/users/search?query=Seed",
-      "/api/v1/devices",
-      "/api/v1/locations/search?query=example",
-      "/api/v1/platform-admins",
-    ];
-    for (const path of paths)
-      expect((await app.get(path).withAuth(visitor)).status, path).toBe(403);
+    for (const route of [...guestRouteInventory, ...guestNativeRouteInventory].filter(
+      ({ method, classification }) => method === "GET" && classification === "deny",
+    )) {
+      const path = route.path.replace(/\{[^}]+\}/g, publicExperiment);
+      const response = await app.get(path).withAuth(visitor);
+      expect(response.status, path).toBe(403);
+      expect(response.body).toMatchObject({ code: "GUEST_ACTION_FORBIDDEN" });
+    }
   });
 
   it("issues only Demo guest uploads, enforces size, and caps the 61st before AWS", async () => {

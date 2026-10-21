@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import nativeInventory from "./guest-native-routes.json";
 import inventory from "./guest-routes.json";
 
 const routeSchema = z.object({
@@ -18,9 +19,10 @@ const routeSchema = z.object({
 });
 
 export const guestRouteInventory = z.array(routeSchema).parse(inventory);
+export const guestNativeRouteInventory = z.array(routeSchema).parse(nativeInventory);
 
 // Static routes precede parameter routes, so /experiments/home isn't an experiment UUID.
-const routes = [...guestRouteInventory].sort(
+const routes = [...guestRouteInventory, ...guestNativeRouteInventory].sort(
   (a, b) => (a.path.match(/\{/g)?.length ?? 0) - (b.path.match(/\{/g)?.length ?? 0),
 );
 
