@@ -56,7 +56,18 @@ describe("largeUploadTransport", () => {
     });
   });
 
-  it.each([401, 403, 413, 429])("does not retry a guest issuer refusal %s", async (status) => {
+  it("distinguishes an oversized guest payload from a malformed request", async () => {
+    mockGetUploadUrl.mockRejectedValue({
+      status: 400,
+      data: { code: "GUEST_UPLOAD_SIZE_INVALID" },
+    });
+    await expect(
+      createLargeUploadTransport().publish(TOPIC, { value: 1 }, { guest: true }),
+    ).rejects.toMatchObject({ kind: "TooLarge", retryable: false });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([401, 403, 429])("does not retry a guest issuer refusal %s", async (status) => {
     mockGetUploadUrl.mockRejectedValue({ status });
     const error = await createLargeUploadTransport()
       .publish(TOPIC, { value: 1 }, { guest: true })

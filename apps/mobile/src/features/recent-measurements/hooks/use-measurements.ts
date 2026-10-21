@@ -52,8 +52,12 @@ export function useMeasurements() {
   );
 
   const saveMeasurement = useCallback(
-    async (upload: Measurement, status: MeasurementStatus) => {
-      const id = await saveMeasurementToStorage(upload, status);
+    async (
+      upload: Measurement,
+      status: MeasurementStatus,
+      owner?: { userId: string; isGuest: boolean } | null,
+    ) => {
+      const id = await saveMeasurementToStorage(upload, status, owner);
       await queryClient.invalidateQueries({ queryKey: queryKeys.root });
       return id;
     },

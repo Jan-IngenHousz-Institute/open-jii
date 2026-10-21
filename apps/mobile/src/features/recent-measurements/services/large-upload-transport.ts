@@ -1,4 +1,5 @@
 import type { PublishMeta, Transport } from "~/features/connection/services/mqtt/mqtt-transport";
+import { apiErrorCode } from "~/features/experiments/utils/api-error";
 import { getApiClient } from "~/shared/api/client";
 import { parseMeasurementTopic } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
@@ -105,6 +106,11 @@ class LargeUploadTransportImpl implements Transport {
       }
       if (status === 413 || (status === 429 && contentLength !== undefined)) {
         throw new LargeUploadError("Rejected", "guest upload size or quota refused", false, {
+          cause: err,
+        });
+      }
+      if (status === 400 && apiErrorCode(err) === "GUEST_UPLOAD_SIZE_INVALID") {
+        throw new LargeUploadError("TooLarge", "guest uploads are limited to 1 MiB", false, {
           cause: err,
         });
       }

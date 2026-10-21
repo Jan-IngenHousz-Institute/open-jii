@@ -11,6 +11,9 @@ const { saveMeasurement, enqueueMany } = vi.hoisted(() => ({
   enqueueMany: vi.fn(),
 }));
 
+vi.mock("~/features/auth/services/local-upload-identity", () => ({
+  getLocalUploadIdentity: () => ({ userId: "user-1", isGuest: false }),
+}));
 vi.mock("~/features/recent-measurements/hooks/use-measurements", () => ({
   useMeasurements: () => ({ saveMeasurement }),
 }));
