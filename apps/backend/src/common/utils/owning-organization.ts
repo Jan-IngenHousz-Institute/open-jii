@@ -27,13 +27,3 @@ export function owningOrganizationNameSql(
       AND ${organizations.slug} NOT LIKE ${`${PERSONAL_ORG_SLUG_PREFIX}%`}
   )`;
 }
-
-export function owningOrganizationTypeSql(
-  table: string,
-  column = "organization_id",
-): SQL<(typeof organizations.$inferSelect)["type"]> {
-  return sql<(typeof organizations.$inferSelect)["type"]>`(
-    SELECT ${organizations.type} FROM ${organizations}
-    WHERE ${organizations.id} = ${sql.identifier(table)}.${sql.identifier(column)}
-  )`;
-}

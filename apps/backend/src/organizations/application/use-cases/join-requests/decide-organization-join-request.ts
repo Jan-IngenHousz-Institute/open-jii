@@ -7,8 +7,8 @@ import {
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
-import { ORGANIZATION_FULL_MESSAGE } from "../../../core/admit-member";
 import type { OrganizationJoinRequestDto } from "../../../core/models/organization-join-request.model";
+import { ORGANIZATION_FULL_MESSAGE } from "../../../core/models/organization-member.model";
 import { canManageMembership, canViewOrganization } from "../../../core/organization-access";
 import { OrganizationJoinRequestRepository } from "../../../core/repositories/organization-join-request.repository";
 import { OrganizationRepository } from "../../../core/repositories/organization.repository";

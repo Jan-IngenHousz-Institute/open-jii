@@ -74,6 +74,7 @@ import {
   SoleOwnedOrganization,
   PendingOrganizationInvitation,
 } from "../models/user.model";
+import { userDisplayNameSql } from "./user-display-name";
 
 /**
  * The two refusals account deletion can produce. Shared with the use case's pre-flight
@@ -204,7 +205,7 @@ export class UserRepository {
 
   async search(params: SearchUsersParams): Promise<Result<UserSearchResultDto[]>> {
     return tryCatch(() => {
-      const fullName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
+      const fullName = userDisplayNameSql();
       const isExactEmail = sql<boolean>`lower(${users.email}) = lower(${params.query})`;
 
       // Names match loosely: substring (ILIKE) handles prefixes, trigram (%) adds typo

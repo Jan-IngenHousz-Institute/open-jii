@@ -22,6 +22,29 @@ describe("Demo resource and directory HTTP behavior", () => {
     return { owner, outsider, organizationId };
   }
 
+  it("returns Demo ownership metadata from experiment creation and updates", async () => {
+    const { owner, organizationId } = await fixture();
+    const created = await app
+      .post("/api/v1/experiments")
+      .withAuth(owner)
+      .send({
+        name: "Demo mutation metadata",
+        organizationId,
+      })
+      .expect(201);
+    const experiment = z
+      .object({ id: z.string().uuid(), organizationType: z.literal("demo") })
+      .parse(created.body);
+    const updated = await app
+      .patch(`/api/v1/experiments/${experiment.id}`)
+      .withAuth(owner)
+      .send({
+        name: "Updated Demo mutation metadata",
+      })
+      .expect(200);
+    expect(updated.body).toMatchObject({ id: experiment.id, organizationType: "demo" });
+  });
+
   it.each([
     ["workbooks", { name: "Public workbook" }],
     ["protocols", { name: "Public protocol", code: [{ steps: [] }], family: "multispeq" }],
