@@ -55,6 +55,9 @@ export function openJiiGuest({
             ) {
               // Cached guest cookies cannot renew a session whose account was purged.
               ctx.context.session = null;
+              if (ctx.path === "/get-session") {
+                return { context: { query: { ...ctx.query, disableCookieCache: true } } };
+              }
               session = await getSessionFromCtx(ctx, { disableCookieCache: true });
               if (!session)
                 throw new APIError("UNAUTHORIZED", { message: "This guest session has ended" });
