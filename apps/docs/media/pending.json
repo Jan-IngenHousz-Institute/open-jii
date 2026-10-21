@@ -4,11 +4,5 @@
     "staged": "apps/docs/.capture/web/platform-admin-roster.webm",
     "ticket": "OJD-2217",
     "date": "2026-10-29"
-  },
-  {
-    "path": "/img/guide/web/demo-seed-experiments.webm",
-    "staged": "apps/docs/.capture/web/demo-seed-experiments.webm",
-    "ticket": "OJD-2225",
-    "date": "2026-10-21"
   }
 ]
