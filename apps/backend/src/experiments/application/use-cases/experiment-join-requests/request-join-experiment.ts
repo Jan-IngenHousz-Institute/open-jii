@@ -48,6 +48,15 @@ export class RequestJoinExperimentUseCase {
           return failure(AppError.forbidden("Cannot request to join an archived experiment"));
         }
 
+        if (experiment.organizationType === "demo") {
+          return failure(
+            AppError.forbidden(
+              "Demo experiments do not accept join requests",
+              "DEMO_JOIN_REQUESTS_DISABLED",
+            ),
+          );
+        }
+
         // Private experiments are hidden from non-members; deny join requests for them
         // so the experiment's privacy is preserved.
         if (experiment.visibility !== "public") {

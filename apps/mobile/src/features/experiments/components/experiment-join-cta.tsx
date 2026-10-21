@@ -26,6 +26,7 @@ interface ExperimentJoinCtaProps {
   id: string;
   name: string;
   status: ExperimentStatus;
+  organizationType?: string | null;
   workbookVersionId: string | null;
   membershipStatus: ExperimentMembershipStatus;
   /** Called when the pending request turns out to have been decided elsewhere. */
@@ -38,6 +39,7 @@ export function ExperimentJoinCta({
   status,
   workbookVersionId,
   membershipStatus,
+  organizationType,
   onRefreshAccess,
 }: ExperimentJoinCtaProps) {
   const { t } = useTranslation(["common", "experiments"]);
@@ -145,6 +147,8 @@ export function ExperimentJoinCta({
       </View>
     );
   }
+
+  if (organizationType === "demo") return null;
 
   return (
     <View className="mt-3 gap-2">
