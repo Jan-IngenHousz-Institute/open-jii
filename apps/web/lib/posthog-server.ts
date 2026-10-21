@@ -137,11 +137,11 @@ function isFeatureFlagEnabledForPerson(
   session: NonNullable<Session>,
   organizationIds: string[],
 ): Promise<boolean> {
-  const { id, email } = session.user;
+  const { id, email, isAnonymous } = session.user;
   return isFeatureFlagEnabled(
     flagKey,
-    email || id,
-    flagPersonProperties({ email, organizationIds }),
+    isAnonymous ? id : email || id,
+    flagPersonProperties({ email, isAnonymous: isAnonymous === true, organizationIds }),
   );
 }
 
@@ -162,11 +162,15 @@ export async function isFeatureFlagEnabledForSession(
 
   const organizationIds = await fetchMyOrganizationIds();
   await ensureInitialized();
-  const { id, email } = session.user;
+  const { id, email, isAnonymous } = session.user;
   const decision = await evaluateFeatureFlagBase(
     flagKey,
-    email || id,
-    flagPersonProperties({ email, organizationIds: organizationIds ?? [] }),
+    isAnonymous ? id : email || id,
+    flagPersonProperties({
+      email,
+      isAnonymous: isAnonymous === true,
+      organizationIds: organizationIds ?? [],
+    }),
   );
 
   // A fallback, from memberships that failed to load or a PostHog that did not answer, is used

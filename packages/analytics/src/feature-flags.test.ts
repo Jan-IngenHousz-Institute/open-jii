@@ -25,6 +25,15 @@ describe("feature flags", () => {
 });
 
 describe("flagPersonProperties", () => {
+  it("omits a guest address even when a caller supplies it", () => {
+    expect(
+      flagPersonProperties({
+        email: "synthetic@guest.openjii.invalid",
+        isAnonymous: true,
+        organizationIds: ["demo"],
+      }),
+    ).toEqual({ organization_ids: "demo", is_guest: "true" });
+  });
   it("joins the organization ids into one string a 'contains' condition can match", () => {
     expect(
       flagPersonProperties({ email: "ana@example.com", organizationIds: ["org-qa", "org-lab"] }),

@@ -1,12 +1,11 @@
 import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { anonymous } from "better-auth/plugins";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
-import { isFeatureFlagEnabled } from "@repo/analytics/server";
+import { isDemoModeEnabled } from "@repo/analytics/server";
 import { GUEST_EMAIL_DOMAIN, isGuestEmail, zGuestName } from "@repo/api/shared/guest";
 
 export async function demoModeEnabled(): Promise<boolean> {
-  return isFeatureFlagEnabled(FEATURE_FLAGS.DEMO_MODE);
+  return isDemoModeEnabled();
 }
 
 export const GUEST_AUTH_PATHS = ["/get-session", "/sign-out", "/update-user"] as const;

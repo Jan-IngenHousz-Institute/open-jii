@@ -33,6 +33,8 @@ export function usePostHogAuth() {
 
   const id = session?.user.id;
   const email = session?.user.email;
+  const isGuest = session?.user.isAnonymous === true;
+  const identifiedGuest = useRef(false);
   const isSignedOut = !isPending && !session;
   const hasConsented = consent === "accepted";
 
@@ -50,21 +52,26 @@ export function usePostHogAuth() {
 
   useEffect(() => {
     if (posthog && id && hasConsented) {
-      posthog.identify(id, { email });
+      const properties = isGuest
+        ? { is_guest: true }
+        : { email, ...(identifiedGuest.current ? { is_guest: false } : {}) };
+      posthog.identify(id, properties);
+      identifiedGuest.current = isGuest;
     }
-  }, [posthog, id, email, hasConsented]);
+  }, [posthog, id, email, isGuest, hasConsented]);
 
   // Rejecting cookies resets PostHog, which drops the overrides, so every consent change
   // re-applies them. A failed membership fetch still sends what is known rather than holding every
   // flag back.
   useEffect(() => {
-    if (!posthog || !email || isOrganizationsPending) {
+    if (!posthog || !id || isOrganizationsPending) {
       return;
     }
 
     const hasAccepted = consent === "accepted";
     const properties = flagPersonProperties({
       email: hasAccepted ? email : undefined,
+      isAnonymous: isGuest,
       organizationIds: organizations?.map(({ id }) => id) ?? [],
     });
     posthog.setPersonPropertiesForFlags(properties, true);
@@ -74,7 +81,7 @@ export function usePostHogAuth() {
     if (hasAccepted) {
       posthog.setPersonProperties(properties);
     }
-  }, [posthog, email, organizations, isOrganizationsPending, consent]);
+  }, [posthog, id, email, isGuest, organizations, isOrganizationsPending, consent]);
 }
 
 /**
