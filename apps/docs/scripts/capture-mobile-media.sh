@@ -7,6 +7,32 @@ DOCS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 STAGING_DIR="${OPENJII_CAPTURE_STAGING_DIR:-$DOCS_DIR/.capture/mobile}"
 REMOTE_DIR="/sdcard"
 
+CROP_TOP="${OPENJII_CAPTURE_CROP_TOP:-0}"
+if [[ ! "$CROP_TOP" =~ ^[0-9]+$ ]]; then
+  echo "OPENJII_CAPTURE_CROP_TOP must be a nonnegative pixel count." >&2
+  exit 1
+fi
+STILL_FILTER="null"
+CAPTURE_FILTER="scale='min(1080,iw)':-2"
+if ((CROP_TOP > 0)); then
+  STILL_FILTER="crop=iw:ih-$CROP_TOP:0:$CROP_TOP"
+  CAPTURE_FILTER="$STILL_FILTER,$CAPTURE_FILTER"
+fi
+
+start_demo_mode() {
+  adb shell settings put global sysui_demo_allowed 1 >/dev/null
+  trap 'adb shell am broadcast -a com.android.systemui.demo -e command exit >/dev/null; adb shell settings put global sysui_demo_allowed 0 >/dev/null' EXIT
+  adb shell am broadcast -a com.android.systemui.demo -e command enter >/dev/null
+  adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 1200 >/dev/null
+  adb shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false >/dev/null
+  adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4 >/dev/null
+  adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false >/dev/null
+  echo "SystemUI demo mode requested. Check the first frame; some OEMs ignore these commands."
+  if ((CROP_TOP > 0)); then
+    echo "Removing the top $CROP_TOP source pixels from this capture."
+  fi
+}
+
 usage() {
   cat <<'EOF'
 Usage:
@@ -86,12 +112,13 @@ capture_screenshot() {
   require_device
   require_command ffmpeg
   mkdir -p "$STAGING_DIR"
+  start_demo_mode
   raw="$STAGING_DIR/$slug.raw.png"
   output="$STAGING_DIR/$slug.png"
 
   adb exec-out screencap -p >"$raw"
   ffmpeg -hide_banner -loglevel error -y -i "$raw" -map_metadata -1 \
-    -compression_level 9 -pred mixed "$output"
+    -vf "$STILL_FILTER" -compression_level 9 -pred mixed "$output"
   rm -f "$raw"
   echo "Staged screenshot: $output"
   echo "Review the full image for credentials, notifications, private datasets, locations, and dev-only UI."
@@ -108,6 +135,7 @@ capture_recording() {
   require_device
   require_command ffmpeg
   mkdir -p "$STAGING_DIR"
+  start_demo_mode
   remote="$REMOTE_DIR/openjii-docs-$slug.mp4"
   raw="$STAGING_DIR/$slug.raw.mp4"
   output="$STAGING_DIR/$slug.webm"
@@ -147,7 +175,7 @@ capture_recording() {
   adb pull "$remote" "$raw" >/dev/null
   adb shell rm -f "$remote" >/dev/null 2>&1
   ffmpeg -hide_banner -loglevel error -y -i "$raw" -map_metadata -1 -an \
-    -vf "scale='min(1080,iw)':-2" -c:v libvpx-vp9 -crf 34 -b:v 0 \
+    -vf "$CAPTURE_FILTER" -c:v libvpx-vp9 -crf 34 -b:v 0 \
     -row-mt 1 -deadline good -cpu-used 2 "$output"
   rm -f "$raw"
   echo "Staged recording: $output"

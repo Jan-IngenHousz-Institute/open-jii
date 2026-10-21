@@ -126,6 +126,12 @@ async function probeMobileRecording(mode) {
       timeout: 5_000,
     });
     const eventLines = (await readFile(events, "utf8")).trim().split("\n").filter(Boolean);
+    const commands = await readFile(log, "utf8");
+    assert.ok(commands.includes("settings put global sysui_demo_allowed 1"));
+    assert.ok(commands.includes("command notifications -e visible false"));
+    assert.ok(commands.includes("command clock -e hhmm 1200"));
+    assert.ok(commands.includes("command exit"));
+    assert.ok(commands.includes("settings put global sysui_demo_allowed 0"));
     assert.ok(eventLines.includes("sigint"), "timeout did not send SIGINT");
 
     if (mode === "flushes") {

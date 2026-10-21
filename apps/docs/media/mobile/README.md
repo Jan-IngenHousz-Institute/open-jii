@@ -24,3 +24,12 @@ The NX789J used on 2026-07-19 has an OEM `screenrecord` behavior that may detach
 the encoder from the ADB client. The helper waits for the device-side process
 and refuses missing/empty output. Interactive MultispeQ and multi-device videos
 still require the relevant physical hardware.
+
+Before each capture the helper requests SystemUI demo mode: notifications hidden,
+clock at 12:00, full battery and Wi-Fi. It exits demo mode and disables it on
+completion or failure. Check the first frame yourself because some OEMs ignore
+these commands. On those devices set `OPENJII_CAPTURE_CROP_TOP` to the height of
+the status bar in source pixels. For the REDMAGIC 10 Pro, `108` removes that band.
+The helper crops before scaling the recording. State the crop in the PR and keep
+all capture files private until a reviewer has checked their frames, including
+any derived GIF attached to a PR.

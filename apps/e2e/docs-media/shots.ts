@@ -1,7 +1,15 @@
 import type { CDPSession, Locator, Page } from "@playwright/test";
 
 import type { FrameName } from "./frames.js";
-import { experimentId, organizationId, protocolWorkbookId, workbookId } from "./seed-entities.js";
+import {
+  demoRecordingOrganization,
+  clearDemoTrainingRecording,
+  clearDemoRecordingAppointment,
+  experimentId,
+  organizationId,
+  protocolWorkbookId,
+  workbookId,
+} from "./seed-entities.js";
 
 export interface Shot {
   /** Output basename under the staging directory. */
@@ -153,6 +161,119 @@ const privacyShots: readonly Shot[] = privacyCaptureEmail
   : [];
 
 export const SHOTS: readonly Shot[] = [
+  {
+    slug: "platform-admin-appointments",
+    publish: "img/guide/web/platform-admin-appointments.webm",
+    frame: "desktop",
+    route: "/platform/platform-admins",
+    async prepare(page) {
+      await clearDemoRecordingAppointment();
+      await page.reload({ waitUntil: "networkidle" });
+    },
+    async perform(page) {
+      page.setDefaultTimeout(15_000);
+      await typeInto(page.getByLabel("Find a researcher by name"), "Newcomer");
+      await page.getByText("Newcomer User", { exact: true }).waitFor();
+      await settle(page, 1500);
+      await page.getByRole("button", { name: "Appoint admin", exact: true }).click();
+      await page.getByText("Platform admin appointed.").waitFor();
+      await settle(page, 2500);
+      await page
+        .getByRole("button", { name: "Remove Newcomer User as a platform admin", exact: true })
+        .click();
+      await page.getByText("Platform admin removed.").waitFor();
+      await settle(page, 2000);
+    },
+    scope: "Appointing a registered researcher as a platform admin and removing the appointment",
+  },
+  {
+    slug: "demo-organization-creation",
+    publish: "img/guide/web/demo-organization-creation.webm",
+    frame: "desktop",
+    route: "/platform/organizations/new",
+    async prepare() {
+      await clearDemoTrainingRecording();
+      await demoRecordingOrganization("Unpublished research lab", false);
+    },
+    async perform(page) {
+      page.setDefaultTimeout(15_000);
+      await typeInto(page.getByLabel("Name", { exact: true }), "Demo training lab");
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: "Demo", exact: true }).click();
+      await settle(page, 1300);
+      await activate(page, /^next$/i);
+      await page
+        .getByRole("radio", { name: /Private/ })
+        .isDisabled()
+        .then((disabled) => {
+          if (!disabled) throw new Error("Demo organization permits private visibility");
+        });
+      await settle(page, 1800);
+      await activate(page, /^next$/i);
+      await activate(page, /^next$/i);
+      await activate(page, /^create organization$/i);
+      await page.waitForURL(/\/organizations\/[0-9a-f-]+$/);
+      await settle(page, 2000);
+      await page.getByRole("link", { name: "Organizations", exact: true }).first().click();
+      await page.getByRole("link", { name: "Unpublished research lab", exact: true }).click();
+      await page.getByRole("tab", { name: "Settings", exact: true }).click();
+      await page.getByLabel("Type", { exact: true }).click();
+      await page.getByRole("option", { name: "Demo", exact: true }).click();
+      await settle(page, 1600);
+      await activate(page, /^save$/i);
+      await page
+        .getByText(/Publish every experiment, workbook, protocol and macro before choosing Demo/i)
+        .waitFor();
+      await settle(page, 3500);
+    },
+    scope:
+      "Creating a public Demo organization and refusing conversion of a lab with private research",
+  },
+  {
+    slug: "demo-organization-discovery",
+    publish: "img/guide/web/demo-organization-discovery.webm",
+    frame: "desktop",
+    session: "newcomer",
+    route: async () => {
+      await demoRecordingOrganization("Demo discovery lab", true);
+      return "/platform/organizations";
+    },
+    async perform(page) {
+      page.setDefaultTimeout(15_000);
+      await page.getByRole("combobox", { name: "Type", exact: true }).click();
+      await page.getByRole("option", { name: "Demo", exact: true }).click();
+      await settle(page, 1800);
+      await page.getByRole("link", { name: "Demo discovery lab", exact: true }).click();
+      await page.getByRole("heading", { name: "Demo discovery lab", exact: true }).waitFor();
+      await settle(page, 2500);
+      if (await page.getByRole("button", { name: /request to join/i }).isVisible()) {
+        throw new Error("Demo organization offers a join request");
+      }
+      await page.getByRole("link", { name: "Demo photosynthesis experiment", exact: true }).click();
+      await page
+        .getByRole("heading", { name: "Demo photosynthesis experiment", exact: true })
+        .waitFor();
+      if (
+        (await page.getByRole("tab", { name: "Settings", exact: true }).isVisible()) ||
+        (await page.getByRole("button", { name: /^edit$/i }).isVisible())
+      ) {
+        throw new Error("Newcomer sees an experiment edit control");
+      }
+      await settle(page, 2500);
+    },
+    scope:
+      "A newcomer filters the directory to Demo organizations and opens public work without joining",
+  },
+  {
+    slug: "platform-admins",
+    publish: "img/guide/web/platform-admins.webp",
+    frame: "desktop",
+    route: "/platform/platform-admins",
+    prepare: async (page) => {
+      await page.getByRole("heading", { name: "Current admins" }).waitFor();
+    },
+    scope: "Platform admins and the appointment search, using development accounts",
+  },
   ...privacyShots,
   // ------------------------------------------- tier 1: shell, overviews, access
   {
