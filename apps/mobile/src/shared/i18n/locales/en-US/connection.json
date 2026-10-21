@@ -47,7 +47,8 @@
     "permissionExplainer": "Allow Bluetooth to find nearby measurement devices.",
     "connectedCount_one": "{{count}} device connected",
     "connectedCount_other": "{{count}} devices connected",
-    "addAnotherHint": "Connect more measurement devices through the hub. A powered USB hub is recommended."
+    "addAnotherHint": "Connect more measurement devices through the hub. A powered USB hub is recommended.",
+    "simulatedMultispeq": "Simulated MultispeQ"
   },
   "chip": {
     "connect": "Connect",

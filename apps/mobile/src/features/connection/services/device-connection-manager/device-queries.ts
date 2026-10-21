@@ -2,6 +2,7 @@ import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { listSerialPortDevices } from "~/features/connection/services/device-connection-manager/android-serial-port-connection/open-serial-port-connection";
 import { getConnectedMockDevices } from "~/features/connection/services/multispeq/mock-device/mock-device-registry";
 import { mockDevicesEnabled } from "~/features/connection/services/multispeq/mock-device/mock-devices-enabled";
+import { connectedSimulatedDevices } from "~/features/connection/services/simulated-device";
 import type { Device } from "~/shared/types/device";
 
 import { bluetoothDeviceToDevice } from "./device-utils";
@@ -18,19 +19,23 @@ export async function getConnectedDevices(): Promise<Device[]> {
     // Can't determine; keep the (possibly live) connections.
   }
 
+  const simulatedDevices = connectedSimulatedDevices();
+
   // Transport exclusivity (see CONTEXT.md): serial devices win over the
   // single Bluetooth device, mirroring the previous serial-first preference.
   const serialDevices = getConnectedSerialPortDevices();
   if (serialDevices.length > 0) {
-    return serialDevices;
+    return [...serialDevices, ...simulatedDevices];
   }
 
   if (mockDevicesEnabled) {
     const mockDevices = getConnectedMockDevices();
     if (mockDevices.length > 0) {
-      return mockDevices;
+      return [...mockDevices, ...simulatedDevices];
     }
   }
+
+  if (simulatedDevices.length > 0) return simulatedDevices;
 
   const [device] = await RNBluetoothClassic.getConnectedDevices();
   if (!device) {

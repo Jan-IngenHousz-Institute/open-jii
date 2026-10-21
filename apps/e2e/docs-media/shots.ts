@@ -164,6 +164,46 @@ const privacyShots: readonly Shot[] = privacyCaptureEmail
     ]
   : [];
 
+const simulatedSensorShots: readonly Shot[] = [
+  { family: "multispeq", label: "MultispeQ", experimentEnv: "E2E_DEMO_MULTISPEQ_EXPERIMENT" },
+  { family: "ambit", label: "Ambit", experimentEnv: "E2E_DEMO_AMBIT_EXPERIMENT" },
+  { family: "minipar", label: "MiniPAR", experimentEnv: "E2E_DEMO_MINIPAR_EXPERIMENT" },
+].map(
+  ({ family, label, experimentEnv }): Shot => ({
+    slug: `simulated-${family}-web`,
+    publish: `img/guide/web/simulated-${family}-web.webm`,
+    frame: "desktop",
+    route: async () => {
+      const name = process.env[experimentEnv];
+      if (!name) throw new Error(`Set ${experimentEnv} to the seeded demo experiment name`);
+      return `/platform/experiments/${await experimentId(name)}/design`;
+    },
+    async prepare(page) {
+      await page.getByRole("button", { name: "Run all", exact: true }).waitFor();
+      await settle(page);
+    },
+    async perform(page) {
+      await page.getByRole("combobox").filter({ hasText: "USB/serial" }).click();
+      await settle(page);
+      await page.getByRole("option", { name: `Simulated ${label}`, exact: true }).click();
+      await settle(page);
+      await page.getByRole("button", { name: "Connect", exact: true }).click();
+      await page
+        .getByRole("button", { name: /^Disconnect / })
+        .first()
+        .waitFor();
+      await settle(page);
+      await page.getByRole("button", { name: "Run all", exact: true }).click();
+      const marker = page.getByText("Simulated", { exact: true }).first();
+      await marker.waitFor({ state: "visible", timeout: 30_000 });
+      await marker.scrollIntoViewIfNeeded();
+      await settle(page, 1800);
+    },
+    tailSeconds: 3,
+    scope: `Choose Simulated ${label}, connect, run the seeded demo workbook and inspect its labelled result`,
+  }),
+);
+
 export const SHOTS: readonly Shot[] = [
   {
     slug: "demo-seed-experiments",
@@ -300,6 +340,7 @@ export const SHOTS: readonly Shot[] = [
     scope:
       "A newcomer filters the directory to Demo organizations and opens public work without joining",
   },
+  ...simulatedSensorShots,
   ...privacyShots,
   // ------------------------------------------- tier 1: shell, overviews, access
   {

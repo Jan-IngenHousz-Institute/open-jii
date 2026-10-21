@@ -175,3 +175,29 @@ describe("createTableColumns", () => {
     expect(phi2Column.cell?.({ row, table: { options: {} } })).toBe(0.71);
   });
 });
+
+describe("provenance columns", () => {
+  it("uses readable labels while keeping the boolean field keys for filters and exports", () => {
+    const columns = createTableColumns({
+      columns: [
+        { name: "is_simulated", type_text: "BOOLEAN", type_name: "BOOLEAN" },
+        { name: "is_guest", type_text: "BOOLEAN", type_name: "BOOLEAN" },
+      ],
+      provenanceLabels: { simulated: "Simulated", guest: "Guest" },
+    });
+    expect(
+      columns.map((column) => ({
+        key: column.accessorKey,
+        label: column.header,
+        meta: column.meta,
+      })),
+    ).toEqual([
+      {
+        key: "is_simulated",
+        label: "Simulated",
+        meta: { type: "BOOLEAN", renamedFrom: undefined },
+      },
+      { key: "is_guest", label: "Guest", meta: { type: "BOOLEAN", renamedFrom: undefined } },
+    ]);
+  });
+});

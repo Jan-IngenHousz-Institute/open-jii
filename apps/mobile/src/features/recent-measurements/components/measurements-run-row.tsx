@@ -42,6 +42,7 @@ export const MeasurementsRunRow = memo(function MeasurementsRunRow({
         failureReason={summary.failureReason}
         questions={summary.questions}
         hasComment={summary.hasComment}
+        simulated={entry.items.some((item) => item.simulated)}
         expanded={expanded}
         onToggle={onToggle}
       />

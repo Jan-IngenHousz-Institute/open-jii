@@ -10,6 +10,7 @@ from pyspark.sql.types import StringType
 
 from openjii.centrum import sensor_schema
 from openjii.centrum.constants import MEASUREMENT_PATH_TRIGGER_INTERVAL
+from openjii.centrum.measurement_provenance import is_simulated
 from openjii.centrum.runtime import (
     BRONZE_TABLE,
     KINESIS_STREAM_NAME,
@@ -36,7 +37,7 @@ from openjii.centrum.runtime import (
 def raw_data():
     """Bronze layer: Ingest raw Kinesis sensor data."""
 
-    return (
+    source = (
         spark.readStream
         .format("kinesis")
         .option("streamName", KINESIS_STREAM_NAME)
@@ -44,6 +45,13 @@ def raw_data():
         .option("serviceCredential", SERVICE_CREDENTIAL_NAME)
         .option("maxRecordsPerFetch", "10000")
         .load()
+    )
+    return extract_raw_data(source)
+
+
+def extract_raw_data(source):
+    return (
+        source
         .withColumn("ingestion_timestamp", F.current_timestamp())
         # Capture Kinesis metadata
         .withColumn("kinesis_sequence_number", F.col("sequenceNumber"))
@@ -52,6 +60,14 @@ def raw_data():
         .withColumn("partitionKey", F.col("partitionKey"))
         # Parse data for basic extraction
         .withColumn("parsed_data", F.from_json(F.col("data").cast("string"), sensor_schema))
+        .withColumn(
+            "is_simulated",
+            is_simulated(
+                F.from_json(F.col("data").cast("string"), "simulated BOOLEAN")["simulated"],
+                F.col("parsed_data.device_id"),
+            ),
+        )
+        .withColumn("is_guest", F.lit(False))
         .withColumn("ingest_date", F.to_date(F.col("ingestion_timestamp")))
         # Basic experiment_id extraction for partitioning
         .withColumn("experiment_id", F.coalesce(
@@ -106,6 +122,8 @@ def raw_data():
         )
         .select(
             "experiment_id",
+            "is_simulated",
+            "is_guest",
             "client_id",
             "workbook_version_id",
             "macro_context",

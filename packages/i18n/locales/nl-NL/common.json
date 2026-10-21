@@ -1528,5 +1528,9 @@
     "userId": "Gebruikers-id",
     "loadFailed": "Platformbeheerders konden niet worden geladen.",
     "retry": "Opnieuw proberen"
+  },
+  "provenance": {
+    "simulated": "Gesimuleerd",
+    "guest": "Gast"
   }
 }

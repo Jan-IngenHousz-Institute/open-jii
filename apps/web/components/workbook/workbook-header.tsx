@@ -43,6 +43,7 @@ import { useIsMobile, useIsLgTablet, useIsTablet } from "@repo/ui/hooks/use-mobi
 import { cn } from "@repo/ui/lib/utils";
 
 interface WorkbookHeaderProps {
+  simulationAvailable?: boolean;
   title: string;
   cells: WorkbookCell[];
   isConnected: boolean;
@@ -105,6 +106,7 @@ function macroExtension(language: "python" | "r" | "javascript"): string {
 }
 
 export function WorkbookHeader({
+  simulationAvailable = false,
   title,
   cells,
   isConnected,
@@ -162,8 +164,9 @@ export function WorkbookHeader({
   // server would cause a hydration mismatch.
   const isHydrated = useIsHydrated();
   const showMockDevices = useMemo(() => isHydrated && mockDevicesEnabled(), [isHydrated]);
-  const transportSupported =
-    connectionType === "mock"
+  const transportSupported = connectionType.startsWith("simulated-")
+    ? simulationAvailable
+    : connectionType === "mock"
       ? true
       : connectionType === "serial"
         ? browserSupport.serial
@@ -311,6 +314,19 @@ export function WorkbookHeader({
               <SelectItem value="bluetooth" disabled={sensorFamily === "multispeq"}>
                 {t("iot.protocolRunner.bluetooth")}
               </SelectItem>
+              {simulationAvailable && (
+                <>
+                  <SelectItem value="simulated-multispeq">
+                    {t("iot.workbookBar.simulatedMultispeq")}
+                  </SelectItem>
+                  <SelectItem value="simulated-ambit">
+                    {t("iot.workbookBar.simulatedAmbit")}
+                  </SelectItem>
+                  <SelectItem value="simulated-minipar">
+                    {t("iot.workbookBar.simulatedMinipar")}
+                  </SelectItem>
+                </>
+              )}
               {showMockDevices && <SelectItem value="mock">{t("iot.workbookBar.mock")}</SelectItem>}
             </SelectContent>
           </Select>
@@ -432,9 +448,7 @@ export function WorkbookHeader({
         <span className="hidden xl:inline">{t("iot.workbookBar.clearAll")}</span>
       </Button>
 
-      {/* Only the workbook creator can run cells; the backend rejects updates
-          from others, so non-creators don't see the Run all / Stop control. */}
-      {!readOnly &&
+      {(!readOnly || simulationAvailable) &&
         (isRunningAll ? (
           <Button
             type="button"

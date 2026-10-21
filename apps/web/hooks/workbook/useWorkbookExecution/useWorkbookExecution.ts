@@ -16,6 +16,7 @@ import { getLiveProtocolCode } from "~/lib/protocol-code-registry";
 import { parseApiError } from "~/util/apiError";
 import { getSensorFamilyLabel } from "~/util/sensor-family";
 
+import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type {
   BranchCell,
@@ -51,6 +52,7 @@ interface CellExecutionState {
 }
 
 interface UseWorkbookExecutionOptions {
+  experiment?: Experiment;
   cells: WorkbookCell[];
   onCellsChange: (cells: WorkbookCell[]) => void;
   onPromptQuestion?: (cell: QuestionCell) => Promise<string | undefined>;
@@ -167,6 +169,7 @@ function toOutputData(data: unknown): Record<string, unknown> {
 }
 
 export function useWorkbookExecution({
+  experiment,
   cells,
   onCellsChange,
   onPromptQuestion,
@@ -190,8 +193,14 @@ export function useWorkbookExecution({
     setSensorFamilyState(family);
   }, []);
 
-  const { connections, isConnecting, connect, disconnectDevice, disconnectAll } =
-    useIotConnections(sensorFamily);
+  const {
+    connections,
+    simulationAvailable,
+    isConnecting,
+    connect,
+    disconnectDevice,
+    disconnectAll,
+  } = useIotConnections(sensorFamily, { experiment });
   const isConnected = connections.length > 0;
 
   const executeMacroMutation = useMutation(orpc.macros.executeMacro.mutationOptions());
@@ -231,11 +240,12 @@ export function useWorkbookExecution({
         deviceLabel: string;
         family: SensorFamily;
         deviceName?: string;
+        simulated?: boolean;
         data?: Record<string, unknown>;
         error?: string;
       }[] = devices.map((d, i) => {
         const outcome = settled[i];
-        const identity = { family: d.family, deviceName: d.identity.name };
+        const identity = { family: d.family, deviceName: d.identity.name, simulated: d.simulated };
         const deviceLabel = secondaryDeviceLabel(d);
         return outcome.status === "fulfilled"
           ? { deviceId: d.id, deviceLabel, ...identity, data: normalize(outcome.value) }
@@ -406,6 +416,13 @@ export function useWorkbookExecution({
   const runMacroCell = useCallback(
     async (cell: MacroCell, cellIndex: number, currentCells: WorkbookCell[]) => {
       const input = findPrecedingOutput(currentCells, cellIndex);
+      const simulated = currentCells
+        .slice(0, cellIndex)
+        .some(
+          (c) =>
+            c.type === "output" &&
+            (c.simulated === true || c.deviceResults?.some((r) => r.simulated)),
+        );
       // A macro can run from ctx alone; error only when there is neither a
       // nearest measurement nor any upstream output to read.
       if (!input) {
@@ -458,7 +475,7 @@ export function useWorkbookExecution({
 
         const results: OutputDeviceResult[] = inputResults.map((r, i) => {
           const outcome = settled[i];
-          const identity = { family: r.family, deviceName: r.deviceName };
+          const identity = { family: r.family, deviceName: r.deviceName, simulated: r.simulated };
           return outcome.status === "fulfilled"
             ? { deviceId: r.deviceId, deviceLabel: r.deviceLabel, ...identity, data: outcome.value }
             : {
@@ -512,6 +529,7 @@ export function useWorkbookExecution({
         const singleInputIdentity = inputResults?.length === 1 ? inputResults[0] : undefined;
         return insertOutputAfterCell(currentCells, cell.id, {
           ...makeOutputCell(cell.id, output, executionTime, []),
+          simulated,
           ...(singleInputIdentity
             ? {
                 deviceResults: [
@@ -520,6 +538,7 @@ export function useWorkbookExecution({
                     deviceLabel: singleInputIdentity.deviceLabel,
                     family: singleInputIdentity.family,
                     deviceName: singleInputIdentity.deviceName,
+                    simulated: singleInputIdentity.simulated,
                     data: output,
                   },
                 ],
@@ -533,6 +552,7 @@ export function useWorkbookExecution({
         const singleInputIdentity = inputResults?.length === 1 ? inputResults[0] : undefined;
         return insertOutputAfterCell(currentCells, cell.id, {
           ...makeErrorOutputCell(cell.id, message, executionTime),
+          simulated,
           ...(singleInputIdentity
             ? {
                 deviceResults: [
@@ -541,6 +561,7 @@ export function useWorkbookExecution({
                     deviceLabel: singleInputIdentity.deviceLabel,
                     family: singleInputIdentity.family,
                     deviceName: singleInputIdentity.deviceName,
+                    simulated: singleInputIdentity.simulated,
                     error: message,
                   },
                 ],
@@ -579,7 +600,19 @@ export function useWorkbookExecution({
         const updated = currentCells.map((c) =>
           c.id === cell.id ? { ...cell, answer, isAnswered: true } : c,
         );
-        return insertOutputAfterCell(updated, cell.id, makeOutputCell(cell.id, { answer }, 0, []));
+        const preceding = currentCells.slice(
+          0,
+          currentCells.findIndex((c) => c.id === cell.id),
+        );
+        const simulated = preceding.some(
+          (c) =>
+            c.type === "output" &&
+            (c.simulated === true || c.deviceResults?.some((r) => r.simulated)),
+        );
+        return insertOutputAfterCell(updated, cell.id, {
+          ...makeOutputCell(cell.id, { answer }, 0, []),
+          simulated,
+        });
       } catch {
         setCellState(cell.id, { status: "error", error: "Question prompt failed" });
         return currentCells;
@@ -882,6 +915,7 @@ export function useWorkbookExecution({
 
   return {
     isConnected,
+    simulationAvailable,
     isConnecting,
     connectedDevices: connections.map(({ id, label, ordinal, family, identity }) => ({
       id,

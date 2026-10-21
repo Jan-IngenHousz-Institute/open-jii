@@ -1,0 +1,1 @@
+ALTER TABLE `measurements` ADD `simulated` integer DEFAULT false NOT NULL;
