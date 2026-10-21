@@ -1,4 +1,4 @@
-import { MessageSquare, Trash2, UploadCloud } from "lucide-react-native";
+import { Flag, MessageSquare, Trash2, UploadCloud } from "lucide-react-native";
 import React, { memo, useEffect } from "react";
 import { View, TouchableOpacity } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -30,6 +30,7 @@ interface SwipeableRowProps {
   /** Drives which actions apply; for a run, the worst-of status. */
   status: MeasurementStatus;
   onComment?: (id: string) => void;
+  onFlag?: (id: string) => void;
   onSync?: (id: string) => void;
   onDelete?: (id: string) => void;
   peekToken?: number;
@@ -48,6 +49,7 @@ export const SwipeableRow = memo(function SwipeableRow({
   id,
   status,
   onComment,
+  onFlag,
   onSync,
   onDelete,
   peekToken = 0,
@@ -62,10 +64,11 @@ export const SwipeableRow = memo(function SwipeableRow({
   const startX = useSharedValue(0);
   const actionWidthSV = useSharedValue(0);
 
-  const canFlag = status === "pending" || status === "failed";
-  const showComment = canFlag && !!onComment;
+  const isUnsyncedStatus = status === "pending" || status === "failed";
+  const showComment = !!onComment;
+  const showFlag = !!onFlag;
   // Hide the upload action when offline: it can't sync anyway.
-  const showSync = canFlag && !!onSync && online !== false;
+  const showSync = isUnsyncedStatus && !!onSync && online !== false;
   const showDelete = !!onDelete;
 
   // Reset swipe offset when status changes AND on recycle (id change): FlashList
@@ -130,6 +133,10 @@ export const SwipeableRow = memo(function SwipeableRow({
     closeRow();
     onComment?.(id);
   };
+  const handleFlag = () => {
+    closeRow();
+    onFlag?.(id);
+  };
   const handleSync = () => {
     closeRow();
     onSync?.(id);
@@ -181,6 +188,19 @@ export const SwipeableRow = memo(function SwipeableRow({
             accessibilityLabel={t("swipe.commentButton")}
           >
             <MessageSquare size={22} color={colors.onSurface} strokeWidth={1.8} />
+          </TouchableOpacity>
+        )}
+
+        {showFlag && (
+          <TouchableOpacity
+            onPress={handleFlag}
+            activeOpacity={0.7}
+            className="items-center justify-center"
+            style={{ width: SEGMENT_WIDTH }}
+            accessibilityRole="button"
+            accessibilityLabel={t("swipe.flagButton")}
+          >
+            <Flag size={22} color={colors.onSurface} strokeWidth={1.8} />
           </TouchableOpacity>
         )}
 

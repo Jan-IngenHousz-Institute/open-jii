@@ -1,7 +1,7 @@
 "use client";
 
 import { ExperimentDatasetsPanel } from "@/components/datasets/experiment-datasets-panel";
-import { ConceptDDatasetsPanel } from "@/components/experiment-standards/concepts/d/concept-d-datasets-panel";
+import { StandardsStepsBlock } from "@/components/experiment-standards/standards-steps-block";
 import { PageContainer } from "@/components/page-container";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
@@ -21,8 +21,10 @@ export default function ExperimentDatasetsContent({ params }: ExperimentDatasets
 
   // An archived experiment accepts no other change, so it publishes no dataset either.
   const canPublish = Boolean(accessData?.hasAccess) && accessData?.experiment.status !== "archived";
-  // Scaffold: ?readiness=d holds publishing until the standards the trial follows are met.
-  const isConceptD = useSearchParams().get("readiness") === "d";
+  // Withdrawing is still possible on an archived experiment, since its datasets stay public.
+  const canManage = Boolean(accessData?.isAdmin);
+  // Scaffold: ?standards=off shows the tab as it is before the standards block ships.
+  const showsStandards = useSearchParams().get("standards") !== "off";
 
   return (
     <EntityLayoutShell
@@ -37,11 +39,14 @@ export default function ExperimentDatasetsContent({ params }: ExperimentDatasets
           <p className="text-muted-foreground text-sm">{t("tab.description")}</p>
         </div>
 
-        {isConceptD ? (
-          <ConceptDDatasetsPanel experimentId={id} canPublish={canPublish} />
-        ) : (
-          <ExperimentDatasetsPanel experimentId={id} canPublish={canPublish} />
-        )}
+        {showsStandards ? <StandardsStepsBlock experimentId={id} canPublish={canPublish} /> : null}
+
+        <ExperimentDatasetsPanel
+          experimentId={id}
+          canPublish={canPublish}
+          canManage={canManage}
+          showsPublishButton={!showsStandards}
+        />
       </PageContainer>
     </EntityLayoutShell>
   );

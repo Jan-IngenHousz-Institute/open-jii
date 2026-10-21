@@ -1,10 +1,9 @@
-import { ChevronRight } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
-export type SkipReason = "plantMissing" | "flooded" | "couldNotReach" | "other";
+import type { SkipReason } from "./next-plot";
 
 interface SkipReasonRowProps {
   reason: SkipReason;
@@ -28,7 +27,6 @@ export function SkipReasonRow({ reason, label, Icon, onChoose }: SkipReasonRowPr
         <Icon size={20} color={themeColors.onSurface} />
       </View>
       <Text className="text-on-surface min-w-0 flex-1 text-[15px] font-bold">{label}</Text>
-      <ChevronRight size={20} color={themeColors.inactive} />
     </Pressable>
   );
 }

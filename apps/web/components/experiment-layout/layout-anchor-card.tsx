@@ -1,14 +1,16 @@
 "use client";
 
 import { Map as LocationMap } from "@/components/map";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { X } from "lucide-react";
-import type { ChangeEvent } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { useState } from "react";
+import type { UseFormReturn } from "react-hook-form";
 
-import type { ExperimentLayout } from "@repo/api/domains/experiment/layout/experiment-layout.schema";
-import { zLayoutAnchor } from "@repo/api/domains/experiment/layout/experiment-layout.schema";
+import type {
+  ExperimentLayout,
+  LayoutAnchor,
+} from "@repo/api/domains/experiment/layout/experiment-layout.schema";
+import type { ExperimentLocation } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -28,77 +30,125 @@ import {
   FormLabel,
   FormMessage,
 } from "@repo/ui/components/form";
-import { Input } from "@repo/ui/components/input";
+import { Label } from "@repo/ui/components/label";
 import type { LocationPoint } from "@repo/ui/components/map";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components/select";
+import { ToggleGroup, ToggleGroupItem } from "@repo/ui/components/toggle-group";
 
+import { AnchorGeometry } from "./anchor-geometry";
 import { LayoutDecimalInput } from "./layout-decimal-input";
-import { rowLetter } from "./row-letter";
+import { LayoutNamingScheme } from "./layout-naming";
 
 interface LayoutAnchorCardProps {
+  experimentId: string;
   layout: ExperimentLayout;
+  /** Held by the Plots view, so unsaved values survive opening a plot and coming back. */
+  form: UseFormReturn<LayoutAnchor>;
   onClose: () => void;
 }
 
-const MAP_HEIGHT = "280px";
+type ClickTarget = "corner" | "rowEnd";
 
-// Matches the map's own popup, so a corner reads the same in the field and on the map.
+const MAP_HEIGHT = "300px";
+const FIELD_ZOOM = 18;
 const COORDINATE_DIGITS = 6;
-const METER_DIGITS = 2;
+const METER_DIGITS = 1;
 
-type AnchorForm = z.infer<typeof zLayoutAnchor>;
-
-function numberOrNull(event: ChangeEvent<HTMLInputElement>): number | null {
-  return event.target.value === "" ? null : event.target.valueAsNumber;
+function formatPoint(point: { latitude: number; longitude: number } | null): string | null {
+  return point === null
+    ? null
+    : `${point.latitude.toFixed(COORDINATE_DIGITS)}, ${point.longitude.toFixed(COORDINATE_DIGITS)}`;
 }
 
-export function LayoutAnchorCard({ layout, onClose }: LayoutAnchorCardProps) {
+export function LayoutAnchorCard({ experimentId, layout, form, onClose }: LayoutAnchorCardProps) {
   const { t } = useTranslation("experiments");
-  const form = useForm<AnchorForm>({
-    resolver: zodResolver(zLayoutAnchor),
-    defaultValues: {
-      latitude: null,
-      longitude: null,
-      bearing: null,
-      plotWidth: null,
-      plotLength: null,
-      ...layout.anchor,
-    },
-  });
+  const { data: locations = [] } = useExperimentLocations(experimentId);
+  const [target, setTarget] = useState<ClickTarget>("corner");
 
-  const firstIdentifier = `${rowLetter(1)}1`;
-  const latitude = form.watch("latitude");
-  const longitude = form.watch("longitude");
-  const hasCorner = latitude !== null && longitude !== null;
+  const anchor = form.watch();
+  const geometry = new AnchorGeometry(anchor, layout.rows, layout.columns);
+  const naming = new LayoutNamingScheme(
+    layout.naming ?? "rowLetter",
+    layout.columns,
+    layout.firstNumber ?? 1,
+  );
+  const first = naming.identifier(1, 1);
+  const rowEnd = naming.identifier(1, layout.columns);
+  const location = locations.find((candidate) => candidate.id === anchor.locationId);
+  const cornerText = formatPoint(anchor.corner);
+  const rowEndText = formatPoint(anchor.rowEnd);
+  const hasPlacement = geometry.bearing !== null && geometry.columnSpacing !== null;
 
-  const cornerLocations: LocationPoint[] = hasCorner
-    ? [
-        {
-          id: "anchor",
-          name: t("layout.anchor.corner", { identifier: firstIdentifier }),
-          latitude,
-          longitude,
-        },
-      ]
-    : [];
+  const mapPoints: LocationPoint[] = [
+    ...(location === undefined
+      ? []
+      : [
+          {
+            id: location.id,
+            name: location.name,
+            latitude: location.latitude,
+            longitude: location.longitude,
+          },
+        ]),
+    ...(anchor.corner === null
+      ? []
+      : [
+          {
+            id: "corner",
+            name: t("layout.anchor.cornerPin", { identifier: first }),
+            ...anchor.corner,
+          },
+        ]),
+    ...(anchor.rowEnd === null
+      ? []
+      : [
+          {
+            id: "rowEnd",
+            name: t("layout.anchor.cornerPin", { identifier: rowEnd }),
+            ...anchor.rowEnd,
+          },
+        ]),
+  ];
+  const center: [number, number] | undefined =
+    anchor.corner === null
+      ? location === undefined
+        ? undefined
+        : [location.latitude, location.longitude]
+      : [anchor.corner.latitude, anchor.corner.longitude];
 
-  const placeCorner = (locations: LocationPoint[]) => {
-    const placed = locations.at(-1);
-    if (placed !== undefined) {
-      form.setValue("latitude", placed.latitude);
-      form.setValue("longitude", placed.longitude);
+  const placePoint = (points: LocationPoint[]) => {
+    const placed = points.at(-1);
+    if (placed === undefined) {
+      return;
+    }
+    const point = { latitude: placed.latitude, longitude: placed.longitude };
+    form.setValue(target, point);
+    setTarget(target === "corner" ? "rowEnd" : "corner");
+  };
+
+  const chooseTarget = (value: string) => {
+    if (value === "corner" || value === "rowEnd") {
+      setTarget(value);
     }
   };
+
+  const renderLocation = (candidate: ExperimentLocation) => (
+    <SelectItem key={candidate.id} value={candidate.id}>
+      {candidate.country ? `${candidate.name}, ${candidate.country}` : candidate.name}
+    </SelectItem>
+  );
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>{t("layout.anchor.title")}</CardTitle>
-        <CardDescription>
-          {t("layout.anchor.description", {
-            level: layout.levelName.toLowerCase(),
-            identifier: firstIdentifier,
-          })}
-        </CardDescription>
+        <CardDescription>{t("layout.anchor.description")}</CardDescription>
         <CardAction>
           <Button variant="ghost" size="icon" aria-label={t("layout.plot.close")} onClick={onClose}>
             <X className="size-4" aria-hidden />
@@ -108,104 +158,107 @@ export function LayoutAnchorCard({ layout, onClose }: LayoutAnchorCardProps) {
 
       <CardContent>
         <Form {...form}>
-          <form className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <FormField
-                control={form.control}
-                name="latitude"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("layout.anchor.latitude")}</FormLabel>
-                    <FormControl>
-                      <LayoutDecimalInput {...field} fractionDigits={COORDINATE_DIGITS} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="longitude"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("layout.anchor.longitude")}</FormLabel>
-                    <FormControl>
-                      <LayoutDecimalInput {...field} fractionDigits={COORDINATE_DIGITS} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
+          <form className="space-y-5">
             <FormField
               control={form.control}
-              name="bearing"
+              name="locationId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("layout.anchor.bearing")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={359}
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={(event) => field.onChange(numberOrNull(event))}
-                    />
-                  </FormControl>
-                  <FormDescription>{t("layout.anchor.bearingHelp")}</FormDescription>
-                  <FormMessage />
+                  <FormLabel>{t("layout.anchor.location")}</FormLabel>
+                  <Select value={field.value ?? undefined} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={t("layout.anchor.locationPlaceholder")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {locations.map(renderLocation)}
+                      <SelectItem value="new">{t("layout.anchor.newLocation")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>{t("layout.anchor.locationHelp")}</FormDescription>
                 </FormItem>
               )}
             />
 
             <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-3">
-                <FormField
-                  control={form.control}
-                  name="plotWidth"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("layout.anchor.plotWidth")}</FormLabel>
-                      <FormControl>
-                        <LayoutDecimalInput {...field} fractionDigits={METER_DIGITS} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="plotLength"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("layout.anchor.plotLength")}</FormLabel>
-                      <FormControl>
-                        <LayoutDecimalInput {...field} fractionDigits={METER_DIGITS} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <p className="text-muted-foreground text-sm">{t("layout.anchor.plotSizeHelp")}</p>
+              <Label>{t("layout.anchor.corners")}</Label>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                value={target}
+                onValueChange={chooseTarget}
+                className="w-full"
+              >
+                <ToggleGroupItem
+                  value="corner"
+                  className="h-auto flex-1 flex-col items-start gap-0 px-3 py-1.5"
+                >
+                  <span className="text-xs font-medium">
+                    {t("layout.anchor.cornerLabel", { identifier: first })}
+                  </span>
+                  <span className="text-muted-foreground font-mono text-[11px]">
+                    {cornerText ?? t("layout.anchor.clickMap")}
+                  </span>
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="rowEnd"
+                  className="h-auto flex-1 flex-col items-start gap-0 px-3 py-1.5"
+                >
+                  <span className="text-xs font-medium">
+                    {t("layout.anchor.rowEndLabel", { identifier: rowEnd })}
+                  </span>
+                  <span className="text-muted-foreground font-mono text-[11px]">
+                    {rowEndText ?? t("layout.anchor.clickMap")}
+                  </span>
+                </ToggleGroupItem>
+              </ToggleGroup>
+              {hasPlacement ? (
+                <p className="text-sm" data-anchor-derived>
+                  {t("layout.anchor.derived", {
+                    bearing: Math.round(geometry.bearing),
+                    spacing: geometry.columnSpacing.toFixed(METER_DIGITS),
+                  })}
+                </p>
+              ) : null}
             </div>
+
+            <FormField
+              control={form.control}
+              name="rowSpacing"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("layout.anchor.rowSpacing")}</FormLabel>
+                  <FormControl>
+                    <LayoutDecimalInput {...field} fractionDigits={METER_DIGITS} />
+                  </FormControl>
+                  <FormDescription>{t("layout.anchor.rowSpacingHelp")}</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="space-y-1.5">
               <LocationMap
-                locations={cornerLocations}
-                onLocationsChange={placeCorner}
+                locations={mapPoints}
+                onLocationsChange={placePoint}
                 selectionMode
                 height={MAP_HEIGHT}
-                center={hasCorner ? [latitude, longitude] : undefined}
+                center={center}
+                zoom={FIELD_ZOOM}
+                outline={geometry.outline()}
                 useClustering={false}
-                showScale={false}
+                showScale
                 showSidebar={false}
                 showLocationSearch={false}
                 showDistances={false}
+                fitBoundsOnMapLoad={false}
               />
-              <p className="text-muted-foreground text-xs">{t("layout.anchor.mapHelp")}</p>
+              <p className="text-muted-foreground text-xs">
+                {geometry.isComplete
+                  ? t("layout.anchor.outlineHelp")
+                  : t("layout.anchor.partialHelp")}
+              </p>
             </div>
 
             <Button type="submit">{t("layout.anchor.save")}</Button>

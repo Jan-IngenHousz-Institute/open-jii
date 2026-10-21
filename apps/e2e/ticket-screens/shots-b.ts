@@ -91,65 +91,229 @@ export const trialTables = new FixtureWarehouse(DROUGHT_TRIAL, [RAW_DATA_TABLE, 
 
 type FieldSource = "experiment" | "study-details" | "layout" | "data-dictionary" | "profile";
 
-function filled(section: string, field: string, value: string, source: FieldSource) {
-  return { section, field, status: "filled", value, source };
+function filled(field: string, value: string, source: FieldSource) {
+  return { field, status: "filled", value, source };
 }
 
-function missing(section: string, field: string, reason: object, fix: string) {
-  return { section, field, status: "missing", reason, fix };
+function missing(field: string, reason: object) {
+  return { field, status: "missing", reason };
 }
+
+// The a5 dictionary less its plot column, which never counts as a column to describe.
+const UNDESCRIBED = ["relative_humidity", "quality_flag"];
+const WITHOUT_TERM = ["light_intensity", "daily_mean_temperature", "daily_mean_light"];
+const WITHOUT_ORCID = ["Alex Example", "Robin Example"];
 
 const NO_LOCATION = { code: "no-location" };
-const UNDESCRIBED = { code: "columns-not-described", count: 3 };
+const NOT_DESCRIBED = { code: "columns-not-described", subjects: UNDESCRIBED };
+const NO_ORCID = { code: "members-without-orcid", subjects: WITHOUT_ORCID, includesViewer: false };
 
-// Every field the export fills or leaves empty, so the missing ones are the 8 the menu item implies.
+// Every field the package fills or leaves empty, so the empty ones are the 8 the export menu names.
 const MIAPPE_FIELDS = {
   standard: "miappe",
   filled: 14,
   total: 22,
+  validator: null,
   fields: [
-    filled("investigation", "title", "Drought trial (example data)", "experiment"),
+    filled("title", "Drought trial (example data)", "experiment"),
     filled(
-      "investigation",
       "description",
       "Soybean lines under three irrigation treatments, measured weekly through the season.",
       "experiment",
     ),
-    filled("investigation", "license", "CC BY 4.0", "study-details"),
-    filled("study", "start-date", "4 May 2026", "study-details"),
-    filled("study", "end-date", "25 September 2026", "study-details"),
+    filled("license", "CC BY 4.0", "study-details"),
+    filled("start-date", "4 May 2026", "study-details"),
+    filled("end-date", "25 September 2026", "study-details"),
     filled(
-      "study",
       "experimental-design",
       "Randomized complete blocks, three treatments in three blocks",
       "study-details",
     ),
-    filled("study", "growth-facility", "Open field", "study-details"),
-    filled("study", "observation-unit-level", "Plot", "layout"),
-    missing("study", "site-name", NO_LOCATION, "add-location"),
-    missing("study", "country", NO_LOCATION, "add-location"),
-    missing("study", "latitude", NO_LOCATION, "add-location"),
-    missing("study", "longitude", NO_LOCATION, "add-location"),
-    filled("people", "person-name", "Seed User, Alex Example, Robin Example", "profile"),
-    missing("people", "orcid", { code: "authors-without-orcid", count: 2 }, "connect-orcid"),
-    filled("biological-material", "organism", "Glycine max", "study-details"),
-    filled("biological-material", "biological-material-id", "Line A, Line B", "layout"),
-    filled(
-      "experimental-factors",
-      "experimental-factor",
-      "Treatment: Control, Drought, Severe drought",
-      "layout",
-    ),
-    filled("observation-units", "observation-unit-id", "46 plots, A1 to F8", "layout"),
-    filled("observed-variables", "variable-name", "7 columns", "data-dictionary"),
-    missing("observed-variables", "trait", UNDESCRIBED, "describe-columns"),
-    missing("observed-variables", "method", UNDESCRIBED, "describe-columns"),
-    missing("observed-variables", "scale", UNDESCRIBED, "describe-columns"),
+    filled("growth-facility", "Open field", "study-details"),
+    filled("observation-unit-level", "Plot", "layout"),
+    missing("site-name", NO_LOCATION),
+    missing("country", NO_LOCATION),
+    missing("latitude", NO_LOCATION),
+    missing("longitude", NO_LOCATION),
+    filled("person-name", "Seed User, Alex Example, Robin Example", "profile"),
+    missing("orcid", NO_ORCID),
+    filled("organism", "Glycine max", "study-details"),
+    filled("biological-material-id", "Line A, Line B", "layout"),
+    filled("experimental-factor", "Treatment: Control, Drought, Severe drought", "layout"),
+    filled("observation-unit-id", "46 plots, A1 to F8", "layout"),
+    filled("variable-name", "6 columns", "data-dictionary"),
+    missing("trait", NOT_DESCRIBED),
+    missing("method", NOT_DESCRIBED),
+    missing("scale", NOT_DESCRIBED),
   ],
 };
 
 export const miappeFields = experimentRoute("/standards/miappe/fields", MIAPPE_FIELDS);
 const noExports = experimentRoute("/data/exports", { exports: [] });
+
+// The experiment chose the checklist and crop trait names. Four steps hold Freeze: three from
+// those standards and plots D6 and D7, measured twice in d9, which hold every dataset. The ORCID step
+// waits on two members and the skipped plots from e10 only inform.
+const STANDARDS = {
+  followed: ["miappe", "crop-ontology"],
+  standards: [
+    {
+      standard: "miappe",
+      state: "partial",
+      filled: 14,
+      total: 22,
+      status: { code: "fields-missing", count: 8 },
+    },
+    {
+      standard: "crop-ontology",
+      state: "partial",
+      filled: 1,
+      total: 4,
+      status: { code: "columns-without-term", count: 3 },
+    },
+    {
+      standard: "common-greenhouse-ontology",
+      state: "not-applicable",
+      filled: null,
+      total: null,
+      status: { code: "applies-to-greenhouses" },
+    },
+    {
+      standard: "openaire",
+      state: "partial",
+      filled: null,
+      total: null,
+      status: { code: "filled-while-publishing" },
+    },
+    {
+      standard: "brapi",
+      state: "met",
+      filled: 4,
+      total: 4,
+      status: { code: "calls-answer", count: 4 },
+    },
+    {
+      standard: "ogc-sensorthings",
+      state: "not-applicable",
+      filled: null,
+      total: null,
+      status: { code: "under-evaluation" },
+    },
+    {
+      standard: "fair",
+      state: "partial",
+      filled: null,
+      total: null,
+      status: { code: "scored", percent: 71 },
+    },
+  ],
+  steps: [
+    { reason: NO_LOCATION, holdsFreeze: true, standards: ["miappe"] },
+    { reason: NOT_DESCRIBED, holdsFreeze: true, standards: ["miappe"] },
+    {
+      reason: { code: "columns-without-term", subjects: WITHOUT_TERM },
+      holdsFreeze: true,
+      standards: ["crop-ontology"],
+    },
+    {
+      reason: { code: "plots-measured-twice", subjects: ["D6", "D7"] },
+      holdsFreeze: true,
+      standards: [],
+    },
+    { reason: NO_ORCID, holdsFreeze: false, standards: ["miappe"] },
+    {
+      reason: { code: "plots-left-skipped", subjects: ["A4", "E4"] },
+      holdsFreeze: false,
+      standards: [],
+    },
+  ],
+};
+
+export const standards = experimentRoute("/standards", STANDARDS);
+
+/** Saving a choice answers with what was sent, as the product does. */
+const followedEcho: Fixture = {
+  install: async (page) => {
+    await page.route(
+      (url) => url.pathname.endsWith("/standards/followed"),
+      (route) => route.fulfill({ status: 200, json: route.request().postDataJSON() }),
+    );
+  },
+};
+
+// F's dataset fixtures are not exported, so the two versions from the example field are mirrored.
+const AUTHORS = [
+  {
+    userId: "00000000-0000-4000-a000-000000000001",
+    givenName: "Seed",
+    familyName: "User",
+    orcid: "0000-0002-1825-0097",
+    affiliation: "Example University",
+  },
+  {
+    userId: "00000000-0000-4000-a000-000000000002",
+    givenName: "Alex",
+    familyName: "Example",
+    orcid: null,
+    affiliation: "Example University",
+  },
+  {
+    userId: "00000000-0000-4000-a000-000000000003",
+    givenName: "Robin",
+    familyName: "Example",
+    orcid: null,
+    affiliation: "Example University",
+  },
+];
+
+function exampleDataset(id: string, experiment: string, version: number, isDraft: boolean) {
+  return {
+    id,
+    experimentId: experiment,
+    version,
+    state: isDraft ? "draft" : "published",
+    title: "Drought trial, 2026 season (example data)",
+    description:
+      "Soybean lines under three irrigation treatments, measured weekly through the season.",
+    limitations: null,
+    authors: AUTHORS,
+    license: isDraft ? null : "CC-BY-4.0",
+    access: "open",
+    embargoUntil: null,
+    funding: [{ funderName: "Example Research Council", awardNumber: "EX-2026-001" }],
+    relatedPublications: [],
+    excludedReadings: [],
+    studyDetails: null,
+    readingCount: null,
+    plotCount: null,
+    doi: isDraft ? null : "10.5281/zenodo.0000000",
+    deposit: null,
+    supersedesId: null,
+    files: [],
+    createdAt: isDraft ? "2026-10-18T09:30:00.000Z" : "2026-09-28T09:00:00.000Z",
+    publishedAt: isDraft ? null : "2026-09-30T10:00:00.000Z",
+    withdrawnAt: null,
+    withdrawalReason: null,
+    zenodoCopy: null,
+  };
+}
+
+const datasetList: Fixture = {
+  install: async (page) => {
+    const experiment = await resolve(DROUGHT_TRIAL);
+    await page.route(
+      (url) => url.pathname === `/api/v1/experiments/${experiment}/datasets`,
+      (route) =>
+        route.fulfill({
+          status: 200,
+          json: [
+            exampleDataset("00000000-0000-4000-9000-000000000002", experiment, 2, true),
+            exampleDataset("00000000-0000-4000-9000-000000000001", experiment, 1, false),
+          ],
+        }),
+    );
+  },
+};
 
 /** The seed links a wheat workbook the example field does not have, so the trial shows none. */
 export const noLinkedWorkbook: Fixture = {
@@ -161,9 +325,28 @@ export const noLinkedWorkbook: Fixture = {
   },
 };
 
+export async function overviewRoute(): Promise<string> {
+  return `/platform/experiments/${await resolve(DROUGHT_TRIAL)}`;
+}
+
+async function datasetsRoute(): Promise<string> {
+  return `${await overviewRoute()}/datasets`;
+}
+
 /** Radix marks the page outside an open menu aria-hidden, so menu parts are found by CSS. */
 function openMenu(page: Page) {
   return page.locator("[role='menu']");
+}
+
+/** Found by CSS, since an open dialog hides the page from role queries. */
+function tabStrip(page: Page): Locator {
+  return page.locator("[role='tablist']").first();
+}
+
+function detailsCard(page: Page): Locator {
+  return page
+    .locator("h3", { hasText: /^Details$/ })
+    .locator("xpath=ancestor::div[contains(concat(' ', @class, ' '), ' rounded-xl ')][1]");
 }
 
 /** Waits out an opening zoom, which would otherwise skew the outline drawn around a part of it. */
@@ -181,144 +364,150 @@ async function blurFocus(page: Page): Promise<void> {
   });
 }
 
+async function openExportMenu(page: Page): Promise<Locator> {
+  await page.getByText("Line A").first().waitFor();
+  await page.getByRole("button", { name: "Download table" }).first().click();
+
+  const dialog = page.locator("[role='dialog']", { hasText: "Export table" });
+  await dialog.getByRole("button", { name: "Create Export" }).click();
+  await openMenu(page).getByText("8 fields will be empty").waitFor();
+  await settled(openMenu(page));
+  return dialog;
+}
+
+/** The Whole experiment group: its label and the package item under it. */
+function packageGroup(page: Page): Locator[] {
+  return [
+    openMenu(page).getByText("Whole experiment", { exact: true }),
+    openMenu(page).locator("[role='menuitem']", { hasText: "Plant phenotyping checklist" }),
+  ];
+}
+
 const exportMiappe: TicketShot = {
   slug: "b5-export-miappe",
-  route: async () => `/platform/experiments/${await resolve(DROUGHT_TRIAL)}/data`,
+  route: async () => `${await overviewRoute()}/data`,
   fixtures: [trialTables, noExports, miappeFields],
-  viewport: { width: 1440, height: 1000 },
+  viewport: { width: 1440, height: 1100 },
   prepare: async (page) => {
-    await page.getByText("Line A").first().waitFor();
-    await page.getByRole("button", { name: "Download table" }).first().click();
-
-    const dialog = page.locator("[role='dialog']", { hasText: "Export Dataset" });
-    await dialog.getByRole("button", { name: "Create Export" }).click();
-    const miappe = openMenu(page).locator("[role='menuitem']", { hasText: "MIAPPE (ISA-Tab)" });
-    await miappe.getByText("14 of 22 fields can be filled").waitFor();
-    await settled(openMenu(page));
+    const dialog = await openExportMenu(page);
 
     const marker = new ChangeMarker(page);
-    await marker.mark(miappe, "New", "outside-left");
+    await marker.mark(packageGroup(page), "New", "outside-left");
+    await marker.mark(dialog.locator("h2"), "New", "inside-right");
     return marker.frame([dialog, openMenu(page)], 24);
   },
 };
 
-const READINESS = {
-  standards: [
-    {
-      standard: "fair",
-      state: "not-assessed",
-      filled: null,
-      total: null,
-      reason: { code: "no-published-dataset" },
-    },
-    {
-      standard: "crop-ontology",
-      state: "partial",
-      filled: 1,
-      total: 4,
-      reason: { code: "columns-without-term", count: 3 },
-    },
-    {
-      standard: "common-greenhouse-ontology",
-      state: "not-applicable",
-      filled: null,
-      total: null,
-      reason: { code: "unit-without-greenhouse-term", unitName: "Plot" },
-    },
-    {
-      standard: "miappe",
-      state: "partial",
-      filled: 14,
-      total: 22,
-      reason: { code: "fields-not-fillable", count: 8 },
-    },
-    {
-      standard: "brapi",
-      state: "met",
-      filled: 4,
-      total: 4,
-      reason: { code: "calls-pass", count: 4 },
-    },
-    {
-      standard: "ogc-sensorthings",
-      state: "not-applicable",
-      filled: null,
-      total: null,
-      reason: { code: "under-evaluation" },
-    },
-    {
-      standard: "openaire-floor",
-      state: "partial",
-      filled: 2,
-      total: 8,
-      reason: { code: "fields-from-dataset", count: 6 },
-    },
-  ],
-};
-
-export const readiness = experimentRoute("/standards", READINESS);
-
-export async function overviewRoute(): Promise<string> {
-  return `/platform/experiments/${await resolve(DROUGHT_TRIAL)}`;
-}
-
-function readinessSection(page: Page) {
-  return page.locator("#standards-readiness");
-}
-
-/**
- * Centres the readiness section so the data inventory above it clears the sticky header, and
- * returns the inventory heading that opens the crop. Found by CSS, since an open sheet hides the
- * page from role queries.
- */
-async function scrollToInventory(page: Page) {
-  await readinessSection(page).evaluate((element) => element.scrollIntoView({ block: "center" }));
-  return page.locator("h2", { hasText: /^Data$/ });
-}
-
-const readinessScreen: TicketShot = {
-  slug: "b8-readiness",
-  route: overviewRoute,
-  fixtures: [trialTables, readiness, miappeFields],
-  viewport: { width: 1440, height: 1240 },
+const exportConfirm: TicketShot = {
+  slug: "b5-export-confirm",
+  route: async () => `${await overviewRoute()}/data`,
+  fixtures: [trialTables, noExports, miappeFields],
+  viewport: { width: 1440, height: 1300 },
   prepare: async (page) => {
-    const section = readinessSection(page);
-    await section.getByText("OpenAIRE floor").waitFor();
-    await page.getByText("Glycine max").waitFor();
-    const inventory = await scrollToInventory(page);
+    const dialog = await openExportMenu(page);
+    await openMenu(page)
+      .locator("[role='menuitem']", { hasText: "Plant phenotyping checklist" })
+      .click();
+
+    const confirm = dialog.getByTestId("miappe-export-confirm");
+    await confirm.getByText("Export anyway").waitFor();
+    await settled(dialog);
+    await blurFocus(page);
 
     const marker = new ChangeMarker(page);
-    await marker.mark(section, "New", "above");
-    return marker.frame([inventory, section], 36);
+    await marker.mark(confirm, "New", "outside-left");
+    return marker.frame([dialog], 24);
+  },
+};
+
+/** The Datasets tab with the steps block and the dataset list loaded. */
+async function waitForDatasets(page: Page): Promise<Locator> {
+  const block = page.getByTestId("standards-steps");
+  await block.getByText("Freeze waits for the 4 steps above").waitFor();
+  await page.getByTestId("experiment-datasets").getByText("Version 1").waitFor();
+  return block;
+}
+
+const standardsSteps: TicketShot = {
+  slug: "b8-standards-steps",
+  route: datasetsRoute,
+  fixtures: [datasetList, standards, miappeFields],
+  viewport: { width: 1440, height: 1500 },
+  prepare: async (page) => {
+    const block = await waitForDatasets(page);
+    const list = page.getByTestId("experiment-datasets");
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(block, "New", "above");
+    return marker.frame([tabStrip(page), block, list], 24);
+  },
+};
+
+const detailsLine: TicketShot = {
+  slug: "b8-details-line",
+  route: overviewRoute,
+  fixtures: [trialTables, standards, noLinkedWorkbook],
+  viewport: { width: 1440, height: 1500 },
+  prepare: async (page) => {
+    const line = page.getByTestId("standards-line");
+    await line.getByText("4 steps before freezing.", { exact: false }).waitFor();
+    await page.getByText("Glycine max").waitFor();
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(line, "New", "outside-left");
+    return marker.frame([tabStrip(page), detailsCard(page)], 24);
+  },
+};
+
+const chooseStandards: TicketShot = {
+  slug: "b8-choose",
+  route: datasetsRoute,
+  fixtures: [datasetList, standards, miappeFields, followedEcho],
+  viewport: { width: 1440, height: 1500 },
+  prepare: async (page) => {
+    const block = await waitForDatasets(page);
+    await block.getByRole("button", { name: "Change", exact: true }).click();
+
+    const dialog = page.locator("[role='dialog']", { hasText: "What this experiment follows" });
+    await dialog.getByText("Shown here, but not followed").waitFor();
+    await settled(dialog);
+    await blurFocus(page);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(dialog, "New", "above");
+    return marker.frame([tabStrip(page), block, dialog], 24);
   },
 };
 
 const fieldPanel: TicketShot = {
   slug: "b9-field-panel",
-  route: overviewRoute,
-  fixtures: [trialTables, readiness, miappeFields, noLinkedWorkbook],
-  // Tall enough for all 22 fields unscrolled, so the panel's counts can be checked against its rows.
-  viewport: { width: 1440, height: 1760 },
+  route: datasetsRoute,
+  fixtures: [datasetList, standards, miappeFields],
+  // As tall as the panel's content, since the sheet runs the viewport's full height.
+  viewport: { width: 1440, height: 1000 },
   prepare: async (page) => {
-    const section = readinessSection(page);
-    await section.getByText("OpenAIRE floor").waitFor();
-    await page.getByText("Glycine max").waitFor();
-    const inventory = await scrollToInventory(page);
-    await section.getByRole("button", { name: /^MIAPPE/ }).click();
+    const block = await waitForDatasets(page);
+    await block.getByRole("button", { name: /^Plant phenotyping checklist/ }).click();
 
     const sheet = page.locator("[role='dialog']", { hasText: "14 of 22 fields filled" });
-    await sheet.getByText("Describe columns").first().waitFor();
+    const fields = sheet.getByTestId("standard-fields");
+    await fields.getByText("Still missing").waitFor();
     await settled(sheet);
     await blurFocus(page);
 
     // The sheet is flush with three viewport edges and its close button sits in the header, so the
     // outline goes round the field list.
-    const sections = sheet.locator("section");
-
     const marker = new ChangeMarker(page);
-    await marker.mark([sections.first(), sections.last()], "New", "below");
-    return marker.frame([inventory, section, sheet], 24);
+    await marker.mark(fields, "New", "outside-left");
+    return marker.frame([tabStrip(page), block, sheet], 24);
   },
 };
 
-export const SHOTS_B: readonly TicketShot[] = [exportMiappe, readinessScreen, fieldPanel];
+export const SHOTS_B: readonly TicketShot[] = [
+  exportMiappe,
+  exportConfirm,
+  standardsSteps,
+  detailsLine,
+  chooseStandards,
+  fieldPanel,
+];

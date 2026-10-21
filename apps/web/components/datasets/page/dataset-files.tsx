@@ -28,7 +28,7 @@ export function DatasetFiles({ files }: { files: DatasetFile[] }) {
   );
 
   return (
-    <section className="space-y-2">
+    <section className="space-y-2" id="dataset-files">
       <h2 className="text-lg font-semibold">{t("page.files")}</h2>
       <ul className="bg-card divide-border divide-y rounded-lg border">{files.map(renderFile)}</ul>
     </section>

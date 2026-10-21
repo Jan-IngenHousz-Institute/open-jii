@@ -11,6 +11,7 @@ import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 
 import type { PublishDatasetForm } from "./dataset-publish-schema";
 import { DatasetPublishStepFrame } from "./dataset-publish-step-frame";
+import { StepLoadError } from "./step-load-error";
 
 interface ScopeStepProps extends WizardStepProps<PublishDatasetForm> {
   datasetId: string;
@@ -24,7 +25,23 @@ interface ScopeItem {
 
 export function ScopeStep({ datasetId, ...props }: ScopeStepProps) {
   const { t } = useTranslation("datasets");
-  const { data: scope, isLoading } = useDatasetScope(datasetId);
+  const { data: scope, isLoading, isError, refetch } = useDatasetScope(datasetId);
+
+  const handleRetry = () => {
+    void refetch();
+  };
+
+  if (isError) {
+    return (
+      <DatasetPublishStepFrame {...props}>
+        <StepLoadError
+          message={t("publish.loadError")}
+          retryLabel={t("publish.retry")}
+          onRetry={handleRetry}
+        />
+      </DatasetPublishStepFrame>
+    );
+  }
 
   if (isLoading || scope === undefined) {
     return <Skeleton className="h-72 w-full" />;
@@ -40,6 +57,16 @@ export function ScopeStep({ datasetId, ...props }: ScopeStepProps) {
     { icon: LayoutGrid, label: t("scope.layout"), detail: t("scope.layoutDetail") },
     { icon: FileText, label: t("scope.studyDetails"), detail: t("scope.studyDetailsDetail") },
   ];
+
+  const { previous } = scope;
+  const versionDetail =
+    previous === null
+      ? t("scope.firstVersionDetail")
+      : t("scope.versionDetail", {
+          previous: previous.version,
+          previousCount: previous.readingCount,
+          added: scope.readingCount - previous.readingCount,
+        });
 
   const renderItem = ({ icon: Icon, label, detail }: ScopeItem) => (
     <li key={label} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
@@ -63,11 +90,11 @@ export function ScopeStep({ datasetId, ...props }: ScopeStepProps) {
           <p className="text-sm font-medium">
             {t("scope.versionTitle", { version: scope.version })}
           </p>
-          <p className="text-muted-foreground text-sm">
-            {t("scope.versionDetail", { version: scope.version })}
-          </p>
+          <p className="text-muted-foreground text-sm">{versionDetail}</p>
         </div>
       </div>
+
+      <p className="text-muted-foreground text-sm">{t("scope.publicExperimentNote")}</p>
     </DatasetPublishStepFrame>
   );
 }

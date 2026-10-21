@@ -15,8 +15,11 @@ import type { Measurement, MeasurementStatus } from "~/shared/db/measurements-st
 import { UNSYNCED_STATUSES } from "~/shared/db/measurements-storage";
 import {
   buildAnnotations,
+  getCommentFromMeasurementResult,
   getFlagTypeFromMeasurementResult,
 } from "~/shared/measurements/measurement-annotations";
+
+import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 // The row-action functions below are useCallback'd on [queryClient]:
 // row-action callbacks in the list screen hang off these, and a new closure
@@ -101,6 +104,17 @@ export function useMeasurements() {
     [queryClient],
   );
 
+  const updateMeasurementFlag = useCallback(
+    async (key: string, data: Measurement, flagType: ExperimentAnnotationFlagType | null) => {
+      const commentText = getCommentFromMeasurementResult(data.measurementResult);
+      const annotations = buildAnnotations(commentText, flagType);
+      const measurementResult = { ...data.measurementResult, annotations };
+      await updateMeasurement(key, { ...data, measurementResult });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.root });
+    },
+    [queryClient],
+  );
+
   return {
     isUploading: uploadMutation.isPending,
     uploadAll: () => uploadMutation.mutateAsync(),
@@ -112,5 +126,6 @@ export function useMeasurements() {
     removeMeasurements,
     clearSyncedMeasurements,
     updateMeasurementComment,
+    updateMeasurementFlag,
   };
 }

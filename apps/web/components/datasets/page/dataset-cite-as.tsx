@@ -5,9 +5,24 @@ import { Quote } from "lucide-react";
 import { useTranslation } from "@repo/i18n";
 import { CopyButton } from "@repo/ui/components/copy-button";
 
+interface DatasetCiteAsProps {
+  citation: string;
+  /** On a tombstone the citation stays for references already made, but steps back. */
+  isQuiet?: boolean;
+}
+
 /** The citation as the record states it, built once on the server so every copy reads the same. */
-export function DatasetCiteAs({ citation }: { citation: string }) {
+export function DatasetCiteAs({ citation, isQuiet = false }: DatasetCiteAsProps) {
   const { t } = useTranslation("datasets");
+
+  if (isQuiet) {
+    return (
+      <p className="text-muted-foreground text-xs leading-relaxed" data-testid="dataset-cite-as">
+        <span className="font-medium">{t("page.citeAs")}: </span>
+        {citation}
+      </p>
+    );
+  }
 
   return (
     <section className="bg-card rounded-lg border p-4" data-testid="dataset-cite-as">

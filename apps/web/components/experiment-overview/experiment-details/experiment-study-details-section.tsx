@@ -1,5 +1,6 @@
 "use client";
 
+import { formatShortDate } from "@/util/date";
 import { useState } from "react";
 
 import type { Experiment, FundingReference } from "@repo/api/domains/experiment/experiment.schema";
@@ -30,7 +31,11 @@ export function ExperimentStudyDetailsSection({
   const canEdit = hasAccess && !isArchived;
   const hasPeriod = Boolean(experiment.startDate ?? experiment.endDate);
   const notSet = t("studyDetails.dateNotSet");
-  const period = `${experiment.startDate ?? notSet} → ${experiment.endDate ?? notSet}`;
+  // Plain dates are formatted in UTC, or a reader west of Greenwich would see the day before.
+  const formatDay = (day: string | null) => (day ? formatShortDate(day, "en-US", "UTC") : notSet);
+  const period = hasPeriod
+    ? `${formatDay(experiment.startDate)} → ${formatDay(experiment.endDate)}`
+    : null;
   const fundingReferences = experiment.fundingReferences ?? [];
   const hasFunding = fundingReferences.length > 0;
   const hasAnyDetail =
@@ -40,24 +45,46 @@ export function ExperimentStudyDetailsSection({
     Boolean(experiment.growthFacility) ||
     Boolean(experiment.experimentalDesign) ||
     Boolean(experiment.license);
+  const showsRows = canEdit || hasAnyDetail;
 
-  const renderRow = (label: string, value: string) => (
-    <div>
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <p className="truncate text-sm" title={value}>
+  const renderValue = (value: string | null) =>
+    value === null ? (
+      <p className="text-muted-foreground text-sm italic">{t("studyDetails.notSet")}</p>
+    ) : (
+      <p className="line-clamp-3 text-sm" title={value}>
         {value}
       </p>
-    </div>
-  );
+    );
+
+  // Someone who may edit sees every field, so they know what is still missing.
+  const renderRow = (label: string, value: string | null | undefined) => {
+    const text = value === "" ? null : (value ?? null);
+    const isHidden = text === null && !canEdit;
+
+    return isHidden ? null : (
+      <div>
+        <p className="text-muted-foreground text-xs">{label}</p>
+        {renderValue(text)}
+      </div>
+    );
+  };
 
   const renderFundingReference = (reference: FundingReference, index: number) => {
     const text = reference.awardNumber
       ? tStudy("funding.reference", { funder: reference.funderName, award: reference.awardNumber })
       : reference.funderName;
+    return <div key={index}>{renderValue(text)}</div>;
+  };
+
+  const renderFunding = () => {
+    if (!hasFunding && !canEdit) {
+      return null;
+    }
     return (
-      <p key={index} className="truncate text-sm" title={text}>
-        {text}
-      </p>
+      <div>
+        <p className="text-muted-foreground text-xs">{tStudy("funding.title")}</p>
+        {hasFunding ? fundingReferences.map(renderFundingReference) : renderValue(null)}
+      </div>
     );
   };
 
@@ -73,22 +100,17 @@ export function ExperimentStudyDetailsSection({
           ) : null}
         </div>
 
-        {hasAnyDetail ? (
+        {showsRows ? (
           <div className="space-y-2">
-            {hasPeriod && renderRow(t("studyDetails.period"), period)}
-            {experiment.organism && renderRow(t("studyDetails.organism"), experiment.organism)}
-            {experiment.growthFacility &&
-              renderRow(t("studyDetails.growthFacility"), experiment.growthFacility)}
-            {experiment.experimentalDesign &&
-              renderRow(t("studyDetails.experimentalDesign"), experiment.experimentalDesign)}
-            {experiment.license &&
-              renderRow(t("studyDetails.license"), licenseLabel(experiment.license))}
-            {hasFunding && (
-              <div>
-                <p className="text-muted-foreground text-xs">{tStudy("funding.title")}</p>
-                {fundingReferences.map(renderFundingReference)}
-              </div>
+            {renderRow(t("studyDetails.period"), period)}
+            {renderRow(t("studyDetails.organism"), experiment.organism)}
+            {renderRow(t("studyDetails.experimentalDesign"), experiment.experimentalDesign)}
+            {renderRow(t("studyDetails.growthFacility"), experiment.growthFacility)}
+            {renderRow(
+              t("studyDetails.license"),
+              experiment.license ? licenseLabel(experiment.license) : null,
             )}
+            {renderFunding()}
           </div>
         ) : (
           <p className="text-muted-foreground text-sm italic">{t("studyDetails.empty")}</p>

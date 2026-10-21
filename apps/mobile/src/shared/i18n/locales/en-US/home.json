@@ -14,7 +14,8 @@
     "stepOfTotal": "Step {{step}} of {{total}}",
     "stepOfTotalWithPlot": "Step {{step}} of {{total}} · {{plot}}",
     "action": "Continue measurement",
-    "untitled": "Measurement in progress"
+    "untitled": "Measurement in progress",
+    "nextPlot": "Next plot {{plot}} · {{measured}} of {{total}} plots measured"
   },
   "cta": {
     "title": "Start a measurement",

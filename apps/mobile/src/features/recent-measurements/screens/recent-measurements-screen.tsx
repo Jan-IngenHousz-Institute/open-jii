@@ -58,6 +58,7 @@ export function RecentMeasurementsScreen() {
     confirmSyncRun,
     confirmDeleteRun,
     saveComment,
+    saveFlag,
   } = useRecentMeasurementsActions(filter);
 
   // Which workbook runs are open. Collapsed is the default: the point of the
@@ -100,7 +101,7 @@ export function RecentMeasurementsScreen() {
 
   // The list row is lean (no `measurement_result`). Loading the full payload
   // on tap is fast (~5-20 ms locally); see Scenario J in measurements-perf.
-  const openModal = useCallback(async (kind: "questions" | "comment", id: string) => {
+  const openModal = useCallback(async (kind: "questions" | "comment" | "flag", id: string) => {
     const full = await getMeasurement(id);
     if (full) setModal({ kind, measurement: full });
   }, []);
@@ -208,6 +209,12 @@ export function RecentMeasurementsScreen() {
     },
     [openModal],
   );
+  const onRowFlag = useCallback(
+    (id: string) => {
+      void openModal("flag", id);
+    },
+    [openModal],
+  );
   const onRowDelete = useCallback(
     (id: string) => {
       const item = itemsById.get(id);
@@ -261,6 +268,7 @@ export function RecentMeasurementsScreen() {
           item={row.item}
           onPress={onRowPress}
           onComment={onRowComment}
+          onFlag={onRowFlag}
           onDelete={onRowDelete}
           onSync={onRowSync}
           peekToken={row.key === firstRowKey ? peekToken : 0}
@@ -271,6 +279,7 @@ export function RecentMeasurementsScreen() {
     [
       onRowPress,
       onRowComment,
+      onRowFlag,
       onRowDelete,
       onRowSync,
       onRunSync,
@@ -308,7 +317,12 @@ export function RecentMeasurementsScreen() {
         </View>
       )}
 
-      <MeasurementsModals state={modal} onClose={closeModal} onSaveComment={saveComment} />
+      <MeasurementsModals
+        state={modal}
+        onClose={closeModal}
+        onSaveComment={saveComment}
+        onSaveFlag={saveFlag}
+      />
     </View>
   );
 }

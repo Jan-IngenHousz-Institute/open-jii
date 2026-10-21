@@ -6,16 +6,19 @@ interface MeasurerPickerProps {
   measurers: readonly Measurer[];
   value: readonly string[];
   onChange: (userIds: string[]) => void;
+  isDisabled: boolean;
 }
 
-export function MeasurerPicker({ measurers, value, onChange }: MeasurerPickerProps) {
-  const toggle = (userId: string, isChecked: boolean) =>
+export function MeasurerPicker({ measurers, value, onChange, isDisabled }: MeasurerPickerProps) {
+  const toggle = (userId: string, isChecked: boolean) => {
     onChange(isChecked ? [...value, userId] : value.filter((id) => id !== userId));
+  };
 
   const renderMeasurer = (measurer: Measurer) => {
     const inputId = `measurer-${measurer.userId}`;
-    const handleCheckedChange = (checked: boolean | "indeterminate") =>
+    const handleCheckedChange = (checked: boolean | "indeterminate") => {
       toggle(measurer.userId, checked === true);
+    };
 
     return (
       <div key={measurer.userId} className="flex items-center gap-2">
@@ -23,6 +26,7 @@ export function MeasurerPicker({ measurers, value, onChange }: MeasurerPickerPro
           id={inputId}
           checked={value.includes(measurer.userId)}
           onCheckedChange={handleCheckedChange}
+          disabled={isDisabled}
         />
         <Label htmlFor={inputId} className="cursor-pointer font-normal">
           {measurer.name}

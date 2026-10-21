@@ -16,8 +16,9 @@ interface ChoiceOptionProps {
 
 /** One bordered radio row, as the calibration definition picker draws its choices. */
 export function ChoiceOption({ value, id, label, detail, children }: ChoiceOptionProps) {
+  // The radio dot alone is too faint to tell which card is chosen, so the card itself shows it.
   return (
-    <div className="hover:bg-muted/40 rounded-lg border px-4 py-3 transition-colors">
+    <div className="hover:bg-muted/40 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5 rounded-lg border px-4 py-3 transition-colors">
       <div className="flex items-start gap-3">
         <RadioGroupItem value={value} id={id} className="mt-0.5" />
         <Label

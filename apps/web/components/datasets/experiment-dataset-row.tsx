@@ -10,6 +10,7 @@ import { TableCell, TableRow } from "@repo/ui/components/table";
 
 import { DatasetDepositStatus } from "./dataset-deposit-status";
 import { DatasetDoiLink } from "./dataset-doi-link";
+import { DatasetRowActions } from "./dataset-row-actions";
 import { DatasetStateBadge } from "./dataset-state-badge";
 import { DatasetVersionCell } from "./dataset-version-cell";
 
@@ -18,18 +19,29 @@ interface ExperimentDatasetRowProps {
   /** The version this one supersedes, when it is the next row down. */
   supersededVersion: number | null;
   isSupersededAbove: boolean;
+  /** Set once any dataset has been deposited, so the column means something. */
+  showsDoi: boolean;
+  /** Admins and members retry a deposit. */
+  canPublish: boolean;
+  /** Only admins withdraw or open embargoed files early. */
+  canManage: boolean;
 }
 
 export function ExperimentDatasetRow({
   dataset,
   supersededVersion,
   isSupersededAbove,
+  showsDoi,
+  canPublish,
+  canManage,
 }: ExperimentDatasetRowProps) {
   const { t } = useTranslation("datasets");
   const locale = useLocale();
   const format = useLocalDateFormat(locale);
 
   const isDraft = dataset.state === "draft";
+  const embargoUntil = dataset.access === "embargoed" ? dataset.embargoUntil : null;
+  const zenodoCopy = dataset.state === "withdrawn" ? dataset.zenodoCopy : null;
   // A Draft reopens the publish flow; everything else has a dataset page.
   const href = isDraft
     ? `/${locale}/platform/experiments/${dataset.experimentId}/datasets/${dataset.id}/publish`
@@ -43,6 +55,35 @@ export function ExperimentDatasetRow({
       return t("list.published", { date: format.date(dataset.publishedAt) });
     }
     return t("list.started", { date: format.date(dataset.createdAt) });
+  };
+
+  const readingsLabel =
+    dataset.readingCount === null
+      ? t("list.notFrozen")
+      : t("list.readings", { count: dataset.readingCount });
+
+  const doiCell = () => {
+    if (dataset.deposit !== null && dataset.deposit.status !== "deposited") {
+      return <DatasetDepositStatus deposit={dataset.deposit} canRetry={canPublish} />;
+    }
+    if (dataset.doi === null) {
+      return (
+        <span className="text-muted-foreground">
+          {isDraft ? t("list.doiAtFreeze") : t("list.notDeposited")}
+        </span>
+      );
+    }
+    return (
+      <div className="space-y-1.5">
+        <DatasetDoiLink doi={dataset.doi} />
+        {dataset.deposit !== null ? (
+          <DatasetDepositStatus deposit={dataset.deposit} canRetry={canPublish} />
+        ) : null}
+        {zenodoCopy !== null ? (
+          <p className="text-muted-foreground text-xs">{t(`zenodoCopy.${zenodoCopy}`)}</p>
+        ) : null}
+      </div>
+    );
   };
 
   return (
@@ -68,18 +109,22 @@ export function ExperimentDatasetRow({
         <DatasetStateBadge state={dataset.state} />
       </TableCell>
 
-      <TableCell className="text-muted-foreground">{dateLabel()}</TableCell>
-
-      <TableCell className="py-3">
-        <div className="space-y-1.5">
-          {dataset.doi !== null ? (
-            <DatasetDoiLink doi={dataset.doi} />
-          ) : (
-            <span className="text-muted-foreground">{t("list.noDoi")}</span>
-          )}
-          {dataset.deposit !== null ? <DatasetDepositStatus deposit={dataset.deposit} /> : null}
-        </div>
+      <TableCell className="text-muted-foreground py-3">
+        <p>{dateLabel()}</p>
+        {embargoUntil !== null ? (
+          <p className="text-xs">{t("list.filesOpen", { date: format.date(embargoUntil) })}</p>
+        ) : null}
       </TableCell>
+
+      <TableCell className="text-muted-foreground tabular-nums">{readingsLabel}</TableCell>
+
+      {showsDoi ? <TableCell className="py-3">{doiCell()}</TableCell> : null}
+
+      {canManage ? (
+        <TableCell className="w-12 pr-3 text-right">
+          <DatasetRowActions dataset={dataset} />
+        </TableCell>
+      ) : null}
     </TableRow>
   );
 }

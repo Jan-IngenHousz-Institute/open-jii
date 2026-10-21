@@ -28,27 +28,34 @@ import { WalkingStrategyOption } from "./walking-strategy-option";
 
 interface WalkingOrderCardProps {
   plan: FieldPlan;
+  canEdit: boolean;
 }
 
-export function WalkingOrderCard({ plan }: WalkingOrderCardProps) {
+const RECOMMENDED: WalkingStrategy = "treatmentBalanced";
+
+export function WalkingOrderCard({ plan, canEdit }: WalkingOrderCardProps) {
   const { t } = useTranslation("fieldSessions");
 
-  // Treatment-balanced needs treatments to balance.
-  const strategies = zWalkingStrategy.options.filter(
-    (option) => plan.hasTreatments || option !== "treatmentBalanced",
-  );
-  const fallback: WalkingStrategy = plan.hasTreatments ? "treatmentBalanced" : "randomByBlock";
-
+  const fallback: WalkingStrategy = plan.hasTreatments ? RECOMMENDED : "randomByBlock";
   const form = useForm<WalkingOrderSettings>({
     resolver: zodResolver(zWalkingOrderSettings),
-    defaultValues: { strategy: plan.strategy ?? fallback, seed: plan.seed },
+    defaultValues: { strategy: plan.strategy ?? fallback, orderCode: plan.orderCode },
   });
+
+  const isSaved = plan.strategy !== null;
+  const canSave = !isSaved || form.formState.isDirty;
 
   // Scaffold: storing the strategy is not built yet.
   const handleSave = form.handleSubmit(() => undefined);
 
   const renderOption = (option: WalkingStrategy) => (
-    <WalkingStrategyOption key={option} strategy={option} />
+    <WalkingStrategyOption
+      key={option}
+      strategy={option}
+      isRecommended={option === RECOMMENDED}
+      isDisabled={!canEdit || (option === RECOMMENDED && !plan.hasTreatments)}
+      needsTreatments={option === RECOMMENDED && !plan.hasTreatments}
+    />
   );
 
   return (
@@ -69,16 +76,21 @@ export function WalkingOrderCard({ plan }: WalkingOrderCardProps) {
                     <RadioGroup
                       value={field.value}
                       onValueChange={field.onChange}
+                      disabled={!canEdit}
                       className="gap-2"
                     >
-                      {strategies.map(renderOption)}
+                      {zWalkingStrategy.options.map(renderOption)}
                     </RadioGroup>
                   </FormControl>
                 </FormItem>
               )}
             />
 
-            <Button type="submit">{t("walkingOrder.save")}</Button>
+            {canEdit ? (
+              <Button type="submit" disabled={!canSave}>
+                {t("walkingOrder.save")}
+              </Button>
+            ) : null}
           </form>
         </Form>
       </CardContent>

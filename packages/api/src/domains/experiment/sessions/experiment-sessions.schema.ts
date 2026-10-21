@@ -17,16 +17,17 @@ export const zPlotAttributes = z.object({
 
 export const zWalkingOrder = z.object({
   strategy: zWalkingStrategy.nullable(),
-  seed: z.string().nullable(),
+  /** Rebuilds a random order exactly. By row and serpentine follow the layout and carry none. */
+  orderCode: z.string().nullable(),
   /** Unit ids in the order a phone walks them, empty until a strategy is saved. */
   order: z.array(z.string().uuid()),
   plots: z.array(zPlotAttributes),
 });
 
-/** A null seed asks the platform to draw one when the strategy is saved. */
+/** A null order code asks the platform to draw one when a random strategy is saved. */
 export const zWalkingOrderSettings = z.object({
   strategy: zWalkingStrategy,
-  seed: z.string().min(1).max(64).nullable(),
+  orderCode: z.string().min(1).max(64).nullable(),
 });
 
 export const zMeasurer = z.object({
@@ -43,7 +44,6 @@ export const zFieldShare = z.object({
 
 export const zFieldAssignments = z.object({
   split: zFieldSplit,
-  seed: z.string(),
   shares: z.array(zFieldShare),
 });
 
@@ -65,6 +65,9 @@ export const zSessionProgress = z.object({
   measurers: z.array(zMeasurerProgress),
 });
 
+/** The days any session ran on, newest first. */
+export const zSessionDays = z.array(z.string().date());
+
 export const zSkipReason = z.enum(["plantMissing", "flooded", "couldNotReach", "other"]);
 
 export const zSessionReading = z.object({
@@ -77,7 +80,7 @@ export const zSessionSkip = z.object({
   reason: zSkipReason,
 });
 
-/** One measurer's session as uploaded so far. A reading outside the assignment is off-plan. */
+/** One measurer's session as uploaded so far. A reading outside the assignment is outside their share. */
 export const zEndedSession = z.object({
   userId: z.string().uuid(),
   phone: z.string(),
@@ -93,17 +96,33 @@ export const zEndedSessionsQuery = z.object({
   endedOn: z.string().date(),
 });
 
-export const zConflictReading = z.object({
+/** One value a reading carries, as the workbook labels it. */
+export const zReadingValue = z.object({
+  label: z.string(),
+  value: z.string(),
+});
+
+export const zMeasuredTwiceReading = z.object({
+  readingId: z.string().uuid(),
   userId: z.string().uuid(),
   phone: z.string(),
   measuredAt: z.string().datetime(),
+  values: z.array(zReadingValue),
 });
 
-export const zPlotConflict = z.object({
+/** Which reading stands. The others stay in the data, left out of it. */
+export const zMeasuredTwiceResolution = z.object({
+  keptReadingId: z.string().uuid(),
+  resolvedBy: z.string().uuid(),
+  resolvedAt: z.string().datetime(),
+});
+
+/** A plot more than one reading landed on without a repeat. */
+export const zMeasuredTwicePlot = z.object({
   id: z.string().uuid(),
   unitId: z.string().uuid(),
-  readings: z.array(zConflictReading),
-  resolvedAt: z.string().datetime().nullable(),
+  readings: z.array(zMeasuredTwiceReading),
+  resolution: zMeasuredTwiceResolution.nullable(),
 });
 
 export type WalkingStrategy = z.infer<typeof zWalkingStrategy>;
@@ -121,5 +140,7 @@ export type SkipReason = z.infer<typeof zSkipReason>;
 export type SessionReading = z.infer<typeof zSessionReading>;
 export type SessionSkip = z.infer<typeof zSessionSkip>;
 export type EndedSession = z.infer<typeof zEndedSession>;
-export type ConflictReading = z.infer<typeof zConflictReading>;
-export type PlotConflict = z.infer<typeof zPlotConflict>;
+export type ReadingValue = z.infer<typeof zReadingValue>;
+export type MeasuredTwiceReading = z.infer<typeof zMeasuredTwiceReading>;
+export type MeasuredTwiceResolution = z.infer<typeof zMeasuredTwiceResolution>;
+export type MeasuredTwicePlot = z.infer<typeof zMeasuredTwicePlot>;

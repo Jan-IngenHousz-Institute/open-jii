@@ -51,8 +51,26 @@ export function getDatasetCatalogueColumns({
       ),
     },
     {
+      header: t("catalogue.columns.organism"),
+      className: "hidden w-40 md:table-cell",
+      cell: (dataset) => (
+        <span className={cn("text-[13px] italic", overviewTableText.strong)}>
+          {dataset.studyDetails?.organism ?? ""}
+        </span>
+      ),
+    },
+    {
+      header: t("catalogue.columns.version"),
+      className: "w-28",
+      cell: (dataset) => (
+        <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
+          {t("catalogue.versionValue", { version: dataset.version })}
+        </span>
+      ),
+    },
+    {
       header: t("catalogue.columns.license"),
-      className: "w-32",
+      className: "w-28",
       cell: (dataset) => (
         <span className={cn("text-[13px]", overviewTableText.strong)}>
           {dataset.license === null ? "" : t(`licenses.${LICENSE_KEYS[dataset.license]}`)}
@@ -72,11 +90,7 @@ export function getDatasetCatalogueColumns({
       header: t("catalogue.columns.doi"),
       className: "hidden w-64 lg:table-cell",
       cell: (dataset) =>
-        dataset.doi === null ? (
-          <span className={cn("text-[13px]", overviewTableText.muted)}>{t("list.noDoi")}</span>
-        ) : (
-          <DatasetDoiLink doi={dataset.doi} className="text-[13px]" />
-        ),
+        dataset.doi === null ? null : <DatasetDoiLink doi={dataset.doi} className="text-[13px]" />,
     },
   ];
 }

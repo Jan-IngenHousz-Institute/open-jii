@@ -35,8 +35,10 @@ export function LayoutSheetMatchPreview({
     return hidden > 0 ? t("layout.sheetMatch.moreNames", { names: shown, count: hidden }) : shown;
   };
 
-  const { matchedRowCount, unmatchedNames, plotsWithoutRow, duplicateNames } = preview;
+  const { matchedRowCount, unmatchedNames, plotsWithoutRow, duplicateNames, readingsWithPlot } =
+    preview;
   const hasDuplicates = duplicateNames.length > 0;
+  const hasReadings = readingsWithPlot > 0;
 
   const matched = t("layout.sheetMatch.matched", { count: matchedRowCount });
   const unmatched =
@@ -65,6 +67,11 @@ export function LayoutSheetMatchPreview({
             {t("layout.sheetMatch.duplicates", { names: listNames(duplicateNames) })}
           </p>
         ) : null}
+        <p className="text-muted-foreground" data-readings-with-plot>
+          {hasReadings
+            ? t("layout.sheetMatch.readings", { count: readingsWithPlot, level })
+            : t("layout.sheetMatch.noReadings", { level })}
+        </p>
       </div>
     </div>
   );

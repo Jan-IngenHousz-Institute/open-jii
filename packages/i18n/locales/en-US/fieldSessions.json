@@ -1,13 +1,18 @@
 {
   "gridTitle": "{{level}} grid",
-  "gap": "A gap in the field, with no unit",
-  "gapShort": "Gap",
+  "unitName": "{{level}} {{plot}}",
+  "treatment": "Treatment",
   "plotCount_one": "{{count}} plot",
   "plotCount_other": "{{count}} plots",
   "coverage": "{{measured}} of {{total}}",
+  "loadError": "This view could not be loaded.",
+  "retry": "Try again",
   "walkingOrder": {
     "title": "Walking order",
-    "description": "How measurers walk the field. Every phone receives it when a session starts.",
+    "description": "How measurers walk the field. Phones receive it when their next session starts.",
+    "choose": "Choose a walking order",
+    "recommended": "Recommended",
+    "addTreatments": "Add treatments to plots first",
     "strategies": {
       "byRow": {
         "label": "By row",
@@ -19,64 +24,102 @@
       },
       "randomByBlock": {
         "label": "Random by block",
-        "description": "Shuffles the plots within each block from a seed. Time of day no longer follows the layout inside a block."
+        "description": "Shuffles the plots within each block. Time of day no longer follows the layout inside a block."
       },
       "treatmentBalanced": {
         "label": "Treatment-balanced",
-        "description": "Spreads every treatment evenly across the walk from a seed. No treatment is measured mostly early or mostly late."
+        "description": "Spreads every treatment evenly across the walk, so no treatment is measured mostly early or mostly late."
       }
     },
     "save": "Save",
+    "change": "Change",
+    "summary": "{{strategy}}, order code {{code}}",
+    "summaryNoCode": "{{strategy}}",
     "previewDescription": "{{count}} plots in walking order",
-    "balance": "Every {{window}} plots in a row hold each treatment {{expected}} times, give or take one",
-    "unbalanced": "Part of the walk holds a treatment more often than the balance allows",
-    "seed": "Seed: {{seed}}",
+    "showPath": "Show path",
+    "start": "Start",
+    "end": "End",
+    "strip": "The walk, step by step",
+    "stripStart": "Start {{plot}}",
+    "stripEnd": "End {{plot}}",
+    "stripStep": "Step {{position}}, {{plot}}, {{treatment}}",
+    "balance": "Any {{window}} consecutive plots in the walk hold each treatment {{expected}} times, give or take one.",
+    "unbalanced": "Steps {{first}} to {{last}} hold a treatment more or less often than the balance allows.",
+    "outsideBalance": "Outside the balance",
+    "orderCode": "Order code",
+    "orderCodeHint": "The same code always rebuilds this order. A new code changes the order for sessions that start after you save, never walks already recorded.",
     "regenerate": "Regenerate"
   },
   "divide": {
     "title": "Divide the field",
-    "description": "Give each measurer a share of the walking order. Each share becomes the assignment their phone receives.",
+    "description": "Give each measurer a share of the walking order. Each share becomes the assignment their phone receives at its next session start.",
     "measurers": "Measurers",
     "split": "Split",
+    "protects": "Protects:",
+    "costs": "Costs:",
     "splits": {
-      "equalShares": "Equal shares along the walking order",
-      "rowBands": "Row bands"
-    },
-    "splitHints": {
-      "equalShares": "Or row bands, which keep every block with one measurer.",
-      "rowBands": "Or equal shares, which cut the walking order into even parts."
+      "equalShares": {
+        "label": "Equal shares along the walk",
+        "protects": "Every measurer gets the same number of plots, each share balanced across treatments.",
+        "costs": "Each measurer walks across every block."
+      },
+      "rowBands": {
+        "label": "Row bands",
+        "protects": "Each block stays with one measurer, so differences between measurers fall inside the block differences the analysis already separates.",
+        "costs": "Shares are unequal when blocks do not divide evenly between measurers.",
+        "uneven": "Here that gives {{sizes}} plots."
+      }
     },
     "paint": "Paint by hand",
-    "paintHint": "Pick a measurer, then click or drag over plots to move them into that share.",
+    "paintHint": "Pick a measurer, then click or drag over plots. With the keyboard, move with the arrow keys and press Space to paint.",
     "paintInto": "Paint into",
+    "undo": "Undo",
+    "reset": "Reset",
     "sharePlots_one": "{{count}} plot, rows {{first}} to {{last}}",
     "sharePlots_other": "{{count}} plots, rows {{first}} to {{last}}",
+    "shareWalk": "{{size}}, walk {{first}} to {{last}}",
     "sharePlotsCount_one": "{{count}} plot",
     "sharePlotsCount_other": "{{count}} plots",
     "balanced": "Balanced",
-    "oneTreatment": "One treatment",
-    "oneTreatmentWarning": "A share of one treatment ties this measurer to that treatment.",
+    "missing": "Missing {{treatments}}",
+    "outsideBalance": "Outside the balance",
+    "missingWarning": "A share missing a treatment ties this measurer to the treatments it holds.",
+    "outsideWarning": "This share holds a treatment more or less often than the tolerance allows.",
     "noOverlap": "No plot is in two shares.",
-    "regenerate": "Regenerate split",
     "save": "Save assignments",
-    "gridDescription": "{{count}} plots, bordered by share"
+    "gridDescription": "{{count}} plots, bordered by share",
+    "inviteTitle": "Nobody else can measure yet",
+    "inviteDescription": "A measurer has to be a member of this experiment before they can get a share. Invite one, and they appear here once they accept.",
+    "invite": "Invite a measurer",
+    "replaceTitle": "Replace the painted shares?",
+    "replaceDescription": "A new order code builds a new walking order, and the shares are cut from it again. The plots you painted by hand go back to the split.",
+    "replaceCancel": "Cancel",
+    "replaceConfirm": "Replace painted shares"
+  },
+  "fieldDays": {
+    "today": "Today",
+    "todayOn": "Today, {{date}}",
+    "yesterdayOn": "Yesterday, {{date}}",
+    "day": "Day",
+    "running": "Sessions running",
+    "updated": "Updated {{time}}",
+    "noSessionTitle": "No session on this day",
+    "noSessionDescription": "Nobody ended a session on the day you chose. Pick another day, or wait for measurers to finish."
   },
   "live": {
     "title": "Live progress",
-    "updated": "Updated {{time}}",
-    "measuredOf": "{{measured}} of {{total}} measured",
-    "skippedToDo": "{{skipped}} skipped, {{toDo}} to do",
-    "lastUpload": "Last upload {{time}}",
-    "noUpload": "No upload yet",
+    "measuredOf": "{{measured}} of {{total}} plots measured",
+    "skippedToMeasure": "{{skipped}} skipped, {{toMeasure}} to measure",
+    "uploaded": "Uploaded {{time}}",
+    "quiet": "Uploaded {{time}}. The phone may be out of signal, and its readings arrive when it reconnects.",
+    "noUpload": "No upload yet.",
+    "noUploadHint": "Nothing has arrived from this phone today.",
     "byTreatment": "By treatment",
     "byGenotype": "By genotype",
-    "gridDescription": "{{measured}} of {{total}} plots measured",
-    "legendMeasured": "Measured",
-    "legendNotMeasured": "Not measured yet",
-    "legendSkipped": "Skipped"
+    "gridDescription": "{{measured}} of {{total}} plots measured"
   },
   "overview": {
-    "title": "Sessions ended today",
+    "title": "Overview of the day",
     "allUploaded": "All phones uploaded",
     "waitingCount_one": "{{count}} phone waiting",
     "waitingCount_other": "{{count}} phones waiting",
@@ -86,18 +129,21 @@
     "phones_other": "{{count}} phones",
     "repeats_one": "{{count}} repeat",
     "repeats_other": "{{count}} repeats",
-    "summary": "{{readings}} received from {{phones}}. {{covered}} of {{total}} plots covered, {{skipped}} skipped, {{repeats}}, {{offPlan}} off-plan.",
-    "coveredBar": "{{covered}} of {{total}} plots covered",
+    "outsideShare_one": "{{count}} reading outside a share",
+    "outsideShare_other": "{{count}} readings outside a share",
+    "measuredTwice_one": "{{count}} plot measured twice",
+    "measuredTwice_other": "{{count}} plots measured twice",
+    "summary": "{{readings}} from {{phones}}. {{measured}} of {{total}} plots measured, {{skipped}} skipped, {{repeats}}, {{outside}}, {{twice}}.",
+    "measuredBar": "{{measured}} of {{total}} plots measured",
     "columns": {
       "measurer": "Measurer",
       "assigned": "Assigned",
       "measured": "Measured",
       "skipped": "Skipped",
       "repeats": "Repeats",
-      "offPlan": "Off-plan",
+      "outsideShare": "Outside their share",
       "lastUpload": "Last upload"
     },
-    "countWithPlots": "{{count}}: {{plots}}",
     "skipWithReason": "{{plot}}, {{reason}}",
     "skipReasons": {
       "plantMissing": "Plant missing",
@@ -106,29 +152,27 @@
       "other": "Other"
     },
     "waiting": "Waiting for upload",
-    "fieldMap": "Field map",
-    "coverageTitle": "Coverage by treatment",
-    "coverageLine": "{{measured}} of {{total}}",
+    "coverageTitle": "Measured by treatment",
     "missing": "Missing {{plots}}",
-    "measuredTwice_one": "{{count}} plot measured twice",
-    "measuredTwice_other": "{{count}} plots measured twice",
-    "measuredTwiceHint": "{{plots}} hold readings from two phones. A person decides which reading stands.",
-    "openNeedsReview": "Open Needs review",
-    "legendMeasured": "Measured",
-    "legendSkipped": "Skipped",
-    "legendOffPlan": "Off-plan reading"
+    "measuredTwiceTitle": "Plots measured twice",
+    "measuredTwiceLine": "{{plots}} hold readings nobody asked to repeat. A person decides which reading stands.",
+    "resolve": "Resolve in Measured twice",
+    "gridDescription": "{{measured}} of {{total}} plots measured on this day"
   },
-  "review": {
-    "title": "Needs review",
-    "description": "Plots that two phones both measured. Decide which reading stands.",
-    "unresolved_one": "{{count}} unresolved",
-    "unresolved_other": "{{count}} unresolved",
-    "plot": "Plot {{plot}}",
-    "explanation": "Two phones measured {{plot}} and nobody asked for a repeat.",
+  "measuredTwice": {
+    "title": "Measured twice",
+    "description": "Plots more than one reading landed on without a repeat. Keep the reading that stands, and the others stay in the data, left out of it.",
+    "toResolve_one": "{{count}} to resolve",
+    "toResolve_other": "{{count}} to resolve",
+    "noneOpen": "Every plot measured twice is resolved.",
+    "none": "No plot has been measured twice.",
+    "explanation": "{{names}} both measured {{plot}}, and neither asked for a repeat.",
+    "and": "{{first}} and {{second}}",
     "reading": "{{phone}} at {{time}}",
-    "keepOne": "Keep one",
-    "keepBoth": "Keep both as repeats",
+    "keep": "Keep this one",
     "move": "Move to another plot",
-    "marker": "Needs review"
+    "resolvedTitle": "Resolved",
+    "resolved": "{{plot}}: kept {{kept}}'s reading. The other stays in the data, left out of it.",
+    "resolvedBy": "Resolved by {{name}} at {{time}}"
   }
 }

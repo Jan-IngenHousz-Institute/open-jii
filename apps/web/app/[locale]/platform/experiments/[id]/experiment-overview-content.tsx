@@ -1,6 +1,5 @@
 "use client";
 
-import { ExperimentReadinessSummary } from "@/components/experiment-overview/experiment-readiness-summary";
 import { ErrorDisplay } from "@/components/error-display";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentContributors } from "@/hooks/experiment/useExperimentContributors/useExperimentContributors";
@@ -103,7 +102,6 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           workbookVersionId={experiment.workbookVersionId}
         />
         <ExperimentDataInventory experimentId={id} />
-        <ExperimentReadinessSummary experimentId={id} experiment={experiment} />
 
         <ExperimentDashboardsDisplay experimentId={id} hasAccess={hasAccess} />
       </div>

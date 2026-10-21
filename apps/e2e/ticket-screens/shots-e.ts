@@ -8,9 +8,11 @@ import { resolve } from "./fixture.js";
 import type { TicketShot } from "./shots.js";
 
 const DROUGHT_TRIAL: Resolvable = () => experimentId("Drought trial (example data)");
+const VIEWPORT = { width: 1440, height: 2200 };
 
-export async function layoutTabRoute(view: string): Promise<string> {
-  return `/platform/experiments/${await resolve(DROUGHT_TRIAL)}/layout?sessions=${view}`;
+/** The Layout tab with one scaffold state of the Walking order or Field days view. */
+export async function layoutTabRoute(state: string): Promise<string> {
+  return `/platform/experiments/${await resolve(DROUGHT_TRIAL)}/layout?sessions=${state}`;
 }
 
 /** Answers one experiment-scoped API path, such as `walking-order`, for whichever experiment asks. */
@@ -59,75 +61,48 @@ const PLOT_ATTRIBUTES = PLOTS.map(({ id, treatment, genotype, block }) => ({
   block,
 }));
 
-/** No strategy saved yet, so the card falls back to treatment-balanced because plots carry treatments. */
+/** No strategy saved yet, so the phones still walk in layout order. */
 export const unsavedWalkingOrder = new ExperimentPathFixture("walking-order", {
   strategy: null,
-  seed: null,
+  orderCode: null,
   order: [],
   plots: PLOT_ATTRIBUTES,
 });
 
 export const savedWalkingOrder = new ExperimentPathFixture("walking-order", {
   strategy: "treatmentBalanced",
-  seed: "field-7Q2",
+  orderCode: "field-7Q2",
   order: unitIds(WALK),
   plots: PLOT_ATTRIBUTES,
 });
 
-function card(page: Page, title: string): Locator {
-  return page
-    .getByText(title, { exact: true })
-    .first()
-    .locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]");
+/** Today at a wall-clock time, as the browser on this machine will show it. */
+export function todayAt(hours: number, minutes: number): string {
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date.toISOString();
 }
 
-const strategyPicker: TicketShot = {
-  slug: "e4-strategy-picker",
-  route: () => layoutTabRoute("walking-order"),
-  fixtures: [exampleLayoutFixture, unsavedWalkingOrder],
-  viewport: { width: 1440, height: 2000 },
-  prepare: async (page) => {
-    await page.getByText("Walking order", { exact: true }).waitFor();
-    const walkingOrder = card(page, "Walking order");
-    const section = walkingOrder.locator("xpath=..");
-    await section.scrollIntoViewIfNeeded();
-
-    const marker = new ChangeMarker(page);
-    await marker.mark(walkingOrder, "New", "below");
-    return marker.frame([section], 16);
-  },
-};
-
-/** The grid card this section draws, below the layout panel's own. */
-function sessionGrid(page: Page): Locator {
-  return page
-    .getByText("Plot grid", { exact: true })
-    .last()
-    .locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]");
+/** A moment the given number of minutes before the capture, so relative times read true. */
+function minutesAgo(minutes: number): string {
+  return new Date(Date.now() - minutes * 60_000).toISOString();
 }
 
-const orderPreview: TicketShot = {
-  slug: "e5-order-preview",
-  route: () => layoutTabRoute("order-preview"),
-  fixtures: [exampleLayoutFixture, savedWalkingOrder],
-  viewport: { width: 1440, height: 2000 },
-  prepare: async (page) => {
-    await page.getByText("Seed: field-7Q2").waitFor();
-    const walkingOrder = card(page, "Walking order");
-    const section = walkingOrder.locator("xpath=..");
-    const grid = sessionGrid(page);
-    await section.scrollIntoViewIfNeeded();
-
-    const marker = new ChangeMarker(page);
-    await marker.mark(grid, "New", "below");
-    return marker.frame([section], 16);
-  },
-};
+/** A local calendar day the given number of days before today, as YYYY-MM-DD. */
+function daysAgo(days: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
 
 export const SEED_USER = { userId: "00000000-0000-4000-8000-0000000000a1", name: "Seed User" };
 export const ALEX = { userId: "00000000-0000-4000-8000-0000000000a2", name: "Alex Example" };
 
 export const measurers = new ExperimentPathFixture("measurers", [SEED_USER, ALEX]);
+const onlyResearcher = new ExperimentPathFixture("measurers", [SEED_USER]);
+const noAssignments = new ExperimentPathFixture("assignments", null);
 
 /** Equal shares cut from the walk: positions 1 to 23 and 24 to 46. */
 export const SEED_USER_SHARE = WALK.slice(0, 23);
@@ -135,29 +110,11 @@ export const ALEX_SHARE = WALK.slice(23);
 
 export const equalShares = new ExperimentPathFixture("assignments", {
   split: "equalShares",
-  seed: "split-4K8",
   shares: [
     { userId: SEED_USER.userId, unitIds: unitIds(SEED_USER_SHARE) },
     { userId: ALEX.userId, unitIds: unitIds(ALEX_SHARE) },
   ],
 });
-
-const divideField: TicketShot = {
-  slug: "e6-divide-field",
-  route: () => layoutTabRoute("divide"),
-  fixtures: [exampleLayoutFixture, savedWalkingOrder, measurers, equalShares],
-  viewport: { width: 1440, height: 2000 },
-  prepare: async (page) => {
-    await page.getByText("Divide the field", { exact: true }).waitFor();
-    const panel = card(page, "Divide the field");
-    const section = panel.locator("xpath=..");
-    await section.scrollIntoViewIfNeeded();
-
-    const marker = new ChangeMarker(page);
-    await marker.mark(section, "New", "below");
-    return marker.frame([section], 16);
-  },
-};
 
 const DROUGHT_PLOTS = PLOTS.filter((plot) => plot.treatment === "Drought").map(
   (plot) => plot.identifier,
@@ -167,7 +124,6 @@ const STROKE = ["F1", "F4", "F7"];
 /** Alex already painted every Drought plot but the three the shot drags across in row F. */
 const nearlyOneTreatment = new ExperimentPathFixture("assignments", {
   split: "equalShares",
-  seed: "split-4K8",
   shares: [
     {
       userId: SEED_USER.userId,
@@ -182,90 +138,47 @@ const nearlyOneTreatment = new ExperimentPathFixture("assignments", {
   ],
 });
 
-async function centerOf(locator: Locator): Promise<{ x: number; y: number }> {
-  const box = await locator.boundingBox();
-  if (!box) throw new Error("The plot is not on the page");
-  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-}
-
-const paintShare: TicketShot = {
-  slug: "e7-paint-share",
-  route: () => layoutTabRoute("divide"),
-  fixtures: [exampleLayoutFixture, savedWalkingOrder, measurers, nearlyOneTreatment],
-  viewport: { width: 1440, height: 2000 },
-  prepare: async (page) => {
-    await page.getByText("Divide the field", { exact: true }).waitFor();
-    const panel = card(page, "Divide the field");
-    const section = panel.locator("xpath=..");
-    await section.scrollIntoViewIfNeeded();
-
-    await page.getByRole("switch", { name: "Paint by hand" }).click();
-    await page.getByRole("radio", { name: "Alex Example" }).click();
-
-    // The pointer stays down on the last plot, so the capture holds the drag mid-stroke.
-    const plots = STROKE.map((identifier) => section.locator(`[title="${identifier}"]`));
-    const [first, ...rest] = await Promise.all(plots.map(centerOf));
-    await page.mouse.move(first.x, first.y);
-    await page.mouse.down();
-    for (const point of rest) await page.mouse.move(point.x, point.y);
-
-    const alexCard = page
-      .locator("div.rounded-lg.border")
-      .filter({ hasText: "A share of one treatment" });
-    await alexCard.waitFor();
-
-    const marker = new ChangeMarker(page);
-    await marker.mark(alexCard, "New", "outside-left");
-    for (const plot of plots) await marker.mark(plot, "New", "below");
-    return marker.frame([section], 16);
-  },
-};
-
-/** Today at a wall-clock time, as the browser on this machine will show it. */
-export function todayAt(hours: number, minutes: number): string {
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-  return date.toISOString();
-}
-
 /**
  * Mid-session, as the phone shows it: Seed User measured 10 plots, skipped A4 at 10 and stands at
- * C4, 12th. Alex walked 11 plots.
+ * C4, 12th. Alex walked 11 plots and has been quiet for half an hour.
  */
 const liveProgress = new ExperimentPathFixture("sessions/progress", {
-  updatedAt: todayAt(10, 44),
+  updatedAt: minutesAgo(0),
   measurers: [
     {
       userId: SEED_USER.userId,
       measuredUnitIds: unitIds([...WALK.slice(0, 9), WALK[10]]),
       skippedUnitIds: unitIds(["A4"]),
-      lastUploadAt: todayAt(10, 42),
+      lastUploadAt: minutesAgo(2),
     },
     {
       userId: ALEX.userId,
       measuredUnitIds: unitIds(WALK.slice(23, 34)),
       skippedUnitIds: [],
-      lastUploadAt: todayAt(10, 15),
+      lastUploadAt: minutesAgo(29),
     },
   ],
 });
 
-const liveMonitor: TicketShot = {
-  slug: "e9-live-monitor",
-  route: () => layoutTabRoute("live"),
-  fixtures: [exampleLayoutFixture, savedWalkingOrder, measurers, equalShares, liveProgress],
-  viewport: { width: 1440, height: 2000 },
-  prepare: async (page) => {
-    await page.getByText("Live progress", { exact: true }).waitFor();
-    const live = card(page, "Live progress");
-    const section = live.locator("xpath=..");
-    await section.scrollIntoViewIfNeeded();
+/** The same morning before Alex's phone has sent anything. */
+const liveProgressNoUpload = new ExperimentPathFixture("sessions/progress", {
+  updatedAt: minutesAgo(0),
+  measurers: [
+    {
+      userId: SEED_USER.userId,
+      measuredUnitIds: unitIds([...WALK.slice(0, 9), WALK[10]]),
+      skippedUnitIds: unitIds(["A4"]),
+      lastUploadAt: minutesAgo(2),
+    },
+    { userId: ALEX.userId, measuredUnitIds: [], skippedUnitIds: [], lastUploadAt: null },
+  ],
+});
 
-    const marker = new ChangeMarker(page);
-    await marker.mark(section, "New", "below");
-    return marker.frame([section], 16);
-  },
-};
+const sessionDays = new ExperimentPathFixture("sessions/days", [
+  daysAgo(0),
+  daysAgo(3),
+  daysAgo(7),
+]);
 
 function plannedReadings(
   share: readonly string[],
@@ -277,26 +190,28 @@ function plannedReadings(
   }));
 }
 
+const seedUserSession = {
+  userId: SEED_USER.userId,
+  phone: "Phone A",
+  endedAt: minutesAgo(80),
+  lastUploadAt: minutesAgo(72),
+  isUploaded: true,
+  assignedUnitIds: unitIds(SEED_USER_SHARE),
+  readings: [...plannedReadings(SEED_USER_SHARE, "A4"), { unitId: unitId("C4"), isRepeat: true }],
+  skips: [{ unitId: unitId("A4"), reason: "flooded" }],
+};
+
 /**
  * End of day: Seed User skipped A4 as flooded and repeated C4 on purpose, and Alex skipped E4 with
  * no plant and also read D6 and D7, which sit in Seed User's share.
  */
 const endedSessions = new ExperimentPathFixture("sessions/ended", [
-  {
-    userId: SEED_USER.userId,
-    phone: "Phone A",
-    endedAt: todayAt(17, 40),
-    lastUploadAt: todayAt(17, 48),
-    isUploaded: true,
-    assignedUnitIds: unitIds(SEED_USER_SHARE),
-    readings: [...plannedReadings(SEED_USER_SHARE, "A4"), { unitId: unitId("C4"), isRepeat: true }],
-    skips: [{ unitId: unitId("A4"), reason: "flooded" }],
-  },
+  seedUserSession,
   {
     userId: ALEX.userId,
     phone: "Phone B",
-    endedAt: todayAt(17, 25),
-    lastUploadAt: todayAt(17, 31),
+    endedAt: minutesAgo(95),
+    lastUploadAt: minutesAgo(88),
     isUploaded: true,
     assignedUnitIds: unitIds(ALEX_SHARE),
     readings: [
@@ -308,27 +223,415 @@ const endedSessions = new ExperimentPathFixture("sessions/ended", [
   },
 ]);
 
+/** The same day while Alex's phone has uploaded only its first 11 readings since the session ended. */
+const endedSessionsWaiting = new ExperimentPathFixture("sessions/ended", [
+  seedUserSession,
+  {
+    userId: ALEX.userId,
+    phone: "Phone B",
+    endedAt: minutesAgo(95),
+    lastUploadAt: minutesAgo(130),
+    isUploaded: false,
+    assignedUnitIds: unitIds(ALEX_SHARE),
+    readings: plannedReadings(ALEX_SHARE.slice(0, 11), "E4"),
+    skips: [],
+  },
+]);
+
+function reading(
+  id: string,
+  user: { userId: string },
+  phone: string,
+  at: string,
+  height: string,
+  leaves: string,
+) {
+  return {
+    readingId: id,
+    userId: user.userId,
+    phone,
+    measuredAt: at,
+    values: [
+      { label: "Plant height", value: height },
+      { label: "Leaf count", value: leaves },
+    ],
+  };
+}
+
+/** Alex's readings on D6 and D7 landed on plots Seed User had measured. D7 is settled already. */
+const plotsMeasuredTwice = new ExperimentPathFixture("measured-twice", [
+  {
+    id: "00000000-0000-4000-8000-0000000000d6",
+    unitId: unitId("D6"),
+    readings: [
+      reading(
+        "00000000-0000-4000-8000-00000000d601",
+        SEED_USER,
+        "Phone A",
+        minutesAgo(300),
+        "64 cm",
+        "12",
+      ),
+      reading(
+        "00000000-0000-4000-8000-00000000d602",
+        ALEX,
+        "Phone B",
+        minutesAgo(110),
+        "61 cm",
+        "12",
+      ),
+    ],
+    resolution: null,
+  },
+  {
+    id: "00000000-0000-4000-8000-0000000000d7",
+    unitId: unitId("D7"),
+    readings: [
+      reading(
+        "00000000-0000-4000-8000-00000000d701",
+        SEED_USER,
+        "Phone A",
+        minutesAgo(296),
+        "58 cm",
+        "10",
+      ),
+      reading(
+        "00000000-0000-4000-8000-00000000d702",
+        ALEX,
+        "Phone B",
+        minutesAgo(106),
+        "59 cm",
+        "11",
+      ),
+    ],
+    resolution: {
+      keptReadingId: "00000000-0000-4000-8000-00000000d701",
+      resolvedBy: SEED_USER.userId,
+      resolvedAt: minutesAgo(20),
+    },
+  },
+]);
+
+const noneMeasuredTwice = new ExperimentPathFixture("measured-twice", []);
+
+// CSS rather than roles, since an open dialog hides the rest of the page from role queries.
+function layoutTab(page: Page): Locator {
+  return page.locator("[role=tab]", { hasText: /^Layout$/ });
+}
+
+function viewSwitch(page: Page): Locator {
+  return page.locator('[role=tablist][aria-label="Layout views"]');
+}
+
+function card(locator: Locator): Locator {
+  return locator.locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]");
+}
+
+function cardWith(page: Page, text: string): Locator {
+  return card(page.getByText(text, { exact: true }).first());
+}
+
+function strategyCard(page: Page): Locator {
+  return cardWith(
+    page,
+    "How measurers walk the field. Phones receive it when their next session starts.",
+  );
+}
+
+function gridCard(page: Page): Locator {
+  return cardWith(page, "Plot grid");
+}
+
+function dividePanel(page: Page): Locator {
+  return cardWith(page, "Divide the field");
+}
+
+function measuredTwicePanel(page: Page): Locator {
+  return page.locator("#measured-twice");
+}
+
+async function settle(page: Page): Promise<void> {
+  await page.mouse.move(0, 0);
+}
+
+const strategyPicker: TicketShot = {
+  slug: "e4-strategy-picker",
+  route: () => layoutTabRoute("walking-order"),
+  fixtures: [exampleLayoutFixture, savedWalkingOrder],
+  viewport: VIEWPORT,
+  prepare: async (page) => {
+    await page.getByText("Recommended", { exact: true }).waitFor();
+    await settle(page);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(strategyCard(page), "New", "below");
+    return marker.frame(
+      [layoutTab(page), viewSwitch(page), gridCard(page), strategyCard(page)],
+      24,
+    );
+  },
+};
+
+const layoutOrder: TicketShot = {
+  slug: "e4-layout-order",
+  route: () => layoutTabRoute("walking-order"),
+  fixtures: [exampleLayoutFixture, unsavedWalkingOrder],
+  viewport: { width: 1440, height: 1000 },
+  prepare: async (page) => {
+    const choose = page.getByRole("button", { name: "Choose a walking order" });
+    await choose.waitFor();
+    const title = page.getByText("Walked in layout order", { exact: true });
+    await settle(page);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(choose, "New", "below");
+    return marker.frame([layoutTab(page), viewSwitch(page), card(title)], 24);
+  },
+};
+
+const orderPreview: TicketShot = {
+  slug: "e5-order-preview",
+  route: () => layoutTabRoute("order-preview"),
+  fixtures: [exampleLayoutFixture, savedWalkingOrder],
+  viewport: VIEWPORT,
+  prepare: async (page) => {
+    await page.getByText("field-7Q2", { exact: true }).waitFor();
+    await settle(page);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(gridCard(page), "New", "below");
+    return marker.frame(
+      [layoutTab(page), viewSwitch(page), gridCard(page), strategyCard(page)],
+      24,
+    );
+  },
+};
+
+const divideField: TicketShot = {
+  slug: "e6-divide-field",
+  route: () => layoutTabRoute("divide"),
+  fixtures: [exampleLayoutFixture, savedWalkingOrder, measurers, equalShares],
+  viewport: VIEWPORT,
+  prepare: async (page) => {
+    await page.getByText("Divide the field", { exact: true }).waitFor();
+    await settle(page);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(gridCard(page), "New", "below");
+    await marker.mark(dividePanel(page), "New", "below");
+    return marker.frame([layoutTab(page), viewSwitch(page), gridCard(page), dividePanel(page)], 24);
+  },
+};
+
+const inviteMeasurer: TicketShot = {
+  slug: "e6-invite-measurer",
+  route: () => layoutTabRoute("divide"),
+  fixtures: [exampleLayoutFixture, savedWalkingOrder, onlyResearcher, noAssignments],
+  viewport: VIEWPORT,
+  prepare: async (page) => {
+    await page.getByRole("link", { name: "Invite a measurer" }).waitFor();
+    await settle(page);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(dividePanel(page), "New", "below");
+    return marker.frame([layoutTab(page), viewSwitch(page), dividePanel(page)], 24);
+  },
+};
+
+async function centerOf(locator: Locator): Promise<{ x: number; y: number }> {
+  const box = await locator.boundingBox();
+  if (!box) throw new Error("The plot is not on the page");
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+}
+
+function plotButton(page: Page, identifier: string): Locator {
+  return page.getByRole("button", { name: identifier, exact: true });
+}
+
+async function paintIntoAlex(page: Page): Promise<void> {
+  await page.getByText("Divide the field", { exact: true }).waitFor();
+  await page.getByRole("switch", { name: "Paint by hand" }).click();
+  await page.getByRole("radio", { name: /Alex Example/ }).click();
+}
+
+const paintShare: TicketShot = {
+  slug: "e7-paint-share",
+  route: () => layoutTabRoute("divide"),
+  fixtures: [exampleLayoutFixture, savedWalkingOrder, measurers, nearlyOneTreatment],
+  viewport: VIEWPORT,
+  prepare: async (page) => {
+    await paintIntoAlex(page);
+
+    // The pointer stays down on the last plot, so the capture holds the drag mid-stroke.
+    const plots = STROKE.map((identifier) => plotButton(page, identifier));
+    const [first, ...rest] = await Promise.all(plots.map(centerOf));
+    await page.mouse.move(first.x, first.y);
+    await page.mouse.down();
+    for (const point of rest) await page.mouse.move(point.x, point.y);
+    await page.getByText("Missing Control and Severe drought").waitFor();
+
+    const controls = page.getByText("Paint into", { exact: true }).locator("xpath=../..");
+    const shareCards = page.locator("div.rounded-lg.border").filter({ hasText: /plots?, rows/ });
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(controls, "New", "outside-left");
+    await marker.mark([shareCards.first(), shareCards.last()], "New", "outside-left");
+    for (const plot of plots) await marker.mark(plot, "New", "below");
+    return marker.frame([layoutTab(page), viewSwitch(page), gridCard(page), dividePanel(page)], 24);
+  },
+};
+
+const replacePainted: TicketShot = {
+  slug: "e7-replace-painted",
+  route: () => layoutTabRoute("divide"),
+  fixtures: [exampleLayoutFixture, savedWalkingOrder, measurers, nearlyOneTreatment],
+  viewport: { width: 1440, height: 1200 },
+  prepare: async (page) => {
+    await paintIntoAlex(page);
+    await plotButton(page, "F1").click();
+    await page.getByRole("button", { name: "Regenerate" }).click();
+
+    const dialog = page.getByRole("alertdialog");
+    await dialog.waitFor();
+    await settle(page);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(dialog, "New", "above");
+    return marker.frame([dialog], 40);
+  },
+};
+
+function liveCard(page: Page): Locator {
+  return cardWith(page, "Live progress");
+}
+
+const liveMonitor: TicketShot = {
+  slug: "e9-live-monitor",
+  route: () => layoutTabRoute("live"),
+  fixtures: [exampleLayoutFixture, savedWalkingOrder, measurers, equalShares, liveProgress],
+  viewport: VIEWPORT,
+  prepare: async (page) => {
+    await page.getByText("Live progress", { exact: true }).waitFor();
+    await settle(page);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(gridCard(page), "New", "below");
+    await marker.mark(liveCard(page), "New", "below");
+    return marker.frame([layoutTab(page), viewSwitch(page), gridCard(page), liveCard(page)], 24);
+  },
+};
+
+const noUpload: TicketShot = {
+  slug: "e9-no-upload",
+  route: () => layoutTabRoute("live"),
+  fixtures: [exampleLayoutFixture, savedWalkingOrder, measurers, equalShares, liveProgressNoUpload],
+  viewport: VIEWPORT,
+  prepare: async (page) => {
+    const line = page.getByText("No upload yet.", { exact: true });
+    await line.waitFor();
+    await settle(page);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(line.locator("xpath=../.."), "New", "outside-left");
+    return marker.frame([layoutTab(page), viewSwitch(page), gridCard(page), liveCard(page)], 24);
+  },
+};
+
+function dayRow(page: Page): Locator {
+  return page.locator("#field-day").locator("xpath=..");
+}
+
+function overviewCard(page: Page): Locator {
+  return cardWith(page, "Overview of the day");
+}
+
 const sessionOverview: TicketShot = {
   slug: "e10-session-overview",
   route: () => layoutTabRoute("overview"),
-  fixtures: [exampleLayoutFixture, savedWalkingOrder, measurers, endedSessions],
-  viewport: { width: 1440, height: 2000 },
+  fixtures: [
+    exampleLayoutFixture,
+    savedWalkingOrder,
+    measurers,
+    sessionDays,
+    endedSessions,
+    plotsMeasuredTwice,
+  ],
+  viewport: VIEWPORT,
   prepare: async (page) => {
-    await page.getByText("Sessions ended today", { exact: true }).waitFor();
-    const overview = card(page, "Sessions ended today");
-    await overview.scrollIntoViewIfNeeded();
+    await page.getByText("Overview of the day", { exact: true }).waitFor();
+    await settle(page);
 
     const marker = new ChangeMarker(page);
-    await marker.mark(overview, "New", "below");
-    return marker.frame([overview], 16);
+    await marker.mark(dayRow(page), "New", "inside-right");
+    await marker.mark(overviewCard(page), "New", "inside-top-right");
+    await marker.mark(gridCard(page), "New", "below");
+    return marker.frame(
+      [
+        layoutTab(page),
+        viewSwitch(page),
+        dayRow(page),
+        overviewCard(page),
+        gridCard(page),
+        measuredTwicePanel(page),
+      ],
+      24,
+    );
+  },
+};
+
+const waiting: TicketShot = {
+  slug: "e10-waiting",
+  route: () => layoutTabRoute("overview"),
+  fixtures: [
+    exampleLayoutFixture,
+    savedWalkingOrder,
+    measurers,
+    sessionDays,
+    endedSessionsWaiting,
+    noneMeasuredTwice,
+  ],
+  viewport: VIEWPORT,
+  prepare: async (page) => {
+    const badge = page.getByText("Waiting for upload", { exact: true });
+    await badge.waitFor();
+    await settle(page);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(page.getByText("1 phone waiting", { exact: true }), "New", "below");
+    await marker.mark(badge.locator("xpath=ancestor::tr[1]"), "New", "outside-left");
+    return marker.frame([layoutTab(page), viewSwitch(page), dayRow(page), overviewCard(page)], 24);
+  },
+};
+
+const measuredTwice: TicketShot = {
+  slug: "d9-measured-twice",
+  route: () => layoutTabRoute("review"),
+  fixtures: [exampleLayoutFixture, savedWalkingOrder, measurers, plotsMeasuredTwice],
+  viewport: VIEWPORT,
+  prepare: async (page) => {
+    await measuredTwicePanel(page).getByText("Plot D6", { exact: true }).waitFor();
+    await settle(page);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(measuredTwicePanel(page), "New", "below");
+    return marker.frame(
+      [layoutTab(page), viewSwitch(page), gridCard(page), measuredTwicePanel(page)],
+      24,
+    );
   },
 };
 
 export const SHOTS_E: readonly TicketShot[] = [
   strategyPicker,
+  layoutOrder,
   orderPreview,
   divideField,
+  inviteMeasurer,
   paintShare,
+  replacePainted,
   liveMonitor,
+  noUpload,
   sessionOverview,
+  waiting,
+  measuredTwice,
 ];

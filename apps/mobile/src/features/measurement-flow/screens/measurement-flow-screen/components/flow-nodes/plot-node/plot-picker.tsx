@@ -1,88 +1,123 @@
-import { clsx } from "clsx";
-import { MapPin } from "lucide-react-native";
+import { ScanLine, Search } from "lucide-react-native";
 import React, { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
-import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
+import { Input } from "~/shared/ui/Input";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
-import type { ExampleField, NextPlot } from "./next-plot";
+import type { ExampleField, LayoutSession, NextPlot } from "./next-plot";
 import { PlotGrid } from "./plot-grid";
-import { PlotGridLegend } from "./plot-grid-legend";
-import type { PlotGridLegendItem } from "./plot-grid-legend";
-import { PlotPickerCell } from "./plot-picker-cell";
+import { PlotStateCell } from "./plot-state-cell";
+import { PlotStateLegend } from "./plot-state-legend";
+import type { PlotLegendEntry } from "./plot-state-legend";
 
 interface PlotPickerProps {
   field: ExampleField;
   namedPlot: NextPlot;
-  measured: string[];
-  heldPlot: string | null;
-  onPick: (plot: NextPlot) => void;
+  session: LayoutSession;
+  selectedPlot: string | null;
+  onSelect: (identifier: string) => void;
+  onMeasure: (plot: NextPlot) => void;
   onCancel: () => void;
 }
 
 export function PlotPicker({
   field,
   namedPlot,
-  measured,
-  heldPlot,
-  onPick,
+  session,
+  selectedPlot,
+  onSelect,
+  onMeasure,
   onCancel,
 }: PlotPickerProps) {
   const { t } = useTranslation("measurementFlow");
-  const [pressedPlot, setPressedPlot] = useState(heldPlot);
-  const isPicking = pressedPlot !== null;
+  const themeColors = useThemeColors();
+  const [search, setSearch] = useState("");
 
-  const legendItems: PlotGridLegendItem[] = [
-    {
-      label: t("measurementFlow:plotPicker.namedPlot"),
-      swatchClassName: "bg-primary/10 border-primary border-2",
-      icon: <MapPin size={8} color={colors.jii.darkGreen} />,
-    },
-    {
-      label: t("measurementFlow:plotPicker.measured"),
-      swatchClassName: "bg-primary/5 border-primary/20 border opacity-40",
-    },
-  ];
+  const selected = field.plots.find((plot) => plot.identifier === selectedPlot);
+  const hasSkippedPlots = session.skipped.length > 0;
 
-  const releasePress = () => setPressedPlot(null);
+  const legendEntries: PlotLegendEntry[] = hasSkippedPlots
+    ? ["current", "measured", "skipped", "gap"]
+    : ["current", "measured", "gap"];
+
+  const selectSearched = () => {
+    const match = field.plots.find(
+      (plot) => plot.identifier.toLowerCase() === search.trim().toLowerCase(),
+    );
+    if (match) {
+      onSelect(match.identifier);
+    }
+  };
+
+  const measureSelected = () => {
+    if (selected) {
+      onMeasure(selected);
+    }
+  };
 
   const renderCell = (plot: NextPlot) => (
-    <PlotPickerCell
-      plot={plot}
-      isNamed={plot.identifier === namedPlot.identifier}
-      isMeasured={measured.includes(plot.identifier)}
-      isPressed={plot.identifier === pressedPlot}
-      onPressIn={setPressedPlot}
-      onPressOut={releasePress}
-      onPick={onPick}
+    <PlotStateCell
+      identifier={plot.identifier}
+      state={session.stateOf(plot.identifier)}
+      isCurrent={plot.identifier === namedPlot.identifier}
+      isSelected={plot.identifier === selectedPlot}
+      onPress={onSelect}
     />
   );
 
   return (
     <View className="flex-1 gap-3 px-4 pt-4">
-      <View className="gap-1">
-        <Text className="text-foreground text-lg font-bold">
-          {t("measurementFlow:plotPicker.title")}
-        </Text>
-        <Text
-          className={clsx(
-            "text-sm",
-            isPicking ? "text-primary font-semibold" : "text-muted-foreground",
-          )}
-        >
-          {isPicking
-            ? t("measurementFlow:plotPicker.picked", { plot: pressedPlot })
-            : t("measurementFlow:plotPicker.hint")}
-        </Text>
+      <Text className="text-foreground text-lg font-bold">
+        {t("measurementFlow:plotPicker.title")}
+      </Text>
+
+      <View className="flex-row items-center gap-2">
+        <Input
+          value={search}
+          onChangeText={setSearch}
+          onSubmitEditing={selectSearched}
+          placeholder={t("measurementFlow:plotPicker.searchPlaceholder")}
+          leftIcon={<Search size={18} color={themeColors.inactive} />}
+          containerStyle={{ flex: 1, marginBottom: 0 }}
+          autoCapitalize="characters"
+          autoCorrect={false}
+        />
+        <Button
+          title={t("measurementFlow:plotPicker.scanLabel")}
+          variant="outline"
+          size="md"
+          icon={<ScanLine size={18} color={themeColors.brand} />}
+        />
       </View>
 
+      <Text className="text-muted-foreground text-sm">
+        {selected
+          ? t("measurementFlow:plotPicker.selected", {
+              plot: selected.identifier,
+              row: selected.rowLabel,
+              column: selected.column,
+            })
+          : t("measurementFlow:plotPicker.hint")}
+      </Text>
+
       <ScrollView className="flex-1" contentContainerStyle={{ gap: 16, paddingBottom: 8 }}>
-        <PlotGrid field={field} renderCell={renderCell} />
-        <PlotGridLegend items={legendItems} />
+        <PlotGrid field={field} renderCell={renderCell} focusColumn={namedPlot.column} />
+        <PlotStateLegend entries={legendEntries} />
       </ScrollView>
 
-      <View className="pb-4">
+      <View className="gap-2 pb-4">
+        <Button
+          title={
+            selected
+              ? t("measurementFlow:plotPicker.measure", { plot: selected.identifier })
+              : t("measurementFlow:plotPicker.pickFirst")
+          }
+          size="lg"
+          isDisabled={!selected}
+          onPress={measureSelected}
+        />
         <Button title={t("measurementFlow:plotPicker.cancel")} variant="ghost" onPress={onCancel} />
       </View>
     </View>

@@ -4,15 +4,26 @@ import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { useLocale } from "@/hooks/useLocale";
 import { Ban } from "lucide-react";
 
+import type { ZenodoCopyState } from "@repo/api/domains/dataset/dataset.schema";
 import { useTranslation } from "@repo/i18n";
 
 interface DatasetWithdrawalNoticeProps {
   withdrawnAt: string;
   reason: string;
+  doi: string | null;
+  zenodoCopy: ZenodoCopyState | null;
 }
 
-/** Takes the files' place on a tombstone, so the DOI still resolves to a page that says why. */
-export function DatasetWithdrawalNotice({ withdrawnAt, reason }: DatasetWithdrawalNoticeProps) {
+/**
+ * Takes the files' place on a tombstone. A Zenodo DOI resolves to Zenodo's record, whose copy
+ * follows its own withdrawal, so the page says where the DOI leads and what state that copy is in.
+ */
+export function DatasetWithdrawalNotice({
+  withdrawnAt,
+  reason,
+  doi,
+  zenodoCopy,
+}: DatasetWithdrawalNoticeProps) {
   const { t } = useTranslation("datasets");
   const locale = useLocale();
   const format = useLocalDateFormat(locale);
@@ -29,6 +40,12 @@ export function DatasetWithdrawalNotice({ withdrawnAt, reason }: DatasetWithdraw
         </h2>
         <p className="text-sm">{t("page.withdrawnReason", { reason })}</p>
         <p className="text-muted-foreground text-sm">{t("page.withdrawnFiles")}</p>
+        {doi !== null ? (
+          <p className="text-muted-foreground text-sm">{t("page.withdrawnDoi", { doi })}</p>
+        ) : null}
+        {zenodoCopy !== null ? (
+          <p className="text-muted-foreground text-sm">{t(`page.withdrawnZenodo.${zenodoCopy}`)}</p>
+        ) : null}
       </div>
     </section>
   );

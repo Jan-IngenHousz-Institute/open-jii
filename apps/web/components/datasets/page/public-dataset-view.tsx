@@ -1,11 +1,11 @@
 "use client";
 
 import { usePublicDataset } from "@/hooks/dataset/usePublicDataset/usePublicDataset";
-import { Info } from "lucide-react";
+import { getOrpcError } from "@/lib/orpc";
 
-import type { FundingReference } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
@@ -13,32 +13,49 @@ import { DatasetStateBadge } from "../dataset-state-badge";
 import { DatasetAuthors } from "./dataset-authors";
 import { DatasetCiteAs } from "./dataset-cite-as";
 import { DatasetFacts } from "./dataset-facts";
-import { DatasetFiles } from "./dataset-files";
+import { DatasetPublishedBody } from "./dataset-published-body";
+import { DatasetStateNotices } from "./dataset-state-notices";
 import { DatasetWithdrawalNotice } from "./dataset-withdrawal-notice";
 
 /** Read in the browser so the scaffold's fixture can answer it; the real page renders on the server for crawlers. */
 export function PublicDatasetView({ datasetId }: { datasetId: string }) {
   const { t } = useTranslation("datasets");
-  const { data: dataset, isLoading, isError } = usePublicDataset(datasetId);
+  const { data: dataset, isLoading, error, refetch } = usePublicDataset(datasetId);
+
+  const handleRetry = () => {
+    void refetch();
+  };
 
   if (isLoading) {
     return <Skeleton className="h-96 w-full" />;
   }
 
-  if (isError || dataset === undefined) {
+  // A Draft, a private experiment's dataset and an unknown id all answer not found alike.
+  const isNotFound = getOrpcError(error)?.status === 404;
+
+  if (isNotFound) {
     return <EmptyState size="page" description={t("page.notFound")} />;
+  }
+
+  if (error !== null || dataset === undefined) {
+    return (
+      <EmptyState
+        size="page"
+        variant="error"
+        description={t("page.loadError")}
+        action={
+          <Button variant="outline" size="sm" onClick={handleRetry}>
+            {t("page.retry")}
+          </Button>
+        }
+      />
+    );
   }
 
   const { withdrawnAt, withdrawalReason } = dataset;
   const isWithdrawn = withdrawnAt !== null && withdrawalReason !== null;
-
-  const renderFunding = (funding: FundingReference) => (
-    <li key={funding.funderName}>
-      {funding.awardNumber === null
-        ? funding.funderName
-        : t("page.fundingEntry", { funder: funding.funderName, award: funding.awardNumber })}
-    </li>
-  );
+  // A sandbox DOI is a test that may stop resolving, so no citation is offered for it.
+  const offersCitation = dataset.depositEnvironment !== "sandbox";
 
   return (
     <article className="space-y-8">
@@ -52,32 +69,22 @@ export function PublicDatasetView({ datasetId }: { datasetId: string }) {
         <DatasetFacts dataset={dataset} />
       </header>
 
-      <DatasetCiteAs citation={dataset.citation} />
+      <DatasetStateNotices dataset={dataset} />
 
       {isWithdrawn ? (
-        <DatasetWithdrawalNotice withdrawnAt={withdrawnAt} reason={withdrawalReason} />
+        <div className="space-y-3">
+          <DatasetWithdrawalNotice
+            withdrawnAt={withdrawnAt}
+            reason={withdrawalReason}
+            doi={dataset.doi}
+            zenodoCopy={dataset.zenodoCopy}
+          />
+          <DatasetCiteAs citation={dataset.citation} isQuiet />
+        </div>
       ) : (
         <>
-          <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-md p-3 text-sm">
-            <Info className="text-primary size-4 shrink-0" aria-hidden />
-            <span className="leading-tight">{t("page.frozenNotice")}</span>
-          </div>
-
-          {dataset.description !== null ? (
-            <section className="space-y-2">
-              <h2 className="text-lg font-semibold">{t("page.description")}</h2>
-              <p className="text-sm leading-relaxed">{dataset.description}</p>
-            </section>
-          ) : null}
-
-          {dataset.funding.length > 0 ? (
-            <section className="space-y-2">
-              <h2 className="text-lg font-semibold">{t("page.funding")}</h2>
-              <ul className="space-y-1 text-sm">{dataset.funding.map(renderFunding)}</ul>
-            </section>
-          ) : null}
-
-          <DatasetFiles files={dataset.files} />
+          {offersCitation ? <DatasetCiteAs citation={dataset.citation} /> : null}
+          <DatasetPublishedBody dataset={dataset} />
         </>
       )}
     </article>

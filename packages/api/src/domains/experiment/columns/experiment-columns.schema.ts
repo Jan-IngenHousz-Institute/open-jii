@@ -1,16 +1,21 @@
 import { z } from "zod";
 
-/** What produced a column: an instrument running a workbook version, a macro, or nothing known. */
+/**
+ * What produced a column: an instrument running a workbook version, a macro, the experiment's
+ * layout, or nothing known.
+ */
 export const zColumnProducer = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("instrument"),
     workbookVersion: z.number().int().positive(),
+    workbookName: z.string().optional(),
   }),
   z.object({
     kind: z.literal("macro"),
     macroId: z.string().uuid(),
     macroName: z.string(),
   }),
+  z.object({ kind: z.literal("layout") }),
   z.object({ kind: z.literal("unknown") }),
 ]);
 
@@ -18,11 +23,16 @@ export const zColumnProducer = z.discriminatedUnion("kind", [
 export const zColumnTerm = z.object({
   id: z.string().regex(/^CO_\d+:\d+$/),
   label: z.string(),
+  definition: z.string().optional().describe("What the ontology says the term means"),
 });
 
 export const zColumnDescription = z.object({
   trait: z.string().trim().min(1, "The trait is required").max(255),
   traitTerm: zColumnTerm.nullable(),
+  noTermFits: z
+    .boolean()
+    .optional()
+    .describe("The researcher looked and found no Crop Ontology term for the trait"),
   method: z.string().trim().max(500).nullable(),
   methodTerm: zColumnTerm.nullable(),
   scale: z.string().trim().max(255).nullable(),
@@ -37,6 +47,15 @@ export const zDictionaryColumn = z.object({
   type: z.string().describe("The column's type as the warehouse names it, such as DOUBLE"),
   rowCount: z.number().int().nonnegative().describe("Rows carrying a value for this column"),
   description: zColumnDescription.nullable(),
+  previous: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("The identity this column had under the workbook's previous version, if it had one"),
+  isSuggested: z
+    .boolean()
+    .optional()
+    .describe("Nobody described it here, and another experiment or an earlier version did"),
 });
 
 export const zDictionaryGroup = z.object({

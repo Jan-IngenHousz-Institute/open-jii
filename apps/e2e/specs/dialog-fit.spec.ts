@@ -201,9 +201,9 @@ for (const screen of screens) {
       await openExperimentData(page, { withTable: true, exports: 8 });
       await page.getByRole("button", { name: "Download table" }).click();
 
-      const dialog = page.getByRole("dialog", { name: "Export Dataset" });
+      const dialog = page.getByRole("dialog", { name: "Export table" });
       await expect(dialog.getByText("Export #1", { exact: true })).toBeAttached();
-      await expectReachable(dialog.getByRole("heading", { name: "Export Dataset" }));
+      await expectReachable(dialog.getByRole("heading", { name: "Export table" }));
       await expectReachable(dialog.getByRole("button", { name: "Close" }).first());
       await expectReachable(dialog.getByRole("button", { name: "Create Export" }));
 

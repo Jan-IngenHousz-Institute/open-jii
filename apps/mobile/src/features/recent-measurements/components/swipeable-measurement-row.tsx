@@ -13,6 +13,7 @@ interface SwipeableMeasurementRowProps {
   questions?: AnswerData[];
   onPress?: (id: string) => void;
   onComment?: (id: string) => void;
+  onFlag?: (id: string) => void;
   onSync?: (id: string) => void;
   onDelete?: (id: string) => void;
   hasComment?: boolean;
@@ -30,6 +31,7 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
   questions,
   onPress,
   onComment,
+  onFlag,
   onSync,
   onDelete,
   hasComment = false,
@@ -41,6 +43,7 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
       id={id}
       status={status}
       onComment={onComment}
+      onFlag={onFlag}
       onSync={onSync}
       onDelete={onDelete}
       peekToken={peekToken}

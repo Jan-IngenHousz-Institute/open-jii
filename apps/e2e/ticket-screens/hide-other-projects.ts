@@ -9,9 +9,8 @@ interface ScaffoldSurface {
 }
 
 const SURFACES: readonly ScaffoldSurface[] = [
-  { selector: 'a[href$="/layout"]', projects: "cde" },
-  { selector: 'a[href$="/datasets"]', projects: "f" },
-  { selector: "#standards-readiness", projects: "b" },
+  { selector: 'a[href$="/layout"]', projects: "bcde" },
+  { selector: 'a[href$="/datasets"]', projects: "bf" },
   { selector: '[data-testid="experiment-publications"]', projects: "f" },
 ];
 

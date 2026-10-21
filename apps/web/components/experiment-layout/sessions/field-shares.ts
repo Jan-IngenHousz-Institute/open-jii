@@ -1,10 +1,22 @@
-import type { FieldShare } from "@repo/api/domains/experiment/sessions/experiment-sessions.schema";
+import type {
+  FieldShare,
+  Measurer,
+} from "@repo/api/domains/experiment/sessions/experiment-sessions.schema";
+
+import type { PlotShare } from "../plot-state";
+import { PlotShares } from "../plot-state";
 
 /** The field divided between measurers, one share each, in the order the measurers were picked. */
 export class FieldShares {
+  /** Each share's border and initials from the plot-state legend, in share order. */
+  readonly legend: PlotShares;
+
   private readonly owners: ReadonlyMap<string, string>;
 
-  constructor(readonly shares: readonly FieldShare[]) {
+  constructor(
+    readonly shares: readonly FieldShare[],
+    private readonly measurers: readonly Measurer[],
+  ) {
     const owners = new Map<string, string>();
     for (const share of shares) {
       for (const unitId of share.unitIds) {
@@ -12,20 +24,26 @@ export class FieldShares {
       }
     }
     this.owners = owners;
+    this.legend = new PlotShares(shares.map((share) => this.nameOf(share.userId)));
+  }
+
+  nameOf(userId: string): string {
+    return this.measurers.find((measurer) => measurer.userId === userId)?.name ?? "";
   }
 
   ownerOf(unitId: string): string | undefined {
     return this.owners.get(unitId);
   }
 
-  /** The measurer's place among the shares, which picks their color. */
-  indexOf(userId: string): number {
-    return this.shares.findIndex((share) => share.userId === userId);
+  /** The legend entry of a measurer's share. */
+  styleOf(userId: string): PlotShare | undefined {
+    return this.legend.at(this.shares.findIndex((share) => share.userId === userId));
   }
 
-  ownerIndexOf(unitId: string): number {
+  /** The legend entry of the share a plot sits in. */
+  styleOfPlot(unitId: string): PlotShare | undefined {
     const owner = this.ownerOf(unitId);
-    return owner === undefined ? -1 : this.indexOf(owner);
+    return owner === undefined ? undefined : this.styleOf(owner);
   }
 
   /** Whether every given plot sits in exactly one share. */

@@ -4,6 +4,8 @@ import { Text, View } from "react-native";
 import { useShallow } from "zustand/react/shallow";
 import { useHomeContinueAction } from "~/features/home/hooks/use-home-continue-action";
 import { useFlowStepInfo } from "~/features/measurement-flow/hooks/use-flow-step-info";
+import { exampleLayout } from "~/features/measurement-flow/screens/measurement-flow-screen/components/flow-nodes/plot-node/next-plot";
+import { isScaffoldScreenOn } from "~/features/measurement-flow/screens/measurement-flow-screen/components/flow-nodes/plot-node/scaffold-screen";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
@@ -26,10 +28,19 @@ export function HomeContinueCard() {
   const { t } = useTranslation("home");
   const colors = useThemeColors();
 
+  // Scaffold: in an experiment with a layout the card stays up between plots and names the next one.
+  const betweenPlots =
+    isScaffoldScreenOn("d3-continue-card") && exampleLayout ? exampleLayout : undefined;
+
   // Show the card when an experiment is active and the user has moved past the
   // picker (currentFlowStep > 0) or is on the questions-only submit screen.
-  const isInProgress = !!experimentId && (currentFlowStep > 0 || isQuestionsSubmitPending);
+  const isInProgress =
+    !!experimentId && (currentFlowStep > 0 || isQuestionsSubmitPending || !!betweenPlots);
   if (!isInProgress) return null;
+
+  const shownProgress = betweenPlots
+    ? betweenPlots.session.measured.length / betweenPlots.session.total
+    : progress;
 
   return (
     <Card
@@ -52,13 +63,19 @@ export function HomeContinueCard() {
         {experimentLabel ?? t("continue.untitled")}
       </Text>
       <Text className="text-muted-body mt-1 text-[13px]">
-        {t("continue.stepOfTotal", { step, total })}
+        {betweenPlots
+          ? t("continue.nextPlot", {
+              plot: betweenPlots.namedPlot.identifier,
+              measured: betweenPlots.session.measured.length,
+              total: betweenPlots.session.total,
+            })
+          : t("continue.stepOfTotal", { step, total })}
       </Text>
 
       <View className="bg-jii-primary/15 mt-3 h-1 overflow-hidden rounded-full dark:bg-white/10">
         <View
           className="bg-jii-primary dark:bg-jii-primary-bright h-full rounded-full"
-          style={{ width: `${progress * 100}%` }}
+          style={{ width: `${shownProgress * 100}%` }}
         />
       </View>
 

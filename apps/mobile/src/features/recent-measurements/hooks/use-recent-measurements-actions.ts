@@ -13,6 +13,8 @@ import { getMeasurementIdsByRunId } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { showAlert } from "~/shared/ui/AlertDialog";
 
+import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
+
 type TFn = ReturnType<typeof useTranslation>["t"];
 
 interface ConfirmConfig {
@@ -51,6 +53,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     removeMeasurements,
     clearSyncedMeasurements,
     updateMeasurementComment,
+    updateMeasurementFlag,
   } = useMeasurements();
   const { t } = useTranslation(["common", "recentMeasurements"]);
   const { exportMeasurements } = useExportMeasurements();
@@ -234,6 +237,17 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     }
   };
 
+  const saveFlag = async (m: StoredMeasurement, flagType: ExperimentAnnotationFlagType | null) => {
+    try {
+      await updateMeasurementFlag(m.id, m.data, flagType);
+    } catch (err) {
+      toast.error(t("recentMeasurements:alerts.flagSaveError"));
+      throw err;
+    } finally {
+      invalidate();
+    }
+  };
+
   return {
     measurements,
     fetchNextPage,
@@ -247,5 +261,6 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     confirmDeleteAllSynced,
     handleExport: exportMeasurements,
     saveComment,
+    saveFlag,
   };
 }

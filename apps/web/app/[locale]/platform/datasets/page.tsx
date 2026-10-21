@@ -22,7 +22,7 @@ export default async function DatasetsPage({ params }: DatasetsPageProps) {
   return (
     <PageContainer width="fluid" className="space-y-6">
       <p className="text-muted-foreground text-sm">{t("catalogue.description")}</p>
-      <DatasetsCatalogue />
+      <DatasetsCatalogue canFilterMine />
     </PageContainer>
   );
 }

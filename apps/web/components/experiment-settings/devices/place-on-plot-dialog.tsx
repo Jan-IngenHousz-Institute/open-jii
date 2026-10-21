@@ -1,6 +1,8 @@
 "use client";
 
 import { useExperimentLayout } from "@/hooks/experiment/useExperimentLayout/useExperimentLayout";
+import { useExperimentLayoutPlacements } from "@/hooks/experiment/useExperimentLayoutPlacements/useExperimentLayoutPlacements";
+import { formatDate } from "@/util/date";
 import { resolveDeviceLabel } from "@/util/device-presentation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { FormEvent } from "react";
@@ -62,6 +64,9 @@ export function PlaceOnPlotDialog({ experimentId, device, onClose }: PlaceOnPlot
   const { t } = useTranslation("experiments");
   const { t: tIot } = useTranslation("iot");
   const { data: layout } = useExperimentLayout(experimentId);
+  const { data: placements = [] } = useExperimentLayoutPlacements(experimentId, {
+    deviceId: device.id,
+  });
 
   const form = useForm<LayoutPlacementCreate>({
     resolver: zodResolver(zLayoutPlacementCreate),
@@ -88,9 +93,18 @@ export function PlaceOnPlotDialog({ experimentId, device, onClose }: PlaceOnPlot
 
   const renderChannel = (channel: number) => (
     <SelectItem key={channel} value={String(channel)}>
-      {t("layout.placement.channelOf", { channel, count: AMBYTE_CHANNEL_COUNT })}
+      {t("layout.placement.port", { channel })}
     </SelectItem>
   );
+
+  const channel = form.watch("channel");
+  const startDate = form.watch("startDate");
+  const overlapping = placements.find(
+    (placement) =>
+      placement.channel === channel &&
+      (placement.endDate === null || placement.endDate >= startDate),
+  );
+  const overlappingPlot = layout?.units.find((unit) => unit.id === overlapping?.plotId)?.identifier;
 
   return (
     <Dialog open onOpenChange={handleOpenChange}>
@@ -131,7 +145,9 @@ export function PlaceOnPlotDialog({ experimentId, device, onClose }: PlaceOnPlot
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={WHOLE_DEVICE}>{t("layout.placement.wholeDevice")}</SelectItem>
+                        <SelectItem value={WHOLE_DEVICE}>
+                          {t("layout.placement.wholeDevice")}
+                        </SelectItem>
                         {CHANNELS.map(renderChannel)}
                       </SelectContent>
                     </Select>
@@ -174,11 +190,26 @@ export function PlaceOnPlotDialog({ experimentId, device, onClose }: PlaceOnPlot
               )}
             />
 
+            {overlapping === undefined ? null : (
+              <p role="alert" className="text-destructive text-sm" data-placement-overlap>
+                {t("layout.placement.overlap", {
+                  port:
+                    channel === null
+                      ? t("layout.placement.wholeDevice")
+                      : t("layout.placement.port", { channel }),
+                  plot: overlappingPlot ?? "",
+                  date: formatDate(overlapping.startDate),
+                })}
+              </p>
+            )}
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
                 {t("layout.placement.cancel")}
               </Button>
-              <Button type="submit">{t("layout.placement.place")}</Button>
+              <Button type="submit" disabled={overlapping !== undefined}>
+                {t("layout.placement.place")}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

@@ -8,6 +8,9 @@ import { BarChart3, Upload } from "lucide-react";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
+import { ColumnDictionary } from "~/components/experiment-columns/column-dictionary";
+import type { DataView } from "~/components/experiment-columns/data-view-switch";
+import { DataViewSwitch } from "~/components/experiment-columns/data-view-switch";
 import { DatasetPicker } from "~/components/experiment-data/dataset-picker";
 import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
 import { UploadDataModal } from "~/components/experiment-data/upload-data-modal/upload-data-modal";
@@ -30,6 +33,8 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
   const { t } = useTranslation("experiments");
   const [uploadModalOpen, setUploadModalOpen] = React.useState(false);
   const [activeIdentifier, setActiveIdentifier] = React.useState<string | undefined>(undefined);
+  const [view, setView] = React.useState<DataView>("tables");
+  const isTablesView = view === "tables";
 
   if (isLoading || isLoadingTables) {
     return (
@@ -135,21 +140,30 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
       </div>
 
       <div className="space-y-6">
-        <DatasetPicker
-          tables={tables}
-          value={activeTable.identifier}
-          onChange={setActiveIdentifier}
-        />
-        <ExperimentDataTable
-          key={activeTable.identifier}
-          experimentId={id}
-          tableName={activeTable.identifier}
-          displayName={activeTable.displayName}
-          pageSize={10}
-          defaultSortColumn={activeTable.defaultSortColumn}
-          tableRowCount={activeTable.totalRows}
-          latestRowAt={activeTable.latestRowAt}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <DataViewSwitch view={view} onViewChange={setView} />
+          {isTablesView && (
+            <DatasetPicker
+              tables={tables}
+              value={activeTable.identifier}
+              onChange={setActiveIdentifier}
+            />
+          )}
+        </div>
+        {isTablesView ? (
+          <ExperimentDataTable
+            key={activeTable.identifier}
+            experimentId={id}
+            tableName={activeTable.identifier}
+            displayName={activeTable.displayName}
+            pageSize={10}
+            defaultSortColumn={activeTable.defaultSortColumn}
+            tableRowCount={activeTable.totalRows}
+            latestRowAt={activeTable.latestRowAt}
+          />
+        ) : (
+          <ColumnDictionary experimentId={id} canDescribe={false} />
+        )}
       </div>
 
       <UploadDataModal

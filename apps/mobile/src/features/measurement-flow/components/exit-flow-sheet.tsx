@@ -13,6 +13,13 @@ import { Button } from "~/shared/ui/Button";
 import { useBottomSheetController } from "~/shared/ui/hooks/use-bottom-sheet-controller";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
+import { exampleLayout } from "../screens/measurement-flow-screen/components/flow-nodes/plot-node/next-plot";
+import {
+  isScaffoldScreenOn,
+  scaffoldSession,
+} from "../screens/measurement-flow-screen/components/flow-nodes/plot-node/scaffold-screen";
+import { SessionExitOptions } from "./session-exit-options";
+
 export function ExitFlowSheet() {
   const isOpen = useExitFlowSheetStore((s) => s.isOpen);
   const close = useExitFlowSheetStore((s) => s.close);
@@ -46,6 +53,9 @@ export function ExitFlowSheet() {
     dismissFlow();
   };
 
+  // Scaffold: in an experiment with a layout the sheet speaks for the session, not the round.
+  const exitSession = isScaffoldScreenOn("d11-end-session") ? scaffoldSession() : undefined;
+
   return (
     <BottomSheetModal
       ref={sheetRef}
@@ -57,50 +67,64 @@ export function ExitFlowSheet() {
       stackBehavior="push"
     >
       <BottomSheetView className="bg-card gap-3 px-4" style={{ paddingBottom: insets.bottom + 16 }}>
-        <Text className="text-on-surface" style={{ fontFamily: "Poppins-Bold", fontSize: 20 }}>
-          {t("exitSheet.title")}
-        </Text>
-        <Text className="text-muted-body text-[13.5px] leading-5">
-          {t("exitSheet.body", { step: currentStep, total: totalSteps })}
-        </Text>
-
-        <Pressable
-          onPress={handlePause}
-          className="bg-jii-mint-light border-jii-mint flex-row items-center gap-3 rounded-2xl border p-3.5"
-        >
-          <View
-            className="h-10 w-10 items-center justify-center rounded-xl"
-            style={{ backgroundColor: themeColors.brand + "30" }}
-          >
-            <Pause size={20} color={themeColors.brand} />
-          </View>
-          <View className="min-w-0 flex-1">
-            <Text className="text-[15px] font-bold" style={{ color: themeColors.brand }}>
-              {t("exitSheet.pause")}
+        {exitSession && exampleLayout ? (
+          <SessionExitOptions
+            session={exitSession}
+            currentPlot={exampleLayout.namedPlot.identifier}
+            onPause={handlePause}
+            onEnd={handleDiscard}
+            onDiscardRound={close}
+          />
+        ) : (
+          <>
+            <Text className="text-on-surface" style={{ fontFamily: "Poppins-Bold", fontSize: 20 }}>
+              {t("exitSheet.title")}
             </Text>
-            <Text className="text-muted-body mt-0.5 text-[12.5px]">{t("exitSheet.pauseSub")}</Text>
-          </View>
-          <ChevronRight size={20} color={themeColors.brand} />
-        </Pressable>
-
-        <Pressable
-          onPress={handleDiscard}
-          className="border-error/40 bg-card flex-row items-center gap-3 rounded-2xl border p-3.5"
-        >
-          <View
-            className="h-10 w-10 items-center justify-center rounded-xl"
-            style={{ backgroundColor: "#fee2e2" }}
-          >
-            <Trash2 size={20} color={colors.semantic.error} />
-          </View>
-          <View className="min-w-0 flex-1">
-            <Text className="text-error text-[15px] font-bold">{t("exitSheet.discard")}</Text>
-            <Text className="text-muted-body mt-0.5 text-[12.5px]">
-              {t("exitSheet.discardSub")}
+            <Text className="text-muted-body text-[13.5px] leading-5">
+              {t("exitSheet.body", { step: currentStep, total: totalSteps })}
             </Text>
-          </View>
-          <ChevronRight size={20} color={colors.semantic.error} />
-        </Pressable>
+
+            <Pressable
+              onPress={handlePause}
+              className="bg-jii-mint-light border-jii-mint flex-row items-center gap-3 rounded-2xl border p-3.5"
+            >
+              <View
+                className="h-10 w-10 items-center justify-center rounded-xl"
+                style={{ backgroundColor: themeColors.brand + "30" }}
+              >
+                <Pause size={20} color={themeColors.brand} />
+              </View>
+              <View className="min-w-0 flex-1">
+                <Text className="text-[15px] font-bold" style={{ color: themeColors.brand }}>
+                  {t("exitSheet.pause")}
+                </Text>
+                <Text className="text-muted-body mt-0.5 text-[12.5px]">
+                  {t("exitSheet.pauseSub")}
+                </Text>
+              </View>
+              <ChevronRight size={20} color={themeColors.brand} />
+            </Pressable>
+
+            <Pressable
+              onPress={handleDiscard}
+              className="border-error/40 bg-card flex-row items-center gap-3 rounded-2xl border p-3.5"
+            >
+              <View
+                className="h-10 w-10 items-center justify-center rounded-xl"
+                style={{ backgroundColor: "#fee2e2" }}
+              >
+                <Trash2 size={20} color={colors.semantic.error} />
+              </View>
+              <View className="min-w-0 flex-1">
+                <Text className="text-error text-[15px] font-bold">{t("exitSheet.discard")}</Text>
+                <Text className="text-muted-body mt-0.5 text-[12.5px]">
+                  {t("exitSheet.discardSub")}
+                </Text>
+              </View>
+              <ChevronRight size={20} color={colors.semantic.error} />
+            </Pressable>
+          </>
+        )}
 
         <Button title={t("exitSheet.continue")} onPress={close} variant="ghost" size="md" />
       </BottomSheetView>

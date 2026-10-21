@@ -41,10 +41,6 @@ export const namespaces = [
   "standards",
   "fieldSessions",
   "datasets",
-  "readinessConceptA",
-  "readinessConceptB",
-  "readinessConceptC",
-  "readinessConceptD",
 ] as const;
 
 export type Namespace = (typeof namespaces)[number];

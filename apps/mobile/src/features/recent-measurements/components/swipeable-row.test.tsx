@@ -11,6 +11,7 @@ vi.mock("~/shared/i18n", () => ({
       ({
         "swipe.uploadButton": "Upload",
         "swipe.commentButton": "Comment",
+        "swipe.flagButton": "Flag",
         "swipe.deleteButton": "Delete",
       })[key] ?? key,
   }),
@@ -117,11 +118,18 @@ describe("SwipeableRow", () => {
     expect(screen.getByLabelText("Delete")).toBeTruthy();
   });
 
-  it("drops upload and comment once the row is synced", () => {
-    renderRow({ status: "successful", onSync: vi.fn(), onComment: vi.fn(), onDelete: vi.fn() });
+  it("drops upload once the row is synced, keeping comment and flag", () => {
+    renderRow({
+      status: "successful",
+      onSync: vi.fn(),
+      onComment: vi.fn(),
+      onFlag: vi.fn(),
+      onDelete: vi.fn(),
+    });
 
     expect(screen.queryByLabelText("Upload")).toBeNull();
-    expect(screen.queryByLabelText("Comment")).toBeNull();
+    expect(screen.getByLabelText("Comment")).toBeTruthy();
+    expect(screen.getByLabelText("Flag")).toBeTruthy();
     expect(screen.getByLabelText("Delete")).toBeTruthy();
   });
 
@@ -136,15 +144,18 @@ describe("SwipeableRow", () => {
   it("reports the row id to each action", () => {
     const onSync = vi.fn();
     const onComment = vi.fn();
+    const onFlag = vi.fn();
     const onDelete = vi.fn();
-    renderRow({ id: "run:2026-05-18:abc", onSync, onComment, onDelete });
+    renderRow({ id: "run:2026-05-18:abc", onSync, onComment, onFlag, onDelete });
 
     fireEvent.press(screen.getByLabelText("Upload"));
     fireEvent.press(screen.getByLabelText("Comment"));
+    fireEvent.press(screen.getByLabelText("Flag"));
     fireEvent.press(screen.getByLabelText("Delete"));
 
     expect(onSync).toHaveBeenCalledWith("run:2026-05-18:abc");
     expect(onComment).toHaveBeenCalledWith("run:2026-05-18:abc");
+    expect(onFlag).toHaveBeenCalledWith("run:2026-05-18:abc");
     expect(onDelete).toHaveBeenCalledWith("run:2026-05-18:abc");
   });
 
@@ -153,6 +164,7 @@ describe("SwipeableRow", () => {
 
     expect(screen.queryByLabelText("Upload")).toBeNull();
     expect(screen.queryByLabelText("Comment")).toBeNull();
+    expect(screen.queryByLabelText("Flag")).toBeNull();
   });
 
   it("runs the peek hint without error", () => {

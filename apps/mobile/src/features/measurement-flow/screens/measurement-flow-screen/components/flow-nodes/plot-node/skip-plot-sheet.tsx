@@ -9,9 +9,8 @@ import { Button } from "~/shared/ui/Button";
 import { useBottomSheetController } from "~/shared/ui/hooks/use-bottom-sheet-controller";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
-import type { NextPlot } from "./next-plot";
+import type { NextPlot, SkipReason } from "./next-plot";
 import { SkipReasonRow } from "./skip-reason-row";
-import type { SkipReason } from "./skip-reason-row";
 
 interface SkipPlotSheetProps {
   plot: NextPlot;
@@ -50,6 +49,9 @@ export function SkipPlotSheet({ plot, isOpen, onChoose, onClose }: SkipPlotSheet
       <BottomSheetView className="bg-card gap-3 px-4" style={{ paddingBottom: insets.bottom + 16 }}>
         <Text className="text-on-surface" style={{ fontFamily: "Poppins-Bold", fontSize: 20 }}>
           {t("measurementFlow:skipSheet.title", { plot: plot.identifier })}
+        </Text>
+        <Text className="text-muted-body text-[13.5px] leading-5">
+          {t("measurementFlow:skipSheet.body", { plot: plot.identifier })}
         </Text>
 
         <View className="gap-2">{reasons.map(renderReason)}</View>

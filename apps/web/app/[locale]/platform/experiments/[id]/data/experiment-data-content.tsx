@@ -4,7 +4,7 @@ import { ErrorDisplay } from "@/components/error-display";
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { PageContainer } from "@/components/page-container";
 import { BarChart3, FileSpreadsheet, Pencil, Upload } from "lucide-react";
-import { notFound } from "next/navigation";
+import { notFound, useSearchParams } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
 import { ColumnDictionary } from "~/components/experiment-columns/column-dictionary";
@@ -39,6 +39,8 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
   const [activeIdentifier, setActiveIdentifier] = React.useState<string | undefined>(undefined);
   const [view, setView] = React.useState<DataView>("tables");
   const isTablesView = view === "tables";
+  // Scaffold: ?access=view shows the Dictionary as someone who may not describe columns sees it.
+  const isViewOnly = useSearchParams().get("access") === "view";
 
   // Check if metadata already exists for this experiment
   const { data: metadataResponse } = useExperimentMetadata(id);
@@ -217,7 +219,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
             canContribute={canContribute}
           />
         ) : (
-          <ColumnDictionary experimentId={id} />
+          <ColumnDictionary experimentId={id} canDescribe={canContribute && !isViewOnly} />
         )}
       </div>
 

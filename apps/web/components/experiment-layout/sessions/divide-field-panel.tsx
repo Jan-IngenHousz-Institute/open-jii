@@ -1,9 +1,9 @@
-import { RefreshCw } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 
 import type {
   DivideFieldBody,
   FieldShare,
+  FieldSplit,
   Measurer,
 } from "@repo/api/domains/experiment/sessions/experiment-sessions.schema";
 import { zFieldSplit } from "@repo/api/domains/experiment/sessions/experiment-sessions.schema";
@@ -16,82 +16,110 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-} from "@repo/ui/components/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@repo/ui/components/form";
 import { Label } from "@repo/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/select";
+import { RadioGroup } from "@repo/ui/components/radio-group";
 import { Switch } from "@repo/ui/components/switch";
-import { ToggleGroup, ToggleGroupItem } from "@repo/ui/components/toggle-group";
 
 import type { FieldPlan } from "./field-plan";
 import type { FieldShares } from "./field-shares";
+import { InviteMeasurer } from "./invite-measurer";
 import { MeasurerPicker } from "./measurer-picker";
+import { PaintControls } from "./paint-controls";
 import { ShareCard } from "./share-card";
+import { SplitOption } from "./split-option";
 
 interface DivideFieldPanelProps {
   form: UseFormReturn<DivideFieldBody>;
   plan: FieldPlan;
+  canEdit: boolean;
   measurers: Measurer[];
   shares: FieldShares;
+  hasOtherMembers: boolean;
   isPainting: boolean;
   onPaintingChange: (isPainting: boolean) => void;
   paintInto: string | null;
   onPaintIntoChange: (userId: string | null) => void;
+  canUndo: boolean;
+  onUndo: () => void;
+  onReset: () => void;
+  /** Cuts the walk again for a new split or a new set of measurers. */
+  onRecut: (split: FieldSplit, userIds: readonly string[]) => void;
 }
 
 export function DivideFieldPanel({
   form,
   plan,
+  canEdit,
   measurers,
   shares,
+  hasOtherMembers,
   isPainting,
   onPaintingChange,
   paintInto,
   onPaintIntoChange,
+  canUndo,
+  onUndo,
+  onReset,
+  onRecut,
 }: DivideFieldPanelProps) {
   const { t } = useTranslation("fieldSessions");
 
   const isCoveredOnce = shares.coversOnce(plan.plots.map((plot) => plot.id));
-  const measurerName = (userId: string) =>
-    measurers.find((measurer) => measurer.userId === userId)?.name ?? userId;
+  const canSave = canEdit && form.formState.isDirty && isCoveredOnce;
 
   // Scaffold: saving assignments is not built yet.
   const handleSave = form.handleSubmit(() => undefined);
-  const handlePaintIntoChange = (userId: string) => onPaintIntoChange(userId || null);
 
-  const renderSplit = (split: DivideFieldBody["split"]) => (
-    <SelectItem key={split} value={split}>
-      {t(`divide.splits.${split}`)}
-    </SelectItem>
+  const changeSplit = (split: FieldSplit) => {
+    form.setValue("split", split, { shouldDirty: true });
+    onRecut(split, form.getValues("measurerIds"));
+  };
+
+  const changeMeasurers = (userIds: string[]) => {
+    form.setValue("measurerIds", userIds, { shouldDirty: true });
+    onRecut(form.getValues("split"), userIds);
+  };
+
+  const handleSplitChange = (value: string) => {
+    const split = zFieldSplit.safeParse(value);
+    if (split.success) {
+      changeSplit(split.data);
+    }
+  };
+
+  const renderSplit = (split: FieldSplit) => (
+    <SplitOption
+      key={split}
+      split={split}
+      plan={plan}
+      measurerIds={form.watch("measurerIds")}
+      isDisabled={!canEdit}
+    />
   );
 
-  const renderPaintTarget = (share: FieldShare) => (
-    <ToggleGroupItem key={share.userId} value={share.userId} className="px-3">
-      {measurerName(share.userId)}
-    </ToggleGroupItem>
-  );
-
-  const renderShare = (share: FieldShare, index: number) => (
+  const renderShare = (share: FieldShare) => (
     <ShareCard
       key={share.userId}
       plan={plan}
-      measurer={{ userId: share.userId, name: measurerName(share.userId) }}
-      shareIndex={index}
+      name={shares.nameOf(share.userId)}
+      style={shares.styleOf(share.userId)}
       unitIds={share.unitIds}
     />
   );
+
+  if (!hasOtherMembers) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("divide.title")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <InviteMeasurer canInvite={canEdit} />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -112,7 +140,8 @@ export function DivideFieldPanel({
                     <MeasurerPicker
                       measurers={measurers}
                       value={field.value}
-                      onChange={field.onChange}
+                      onChange={changeMeasurers}
+                      isDisabled={!canEdit}
                     />
                   </FormControl>
                 </FormItem>
@@ -125,45 +154,42 @@ export function DivideFieldPanel({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("divide.split")}</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>{zFieldSplit.options.map(renderSplit)}</SelectContent>
-                  </Select>
-                  <FormDescription>{t(`divide.splitHints.${field.value}`)}</FormDescription>
+                  <FormControl>
+                    <RadioGroup
+                      value={field.value}
+                      onValueChange={handleSplitChange}
+                      disabled={!canEdit}
+                      className="gap-2"
+                    >
+                      {zFieldSplit.options.map(renderSplit)}
+                    </RadioGroup>
+                  </FormControl>
                 </FormItem>
               )}
             />
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="paint-by-hand">{t("divide.paint")}</Label>
-                <Switch
-                  id="paint-by-hand"
-                  checked={isPainting}
-                  onCheckedChange={onPaintingChange}
-                />
-              </div>
-              {isPainting ? (
-                <div className="space-y-2">
-                  <p className="text-muted-foreground text-sm">{t("divide.paintHint")}</p>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm">{t("divide.paintInto")}</span>
-                    <ToggleGroup
-                      type="single"
-                      variant="outline"
-                      value={paintInto ?? ""}
-                      onValueChange={handlePaintIntoChange}
-                    >
-                      {shares.shares.map(renderPaintTarget)}
-                    </ToggleGroup>
-                  </div>
+            {canEdit ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="paint-by-hand">{t("divide.paint")}</Label>
+                  <Switch
+                    id="paint-by-hand"
+                    checked={isPainting}
+                    onCheckedChange={onPaintingChange}
+                  />
                 </div>
-              ) : null}
-            </div>
+                {isPainting ? (
+                  <PaintControls
+                    shares={shares}
+                    paintInto={paintInto}
+                    onPaintIntoChange={onPaintIntoChange}
+                    canUndo={canUndo}
+                    onUndo={onUndo}
+                    onReset={onReset}
+                  />
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="space-y-3">{shares.shares.map(renderShare)}</div>
 
@@ -171,13 +197,11 @@ export function DivideFieldPanel({
               <p className="text-muted-foreground text-sm">{t("divide.noOverlap")}</p>
             ) : null}
 
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline">
-                <RefreshCw className="size-4" />
-                {t("divide.regenerate")}
+            {canEdit ? (
+              <Button type="submit" disabled={!canSave}>
+                {t("divide.save")}
               </Button>
-              <Button type="submit">{t("divide.save")}</Button>
-            </div>
+            ) : null}
           </form>
         </Form>
       </CardContent>

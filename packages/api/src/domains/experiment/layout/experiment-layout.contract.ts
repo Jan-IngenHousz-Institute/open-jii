@@ -6,7 +6,10 @@ import {
   zExperimentLayoutPlot,
   zExperimentLayoutPlotPathParam,
   zLayoutAnchor,
+  zLayoutAttributes,
   zLayoutPlacement,
+  zLayoutPlacementList,
+  zLayoutPlacementListQuery,
   zLayoutSheetPreview,
   zLayoutSheetPreviewBody,
   zLayoutTermSearchQuery,
@@ -26,6 +29,22 @@ export const experimentLayoutContract = {
     })
     .input(zExperimentLayoutPlotPathParam)
     .output(zExperimentLayoutPlot),
+  getExperimentLayoutAttributes: oc
+    .route({
+      method: "GET",
+      path: "/api/v1/experiments/{id}/layout/attributes",
+      successStatus: 200,
+    })
+    .input(zExperimentIdPathParam)
+    .output(zLayoutAttributes),
+  listLayoutPlacements: oc
+    .route({
+      method: "GET",
+      path: "/api/v1/experiments/{id}/layout/placements",
+      successStatus: 200,
+    })
+    .input(zExperimentIdPathParam.merge(zLayoutPlacementListQuery))
+    .output(zLayoutPlacementList),
   updateExperimentLayoutAnchor: oc
     .route({ method: "PUT", path: "/api/v1/experiments/{id}/layout/anchor", successStatus: 200 })
     .input(zExperimentIdPathParam.merge(zLayoutAnchor))

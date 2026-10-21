@@ -1,9 +1,11 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
+import { DiscardChangesDialog } from "@/components/shared/discard-changes-dialog";
 import { useExperimentUpdate } from "@/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 import { parseApiError } from "~/util/apiError";
@@ -18,6 +20,7 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -27,6 +30,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -97,6 +101,8 @@ export function ExperimentStudyDetailsDialog({
 
   const funding = useFieldArray({ control: form.control, name: "fundingReferences" });
   const hasFunding = funding.fields.length > 0;
+  const isDirty = form.formState.isDirty;
+  const [isDiscardOpen, setIsDiscardOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -113,6 +119,21 @@ export function ExperimentStudyDetailsDialog({
     (onChange: (value: string | null) => void) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       onChange(event.target.value || null);
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next && isDirty) {
+      setIsDiscardOpen(true);
+    } else {
+      onOpenChange(next);
+    }
+  };
+
+  const handleKeepEditing = () => setIsDiscardOpen(false);
+
+  const handleDiscard = () => {
+    setIsDiscardOpen(false);
+    onOpenChange(false);
+  };
 
   const handleAddFunding = () => funding.append({ funderName: "", awardNumber: null });
 
@@ -181,161 +202,189 @@ export function ExperimentStudyDetailsDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t("studyDetails.title")}</DialogTitle>
-          <DialogDescription>{t("studyDetails.dialogDescription")}</DialogDescription>
-        </DialogHeader>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="startDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("studyDetails.startDate")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="date"
-                        value={field.value ?? ""}
-                        onChange={handleOptionalChange(field.onChange)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="endDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("studyDetails.endDate")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="date"
-                        value={field.value ?? ""}
-                        onChange={handleOptionalChange(field.onChange)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="organism"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("studyDetails.organism")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      value={field.value ?? ""}
-                      onChange={handleOptionalChange(field.onChange)}
-                      placeholder={t("studyDetails.organismPlaceholder")}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("studyDetails.title")}</DialogTitle>
+            <DialogDescription>{t("studyDetails.dialogDescription")}</DialogDescription>
+            <DocsHelpLink
+              path="/guide/sharing/open-fair-data"
+              label={t("studyDetails.learnMore")}
             />
+          </DialogHeader>
 
-            <FormField
-              control={form.control}
-              name="experimentalDesign"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("studyDetails.experimentalDesign")}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      value={field.value ?? ""}
-                      onChange={handleOptionalChange(field.onChange)}
-                      placeholder={t("studyDetails.experimentalDesignPlaceholder")}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="flex min-h-0 flex-1 flex-col gap-4"
+            >
+              <DialogBody className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("studyDetails.startDate")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            value={field.value ?? ""}
+                            onChange={handleOptionalChange(field.onChange)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="endDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("studyDetails.endDate")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            value={field.value ?? ""}
+                            onChange={handleOptionalChange(field.onChange)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-            <FormField
-              control={form.control}
-              name="growthFacility"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("studyDetails.growthFacility")}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      value={field.value ?? ""}
-                      onChange={handleOptionalChange(field.onChange)}
-                      placeholder={t("studyDetails.growthFacilityPlaceholder")}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="organism"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("studyDetails.organism")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          value={field.value ?? ""}
+                          onChange={handleOptionalChange(field.onChange)}
+                          placeholder={t("studyDetails.organismPlaceholder")}
+                        />
+                      </FormControl>
+                      <FormDescription>{t("studyDetails.organismHelp")}</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="license"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("studyDetails.license")}</FormLabel>
-                  <Select
-                    value={field.value ?? LICENSE_NONE}
-                    onValueChange={(value) => field.onChange(value === LICENSE_NONE ? null : value)}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("studyDetails.licensePlaceholder")} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={LICENSE_NONE}>{t("studyDetails.licenseNone")}</SelectItem>
-                      {zDataLicense.options.map((license) => (
-                        <SelectItem key={license} value={license}>
-                          {licenseLabels[license]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="experimentalDesign"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("studyDetails.experimentalDesign")}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          value={field.value ?? ""}
+                          onChange={handleOptionalChange(field.onChange)}
+                          placeholder={t("studyDetails.experimentalDesignPlaceholder")}
+                        />
+                      </FormControl>
+                      <FormDescription>{t("studyDetails.experimentalDesignHelp")}</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <section aria-labelledby="study-details-funding" className="space-y-3 border-t pt-4">
-              <h3 id="study-details-funding" className="text-sm font-semibold">
-                {tStudy("funding.title")}
-              </h3>
-              {hasFunding ? (
-                funding.fields.map(renderFundingRow)
-              ) : (
-                <p className="text-muted-foreground text-sm">{tStudy("funding.empty")}</p>
-              )}
-              <Button type="button" variant="outline" size="sm" onClick={handleAddFunding}>
-                <Plus className="mr-1 h-3.5 w-3.5" />
-                {hasFunding ? tStudy("funding.addAnother") : tStudy("funding.add")}
-              </Button>
-            </section>
+                <FormField
+                  control={form.control}
+                  name="growthFacility"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("studyDetails.growthFacility")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          value={field.value ?? ""}
+                          onChange={handleOptionalChange(field.onChange)}
+                          placeholder={t("studyDetails.growthFacilityPlaceholder")}
+                        />
+                      </FormControl>
+                      <FormDescription>{t("studyDetails.growthFacilityHelp")}</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {t("common.save")}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+                <FormField
+                  control={form.control}
+                  name="license"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("studyDetails.license")}</FormLabel>
+                      <Select
+                        value={field.value ?? LICENSE_NONE}
+                        onValueChange={(value) =>
+                          field.onChange(value === LICENSE_NONE ? null : value)
+                        }
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t("studyDetails.licensePlaceholder")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={LICENSE_NONE}>
+                            {t("studyDetails.licenseNone")}
+                          </SelectItem>
+                          {zDataLicense.options.map((license) => (
+                            <SelectItem key={license} value={license}>
+                              {licenseLabels[license]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>{t("studyDetails.licenseHelp")}</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <section
+                  aria-labelledby="study-details-funding"
+                  className="space-y-3 border-t pt-4"
+                >
+                  <h3 id="study-details-funding" className="text-sm font-semibold">
+                    {tStudy("funding.title")}
+                  </h3>
+                  <p className="text-muted-foreground text-sm">{tStudy("funding.help")}</p>
+                  {hasFunding ? (
+                    funding.fields.map(renderFundingRow)
+                  ) : (
+                    <p className="text-muted-foreground text-sm">{tStudy("funding.empty")}</p>
+                  )}
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddFunding}>
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    {hasFunding ? tStudy("funding.addAnother") : tStudy("funding.add")}
+                  </Button>
+                </section>
+              </DialogBody>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+                  {t("common.cancel")}
+                </Button>
+                <Button type="submit" disabled={isPending}>
+                  {t("common.save")}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      <DiscardChangesDialog
+        open={isDiscardOpen}
+        onKeepEditing={handleKeepEditing}
+        onDiscard={handleDiscard}
+      />
+    </>
   );
 }

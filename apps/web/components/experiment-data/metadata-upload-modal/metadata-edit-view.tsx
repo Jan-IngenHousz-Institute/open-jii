@@ -1,7 +1,7 @@
 import { MetadataTable } from "@/components/metadata-table/metadata-table";
 import type { MetadataColumn, MetadataRow } from "@/components/metadata-table/types";
-import { useExperimentMetadataCreate } from "@/hooks/experiment/useExperimentMetadataCreate/useExperimentMetadataCreate";
 import { useExperimentLayout } from "@/hooks/experiment/useExperimentLayout/useExperimentLayout";
+import { useExperimentMetadataCreate } from "@/hooks/experiment/useExperimentMetadataCreate/useExperimentMetadataCreate";
 import { useExperimentMetadataUpdate } from "@/hooks/experiment/useExperimentMetadataUpdate/useExperimentMetadataUpdate";
 import {
   ArrowLeft,
@@ -51,6 +51,8 @@ interface MetadataEditViewProps {
   existingRecords: ExperimentMetadata[];
   editingMetadataId: string | null;
   questionOptions: QuestionOption[];
+  /** Kept as the match target when a sheet is imported, as when opened from the Layout tab. */
+  presetMatchTarget?: string;
   onBack: () => void;
 }
 
@@ -64,6 +66,7 @@ export function MetadataEditView({
   existingRecords,
   editingMetadataId,
   questionOptions,
+  presetMatchTarget,
   onBack,
 }: MetadataEditViewProps) {
   const { t } = useTranslation("experiments");
@@ -96,12 +99,19 @@ export function MetadataEditView({
 
   const replaceTableData = useCallback(
     (newColumns: MetadataColumn[], newRows: MetadataRow[]) => {
+      // Opened for the layout's plots, a column named after the unit name is the plot column.
+      const isPlotPreset = presetMatchTarget === LAYOUT_PLOT_MATCH_TARGET;
+      const unitColumn = isPlotPreset
+        ? newColumns.find(
+            (column) => column.name.trim().toLowerCase() === layout?.levelName.toLowerCase(),
+          )
+        : undefined;
       setValue("columns", newColumns, { shouldValidate: false });
       setValue("rows", newRows, { shouldValidate: false });
-      setValue("identifierColumnId", "", { shouldValidate: false });
-      setValue("experimentQuestionId", "", { shouldValidate: false });
+      setValue("identifierColumnId", unitColumn?.id ?? "", { shouldValidate: false });
+      setValue("experimentQuestionId", presetMatchTarget ?? "", { shouldValidate: false });
     },
-    [setValue],
+    [setValue, presetMatchTarget, layout],
   );
 
   const {

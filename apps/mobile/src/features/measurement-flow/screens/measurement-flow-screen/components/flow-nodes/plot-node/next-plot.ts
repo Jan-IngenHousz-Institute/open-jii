@@ -20,7 +20,47 @@ export interface ExampleField {
   plots: NextPlot[];
 }
 
-export type SharePlotState = "current" | "done" | "skipped" | "toDo" | "otherShare";
+export type PlotState = "measured" | "skipped" | "toMeasure";
+
+export type SkipReason = "plantMissing" | "flooded" | "couldNotReach" | "other";
+
+export interface SkippedPlot {
+  identifier: string;
+  reason: SkipReason;
+  skippedAt: string;
+}
+
+const SESSION_START_MINUTES = 8 * 60 + 30;
+const MINUTES_PER_PLOT = 2;
+
+function clockTime(minutes: number): string {
+  const hours = String(Math.floor(minutes / 60)).padStart(2, "0");
+  return `${hours}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
+/** What the phone itself knows about one session: which plots it measured and skipped. */
+export class LayoutSession {
+  constructor(
+    readonly total: number,
+    readonly measured: string[],
+    readonly skipped: SkippedPlot[],
+  ) {}
+
+  stateOf(identifier: string): PlotState {
+    if (this.measured.includes(identifier)) {
+      return "measured";
+    }
+    if (this.skipped.some((plot) => plot.identifier === identifier)) {
+      return "skipped";
+    }
+    return "toMeasure";
+  }
+
+  /** When a plot's reading was saved, one plot every two minutes from 08:30. */
+  measuredAt(identifier: string): string {
+    return clockTime(SESSION_START_MINUTES + this.measured.indexOf(identifier) * MINUTES_PER_PLOT);
+  }
+}
 
 /** A walking order, read at the plot the measurer stands at. */
 export class ExampleWalk {
@@ -67,30 +107,27 @@ export class ShareProgress {
     return this.walk.order.slice(this.walk.position - 1);
   }
 
-  stateOf(identifier: string): SharePlotState {
-    if (identifier === this.walk.current) {
-      return "current";
-    }
-    if (this.skipped.includes(identifier)) {
-      return "skipped";
-    }
-    if (this.done.includes(identifier)) {
-      return "done";
-    }
-    if (this.walk.order.includes(identifier)) {
-      return "toDo";
-    }
-    return "otherShare";
+  isInShare(identifier: string): boolean {
+    return this.walk.order.includes(identifier);
   }
+}
+
+/** A second phone that started a session on the same field today, as of the last sync. */
+export interface OtherPhoneSession {
+  measurer: string;
+  startedAt: string;
 }
 
 export interface ExampleLayout {
   field: ExampleField;
   namedPlot: NextPlot;
-  /** Plots measured this session: every plot before the named one in layout order. */
-  measured: string[];
-  walk: ExampleWalk;
+  /** Layout order before any walking order: every plot before C4 measured. */
+  session: LayoutSession;
+  /** The same session with A4 skipped and waiting on the come-back-later list. */
+  sessionWithSkip: LayoutSession;
   share: ShareProgress;
+  shareSession: LayoutSession;
+  otherPhone: OtherPhoneSession;
 }
 
 const FIELD_ROWS = 6;
@@ -98,6 +135,7 @@ const FIELD_COLUMNS = 8;
 const FIELD_GAPS = new Set(["B4", "E7"]);
 const TREATMENTS: Treatment[] = ["Control", "Drought", "Severe drought"];
 const NAMED_PLOT = "C4";
+const SKIPPED_PLOT: SkippedPlot = { identifier: "A4", reason: "flooded", skippedAt: "08:36" };
 
 // The same treatment-balanced walk the web screens show: any 12 plots in a row hold each
 // treatment 4 times, give or take one. C4 is 12th and B6 13th.
@@ -111,8 +149,8 @@ const EXAMPLE_WALK = [
 
 // The measurer's share is the first half of the walk; the second measurer holds the rest.
 const SHARE_SIZE = 23;
-const SKIPPED_PLOTS = ["A4"];
 const OTHER_MEASURER = "Alex Example";
+const OTHER_PHONE_STARTED_AT = "08:40";
 
 function buildExampleField(): ExampleField {
   const plots: NextPlot[] = [];
@@ -150,17 +188,25 @@ function buildExampleLayout(): ExampleLayout {
     throw new Error(`The example field has no plot ${NAMED_PLOT}`);
   }
 
+  const total = field.plots.length;
+  const beforeNamed = field.plots.slice(0, namedIndex).map((plot) => plot.identifier);
+  const isNotSkipped = (identifier: string) => identifier !== SKIPPED_PLOT.identifier;
+
+  const share = new ShareProgress(
+    EXAMPLE_WALK.slice(0, SHARE_SIZE),
+    NAMED_PLOT,
+    [SKIPPED_PLOT.identifier],
+    OTHER_MEASURER,
+  );
+
   return {
     field,
     namedPlot,
-    measured: field.plots.slice(0, namedIndex).map((plot) => plot.identifier),
-    walk: new ExampleWalk(EXAMPLE_WALK, NAMED_PLOT),
-    share: new ShareProgress(
-      EXAMPLE_WALK.slice(0, SHARE_SIZE),
-      NAMED_PLOT,
-      SKIPPED_PLOTS,
-      OTHER_MEASURER,
-    ),
+    session: new LayoutSession(total, beforeNamed, []),
+    sessionWithSkip: new LayoutSession(total, beforeNamed.filter(isNotSkipped), [SKIPPED_PLOT]),
+    share,
+    shareSession: new LayoutSession(SHARE_SIZE, share.done, [SKIPPED_PLOT]),
+    otherPhone: { measurer: OTHER_MEASURER, startedAt: OTHER_PHONE_STARTED_AT },
   };
 }
 
@@ -184,11 +230,13 @@ interface PlotStepState {
   confirmedRound: number | null;
   confirmedPlot: NextPlot | null;
   isPickerOpen: boolean;
-  /** Scaffold flag: a plot drawn pressed on the picker, since a press cannot be held for a capture. */
-  heldPlot: string | null;
+  /** The plot tapped on the picker, waiting for its Measure button. */
+  selectedPlot: string | null;
+  isMeasuredPromptOpen: boolean;
   isSkipSheetOpen: boolean;
+  isComeBackOpen: boolean;
   isFieldGridOpen: boolean;
-  /** Scaffold counter for Measure again, until readings carry an ordinal. */
+  /** Scaffold counter for Keep and measure again, until readings carry an ordinal. */
   repeat: number;
 }
 
@@ -196,9 +244,13 @@ interface PlotStepActions {
   confirm: (round: number, plot: NextPlot) => void;
   openPicker: () => void;
   closePicker: () => void;
-  holdPlot: (identifier: string) => void;
+  selectPlot: (identifier: string) => void;
+  openMeasuredPrompt: () => void;
+  closeMeasuredPrompt: () => void;
   openSkipSheet: () => void;
   closeSkipSheet: () => void;
+  openComeBack: () => void;
+  closeComeBack: () => void;
   openFieldGrid: () => void;
   closeFieldGrid: () => void;
   measureAgain: () => void;
@@ -209,8 +261,10 @@ const initialPlotStepState: PlotStepState = {
   confirmedRound: null,
   confirmedPlot: null,
   isPickerOpen: false,
-  heldPlot: null,
+  selectedPlot: null,
+  isMeasuredPromptOpen: false,
   isSkipSheetOpen: false,
+  isComeBackOpen: false,
   isFieldGridOpen: false,
   repeat: 1,
 };
@@ -222,21 +276,29 @@ export const usePlotStepStore = create<PlotStepState & PlotStepActions>((set) =>
       confirmedRound: round,
       confirmedPlot: plot,
       isPickerOpen: false,
-      heldPlot: null,
+      selectedPlot: null,
+      isMeasuredPromptOpen: false,
       repeat: 1,
     }),
   openPicker: () => set({ isPickerOpen: true }),
-  closePicker: () => set({ isPickerOpen: false, heldPlot: null }),
-  holdPlot: (identifier) => set({ heldPlot: identifier }),
+  closePicker: () => set({ isPickerOpen: false, selectedPlot: null, isMeasuredPromptOpen: false }),
+  selectPlot: (identifier) => set({ selectedPlot: identifier }),
+  openMeasuredPrompt: () => set({ isMeasuredPromptOpen: true }),
+  closeMeasuredPrompt: () => set({ isMeasuredPromptOpen: false }),
   openSkipSheet: () => set({ isSkipSheetOpen: true }),
   closeSkipSheet: () => set({ isSkipSheetOpen: false }),
+  openComeBack: () => set({ isComeBackOpen: true }),
+  closeComeBack: () => set({ isComeBackOpen: false }),
   openFieldGrid: () => set({ isFieldGridOpen: true }),
   closeFieldGrid: () => set({ isFieldGridOpen: false }),
   measureAgain: () => set((state) => ({ repeat: state.repeat + 1 })),
   reset: () => set(initialPlotStepState),
 }));
 
-/** The plot step opens every round of an experiment with a layout, until the plot is confirmed. */
+/**
+ * The plot step opens every round of an experiment with a layout until the plot is confirmed, and
+ * again whenever the plot card reopens the picker to correct it.
+ */
 export function useIsPlotStepShowing(): boolean {
   const nextPlot = useNextPlot();
   const isFirstStep = useMeasurementFlowStore(
@@ -244,6 +306,9 @@ export function useIsPlotStepShowing(): boolean {
   );
   const round = useMeasurementFlowStore((s) => s.iterationCount);
   const confirmedRound = usePlotStepStore((s) => s.confirmedRound);
+  const isPickerOpen = usePlotStepStore((s) => s.isPickerOpen);
 
-  return nextPlot !== undefined && isFirstStep && confirmedRound !== round;
+  const isRoundUnconfirmed = isFirstStep && confirmedRound !== round;
+
+  return nextPlot !== undefined && (isRoundUnconfirmed || isPickerOpen);
 }

@@ -37,6 +37,7 @@
   "swipe": {
     "uploadButton": "Uploaden",
     "commentButton": "Opmerking",
+    "flagButton": "Markeren",
     "deleteButton": "Verwijderen"
   },
   "commentModal": {
@@ -100,7 +101,8 @@
     "saveErrorMessage": "Kon de meting niet opslaan. Wil je deze in plaats daarvan als bestand opslaan?",
     "saveToFileButton": "Opslaan als bestand",
     "saveToFileError": "Kon meting niet opslaan. Probeer het opnieuw.",
-    "commentSaveError": "Kon de opmerking niet opslaan. Probeer het opnieuw."
+    "commentSaveError": "Kon de opmerking niet opslaan. Probeer het opnieuw.",
+    "flagSaveError": "Kon de markering niet opslaan. Probeer het opnieuw."
   },
   "accessibility": {
     "expandRun_one": "Workbookrun uitklappen: {{name}}, {{count}} meting",

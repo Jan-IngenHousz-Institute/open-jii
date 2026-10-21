@@ -6,21 +6,38 @@ import { useExperimentSessionMeasurers } from "@/hooks/experiment/useExperimentS
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { DivideFieldWorkspace } from "./divide-field-workspace";
-import type { SessionsViewProps } from "./sessions-view";
+import type { FieldPlan } from "./field-plan";
+import { LoadFailed } from "./load-failed";
 
-export function DivideFieldSection({ experimentId, plan }: SessionsViewProps) {
-  const { data: measurers, isLoading: isMeasurersLoading } =
-    useExperimentSessionMeasurers(experimentId);
-  const { data: assignments, isLoading: isAssignmentsLoading } =
-    useExperimentSessionAssignments(experimentId);
+interface DivideFieldSectionProps {
+  experimentId: string;
+  canEdit: boolean;
+  plan: FieldPlan;
+}
 
-  if (isMeasurersLoading || isAssignmentsLoading) {
+export function DivideFieldSection({ experimentId, canEdit, plan }: DivideFieldSectionProps) {
+  const measurers = useExperimentSessionMeasurers(experimentId);
+  const assignments = useExperimentSessionAssignments(experimentId);
+
+  const retry = () => {
+    void measurers.refetch();
+    void assignments.refetch();
+  };
+
+  if (measurers.isLoading || assignments.isLoading) {
     return <Skeleton className="h-96 w-full" />;
   }
 
-  if (!measurers || !assignments) {
-    return null;
+  if (!measurers.data || assignments.isError) {
+    return <LoadFailed onRetry={retry} />;
   }
 
-  return <DivideFieldWorkspace plan={plan} measurers={measurers} assignments={assignments} />;
+  return (
+    <DivideFieldWorkspace
+      plan={plan}
+      canEdit={canEdit}
+      measurers={measurers.data}
+      assignments={assignments.data ?? null}
+    />
+  );
 }

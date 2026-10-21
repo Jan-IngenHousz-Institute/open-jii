@@ -36,10 +36,24 @@ describe("<ExperimentStudyDetailsSection />", () => {
       }),
     });
 
-    expect(screen.getByText(/2026-03-01/)).toBeInTheDocument();
+    expect(screen.getByText("Mar 1, 2026 → Jun 30, 2026")).toBeInTheDocument();
     expect(screen.getByText("Arabidopsis thaliana")).toBeInTheDocument();
     expect(screen.getByText("Greenhouse compartment 2")).toBeInTheDocument();
     expect(screen.getByText("studyDetails.licenseCcByShort")).toBeInTheDocument();
+  });
+
+  it("lists an empty field as not set for someone who may edit", () => {
+    renderSection({ experiment: createExperiment({ organism: "Zea mays" }), hasAccess: true });
+
+    expect(screen.getByText("Zea mays")).toBeInTheDocument();
+    expect(screen.getAllByText("studyDetails.notSet")).toHaveLength(5);
+  });
+
+  it("leaves an empty field out for someone who may not edit", () => {
+    renderSection({ experiment: createExperiment({ organism: "Zea mays" }), hasAccess: false });
+
+    expect(screen.getByText("Zea mays")).toBeInTheDocument();
+    expect(screen.queryByText("studyDetails.notSet")).not.toBeInTheDocument();
   });
 
   it("hides the edit affordance without access", () => {

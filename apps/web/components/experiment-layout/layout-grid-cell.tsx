@@ -1,25 +1,35 @@
 import type { ExperimentUnit } from "@repo/api/domains/experiment/layout/experiment-layout.schema";
-import { useTranslation } from "@repo/i18n";
-import { cn } from "@repo/ui/lib/utils";
+
+import type { PlotCategory } from "./plot-state";
+import { PlotStateCell } from "./plot-state-cell";
 
 interface LayoutGridCellProps {
   unit: ExperimentUnit | undefined;
+  category?: PlotCategory;
   isSelected: boolean;
-  onSelect: (unit: ExperimentUnit) => void;
+  /** Absent in a preview, where nothing can be inspected yet. */
+  onSelect?: (unit: ExperimentUnit) => void;
 }
 
-export function LayoutGridCell({ unit, isSelected, onSelect }: LayoutGridCellProps) {
-  const { t } = useTranslation("experiments");
+/** One position of the Plots view in its default mode, where clicking a plot inspects it. */
+export function LayoutGridCell({ unit, category, isSelected, onSelect }: LayoutGridCellProps) {
+  if (unit === undefined) {
+    return <PlotStateCell kind="gap" />;
+  }
 
-  if (unit === undefined || !unit.active) {
-    return (
-      <div
-        title={t("layout.gap")}
-        className="text-muted-foreground flex h-10 items-center justify-center rounded-md border border-dashed bg-transparent text-xs font-medium"
-      >
-        {t("layout.gapShort")}
-      </div>
-    );
+  const isRemoved = !unit.active && (unit.readingCount ?? 0) > 0;
+  const kind = unit.active ? "plot" : isRemoved ? "removed" : "gap";
+  const cell = (
+    <PlotStateCell
+      kind={kind}
+      identifier={unit.identifier}
+      category={category}
+      isSelected={isSelected}
+    />
+  );
+
+  if (kind === "gap" || onSelect === undefined) {
+    return cell;
   }
 
   const handleClick = () => {
@@ -29,17 +39,12 @@ export function LayoutGridCell({ unit, isSelected, onSelect }: LayoutGridCellPro
   return (
     <button
       type="button"
-      title={unit.identifier}
+      aria-label={unit.identifier}
       aria-pressed={isSelected}
       onClick={handleClick}
-      className={cn(
-        "flex h-10 items-center justify-center rounded-md border text-xs font-medium transition-colors",
-        isSelected
-          ? "bg-primary text-primary-foreground border-primary"
-          : "bg-primary/5 border-primary/20 text-foreground hover:bg-primary/10",
-      )}
+      className="focus-visible:ring-ring h-full w-full rounded-md transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
     >
-      {unit.identifier}
+      {cell}
     </button>
   );
 }

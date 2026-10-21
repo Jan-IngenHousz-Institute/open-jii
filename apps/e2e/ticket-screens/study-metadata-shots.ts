@@ -1,8 +1,9 @@
 import type { Page } from "@playwright/test";
 
 import { experimentId } from "../docs-media/seed-entities.js";
+import type { Box } from "./change-marker.js";
 import { ChangeMarker } from "./change-marker.js";
-import type { Fixture, Resolvable } from "./fixture.js";
+import type { Resolvable } from "./fixture.js";
 import { resolve } from "./fixture.js";
 import type { TicketShot } from "./shots.js";
 
@@ -17,25 +18,70 @@ function studySection(page: Page) {
   return page.getByRole("heading", { name: "Study details", exact: true }).locator("xpath=../..");
 }
 
+const DRAFT_TRIAL: Resolvable = () => experimentId("Draft trial (example data)");
+
+async function draftOverviewRoute(): Promise<string> {
+  return `/platform/experiments/${await resolve(DRAFT_TRIAL)}`;
+}
+
+async function blurFocus(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  });
+}
+
+/** The readiness block and the funding row belong to other tickets, so A1's screens leave them out. */
+async function hideOtherChanges(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const labels = Array.from(document.querySelectorAll("h4, p"));
+    const readiness = labels.find((label) => label.textContent === "Standards readiness");
+    readiness?.parentElement?.remove();
+    const funding = labels.find((label) => label.textContent === "Funding");
+    funding?.parentElement?.remove();
+  });
+}
+
+/** The tag sits below the section, so the next section is nudged down to leave it room. */
+async function markStudySection(page: Page): Promise<Box> {
+  const section = studySection(page);
+  const cardHeading = page.getByRole("heading", { name: "Details", exact: true });
+  await section.evaluate((element) => {
+    element.style.marginBottom = "32px";
+  });
+
+  const marker = new ChangeMarker(page);
+  await marker.mark(section, "New", "below");
+  return marker.frame([cardHeading, section], 24);
+}
+
 const studyDetailsOnOverview: TicketShot = {
   slug: "a1-study-details",
   route: overviewRoute,
+  viewport: { width: 1440, height: 1000 },
   prepare: async (page) => {
     await page.getByText("Glycine max").waitFor();
-    const readiness = page
-      .getByRole("heading", { name: "Standards readiness", exact: true })
-      .locator("xpath=..");
-    const cardHeading = page.getByRole("heading", { name: "Details", exact: true });
+    await hideOtherChanges(page);
+    return markStudySection(page);
+  },
+};
 
-    const marker = new ChangeMarker(page);
-    await marker.mark([studySection(page), readiness], "New", "inside-right");
-    return marker.frame([cardHeading, readiness], 24);
+const studyDetailsNotSet: TicketShot = {
+  slug: "a1-study-details-not-set",
+  route: draftOverviewRoute,
+  viewport: { width: 1440, height: 1000 },
+  prepare: async (page) => {
+    await page.getByRole("heading", { name: "Study details", exact: true }).waitFor();
+    await hideOtherChanges(page);
+    return markStudySection(page);
   },
 };
 
 const studyDetailsDialog: TicketShot = {
   slug: "a1-study-details-dialog",
   route: overviewRoute,
+  viewport: { width: 1440, height: 1000 },
   prepare: async (page) => {
     await page.getByText("Glycine max").waitFor();
     await studySection(page).getByRole("button", { name: "Edit" }).click();
@@ -44,79 +90,40 @@ const studyDetailsDialog: TicketShot = {
 
     // The Funding section is A2's change, so A1's dialog is shown without it.
     await dialog.getByRole("region", { name: "Funding" }).evaluate((section) => section.remove());
-    await page.evaluate(() => {
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-    });
+    await blurFocus(page);
 
     const marker = new ChangeMarker(page);
     return marker.frame([dialog], 16);
   },
 };
 
-const FIELD_ROWS = 6;
-const FIELD_COLUMNS = 8;
-const FIELD_GAPS = new Set(["B4", "E7"]);
-
-function rowLetter(row: number): string {
-  return String.fromCharCode(64 + row);
-}
-
-function exampleUnitId(index: number): string {
-  return `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
-}
-
-/** A six by eight field with two gaps, which no table holds yet, so the layout route is answered here. */
-function exampleFieldLayout() {
-  const units = [];
-  for (let row = 1; row <= FIELD_ROWS; row++) {
-    for (let column = 1; column <= FIELD_COLUMNS; column++) {
-      const identifier = `${rowLetter(row)}${column}`;
-      if (!FIELD_GAPS.has(identifier)) {
-        units.push({
-          id: exampleUnitId(units.length + 1),
-          parentId: null,
-          identifier,
-          row,
-          column,
-          active: true,
-        });
-      }
-    }
-  }
-  return { levelName: "Plot", rows: FIELD_ROWS, columns: FIELD_COLUMNS, units };
-}
-
-const exampleLayout: Fixture = {
-  install: async (page) => {
-    await page.route(
-      (url) => /^\/api\/v1\/experiments\/[^/]+\/layout$/.test(url.pathname),
-      (route) => route.fulfill({ status: 200, json: exampleFieldLayout() }),
-    );
-  },
-};
-
-const layoutTab: TicketShot = {
-  slug: "c2-layout-grid",
-  route: async () => `/platform/experiments/${await resolve(DROUGHT_TRIAL)}/layout`,
-  fixtures: [exampleLayout],
+const discardChanges: TicketShot = {
+  slug: "a1-discard-changes",
+  route: overviewRoute,
   viewport: { width: 1440, height: 1000 },
   prepare: async (page) => {
-    await page.getByText("Plot grid").waitFor();
-    const tab = page.getByRole("tab", { name: "Layout" });
-    const setup = page.getByText("Set up the layout").locator("xpath=ancestor::div[contains(@class,'rounded')][1]");
-    const grid = page.getByText("Plot grid").locator("xpath=ancestor::div[contains(@class,'rounded')][1]");
+    await page.getByText("Glycine max").waitFor();
+    await studySection(page).getByRole("button", { name: "Edit" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.waitFor();
 
+    await dialog.getByRole("region", { name: "Funding" }).evaluate((section) => section.remove());
+    await dialog.getByLabel("Organism").fill("Glycine soja");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    const prompt = page.getByRole("alertdialog");
+    await prompt.waitFor();
+
+    // The prompt hides the dialog from the accessibility tree, so the dialog is found by its markup.
+    const behind = page.locator('[role="dialog"]');
     const marker = new ChangeMarker(page);
-    await marker.mark(tab, "New", "above");
-    await marker.mark([setup, grid], "New", "below");
-    return marker.frame([tab, setup, grid], 24);
+    await marker.mark(prompt, "New", "above");
+    return marker.frame([behind, prompt], 16);
   },
 };
 
 export const STUDY_METADATA_SHOTS: readonly TicketShot[] = [
   studyDetailsOnOverview,
+  studyDetailsNotSet,
   studyDetailsDialog,
-  layoutTab,
+  discardChanges,
 ];

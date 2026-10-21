@@ -1,46 +1,54 @@
 import { createExperiment } from "@/test/factories";
-import { render, screen } from "@/test/test-utils";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import {
-  countStudyDescriptors,
-  ExperimentStandardsReadiness,
-} from "./experiment-standards-readiness";
+import { contract } from "@repo/api/contract";
 
-const goldenExperiment = createExperiment({
-  startDate: "2026-06-01",
-  endDate: "2026-08-30",
-  organism: "Zea mays",
-  experimentalDesign: "RCBD",
-  growthFacility: "Open field",
-  license: "CC-BY-4.0",
-});
+import { ExperimentStandardsReadiness } from "./experiment-standards-readiness";
 
-describe("countStudyDescriptors", () => {
-  it("counts 0 for a sparse experiment and all for a golden one", () => {
-    const sparse = countStudyDescriptors(createExperiment());
-    expect(sparse.filled).toBe(0);
+const experiment = createExperiment();
 
-    const golden = countStudyDescriptors(goldenExperiment);
-    expect(golden.filled).toBe(golden.total);
-  });
-
-  it("counts partial fills", () => {
-    expect(
-      countStudyDescriptors(createExperiment({ organism: "Zea mays", license: "CC0-1.0" })).filled,
-    ).toBe(2);
-  });
-});
+const followingTwo = {
+  followed: ["miappe", "crop-ontology"],
+  standards: [],
+  steps: [
+    { reason: { code: "no-location" }, holdsFreeze: true, standards: ["miappe"] },
+    {
+      reason: { code: "plots-left-skipped", subjects: ["A4"] },
+      holdsFreeze: false,
+      standards: [],
+    },
+  ],
+};
 
 describe("<ExperimentStandardsReadiness />", () => {
-  it("shows the license when chosen", () => {
-    render(<ExperimentStandardsReadiness experiment={goldenExperiment} />);
-    expect(screen.getByText("standardsReadiness.title")).toBeInTheDocument();
-    expect(screen.getByText(/studyDetails\.licenseCcByShort/)).toBeInTheDocument();
+  it("names what the experiment follows and links to its steps while one holds Freeze", async () => {
+    server.mount(contract.experiments.getExperimentStandards, { body: followingTwo });
+    render(<ExperimentStandardsReadiness experiment={experiment} />);
+
+    const link = await screen.findByRole("link", { name: "line.seeSteps" });
+    expect(link).toHaveAttribute("href", `/en-US/platform/experiments/${experiment.id}/datasets`);
+    expect(screen.getByText(/line\.follows/)).toBeInTheDocument();
+    expect(screen.getByText(/line\.steps/)).toBeInTheDocument();
   });
 
-  it("shows the none state without a license", () => {
-    render(<ExperimentStandardsReadiness experiment={createExperiment()} />);
-    expect(screen.getByText(/standardsReadiness\.licenseNone/)).toBeInTheDocument();
+  it("says nothing holds Freeze when no step does", async () => {
+    server.mount(contract.experiments.getExperimentStandards, {
+      body: { followed: [], standards: [], steps: [] },
+    });
+    render(<ExperimentStandardsReadiness experiment={experiment} />);
+
+    expect(await screen.findByRole("link", { name: "line.openDatasets" })).toBeInTheDocument();
+    expect(screen.getByText(/line\.followsOnly/)).toBeInTheDocument();
+    expect(screen.getByText(/line\.ready/)).toBeInTheDocument();
+  });
+
+  it("leaves the line out when the standards cannot be loaded", async () => {
+    const spy = server.mount(contract.experiments.getExperimentStandards, { status: 500 });
+    render(<ExperimentStandardsReadiness experiment={experiment} />);
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(screen.queryByTestId("standards-line")).toBeNull();
   });
 });

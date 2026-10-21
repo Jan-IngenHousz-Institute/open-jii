@@ -9,41 +9,71 @@ import type {
   OpenAireFloorField,
 } from "@repo/api/domains/dataset/dataset.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 
-/** The one row that blocks: each floor field is either filled or stops the freeze. */
-export function OpenAireFloorRow({ floor }: { floor: DatasetReadiness["floor"] }) {
+interface OpenAireFloorRowProps {
+  floor: DatasetReadiness["floor"];
+  /** What this dataset holds for each filled field, so the record reads as its own state. */
+  values?: Partial<Record<OpenAireFloorField, string>>;
+  /** The flow's step that fills a missing field, when there is one. */
+  onFix?: (field: OpenAireFloorField) => { label: string; go: () => void } | null;
+}
+
+/** The OpenAIRE record every dataset follows, filled by the publish flow's own steps. */
+export function OpenAireFloorRow({ floor, values, onFix }: OpenAireFloorRowProps) {
   const { t } = useTranslation("datasets");
   const isComplete = floor.missing.length === 0;
 
-  const renderField = (field: OpenAireFloorField, isFilled: boolean) => (
-    <li key={field} className="flex items-center gap-1.5 text-sm">
-      {isFilled ? (
-        <Check className="text-status-active-foreground size-3.5" aria-hidden />
-      ) : (
-        <X className="text-destructive size-3.5" aria-hidden />
-      )}
-      {t(`check.floorFields.${field}`)}
-    </li>
-  );
+  const renderFilled = (field: OpenAireFloorField) => {
+    const value = values?.[field];
+
+    return (
+      <li key={field} className="flex items-start gap-2 text-sm">
+        <Check className="text-status-active-foreground mt-0.5 size-3.5 shrink-0" aria-hidden />
+        <div className="min-w-0">
+          <p className="text-muted-foreground text-xs">{t(`check.fields.${field}`)}</p>
+          {value !== undefined ? <p className="break-words font-medium">{value}</p> : null}
+        </div>
+      </li>
+    );
+  };
+
+  const renderMissing = (field: OpenAireFloorField) => {
+    const fix = onFix?.(field) ?? null;
+
+    return (
+      <li key={field} className="flex items-start gap-2 text-sm">
+        <X className="text-status-stale-foreground mt-0.5 size-3.5 shrink-0" aria-hidden />
+        <div className="min-w-0">
+          <p className="text-xs">{t(`check.fields.${field}`)}</p>
+          {fix !== null ? (
+            <Button type="button" variant="link" className="h-auto p-0 text-sm" onClick={fix.go}>
+              {fix.label}
+            </Button>
+          ) : null}
+        </div>
+      </li>
+    );
+  };
 
   const verdict = isComplete ? (
-    <StatusBadge tone="active">{t("check.floorComplete")}</StatusBadge>
+    <StatusBadge tone="active">{t("check.recordFilled")}</StatusBadge>
   ) : (
-    <StatusBadge tone="destructive">
-      {t("check.floorMissing", { count: floor.missing.length })}
+    <StatusBadge tone="stale">
+      {t("check.recordMissing", { count: floor.missing.length })}
     </StatusBadge>
   );
 
   return (
     <SettingsCard
-      title={t("check.floorTitle")}
-      description={t("check.floorDescription")}
+      title={t("check.recordTitle")}
+      description={t("check.recordDescription")}
       action={verdict}
       data-testid="openaire-floor"
     >
-      <ul className="grid grid-cols-2 gap-x-6 gap-y-1.5 sm:grid-cols-4">
-        {floor.filled.map((field) => renderField(field, true))}
-        {floor.missing.map((field) => renderField(field, false))}
+      <ul className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+        {floor.missing.map(renderMissing)}
+        {floor.filled.map(renderFilled)}
       </ul>
     </SettingsCard>
   );

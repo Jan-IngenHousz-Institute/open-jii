@@ -17,10 +17,16 @@ import { MetadataListView } from "../metadata-list-view";
 
 interface MetadataUploadStepProps {
   experimentId: string;
+  /** Starts on a new sheet with this match target chosen, skipping the list. */
+  matchTarget?: string;
   onClose: () => void;
 }
 
-export function MetadataUploadStep({ experimentId, onClose }: MetadataUploadStepProps) {
+export function MetadataUploadStep({
+  experimentId,
+  matchTarget,
+  onClose,
+}: MetadataUploadStepProps) {
   const { data: existingMetadataResponse } = useExperimentMetadata(experimentId);
   const existingRecords = useMemo(() => existingMetadataResponse ?? [], [existingMetadataResponse]);
 
@@ -48,12 +54,12 @@ export function MetadataUploadStep({ experimentId, onClose }: MetadataUploadStep
     [reservedQuestionLabels],
   );
 
-  const [mode, setMode] = useState<"list" | "edit">("list");
+  const [mode, setMode] = useState<"list" | "edit">(matchTarget === undefined ? "list" : "edit");
   const [editingMetadataId, setEditingMetadataId] = useState<string | null>(null);
 
   const form = useForm<MetadataFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: EMPTY_FORM_VALUES,
+    defaultValues: { ...EMPTY_FORM_VALUES, experimentQuestionId: matchTarget ?? "" },
     mode: "onSubmit",
     reValidateMode: "onChange",
   });
@@ -107,6 +113,7 @@ export function MetadataUploadStep({ experimentId, onClose }: MetadataUploadStep
         existingRecords={existingRecords}
         editingMetadataId={editingMetadataId}
         questionOptions={questionOptions}
+        presetMatchTarget={matchTarget}
         onBack={existingRecords.length > 0 ? backToList : onClose}
       />
     </FormProvider>

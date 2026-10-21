@@ -2,7 +2,7 @@
 
 import { useDatasetCreate } from "@/hooks/dataset/useDatasetCreate/useDatasetCreate";
 import { useLocale } from "@/hooks/useLocale";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import type { Dataset } from "@repo/api/domains/dataset/dataset.schema";
@@ -25,6 +25,7 @@ export function PublishDatasetButton({ experimentId, draft }: PublishDatasetButt
   };
 
   const { mutate: createDataset, isPending } = useDatasetCreate({ onSuccess: openPublishFlow });
+  const hasDraft = draft !== undefined;
 
   const handleClick = () => {
     if (draft !== undefined) {
@@ -34,10 +35,12 @@ export function PublishDatasetButton({ experimentId, draft }: PublishDatasetButt
     createDataset({ id: experimentId });
   };
 
+  const icon = hasDraft ? <Pencil className="size-4" /> : <Plus className="size-4" />;
+
   return (
     <Button onClick={handleClick} disabled={isPending}>
-      {isPending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-      {t("list.publish")}
+      {isPending ? <Loader2 className="size-4 animate-spin" /> : icon}
+      {hasDraft ? t("list.continueDraft") : t("list.publish")}
     </Button>
   );
 }

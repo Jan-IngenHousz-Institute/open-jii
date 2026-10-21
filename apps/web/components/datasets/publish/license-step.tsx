@@ -1,7 +1,7 @@
 "use client";
 
 import { SettingsCard } from "@/components/shared/settings-card";
-import { Info } from "lucide-react";
+import { Info, Lock } from "lucide-react";
 
 import type { DatasetAccess } from "@repo/api/domains/dataset/dataset.schema";
 import { zDatasetAccess } from "@repo/api/domains/dataset/dataset.schema";
@@ -86,9 +86,15 @@ export function LicenseStep(props: WizardStepProps<PublishDatasetForm>) {
             )}
           />
 
-          <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-md p-2 text-sm">
-            <Info className="text-primary size-4 shrink-0" aria-hidden />
-            <span className="leading-tight">{t("license.metadataNote")}</span>
+          <div className="space-y-2">
+            <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-md p-2 text-sm">
+              <Lock className="text-primary size-4 shrink-0" aria-hidden />
+              <span className="leading-tight">{t("license.permanentNote")}</span>
+            </div>
+            <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-md p-2 text-sm">
+              <Info className="text-primary size-4 shrink-0" aria-hidden />
+              <span className="leading-tight">{t("license.metadataNote")}</span>
+            </div>
           </div>
 
           <FormField

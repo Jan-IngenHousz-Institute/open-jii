@@ -79,7 +79,9 @@ export function LayoutTermSelect({ id, value, onChange }: LayoutTermSelectProps)
           className={cn("w-full justify-between font-normal", !hasTerm && "text-muted-foreground")}
         >
           <span className="truncate">
-            {hasTerm ? t("layout.term.selected", { label: value.label, id: value.id }) : t("layout.term.none")}
+            {hasTerm
+              ? t("layout.term.selected", { label: value.label, id: value.id })
+              : t("layout.term.none")}
           </span>
           <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
         </Button>
@@ -98,7 +100,9 @@ export function LayoutTermSelect({ id, value, onChange }: LayoutTermSelectProps)
               </p>
             ) : null}
             {matches.length > 0 ? (
-              <CommandGroup heading={t("layout.term.ontology")}>{matches.map(renderTerm)}</CommandGroup>
+              <CommandGroup heading={t("layout.term.ontology")}>
+                {matches.map(renderTerm)}
+              </CommandGroup>
             ) : null}
             <CommandSeparator />
             <CommandGroup>

@@ -1,13 +1,11 @@
 "use client";
 
-import { MapPin } from "lucide-react";
+import type { ReactNode } from "react";
 
 import type {
   ExperimentLayout,
   ExperimentUnit,
 } from "@repo/api/domains/experiment/layout/experiment-layout.schema";
-import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components/button";
 import {
   Card,
   CardContent,
@@ -15,26 +13,51 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
+import { cn } from "@repo/ui/lib/utils";
 
-import { LayoutGridCell } from "./layout-grid-cell";
-import { LayoutPlotSearch } from "./layout-plot-search";
 import { rowLetter } from "./row-letter";
+
+export interface LayoutGridPosition {
+  row: number;
+  column: number;
+  unit: ExperimentUnit | undefined;
+}
 
 interface LayoutGridProps {
   layout: ExperimentLayout;
-  selectedPlotId: string | null;
-  onSelectPlot: (unit: ExperimentUnit) => void;
-  /** Opens Anchor on map, offered only to those who can edit the layout. */
-  onAnchor?: () => void;
+  title: string;
+  description: ReactNode;
+  renderCell: (position: LayoutGridPosition) => ReactNode;
+  /** Controls above the grid, such as Find by name or Mark gaps. */
+  toolbar?: ReactNode;
+  /** Shown above the toolbar while a mode such as Mark gaps is on. */
+  banner?: ReactNode;
+  /** The legend and anything listed under the grid, such as plots without a position. */
+  footer?: ReactNode;
+  /** Ends a drag that started on a cell, wherever the pointer is released. */
+  onPointerUp?: () => void;
+  className?: string;
 }
 
 function positionKey(row: number, column: number): string {
   return `${row}:${column}`;
 }
 
-export function LayoutGrid({ layout, selectedPlotId, onSelectPlot, onAnchor }: LayoutGridProps) {
-  const { t } = useTranslation("experiments");
-
+/**
+ * The layout's rows and columns in their own scroll area, with the row letters and column numbers
+ * kept in view while it scrolls.
+ */
+export function LayoutGrid({
+  layout,
+  title,
+  description,
+  renderCell,
+  toolbar,
+  banner,
+  footer,
+  onPointerUp,
+  className,
+}: LayoutGridProps) {
   const unitsByPosition = new Map<string, ExperimentUnit>();
   for (const unit of layout.units) {
     if (unit.row !== null && unit.column !== null) {
@@ -42,65 +65,57 @@ export function LayoutGrid({ layout, selectedPlotId, onSelectPlot, onAnchor }: L
     }
   }
 
-  const activeCount = layout.units.filter((unit) => unit.active).length;
-  const gapCount = layout.rows * layout.columns - activeCount;
   const rowNumbers = Array.from({ length: layout.rows }, (_, index) => index + 1);
   const columnNumbers = Array.from({ length: layout.columns }, (_, index) => index + 1);
 
   const renderColumnHeader = (column: number) => (
-    <div key={column} className="text-muted-foreground text-center text-xs">
+    <div
+      key={column}
+      className="bg-card text-muted-foreground sticky top-0 z-10 pb-1 text-center text-xs"
+    >
       {column}
     </div>
   );
 
-  const renderCell = (row: number, column: number) => {
-    const unit = unitsByPosition.get(positionKey(row, column));
-    return (
-      <LayoutGridCell
-        key={column}
-        unit={unit}
-        isSelected={unit !== undefined && unit.id === selectedPlotId}
-        onSelect={onSelectPlot}
-      />
-    );
-  };
+  const renderPosition = (row: number, column: number) => (
+    <div key={column} className="h-10">
+      {renderCell({ row, column, unit: unitsByPosition.get(positionKey(row, column)) })}
+    </div>
+  );
 
   const renderRow = (row: number) => (
     <div key={row} className="contents">
-      <div className="text-muted-foreground flex items-center text-xs font-medium">
+      <div className="bg-card text-muted-foreground sticky left-0 z-10 flex items-center text-xs font-medium">
         {rowLetter(row)}
       </div>
-      {columnNumbers.map((column) => renderCell(row, column))}
+      {columnNumbers.map((column) => renderPosition(row, column))}
     </div>
   );
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
-        <CardTitle>{t("layout.gridTitle", { level: layout.levelName })}</CardTitle>
-        <CardDescription>
-          {t("layout.summary", { active: activeCount, gaps: gapCount })}
-        </CardDescription>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <LayoutPlotSearch units={layout.units} onFind={onSelectPlot} />
-          {onAnchor === undefined ? null : (
-            <Button type="button" variant="outline" onClick={onAnchor}>
-              <MapPin className="size-4" aria-hidden />
-              {t("layout.anchor.title")}
-            </Button>
-          )}
+        {banner}
+        {toolbar ? <div className="flex flex-wrap items-center gap-2">{toolbar}</div> : null}
+
+        <div className="max-h-[70vh] overflow-auto">
+          <div
+            className={cn("grid select-none gap-1.5", onPointerUp && "touch-none")}
+            style={{ gridTemplateColumns: `1.5rem repeat(${layout.columns}, minmax(2.5rem, 1fr))` }}
+            onPointerUp={onPointerUp}
+            onPointerLeave={onPointerUp}
+          >
+            <div className="bg-card sticky left-0 top-0 z-20" />
+            {columnNumbers.map(renderColumnHeader)}
+            {rowNumbers.map(renderRow)}
+          </div>
         </div>
 
-        <div
-          className="grid gap-1.5"
-          style={{ gridTemplateColumns: `1.5rem repeat(${layout.columns}, minmax(2.5rem, 1fr))` }}
-        >
-          <div />
-          {columnNumbers.map(renderColumnHeader)}
-          {rowNumbers.map(renderRow)}
-        </div>
+        {footer ? <div className="space-y-3 border-t pt-4">{footer}</div> : null}
       </CardContent>
     </Card>
   );

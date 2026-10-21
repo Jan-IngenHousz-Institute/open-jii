@@ -10,6 +10,7 @@ import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 import { protocolRequiresInteraction } from "@repo/iot";
 
+import { ConfirmedPlotCard } from "../plot-node/confirmed-plot-card";
 import { DeviceScanProgressList } from "./components/device-scan-progress-list";
 import { ErrorState } from "./components/error-state";
 import { NoDeviceState } from "./components/no-device-state";
@@ -138,6 +139,9 @@ export function MeasurementNode({ content, nodeId }: MeasurementNodeProps) {
 
     return (
       <View className="flex-1">
+        <View className="px-4 pt-4">
+          <ConfirmedPlotCard />
+        </View>
         <ReadyState onCardPress={navigateToQuestionFromOverview} />
         <View className="px-4 py-3">
           <Button

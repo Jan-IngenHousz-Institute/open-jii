@@ -27,6 +27,7 @@ export function DatasetAuthorRow({ id, position, author, onRemove }: DatasetAuth
 
   const name = `${author.givenName} ${author.familyName}`;
   const isAddedByName = author.userId === null;
+  const hasNoOrcid = !isAddedByName && author.orcid === null;
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   const handleRemove = () => onRemove(position);
@@ -80,6 +81,7 @@ export function DatasetAuthorRow({ id, position, author, onRemove }: DatasetAuth
               {author.orcid}
             </a>
           ) : null}
+          {hasNoOrcid ? <span>{t("describe.noOrcid")}</span> : null}
         </div>
       </div>
 

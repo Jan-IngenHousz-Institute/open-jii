@@ -60,7 +60,15 @@ export function exampleFieldLayout() {
     column,
     active,
   }));
-  return { levelName: "Plot", rows: FIELD_ROWS, columns: FIELD_COLUMNS, units };
+  return {
+    levelName: "Plot",
+    rows: FIELD_ROWS,
+    columns: FIELD_COLUMNS,
+    naming: "rowLetter",
+    firstNumber: 1,
+    readingCount: 0,
+    units,
+  };
 }
 
 /** Answers the layout route with the example field, which no table holds yet. */

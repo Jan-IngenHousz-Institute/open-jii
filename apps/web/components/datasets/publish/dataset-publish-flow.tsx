@@ -1,6 +1,5 @@
 "use client";
 
-import { ConceptDCheckStep } from "@/components/experiment-standards/concepts/d/concept-d-check-step";
 import { useDatasetPublish } from "@/hooks/dataset/useDatasetPublish/useDatasetPublish";
 import { useLocale } from "@/hooks/useLocale";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -41,8 +40,10 @@ export function DatasetPublishFlow({ dataset, experiment }: DatasetPublishFlowPr
   const locale = useLocale();
   const datasetId = dataset.id;
   const experimentId = dataset.experimentId;
-  // Scaffold: ?readiness=d makes the standards the trial follows hold the freeze.
-  const isConceptD = useSearchParams().get("readiness") === "d";
+  const version = dataset.version;
+  const funding = dataset.funding;
+  // Scaffold: ?standards=off shows the flow as it is before the standards block ships.
+  const showsStandards = useSearchParams().get("standards") !== "off";
 
   const { mutate: publish, isPending } = useDatasetPublish({
     onSuccess: (published) => {
@@ -55,16 +56,22 @@ export function DatasetPublishFlow({ dataset, experiment }: DatasetPublishFlowPr
       return <ScopeStep {...props} datasetId={datasetId} />;
     }
     function Curate(props: WizardStepProps<PublishDatasetForm>) {
-      return <CurateStep {...props} datasetId={datasetId} />;
+      return <CurateStep {...props} datasetId={datasetId} experimentId={experimentId} />;
     }
     function Check(props: WizardStepProps<PublishDatasetForm>) {
-      if (isConceptD) {
-        return <ConceptDCheckStep {...props} datasetId={datasetId} experimentId={experimentId} />;
-      }
-      return <CheckStep {...props} datasetId={datasetId} />;
+      return (
+        <CheckStep
+          {...props}
+          datasetId={datasetId}
+          experimentId={experimentId}
+          funding={funding}
+          showsStandards={showsStandards}
+        />
+      );
     }
     function Freeze(props: WizardStepProps<PublishDatasetForm>) {
-      return <FreezeStep {...props} datasetId={datasetId} />;
+      const freeze = (data: PublishDatasetForm) => publish({ ...data, id: datasetId });
+      return <FreezeStep {...props} datasetId={datasetId} version={version} onFreeze={freeze} />;
     }
 
     return [
@@ -83,7 +90,7 @@ export function DatasetPublishFlow({ dataset, experiment }: DatasetPublishFlowPr
       { title: t("publish.steps.check"), validationSchema: checkSchema, component: Check },
       { title: t("publish.steps.freeze"), validationSchema: freezeSchema, component: Freeze },
     ];
-  }, [t, datasetId, experimentId, isConceptD]);
+  }, [t, datasetId, experimentId, version, funding, showsStandards, publish]);
 
   // A Draft saves as the researcher goes, so the flow resumes from what it holds, and an empty
   // field falls back to the experiment it was started from.

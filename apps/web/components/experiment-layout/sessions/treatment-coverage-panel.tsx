@@ -3,7 +3,6 @@ import { useTranslation } from "@repo/i18n";
 import { CoverageLine } from "./coverage-line";
 import type { FieldPlan } from "./field-plan";
 import type { SessionDay } from "./session-day";
-import { treatmentTone } from "./session-tones";
 
 interface TreatmentCoveragePanelProps {
   plan: FieldPlan;
@@ -12,19 +11,19 @@ interface TreatmentCoveragePanelProps {
 
 export function TreatmentCoveragePanel({ plan, day }: TreatmentCoveragePanelProps) {
   const { t } = useTranslation("fieldSessions");
-  const covered = plan.countByTreatment(day.covered);
+  const measured = plan.countByTreatment(day.measured);
   const totals = plan.totalByTreatment();
   const missing = day.missingByTreatment();
 
-  const renderTreatment = (treatment: string, index: number) => {
+  const renderTreatment = (treatment: string) => {
     const missingPlots = (missing.get(treatment) ?? []).map((unitId) => plan.identifierOf(unitId));
     return (
       <div key={treatment} className="space-y-1">
         <CoverageLine
           label={treatment}
-          measured={covered.get(treatment) ?? 0}
+          measured={measured.get(treatment) ?? 0}
           total={totals.get(treatment) ?? 0}
-          swatchClassName={treatmentTone(index).swatch}
+          category={plan.categories.get(treatment)}
         />
         {missingPlots.length > 0 ? (
           <p className="text-muted-foreground text-xs">

@@ -12,7 +12,7 @@ import {
 } from "@repo/ui/components/dropdown-menu";
 
 /** Authors come from the experiment's members, or by name for someone without an account. */
-export function AddAuthorMenu() {
+export function AddAuthorMenu({ onAddByName }: { onAddByName: () => void }) {
   const { t } = useTranslation("datasets");
 
   return (
@@ -28,7 +28,7 @@ export function AddAuthorMenu() {
           <UserRound className="mr-2 size-4" />
           {t("describe.addMember")}
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem onSelect={onAddByName}>
           <UserPlus className="mr-2 size-4" />
           {t("describe.addByName")}
         </DropdownMenuItem>

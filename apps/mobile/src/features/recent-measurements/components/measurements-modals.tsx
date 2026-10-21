@@ -2,22 +2,33 @@ import React from "react";
 import { MeasurementMacroPreview } from "~/features/recent-measurements/components/measurement-macro-preview";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { parseQuestions } from "~/shared/measurements/convert-cycle-answers-to-array";
-import { getCommentFromMeasurementResult } from "~/shared/measurements/measurement-annotations";
+import {
+  getCommentFromMeasurementResult,
+  getFlagTypeFromMeasurementResult,
+} from "~/shared/measurements/measurement-annotations";
 import { CommentModal } from "~/shared/ui/measurement/comment-modal";
+import { FlagTypeModal } from "~/shared/ui/measurement/flag-type-modal";
 import { MeasurementQuestionsModal } from "~/shared/ui/measurement/measurement-questions-modal";
+
+import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 export type ModalState =
   | { kind: "none" }
   | { kind: "questions"; measurement: StoredMeasurement }
-  | { kind: "comment"; measurement: StoredMeasurement };
+  | { kind: "comment"; measurement: StoredMeasurement }
+  | { kind: "flag"; measurement: StoredMeasurement };
 
 interface Props {
   state: ModalState;
   onClose: () => void;
   onSaveComment: (m: StoredMeasurement, text: string) => Promise<void>;
+  onSaveFlag: (
+    m: StoredMeasurement,
+    flagType: ExperimentAnnotationFlagType | null,
+  ) => Promise<void>;
 }
 
-export function MeasurementsModals({ state, onClose, onSaveComment }: Props) {
+export function MeasurementsModals({ state, onClose, onSaveComment, onSaveFlag }: Props) {
   if (state.kind === "questions") {
     const m = state.measurement;
     return (
@@ -45,6 +56,21 @@ export function MeasurementsModals({ state, onClose, onSaveComment }: Props) {
         timestamp={m.data.metadata.timestamp}
         onSave={async (text) => {
           await onSaveComment(m, text);
+          onClose();
+        }}
+        onCancel={onClose}
+      />
+    );
+  }
+
+  if (state.kind === "flag") {
+    const m = state.measurement;
+    return (
+      <FlagTypeModal
+        visible
+        selected={getFlagTypeFromMeasurementResult(m.data.measurementResult)}
+        onSelect={async (flagType) => {
+          await onSaveFlag(m, flagType);
           onClose();
         }}
         onCancel={onClose}

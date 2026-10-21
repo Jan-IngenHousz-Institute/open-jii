@@ -8,6 +8,7 @@ import {
   MapContainer,
   TileLayer,
   Marker,
+  Polygon,
   Popup,
   useMapEvents,
   ZoomControl,
@@ -142,6 +143,10 @@ export interface MapProps {
    * Whether to automatically fit map bounds to show all locations on initial load
    */
   fitBoundsOnMapLoad?: boolean;
+  /**
+   * A closed shape drawn over the tiles, such as a field's outline, as latitude and longitude pairs
+   */
+  outline?: [number, number][];
 }
 
 // Component to handle map view changes and bounds fitting
@@ -224,6 +229,7 @@ export const Map = ({
   showDistances = false,
   referencePoint,
   fitBoundsOnMapLoad = true,
+  outline,
 }: MapProps) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(sidebarCollapsed);
   const hasChosenSidebarState = useRef(false);
@@ -500,6 +506,17 @@ export const Map = ({
 
           {showZoomControl && <ZoomControl position="topright" />}
           {showScale && <ScaleControl position="bottomright" />}
+
+          {outline && outline.length > 2 && (
+            <Polygon
+              positions={outline}
+              pathOptions={{
+                className: "stroke-primary fill-primary",
+                weight: 2,
+                fillOpacity: 0.12,
+              }}
+            />
+          )}
 
           {selectionMode && !disabled && <MapClickHandler onMapClick={handleMapClick} />}
 

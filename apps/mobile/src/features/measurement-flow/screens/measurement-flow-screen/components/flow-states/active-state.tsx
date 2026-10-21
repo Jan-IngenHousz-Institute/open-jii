@@ -10,6 +10,7 @@ import { InstructionNode } from "../flow-nodes/instruction-node";
 import { MeasurementNode } from "../flow-nodes/measurement-node/measurement-node";
 import { useExampleLayout, useIsPlotStepShowing } from "../flow-nodes/plot-node/next-plot";
 import { PlotStep } from "../flow-nodes/plot-node/plot-step";
+import { scaffoldSession } from "../flow-nodes/plot-node/scaffold-screen";
 import { QuestionNode } from "../flow-nodes/question-node/question-node";
 
 interface ActiveStateProps {
@@ -68,11 +69,12 @@ export function ActiveState({ currentNode }: ActiveStateProps) {
   );
   const exampleLayout = useExampleLayout();
   const isPlotStepShowing = useIsPlotStepShowing();
+  const plotSession = scaffoldSession();
 
-  if (isPlotStepShowing && exampleLayout) {
+  if (isPlotStepShowing && exampleLayout && plotSession) {
     return (
       <View className="flex-1">
-        <PlotStep layout={exampleLayout} />
+        <PlotStep layout={exampleLayout} session={plotSession} />
       </View>
     );
   }

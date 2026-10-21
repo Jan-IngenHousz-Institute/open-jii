@@ -10,6 +10,7 @@ vi.mock("~/shared/i18n", () => ({
       const map: Record<string, string> = {
         "swipe.uploadButton": "Upload",
         "swipe.commentButton": "Comment",
+        "swipe.flagButton": "Flag",
         "swipe.deleteButton": "Delete",
       };
       return map[key] ?? key;
@@ -101,9 +102,17 @@ describe("SwipeableMeasurementRow", () => {
     expect(screen.getByLabelText("Comment")).toBeTruthy();
   });
 
-  it("does not show the Comment button for synced rows", () => {
-    render(<SwipeableMeasurementRow {...defaultProps} status="successful" onComment={vi.fn()} />);
-    expect(screen.queryByLabelText("Comment")).toBeNull();
+  it("shows the Comment and Flag buttons for synced rows", () => {
+    render(
+      <SwipeableMeasurementRow
+        {...defaultProps}
+        status="successful"
+        onComment={vi.fn()}
+        onFlag={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText("Comment")).toBeTruthy();
+    expect(screen.getByLabelText("Flag")).toBeTruthy();
   });
 
   it("calls onDelete with the row id when the delete button is pressed", () => {

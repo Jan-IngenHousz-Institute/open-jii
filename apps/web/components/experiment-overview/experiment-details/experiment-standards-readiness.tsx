@@ -1,78 +1,54 @@
 "use client";
 
-import { STANDARDS_READINESS_ANCHOR } from "@/components/experiment-overview/experiment-readiness-summary";
-import { ConceptDReadinessSummary } from "@/components/experiment-standards/concepts/d/concept-d-readiness-summary";
-import { useSearchParams } from "next/navigation";
-import { useExperimentStandardsReadiness } from "~/hooks/experiment/useExperimentStandardsReadiness/useExperimentStandardsReadiness";
+import { formatList } from "@/components/calibrations/format-list";
+import { useFollowedStandards } from "@/components/experiment-standards/use-followed-standards";
+import Link from "next/link";
+import { useLocale } from "~/hooks/useLocale";
 
 import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
+import { ALWAYS_FOLLOWED } from "@repo/api/domains/experiment/standards/experiment-standards.schema";
+import type { FollowableStandardId } from "@repo/api/domains/experiment/standards/experiment-standards.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-
-import { useDataLicenseLabel } from "./use-data-license-label";
 
 interface ExperimentStandardsReadinessProps {
   experiment: Experiment;
 }
 
-/** How many of the study descriptors carry a value, out of how many exist. */
-export function countStudyDescriptors(experiment: Experiment): {
-  filled: number;
-  total: number;
-} {
-  const descriptors = [
-    experiment.startDate,
-    experiment.endDate,
-    experiment.organism,
-    experiment.experimentalDesign,
-    experiment.growthFacility,
-    experiment.license,
-  ];
-
-  return { filled: descriptors.filter(Boolean).length, total: descriptors.length };
-}
-
-/** Points at the readiness screen once it answers, and counts study fields until then. */
+/**
+ * The details card's one line: what the experiment follows and how many steps hold Freeze, linking
+ * to the steps on the Datasets tab. The tab shows loading and a failure with Retry, so the line
+ * waits for the answer and leaves a failure out.
+ */
 export function ExperimentStandardsReadiness({ experiment }: ExperimentStandardsReadinessProps) {
-  const { t } = useTranslation("experiments");
-  const licenseLabel = useDataLicenseLabel();
-  const { t: tStandards } = useTranslation("standards");
-  const { data: readiness } = useExperimentStandardsReadiness(experiment.id);
-  // Scaffold: ?readiness=d says here what the trial follows, and its steps live on Datasets.
-  const isConceptD = useSearchParams().get("readiness") === "d";
+  const { t } = useTranslation("standards");
+  const locale = useLocale();
+  const { followed } = useFollowedStandards(experiment.id);
 
-  if (isConceptD) {
-    return <ConceptDReadinessSummary experimentId={experiment.id} />;
+  if (followed === undefined) {
+    return null;
   }
 
-  const { filled, total } = countStudyDescriptors(experiment);
+  const { chosen, holding } = followed;
+  const isHeld = holding > 0;
+  const inSentence = (standard: FollowableStandardId) => t(`standard.${standard}.inSentence`);
 
-  if (readiness) {
-    return (
-      <div className="space-y-1">
-        <h4 className="text-sm font-medium">{t("standardsReadiness.title")}</h4>
-        <Button asChild variant="link" className="h-auto p-0">
-          <a href={`#${STANDARDS_READINESS_ANCHOR}`}>{tStandards("readiness.seeAll")}</a>
-        </Button>
-      </div>
-    );
-  }
+  const follows =
+    chosen.length > 0
+      ? t("line.follows", { names: formatList(locale, chosen.map(inSentence)) })
+      : t("line.followsOnly", { name: t(`standard.${ALWAYS_FOLLOWED}.inSentence`) });
+  const progress = isHeld ? t("line.steps", { count: holding }) : t("line.ready");
+  const datasetsHref = `/${locale}/platform/experiments/${experiment.id}/datasets`;
 
   return (
-    <div className="space-y-1">
-      <h4 className="text-sm font-medium">{t("standardsReadiness.title")}</h4>
-      <div className="text-muted-foreground space-y-0.5 text-sm">
-        <p>
-          {t("standardsReadiness.studyFields")}{" "}
-          {t("standardsReadiness.fieldsCount", { filled, total })}
-        </p>
-        <p>
-          {t("standardsReadiness.license")}{" "}
-          {experiment.license
-            ? licenseLabel(experiment.license)
-            : t("standardsReadiness.licenseNone")}
-        </p>
-      </div>
+    <div className="space-y-1" data-testid="standards-line">
+      <h4 className="text-sm font-medium">{t("line.title")}</h4>
+      <p className="text-muted-foreground text-sm">
+        {follows} {progress}
+      </p>
+      <Button asChild variant="link" className="h-auto p-0">
+        <Link href={datasetsHref}>{isHeld ? t("line.seeSteps") : t("line.openDatasets")}</Link>
+      </Button>
     </div>
   );
 }

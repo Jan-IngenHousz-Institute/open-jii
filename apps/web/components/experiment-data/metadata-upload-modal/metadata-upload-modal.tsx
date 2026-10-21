@@ -17,12 +17,15 @@ interface MetadataUploadModalProps {
   experimentId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Opens straight on a new sheet with this match target chosen, such as the layout's plots. */
+  matchTarget?: string;
 }
 
 export function MetadataUploadModal({
   experimentId,
   open,
   onOpenChange,
+  matchTarget,
 }: MetadataUploadModalProps) {
   const { t } = useTranslation("experiments");
 
@@ -34,7 +37,11 @@ export function MetadataUploadModal({
           <DialogDescription>{t("uploadModal.metadata.description")}</DialogDescription>
         </DialogHeader>
 
-        <MetadataUploadStep experimentId={experimentId} onClose={() => onOpenChange(false)} />
+        <MetadataUploadStep
+          experimentId={experimentId}
+          matchTarget={matchTarget}
+          onClose={() => onOpenChange(false)}
+        />
       </DialogContent>
     </Dialog>
   );

@@ -15,11 +15,17 @@ interface ExperimentDatasetsPanelProps {
   experimentId: string;
   /** An experiment's admins and members publish; other viewers only read. */
   canPublish: boolean;
+  /** Only admins withdraw a dataset or open its embargoed files early. */
+  canManage?: boolean;
+  /** Once the standards block is above the list, Publish a dataset is its last row instead. */
+  showsPublishButton?: boolean;
 }
 
 export function ExperimentDatasetsPanel({
   experimentId,
   canPublish,
+  canManage = false,
+  showsPublishButton = true,
 }: ExperimentDatasetsPanelProps) {
   const { t } = useTranslation("datasets");
   const { data: datasets, isLoading, isError, refetch } = useExperimentDatasets(experimentId);
@@ -47,9 +53,10 @@ export function ExperimentDatasetsPanel({
   }
 
   const draft = datasets.find((dataset) => dataset.state === "draft");
-  const publishButton = canPublish ? (
-    <PublishDatasetButton experimentId={experimentId} draft={draft} />
-  ) : undefined;
+  const publishButton =
+    canPublish && showsPublishButton ? (
+      <PublishDatasetButton experimentId={experimentId} draft={draft} />
+    ) : undefined;
 
   if (datasets.length === 0) {
     return (
@@ -65,7 +72,7 @@ export function ExperimentDatasetsPanel({
   return (
     <div className="space-y-3" data-testid="experiment-datasets">
       {publishButton ? <div className="flex justify-end">{publishButton}</div> : null}
-      <ExperimentDatasetsTable datasets={datasets} />
+      <ExperimentDatasetsTable datasets={datasets} canPublish={canPublish} canManage={canManage} />
     </div>
   );
 }

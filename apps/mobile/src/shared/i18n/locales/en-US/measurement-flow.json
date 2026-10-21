@@ -59,7 +59,8 @@
       "plot": "Plot"
     },
     "exitLabel": "Exit",
-    "branchPathA11y": "Active branch path: {{label}}"
+    "branchPathA11y": "Active branch path: {{label}}",
+    "plotsMeasured": "{{measured}} of {{total}} plots measured"
   },
   "exitSheet": {
     "title": "Exit measurement?",
@@ -95,9 +96,10 @@
       "discardRetry": "Discard & retry",
       "uploading": "Uploading...",
       "acceptData": "Accept data",
-      "measureAgain": "Measure again"
+      "discardAndRetry": "Discard and retry",
+      "keepAndMeasureAgain": "Keep and measure again",
+      "anotherReadingHint": "Keep and measure again saves this reading and takes another of the same plot. Discard and retry throws this reading away."
     },
-    "repeatMarker": "Repeat {{repeat}} of plot {{plot}}",
     "macroResult": {
       "noDataTitle": "No Measurement Data",
       "noDataMessage": "Please complete the measurement step first",
@@ -284,47 +286,87 @@
     "block": "Block",
     "genotype": "Genotype",
     "hint": "Walk to this plot and check its label before you measure.",
-    "confirm": "This is the plot",
-    "reject": "Not this plot",
-    "skip": "Skip",
-    "walkPosition": "{{position}} of {{total}}",
+    "measure": "Measure {{plot}}",
+    "atAnotherPlot": "I am at another plot",
+    "cannotMeasure": "Cannot measure this plot",
     "walkNext": "Then {{plots}}",
-    "showFieldGrid": "Show field grid"
+    "showFieldGrid": "Field grid",
+    "walkPlace": "{{position}} of your {{total}} plots",
+    "walkWhy": "The order spreads every treatment across the day."
   },
   "plotPicker": {
     "title": "Pick the plot you are at",
-    "hint": "Tap the plot you are standing at.",
-    "picked": "{{plot}} picked",
-    "namedPlot": "Named plot",
-    "measured": "Measured this session",
+    "hint": "Tap the plot you are standing at, or find it by name or label.",
+    "selected": "{{plot}} selected, row {{row}}, column {{column}}",
+    "searchPlaceholder": "Find a plot",
+    "scanLabel": "Scan label",
+    "measure": "Measure {{plot}}",
+    "pickFirst": "Pick a plot",
     "cancel": "Cancel"
   },
   "skipSheet": {
-    "title": "Why skip plot {{plot}}?",
+    "title": "Why can't you measure {{plot}}?",
+    "body": "{{plot}} goes on your come-back-later list, and the app offers it again before the session ends.",
     "plantMissing": "Plant missing",
     "flooded": "Flooded",
     "couldNotReach": "Could not reach",
     "other": "Other",
     "cancel": "Cancel"
   },
-  "sessionSheet": {
-    "plots": "Your plots for this session: {{assigned}} of {{total}}",
-    "offline": "This session works offline from here.",
-    "start": "Start"
-  },
   "confirmedPlot": {
-    "attributes": "{{treatment}}, {{genotype}}"
+    "place": "Row {{row}}, column {{column}} · Block {{block}}",
+    "attributes": "{{treatment}}, {{genotype}}",
+    "repeat": "Repeat {{repeat}}",
+    "change": "Change",
+    "changeHint": "Opens the plot picker to correct the plot"
   },
   "fieldGrid": {
     "title": "Field grid",
-    "doneCount": "{{done}} of {{total}}",
-    "doneLabel": "plots done in your share",
-    "remaining": "{{skipped}} skipped, {{toDo}} to do",
-    "legendDone": "Done",
-    "legendSkipped": "Skipped",
-    "legendCurrent": "Current",
-    "legendOtherShare": "{{name}}'s share",
-    "current": "Current plot {{plot}}, {{treatment}}",
-    "back": "Back to measuring"
+    "measuredCount": "{{measured}} of your {{total}} plots measured",
+    "remaining": "{{skipped}} skipped, {{toMeasure}} to measure",
+    "current": "Current plot {{plot}}",
+    "back": "Back to measuring",
+    "skipped": "Skipped: {{plots}}"
+  },
+  "plotLegend": {
+    "current": "Current",
+    "measured": "Measured",
+    "skipped": "Skipped",
+    "otherShare": "Another share",
+    "gap": "Gap",
+    "namedShare": "{{name}}'s share"
+  },
+  "measuredPlot": {
+    "title": "{{plot}} was measured today at {{time}}",
+    "body": "Measuring it again records a second reading of {{plot}} as a repeat.",
+    "measureAgain": "Measure {{plot}} again",
+    "pickAnother": "Pick another plot"
+  },
+  "comeBack": {
+    "count_one": "{{count}} plot to come back to",
+    "count_other": "{{count}} plots to come back to",
+    "title": "Come back later",
+    "body": "The app offers these plots again before the session ends.",
+    "reason": "{{reason}}, skipped at {{time}}",
+    "measure": "Measure {{plot}}",
+    "close": "Close"
+  },
+  "sessionStart": {
+    "plots": "You will measure all {{plots}} plots",
+    "offline": "This session works offline once it starts.",
+    "otherPhoneTitle": "{{name}} is measuring this field today",
+    "otherPhoneBody": "Their phone started a session at {{time}}, as of the last sync. You may both measure the same plots."
+  },
+  "sessionExit": {
+    "title": "Leave the session?",
+    "body": "{{measured}} of {{total}} plots measured.",
+    "bodyWithSkipped_one": "{{measured}} of {{total}} plots measured, {{count}} to come back to.",
+    "bodyWithSkipped_other": "{{measured}} of {{total}} plots measured, {{count}} to come back to.",
+    "pause": "Pause session",
+    "pauseSub": "Keep your place and come back to {{plot}} later.",
+    "end": "End session",
+    "endSub": "Finish for today. Plots not measured stay recorded as not measured.",
+    "discardRound": "Discard this round only",
+    "discardRoundSub": "Throw away this round of {{plot}}. Saved readings stay."
   }
 }

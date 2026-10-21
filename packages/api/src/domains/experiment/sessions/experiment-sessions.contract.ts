@@ -6,8 +6,9 @@ import {
   zEndedSession,
   zEndedSessionsQuery,
   zFieldAssignments,
+  zMeasuredTwicePlot,
   zMeasurer,
-  zPlotConflict,
+  zSessionDays,
   zSessionProgress,
   zWalkingOrder,
 } from "./experiment-sessions.schema";
@@ -33,12 +34,16 @@ export const experimentSessionsContract = {
     })
     .input(zExperimentIdPathParam)
     .output(zSessionProgress.nullable()),
+  listExperimentSessionDays: oc
+    .route({ method: "GET", path: "/api/v1/experiments/{id}/sessions/days", successStatus: 200 })
+    .input(zExperimentIdPathParam)
+    .output(zSessionDays),
   listExperimentEndedSessions: oc
     .route({ method: "GET", path: "/api/v1/experiments/{id}/sessions/ended", successStatus: 200 })
     .input(zExperimentIdPathParam.and(zEndedSessionsQuery))
     .output(z.array(zEndedSession)),
-  listExperimentPlotConflicts: oc
-    .route({ method: "GET", path: "/api/v1/experiments/{id}/plot-conflicts", successStatus: 200 })
+  listExperimentMeasuredTwice: oc
+    .route({ method: "GET", path: "/api/v1/experiments/{id}/measured-twice", successStatus: 200 })
     .input(zExperimentIdPathParam)
-    .output(z.array(zPlotConflict)),
+    .output(z.array(zMeasuredTwicePlot)),
 };

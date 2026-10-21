@@ -14,6 +14,8 @@ import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 
+import { usePlotSessionCount } from "../screens/measurement-flow-screen/components/flow-nodes/plot-node/scaffold-screen";
+
 interface FlowHeroProps {
   title: string;
   onExitPress: () => void;
@@ -30,14 +32,17 @@ export function FlowHero({ title, onExitPress }: FlowHeroProps) {
   const { t } = useTranslation("measurementFlow");
   const { currentStep, totalSteps, stepTypeKey, progress } = useFlowStepInfo();
   const lastMatchedPath = useMeasurementFlowStore((s) => s.lastMatchedPath);
+  // On the Next plot step the header counts the session's plots instead of the workbook's steps.
+  const plotSession = usePlotSessionCount();
+  const shownProgress = plotSession ? plotSession.measured.length / plotSession.total : progress;
 
-  const progressValue = useSharedValue(progress);
+  const progressValue = useSharedValue(shownProgress);
   useEffect(() => {
-    progressValue.value = withTiming(progress, {
+    progressValue.value = withTiming(shownProgress, {
       duration: 320,
       easing: Easing.out(Easing.cubic),
     });
-  }, [progress, progressValue]);
+  }, [shownProgress, progressValue]);
 
   const progressStyle = useAnimatedStyle(() => ({
     width: `${progressValue.value * 100}%`,
@@ -107,7 +112,12 @@ export function FlowHero({ title, onExitPress }: FlowHeroProps) {
         <View className="mt-5">
           <View className="flex-row items-center justify-between">
             <Text className="text-[12px] text-white/80">
-              {t("hero.stepOfTotal", { step: currentStep, total: totalSteps })}
+              {plotSession
+                ? t("hero.plotsMeasured", {
+                    measured: plotSession.measured.length,
+                    total: plotSession.total,
+                  })
+                : t("hero.stepOfTotal", { step: currentStep, total: totalSteps })}
             </Text>
             <Text className="text-[12px] text-white/80">
               {t(`hero.stepTypeLabel.${stepTypeKey}` as const)}

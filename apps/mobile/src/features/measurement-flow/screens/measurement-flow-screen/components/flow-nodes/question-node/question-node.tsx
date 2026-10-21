@@ -12,6 +12,7 @@ import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { QRScannerModal } from "~/shared/ui/qr-scanner/qr-scanner-modal";
 
 import { ConfirmedPlotCard } from "../plot-node/confirmed-plot-card";
+import { useExampleLayout } from "../plot-node/next-plot";
 import { AutoProceededSummary } from "./auto-proceeded-summary";
 import { MultipleChoiceQuestion } from "./question-types/multiple-choice-question";
 import { NumberQuestion } from "./question-types/number-question";
@@ -134,6 +135,24 @@ export function QuestionNode({ node }: QuestionNodeProps) {
     }
   };
 
+  // In an experiment with a layout every answer belongs to its plot, so none carries to the next.
+  const isRememberOffered = useExampleLayout() === undefined;
+  const isMultiChoice = content.kind === "multi_choice";
+
+  const handleRememberChange = (enabled: boolean) => {
+    setRememberAnswer(node.id, enabled);
+    if (enabled && isMultiChoice) {
+      setAutoincrement(node.id, false);
+    }
+  };
+
+  const handleAutoincrementChange = (enabled: boolean) => {
+    setAutoincrement(node.id, enabled);
+    if (enabled) {
+      setRememberAnswer(node.id, false);
+    }
+  };
+
   return (
     <View className="flex-1 gap-4 rounded-xl px-4 pt-4">
       <AutoProceededSummary currentNodeId={node.id} iterationCount={iterationCount} />
@@ -147,42 +166,24 @@ export function QuestionNode({ node }: QuestionNodeProps) {
       />
 
       <View className="flex-row items-center gap-4">
-        {content.kind === "multi_choice" ? (
-          <>
-            <Checkbox
-              value={isRememberAnswerEnabled(node.id)}
-              text={t("measurementFlow:questionNode.rememberAnswer")}
-              textSize="sm"
-              icon={<Bookmark size={16} color={themeColors.onSurface} />}
-              onChange={(enabled) => {
-                setRememberAnswer(node.id, enabled);
-                if (enabled) {
-                  setAutoincrement(node.id, false);
-                }
-              }}
-            />
-            <Checkbox
-              value={isAutoincrementEnabled(node.id)}
-              text={t("measurementFlow:questionNode.autoProceed")}
-              textSize="sm"
-              icon={<Repeat2 size={16} color={themeColors.onSurface} />}
-              onChange={(enabled) => {
-                setAutoincrement(node.id, enabled);
-                if (enabled) {
-                  setRememberAnswer(node.id, false);
-                }
-              }}
-            />
-          </>
-        ) : (
+        {isRememberOffered ? (
           <Checkbox
             value={isRememberAnswerEnabled(node.id)}
             text={t("measurementFlow:questionNode.rememberAnswer")}
             textSize="sm"
             icon={<Bookmark size={16} color={themeColors.onSurface} />}
-            onChange={(enabled) => setRememberAnswer(node.id, enabled)}
+            onChange={handleRememberChange}
           />
-        )}
+        ) : null}
+        {isMultiChoice ? (
+          <Checkbox
+            value={isAutoincrementEnabled(node.id)}
+            text={t("measurementFlow:questionNode.autoProceed")}
+            textSize="sm"
+            icon={<Repeat2 size={16} color={themeColors.onSurface} />}
+            onChange={handleAutoincrementChange}
+          />
+        ) : null}
       </View>
 
       {content.kind === "multi_choice" && (

@@ -37,6 +37,7 @@
   "swipe": {
     "uploadButton": "Upload",
     "commentButton": "Comment",
+    "flagButton": "Flag",
     "deleteButton": "Delete"
   },
   "commentModal": {
@@ -100,7 +101,8 @@
     "saveErrorMessage": "Could not save the measurement. Would you like to save it as a file instead?",
     "saveToFileButton": "Save to File",
     "saveToFileError": "Could not save measurement. Please try again.",
-    "commentSaveError": "Could not save the comment. Please try again."
+    "commentSaveError": "Could not save the comment. Please try again.",
+    "flagSaveError": "Could not save the flag. Please try again."
   },
   "accessibility": {
     "expandRun_one": "Expand workbook run: {{name}}, {{count}} measurement",

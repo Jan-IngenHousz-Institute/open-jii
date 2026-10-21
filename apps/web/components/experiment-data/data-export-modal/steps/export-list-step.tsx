@@ -36,6 +36,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
 import { ScrollArea } from "@repo/ui/components/scroll-area";
@@ -54,6 +56,9 @@ interface ExportListStepProps {
   tableName: string;
   displayName?: string;
   onCreateExport: (format: ExperimentInitiateExportBody["format"]) => void;
+  /** Opens the confirm step that lists what the MIAPPE package leaves empty. */
+  onConfirmPackage: () => void;
+  onExportPackage: () => void;
   onClose: () => void;
   creationStatus?: CreationStatus;
 }
@@ -232,10 +237,13 @@ export function ExportListStep({
   tableName,
   displayName,
   onCreateExport,
+  onConfirmPackage,
+  onExportPackage,
   onClose,
   creationStatus = "idle",
 }: ExportListStepProps) {
   const { t } = useTranslation("experimentData");
+  const { t: tStandards } = useTranslation("standards");
   const { data, isLoading, error } = useListExports({ experimentId, tableName });
   const exports = data?.exports ?? [];
 
@@ -346,7 +354,15 @@ export function ExportListStep({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onCreateExport("parquet")}>Parquet</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onCreateExport("xlsx")}>Excel</DropdownMenuItem>
-              <MiappeExportMenuItem experimentId={experimentId} />
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-muted-foreground text-xs font-medium">
+                {tStandards("export.group")}
+              </DropdownMenuLabel>
+              <MiappeExportMenuItem
+                experimentId={experimentId}
+                onConfirm={onConfirmPackage}
+                onExport={onExportPackage}
+              />
             </DropdownMenuContent>
           </DropdownMenu>
         )}

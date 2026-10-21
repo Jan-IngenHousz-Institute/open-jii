@@ -4,6 +4,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   ScrollView,
+  Text,
   View,
   TouchableOpacity,
 } from "react-native";
@@ -34,7 +35,7 @@ interface AnalysisActionBarProps {
   onScrollToTop: () => void;
   onRetry: () => void;
   onUpload: () => void;
-  /** Offered in an experiment with a layout: saves the reading and measures the same plot again. */
+  /** Offered in an experiment with a layout: keeps the reading and measures the same plot again. */
   onMeasureAgain?: () => void;
 }
 
@@ -87,19 +88,32 @@ export function AnalysisActionBar({
         </TouchableOpacity>
       )}
       {onMeasureAgain ? (
-        // Three labels crowd one row on a phone, so Discard & retry takes its own.
+        // In an experiment with a layout the two ways of taking another reading sit side by side,
+        // under a line saying what each does to the reading on screen.
         <View className="gap-3">
-          <View className="flex-row">{discardButton}</View>
-          <View className="flex-row gap-4">
+          <Text className="text-muted-body text-[13px] leading-5">
+            {t("measurementFlow:analysis.actionBar.anotherReadingHint")}
+          </Text>
+          <View className="flex-row gap-3">
             <Button
-              title={t("measurementFlow:analysis.actionBar.measureAgain")}
+              title={t("measurementFlow:analysis.actionBar.discardAndRetry")}
+              onPress={onRetry}
+              variant="tertiary"
+              multiline
+              numberOfLines={2}
+              style={{ flex: 1, minHeight: 56, borderColor: "transparent" }}
+            />
+            <Button
+              title={t("measurementFlow:analysis.actionBar.keepAndMeasureAgain")}
               onPress={onMeasureAgain}
               disabled={isUploading}
               variant="outline"
-              style={{ flex: 1, height: 44 }}
+              multiline
+              numberOfLines={2}
+              style={{ flex: 1, minHeight: 56 }}
             />
-            {acceptButton}
           </View>
+          <View className="flex-row">{acceptButton}</View>
         </View>
       ) : (
         <View className="flex-row gap-4">

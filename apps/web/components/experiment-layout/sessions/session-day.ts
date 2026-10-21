@@ -3,6 +3,7 @@ import type {
   SessionSkip,
 } from "@repo/api/domains/experiment/sessions/experiment-sessions.schema";
 
+import type { PlotMark } from "../plot-state";
 import type { FieldPlan } from "./field-plan";
 
 /** One measurer's ended session, counted against their assignment. */
@@ -11,13 +12,13 @@ export interface SessionTally {
   measured: number;
   skips: SessionSkip[];
   repeatUnitIds: string[];
-  offPlanUnitIds: string[];
+  outsideShareUnitIds: string[];
 }
 
-/** What every session that ended on one day covered, as uploaded so far. */
+/** What every session that ended on one day measured, as uploaded so far. */
 export class SessionDay {
   readonly tallies: readonly SessionTally[];
-  readonly covered: ReadonlySet<string>;
+  readonly measured: ReadonlySet<string>;
 
   constructor(
     private readonly plan: FieldPlan,
@@ -26,7 +27,7 @@ export class SessionDay {
     const read = new Set(
       sessions.flatMap((session) => session.readings.map((reading) => reading.unitId)),
     );
-    this.covered = new Set(plan.plots.filter((plot) => read.has(plot.id)).map((plot) => plot.id));
+    this.measured = new Set(plan.plots.filter((plot) => read.has(plot.id)).map((plot) => plot.id));
     this.tallies = sessions.map((session) => SessionDay.tally(session));
   }
 
@@ -49,18 +50,18 @@ export class SessionDay {
   /** Skipped plots nobody measured later the same day. */
   get skippedUnitIds(): string[] {
     const skipped = this.sessions.flatMap((session) => session.skips.map((skip) => skip.unitId));
-    return [...new Set(skipped)].filter((unitId) => !this.covered.has(unitId));
+    return [...new Set(skipped)].filter((unitId) => !this.measured.has(unitId));
   }
 
   get repeatCount(): number {
     return this.tallies.reduce((sum, tally) => sum + tally.repeatUnitIds.length, 0);
   }
 
-  get offPlanUnitIds(): string[] {
-    return this.tallies.flatMap((tally) => tally.offPlanUnitIds);
+  get outsideShareUnitIds(): string[] {
+    return this.tallies.flatMap((tally) => tally.outsideShareUnitIds);
   }
 
-  /** Plots read from more than one session without a repeat asked for, which go to Needs review. */
+  /** Plots read in more than one session without a repeat asked for. */
   get measuredTwiceUnitIds(): string[] {
     const sessionsByPlot = new Map<string, number>();
     for (const session of this.sessions) {
@@ -74,6 +75,20 @@ export class SessionDay {
     return [...sessionsByPlot].filter(([, count]) => count > 1).map(([unitId]) => unitId);
   }
 
+  /** The glyph the field map shows on a plot, the most urgent state first. */
+  markOf(unitId: string): PlotMark | undefined {
+    if (this.measuredTwiceUnitIds.includes(unitId)) {
+      return "measuredTwice";
+    }
+    if (this.outsideShareUnitIds.includes(unitId)) {
+      return "outsideShare";
+    }
+    if (this.skippedUnitIds.includes(unitId)) {
+      return "skipped";
+    }
+    return this.measured.has(unitId) ? "measured" : undefined;
+  }
+
   /** Plots of each treatment nobody measured, in the field's treatment order. */
   missingByTreatment(): Map<string, string[]> {
     const missing = new Map<string, string[]>(
@@ -81,7 +96,7 @@ export class SessionDay {
     );
     for (const plot of this.plan.plots) {
       const treatment = this.plan.treatmentOf(plot.id);
-      if (treatment !== null && !this.covered.has(plot.id)) {
+      if (treatment !== null && !this.measured.has(plot.id)) {
         missing.get(treatment)?.push(plot.id);
       }
     }
@@ -90,16 +105,16 @@ export class SessionDay {
 
   private static tally(session: EndedSession): SessionTally {
     const assigned = new Set(session.assignedUnitIds);
-    const planned = session.readings.filter((reading) => assigned.has(reading.unitId));
+    const inShare = session.readings.filter((reading) => assigned.has(reading.unitId));
 
     return {
       session,
-      measured: new Set(planned.map((reading) => reading.unitId)).size,
+      measured: new Set(inShare.map((reading) => reading.unitId)).size,
       skips: session.skips,
       repeatUnitIds: session.readings
         .filter((reading) => reading.isRepeat)
         .map((reading) => reading.unitId),
-      offPlanUnitIds: session.readings
+      outsideShareUnitIds: session.readings
         .filter((reading) => !assigned.has(reading.unitId))
         .map((reading) => reading.unitId),
     };

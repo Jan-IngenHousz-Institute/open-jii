@@ -5,6 +5,7 @@ import {
   zDataset,
   zDatasetIdPathParam,
   zDatasetList,
+  zDatasetPlotChecks,
   zDatasetReadiness,
   zDatasetScope,
   zFlaggedReadingList,
@@ -12,6 +13,7 @@ import {
   zPublicDataset,
   zPublishDatasetBody,
   zRelatedPublication,
+  zWithdrawDatasetBody,
 } from "./dataset.schema";
 
 const datasetRoutes = {
@@ -39,6 +41,10 @@ const datasetRoutes = {
     .route({ method: "GET", path: "/api/v1/datasets/{id}/flagged-readings", successStatus: 200 })
     .input(zDatasetIdPathParam)
     .output(zFlaggedReadingList),
+  getDatasetPlotChecks: oc
+    .route({ method: "GET", path: "/api/v1/datasets/{id}/plot-checks", successStatus: 200 })
+    .input(zDatasetIdPathParam)
+    .output(zDatasetPlotChecks),
   getDatasetReadiness: oc
     .route({ method: "GET", path: "/api/v1/datasets/{id}/readiness", successStatus: 200 })
     .input(zDatasetIdPathParam)
@@ -46,6 +52,10 @@ const datasetRoutes = {
   publishDataset: oc
     .route({ method: "POST", path: "/api/v1/datasets/{id}/publish", successStatus: 200 })
     .input(zDatasetIdPathParam.merge(zPublishDatasetBody))
+    .output(zDataset),
+  withdrawDataset: oc
+    .route({ method: "POST", path: "/api/v1/datasets/{id}/withdraw", successStatus: 200 })
+    .input(zDatasetIdPathParam.merge(zWithdrawDatasetBody))
     .output(zDataset),
   // Answered without a session, so the DOI never resolves to a sign-in screen.
   getPublicDataset: oc

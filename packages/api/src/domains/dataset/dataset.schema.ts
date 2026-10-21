@@ -3,6 +3,7 @@ import { z } from "zod";
 import { zResourceScope } from "../../shared/listing";
 import { zExperimentAnnotationFlagType } from "../experiment/data-annotations/experiment-data-annotations.schema";
 import { zDataLicense, zFundingReferenceList } from "../experiment/experiment.schema";
+import { zSkipReason } from "../experiment/sessions/experiment-sessions.schema";
 import { zOrcid } from "../user/user.schema";
 
 export const zDatasetIdPathParam = z.object({
@@ -45,10 +46,26 @@ export const zDepositStatus = z.enum([
 
 export const zDepositEnvironment = z.enum(["sandbox", "production"]);
 
+export const zDepositStep = z.enum(["upload", "register", "verify"]);
+
 export const zDatasetDeposit = z.object({
   status: zDepositStatus,
   environment: zDepositEnvironment,
   attempts: z.number().int().nonnegative(),
+  /** The step that ran out of retries, set only while the status is failed. */
+  failedStep: zDepositStep.nullable(),
+});
+
+/** Zenodo has no withdraw action in its API, so its copy follows a request a person sends. */
+export const zZenodoCopyState = z.enum(["requestPrepared", "removed"]);
+
+/** The study details as they read when the dataset froze. */
+export const zDatasetStudyDetails = z.object({
+  organism: z.string().nullable(),
+  startDate: z.string().date().nullable(),
+  endDate: z.string().date().nullable(),
+  experimentalDesign: z.string().nullable(),
+  growthFacility: z.string().nullable(),
 });
 
 /** A reading left out of the dataset's files, kept with its reason so the exclusion is auditable. */
@@ -93,6 +110,10 @@ export const zDataset = z.object({
   funding: zFundingReferenceList,
   relatedPublications: z.array(zRelatedPublication),
   excludedReadings: z.array(zExcludedReading),
+  /** Frozen with the dataset, so all three are null on a Draft. */
+  studyDetails: zDatasetStudyDetails.nullable(),
+  readingCount: z.number().int().nonnegative().nullable(),
+  plotCount: z.number().int().nonnegative().nullable(),
   doi: z.string().nullable(),
   deposit: zDatasetDeposit.nullable(),
   supersedesId: z.string().uuid().nullable(),
@@ -101,6 +122,7 @@ export const zDataset = z.object({
   publishedAt: z.string().datetime().nullable(),
   withdrawnAt: z.string().datetime().nullable(),
   withdrawalReason: z.string().nullable(),
+  zenodoCopy: zZenodoCopyState.nullable(),
 });
 
 export const zDatasetList = z.array(zDataset);
@@ -109,6 +131,7 @@ export const zListDatasetsQuery = z.object({
   scope: zResourceScope
     .optional()
     .describe("related adds the caller's own experiments' datasets, drafts included"),
+  search: z.string().trim().max(255).optional().describe("Matches title, description and organism"),
 });
 
 /** What freezing would capture, counted now, since readings keep arriving until the freeze. */
@@ -116,11 +139,26 @@ export const zDatasetScope = z.object({
   version: z.number().int().positive(),
   readingCount: z.number().int().nonnegative(),
   countedAt: z.string().datetime(),
+  /** The latest published version, so Scope can say what this one adds. */
+  previous: z
+    .object({
+      version: z.number().int().positive(),
+      readingCount: z.number().int().nonnegative(),
+    })
+    .nullable(),
+});
+
+/** One column of a reading, formatted for display. */
+export const zReadingValue = z.object({
+  column: z.string(),
+  value: z.string(),
 });
 
 export const zFlaggedReading = z.object({
   rowId: z.string().min(1),
   plot: z.string().nullable(),
+  measuredAt: z.string().datetime(),
+  values: z.array(zReadingValue),
   flagType: zExperimentAnnotationFlagType,
   comment: z.string().nullable(),
   flaggedByName: z.string(),
@@ -128,6 +166,32 @@ export const zFlaggedReading = z.object({
 });
 
 export const zFlaggedReadingList = z.array(zFlaggedReading);
+
+export const zMeasuredTwiceReading = z.object({
+  rowId: z.string().min(1),
+  measuredByName: z.string(),
+  measuredAt: z.string().datetime(),
+  values: z.array(zReadingValue),
+});
+
+/** A plot more than one reading landed on without a repeat, still waiting for a person. */
+export const zMeasuredTwicePlot = z.object({
+  plot: z.string(),
+  readings: z.array(zMeasuredTwiceReading).min(2),
+});
+
+/** A plot a measurer skipped and nobody came back to that day. */
+export const zSkippedPlot = z.object({
+  plot: z.string(),
+  reason: zSkipReason,
+  skippedByName: z.string(),
+  skippedAt: z.string().datetime(),
+});
+
+export const zDatasetPlotChecks = z.object({
+  measuredTwice: z.array(zMeasuredTwicePlot),
+  skipped: z.array(zSkippedPlot),
+});
 
 /** The record fields OpenAIRE needs before a dataset's DOI is harvested. */
 export const zOpenAireFloorField = z.enum([
@@ -180,15 +244,22 @@ export const zPublishDatasetBody = z.object({
   embargoUntil: z.string().datetime().optional(),
 });
 
+export const zWithdrawDatasetBody = z.object({
+  reason: z.string().trim().min(1).max(500),
+});
+
 /** What anyone may read without an account: never a Draft, never files that are embargoed or withdrawn. */
-export const zPublicDataset = zDataset
-  .omit({ excludedReadings: true, deposit: true, limitations: true })
-  .extend({
-    state: zDatasetState.exclude(["draft"]),
-    citation: z.string(),
-    publisher: z.string(),
-    supersededById: z.string().uuid().nullable(),
-  });
+export const zPublicDataset = zDataset.omit({ excludedReadings: true, deposit: true }).extend({
+  state: zDatasetState.exclude(["draft"]),
+  citation: z.string(),
+  publisher: z.string(),
+  supersededById: z.string().uuid().nullable(),
+  supersededByVersion: z.number().int().positive().nullable(),
+  /** How many readings Curate left out, without saying which. */
+  excludedCount: z.number().int().nonnegative(),
+  /** A sandbox DOI is a test and is never offered as a citation. */
+  depositEnvironment: zDepositEnvironment.nullable(),
+});
 
 export type DatasetState = z.infer<typeof zDatasetState>;
 export type DatasetAccess = z.infer<typeof zDatasetAccess>;
@@ -196,6 +267,15 @@ export type DatasetAuthor = z.infer<typeof zDatasetAuthor>;
 export type DatasetFile = z.infer<typeof zDatasetFile>;
 export type DatasetDeposit = z.infer<typeof zDatasetDeposit>;
 export type DepositStatus = z.infer<typeof zDepositStatus>;
+export type DepositStep = z.infer<typeof zDepositStep>;
+export type ZenodoCopyState = z.infer<typeof zZenodoCopyState>;
+export type DatasetStudyDetails = z.infer<typeof zDatasetStudyDetails>;
+export type ReadingValue = z.infer<typeof zReadingValue>;
+export type MeasuredTwicePlot = z.infer<typeof zMeasuredTwicePlot>;
+export type MeasuredTwiceReading = z.infer<typeof zMeasuredTwiceReading>;
+export type SkippedPlot = z.infer<typeof zSkippedPlot>;
+export type DatasetPlotChecks = z.infer<typeof zDatasetPlotChecks>;
+export type WithdrawDatasetBody = z.infer<typeof zWithdrawDatasetBody>;
 export type ExcludedReading = z.infer<typeof zExcludedReading>;
 export type PublicationRelation = z.infer<typeof zPublicationRelation>;
 export type RelatedPublication = z.infer<typeof zRelatedPublication>;

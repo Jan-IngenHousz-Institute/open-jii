@@ -6,9 +6,20 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@repo/ui/com
 
 import { ExperimentDatasetRow } from "./experiment-dataset-row";
 
+interface ExperimentDatasetsTableProps {
+  datasets: Dataset[];
+  canPublish: boolean;
+  canManage: boolean;
+}
+
 /** Newest version first, so a dataset's predecessor in the chain is the row below it. */
-export function ExperimentDatasetsTable({ datasets }: { datasets: Dataset[] }) {
+export function ExperimentDatasetsTable({
+  datasets,
+  canPublish,
+  canManage,
+}: ExperimentDatasetsTableProps) {
   const { t } = useTranslation("datasets");
+  const showsDoi = datasets.some((dataset) => dataset.doi !== null || dataset.deposit !== null);
 
   const renderRow = (dataset: Dataset, index: number) => {
     const below = datasets.at(index + 1);
@@ -21,6 +32,9 @@ export function ExperimentDatasetsTable({ datasets }: { datasets: Dataset[] }) {
         dataset={dataset}
         supersededVersion={supersededVersion}
         isSupersededAbove={above?.supersedesId === dataset.id}
+        showsDoi={showsDoi}
+        canPublish={canPublish}
+        canManage={canManage}
       />
     );
   };
@@ -33,8 +47,14 @@ export function ExperimentDatasetsTable({ datasets }: { datasets: Dataset[] }) {
             <TableHead className="w-36 pl-4">{t("list.columns.version")}</TableHead>
             <TableHead>{t("list.columns.title")}</TableHead>
             <TableHead className="w-32">{t("list.columns.state")}</TableHead>
-            <TableHead className="w-52">{t("list.columns.date")}</TableHead>
-            <TableHead className="w-72">{t("list.columns.doi")}</TableHead>
+            <TableHead className="w-48">{t("list.columns.date")}</TableHead>
+            <TableHead className="w-36">{t("list.columns.readings")}</TableHead>
+            {showsDoi ? <TableHead className="w-72">{t("list.columns.doi")}</TableHead> : null}
+            {canManage ? (
+              <TableHead className="w-12">
+                <span className="sr-only">{t("list.columns.actions")}</span>
+              </TableHead>
+            ) : null}
           </TableRow>
         </TableHeader>
         <TableBody>{datasets.map(renderRow)}</TableBody>

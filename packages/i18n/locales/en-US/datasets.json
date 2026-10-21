@@ -15,15 +15,25 @@
     "withdrawn": "Withdrawn"
   },
   "deposit": {
-    "uploading": "Uploading",
-    "registering": "Registering",
-    "verifying": "Verifying",
+    "uploading": "Uploading files",
+    "registering": "Registering the DOI",
+    "verifying": "Checking the files",
     "deposited": "Deposited",
-    "failed": "Deposit failed"
+    "testDeposit": "Test deposit, not citable",
+    "failed": "Deposit failed",
+    "failedAt": {
+      "upload_one": "Upload failed after {{count}} try",
+      "upload_other": "Upload failed after {{count}} tries",
+      "register_one": "Registering failed after {{count}} try",
+      "register_other": "Registering failed after {{count}} tries",
+      "verify_one": "Checking the files failed after {{count}} try",
+      "verify_other": "Checking the files failed after {{count}} tries"
+    },
+    "retry": "Retry"
   },
-  "environment": {
-    "sandbox": "Sandbox",
-    "production": "Production"
+  "zenodoCopy": {
+    "requestPrepared": "Zenodo's copy: request prepared, not yet removed",
+    "removed": "Zenodo's copy: removed by Zenodo"
   },
   "licenses": {
     "cc0": "CC0 1.0",
@@ -31,6 +41,7 @@
   },
   "list": {
     "publish": "Publish a dataset",
+    "continueDraft": "Continue draft",
     "emptyTitle": "No datasets yet",
     "empty": "A dataset is a frozen, citable copy of this experiment's data. Publishing one leaves the experiment itself editable.",
     "loadError": "Could not load the datasets.",
@@ -40,19 +51,47 @@
       "title": "Title",
       "state": "State",
       "date": "Date",
-      "doi": "DOI"
+      "readings": "Readings",
+      "doi": "DOI",
+      "actions": "Actions"
     },
     "version": "Version {{version}}",
     "started": "Started {{date}}",
     "published": "Published {{date}}",
     "withdrawn": "Withdrawn {{date}}",
-    "noDoi": "No DOI yet",
+    "filesOpen": "Files open {{date}}",
+    "readings_one": "{{count}} reading",
+    "readings_other": "{{count}} readings",
+    "notFrozen": "Counted at Freeze",
+    "doiAtFreeze": "After freezing",
+    "notDeposited": "Not deposited",
     "supersedes": "Supersedes version {{version}}"
+  },
+  "actions": {
+    "label": "Actions for version {{version}}",
+    "openFiles": "Open the files now",
+    "withdraw": "Withdraw"
+  },
+  "withdraw": {
+    "title": "Withdraw version {{version}}",
+    "description": "Withdraw a dataset only when it must not stay public, for example because it holds data it should not. This cannot be undone.",
+    "consequences": {
+      "files": "openJII stops serving its files to everyone, signed in or not.",
+      "tombstone": "Its page becomes a tombstone that keeps the title, authors and DOI and shows your reason.",
+      "zenodo": "openJII prepares a withdrawal request to Zenodo with the same reason. Zenodo's copy stays public until Zenodo acts on it.",
+      "doi": "The DOI {{doi}} keeps resolving to Zenodo's record."
+    },
+    "reasonLabel": "Reason",
+    "reasonPublic": "This reason is public. It shows on the dataset's page and in the request to Zenodo.",
+    "cancel": "Cancel",
+    "confirm": "Withdraw version {{version}}"
   },
   "publish": {
     "title": "Publish a dataset",
     "subtitle": "Version {{version}} of {{experiment}}",
     "loading": "Loading the draft...",
+    "loadError": "Could not load this step.",
+    "retry": "Try again",
     "next": "Next",
     "back": "Back",
     "steps": {
@@ -61,15 +100,15 @@
       "describe": "Describe",
       "license": "License and access",
       "check": "Check",
-      "freeze": "Freeze and deposit"
+      "freeze": "Freeze"
     }
   },
   "scope": {
     "title": "What this dataset will hold",
-    "description": "The whole experiment is in scope. Readings you exclude in Curate are left out.",
+    "description": "The whole experiment is in scope. A copy is made in the last step, Freeze, and readings added after that are not in it.",
     "readings": "Readings",
-    "readingsDetail_one": "Every reading in the experiment, {{count}} so far",
-    "readingsDetail_other": "Every reading in the experiment, {{count}} so far",
+    "readingsDetail_one": "Every reading in the experiment, {{count}} so far, minus those you exclude in Curate",
+    "readingsDetail_other": "Every reading in the experiment, {{count}} so far, minus those you exclude in Curate",
     "dictionary": "Data dictionary",
     "dictionaryDetail": "Every column the experiment produced, with its description",
     "layout": "Layout",
@@ -77,13 +116,16 @@
     "studyDetails": "Study details",
     "studyDetailsDetail": "Dates, organism, design, facility and license",
     "versionTitle": "Version {{version}}",
-    "versionDetail": "This dataset becomes version {{version}}. Earlier versions stay as they were published."
+    "firstVersionDetail": "This dataset becomes version 1 of the experiment.",
+    "versionDetail": "Version {{previous}} held {{previousCount}} readings, so this version adds {{added}} so far. Version {{previous}} stays as it was published.",
+    "publicExperimentNote": "Making the experiment public in its settings is separate. That opens the live experiment to signed-in researchers, while a dataset is a frozen copy anyone can open."
   },
   "curate": {
     "title": "Flagged readings",
-    "description": "Readings flagged on the Data tab or in the app. An excluded reading is left out of the dataset's files and recorded with its reason, and it stays in the experiment.",
+    "description": "Readings flagged on the Data tab or in the app. An excluded reading is left out of the dataset's files and stays in the experiment. The dataset page says how many were left out, never which.",
     "columns": {
       "plot": "Plot",
+      "reading": "Reading",
       "flag": "Flag",
       "comment": "Comment",
       "flaggedBy": "Flagged by",
@@ -91,11 +133,33 @@
     },
     "noComment": "No comment",
     "noPlot": "No plot",
-    "flaggedOn": "{{name}}, {{date}}",
+    "valueEntry": "{{column}} {{value}}",
+    "viewReading": "Open the reading on {{plot}} on the Data tab",
     "excludeLabel": "Exclude the reading on {{plot}}",
     "excludedCount_one": "{{count}} reading will be left out of the dataset.",
     "excludedCount_other": "{{count}} readings will be left out of the dataset.",
-    "none": "No readings are flagged, so the dataset holds every reading."
+    "none": "No readings are flagged, so the dataset holds every reading.",
+    "loadError": "Could not load the flagged readings.",
+    "retry": "Try again"
+  },
+  "plotChecks": {
+    "measuredTwiceTitle": "Plots measured twice",
+    "measuredTwiceDescription": "More than one reading landed on these plots without a repeat being asked for. Freeze waits until each is resolved, whatever the experiment follows.",
+    "holds": "Holds Freeze",
+    "resolve": "Resolve",
+    "readingBy": "{{name}}, {{date}}",
+    "skippedTitle": "Plots left skipped",
+    "skippedDescription": "Skipped and not measured again that day. They never hold Freeze, and they start the limitations statement in Describe.",
+    "skippedBy": "Skipped by {{name}}, {{date}}",
+    "reasons": {
+      "plantMissing": "Plant missing",
+      "flooded": "Flooded",
+      "couldNotReach": "Could not reach",
+      "other": "Other"
+    },
+    "none": "No plot was measured twice or left skipped.",
+    "loadError": "Could not load the plots measured twice and skipped.",
+    "retry": "Try again"
   },
   "describe": {
     "detailsTitle": "Title and description",
@@ -104,9 +168,19 @@
     "descriptionLabel": "Description",
     "authorsTitle": "Authors",
     "authorsDescription": "The dataset is cited with its authors in this order. Drag a row to move it.",
+    "authorsFinal": "Authors cannot be changed after you publish.",
+    "orcidInfo_one": "{{names}} has not connected an ORCID iD, so is cited by name. Nothing waits for it.",
+    "orcidInfo_other": "{{names}} have not connected an ORCID iD, so they are cited by name. Nothing waits for them.",
+    "noOrcid": "No ORCID iD connected",
     "addAuthor": "Add an author",
     "addMember": "From the experiment's members",
     "addByName": "By name",
+    "byNameTitle": "Add an author by name",
+    "byNameHelp": "For someone without an openJII account. They are cited by name, with no ORCID iD.",
+    "givenName": "Given name",
+    "familyName": "Family name",
+    "add": "Add",
+    "cancel": "Cancel",
     "addedByName": "Added by name",
     "noAffiliation": "No affiliation",
     "orcidLabel": "ORCID iD {{orcid}}",
@@ -121,6 +195,7 @@
     "description": "Prefilled from the study details. The data is published under this license.",
     "cc0Detail": "No rights reserved. Anyone may reuse the data without giving credit.",
     "ccByDetail": "Anyone may reuse the data as long as they credit the authors.",
+    "permanentNote": "A license cannot be taken back once the dataset is published.",
     "metadataNote": "The dataset's metadata is always published under CC0, whatever the data license.",
     "rightToPublish": "I have the right to publish this data under the chosen license."
   },
@@ -130,18 +205,22 @@
     "open": "Open now",
     "openDetail": "Anyone can download the files once the dataset is published.",
     "embargoed": "Embargo until a date",
-    "embargoedDetail": "The files open by themselves on the date, for example when the paper is out.",
+    "embargoedDetail": "The files open by themselves on the date. It can be brought forward later from the Datasets tab, never pushed back.",
     "date": "Files open on",
     "pickDate": "Pick a date"
   },
   "check": {
-    "floorTitle": "OpenAIRE floor",
-    "floorDescription": "What OpenAIRE, the European open-science catalogue, needs before it harvests the dataset. A missing field blocks freezing.",
-    "floorComplete": "Complete",
-    "floorMissing_one": "{{count}} field missing",
-    "floorMissing_other": "{{count}} fields missing",
-    "floorBlocked": "Fill every OpenAIRE floor field before freezing the dataset.",
-    "floorFields": {
+    "recordTitle": "OpenAIRE record",
+    "recordDescription": "Every dataset follows it. The steps of this flow fill it, so OpenAIRE, the European open-science catalogue, can harvest the dataset.",
+    "recordFilled": "Filled",
+    "recordMissing_one": "{{count}} field missing",
+    "recordMissing_other": "{{count}} fields missing",
+    "fillIn": "Fill in {{step}}",
+    "holdsMeasuredTwice_one": "Resolve {{count}} plot measured twice",
+    "holdsMeasuredTwice_other": "Resolve {{count}} plots measured twice",
+    "openCurate": "Open Curate",
+    "blocked": "Freeze waits until every step above is done.",
+    "fields": {
       "title": "Title",
       "creators": "Creators",
       "publisher": "Publisher",
@@ -151,35 +230,51 @@
       "access": "Access",
       "funding": "Funding"
     },
-    "standardsTitle": "Standards",
-    "standardsDescription": "Each standard warns about what it still lacks and never blocks freezing.",
-    "standards": {
-      "miappe": "MIAPPE",
-      "brapi": "BrAPI",
-      "cropOntology": "Crop Ontology",
-      "greenhouseOntology": "Common Greenhouse Ontology",
-      "sensorThings": "OGC SensorThings",
-      "fair": "FAIR"
-    },
-    "verdicts": {
-      "met": "Met",
-      "partial": "Partial",
-      "partialCount": "Partial, {{filled}} of {{total}}",
-      "notApplicable": "Not applicable yet",
-      "notAssessed": "Not assessed"
+    "values": {
+      "creators_one": "{{count}} author",
+      "creators_other": "{{count}} authors",
+      "publisher": "Jan IngenHousz Institute",
+      "type": "Dataset",
+      "open": "Open now",
+      "embargoed": "Files open {{date}}"
     }
   },
   "freeze": {
-    "title": "Freeze and deposit",
-    "readings_one": "Freezing writes {{count}} reading, counted {{time}}, to files whose bytes never change.",
-    "readings_other": "Freezing writes {{count}} readings, counted {{time}}, to files whose bytes never change.",
-    "neverChanges": "A published dataset never changes. A mistake found later becomes a new version.",
-    "submit": "Freeze and deposit"
+    "title": "What becomes public",
+    "description": "Read this before freezing. Once the dataset is frozen, none of it can be changed.",
+    "titleLabel": "Title",
+    "authorsLabel": "Authors, in citation order",
+    "licenseLabel": "License",
+    "accessLabel": "Access",
+    "accessOpen": "Open now. Anyone can download the files.",
+    "accessEmbargoed": "The title, authors and citation are public now, and the files open on {{date}}.",
+    "readingsLabel": "Readings",
+    "readings_one": "{{count}} reading, counted {{time}}",
+    "readings_other": "{{count}} readings, counted {{time}}",
+    "excluded_one": "{{count}} left out in Curate",
+    "excluded_other": "{{count}} left out in Curate",
+    "filesLabel": "Files",
+    "files": "The readings, the data dictionary, the layout and the study details",
+    "commitsTitle": "What freezing commits you to",
+    "commits": {
+      "public": "The dataset's page is public at once, and anyone can open it without an account.",
+      "frozen": "Its files never change. A mistake found later becomes a new version.",
+      "final": "Its license cannot be taken back, and its authors cannot be changed.",
+      "experiment": "The experiment can then be archived, but never deleted."
+    },
+    "submit": "Freeze version {{version}}",
+    "confirmTitle": "Freeze version {{version}}?",
+    "confirmDescription": "The dataset becomes public and never changes. The experiment itself stays editable.",
+    "confirm": "Freeze version {{version}}",
+    "cancel": "Cancel",
+    "freezing": "Freezing..."
   },
   "page": {
     "kind": "Dataset",
     "loading": "Loading the dataset...",
-    "notFound": "This dataset does not exist or is not published.",
+    "notFound": "This dataset does not exist or is not public.",
+    "loadError": "Could not load the dataset.",
+    "retry": "Try again",
     "version": "Version {{version}}",
     "published": "Published",
     "license": "License",
@@ -189,8 +284,24 @@
     "copy": "Copy citation",
     "copied": "Citation copied",
     "description": "Description",
+    "limitations": "Limitations",
+    "about": "About this data",
+    "aboutFields": {
+      "organism": "Organism",
+      "period": "Study period",
+      "periodValue": "{{start}} to {{end}}",
+      "design": "Experimental design",
+      "facility": "Growth facility",
+      "plots": "Plots",
+      "readings": "Readings",
+      "readingsExcluded_one": "{{readings}}, {{count}} left out in curation",
+      "readingsExcluded_other": "{{readings}}, {{count}} left out in curation",
+      "dictionary": "Data dictionary",
+      "dictionaryValue": "Every column, with what it measures"
+    },
     "funding": "Funding",
     "fundingEntry": "{{funder}}, grant {{award}}",
+    "publications": "Related publications",
     "files": "Files",
     "download": "Download",
     "fileKinds": {
@@ -199,21 +310,40 @@
       "miappe": "MIAPPE file",
       "roCrate": "RO-Crate"
     },
+    "embargoTitle": "The files open on {{date}}",
+    "embargoDetail": "The title, authors and citation are public now. The files are withheld until that date.",
+    "supersededTitle": "A newer version is available",
+    "supersededDetail": "Version {{version}} supersedes this one. This version stays as it was published, so citations of it still hold.",
+    "supersededLink": "Open version {{version}}",
+    "testTitle": "Test deposit, not citable",
+    "testDetail": "This dataset was deposited in Zenodo's sandbox from a test environment. Its DOI is a test, so no citation is offered.",
     "withdrawnTitle": "This dataset was withdrawn on {{date}}",
     "withdrawnReason": "Reason: {{reason}}",
-    "withdrawnFiles": "Its files are no longer served. The citation and DOI stay, so existing references still resolve here."
+    "withdrawnFiles": "openJII no longer serves its files.",
+    "withdrawnDoi": "Its DOI, {{doi}}, resolves to Zenodo's record.",
+    "withdrawnZenodo": {
+      "requestPrepared": "Zenodo's copy stays public until Zenodo acts on the withdrawal request.",
+      "removed": "Zenodo has withdrawn its copy and shows its own tombstone."
+    }
   },
   "catalogue": {
     "title": "Datasets",
     "description": "Every published dataset on openJII, each a frozen, citable copy of an experiment's data.",
-    "mine": "Only my datasets, drafts included",
+    "searchPlaceholder": "Search datasets",
+    "clearSearch": "Clear search",
+    "searching": "Searching...",
+    "mine": "Mine",
     "columns": {
       "title": "Dataset",
+      "organism": "Organism",
+      "version": "Version",
       "license": "License",
       "date": "Date",
       "doi": "DOI"
     },
+    "versionValue": "Version {{version}}",
     "empty": "No datasets are published yet.",
+    "noMatches": "No datasets match the search.",
     "loadError": "Could not load the datasets.",
     "retry": "Try again"
   },
@@ -223,10 +353,10 @@
     "empty": "No publications linked.",
     "byline": "{{authors}}, {{year}}",
     "relations": {
-      "IsSupplementedBy": "Is supplemented by",
-      "Cites": "Cites",
-      "References": "References",
-      "Documents": "Documents"
+      "IsSupplementedBy": "Supported by this data",
+      "Cites": "Cites this data",
+      "References": "Refers to this data",
+      "Documents": "Describes this data"
     }
   }
 }

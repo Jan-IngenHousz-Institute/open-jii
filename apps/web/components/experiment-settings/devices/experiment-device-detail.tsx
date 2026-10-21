@@ -12,9 +12,11 @@ import type {
   ExperimentDeviceEntry,
   ExperimentDeviceIdentity,
 } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
+import { PLACEABLE_DEVICE_TYPES } from "@repo/api/domains/experiment/layout/experiment-layout.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
+import { ExperimentDevicePlacements } from "./experiment-device-placements";
 import { ExperimentDeviceSeriesPanel } from "./experiment-device-series-panel";
 
 interface ExperimentDeviceDetailProps {
@@ -40,6 +42,7 @@ export function ExperimentDeviceDetail({
 
   const device = entry.device;
   const reported = entry.reported;
+  const isPlaceable = device !== null && PLACEABLE_DEVICE_TYPES.includes(device.deviceType);
 
   function renderWindowCount() {
     if (pipelineUnavailable && entry.recentData === null) {
@@ -74,7 +77,7 @@ export function ExperimentDeviceDetail({
           {device !== null && (
             <ConnectivityDot connectivity={entry.connectivity} deviceType={device.deviceType} />
           )}
-          {entry.binding !== null && device !== null && (
+          {entry.binding !== null && device !== null && isPlaceable && (
             <Button
               variant="outline"
               size="sm"
@@ -148,6 +151,10 @@ export function ExperimentDeviceDetail({
           }
         />
       </dl>
+
+      {isPlaceable ? (
+        <ExperimentDevicePlacements experimentId={experimentId} deviceId={device.id} />
+      ) : null}
 
       <ExperimentDeviceSeriesPanel
         experimentId={experimentId}

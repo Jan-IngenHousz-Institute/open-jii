@@ -22,10 +22,10 @@
     },
     "uploadData": "Upload Data",
     "exportModal": {
-      "title": "Export Dataset",
+      "title": "Export table",
       "createTitle": "Create New Export",
-      "description": "View and manage exports for the '{{tableName}}' dataset.",
-      "createDescription": "Create a new export for the '{{tableName}}' dataset.",
+      "description": "View and manage exports for the '{{tableName}}' table.",
+      "createDescription": "Create a new export for the '{{tableName}}' table.",
       "status": {
         "queued": "Queued",
         "pending": "Pending",
