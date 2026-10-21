@@ -121,6 +121,35 @@ describe("anonymous sessions on the production auth boundary", () => {
     }
   });
 
+  it("records the shared two-hop fallback that gates production demo-mode on OJD-2040", async () => {
+    auth = createAuth(
+      app.module.get<AuthService<typeof productionAuth>>(AuthService).instance.options.hooks,
+      true,
+    );
+    const enter = (forwarded: string) =>
+      auth.handler(
+        new Request(`${base}/sign-in/anonymous`, {
+          method: "POST",
+          headers: {
+            origin: "http://localhost:3000",
+            "content-type": "application/json",
+            "x-forwarded-for": forwarded,
+          },
+          body: JSON.stringify({ name: "Synthetic" }),
+        }),
+      );
+    try {
+      for (let i = 0; i < 10; i++)
+        expect((await enter("192.0.2.1, 198.51.100.1")).status).toBe(200);
+      expect((await enter("192.0.2.2, 198.51.100.1")).status).toBe(429);
+      expect((await enter("203.0.113.99, 192.0.2.2, 198.51.100.1")).status).toBe(429);
+    } finally {
+      auth = createAuth(
+        app.module.get<AuthService<typeof productionAuth>>(AuthService).instance.options.hooks,
+      );
+    }
+  });
+
   it("classifies all installed auth endpoints and refuses every denied HTTP route without effects", async () => {
     const actual = Object.entries(auth.api)
       .map(([name, endpoint]) => ({
