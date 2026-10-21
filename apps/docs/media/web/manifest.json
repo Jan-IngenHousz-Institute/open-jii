@@ -500,6 +500,17 @@
       "sha256": "70f0c67f06a5225f1a4cdc43f7dd50cae0edaeaa28afff4156e1d891ba562ee8",
       "disposition": "published",
       "scope": "A newcomer discovers a Demo organization and opens its public experiment without edit controls"
+    },
+    {
+      "path": "/img/guide/web/demo-seed-experiments.webm",
+      "slug": "demo-seed-experiments",
+      "kind": "recording",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 681265,
+      "sha256": "badce83aaed6ea91afdd623b85af3ccfe4c767fa69eb3ccbedd4b12f17d388ba",
+      "disposition": "published",
+      "scope": "A newcomer opens the seeded Demo examples, read-only workbook and dashboard list; trimmed before the chart-loading screen"
     }
   ],
   "unmetCaptures": [
