@@ -7,6 +7,15 @@ describe("buildFilterCondition", () => {
   // `SqlQueryBuilder` is the simplest concrete instance with no setup.
   const builder = new SqlQueryBuilder();
 
+  it.each(["is_simulated", "is_guest"])("filters %s using a boolean value", (column) => {
+    expect(buildFilterCondition({ column, operator: "equals", value: true }, builder)).toBe(
+      `\`${column}\` = true`,
+    );
+    expect(buildFilterCondition({ column, operator: "equals", value: false }, builder)).toBe(
+      `\`${column}\` = false`,
+    );
+  });
+
   it("compiles `equals` to `=` with escaped column and value", () => {
     expect(
       buildFilterCondition({ column: "status", operator: "equals", value: "active" }, builder),

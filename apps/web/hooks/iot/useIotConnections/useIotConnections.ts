@@ -3,14 +3,30 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MockTransportAdapter, parseMockFamilies } from "~/lib/iot/mock-devices";
 
+import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import { simulatedSensorsEnabled } from "@repo/api/transforms/simulated-sensor-eligibility";
 import type { DeviceIdentity, IDeviceDriver, ITransportAdapter } from "@repo/iot";
 import { identifyDevice } from "@repo/iot";
+import { simulatedDeviceId } from "@repo/iot/simulation/recordings";
+import { SimulatedTransportAdapter } from "@repo/iot/simulation/transport";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { createAdapter } from "../useIotCommunication/useIotCommunication";
 
-export type WorkbookConnectionType = "bluetooth" | "serial" | "mock";
+export type WorkbookConnectionType =
+  | "bluetooth"
+  | "serial"
+  | "mock"
+  | "simulated-multispeq"
+  | "simulated-ambit"
+  | "simulated-minipar";
+
+const simulatedFamilies = {
+  "simulated-multispeq": "multispeq",
+  "simulated-ambit": "ambit",
+  "simulated-minipar": "minipar",
+} as const;
 
 export interface IotDeviceConnection {
   /** Stable per-connection id (uuid); devices carry no usable web identifier. */
@@ -28,9 +44,12 @@ export interface IotDeviceConnection {
   /** Structured identity from the handshake (name, id, firmware, battery). */
   identity: DeviceIdentity;
   driver: IDeviceDriver;
+  simulated?: boolean;
+  simulationExperimentId?: string;
 }
 
 export interface IotConnectionsOptions {
+  experiment?: Experiment;
   /**
    * Off for a caller that has to rest other hardware through these drivers before they
    * go; that caller calls disconnectAll itself, in its own order. Cleanup runs in hook
@@ -46,6 +65,10 @@ export interface IotConnectionsOptions {
  * the primary device. Mirrors the mobile scanner registry semantics.
  */
 export function useIotConnections(sensorFamily: SensorFamily, options?: IotConnectionsOptions) {
+  const simulationAvailable = simulatedSensorsEnabled(options?.experiment);
+  const experimentId = options?.experiment?.id;
+  const contextRef = useRef({ simulationAvailable, experimentId });
+  contextRef.current = { simulationAvailable, experimentId };
   const [connections, setConnections] = useState<IotDeviceConnection[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,15 +104,24 @@ export function useIotConnections(sensorFamily: SensorFamily, options?: IotConne
       setError(null);
 
       const generation = generationRef.current;
+      const originExperimentId = contextRef.current.experimentId;
+      const simulatedFamily =
+        connectionType in simulatedFamilies
+          ? simulatedFamilies[connectionType as keyof typeof simulatedFamilies]
+          : undefined;
       let adapter: ITransportAdapter | undefined;
       try {
         const index = connectCounterRef.current + 1;
-        if (connectionType === "mock") {
+        if (simulatedFamily) {
+          if (!contextRef.current.simulationAvailable)
+            throw new Error("Simulated sensors require a demo experiment");
+          adapter = new SimulatedTransportAdapter(simulatedFamily);
+        } else if (connectionType === "mock") {
           // Successive connect clicks cycle through the ?mockDevices= families.
           const families = parseMockFamilies();
           adapter = new MockTransportAdapter(index, families[(index - 1) % families.length]);
         } else {
-          adapter = await createAdapter(sensorFamily, connectionType);
+          adapter = await createAdapter(sensorFamily, connectionType as "bluetooth" | "serial");
         }
 
         // Identification handshake: probe who actually answered, and let that
@@ -100,18 +132,24 @@ export function useIotConnections(sensorFamily: SensorFamily, options?: IotConne
 
         // The user disconnected everything while this connect was in flight;
         // honor that instead of resurrecting a connection.
-        if (generation !== generationRef.current) {
+        if (
+          generation !== generationRef.current ||
+          (simulatedFamily &&
+            (!contextRef.current.simulationAvailable ||
+              originExperimentId !== contextRef.current.experimentId))
+        ) {
           await connector.destroy();
           return;
         }
 
-        if (family !== sensorFamily) {
+        if (!simulatedFamily && family !== sensorFamily) {
           toast({
             title: "Different device identified",
             description: `Connected as ${sensorFamily}, but the device identifies as ${family}. Using ${family}.`,
           });
         }
 
+        if (simulatedFamily) info.deviceId = simulatedDeviceId(simulatedFamily);
         const id = crypto.randomUUID();
         const label = info.name ?? `Device #${index}`;
 
@@ -123,7 +161,16 @@ export function useIotConnections(sensorFamily: SensorFamily, options?: IotConne
         connectCounterRef.current = index;
         setConnections((prev) => [
           ...prev,
-          { id, label, ordinal: index, family, identity: info, driver: connector },
+          {
+            id,
+            label,
+            ordinal: index,
+            family,
+            identity: info,
+            driver: connector,
+            simulated: !!simulatedFamily,
+            simulationExperimentId: simulatedFamily ? originExperimentId : undefined,
+          },
         ]);
       } catch (err) {
         // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -159,8 +206,22 @@ export function useIotConnections(sensorFamily: SensorFamily, options?: IotConne
     await Promise.allSettled(existing.map((c) => c.driver.destroy()));
   }, []);
 
+  useEffect(() => {
+    for (const connection of connectionsRef.current) {
+      if (
+        connection.simulated &&
+        (!simulationAvailable || connection.simulationExperimentId !== experimentId)
+      ) {
+        void disconnectDevice(connection.id);
+      }
+    }
+  }, [simulationAvailable, experimentId, disconnectDevice]);
+
   return {
-    connections,
+    simulationAvailable,
+    connections: connections.filter(
+      (c) => !c.simulated || (simulationAvailable && c.simulationExperimentId === experimentId),
+    ),
     isConnecting,
     error,
     connect,

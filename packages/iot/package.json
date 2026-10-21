@@ -16,6 +16,10 @@
     "./transport/react-native": {
       "types": "./dist/transport/react-native/index.d.ts",
       "default": "./dist/transport/react-native/index.js"
+    },
+    "./simulation/*": {
+      "types": "./dist/simulation/*.d.ts",
+      "default": "./dist/simulation/*.js"
     }
   },
   "private": true,

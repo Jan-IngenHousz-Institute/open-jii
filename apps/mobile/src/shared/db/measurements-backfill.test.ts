@@ -14,6 +14,7 @@ const migrationSqls = [
   "0004_add_day_key.sql",
   "0005_add_workbook_run_id.sql",
   "0006_add_failure_reason.sql",
+  "0007_add_simulated_provenance.sql",
 ].map((f) => readFileSync(resolve(__dirname, "../../../drizzle", f), "utf-8"));
 
 let sqlite: ReturnType<typeof Database>;

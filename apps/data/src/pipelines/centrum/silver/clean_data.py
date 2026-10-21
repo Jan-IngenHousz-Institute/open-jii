@@ -15,6 +15,7 @@ from openjii.centrum import (
     RAW_LARGE_DATA_TABLE,
     question_schema,
 )
+from openjii.centrum.measurement_provenance import is_simulated, with_provenance_defaults
 from openjii.centrum.runtime import (
     BRONZE_TABLE,
     LEGACY_MACRO_ID_MAP,
@@ -57,7 +58,7 @@ def _remap_macro_id(id_col):
 @dlt.append_flow(target=SILVER_TABLE, name="clean_data")
 def clean_data():
     """Silver layer: Clean and standardize sensor data, including imported data."""
-    bronze_df = dlt.read_stream(BRONZE_TABLE)
+    bronze_df = with_provenance_defaults(dlt.read_stream(BRONZE_TABLE))
 
     df = (
         bronze_df
@@ -215,6 +216,8 @@ def clean_data():
     bronze_clean = df.select(
         "id",
         "device_id",
+        "is_simulated",
+        "is_guest",
         "client_id",
         "device_name",
         "device_version",
@@ -255,6 +258,8 @@ def clean_data():
 
     imported_clean = (
         imported_df
+        .withColumn("is_simulated", is_simulated(F.lit(False), F.col("device_id")))
+        .withColumn("is_guest", F.lit(False))
         .withColumn("id", F.col("id").cast("long"))
         .withColumn("processed_timestamp", F.current_timestamp())
         # Imports never pass the IoT broker.
@@ -307,6 +312,8 @@ def clean_data():
         .select(
             "id",
             "device_id",
+            "is_simulated",
+            "is_guest",
             "client_id",
             "device_name",
             "device_version",
@@ -354,7 +361,7 @@ def clean_data():
 @dlt.append_flow(target=SILVER_TABLE, name="clean_data_large_iot")
 def clean_data_large_iot():
     """Silver append flow: clean and standardize large-IoT payloads."""
-    large_iot_df = dlt.read_stream(RAW_LARGE_DATA_TABLE)
+    large_iot_df = with_provenance_defaults(dlt.read_stream(RAW_LARGE_DATA_TABLE))
 
     large_iot_clean = (
         large_iot_df
@@ -425,6 +432,8 @@ def clean_data_large_iot():
         .select(
             "id",
             "device_id",
+            "is_simulated",
+            "is_guest",
             "client_id",
             "device_name",
             "device_version",

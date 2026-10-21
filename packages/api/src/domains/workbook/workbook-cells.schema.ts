@@ -94,6 +94,7 @@ export const zBranchCell = zBaseCell.extend({
 // One device's outcome from a multi-device run; exactly one of data/error set.
 export const zOutputDeviceResult = z.object({
   deviceId: z.string(),
+  simulated: z.boolean().optional(),
   deviceLabel: z.string().optional(),
   // Identified sensor family and device-reported name, when the handshake resolved them.
   family: zSensorFamily.optional(),
@@ -105,6 +106,7 @@ export const zOutputDeviceResult = z.object({
 export const zOutputCell = zBaseCell.extend({
   type: z.literal("output"),
   producedBy: z.string().min(1, "Producer cell ID is required"),
+  simulated: z.boolean().optional(),
   // Primary device's result; single-device runs carry only this.
   data: z.unknown().optional(),
   executionTime: z.number().nonnegative().optional(),

@@ -244,6 +244,8 @@ export const RESERVED_EXPERIMENT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   "id",
   "experiment_id",
   "device_id",
+  "is_simulated",
+  "is_guest",
   "device_name",
   "device_version",
   "timestamp",

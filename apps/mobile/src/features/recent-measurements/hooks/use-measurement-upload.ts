@@ -129,6 +129,7 @@ export function useMeasurementUpload() {
         const topic = getMeasurementMqttTopic({ experimentId });
         const measurementData = buildUploadPayload({
           rawMeasurement,
+          simulated: device?.simulated === true,
           userId,
           protocolId: result.protocolId ?? protocolId,
           macro,

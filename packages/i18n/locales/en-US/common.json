@@ -1534,5 +1534,9 @@
     "roleChanged_admin": "Platform admin appointed.",
     "roleChanged_user": "Platform admin removed.",
     "appointNamed": "Appoint admin: {{name}}"
+  },
+  "provenance": {
+    "simulated": "Simulated",
+    "guest": "Guest"
   }
 }

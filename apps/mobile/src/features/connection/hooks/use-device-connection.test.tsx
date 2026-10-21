@@ -9,6 +9,7 @@ import { isConnectInFlight, useAllDevices, useConnectToDevice } from "./use-devi
 
 const mocks = vi.hoisted(() => ({
   transportConnect: vi.fn(),
+  connectedQuery: vi.fn(() => Promise.resolve([])),
   addDevice: vi.fn(),
   setLastConnectedDevice: vi.fn(),
   serialDevices: [] as { deviceId: number; vendorId: number; productId: number }[],
@@ -54,7 +55,7 @@ vi.mock("~/features/connection/services/multispeq/mock-device/mock-devices-enabl
   mockDevicesEnabled: false,
 }));
 vi.mock("~/features/connection/services/device-connection-manager/device-queries", () => ({
-  getConnectedDevices: () => Promise.resolve([]),
+  getConnectedDevices: () => mocks.connectedQuery(),
 }));
 vi.mock("~/features/connection/services/device-connection-manager/device-connection", () => ({
   connectToDevice: (device: Device) => mocks.transportConnect(device),
@@ -88,8 +89,22 @@ function renderConnectHook() {
 }
 
 describe("useConnectToDevice", () => {
+  it("connects simulation without querying Bluetooth when permission is denied", async () => {
+    mocks.hasBluetoothPermission.mockResolvedValue(false);
+    const { result } = renderConnectHook();
+    const device: Device = {
+      id: "simulated:multispeq",
+      type: "simulated-device",
+      name: "Simulated MultispeQ",
+    };
+    await act(() => result.current.connectToDevice(device));
+    expect(mocks.connectedQuery).not.toHaveBeenCalled();
+    expect(mocks.transportConnect).toHaveBeenCalledWith(device);
+    expect(mocks.addDevice).toHaveBeenCalledWith(device);
+  });
   beforeEach(() => {
     mocks.transportConnect.mockReset();
+    mocks.connectedQuery.mockClear();
     mocks.addDevice.mockReset().mockResolvedValue(undefined);
     mocks.setLastConnectedDevice.mockReset();
     mocks.serialDevices = [];
@@ -233,3 +248,11 @@ describe("useAllDevices", () => {
     expect(result.current.isFetching).toBe(false);
   });
 });
+
+vi.mock("~/features/connection/services/simulated-device", () => ({
+  closeSimulatedDevice: () => undefined,
+  simulatedExperimentId: () => undefined,
+  subscribeSimulatedExperiment: () => () => undefined,
+}));
+
+vi.mock("~/shared/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));

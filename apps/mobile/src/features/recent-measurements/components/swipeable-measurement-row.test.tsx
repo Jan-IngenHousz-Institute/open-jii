@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react-native";
 import React from "react";
+import { Dimensions } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SwipeableMeasurementRow } from "./swipeable-measurement-row";
@@ -152,4 +153,23 @@ describe("SwipeableMeasurementRow", () => {
     render(<SwipeableMeasurementRow {...defaultProps} peekToken={1} />);
     expect(screen.getByText("Photosynthesis")).toBeTruthy();
   });
+});
+
+describe("simulation label", () => {
+  it.each(["pending", "failed", "successful"] as const)(
+    "keeps the label for a %s upload on a narrow row",
+    (status) => {
+      Dimensions.set({
+        window: { width: 320, height: 640, scale: 1, fontScale: 1 },
+        screen: { width: 320, height: 640, scale: 1, fontScale: 1 },
+      });
+      const view = render(<SwipeableMeasurementRow {...defaultProps} status={status} simulated />);
+      const label = screen.getByText("common:simulated");
+      expect(label.props.numberOfLines).toBeUndefined();
+      view.rerender(
+        <SwipeableMeasurementRow {...defaultProps} status={status} simulated={false} />,
+      );
+      expect(screen.queryByText("common:simulated")).toBeNull();
+    },
+  );
 });

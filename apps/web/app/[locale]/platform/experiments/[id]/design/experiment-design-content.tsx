@@ -26,6 +26,7 @@ import { use, useCallback, useMemo } from "react";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
+import { simulatedSensorsEnabled } from "@repo/api/transforms/simulated-sensor-eligibility";
 import { useTranslation } from "@repo/i18n/client";
 import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -200,6 +201,8 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
             {canEdit ? (
               <WorkbookEntitySavedProvider onEntitySaved={handleDraftSaved}>
                 <WorkbookDraftEditor
+                  key={id}
+                  experiment={experimentData}
                   id={workbookId}
                   initialCells={workbookDraft.cells}
                   // Same capability the branch above gated on.
@@ -208,6 +211,16 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
                   onSaved={handleDraftSaved}
                 />
               </WorkbookEntitySavedProvider>
+            ) : simulatedSensorsEnabled(experimentData) ? (
+              <WorkbookDraftEditor
+                key={`${id}:${workbookVersionId}`}
+                id={workbookId}
+                experiment={experimentData}
+                initialCells={versionedCells}
+                entitySnapshots={pinnedVersionData?.entitySnapshots}
+                canEdit={false}
+                name={workbookDraft?.name ?? experimentData.name}
+              />
             ) : (
               <WorkbookEditor
                 cells={versionedCells}

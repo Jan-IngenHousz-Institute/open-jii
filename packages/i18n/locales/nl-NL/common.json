@@ -1532,5 +1532,9 @@
     "roleChanged_admin": "Platformbeheerder benoemd.",
     "roleChanged_user": "Platformbeheerder verwijderd.",
     "appointNamed": "Beheerder benoemen: {{name}}"
+  },
+  "provenance": {
+    "simulated": "Gesimuleerd",
+    "guest": "Gast"
   }
 }

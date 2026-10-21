@@ -149,3 +149,9 @@ describe("useAutoReconnect", () => {
     unmount();
   });
 });
+
+vi.mock("~/features/connection/services/simulated-device", () => ({
+  closeSimulatedDevice: () => undefined,
+  simulatedExperimentId: () => undefined,
+  subscribeSimulatedExperiment: () => () => undefined,
+}));

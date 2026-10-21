@@ -20,6 +20,7 @@ from openjii.centrum import (
     EXPERIMENT_RAW_DATA_TABLE,
     MACRO_ID_UUID_PATTERN,
 )
+from openjii.centrum.measurement_provenance import with_provenance_defaults
 from openjii.macros.runtime import (
     ENVIRONMENT,
     MACRO_EXECUTION_PARTITIONS,
@@ -58,12 +59,15 @@ def experiment_macro_data():
         .option("maxFilesPerTrigger", MACRO_MAX_FILES_PER_TRIGGER)
         .option("maxBytesPerTrigger", MACRO_MAX_BYTES_PER_TRIGGER)
         .table(centrum_table(EXPERIMENT_RAW_DATA_TABLE))
+        .transform(with_provenance_defaults)
         .filter("macros IS NOT NULL")
         .filter("size(macros) > 0")
         .select(
             "id",
             "experiment_id",
             "device_id",
+            "is_simulated",
+            "is_guest",
             "client_id",
             "device_name",
             "timestamp",
@@ -87,6 +91,8 @@ def experiment_macro_data():
             "id",
             "experiment_id",
             "device_id",
+            "is_simulated",
+            "is_guest",
             "client_id",
             "device_name",
             "timestamp",
@@ -184,6 +190,8 @@ def experiment_macro_data():
             F.col("macro_row_id").alias("id"),
             F.col("id").alias("raw_id"),
             "device_id",
+            "is_simulated",
+            "is_guest",
             "client_id",
             "device_name",
             "timestamp",

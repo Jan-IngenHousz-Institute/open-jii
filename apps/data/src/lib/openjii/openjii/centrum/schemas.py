@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from pyspark.sql.types import (
     ArrayType,
+    BooleanType,
     DoubleType,
     LongType,
     StringType,
@@ -93,6 +94,7 @@ sensor_schema = StructType(
 # message envelope.
 large_iot_schema = StructType(
     [
+        StructField("simulated", BooleanType(), True),
         StructField("device_name", StringType(), True),
         StructField("device_version", StringType(), True),
         StructField("device_id", StringType(), True),

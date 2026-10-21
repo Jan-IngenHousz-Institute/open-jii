@@ -125,6 +125,8 @@ def centrum(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> It
     location = tmp_path_factory.mktemp("centrum")
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {_CATALOG}.centrum LOCATION '{location}'")
     for name, query in _TABLES.items():
+        if name in ("experiment_raw_data", "experiment_macro_data"):
+            query = f"SELECT t.*, CASE WHEN device_id = 'd1' THEN true ELSE NULL END AS is_simulated, device_id = 'd2' AS is_guest FROM ({query}) t"
         spark.sql(f"CREATE TABLE {_CATALOG}.centrum.{name} USING parquet AS {query}")
 
     # One measurement per timezone in experiment e3, ids from 10 up.
@@ -138,7 +140,7 @@ def centrum(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> It
           DATE'2026-09-06', CAST(NULL AS ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>),
           CAST(NULL AS VARIANT), CAST(NULL AS ARRAY<{_ANNOTATION}>), 'u9', 'c9', CAST(NULL AS STRING),
           CAST(NULL AS STRING), CAST(NULL AS DOUBLE), CAST(NULL AS DOUBLE), parse_json('[]'),
-          TIMESTAMP'2026-09-23 10:03:00'
+          TIMESTAMP'2026-09-23 10:03:00', false, false
         FROM timezones
         """
     )
@@ -256,3 +258,14 @@ def test_uploaded_rows_credit_their_uploader_and_carry_their_annotations(
     # u3 is not a contributor of e1.
     assert rows[1002]["contributor"] is None
     assert rows[1002]["annotations"] == []
+
+
+def test_provenance_survives_the_real_enriched_views(spark, centrum):
+    raw = _rows(spark, "enriched_experiment_raw_data")
+    macro = _rows(spark, "enriched_experiment_macro_data")
+    assert (raw[1]["is_simulated"], raw[1]["is_guest"]) == (True, False)
+    assert (raw[2]["is_simulated"], raw[2]["is_guest"]) == (False, True)
+    assert (macro[101]["is_simulated"], macro[101]["is_guest"]) == (True, False)
+    assert (macro[102]["is_simulated"], macro[102]["is_guest"]) == (False, True)
+    uploaded = _rows(spark, "enriched_experiment_uploaded_data")
+    assert all(not row["is_simulated"] and not row["is_guest"] for row in uploaded.values())

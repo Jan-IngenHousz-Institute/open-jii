@@ -1287,7 +1287,10 @@
       "downloadWorkbook": "Download Workbook (.jii)",
       "clearAll": "Clear all",
       "stop": "Stop",
-      "runAll": "Run all"
+      "runAll": "Run all",
+      "simulatedMultispeq": "Simulated MultispeQ",
+      "simulatedAmbit": "Simulated Ambit",
+      "simulatedMinipar": "Simulated MiniPAR"
     }
   }
 }
