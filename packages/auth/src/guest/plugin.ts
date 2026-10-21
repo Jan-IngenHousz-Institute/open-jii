@@ -1,4 +1,5 @@
 import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
+import { expireCookie, parseCookies } from "better-auth/cookies";
 import { anonymous } from "better-auth/plugins";
 
 import { isDemoModeEnabled } from "@repo/analytics/server";
@@ -115,6 +116,20 @@ export function openJiiGuest({
               !user.isAnonymous
             ) {
               return Promise.resolve();
+            }
+            // Keep the signed session token, but never persist a guest identity snapshot.
+            const cache = ctx.context.authCookies.sessionData;
+            const cookieNames = new Set([
+              cache.name,
+              ...parseCookies(ctx.headers?.get("cookie") ?? "").keys(),
+              ...(ctx.context.responseHeaders?.getSetCookie() ?? []).map((cookie) =>
+                cookie.slice(0, cookie.indexOf("=")),
+              ),
+            ]);
+            for (const name of cookieNames) {
+              if (name === cache.name || name.startsWith(`${cache.name}.`)) {
+                expireCookie(ctx, { ...cache, name });
+              }
             }
             const { email: _email, ...safeUser } = user as Record<string, unknown>;
             ctx.context.returned = { ...returned, user: safeUser };

@@ -68,6 +68,16 @@ describe("GetIotUploadUrlUseCase", () => {
     expect(result.error).toEqual(error);
   });
 
+  it("refuses a caller deleted after authorization without issuing an upload URL", async () => {
+    const issue = vi.spyOn(awsAdapter, "getIotUploadUrl");
+
+    const result = await useCase.execute(experimentId, crypto.randomUUID(), 100);
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(401);
+    expect(issue).not.toHaveBeenCalled();
+  });
+
   it("should return not found when experiment does not exist", async () => {
     const result = await useCase.execute("00000000-0000-0000-0000-000000000000");
 

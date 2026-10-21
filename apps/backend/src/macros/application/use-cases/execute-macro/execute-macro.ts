@@ -48,6 +48,9 @@ export class ExecuteMacroUseCase {
     });
 
     const identity = userId ? await this.guests.findIdentity(userId) : null;
+    if (userId && !identity) {
+      return failure(AppError.unauthorized("This session is no longer valid"));
+    }
     if (identity?.isAnonymous) {
       const owner = await this.guestAccess.findOwnership(macroId);
       if (

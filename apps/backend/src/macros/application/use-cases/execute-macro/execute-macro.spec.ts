@@ -58,6 +58,19 @@ describe("ExecuteMacroUseCase", () => {
     return { id: macro.id, name: macro.name, language: macro.language };
   }
 
+  it("refuses a caller deleted after authorization before fetching or executing a script", async () => {
+    const macro = await createTestMacro();
+    const script = vi.spyOn(macroRepository, "findScriptById");
+    const invoke = vi.spyOn(lambdaPort, "invokeLambda");
+
+    const result = await useCase.execute(macro.id, { data: { value: 1 } }, crypto.randomUUID());
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(401);
+    expect(script).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
   describe("successful execution", () => {
     it("should execute a macro with a single data point and return the result", async () => {
       const macro = await createTestMacro({ language: "python" });

@@ -48,6 +48,9 @@ export class GetIotUploadUrlUseCase {
     }
 
     const identity = userId ? await this.guests.findIdentity(userId) : null;
+    if (userId && !identity) {
+      return failure(AppError.unauthorized("This session is no longer valid"));
+    }
     if (userId && identity?.isAnonymous) {
       if (experimentResult.value.organizationType !== "demo" || !(await this.demo.isEnabled())) {
         return failure(

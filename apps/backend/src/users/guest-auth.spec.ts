@@ -1,5 +1,7 @@
 import { AuthService } from "@thallesp/nestjs-better-auth";
 import { betterAuth } from "better-auth";
+import { applySetCookies } from "better-auth/cookies";
+import { anonymous } from "better-auth/plugins";
 import { z } from "zod";
 
 import { DISABLED_ADMIN_PATHS } from "@repo/auth/admin";
@@ -10,17 +12,25 @@ import {
   createSecondaryDatabase,
   db,
   eq,
+  experiments,
+  guestUsage,
   organizationMembers,
   organizations,
   notifications,
   profiles,
+  resourceVisits,
   rateLimits,
   sessions,
   users,
   verifications,
 } from "@repo/database";
 
+import { guestRouteInventory } from "../authorization/core/models/guest-route.model";
+import { AwsAdapter } from "../common/modules/aws/aws.adapter";
+import { LAMBDA_PORT } from "../macros/core/ports/lambda.port";
+import type { LambdaPort } from "../macros/core/ports/lambda.port";
 import { TestHarness } from "../test/test-harness";
+import { GuestRepository } from "./core/repositories/guest.repository";
 import guestAuthEndpoints from "./guest-auth-endpoints.json";
 
 const enabled = vi.fn().mockResolvedValue(true);
@@ -66,6 +76,24 @@ async function guest(name?: unknown) {
     .parse(raw);
   expect(raw).not.toHaveProperty("user.email");
   return { ...body.user, cookie: cookies(response) };
+}
+
+async function legacyCachedSession(cookie: string) {
+  // Mint the still-valid identity cache that deployed clients can bring across this change.
+  const legacy = betterAuth({
+    ...auth.options,
+    plugins: auth.options.plugins.map((plugin) =>
+      plugin.id === "anonymous" ? anonymous({ disableDeleteAnonymousUser: true }) : plugin,
+    ),
+  });
+  const cached = await legacy.handler(new Request(`${base}/get-session`, { headers: { cookie } }));
+  expect(cached.status).toBe(200);
+  expect(cached.headers.getSetCookie()).toEqual(
+    expect.arrayContaining([expect.stringMatching(/session_data=[^;]/)]),
+  );
+  const jar = new Headers({ cookie });
+  applySetCookies(jar, cached.headers.getSetCookie());
+  return { legacy, cookie: z.string().parse(jar.get("cookie")) };
 }
 
 describe("anonymous sessions on the production auth boundary", () => {
@@ -532,12 +560,7 @@ describe("anonymous sessions on the production auth boundary", () => {
 
   it("does not renew a purged guest from the cached session cookie", async () => {
     const visitor = await guest();
-    const cached = await auth.handler(
-      new Request(`${base}/get-session`, { headers: { cookie: visitor.cookie } }),
-    );
-    expect(cached.status).toBe(200);
-    const cookie = [visitor.cookie, cookies(cached)].filter(Boolean).join("; ");
-    expect(cookie).toContain("session_data=");
+    const { cookie } = await legacyCachedSession(visitor.cookie);
     await db.delete(users).where(eq(users.id, visitor.id));
     const rename = await post("/update-user", { name: "Must not renew" }, cookie);
     expect(rename.status).toBe(401);
@@ -552,6 +575,152 @@ describe("anonymous sessions on the production auth boundary", () => {
     );
     await expect(auth.api.getSession({ headers: new Headers({ cookie }) })).resolves.toBeNull();
     expect(await db.select().from(sessions).where(eq(sessions.userId, visitor.id))).toHaveLength(0);
+  });
+
+  it.each([0, 6000])(
+    "expires guest identity caches with a %i-byte browser description",
+    async (length) => {
+      const visitor = await guest();
+      if (length) {
+        await db
+          .update(sessions)
+          .set({ userAgent: "x".repeat(length) })
+          .where(eq(sessions.userId, visitor.id));
+      }
+      const response = await auth.handler(
+        new Request(`${base}/get-session`, { headers: { cookie: visitor.cookie } }),
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.getSetCookie()).toEqual(
+        expect.arrayContaining([expect.stringMatching(/session_data=;.*Max-Age=0/)]),
+      );
+      expect(
+        response.headers
+          .getSetCookie()
+          .filter((value) => /session_data(?:\.\d+)?=[^;]/.test(value)),
+      ).toEqual([]);
+      await expect(
+        auth.api.getSession({ headers: new Headers({ cookie: visitor.cookie }) }),
+      ).resolves.toMatchObject({ user: { id: visitor.id, isAnonymous: true } });
+    },
+  );
+
+  it("keeps the researcher identity cache unchanged", async () => {
+    const email = `researcher-${crypto.randomUUID()}@example.test`;
+    const otp = await auth.api.createVerificationOTP({ body: { email, type: "sign-in" } });
+    const signedIn = await post("/sign-in/email-otp", { email, otp });
+    expect(signedIn.status).toBe(200);
+    expect(signedIn.headers.getSetCookie()).toEqual(
+      expect.arrayContaining([expect.stringMatching(/session_data=[^;]/)]),
+    );
+  });
+
+  it("refuses all guest writes through Nest with a still-valid cached cookie after purge", async () => {
+    const owner = await app.createTestUser();
+    const organizationId = await app.createOrganization(undefined, {
+      type: "demo",
+      visibility: "public",
+    });
+    const [experiment] = await db
+      .insert(experiments)
+      .values({
+        name: "Synthetic cached-session example",
+        createdBy: owner,
+        organizationId,
+        visibility: "public",
+      })
+      .returning();
+    const macro = await app.createMacro({
+      name: "Synthetic cached-session macro",
+      createdBy: owner,
+      organizationId,
+      visibility: "public",
+    });
+    const visitor = await guest();
+    const { cookie, legacy } = await legacyCachedSession(visitor.cookie);
+    const nestAuth = app.module.get<AuthService<typeof productionAuth>>(AuthService).instance;
+    let guardIdentity: string | undefined;
+    vi.mocked(nestAuth.api.getSession).mockImplementation(async (input) => {
+      const session = await auth.api.getSession({ headers: input?.headers ?? new Headers() });
+      guardIdentity = session?.user.id ?? "no session";
+      if (!session) return null;
+      const identity = z
+        .object({ isAnonymous: z.boolean(), banned: z.boolean().nullish() })
+        .parse(session.user);
+      return {
+        ...session,
+        user: { ...session.user, isAnonymous: identity.isAnonymous, banned: identity.banned },
+      };
+    });
+    await expect(auth.api.getSession({ headers: new Headers({ cookie }) })).resolves.toMatchObject({
+      user: { id: visitor.id, isAnonymous: true },
+    });
+    const live = await app.get(`/api/v1/experiments/${experiment.id}`).set("Cookie", cookie);
+    expect(guardIdentity).toBe(visitor.id);
+    expect(live.status, JSON.stringify(live.body)).toBe(200);
+    const signer = vi.spyOn(app.module.get(AwsAdapter), "getIotUploadUrl");
+    const invoke = vi.spyOn(app.module.get<LambdaPort>(LAMBDA_PORT), "invokeLambda");
+    await db
+      .update(users)
+      .set({ createdAt: new Date(Date.now() - 8 * 86_400_000) })
+      .where(eq(users.id, visitor.id));
+    const purged = await app.module.get(GuestRepository).purgeExpired();
+    expect(purged.deleted).toBe(1);
+    // This control proves the signed cache has not merely expired or become malformed.
+    await expect(
+      legacy.api.getSession({ headers: new Headers({ cookie }) }),
+    ).resolves.toMatchObject({ user: { id: visitor.id, isAnonymous: true } });
+    const writes = [
+      {
+        path: "/api/v1/iot/upload-url",
+        classification: "demo-upload",
+        body: { experimentId: experiment.id, contentLength: 100 },
+      },
+      {
+        path: `/api/v1/macros/${macro.id}/execute`,
+        classification: "demo-macro",
+        body: { data: { value: 1 } },
+      },
+      {
+        path: "/api/v1/visits",
+        classification: "visit",
+        body: { resourceType: "experiment", resourceId: experiment.id },
+      },
+    ];
+    expect(writes.map(({ classification }) => classification).sort()).toEqual(
+      guestRouteInventory
+        .filter(({ method, classification }) => method !== "GET" && classification !== "deny")
+        .map(({ classification }) => classification)
+        .sort(),
+    );
+    for (const { path, body } of [
+      ...writes,
+      { path: `/api/v1/experiments/${experiment.id}/data/uploads`, body: {} },
+      { path: "/api/v1/experiments", body: { name: "Must not persist" } },
+    ]) {
+      expect((await app.post(path).set("Cookie", cookie).send(body)).status, path).toBe(401);
+    }
+    expect(
+      (await app.get(`/api/v1/experiments/${experiment.id}`).set("Cookie", cookie)).status,
+    ).toBe(401);
+    expect((await app.get("/api/v1/experiments").set("Cookie", cookie)).status).toBe(401);
+    expect(signer).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalled();
+    expect(
+      await db.select().from(guestUsage).where(eq(guestUsage.userId, visitor.id)),
+    ).toHaveLength(0);
+    expect(
+      await db.select().from(resourceVisits).where(eq(resourceVisits.userId, visitor.id)),
+    ).toHaveLength(0);
+    expect(await db.select().from(sessions).where(eq(sessions.userId, visitor.id))).toHaveLength(0);
+    const ended = await auth.handler(new Request(`${base}/get-session`, { headers: { cookie } }));
+    expect(await ended.json()).toBeNull();
+    expect(ended.headers.getSetCookie()).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/session_token=;.*Max-Age=0/),
+        expect.stringMatching(/session_data=;.*Max-Age=0/),
+      ]),
+    );
   });
 
   it("fails closed when the demo flag is off or unavailable", async () => {
