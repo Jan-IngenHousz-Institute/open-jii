@@ -8,6 +8,7 @@ import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/exp
 import { getColumnKind } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 
+import { BooleanInput } from "./value-inputs/boolean-input";
 import { CategoricalMultiInput } from "./value-inputs/categorical-multi-input";
 import { CategoricalSingleInput } from "./value-inputs/categorical-single-input";
 import { CommaSeparatedInput } from "./value-inputs/comma-separated-input";
@@ -39,6 +40,10 @@ export function FilterValueInput({
 }: FilterValueInputProps) {
   const { t } = useTranslation("common");
   const kind = column ? getColumnKind(column.type_text) : undefined;
+
+  if (column?.type_text === "BOOLEAN" && (operator === "equals" || operator === "not_equals")) {
+    return <BooleanInput value={value} onChange={onChange} />;
+  }
 
   if (operator === "between") {
     if (kind === "temporal") {

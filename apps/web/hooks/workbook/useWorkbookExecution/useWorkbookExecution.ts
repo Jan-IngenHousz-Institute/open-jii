@@ -416,13 +416,8 @@ export function useWorkbookExecution({
   const runMacroCell = useCallback(
     async (cell: MacroCell, cellIndex: number, currentCells: WorkbookCell[]) => {
       const input = findPrecedingOutput(currentCells, cellIndex);
-      const simulated = currentCells
-        .slice(0, cellIndex)
-        .some(
-          (c) =>
-            c.type === "output" &&
-            (c.simulated === true || c.deviceResults?.some((r) => r.simulated)),
-        );
+      const simulated =
+        input?.simulated === true || input?.deviceResults?.some((r) => r.simulated) === true;
       // A macro can run from ctx alone; error only when there is neither a
       // nearest measurement nor any upstream output to read.
       if (!input) {
@@ -600,15 +595,12 @@ export function useWorkbookExecution({
         const updated = currentCells.map((c) =>
           c.id === cell.id ? { ...cell, answer, isAnswered: true } : c,
         );
-        const preceding = currentCells.slice(
-          0,
+        const input = findPrecedingOutput(
+          currentCells,
           currentCells.findIndex((c) => c.id === cell.id),
         );
-        const simulated = preceding.some(
-          (c) =>
-            c.type === "output" &&
-            (c.simulated === true || c.deviceResults?.some((r) => r.simulated)),
-        );
+        const simulated =
+          input?.simulated === true || input?.deviceResults?.some((r) => r.simulated) === true;
         return insertOutputAfterCell(updated, cell.id, {
           ...makeOutputCell(cell.id, { answer }, 0, []),
           simulated,

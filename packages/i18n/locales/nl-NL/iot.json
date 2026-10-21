@@ -1288,9 +1288,9 @@
       "clearAll": "Alles wissen",
       "stop": "Stoppen",
       "runAll": "Alles uitvoeren",
-      "simulatedMultispeq": "Gesimuleerd MultispeQ",
-      "simulatedAmbit": "Gesimuleerd Ambit",
-      "simulatedMinipar": "Gesimuleerd MiniPAR"
+      "simulatedMultispeq": "Gesimuleerde MultispeQ",
+      "simulatedAmbit": "Gesimuleerde Ambit",
+      "simulatedMinipar": "Gesimuleerde MiniPAR"
     }
   }
 }
