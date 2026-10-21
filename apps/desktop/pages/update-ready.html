@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; font-src 'self'; style-src 'self'" />
+    <title>Update ready</title>
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <main class="page top left">
+      <h2>openJII <span id="version"></span> is ready</h2>
+      <p class="small tight">Restart to finish updating. A measurement in progress is not interrupted; the update waits until you restart.</p>
+      <div class="actions">
+        <button id="later" class="button secondary" type="button">Later</button>
+        <button id="restart" class="button" type="button">Restart now</button>
+      </div>
+    </main>
+    <script src="update.js"></script>
+  </body>
+</html>

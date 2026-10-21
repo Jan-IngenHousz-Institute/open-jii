@@ -4,6 +4,7 @@ import { editProtocolFormSchema } from "@/util/schema";
 import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronsUpDown, MonitorX } from "lucide-react";
+import { env } from "~/env";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import type { Resolver } from "react-hook-form";
@@ -274,6 +275,14 @@ export function ProtocolDetailsCard({
                       <div className="text-muted-foreground/60 text-xs">
                         {tIot("iot.protocolRunner.tryDifferentBrowser")}
                       </div>
+                      <a
+                        className="text-primary mt-3 inline-block max-w-56 text-xs font-medium underline-offset-4 hover:underline"
+                        href={`${env.NEXT_PUBLIC_DOCS_URL}/guide/get-started/desktop-app`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {tIot("iot.protocolRunner.useDesktopAppInstead")}
+                      </a>
                     </div>
                   </div>
                 )}

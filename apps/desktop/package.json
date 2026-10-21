@@ -1,0 +1,62 @@
+{
+  "name": "desktop",
+  "version": "1.0.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "43.8.1",
+    "electron-builder": "26.15.3"
+  },
+  "productName": "openJII",
+  "description": "openJII desktop app",
+  "author": "Jan Ingenhousz Institute",
+  "build": {
+    "appId": "com.openjii.desktop",
+    "productName": "openJII",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "pages/**",
+      "assets/**"
+    ],
+    "protocols": [
+      {
+        "name": "openJII",
+        "schemes": [
+          "openjii"
+        ]
+      }
+    ],
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.education",
+      "icon": "assets/icon.png",
+      "identity": null
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icon.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Science",
+      "icon": "assets/icon.png",
+      "maintainer": "Jan Ingenhousz Institute"
+    }
+  },
+  "homepage": "https://openjii.org"
+}

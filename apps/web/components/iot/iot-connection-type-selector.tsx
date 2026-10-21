@@ -1,7 +1,10 @@
 "use client";
 
 import { Bluetooth, Usb } from "lucide-react";
+import { env } from "~/env";
 import type { TransportUnavailableReason } from "~/hooks/iot/useIotBrowserSupport";
+import { useIsHydrated } from "~/hooks/useIsHydrated";
+import { isDesktopShell } from "~/lib/platform";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -39,6 +42,10 @@ export function ConnectionTypeSelector({
   disabled = false,
 }: ConnectionTypeSelectorProps) {
   const { t } = useTranslation("iot");
+  const isHydrated = useIsHydrated();
+  const inDesktopApp = isHydrated && isDesktopShell();
+  const browserLacksSerial = isHydrated && !inDesktopApp && browserSupport.serialReason === "browser";
+  const showDesktopBluetoothHint = inDesktopApp && bluetoothClassicOnly && !disabled;
 
   const bluetoothTooltip =
     browserSupport.bluetoothReason === "device"
@@ -123,6 +130,21 @@ export function ConnectionTypeSelector({
         <p className="text-muted-foreground text-xs">
           {serialTooltip ?? bluetoothTooltip ?? t("iot.protocolRunner.webSerialNotSupported")}
         </p>
+      )}
+      {!disabled && browserLacksSerial && (
+        <p className="text-xs">
+          <a
+            className="text-primary font-medium underline-offset-4 hover:underline"
+            href={`${env.NEXT_PUBLIC_DOCS_URL}/guide/get-started/desktop-app`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t("iot.protocolRunner.getDesktopApp")}
+          </a>
+        </p>
+      )}
+      {showDesktopBluetoothHint && (
+        <p className="text-muted-foreground text-xs">{t("iot.protocolRunner.bluetoothClassicDesktopHint")}</p>
       )}
     </div>
   );

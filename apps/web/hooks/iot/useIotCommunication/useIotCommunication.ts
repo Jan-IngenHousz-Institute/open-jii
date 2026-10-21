@@ -115,6 +115,18 @@ export function useIotCommunication(
       const newDriver = createDriver(sensorFamily);
       await newDriver.initialize(adapter);
 
+      const identity = await newDriver.getDeviceIdentity?.().catch(() => undefined);
+      setDeviceInfo(
+        identity
+          ? {
+              device_name: identity.name,
+              device_id: identity.deviceId,
+              device_version: identity.firmwareVersion,
+              device_battery: identity.batteryPercent,
+            }
+          : null,
+      );
+
       // Listen for device disconnect events from the transport
       adapter.onStatusChanged((connected, err) => {
         if (!connected) {

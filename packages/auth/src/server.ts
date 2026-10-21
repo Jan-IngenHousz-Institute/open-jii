@@ -4,7 +4,7 @@ import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
-import { emailOTP, genericOAuth, lastLoginMethod } from "better-auth/plugins";
+import { emailOTP, genericOAuth, lastLoginMethod, oneTimeToken } from "better-auth/plugins";
 
 import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/database";
 import * as schema from "@repo/database/schema";
@@ -144,6 +144,7 @@ export const auth = betterAuth({
   },
   plugins: [
     expo(), // Add Expo plugin for mobile app support
+    oneTimeToken({ storeToken: "hashed", expiresIn: 3 }),
     emailOTP({
       async sendVerificationOTP({ email, otp }) {
         const emailServer = process.env.AUTH_EMAIL_SERVER;

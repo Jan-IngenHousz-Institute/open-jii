@@ -15,3 +15,9 @@ export function isMac(): boolean {
 export function modifierLabel(): string {
   return isMac() ? "⌘" : "Ctrl";
 }
+
+/** True inside the openJII desktop app, which adds `openJII-Desktop/<version>` to its user agent. */
+export function isDesktopShell(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.navigator.userAgent.includes("openJII-Desktop/");
+}

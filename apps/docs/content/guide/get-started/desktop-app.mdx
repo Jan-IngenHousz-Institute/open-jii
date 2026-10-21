@@ -1,0 +1,50 @@
+---
+title: "Installing the desktop app"
+description: "Install openJII on macOS, Windows or Linux and connect measurement devices from any computer."
+---
+
+The openJII desktop app opens the platform in its own window and connects measurement devices over
+USB cable or Bluetooth, whatever browser the computer has. Everything else works as it does on the
+web, because the app shows the same platform.
+
+<Callout type="info">
+  Connecting devices in a browser needs Chrome or Edge. The desktop app is for computers where those
+  are not available, such as a lab machine with Firefox or Safari only.
+</Callout>
+
+## Download
+
+| System | Download | Needs |
+| --- | --- | --- |
+| macOS | [Apple silicon](https://download.openjii.org/desktop/latest/openJII-arm64.dmg) or [Intel](https://download.openjii.org/desktop/latest/openJII-x64.dmg) | macOS 13 or newer |
+| Windows | [Installer](https://download.openjii.org/desktop/latest/openJII-Setup.exe) | Windows 10 or newer |
+| Linux | [AppImage](https://download.openjii.org/desktop/latest/openJII.AppImage) or [deb package](https://download.openjii.org/desktop/latest/openJII.deb) | A 64-bit Intel or AMD processor |
+
+1. Download the file for your system.
+2. Open it and follow the installer. On macOS, drag openJII into Applications.
+3. Open openJII. It checks for updates by itself from then on.
+
+## Sign in through your browser
+
+The app opens your browser to sign in, so every method works: email code, passkey, GitHub or
+ORCID. Once you are signed in there, the browser hands you back to the app. Signing out of the
+app does not sign you out of the browser.
+
+## Connect a device
+
+Choose **Connect** on a protocol or a workbook as you would on the web. The app lists the devices
+it can reach, and you pick one.
+
+- **USB cable:** plug the device in. It appears in the list straight away.
+- **Bluetooth:** pair the device in your computer's Bluetooth settings first, then choose
+  **USB/serial** and pick it from the list. A MultispeQ asks for the pairing code `1234`.
+- **macOS:** the first time a measurement uses Bluetooth, macOS asks whether openJII may use it.
+  Choose **Allow**. You can change this later under System Settings, then Privacy & Security, then
+  Bluetooth.
+- **Linux:** if a USB device does not appear, your account may need to be in the `dialout` group.
+  Run `sudo usermod -aG dialout $USER`, then sign out of the computer and back in.
+
+## If the app can't reach openJII
+
+The app shows a page that says so, with **Try again**. Measurements already saved on the platform
+are not affected. Check the computer's internet connection, then try again.

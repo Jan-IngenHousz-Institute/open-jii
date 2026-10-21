@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; font-src 'self'; style-src 'self'" />
+    <title>Update openJII</title>
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="card">
+        <img class="logo logo-light" src="../assets/logo.svg" alt="openJII" /><img class="logo logo-dark" src="../assets/logo-white.svg" alt="openJII" />
+        <h1>Update openJII to keep measuring</h1>
+        <p>This version, <span id="current"></span>, no longer works with the platform. Version <span id="version"></span> is downloaded and ready.</p>
+        <button id="restart" class="button block" type="button">Restart to update</button>
+      </section>
+    </main>
+    <script src="update.js"></script>
+  </body>
+</html>

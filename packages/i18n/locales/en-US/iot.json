@@ -30,11 +30,14 @@
       "webSerialNotSupported": "Web Serial is not supported in this browser",
       "deviceNoBLE": "This device does not support Bluetooth Low Energy (BLE)",
       "bluetoothClassicHint": "This device connects over Bluetooth Classic, which browsers can't reach with Web Bluetooth. Connect over USB/serial instead.",
+      "bluetoothClassicDesktopHint": "Connecting over Bluetooth? Pair the device in your computer's Bluetooth settings first, then choose USB/serial and pick it from the list.",
+      "getDesktopApp": "Get the openJII desktop app to connect devices from any browser.",
       "deviceNoSerial": "This device does not support serial connections",
       "testProtocol": "Test Protocol",
       "connectToDeviceDescription": "Connect to a device and test your protocol before saving",
       "browserNotSupported": "Your browser doesn't support Web Bluetooth or Web Serial APIs.",
       "tryDifferentBrowser": "Try using Chrome, Edge, or Opera on desktop.",
+      "useDesktopAppInstead": "Or use the openJII desktop app, which connects devices on any computer.",
       "registerDevice": "Register this device"
     },
     "deviceIdentity": {

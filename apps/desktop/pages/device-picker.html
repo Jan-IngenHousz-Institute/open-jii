@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; font-src 'self'; style-src 'self'" />
+    <title>Connect a device</title>
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <main class="page top">
+      <h2 id="title">Choose the device to connect</h2>
+      <p id="subtitle" class="small subtitle"></p>
+      <ul id="list" class="list" role="listbox" aria-labelledby="title"></ul>
+      <div id="status" class="status"></div>
+      <div id="hint" class="hint" hidden></div>
+      <div class="actions">
+        <button id="cancel" class="button secondary" type="button">Cancel</button>
+        <button id="connect" class="button" type="button" disabled>Connect</button>
+      </div>
+    </main>
+    <script src="device-picker.js"></script>
+  </body>
+</html>
