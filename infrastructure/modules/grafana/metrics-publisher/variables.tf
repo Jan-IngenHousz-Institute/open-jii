@@ -43,3 +43,9 @@ variable "metrics_publisher_lambda_sg_id" {
   description = "Security group ID for the metrics-publisher Lambda"
   type        = string
 }
+
+variable "log_retention_days" {
+  description = "CloudWatch log retention for the metrics publisher Lambda's logs"
+  type        = number
+  default     = 30
+}

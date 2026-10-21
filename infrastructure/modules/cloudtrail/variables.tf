@@ -14,3 +14,21 @@ variable "region" {
   default     = "eu-central-1"
 }
 
+
+variable "log_retention_days" {
+  description = "Days each log file is locked against deletion (S3 Object Lock, GOVERNANCE mode)"
+  type        = number
+  default     = 365
+}
+
+variable "log_archive_after_days" {
+  description = "Days before log files move to Glacier Flexible Retrieval"
+  type        = number
+  default     = 90
+}
+
+variable "log_expiration_days" {
+  description = "Days before log files, current and noncurrent versions, are deleted. Must exceed log_retention_days."
+  type        = number
+  default     = 400
+}

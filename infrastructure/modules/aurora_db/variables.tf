@@ -95,3 +95,9 @@ variable "environment" {
   description = "Environment name (e.g., dev, prod, staging)"
   type        = string
 }
+
+variable "log_retention_days" {
+  description = "CloudWatch log retention for the cluster's exported PostgreSQL logs"
+  type        = number
+  default     = 365
+}
