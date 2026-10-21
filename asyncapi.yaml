@@ -261,6 +261,12 @@ components:
           user_id:
             type: string
             description: Platform id of the contributing user's session.
+          simulated:
+            type: boolean
+            description: >
+              True when the application collected the result from a simulated
+              sensor. The pipeline also recognizes the reserved simulated:
+              device identity prefix and exposes the result as is_simulated.
           device_id:
             type: string
             description: Device identifier as reported by the instrument.
