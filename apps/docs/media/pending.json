@@ -1,1 +1,8 @@
-[]
+[
+  {
+    "path": "/img/guide/web/organizations-list-types.webp",
+    "staged": "apps/docs/.capture/web/organizations-list.webp",
+    "ticket": "OJD-2220",
+    "date": "2026-10-21"
+  }
+]

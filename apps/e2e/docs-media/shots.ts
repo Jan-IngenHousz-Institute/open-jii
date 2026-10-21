@@ -297,11 +297,11 @@ export const SHOTS: readonly Shot[] = [
   },
   {
     slug: "organizations-list",
-    publish: "img/guide/web/organizations-list.webp",
+    publish: "img/guide/web/organizations-list-types.webp",
     frame: "desktop",
     route: "/platform/organizations",
     prepare: sortNameAscending,
-    scope: "Organizations overview with the Name column sorted ascending",
+    scope: "Organizations overview with the type filter and Name column sorted ascending",
   },
   {
     slug: "workbooks-list",
