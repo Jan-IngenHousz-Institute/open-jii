@@ -106,9 +106,13 @@ export function openJiiGuest({
           handler: createAuthMiddleware((ctx) => {
             if (!ctx.request) return Promise.resolve();
             const returned: unknown = ctx.context.returned;
-            if (!returned || typeof returned !== "object" || !("user" in returned))
-              return Promise.resolve();
-            const user = returned.user;
+            if (!returned || typeof returned !== "object") return Promise.resolve();
+            const user =
+              "user" in returned
+                ? returned.user
+                : ctx.path === "/update-user"
+                  ? ctx.context.session?.user
+                  : undefined;
             if (
               !user ||
               typeof user !== "object" ||
@@ -131,8 +135,10 @@ export function openJiiGuest({
                 expireCookie(ctx, { ...cache, name });
               }
             }
-            const { email: _email, ...safeUser } = user as Record<string, unknown>;
-            ctx.context.returned = { ...returned, user: safeUser };
+            if ("user" in returned) {
+              const { email: _email, ...safeUser } = user as Record<string, unknown>;
+              ctx.context.returned = { ...returned, user: safeUser };
+            }
             return Promise.resolve();
           }),
         },

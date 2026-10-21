@@ -615,6 +615,19 @@ describe("anonymous sessions on the production auth boundary", () => {
     );
   });
 
+  it("does not cache guest identity after a name change", async () => {
+    const visitor = await guest();
+    const renamed = await post("/update-user", { name: "Renamed visitor" }, visitor.cookie);
+    expect(renamed.status).toBe(200);
+    expect(await renamed.json()).toEqual({ status: true });
+    expect(renamed.headers.getSetCookie()).toEqual(
+      expect.arrayContaining([expect.stringMatching(/session_data=;.*Max-Age=0/)]),
+    );
+    expect(
+      renamed.headers.getSetCookie().filter((value) => /session_data(?:\.\d+)?=[^;]/.test(value)),
+    ).toEqual([]);
+  });
+
   it("refuses all guest writes through Nest with a still-valid cached cookie after purge", async () => {
     const owner = await app.createTestUser();
     const organizationId = await app.createOrganization(undefined, {
