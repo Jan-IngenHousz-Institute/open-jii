@@ -1273,6 +1273,7 @@
       "mock": "Mock",
       "addDevice": "Apparaat toevoegen",
       "connect": "Verbinden",
+      "connect_true": "$t(iot.workbookBar.addDevice)",
       "disconnected": "Niet verbonden",
       "deviceCount": "{{count}} apparaat",
       "deviceCount_other": "{{count}} apparaten",

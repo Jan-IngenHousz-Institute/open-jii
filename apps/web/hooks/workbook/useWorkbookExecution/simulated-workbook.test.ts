@@ -64,13 +64,18 @@ describe("simulated workbook execution", () => {
         expect(hook.result.current.connectedDevices[0]).toMatchObject({
           family,
           stableId: `simulated:${family}`,
+          name: recording.measurement.device_name,
         });
         expect(hook.result.current.sensorFamily).toBe("multispeq");
         await act(() => hook.result.current.runAll());
         const outputs = hook.result.current.cells.filter((c) => c.type === "output");
         expect(outputs).toHaveLength(3);
         expect(outputs[0].data).toEqual(recording.measurement);
-        expect(outputs[0].deviceResults?.[0]).toMatchObject({ family, simulated: true });
+        expect(outputs[0].deviceResults?.[0]).toMatchObject({
+          family,
+          simulated: true,
+          deviceName: recording.measurement.device_name,
+        });
         expect(requests[0].context?.$device).toMatchObject({ family, id: `simulated:${family}` });
         expect(outputs.slice(1).every((c) => c.simulated)).toBe(true);
       } finally {
