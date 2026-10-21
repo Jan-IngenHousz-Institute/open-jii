@@ -10,8 +10,8 @@ import {
   useAllDevices,
   useConnectedDevices,
 } from "~/features/connection/hooks/use-device-connection";
-import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 import { useDeviceSheetActions } from "~/features/connection/hooks/use-device-sheet-actions";
+import { useReconnectDevice } from "~/features/connection/hooks/use-reconnect-device";
 import { partitionDevices } from "~/features/connection/services/device-connection-manager/device-sort";
 import {
   mobileDevicePrimaryLabel,
@@ -43,7 +43,7 @@ export function DeviceSheet() {
 
   const { data: connectedDevices = [] } = useConnectedDevices();
   const executors = useScannerCommandExecutorStore((s) => s.executors);
-  const lastConnectedDevice = useDeviceConnectionStore((s) => s.lastConnectedDevice);
+  const lastConnectedDevice = useReconnectDevice();
   const batteryLevel = useBatteryLevel();
   const { data: nearbyDevices = [], refetch: refreshDevices, isFetching } = useAllDevices();
   const { handleConnect, handleDisconnect, connectingDeviceId } = useDeviceSheetActions();

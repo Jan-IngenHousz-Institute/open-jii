@@ -3,10 +3,13 @@ import { render, screen, waitFor } from "@testing-library/react-native";
 import React from "react";
 import { View } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Device } from "~/shared/types/device";
 
 import { DeviceSheet } from "./device-sheet";
 
 const mocks = vi.hoisted(() => ({
+  lastConnectedDevice: undefined as Device | undefined,
+  simulatedExperiment: undefined as string | undefined,
   refreshDevices: vi.fn<() => Promise<void>>(),
   hasBluetoothPermission: vi.fn<() => Promise<boolean>>(),
 }));
@@ -41,9 +44,14 @@ vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () =>
   };
 });
 vi.mock("~/features/connection/hooks/use-device-connection-store", () => {
-  const state = { lastConnectedDevice: undefined };
-  return { useDeviceConnectionStore: (select: (s: typeof state) => unknown) => select(state) };
+  return {
+    useDeviceConnectionStore: (select: (s: { lastConnectedDevice?: Device }) => unknown) =>
+      select({ lastConnectedDevice: mocks.lastConnectedDevice }),
+  };
 });
+vi.mock("~/features/connection/hooks/use-simulated-experiment", () => ({
+  useSimulatedExperiment: () => mocks.simulatedExperiment,
+}));
 vi.mock("~/features/connection/hooks/use-battery-level", () => ({
   useBatteryLevel: () => undefined,
 }));
@@ -74,9 +82,33 @@ function renderSheet() {
 
 describe("DeviceSheet Bluetooth permission", () => {
   beforeEach(() => {
+    mocks.lastConnectedDevice = undefined;
+    mocks.simulatedExperiment = undefined;
     mocks.refreshDevices.mockReset().mockResolvedValue(undefined);
     mocks.hasBluetoothPermission.mockReset();
   });
+
+  it.each([undefined, "demo"])(
+    "offers the remembered simulated reconnect only in demo context %s",
+    (experiment) => {
+      mocks.simulatedExperiment = experiment;
+      mocks.lastConnectedDevice = {
+        id: "simulated:multispeq",
+        name: "Simulated MultispeQ",
+        type: "simulated-device",
+      };
+      mocks.hasBluetoothPermission.mockReturnValue(new Promise<boolean>(() => undefined));
+      renderSheet();
+      if (experiment) {
+        expect(screen.getByText("deviceSheet.reconnectTitle")).toBeTruthy();
+        expect(screen.getByText("deviceSheet.reconnect")).toBeTruthy();
+      } else {
+        expect(screen.queryByText("deviceSheet.reconnectTitle")).toBeNull();
+        expect(screen.queryByText("deviceSheet.reconnect")).toBeNull();
+        expect(screen.getByText("deviceSheet.noDeviceTitle")).toBeTruthy();
+      }
+    },
+  );
 
   it("does not scan or ask for Bluetooth while the permission check is pending", () => {
     mocks.hasBluetoothPermission.mockReturnValue(new Promise<boolean>(() => undefined));

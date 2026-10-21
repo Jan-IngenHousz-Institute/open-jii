@@ -14,10 +14,15 @@ const remembered: Device = { id: "2002", type: "usb", name: "MultispeQ #2002" };
 const plugged: Device = { id: "2003", type: "usb", name: "1a86:55d4 #2003" };
 
 const mocks = vi.hoisted(() => ({
+  remembered: undefined as Device | undefined,
+  simulatedExperiment: undefined as string | undefined,
   appStateListeners: [] as ((state: string) => void)[],
   transportConnect: vi.fn(),
 }));
 
+vi.mock("~/features/connection/hooks/use-simulated-experiment", () => ({
+  useSimulatedExperiment: () => mocks.simulatedExperiment,
+}));
 vi.mock("react-native", () => ({
   AppState: {
     currentState: "active",
@@ -74,10 +79,13 @@ vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () =>
   return { useScannerCommandExecutorStore: hook };
 });
 vi.mock("~/features/connection/hooks/use-device-connection-store", () => ({
-  useDeviceConnectionStore: () => ({
-    lastConnectedDevice: remembered,
-    setLastConnectedDevice: () => undefined,
-  }),
+  useDeviceConnectionStore: (select?: (state: { lastConnectedDevice?: Device }) => unknown) => {
+    const state = {
+      lastConnectedDevice: mocks.remembered,
+      setLastConnectedDevice: () => undefined,
+    };
+    return select ? select(state) : state;
+  },
 }));
 
 function renderSheetWithAutoReconnect() {
@@ -104,8 +112,23 @@ function closePermissionDialog() {
 
 describe("useAutoReconnect", () => {
   beforeEach(() => {
+    mocks.remembered = remembered;
+    mocks.simulatedExperiment = undefined;
     mocks.transportConnect.mockReset();
     mocks.appStateListeners = [];
+  });
+
+  it("does not auto-reconnect a remembered simulator outside a demo", async () => {
+    mocks.remembered = {
+      id: "simulated:multispeq",
+      name: "Simulated MultispeQ",
+      type: "simulated-device",
+    };
+    const { unmount } = renderSheetWithAutoReconnect();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    closePermissionDialog();
+    expect(mocks.transportConnect).not.toHaveBeenCalled();
+    unmount();
   });
 
   it("does not start a second connect while the sheet's connect waits on the permission dialog", async () => {

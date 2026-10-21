@@ -84,6 +84,7 @@ describe("simulated mobile device", () => {
     const executor = await createSimulatedExecutor();
     flow.current?.setState({ experimentId: "private-experiment" });
     expect(connectedSimulatedDevices()).toEqual([]);
+    await expect(openSimulatedDevice(device)).rejects.toThrow("demo experiment");
     await expect(executor.execute(getDemoRecording("multispeq").protocol)).rejects.toThrow(
       "original demo experiment",
     );
