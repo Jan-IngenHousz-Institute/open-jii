@@ -1453,6 +1453,9 @@
     "renamedExportName": "Exported files call it {{key}}."
   },
   "dataFilters": {
+    "booleanValue": "Value",
+    "booleanValue_true": "Yes",
+    "booleanValue_false": "No",
     "placeholderSubstring": "Substring",
     "placeholderValue": "Value",
     "placeholderCommaSeparated": "value1, value2, …",

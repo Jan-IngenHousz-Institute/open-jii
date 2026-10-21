@@ -9,6 +9,7 @@ import type {
   ExperimentDataColumn,
   ExperimentDataFilter,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type * as translations from "@repo/i18n";
 import common from "@repo/i18n/locales/en-US/common.json";
 import dutch from "@repo/i18n/locales/nl-NL/common.json";
 
@@ -16,18 +17,26 @@ import { FilterChipBar } from "./filter-chip-bar";
 
 const locale = vi.hoisted(() => ({ dutch: false }));
 
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations = locale.dutch ? dutch : common;
-      if (key === "provenance.simulated") return translations.provenance.simulated;
-      if (key === "provenance.guest") return translations.provenance.guest;
-      if (key === "common.yes") return translations.common.yes;
-      if (key === "common.no") return translations.common.no;
-      return key;
-    },
-  }),
-}));
+vi.mock("@repo/i18n", async () => {
+  const { createInstance } = await vi.importActual<typeof translations>("@repo/i18n");
+  const { default: english } = await import("@repo/i18n/locales/en-US/common.json");
+  const { default: dutch } = await import("@repo/i18n/locales/nl-NL/common.json");
+  const i18n = createInstance();
+  await i18n.init({
+    defaultNS: "common",
+    resources: { "en-US": { common: english }, "nl-NL": { common: dutch } },
+  });
+  return {
+    useTranslation: () => ({
+      t: (key: string, options?: { context?: string }) => {
+        if (key.startsWith("provenance.") || key === "dataFilters.booleanValue") {
+          return i18n.t(key, { ...options, lng: locale.dutch ? "nl-NL" : "en-US" });
+        }
+        return key;
+      },
+    }),
+  };
+});
 
 const columns: ExperimentDataColumn[] = [
   { name: "is_simulated", type_name: "BOOLEAN", type_text: "BOOLEAN" },
