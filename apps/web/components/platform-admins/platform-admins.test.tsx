@@ -120,6 +120,19 @@ describe.each(TEST_LOCALES)("<PlatformAdmins /> in %s", (locale) => {
     expect(await screen.findByText(copy.searchStatus_none)).toBeInTheDocument();
   });
 
+  it("keeps the heading and retries a failed access check", async () => {
+    await mockRealTranslations(locale);
+    const access = server.mount(contract.users.getPlatformAdminAccess, { status: 500 });
+    render(<PlatformAdmins />);
+    expect(await screen.findByText(copy.loadFailed)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: copy.title })).toBeInTheDocument();
+    expect(access.calls).toHaveLength(1);
+    mountAdmins();
+    await userEvent.click(screen.getByRole("button", { name: copy.retry }));
+    expect(await screen.findByText("Configured Admin")).toBeInTheDocument();
+    expect(screen.queryByText(copy.loadFailed)).not.toBeInTheDocument();
+  });
+
   it("shows a failed list with a retry action", async () => {
     await mockRealTranslations(locale);
     server.mount(contract.users.getPlatformAdminAccess, { body: { isPlatformAdmin: true } });

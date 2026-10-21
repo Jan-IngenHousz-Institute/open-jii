@@ -95,7 +95,19 @@ export function PlatformAdmins() {
     }
   }
 
-  if (access.isError) return <p role="alert">{t("platformAdmins.loadFailed")}</p>;
+  if (access.isError) {
+    return (
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 sm:p-6">
+        <h1 className="text-2xl font-semibold">{t("platformAdmins.title")}</h1>
+        <div role="alert">
+          <p>{t("platformAdmins.loadFailed")}</p>
+          <Button variant="outline" onClick={() => void access.refetch()}>
+            {t("platformAdmins.retry")}
+          </Button>
+        </div>
+      </div>
+    );
+  }
   if (!allowed) return <p role="status">{t("common.loading")}</p>;
 
   return (
