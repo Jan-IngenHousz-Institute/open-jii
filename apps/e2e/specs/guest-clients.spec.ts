@@ -39,6 +39,8 @@ for (const [locale, copy] of [["en-US", en.demo]] as const) {
     await page.getByRole("button", { name: copy.leave, exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: copy.leave, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/${locale}/login$`));
+    await expect(page.getByRole("button", { name: copy.try, exact: true })).toBeVisible();
+    await expect(page.locator("ol li").filter({ hasText: /^Error$/ })).toHaveCount(0);
     await page.goto(destination);
     await expect(page).toHaveURL(/\/login/);
   });
