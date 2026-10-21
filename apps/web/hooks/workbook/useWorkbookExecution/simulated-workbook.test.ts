@@ -1,6 +1,7 @@
 import {
   createExperiment,
   createMacroCell,
+  createOutputCell,
   createProtocolCell,
   createQuestionCell,
 } from "@/test/factories";
@@ -78,6 +79,53 @@ describe("simulated workbook execution", () => {
       }
     },
   );
+  it("does not label a real macro input or its following answer from stale simulated outputs", async () => {
+    const simulatedProtocol = createProtocolCell();
+    const realProtocol = createProtocolCell();
+    const macro = createMacroCell();
+    const question = createQuestionCell();
+    const realData = { Phi2: 0.83 };
+    const requests: unknown[] = [];
+    server.use(
+      http.post(`${API_URL}/api/v1/macros/:id/execute`, async ({ request }) => {
+        requests.push(await request.json());
+        return HttpResponse.json({
+          macro_id: macro.payload.macroId,
+          success: true,
+          output: realData,
+        });
+      }),
+    );
+    const hook = renderHook(() => {
+      const [cells, setCells] = useState<WorkbookCell[]>([
+        simulatedProtocol,
+        createOutputCell({
+          producedBy: simulatedProtocol.id,
+          data: { Phi2: 0.7 },
+          simulated: true,
+        }),
+        realProtocol,
+        createOutputCell({ producedBy: realProtocol.id, data: realData, simulated: false }),
+        macro,
+        question,
+      ]);
+      const execution = useWorkbookExecution({
+        experiment: demo,
+        cells,
+        onCellsChange: setCells,
+        onPromptQuestion: () => Promise.resolve("real sample"),
+      });
+      return { cells, ...execution };
+    });
+    await act(() => hook.result.current.runCell(macro.id));
+    await act(() => hook.result.current.runCell(question.id));
+    expect(requests[0]).toMatchObject({ data: realData });
+    const outputs = hook.result.current.cells.filter((c) => c.type === "output");
+    expect(outputs.find((c) => c.producedBy === simulatedProtocol.id)?.simulated).toBe(true);
+    expect(outputs.find((c) => c.producedBy === macro.id)?.simulated).toBe(false);
+    expect(outputs.find((c) => c.producedBy === question.id)?.simulated).toBe(false);
+    hook.unmount();
+  });
   it("enables production demo simulation with developer flags off, and disables non-demo simulation with them on", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_ENABLE_MOCK_DEVICES", "false");

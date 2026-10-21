@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ColumnName } from "~/components/experiment-data/column-name";
 
 import type {
   ExperimentDataFilter,
@@ -99,7 +100,9 @@ export function FilterChip({
         />
       </PopoverAnchor>
       <PopoverContent className="w-80 space-y-3 p-3" align="start">
-        <div className="text-muted-foreground text-xs">{parentColumnName(filter.column)}</div>
+        <div className="text-muted-foreground text-xs">
+          <ColumnName column={column ?? { name: parentColumnName(filter.column) }} />
+        </div>
         <Select value={draft.operator} onValueChange={handleOperatorChange}>
           <SelectTrigger className="h-9 w-full">
             <SelectValue />

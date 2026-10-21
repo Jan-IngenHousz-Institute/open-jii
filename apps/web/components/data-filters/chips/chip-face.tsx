@@ -2,7 +2,7 @@
 
 import { X } from "lucide-react";
 import { forwardRef } from "react";
-import { ColumnName } from "~/components/experiment-data/column-name";
+import { ColumnName, useColumnLabel } from "~/components/experiment-data/column-name";
 
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -37,7 +37,7 @@ export const FilterChipFace = forwardRef<HTMLDivElement, FilterChipFaceProps>(
     const opLabel = operators.find((o) => o.value === filter.operator)?.label ?? filter.operator;
     const isContributor = column?.type_text === WellKnownColumnTypes.CONTRIBUTOR;
     const displayColumn = parentColumnName(filter.column);
-    const columnLabel = column?.renamedFrom?.name ?? displayColumn;
+    const columnLabel = useColumnLabel(column ?? { name: displayColumn });
 
     const handleRemove = (e: React.MouseEvent) => {
       e.stopPropagation();

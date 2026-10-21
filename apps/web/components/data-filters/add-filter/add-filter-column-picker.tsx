@@ -1,6 +1,6 @@
 "use client";
 
-import { ColumnName } from "~/components/experiment-data/column-name";
+import { ColumnName, useColumnLabel } from "~/components/experiment-data/column-name";
 
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ColumnKind } from "@repo/api/transforms/column-type-utils";
@@ -62,8 +62,9 @@ interface FilterColumnOptionProps {
 }
 
 function FilterColumnOption({ column, onPick }: FilterColumnOptionProps) {
+  const label = useColumnLabel(column);
   return (
-    <CommandItem value={column.name} onSelect={() => onPick(column)}>
+    <CommandItem value={column.name} keywords={[label]} onSelect={() => onPick(column)}>
       <span className="min-w-0 flex-1">
         <ColumnName column={column} />
       </span>
