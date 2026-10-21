@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 
 import { authClient } from "@repo/auth/client";
-import { retryAfterSeconds } from "@repo/auth/rate-limit/retry-after";
+import { retryAfterSeconds, retryAfterTranslation } from "@repo/auth/rate-limit/retry-after";
 import { useTranslation } from "@repo/i18n/client";
 
 /**
@@ -27,13 +27,11 @@ export function useSignInEmail() {
         },
       );
       if (response.error?.status === 429) {
-        let context: string | undefined;
-        if (retrySeconds !== undefined) context = "timed";
         return {
           ...response,
           error: {
             ...response.error,
-            message: t("auth.rateLimited", { context, count: retrySeconds }),
+            message: t("auth.rateLimited", retryAfterTranslation(retrySeconds)),
           },
         };
       }

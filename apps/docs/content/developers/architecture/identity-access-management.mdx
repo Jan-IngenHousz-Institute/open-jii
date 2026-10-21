@@ -108,7 +108,7 @@ fields @log, httpRequest.clientIp as clientIp, action
 fields @log, action, terminatingRuleId
 | filter action = "BLOCK"
 | filter terminatingRuleId in ["RateLimitRule", "MachineRateLimitRule"]
-| stats count(*) as blockedRequests by @log, terminatingRuleId, bin(5m)
+| stats count(*) as blockedRequests by @log, terminatingRuleId, httpRequest.uri, bin(5m)
 ```
 
 If a legitimate client is blocked, raise the threshold or add a scoped rule

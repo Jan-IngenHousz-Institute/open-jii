@@ -42,13 +42,21 @@ vi.mock("@repo/i18n/client", () => ({
 }));
 
 it.each([
-  ["en-US", "Too many attempts. Try again in 900 seconds."],
-  ["nl-NL", "Te veel pogingen. Probeer het over 900 seconden opnieuw."],
-])("translates a real retry header in %s", async (locale, message) => {
+  ["en-US", 1, "Too many attempts. Try again in 1 second."],
+  ["en-US", 59, "Too many attempts. Try again in 59 seconds."],
+  ["en-US", 60, "Too many attempts. Try again in 1 minute."],
+  ["en-US", 61, "Too many attempts. Try again in 2 minutes."],
+  ["en-US", 900, "Too many attempts. Try again in 15 minutes."],
+  ["nl-NL", 1, "Te veel pogingen. Probeer het over 1 seconde opnieuw."],
+  ["nl-NL", 59, "Te veel pogingen. Probeer het over 59 seconden opnieuw."],
+  ["nl-NL", 60, "Te veel pogingen. Probeer het over 1 minuut opnieuw."],
+  ["nl-NL", 61, "Te veel pogingen. Probeer het over 2 minuten opnieuw."],
+  ["nl-NL", 900, "Te veel pogingen. Probeer het over 15 minuten opnieuw."],
+])("translates a real retry header in %s at %s seconds", async (locale, seconds, message) => {
   await translations.changeLanguage(locale);
   vi.mocked(authClient.emailOtp.sendVerificationOtp).mockImplementation(async (_body, options) => {
     await options?.onError?.({
-      response: new Response(null, { status: 429, headers: { "Retry-After": "900" } }),
+      response: new Response(null, { status: 429, headers: { "Retry-After": String(seconds) } }),
     } as Parameters<NonNullable<NonNullable<typeof options>["onError"]>>[0]);
     return {
       data: null,

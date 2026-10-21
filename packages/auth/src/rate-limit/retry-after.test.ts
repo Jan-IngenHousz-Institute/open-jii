@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { retryAfterSeconds } from "./retry-after";
+import { retryAfterSeconds, retryAfterTranslation } from "./retry-after";
 
 describe("retry guidance", () => {
   it.each([
@@ -22,4 +22,15 @@ describe("retry guidance", () => {
   });
   it("leaves the retry time unknown when no header exists", () =>
     expect(retryAfterSeconds(new Headers())).toBeUndefined());
+});
+
+it.each([
+  [undefined, undefined, undefined],
+  [1, "timed", 1],
+  [59, "timed", 59],
+  [60, "minutes", 1],
+  [61, "minutes", 2],
+  [900, "minutes", 15],
+])("selects readable units for %s seconds", (seconds, context, count) => {
+  expect(retryAfterTranslation(seconds)).toEqual({ context, count });
 });

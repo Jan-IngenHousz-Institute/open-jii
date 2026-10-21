@@ -27,6 +27,8 @@ import { useIsOnline } from "~/shared/ui/hooks/use-is-online";
 import { useMultiTapReveal } from "~/shared/ui/hooks/use-multi-tap-reveal";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
+import { retryAfterTranslation } from "@repo/auth/rate-limit/retry-after";
+
 const RESEND_COOLDOWN_SECONDS = 30;
 
 interface LoginFormValues {
@@ -147,12 +149,10 @@ export default function LoginScreen() {
       if (result?.error) {
         let message = t("auth:errors.expiredOtp");
         if (result.error.status === 429) {
-          let context: string | undefined;
-          if (result.error.retryAfterSeconds !== undefined) context = "timed";
-          message = t("auth:errors.rateLimited", {
-            context,
-            count: result.error.retryAfterSeconds,
-          });
+          message = t(
+            "auth:errors.rateLimited",
+            retryAfterTranslation(result.error.retryAfterSeconds),
+          );
         }
         setError("otp", { message });
       }
@@ -192,11 +192,12 @@ export default function LoginScreen() {
 
     const result = await sendEmailOTP(submittedEmail);
     if (result?.error) {
-      let message = result.error.message ?? t("auth:errors.sendFailed");
+      let message = t("auth:errors.sendFailed");
       if (result.error.status === 429) {
-        let context: string | undefined;
-        if (result.error.retryAfterSeconds !== undefined) context = "timed";
-        message = t("auth:errors.rateLimited", { context, count: result.error.retryAfterSeconds });
+        message = t(
+          "auth:errors.rateLimited",
+          retryAfterTranslation(result.error.retryAfterSeconds),
+        );
       }
       setError("email", { message });
       return;
@@ -212,11 +213,12 @@ export default function LoginScreen() {
     clearErrors();
     const result = await sendEmailOTP(email);
     if (result?.error) {
-      let message = result.error.message ?? t("auth:errors.resendFailed");
+      let message = t("auth:errors.resendFailed");
       if (result.error.status === 429) {
-        let context: string | undefined;
-        if (result.error.retryAfterSeconds !== undefined) context = "timed";
-        message = t("auth:errors.rateLimited", { context, count: result.error.retryAfterSeconds });
+        message = t(
+          "auth:errors.rateLimited",
+          retryAfterTranslation(result.error.retryAfterSeconds),
+        );
       }
       setError("otp", { message });
       return;

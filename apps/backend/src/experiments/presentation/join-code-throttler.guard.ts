@@ -12,6 +12,7 @@ interface ThrottledRequest extends ClientAddressRequest {
 export class JoinCodeThrottlerGuard extends ThrottlerGuard {
   protected getTracker(req: ThrottledRequest): Promise<string> {
     const userId = req.session?.user?.id;
+    // Keep a signed-in user in one bucket even when they change networks.
     if (userId) return Promise.resolve(userId);
     const address = resolveClientAddress(req);
     if (!address) throw new BadRequestException(CLIENT_ADDRESS_UNAVAILABLE);

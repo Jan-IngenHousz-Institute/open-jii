@@ -122,9 +122,11 @@ export function EmailLoginForm({
     try {
       const res = await signInEmailMutation.mutateAsync(data.email);
       if (res.error) {
+        let message = t("auth.emailSendError");
+        if (res.error.status === 429 && res.error.message) message = res.error.message;
         emailForm.setError("email", {
           type: "server",
-          message: res.error.message ?? t("auth.emailSendError"),
+          message,
         });
         return;
       }
@@ -179,7 +181,9 @@ export function EmailLoginForm({
     try {
       const result = await signInEmailMutation.mutateAsync(email);
       if (result.error) {
-        otpForm.setError("code", { message: result.error.message ?? t("auth.emailSendError") });
+        let message = t("auth.emailSendError");
+        if (result.error.status === 429 && result.error.message) message = result.error.message;
+        otpForm.setError("code", { message });
         return;
       }
       setCountdown(RESEND_COOLDOWN_SECONDS);

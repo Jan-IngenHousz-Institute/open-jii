@@ -198,52 +198,68 @@ describe("login connection polling", () => {
 });
 
 describe.each([
-  ["en-US", "Too many attempts. Try again in 900 seconds."],
-  ["nl-NL", "Te veel pogingen. Probeer het over 900 seconden opnieuw."],
+  ["en-US", "Too many attempts. Try again in 15 minutes."],
+  ["nl-NL", "Te veel pogingen. Probeer het over 15 minuten opnieuw."],
 ])("recipient quota guidance in %s", (locale, message) => {
-  it("keeps a delivered code usable when its resend is refused", async () => {
-    vi.useFakeTimers();
-    try {
-      await translations.changeLanguage(locale);
-      const labels = translations.getFixedT(locale, "auth");
-      probe.mockResolvedValue(true);
-      sendEmailOTP.mockResolvedValueOnce({ data: { success: true }, error: null });
-      renderLogin();
-      await act(() => vi.advanceTimersByTimeAsync(0));
-      fireEvent.changeText(
-        screen.getByPlaceholderText(labels("emailPlaceholder")),
-        "quota@example.test",
-      );
-      fireEvent.press(screen.getByText(labels("continueWithEmail")));
-      await act(() => vi.advanceTimersByTimeAsync(0));
-      await act(() => Promise.resolve(screen.UNSAFE_getByType(OTPInput).props.onChangeText("123")));
-      for (let i = 0; i < 30; i++) await act(() => vi.advanceTimersByTimeAsync(1000));
-      sendEmailOTP.mockResolvedValueOnce({
-        data: null,
-        error: { status: 429, retryAfterSeconds: 900 },
-      });
-      fireEvent.press(screen.getByText(labels("resendCode")));
-      await act(() => vi.advanceTimersByTimeAsync(0));
-      expect(screen.getByText(message)).toBeTruthy();
-      expect(screen.UNSAFE_getByType(OTPInput).props.value).toBe("123");
-      verifyEmailOTP.mockResolvedValueOnce({ data: { success: true }, error: null });
-      await act(() =>
-        Promise.resolve(screen.UNSAFE_getByType(OTPInput).props.onChangeText("123456")),
-      );
-      await act(() => vi.advanceTimersByTimeAsync(0));
-      expect(verifyEmailOTP).toHaveBeenCalledWith("quota@example.test", "123456");
-      expect(screen.queryByText(message)).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
+  it.each([429, 400])(
+    "keeps a delivered code usable when its resend is refused (%s)",
+    async (status) => {
+      vi.useFakeTimers();
+      try {
+        await translations.changeLanguage(locale);
+        const labels = translations.getFixedT(locale, "auth");
+        probe.mockResolvedValue(true);
+        sendEmailOTP.mockResolvedValueOnce({ data: { success: true }, error: null });
+        renderLogin();
+        await act(() => vi.advanceTimersByTimeAsync(0));
+        fireEvent.changeText(
+          screen.getByPlaceholderText(labels("emailPlaceholder")),
+          "quota@example.test",
+        );
+        fireEvent.press(screen.getByText(labels("continueWithEmail")));
+        await act(() => vi.advanceTimersByTimeAsync(0));
+        await act(() =>
+          Promise.resolve(screen.UNSAFE_getByType(OTPInput).props.onChangeText("123")),
+        );
+        for (let i = 0; i < 30; i++) await act(() => vi.advanceTimersByTimeAsync(1000));
+        sendEmailOTP.mockResolvedValueOnce({
+          data: null,
+          error: { status, retryAfterSeconds: 900, message: "untranslated server text" },
+        });
+        fireEvent.press(screen.getByText(labels("resendCode")));
+        await act(() => vi.advanceTimersByTimeAsync(0));
+        let expected = message;
+        if (status !== 429) expected = labels("errors.resendFailed");
+        expect(screen.getByText(expected)).toBeTruthy();
+        expect(screen.queryByText("untranslated server text")).toBeNull();
+        expect(screen.UNSAFE_getByType(OTPInput).props.value).toBe("123");
+        verifyEmailOTP.mockResolvedValueOnce({ data: { success: true }, error: null });
+        await act(() =>
+          Promise.resolve(screen.UNSAFE_getByType(OTPInput).props.onChangeText("123456")),
+        );
+        await act(() => vi.advanceTimersByTimeAsync(0));
+        expect(verifyEmailOTP).toHaveBeenCalledWith("quota@example.test", "123456");
+        expect(screen.queryByText(message)).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 
-  it("shows when to retry without replacing the email address", async () => {
+  it.each([
+    [1, "1 second", "1 seconde"],
+    [59, "59 seconds", "59 seconden"],
+    [60, "1 minute", "1 minuut"],
+    [61, "2 minutes", "2 minuten"],
+    [900, "15 minutes", "15 minuten"],
+  ])("shows a readable retry interval for %s seconds", async (seconds, en, nl) => {
+    let expected = `Too many attempts. Try again in ${en}.`;
+    if (locale === "nl-NL") expected = `Te veel pogingen. Probeer het over ${nl} opnieuw.`;
     await translations.changeLanguage(locale);
     probe.mockResolvedValue(true);
     sendEmailOTP.mockResolvedValue({
       data: null,
-      error: { status: 429, message: "untranslated server text", retryAfterSeconds: 900 },
+      error: { status: 429, message: "untranslated server text", retryAfterSeconds: seconds },
     });
     renderLogin();
     const labels = translations.getFixedT(locale, "auth");
@@ -253,8 +269,26 @@ describe.each([
       "quota@example.test",
     );
     fireEvent.press(screen.getByText(labels("continueWithEmail")));
-    await waitFor(() => expect(screen.getByText(message)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(expected)).toBeTruthy());
     expect(screen.getByDisplayValue("quota@example.test")).toBeTruthy();
     expect(screen.queryByText("untranslated server text")).toBeNull();
+  });
+  it("translates send failures instead of displaying server text", async () => {
+    await translations.changeLanguage(locale);
+    probe.mockResolvedValue(true);
+    sendEmailOTP.mockResolvedValue({
+      data: null,
+      error: { status: 400, message: "The client address could not be verified." },
+    });
+    renderLogin();
+    const labels = translations.getFixedT(locale, "auth");
+    await waitFor(() => expect(buttonDisabled(labels("continueWithEmail"))).toBe(false));
+    fireEvent.changeText(
+      screen.getByPlaceholderText(labels("emailPlaceholder")),
+      "quota@example.test",
+    );
+    fireEvent.press(screen.getByText(labels("continueWithEmail")));
+    await waitFor(() => expect(screen.getByText(labels("errors.sendFailed"))).toBeTruthy());
+    expect(screen.queryByText("The client address could not be verified.")).toBeNull();
   });
 });
