@@ -183,11 +183,11 @@ importers:
         specifier: 'catalog:'
         version: 6.0.3
       vite:
-        specifier: ^7.3.5
-        version: 7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
+        specifier: ^7.3.7
+        version: 7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
       vitest:
         specifier: catalog:testing
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
 
   apps/backend:
     dependencies:
@@ -404,7 +404,7 @@ importers:
         version: 1.5.9(@swc/core@1.15.43(@swc/helpers@0.5.23))(rollup@4.62.2)
       vitest:
         specifier: catalog:testing
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
 
   apps/calibration-sandbox:
     devDependencies:
@@ -421,7 +421,7 @@ importers:
         version: 16.11.5(@mdx-js/mdx@3.1.1(supports-color@8.1.1))(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.14)(algoliasearch@5.55.1)(lucide-react@0.507.0(react@19.2.3))(next@16.3.8(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.13.3)(babel-plugin-macros@2.8.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@8.1.1)(zod@4.4.3)
       fumadocs-mdx:
         specifier: ^15.2.0
-        version: 15.2.0(9324b85f9749c8a7aa7631cff6a71c41)
+        version: 15.2.0(af1a5fe1587f28c9bbc9dca01a13adb2)
       fumadocs-openapi:
         specifier: ^11.2.2
         version: 11.2.2(f2b9a7128da6d18d125ab9ba5ad59d89)
@@ -531,7 +531,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: catalog:testing
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
 
   apps/macro-sandbox:
     devDependencies:
@@ -558,7 +558,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: catalog:testing
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.1.0)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.6(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.1.0)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
 
   apps/mobile:
     dependencies:
@@ -916,7 +916,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: catalog:testing
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.1.0)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.6(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.1.0)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))
 
   apps/tools: {}
 
@@ -1126,7 +1126,7 @@ importers:
         version: 19.2.3(@types/react@19.2.14)
       '@vitejs/plugin-react':
         specifier: ^4.7.0
-        version: 4.7.0(supports-color@8.1.1)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))
+        version: 4.7.0(supports-color@8.1.1)(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))
       '@vitest/coverage-v8':
         specifier: catalog:testing
         version: 4.1.11(vitest@4.1.11)
@@ -1153,7 +1153,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: catalog:testing
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))
 
   packages/analytics:
     dependencies:
@@ -1199,7 +1199,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: catalog:testing
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
 
   packages/api:
     dependencies:
@@ -1245,7 +1245,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: catalog:testing
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))
 
   packages/auth:
     dependencies:
@@ -1300,7 +1300,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: catalog:testing
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
 
   packages/cms:
     dependencies:
@@ -1502,7 +1502,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: catalog:testing
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
 
   packages/monitoring:
     dependencies:
@@ -1536,7 +1536,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: catalog:testing
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
 
   packages/transactional:
     dependencies:
@@ -1721,7 +1721,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: catalog:testing
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.1.0)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.6(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.1.0)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
       zod:
         specifier: 'catalog:'
         version: 3.25.76
@@ -1767,7 +1767,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: catalog:testing
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
 
   tooling/eslint:
     dependencies:
@@ -1885,7 +1885,7 @@ importers:
     dependencies:
       '@vitejs/plugin-react':
         specifier: ^4.7.0
-        version: 4.7.0(supports-color@8.1.1)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 4.7.0(supports-color@8.1.1)(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
@@ -1894,7 +1894,7 @@ importers:
         version: 2.321.0
       vitest:
         specifier: catalog:testing
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
     devDependencies:
       '@repo/typescript-config':
         specifier: workspace:*
@@ -11014,8 +11014,8 @@ packages:
     engines: {node: '>=4'}
     hasBin: true
 
-  follow-redirects@1.16.0:
-    resolution: {integrity: sha512-y5rN/uOsadFT/JfYwhxRS5R7Qce+g3zG97+JrtFZlC9klX/W5hD7iiLzScI4nZqUS7DNUdhPgw4xI8W2LuXlUw==}
+  follow-redirects@1.16.1:
+    resolution: {integrity: sha512-FNvFGzoMLWmE6Yj9spb/zjd7yiNCHiAW9/Tg9CXrQ8wuu32HtlJOwWO11OJafl5FfY3DxTdQ0vj42zU1kvv5jg==}
     engines: {node: '>=4.0'}
     peerDependencies:
       debug: '*'
@@ -16406,8 +16406,8 @@ packages:
   victory-vendor@36.9.2:
     resolution: {integrity: sha512-PnpQQMuxlwYdocC8fIJqVXvkeViHYzotI+NJrCuav0ZYFoq912ZHBk3mCeuj+5/VpodOjPe1z0Fk2ihgzlXqjQ==}
 
-  vite@7.3.6:
-    resolution: {integrity: sha512-4XP60spRGjSZFf1qYH+dJIkK2znL3zQfl9KkOV9MkkRR/3Dls0dxaBsQPTloEc5BLXWPL9vsOxopxyKoMmDueg==}
+  vite@7.3.7:
+    resolution: {integrity: sha512-AHEzTORMbi7/7aXp7w7KZ5+DCUdSeLsJz0grY8xHpc9DHdYb0vQu6DqJfm2tOw3gDExNgPgnJTXxM6syYFHaCA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -23808,7 +23808,7 @@ snapshots:
 
   '@vercel/stega@1.1.0': {}
 
-  '@vitejs/plugin-react@4.7.0(supports-color@8.1.1)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))':
+  '@vitejs/plugin-react@4.7.0(supports-color@8.1.1)(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))':
     dependencies:
       '@babel/core': 7.29.7(supports-color@8.1.1)
       '@babel/plugin-transform-react-jsx-self': 7.29.7(@babel/core@7.29.7(supports-color@8.1.1))
@@ -23816,11 +23816,11 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-beta.27
       '@types/babel__core': 7.20.5
       react-refresh: 0.17.0
-      vite: 7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3)
+      vite: 7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3)
     transitivePeerDependencies:
       - supports-color
 
-  '@vitejs/plugin-react@4.7.0(supports-color@8.1.1)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))':
+  '@vitejs/plugin-react@4.7.0(supports-color@8.1.1)(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))':
     dependencies:
       '@babel/core': 7.29.7(supports-color@8.1.1)
       '@babel/plugin-transform-react-jsx-self': 7.29.7(@babel/core@7.29.7(supports-color@8.1.1))
@@ -23828,7 +23828,7 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-beta.27
       '@types/babel__core': 7.20.5
       react-refresh: 0.17.0
-      vite: 7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
+      vite: 7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -23844,7 +23844,7 @@ snapshots:
       obug: 2.1.3
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+      vitest: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
 
   '@vitest/expect@4.1.11':
     dependencies:
@@ -23855,41 +23855,41 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.11(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))':
+  '@vitest/mocker@4.1.11(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))':
     dependencies:
       '@vitest/spy': 4.1.11
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
       msw: 2.14.6(@types/node@24.13.3)(typescript@6.0.3)
-      vite: 7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3)
+      vite: 7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3)
 
-  '@vitest/mocker@4.1.11(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))':
+  '@vitest/mocker@4.1.11(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 4.1.11
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
       msw: 2.14.6(@types/node@24.13.3)(typescript@6.0.3)
-      vite: 7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
+      vite: 7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
 
-  '@vitest/mocker@4.1.11(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.6(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))':
+  '@vitest/mocker@4.1.11(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))':
     dependencies:
       '@vitest/spy': 4.1.11
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
       msw: 2.14.6(@types/node@26.1.0)(typescript@6.0.3)
-      vite: 7.3.6(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3)
+      vite: 7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3)
 
-  '@vitest/mocker@4.1.11(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.6(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))':
+  '@vitest/mocker@4.1.11(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 4.1.11
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
       msw: 2.14.6(@types/node@26.1.0)(typescript@6.0.3)
-      vite: 7.3.6(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
+      vite: 7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
 
   '@vitest/pretty-format@4.1.11':
     dependencies:
@@ -23918,7 +23918,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vitest: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+      vitest: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
 
   '@vitest/utils@4.1.11':
     dependencies:
@@ -24554,7 +24554,7 @@ snapshots:
 
   axios@1.20.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1):
     dependencies:
-      follow-redirects: 1.16.0(debug@4.4.3(supports-color@8.1.1))
+      follow-redirects: 1.16.1(debug@4.4.3(supports-color@8.1.1))
       form-data: 4.0.6
       https-proxy-agent: 5.0.1(supports-color@8.1.1)
       proxy-from-env: 2.1.0
@@ -24795,7 +24795,7 @@ snapshots:
       next: 16.3.8(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.13.3)(babel-plugin-macros@2.8.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
-      vitest: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+      vitest: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
       - '@opentelemetry/api'
@@ -27534,7 +27534,7 @@ snapshots:
       pirates: 3.0.2
       vlq: 0.2.3
 
-  follow-redirects@1.16.0(debug@4.4.3(supports-color@8.1.1)):
+  follow-redirects@1.16.1(debug@4.4.3(supports-color@8.1.1)):
     optionalDependencies:
       debug: 4.4.3(supports-color@8.1.1)
 
@@ -27689,7 +27689,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  fumadocs-mdx@15.2.0(9324b85f9749c8a7aa7631cff6a71c41):
+  fumadocs-mdx@15.2.0(af1a5fe1587f28c9bbc9dca01a13adb2):
     dependencies:
       '@mdx-js/mdx': 3.1.1(supports-color@8.1.1)
       '@standard-schema/spec': 1.1.0
@@ -27718,7 +27718,7 @@ snapshots:
       mdast-util-directive: 3.1.0(supports-color@8.1.1)
       next: 16.3.8(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.13.3)(babel-plugin-macros@2.8.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react: 19.2.3
-      vite: 7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
+      vite: 7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -33873,7 +33873,7 @@ snapshots:
       d3-time: 3.1.0
       d3-timer: 3.0.1
 
-  vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3):
+  vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3):
     dependencies:
       esbuild: 0.28.2
       fdir: 6.5.0(picomatch@4.0.5)
@@ -33890,7 +33890,7 @@ snapshots:
       tsx: 4.23.0
       yaml: 2.8.3
 
-  vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0):
+  vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0):
     dependencies:
       esbuild: 0.28.2
       fdir: 6.5.0(picomatch@4.0.5)
@@ -33907,7 +33907,7 @@ snapshots:
       tsx: 4.23.0
       yaml: 2.9.0
 
-  vite@7.3.6(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3):
+  vite@7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3):
     dependencies:
       esbuild: 0.28.2
       fdir: 6.5.0(picomatch@4.0.5)
@@ -33924,7 +33924,7 @@ snapshots:
       tsx: 4.23.0
       yaml: 2.8.3
 
-  vite@7.3.6(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0):
+  vite@7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0):
     dependencies:
       esbuild: 0.28.2
       fdir: 6.5.0(picomatch@4.0.5)
@@ -33941,10 +33941,10 @@ snapshots:
       tsx: 4.23.0
       yaml: 2.9.0
 
-  vitest@4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3)):
+  vitest@4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3)):
     dependencies:
       '@vitest/expect': 4.1.11
-      '@vitest/mocker': 4.1.11(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))
+      '@vitest/mocker': 4.1.11(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))
       '@vitest/pretty-format': 4.1.11
       '@vitest/runner': 4.1.11
       '@vitest/snapshot': 4.1.11
@@ -33961,7 +33961,7 @@ snapshots:
       tinyexec: 1.2.4
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vite: 7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3)
+      vite: 7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
@@ -33972,10 +33972,10 @@ snapshots:
     transitivePeerDependencies:
       - msw
 
-  vitest@4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)):
+  vitest@4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)):
     dependencies:
       '@vitest/expect': 4.1.11
-      '@vitest/mocker': 4.1.11(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+      '@vitest/mocker': 4.1.11(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
       '@vitest/pretty-format': 4.1.11
       '@vitest/runner': 4.1.11
       '@vitest/snapshot': 4.1.11
@@ -33992,7 +33992,7 @@ snapshots:
       tinyexec: 1.2.4
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vite: 7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
+      vite: 7.3.7(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
@@ -34003,10 +34003,10 @@ snapshots:
     transitivePeerDependencies:
       - msw
 
-  vitest@4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.1.0)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.6(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3)):
+  vitest@4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.1.0)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3)):
     dependencies:
       '@vitest/expect': 4.1.11
-      '@vitest/mocker': 4.1.11(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.6(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))
+      '@vitest/mocker': 4.1.11(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3))
       '@vitest/pretty-format': 4.1.11
       '@vitest/runner': 4.1.11
       '@vitest/snapshot': 4.1.11
@@ -34023,7 +34023,7 @@ snapshots:
       tinyexec: 1.2.4
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vite: 7.3.6(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3)
+      vite: 7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.8.3)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
@@ -34034,10 +34034,10 @@ snapshots:
     transitivePeerDependencies:
       - msw
 
-  vitest@4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.1.0)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.6(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)):
+  vitest@4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.1.0)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)):
     dependencies:
       '@vitest/expect': 4.1.11
-      '@vitest/mocker': 4.1.11(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.6(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+      '@vitest/mocker': 4.1.11(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
       '@vitest/pretty-format': 4.1.11
       '@vitest/runner': 4.1.11
       '@vitest/snapshot': 4.1.11
@@ -34054,7 +34054,7 @@ snapshots:
       tinyexec: 1.2.4
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vite: 7.3.6(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
+      vite: 7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
