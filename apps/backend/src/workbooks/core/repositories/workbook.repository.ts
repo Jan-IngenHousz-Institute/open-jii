@@ -28,6 +28,13 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
+import {
+  accessibleResourceCondition,
+  relatedResourceCondition,
+  resourceRoleExpression,
+  resourceTierExpression,
+} from "../../../authorization/core/repositories/resource-access-query";
+import type { ResourceRoleName } from "../../../authorization/core/repositories/resource-access-query";
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
   crossTableBonus,
@@ -41,13 +48,6 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
-import {
-  accessibleResourceCondition,
-  relatedResourceCondition,
-  resourceRoleExpression,
-  resourceTierExpression,
-} from "../../../common/utils/resource-access-scope";
-import type { ResourceRoleName } from "../../../common/utils/resource-access-scope";
 import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import {
   CreateWorkbookDto,

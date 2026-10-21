@@ -21,6 +21,10 @@ import type { DatabaseInstance, DbOrTx } from "@repo/database";
 import type { ResourceType } from "@repo/database";
 
 import { mayTransferOutOfOrganization } from "../sharing/core/transfer-authority";
+import { GUEST_IDENTITY_PORT } from "../users/core/ports/guest-identity.port";
+import type { GuestIdentityPort } from "../users/core/ports/guest-identity.port";
+import { GUEST_RESOURCE_PORT } from "./core/ports/guest-resource.port";
+import type { GuestResourcePort } from "./core/ports/guest-resource.port";
 
 // Every shareable resource type is org-scoped and resolvable to its owning
 // org + visibility here; the total record makes a new type a compile error.
@@ -77,7 +81,11 @@ export interface ResourceOwnership {
  */
 @Injectable()
 export class AuthorizationService {
-  constructor(@Inject("DATABASE") private readonly db: DatabaseInstance) {}
+  constructor(
+    @Inject("DATABASE") private readonly db: DatabaseInstance,
+    @Inject(GUEST_IDENTITY_PORT) private readonly guests: GuestIdentityPort,
+    @Inject(GUEST_RESOURCE_PORT) private readonly guestResources: GuestResourcePort,
+  ) {}
 
   /**
    * `executor` lets a caller re-ask this question **inside its own transaction**,
@@ -91,6 +99,25 @@ export class AuthorizationService {
     req: AccessRequest,
     executor: DbOrTx = this.db,
   ): Promise<AccessDecision> {
+    const identity = await this.guests.findIdentity(userId, executor);
+    if (identity?.isAnonymous) {
+      const publicKinds = ["experiment", "macro", "protocol", "workbook"] as const;
+      const kind = publicKinds.find((value) => value === req.resourceType);
+      if (!kind) return { allow: false, reason: "forbidden", organizationId: null };
+      const resource = await this.guestResources.findOwnership(kind, req.resourceId, executor);
+      const allow = Boolean(
+        resource?.visibility === "public" &&
+          (req.action === "read" ||
+            (req.resourceType === "experiment" &&
+              req.action === "contribute" &&
+              resource.organizationType === "demo")),
+      );
+      return {
+        allow,
+        reason: allow ? "public" : "forbidden",
+        organizationId: resource?.organizationId ?? null,
+      };
+    }
     // 1. Resolve the resource's owning org + visibility.
     const ownership = await this.loadOwnership(req.resourceType, req.resourceId, executor);
     if (!ownership) {
@@ -236,6 +263,7 @@ export class AuthorizationService {
     resourceType: ResourceType,
     resourceId: string,
   ): Promise<boolean> {
+    if ((await this.guests.findIdentity(userId))?.isAnonymous) return false;
     const rows = await this.db
       .select({ id: resourceGrants.id })
       .from(resourceGrants)
