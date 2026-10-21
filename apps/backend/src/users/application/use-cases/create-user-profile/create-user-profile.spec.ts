@@ -1,3 +1,5 @@
+import { eq, users, profiles } from "@repo/database";
+
 import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { UserRepository } from "../../../core/repositories/user.repository";
@@ -42,6 +44,37 @@ describe("CreateUserProfileUseCase", () => {
       firstName: dto.firstName,
       lastName: dto.lastName,
     });
+  });
+
+  it("does not mark registration complete when the profile save fails", async () => {
+    const id = await testApp.createTestUser({ createProfile: false, registered: false });
+    vi.spyOn(userRepository, "createOrUpdateUserProfile").mockResolvedValue(
+      failure(AppError.internal("Save failed")),
+    );
+    const result = await useCase.execute({ firstName: "New", lastName: "Researcher" }, id);
+    assertFailure(result);
+    const [user] = await testApp.database.select().from(users).where(eq(users.id, id));
+    expect(user.registered).toBe(false);
+    expect(
+      await testApp.database.select().from(profiles).where(eq(profiles.userId, id)),
+    ).toHaveLength(0);
+  });
+
+  it("can retry profile saving after the registered update fails", async () => {
+    const id = await testApp.createTestUser({ createProfile: false, registered: false });
+    vi.spyOn(userRepository, "update").mockResolvedValueOnce(
+      failure(AppError.internal("Update failed")),
+    );
+    const data = { firstName: "New", lastName: "Researcher" };
+    assertFailure(await useCase.execute(data, id));
+    const [before] = await testApp.database.select().from(users).where(eq(users.id, id));
+    expect(before.registered).toBe(false);
+    assertSuccess(await useCase.execute(data, id));
+    const [after] = await testApp.database.select().from(users).where(eq(users.id, id));
+    expect(after.registered).toBe(true);
+    expect(
+      await testApp.database.select().from(profiles).where(eq(profiles.userId, id)),
+    ).toHaveLength(1);
   });
 
   it("should return NOT_FOUND error when user does not exist", async () => {
