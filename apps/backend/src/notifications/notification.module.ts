@@ -6,6 +6,7 @@ import { NotificationDispatchService } from "./application/services/notification
 import { NotificationEmailService } from "./application/services/notification-email.service";
 import { NotificationOutboxWorker } from "./application/services/notification-outbox.worker";
 import { NotificationPreferencesService } from "./application/services/notification-preferences.service";
+import { ResourceDeletedNotifier } from "./application/services/resource-deleted-notifier";
 // Use Cases
 import { GetNotificationPreferencesUseCase } from "./application/use-cases/get-notification-preferences/get-notification-preferences";
 import { GetUnreadNotificationCountUseCase } from "./application/use-cases/get-unread-notification-count/get-unread-notification-count";
@@ -32,6 +33,7 @@ import { NotificationController } from "./presentation/notification.controller";
     NotificationEmailService,
     NotificationPreferencesService,
     NotificationOutboxWorker,
+    ResourceDeletedNotifier,
 
     // Use cases
     ListNotificationsUseCase,
@@ -43,6 +45,6 @@ import { NotificationController } from "./presentation/notification.controller";
   ],
   // Producers inject the dispatch service directly; it is an in-process domain
   // service, not infrastructure behind a port.
-  exports: [NotificationDispatchService],
+  exports: [NotificationDispatchService, ResourceDeletedNotifier],
 })
 export class NotificationModule {}

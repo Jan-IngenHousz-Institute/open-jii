@@ -32,6 +32,11 @@ data "archive_file" "lambda_zip" {
   output_path = "${path.module}/lambda/force_deploy.zip"
 }
 
+resource "aws_cloudwatch_log_group" "lambda" {
+  name              = "/aws/lambda/${var.environment}-ecs-force-deployment"
+  retention_in_days = var.log_retention_days
+}
+
 # Lambda Function
 resource "aws_lambda_function" "ecs_force_deployment" {
   filename         = data.archive_file.lambda_zip.output_path
@@ -48,6 +53,8 @@ resource "aws_lambda_function" "ecs_force_deployment" {
       ECS_SERVICE_NAME = var.ecs_service_name
     }
   }
+
+  depends_on = [aws_cloudwatch_log_group.lambda]
 }
 
 resource "aws_cloudwatch_event_target" "lambda_target" {

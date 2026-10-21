@@ -188,7 +188,11 @@ export const NOTIFICATION_TYPES = {
   resource_moved_organization: {
     category: "experiments_and_resources",
     channels: { email: "never" },
-    params: resource.extend({ organizationName: z.string() }),
+    params: resource.extend({
+      organizationName: z.string(),
+      // "organization", or "personal" for the mover's own workspace.
+      organizationKind: z.string(),
+    }),
   },
   workbook_version_published: {
     category: "experiments_and_resources",

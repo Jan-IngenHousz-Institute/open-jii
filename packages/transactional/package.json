@@ -54,6 +54,10 @@
     "./render/organization-join-request-rejected": {
       "types": "./dist/render/organization-join-request-rejected.d.ts",
       "default": "./dist/render/organization-join-request-rejected.js"
+    },
+    "./render/resource-deleted-notification": {
+      "types": "./dist/render/resource-deleted-notification.d.ts",
+      "default": "./dist/render/resource-deleted-notification.js"
     }
   },
   "scripts": {
