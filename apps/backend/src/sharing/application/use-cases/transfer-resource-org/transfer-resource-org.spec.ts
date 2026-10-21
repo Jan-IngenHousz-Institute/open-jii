@@ -1,9 +1,29 @@
 import { StatusCodes } from "http-status-codes";
 
-import { and, eq, macros, profiles, resourceGrants, sql } from "@repo/database";
+import type { TransferableResourceType } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.schema";
+import {
+  and,
+  eq,
+  macros,
+  notifications,
+  organizations,
+  profiles,
+  resourceGrants,
+  sql,
+} from "@repo/database";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
+import { NotificationRepository } from "../../../../notifications/core/repositories/notification.repository";
+import {
+  audienceDeliveries,
+  audienceNotifications,
+  grantResourceAudience,
+  heardByAllButTheActor,
+  notificationsFor,
+  seedResourceAudience,
+} from "../../../../test/resource-audience";
+import type { ResourceAudience } from "../../../../test/resource-audience";
 import { TestHarness } from "../../../../test/test-harness";
 import { SharingRepository } from "../../../core/repositories/sharing.repository";
 import { TransferResourceOrgUseCase } from "./transfer-resource-org";
@@ -410,5 +430,131 @@ describe("TransferResourceOrgUseCase", () => {
     // Owners are not collaborators on their own resources — the Owner row on the
     // sharing surface is synthesized from the organization, not from a grant.
     expect(await grantsOn(macro.id, "user")).toEqual([]);
+  });
+
+  describe("notifying everyone the move takes something from", () => {
+    const builders: Record<
+      TransferableResourceType,
+      (name: string, createdBy: string, organizationId: string) => Promise<string>
+    > = {
+      experiment: async (name, userId, organizationId) =>
+        (await testApp.createExperiment({ name, userId, organizationId })).experiment.id,
+      macro: async (name, createdBy, organizationId) =>
+        (await testApp.createMacro({ name, createdBy, organizationId })).id,
+      protocol: async (name, createdBy, organizationId) =>
+        (await testApp.createProtocol({ name, createdBy, organizationId })).id,
+      workbook: async (name, createdBy, organizationId) =>
+        (await testApp.createWorkbook({ name, createdBy, organizationId })).id,
+      calibration_definition: async (name, createdBy, organizationId) =>
+        (await testApp.createCalibrationDefinition({ name, createdBy, organizationId })).id,
+    };
+
+    let audience: ResourceAudience;
+    let receivingOrg: string;
+    let receivingOwner: string;
+
+    beforeEach(async () => {
+      audience = await seedResourceAudience(testApp);
+      // The mover administers the losing organization and belongs to the receiving one.
+      await testApp.addOrganizationMember(audience.organizationId, audience.actor, "admin");
+      receivingOrg = await testApp.createOrganization("Receiving Lab");
+      receivingOwner = await testApp.createTestUser({ name: "Receiving Owner" });
+      await testApp.addOrganizationMember(receivingOrg, receivingOwner, "owner");
+      await testApp.addOrganizationMember(receivingOrg, audience.actor, "member");
+    });
+
+    async function sharedResource(resourceType: TransferableResourceType) {
+      const resourceId = await builders[resourceType](
+        "Moving Target",
+        audience.owner,
+        audience.organizationId,
+      );
+      await grantResourceAudience(testApp, audience, resourceType, resourceId);
+      return resourceId;
+    }
+
+    it.each(Object.keys(builders) as TransferableResourceType[])(
+      "tells the %s's grantees and the losing organization's owner, with no email",
+      async (resourceType) => {
+        const resourceId = await sharedResource(resourceType);
+
+        assertSuccess(
+          await useCase.execute(audience.actor, resourceType, resourceId, receivingOrg),
+        );
+
+        expect(await audienceNotifications(testApp, audience)).toEqual(
+          heardByAllButTheActor(audience, (recipientId) => ({
+            type: "resource_moved_organization",
+            recipientId,
+            actorId: audience.actor,
+            resourceType,
+            resourceId,
+            params: {
+              resourceName: "Moving Target",
+              organizationName: "Receiving Lab",
+              organizationKind: "organization",
+            },
+          })),
+        );
+        expect(await audienceDeliveries(testApp, audience)).toEqual({
+          owner: [],
+          actor: [],
+          admin: [],
+          viewer: [],
+        });
+        expect(await notificationsFor(testApp, receivingOwner)).toEqual([]);
+      },
+    );
+
+    it("writes nothing when the transfer is refused", async () => {
+      const resourceId = await sharedResource("macro");
+      const elsewhere = await testApp.createOrganization();
+
+      assertFailure(await useCase.execute(audience.actor, "macro", resourceId, elsewhere));
+
+      expect(await testApp.database.select().from(notifications)).toEqual([]);
+    });
+
+    it("marks a move into the mover's personal workspace as personal", async () => {
+      const resourceId = await sharedResource("macro");
+      const personal = await testApp.personalOrganizationId(audience.actor);
+      const [workspace] = await testApp.database
+        .select({ name: organizations.name })
+        .from(organizations)
+        .where(eq(organizations.id, personal));
+
+      assertSuccess(await useCase.execute(audience.actor, "macro", resourceId, personal));
+
+      const [row] = await notificationsFor(testApp, audience.viewer);
+      expect(row.params).toEqual({
+        resourceName: "Moving Target",
+        organizationName: workspace.name,
+        organizationKind: "personal",
+      });
+    });
+
+    it("still moves the resource, telling nobody, when the members cannot be read", async () => {
+      const resourceId = await sharedResource("macro");
+      vi.spyOn(testApp.module.get(SharingRepository), "listMemberIds").mockResolvedValue(
+        failure(AppError.internal("members unavailable")),
+      );
+
+      assertSuccess(await useCase.execute(audience.actor, "macro", resourceId, receivingOrg));
+
+      expect(await owningOrgOf(resourceId)).toBe(receivingOrg);
+      expect(await testApp.database.select().from(notifications)).toEqual([]);
+    });
+
+    it("still moves the resource when the notification cannot be stored", async () => {
+      const resourceId = await sharedResource("macro");
+      vi.spyOn(testApp.module.get(NotificationRepository), "insertMany").mockResolvedValue(
+        failure(AppError.internal("notifications unavailable")),
+      );
+
+      assertSuccess(await useCase.execute(audience.actor, "macro", resourceId, receivingOrg));
+
+      expect(await owningOrgOf(resourceId)).toBe(receivingOrg);
+      expect(await testApp.database.select().from(notifications)).toEqual([]);
+    });
   });
 });

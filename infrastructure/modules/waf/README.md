@@ -20,7 +20,7 @@ module "backend_waf" {
   service_name       = "backend"
   environment        = var.environment
   rate_limit         = 500
-  log_retention_days = 30
+  log_retention_days = 365
   enable_bot_control = true
 
   large_body_bypass_routes = [
@@ -46,7 +46,7 @@ module "backend_waf" {
 | `environment`                  | Environment name                          | `string`       | —        | yes      |
 | `rate_limit`                   | Requests per 5-min window per IP          | `number`       | `500`    | no       |
 | `blocked_countries`            | ISO 3166-1 alpha-2 country codes to block | `list(string)` | `[]`     | no       |
-| `log_retention_days`           | Days to retain WAF logs                   | `number`       | `30`     | no       |
+| `log_retention_days`           | Days to retain WAF logs                   | `number`       | `365`    | no       |
 | `enable_bot_control`           | Enable AWS Bot Control rule set           | `bool`         | `false`  | no       |
 | `bot_control_inspection_level` | `COMMON` or `TARGETED`                    | `string`       | `COMMON` | no       |
 | `large_body_bypass_routes`     | Routes that bypass body size restrictions | `list(object)` | `[]`     | no       |

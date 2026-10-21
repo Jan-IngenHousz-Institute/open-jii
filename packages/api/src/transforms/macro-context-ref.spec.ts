@@ -65,9 +65,9 @@ describe("restoreMacroInputInContext", () => {
     expect(restoreMacroInputInContext(inline, measurement)).toEqual(inline);
   });
 
-  it("drops the macros key the upload injected into the sample", () => {
-    // What arrives from the lakehouse is the uploaded entry, which carries the
-    // routing list; the value the macro read on the device did not.
+  it("drops the macros key that older uploads carry in the sample", () => {
+    // What arrives from the lakehouse for an upload from an older app version
+    // carries the routing list; the value the macro read on the device did not.
     const uploaded = { sample: [{ ...scan, macros: ["analysis.py"] }] };
 
     expect(restoreMacroInputInContext({ measurement_node: ref }, uploaded)).toEqual({
