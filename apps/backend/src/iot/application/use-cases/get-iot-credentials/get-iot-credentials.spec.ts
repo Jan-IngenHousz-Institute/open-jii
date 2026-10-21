@@ -34,7 +34,7 @@ describe("GetIotCredentialsUseCase", () => {
   });
 
   it("should successfully return IoT credentials", async () => {
-    const userId = "user-123";
+    const userId = await testApp.createTestUser();
     const mockCredentials = {
       accessKeyId: "AKIAIOSFODNN7EXAMPLE",
       secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
@@ -53,7 +53,7 @@ describe("GetIotCredentialsUseCase", () => {
   });
 
   it("should return failure when AWS adapter fails", async () => {
-    const userId = "user-123";
+    const userId = await testApp.createTestUser();
     const error = AppError.internal("Cognito error", ErrorCodes.AWS_COGNITO_CREDENTIALS_FAILED);
 
     vi.spyOn(awsAdapter, "getIotCredentials").mockResolvedValue(failure(error));

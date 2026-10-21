@@ -604,9 +604,13 @@ describe("MacroController", () => {
         output: { result: 42 },
       });
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(executeMacroUseCase.execute).toHaveBeenCalledWith(macroId, {
-        data: { trace_1: [1, 2, 3] },
-      });
+      expect(executeMacroUseCase.execute).toHaveBeenCalledWith(
+        macroId,
+        {
+          data: { trace_1: [1, 2, 3] },
+        },
+        testUserId,
+      );
     });
 
     it("should handle execution failure result", async () => {
