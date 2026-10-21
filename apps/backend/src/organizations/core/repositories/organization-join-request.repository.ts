@@ -214,11 +214,12 @@ export class OrganizationJoinRequestRepository {
   ): Promise<Result<ApproveOrganizationJoinRequestOutcome>> {
     return tryCatch(async () => {
       const claimed = await this.database.transaction(async (tx) => {
-        const [organization] = await tx
+        const organizationRows = await tx
           .select({ type: organizations.type })
           .from(organizations)
           .where(eq(organizations.id, organizationId))
           .for("update");
+        const organization = organizationRows.at(0);
         if (!organization) return "not-pending" as const;
         if (organization.type === "demo") return "demo-organization" as const;
 

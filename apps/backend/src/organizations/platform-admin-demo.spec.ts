@@ -244,7 +244,7 @@ describe("platform admin and Demo security through Better Auth", () => {
     ] as const) {
       const response = await call("/admin/set-role", configured, { userId: target.id, role });
       expect(response.status).toBe(expectedStatus);
-      const body = await response.json();
+      const body: unknown = await response.json();
       if (expectedStatus === 200) {
         expect(body).toEqual({ user: { id: target.id, role } });
       } else {
