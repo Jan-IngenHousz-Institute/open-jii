@@ -69,15 +69,17 @@ export class ListExperimentContributorsUseCase {
     experimentId: string,
     { anonymizeContributors, collaborators: rows }: ExperimentCollaborators,
   ) {
-    return rows.map(({ userId, firstName, lastName, avatarUrl }) => {
+    return rows.map(({ userId, firstName, lastName, avatarUrl, isGuest, isFormerGuest }) => {
       if (!anonymizeContributors) {
-        return { userId, firstName, lastName, avatarUrl };
+        return { userId, firstName, lastName, avatarUrl, isGuest, isFormerGuest };
       }
       // Same pseudonym the CONTRIBUTOR cells carry. The id is pseudonymised too,
       // or a caller could join this list back to the data grid and undo it.
       const pseudonym = this.contributorAnonymizer.pseudonymFor(experimentId, userId);
       return {
         userId: pseudonym,
+        isGuest: false,
+        isFormerGuest: false,
         firstName: pseudonym,
         lastName: "",
         avatarUrl: null,

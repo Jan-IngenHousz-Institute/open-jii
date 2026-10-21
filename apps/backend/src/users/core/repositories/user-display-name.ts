@@ -12,7 +12,9 @@ export function userDisplayNameSql() {
 
 export function userMetadataFieldsSql() {
   return {
-    firstName: sql<string>`CASE WHEN ${users.isAnonymous} THEN ${users.name} || ' (guest)' ELSE ${getAnonymizedFirstName()} END`,
+    isGuest: users.isAnonymous,
+    isFormerGuest: sql<boolean>`false`,
+    firstName: sql<string>`CASE WHEN ${users.isAnonymous} THEN ${users.name} ELSE ${getAnonymizedFirstName()} END`,
     lastName: sql<string>`CASE WHEN ${users.isAnonymous} THEN '' ELSE ${getAnonymizedLastName()} END`,
     avatarUrl: sql<
       string | null

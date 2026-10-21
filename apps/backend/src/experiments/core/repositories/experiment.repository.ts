@@ -34,6 +34,7 @@ import {
   upsertGrant,
   resourceGrants,
   resourceVisits,
+  users,
 } from "@repo/database";
 import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
@@ -65,6 +66,7 @@ import {
   lockStaffedResource,
   seedCreatorControl,
 } from "../../../sharing/core/resource-staffing";
+import { userMetadataFieldsSql } from "../../../users/core/repositories/user-display-name";
 import {
   CreateExperimentDto,
   UpdateExperimentDto,
@@ -241,9 +243,7 @@ export class ExperimentRepository {
           // Whether the profile join matched. The name columns below can't answer
           // that; they fall back to "Unknown"/"User" for a NULL row.
           profileUserId: profiles.userId,
-          firstName: getAnonymizedFirstName(),
-          lastName: getAnonymizedLastName(),
-          avatarUrl: getAnonymizedAvatarUrl(),
+          ...userMetadataFieldsSql(),
         })
         .from(experiments)
         .leftJoin(
@@ -254,6 +254,7 @@ export class ExperimentRepository {
             eq(resourceGrants.granteeType, "user"),
           ),
         )
+        .leftJoin(users, eq(users.id, resourceGrants.granteeId))
         .leftJoin(
           profiles,
           and(
@@ -268,10 +269,13 @@ export class ExperimentRepository {
       // or the experiment on its own with nobody granted.
       const granted = rows
         .filter(
-          (r): r is typeof r & { userId: string } => r.userId !== null && r.profileUserId !== null,
+          (r): r is typeof r & { userId: string } =>
+            r.userId !== null && (r.profileUserId !== null || r.isGuest === true),
         )
-        .map(({ userId, firstName, lastName, avatarUrl }) => ({
+        .map(({ userId, firstName, lastName, avatarUrl, isGuest, isFormerGuest }) => ({
           userId,
+          isGuest: isGuest === true,
+          isFormerGuest,
           firstName,
           lastName,
           avatarUrl,
@@ -290,6 +294,8 @@ export class ExperimentRepository {
           : await this.database
               .select({
                 userId: profiles.userId,
+                isGuest: sql<boolean>`false`,
+                isFormerGuest: sql<boolean>`false`,
                 firstName: getAnonymizedFirstName(),
                 lastName: getAnonymizedLastName(),
                 avatarUrl: getAnonymizedAvatarUrl(),

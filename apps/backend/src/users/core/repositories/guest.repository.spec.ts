@@ -1,3 +1,4 @@
+import { zExperimentContributors } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import {
   createSecondaryDatabase,
   db,
@@ -57,7 +58,14 @@ describe("guest quotas and guarded purge", () => {
     expect(metadata.isSuccess()).toBe(true);
     if (metadata.isSuccess())
       expect(metadata.value).toEqual([
-        { userId: guest.id, firstName: "Synthetic visitor (guest)", lastName: "", avatarUrl: null },
+        {
+          userId: guest.id,
+          firstName: "Synthetic visitor",
+          isGuest: true,
+          isFormerGuest: false,
+          lastName: "",
+          avatarUrl: null,
+        },
       ]);
     const roster = await app.module.get(OrganizationRepository).listMembers(demo);
     expect(roster.isSuccess()).toBe(true);
@@ -65,12 +73,61 @@ describe("guest quotas and guarded purge", () => {
       expect(roster.value).toMatchObject([
         {
           userId: guest.id,
-          firstName: "Synthetic visitor (guest)",
+          firstName: "Synthetic visitor",
+          isGuest: true,
+          isFormerGuest: false,
           lastName: "",
           email: null,
           avatarUrl: null,
         },
       ]);
+  });
+
+  it("returns raw guest attribution through the public contributor API", async () => {
+    const researcher = await app.createTestUser();
+    const demo = await app.createOrganization(undefined, { type: "demo", visibility: "public" });
+    const guest = await createGuest();
+    const { experiment } = await app.createExperiment({
+      name: "Synthetic example",
+      userId: researcher,
+      organizationId: demo,
+      visibility: "public",
+    });
+    await db
+      .insert(resourceGrants)
+      .values({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId: guest.id,
+        role: "viewer",
+        createdBy: researcher,
+      });
+    const response = await app
+      .get(`/api/v1/experiments/${experiment.id}/contributors`)
+      .withAuth(researcher);
+    expect(response.status).toBe(200);
+    const result = zExperimentContributors.parse(response.body);
+    expect(result.contributors.find(({ userId }) => userId === guest.id)).toEqual({
+      userId: guest.id,
+      firstName: "Synthetic visitor",
+      lastName: "",
+      avatarUrl: null,
+      isGuest: true,
+      isFormerGuest: false,
+    });
+    expect(result.contributors.find(({ userId }) => userId === researcher)).toMatchObject({
+      isGuest: false,
+      isFormerGuest: false,
+    });
+  });
+
+  it("returns researcher metadata with explicit non-guest status and unmodified names", async () => {
+    const id = await app.createTestUser({ name: "Synthetic researcher" });
+    const result = await app.module.get(UserRepository).findUsersByIds([id]);
+    expect(result.isSuccess()).toBe(true);
+    if (result.isSuccess())
+      expect(result.value).toMatchObject([{ userId: id, isGuest: false, isFormerGuest: false }]);
   });
 
   it("excludes guests from people, sharing and admin search even if legacy profile or role rows exist", async () => {
