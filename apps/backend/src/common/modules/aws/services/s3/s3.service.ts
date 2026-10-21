@@ -29,12 +29,12 @@ export class AwsS3Service {
     });
   }
 
-  // Separated from the callers so tests can spy on this method (ESM exports are not configurable).
+  // Separated from getIotUploadUrl so tests can spy on this method (ESM exports are not configurable).
   protected createSignedUrl(
     command: PutObjectCommand | GetObjectCommand,
+    guest?: GuestUploadOptions,
     expiresIn = PRESIGNED_URL_EXPIRY_SECONDS,
   ): Promise<string> {
-    const guest = command instanceof PutObjectCommand && command.input.ContentLength !== undefined;
     return getSignedUrl(guest ? this.guestS3Client : this.s3Client, command, {
       expiresIn,
       ...(guest ? { signableHeaders: new Set(["content-type", "content-length"]) } : {}),
@@ -74,7 +74,7 @@ export class AwsS3Service {
           ...(guest ? { ContentLength: guest.guestContentLength } : {}),
         });
 
-        const uploadUrl = await this.createSignedUrl(command);
+        const uploadUrl = await this.createSignedUrl(command, guest);
 
         return {
           uploadUrl,
@@ -96,7 +96,7 @@ export class AwsS3Service {
           ResponseContentDisposition: `attachment; filename="${fileName}"`,
         });
 
-        const url = await this.createSignedUrl(command, EXPORT_DOWNLOAD_EXPIRY_SECONDS);
+        const url = await this.createSignedUrl(command, undefined, EXPORT_DOWNLOAD_EXPIRY_SECONDS);
         const signedExpiry = Date.now() + EXPORT_DOWNLOAD_EXPIRY_SECONDS * 1000;
         const credentialsExpiry = (await this.signingCredentialsExpiry())?.getTime() ?? Infinity;
 

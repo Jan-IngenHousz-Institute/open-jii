@@ -7,6 +7,7 @@ import { Readable } from "stream";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { AwsConfigService } from "../config/config.service";
 import { AwsS3Service } from "./s3.service";
+import type { GuestUploadOptions } from "./s3.types";
 
 const s3Mock = mockClient(S3Client);
 
@@ -76,9 +77,9 @@ describe("AwsS3Service", () => {
     vi.stubEnv("AWS_SECRET_ACCESS_KEY", "synthetic-secret-key");
     class CapturingSigner extends AwsS3Service {
       command?: PutObjectCommand;
-      protected override createSignedUrl(command: PutObjectCommand) {
+      protected override createSignedUrl(command: PutObjectCommand, guest?: GuestUploadOptions) {
         this.command = command;
-        return super.createSignedUrl(command);
+        return super.createSignedUrl(command, guest);
       }
     }
     try {
