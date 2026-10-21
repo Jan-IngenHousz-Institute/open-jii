@@ -1,0 +1,85 @@
+---
+title: "Guest privacy review draft"
+description: "Dated draft for privacy-officer review before public policy publication."
+---
+
+<Callout type="warn" title="Draft, 21 October 2026">
+  This is implementation evidence and proposed wording for review. It is not the published privacy
+  policy and has not been approved by the privacy officer.
+</Callout>
+
+## Proposed English wording
+
+You can explore the public demo with a temporary guest account. A name is
+optional. Use a nickname and do not enter an email address. Your chosen name is
+visible beside your contributions while the guest account exists.
+
+Measurements you take here stay in the public demo permanently.
+
+The guest account, name and session details, including the client address and
+browser information recorded with the session, become eligible for removal after
+seven days. A nightly cleanup normally removes them on its next run, so they can
+remain for roughly seven to eight days. Anonymous-entry abuse counters are also
+removed after they become seven days old. If an unexpected research ownership
+record blocks cleanup, that account remains for investigation and an operator
+receives an alert. Measurements remain public. Live account and membership lookups no longer resolve
+the removed name. Existing derived contributor caches can retain earlier guest
+names beyond account cleanup; their retention needs privacy-officer review.
+
+Security logs have separate retention. WAF request logs are kept for 365 days.
+CloudTrail logs are locked for 365 days and configured to expire after 400 days.
+The current load-balancer access-log bucket has no lifecycle expiry configured.
+These logs may retain client addresses or request metadata beyond guest-account
+cleanup. The privacy officer must confirm their purpose and retention before
+publication; this draft does not promise seven-day deletion for security logs.
+
+## Voorgestelde Nederlandse tekst
+
+Je kunt de openbare demo verkennen met een tijdelijk gastaccount. Een naam is
+optioneel. Gebruik een bijnaam en vul geen e-mailadres in. Je gekozen naam is
+zichtbaar bij je bijdragen zolang het gastaccount bestaat.
+
+Metingen die je hier doet, blijven permanent in de openbare demo staan.
+
+Het gastaccount, de naam en sessiegegevens, waaronder het vastgelegde clientadres
+en browsergegevens, komen na zeven dagen voor verwijdering in aanmerking. De
+nachtelijke opschoning verwijdert ze normaal bij de eerstvolgende uitvoering.
+Daardoor kunnen ze ongeveer zeven tot acht dagen bewaard blijven. Tellers tegen
+misbruik van de gasttoegang worden ook verwijderd zodra ze zeven dagen oud zijn.
+Als een onverwachte koppeling aan onderzoeksgegevens de verwijdering blokkeert,
+blijft dat account voor onderzoek bewaard en krijgt een beheerder een melding.
+Metingen blijven openbaar en de actuele account- en ledengegevens verwijzen na verwijdering niet meer naar
+de gastnaam. Bestaande afgeleide bijdragerscaches kunnen eerdere gastnamen langer
+bewaren. De privacy officer moet die bewaartermijn beoordelen.
+
+Voor beveiligingslogboeken gelden andere termijnen. WAF-verzoeklogboeken blijven
+365 dagen bewaard. CloudTrail-logboeken zijn 365 dagen vergrendeld en verlopen
+volgens de configuratie na 400 dagen. Voor de huidige opslag van
+load-balancer-toegangslogboeken is geen automatische vervaldatum ingesteld.
+Clientadressen en verzoekgegevens kunnen daardoor langer bewaard blijven dan het
+gastaccount. De privacy officer moet het doel en de bewaartermijnen vóór
+publicatie bevestigen. Deze tekst belooft geen verwijdering van
+beveiligingslogboeken na zeven dagen.
+
+Unsent measurements also remain on the phone. Known guest-owned rows expire
+after seven days. If the app could not establish ownership type at capture, the
+row stays local until its owner returns; this exception avoids deleting
+researchers' unsent data.
+
+Niet-verzonden metingen staan ook op de telefoon. Metingen met een vastgelegd
+gasttype vervallen na zeven dagen. Als de app het accounttype bij het meten niet
+kon vaststellen, blijft de meting lokaal totdat de eigenaar terugkeert. Zo worden
+niet-verzonden onderzoeksgegevens niet per ongeluk verwijderd.
+
+## Human publication steps
+
+1. The privacy officer reviews the account cleanup, blocked-account exception,
+   security-log purposes and actual retention, and approves the wording.
+2. A policy editor publishes the approved English and Dutch text in the existing
+   Contentful policy entry and updates the policy change date on that page.
+3. The client prompt uses the approved shared sentence from
+   `guestSession.permanentMeasurements` in the common translation bundle. The
+   prompt itself belongs to the next client milestone.
+
+Record completion on OJD-2238. No Contentful or infrastructure changes are applied
+by this draft.

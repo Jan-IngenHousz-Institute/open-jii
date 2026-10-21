@@ -4897,6 +4897,15 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "isGuest": {
+                            "default": false,
+                            "type": "boolean"
+                          },
+                          "isFormerGuest": {
+                            "default": false,
+                            "type": "boolean",
+                            "description": "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal."
+                          },
                           "firstName": {
                             "type": "string"
                           },
@@ -15261,6 +15270,11 @@
                     "type": "string",
                     "format": "uuid",
                     "description": "UUID of the experiment to associate this upload with"
+                  },
+                  "contentLength": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "UTF-8 payload bytes; required and capped at 1 MiB for guests"
                   }
                 },
                 "required": [
@@ -31626,6 +31640,15 @@
                             "type": "string",
                             "format": "uuid"
                           },
+                          "isGuest": {
+                            "default": false,
+                            "type": "boolean"
+                          },
+                          "isFormerGuest": {
+                            "default": false,
+                            "type": "boolean",
+                            "description": "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal."
+                          },
                           "firstName": {
                             "type": "string"
                           },
@@ -31796,6 +31819,15 @@
                             "userId": {
                               "type": "string",
                               "format": "uuid"
+                            },
+                            "isGuest": {
+                              "default": false,
+                              "type": "boolean"
+                            },
+                            "isFormerGuest": {
+                              "default": false,
+                              "type": "boolean",
+                              "description": "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal."
                             },
                             "firstName": {
                               "type": "string"
@@ -37023,6 +37055,15 @@
                                   "type": "string",
                                   "format": "uuid"
                                 },
+                                "isGuest": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "isFormerGuest": {
+                                  "default": false,
+                                  "type": "boolean",
+                                  "description": "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal."
+                                },
                                 "firstName": {
                                   "type": "string"
                                 },
@@ -37135,6 +37176,15 @@
                           "userId": {
                             "type": "string",
                             "format": "uuid"
+                          },
+                          "isGuest": {
+                            "default": false,
+                            "type": "boolean"
+                          },
+                          "isFormerGuest": {
+                            "default": false,
+                            "type": "boolean",
+                            "description": "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal."
                           },
                           "firstName": {
                             "type": "string"
