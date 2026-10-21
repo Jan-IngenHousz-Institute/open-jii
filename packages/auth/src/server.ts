@@ -14,6 +14,7 @@ import { getApiKeyForSessionCheck } from "./api-key-session";
 import { sendOtpEmail } from "./email/otpEmail";
 import { openJiiOrganization } from "./organization/plugin";
 import { orcidProvider } from "./providers/orcid";
+import { serverOwnedRegistration } from "./registration";
 
 const environmentPrefix = process.env.ENVIRONMENT_PREFIX ?? "dev";
 const clientUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
@@ -120,6 +121,7 @@ export const auth = betterAuth({
     },
     additionalFields: {
       registered: {
+        input: false,
         type: "boolean",
         defaultValue: false,
         required: false,
@@ -146,6 +148,7 @@ export const auth = betterAuth({
   disabledPaths: DISABLED_ADMIN_PATHS,
   plugins: [
     openJiiAdmin(),
+    serverOwnedRegistration(),
     expo(), // Add Expo plugin for mobile app support
     emailOTP({
       async sendVerificationOTP({ email, otp }) {
