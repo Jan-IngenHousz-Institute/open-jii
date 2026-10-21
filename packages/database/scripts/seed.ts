@@ -1,4 +1,4 @@
-import { db } from "../src/database";
+import { db } from "../src/postgres/database";
 import { seedCalibrations } from "./seed/calibration.seed";
 import { clearSeedData } from "./seed/clear.seed";
 import { seedContributors } from "./seed/contributor.seed";

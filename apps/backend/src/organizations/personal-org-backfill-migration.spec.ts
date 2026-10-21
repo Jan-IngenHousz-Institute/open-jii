@@ -12,7 +12,7 @@ import { TestHarness } from "../test/test-harness";
 
 /**
  * These statements mirror the data operations hand-written in
- * `packages/database/drizzle/0035_wild_moondragon.sql` (legacy-org
+ * `packages/database/postgres/migrations/0035_wild_moondragon.sql` (legacy-org
  * cleanup + personal-org provisioning). They are duplicated here so the
  * irreversible DELETE and the provisioning backfill are locked by tests —
  * update both together if the migration changes.

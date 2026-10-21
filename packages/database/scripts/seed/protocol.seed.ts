@@ -1,7 +1,7 @@
 import { and } from "drizzle-orm";
 
-import { db } from "../../src/database";
-import { protocols } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import { protocols } from "../../src/postgres/schema";
 import type { SeedUser } from "./types";
 
 /** Measurement protocols, and the macros each one runs. */

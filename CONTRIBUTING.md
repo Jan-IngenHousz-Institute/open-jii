@@ -68,7 +68,7 @@ Lint, types and tests catch the mechanical mistakes. These are the judgement cal
 - Class names compose with `cn()` and variants with `cva`, not template strings.
 - App and pipeline code does not branch on dev versus prod. Environment differences live in configuration.
 - An effect does not copy props into state or force a refresh; derive the value instead. The React lint rules fail on the common shapes.
-- Postgres sets `updatedAt` through the `timestamps` helper in `packages/database/src/schema.ts`, so app code never passes it.
+- Postgres sets `updatedAt` through the `timestamps` helper in `packages/database/src/postgres/schema.ts`, so app code never passes it.
 - A new datastore, cloud service, dependency family or large vendored drop is agreed with the team before it lands.
 
 ## Pull request and release metadata
