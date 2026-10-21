@@ -1,0 +1,59 @@
+#cloud-config
+# Before the packages install: the RPM keeps an existing clickhouse user instead of picking free IDs.
+bootcmd:
+  - [sh, -c, "getent group clickhouse || groupadd -r -g ${clickhouse_id} clickhouse"]
+  - [sh, -c, "getent passwd clickhouse || useradd -r -u ${clickhouse_id} -g clickhouse -d /nonexistent -s /bin/false clickhouse"]
+
+yum_repos:
+  clickhouse-stable:
+    name: ClickHouse stable
+    baseurl: https://packages.clickhouse.com/rpm/stable/
+    enabled: true
+    gpgcheck: 0
+    repo_gpgcheck: 1
+    gpgkey: https://packages.clickhouse.com/rpm/stable/repodata/repomd.xml.key
+
+packages:
+  - [clickhouse-server, "${clickhouse_version}"]
+  - [clickhouse-client, "${clickhouse_version}"]
+  - amazon-cloudwatch-agent
+
+write_files:
+  # The data volume attaches after boot: systemd waits for it, formats it only when blank,
+  # and mounts it before ClickHouse starts.
+  - path: /etc/fstab
+    append: true
+    content: |
+      ${data_device} /var/lib/clickhouse ext4 defaults,noatime,nofail,x-systemd.makefs,x-systemd.device-timeout=10min 0 2
+
+  - path: /etc/systemd/system/clickhouse-server.service.d/openjii.conf
+    content: |
+      [Unit]
+      RequiresMountsFor=/var/lib/clickhouse
+
+      [Service]
+      ExecStartPre=+/usr/bin/chown clickhouse:clickhouse /var/lib/clickhouse
+
+  - path: /etc/clickhouse-server/config.d/openjii.xml
+    defer: true
+    content: ${jsonencode(config_xml)}
+
+  - path: /etc/clickhouse-server/users.d/openjii.xml
+    defer: true
+    owner: root:clickhouse
+    permissions: "0640"
+    content: ${jsonencode(users_xml)}
+
+  - path: ${prometheus_config_path}
+    defer: true
+    content: ${jsonencode(prometheus_config)}
+
+  # Not the agent's own amazon-cloudwatch-agent.json, which its fetch-config deletes after reading.
+  - path: ${cloudwatch_agent_config_path}
+    defer: true
+    content: ${jsonencode(cloudwatch_agent_config)}
+
+runcmd:
+  - [systemctl, daemon-reload]
+  - [systemctl, enable, --now, clickhouse-server]
+  - [/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl, -a, fetch-config, -m, ec2, -s, -c, "file:${cloudwatch_agent_config_path}"]
