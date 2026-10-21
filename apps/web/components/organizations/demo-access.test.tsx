@@ -170,6 +170,83 @@ describe("Demo is reserved for platform admins", () => {
   });
 });
 
+describe("Private stays ruled out while Demo is in play in settings", () => {
+  afterEach(() => mockSession(null));
+
+  function mountSettings(type: "demo" | "university", visibility: "public" | "private") {
+    server.mount(contract.organizations.getOrganization, {
+      body: createOrganizationProfile({ id: "org-1", role: "owner", type, visibility }),
+    });
+  }
+
+  function mountShell() {
+    mockSession({ id: "owner" });
+    mountAccess(true);
+    server.mount(contract.organizations.listOrganizationResources, {
+      body: { resources: [], totals: NO_TOTALS },
+    });
+  }
+
+  it("keeps Private disabled for a saved Demo organization whose type is only drafted away", async () => {
+    const user = userEvent.setup();
+    mountShell();
+    mountSettings("demo", "public");
+    render(<OrganizationSettingsSurface organizationId="org-1" />);
+
+    const privateCard = await screen.findByRole("radio", {
+      name: /organizations.visibility.privateLabel/u,
+    });
+    expect(privateCard).toBeDisabled();
+
+    await user.click(screen.getByLabelText("organizations.fields.type"));
+    await user.click(await screen.findByRole("option", { name: "organizations.types.university" }));
+
+    // The visibility click would send only the visibility, which the saved Demo type refuses.
+    expect(privateCard).toBeDisabled();
+    expect(
+      screen.getByRole("radio", { name: /organizations.visibility.publicLabel/u }),
+    ).toBeChecked();
+  });
+
+  it("lets Private be chosen once the type has been saved as ordinary", async () => {
+    const user = userEvent.setup();
+    mountShell();
+    mountSettings("demo", "public");
+    render(<OrganizationSettingsSurface organizationId="org-1" />);
+
+    await user.click(await screen.findByLabelText("organizations.fields.type"));
+    await user.click(await screen.findByRole("option", { name: "organizations.types.university" }));
+    mountSettings("university", "public");
+    await user.click(screen.getByRole("button", { name: "common.save" }));
+
+    const privateCard = screen.getByRole("radio", {
+      name: /organizations.visibility.privateLabel/u,
+    });
+    await waitFor(() => expect(privateCard).toBeEnabled());
+  });
+
+  it("still previews Public for an ordinary private organization whose draft is Demo", async () => {
+    const user = userEvent.setup();
+    mountShell();
+    mountSettings("university", "private");
+    render(<OrganizationSettingsSurface organizationId="org-1" />);
+
+    const privateCard = await screen.findByRole("radio", {
+      name: /organizations.visibility.privateLabel/u,
+    });
+    expect(privateCard).toBeEnabled();
+    expect(privateCard).toBeChecked();
+
+    await user.click(screen.getByLabelText("organizations.fields.type"));
+    await user.click(await screen.findByRole("option", { name: "organizations.types.demo" }));
+
+    expect(privateCard).toBeDisabled();
+    expect(
+      screen.getByRole("radio", { name: /organizations.visibility.publicLabel/u }),
+    ).toBeChecked();
+  });
+});
+
 describe("Demo organizations take no join requests", () => {
   it("renders no join control for a Demo organization", () => {
     const { container } = render(

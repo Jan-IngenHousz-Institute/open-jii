@@ -106,10 +106,13 @@ function OwnerSettingsForm({ organization }: { organization: OrganizationProfile
   const [website, setWebsite] = useState(organization.website ?? "");
   const [location, setLocation] = useState(organization.location ?? "");
 
-  // Choosing Demo is a draft until it is saved, but the card has to say what saving will
-  // do, so Private is ruled out and Public shown as chosen from the moment it is picked.
-  const isDemoDraft = type === "demo";
-  const shownVisibility = isDemoDraft ? "public" : organization.visibility;
+  // A visibility click saves on its own and only sends the visibility, so the server still
+  // judges it against the saved type: Private stays ruled out while the saved type is Demo,
+  // and, as a preview of what saving the type will do, while the draft is Demo.
+  const demoInPlay = organization.type === "demo" || type === "demo";
+  const shownVisibility = demoInPlay ? "public" : organization.visibility;
+  // Until a saved Demo type has actually been changed, the copy keeps describing Demo.
+  const copyType = demoInPlay ? "demo" : type;
 
   const trimmedName = name.trim();
   const slugRejection = organizationSlugRejection(slug);
@@ -350,7 +353,7 @@ function OwnerSettingsForm({ organization }: { organization: OrganizationProfile
         <div className="space-y-0.5">
           <h3 className="text-sm font-semibold">{t("organizations.visibility.title")}</h3>
           <p className="text-muted-foreground text-xs leading-relaxed">
-            {t("organizations.visibility.description", { context: type })}
+            {t("organizations.visibility.description", { context: copyType })}
           </p>
         </div>
 
@@ -367,14 +370,14 @@ function OwnerSettingsForm({ organization }: { organization: OrganizationProfile
             title={t("organizations.visibility.privateLabel")}
             description={t("organizations.visibility.hint", { context: "private" })}
             isSelected={shownVisibility === "private"}
-            disabled={isSaving || isDemoDraft}
+            disabled={isSaving || demoInPlay}
             onSelect={() => void setVisibility("private")}
           />
           <VisibilityCard
             icon={Globe}
             title={t("organizations.visibility.publicLabel")}
             description={t("organizations.visibility.hint", {
-              context: visibilityKind(type, "public"),
+              context: visibilityKind(copyType, "public"),
             })}
             isSelected={shownVisibility === "public"}
             disabled={isSaving}
