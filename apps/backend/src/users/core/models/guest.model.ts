@@ -18,3 +18,7 @@ export interface GuestPurgeResult {
   deleted: number;
   rateLimitRowsDeleted: number;
 }
+
+export interface GuestPurgeBatch extends GuestPurgeResult {
+  blocked: unknown[];
+}

@@ -6,11 +6,13 @@ import {
   guestUsage,
   organizationMembers,
   rateLimits,
+  resourceGrants,
   sessions,
   sql,
   users,
 } from "@repo/database";
 
+import { GuestGrantCleanupRepository } from "../../../sharing/core/repositories/guest-grant-cleanup.repository";
 import { TestHarness } from "../../../test/test-harness";
 import { PurgeExpiredGuestsUseCase } from "../../application/use-cases/purge-expired-guests/purge-expired-guests";
 import { GUEST_LIFETIME_MS } from "../models/guest.model";
@@ -49,7 +51,7 @@ describe("guest quotas and guarded purge", () => {
       const guest = await createGuest();
       const other = createSecondaryDatabase();
       try {
-        const second = new GuestRepository(other.database);
+        const second = new GuestRepository(other.database, new GuestGrantCleanupRepository());
         const now = new Date();
         const outcomes = await Promise.all(
           Array.from({ length: 64 }, (_, i) =>
@@ -108,6 +110,7 @@ describe("guest quotas and guarded purge", () => {
       skipped: false,
       deleted: 1,
       rateLimitRowsDeleted: 1,
+      blocked: [],
     });
     expect(await db.select().from(users).where(eq(users.id, expired.id))).toHaveLength(0);
     expect(await db.select().from(sessions).where(eq(sessions.userId, expired.id))).toHaveLength(0);
@@ -131,6 +134,7 @@ describe("guest quotas and guarded purge", () => {
       skipped: false,
       deleted: 0,
       rateLimitRowsDeleted: 0,
+      blocked: [],
     });
   });
 
@@ -145,6 +149,7 @@ describe("guest quotas and guarded purge", () => {
           skipped: true,
           deleted: 0,
           rateLimitRowsDeleted: 0,
+          blocked: [],
         });
       });
       expect(await repository.purgeExpired()).toMatchObject({ skipped: false });
@@ -167,7 +172,41 @@ describe("guest quotas and guarded purge", () => {
       .returning();
     const signal = { report: vi.fn() };
     const purge = new PurgeExpiredGuestsUseCase(repository, signal);
-    expect(await purge.execute()).toBeNull();
+    const deletable = await createGuest(new Date(Date.now() - GUEST_LIFETIME_MS - 1));
+    await db.insert(resourceGrants).values([
+      {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId: guest.id,
+        role: "viewer",
+      },
+      {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId: deletable.id,
+        role: "viewer",
+      },
+    ]);
+    await db.insert(sessions).values([
+      { userId: guest.id, token: "blocked-session", expiresAt: new Date(Date.now() + 10000) },
+      { userId: deletable.id, token: "deletable-session", expiresAt: new Date(Date.now() + 10000) },
+    ]);
+    await db.insert(rateLimits).values({
+      key: "192.0.2.9|/sign-in/anonymous",
+      count: 1,
+      lastRequest: guest.createdAt.getTime(),
+    });
+    expect(await purge.execute()).toEqual({ skipped: false, deleted: 1, rateLimitRowsDeleted: 1 });
+    expect(await db.select().from(users).where(eq(users.id, deletable.id))).toHaveLength(0);
+    expect(await db.select().from(sessions).where(eq(sessions.userId, deletable.id))).toHaveLength(
+      0,
+    );
+    expect(await db.select().from(sessions).where(eq(sessions.userId, guest.id))).toHaveLength(1);
+    expect(await db.select().from(resourceGrants)).toMatchObject([{ granteeId: guest.id }]);
+    expect(await db.select().from(resourceGrants)).toHaveLength(1);
+    expect(await db.select().from(rateLimits)).toHaveLength(0);
     expect(signal.report).toHaveBeenCalledExactlyOnceWith(expect.anything(), {
       operation: "purgeExpiredGuests",
       error_code: "GUEST_PURGE_FAILED",
