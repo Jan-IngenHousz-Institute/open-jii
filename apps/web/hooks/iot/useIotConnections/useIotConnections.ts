@@ -9,7 +9,7 @@ import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { simulatedSensorsEnabled } from "@repo/api/transforms/simulated-sensor-eligibility";
 import type { DeviceIdentity, IDeviceDriver, ITransportAdapter } from "@repo/iot";
 import { identifyDevice } from "@repo/iot";
-import { simulatedDeviceId } from "@repo/iot/simulation/recordings";
+import { getDemoRecording, simulatedDeviceId } from "@repo/iot/simulation/recordings";
 import { SimulatedTransportAdapter } from "@repo/iot/simulation/transport";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -150,7 +150,10 @@ export function useIotConnections(sensorFamily: SensorFamily, options?: IotConne
           });
         }
 
-        if (simulatedFamily) info.deviceId = simulatedDeviceId(simulatedFamily);
+        if (simulatedFamily) {
+          info.deviceId = simulatedDeviceId(simulatedFamily);
+          info.name = String(getDemoRecording(simulatedFamily).measurement.device_name);
+        }
         const id = crypto.randomUUID();
         const label = info.name ?? `Device #${index}`;
 

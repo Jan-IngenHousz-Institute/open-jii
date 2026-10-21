@@ -4,5 +4,29 @@
     "staged": "apps/docs/.capture/web/platform-admin-roster.webm",
     "ticket": "OJD-2217",
     "date": "2026-10-29"
+  },
+  {
+    "path": "/img/guide/web/simulated-multispeq-web.webm",
+    "staged": "apps/docs/.capture/web/simulated-multispeq-web.webm",
+    "ticket": "OJD-2227",
+    "date": "2026-10-21"
+  },
+  {
+    "path": "/img/guide/web/simulated-ambit-web.webm",
+    "staged": "apps/docs/.capture/web/simulated-ambit-web.webm",
+    "ticket": "OJD-2227",
+    "date": "2026-10-21"
+  },
+  {
+    "path": "/img/guide/web/simulated-minipar-web.webm",
+    "staged": "apps/docs/.capture/web/simulated-minipar-web.webm",
+    "ticket": "OJD-2227",
+    "date": "2026-10-21"
+  },
+  {
+    "path": "/img/mobile/simulated-multispeq-android.webm",
+    "staged": "apps/docs/.capture/mobile/simulated-multispeq-android.webm",
+    "ticket": "OJD-2228",
+    "date": "2026-10-21"
   }
 ]

@@ -357,10 +357,11 @@ export function WorkbookHeader({
               onClick={onConnect}
               disabled={isConnecting || !transportSupported}
               data-testid="connect-device"
+              aria-label={t("iot.workbookBar.connect", { context: String(isConnected) })}
             >
               <Usb className="size-4" />
               <span className="hidden xl:inline">
-                {isConnected ? t("iot.workbookBar.addDevice") : t("iot.workbookBar.connect")}
+                {t("iot.workbookBar.connect", { context: String(isConnected) })}
               </span>
             </Button>
           </TooltipTrigger>
@@ -441,6 +442,7 @@ export function WorkbookHeader({
           "bg-muted text-foreground h-[34px] shrink-0 gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
           !hasOutputs && "cursor-not-allowed opacity-50",
         )}
+        aria-label={t("iot.workbookBar.clearAll")}
         onClick={onClearOutputs}
         disabled={!hasOutputs}
       >
@@ -454,6 +456,7 @@ export function WorkbookHeader({
             type="button"
             variant="destructive"
             className="h-[34px] shrink-0 gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]"
+            aria-label={t("iot.workbookBar.stop")}
             onClick={onStopExecution}
           >
             <Square className="size-4 fill-current" />
@@ -466,6 +469,7 @@ export function WorkbookHeader({
               "h-[34px] shrink-0 gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
               cells.length === 0 && "cursor-not-allowed opacity-50",
             )}
+            aria-label={t("iot.workbookBar.runAll")}
             onClick={onRunAll}
             disabled={cells.length === 0}
           >
