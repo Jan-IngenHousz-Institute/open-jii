@@ -16,6 +16,7 @@ const migrationFiles = [
   "0005_add_workbook_run_id.sql",
   "0006_add_failure_reason.sql",
   "0007_add_simulated_provenance.sql",
+  "0008_add_capture_owner.sql",
 ];
 const migrationSqls = migrationFiles.map((f) =>
   readFileSync(resolve(__dirname, "../../../drizzle", f), "utf-8"),
@@ -119,6 +120,19 @@ describe("measurements-storage", () => {
       ]);
       await mod.updateMeasurement(id, measurement);
       expect((await mod.getMeasurement(id))?.data.measurementResult.simulated).toBe(true);
+    });
+
+    it("persists capture ownership separately from body fields", async () => {
+      const mod = await import("~/shared/db/measurements-storage");
+      const id = await mod.saveMeasurement(
+        { ...mockMeasurement, measurementResult: { user_id: "forged-body-user" } },
+        "pending",
+        { userId: "guest-1", isGuest: true },
+      );
+      expect((await mod.getMeasurementById(id))?.owner).toEqual({
+        userId: "guest-1",
+        isGuest: true,
+      });
     });
 
     it("inserts a pending row and returns its id (save-first default)", async () => {
@@ -1079,6 +1093,32 @@ describe("measurements-storage", () => {
   // ---------------------------------------------------------------------------
 
   describe("pruneExpiredMeasurements", () => {
+    it("expires unsent guest rows only, keeping unsent researchers and recent guests", async () => {
+      const old = Date.now() - 8 * 24 * 60 * 60 * 1000;
+      const recent = Date.now() - 6 * 24 * 60 * 60 * 1000;
+      for (const [id, status, guest, createdAt] of [
+        ["guest-pending", "pending", true, old],
+        ["guest-failed", "failed", true, old],
+        ["guest-recent", "pending", true, recent],
+        ["researcher-pending", "pending", false, old],
+        ["researcher-failed", "failed", false, old],
+      ] as const) {
+        insertRow(id, status, { createdAt });
+        sqlite
+          .prepare("UPDATE measurements SET owner_is_guest = ? WHERE id = ?")
+          .run(Number(guest), id);
+      }
+      const mod = await import("~/shared/db/measurements-storage");
+      await mod.pruneExpiredMeasurements();
+      const remaining = db
+        .select({ id: schema.measurements.id })
+        .from(schema.measurements)
+        .all()
+        .map(({ id }) => id)
+        .sort();
+      expect(remaining).toEqual(["guest-recent", "researcher-failed", "researcher-pending"]);
+    });
+
     it("removes successful rows older than 7 days", async () => {
       const eightDaysAgoMs = Date.now() - 8 * 24 * 60 * 60 * 1000;
       const oneDayAgoMs = Date.now() - 1 * 24 * 60 * 60 * 1000;

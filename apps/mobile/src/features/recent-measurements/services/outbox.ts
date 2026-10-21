@@ -59,11 +59,16 @@ export interface Outbox {
   destroy(): void;
 }
 
+export interface UploadIdentity {
+  userId: string;
+  isGuest: boolean;
+}
+
 export interface OutboxOptions {
   transport: Transport;
   /** Carries the measurements the broker will not accept. */
   largeTransport: Transport;
-  isGuest?: () => Promise<boolean>;
+  getIdentity: () => UploadIdentity | null;
   concurrency?: number;
   retryBackoffMs?: readonly number[];
 }
@@ -83,7 +88,7 @@ const yieldToEventLoop = (): Promise<void> => new Promise<void>((resolve) => set
 class OutboxImpl implements Outbox {
   private readonly transport: Transport;
   private readonly largeTransport: Transport;
-  private readonly isGuest: () => Promise<boolean>;
+  private readonly getIdentity: () => UploadIdentity | null;
   private readonly queue: AsyncQueuer<string>;
   private rehydrating = false;
   private lastRehydrateAt = 0;
@@ -107,7 +112,7 @@ class OutboxImpl implements Outbox {
   constructor(opts: OutboxOptions) {
     this.transport = opts.transport;
     this.largeTransport = opts.largeTransport;
-    this.isGuest = opts.isGuest ?? (() => Promise.resolve(false));
+    this.getIdentity = opts.getIdentity;
     const concurrency = opts.concurrency ?? UPLOAD_CONCURRENCY;
     const backoff = opts.retryBackoffMs ?? UPLOAD_RETRY_BACKOFF_MS;
     log.info("init", { concurrency, backoffSteps: backoff.length });
@@ -342,7 +347,20 @@ class OutboxImpl implements Outbox {
     const serialized = JSON.stringify(payload);
     const bytes = utf8ByteLength(serialized);
     const overBrokerLimit = bytes > MQTT_PAYLOAD_LIMIT_BYTES;
-    const guest = await this.isGuest();
+    const identity = this.getIdentity();
+    const ownerId = row.owner?.userId;
+    const capturedGuest = row.owner?.isGuest;
+    if (
+      !identity ||
+      typeof ownerId !== "string" ||
+      identity.userId !== ownerId ||
+      typeof capturedGuest !== "boolean" ||
+      capturedGuest !== identity.isGuest
+    ) {
+      trace?.end("ok", { skipped: "owner_not_signed_in" });
+      return;
+    }
+    const guest = capturedGuest;
     const useS3 = guest || overBrokerLimit;
     const transport = useS3 ? this.largeTransport : this.transport;
     const route = useS3 ? "s3" : "mqtt";

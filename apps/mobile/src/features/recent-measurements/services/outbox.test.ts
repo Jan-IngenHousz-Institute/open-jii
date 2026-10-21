@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Transport } from "~/features/connection/services/mqtt/mqtt-transport";
 
+import type { UploadIdentity } from "./outbox";
+
 const {
   mockGetMeasurementById,
   mockGetMeasurementIds,
@@ -61,7 +63,7 @@ async function freshOutbox(
     concurrency?: number;
     retryBackoffMs?: readonly number[];
     largeTransport?: Transport;
-    isGuest?: () => Promise<boolean>;
+    getIdentity?: () => UploadIdentity | null;
   },
 ) {
   vi.resetModules();
@@ -73,7 +75,7 @@ async function freshOutbox(
   const outbox = outboxMod.createOutbox({
     transport,
     largeTransport: opts?.largeTransport ?? makeTransport(),
-    isGuest: opts?.isGuest,
+    getIdentity: opts?.getIdentity ?? (() => ({ userId: "user-1", isGuest: false })),
     concurrency: opts?.concurrency ?? 1,
     retryBackoffMs: opts?.retryBackoffMs ?? [],
   });
@@ -128,9 +130,10 @@ const row = (
 ) => ({
   id: overrides.id ?? "row-1",
   status: overrides.status ?? "pending",
+  owner: { userId: "user-1", isGuest: false },
   data: {
     topic: overrides.topic ?? "exp/proto",
-    measurementResult: overrides.result ?? { foo: 1 },
+    measurementResult: { user_id: "user-1", ...(overrides.result ?? { foo: 1 }) },
     metadata: { experimentName: "e", protocolName: "p", timestamp: "t" },
   },
 });
@@ -221,6 +224,7 @@ describe("Outbox", () => {
       expect(transport.calls).toHaveLength(1);
       expect(transport.calls[0].topic).toBe("exp/p");
       expect(transport.calls[0].payload).toEqual({
+        user_id: "user-1",
         v: 42,
         device_family: "multispeq",
         device_firmware: "2.311",
@@ -724,11 +728,14 @@ describe("Outbox", () => {
       const mqtt = makeTransport();
       const large = makeTransport();
       mockGetMeasurementById.mockImplementation((id: string) =>
-        Promise.resolve(row({ id, result: { value: "é🌱" } })),
+        Promise.resolve({
+          ...row({ id, result: { value: "é🌱" } }),
+          owner: { userId: "user-1", isGuest: guest },
+        }),
       );
       const { outbox } = await freshOutbox(mqtt, {
         largeTransport: large,
-        isGuest: () => Promise.resolve(guest),
+        getIdentity: () => ({ userId: "user-1", isGuest: guest }),
       });
       await flushTasks();
       outbox.enqueue("guest-row");
@@ -745,9 +752,39 @@ describe("Outbox", () => {
       outbox.destroy();
     });
 
+    it.each([
+      { owner: "researcher", active: { userId: "guest", isGuest: true } },
+      { owner: "guest", active: { userId: "researcher", isGuest: false } },
+      { owner: "guest", active: null },
+    ])("holds $owner rows when another or no identity is active", async ({ owner, active }) => {
+      const mqtt = makeTransport();
+      const large = makeTransport();
+      mockGetMeasurementById.mockResolvedValue({
+        ...row({ result: { user_id: owner } }),
+        owner: { userId: owner, isGuest: owner === "guest" },
+      });
+      const { outbox } = await freshOutbox(mqtt, {
+        largeTransport: large,
+        getIdentity: () => active,
+      });
+      await flushTasks();
+      outbox.enqueue("row-1");
+      await flushTasks(20);
+      expect(mqtt.calls).toHaveLength(0);
+      expect(large.calls).toHaveLength(0);
+      expect(mockMarkAsFailed).not.toHaveBeenCalled();
+      expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
+      expect(outbox.isProcessing("row-1")).toBe(false);
+      outbox.destroy();
+    });
+
     // `{"blob":"<n>","_client_id":"row-1"}` is the serialized payload, and the
     // literal characters around the blob account for the difference.
-    const ENVELOPE_CHARS = 32;
+    const ENVELOPE_CHARS = JSON.stringify({
+      user_id: "user-1",
+      blob: "",
+      _client_id: "row-1",
+    }).length;
     const LIMIT = 128 * 1024;
 
     async function runOne(result: object) {
