@@ -5,6 +5,7 @@ import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 
 import { renderAccessGrantedNotification } from "../render/access-granted-notification";
+import { renderExperimentMadePublicNotification } from "../render/experiment-made-public-notification";
 import { renderOrganizationMembershipRemoved } from "../render/organization-membership-removed";
 import { renderOrganizationRoleChanged } from "../render/organization-role-changed";
 import { renderOtpEmail } from "../render/otp-email";
@@ -79,6 +80,16 @@ async function main(): Promise<void> {
       baseUrl,
       organizationName: "Photosynthesis Lab",
       actor: "Jane Doe",
+    }),
+  );
+
+  write(
+    "experiment-made-public",
+    await renderExperimentMadePublicNotification({
+      host,
+      baseUrl,
+      experimentName: "Leaf Area Index",
+      experimentUrl: `${baseUrl}/en-US/platform/experiments/123`,
     }),
   );
 

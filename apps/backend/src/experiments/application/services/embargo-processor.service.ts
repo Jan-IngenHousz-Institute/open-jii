@@ -2,6 +2,10 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
 import { ErrorCodes } from "../../../common/utils/error-codes";
+import { AppError, Result, failure, success } from "../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../notifications/application/services/notification-dispatch.service";
+import { SharingRepository } from "../../../sharing/core/repositories/sharing.repository";
+import type { ExperimentDto } from "../../core/models/experiment.model";
 import { ANALYTICS_PORT } from "../../core/ports/analytics.port";
 import type { AnalyticsPort } from "../../core/ports/analytics.port";
 import { ExperimentRepository } from "../../core/repositories/experiment.repository";
@@ -12,6 +16,8 @@ export class EmbargoProcessorService {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
+    private readonly sharingRepository: SharingRepository,
+    private readonly notifications: NotificationDispatchService,
     @Inject(ANALYTICS_PORT)
     private readonly analyticsPort: AnalyticsPort,
   ) {}
@@ -65,13 +71,13 @@ export class EmbargoProcessorService {
       let successCount = 0;
       let failureCount = 0;
       let firstFailure: unknown = null;
+      let notifyFailureCount = 0;
+      let firstNotifyFailure: unknown = null;
 
       for (const experiment of experiments) {
-        const updateResult = await this.experimentRepository.update(experiment.id, {
-          visibility: "public",
-        });
+        const published = await this.publish(experiment);
 
-        if (updateResult.isSuccess()) {
+        if (published.isSuccess()) {
           successCount++;
           this.logger.log({
             msg: "Experiment embargo expired and made public",
@@ -79,15 +85,28 @@ export class EmbargoProcessorService {
             experimentId: experiment.id,
             status: "success",
           });
+
+          const { notifyError } = published.value;
+          if (notifyError) {
+            notifyFailureCount++;
+            firstNotifyFailure ??= notifyError;
+            this.logger.error({
+              msg: "Failed to notify the admins of an experiment made public, it stays public",
+              errorCode: ErrorCodes.EMBARGO_PROCESSING_FAILED,
+              operation: "processExpiredEmbargoes",
+              experimentId: experiment.id,
+              error: notifyError,
+            });
+          }
         } else {
           failureCount++;
-          firstFailure ??= updateResult.error;
+          firstFailure ??= published.error;
           this.logger.error({
             msg: "Failed to update experiment embargo",
             errorCode: ErrorCodes.EMBARGO_PROCESSING_FAILED,
             operation: "processExpiredEmbargoes",
             experimentId: experiment.id,
-            error: updateResult.error,
+            error: published.error,
           });
         }
       }
@@ -104,6 +123,12 @@ export class EmbargoProcessorService {
       if (firstFailure !== null) {
         this.reportFailure(firstFailure, { stage: "update", failure_count: failureCount });
       }
+      if (firstNotifyFailure !== null) {
+        this.reportFailure(firstNotifyFailure, {
+          stage: "notify",
+          failure_count: notifyFailureCount,
+        });
+      }
     } catch (error) {
       this.logger.error({
         msg: "Unexpected error during embargo processing",
@@ -113,6 +138,37 @@ export class EmbargoProcessorService {
       });
       this.reportFailure(error, { stage: "unexpected" });
     }
+  }
+
+  /**
+   * Makes one experiment public, then tells its admins. A notification failure is
+   * handed back beside the publish rather than failing it.
+   */
+  private async publish(
+    experiment: ExperimentDto,
+  ): Promise<Result<{ notifyError: AppError | null }>> {
+    const updateResult = await this.experimentRepository.update(experiment.id, {
+      visibility: "public",
+    });
+    if (updateResult.isFailure()) {
+      return failure(updateResult.error);
+    }
+
+    const adminIds = await this.sharingRepository.listAdminIds("experiment", experiment.id);
+    if (adminIds.isFailure()) {
+      return success({ notifyError: adminIds.error });
+    }
+
+    const dispatched = await this.notifications.dispatch({
+      type: "experiment_made_public",
+      recipientIds: adminIds.value,
+      actorId: null,
+      resource: { type: "experiment", id: experiment.id },
+      params: { experimentName: experiment.name },
+      dedupeKey: `embargo:${experiment.id}`,
+    });
+
+    return success({ notifyError: dispatched.isFailure() ? dispatched.error : null });
   }
 
   private reportFailure(error: unknown, properties: Record<string, unknown>): void {
@@ -150,12 +206,21 @@ export class EmbargoProcessorService {
     let failed = 0;
 
     for (const experiment of experiments) {
-      const updateResult = await this.experimentRepository.update(experiment.id, {
-        visibility: "public",
-      });
+      const published = await this.publish(experiment);
 
-      if (updateResult.isSuccess()) {
+      if (published.isSuccess()) {
         succeeded++;
+
+        const { notifyError } = published.value;
+        if (notifyError) {
+          this.logger.error({
+            msg: "Failed to notify the admins of an experiment made public, it stays public",
+            errorCode: ErrorCodes.EMBARGO_PROCESSING_FAILED,
+            operation: "processExpiredEmbargoesManually",
+            experimentId: experiment.id,
+            error: notifyError,
+          });
+        }
       } else {
         failed++;
       }

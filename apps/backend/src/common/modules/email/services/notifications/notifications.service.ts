@@ -4,6 +4,7 @@ import Mail from "nodemailer/lib/mailer";
 
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { renderAccessGrantedNotification } from "@repo/transactional/render/access-granted-notification";
+import { renderExperimentMadePublicNotification } from "@repo/transactional/render/experiment-made-public-notification";
 import { renderJoinRequestRejected } from "@repo/transactional/render/join-request-rejected";
 import { renderJoinRequestSubmitted } from "@repo/transactional/render/join-request-submitted";
 import { renderOrganizationInvitation } from "@repo/transactional/render/organization-invitation";
@@ -106,6 +107,13 @@ export class NotificationsService {
     ...args: Parameters<typeof renderResourceDeletedNotification>
   ) {
     return renderResourceDeletedNotification(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderExperimentMadePublicNotificationEmail(
+    ...args: Parameters<typeof renderExperimentMadePublicNotification>
+  ) {
+    return renderExperimentMadePublicNotification(...args);
   }
 
   /* v8 ignore next 5 */
@@ -644,6 +652,57 @@ export class NotificationsService {
           operation: "sendResourceDeletedNotification",
           email,
           resourceType,
+          error,
+        }),
+    );
+  }
+
+  async sendExperimentMadePublicNotification(
+    experimentId: string,
+    experimentName: string,
+    email: string,
+  ) {
+    return await tryCatch(
+      async () => {
+        this.logger.log({
+          msg: "Sending experiment made public notification email",
+          operation: "sendExperimentMadePublicNotification",
+          email,
+          experimentId,
+        });
+
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { href: experimentUrl } = new URL(`/platform/experiments/${experimentId}`, baseUrl);
+
+        const { html, text } = await this.renderExperimentMadePublicNotificationEmail({
+          host,
+          baseUrl,
+          experimentName,
+          experimentUrl,
+        });
+
+        await this.dispatch({
+          to: email,
+          subject: `${experimentName} is now public on the openJII Platform`,
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Experiment made public notification email sent successfully",
+          operation: "sendExperimentMadePublicNotification",
+          email,
+          experimentId,
+          status: "success",
+        });
+      },
+      (error) =>
+        this.sendFailure(error, {
+          msg: "Failed to send experiment made public notification email",
+          operation: "sendExperimentMadePublicNotification",
+          email,
+          experimentId,
           error,
         }),
     );

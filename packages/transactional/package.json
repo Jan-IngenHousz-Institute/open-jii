@@ -66,6 +66,10 @@
     "./render/organization-membership-removed": {
       "types": "./dist/render/organization-membership-removed.d.ts",
       "default": "./dist/render/organization-membership-removed.js"
+    },
+    "./render/experiment-made-public-notification": {
+      "types": "./dist/render/experiment-made-public-notification.d.ts",
+      "default": "./dist/render/experiment-made-public-notification.js"
     }
   },
   "scripts": {
