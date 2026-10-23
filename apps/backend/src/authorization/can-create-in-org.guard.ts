@@ -3,13 +3,16 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Inject,
   Injectable,
+  InternalServerErrorException,
   Logger,
   UseGuards,
 } from "@nestjs/common";
 import type { Request } from "express";
 
-import { AuthorizationService } from "./authorization.service";
+import { ORGANIZATION_ACCESS_PORT } from "../organizations/core/ports/organization-access.port";
+import type { OrganizationAccessPort } from "../organizations/core/ports/organization-access.port";
 
 interface AuthenticatedRequest extends Request {
   session?: { user?: { id?: string } } | null;
@@ -26,11 +29,13 @@ interface AuthenticatedRequest extends Request {
 export class CanCreateInOrgGuard implements CanActivate {
   private readonly logger = new Logger(CanCreateInOrgGuard.name);
 
-  constructor(private readonly authz: AuthorizationService) {}
+  constructor(
+    @Inject(ORGANIZATION_ACCESS_PORT) private readonly organizations: OrganizationAccessPort,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const body = request.body as { organizationId?: unknown } | undefined;
+    const body = request.body as { organizationId?: unknown; visibility?: unknown } | undefined;
     const orgId = body?.organizationId;
     // No explicit target org → defaults to the caller's personal org later.
     if (typeof orgId !== "string" || orgId.length === 0) {
@@ -42,8 +47,11 @@ export class CanCreateInOrgGuard implements CanActivate {
       throw new ForbiddenException("Unauthorized");
     }
 
-    const isMember = await this.authz.isOrgMember(userId, orgId);
-    if (!isMember) {
+    const access = await this.organizations.findAccess(orgId, userId);
+    if (access.isFailure()) {
+      throw new InternalServerErrorException("Could not check organization access");
+    }
+    if (!access.value?.memberRole) {
       this.logger.warn({
         msg: "Attempt to create a resource in an organization the caller is not a member of",
         operation: "canCreateInOrg",
@@ -51,6 +59,9 @@ export class CanCreateInOrgGuard implements CanActivate {
         userId,
       });
       throw new ForbiddenException("You cannot create resources in this organization");
+    }
+    if (body?.visibility === "private" && access.value.type === "demo") {
+      throw new ForbiddenException("Demo organizations can only own public resources");
     }
     return true;
   }

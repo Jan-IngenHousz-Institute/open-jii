@@ -9,6 +9,7 @@
       "env": [
         "NODE_ENV",
         "AUTH_SECRET",
+        "ADMIN_USER_IDS",
         "NEXT_RUNTIME",
         "CORS_ENABLED",
         "CORS_ORIGINS",
@@ -38,7 +39,7 @@
     },
     "dev": {
       "dependsOn": ["^build"],
-      "env": ["NEXT_PUBLIC_ENABLE_DEVTOOLS"],
+      "env": ["NEXT_PUBLIC_ENABLE_DEVTOOLS", "ADMIN_USER_IDS"],
       "cache": false,
       "persistent": true
     },

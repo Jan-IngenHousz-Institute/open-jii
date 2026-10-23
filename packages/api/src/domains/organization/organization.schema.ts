@@ -6,16 +6,11 @@ import { zDeviceType } from "../iot/iot.schema";
 import { zMacroLanguage } from "../macro/macro.schema";
 import { zSensorFamily } from "../protocol/protocol.schema";
 import { zGrantRole, zSharingResourceType } from "../sharing/sharing.schema";
+import { zOrganizationType } from "./organization-type.schema";
+import type { OrganizationType } from "./organization-type.schema";
 
-/** Mirrors the `organization_type` enum; organizations may leave it unset. */
-export const zOrganizationType = z.enum([
-  "research_institute",
-  "non_profit",
-  "private_company",
-  "government_agency",
-  "university",
-]);
-export type OrganizationType = z.infer<typeof zOrganizationType>;
+export { zOrganizationType };
+export type { OrganizationType };
 
 /**
  * Every visible organization-type label the search service accepts. Kept beside
@@ -28,6 +23,7 @@ export const ORGANIZATION_TYPE_SEARCH_ALIASES = {
   private_company: "Private company Privatunternehmen Particulier bedrijf",
   government_agency: "Government agency Behörde Overheidsinstantie",
   university: "University Universität Universiteit",
+  demo: "Demo",
 } as const satisfies Record<OrganizationType, string>;
 
 /** Directory listing state. Private organizations are invisible to non-members. */

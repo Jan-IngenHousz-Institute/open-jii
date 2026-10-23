@@ -528,7 +528,8 @@
       "non_profit": "Non-profit",
       "private_company": "Private company",
       "government_agency": "Government agency",
-      "university": "University"
+      "university": "University",
+      "demo": "Demo"
     },
     "roles": {
       "owner": "Owner",
@@ -570,8 +571,8 @@
       "creating": "Creating…",
       "created": "{{name}} created",
       "failed": "Could not create this organization.",
-      "privateNote": "This organization will be private. Nobody outside it will see it, and you can publish it later from its settings.",
-      "publicNote": "This organization will be public. It appears in the directory as soon as it is created, where anyone signed in can find it and ask to join.",
+      "visibilityNote_private": "This organization will be private. Nobody outside it will see it, and you can publish it later from its settings.",
+      "visibilityNote_public": "This organization will be public. It appears in the directory as soon as it is created, where anyone signed in can find it and ask to join.",
       "next": "Next",
       "identityStep": "Identity",
       "identityTitle": "Identity",
@@ -601,7 +602,8 @@
         "listTitle": "People to invite",
         "teamsNote": "Teams are set up from the organization's Teams tab once it exists — a team is a group of its members, so it cannot come first.",
         "failed": "The organization was created, but {{names}} could not be invited. Try again from its Members tab."
-      }
+      },
+      "visibilityNote_demo": "This Demo organization and all its resources are public. People can browse without joining; join requests are not accepted."
     },
     "directory": {
       "emptyTitle": "No organizations yet",
@@ -724,6 +726,7 @@
       "invitedByAndExpiry": "Invited by {{name}} · {{expiry}}"
     },
     "requests": {
+      "approvalNotice_demo": "Demo organizations don't accept join requests. You can reject requests left pending before conversion.",
       "approveAction": "Approve",
       "rejectAction": "Reject",
       "approved": "{{name}} joined the organization",
@@ -793,10 +796,13 @@
       "profileTitle": "Profile",
       "profileDescription": "How this organization appears to its members and, if it is public, in the directory.",
       "saved": "Organization updated",
-      "saveFailed": "Could not save these changes.",
+      "saveError": "Could not save these changes.",
+      "saveError_demoPrivateResources": "Publish every experiment, workbook, protocol and macro before choosing Demo.",
+      "saveError_organization_changed": "The organization changed. Reload it before saving again.",
       "title": "Settings",
       "description": "Only owners can change these. Admins manage people and teams.",
-      "unsaved": "Unsaved changes to the profile."
+      "unsaved": "Unsaved changes to the profile.",
+      "demoPrivateResources": "Publish these private resources before choosing Demo."
     },
     "visibility": {
       "title": "Visibility",
@@ -808,8 +814,10 @@
       "nowPublic": "This organization is now public",
       "nowPrivate": "This organization is now private",
       "changeFailed": "Could not change the organization's visibility.",
-      "privateHint": "Invisible from outside. A non-member gets a not-found page, and nobody can ask to join.",
-      "publicHint": "Listed in the directory. Anyone signed in sees the profile and its public resources, and can ask to join."
+      "hint_private": "Invisible from outside. A non-member gets a not-found page, and nobody can ask to join.",
+      "hint_public": "Listed in the directory. Anyone signed in sees the profile and its public resources, and can ask to join.",
+      "description_demo": "Demo organizations and every experiment, workbook, protocol and macro they own are public. People can browse them without joining.",
+      "hint_demo": "Listed in the directory. Everyone can view its resources. Demo organizations do not accept join requests."
     },
     "delete": {
       "description": "Deleting an organization cannot be undone. Nothing it owns is deleted with it, so it has to be empty first.",
@@ -901,8 +909,10 @@
       "title": "Resource mix"
     },
     "overview": {
-      "visitorNotice": "You are looking at a public profile. Members see everything they have access to; ask to join and an owner decides."
-    }
+      "visitorNotice": "You are looking at a public profile. Members see everything they have access to; ask to join and an owner decides.",
+      "visitorNotice_demo": "You are viewing a Demo organization. Its resources are public. Viewing does not give you permission to edit them."
+    },
+    "allTypes": "All types"
   },
   "dashboard": {
     "title": "Home",
@@ -1503,5 +1513,26 @@
     "previous": "Previous",
     "next": "Next",
     "pageOf": "Page {{page}} of {{totalPages}}"
+  },
+  "platformAdmins": {
+    "title": "Platform admins",
+    "description": "Platform admins appoint other admins and manage Demo organizations.",
+    "current": "Current admins",
+    "configured": "Set by deployment configuration",
+    "dateUnknown": "Appointment date unavailable",
+    "appoint": "Appoint admin",
+    "remove": "Remove admin",
+    "search": "Find a researcher by name",
+    "searchStatus_none": "No registered researchers match.",
+    "searchStatus_loading": "Loading...",
+    "loadFailed": "Could not load platform admins.",
+    "searchFailed": "Could not search researchers.",
+    "changeFailed": "Could not change the admin role. Try again.",
+    "retry": "Try again",
+    "removeNamed": "Remove admin: {{name}}",
+    "searchStatus_alreadyAdmin": "All matching researchers are already platform admins.",
+    "roleChanged_admin": "Platform admin appointed.",
+    "roleChanged_user": "Platform admin removed.",
+    "appointNamed": "Appoint admin: {{name}}"
   }
 }

@@ -11,8 +11,13 @@ Prepare and start the local stack:
 ```sh
 pnpm db:setup
 pnpm --filter database db:seed
-pnpm dev:fb
+ADMIN_USER_IDS=$(pnpm --silent --filter @repo/e2e seed-user-id) pnpm dev:fb
 ```
+
+`ADMIN_USER_IDS` makes the seed user a deployment-configured platform admin, which
+`specs/platform-admins.spec.ts` and the platform admin and Demo organization captures need. The seed
+user's id can change when the database is reseeded or reset, so restart the backend this way
+afterwards.
 
 In another terminal, once both applications are ready, run the suite:
 
@@ -37,6 +42,9 @@ page before authentication starts.
 - `specs/chrome-refresh.spec.ts` covers the authenticated application shell and experiment chrome.
 - `specs/workbook-search.spec.ts` covers server-side workbook search and attachment.
 - `specs/registration.spec.ts` covers a new account registering and landing on home.
+- `specs/platform-admins.spec.ts` covers appointing and removing a platform admin and creating a
+  Demo organization. It needs the seed user in `ADMIN_USER_IDS`, and resets Newcomer's role and the
+  organization it creates before and after each attempt.
 - `scripts/record-maintenance.ts` records maintenance-mode screenshots and video but is not a test.
 - `scripts/capture-docs-media.ts` stages documentation screenshots and recordings for `apps/docs`.
 - `scripts/capture-ticket-screens.ts` captures the screens a Linear ticket carries.
@@ -55,7 +63,9 @@ pnpm --filter @repo/e2e capture-docs-media --theme dark
 ```
 
 Captures are staged in `apps/docs/.capture/web` and are never published automatically. `ffmpeg` is
-required for the scale, metadata strip and encode.
+required for the scale, metadata strip and encode. The `platform-admin-appointments` and
+`demo-organization-creation` recordings act as a platform admin, so start the backend with the seed
+user in `ADMIN_USER_IDS` as described under [Run locally](#run-locally).
 
 ## Ticket screens
 

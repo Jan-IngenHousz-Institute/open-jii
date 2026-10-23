@@ -9,6 +9,7 @@ import { useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import type { OrganizationJoinRequest } from "@repo/api/domains/organization/join-requests/organization-join-requests.schema";
+import type { OrganizationType } from "@repo/api/domains/organization/organization-type.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -21,7 +22,13 @@ import { toast } from "@repo/ui/hooks/use-toast";
  * decision buttons; the decided ones stay as history, without them — a decision is
  * not reversible here, the person is either a member now or has to ask again.
  */
-export function OrganizationJoinRequests({ organizationId }: { organizationId: string }) {
+export function OrganizationJoinRequests({
+  organizationId,
+  organizationType,
+}: {
+  organizationId: string;
+  organizationType?: OrganizationType | null;
+}) {
   const { t } = useTranslation();
   const { data, isPending, isError } = useOrganizationJoinRequests(organizationId);
   const { mutateAsync: decide } = useDecideOrganizationJoinRequest();
@@ -94,6 +101,11 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
 
   return (
     <div className="flex flex-col gap-6">
+      {organizationType === "demo" && pending.length > 0 && (
+        <p className="text-muted-foreground text-sm">
+          {t("organizations.requests.approvalNotice", { context: organizationType })}
+        </p>
+      )}
       <div
         role="list"
         aria-label={t("organizations.requests.label")}
@@ -124,13 +136,15 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
               ) : null}
             </div>
             <div className="flex shrink-0 gap-2">
-              <Button
-                size="sm"
-                onClick={() => void submitDecision(request, "approve")}
-                disabled={busyRequestId === request.id}
-              >
-                {t("organizations.requests.approveAction")}
-              </Button>
+              {organizationType !== "demo" && (
+                <Button
+                  size="sm"
+                  onClick={() => void submitDecision(request, "approve")}
+                  disabled={busyRequestId === request.id}
+                >
+                  {t("organizations.requests.approveAction")}
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="outline"

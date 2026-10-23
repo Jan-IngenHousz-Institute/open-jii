@@ -131,7 +131,12 @@ export function OrganizationMembersSurface({ organizationId }: { organizationId:
         />
       )}
       {activeView === "invited" && <OrganizationInvitations organizationId={organizationId} />}
-      {activeView === "requests" && <OrganizationJoinRequests organizationId={organizationId} />}
+      {activeView === "requests" && (
+        <OrganizationJoinRequests
+          organizationId={organizationId}
+          organizationType={organization?.type}
+        />
+      )}
     </div>
   );
 }

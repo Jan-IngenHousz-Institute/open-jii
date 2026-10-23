@@ -77,3 +77,12 @@ invitations from a different manager for the hidden-invitations shot. Set
 `E2E_PRIVACY_CAPTURE_EXPERIMENT` and `E2E_PRIVACY_CAPTURE_ORGANIZATION` when the
 fixture uses names other than Access Showcase Experiment and Access Showcase Lab.
 These captures follow the same staging and frame-review rules above.
+
+## Pending publication
+
+Add unpublished recordings to `../pending.json` with their planned `/img/...` path,
+staged capture path, ticket and date. Wrap the docs' `<video>` in `<DocsVideo>` so
+readers see a Recording pending review callout until a person publishes the file
+and removes its pending entry. `pnpm --filter docs check-media-references --strict`
+must pass before leaving draft or releasing. Publishing still requires the frame
+review and checksum described above.

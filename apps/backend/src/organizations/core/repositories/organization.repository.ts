@@ -66,6 +66,7 @@ import type {
   OrganizationTeamGrantDto,
 } from "../models/organization.model";
 import { normalizeOrgRole } from "../organization-access";
+import type { OrganizationAccessPort } from "../ports/organization-access.port";
 
 /**
  * The resource tables an organization can own, keyed by the grant enum so a new
@@ -234,7 +235,7 @@ const personFields = {
 };
 
 @Injectable()
-export class OrganizationRepository {
+export class OrganizationRepository implements OrganizationAccessPort {
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
@@ -256,6 +257,7 @@ export class OrganizationRepository {
           slug: organizations.slug,
           visibility: organizations.visibility,
           memberRole: organizationMembers.role,
+          type: organizations.type,
         })
         .from(organizations)
         .leftJoin(

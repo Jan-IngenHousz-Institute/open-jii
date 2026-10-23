@@ -236,3 +236,9 @@ variable "data_platform_sp_application_id" {
   type        = string
   default     = "122ea6e5-a082-45b5-9df6-ef5482868fdc"
 }
+
+variable "admin_user_ids" {
+  description = "Comma-separated user UUIDs with platform admin access. Changing these requires redeployment."
+  type        = string
+  default     = "74a8ee3e-2c4f-4378-bb0b-a41e1d68f013"
+}

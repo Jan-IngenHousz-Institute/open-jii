@@ -4,7 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import type { MacroProtocolList } from "@repo/api/domains/macro/macro.schema";
-import { protocols } from "@repo/database";
+import { protocols, eq, macros } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
@@ -904,10 +904,7 @@ describe("MacroController", () => {
     });
 
     it("returns 403 when creating a macro in an organization the caller is not a member of", async () => {
-      const organizationId = faker.string.uuid();
-      const isOrgMemberSpy = vi
-        .spyOn(testApp.module.get(AuthorizationService), "isOrgMember")
-        .mockResolvedValue(false);
+      const organizationId = await testApp.createOrganization();
 
       await testApp
         .post(testApp.resolveOrpcPath(contract.macros.createMacro))
@@ -915,7 +912,11 @@ describe("MacroController", () => {
         .send({ name: "Org macro", language: "python", code: btoa("print('x')"), organizationId })
         .expect(StatusCodes.FORBIDDEN);
 
-      expect(isOrgMemberSpy).toHaveBeenCalledWith(testUserId, organizationId);
+      const resources = await testApp.database
+        .select({ id: macros.id })
+        .from(macros)
+        .where(eq(macros.organizationId, organizationId));
+      expect(resources).toHaveLength(0);
     });
   });
 });

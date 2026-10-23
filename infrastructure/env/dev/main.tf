@@ -2517,6 +2517,10 @@ module "backend_ecs" {
   # Environment variables for the backend service
   environment_variables = [
     {
+      name  = "ADMIN_USER_IDS"
+      value = var.admin_user_ids
+    },
+    {
       name  = "DATABRICKS_CATALOG_NAME"
       value = module.databricks_catalog.catalog_name
     },

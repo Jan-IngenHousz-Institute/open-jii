@@ -108,6 +108,7 @@ export function createExperiment(overrides: Partial<ExperimentListItem> = {}): E
     workbookId: null,
     workbookVersionId: null,
     organizationId: null,
+    organizationType: null,
     ownerFirstName: "John",
     ownerLastName: "Doe",
     membershipStatus: "none",
@@ -230,6 +231,7 @@ export function createSession(
     updatedAt: new Date("2025-01-01T00:00:00.000Z"),
     image: null,
     registered: true,
+    banned: false,
     ...overrides.user,
   };
   return {

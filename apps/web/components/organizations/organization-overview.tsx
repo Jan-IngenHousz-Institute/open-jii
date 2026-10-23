@@ -53,7 +53,11 @@ export function OrganizationOverview({ organizationId }: { organizationId: strin
         {organization && !isMember ? (
           <Card className="text-muted-foreground flex items-start gap-3 p-4 text-sm">
             <Info className="text-primary mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            <p className="leading-relaxed">{t("organizations.overview.visitorNotice")}</p>
+            <p className="leading-relaxed">
+              {t("organizations.overview.visitorNotice", {
+                context: organization.type ?? undefined,
+              })}
+            </p>
           </Card>
         ) : null}
 

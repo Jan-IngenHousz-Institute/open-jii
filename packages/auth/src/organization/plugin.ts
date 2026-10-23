@@ -5,6 +5,12 @@ import { organization as organizationPlugin } from "better-auth/plugins";
 import { ORGANIZATION_MEMBERSHIP_LIMIT } from "@repo/database";
 
 import { ac, roles } from "../access";
+import { configuredAdminUserIds } from "../platform-admin";
+import {
+  resolveDemoOrganizationUpdate,
+  withDemoOrganizationAdapter,
+  withDemoOrganizationUpdate,
+} from "./demo";
 import {
   assertCanListInvitations,
   assertCanReadOrganization,
@@ -59,7 +65,7 @@ function wrapEndpoint<Endpoint extends object>(
  * Built here rather than inline in the auth instance so the rules can be driven by
  * a real Better Auth instance in tests without standing up the whole server config.
  */
-export const openJiiOrganization = () => {
+export const openJiiOrganization = (adminIds: readonly string[] = configuredAdminUserIds) => {
   const plugin = organizationPlugin({
     allowUserToCreateOrganization: true,
     creatorRole: "owner",
@@ -73,7 +79,8 @@ export const openJiiOrganization = () => {
     teams: { enabled: true, defaultTeam: { enabled: false }, allowRemovingAllTeams: true },
     // Better Auth's own defaults, set here so they are a decision rather than an
     // inherited number, and so the limits are visible next to the surface they cap.
-    membershipLimit: ORGANIZATION_MEMBERSHIP_LIMIT,
+    membershipLimit: (_user, org) =>
+      (org as { type?: string }).type === "demo" ? Infinity : ORGANIZATION_MEMBERSHIP_LIMIT,
     invitationLimit: 100,
     invitationExpiresIn: 60 * 60 * 48,
     // Set explicitly: left unset, Better Auth infers it from
@@ -104,20 +111,34 @@ export const openJiiOrganization = () => {
     // emails the rest from notification dispatch. See the module for the split.
     sendInvitationEmail: sendInvitationEmailUnlessAccountExists,
     organizationHooks: {
-      beforeCreateOrganization({ organization }) {
+      async beforeCreateOrganization({ organization, user }) {
         if (typeof organization.slug === "string") assertSlugAllowed(organization.slug);
         // Written on every create, so the column's default never decides.
-        return Promise.resolve({
-          data: { visibility: resolveCreateVisibility(organization.visibility) },
-        });
+        const demo = await resolveDemoOrganizationUpdate(
+          { type: organization.type, visibility: organization.visibility },
+          user,
+          undefined,
+          adminIds,
+        );
+        return {
+          data: { visibility: demo.visibility ?? resolveCreateVisibility(organization.visibility) },
+        };
       },
-      async beforeUpdateOrganization({ organization: update, member }) {
+      async beforeUpdateOrganization({ organization: update, member, user }) {
         const slug = await findOrganizationSlug(member.organizationId);
         assertNotPersonalOrganization(slug, "settings");
         if (typeof update.slug === "string") assertSlugAllowed(update.slug);
         if (update.visibility !== undefined) {
           assertVisibilityChangeAllowed(update.visibility, member.role);
         }
+        return {
+          data: await resolveDemoOrganizationUpdate(
+            { type: update.type, visibility: update.visibility },
+            user,
+            member.organizationId,
+            adminIds,
+          ),
+        };
       },
       beforeCreateInvitation({ invitation, organization }) {
         assertNotPersonalOrganization(organization.slug, "members to invite");
@@ -182,8 +203,14 @@ export const openJiiOrganization = () => {
 
   return {
     ...plugin,
+    init(context: Parameters<NonNullable<BetterAuthPlugin["init"]>>[0]) {
+      return { context: { adapter: withDemoOrganizationAdapter(context.adapter) } };
+    },
     endpoints: {
       ...plugin.endpoints,
+      updateOrganization: wrapEndpoint(plugin.endpoints.updateOrganization, (_ctx, run) =>
+        withDemoOrganizationUpdate(run),
+      ),
       // A resource transferred in after the pre-delete count hits the `RESTRICT`
       // constraint; this turns Postgres's wording into an answer callers can act on.
       deleteOrganization: wrapEndpoint(plugin.endpoints.deleteOrganization, async (ctx, run) => {
@@ -199,6 +226,16 @@ export const openJiiOrganization = () => {
     hooks: {
       ...declaredHooks,
       before: [
+        {
+          matcher: (ctx: { path?: string }) =>
+            ctx.path === "/organization/create" || ctx.path === "/organization/update",
+          handler: createAuthMiddleware((ctx) => {
+            if (ctx.headers?.has("x-api-key")) {
+              throw new APIError("FORBIDDEN", { message: "API keys cannot manage organizations" });
+            }
+            return Promise.resolve();
+          }),
+        },
         ...(declaredHooks?.before ?? []),
         {
           // `path` is optional on the shared hook context (a virtual endpoint has

@@ -5,6 +5,10 @@ import {
   asc,
   desc,
   eq,
+  isNull,
+  ne,
+  notExists,
+  or,
   isNotPersonalOrgSql,
   organizationJoinRequests,
   organizationMembers,
@@ -22,11 +26,12 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
-import { admitMember } from "../admit-member";
 import type {
   OrganizationJoinRequestDto,
   OrganizationJoinRequestStatus,
 } from "../models/organization-join-request.model";
+import { MEMBER_ADMISSION_PORT } from "../ports/member-admission.port";
+import type { MemberAdmissionPort } from "../ports/member-admission.port";
 
 /** The role an approved request confers. Approval admits, it does not promote. */
 export const JOIN_APPROVAL_ORG_ROLE = "member";
@@ -38,7 +43,8 @@ export type CreateJoinRequestOutcome =
 export type ApproveOrganizationJoinRequestOutcome =
   | { outcome: "approved"; request: OrganizationJoinRequestDto }
   | { outcome: "not-pending" }
-  | { outcome: "organization-full" };
+  | { outcome: "organization-full" }
+  | { outcome: "demo-organization" };
 
 const joinRequestSelectFields = {
   id: organizationJoinRequests.id,
@@ -63,6 +69,7 @@ export class OrganizationJoinRequestRepository {
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
+    @Inject(MEMBER_ADMISSION_PORT) private readonly members: MemberAdmissionPort,
   ) {}
 
   private selectRequests() {
@@ -96,20 +103,44 @@ export class OrganizationJoinRequestRepository {
     message: string | undefined,
   ): Promise<Result<CreateJoinRequestOutcome>> {
     return tryCatch(async () => {
-      const inserted = await this.database.execute<{ id: string }>(sql`
-        INSERT INTO ${organizationJoinRequests} ("organization_id", "user_id", "message")
-        SELECT ${organizations.id}, ${userId}::uuid, ${message ?? null}
-        FROM ${organizations}
-        WHERE ${organizations.id} = ${organizationId}::uuid
-          AND ${organizations.visibility} = 'public'
-          AND ${isNotPersonalOrgSql()}
-          AND NOT EXISTS (
-            SELECT 1 FROM ${organizationMembers}
-            WHERE ${organizationMembers.organizationId} = ${organizations.id}
-              AND ${organizationMembers.userId} = ${userId}::uuid
-          )
-        RETURNING ${organizationJoinRequests.id}
-      `);
+      const inserted = await this.database
+        .insert(organizationJoinRequests)
+        .select(
+          this.database
+            // Drizzle 0.45 requires every insert-select column in schema order.
+            .select({
+              id: sql<string>`${organizationJoinRequests.id.default}`.as("id"),
+              organizationId: organizations.id,
+              userId: sql<string>`${userId}::uuid`.as("user_id"),
+              message: sql<string | null>`${message ?? null}`.as("message"),
+              status: sql<"pending">`${organizationJoinRequests.status.default}`.as("status"),
+              decidedBy: sql<string | null>`null`.as("decided_by"),
+              decidedAt: sql<Date | null>`null`.as("decided_at"),
+              createdAt: sql<Date>`${organizationJoinRequests.createdAt.default}`.as("created_at"),
+              updatedAt: sql<Date>`${organizationJoinRequests.updatedAt.default}`.as("updated_at"),
+            })
+            .from(organizations)
+            .where(
+              and(
+                eq(organizations.id, organizationId),
+                eq(organizations.visibility, "public"),
+                or(isNull(organizations.type), ne(organizations.type, "demo")),
+                isNotPersonalOrgSql(),
+                notExists(
+                  this.database
+                    .select({ id: organizationMembers.id })
+                    .from(organizationMembers)
+                    .where(
+                      and(
+                        eq(organizationMembers.organizationId, organizations.id),
+                        eq(organizationMembers.userId, userId),
+                      ),
+                    ),
+                ),
+              ),
+            ),
+        )
+        .returning({ id: organizationJoinRequests.id });
 
       if (inserted.length === 0) {
         return { outcome: "not-joinable" as const };
@@ -164,12 +195,14 @@ export class OrganizationJoinRequestRepository {
 
   /**
    * Claim a pending request and admit the requester in one transaction, through
-   * {@link admitMember}: approving a request for somebody who joined meanwhile still
+   * {@link MemberAdmissionPort.admit}: approving a request for somebody who joined meanwhile still
    * resolves the request instead of failing on the unique index — and never overwrites
    * the role they already hold — and an organization at its membership cap refuses
    * instead of being walked past it.
    *
-   * The claim still comes first, so a request somebody else already decided admits
+   * Lock the organization before request/member rows so a concurrent Demo conversion
+   * cannot pass the type check and then admit a requester into a Demo organization.
+   * The claim comes before admission, so a request somebody else already decided admits
    * nobody. A cap refusal then puts it back: an approval the cap turned away is one the
    * reviewer can take again once a seat frees up, not a decision already recorded.
    */
@@ -181,6 +214,15 @@ export class OrganizationJoinRequestRepository {
   ): Promise<Result<ApproveOrganizationJoinRequestOutcome>> {
     return tryCatch(async () => {
       const claimed = await this.database.transaction(async (tx) => {
+        const organizationRows = await tx
+          .select({ type: organizations.type })
+          .from(organizations)
+          .where(eq(organizations.id, organizationId))
+          .for("update");
+        const organization = organizationRows.at(0);
+        if (!organization) return "not-pending" as const;
+        if (organization.type === "demo") return "demo-organization" as const;
+
         const updated = await tx
           .update(organizationJoinRequests)
           .set({ status: "approved", decidedBy, decidedAt: new Date() })
@@ -196,7 +238,7 @@ export class OrganizationJoinRequestRepository {
           return "not-pending" as const;
         }
 
-        const admission = await admitMember(tx, {
+        const admission = await this.members.admit(tx, {
           organizationId,
           userId: requesterUserId,
           role: JOIN_APPROVAL_ORG_ROLE,

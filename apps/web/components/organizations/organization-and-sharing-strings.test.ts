@@ -113,9 +113,16 @@ const LOCALES = {
 
 const localeNames = Object.keys(LOCALES) as (keyof typeof LOCALES)[];
 
-/** A count-suffixed key resolves through i18next's plural forms. */
+/**
+ * A count-suffixed key resolves through i18next's plural forms. A key passed a `context`
+ * resolves through its `_<context>` variants, so the bare key is not itself a leaf there.
+ */
 function resolves(bundleKeys: Set<string>, key: string): boolean {
-  return bundleKeys.has(key) || (bundleKeys.has(`${key}_one`) && bundleKeys.has(`${key}_other`));
+  return (
+    bundleKeys.has(key) ||
+    (bundleKeys.has(`${key}_one`) && bundleKeys.has(`${key}_other`)) ||
+    [...bundleKeys].some((candidate) => candidate.startsWith(`${key}_`))
+  );
 }
 
 describe("organization and sharing strings", () => {

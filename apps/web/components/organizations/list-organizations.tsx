@@ -11,8 +11,16 @@ import { OverviewToolbar } from "@/components/overview-toolbar";
 import { useOrganizationsList } from "@/hooks/organization/useOrganizationsList/useOrganizationsList";
 import { useLocale } from "@/hooks/useLocale";
 
+import { zOrganizationType } from "@repo/api/domains/organization/organization.schema";
 import { useTranslation } from "@repo/i18n";
 import { SearchInput } from "@repo/ui/components/search-input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components/select";
 
 import { organizationPath } from "./organization-routes";
 
@@ -24,6 +32,8 @@ export function ListOrganizations() {
   const { t } = useTranslation();
   const locale = useLocale();
   const {
+    type,
+    setType,
     search,
     setSearch,
     isSearching,
@@ -59,7 +69,30 @@ export function ListOrganizations() {
             className="w-full md:w-64"
           />
         }
-        filters={<ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />}
+        filters={
+          <>
+            <Select
+              value={type}
+              onValueChange={(value) => {
+                const parsed = zOrganizationType.safeParse(value);
+                setType(parsed.success ? parsed.data : "all");
+              }}
+            >
+              <SelectTrigger aria-label={t("organizations.fields.type")} className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("organizations.allTypes")}</SelectItem>
+                {zOrganizationType.options.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t(`organizations.types.${value}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />
+          </>
+        }
       />
 
       <div

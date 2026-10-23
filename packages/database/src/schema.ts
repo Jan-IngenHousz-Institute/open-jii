@@ -63,6 +63,11 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   registered: boolean("registered").notNull().default(false),
+  role: text("role").default("user"),
+  banned: boolean("banned").default(false),
+  banReason: text("ban_reason"),
+  banExpires: timestamp("ban_expires"),
+  adminGrantedAt: timestamp("admin_granted_at"),
   ...timestamps,
 });
 
@@ -72,6 +77,7 @@ export const sessions = pgTable("sessions", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   token: text("token").notNull().unique(),
+  impersonatedBy: text("impersonated_by"),
   expiresAt: timestamp("expires_at").notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
@@ -186,6 +192,7 @@ export const organizationTypeEnum = pgEnum("organization_type", [
   "private_company",
   "government_agency",
   "university",
+  "demo",
 ]);
 
 // Sensor Family Enum

@@ -12,6 +12,7 @@
     "e2e": "playwright test",
     "lint": "eslint",
     "record-maintenance": "tsx scripts/record-maintenance.ts",
+    "seed-user-id": "tsx scripts/seed-user-id.ts",
     "test": "vitest run"
   },
   "dependencies": {

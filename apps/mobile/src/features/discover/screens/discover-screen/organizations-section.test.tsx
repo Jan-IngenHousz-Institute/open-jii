@@ -57,6 +57,7 @@ vi.mock("~/shared/i18n", () => ({
           "membership.requested": "Requested",
           "membership.private": "Private",
           "organizations:type.university": "University",
+          "organizations:type.demo": "Demo",
         }[key] ?? key
       );
     },
@@ -97,6 +98,12 @@ beforeEach(() => {
 });
 
 describe("OrganizationsSection", () => {
+  it("shows a Demo badge in Discover", () => {
+    state.organizations = [{ ...entry(), type: "demo" }];
+    renderSection();
+    expect(screen.getAllByText("Demo").length).toBeGreaterThan(0);
+  });
+
   it("passes the hub's term and enabled flag straight to the directory hook", () => {
     renderSection({ search: "canopy", enabled: false });
 

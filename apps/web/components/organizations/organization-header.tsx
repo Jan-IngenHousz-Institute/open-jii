@@ -86,6 +86,7 @@ export function OrganizationHeader({ organization }: { organization: Organizatio
         />
       ) : (
         <OrganizationJoinCta
+          isDemo={organization.type === "demo"}
           organizationId={organization.id}
           organizationName={organization.name}
           membershipStatus={organization.membershipStatus}

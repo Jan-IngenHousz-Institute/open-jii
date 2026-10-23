@@ -3,7 +3,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type { ProtocolMacroList } from "@repo/api/domains/protocol/protocol.schema";
-import { macros } from "@repo/database";
+import { macros, eq, protocols } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, failure } from "../../common/utils/fp-utils";
@@ -63,10 +63,7 @@ describe("ProtocolController - createProtocol", () => {
   });
 
   it("returns 403 when creating a protocol in an organization the caller is not a member of", async () => {
-    const organizationId = faker.string.uuid();
-    const isOrgMemberSpy = vi
-      .spyOn(testApp.module.get(AuthorizationService), "isOrgMember")
-      .mockResolvedValue(false);
+    const organizationId = await testApp.createOrganization();
 
     await testApp
       .post(testApp.resolveOrpcPath(contract.protocols.createProtocol))
@@ -80,7 +77,11 @@ describe("ProtocolController - createProtocol", () => {
       })
       .expect(StatusCodes.FORBIDDEN);
 
-    expect(isOrgMemberSpy).toHaveBeenCalledWith(testUserId, organizationId);
+    const resources = await testApp.database
+      .select({ id: protocols.id })
+      .from(protocols)
+      .where(eq(protocols.organizationId, organizationId));
+    expect(resources).toHaveLength(0);
   });
 });
 

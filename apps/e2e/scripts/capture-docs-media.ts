@@ -204,7 +204,7 @@ try {
       }
     } catch (error) {
       failures.push(`${shot.slug}: ${(error as Error).message.split("\n")[0]}`);
-      process.stderr.write(`FAILED ${shot.slug}: ${(error as Error).message.split("\n")[0]}\n`);
+      process.stderr.write(`FAILED ${shot.slug}: ${(error as Error).message}\n`);
     } finally {
       await context.close();
     }

@@ -7,6 +7,10 @@ import type { EnvTarget } from "./env-manifest.js";
 const root = fileURLToPath(new URL("../../..", import.meta.url));
 
 const localNotes = new Map([
+  [
+    "ADMIN_USER_IDS",
+    "Optional comma-separated user UUIDs for deployment-configured platform admins. Empty means none; malformed ids are ignored and logged.",
+  ],
   ["COOKIE_DOMAIN", "Leave unset for localhost sessions and passkey validation."],
   ["EMAIL_SERVER", "No local SMTP service listens on this address."],
   ["MAILCHIMP_API_KEY", "Mailchimp keys are all-or-none; leave all unset locally."],

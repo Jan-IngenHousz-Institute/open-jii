@@ -3,6 +3,7 @@ import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import type { OrganizationListItem } from "@/hooks/organization/useOrganizationsList/useOrganizationsList";
 import { FolderOpen, Users } from "lucide-react";
 
+import { Badge } from "@repo/ui/components/badge";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -30,6 +31,9 @@ export function getOrganizationColumns(
             >
               {organization.name}
             </IntentLink>
+            {organization.type === "demo" && (
+              <Badge variant="secondary">{t("organizations.types.demo")}</Badge>
+            )}
             <VisibilityBadge
               visibility={organization.visibility}
               privateOnly

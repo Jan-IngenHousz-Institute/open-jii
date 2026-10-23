@@ -1,0 +1,30 @@
+---
+title: "Platform admins"
+description: "Appoint platform admins and manage the Demo organization type."
+---
+
+Platform admins manage the Demo organization type and appoint other platform admins.
+This role is separate from an organization's Owner or Admin role.
+
+Open the account menu at the bottom of the sidebar and choose **Platform admins**. Only platform
+admins see this entry. The page lists the current admins and when each was appointed.
+Admins supplied by deployment configuration have a **Set by deployment configuration**
+label. Their role changes through deployment configuration.
+
+To appoint someone, type part of a registered researcher's name and choose **Appoint
+admin** beside the result. To remove someone appointed on this page, choose **Remove
+admin** beside their name. You cannot remove your own role.
+
+A platform admin still needs an organization's Owner permission to change its settings.
+When creating an organization, or editing one they own, they can choose **Demo**. See
+[Demo organizations](/guide/organizations/creating#demo-organizations) for its public
+visibility rules.
+
+Platform admins cannot sign in as someone else. API keys cannot exercise platform admin
+powers, even when the key belongs to a platform admin.
+
+<DocsVideo>
+  <video controls width="100%" preload="none" src="/img/guide/web/platform-admin-appointments.webm">
+    Your browser does not support embedded video.
+  </video>
+</DocsVideo>

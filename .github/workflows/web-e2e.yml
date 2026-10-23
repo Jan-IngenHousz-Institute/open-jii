@@ -41,6 +41,12 @@ jobs:
           pnpm db:setup
           pnpm --filter database db:seed
 
+      # The platform admin spec signs in as a deployment-configured admin.
+      - name: Configure Platform Admin
+        run: |
+          seed_user_id=$(pnpm --silent --filter @repo/e2e seed-user-id)
+          echo "ADMIN_USER_IDS=$seed_user_id" >> "$GITHUB_ENV"
+
       - name: Build Applications
         run: |
           pnpm exec turbo run build --filter=backend --filter=web

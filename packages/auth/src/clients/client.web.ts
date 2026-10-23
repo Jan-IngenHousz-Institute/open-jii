@@ -2,6 +2,7 @@ import { apiKeyClient } from "@better-auth/api-key/client";
 import { passkeyClient } from "@better-auth/passkey/client";
 import { WebAuthnAbortService } from "@simplewebauthn/browser";
 import {
+  adminClient,
   emailOTPClient,
   genericOAuthClient,
   inferAdditionalFields,
@@ -19,6 +20,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3020";
 export const authClient = createAuthClient({
   baseURL: `${BACKEND_URL}/api/v1/auth`,
   plugins: [
+    adminClient(),
     inferAdditionalFields<typeof auth>(),
     emailOTPClient(),
     genericOAuthClient(), // Required for custom OAuth providers like ORCID

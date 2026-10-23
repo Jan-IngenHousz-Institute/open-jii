@@ -18,7 +18,8 @@ Go to **Organizations** and select **New organization**. You become its first Ow
 ## Private or public
 
 This choice controls **one thing: whether the organization is discoverable in the
-directory.** New organizations are private.
+directory.** New organizations are private unless a platform admin chooses the Demo type.
+The choices below describe ordinary organizations.
 
 |                                       | Private         | Public                                    |
 | :------------------------------------ | :-------------- | :---------------------------------------- |
@@ -33,10 +34,10 @@ states its own consequence:
 
 <Callout type="warn">
   **This is not the same setting as a resource's visibility, even though both say Private and
-  Public.** Making the organization public does not publish a single experiment, and publishing an
+  Public.** For ordinary organizations, making the organization public does not publish a single experiment, and publishing an
   experiment does not list the organization. They are independent controls with the same words.
 
-The important asymmetry: you can make an organization private again at any time, but publishing an
+The important asymmetry: you can make an ordinary organization private again at any time, but publishing an
 experiment cannot be undone.
 
 </Callout>
@@ -54,3 +55,24 @@ experiment cannot be undone.
   Moving work you already own into a new organization is a separate task — see [Moving a
   resource](/guide/sharing/moving-resources).
 </Callout>
+
+## Demo organizations
+
+Platform admins can choose **Demo** in the type picker. A Demo organization is public,
+and every experiment, workbook, protocol and macro it owns is public. You cannot select
+Private for it. Personal workspaces cannot become Demo organizations. Demo organizations
+do not accept join requests.
+
+An organization Owner who is also a platform admin can change an existing organization's
+type to Demo in Settings. Publish all its experiments, workbooks, protocols and macros
+first. The change is refused while any of them remain private. Changing the type makes
+the organization public in the same operation.
+
+Changing away from Demo does not make its resources private. Publication is permanent.
+Private resources cannot be moved into a Demo organization.
+
+<DocsVideo>
+  <video controls width="100%" preload="none" src="/img/guide/web/demo-organization-creation.webm">
+    Your browser does not support embedded video.
+  </video>
+</DocsVideo>

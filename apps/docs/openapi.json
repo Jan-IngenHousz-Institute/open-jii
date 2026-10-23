@@ -250,6 +250,25 @@
                         }
                       ]
                     },
+                    "organizationType": {
+                      "default": null,
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "research_institute",
+                            "non_profit",
+                            "private_company",
+                            "government_agency",
+                            "university",
+                            "demo"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -702,6 +721,25 @@
                               }
                             ]
                           },
+                          "organizationType": {
+                            "default": null,
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "research_institute",
+                                  "non_profit",
+                                  "private_company",
+                                  "government_agency",
+                                  "university",
+                                  "demo"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "createdBy": {
                             "type": "string",
                             "format": "uuid"
@@ -1018,6 +1056,25 @@
                               "organizationName": {
                                 "anyOf": [
                                   {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "organizationType": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "enum": [
+                                      "research_institute",
+                                      "non_profit",
+                                      "private_company",
+                                      "government_agency",
+                                      "university",
+                                      "demo"
+                                    ],
                                     "type": "string"
                                   },
                                   {
@@ -1399,6 +1456,25 @@
                               }
                             ]
                           },
+                          "organizationType": {
+                            "default": null,
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "research_institute",
+                                  "non_profit",
+                                  "private_company",
+                                  "government_agency",
+                                  "university",
+                                  "demo"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "createdBy": {
                             "type": "string",
                             "format": "uuid"
@@ -1758,6 +1834,25 @@
                     "organizationName": {
                       "anyOf": [
                         {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organizationType": {
+                      "default": null,
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "research_institute",
+                            "non_profit",
+                            "private_company",
+                            "government_agency",
+                            "university",
+                            "demo"
+                          ],
                           "type": "string"
                         },
                         {
@@ -2145,6 +2240,25 @@
                         }
                       ]
                     },
+                    "organizationType": {
+                      "default": null,
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "research_institute",
+                            "non_profit",
+                            "private_company",
+                            "government_agency",
+                            "university",
+                            "demo"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -2472,6 +2586,25 @@
                         "organizationName": {
                           "anyOf": [
                             {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "organizationType": {
+                          "default": null,
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "research_institute",
+                                "non_profit",
+                                "private_company",
+                                "government_agency",
+                                "university",
+                                "demo"
+                              ],
                               "type": "string"
                             },
                             {
@@ -7634,6 +7767,25 @@
                     "organizationName": {
                       "anyOf": [
                         {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organizationType": {
+                      "default": null,
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "research_institute",
+                            "non_profit",
+                            "private_company",
+                            "government_agency",
+                            "university",
+                            "demo"
+                          ],
                           "type": "string"
                         },
                         {
@@ -30646,7 +30798,8 @@
                                   "non_profit",
                                   "private_company",
                                   "government_agency",
-                                  "university"
+                                  "university",
+                                  "demo"
                                 ],
                                 "type": "string"
                               },
@@ -30865,7 +31018,8 @@
                             "non_profit",
                             "private_company",
                             "government_agency",
-                            "university"
+                            "university",
+                            "demo"
                           ],
                           "type": "string"
                         },
@@ -37388,6 +37542,129 @@
                   "required": [
                     "lastSeenAt"
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform-admins/access": {
+      "get": {
+        "operationId": "users.getPlatformAdminAccess",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isPlatformAdmin": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "isPlatformAdmin"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform-admins": {
+      "get": {
+        "operationId": "users.listPlatformAdmins",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "configured": {
+                        "type": "boolean"
+                      },
+                      "appointedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "configured",
+                      "appointedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform-admins/candidates": {
+      "get": {
+        "operationId": "users.searchPlatformAdminCandidates",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name"
+                    ]
+                  }
                 }
               }
             }

@@ -23,6 +23,8 @@ import {
   ilike,
   inArray,
   isNull,
+  isNotPersonalOrgSql,
+  organizations,
   sql,
   profiles,
   alias,
@@ -44,7 +46,6 @@ import {
   ftsRank,
   searchScore,
 } from "../../../common/utils/fts";
-import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
 import {
   getAnonymizedAvatarUrl,
   getAnonymizedFirstName,
@@ -103,6 +104,13 @@ export interface ExperimentCollaborators {
 /** Read plus data contribution. Stored as the grant role `viewer`. */
 const COLLABORATOR_GRANT_ROLE = "viewer";
 
+const owningOrganizationFields = {
+  organizationName: sql<
+    string | null
+  >`CASE WHEN ${isNotPersonalOrgSql()} THEN ${organizations.name} ELSE NULL END`,
+  organizationType: organizations.type,
+};
+
 // All experiment columns except the internal full-text `search_vector` (never returned to clients).
 const { searchVector: _experimentSearchVector, ...experimentColumns } =
   getTableColumns(experiments);
@@ -151,12 +159,21 @@ export class ExperimentRepository {
             createdBy: userId,
             organizationId,
           })
-          .returning(experimentColumns);
+          .returning({ id: experiments.id });
 
         await seedCreatorControl(tx, "experiment", results[0].id, organizationId, userId);
         await this.grantCollaborators(tx, results[0].id, collaboratorUserIds, userId);
 
-        return results;
+        return tx
+          .select({ ...experimentColumns, ...owningOrganizationFields })
+          .from(experiments)
+          .leftJoin(organizations, eq(experiments.organizationId, organizations.id))
+          .where(
+            inArray(
+              experiments.id,
+              results.map((experiment) => experiment.id),
+            ),
+          );
       });
     });
   }
@@ -355,7 +372,7 @@ export class ExperimentRepository {
       updatedAt: experiments.updatedAt,
       ownerFirstName: getAnonymizedFirstName(),
       ownerLastName: getAnonymizedLastName(),
-      organizationName: owningOrganizationNameSql("experiments"),
+      ...owningOrganizationFields,
       membersCount: experimentMembersCountSql(),
       membershipStatus: sql<ExperimentMembershipStatus>`CASE
         WHEN ${isMember} THEN 'member'
@@ -559,6 +576,7 @@ export class ExperimentRepository {
       let query = this.database
         .select(fields)
         .from(experiments)
+        .leftJoin(organizations, eq(experiments.organizationId, organizations.id))
         .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
         .$dynamic();
 
@@ -607,6 +625,7 @@ export class ExperimentRepository {
       let rows = this.database
         .select(fields)
         .from(experiments)
+        .leftJoin(organizations, eq(experiments.organizationId, organizations.id))
         .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
         .$dynamic();
       let total = this.database
@@ -657,11 +676,12 @@ export class ExperimentRepository {
           id: experiments.id,
           name: experiments.name,
           status: experiments.status,
-          organizationName: owningOrganizationNameSql("experiments"),
+          ...owningOrganizationFields,
           openedAt: resourceVisits.visitedAt,
           callerRole,
         })
         .from(experiments)
+        .leftJoin(organizations, eq(experiments.organizationId, organizations.id))
         .innerJoin(
           resourceVisits,
           and(
@@ -693,6 +713,7 @@ export class ExperimentRepository {
       return this.database
         .select({ ...fields, callerRole })
         .from(experiments)
+        .leftJoin(organizations, eq(experiments.organizationId, organizations.id))
         .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
         .where(where)
         .orderBy(desc(experiments.updatedAt), asc(experiments.id))
@@ -703,8 +724,12 @@ export class ExperimentRepository {
   async findOne(id: string): Promise<Result<ExperimentDto | null>> {
     return tryCatch(async () => {
       const result = await this.database
-        .select(experimentColumns)
+        .select({
+          ...experimentColumns,
+          ...owningOrganizationFields,
+        })
         .from(experiments)
+        .leftJoin(organizations, eq(experiments.organizationId, organizations.id))
         .where(eq(experiments.id, id))
         .limit(1);
 
@@ -719,8 +744,12 @@ export class ExperimentRepository {
   async findByName(name: string): Promise<Result<ExperimentDto | null>> {
     return tryCatch(async () => {
       const result = await this.database
-        .select(experimentColumns)
+        .select({
+          ...experimentColumns,
+          ...owningOrganizationFields,
+        })
         .from(experiments)
+        .leftJoin(organizations, eq(experiments.organizationId, organizations.id))
         .where(eq(experiments.name, name))
         .limit(1);
 
@@ -737,11 +766,19 @@ export class ExperimentRepository {
     updateExperimentDto: UpdateExperimentDto,
   ): Promise<Result<ExperimentDto[]>> {
     return tryCatch(() =>
-      this.database
-        .update(experiments)
-        .set(updateExperimentDto)
-        .where(eq(experiments.id, id))
-        .returning(experimentColumns),
+      this.database.transaction(async (tx) => {
+        const updated = await tx
+          .update(experiments)
+          .set(updateExperimentDto)
+          .where(eq(experiments.id, id))
+          .returning({ id: experiments.id });
+        if (updated.length === 0) return [];
+        return tx
+          .select({ ...experimentColumns, ...owningOrganizationFields })
+          .from(experiments)
+          .leftJoin(organizations, eq(experiments.organizationId, organizations.id))
+          .where(eq(experiments.id, id));
+      }),
     );
   }
 
@@ -841,13 +878,14 @@ export class ExperimentRepository {
         updatedAt: experiments.updatedAt,
         ownerFirstName: getAnonymizedFirstName(),
         ownerLastName: getAnonymizedLastName(),
-        organizationName: owningOrganizationNameSql("experiments"),
+        ...owningOrganizationFields,
         membersCount: experimentMembersCountSql(),
       };
 
       const result = await this.database
         .select({ experiment: experimentFields })
         .from(experiments)
+        .leftJoin(organizations, eq(experiments.organizationId, organizations.id))
         .innerJoin(profiles, eq(experiments.createdBy, profiles.userId))
         .where(eq(experiments.id, experimentId))
         .limit(1);
@@ -912,8 +950,12 @@ export class ExperimentRepository {
   async findExpiredEmbargoes(): Promise<Result<ExperimentDto[]>> {
     return tryCatch(async () => {
       const result = await this.database
-        .select(experimentColumns)
+        .select({
+          ...experimentColumns,
+          ...owningOrganizationFields,
+        })
         .from(experiments)
+        .leftJoin(organizations, eq(experiments.organizationId, organizations.id))
         .where(
           and(
             // Only private experiments

@@ -82,7 +82,7 @@ describe("the create-organization wizard", () => {
     expect(screen.getByText("We grow things.")).toBeInTheDocument();
     expect(screen.getByText("https://openjii.org/about")).toBeInTheDocument();
     expect(screen.getByText("Wageningen")).toBeInTheDocument();
-    expect(screen.getByText("organizations.create.privateNote")).toBeInTheDocument();
+    expect(screen.getByText("organizations.create.visibilityNote")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "organizations.createAction" }));
 
@@ -126,8 +126,7 @@ describe("the create-organization wizard", () => {
     // Read back twice: the summary row, and the sentence above the create button.
     expect(await screen.findByText("organizations.create.reviewHeading")).toBeInTheDocument();
     expect(screen.getByText("organizations.visibility.publicLabel")).toBeInTheDocument();
-    expect(screen.getByText("organizations.create.publicNote")).toBeInTheDocument();
-    expect(screen.queryByText("organizations.create.privateNote")).not.toBeInTheDocument();
+    expect(screen.getByText("organizations.create.visibilityNote")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "organizations.createAction" }));
 
@@ -135,6 +134,35 @@ describe("the create-organization wizard", () => {
       expect(create()).toHaveBeenCalledTimes(1);
     });
     expect(create().mock.calls[0]?.[0]).toMatchObject({ visibility: "public" });
+  });
+
+  it("gives the private default back after Demo was chosen, Next and Back, and another type picked", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.users.getPlatformAdminAccess, { body: { isPlatformAdmin: true } });
+    const { container } = render(<NewOrganizationForm />);
+
+    await user.type(screen.getByLabelText("organizations.fields.name"), "Greenhouse Lab");
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: "organizations.types.demo" }));
+    await user.click(next());
+
+    // Demo forces public and rules private out.
+    expect(await screen.findByText("organizations.create.profileDescription")).toBeInTheDocument();
+    const [privateOption, publicOption] = within(container).getAllByRole("radio");
+    expect(publicOption).toHaveAttribute("aria-checked", "true");
+    expect(privateOption).toBeDisabled();
+
+    // The identity step was unmounted by Next; going back and leaving Demo still restores
+    // what the user had before, which was never public.
+    await user.click(screen.getByRole("button", { name: "common.back" }));
+    await user.click(await screen.findByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: "organizations.types.university" }));
+    await user.click(next());
+
+    expect(await screen.findByText("organizations.create.profileDescription")).toBeInTheDocument();
+    const [restoredPrivate, restoredPublic] = within(container).getAllByRole("radio");
+    expect(restoredPrivate).toHaveAttribute("aria-checked", "true");
+    expect(restoredPublic).toHaveAttribute("aria-checked", "false");
   });
 
   it("sends the role a collected person was changed to, not the one they were added on", async () => {

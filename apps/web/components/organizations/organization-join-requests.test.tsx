@@ -1,11 +1,15 @@
 import { createOrganizationJoinRequest } from "@/test/factories";
 import { server } from "@/test/msw/server";
+import { TEST_LOCALES, mockRealTranslations } from "@/test/real-i18n";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { OrganizationJoinRequest } from "@repo/api/domains/organization/join-requests/organization-join-requests.schema";
 import { useSession } from "@repo/auth/client";
+import de from "@repo/i18n/locales/de-DE/common.json";
+import en from "@repo/i18n/locales/en-US/common.json";
+import nl from "@repo/i18n/locales/nl-NL/common.json";
 
 import { OrganizationJoinRequests } from "./organization-join-requests";
 
@@ -29,6 +33,32 @@ function rowFor(name: string): HTMLElement {
 describe("<OrganizationJoinRequests />", () => {
   afterEach(() => {
     mockSession(null);
+    vi.restoreAllMocks();
+  });
+
+  describe.each(TEST_LOCALES)("pending approvals in %s", (locale) => {
+    const copy = { "en-US": en, "nl-NL": nl, "de-DE": de }[locale].organizations.requests;
+    it("hides approval for Demo with a localized reason while keeping rejection usable", async () => {
+      await mockRealTranslations(locale);
+      mockSession({ id: "user-1" });
+      mountRequests([createOrganizationJoinRequest({ status: "pending" })]);
+      const decision = server.mount(contract.organizations.decideOrganizationJoinRequest, {
+        body: createOrganizationJoinRequest({ status: "rejected" }),
+      });
+      render(<OrganizationJoinRequests organizationId="org-1" organizationType="demo" />);
+      expect(await screen.findByText(copy.approvalNotice_demo)).toBeVisible();
+      expect(screen.queryByRole("button", { name: copy.approveAction })).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: copy.rejectAction }));
+      await waitFor(() => expect(decision.body).toEqual({ decision: "reject" }));
+    });
+    it("keeps approval for an ordinary organization without the Demo notice", async () => {
+      await mockRealTranslations(locale);
+      mockSession({ id: "user-1" });
+      mountRequests([createOrganizationJoinRequest({ status: "pending" })]);
+      render(<OrganizationJoinRequests organizationId="org-1" organizationType="university" />);
+      expect(await screen.findByRole("button", { name: copy.approveAction })).toBeVisible();
+      expect(screen.queryByText(copy.approvalNotice_demo)).not.toBeInTheDocument();
+    });
   });
 
   it("distinguishes no requests at all from none waiting on a decision", async () => {
