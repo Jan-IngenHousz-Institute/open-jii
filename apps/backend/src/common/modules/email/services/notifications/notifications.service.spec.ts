@@ -387,6 +387,71 @@ describe("NotificationsService", () => {
     });
   });
 
+  describe("sendExperimentMadePublicNotification", () => {
+    let mockRenderExperimentMadePublicNotification: MockInstance;
+
+    beforeEach(() => {
+      mockRenderExperimentMadePublicNotification = spyOnProtected(
+        service,
+        "renderExperimentMadePublicNotificationEmail",
+      ).mockResolvedValue({
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("renders the made-public template with the experiment link and sends it to the address", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendExperimentMadePublicNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_EMAIL,
+      );
+
+      assertSuccess(result);
+      expect(mockRenderExperimentMadePublicNotification).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        experimentName: MOCK_EXPERIMENT_NAME,
+        experimentUrl: `http://localhost:3000/platform/experiments/${MOCK_EXPERIMENT_ID}`,
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: `${MOCK_EXPERIMENT_NAME} is now public on the openJII Platform`,
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("treats a rejected address as a failure", async () => {
+      mockCreateTransport.mockReturnValue({
+        sendMail: vi.fn().mockReturnValue({
+          messageId: "test-message-id",
+          accepted: [],
+          rejected: [MOCK_EMAIL],
+          pending: [],
+        }),
+      });
+
+      const result = await service.sendExperimentMadePublicNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_EMAIL,
+      );
+
+      assertFailure(result);
+      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+    });
+  });
+
   describe("sendTransferRequestConfirmation", () => {
     const MOCK_EMAIL = "test@example.com";
     const MOCK_PROJECT_ID_OLD = "project-123";
