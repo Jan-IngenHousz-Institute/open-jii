@@ -14,6 +14,7 @@
     "validate": "databricks bundle validate",
     "validate:dev": "databricks bundle validate -t dev",
     "validate:prod": "databricks bundle validate -t prod",
-    "clean": "git clean -xdf .cache .turbo .venv dist src/lib/*/dist src/lib/*/build src/lib/*/*.egg-info"
+    "clean": "git clean -xdf .cache .turbo .venv dist src/lib/*/dist src/lib/*/build src/lib/*/*.egg-info",
+    "verify:numeric-question-sorting": "uv run python scripts/verify_numeric_question_sorting.py"
   }
 }

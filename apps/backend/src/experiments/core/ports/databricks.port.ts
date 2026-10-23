@@ -8,6 +8,7 @@ import type {
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
 import type {
   AggregationSpec,
+  QueryOrdering,
   FilterCondition,
 } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
 import type {
@@ -71,9 +72,7 @@ export interface DatabricksPort {
     filters?: FilterCondition[];
     aggregation?: AggregationSpec;
     distinct?: boolean;
-    orderBy?: string;
-    orderDirection?: "ASC" | "DESC";
-    orderByContributorPseudonymSalt?: string;
+    ordering?: QueryOrdering;
     limit?: number;
     offset?: number;
   }): Result<string>;

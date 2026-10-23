@@ -1,6 +1,6 @@
 import { SqlQueryBuilder } from "../query-builder.base";
 import type { BaseQueryBuilder } from "../query-builder.base";
-import type { AggregateExpression, AggregationSpec } from "../query-builder.types";
+import type { AggregateExpression, AggregationSpec, QueryOrdering } from "../query-builder.types";
 import { QueryBuilderInputError } from "../query-builder.types";
 import { contributorPseudonym } from "./filter";
 
@@ -59,20 +59,22 @@ export function buildAggregateExpression(
   };
 }
 
-/** The outer sort key, as the pseudonym of a contributor id when the experiment anonymizes. */
+/**
+ * The outer sort key, as the pseudonym of a contributor id when the experiment anonymizes. Numeric
+ * string ordering ranks stored answers, not aggregated outputs, so it is not applied here.
+ */
 function sortTarget(
   builder: BaseQueryBuilder,
-  orderBy: string | undefined,
-  contributorPseudonymSalt: string | undefined,
+  ordering: QueryOrdering | undefined,
 ): string | undefined {
-  if (!orderBy) {
+  if (!ordering) {
     return undefined;
   }
 
-  const target = builder.escapeIdentifier(orderBy);
-  return contributorPseudonymSalt === undefined
-    ? target
-    : contributorPseudonym(target, contributorPseudonymSalt, builder);
+  const target = builder.escapeIdentifier(ordering.column);
+  return ordering.mode?.kind === "pseudonym"
+    ? contributorPseudonym(target, ordering.mode.salt, builder)
+    : target;
 }
 
 /**
@@ -94,9 +96,7 @@ export function wrapWithAggregation(
   innerSql: string,
   opts: {
     aggregation?: AggregationSpec;
-    orderBy?: string;
-    orderDirection?: "ASC" | "DESC";
-    orderByContributorPseudonymSalt?: string;
+    ordering?: QueryOrdering;
     limit?: number;
     offset?: number;
   },
@@ -105,7 +105,7 @@ export function wrapWithAggregation(
   const selectClauses: string[] = [];
   const groupByClauses: string[] = [];
   const windowProjections: string[] = [];
-  const orderSql = sortTarget(builder, opts.orderBy, opts.orderByContributorPseudonymSalt);
+  const orderSql = sortTarget(builder, opts.ordering);
 
   let firstGroupBySql: string | undefined;
 
@@ -174,7 +174,7 @@ export function wrapWithAggregation(
   }
 
   if (orderSql !== undefined) {
-    const direction = opts.orderDirection ?? "ASC";
+    const direction = opts.ordering?.direction ?? "ASC";
     sql += ` ORDER BY ${orderSql} ${direction}`;
   }
 
