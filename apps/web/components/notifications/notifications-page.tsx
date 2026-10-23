@@ -154,6 +154,8 @@ export function NotificationsPage() {
       {totalPages > 1 && (
         <ListPagination page={page} totalPages={totalPages} onPageChange={setPage} />
       )}
+
+      <p className="text-muted-foreground text-sm">{t("retention")}</p>
     </div>
   );
 }

@@ -14,6 +14,7 @@
   },
   "loadError": "Your notifications could not be loaded.",
   "retry": "Try again",
+  "retention": "Read notifications are kept for 90 days, unread ones for a year.",
   "filters": {
     "all": "All",
     "unread": "Unread",
