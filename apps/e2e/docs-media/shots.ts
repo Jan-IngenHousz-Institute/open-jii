@@ -162,6 +162,54 @@ const privacyShots: readonly Shot[] = privacyCaptureEmail
 
 export const SHOTS: readonly Shot[] = [
   {
+    slug: "demo-seed-experiments",
+    publish: "img/guide/web/demo-seed-experiments.webm",
+    frame: "desktop",
+    session: "newcomer",
+    route: "/platform/organizations?type=demo",
+    async perform(page) {
+      page.setDefaultTimeout(15_000);
+      await settle(page, 2000);
+      await page.getByRole("link", { name: "openJII Demo", exact: true }).click();
+      await page.getByRole("heading", { name: "openJII Demo", exact: true }).waitFor();
+      for (const name of [
+        "[Seed] MultispeQ Demo Example",
+        "[Seed] Ambit Demo Example",
+        "[Seed] MiniPAR Demo Example",
+      ]) {
+        await page.getByRole("link", { name, exact: true }).waitFor();
+      }
+      await settle(page, 2500);
+      await page.getByRole("link", { name: "[Seed] MultispeQ Demo Example", exact: true }).click();
+      await page
+        .getByRole("heading", { name: "[Seed] MultispeQ Demo Example", exact: true })
+        .waitFor();
+      await settle(page, 1800);
+      await page.getByRole("tab", { name: "Design", exact: true }).click();
+      await page
+        .getByText("[Seed] Example: Demo MultispeQ placeholder protocol", { exact: true })
+        .first()
+        .waitFor();
+      await page
+        .getByText("[Seed] Example: Demo MultispeQ analysis", { exact: true })
+        .first()
+        .waitFor();
+      await settle(page, 3500);
+      await page.getByRole("tab", { name: "Dashboards", exact: true }).click();
+      await page
+        .getByRole("link", { name: "[Seed] MultispeQ Demo Example Dashboard", exact: true })
+        .first()
+        .click();
+      await page.getByRole("heading", { name: "MultispeQ Example", exact: true }).waitFor();
+      await settle(page, 3500);
+      if (await page.getByRole("button", { name: /^edit$/i }).isVisible()) {
+        throw new Error("Newcomer sees a dashboard edit control");
+      }
+    },
+    scope:
+      "A newcomer finds the three seeded sensor examples, reads the pinned MultispeQ workbook and opens its example dashboard",
+  },
+  {
     slug: "platform-admin-appointments",
     publish: "img/guide/web/platform-admin-appointments.webm",
     frame: "desktop",

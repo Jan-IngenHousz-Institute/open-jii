@@ -28,8 +28,10 @@ import {
   SEED_EXPERIMENT_IDS,
   CONTRIBUTOR_SEEDS,
 } from "./constants";
+import { clearDemoContent } from "./demo.seed";
 
 export async function clearSeedData() {
+  await clearDemoContent();
   // User + profile (seed user)
   const seedUsers = await db
     .select({ id: users.id })

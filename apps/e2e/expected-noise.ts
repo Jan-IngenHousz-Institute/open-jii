@@ -2,6 +2,11 @@ import type { ConsoleMessage, Page, Request } from "@playwright/test";
 
 const expectedHttpFailures = [
   {
+    // useMyJoinRequest treats this 404 as no pending request for a nonmember.
+    url: /\/api\/v1\/experiments\/[^/]+\/join-requests\/me(?:[?#]|$)/,
+    statuses: new Set([404]),
+  },
+  {
     // Local runs deliberately have no Contentful credentials.
     url: /(?:contentful\.com|graphql\.contentful\.com)/i,
     statuses: new Set([404, 500]),

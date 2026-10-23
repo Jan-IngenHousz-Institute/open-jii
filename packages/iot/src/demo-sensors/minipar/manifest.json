@@ -1,0 +1,17 @@
+{
+  "family": "minipar",
+  "placeholder": true,
+  "recordingVersion": 1,
+  "firmwareVersion": "synthetic",
+  "protocolVersion": "placeholder-v1",
+  "protocolName": "Demo MiniPAR placeholder protocol",
+  "macroName": "Demo MiniPAR analysis",
+  "description": "Synthetic placeholder for hardware-team replacement. Not recorded from a physical sensor or validated for hardware use.",
+  "frameFooter": "7A1E3AA1",
+  "hello": "{\"device\":\"MiniPAR\",\"version\":\"synthetic\",\"name\":\"Simulated MiniPAR\"}\n",
+  "expectedOutput": {
+    "PAR": 345.0,
+    "PAR_min": 340.0,
+    "PAR_max": 350.0
+  }
+}
