@@ -81,7 +81,7 @@ export function ExperimentStudyDetailsSection({
       return null;
     }
     return (
-      <div>
+      <div data-study-funding>
         <p className="text-muted-foreground text-xs">{tStudy("funding.title")}</p>
         {hasFunding ? fundingReferences.map(renderFundingReference) : renderValue(null)}
       </div>

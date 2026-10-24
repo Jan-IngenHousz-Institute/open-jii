@@ -66,6 +66,7 @@ async function captureShot(
     await new HideOtherProjects(shot.slug).install(page);
     if (shot.featureFlags) await new PinnedFeatureFlags(shot.featureFlags).install(page);
     for (const fixture of shot.fixtures ?? []) await fixture.install(page);
+    if (shot.clock) await page.clock.setFixedTime(shot.clock);
 
     const route = typeof shot.route === "string" ? shot.route : await shot.route();
     await page.goto(`${baseUrl}/${locale}${route}`, { waitUntil: "domcontentloaded" });

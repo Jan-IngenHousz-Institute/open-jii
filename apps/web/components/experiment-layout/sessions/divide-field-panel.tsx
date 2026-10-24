@@ -169,7 +169,7 @@ export function DivideFieldPanel({
             />
 
             {canEdit ? (
-              <div className="space-y-3">
+              <div data-paint-by-hand className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <Label htmlFor="paint-by-hand">{t("divide.paint")}</Label>
                   <Switch

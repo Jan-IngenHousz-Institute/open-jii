@@ -8,7 +8,13 @@ import { usePlotStepStore } from "./next-plot";
 import type { ExampleLayout, LayoutSession, NextPlot } from "./next-plot";
 import { PlotNode } from "./plot-node";
 import { PlotPicker } from "./plot-picker";
-import { isScaffoldScreenOn, isSkipOn, isTreatmentShown, isWalkOn } from "./scaffold-screen";
+import {
+  isScaffoldScreenOn,
+  isSkipOn,
+  isTreatmentShown,
+  isWalkOn,
+  scaffoldNamedPlot,
+} from "./scaffold-screen";
 import { SkipPlotSheet } from "./skip-plot-sheet";
 
 interface PlotStepProps {
@@ -41,9 +47,10 @@ export function PlotStep({ layout, session }: PlotStepProps) {
   const isSkipAvailable = isSkipOn();
   const isFieldGridOn = isScaffoldScreenOn("e8-progress-grid");
   const selected = layout.field.plots.find((plot) => plot.identifier === selectedPlot);
+  const namedPlot = scaffoldNamedPlot(layout);
 
   const confirmPlot = (plot: NextPlot) => confirm(iterationCount, plot);
-  const confirmNamedPlot = () => confirmPlot(layout.namedPlot);
+  const confirmNamedPlot = () => confirmPlot(namedPlot);
 
   const measurePicked = (plot: NextPlot) => {
     const isAlreadyMeasured = session.stateOf(plot.identifier) === "measured";
@@ -73,7 +80,7 @@ export function PlotStep({ layout, session }: PlotStepProps) {
       {isPickerOpen ? (
         <PlotPicker
           field={layout.field}
-          namedPlot={layout.namedPlot}
+          namedPlot={namedPlot}
           session={session}
           selectedPlot={selectedPlot}
           onSelect={selectPlot}
@@ -82,7 +89,7 @@ export function PlotStep({ layout, session }: PlotStepProps) {
         />
       ) : (
         <PlotNode
-          plot={layout.namedPlot}
+          plot={namedPlot}
           session={session}
           isTreatmentShown={isTreatmentShown()}
           walk={isWalkOn() ? layout.share.walk : undefined}
@@ -107,7 +114,7 @@ export function PlotStep({ layout, session }: PlotStepProps) {
       {isSkipAvailable ? (
         <>
           <SkipPlotSheet
-            plot={layout.namedPlot}
+            plot={namedPlot}
             isOpen={isSkipSheetOpen}
             onChoose={closeSkipSheet}
             onClose={closeSkipSheet}

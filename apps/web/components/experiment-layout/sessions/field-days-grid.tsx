@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { ExperimentUnit } from "@repo/api/domains/experiment/layout/experiment-layout.schema";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -18,7 +20,7 @@ import { SessionGrid } from "./session-grid";
 
 interface FieldDaysGridProps {
   plan: FieldPlan;
-  description: string;
+  description: ReactNode;
   markOf: (unitId: string) => PlotMark | undefined;
   shares?: FieldShares;
 }

@@ -76,21 +76,21 @@ export const savedWalkingOrder = new ExperimentPathFixture("walking-order", {
   plots: PLOT_ATTRIBUTES,
 });
 
-/** Today at a wall-clock time, as the browser on this machine will show it. */
-export function todayAt(hours: number, minutes: number): string {
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-  return date.toISOString();
+/**
+ * The example's field day, 14 August 2026. The live screens show it mid-morning and the overview
+ * once both sessions have ended, and each such shot sets the page's clock to its moment.
+ */
+const FIELD_DAY_MORNING = new Date("2026-08-14T11:00:00+02:00");
+const FIELD_DAY_AFTERNOON = new Date("2026-08-14T13:30:00+02:00");
+
+/** A moment the given number of minutes before another, so relative times read true. */
+function minutesBefore(moment: Date, minutes: number): string {
+  return new Date(moment.getTime() - minutes * 60_000).toISOString();
 }
 
-/** A moment the given number of minutes before the capture, so relative times read true. */
-function minutesAgo(minutes: number): string {
-  return new Date(Date.now() - minutes * 60_000).toISOString();
-}
-
-/** A local calendar day the given number of days before today, as YYYY-MM-DD. */
-function daysAgo(days: number): string {
-  const date = new Date();
+/** A local calendar day the given number of days before a moment, as YYYY-MM-DD. */
+function daysBefore(moment: Date, days: number): string {
+  const date = new Date(moment);
   date.setDate(date.getDate() - days);
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
@@ -143,41 +143,41 @@ const nearlyOneTreatment = new ExperimentPathFixture("assignments", {
  * C4, 12th. Alex walked 11 plots and has been quiet for half an hour.
  */
 const liveProgress = new ExperimentPathFixture("sessions/progress", {
-  updatedAt: minutesAgo(0),
+  updatedAt: minutesBefore(FIELD_DAY_MORNING, 0),
   measurers: [
     {
       userId: SEED_USER.userId,
       measuredUnitIds: unitIds([...WALK.slice(0, 9), WALK[10]]),
       skippedUnitIds: unitIds(["A4"]),
-      lastUploadAt: minutesAgo(2),
+      lastUploadAt: minutesBefore(FIELD_DAY_MORNING, 2),
     },
     {
       userId: ALEX.userId,
-      measuredUnitIds: unitIds(WALK.slice(23, 34)),
-      skippedUnitIds: [],
-      lastUploadAt: minutesAgo(29),
+      measuredUnitIds: unitIds(WALK.slice(23, 35).filter((plot) => plot !== "E4")),
+      skippedUnitIds: unitIds(["E4"]),
+      lastUploadAt: minutesBefore(FIELD_DAY_MORNING, 29),
     },
   ],
 });
 
 /** The same morning before Alex's phone has sent anything. */
 const liveProgressNoUpload = new ExperimentPathFixture("sessions/progress", {
-  updatedAt: minutesAgo(0),
+  updatedAt: minutesBefore(FIELD_DAY_MORNING, 0),
   measurers: [
     {
       userId: SEED_USER.userId,
       measuredUnitIds: unitIds([...WALK.slice(0, 9), WALK[10]]),
       skippedUnitIds: unitIds(["A4"]),
-      lastUploadAt: minutesAgo(2),
+      lastUploadAt: minutesBefore(FIELD_DAY_MORNING, 2),
     },
     { userId: ALEX.userId, measuredUnitIds: [], skippedUnitIds: [], lastUploadAt: null },
   ],
 });
 
 const sessionDays = new ExperimentPathFixture("sessions/days", [
-  daysAgo(0),
-  daysAgo(3),
-  daysAgo(7),
+  daysBefore(FIELD_DAY_AFTERNOON, 0),
+  daysBefore(FIELD_DAY_AFTERNOON, 3),
+  daysBefore(FIELD_DAY_AFTERNOON, 7),
 ]);
 
 function plannedReadings(
@@ -193,8 +193,8 @@ function plannedReadings(
 const seedUserSession = {
   userId: SEED_USER.userId,
   phone: "Phone A",
-  endedAt: minutesAgo(80),
-  lastUploadAt: minutesAgo(72),
+  endedAt: minutesBefore(FIELD_DAY_AFTERNOON, 85),
+  lastUploadAt: minutesBefore(FIELD_DAY_AFTERNOON, 80),
   isUploaded: true,
   assignedUnitIds: unitIds(SEED_USER_SHARE),
   readings: [...plannedReadings(SEED_USER_SHARE, "A4"), { unitId: unitId("C4"), isRepeat: true }],
@@ -210,8 +210,8 @@ const endedSessions = new ExperimentPathFixture("sessions/ended", [
   {
     userId: ALEX.userId,
     phone: "Phone B",
-    endedAt: minutesAgo(95),
-    lastUploadAt: minutesAgo(88),
+    endedAt: minutesBefore(FIELD_DAY_AFTERNOON, 70),
+    lastUploadAt: minutesBefore(FIELD_DAY_AFTERNOON, 63),
     isUploaded: true,
     assignedUnitIds: unitIds(ALEX_SHARE),
     readings: [
@@ -229,8 +229,8 @@ const endedSessionsWaiting = new ExperimentPathFixture("sessions/ended", [
   {
     userId: ALEX.userId,
     phone: "Phone B",
-    endedAt: minutesAgo(95),
-    lastUploadAt: minutesAgo(130),
+    endedAt: minutesBefore(FIELD_DAY_AFTERNOON, 70),
+    lastUploadAt: minutesBefore(FIELD_DAY_AFTERNOON, 130),
     isUploaded: false,
     assignedUnitIds: unitIds(ALEX_SHARE),
     readings: plannedReadings(ALEX_SHARE.slice(0, 11), "E4"),
@@ -243,8 +243,8 @@ function reading(
   user: { userId: string },
   phone: string,
   at: string,
-  height: string,
-  leaves: string,
+  efficiency: string,
+  stressIndex: string,
 ) {
   return {
     readingId: id,
@@ -252,13 +252,13 @@ function reading(
     phone,
     measuredAt: at,
     values: [
-      { label: "Plant height", value: height },
-      { label: "Leaf count", value: leaves },
+      { label: "efficiency", value: efficiency },
+      { label: "stress_index", value: stressIndex },
     ],
   };
 }
 
-/** Alex's readings on D6 and D7 landed on plots Seed User had measured. D7 is settled already. */
+/** Alex's readings on D6 and D7 landed on plots Seed User had measured, with the values F shows. */
 const plotsMeasuredTwice = new ExperimentPathFixture("measured-twice", [
   {
     id: "00000000-0000-4000-8000-0000000000d6",
@@ -268,17 +268,17 @@ const plotsMeasuredTwice = new ExperimentPathFixture("measured-twice", [
         "00000000-0000-4000-8000-00000000d601",
         SEED_USER,
         "Phone A",
-        minutesAgo(300),
-        "64 cm",
-        "12",
+        "2026-08-14T09:25:00.000Z",
+        "0.61",
+        "0.29",
       ),
       reading(
         "00000000-0000-4000-8000-00000000d602",
         ALEX,
         "Phone B",
-        minutesAgo(110),
-        "61 cm",
-        "12",
+        "2026-08-14T10:12:00.000Z",
+        "0.47",
+        "0.41",
       ),
     ],
     resolution: null,
@@ -291,24 +291,20 @@ const plotsMeasuredTwice = new ExperimentPathFixture("measured-twice", [
         "00000000-0000-4000-8000-00000000d701",
         SEED_USER,
         "Phone A",
-        minutesAgo(296),
-        "58 cm",
-        "10",
+        "2026-08-14T09:30:00.000Z",
+        "0.66",
+        "0.25",
       ),
       reading(
         "00000000-0000-4000-8000-00000000d702",
         ALEX,
         "Phone B",
-        minutesAgo(106),
-        "59 cm",
-        "11",
+        "2026-08-14T10:15:00.000Z",
+        "0.52",
+        "0.37",
       ),
     ],
-    resolution: {
-      keptReadingId: "00000000-0000-4000-8000-00000000d701",
-      resolvedBy: SEED_USER.userId,
-      resolvedAt: minutesAgo(20),
-    },
+    resolution: null,
   },
 ]);
 
@@ -355,7 +351,7 @@ async function settle(page: Page): Promise<void> {
 }
 
 const strategyPicker: TicketShot = {
-  slug: "e4-strategy-picker",
+  slug: "e3-strategy-picker",
   route: () => layoutTabRoute("walking-order"),
   fixtures: [exampleLayoutFixture, savedWalkingOrder],
   viewport: VIEWPORT,
@@ -373,7 +369,7 @@ const strategyPicker: TicketShot = {
 };
 
 const layoutOrder: TicketShot = {
-  slug: "e4-layout-order",
+  slug: "e3-layout-order",
   route: () => layoutTabRoute("walking-order"),
   fixtures: [exampleLayoutFixture, unsavedWalkingOrder],
   viewport: { width: 1440, height: 1000 },
@@ -390,7 +386,7 @@ const layoutOrder: TicketShot = {
 };
 
 const orderPreview: TicketShot = {
-  slug: "e5-order-preview",
+  slug: "e4-order-preview",
   route: () => layoutTabRoute("order-preview"),
   fixtures: [exampleLayoutFixture, savedWalkingOrder],
   viewport: VIEWPORT,
@@ -407,6 +403,15 @@ const orderPreview: TicketShot = {
   },
 };
 
+/** E6 shows the panel before E7 adds painting, so its shot hides the switch. */
+async function hidePainting(page: Page): Promise<void> {
+  const painting = page.locator("[data-paint-by-hand]");
+  await painting.waitFor();
+  await painting.evaluate((element) => {
+    element.setAttribute("hidden", "");
+  });
+}
+
 const divideField: TicketShot = {
   slug: "e6-divide-field",
   route: () => layoutTabRoute("divide"),
@@ -414,6 +419,7 @@ const divideField: TicketShot = {
   viewport: VIEWPORT,
   prepare: async (page) => {
     await page.getByText("Divide the field", { exact: true }).waitFor();
+    await hidePainting(page);
     await settle(page);
 
     const marker = new ChangeMarker(page);
@@ -507,6 +513,7 @@ function liveCard(page: Page): Locator {
 
 const liveMonitor: TicketShot = {
   slug: "e9-live-monitor",
+  clock: FIELD_DAY_MORNING,
   route: () => layoutTabRoute("live"),
   fixtures: [exampleLayoutFixture, savedWalkingOrder, measurers, equalShares, liveProgress],
   viewport: VIEWPORT,
@@ -523,6 +530,7 @@ const liveMonitor: TicketShot = {
 
 const noUpload: TicketShot = {
   slug: "e9-no-upload",
+  clock: FIELD_DAY_MORNING,
   route: () => layoutTabRoute("live"),
   fixtures: [exampleLayoutFixture, savedWalkingOrder, measurers, equalShares, liveProgressNoUpload],
   viewport: VIEWPORT,
@@ -547,6 +555,7 @@ function overviewCard(page: Page): Locator {
 
 const sessionOverview: TicketShot = {
   slug: "e10-session-overview",
+  clock: FIELD_DAY_AFTERNOON,
   route: () => layoutTabRoute("overview"),
   fixtures: [
     exampleLayoutFixture,
@@ -581,6 +590,7 @@ const sessionOverview: TicketShot = {
 
 const waiting: TicketShot = {
   slug: "e10-waiting",
+  clock: FIELD_DAY_AFTERNOON,
   route: () => layoutTabRoute("overview"),
   fixtures: [
     exampleLayoutFixture,
@@ -605,6 +615,7 @@ const waiting: TicketShot = {
 
 const measuredTwice: TicketShot = {
   slug: "d9-measured-twice",
+  clock: FIELD_DAY_AFTERNOON,
   route: () => layoutTabRoute("review"),
   fixtures: [exampleLayoutFixture, savedWalkingOrder, measurers, plotsMeasuredTwice],
   viewport: VIEWPORT,

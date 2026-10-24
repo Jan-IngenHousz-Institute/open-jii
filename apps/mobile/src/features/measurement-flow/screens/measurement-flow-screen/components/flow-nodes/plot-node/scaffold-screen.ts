@@ -2,7 +2,7 @@ import { LogBox } from "react-native";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 
 import { exampleLayout, useIsPlotStepShowing, usePlotStepStore } from "./next-plot";
-import type { LayoutSession } from "./next-plot";
+import type { ExampleLayout, LayoutSession, NextPlot } from "./next-plot";
 import {
   LEAF_READING_NODE_ID,
   LEAF_READING_RESULT,
@@ -22,11 +22,11 @@ import {
  * - d5-measure-again: a device workbook on the result step of repeat 2 of plot C4
  * - d6-questions-only-plot: a questions-only workbook on its first question, under plot C4
  * - d7-skip-plot: the Next plot step with Cannot measure this plot and one plot to come back to
- * - d7-skip-reason: the same step with the skip sheet open
+ * - d7-skip-reason: the step at A4 with the skip sheet open, before A4 is skipped
  * - d7-come-back-later: the same step with the come-back-later list open
  * - d10-show-treatment: the Next plot step with treatment and genotype shown to the measurer
  * - d11-end-session: the exit sheet of a session
- * - e3-route-context: the Next plot step with the plot after it in the walk
+ * - e5-route-context: the Next plot step with the plot after it in the walk
  * - e8-progress-grid: the field grid over the Next plot step
  */
 // Dev toasts would cover the screens being captured, so a selected screen silences them.
@@ -46,7 +46,7 @@ export type ScaffoldScreen =
   | "d7-come-back-later"
   | "d10-show-treatment"
   | "d11-end-session"
-  | "e3-route-context"
+  | "e5-route-context"
   | "e8-progress-grid";
 
 const SCAFFOLD_SCREENS: ScaffoldScreen[] = [
@@ -61,12 +61,12 @@ const SCAFFOLD_SCREENS: ScaffoldScreen[] = [
   "d7-come-back-later",
   "d10-show-treatment",
   "d11-end-session",
-  "e3-route-context",
+  "e5-route-context",
   "e8-progress-grid",
 ];
 
-/** Screens drawn after Skip exists, so the session holds A4 on the come-back-later list. */
-const SKIP_SCREENS: ScaffoldScreen[] = ["d7-skip-plot", "d7-skip-reason", "d7-come-back-later"];
+/** Screens drawn after A4 is skipped, so the session holds it on the come-back-later list. */
+const SKIP_SCREENS: ScaffoldScreen[] = ["d7-skip-plot", "d7-come-back-later"];
 
 const selectedScreen = exampleLayout
   ? SCAFFOLD_SCREENS.find((screen) => screen === process.env.EXPO_PUBLIC_SCAFFOLD_SCREEN)
@@ -82,12 +82,17 @@ export function isAnyScaffoldScreenOn(screens: ScaffoldScreen[]): boolean {
 
 /** Whether the selected screen comes after Skip, so Cannot measure this plot is offered. */
 export function isSkipOn(): boolean {
-  return isAnyScaffoldScreenOn([...SKIP_SCREENS, "e3-route-context", "e8-progress-grid"]);
+  return isAnyScaffoldScreenOn([
+    ...SKIP_SCREENS,
+    "d7-skip-reason",
+    "e5-route-context",
+    "e8-progress-grid",
+  ]);
 }
 
 /** Whether the selected screen comes after the walking order, so the step names the plot after it. */
 export function isWalkOn(): boolean {
-  return isAnyScaffoldScreenOn(["e3-route-context", "e8-progress-grid"]);
+  return isAnyScaffoldScreenOn(["e5-route-context", "e8-progress-grid"]);
 }
 
 /** The experiment setting that shows treatment and genotype to measurers, off unless selected. */
@@ -106,7 +111,15 @@ export function scaffoldSession(): LayoutSession | undefined {
   if (isAnyScaffoldScreenOn(SKIP_SCREENS)) {
     return exampleLayout.sessionWithSkip;
   }
+  if (isScaffoldScreenOn("d7-skip-reason")) {
+    return exampleLayout.sessionAtSkippedPlot;
+  }
   return exampleLayout.session;
+}
+
+/** The plot the step names: A4 while the skip sheet asks about it, C4 otherwise. */
+export function scaffoldNamedPlot(layout: ExampleLayout): NextPlot {
+  return isScaffoldScreenOn("d7-skip-reason") ? layout.skippedPlot : layout.namedPlot;
 }
 
 /** The session count the flow's header shows while the Next plot step is up. */
@@ -187,7 +200,7 @@ export function startScaffoldScreen(): void {
     case "d7-skip-plot":
     case "d10-show-treatment":
     case "d11-end-session":
-    case "e3-route-context":
+    case "e5-route-context":
       break;
   }
 }

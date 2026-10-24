@@ -655,10 +655,10 @@
     "term": {
       "section": "Standard term (optional)",
       "label": "Term",
-      "help": "A Common Greenhouse Ontology term tells an export what kind of unit this is. Most field plots have none.",
-      "none": "No term",
+      "help": "A greenhouse term (Common Greenhouse Ontology) tells an export what kind of unit this is. Most field plots have none.",
+      "none": "No term fits",
       "selected": "{{label}} ({{id}})",
-      "searchPlaceholder": "Search the Common Greenhouse Ontology",
+      "searchPlaceholder": "Search greenhouse terms",
       "ontology": "Common Greenhouse Ontology",
       "noMatches": "No term matches this name."
     },

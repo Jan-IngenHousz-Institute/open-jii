@@ -14,6 +14,7 @@ import { LayoutCount } from "./layout-count";
 import type { LayoutGridPosition } from "./layout-grid";
 import { LayoutGrid } from "./layout-grid";
 import { LayoutGridCell } from "./layout-grid-cell";
+import { LayoutOccupancy } from "./layout-occupancy";
 import { LayoutPlotSearch } from "./layout-plot-search";
 import { LayoutUnplacedStrip } from "./layout-unplaced-strip";
 import type { PlotCategories, PlotLegendEntry } from "./plot-state";
@@ -52,11 +53,7 @@ export function LayoutPlotGrid({
 }: LayoutPlotGridProps) {
   const { t } = useTranslation("experiments");
 
-  const plotCount = layout.units.filter((unit) => unit.active).length;
-  const placedCount = layout.units.filter(
-    (unit) => unit.active && unit.row !== null && unit.column !== null,
-  ).length;
-  const gapCount = layout.rows * layout.columns - placedCount;
+  const occupancy = new LayoutOccupancy(layout);
   const hasRemoved = layout.units.some((unit) => !unit.active && (unit.readingCount ?? 0) > 0);
   const legendEntries: PlotLegendEntry[] = hasRemoved ? ["gap", "removed"] : ["gap"];
 
@@ -116,7 +113,13 @@ export function LayoutPlotGrid({
     <LayoutGrid
       layout={layout}
       title={t("layout.gridTitle", { level: layout.levelName })}
-      description={<LayoutCount levelName={layout.levelName} plots={plotCount} gaps={gapCount} />}
+      description={
+        <LayoutCount
+          levelName={layout.levelName}
+          plots={occupancy.plotCount}
+          gaps={occupancy.gapCount}
+        />
+      }
       renderCell={renderCell}
       toolbar={toolbar}
       footer={footer}

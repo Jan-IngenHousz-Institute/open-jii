@@ -100,6 +100,7 @@ export function LayoutGapPainter({ layout, onDone }: LayoutGapPainterProps) {
     kindAt(position) === "removed" && position.unit !== undefined ? [position.unit.identifier] : [],
   );
   const plotCount = positions.filter((position) => kindAt(position) === "plot").length;
+  const gapCount = positions.filter((position) => kindAt(position) === "gap").length;
 
   const closeConfirm = () => {
     setIsConfirming(false);
@@ -166,13 +167,7 @@ export function LayoutGapPainter({ layout, onDone }: LayoutGapPainterProps) {
       <LayoutGrid
         layout={layout}
         title={t("layout.gridTitle", { level: layout.levelName })}
-        description={
-          <LayoutCount
-            levelName={layout.levelName}
-            plots={plotCount}
-            gaps={layout.rows * layout.columns - plotCount}
-          />
-        }
+        description={<LayoutCount levelName={layout.levelName} plots={plotCount} gaps={gapCount} />}
         renderCell={renderCell}
         banner={banner}
         onPointerUp={endStroke}

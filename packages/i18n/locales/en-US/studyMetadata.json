@@ -66,7 +66,7 @@
     "empty": "No columns yet. They appear once this experiment has readings.",
     "allDescribed": "Every column is described.",
     "noneSuggested": "No column has a suggestion.",
-    "readOnly": "Only this experiment's members can describe its columns."
+    "readOnly": "Only this experiment's admins and members can describe its columns."
   },
   "describe": {
     "intro": "Say what this column measures. Only the trait is required.",
@@ -105,7 +105,7 @@
     "cancel": "Cancel",
     "close": "Close",
     "saved": "Description saved",
-    "readOnly": "Only this experiment's members can describe its columns."
+    "readOnly": "Only this experiment's admins and members can describe its columns."
   },
   "suggestion": {
     "title": "Suggested description",

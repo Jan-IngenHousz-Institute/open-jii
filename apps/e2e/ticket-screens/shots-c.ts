@@ -359,7 +359,7 @@ const levelTerm: TicketShot = {
     const section = page.locator("[data-term-section]");
     await section.getByText("Standard term (optional)").click();
     await page.getByRole("combobox", { name: "Term", exact: true }).click();
-    await page.getByPlaceholder("Search the Common Greenhouse Ontology").fill("bench");
+    await page.getByPlaceholder("Search greenhouse terms").fill("bench");
     await page.getByRole("option", { name: /Bench/ }).first().waitFor();
     await page.mouse.move(0, 0);
 
@@ -878,7 +878,7 @@ async function paintGaps(page: Page): Promise<void> {
   await plotGrid(page).waitFor();
   await toolbarControl(page, "markGaps").click();
   await page.locator("[data-gap-banner]").waitFor();
-  await paint(page, "D7", "D8");
+  await paint(page, "E8", "F8");
   await paint(page, MEASURED_PLOT, MEASURED_PLOT);
   await page.getByText("3 changes").waitFor();
 }
@@ -895,7 +895,7 @@ const markGaps: TicketShot = {
     const banner = page.locator("[data-gap-banner]");
     const marker = new ChangeMarker(page);
     await marker.mark(banner, "New", "below");
-    for (const identifier of ["D7", "D8", MEASURED_PLOT]) {
+    for (const identifier of ["E8", "F8", MEASURED_PLOT]) {
       await outline(page, page.getByRole("button", { name: identifier, exact: true }));
     }
     return marker.frame(

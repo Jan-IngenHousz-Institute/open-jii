@@ -511,7 +511,9 @@ const drawerReadOnly: TicketShot = {
       "View the description of leaf_temperature",
       "4 of 6 columns described",
     );
-    await drawer.getByText("Only this experiment's members can describe its columns.").waitFor();
+    await drawer
+      .getByText("Only this experiment's admins and members can describe its columns.")
+      .waitFor();
     await blurFocus(page);
     await hideWalkThrough(page);
 

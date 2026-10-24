@@ -260,13 +260,13 @@ const PLOT_CHECKS = {
         {
           rowId: "reading-d6-seed",
           measuredByName: "Seed User",
-          measuredAt: "2026-08-14T10:12:00.000Z",
+          measuredAt: "2026-08-14T09:25:00.000Z",
           values: values("0.61", "0.29"),
         },
         {
           rowId: "reading-d6-alex",
           measuredByName: "Alex Example",
-          measuredAt: "2026-08-14T15:40:00.000Z",
+          measuredAt: "2026-08-14T10:12:00.000Z",
           values: values("0.47", "0.41"),
         },
       ],
@@ -277,13 +277,13 @@ const PLOT_CHECKS = {
         {
           rowId: "reading-d7-seed",
           measuredByName: "Seed User",
-          measuredAt: "2026-08-14T10:15:00.000Z",
+          measuredAt: "2026-08-14T09:30:00.000Z",
           values: values("0.66", "0.25"),
         },
         {
           rowId: "reading-d7-alex",
           measuredByName: "Alex Example",
-          measuredAt: "2026-08-14T15:44:00.000Z",
+          measuredAt: "2026-08-14T10:15:00.000Z",
           values: values("0.52", "0.37"),
         },
       ],
@@ -294,13 +294,13 @@ const PLOT_CHECKS = {
       plot: "A4",
       reason: "flooded",
       skippedByName: "Seed User",
-      skippedAt: "2026-08-14T11:02:00.000Z",
+      skippedAt: "2026-08-14T08:45:00.000Z",
     },
     {
       plot: "E4",
       reason: "plantMissing",
       skippedByName: "Alex Example",
-      skippedAt: "2026-08-14T14:20:00.000Z",
+      skippedAt: "2026-08-14T08:10:00.000Z",
     },
   ],
 };

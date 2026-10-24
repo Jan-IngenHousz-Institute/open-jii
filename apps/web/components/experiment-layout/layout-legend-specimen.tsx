@@ -21,7 +21,7 @@ const SPECIMENS: readonly PlotStateCellProps[] = [
     kind: "plot",
     identifier: "A2",
     category: CATEGORIES.get("Control"),
-    share: SHARES.at(0),
+    share: SHARES.at(1),
     mark: "measured",
   },
   {
@@ -40,27 +40,27 @@ const SPECIMENS: readonly PlotStateCellProps[] = [
   },
   {
     kind: "plot",
-    identifier: "C5",
-    category: CATEGORIES.get("Control"),
+    identifier: "D6",
+    category: CATEGORIES.get("Drought"),
     share: SHARES.at(0),
     mark: "measuredTwice",
   },
   {
     kind: "plot",
-    identifier: "D2",
+    identifier: "D5",
     category: CATEGORIES.get("Control"),
     share: SHARES.at(1),
     mark: "outsideShare",
   },
   {
     kind: "plot",
-    identifier: "E5",
+    identifier: "D4",
     category: CATEGORIES.get("Severe drought"),
     share: SHARES.at(1),
     isDimmed: true,
   },
   { kind: "gap" },
-  { kind: "removed", identifier: "F3" },
+  { kind: "removed", identifier: "C5" },
 ];
 
 /** Scaffold only: every look of the plot-state legend in one row, for the C2 ticket's screen. */

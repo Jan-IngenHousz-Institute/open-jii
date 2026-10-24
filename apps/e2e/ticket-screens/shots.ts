@@ -27,6 +27,8 @@ export interface TicketShot {
   readonly anonymous?: boolean;
   /** PostHog flags pinned on in the browser for this shot. */
   readonly featureFlags?: readonly string[];
+  /** The moment the page's clock shows, for screens that date what they show against today. */
+  readonly clock?: Date;
   /**
    * Drives the page to the state the ticket describes, marks the change, and returns the crop.
    * The whole viewport is captured when it returns nothing.

@@ -3,9 +3,10 @@
 import { useExperimentMeasuredTwice } from "@/hooks/experiment/useExperimentMeasuredTwice/useExperimentMeasuredTwice";
 import { useExperimentSessionMeasurers } from "@/hooks/experiment/useExperimentSessionMeasurers/useExperimentSessionMeasurers";
 
-import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
+import { LayoutCount } from "../layout-count";
+import { LayoutOccupancy } from "../layout-occupancy";
 import type { PlotMark } from "../plot-state";
 import { FieldDaysGrid } from "./field-days-grid";
 import type { FieldPlan } from "./field-plan";
@@ -20,7 +21,6 @@ interface MeasuredTwiceSectionProps {
 
 /** The grid with each plot still measured twice marked, and the panel that settles them. */
 export function MeasuredTwiceSection({ experimentId, canEdit, plan }: MeasuredTwiceSectionProps) {
-  const { t } = useTranslation("fieldSessions");
   const measurers = useExperimentSessionMeasurers(experimentId);
   const measuredTwice = useExperimentMeasuredTwice(experimentId);
 
@@ -42,12 +42,19 @@ export function MeasuredTwiceSection({ experimentId, canEdit, plan }: MeasuredTw
   );
   const markOf = (unitId: string): PlotMark | undefined =>
     open.has(unitId) ? "measuredTwice" : undefined;
+  const occupancy = new LayoutOccupancy(plan.layout);
 
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
       <FieldDaysGrid
         plan={plan}
-        description={t("plotCount", { count: plan.plots.length })}
+        description={
+          <LayoutCount
+            levelName={plan.layout.levelName}
+            plots={occupancy.plotCount}
+            gaps={occupancy.gapCount}
+          />
+        }
         markOf={markOf}
       />
       <MeasuredTwicePanel

@@ -7,6 +7,7 @@ import { Card } from "@repo/ui/components/card";
 
 import { LayoutCount } from "./layout-count";
 import { LayoutNamingScheme } from "./layout-naming";
+import { LayoutOccupancy } from "./layout-occupancy";
 import { UnitName } from "./unit-name";
 
 interface LayoutSetupSummaryProps {
@@ -20,11 +21,7 @@ export function LayoutSetupSummary({ layout, onEdit }: LayoutSetupSummaryProps) 
   const { t } = useTranslation("experiments");
 
   const unitName = new UnitName(layout.levelName);
-  const plotCount = layout.units.filter((unit) => unit.active).length;
-  const placedCount = layout.units.filter(
-    (unit) => unit.active && unit.row !== null && unit.column !== null,
-  ).length;
-  const gapCount = layout.rows * layout.columns - placedCount;
+  const occupancy = new LayoutOccupancy(layout);
   const readingCount = layout.readingCount ?? 0;
   const hasReadings = readingCount > 0;
   const naming =
@@ -59,7 +56,11 @@ export function LayoutSetupSummary({ layout, onEdit }: LayoutSetupSummaryProps) 
             {t("layout.summaryCard.plots", { units: unitName.plural })}
           </dt>
           <dd className="font-medium">
-            <LayoutCount levelName={layout.levelName} plots={plotCount} gaps={gapCount} />
+            <LayoutCount
+              levelName={layout.levelName}
+              plots={occupancy.plotCount}
+              gaps={occupancy.gapCount}
+            />
           </dd>
         </div>
         <div className="flex items-baseline gap-1.5">

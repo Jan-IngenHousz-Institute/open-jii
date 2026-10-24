@@ -121,6 +121,10 @@ export interface OtherPhoneSession {
 export interface ExampleLayout {
   field: ExampleField;
   namedPlot: NextPlot;
+  /** The plot the example skips, A4, as the step names it before the skip. */
+  skippedPlot: NextPlot;
+  /** Layout order at A4: A1 to A3 measured and nothing skipped yet. */
+  sessionAtSkippedPlot: LayoutSession;
   /** Layout order before any walking order: every plot before C4 measured. */
   session: LayoutSession;
   /** The same session with A4 skipped and waiting on the come-back-later list. */
@@ -150,7 +154,7 @@ const EXAMPLE_WALK = [
 // The measurer's share is the first half of the walk; the second measurer holds the rest.
 const SHARE_SIZE = 23;
 const OTHER_MEASURER = "Alex Example";
-const OTHER_PHONE_STARTED_AT = "08:40";
+const OTHER_PHONE_STARTED_AT = "08:10";
 
 function buildExampleField(): ExampleField {
   const plots: NextPlot[] = [];
@@ -188,7 +192,14 @@ function buildExampleLayout(): ExampleLayout {
     throw new Error(`The example field has no plot ${NAMED_PLOT}`);
   }
 
+  const skippedIndex = field.plots.findIndex((plot) => plot.identifier === SKIPPED_PLOT.identifier);
+  const skippedPlot = field.plots[skippedIndex];
+  if (!skippedPlot) {
+    throw new Error(`The example field has no plot ${SKIPPED_PLOT.identifier}`);
+  }
+
   const total = field.plots.length;
+  const beforeSkipped = field.plots.slice(0, skippedIndex).map((plot) => plot.identifier);
   const beforeNamed = field.plots.slice(0, namedIndex).map((plot) => plot.identifier);
   const isNotSkipped = (identifier: string) => identifier !== SKIPPED_PLOT.identifier;
 
@@ -202,6 +213,8 @@ function buildExampleLayout(): ExampleLayout {
   return {
     field,
     namedPlot,
+    skippedPlot,
+    sessionAtSkippedPlot: new LayoutSession(total, beforeSkipped, []),
     session: new LayoutSession(total, beforeNamed, []),
     sessionWithSkip: new LayoutSession(total, beforeNamed.filter(isNotSkipped), [SKIPPED_PLOT]),
     share,
