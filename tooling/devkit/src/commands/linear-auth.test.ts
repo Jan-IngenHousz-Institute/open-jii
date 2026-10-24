@@ -10,7 +10,7 @@ function deps(overrides: Partial<AuthDependencies> = {}) {
     .fn<AuthDependencies["verify"]>()
     .mockResolvedValue({ name: "Petar", teams: ["OJD"] });
   const value: AuthDependencies = {
-    readInput: () => "lin_api_secret\n",
+    readInput: () => Promise.resolve("lin_api_secret\n"),
     verify,
     storeFile,
     write: (text) => lines.push(text),
@@ -34,8 +34,8 @@ describe("authenticate", () => {
   });
 
   it("refuses empty or whitespace-laden input before verifying", async () => {
-    const empty = deps({ readInput: () => "\n" });
-    const spaced = deps({ readInput: () => "lin api\n" });
+    const empty = deps({ readInput: () => Promise.resolve("\n") });
+    const spaced = deps({ readInput: () => Promise.resolve("lin api\n") });
 
     await expect(authenticate(empty.value)).rejects.toThrow("No key received");
     await expect(authenticate(spaced.value)).rejects.toThrow("contains whitespace");

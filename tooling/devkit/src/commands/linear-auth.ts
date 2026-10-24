@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { text } from "node:stream/consumers";
 
 import { devkitEnvPath, linearKey, repositoryRoot } from "../lib/config.js";
 import { upsertEnvFile } from "../lib/env-file.js";
@@ -10,7 +10,7 @@ export interface Identity {
 }
 
 export interface AuthDependencies {
-  readInput: () => string;
+  readInput: () => Promise<string>;
   verify: (key: string) => Promise<Identity>;
   storeFile: (key: string) => Promise<void>;
   write: (text: string) => void;
@@ -28,7 +28,7 @@ async function verifyKey(key: string): Promise<Identity> {
 }
 
 export async function authenticate(deps: AuthDependencies): Promise<void> {
-  const key = deps.readInput().trim();
+  const key = (await deps.readInput()).trim();
   if (key.length === 0) {
     throw new Error("No key received on stdin. Paste it in: pbpaste | pnpm linear:auth");
   }
@@ -51,7 +51,9 @@ async function run(): Promise<number> {
   }
   const root = repositoryRoot();
   await authenticate({
-    readInput: () => readFileSync(0, "utf8"),
+    // Waits for the pipe to close. A synchronous read fails with EAGAIN while the writer, such as
+    // the command minting the token, has not written yet.
+    readInput: () => text(process.stdin),
     verify: verifyKey,
     storeFile: (key) => upsertEnvFile(devkitEnvPath(root), linearKey.variable, key),
     write: (text) => {
