@@ -124,6 +124,29 @@ resource "grafana_folder" "folder" {
   uid      = "${var.environment}-dashboards"
 }
 
+# The folder's permissions were never in code and drifted: prod granted the Admin role only, so
+# viewers, the daily round's account among them, saw none of its dashboards or alert rules. This
+# replaces the whole list on every apply.
+resource "grafana_folder_permission" "folder" {
+  provider   = grafana.amg
+  folder_uid = grafana_folder.folder.uid
+
+  permissions {
+    role       = "Admin"
+    permission = "Admin"
+  }
+
+  permissions {
+    role       = "Editor"
+    permission = "Edit"
+  }
+
+  permissions {
+    role       = "Viewer"
+    permission = "View"
+  }
+}
+
 ### Alerting rules 
 
 resource "grafana_contact_point" "slack" {
