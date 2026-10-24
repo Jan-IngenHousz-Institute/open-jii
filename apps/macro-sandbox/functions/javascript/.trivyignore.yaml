@@ -178,3 +178,8 @@ vulnerabilities:
       - "pkg:npm/undici@7.29.0"
     statement: "undici BalancedPool TLS validation bypass. No outbound TLS."
     expired_at: 2026-11-05
+  - id: CVE-2026-109869
+    purls:
+      - "pkg:npm/undici@7.29.0"
+    statement: "undici fetch crash on a malicious server's content encodings. No outbound HTTP."
+    expired_at: 2026-11-05
