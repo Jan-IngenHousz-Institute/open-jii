@@ -8,7 +8,7 @@ function deps(overrides: Partial<PostHogAuthDependencies> = {}) {
   const storeFile = vi.fn<PostHogAuthDependencies["storeFile"]>().mockResolvedValue(undefined);
   const verify = vi.fn<PostHogAuthDependencies["verify"]>().mockResolvedValue(["openJII (80726)"]);
   const value: PostHogAuthDependencies = {
-    readInput: () => "phx_secret\n",
+    readInput: () => Promise.resolve("phx_secret\n"),
     verify,
     storeFile,
     write: (text) => lines.push(text),
@@ -32,8 +32,8 @@ describe("authenticate", () => {
   });
 
   it("refuses empty or whitespace-laden input before verifying", async () => {
-    const empty = deps({ readInput: () => "\n" });
-    const spaced = deps({ readInput: () => "phx key\n" });
+    const empty = deps({ readInput: () => Promise.resolve("\n") });
+    const spaced = deps({ readInput: () => Promise.resolve("phx key\n") });
 
     await expect(authenticate(empty.value)).rejects.toThrow("No key received");
     await expect(authenticate(spaced.value)).rejects.toThrow("contains whitespace");
