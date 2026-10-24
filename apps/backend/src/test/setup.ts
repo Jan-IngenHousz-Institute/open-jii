@@ -56,6 +56,10 @@ vi.mock("@repo/transactional/render/organization-membership-removed", () => ({
   renderOrganizationMembershipRemoved: vi.fn(),
 }));
 
+vi.mock("@repo/transactional/render/experiment-made-public-notification", () => ({
+  renderExperimentMadePublicNotification: vi.fn(),
+}));
+
 // Mock analytics server
 vi.mock("@repo/analytics/server", async (importOriginal) => ({
   ...(await importOriginal<typeof AnalyticsServer>()),

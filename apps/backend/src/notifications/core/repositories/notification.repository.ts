@@ -16,9 +16,12 @@ import {
   desc,
   eq,
   inArray,
+  isNotNull,
   isNull,
+  lt,
   notificationPreferences,
   notifications,
+  or,
   profiles,
   sql,
   users,
@@ -60,8 +63,18 @@ export interface NotificationUserDto {
   lastName: string;
 }
 
+export interface RetentionPeriods {
+  readAfterDays: number;
+  allAfterDays: number;
+  batchSize: number;
+}
+
 /** Postgres binds one parameter per column, so a single statement cannot take every row. */
 const INSERT_CHUNK_SIZE = 1000;
+
+export const NOTIFICATION_RETENTION_LOCK_KEY = "notifications_retention";
+
+const RETENTION_LOCK = sql`hashtext(${NOTIFICATION_RETENTION_LOCK_KEY})`;
 
 @Injectable()
 export class NotificationRepository {
@@ -228,6 +241,71 @@ export class NotificationRepository {
         .returning({ id: notifications.id });
 
       return updated.length;
+    });
+  }
+
+  /**
+   * A session lock, held across the delete batches with no transaction around them;
+   * `false` means another task holds it. The task's client pools one connection
+   * (`max: 1`), so every batch runs on the session that took the lock, and a transaction
+   * would pin that one connection for every request in the task until the last batch. The
+   * driver also recycles that one connection at the end of its lifetime, so a release now
+   * and then finds the lock gone with the replaced session. If the pool ever grows, the
+   * release can land on a session that never locked, and the lock then needs a reserved
+   * connection.
+   */
+  async tryRetentionLock(): Promise<Result<boolean>> {
+    return tryCatch(async () => {
+      const [row] = await this.database.execute<{ locked: boolean }>(
+        sql`SELECT pg_try_advisory_lock(${RETENTION_LOCK}) AS locked`,
+      );
+      return row.locked;
+    });
+  }
+
+  /**
+   * Deletes up to `batchSize` notifications that arrived more than `readAfterDays` ago and
+   * have been read, or more than `allAfterDays` ago whatever their state; their deliveries
+   * go with them by cascade. Both cut-offs come from the database clock, the one
+   * `created_at` and `read_at` are stamped by. The uncorrelated subquery runs once, so its
+   * `LIMIT` caps the batch.
+   */
+  async deleteExpiredBatch({
+    readAfterDays,
+    allAfterDays,
+    batchSize,
+  }: RetentionPeriods): Promise<Result<number>> {
+    return tryCatch(async () => {
+      const readCutoff = sql`(now() AT TIME ZONE 'UTC') - make_interval(days => ${readAfterDays})`;
+      const allCutoff = sql`(now() AT TIME ZONE 'UTC') - make_interval(days => ${allAfterDays})`;
+
+      const expired = this.database
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(
+          and(
+            lt(notifications.createdAt, readCutoff),
+            or(isNotNull(notifications.readAt), lt(notifications.createdAt, allCutoff)),
+          ),
+        )
+        .limit(batchSize);
+
+      const rows = await this.database
+        .delete(notifications)
+        .where(inArray(notifications.id, expired))
+        .returning({ id: notifications.id });
+
+      return rows.length;
+    });
+  }
+
+  /** `false` when this session no longer held the lock. */
+  async releaseRetentionLock(): Promise<Result<boolean>> {
+    return tryCatch(async () => {
+      const [row] = await this.database.execute<{ unlocked: boolean }>(
+        sql`SELECT pg_advisory_unlock(${RETENTION_LOCK}) AS unlocked`,
+      );
+      return row.unlocked;
     });
   }
 
