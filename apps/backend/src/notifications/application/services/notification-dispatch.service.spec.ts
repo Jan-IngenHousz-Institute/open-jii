@@ -605,6 +605,48 @@ describe("NotificationDispatchService", () => {
     });
   });
 
+  describe("the made-public email entry", () => {
+    const madePublicContext = (resource: { type: "experiment"; id: string } | null) => ({
+      recipientEmail,
+      actorName: null,
+      resource,
+      params: { experimentName: "Leaf Area Index" },
+    });
+
+    let sendMadePublic: MockInstance<EmailAdapter["sendExperimentMadePublicNotification"]>;
+
+    beforeEach(() => {
+      sendMadePublic = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendExperimentMadePublicNotification")
+        .mockResolvedValue(success(undefined));
+    });
+
+    it("sends the experiment's id and name to the address", async () => {
+      const result = await notificationEmail.send(
+        "experiment_made_public",
+        madePublicContext(experiment),
+      );
+
+      assertSuccess(result);
+      expect(sendMadePublic).toHaveBeenCalledExactlyOnceWith(
+        experiment.id,
+        "Leaf Area Index",
+        recipientEmail,
+      );
+    });
+
+    it("refuses a notification stored with no resource", async () => {
+      const result = await notificationEmail.send(
+        "experiment_made_public",
+        madePublicContext(null),
+      );
+
+      assertFailure(result);
+      expect(result.error.message).toContain("no resource to email about");
+      expect(sendMadePublic).not.toHaveBeenCalled();
+    });
+  });
+
   it("writes both rows on a replay after a first attempt rolled back", async () => {
     const send = {
       type: "experiment_join_request_received" as const,

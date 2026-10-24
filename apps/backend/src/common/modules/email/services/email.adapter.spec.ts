@@ -383,4 +383,25 @@ describe("EmailAdapter", () => {
       expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
     });
   });
+
+  describe("sendExperimentMadePublicNotification", () => {
+    it("delegates to NotificationsService with every argument in order", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendExperimentMadePublicNotification")
+        .mockResolvedValue(success(undefined));
+
+      const result = await adapter.sendExperimentMadePublicNotification(
+        "exp-123",
+        "Leaf Area Index",
+        "admin@example.com",
+      );
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(
+        "exp-123",
+        "Leaf Area Index",
+        "admin@example.com",
+      );
+    });
+  });
 });
