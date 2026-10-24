@@ -56,7 +56,9 @@ describe("RegisterIotDeviceDialog", () => {
     render(<RegisterIotDeviceDialog open onOpenChange={vi.fn()} />);
     await user.click(screen.getByRole("button", { name: "iot.devices.dialog.submit" }));
 
-    expect(await screen.findAllByText(/at least 1 character/i)).not.toHaveLength(0);
+    expect(await screen.findAllByText(/expected string to have >=1 characters/i)).not.toHaveLength(
+      0,
+    );
     expect(spy.called).toBe(false);
   });
 

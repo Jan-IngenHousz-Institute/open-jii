@@ -21,7 +21,7 @@ export const zSearchResultType = z.enum([
 /** A single normalized, ranked search result. */
 export const zSearchResult = z.object({
   type: zSearchResultType,
-  id: z.string().uuid(),
+  id: z.string().guid(),
   title: z.string(),
   subtitle: z.string().nullable(),
   /**

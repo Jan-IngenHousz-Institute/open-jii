@@ -10,8 +10,8 @@ export const zExperimentTransferRequestStatus = z.enum([
 ]);
 
 export const zExperimentTransferRequest = z.object({
-  requestId: z.string().uuid(),
-  userId: z.string().uuid(),
+  requestId: z.string().guid(),
+  userId: z.string().guid(),
   userEmail: z.string().email(),
   sourcePlatform: z.string(),
   projectIdOld: z.string(),

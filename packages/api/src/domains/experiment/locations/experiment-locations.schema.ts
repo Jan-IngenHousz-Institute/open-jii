@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const zExperimentLocation = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z
     .string()
     .min(1, "ExperimentLocation name is required")

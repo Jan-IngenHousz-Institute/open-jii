@@ -14,8 +14,8 @@ export const zTransferResourceAdminBody = z.object({
     .array(
       z.object({
         resourceType: zSharingResourceType.describe("Type of resource to transfer admin on"),
-        resourceId: z.string().uuid().describe("Resource to transfer admin rights on"),
-        targetUserId: z.string().uuid().describe("User to make an admin of the resource"),
+        resourceId: z.string().guid().describe("Resource to transfer admin rights on"),
+        targetUserId: z.string().guid().describe("User to make an admin of the resource"),
       }),
     )
     .min(1)
@@ -24,7 +24,7 @@ export const zTransferResourceAdminBody = z.object({
 
 export const zTransferResourceAdminResult = z.object({
   resourceType: zSharingResourceType,
-  resourceId: z.string().uuid(),
+  resourceId: z.string().guid(),
   success: z.boolean(),
   error: z.string().optional(),
 });

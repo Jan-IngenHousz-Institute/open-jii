@@ -71,8 +71,8 @@ catalogs:
       specifier: 6.0.3
       version: 6.0.3
     zod:
-      specifier: 3.25.76
-      version: 3.25.76
+      specifier: 4.6.7
+      version: 4.6.7
   orpc:
     '@orpc/client':
       specifier: 1.15.1
@@ -291,8 +291,8 @@ importers:
         specifier: ^1.8.2
         version: 1.8.2(supports-color@8.1.1)
       drizzle-zod:
-        specifier: ^0.5.1
-        version: 0.5.1(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.11.1)(expo-sqlite@57.0.1(expo@57.0.7)(react-native@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3))(kysely@0.28.17)(postgres@3.4.9))(zod@3.25.76)
+        specifier: ^0.8.3
+        version: 0.8.3(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.11.1)(expo-sqlite@57.0.1(expo@57.0.7)(react-native@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3))(kysely@0.28.17)(postgres@3.4.9))(zod@4.6.7)
       http-status-codes:
         specifier: ^2.3.0
         version: 2.3.0
@@ -316,7 +316,7 @@ importers:
         version: 7.8.2
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@faker-js/faker':
         specifier: ^10.6.0
@@ -490,7 +490,7 @@ importers:
         specifier: 'catalog:'
         version: 6.0.3
       zod:
-        specifier: ^4.6.7
+        specifier: 'catalog:'
         version: 4.6.7
 
   apps/e2e:
@@ -813,7 +813,7 @@ importers:
         version: 2.8.3
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
       zustand:
         specifier: ^5.0.12
         version: 5.0.14(@types/react@19.2.14)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))
@@ -1080,7 +1080,7 @@ importers:
         version: 2.8.3
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@open-jii/release-tools':
         specifier: workspace:*
@@ -1162,7 +1162,7 @@ importers:
         version: 10.3.1
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
@@ -1211,13 +1211,13 @@ importers:
         version: 1.15.1(@opentelemetry/api@1.9.1)(ws@8.21.0)
       '@orpc/zod':
         specifier: catalog:orpc
-        version: 1.15.1(@opentelemetry/api@1.9.1)(@orpc/contract@1.15.1(@opentelemetry/api@1.9.1))(@orpc/server@1.15.1(@opentelemetry/api@1.9.1)(ws@8.21.0))(ws@8.21.0)(zod@3.25.76)
+        version: 1.15.1(@opentelemetry/api@1.9.1)(@orpc/contract@1.15.1(@opentelemetry/api@1.9.1))(@orpc/server@1.15.1(@opentelemetry/api@1.9.1)(ws@8.21.0))(ws@8.21.0)(zod@4.6.7)
       yaml:
         specifier: 2.8.3
         version: 2.8.3
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
@@ -1397,7 +1397,7 @@ importers:
         version: 3.4.9
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@repo/api':
         specifier: workspace:*
@@ -1724,7 +1724,7 @@ importers:
         version: 4.1.12(@opentelemetry/api@1.9.1)(@types/node@26.1.0)(@vitest/coverage-v8@4.1.12)(@vitest/ui@4.1.12)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@26.1.0)(typescript@6.0.3))(vite@7.3.7(@types/node@26.1.0)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
 
   tooling/devkit:
     dependencies:
@@ -10069,11 +10069,11 @@ packages:
       sqlite3:
         optional: true
 
-  drizzle-zod@0.5.1:
-    resolution: {integrity: sha512-C/8bvzUH/zSnVfwdSibOgFjLhtDtbKYmkbPbUCq46QZyZCH6kODIMSOgZ8R7rVjoI+tCj3k06MRJMDqsIeoS4A==}
+  drizzle-zod@0.8.3:
+    resolution: {integrity: sha512-66yVOuvGhKJnTdiqj1/Xaaz9/qzOdRJADpDa68enqS6g3t0kpNkwNYjUuaeXgZfO/UWuIM9HIhSlJ6C5ZraMww==}
     peerDependencies:
-      drizzle-orm: '>=0.23.13'
-      zod: '*'
+      drizzle-orm: '>=0.36.0'
+      zod: ^3.25.0 || ^4.0.0
 
   dtype@2.0.0:
     resolution: {integrity: sha512-s2YVcLKdFGS0hpFqJaTwscsyt0E8nNFdmo73Ocd81xNPj4URI4rj6D60A+vFMIw7BXWlb4yRkEwfBqcZzPGiZg==}
@@ -20892,7 +20892,7 @@ snapshots:
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
-  '@orpc/zod@1.15.1(@opentelemetry/api@1.9.1)(@orpc/contract@1.15.1(@opentelemetry/api@1.9.1))(@orpc/server@1.15.1(@opentelemetry/api@1.9.1)(ws@8.21.0))(ws@8.21.0)(zod@3.25.76)':
+  '@orpc/zod@1.15.1(@opentelemetry/api@1.9.1)(@orpc/contract@1.15.1(@opentelemetry/api@1.9.1))(@orpc/server@1.15.1(@opentelemetry/api@1.9.1)(ws@8.21.0))(ws@8.21.0)(zod@4.6.7)':
     dependencies:
       '@orpc/contract': 1.15.1(@opentelemetry/api@1.9.1)
       '@orpc/json-schema': 1.15.1(@opentelemetry/api@1.9.1)(ws@8.21.0)
@@ -20901,7 +20901,7 @@ snapshots:
       '@orpc/shared': 1.15.1(@opentelemetry/api@1.9.1)
       escape-string-regexp: 5.0.0
       wildcard-match: 5.1.4
-      zod: 3.25.76
+      zod: 4.6.7
     transitivePeerDependencies:
       - '@opentelemetry/api'
       - crossws
@@ -26238,10 +26238,10 @@ snapshots:
       kysely: 0.28.17
       postgres: 3.4.9
 
-  drizzle-zod@0.5.1(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.11.1)(expo-sqlite@57.0.1(expo@57.0.7)(react-native@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3))(kysely@0.28.17)(postgres@3.4.9))(zod@3.25.76):
+  drizzle-zod@0.8.3(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.11.1)(expo-sqlite@57.0.1(expo@57.0.7)(react-native@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3))(kysely@0.28.17)(postgres@3.4.9))(zod@4.6.7):
     dependencies:
       drizzle-orm: 0.45.2(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.11.1)(expo-sqlite@57.0.1(expo@57.0.7)(react-native@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3))(kysely@0.28.17)(postgres@3.4.9)
-      zod: 3.25.76
+      zod: 4.6.7
 
   dtype@2.0.0: {}
 
