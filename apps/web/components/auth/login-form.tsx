@@ -21,7 +21,6 @@ import { cva } from "@repo/ui/lib/utils";
 import { useLastLoginMethod } from "../../hooks/auth/useLastLoginMethod/useLastLoginMethod";
 import { EmailLoginForm } from "./email-login-form";
 import { OAuthLoginForm } from "./oauth-login-form";
-import { DesktopBrowserSignIn } from "./desktop-browser-sign-in";
 import { PasskeyLoginButton } from "./passkey-login-button";
 
 /**
@@ -114,16 +113,14 @@ export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
       )}
 
       {/* Divider */}
-      {!showOTP && oauthProviders.length > 0 && (
+      {/* The desktop app signs in with email codes only, so it shows no other method */}
+      {!showOTP && !inDesktopApp && oauthProviders.length > 0 && (
         <div className="my-8 flex items-center">
           <div className="border-border flex-1 border-t" />
           <span className="bg-card text-muted-foreground mx-2 px-2 text-sm">{t("auth.or")}</span>
           <div className="border-border flex-1 border-t" />
         </div>
       )}
-
-      {/* Inside the desktop app, GitHub, ORCID and passkeys go through the browser */}
-      {!showOTP && inDesktopApp && <DesktopBrowserSignIn />}
 
       {/* OAuth providers */}
       {!showOTP && !inDesktopApp && (
@@ -141,7 +138,7 @@ export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
 
       {/* Terms */}
       {!showOTP && (
-        <p className="text-accent-foreground text-left text-xs">
+        <p className={`text-accent-foreground text-left text-xs ${inDesktopApp ? "mt-6" : ""}`}>
           {t("auth.continueTermsPrefix")}{" "}
           <Dialog>
             <DialogTrigger asChild>
