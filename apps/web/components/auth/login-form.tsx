@@ -3,6 +3,8 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useWebAuthnSupport } from "~/hooks/auth/useWebAuthnSupport/useWebAuthnSupport";
+import { useIsHydrated } from "~/hooks/useIsHydrated";
+import { isDesktopShell } from "~/lib/platform";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -19,6 +21,7 @@ import { cva } from "@repo/ui/lib/utils";
 import { useLastLoginMethod } from "../../hooks/auth/useLastLoginMethod/useLastLoginMethod";
 import { EmailLoginForm } from "./email-login-form";
 import { OAuthLoginForm } from "./oauth-login-form";
+import { DesktopBrowserSignIn } from "./desktop-browser-sign-in";
 import { PasskeyLoginButton } from "./passkey-login-button";
 
 /**
@@ -85,6 +88,8 @@ export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
   const [showOTP, setShowOTP] = useState(false);
   const lastLoginMethod = useLastLoginMethod();
   const webAuthnSupported = useWebAuthnSupport();
+  const isHydrated = useIsHydrated();
+  const inDesktopApp = isHydrated && isDesktopShell();
 
   const emailProvider = providerMap.find((p) => p.id === "email");
   const oauthProviders = providerMap.filter((p) => p.id !== "email");
@@ -117,8 +122,11 @@ export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
         </div>
       )}
 
+      {/* Inside the desktop app, GitHub, ORCID and passkeys go through the browser */}
+      {!showOTP && inDesktopApp && <DesktopBrowserSignIn />}
+
       {/* OAuth providers */}
-      {!showOTP && (
+      {!showOTP && !inDesktopApp && (
         <ProviderGrid
           providers={oauthProviders}
           callbackUrl={callbackUrl}
@@ -127,7 +135,7 @@ export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
       )}
 
       {/* Passkey sign-in */}
-      {!showOTP && webAuthnSupported && (
+      {!showOTP && !inDesktopApp && webAuthnSupported && (
         <PasskeyLoginButton callbackUrl={callbackUrl} isLastUsed={lastLoginMethod === "passkey"} />
       )}
 
