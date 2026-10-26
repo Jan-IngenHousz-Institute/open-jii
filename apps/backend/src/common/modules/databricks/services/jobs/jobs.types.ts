@@ -54,6 +54,8 @@ export interface DatabricksJobRunStatusResponse {
   tasks?: {
     run_id: number;
     task_key: string;
+    /** A retried task lists each attempt as its own entry. */
+    attempt_number?: number;
     state: {
       life_cycle_state: string;
       result_state?: string;
@@ -62,6 +64,15 @@ export interface DatabricksJobRunStatusResponse {
       result?: string;
     };
   }[];
+}
+
+/** `runs/get-output` for one task run; `error` and `error_trace` are set only when it failed. */
+export interface DatabricksJobRunOutputResponse {
+  error?: string;
+  error_trace?: string;
+  notebook_output?: {
+    result?: string;
+  };
 }
 
 export interface DatabricksJobsListRequest {

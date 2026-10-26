@@ -378,6 +378,35 @@ describe("AwsAdapter", () => {
     });
   });
 
+  describe("export objects", () => {
+    it("delegates signing an export part to AwsS3Service", async () => {
+      const signed = { url: "https://s3.test/part", expiresAt: new Date("2026-10-19T14:00:00Z") };
+      vi.spyOn(awsS3Service, "getExportDownloadUrl").mockResolvedValue(success(signed));
+
+      const result = await awsAdapter.getExportDownloadUrl(
+        "exports/e/t/csv/x/part",
+        "trial.csv.gz",
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual(signed);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(awsS3Service.getExportDownloadUrl).toHaveBeenCalledWith(
+        "exports/e/t/csv/x/part",
+        "trial.csv.gz",
+      );
+    });
+
+    it("delegates reading an export object to AwsS3Service", async () => {
+      vi.spyOn(awsS3Service, "readExportObject").mockResolvedValue(success("{}"));
+
+      const result = await awsAdapter.readExportObject("exports/e/t/csv/x/manifest.json");
+
+      assertSuccess(result);
+      expect(result.value).toBe("{}");
+    });
+  });
+
   describe("createThing", () => {
     const input = {
       thingName: "AMBYTE_E8:F6:0A:B1:1D:D4",

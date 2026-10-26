@@ -18,6 +18,7 @@ import {
   DatabricksHealthCheck,
   DatabricksJobRun,
   DatabricksJobRunResponse,
+  DatabricksJobRunOutputResponse,
   DatabricksJobRunStatusResponse,
   DatabricksJobsListRequest,
   DatabricksJobsListResponse,
@@ -230,6 +231,49 @@ export class DatabricksJobsService {
           error,
         });
         return apiErrorMapper(`Failed to get job run status: ${getAxiosErrorMessage(error)}`);
+      },
+    );
+  }
+
+  /**
+   * Get the output of one task run, which is where a failed notebook's error lives
+   */
+  async getJobRunOutput(taskRunId: number): Promise<Result<DatabricksJobRunOutputResponse>> {
+    return await tryCatch(
+      async () => {
+        const tokenResult = await this.authService.getAccessToken();
+        if (tokenResult.isFailure()) {
+          throw tokenResult.error;
+        }
+
+        const token = tokenResult.value;
+        const host = this.configService.getHost();
+        const apiUrl = `${host}${DatabricksJobsService.JOBS_ENDPOINT}/runs/get-output`;
+
+        const response = await this.httpService.axiosRef.get<DatabricksJobRunOutputResponse>(
+          apiUrl,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            params: {
+              run_id: taskRunId,
+            },
+            timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
+          },
+        );
+
+        return response.data;
+      },
+      (error) => {
+        this.logger.error({
+          msg: "Failed to get job run output",
+          errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
+          operation: "getJobRunOutput",
+          taskRunId,
+          error,
+        });
+        return apiErrorMapper(`Failed to get job run output: ${getAxiosErrorMessage(error)}`);
       },
     );
   }
