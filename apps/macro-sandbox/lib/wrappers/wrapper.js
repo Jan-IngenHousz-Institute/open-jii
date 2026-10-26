@@ -49,8 +49,8 @@ try {
 
 // Wrap user code in a function to allow top-level 'return' statements
 const wrappedCode = `
-function executeMacro() { 
-${userCode} 
+function executeMacro() {
+${userCode}
 }
 var macroResult = executeMacro();
 if (macroResult !== undefined) {
@@ -72,79 +72,88 @@ function errorMessage(thrown) {
   }
 }
 
-// Clone data preserving its type (array vs plain object).
-function cloneData(data) {
-  if (Array.isArray(data)) return data.slice();
-  if (data !== null && typeof data === "object") {
-    const obj = Object.create(null);
-    Object.assign(obj, data);
-    return obj;
-  }
-  return data;
-}
-
-// Deep-clone and recursively freeze, so `ctx` is read-only to macro code and a
-// mutation can never leak into the next item through the shared compiled context.
-function deepFreezeClone(value) {
-  if (Array.isArray(value)) {
-    return Object.freeze(value.map(deepFreezeClone));
-  }
-  if (value !== null && typeof value === "object") {
-    const obj = Object.create(null);
-    for (const key of Object.keys(value)) {
-      obj[key] = deepFreezeClone(value[key]);
-    }
-    return Object.freeze(obj);
-  }
-  return value;
-}
-
 // 4. CREATE CONTEXT ONCE
-// Minimal sandbox: no Date, performance, setTimeout, process, require, eval
-const sandbox = {
-  json: null,
-  input_data: null,
-  ctx: Object.create(null),
-  output: Object.create(null),
-  console: { log: () => {} },
-  Date: undefined,
-  performance: undefined,
-  setTimeout: undefined,
-  setInterval: undefined,
-  setImmediate: undefined,
-  clearTimeout: undefined,
-  clearInterval: undefined,
-  clearImmediate: undefined,
-  process: undefined,
-  require: undefined,
-  global: undefined,
-  globalThis: undefined,
-  Function: undefined,
-  eval: undefined,
-  Object: Object,
-  Array: Array,
-  String: String,
-  Number: Number,
-  Boolean: Boolean,
-  Math: Math,
-  JSON: Object.create(null, {
-    parse: { value: JSON.parse, enumerable: true },
-    stringify: { value: JSON.stringify, enumerable: true },
-  }),
-};
-
-const context = vm.createContext(sandbox, {
+// The sandbox is given no host values. Every object a macro can reach, including its input
+// data, belongs to the context's own realm, so `.constructor` leads to the context's Function,
+// which `codeGeneration.strings: false` stops from compiling source. Passing a host object in
+// (even a plain `{}` or the input data) would hand back a host prototype whose constructor is
+// the host Function, which that flag does not restrain.
+const context = vm.createContext(Object.create(null), {
   codeGeneration: {
     strings: false,
     wasm: false,
   },
 });
 
-Object.freeze(Object.prototype);
-Object.freeze(Array.prototype);
-Object.freeze(String.prototype);
-Object.freeze(Number.prototype);
-Object.freeze(Boolean.prototype);
+// Set up the realm from inside it and hand the host back the few entry points it needs. These
+// close over this realm's intrinsics captured before any macro runs, so a macro reassigning a
+// global like `JSON` or `Object` cannot redirect how the next item is loaded or read back.
+const BOOTSTRAP = `(() => {
+  "use strict";
+  const create = Object.create;
+  const freeze = Object.freeze;
+  const keys = Object.keys;
+  const isArray = Array.isArray;
+  const parse = JSON.parse;
+  const stringify = JSON.stringify;
+
+  // Macro stdout must not break the wrapper's single JSON line on stdout.
+  globalThis.console = { log() {}, error() {}, warn() {}, info() {}, debug() {}, trace() {} };
+
+  // Keep the macro surface deterministic, as it was before isolation: no wall clock. Timers and
+  // the module system are already absent from a bare context; this removes the one realm intrinsic
+  // that would otherwise reappear.
+  globalThis.Date = undefined;
+
+  // Freeze this realm's own intrinsics so one item cannot alter a shared prototype the next
+  // item relies on.
+  freeze(Object.prototype);
+  freeze(Array.prototype);
+  freeze(String.prototype);
+  freeze(Number.prototype);
+  freeze(Boolean.prototype);
+  freeze(Function.prototype);
+  freeze(Math);
+
+  const deepFreeze = (value) => {
+    if (isArray(value)) return freeze(value.map(deepFreeze));
+    if (value !== null && typeof value === "object") {
+      const obj = create(null);
+      for (const key of keys(value)) obj[key] = deepFreeze(value[key]);
+      return freeze(obj);
+    }
+    return value;
+  };
+
+  return {
+    // Load one item's data as fresh realm objects and reset its output slot.
+    setItem(dataStr, ctxStr) {
+      const data = parse(dataStr);
+      globalThis.json = data;
+      globalThis.input_data = parse(dataStr);
+      globalThis.ctx = ctxStr === null ? create(null) : deepFreeze(parse(ctxStr));
+      globalThis.output = create(null);
+    },
+    // Serialise inside the realm; throws here fail only the item, as a bad output should.
+    readOutput() {
+      return stringify(globalThis.output);
+    },
+  };
+})();`;
+
+let runtime;
+try {
+  runtime = vm.runInContext(BOOTSTRAP, context, { displayErrors: false });
+} catch (e) {
+  console.log(
+    JSON.stringify({
+      status: "error",
+      results: [],
+      errors: [`Sandbox setup failed: ${e.message}`],
+    }),
+  );
+  process.exit(0);
+}
 
 try {
   vm.runInContext(helpersCode, context);
@@ -173,24 +182,27 @@ let results = [];
 
 // 5. EXECUTION LOOP
 for (const item of batchItems) {
-  sandbox.json = cloneData(item.data);
-  sandbox.input_data = cloneData(item.data);
-  sandbox.ctx = item.context ? deepFreezeClone(item.context) : Object.create(null);
-  sandbox.output = Object.create(null);
-
   try {
+    runtime.setItem(
+      JSON.stringify(item.data ?? null),
+      item.context ? JSON.stringify(item.context) : null,
+    );
+
     script.runInContext(context, { timeout: 1000, displayErrors: false });
-    // Serialised per item, so an output JSON cannot carry, such as a BigInt or a cycle, fails its
-    // own item instead of the whole batch.
+
+    let outputJson;
     try {
-      JSON.stringify(sandbox.output);
+      outputJson = runtime.readOutput();
     } catch (e) {
       throw new Error(`output cannot be sent as JSON: ${errorMessage(e)}`);
     }
+
+    // An output that serialises to nothing (a function, undefined, a symbol) is dropped rather
+    // than failing the item, the same as when the envelope was serialised whole.
     results.push({
       id: item.id,
       success: true,
-      output: sandbox.output,
+      output: outputJson === undefined ? undefined : JSON.parse(outputJson),
     });
   } catch (e) {
     results.push({

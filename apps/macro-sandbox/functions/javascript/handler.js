@@ -88,11 +88,21 @@ async function _runMacroBatch(event) {
     fs.writeFileSync(scriptPath, scriptContent, { mode: 0o600 });
     fs.writeFileSync(inputPath, JSON.stringify(items), { mode: 0o600 });
 
-    // Run wrapper in a subprocess with a stripped environment.
+    // Run wrapper in a subprocess with a stripped environment, under Node's permission model.
+    // The wrapper needs only to read its own code and this batch's files; it never spawns a
+    // process, starts a worker or writes a file. Granting nothing else means a sandbox escape
+    // still cannot reach those, so the macro isolation does not rest on the vm layer alone.
     const result = await new Promise((resolve) => {
       execFile(
         "node",
-        [WRAPPER_PATH, scriptPath, inputPath],
+        [
+          "--permission",
+          "--allow-fs-read=/var/task",
+          `--allow-fs-read=${tmpdir}`,
+          WRAPPER_PATH,
+          scriptPath,
+          inputPath,
+        ],
         {
           timeout: (timeout + 5) * 1000,
           env: {
