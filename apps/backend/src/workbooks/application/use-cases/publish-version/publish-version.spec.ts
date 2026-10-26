@@ -1,7 +1,8 @@
 import { Logger } from "@nestjs/common";
 
-import { eq, experiments } from "@repo/database";
+import { eq, experiments, workbooks } from "@repo/database";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
 import { AttachWorkbookUseCase } from "../../../../experiments/application/use-cases/attach-workbook/attach-workbook";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
@@ -348,6 +349,55 @@ describe("PublishVersionUseCase", () => {
         viewer: [],
       });
       expect(await notificationsFor(testApp, adminOfA)).toEqual([]);
+    });
+
+    it("tells only the admins who can read a private workbook", async () => {
+      // The admin grantee holds a grant on B and nothing on the workbook; the owner
+      // reads it through the organisation that owns it.
+      await testApp.database
+        .update(workbooks)
+        .set({ visibility: "private" })
+        .where(eq(workbooks.id, workbookId));
+      await drift("v2");
+
+      assertSuccess(
+        await useCase.execute(workbookId, audience.actor, { forExperimentId: experimentA }),
+      );
+
+      expect(await audienceNotifications(testApp, audience)).toEqual({
+        owner: [heardAbout(audience.owner, "2")],
+        actor: [],
+        admin: [],
+        viewer: [],
+      });
+    });
+
+    it("leaves out an admin whose read check fails, logging it once", async () => {
+      vi.spyOn(testApp.module.get(AuthorizationService), "can").mockImplementation((userId) =>
+        userId === audience.admin
+          ? Promise.reject(new Error("connection terminated"))
+          : Promise.resolve({ allow: true, reason: "org-role", organizationId: null }),
+      );
+      const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+      await drift("v2");
+
+      assertSuccess(
+        await useCase.execute(workbookId, audience.actor, { forExperimentId: experimentA }),
+      );
+
+      expect(await audienceNotifications(testApp, audience)).toEqual({
+        owner: [heardAbout(audience.owner, "2")],
+        actor: [],
+        admin: [],
+        viewer: [],
+      });
+      expect(error).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          operation: "publishVersion",
+          experimentId: experimentB,
+          adminIds: [audience.admin],
+        }),
+      );
     });
 
     it("dispatches nothing for a workbook only the saving experiment uses", async () => {

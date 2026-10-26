@@ -212,9 +212,35 @@ export class PublishVersionUseCase {
         continue;
       }
 
+      // An experiment grant covers nothing on its workbook, so an admin who cannot read
+      // the workbook would be told its name and sent to a Design tab they cannot open.
+      const checks = await Promise.allSettled(
+        adminIds.value.map((adminId) =>
+          this.authz.can(adminId, {
+            resourceType: "workbook",
+            resourceId: workbook.id,
+            action: "read",
+          }),
+        ),
+      );
+      const uncheckedAdminIds = adminIds.value.filter((_, i) => checks[i].status === "rejected");
+      if (uncheckedAdminIds.length > 0) {
+        this.logger.error({
+          msg: "Failed to check whether the experiment's admins can read the workbook, they were not notified",
+          ...context,
+          experimentId: experiment.id,
+          adminIds: uncheckedAdminIds,
+          error: checks.find((check) => check.status === "rejected")?.reason as unknown,
+        });
+      }
+      const readerIds = adminIds.value.filter((_, i) => {
+        const check = checks[i];
+        return check.status === "fulfilled" && check.value.allow;
+      });
+
       const dispatched = await this.notifications.dispatch({
         type: "workbook_version_published",
-        recipientIds: adminIds.value,
+        recipientIds: readerIds,
         actorId: userId,
         resource: { type: "experiment", id: experiment.id },
         params: {
