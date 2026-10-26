@@ -84,6 +84,7 @@ measurements AS (
     devices.device AS device,
     raw.protocol_id,
     raw.workbook_run_id,
+    raw.workbook_version_id,
     raw.latitude,
     raw.longitude,
     raw.data,
@@ -109,6 +110,8 @@ SELECT
   m.device,
   m.protocol_id,
   m.workbook_run_id,
+  -- The published workbook version the measurement ran, so an export says which method produced it.
+  m.workbook_version_id,
   m.latitude,
   m.longitude,
   m.data,
