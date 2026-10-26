@@ -89,6 +89,7 @@ results AS (
     macro.macro_name,
     macro.macro_filename,
     macro.workbook_run_id,
+    macro.workbook_version_id,
     macro.macro_output,
     macro.macro_error,
     macro.processed_timestamp,
@@ -119,6 +120,8 @@ SELECT
   r.macro_name,
   r.macro_filename,
   r.workbook_run_id,
+  -- The workbook version whose stored macro code produced this result.
+  r.workbook_version_id,
   r.macro_output,
   r.macro_error,
   r.processed_timestamp,
