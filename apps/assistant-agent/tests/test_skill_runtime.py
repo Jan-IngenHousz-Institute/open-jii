@@ -184,6 +184,43 @@ def test_invalid_local_resource_is_tool_error_not_filesystem_access(client, monk
     assert done.json()["skillLibrary"]["reads"] == []
 
 
+@pytest.mark.parametrize("continue_turn", [False, True])
+def test_skill_error_diagnostics_never_reach_model_or_api(client, monkeypatch, continue_turn):
+    from skill_library import SkillLibraryError
+
+    diagnostic = "private diagnostic: /srv/private/skills/catalog.json"
+
+    def failed_read(self, arguments):
+        raise SkillLibraryError(diagnostic)
+
+    monkeypatch.setattr("skill_library.SkillLibrary.read", failed_read)
+    calls = 0
+
+    async def complete(model, payload):
+        nonlocal calls
+        calls += 1
+        if continue_turn and calls == 1:
+            return response(call("call-1", "search_knowledge", query="light"))
+        if calls == (2 if continue_turn else 1):
+            return response(call("local", skillId="example", resource="SKILL.md"))
+        result = json.loads(payload["messages"][-1]["content"])
+        assert result == {"error": {"code": "INVALID_SKILL_RESOURCE",
+                                    "message": "The requested packaged skill resource is invalid or unavailable."}}
+        assert diagnostic not in json.dumps(payload)
+        return {"choices": [{"message": {"role": "assistant", "content": json.dumps(result)}}],
+                "usage": {"prompt_tokens": 20, "completion_tokens": 6}}
+
+    monkeypatch.setattr(server, "complete_model", complete)
+    done = client.post("/v1/agent/turns", json=request_body(), headers=HEADERS)
+    if continue_turn:
+        done = client.post("/v1/agent/turns/continue",
+                           json=result_body(done.json()["continuationToken"]), headers=HEADERS)
+    assert done.status_code == 200, done.text
+    assert done.json()["status"] == "completed"
+    assert diagnostic not in done.text
+    assert "INVALID_SKILL_RESOURCE" in done.text
+
+
 def test_local_and_platform_calls_share_count_and_id_constraints(client, monkeypatch):
     async def complete(model, payload):
         return response(call("one", skillId="example", resource="SKILL.md"),
@@ -311,7 +348,8 @@ def test_interleaved_results_follow_assistant_order_even_if_platform_returns_rev
         assert [json.loads(message["content"]) for message in results] == [
             {"found": identifier} if identifier.startswith("platform")
             else load_skill_library().read({"skillId": "example", "resource": "SKILL.md"}) if identifier == "local-1"
-            else {"error": {"code": "INVALID_SKILL_RESOURCE", "message": "Unknown packaged skill resource"}}
+            else {"error": {"code": "INVALID_SKILL_RESOURCE",
+                            "message": "The requested packaged skill resource is invalid or unavailable."}}
             for identifier in order
         ]
         return answer()

@@ -294,8 +294,9 @@ async def _advance_step(state: dict[str, Any], complete: Completion, library: Sk
             state["skillReads"].append({"callId": call["id"], **{
                 key: result[key] for key in ("skillId", "resource", "sha256", "bytes")
             }})
-        except SkillLibraryError as error:
-            result = {"error": {"code": "INVALID_SKILL_RESOURCE", "message": str(error)}}
+        except SkillLibraryError:
+            result = {"error": {"code": "INVALID_SKILL_RESOURCE",
+                                "message": "The requested packaged skill resource is invalid or unavailable."}}
         state["messages"].append({"role": "tool", "tool_call_id": call["id"], "content": json.dumps(result)})
     if not platform_pending:
         return None
