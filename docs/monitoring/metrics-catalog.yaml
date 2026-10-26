@@ -1411,14 +1411,17 @@ metrics:
     source: dbx
     phase: P2
     active: true
-    slots: [exception]
+    slots: [alert, exception]
+    severity: warning
     signal:
       namespace: OpenJII/Data
       metric: MacroLatencyP95Seconds
       stat: Maximum
       unit: seconds
       dimensions: { Environment: "${ENVIRONMENT}" }
-    notes: p95 of a row's commit in the experiment tables to its macro result's commit. The source row is found by its commit version, however old, so results recovered after an outage still count.
+    baseline: { method: threshold, max: 300 }
+    runbook: docs/runbooks/macro-latency.md
+    notes: p95 of a row's commit in the experiment tables to its macro result's commit. The source row is found by its commit version, however old, so results recovered after an outage still count. In the week to 26 October the prod median was 6 s and the 90th percentile 25 s; the half hours above 300 s were spot reclaims of the macro pipeline's only worker.
 
   - num: 88
     id: macro-backlog
