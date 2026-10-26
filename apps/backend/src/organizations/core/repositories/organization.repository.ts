@@ -436,6 +436,7 @@ export class OrganizationRepository {
 
       const sortFields = {
         name: organizations.name,
+        type: sql<string | null>`${organizations.type}::text`,
         members: memberCountSql(),
         resources: resourceCountSql(this.database, userId),
       };

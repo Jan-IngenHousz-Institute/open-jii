@@ -41,6 +41,11 @@ async function sortNameAscending(page: Page): Promise<void> {
   await page.locator('th[aria-sort="ascending"]').first().waitFor();
 }
 
+async function sortTypeAscending(page: Page): Promise<void> {
+  await page.locator('button[aria-label="Type: unsorted"]').click();
+  await page.locator('th[aria-sort="ascending"]').first().waitFor();
+}
+
 /** Clicks a control by accessible name whether it renders as a link or a button. */
 async function activate(page: Page, name: RegExp): Promise<void> {
   await page.getByRole("button", { name }).or(page.getByRole("link", { name })).first().click();
@@ -138,8 +143,8 @@ export const SHOTS: readonly Shot[] = [
     publish: "img/guide/web/organizations-list.webp",
     frame: "desktop",
     route: "/platform/organizations",
-    prepare: sortNameAscending,
-    scope: "Organizations overview with the Name column sorted ascending",
+    prepare: sortTypeAscending,
+    scope: "Organizations overview with the Type column sorted ascending",
   },
   {
     slug: "workbooks-list",

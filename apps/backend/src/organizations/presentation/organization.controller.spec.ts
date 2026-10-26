@@ -133,9 +133,18 @@ describe("OrganizationController", () => {
     });
 
     it("sorts every directory field in both directions", async () => {
-      const alpha = await testApp.createOrganization("Alpha Lab", { visibility: "public" });
-      const bravo = await testApp.createOrganization("Bravo Lab", { visibility: "public" });
-      const charlie = await testApp.createOrganization("Charlie Lab", { visibility: "public" });
+      const alpha = await testApp.createOrganization("Alpha Lab", {
+        visibility: "public",
+        type: "government_agency",
+      });
+      const bravo = await testApp.createOrganization("Bravo Lab", {
+        visibility: "public",
+        type: "private_company",
+      });
+      const charlie = await testApp.createOrganization("Charlie Lab", {
+        visibility: "public",
+        type: "university",
+      });
 
       for (const organizationId of [alpha, bravo, charlie]) {
         await testApp.addOrganizationMember(organizationId, ownerId, "owner");
@@ -166,11 +175,12 @@ describe("OrganizationController", () => {
       const repository = testApp.module.get(OrganizationRepository);
       const expected = {
         name: [alpha, bravo, charlie],
+        type: [alpha, bravo, charlie],
         members: [alpha, bravo, charlie],
         resources: [alpha, bravo, charlie],
       } as const;
 
-      for (const field of ["name", "members", "resources"] as const) {
+      for (const field of ["name", "type", "members", "resources"] as const) {
         const ascending = await repository.listDirectory(ownerId, {
           sort: [{ field, direction: "asc" }],
         });
@@ -187,6 +197,73 @@ describe("OrganizationController", () => {
           [...expected[field]].reverse(),
         );
       }
+    });
+
+    it("keeps untyped organizations last in both type directions", async () => {
+      const untyped = await testApp.createOrganization("Alpha Untyped Lab", {
+        visibility: "public",
+      });
+      const university = await testApp.createOrganization("Bravo University", {
+        visibility: "public",
+        type: "university",
+      });
+      const agency = await testApp.createOrganization("Charlie Agency", {
+        visibility: "public",
+        type: "government_agency",
+      });
+
+      const repository = testApp.module.get(OrganizationRepository);
+      const ascending = await repository.listDirectory(ownerId, {
+        sort: [{ field: "type", direction: "asc" }],
+      });
+      const descending = await repository.listDirectory(ownerId, {
+        sort: [{ field: "type", direction: "desc" }],
+      });
+      assertSuccess(ascending);
+      assertSuccess(descending);
+
+      expect(ascending.value.organizations.map((organization) => organization.id)).toEqual([
+        agency,
+        university,
+        untyped,
+      ]);
+      expect(descending.value.organizations.map((organization) => organization.id)).toEqual([
+        university,
+        agency,
+        untyped,
+      ]);
+    });
+
+    it("orders organizations of the same type by a second sort", async () => {
+      const alphaUniversity = await testApp.createOrganization("Alpha University", {
+        visibility: "public",
+        type: "university",
+      });
+      const zuluUniversity = await testApp.createOrganization("Zulu University", {
+        visibility: "public",
+        type: "university",
+      });
+      const agency = await testApp.createOrganization("Mike Agency", {
+        visibility: "public",
+        type: "government_agency",
+      });
+
+      const response: SuperTestResponse<OrganizationDirectory> = await testApp
+        .get(path())
+        .query({
+          "sort[0][field]": "type",
+          "sort[0][direction]": "asc",
+          "sort[1][field]": "name",
+          "sort[1][direction]": "desc",
+        })
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.organizations.map((organization) => organization.id)).toEqual([
+        agency,
+        zuluUniversity,
+        alphaUniversity,
+      ]);
     });
 
     it("uses the ID tie-breaker when count values are equal", async () => {

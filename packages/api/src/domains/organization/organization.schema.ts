@@ -43,7 +43,7 @@ export const zOrganizationRole = z.enum(["owner", "admin", "member"]);
  */
 export const zOrganizationMembershipStatus = z.enum(["none", "pending_request", "member"]);
 
-export const zOrganizationSort = zListSort(z.enum(["name", "members", "resources"]));
+export const zOrganizationSort = zListSort(z.enum(["name", "type", "members", "resources"]));
 export type OrganizationSort = z.infer<typeof zOrganizationSort>;
 
 export const zOrganizationIdPathParam = z.object({

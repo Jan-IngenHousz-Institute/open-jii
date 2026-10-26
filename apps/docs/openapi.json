@@ -31314,6 +31314,7 @@
                   "field": {
                     "enum": [
                       "name",
+                      "type",
                       "members",
                       "resources"
                     ],

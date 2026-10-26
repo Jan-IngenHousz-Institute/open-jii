@@ -31,7 +31,7 @@
       "notifications-page captured on 2026-10-08 at 1920x1200 from the local stack with the seeded development identity. The frame shows the All and Unread tabs, the category filter, Mark all read, and one row under each of Today, Yesterday and Earlier. Reviewed at full size. All three rows are seeded: a join request from Otto Outside on Field Trial 2025 — Corn Photosynthesis, and decisions on Greenhouse Tomato Stress Study and Vallei Drought Gradient. No developer-authored row, no credentials and no dev overlays are in frame. Two changes were made to the local data for the shot and both were undone after it: the three seeded rows' timestamps were set to the offsets the seed script writes (5 minutes, 26 hours, 3 days), since this database was seeded in September and all three had aged into Earlier, and four developer-authored transfer rows left by an earlier hand check were held out of frame. The before and after dumps of the table diff clean. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp.",
       "experiments-list retaken on 2026-10-12 at 1920x1200 from the local stack with the seeded development identity. Reviewed at full size and approved before publishing. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
       "workbooks-list retaken on 2026-10-13 at 1920x1200 from the local stack with the seeded development identity, showing the Visibility filter button. Reviewed at full size and approved before publishing. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
-      "organizations-list retaken on 2026-10-14 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only organizations-list. The directory gained the Type filter and Type column. Reviewed at full size: all six organization names are [Seed] fixtures, the Type filter is unselected, the [Seed] Community Seed Library Type cell is empty, and no real users, credentials, precise locations or dev overlays appear. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
+      "organizations-list retaken on 2026-10-14 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only organizations-list. The directory gained the Type filter and a sortable Type column; the shot now sorts by Type ascending. Reviewed at full size and approved before publishing: all six organization names are [Seed] fixtures, the Type filter is unselected, the untyped [Seed] Community Seed Library sorts last with an empty Type cell, and no real users, credentials, precise locations or dev overlays appear. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
     ]
   },
   "assets": [
@@ -107,10 +107,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 60410,
-      "sha256": "6f3f1afe4225480b0c3b15e473626a0b401420b27f02e40ebb0dfc992fd5e112",
+      "bytes": 60860,
+      "sha256": "79b7614b6ccb18a8194f9766fe3aef9148c42f516ada9a66c84f96ce1efc9852",
       "disposition": "published",
-      "scope": "Organizations overview with the Name column sorted ascending"
+      "scope": "Organizations overview with the Type column sorted ascending"
     },
     {
       "path": "/img/guide/web/organization-create-visibility.webp",

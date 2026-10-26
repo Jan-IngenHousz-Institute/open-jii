@@ -17,6 +17,27 @@ describe("organization directory query", () => {
     ]);
   });
 
+  it("accepts type as the only or the second sort field", () => {
+    expect(
+      zOrganizationDirectoryQuery.parse({ sort: [{ field: "type", direction: "asc" }] }).sort,
+    ).toEqual([{ field: "type", direction: "asc" }]);
+    expect(
+      zOrganizationDirectoryQuery.parse({
+        sort: [
+          { field: "name", direction: "asc" },
+          { field: "type", direction: "desc" },
+        ],
+      }).sort,
+    ).toEqual([
+      { field: "name", direction: "asc" },
+      { field: "type", direction: "desc" },
+    ]);
+  });
+
+  it("leaves the sort optional", () => {
+    expect(zOrganizationDirectoryQuery.parse({}).sort).toBeUndefined();
+  });
+
   it("rejects duplicate, unsupported, and third sort fields", () => {
     expect(
       zOrganizationDirectoryQuery.safeParse({

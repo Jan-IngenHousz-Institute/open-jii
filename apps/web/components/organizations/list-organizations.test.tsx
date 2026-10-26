@@ -212,6 +212,21 @@ describe("<ListOrganizations />", () => {
     await waitFor(() => expect(spy.calls.at(-1)?.query.sort).toBeUndefined());
   });
 
+  it("sorts the directory by type through the API", async () => {
+    mockSession({ id: "user-1" });
+    const spy = mountDirectory([
+      createOrganizationDirectoryEntry({ id: "org-a", name: "Alpha", type: "university" }),
+      createOrganizationDirectoryEntry({ id: "org-b", name: "Bravo", type: "non_profit" }),
+    ]);
+    const user = userEvent.setup();
+    render(<ListOrganizations />);
+
+    await screen.findByText("Alpha");
+    await user.click(screen.getByRole("button", { name: /organizations.fields.type:/ }));
+    await waitFor(() => expect(spy.calls.at(-1)?.query["sort[0][field]"]).toBe("type"));
+    expect(spy.calls.at(-1)?.query["sort[0][direction]"]).toBe("asc");
+  });
+
   describe("type filter", () => {
     function openOnUrl(qs: string) {
       vi.mocked(nav.usePathname).mockReturnValue("/platform/organizations");
@@ -255,9 +270,9 @@ describe("<ListOrganizations />", () => {
       await waitFor(() => {
         expect(spy.calls.at(-1)?.url).toContain("type%5B0%5D=university");
       });
-      expect(screen.getByRole("button", { name: /organizations\.fields\.type/ })).toHaveTextContent(
-        "1",
-      );
+      expect(
+        screen.getByRole("button", { name: /^organizations\.fields\.type(?!:)/ }),
+      ).toHaveTextContent("1");
     });
 
     it("restores a shared filter and clears it without dropping the search", async () => {
@@ -270,9 +285,9 @@ describe("<ListOrganizations />", () => {
 
       render(<ListOrganizations />);
 
-      expect(screen.getByRole("button", { name: /organizations\.fields\.type/ })).toHaveTextContent(
-        "2",
-      );
+      expect(
+        screen.getByRole("button", { name: /^organizations\.fields\.type(?!:)/ }),
+      ).toHaveTextContent("2");
       expect(screen.getByLabelText("organizations.searchLabel")).toHaveValue("lab");
       await waitFor(() =>
         expect(screen.getByRole("link", { name: "Northfield Lab" })).toBeInTheDocument(),

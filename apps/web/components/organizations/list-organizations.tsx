@@ -18,6 +18,7 @@ import { Button } from "@repo/ui/components/button";
 import { MultiSelectFilter } from "@repo/ui/components/multi-select-filter";
 import { SearchInput } from "@repo/ui/components/search-input";
 
+import { organizationTypeLabelKey } from "./organization-labels";
 import { organizationPath } from "./organization-routes";
 
 function emptyMessageKey(hasActiveFilters: boolean, hasSearch: boolean): string {
@@ -79,7 +80,7 @@ export function ListOrganizations() {
               title={t("organizations.fields.type")}
               options={zOrganizationType.options.map((value) => ({
                 value,
-                label: t(`organizations.types.${value}`),
+                label: t(organizationTypeLabelKey(value)),
               }))}
               selected={types}
               onChange={setTypes}

@@ -5,6 +5,7 @@ import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import type { OrganizationSort } from "@repo/api/domains/organization/organization.schema";
 import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -253,11 +254,15 @@ describe("organization overview columns", () => {
     };
   }
 
-  function renderOrganizations(items: OrganizationListItem[]) {
+  function renderOrganizations(
+    items: OrganizationListItem[],
+    sort: OrganizationSort = [],
+    toggleSort = vi.fn(),
+  ) {
     return render(
       <OverviewTable
         columns={getOrganizationColumns(t)}
-        sorting={createOverviewTableSorting([], vi.fn(), {
+        sorting={createOverviewTableSorting(sort, toggleSort, {
           unsorted: "Unsorted",
           asc: "Ascending",
           desc: "Descending",
@@ -297,13 +302,41 @@ describe("organization overview columns", () => {
     expect(untypedRow).not.toHaveTextContent("organizations.types.");
   });
 
-  it("does not offer to sort by type", () => {
-    renderOrganizations([organizationRow()]);
+  it("sorts by type, and Shift-click adds type as the second sort", async () => {
+    const toggleSort = vi.fn();
+    const user = userEvent.setup();
+    renderOrganizations([organizationRow()], [{ field: "name", direction: "asc" }], toggleSort);
 
-    const typeHeader = screen.getByRole("columnheader", { name: "organizations.fields.type" });
-    expect(within(typeHeader).queryByRole("button")).toBeNull();
-    const nameHeader = screen.getByRole("columnheader", { name: /organizations\.fields\.name/ });
-    expect(within(nameHeader).getByRole("button")).toBeInTheDocument();
+    const typeHeader = screen.getByRole("columnheader", { name: /organizations\.fields\.type/ });
+    const typeButton = within(typeHeader).getByRole("button", {
+      name: "organizations.fields.type: Unsorted",
+    });
+
+    await user.click(typeButton);
+    expect(toggleSort).toHaveBeenLastCalledWith("type", false);
+
+    await user.keyboard("{Shift>}");
+    await user.click(typeButton);
+    await user.keyboard("{/Shift}");
+    expect(toggleSort).toHaveBeenLastCalledWith("type", true);
+  });
+
+  it("marks type as the secondary sort", () => {
+    renderOrganizations(
+      [organizationRow()],
+      [
+        { field: "name", direction: "asc" },
+        { field: "type", direction: "desc" },
+      ],
+    );
+
+    const typeHeader = screen.getByRole("columnheader", { name: /organizations\.fields\.type/ });
+    expect(typeHeader).not.toHaveAttribute("aria-sort");
+    expect(
+      within(typeHeader).getByRole("button", {
+        name: "organizations.fields.type: Descending, Secondary sort",
+      }),
+    ).toBeInTheDocument();
   });
 });
 

@@ -187,5 +187,28 @@ describe("useOrganizationsList", () => {
         });
       });
     });
+
+    it("adds type as the second sort on a multi toggle", async () => {
+      const spy = mountTwoPages();
+      const result = await renderOnSecondPage();
+
+      act(() => result.current.toggleSort("name", false));
+      act(() => result.current.setPage(2));
+      act(() => result.current.toggleSort("type", true));
+
+      expect(result.current.page).toBe(1);
+      expect(result.current.sort).toEqual([
+        { field: "name", direction: "asc" },
+        { field: "type", direction: "asc" },
+      ]);
+      await waitFor(() => {
+        expect(spy.calls.at(-1)?.query).toMatchObject({
+          "sort[0][field]": "name",
+          "sort[0][direction]": "asc",
+          "sort[1][field]": "type",
+          "sort[1][direction]": "asc",
+        });
+      });
+    });
   });
 });

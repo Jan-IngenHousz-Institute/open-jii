@@ -50,6 +50,7 @@ export function getOrganizationColumns(
     },
     {
       header: t("organizations.fields.type"),
+      sortId: "type",
       className: "hidden w-48 md:table-cell",
       cell: (organization) =>
         organization.type && (
