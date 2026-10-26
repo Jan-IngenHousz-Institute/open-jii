@@ -290,28 +290,27 @@ describe("ExportListStep", () => {
     expect(screen.getByText(twoPartLinks.parts[1].fileName)).toBeInTheDocument();
   });
 
-  it("copies every file link of a multi-part export, one per line", async () => {
+  it("downloads every file of a multi-part export at once", async () => {
     mountExports([multiPartExport]);
     server.mount(contract.experiments.getExportDownloadLinks, { body: twoPartLinks });
 
-    render(<ExportListStep {...defaultProps} />);
+    const { container } = render(<ExportListStep {...defaultProps} />);
 
     const user = userEvent.setup();
-    // `userEvent.setup()` installs its own clipboard stub, so this has to land after it.
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", {
-      value: { writeText },
-      writable: true,
-      configurable: true,
-    });
     await user.click(
       await screen.findByRole("button", { name: /experimentData\.exportModal\.showFiles/ }),
     );
     await user.click(
-      await screen.findByRole("button", { name: /experimentData\.exportModal\.copyLinks/ }),
+      await screen.findByRole("button", { name: "experimentData.exportModal.downloadAll" }),
     );
 
-    expect(writeText).toHaveBeenCalledWith(twoPartLinks.parts.map((part) => part.url).join("\n"));
+    const frames = Array.from(container.querySelectorAll("iframe"));
+    expect(frames.map((frame) => frame.getAttribute("src"))).toEqual(
+      twoPartLinks.parts.map((part) => part.url),
+    );
+    expect(toast).toHaveBeenCalledWith({
+      description: "experimentData.exportModal.downloadingAll",
+    });
   });
 
   it("says the export has expired when its links are refused as expired", async () => {
@@ -337,33 +336,6 @@ describe("ExportListStep", () => {
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith({
         description: "experimentData.exportModal.linkExpired",
-        variant: "destructive",
-      });
-    });
-  });
-
-  it("says so when the links cannot be copied", async () => {
-    mountExports([multiPartExport]);
-    server.mount(contract.experiments.getExportDownloadLinks, { body: twoPartLinks });
-
-    render(<ExportListStep {...defaultProps} />);
-
-    const user = userEvent.setup();
-    Object.defineProperty(navigator, "clipboard", {
-      value: { writeText: vi.fn().mockRejectedValue(new Error("Write permission denied")) },
-      writable: true,
-      configurable: true,
-    });
-    await user.click(
-      await screen.findByRole("button", { name: /experimentData\.exportModal\.showFiles/ }),
-    );
-    await user.click(
-      await screen.findByRole("button", { name: /experimentData\.exportModal\.copyLinks/ }),
-    );
-
-    await waitFor(() => {
-      expect(toast).toHaveBeenCalledWith({
-        description: "experimentData.exportModal.copyFailed",
         variant: "destructive",
       });
     });

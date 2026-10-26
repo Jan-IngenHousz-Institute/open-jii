@@ -46,11 +46,9 @@ dataset's exports by everyone who can open the experiment, not only yours.
 
 A completed export has a download button. A large export is split into several files
 of about a million rows each, in row order. **Show files** lists them, each with its own
-download, and **Copy all links** copies their links for a download tool. Each download
-has to start before the time the list shows, about an hour after it opened. To fetch
-every file under its own name, save the copied links as `links.txt` and run
-`xargs -n 1 curl -fOJ < links.txt`. If a download stops partway and will not resume,
-start it again from **Show files**, which always has fresh links.
+download, and **Download all** saves every file under its own name. Your browser may ask
+once whether the site may download several files. If a download stops partway and will
+not resume, start it again from **Show files**.
 
 CSV and NDJSON files are compressed with gzip and end in `.csv.gz` or `.json.gz`. Python
 and R read them as they are; decompress them first to open them in a spreadsheet.
