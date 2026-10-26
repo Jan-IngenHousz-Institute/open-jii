@@ -5,8 +5,8 @@ description: Read from and write to the openJII Linear workspace, team OJD. Look
 
 # Working with Linear
 
-Read `AGENTS.md` first. Linear is the source of truth for issues; GitHub Issues is a one-way mirror
-fed from Linear. Never create a GitHub issue for tracked work.
+Read `AGENTS.md` first. Issues live in Linear, which no longer syncs them to GitHub Issues. Never
+create a GitHub issue for tracked work.
 
 `docs/agents/issue-tracker.md` holds the conventions. `docs/agents/ticket-standard.md` defines the
 project shape, the three ticket shapes, the two gates and the prose bar.
