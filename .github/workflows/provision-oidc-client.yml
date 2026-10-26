@@ -1,0 +1,126 @@
+name: Provision instrument-tracking OIDC client
+run-name: "OIDC client: ${{ inputs.operation }} at ${{ inputs.release_sha }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: "Full commit SHA of the backend already released to production"
+        required: true
+        type: string
+      operation:
+        description: "Rotation requires redeploying instrument tracking immediately afterwards"
+        required: true
+        type: choice
+        default: reconcile
+        options: [reconcile, rotate]
+      rotation_rollout_ready:
+        description: "For rotation: app redeploy is ready and temporary login interruption is accepted"
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: oidc-instrument-tracking-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  approval:
+    runs-on: ubuntu-latest
+    environment: approval-gate
+    steps:
+      - name: Require protected main
+        env:
+          SOURCE_REF: ${{ github.ref }}
+        run: test "$SOURCE_REF" = refs/heads/main
+
+  provision:
+    needs: approval
+    runs-on: ubuntu-latest
+    environment: prod
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate released ref
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          OPERATION: ${{ inputs.operation }}
+          ROTATION_READY: ${{ inputs.rotation_rollout_ready }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$RELEASE_SHA" origin/main
+          if [[ "$OPERATION" == rotate ]]; then test "$ROTATION_READY" = true; fi
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - uses: ./.github/actions/get-infrastructure-config
+        with:
+          environment: prod
+          prefix: /oidc-client
+      - name: Pin the released backend image and prepare the one-off task
+        id: task-definition
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          OPERATION: ${{ inputs.operation }}
+          OPERATION_ID: github-${{ github.run_id }}
+          DEPLOY_ROLE: ${{ secrets.AWS_ROLE_ARN }}
+        run: |
+          set -euo pipefail
+          account=$(aws sts get-caller-identity --query Account --output text)
+          expected_account=$(cut -d: -f5 <<< "$DEPLOY_ROLE")
+          test "$account" = "$expected_account"
+          aws ecs describe-services --cluster backend-cluster-prod --services backend-prod > backend-service.json
+          jq -e '.failures == [] and (.services | length) == 1 and .services[0].runningCount == .services[0].desiredCount and (.services[0].deployments | length) == 1' backend-service.json > /dev/null
+          backend_definition=$(jq -r '.services[0].taskDefinition' backend-service.json)
+          image=$(aws ecs describe-task-definition --task-definition "$backend_definition" --query 'taskDefinition.containerDefinitions[?name==`backend`].image | [0]' --output text)
+          expected="$account.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY_NAME:$RELEASE_SHA"
+          test "$image" = "$expected"
+          digest=$(aws ecr describe-images --repository-name "$ECR_REPOSITORY_NAME" --image-ids "imageTag=$RELEASE_SHA" --query 'imageDetails[0].imageDigest' --output text)
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          pinned="$account.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY_NAME@$digest"
+          aws ecs describe-task-definition --task-definition "$TASK_DEFINITION_ARN" --query taskDefinition > provision-task.json
+          jq --arg image "$pinned" --arg operation "$OPERATION_ID" --arg action "$OPERATION" '
+            del(.taskDefinitionArn,.revision,.status,.requiresAttributes,.compatibilities,.registeredAt,.registeredBy)
+            | .containerDefinitions[0].image = $image
+            | .containerDefinitions[0].command = (["node","node_modules/@repo/auth/dist/scripts/reconcile-oauth-client.js","--client","jii-instrument-tracking-prod","--operation-id",$operation] + if $action == "rotate" then ["--rotate"] else [] end)
+          ' provision-task.json > provision-task-rendered.json
+          definition=$(aws ecs register-task-definition --cli-input-json file://provision-task-rendered.json --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "definition=$definition" >> "$GITHUB_OUTPUT"
+      - name: Run provisioning in the private VPC
+        id: task
+        env:
+          DEFINITION: ${{ steps.task-definition.outputs.definition }}
+        run: |
+          set -euo pipefail
+          jq -n --argjson subnets "$SUBNETS" --arg group "$SECURITY_GROUP_ID" '{awsvpcConfiguration:{subnets:$subnets,securityGroups:[$group],assignPublicIp:"DISABLED"}}' > provision-network.json
+          aws ecs run-task --cluster "$CLUSTER_NAME" --task-definition "$DEFINITION" --launch-type FARGATE --network-configuration file://provision-network.json > provision-result.json
+          jq -e '.failures == [] and (.tasks | length) == 1' provision-result.json > /dev/null
+          task=$(jq -r '.tasks[0].taskArn' provision-result.json)
+          echo "arn=$task" >> "$GITHUB_OUTPUT"
+          aws ecs wait tasks-stopped --cluster "$CLUSTER_NAME" --tasks "$task"
+          aws ecs describe-tasks --cluster "$CLUSTER_NAME" --tasks "$task" > provision-status.json
+          jq -e '.failures == [] and (.tasks[0].containers | length) == 1 and .tasks[0].containers[0].exitCode == 0' provision-status.json > /dev/null
+      - name: Stop unfinished task after failure or cancellation
+        if: always() && steps.task.outputs.arn != '' && job.status != 'success'
+        env:
+          TASK_ARN: ${{ steps.task.outputs.arn }}
+          JOB_STATUS: ${{ job.status }}
+        run: bash .github/scripts/stop-oidc-task.sh
+      - name: Record safe delivery result
+        env:
+          OPERATION: ${{ inputs.operation }}
+        run: |
+          echo "Instrument-tracking OIDC client reconciled through the approved ECS task." >> "$GITHUB_STEP_SUMMARY"
+          echo "Credentials stayed inside ECS and Secrets Manager; no secret output or artifact was created." >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$OPERATION" == rotate ]]; then
+            echo "Rotation changed credentials. Redeploy instrument tracking now so ECS replaces tasks holding the previous version. Authentication may fail until replacement finishes." >> "$GITHUB_STEP_SUMMARY"
+          fi

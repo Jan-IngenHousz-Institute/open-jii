@@ -81,6 +81,9 @@ jobs:
         with:
           node-version: "24"
 
+      - name: Verify provisioning task cleanup
+        run: node --test .github/scripts/stop-oidc-task.test.cjs
+
       - name: Prettier Check
         shell: bash
         run: pnpm format:check
@@ -544,6 +547,7 @@ jobs:
       TF_VAR_databricks_client_id: ${{ secrets.DATABRICKS_CLIENT_ID }}
       TF_VAR_databricks_client_secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
       TF_VAR_databricks_host: ${{ secrets.DATABRICKS_HOST }}
+      TF_VAR_instrument_tracking_oidc_provisioner_role_arn: ${{ vars.INSTRUMENT_TRACKING_OIDC_PROVISIONER_ROLE_ARN }}
       TF_VAR_auth_secret: ${{ secrets.AUTH_SECRET }}
       TF_VAR_github_oauth_client_id: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
       TF_VAR_github_oauth_client_secret: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
