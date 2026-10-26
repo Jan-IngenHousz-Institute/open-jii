@@ -245,6 +245,13 @@ resource "aws_s3_bucket_lifecycle_configuration" "lifecycle" {
         }
       }
 
+      dynamic "abort_incomplete_multipart_upload" {
+        for_each = rule.value.abort_incomplete_multipart_upload_days != null ? [rule.value.abort_incomplete_multipart_upload_days] : []
+        content {
+          days_after_initiation = abort_incomplete_multipart_upload.value
+        }
+      }
+
       filter {}
     }
   }

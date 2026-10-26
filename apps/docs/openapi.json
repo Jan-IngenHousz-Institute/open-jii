@@ -3453,6 +3453,9 @@
                 "properties": {
                   "tableName": {
                     "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9_-]+$",
                     "description": "Name of the table to export"
                   },
                   "format": {
@@ -3487,13 +3490,134 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "status": {
+                    "exportId": {
                       "type": "string",
-                      "description": "Export status"
+                      "format": "uuid"
+                    },
+                    "experimentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "tableName": {
+                      "type": "string"
+                    },
+                    "format": {
+                      "enum": [
+                        "csv",
+                        "ndjson",
+                        "json-array",
+                        "parquet",
+                        "xlsx"
+                      ],
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "queued",
+                        "pending",
+                        "running",
+                        "completed",
+                        "failed",
+                        "expired"
+                      ],
+                      "type": "string"
+                    },
+                    "rowCount": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "totalBytes": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "partCount": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "errorCode": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "no_data",
+                            "too_many_rows_for_format",
+                            "unknown"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "completedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
-                    "status"
+                    "exportId",
+                    "experimentId",
+                    "tableName",
+                    "format",
+                    "status",
+                    "rowCount",
+                    "totalBytes",
+                    "partCount",
+                    "errorCode",
+                    "createdBy",
+                    "createdAt",
+                    "completedAt",
+                    "expiresAt"
                   ]
                 }
               }
@@ -3520,6 +3644,9 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_-]+$",
               "description": "Name of the table"
             },
             "allowEmptyValue": true,
@@ -3540,15 +3667,8 @@
                         "type": "object",
                         "properties": {
                           "exportId": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "format": "uuid"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
+                            "type": "string",
+                            "format": "uuid"
                           },
                           "experimentId": {
                             "type": "string",
@@ -3573,19 +3693,10 @@
                               "pending",
                               "running",
                               "completed",
-                              "failed"
+                              "failed",
+                              "expired"
                             ],
                             "type": "string"
-                          },
-                          "filePath": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
                           },
                           "rowCount": {
                             "anyOf": [
@@ -3599,12 +3710,39 @@
                               }
                             ]
                           },
-                          "fileSize": {
+                          "totalBytes": {
                             "anyOf": [
                               {
                                 "type": "integer",
                                 "minimum": -9007199254740991,
                                 "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "partCount": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "errorCode": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "no_data",
+                                  "too_many_rows_for_format",
+                                  "unknown"
+                                ],
+                                "type": "string"
                               },
                               {
                                 "type": "null"
@@ -3629,6 +3767,17 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "expiresAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -3637,18 +3786,103 @@
                           "tableName",
                           "format",
                           "status",
-                          "filePath",
                           "rowCount",
-                          "fileSize",
+                          "totalBytes",
+                          "partCount",
+                          "errorCode",
                           "createdBy",
                           "createdAt",
-                          "completedAt"
+                          "completedAt",
+                          "expiresAt"
                         ]
                       }
                     }
                   },
                   "required": [
                     "exports"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/data/exports/{exportId}/links": {
+      "get": {
+        "operationId": "experiments.getExportDownloadLinks",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          },
+          {
+            "name": "exportId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the export"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "parts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "index": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "fileName": {
+                            "type": "string",
+                            "description": "Name the browser saves the part under"
+                          },
+                          "sizeBytes": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "url": {
+                            "type": "string",
+                            "format": "uri",
+                            "description": "Short-lived signed link that downloads the part from storage"
+                          }
+                        },
+                        "required": [
+                          "index",
+                          "fileName",
+                          "sizeBytes",
+                          "url"
+                        ]
+                      }
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the links stop working"
+                    }
+                  },
+                  "required": [
+                    "parts",
+                    "expiresAt"
                   ]
                 }
               }

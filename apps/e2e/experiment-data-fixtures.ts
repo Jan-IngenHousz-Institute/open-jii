@@ -147,12 +147,14 @@ function exportRecords(experimentId: string, count: number) {
     tableName,
     format: "csv",
     status: "completed",
-    filePath: null,
     rowCount: 42,
-    fileSize: 2048,
+    totalBytes: 2048,
+    partCount: 1,
+    errorCode: null,
     createdBy: crypto.randomUUID(),
     createdAt,
     completedAt: createdAt,
+    expiresAt: createdAt,
   }));
 }
 
