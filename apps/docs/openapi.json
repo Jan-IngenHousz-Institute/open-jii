@@ -32435,6 +32435,68 @@
             "example": "sort[0][field]=macros&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc"
           },
           {
+            "name": "family",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "multispeq",
+                    "ambyte",
+                    "minipar",
+                    "generic",
+                    "ambit"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "multispeq",
+                      "ambyte",
+                      "minipar",
+                      "generic",
+                      "ambit"
+                    ],
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "Filter protocols by sensor family; several values match either"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "visibility",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "private",
+                    "public"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "private",
+                      "public"
+                    ],
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "Filter protocols by visibility; several values match either"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
             "name": "page",
             "in": "query",
             "schema": {
