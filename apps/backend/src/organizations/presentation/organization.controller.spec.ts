@@ -134,9 +134,18 @@ describe("OrganizationController", () => {
     });
 
     it("sorts every directory field in both directions", async () => {
-      const alpha = await testApp.createOrganization("Alpha Lab", { visibility: "public" });
-      const bravo = await testApp.createOrganization("Bravo Lab", { visibility: "public" });
-      const charlie = await testApp.createOrganization("Charlie Lab", { visibility: "public" });
+      const alpha = await testApp.createOrganization("Alpha Lab", {
+        visibility: "public",
+        type: "government_agency",
+      });
+      const bravo = await testApp.createOrganization("Bravo Lab", {
+        visibility: "public",
+        type: "private_company",
+      });
+      const charlie = await testApp.createOrganization("Charlie Lab", {
+        visibility: "public",
+        type: "university",
+      });
 
       for (const organizationId of [alpha, bravo, charlie]) {
         await testApp.addOrganizationMember(organizationId, ownerId, "owner");
@@ -167,11 +176,12 @@ describe("OrganizationController", () => {
       const repository = testApp.module.get(OrganizationRepository);
       const expected = {
         name: [alpha, bravo, charlie],
+        type: [alpha, bravo, charlie],
         members: [alpha, bravo, charlie],
         resources: [alpha, bravo, charlie],
       } as const;
 
-      for (const field of ["name", "members", "resources"] as const) {
+      for (const field of ["name", "type", "members", "resources"] as const) {
         const ascending = await repository.listDirectory(ownerId, {
           sort: [{ field, direction: "asc" }],
         });
@@ -188,6 +198,73 @@ describe("OrganizationController", () => {
           [...expected[field]].reverse(),
         );
       }
+    });
+
+    it("keeps untyped organizations last in both type directions", async () => {
+      const untyped = await testApp.createOrganization("Alpha Untyped Lab", {
+        visibility: "public",
+      });
+      const university = await testApp.createOrganization("Bravo University", {
+        visibility: "public",
+        type: "university",
+      });
+      const agency = await testApp.createOrganization("Charlie Agency", {
+        visibility: "public",
+        type: "government_agency",
+      });
+
+      const repository = testApp.module.get(OrganizationRepository);
+      const ascending = await repository.listDirectory(ownerId, {
+        sort: [{ field: "type", direction: "asc" }],
+      });
+      const descending = await repository.listDirectory(ownerId, {
+        sort: [{ field: "type", direction: "desc" }],
+      });
+      assertSuccess(ascending);
+      assertSuccess(descending);
+
+      expect(ascending.value.organizations.map((organization) => organization.id)).toEqual([
+        agency,
+        university,
+        untyped,
+      ]);
+      expect(descending.value.organizations.map((organization) => organization.id)).toEqual([
+        university,
+        agency,
+        untyped,
+      ]);
+    });
+
+    it("orders organizations of the same type by a second sort", async () => {
+      const alphaUniversity = await testApp.createOrganization("Alpha University", {
+        visibility: "public",
+        type: "university",
+      });
+      const zuluUniversity = await testApp.createOrganization("Zulu University", {
+        visibility: "public",
+        type: "university",
+      });
+      const agency = await testApp.createOrganization("Mike Agency", {
+        visibility: "public",
+        type: "government_agency",
+      });
+
+      const response: SuperTestResponse<OrganizationDirectory> = await testApp
+        .get(path())
+        .query({
+          "sort[0][field]": "type",
+          "sort[0][direction]": "asc",
+          "sort[1][field]": "name",
+          "sort[1][direction]": "desc",
+        })
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.organizations.map((organization) => organization.id)).toEqual([
+        agency,
+        zuluUniversity,
+        alphaUniversity,
+      ]);
     });
 
     it("uses the ID tie-breaker when count values are equal", async () => {
@@ -344,6 +421,148 @@ describe("OrganizationController", () => {
         "Beta Org",
         "Gamma Org",
       ]);
+    });
+
+    describe("type filter", () => {
+      async function seedTypedOrgs() {
+        await testApp.createOrganization("Alpha University", {
+          visibility: "public",
+          type: "university",
+        });
+        await testApp.createOrganization("Bravo Foundation", {
+          visibility: "public",
+          type: "non_profit",
+        });
+        await testApp.createOrganization("Charlie Agency", {
+          visibility: "public",
+          type: "government_agency",
+        });
+        await testApp.createOrganization("Delta Untyped", { visibility: "public" });
+      }
+
+      async function listNames(
+        userId: string,
+        params: Parameters<OrganizationRepository["listDirectory"]>[1],
+      ) {
+        const result = await testApp.module
+          .get(OrganizationRepository)
+          .listDirectory(userId, params);
+        assertSuccess(result);
+        return result.value.organizations.map((organization) => organization.name);
+      }
+
+      it("keeps only the picked type", async () => {
+        await seedTypedOrgs();
+
+        expect(await listNames(outsiderId, { types: ["university"] })).toEqual([
+          "Alpha University",
+        ]);
+      });
+
+      it("matches either of two types", async () => {
+        await seedTypedOrgs();
+
+        expect(await listNames(outsiderId, { types: ["university", "non_profit"] })).toEqual([
+          "Alpha University",
+          "Bravo Foundation",
+        ]);
+      });
+
+      it("treats an empty type list as no filter", async () => {
+        await seedTypedOrgs();
+
+        expect(await listNames(outsiderId, { types: [] })).toEqual([
+          "Alpha University",
+          "Bravo Foundation",
+          "Charlie Agency",
+          "Delta Untyped",
+        ]);
+      });
+
+      it("shows an untyped organization only while no type is picked", async () => {
+        await seedTypedOrgs();
+
+        expect(await listNames(outsiderId, {})).toContain("Delta Untyped");
+        expect(
+          await listNames(outsiderId, {
+            types: [
+              "research_institute",
+              "non_profit",
+              "private_company",
+              "government_agency",
+              "university",
+            ],
+          }),
+        ).not.toContain("Delta Untyped");
+      });
+
+      it("combines with search", async () => {
+        await seedTypedOrgs();
+        await testApp.createOrganization("Echo University", {
+          visibility: "public",
+          type: "university",
+        });
+
+        expect(await listNames(outsiderId, { search: "echo", types: ["university"] })).toEqual([
+          "Echo University",
+        ]);
+        expect(await listNames(outsiderId, { search: "echo", types: ["non_profit"] })).toEqual([]);
+      });
+
+      it("combines with scope=related", async () => {
+        await seedTypedOrgs();
+        const mine = await testApp.createOrganization("Echo University", {
+          visibility: "public",
+          type: "university",
+        });
+        await testApp.addOrganizationMember(mine, ownerId, "owner");
+
+        expect(await listNames(ownerId, { scope: "related", types: ["university"] })).toEqual([
+          "Echo University",
+        ]);
+      });
+
+      it("never widens past the visibility boundary", async () => {
+        const hidden = await testApp.createOrganization("Hidden University", {
+          visibility: "private",
+          type: "university",
+        });
+        await testApp.addOrganizationMember(hidden, ownerId, "owner");
+
+        expect(await listNames(outsiderId, { types: ["university"] })).toEqual([]);
+      });
+
+      it("reads the indexed array form the web client sends", async () => {
+        await seedTypedOrgs();
+
+        const response: SuperTestResponse<OrganizationDirectory> = await testApp
+          .get(`${path()}?type[0]=university&type[1]=non_profit`)
+          .withAuth(outsiderId)
+          .expect(StatusCodes.OK);
+
+        expect(response.body.organizations.map((o) => o.name)).toEqual([
+          "Alpha University",
+          "Bravo Foundation",
+        ]);
+      });
+
+      it("reads a single type value", async () => {
+        await seedTypedOrgs();
+
+        const response: SuperTestResponse<OrganizationDirectory> = await testApp
+          .get(`${path()}?type=university`)
+          .withAuth(outsiderId)
+          .expect(StatusCodes.OK);
+
+        expect(response.body.organizations.map((o) => o.name)).toEqual(["Alpha University"]);
+      });
+
+      it("rejects an unknown type", async () => {
+        await testApp
+          .get(`${path()}?type=lab`)
+          .withAuth(outsiderId)
+          .expect(StatusCodes.BAD_REQUEST);
+      });
     });
   });
 

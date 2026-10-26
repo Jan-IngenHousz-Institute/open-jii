@@ -3,6 +3,8 @@
 export const SEED_EMAIL = "seed@openjii.local";
 export const NEWCOMER_EMAIL = "newcomer@openjii.local";
 export const SEED_PREFIX = "[Seed]%";
+// Not `seed-`: `db:seed:orgs` deletes every organization whose slug starts with that.
+export const FIXTURE_ORG_SLUG_PREFIX = "fixture-";
 
 // Fixed UUIDs so two seeded experiments line up with measurement data in
 // dev/staging Databricks: the silver pipeline joins on experiment_id, so
