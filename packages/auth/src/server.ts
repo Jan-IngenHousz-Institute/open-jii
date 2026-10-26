@@ -12,7 +12,7 @@ import * as schema from "@repo/database/schema";
 
 import { getApiKeyForSessionCheck } from "./api-key-session";
 import { sendOtpEmail } from "./email/otpEmail";
-import { getOidcClaims } from "./oidc/claims";
+import { getOidcClaims, oidcAdvertisedMetadata } from "./oidc/claims";
 import { oauthClientManagement } from "./oidc/client-management";
 import { openJiiOrganization } from "./organization/plugin";
 import { orcidProvider } from "./providers/orcid";
@@ -173,6 +173,7 @@ export const auth = betterAuth({
       loginPage: `${clientUrl}/login`,
       consentPage: `${clientUrl}/consent`,
       scopes: ["openid", "profile", "email", "offline_access"],
+      advertisedMetadata: oidcAdvertisedMetadata,
       silenceWarnings: { oauthAuthServerConfig: true },
       grantTypes: ["authorization_code", "refresh_token"],
       clientPrivileges: () => oauthClientManagement.getStore() === true,
