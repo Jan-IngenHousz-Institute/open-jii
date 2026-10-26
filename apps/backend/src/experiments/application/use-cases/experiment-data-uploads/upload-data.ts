@@ -25,6 +25,12 @@ import { ExperimentDataUploadsRepository } from "../../../core/repositories/expe
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { MultipartUploadService } from "../../services/multipart-upload.service";
 
+/**
+ * How often a file still arriving marks its upload as alive. Well inside the reconciler's hour
+ * without progress, so a slow file on a live request is never swept as interrupted.
+ */
+const TRANSFER_HEARTBEAT_MS = 5 * 60_000;
+
 export interface UploadedFileResult {
   fileName: string;
   filePath: string;
@@ -149,14 +155,20 @@ export class UploadDataUseCase {
           return success(undefined);
         }
         const safeName: string = parsed.data;
-        const uploadResult = await this.databricksPort.uploadExperimentData(
-          this.databricksPort.CENTRUM_SCHEMA_NAME,
-          state.ctx.experiment.id,
-          constants.volumeSourceType,
-          state.ctx.directoryName,
-          safeName,
-          file.stream,
-        );
+        const ctx = state.ctx;
+        const heartbeat = setInterval(() => {
+          void this.recordFileReceived(ctx);
+        }, TRANSFER_HEARTBEAT_MS);
+        const uploadResult = await this.databricksPort
+          .uploadExperimentData(
+            this.databricksPort.CENTRUM_SCHEMA_NAME,
+            ctx.experiment.id,
+            constants.volumeSourceType,
+            ctx.directoryName,
+            safeName,
+            file.stream,
+          )
+          .finally(() => clearInterval(heartbeat));
         if (uploadResult.isFailure()) {
           // Whatever Databricks did not take is still arriving. Detach it from the failed request
           // and read it off, or busboy waits on this file and the whole request hangs.
@@ -166,7 +178,7 @@ export class UploadDataUseCase {
           return success(undefined);
         }
         successfulUploads.push({ fileName: safeName, filePath: uploadResult.value.filePath });
-        await this.recordFileReceived(state.ctx);
+        await this.recordFileReceived(ctx);
         return success(undefined);
       },
     });

@@ -12,6 +12,7 @@ import {
   failure,
   success,
 } from "../../../../common/utils/fp-utils";
+import type { Result } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
@@ -331,6 +332,49 @@ describe("UploadDataUseCase", () => {
     });
 
     expect(progress).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps marking a slow file's upload alive while the file is still arriving", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Upload_Slow_File",
+      userId: testUserId,
+    });
+    vi.spyOn(uploadsRepository, "validateTargetTable").mockResolvedValue(
+      success({ uploadTableId: STUB_UPLOAD_TABLE_ID, uploadTableName: "greenhouse_temps" }),
+    );
+    let finishFile: ((result: Result<{ filePath: string }>) => void) | undefined;
+    vi.spyOn(databricksPort, "uploadExperimentData").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishFile = resolve;
+        }),
+    );
+    const progress = vi.spyOn(uploadsRepository, "markFileReceived");
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+
+    mountMultipart(multipartUploadService, async ({ field, file }) => {
+      field("sourceKind", "csv");
+      field("targetKind", "new");
+      field("targetName", "greenhouse_temps");
+      await file(makeFile("slow.csv"));
+    });
+    const upload = useCase.execute({
+      experimentId: experiment.id,
+      userId: testUserId,
+      requestStream: Readable.from([""]),
+      requestHeaders: MULTIPART_HEADERS,
+    });
+    await vi.waitFor(() => expect(finishFile).toBeDefined());
+
+    vi.advanceTimersByTime(11 * 60_000);
+    expect(progress).toHaveBeenCalledTimes(2);
+
+    finishFile?.(success({ filePath: "/Volumes/c/centrum/data-imports/.../slow.csv" }));
+    const result = await upload;
+    vi.useRealTimers();
+
+    assertSuccess(result);
+    expect(progress).toHaveBeenCalledTimes(3);
   });
 
   it("refuses a second upload creating the same new table while the first is in flight", async () => {
