@@ -21,6 +21,8 @@ import { ExperimentVisibilityCard } from "../../experiment-settings/experiment-v
 import { OwningOrganizationField } from "../../organizations/owning-organization-field";
 import { ExperimentMembersTrail } from "../experiment-members-trail";
 import { ExperimentLocationsSection } from "./experiment-locations-section";
+import { ExperimentStandardsReadiness } from "./experiment-standards-readiness";
+import { ExperimentStudyDetailsSection } from "./experiment-study-details-section";
 
 const DETAILS_PANEL_STORAGE_KEY = "experiment_details_panel_collapsed";
 
@@ -190,6 +192,15 @@ export function ExperimentDetailsCard({
                   <h4 className="text-sm font-medium">{t("experimentId")}</h4>
                   <p className="text-muted-foreground text-sm">{experiment.id}</p>
                 </div>
+
+                <ExperimentStudyDetailsSection
+                  experimentId={experimentId}
+                  experiment={experiment}
+                  hasAccess={hasAccess}
+                  isArchived={isArchived}
+                />
+
+                <ExperimentStandardsReadiness experiment={experiment} />
 
                 <ExperimentLocationsSection
                   experimentId={experimentId}

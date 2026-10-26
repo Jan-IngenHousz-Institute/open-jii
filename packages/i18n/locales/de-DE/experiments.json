@@ -404,5 +404,34 @@
     "loadError": "Die Daten dieses Experiments konnten nicht geladen werden.",
     "rowUnit_one": "Zeile",
     "rowUnit_other": "Zeilen"
+  },
+  "studyDetails": {
+    "title": "Studiendetails",
+    "empty": "Noch keine Studiendetails",
+    "period": "Studienzeitraum",
+    "startDate": "Startdatum",
+    "endDate": "Enddatum",
+    "organism": "Organismus",
+    "organismPlaceholder": "z. B. Arabidopsis thaliana",
+    "experimentalDesign": "Versuchsdesign",
+    "experimentalDesignPlaceholder": "Anordnung von Parzellen, Behandlungen und Wiederholungen",
+    "growthFacility": "Anbauumgebung",
+    "growthFacilityPlaceholder": "z. B. Freiland, Gewächshausabteil, Klimakammer",
+    "license": "Datenlizenz",
+    "licensePlaceholder": "Lizenz auswählen",
+    "licenseNone": "Keine Lizenz",
+    "licenseCc0": "CC0 1.0 (gemeinfrei)",
+    "licenseCcBy": "CC BY 4.0 (Namensnennung)",
+    "licenseCc0Short": "CC0 1.0",
+    "licenseCcByShort": "CC BY 4.0",
+    "dateNotSet": "nicht festgelegt",
+    "dialogDescription": "Zeitraum, Organismus, Design und Lizenz der Studie. Grundlage für standardkonforme Exporte."
+  },
+  "standardsReadiness": {
+    "title": "Standards-Bereitschaft",
+    "studyFields": "Studiendetails:",
+    "fieldsCount": "{{filled}} von {{total}}",
+    "license": "Datenlizenz:",
+    "licenseNone": "Keine gewählt"
   }
 }

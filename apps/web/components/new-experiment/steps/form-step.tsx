@@ -18,6 +18,12 @@ export const detailsSchema = zCreateExperimentBodyBase.pick({
   name: true,
   description: true,
   workbookId: true,
+  startDate: true,
+  endDate: true,
+  organism: true,
+  experimentalDesign: true,
+  growthFacility: true,
+  license: true,
 });
 
 const membersVisibilityBase = zCreateExperimentBodyBase.pick({

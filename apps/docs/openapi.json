@@ -32,6 +32,37 @@
                     "type": "string",
                     "description": "Optional description of the experiment"
                   },
+                  "startDate": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Study start date (YYYY-MM-DD)"
+                  },
+                  "endDate": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Study end date (YYYY-MM-DD)"
+                  },
+                  "organism": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "Organism under study, ideally the scientific name"
+                  },
+                  "experimentalDesign": {
+                    "type": "string",
+                    "description": "Free-text description of the experimental design"
+                  },
+                  "growthFacility": {
+                    "type": "string",
+                    "description": "Free-text description of the growth facility (field, greenhouse, growth chamber)"
+                  },
+                  "license": {
+                    "enum": [
+                      "CC0-1.0",
+                      "CC-BY-4.0"
+                    ],
+                    "type": "string",
+                    "description": "Dataset license as an SPDX identifier"
+                  },
                   "status": {
                     "enum": [
                       "active",
@@ -177,6 +208,72 @@
                     "description": {
                       "anyOf": [
                         {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "startDate": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "endDate": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organism": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "experimentalDesign": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "growthFacility": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "license": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "CC0-1.0",
+                            "CC-BY-4.0"
+                          ],
                           "type": "string"
                         },
                         {
@@ -423,6 +520,12 @@
                     "id",
                     "name",
                     "description",
+                    "startDate",
+                    "endDate",
+                    "organism",
+                    "experimentalDesign",
+                    "growthFacility",
+                    "license",
                     "status",
                     "visibility",
                     "embargoUntil",
@@ -629,6 +732,72 @@
                           "description": {
                             "anyOf": [
                               {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "startDate": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "endDate": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "organism": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "experimentalDesign": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "growthFacility": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "license": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "CC0-1.0",
+                                  "CC-BY-4.0"
+                                ],
                                 "type": "string"
                               },
                               {
@@ -920,6 +1089,12 @@
                           "id",
                           "name",
                           "description",
+                          "startDate",
+                          "endDate",
+                          "organism",
+                          "experimentalDesign",
+                          "growthFacility",
+                          "license",
                           "status",
                           "visibility",
                           "embargoUntil",
@@ -952,6 +1127,72 @@
                               "description": {
                                 "anyOf": [
                                   {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "startDate": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "date"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "endDate": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "date"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "organism": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "experimentalDesign": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "growthFacility": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "license": {
+                                "anyOf": [
+                                  {
+                                    "enum": [
+                                      "CC0-1.0",
+                                      "CC-BY-4.0"
+                                    ],
                                     "type": "string"
                                   },
                                   {
@@ -1243,6 +1484,12 @@
                               "id",
                               "name",
                               "description",
+                              "startDate",
+                              "endDate",
+                              "organism",
+                              "experimentalDesign",
+                              "growthFacility",
+                              "license",
                               "status",
                               "visibility",
                               "embargoUntil",
@@ -1699,6 +1946,72 @@
                         }
                       ]
                     },
+                    "startDate": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "endDate": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organism": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "experimentalDesign": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "growthFacility": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "license": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "CC0-1.0",
+                            "CC-BY-4.0"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "status": {
                       "enum": [
                         "active",
@@ -1938,6 +2251,12 @@
                     "id",
                     "name",
                     "description",
+                    "startDate",
+                    "endDate",
+                    "organism",
+                    "experimentalDesign",
+                    "growthFacility",
+                    "license",
                     "status",
                     "visibility",
                     "embargoUntil",
@@ -1985,6 +2304,79 @@
                   "description": {
                     "type": "string",
                     "description": "Updated experiment description"
+                  },
+                  "startDate": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Updated study start date"
+                  },
+                  "endDate": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Updated study end date"
+                  },
+                  "organism": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 255
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Updated organism under study"
+                  },
+                  "experimentalDesign": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Updated experimental design description"
+                  },
+                  "growthFacility": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Updated growth facility description"
+                  },
+                  "license": {
+                    "anyOf": [
+                      {
+                        "enum": [
+                          "CC0-1.0",
+                          "CC-BY-4.0"
+                        ],
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Updated dataset license"
                   },
                   "status": {
                     "enum": [
@@ -2079,6 +2471,72 @@
                         }
                       ]
                     },
+                    "startDate": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "endDate": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organism": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "experimentalDesign": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "growthFacility": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "license": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "CC0-1.0",
+                            "CC-BY-4.0"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "status": {
                       "enum": [
                         "active",
@@ -2318,6 +2776,12 @@
                     "id",
                     "name",
                     "description",
+                    "startDate",
+                    "endDate",
+                    "organism",
+                    "experimentalDesign",
+                    "growthFacility",
+                    "license",
                     "status",
                     "visibility",
                     "embargoUntil",
@@ -2406,6 +2870,72 @@
                         "description": {
                           "anyOf": [
                             {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "startDate": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "endDate": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "organism": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "experimentalDesign": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "growthFacility": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "license": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "CC0-1.0",
+                                "CC-BY-4.0"
+                              ],
                               "type": "string"
                             },
                             {
@@ -2652,6 +3182,12 @@
                         "id",
                         "name",
                         "description",
+                        "startDate",
+                        "endDate",
+                        "organism",
+                        "experimentalDesign",
+                        "growthFacility",
+                        "license",
                         "status",
                         "visibility",
                         "embargoUntil",
@@ -7578,6 +8114,72 @@
                         }
                       ]
                     },
+                    "startDate": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "endDate": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organism": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "experimentalDesign": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "growthFacility": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "license": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "CC0-1.0",
+                            "CC-BY-4.0"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "status": {
                       "enum": [
                         "active",
@@ -7814,6 +8416,12 @@
                     "id",
                     "name",
                     "description",
+                    "startDate",
+                    "endDate",
+                    "organism",
+                    "experimentalDesign",
+                    "growthFacility",
+                    "license",
                     "status",
                     "visibility",
                     "embargoUntil",

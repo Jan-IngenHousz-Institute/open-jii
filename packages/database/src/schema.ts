@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   varchar,
+  date,
   timestamp,
   boolean,
   jsonb,
@@ -348,12 +349,22 @@ export const experimentStatusEnum = pgEnum("experiment_status", [
 // Experiment Visibility Enum
 export const experimentVisibilityEnum = pgEnum("experiment_visibility", ["private", "public"]);
 
+// SPDX identifiers; the only two licenses the platform offers for datasets.
+export const dataLicenseEnum = pgEnum("data_license", ["CC0-1.0", "CC-BY-4.0"]);
+
 export const experiments = pgTable(
   "experiments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     name: varchar("name", { length: 255 }).notNull().unique(),
     description: text("description"),
+    // Study descriptors (MIAPPE study section); all optional.
+    startDate: date("start_date"),
+    endDate: date("end_date"),
+    organism: varchar("organism", { length: 255 }),
+    experimentalDesign: text("experimental_design"),
+    growthFacility: text("growth_facility"),
+    license: dataLicenseEnum("license"),
     status: experimentStatusEnum("status").default("active").notNull(),
     visibility: experimentVisibilityEnum("visibility").default("public").notNull(),
     embargoUntil: timestamp("embargo_until")

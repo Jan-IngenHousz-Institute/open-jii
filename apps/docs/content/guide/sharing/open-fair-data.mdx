@@ -1,56 +1,69 @@
 ---
 title: "Open & FAIR data"
-description: "Use openJII features as building blocks for findable and reusable research data."
+description: "What openJII captures for findable, reusable research data, and what it does with it."
 ---
 
-{/* verified: code@42fda9cf1 2026-07-28 */}
+{/* NEEDS-LIVE-CHECK: study details card and readiness display on the production build. */}
 
 FAIR means **Findable, Accessible, Interoperable, and Reusable**. Open data and
 FAIR data overlap, but they are not the same: data can be private under a valid
 access policy and still follow FAIR practices, while a public file with no
 metadata may be difficult to reuse.
 
-openJII provides useful building blocks; it does not make a dataset FAIR
-automatically or certify FAIR compliance.
+openJII captures the core descriptive metadata for you and shows how complete
+each experiment is. It does not certify FAIR compliance.
+
+## What the platform captures
+
+### Study details
+
+Every experiment can carry six study descriptors, entered during creation or
+any time from the experiment page:
+
+| Field               | Why it matters                                                      |
+| ------------------- | ------------------------------------------------------------------- |
+| Start and end date  | when the study ran; required by metadata standards and repositories |
+| Organism            | what was studied; the most common search facet for reuse            |
+| Experimental design | how plots, treatments, and replicates were arranged                 |
+| Growth facility     | field, greenhouse, or growth chamber context                        |
+| Data license        | whether and how others may reuse the data                           |
+
+These fields are optional and never block your work. They map onto the
+[MIAPPE](https://www.miappe.org/) checklist, the community's minimum
+information standard for plant phenotyping experiments, so filling them in
+prepares the experiment for standards-compliant sharing.
+
+### Standards readiness
+
+The experiment page shows how many study descriptors are filled and whether a
+license is chosen, so completeness is visible at a glance rather than a
+surprise at sharing time.
+
+## The license choice
+
+openJII offers two data licenses, the two accepted by research funders and
+repositories:
+
+- **CC0 1.0**: no conditions; maximum reusability. Scholarly citation is still
+  expected by community norms.
+- **CC BY 4.0**: reuse requires attribution as a legal condition.
+
+Choosing a license is optional while you work. An experiment without one is
+viewable according to its visibility settings, but its data is not licensed
+for reuse outside the platform.
 
 ## A practical checklist
 
-### Findable
-
-- Give the experiment and datasets descriptive names.
-- Add structured metadata for subjects, treatments, locations, conditions, and
-  units.
-- Preserve experiment, protocol, workbook, device, and export identifiers in
-  your research record.
-
-### Accessible
-
+- Give the experiment and datasets descriptive names, and fill the study
+  details above.
 - Choose public visibility or document the embargo and access conditions.
-- Set collaborator access levels deliberately: **Can view** or **Can edit**.
-- Keep a human-readable contact and citation route with the released dataset.
-
-### Interoperable
-
 - Export in a documented standard format such as CSV, JSON, Parquet, or Excel.
-- Use stable column names, explicit units, standard vocabularies, and ISO dates.
-- Explain nested values, raw traces, flags, missing values, and any
-  contributor-anonymization choice.
-
-### Reusable
-
-- Record the protocol, workbook version, hardware, calibration context, and
-  transformation or macro used.
-- Include quality annotations and known limitations.
-- State a license and citation expectation outside the platform if the project
-  requires one; the current experiment create flow does not assign a data
-  license for you.
-
-## Package a release
-
-Export the intended table, save the metadata and methods alongside it, and keep
-the export date and row-count checks. Where possible, publish analysis code and
-an environment lockfile or container recipe so another researcher can reproduce
-the transformation.
+- Use stable column names, explicit units, and ISO dates; explain nested
+  values, raw traces, flags, and missing values.
+- Record the protocol, workbook version, hardware, and macros used; include
+  quality annotations and known limitations.
+- Where possible, publish analysis code and an environment lockfile or
+  container recipe so another researcher can reproduce the transformation.
 
 For field definitions, see the [Glossary](/guide/reference/glossary). For
 technical provenance through the processing pipeline, see

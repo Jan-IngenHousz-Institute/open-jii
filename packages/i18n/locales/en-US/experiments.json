@@ -473,5 +473,34 @@
     "loadError": "This experiment's data could not be loaded.",
     "rowUnit_one": "row",
     "rowUnit_other": "rows"
+  },
+  "studyDetails": {
+    "title": "Study details",
+    "empty": "No study details yet",
+    "period": "Study period",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "organism": "Organism",
+    "organismPlaceholder": "e.g. Arabidopsis thaliana",
+    "experimentalDesign": "Experimental design",
+    "experimentalDesignPlaceholder": "How plots, treatments, and replicates are arranged",
+    "growthFacility": "Growth facility",
+    "growthFacilityPlaceholder": "e.g. open field, greenhouse compartment, growth chamber",
+    "license": "Data license",
+    "licensePlaceholder": "Select a license",
+    "licenseNone": "No license",
+    "licenseCc0": "CC0 1.0 (public domain)",
+    "licenseCcBy": "CC BY 4.0 (attribution)",
+    "licenseCc0Short": "CC0 1.0",
+    "licenseCcByShort": "CC BY 4.0",
+    "dateNotSet": "not set",
+    "dialogDescription": "Dates, organism, design, and licensing that describe the study. These power standards-ready exports."
+  },
+  "standardsReadiness": {
+    "title": "Standards readiness",
+    "studyFields": "Study details:",
+    "fieldsCount": "{{filled}} of {{total}}",
+    "license": "Data license:",
+    "licenseNone": "None chosen"
   }
 }

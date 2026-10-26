@@ -79,6 +79,12 @@ describe("Experiment Schema", () => {
       name: "Exp 1",
       organizationId: null,
       description: "desc",
+      startDate: null,
+      endDate: null,
+      organism: null,
+      experimentalDesign: null,
+      growthFacility: null,
+      license: null,
       status: "active",
       visibility: "private",
       embargoUntil: isoTime,
@@ -150,6 +156,12 @@ describe("Experiment Schema", () => {
         name: "E1",
         organizationId: null,
         description: null,
+        startDate: null,
+        endDate: null,
+        organism: null,
+        experimentalDesign: null,
+        growthFacility: null,
+        license: null,
         status: "active",
         visibility: "public",
         embargoUntil: isoTime,
@@ -476,6 +488,71 @@ describe("Experiment Schema", () => {
             embargoUntil: futureIso,
           }),
         ).toThrow();
+      });
+    });
+
+    describe("study descriptors", () => {
+      it("accepts dates, organism, design, facility, and license", () => {
+        const body = {
+          name: "Documented Exp",
+          startDate: "2026-03-01",
+          endDate: "2026-06-30",
+          organism: "Arabidopsis thaliana",
+          experimentalDesign: "RCBD with 4 blocks",
+          growthFacility: "Greenhouse compartment 2",
+          license: "CC-BY-4.0",
+        };
+        expect(zCreateExperimentBody.parse(body)).toEqual(body);
+      });
+
+      it("accepts an end date equal to the start date", () => {
+        expect(() =>
+          zCreateExperimentBody.parse({
+            name: "One Day Exp",
+            startDate: "2026-03-01",
+            endDate: "2026-03-01",
+          }),
+        ).not.toThrow();
+      });
+
+      it("rejects an end date before the start date", () => {
+        expect(() =>
+          zCreateExperimentBody.parse({
+            name: "Inverted Exp",
+            startDate: "2026-06-30",
+            endDate: "2026-03-01",
+          }),
+        ).toThrow();
+      });
+
+      it("rejects a malformed date", () => {
+        expect(() =>
+          zCreateExperimentBody.parse({ name: "Bad Date Exp", startDate: "03/01/2026" }),
+        ).toThrow();
+      });
+
+      it("rejects an unknown license", () => {
+        expect(() =>
+          zCreateExperimentBody.parse({ name: "Odd License Exp", license: "MIT" }),
+        ).toThrow();
+      });
+
+      it("zUpdateExperimentBody accepts nulls to clear stored descriptors", () => {
+        const body = {
+          startDate: null,
+          endDate: null,
+          organism: null,
+          experimentalDesign: null,
+          growthFacility: null,
+          license: null,
+        };
+        expect(zUpdateExperimentBody.parse(body)).toEqual(body);
+      });
+
+      it("zUpdateExperimentBody carries no date-pair check — a partial update may send one side; the form validates the pair", () => {
+        expect(() =>
+          zUpdateExperimentBody.parse({ startDate: "2026-06-30", endDate: "2026-03-01" }),
+        ).not.toThrow();
       });
     });
 

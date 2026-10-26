@@ -59,6 +59,56 @@ describe("ExperimentController", () => {
       expect(response.body).toHaveProperty("id");
     });
 
+    it("persists and returns the study descriptors", async () => {
+      const experimentData = {
+        name: "Documented Experiment",
+        startDate: "2026-03-01",
+        endDate: "2026-06-30",
+        organism: "Arabidopsis thaliana",
+        experimentalDesign: "RCBD with 4 blocks",
+        growthFacility: "Greenhouse compartment 2",
+        license: "CC-BY-4.0",
+      };
+
+      const createResponse = await testApp
+        .post(testApp.resolveOrpcPath(contract.experiments.createExperiment))
+        .withAuth(testUserId)
+        .send(experimentData)
+        .expect(StatusCodes.CREATED);
+
+      expect(createResponse.body).toMatchObject(experimentData);
+      const created = createResponse.body as { id: string };
+
+      const updateResponse = await testApp
+        .patch(
+          testApp.resolveOrpcPath(contract.experiments.updateExperiment, {
+            id: created.id,
+          }),
+        )
+        .withAuth(testUserId)
+        .send({ organism: null, endDate: null })
+        .expect(StatusCodes.OK);
+
+      expect(updateResponse.body).toMatchObject({
+        startDate: "2026-03-01",
+        endDate: null,
+        organism: null,
+        license: "CC-BY-4.0",
+      });
+    });
+
+    it("rejects an end date before the start date", async () => {
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.experiments.createExperiment))
+        .withAuth(testUserId)
+        .send({
+          name: "Inverted Dates Experiment",
+          startDate: "2026-06-30",
+          endDate: "2026-03-01",
+        })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
     it("should return 400 if name is missing", async () => {
       await testApp
         .post(testApp.resolveOrpcPath(contract.experiments.createExperiment))

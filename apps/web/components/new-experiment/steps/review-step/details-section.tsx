@@ -51,6 +51,35 @@ export function DetailsSection({ formData, onEdit, className }: DetailsSectionPr
         </>
       )}
 
+      {(formData.startDate ?? formData.endDate) && (
+        <>
+          <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+            {t("newExperiment.studyPeriod")}
+          </div>
+          <div className="text-base font-medium">
+            {formData.startDate ?? "\u2014"} {"→"} {formData.endDate ?? "\u2014"}
+          </div>
+        </>
+      )}
+
+      {formData.organism && (
+        <>
+          <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+            {t("newExperiment.organism")}
+          </div>
+          <div className="text-base font-medium">{formData.organism}</div>
+        </>
+      )}
+
+      {formData.license && (
+        <>
+          <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+            {t("newExperiment.license")}
+          </div>
+          <div className="text-base font-medium">{formData.license}</div>
+        </>
+      )}
+
       <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
         {t("newExperiment.workbook")}
       </div>

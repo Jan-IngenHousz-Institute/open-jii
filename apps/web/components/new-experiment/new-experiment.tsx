@@ -25,6 +25,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { NewExperimentDetailsCard } from "./new-experiment-details-card";
 import { NewExperimentLocationsCard } from "./new-experiment-locations-card";
 import { NewExperimentMembersCard } from "./new-experiment-members-card";
+import { NewExperimentStudyDetailsCard } from "./new-experiment-study-details-card";
 import { NewExperimentVisibilityCard } from "./new-experiment-visibility-card";
 import {
   detailsSchema,
@@ -58,7 +59,7 @@ export function NewExperimentForm() {
         title: t("experiments.detailsTitle"),
         description: t("experiments.detailsDescription"),
         validationSchema: detailsSchema,
-        component: createFormStep([NewExperimentDetailsCard]),
+        component: createFormStep([NewExperimentDetailsCard, NewExperimentStudyDetailsCard]),
       },
       {
         title: t("experiments.collaboratorsVisibilityTitle"),

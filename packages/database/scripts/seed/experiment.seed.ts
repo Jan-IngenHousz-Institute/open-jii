@@ -25,7 +25,35 @@ export async function seedExperiments(user: SeedUser, personalOrganizationId: st
     description: string;
     status: "active" | "stale" | "published" | "archived";
     visibility: "public" | "private";
+    startDate?: string;
+    endDate?: string;
+    organism?: string;
+    experimentalDesign?: string;
+    growthFacility?: string;
+    license?: "CC0-1.0" | "CC-BY-4.0";
   }[] = [
+    // Test fixtures: "golden" carries every study descriptor, "sparse" none.
+    // Tests find them by name.
+    {
+      name: "[Seed] Golden Standard Trial",
+      description:
+        "Complete reference experiment: every study descriptor filled, used to test standards surfaces end to end.",
+      status: "active",
+      visibility: "public",
+      startDate: "2026-06-01",
+      endDate: "2026-08-30",
+      organism: "Zea mays",
+      experimentalDesign: "RCBD, 2 genotypes x 2 treatments, 6 replicates",
+      growthFacility: "Open field, Wageningen field 3",
+      license: "CC-BY-4.0",
+    },
+    {
+      name: "[Seed] Sparse Draft Trial",
+      description:
+        "Deliberately incomplete twin of the golden fixture: no study descriptors, exercises every degradation path.",
+      status: "active",
+      visibility: "private",
+    },
     {
       id: EXPERIMENT_ID_CORN_QUESTIONS,
       name: "[Seed] Field Trial 2025 — Corn Photosynthesis",

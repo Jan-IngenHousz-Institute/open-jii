@@ -21,10 +21,19 @@ export const zExperimentStatus = z.enum(["active", "stale", "archived", "publish
 
 export const zExperimentVisibility = z.enum(["private", "public"]);
 
+/** SPDX identifiers of the licenses the platform offers for datasets. */
+export const zDataLicense = z.enum(["CC0-1.0", "CC-BY-4.0"]);
+
 export const zExperiment = z.object({
   id: z.string().uuid(),
   name: z.string(),
   description: z.string().nullable(),
+  startDate: z.string().date().nullable(),
+  endDate: z.string().date().nullable(),
+  organism: z.string().nullable(),
+  experimentalDesign: z.string().nullable(),
+  growthFacility: z.string().nullable(),
+  license: zDataLicense.nullable(),
   status: zExperimentStatus,
   visibility: zExperimentVisibility,
   embargoUntil: z.string().datetime(),
@@ -316,6 +325,7 @@ export const zExperimentFlowGraph = z
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
 export type ExperimentMembershipStatus = z.infer<typeof zExperimentMembershipStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
+export type DataLicense = z.infer<typeof zDataLicense>;
 export type Experiment = z.infer<typeof zExperiment>;
 export type ExperimentListItem = z.infer<typeof zExperimentListEntry>;
 export type ExperimentCallerRole = z.infer<typeof zExperimentCallerRole>;
@@ -365,6 +375,21 @@ export const validateEmbargoDate = (
   }
 };
 
+/** Flags an end date earlier than the start date; both must be present to compare. */
+export const validateStudyDates = (
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+  ctx: z.RefinementCtx,
+) => {
+  if (startDate && endDate && endDate < startDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["endDate"],
+      message: "End date cannot be before the start date",
+    });
+  }
+};
+
 export const zCreateExperimentBodyBase = z.object({
   name: z
     .string()
@@ -373,6 +398,23 @@ export const zCreateExperimentBodyBase = z.object({
     .max(255, "The name must be at most 255 characters")
     .describe("The name of the experiment"),
   description: z.string().optional().describe("Optional description of the experiment"),
+  startDate: z.string().date().optional().describe("Study start date (YYYY-MM-DD)"),
+  endDate: z.string().date().optional().describe("Study end date (YYYY-MM-DD)"),
+  organism: z
+    .string()
+    .trim()
+    .max(255, "The organism must be at most 255 characters")
+    .optional()
+    .describe("Organism under study, ideally the scientific name"),
+  experimentalDesign: z
+    .string()
+    .optional()
+    .describe("Free-text description of the experimental design"),
+  growthFacility: z
+    .string()
+    .optional()
+    .describe("Free-text description of the growth facility (field, greenhouse, growth chamber)"),
+  license: zDataLicense.optional().describe("Dataset license as an SPDX identifier"),
   status: zExperimentStatus.optional().describe("Initial status of the experiment"),
   visibility: zExperimentVisibility.optional().describe("Experiment visibility setting"),
   organizationId: z
@@ -426,6 +468,7 @@ export const zCreateExperimentBody = zCreateExperimentBodyBase.superRefine((val,
     return;
   }
   validateEmbargoDate(val.embargoUntil, ctx, ["embargoUntil"]);
+  validateStudyDates(val.startDate, val.endDate, ctx);
 });
 
 export const zUpdateExperimentBody = z.object({
@@ -437,6 +480,24 @@ export const zUpdateExperimentBody = z.object({
     .optional()
     .describe("Updated experiment name"),
   description: z.string().optional().describe("Updated experiment description"),
+  // Nullable so a stored study descriptor can be cleared, unlike the create body
+  // where omission and null would mean the same thing.
+  startDate: z.string().date().nullable().optional().describe("Updated study start date"),
+  endDate: z.string().date().nullable().optional().describe("Updated study end date"),
+  organism: z
+    .string()
+    .trim()
+    .max(255, "The organism must be at most 255 characters")
+    .nullable()
+    .optional()
+    .describe("Updated organism under study"),
+  experimentalDesign: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("Updated experimental design description"),
+  growthFacility: z.string().nullable().optional().describe("Updated growth facility description"),
+  license: zDataLicense.nullable().optional().describe("Updated dataset license"),
   status: zExperimentStatus.optional().describe("Updated experiment status"),
   // `visibility` is deliberately absent: publishing is one-way and goes through the
   // dedicated `setVisibility` route. Allowing it here would permit public→private.
