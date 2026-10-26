@@ -34,12 +34,12 @@
     "release:cms": "tsx src/commands/release-cms.ts",
     "round:read": "tsx src/commands/round-read.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "dotenv": "^16.6.1",
     "jsdom": "catalog:testing",
-    "mermaid": "^11.16.1",
+    "mermaid": "^12.2.0",
     "postgres": "^3.4.8"
   },
   "devDependencies": {

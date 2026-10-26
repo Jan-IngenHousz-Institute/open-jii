@@ -26,6 +26,7 @@ import type { CachePort } from "../../../../macros/core/ports/cache.port";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import { NotificationRepository } from "../../../../notifications/core/repositories/notification.repository";
+import { queuedDeliveriesFor } from "../../../../test/notification-deliveries";
 import { TestHarness } from "../../../../test/test-harness";
 import { UserRepository } from "../../../../users/core/repositories/user.repository";
 import { SharingRepository } from "../../../core/repositories/sharing.repository";
@@ -323,10 +324,12 @@ describe("createGrant", () => {
   // Being shared with is something the grantee hears about: a row in their bell,
   // and an email while their Membership and access switch is on.
   describe("notifying the grantee", () => {
+    const deliveriesFor = (userId: string) => queuedDeliveriesFor(testApp.database, userId);
+
     const notificationsFor = (userId: string) =>
       testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
 
-    it("tells a user they were given access to an experiment, and emails them", async () => {
+    it("tells a user they were given access to an experiment, and queues their email", async () => {
       const name = `Exp ${crypto.randomUUID()}`;
       const { experiment } = await testApp.createExperiment({ name, userId: owner });
       const grantee = await testApp.createTestUser({
@@ -351,16 +354,12 @@ describe("createGrant", () => {
         resourceId: experiment.id,
         params: { resourceName: name, role: "viewer" },
       });
-      expect(emailAdapter.sendAccessGrantedNotification).toHaveBeenCalledTimes(1);
-      expect(emailAdapter.sendAccessGrantedNotification).toHaveBeenCalledWith({
-        resourceType: "experiment",
-        resourceId: experiment.id,
-        resourceName: name,
-        actor: "Owner User",
-        // On an experiment the viewing tier also carries the right to add data.
-        role: "a contributor who can view and add data",
-        email: "experiment-grantee@example.com",
-      });
+      // The email is owed, not sent; what it says — on an experiment the viewing tier
+      // also carries the right to add data — is the email service's own spec.
+      expect(await deliveriesFor(grantee)).toMatchObject([
+        { type: "resource_access_granted", channel: "email", status: "pending" },
+      ]);
+      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
     });
 
     it("tells a user they were given access to a macro, with the read-only wording", async () => {
@@ -387,15 +386,9 @@ describe("createGrant", () => {
         resourceId: macro.id,
         params: { resourceName: name, role: "viewer" },
       });
-      expect(emailAdapter.sendAccessGrantedNotification).toHaveBeenCalledTimes(1);
-      expect(emailAdapter.sendAccessGrantedNotification).toHaveBeenCalledWith({
-        resourceType: "macro",
-        resourceId: macro.id,
-        resourceName: name,
-        actor: "Owner User",
-        role: "a collaborator who can view",
-        email: "macro-grantee@example.com",
-      });
+      expect(await deliveriesFor(grantee)).toMatchObject([
+        { type: "resource_access_granted", channel: "email", status: "pending" },
+      ]);
     });
 
     // A group grantee has nobody to address yet, so the dispatch is never attempted
@@ -442,6 +435,7 @@ describe("createGrant", () => {
 
       expect(dispatch).not.toHaveBeenCalled();
       expect(await testApp.database.select().from(notifications)).toEqual([]);
+      expect(await deliveriesFor(member)).toEqual([]);
       expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
     });
 
@@ -458,12 +452,12 @@ describe("createGrant", () => {
       assertSuccess(await share());
       assertSuccess(await share());
 
-      // One row and one email from the first share, nothing from the second.
+      // One row and one queued email from the first share, nothing from the second.
       expect(await notificationsFor(grantee)).toHaveLength(1);
-      expect(emailAdapter.sendAccessGrantedNotification).toHaveBeenCalledTimes(1);
+      expect(await deliveriesFor(grantee)).toHaveLength(1);
     });
 
-    it("calls a re-share at another role a change, and sends no email for it", async () => {
+    it("calls a re-share at another role a change, and queues no email for it", async () => {
       const name = `Changed Macro ${crypto.randomUUID()}`;
       const macro = await testApp.createMacro({ name, createdBy: owner });
       const grantee = await testApp.createTestUser({ name: "Promoted Grantee" });
@@ -475,7 +469,6 @@ describe("createGrant", () => {
           role: "viewer",
         }),
       );
-      vi.mocked(emailAdapter.sendAccessGrantedNotification).mockClear();
       assertSuccess(
         await createGrant.execute(owner, "macro", macro.id, {
           granteeType: "user",
@@ -494,10 +487,11 @@ describe("createGrant", () => {
         resourceId: macro.id,
         params: { resourceName: name, role: "admin" },
       });
-      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+      // Only the first share owed an email; the change carries none.
+      expect(await deliveriesFor(grantee)).toMatchObject([{ type: "resource_access_granted" }]);
     });
 
-    it("stores the row but sends no email when the grantee switched the category off", async () => {
+    it("stores the row but queues no email when the grantee switched the category off", async () => {
       const macro = await testApp.createMacro({ name: "Muted Share", createdBy: owner });
       const grantee = await testApp.createTestUser({ name: "Muted Grantee" });
       assertSuccess(
@@ -515,7 +509,7 @@ describe("createGrant", () => {
       );
 
       expect(await notificationsFor(grantee)).toHaveLength(1);
-      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+      expect(await deliveriesFor(grantee)).toEqual([]);
     });
 
     it("still returns the collaborators list when the notification cannot be stored", async () => {
@@ -558,7 +552,7 @@ describe("createGrant", () => {
         grantee,
       );
       expect(await notificationsFor(grantee)).toEqual([]);
-      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+      expect(await deliveriesFor(grantee)).toEqual([]);
     });
   });
 

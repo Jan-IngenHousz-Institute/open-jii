@@ -74,6 +74,19 @@ describe("useIotBrowserSupport", () => {
     expect(result.current.serialReason).toBeNull();
   });
 
+  it("keeps the same result object across re-renders", () => {
+    Object.defineProperty(globalThis, "navigator", {
+      value: { bluetooth: {}, userAgent: "test" },
+      configurable: true,
+    });
+
+    const { result, rerender } = renderHook(() => useIotBrowserSupport("generic"));
+    const first = result.current;
+    rerender();
+
+    expect(result.current).toBe(first);
+  });
+
   describe("with sensorFamily filtering", () => {
     it("disables bluetooth for multispeq with 'device' reason", () => {
       Object.defineProperty(globalThis, "navigator", {

@@ -4,6 +4,7 @@ import { JsonFormatToggle } from "@/components/shared/json-format-toggle";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { useJsonFormatStyle } from "@/hooks/useJsonFormatStyle";
+import { findAmbitTraces } from "@/lib/ambit/timeseries";
 import { formatJson } from "@/lib/json-format";
 import { isMultispeqOutput } from "@/lib/multispeq/detect";
 import {
@@ -25,6 +26,7 @@ import type {
   OutputDeviceResult,
   WorkbookCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { resolveInlineCommand } from "@repo/api/transforms/command-payload";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card } from "@repo/ui/components/card";
@@ -41,6 +43,7 @@ interface OutputCellProps {
   onDelete: () => void;
   readOnly?: boolean;
   producer?: WorkbookCell;
+  protocolSnapshot?: { code?: unknown } | null;
 }
 
 function formatExecutionTime(ms?: number): string {
@@ -99,7 +102,6 @@ function DataTabs({
   onChartClick,
   activeTab,
   onTabChange,
-  showTimeseries,
   protocolCode,
   protocolLoading,
 }: {
@@ -109,7 +111,6 @@ function DataTabs({
   onChartClick: ChartClickHandler;
   activeTab: string;
   onTabChange: (tab: string) => void;
-  showTimeseries: boolean;
   protocolCode?: unknown;
   protocolLoading?: boolean;
 }) {
@@ -118,6 +119,9 @@ function DataTabs({
   // Measurement payloads are mostly long sample arrays, so the layout matters
   // here as much as it does for protocol code. Copy takes what is on screen.
   const jsonText = useMemo(() => formatJson(data, { style }), [data, style]);
+  const hasMultispeq = useMemo(() => isMultispeqOutput(data), [data]);
+  const ambitTraces = useMemo(() => findAmbitTraces(data), [data]);
+  const showTimeseries = hasMultispeq || ambitTraces.length > 0;
   return (
     <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
       <TabsList className="border-border bg-muted h-8 rounded-lg border p-0.5">
@@ -149,6 +153,8 @@ function DataTabs({
         <TabsContent value="timeseries" className="mt-2">
           <OutputCellTimeseries
             data={data}
+            hasMultispeq={hasMultispeq}
+            ambitTraces={ambitTraces}
             protocolCode={protocolCode}
             loading={protocolLoading}
             emptyLabel={t("output.timeseriesEmpty")}
@@ -217,12 +223,10 @@ function DeviceResultIdentity({ result }: { result: OutputDeviceResult }) {
 // switching the JSON view on one device doesn't flip the others.
 function DeviceResultBlock({
   result,
-  showTimeseries,
   protocolCode,
   protocolLoading,
 }: {
   result: OutputDeviceResult;
-  showTimeseries: boolean;
   protocolCode?: unknown;
   protocolLoading?: boolean;
 }) {
@@ -274,7 +278,6 @@ function DeviceResultBlock({
               setActiveTab(tab);
               if (tab !== "table") setPinnedChart(null);
             }}
-            showTimeseries={showTimeseries}
             protocolCode={protocolCode}
             protocolLoading={protocolLoading}
           />
@@ -298,6 +301,7 @@ export function OutputCellComponent({
   onDelete,
   readOnly,
   producer,
+  protocolSnapshot,
 }: OutputCellProps) {
   const { t } = useTranslation("workbook");
   const hasContent =
@@ -331,11 +335,23 @@ export function OutputCellComponent({
   const sourceProtocolId = producer?.type === "protocol" ? producer.payload.protocolId : undefined;
   const { data: protocolResponse, isLoading: protocolLoading } = useProtocol(
     sourceProtocolId ?? "",
-    !!sourceProtocolId,
+    !!sourceProtocolId && protocolSnapshot === undefined,
   );
-  const protocolFamily = protocolResponse?.family;
-  const protocolCode = protocolResponse?.code;
-  const showTimeseries = protocolFamily === "multispeq" && isMultispeqOutput(cell.data);
+  const inlineProtocol = useMemo(() => {
+    if (producer?.type !== "command") return undefined;
+    try {
+      return resolveInlineCommand(producer.payload);
+    } catch {
+      return undefined;
+    }
+  }, [producer]);
+  const protocolCode =
+    producer?.type === "command"
+      ? inlineProtocol
+      : protocolSnapshot !== undefined
+        ? protocolSnapshot?.code
+        : protocolResponse?.code;
+  const loadingProtocol = !!sourceProtocolId && protocolSnapshot === undefined && protocolLoading;
 
   return (
     <Card padding="none" className="group/output relative mt-1 overflow-hidden">
@@ -420,11 +436,8 @@ export function OutputCellComponent({
                   <DeviceResultBlock
                     key={result.deviceId}
                     result={result}
-                    showTimeseries={
-                      protocolFamily === "multispeq" && isMultispeqOutput(result.data)
-                    }
                     protocolCode={protocolCode}
-                    protocolLoading={protocolLoading}
+                    protocolLoading={loadingProtocol}
                   />
                 ))}
               </div>
@@ -450,9 +463,8 @@ export function OutputCellComponent({
                     onChartClick={handleChartClick}
                     activeTab={activeTab}
                     onTabChange={handleTabChange}
-                    showTimeseries={showTimeseries}
                     protocolCode={protocolCode}
-                    protocolLoading={protocolLoading}
+                    protocolLoading={loadingProtocol}
                   />
                   {pinnedChart && activeTab === "table" && (
                     // Plotly reuses its plot div across re-renders; switching columns can leave the

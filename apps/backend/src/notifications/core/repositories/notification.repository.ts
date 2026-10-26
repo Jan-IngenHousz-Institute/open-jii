@@ -16,14 +16,17 @@ import {
   desc,
   eq,
   inArray,
+  isNotNull,
   isNull,
+  lt,
   notificationPreferences,
   notifications,
+  or,
   profiles,
   sql,
   users,
 } from "@repo/database";
-import type { DatabaseInstance, SQL } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
@@ -60,8 +63,18 @@ export interface NotificationUserDto {
   lastName: string;
 }
 
+export interface RetentionPeriods {
+  readAfterDays: number;
+  allAfterDays: number;
+  batchSize: number;
+}
+
 /** Postgres binds one parameter per column, so a single statement cannot take every row. */
 const INSERT_CHUNK_SIZE = 1000;
+
+export const NOTIFICATION_RETENTION_LOCK_KEY = "notifications_retention";
+
+const RETENTION_LOCK = sql`hashtext(${NOTIFICATION_RETENTION_LOCK_KEY})`;
 
 @Injectable()
 export class NotificationRepository {
@@ -74,12 +87,15 @@ export class NotificationRepository {
    * One statement per chunk, returning only the rows that were actually written: a row
    * whose dedupe key is already taken is skipped, and the caller emails nobody about it.
    */
-  async insertMany(rows: NotificationInsertRow[]): Promise<Result<NotificationInsertedRow[]>> {
+  async insertMany(
+    rows: NotificationInsertRow[],
+    handle: DbOrTx = this.database,
+  ): Promise<Result<NotificationInsertedRow[]>> {
     return tryCatch(async () => {
       const inserted: NotificationInsertedRow[] = [];
 
       for (let start = 0; start < rows.length; start += INSERT_CHUNK_SIZE) {
-        const written = await this.database
+        const written = await handle
           .insert(notifications)
           .values(rows.slice(start, start + INSERT_CHUNK_SIZE))
           .onConflictDoNothing()
@@ -95,7 +111,10 @@ export class NotificationRepository {
   /**
    * Who to address, for the recipients of a dispatch and its actor. A deactivated
    * profile yields no address and an anonymised name, so nothing identifying leaves
-   * the platform on their behalf.
+   * the platform on their behalf. A closed account yields no address either: deletion
+   * sets `deleted_at` and rewrites `users.email` to a `deleted-…@example.com` stand-in
+   * without touching `activated`, which the anonymising projection alone would hand
+   * out as a deliverable address.
    */
   async findUsers(ids: string[]): Promise<Result<NotificationUserDto[]>> {
     return tryCatch(async () => {
@@ -106,7 +125,9 @@ export class NotificationRepository {
       return this.database
         .select({
           id: users.id,
-          email: getAnonymizedEmail(),
+          email: sql<
+            string | null
+          >`CASE WHEN ${profiles.deletedAt} IS NULL THEN ${getAnonymizedEmail()} ELSE NULL END`,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
         })
@@ -220,6 +241,71 @@ export class NotificationRepository {
         .returning({ id: notifications.id });
 
       return updated.length;
+    });
+  }
+
+  /**
+   * A session lock, held across the delete batches with no transaction around them;
+   * `false` means another task holds it. The task's client pools one connection
+   * (`max: 1`), so every batch runs on the session that took the lock, and a transaction
+   * would pin that one connection for every request in the task until the last batch. The
+   * driver also recycles that one connection at the end of its lifetime, so a release now
+   * and then finds the lock gone with the replaced session. If the pool ever grows, the
+   * release can land on a session that never locked, and the lock then needs a reserved
+   * connection.
+   */
+  async tryRetentionLock(): Promise<Result<boolean>> {
+    return tryCatch(async () => {
+      const [row] = await this.database.execute<{ locked: boolean }>(
+        sql`SELECT pg_try_advisory_lock(${RETENTION_LOCK}) AS locked`,
+      );
+      return row.locked;
+    });
+  }
+
+  /**
+   * Deletes up to `batchSize` notifications that arrived more than `readAfterDays` ago and
+   * have been read, or more than `allAfterDays` ago whatever their state; their deliveries
+   * go with them by cascade. Both cut-offs come from the database clock, the one
+   * `created_at` and `read_at` are stamped by. The uncorrelated subquery runs once, so its
+   * `LIMIT` caps the batch.
+   */
+  async deleteExpiredBatch({
+    readAfterDays,
+    allAfterDays,
+    batchSize,
+  }: RetentionPeriods): Promise<Result<number>> {
+    return tryCatch(async () => {
+      const readCutoff = sql`(now() AT TIME ZONE 'UTC') - make_interval(days => ${readAfterDays})`;
+      const allCutoff = sql`(now() AT TIME ZONE 'UTC') - make_interval(days => ${allAfterDays})`;
+
+      const expired = this.database
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(
+          and(
+            lt(notifications.createdAt, readCutoff),
+            or(isNotNull(notifications.readAt), lt(notifications.createdAt, allCutoff)),
+          ),
+        )
+        .limit(batchSize);
+
+      const rows = await this.database
+        .delete(notifications)
+        .where(inArray(notifications.id, expired))
+        .returning({ id: notifications.id });
+
+      return rows.length;
+    });
+  }
+
+  /** `false` when this session no longer held the lock. */
+  async releaseRetentionLock(): Promise<Result<boolean>> {
+    return tryCatch(async () => {
+      const [row] = await this.database.execute<{ unlocked: boolean }>(
+        sql`SELECT pg_advisory_unlock(${RETENTION_LOCK}) AS unlocked`,
+      );
+      return row.unlocked;
     });
   }
 

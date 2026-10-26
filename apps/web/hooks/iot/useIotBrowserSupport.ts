@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { isTransportSupported } from "@repo/iot";
 
 import { sensorFamilyToDeviceType } from "./device-type-mapping";
+
+const subscribe = () => () => undefined;
 
 /** Why a transport is unavailable */
 export type TransportUnavailableReason = "browser" | "device" | null;
@@ -32,18 +34,18 @@ export interface IotBrowserSupport {
  *   intersected with the device's declared transport support.
  */
 export function useIotBrowserSupport(sensorFamily?: SensorFamily): IotBrowserSupport {
-  const [support, setSupport] = useState<IotBrowserSupport>({
-    bluetooth: false,
-    serial: false,
-    any: false,
-    bluetoothReason: "browser",
-    serialReason: "browser",
-  });
+  const browserBluetooth = useSyncExternalStore(
+    subscribe,
+    () => typeof navigator !== "undefined" && "bluetooth" in navigator,
+    () => false,
+  );
+  const browserSerial = useSyncExternalStore(
+    subscribe,
+    () => typeof navigator !== "undefined" && "serial" in navigator,
+    () => false,
+  );
 
-  useEffect(() => {
-    const browserBluetooth = typeof navigator !== "undefined" && "bluetooth" in navigator;
-    const browserSerial = typeof navigator !== "undefined" && "serial" in navigator;
-
+  return useMemo(() => {
     // Intersect browser capabilities with device transport support
     const deviceType = sensorFamily ? sensorFamilyToDeviceType(sensorFamily) : undefined;
     const deviceSupportsBluetooth = deviceType
@@ -65,8 +67,6 @@ export function useIotBrowserSupport(sensorFamily?: SensorFamily): IotBrowserSup
         ? "browser"
         : "device";
 
-    setSupport({ bluetooth, serial, any: bluetooth || serial, bluetoothReason, serialReason });
-  }, [sensorFamily]);
-
-  return support;
+    return { bluetooth, serial, any: bluetooth || serial, bluetoothReason, serialReason };
+  }, [browserBluetooth, browserSerial, sensorFamily]);
 }

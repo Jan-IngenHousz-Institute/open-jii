@@ -47,6 +47,10 @@ function toDraft(definition: CalibrationDefinition): DefinitionDraft {
   };
 }
 
+function draftKey(draft: DefinitionDraft | undefined): string {
+  return JSON.stringify(draft ?? null);
+}
+
 type Translate = (key: string, values?: Record<string, unknown>) => string;
 
 /** What keeps a draft from saving. A draft is briefly invalid on most keystrokes, so only a persistent refusal is shown. */
@@ -128,7 +132,7 @@ export function CalibrationDefinitionDetail() {
 
   const autosave = useAutosave<DefinitionDraft | undefined>({
     value: edited,
-    toKey: (value) => JSON.stringify(value ?? null),
+    toKey: draftKey,
     isValid: (value) => value !== undefined && saveIssues(value).length === 0,
     save,
     // Enabling anchors the saved copy to what the server sent, so the first edit is
@@ -139,9 +143,12 @@ export function CalibrationDefinitionDetail() {
   // A blocked or frozen draft has no save state worth reporting: "all changes saved" would
   // be a lie, and a spinner would promise a save that is not coming.
   const isReportable = canEdit && !isBlocked;
+  // Unlike the status, this stays true for a draft whose save failed or that cannot be saved.
+  const hasUnsavedChanges = canEdit && draft !== undefined && draftKey(draft) !== autosave.savedKey;
   useReportAutosaveStatus({
     status: isReportable ? autosave.status : null,
     error: autosave.error,
+    hasUnsavedChanges,
   });
 
   const handleDescriptionSave = useCallback(

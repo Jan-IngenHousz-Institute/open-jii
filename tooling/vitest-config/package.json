@@ -6,6 +6,7 @@
   "exports": {
     ".": "./dist/index.js",
     "./base": "./dist/configs/base-config.js",
+    "./coverage": "./dist/coverage.js",
     "./ui": "./dist/configs/ui-config.js",
     "./setup": "./dist/setup.js",
     "./mobile": "./dist/mobile-rn.js"
@@ -28,6 +29,7 @@
     "@repo/typescript-config": "workspace:*",
     "@testing-library/jest-dom": "catalog:testing",
     "@testing-library/react": "catalog:testing",
+    "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:testing",
     "@vitest/ui": "catalog:testing",
     "glob": "^11.1.0",

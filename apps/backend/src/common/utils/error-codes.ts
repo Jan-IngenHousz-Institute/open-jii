@@ -64,6 +64,7 @@ export enum ErrorCodes {
   // Location: src/common/modules/email/
   EMAIL_SEND_FAILED = "EMAIL_SEND_FAILED", // Email sending failed
   EMAIL_TRANSPORT_VERIFY_FAILED = "EMAIL_TRANSPORT_VERIFY_FAILED", // SMTP login check failed
+  EMAIL_RELAY_UNREACHABLE = "EMAIL_RELAY_UNREACHABLE", // Could not reach the mail relay at all
 
   // ==================== Mailchimp / Newsletter ====================
   // Location: src/common/modules/mailchimp/
@@ -203,6 +204,9 @@ export enum ErrorCodes {
   // ==================== Services ====================
   // Location: src/experiments/application/services/
   EMBARGO_PROCESSING_FAILED = "EMBARGO_PROCESSING_FAILED", // Failed to process embargoes
+
+  // Location: src/notifications/application/services/
+  NOTIFICATION_RETENTION_FAILED = "NOTIFICATION_RETENTION_FAILED", // Failed to delete expired notifications
 
   // Location: src/health/application/services/
   DEPENDENCY_HEALTH_PUBLISH_FAILED = "DEPENDENCY_HEALTH_PUBLISH_FAILED", // Dependency health metrics not published

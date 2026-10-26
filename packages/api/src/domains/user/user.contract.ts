@@ -17,7 +17,7 @@ import {
   zUserMetadataWebhookPayload,
   zUserMetadataWebhookResponse,
   zUserProfile,
-  zUserProfileList,
+  zUserSearchResultList,
   zWhatsNewSeenResponse,
 } from "./user.schema";
 
@@ -25,7 +25,7 @@ export const userContract = {
   searchUsers: oc
     .route({ method: "GET", path: "/api/v1/users/search", successStatus: 200 })
     .input(zSearchUsersQuery)
-    .output(zUserProfileList),
+    .output(zUserSearchResultList),
   getUser: oc
     .route({ method: "GET", path: "/api/v1/users/{id}", successStatus: 200 })
     .input(zUserIdPathParam)

@@ -1,6 +1,6 @@
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { zProtocolSort } from "@repo/api/domains/protocol/protocol.schema";
 import { isPaginatedList } from "@repo/api/shared/listing";
@@ -36,11 +36,9 @@ export const useProtocols = ({ initialSearch = "" }: { initialSearch?: string } 
 
   // A mutation or background update can shrink the result set under the current
   // page; snap back into range once a real (non-placeholder) response says so.
-  useEffect(() => {
-    if (!data || query.isPlaceholderData) return;
-    const maxPage = Math.max(1, data.totalPages);
-    if (page > maxPage) setPage(maxPage);
-  }, [data, query.isPlaceholderData, page]);
+  if (data && !query.isPlaceholderData && page > Math.max(1, data.totalPages)) {
+    setPage(Math.max(1, data.totalPages));
+  }
 
   return {
     data,

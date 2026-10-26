@@ -185,3 +185,21 @@ describe("EditableCell", () => {
     });
   });
 });
+
+describe("EditableCell value sync", () => {
+  it("edits the latest value after the prop changes", async () => {
+    const user = userEvent.setup();
+    const props = {
+      rowId: "row1",
+      columnId: "col1",
+      type: "string" as const,
+      onUpdate: vi.fn(),
+    };
+    const { rerender } = render(<EditableCell {...props} value="first" />);
+    rerender(<EditableCell {...props} value="second" />);
+
+    await user.click(screen.getByRole("button"));
+
+    expect(screen.getByRole("textbox")).toHaveValue("second");
+  });
+});

@@ -1,5 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import {
+  EmailVisibilityService,
+  flatEmail,
+} from "../../../../authorization/email-visibility.service";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import type { OrganizationMemberDto } from "../../../core/models/organization.model";
 import { canViewOrganization, isOrganizationMember } from "../../../core/organization-access";
@@ -13,7 +17,10 @@ import { OrganizationRepository } from "../../../core/repositories/organization.
 export class ListOrganizationMembersUseCase {
   private readonly logger = new Logger(ListOrganizationMembersUseCase.name);
 
-  constructor(private readonly organizationRepository: OrganizationRepository) {}
+  constructor(
+    private readonly organizationRepository: OrganizationRepository,
+    private readonly emailVisibility: EmailVisibilityService,
+  ) {}
 
   async execute(
     organizationId: string,
@@ -43,6 +50,7 @@ export class ListOrganizationMembersUseCase {
       return failure(AppError.internal("Failed to load organization members"));
     }
 
-    return success({ members: membersResult.value });
+    const members = await this.emailVisibility.redact(userId, membersResult.value, flatEmail());
+    return success({ members });
   }
 }

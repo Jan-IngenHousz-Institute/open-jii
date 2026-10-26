@@ -10,7 +10,9 @@ import {
   success,
   AppError,
 } from "../../../../../common/utils/fp-utils";
+import { NotificationDeliveryRepository } from "../../../../../notifications/core/repositories/notification-delivery.repository";
 import { NotificationRepository } from "../../../../../notifications/core/repositories/notification.repository";
+import { queuedDeliveriesFor } from "../../../../../test/notification-deliveries";
 import { TestHarness } from "../../../../../test/test-harness";
 import { CreateTransferRequestUseCase } from "./create-transfer-request";
 
@@ -29,6 +31,8 @@ describe("CreateTransferRequest", () => {
 
   const notificationsFor = (userId: string) =>
     testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
+
+  const deliveriesFor = (userId: string) => queuedDeliveriesFor(testApp.database, userId);
 
   // findExistingRequest finds nothing, then createTransferRequest inserts a row.
   const mockCreatePath = () =>
@@ -90,12 +94,10 @@ describe("CreateTransferRequest", () => {
       params: { projectId: input.projectIdOld, projectUrl: input.projectUrlOld },
     });
 
-    expect(emailAdapter.sendTransferRequestConfirmation).toHaveBeenCalledTimes(1);
-    expect(emailAdapter.sendTransferRequestConfirmation).toHaveBeenCalledWith(
-      testUserEmail,
-      input.projectIdOld,
-      input.projectUrlOld,
-    );
+    expect(await deliveriesFor(testUserId)).toMatchObject([
+      { type: "project_transfer_requested", channel: "email", status: "pending" },
+    ]);
+    expect(emailAdapter.sendTransferRequestConfirmation).not.toHaveBeenCalled();
   });
 
   it("should return bad request error when user email is missing", async () => {
@@ -150,23 +152,25 @@ describe("CreateTransferRequest", () => {
     expect(result.error.message).toContain("You already have a transfer request for this project");
     expect(result.error.message).toContain("Status: pending");
     expect(await notificationsFor(testUserId)).toHaveLength(0);
-    expect(emailAdapter.sendTransferRequestConfirmation).not.toHaveBeenCalled();
+    expect(await deliveriesFor(testUserId)).toHaveLength(0);
   });
 
-  it("should succeed even if email sending fails", async () => {
+  it("should succeed even if the email cannot be queued", async () => {
     mockCreatePath();
-    vi.spyOn(emailAdapter, "sendTransferRequestConfirmation").mockResolvedValue(
-      failure(AppError.internal("Email service unavailable")),
+    vi.spyOn(testApp.module.get(NotificationDeliveryRepository), "insertMany").mockResolvedValue(
+      failure(AppError.internal("Database unavailable")),
     );
 
     // Act
     const result = await useCase.execute(testUserId, testUserEmail, input);
 
-    // Assert - should still succeed
+    // Assert - the transfer request stands; the telling is all-or-nothing, so a
+    // delivery that could not be written takes its notification row with it.
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value.status).toBe("pending");
-    expect(await notificationsFor(testUserId)).toHaveLength(1);
+    expect(await notificationsFor(testUserId)).toHaveLength(0);
+    expect(await deliveriesFor(testUserId)).toHaveLength(0);
   });
 
   it("should return internal error when repository fails to create request", async () => {
@@ -204,7 +208,7 @@ describe("CreateTransferRequest", () => {
     expect(result.error.code).toBe("INTERNAL_ERROR");
   });
 
-  it("should store the notification but send no email when the stored identifier is not an email address", async () => {
+  it("should store the notification but queue no email when the stored identifier is not an email address", async () => {
     const orcidId = "0000-0002-1825-0097"; // Example ORCID ID (not an email)
     // Dispatch reads the address from `users.email`, so the ORCID id has to be what
     // this requester is stored with for the withheld email to mean anything.
@@ -226,7 +230,7 @@ describe("CreateTransferRequest", () => {
       status: "pending",
     });
     expect(await notificationsFor(orcidUserId)).toHaveLength(1);
-    expect(emailAdapter.sendTransferRequestConfirmation).not.toHaveBeenCalled();
+    expect(await deliveriesFor(orcidUserId)).toHaveLength(0);
   });
 
   it("should still return the request when the notification cannot be stored", async () => {
@@ -242,10 +246,10 @@ describe("CreateTransferRequest", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value.status).toBe("pending");
-    expect(emailAdapter.sendTransferRequestConfirmation).not.toHaveBeenCalled();
+    expect(await deliveriesFor(testUserId)).toHaveLength(0);
   });
 
-  it("should store the notification but send no email when project transfers are switched off", async () => {
+  it("should store the notification but queue no email when project transfers are switched off", async () => {
     assertSuccess(
       await testApp.module
         .get(NotificationRepository)
@@ -259,6 +263,6 @@ describe("CreateTransferRequest", () => {
     // Assert
     assertSuccess(result);
     expect(await notificationsFor(testUserId)).toHaveLength(1);
-    expect(emailAdapter.sendTransferRequestConfirmation).not.toHaveBeenCalled();
+    expect(await deliveriesFor(testUserId)).toHaveLength(0);
   });
 });

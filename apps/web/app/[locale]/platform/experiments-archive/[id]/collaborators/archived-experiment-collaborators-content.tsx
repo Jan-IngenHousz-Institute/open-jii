@@ -72,7 +72,7 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
 
   const filteredInvitations = useMemo(() => {
     if (!normalizedFilter) return invitations;
-    return invitations.filter((inv) => inv.email.toLowerCase().includes(normalizedFilter));
+    return invitations.filter((inv) => (inv.email ?? "").toLowerCase().includes(normalizedFilter));
   }, [invitations, normalizedFilter]);
 
   const filteredJoinRequests = useMemo(() => {

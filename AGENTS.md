@@ -41,12 +41,17 @@ The platform UI is auth-gated, so a real check needs Postgres and the backend, n
   `curl -H @.claude/session.header`; the cookie never prints unless you pass `--print`.
 - `pnpm dev:fb` — runs backend and web together.
 - `pnpm e2e` — the browser end-to-end suite, against an already-running stack.
-- `pnpm lint`, `pnpm test`, `pnpm format:check` — validation.
+- `pnpm lint`, `pnpm test`, `pnpm typecheck`, `pnpm format:check` — validation.
+- `pnpm --filter <pkg> exec vitest run <path inside the package>` runs one test file. Coverage
+  runs only under `CI` or `COVERAGE=1`, so a single file does not trip the thresholds. In a fresh
+  worktree run `pnpm build:packages` first, because a direct vitest call skips Turbo's builds.
 - `pnpm linear:auth` stores your Linear key in the owner-only `tooling/devkit/.env`;
   `pnpm linear:query` and the other `linear:*` commands read it in process, so the key never enters
   a shell. `tooling/devkit/README.md` has the one-time setup a person follows.
 - `pnpm posthog:auth` does the same for a PostHog key; `pnpm posthog:query` runs HogQL and
   `pnpm posthog:issues` lists, shows and triages error-tracking issues.
+- `docs/agents/environments.md` covers dev and prod: URLs, signing in without a browser, the
+  production rule and the dev API key recipe.
 
 Copy `apps/backend/.env.example` to `apps/backend/.env` before first boot. It is generated and
 boot-tested, and its comments mark the variables where a plausible dummy value is **worse** than
@@ -104,10 +109,12 @@ Claude Code. Per-machine overrides belong in `.claude/settings.local.json`, whic
 
 ## main is protected
 
-A `PreToolUse` hook is a local seatbelt alongside the authoritative remote branch protection: it
-blocks destructive git while you are on `main`, and blocks pushing to `main` from anywhere. Work
-on a branch and open a PR. On your own branches nothing is restricted: force-push, reset and clean
-as you like.
+GitHub's ruleset protects `main`: every change arrives through a PR with an approval and green
+checks, and nobody, admins included, can bypass it. The local `PreToolUse` hook only guards work
+in progress: it blocks `reset --hard`, `clean -f`, `checkout .` and `restore .` while the repo the
+command targets is on `main`. Claude Code runs it from `.claude/settings.json` and Codex from
+`.codex/hooks.json`, which Codex runs once you trust it through `/hooks`. On your own branches
+nothing is restricted.
 
 ## Pull requests feed releases
 

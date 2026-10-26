@@ -3,6 +3,10 @@ import { Injectable } from "@nestjs/common";
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
+import {
+  EmailVisibilityService,
+  collaboratorEmail,
+} from "../../../../authorization/email-visibility.service";
 import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
 import type { ResourceCollaborator } from "../../../core/models/sharing.model";
 import { SharingRepository } from "../../../core/repositories/sharing.repository";
@@ -16,6 +20,7 @@ export class ListGrantsUseCase {
   constructor(
     private readonly authz: AuthorizationService,
     private readonly repo: SharingRepository,
+    private readonly emailVisibility: EmailVisibilityService,
   ) {}
 
   async execute(
@@ -35,6 +40,10 @@ export class ListGrantsUseCase {
     // The organization the decision was resolved against, never a fresh read: a
     // transfer landing between the two would list another organization's owners,
     // admins and members as this resource's collaborators.
-    return this.repo.list(resourceType, resourceId, decision.organizationId);
+    return this.emailVisibility.redactAll(
+      userId,
+      await this.repo.list(resourceType, resourceId, decision.organizationId),
+      collaboratorEmail(),
+    );
   }
 }

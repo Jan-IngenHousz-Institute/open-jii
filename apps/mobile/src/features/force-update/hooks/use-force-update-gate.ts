@@ -26,7 +26,7 @@ export function useForceUpdateGate(locale = "en-US"): ForceUpdateGateResult {
   const envLoaded = useEnvironmentStore((s) => s.isLoaded);
   const isRestoring = useIsRestoring();
   const queryClient = useQueryClient();
-  const [initialCheckReady, setInitialCheckReady] = useState(false);
+  const [checkedLocale, setCheckedLocale] = useState<string | null>(null);
   const queryKey = useMemo(() => ["contentful", "force-update", locale] as const, [locale]);
 
   const { data, fetchStatus } = useQuery({
@@ -56,14 +56,10 @@ export function useForceUpdateGate(locale = "en-US"): ForceUpdateGateResult {
     });
   }, [envLoaded, locale, queryClient, queryKey]);
 
-  useEffect(() => {
-    setInitialCheckReady(false);
-  }, [locale]);
-
-  useEffect(() => {
-    if (initialCheckReady || isRestoring || !envLoaded || fetchStatus === "fetching") return;
-    setInitialCheckReady(true);
-  }, [envLoaded, fetchStatus, initialCheckReady, isRestoring]);
+  const initialCheckReady = checkedLocale === locale;
+  if (!initialCheckReady && !isRestoring && envLoaded && fetchStatus !== "fetching") {
+    setCheckedLocale(locale);
+  }
 
   const gate = data ?? null;
   const running = Application.nativeApplicationVersion ?? "";

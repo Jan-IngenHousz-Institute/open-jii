@@ -36,7 +36,7 @@
     "lint": "eslint",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@better-auth/api-key": "1.6.23",

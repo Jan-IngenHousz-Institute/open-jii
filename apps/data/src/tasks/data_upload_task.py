@@ -38,6 +38,7 @@ from pyspark.sql.types import (
 
 from ambyte import find_byte_folders, load_files_per_byte, process_trace_files
 from openjii.json_scrub import scrub_non_finite_json_value
+from openjii.variant_schema import merged_variant_schema, variant_schema_key
 from enrich.backend_client import BackendClient
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -580,26 +581,65 @@ def main() -> dict:
 
 # DBTITLE 1,Notify the uploader
 UPLOADED_DATA_TABLE = f"{CATALOG_NAME}.centrum.experiment_uploaded_data"
+UPLOADED_DATA_SCHEMAS_TABLE = f"{CATALOG_NAME}.centrum.experiment_uploaded_data_schemas"
+TABLE_METADATA = f"{CATALOG_NAME}.centrum.experiment_table_metadata"
 ENVIRONMENT = (_optional_widget("ENVIRONMENT") or "").lower()
-# The pipeline is continuous, so rows usually land within minutes; an hour means it is stuck.
+# The pipeline is continuous, so an upload is usually queryable within minutes; an hour means it is stuck.
 TABLE_WAIT_SECONDS = 60 * 60
 TABLE_POLL_SECONDS = 15
 
 
-def wait_for_table_rows(expected_rows: int) -> bool:
-    """True once all of the upload's rows are in the experiment's table, False if they never arrive."""
+def _upload_table_rows(table: str) -> DataFrame:
+    return spark.table(table).where(
+        (F.col("experiment_id") == EXPERIMENT_ID) & (F.col("upload_table_id") == UPLOAD_TABLE_ID)
+    )
+
+
+def upload_schema_keys(expected_rows: int) -> list[str] | None:
+    """The distinct schemas of the upload's rows once all of them are in its table, else None."""
+    rows = _upload_table_rows(UPLOADED_DATA_TABLE).where(F.col("upload_id") == UPLOAD_ID)
+    if rows.count() < expected_rows:
+        return None
+    keys = rows.select(variant_schema_key("uploaded_data").alias("schema_key")).distinct()
+    return [row["schema_key"] for row in keys.collect()]
+
+
+def table_list_shows(schema_keys: list[str]) -> bool:
+    """True once the table list has refreshed since the upload's schemas reached the
+    table's samples, which the pipeline merges into the listed schema."""
+    samples = _upload_table_rows(UPLOADED_DATA_SCHEMAS_TABLE)
+    sampled = samples.where(F.col("schema_key").isin(schema_keys)).select("schema_key").distinct()
+    if sampled.count() < len(schema_keys):
+        return False
+
+    merged = samples.agg(merged_variant_schema("sample").alias("schema")).first()["schema"]
+    listed = (
+        spark.table(TABLE_METADATA)
+        .where(
+            (F.col("experiment_id") == EXPERIMENT_ID)
+            & (F.col("identifier") == UPLOAD_TABLE_ID)
+            & (F.col("table_type") == "upload")
+        )
+        .select("upload_schema")
+        .first()
+    )
+    return listed is not None and listed["upload_schema"] == merged
+
+
+def wait_until_queryable(expected_rows: int) -> bool:
+    """True once every row of the upload is in its table and the table list shows the
+    table with the upload's columns; False if that does not happen in time."""
     deadline = time.monotonic() + TABLE_WAIT_SECONDS
+    schema_keys: list[str] | None = None
     while time.monotonic() < deadline:
         try:
-            landed = spark.sql(
-                f"SELECT count(*) AS landed FROM {UPLOADED_DATA_TABLE} WHERE upload_id = :upload_id",
-                args={"upload_id": UPLOAD_ID},
-            ).first()["landed"]
-            if landed >= expected_rows:
+            if schema_keys is None:
+                schema_keys = upload_schema_keys(expected_rows)
+            if schema_keys is not None and table_list_shows(schema_keys):
                 return True
         except Exception as e:
             # A failed check is retried at the next poll; raising would rerun the whole upload.
-            logger.warning(f"Could not count the upload's rows yet: {e}")
+            logger.warning(f"Could not check whether the upload is queryable yet: {e}")
         time.sleep(TABLE_POLL_SECONDS)
     return False
 
@@ -635,10 +675,10 @@ def report_outcome(result: dict) -> None:
     rows_written = int(result.get("rows_written", 0))
     if result["status"] == "error" or rows_written == 0:
         notify_uploader("failed")
-    elif wait_for_table_rows(rows_written):
+    elif wait_until_queryable(rows_written):
         notify_uploader("ready")
     else:
-        logger.error(f"Upload {UPLOAD_ID} did not reach {UPLOADED_DATA_TABLE} within {TABLE_WAIT_SECONDS} s")
+        logger.error(f"Upload {UPLOAD_ID} was not queryable within {TABLE_WAIT_SECONDS} s")
         notify_uploader("failed")
 
 # COMMAND ----------

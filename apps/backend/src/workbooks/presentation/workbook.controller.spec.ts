@@ -73,6 +73,7 @@ describe("WorkbookController", () => {
     cells: [],
     metadata: {},
     organizationId: null,
+    forkedFrom: null,
     visibility: "public",
     createdBy: testUserId,
     createdByName: faker.person.fullName(),
@@ -431,7 +432,9 @@ describe("WorkbookController", () => {
       cells: [],
       metadata: {},
       createdAt: new Date(),
+      updatedAt: new Date(),
       createdBy: testUserId,
+      entitySnapshots: { protocols: {}, macros: {} },
       ...overrides,
     });
 
@@ -484,7 +487,9 @@ describe("WorkbookController", () => {
       cells: [],
       metadata: {},
       createdAt: new Date(),
+      updatedAt: new Date(),
       createdBy: testUserId,
+      entitySnapshots: { protocols: {}, macros: {} },
       ...overrides,
     });
 
@@ -530,7 +535,9 @@ describe("WorkbookController", () => {
       cells: [],
       metadata: {},
       createdAt: new Date(),
+      updatedAt: new Date(),
       createdBy: testUserId,
+      entitySnapshots: { protocols: {}, macros: {} },
     });
 
     beforeEach(async () => {

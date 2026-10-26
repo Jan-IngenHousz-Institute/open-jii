@@ -4,6 +4,7 @@ import { useMeasurements } from "~/features/recent-measurements/hooks/use-measur
 import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
 import { getMeasurementLocation } from "~/shared/location/measurement-location";
+import { getClientMetadata } from "~/shared/measurements/client-metadata";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
 import { getMeasurementMqttTopic } from "~/shared/measurements/measurement-topic";
@@ -57,6 +58,7 @@ export function useQuestionsUpload() {
         workbook_version_id: workbookVersionId,
         annotations: buildAnnotations(commentText, flagType),
         ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
+        ...getClientMetadata(),
       };
 
       const measurement = {

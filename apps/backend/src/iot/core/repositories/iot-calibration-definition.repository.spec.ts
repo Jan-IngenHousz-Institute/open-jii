@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker";
 
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
+import { calibrationDefinitions, eq } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -91,6 +92,20 @@ describe("IotCalibrationDefinitionRepository", () => {
     const otherFamily = await repository.listAccessible(stranger, { family: "ambit" });
     assertSuccess(otherFamily);
     expect(otherFamily.value.map((row) => row.id)).not.toContain(definition.id);
+  });
+
+  it("updates a definition and leaves updatedAt to Postgres", async () => {
+    const definition = await createDefinition(userId);
+    const backdated = new Date("2020-01-01T00:00:00Z");
+    await testApp.database
+      .update(calibrationDefinitions)
+      .set({ updatedAt: backdated })
+      .where(eq(calibrationDefinitions.id, definition.id));
+
+    const updated = await repository.update(definition.id, { name: "Renamed calibration" });
+    assertSuccess(updated);
+    expect(updated.value?.name).toBe("Renamed calibration");
+    expect(updated.value?.updatedAt.getTime()).toBeGreaterThan(backdated.getTime());
   });
 
   it("deletes a definition", async () => {

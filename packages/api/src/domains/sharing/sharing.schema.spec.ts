@@ -4,8 +4,10 @@ import { zPublishableResourceType } from "../visibility/visibility.schema";
 import {
   zCreateCollaboratorBody,
   zGranteeType,
+  zGranteeUser,
   zGrantRole,
   zResourceGrant,
+  zSearchGranteeUsersQuery,
   zShareableRole,
   zSharingResourceType,
   zUpdateCollaboratorBody,
@@ -132,5 +134,43 @@ describe("the grantable role set is narrower than the stored one", () => {
       expect(zGrantRole.options).toContain(role);
     }
     expect(zShareableRole.options.length).toBeLessThan(zGrantRole.options.length);
+  });
+});
+
+describe("zSearchGranteeUsersQuery", () => {
+  const path = { resourceType: "experiment", id: "123e4567-e89b-12d3-a456-426614174000" };
+
+  it("defaults to 20 results and trims the query", () => {
+    const result = zSearchGranteeUsersQuery.parse({ ...path, query: "  jo " });
+    expect(result.query).toBe("jo");
+    expect(result.limit).toBe(20);
+  });
+
+  it.each([undefined, "", "a", "  a  "])("rejects the query %j", (query) => {
+    expect(zSearchGranteeUsersQuery.safeParse({ ...path, query }).success).toBe(false);
+  });
+
+  it.each([0, 21, 50])("rejects limit %i rather than clamping it", (limit) => {
+    expect(zSearchGranteeUsersQuery.safeParse({ ...path, query: "jo", limit }).success).toBe(false);
+  });
+});
+
+describe("grantee search exact-match evidence", () => {
+  const row = {
+    userId: "123e4567-e89b-12d3-a456-426614174000",
+    firstName: "Lin",
+    lastName: "Zhao",
+    email: null,
+    avatarUrl: null,
+    organizationRole: null,
+    existingGrantRole: null,
+  };
+  it("requires explicit evidence even when the address is hidden", () => {
+    expect(zGranteeUser.safeParse(row).success).toBe(false);
+    expect(zGranteeUser.parse({ ...row, matchedEmail: true })).toMatchObject({
+      email: null,
+      matchedEmail: true,
+    });
+    expect(zGranteeUser.parse({ ...row, matchedEmail: false }).matchedEmail).toBe(false);
   });
 });

@@ -1,5 +1,8 @@
 {
   "extends": "@repo/typescript-config/base.json",
+  "compilerOptions": {
+    "module": "Node16"
+  },
   "include": ["."],
   "exclude": ["node_modules"]
 }

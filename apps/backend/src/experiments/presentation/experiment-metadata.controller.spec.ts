@@ -5,6 +5,7 @@ import { contract } from "@repo/api/contract";
 import type { ExperimentMetadata } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
+import { success } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { ExperimentMetadataRepository } from "../core/repositories/experiment-metadata.repository";
@@ -51,10 +52,8 @@ describe("ExperimentMetadataController", () => {
       });
 
       const metadataRepository = testApp.module.get(ExperimentMetadataRepository);
-      vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue({
-        isSuccess: () => true,
-        isFailure: () => false,
-        value: [
+      vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue(
+        success([
           {
             metadataId: faker.string.uuid(),
             experimentId: experiment.id,
@@ -63,11 +62,8 @@ describe("ExperimentMetadataController", () => {
             createdAt: new Date("2025-06-01T12:00:00.000Z"),
             updatedAt: new Date("2025-06-02T12:00:00.000Z"),
           },
-        ],
-        chain: function (fn: (val: unknown) => unknown) {
-          return fn(this.value);
-        },
-      } as never);
+        ]),
+      );
 
       const path = testApp.resolveOrpcPath(contract.experiments.listExperimentMetadata, {
         id: experiment.id,
@@ -92,14 +88,7 @@ describe("ExperimentMetadataController", () => {
       });
 
       const metadataRepository = testApp.module.get(ExperimentMetadataRepository);
-      vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue({
-        isSuccess: () => true,
-        isFailure: () => false,
-        value: [],
-        chain: function (fn: (val: unknown) => unknown) {
-          return fn(this.value);
-        },
-      } as never);
+      vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue(success([]));
 
       const path = testApp.resolveOrpcPath(contract.experiments.listExperimentMetadata, {
         id: experiment.id,
@@ -153,14 +142,7 @@ describe("ExperimentMetadataController", () => {
         updatedAt: new Date("2025-06-01T12:00:00.000Z"),
       };
 
-      vi.spyOn(metadataRepository, "create").mockResolvedValue({
-        isSuccess: () => true,
-        isFailure: () => false,
-        value: mockResult,
-        chain: function (fn: (val: unknown) => unknown) {
-          return fn(this.value);
-        },
-      } as never);
+      vi.spyOn(metadataRepository, "create").mockResolvedValue(success(mockResult));
 
       const path = testApp.resolveOrpcPath(contract.experiments.createExperimentMetadata, {
         id: experiment.id,
@@ -244,14 +226,7 @@ describe("ExperimentMetadataController", () => {
         updatedAt: new Date("2025-06-03T12:00:00.000Z"),
       };
 
-      vi.spyOn(metadataRepository, "update").mockResolvedValue({
-        isSuccess: () => true,
-        isFailure: () => false,
-        value: mockResult,
-        chain: function (fn: (val: unknown) => unknown) {
-          return fn(this.value);
-        },
-      } as never);
+      vi.spyOn(metadataRepository, "update").mockResolvedValue(success(mockResult));
 
       const path = testApp.resolveOrpcPath(contract.experiments.updateExperimentMetadata, {
         id: experiment.id,
@@ -332,14 +307,7 @@ describe("ExperimentMetadataController", () => {
 
       const metadataId = faker.string.uuid();
       const metadataRepository = testApp.module.get(ExperimentMetadataRepository);
-      vi.spyOn(metadataRepository, "deleteByMetadataId").mockResolvedValue({
-        isSuccess: () => true,
-        isFailure: () => false,
-        value: true,
-        chain: function (fn: (val: unknown) => unknown) {
-          return fn(this.value);
-        },
-      } as never);
+      vi.spyOn(metadataRepository, "deleteByMetadataId").mockResolvedValue(success(true));
 
       const path = testApp.resolveOrpcPath(contract.experiments.deleteExperimentMetadata, {
         id: experiment.id,

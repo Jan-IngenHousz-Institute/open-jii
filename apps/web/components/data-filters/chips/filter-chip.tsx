@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import type {
   ExperimentDataFilter,
@@ -50,11 +50,9 @@ export function FilterChip({
   const [draft, setDraft] = useState<ExperimentDataFilter>(filter);
 
   // Sync only when closed so URL back/forward doesn't clobber in-flight edits.
-  useEffect(() => {
-    if (!open) {
-      setDraft(filter);
-    }
-  }, [filter, open]);
+  if (!open && draft !== filter) {
+    setDraft(filter);
+  }
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);

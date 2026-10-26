@@ -1,5 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import {
+  EmailVisibilityService,
+  nestedUserEmail,
+} from "../../../../authorization/email-visibility.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
@@ -25,6 +29,7 @@ export class DecideOrganizationJoinRequestUseCase {
     private readonly organizationRepository: OrganizationRepository,
     private readonly joinRequestRepository: OrganizationJoinRequestRepository,
     private readonly notifications: NotificationDispatchService,
+    private readonly emailVisibility: EmailVisibilityService,
   ) {}
 
   async execute(
@@ -71,9 +76,11 @@ export class DecideOrganizationJoinRequestUseCase {
       return failure(AppError.conflict("Join request is no longer pending", ErrorCodes.CONFLICT));
     }
 
-    return decision === "approve"
-      ? this.approve(organizationId, requestId, existing, currentUserId)
-      : this.reject(organizationId, requestId, existing, currentUserId);
+    const decided =
+      decision === "approve"
+        ? await this.approve(organizationId, requestId, existing, currentUserId)
+        : await this.reject(organizationId, requestId, existing, currentUserId);
+    return this.emailVisibility.redactAfterWrite(currentUserId, decided, nestedUserEmail());
   }
 
   private async approve(

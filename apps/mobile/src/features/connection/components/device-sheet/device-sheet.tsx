@@ -49,14 +49,17 @@ export function DeviceSheet() {
   const { handleConnect, handleDisconnect, connectingDeviceId } = useDeviceSheetActions();
 
   const [showAllDevices, setShowAllDevices] = useState(false);
-  const { data: bluetoothPermissionGranted = true, refetch: refreshBluetoothPermission } = useQuery(
-    {
-      queryKey: ["bluetooth-permission"],
-      queryFn: hasBluetoothPermission,
-      enabled: isOpen,
-      networkMode: "always",
-    },
-  );
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen);
+    if (!isOpen) setShowAllDevices(false);
+  }
+  const { data: bluetoothPermissionGranted, refetch: refreshBluetoothPermission } = useQuery({
+    queryKey: ["bluetooth-permission"],
+    queryFn: hasBluetoothPermission,
+    enabled: isOpen,
+    networkMode: "always",
+  });
   // Already-connected devices are shown in the connected list above, not as
   // pairable nearby rows.
   const availableDevices = useMemo(() => {
@@ -69,10 +72,6 @@ export function DeviceSheet() {
   const collapseUnnamed = named.length > 0 && !showAllDevices;
   const visibleDevices = collapseUnnamed ? named : [...named, ...unnamed];
 
-  useEffect(() => {
-    if (!isOpen) setShowAllDevices(false);
-  }, [isOpen]);
-
   const handleAllowBluetooth = useCallback(async () => {
     const granted = await requestBluetoothPermission();
     if (granted) {
@@ -82,10 +81,10 @@ export function DeviceSheet() {
     }
   }, [refreshBluetoothPermission]);
 
-  // Stream devices as soon as the sheet opens (with permission); the list fills
-  // in as they're discovered instead of waiting for the full scan.
+  // Stream devices once the permission check has answered; refreshDevices
+  // skips Bluetooth without it, and reruns with it after a grant.
   useEffect(() => {
-    if (isOpen && bluetoothPermissionGranted) void refreshDevices();
+    if (isOpen && bluetoothPermissionGranted !== undefined) void refreshDevices();
   }, [isOpen, bluetoothPermissionGranted, refreshDevices]);
 
   const hasConnected = connectedDevices.length > 0;
@@ -213,7 +212,7 @@ export function DeviceSheet() {
           </Pressable>
         </View>
 
-        {!bluetoothPermissionGranted ? (
+        {bluetoothPermissionGranted === false ? (
           <View className="border-divider bg-card flex-row items-center gap-3 rounded-2xl border p-3.5">
             <View
               className="h-10 w-10 items-center justify-center"

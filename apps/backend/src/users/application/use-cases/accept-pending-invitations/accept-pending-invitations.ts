@@ -3,6 +3,8 @@ import { Injectable, Logger } from "@nestjs/common";
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import type { InvitationDto } from "../../../core/models/user-invitation.model";
 import { InvitationRepository } from "../../../core/repositories/user-invitation.repository";
 
 @Injectable()
@@ -12,6 +14,7 @@ export class AcceptPendingInvitationsUseCase {
   constructor(
     private readonly invitationRepository: InvitationRepository,
     private readonly authz: AuthorizationService,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   /**
@@ -168,6 +171,8 @@ export class AcceptPendingInvitationsUseCase {
         resourceId: invitation.resourceId,
         userId,
       });
+
+      await this.notify(invitation, userId);
     }
 
     this.logger.log({
@@ -181,5 +186,46 @@ export class AcceptPendingInvitationsUseCase {
     });
 
     return success(acceptedCount);
+  }
+
+  /**
+   * Tell the inviter their invitation was taken up. A failure here leaves the
+   * acceptance standing.
+   */
+  private async notify(invitation: InvitationDto, userId: string): Promise<void> {
+    const name = await this.invitationRepository.findResourceName(
+      invitation.resourceType,
+      invitation.resourceId,
+    );
+    if (name.isFailure()) {
+      this.logger.error({
+        msg: "Could not name the experiment, the inviter was not notified",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "accept-pending-invitations",
+        invitationId: invitation.id,
+        resourceId: invitation.resourceId,
+        error: name.error,
+      });
+      return;
+    }
+
+    const dispatched = await this.notifications.dispatch({
+      type: "experiment_invitation_accepted",
+      recipientIds: [invitation.invitedBy],
+      actorId: userId,
+      resource: { type: "experiment", id: invitation.resourceId },
+      params: { experimentName: name.value },
+    });
+
+    if (dispatched.isFailure()) {
+      this.logger.error({
+        msg: "Failed to notify the inviter, the invitation was still accepted",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "accept-pending-invitations",
+        invitationId: invitation.id,
+        resourceId: invitation.resourceId,
+        error: dispatched.error,
+      });
+    }
   }
 }

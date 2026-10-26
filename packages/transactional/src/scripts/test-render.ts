@@ -5,8 +5,12 @@ import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 
 import { renderAccessGrantedNotification } from "../render/access-granted-notification";
+import { renderExperimentMadePublicNotification } from "../render/experiment-made-public-notification";
+import { renderOrganizationMembershipRemoved } from "../render/organization-membership-removed";
+import { renderOrganizationRoleChanged } from "../render/organization-role-changed";
 import { renderOtpEmail } from "../render/otp-email";
 import { renderProjectTransferComplete } from "../render/project-transfer-complete";
+import { renderResourceDeletedNotification } from "../render/resource-deleted-notification";
 import { renderTransferRequestConfirmation } from "../render/transfer-request-confirmation";
 
 const outDir = join(process.cwd(), "dist/email-previews");
@@ -43,6 +47,49 @@ async function main(): Promise<void> {
       resourceUrl: `${baseUrl}/en-US/platform/workbooks/123`,
       actor: "Jane Doe",
       role: "a collaborator who can view",
+    }),
+  );
+
+  write(
+    "resource-deleted",
+    await renderResourceDeletedNotification({
+      host,
+      baseUrl,
+      resourceKind: "device group",
+      resourceName: "North Field Sensors",
+      actor: "Jane Doe",
+    }),
+  );
+
+  write(
+    "organization-role-changed",
+    await renderOrganizationRoleChanged({
+      host,
+      baseUrl,
+      organizationName: "Photosynthesis Lab",
+      organizationUrl: `${baseUrl}/en-US/platform/organizations/123`,
+      actor: "Jane Doe",
+      role: "an admin of",
+    }),
+  );
+
+  write(
+    "organization-membership-removed",
+    await renderOrganizationMembershipRemoved({
+      host,
+      baseUrl,
+      organizationName: "Photosynthesis Lab",
+      actor: "Jane Doe",
+    }),
+  );
+
+  write(
+    "experiment-made-public",
+    await renderExperimentMadePublicNotification({
+      host,
+      baseUrl,
+      experimentName: "Leaf Area Index",
+      experimentUrl: `${baseUrl}/en-US/platform/experiments/123`,
     }),
   );
 

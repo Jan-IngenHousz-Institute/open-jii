@@ -52,7 +52,8 @@ Rules:
 - Cover each acceptance criterion at least once, the alternative flows the ticket names, and the
   negative case for any permission or validation rule the diff touches.
 - Say what data the tester needs and how to get it. A step nobody can set up is not a step. When
-  the data lives only in production, ask the person for it; an agent never queries production.
+  the data lives only in production, ask the person for it; an agent reads production only when
+  the person asks.
 - Every step and every expected result is a whole sentence. A tester reads it cold; "Filters:
   status, clear; page 2" tells them nothing.
 - Under 1,200 characters. If the criteria run longer, the ticket was too big; say so. Cut steps,

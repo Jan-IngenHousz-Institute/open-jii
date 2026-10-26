@@ -15,6 +15,7 @@ import {
   or,
   profiles,
   protocolMacros,
+  resourceVisits,
   sql,
   getTableColumns,
   ensurePersonalOrganization,
@@ -37,8 +38,10 @@ import {
 import {
   accessibleResourceCondition,
   relatedResourceCondition,
+  resourceRoleExpression,
   resourceTierExpression,
 } from "../../../common/utils/resource-access-scope";
+import type { ResourceRoleName } from "../../../common/utils/resource-access-scope";
 import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import {
   CreateMacroDto,
@@ -70,6 +73,14 @@ function protocolCountSql() {
 
 /** A listing row plus its relevance score, which global search merges on across types. */
 export type MacroSearchRow = MacroDto & { score: number };
+
+export type RecentlyOpenedMacroRow = Pick<
+  typeof macros.$inferSelect,
+  "id" | "name" | "language"
+> & {
+  openedAt: Date;
+  callerRole: ResourceRoleName | null;
+};
 
 function toMacroRow(result: {
   macros: unknown;
@@ -254,6 +265,55 @@ export class MacroRepository {
       }
 
       return (await query).map(toMacroRow);
+    });
+  }
+
+  /**
+   * The caller's visited macros, most recently opened first. The listing's access
+   * condition applies, so a visit the caller can no longer open never comes back.
+   */
+  async findRecentlyOpened(
+    userId: string,
+    limit: number,
+  ): Promise<Result<RecentlyOpenedMacroRow[]>> {
+    return tryCatch(() => {
+      const callerRole = resourceRoleExpression({
+        database: this.database,
+        resourceType: "macro",
+        resourceIdColumn: macros.id,
+        organizationIdColumn: macros.organizationId,
+        userId,
+      });
+
+      return this.database
+        .select({
+          id: macros.id,
+          name: macros.name,
+          language: macros.language,
+          openedAt: resourceVisits.visitedAt,
+          callerRole,
+        })
+        .from(macros)
+        .innerJoin(
+          resourceVisits,
+          and(
+            eq(resourceVisits.userId, userId),
+            eq(resourceVisits.resourceType, "macro"),
+            eq(resourceVisits.resourceId, macros.id),
+          ),
+        )
+        .where(
+          accessibleResourceCondition({
+            database: this.database,
+            resourceType: "macro",
+            resourceIdColumn: macros.id,
+            organizationIdColumn: macros.organizationId,
+            visibilityColumn: macros.visibility,
+            userId,
+          }),
+        )
+        .orderBy(desc(resourceVisits.visitedAt), asc(macros.id))
+        .limit(limit);
     });
   }
 

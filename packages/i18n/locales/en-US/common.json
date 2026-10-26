@@ -84,7 +84,9 @@
     "sortUnsorted": "unsorted",
     "sortAscending": "ascending",
     "sortDescending": "descending",
-    "sortSecondary": "secondary sort"
+    "sortSecondary": "secondary sort",
+    "searchMinCharacters": "Type at least 2 characters to search",
+    "emailMatched": "Matches the email you entered"
   },
   "navigation": {
     "experiments": "Experiments",
@@ -302,6 +304,7 @@
     "experimentUnarchivedError": "Failed to unarchive experiment. Please try again.",
     "remove": "Remove",
     "pendingInvite": "Invite pending",
+    "addressHidden": "Address hidden",
     "invitationRevoked": "Invitation revoked successfully",
     "revoke": "Revoke",
     "collaborators": "Collaborators",
@@ -342,7 +345,9 @@
     "invite": "Invite",
     "inviteCollaborators": "Invite collaborators",
     "inviteCollaboratorsDescription": "Add an existing user or one of your organizations, or invite someone by email. Existing accounts get access right away; invitees are emailed and join once they accept.",
-    "filterCollaboratorsPlaceholder": "Filter by name or email…"
+    "filterCollaboratorsPlaceholder": "Filter by name or email…",
+    "invitedBy": "Invited by",
+    "unknownInviter": "Unknown inviter"
   },
   "joinCode": {
     "title": "Join code",
@@ -693,7 +698,7 @@
     "invite": {
       "action": "Invite",
       "title": "Invite someone",
-      "description": "Search for someone with an account, or type an address that has none. Either way they are sent an invitation.",
+      "description": "Search by name or enter an exact email address. If their address is hidden, enter it exactly to send an invitation.",
       "roleLabel": "Role",
       "submit": "Send invitation",
       "sending": "Sending…",
@@ -713,6 +718,7 @@
       "searchFailed": "Could not search for people.",
       "alreadyMember": "This person is already a member of this organization",
       "alreadyInvited": "This address already has a pending invitation",
+      "enterExactEmail": "Enter their exact email address to invite them",
       "mustAccept": "{{name}} will be invited as {{role}} and joins once they accept.",
       "sendByEmail": "Send invite by email",
       "label": "Invited",
@@ -900,23 +906,13 @@
     }
   },
   "dashboard": {
-    "title": "Dashboard",
+    "title": "Home",
     "welcome": "Welcome to openJII",
-    "transferBannerTitle": "Welcome to openJII",
-    "transferBannerDescription": "Continue your research without interruption; transfer your data now, report a bug or ",
-    "transferBannerDescriptionItalic": "request a new feature",
-    "transferBannerButton": "Request transfer",
-    "reportBugButton": "Report bug",
     "recentExperiments": "Recent Experiments",
     "recentArticles": "Recent blog posts",
-    "recentlyOpenedExperiments": "Recently opened",
     "seeAll": "See all",
     "statistics": "Statistics",
     "quickActions": "Quick Actions",
-    "noBlogPosts": "No blog posts available",
-    "errorLoadingBlogPosts": "Error loading blog posts",
-    "recentPublicExperiments": "Recently updated public experiments",
-    "noPublicExperiments": "No public experiments yet.",
     "publicExperimentsLoadFailed": "Could not load public experiments.",
     "publicExperimentsStale": "No public experiment has been updated since {{date}}.",
     "browsePublicExperiments": "Browse public experiments",
@@ -935,8 +931,24 @@
       }
     },
     "yourExperiments": "Your experiments",
-    "userExperimentsLoadFailed": "Could not load your experiments.",
-    "userExperimentsRetry": "Try again"
+    "recentlyOpened": "Recently opened",
+    "recentlyOpenedLoadFailed": "Could not load what you opened recently.",
+    "typeFilterLabel": "Show one type",
+    "allTypes": "All",
+    "seeAllType": {
+      "experiment": "See all experiments",
+      "protocol": "See all protocols",
+      "macro": "See all macros",
+      "workbook": "See all workbooks"
+    },
+    "workbookVersion": "Version {{version}}",
+    "publicResearch": "Public research",
+    "getStarted": "Get started",
+    "welcomeNotice": "Welcome to openJII. Continue your research without interruption; transfer your data now.",
+    "requestTransfer": "Request transfer",
+    "dismiss": "Dismiss",
+    "feedback": "Something not working? <bug>Report a bug</bug> or <feature>request a feature</feature>.",
+    "userExperimentsLoadFailed": "Could not load your experiments."
   },
   "auth": {
     "login": "Sign in",

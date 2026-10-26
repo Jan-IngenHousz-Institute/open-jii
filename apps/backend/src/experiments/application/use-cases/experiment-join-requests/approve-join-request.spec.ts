@@ -14,6 +14,8 @@ import {
   AppError,
 } from "../../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { NotificationDeliveryRepository } from "../../../../notifications/core/repositories/notification-delivery.repository";
+import { queuedDeliveriesFor } from "../../../../test/notification-deliveries";
 import { TestHarness } from "../../../../test/test-harness";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
 import { ApproveJoinRequestUseCase } from "./approve-join-request";
@@ -29,6 +31,8 @@ describe("ApproveJoinRequestUseCase", () => {
 
   const notificationsFor = (userId: string) =>
     testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
+
+  const deliveriesFor = (userId: string) => queuedDeliveriesFor(testApp.database, userId);
 
   beforeAll(async () => {
     await testApp.setup();
@@ -153,6 +157,7 @@ describe("ApproveJoinRequestUseCase", () => {
     // A moot request notifies nobody.
     expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
     expect(await notificationsFor(requesterUserId)).toHaveLength(0);
+    expect(await deliveriesFor(requesterUserId)).toHaveLength(0);
     // The stale request was closed (cancelled).
     const reread = await joinRequestRepository.findById(request.id);
     assertSuccess(reread);
@@ -204,15 +209,18 @@ describe("ApproveJoinRequestUseCase", () => {
       params: { experimentName: experiment.name },
     });
 
-    expect(emailAdapter.sendAccessGrantedNotification).toHaveBeenCalledWith({
-      resourceType: "experiment",
-      resourceId: experiment.id,
-      resourceName: experiment.name,
-      actor: "Adam Admin",
-      // Approval hands out the contributing tier, never an administering one.
-      role: "a contributor who can view and add data",
-      email: "requester@example.com",
-    });
+    // The email is owed rather than sent; the worker renders it from this row, and
+    // what it says — the contributing tier, never an administering one — is the
+    // email service's own spec.
+    expect(await deliveriesFor(requesterUserId)).toEqual([
+      {
+        notificationId: row.id,
+        type: "experiment_join_request_approved",
+        channel: "email",
+        status: "pending",
+      },
+    ]);
+    expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
   });
 
   it("does not demote a requester promoted after the access check", async () => {
@@ -279,8 +287,9 @@ describe("ApproveJoinRequestUseCase", () => {
     }
     expect(refused[0].error.statusCode).toBe(StatusCodes.CONFLICT);
     expect(refused[0].error.message).toContain("no longer pending");
-    expect(emailAdapter.sendAccessGrantedNotification).toHaveBeenCalledTimes(1);
+
     expect(await notificationsFor(requesterUserId)).toHaveLength(1);
+    expect(await deliveriesFor(requesterUserId)).toHaveLength(1);
 
     const decisions = await testApp.database
       .select({
@@ -294,10 +303,10 @@ describe("ApproveJoinRequestUseCase", () => {
     expect([adminUserId, secondAdminUserId]).toContain(decisions[0].decidedBy);
   });
 
-  it("still approves successfully when the membership email fails to send", async () => {
+  it("still approves successfully when the membership email cannot be queued", async () => {
     const { experiment, request } = await seedPendingRequest();
-    vi.spyOn(emailAdapter, "sendAccessGrantedNotification").mockResolvedValue(
-      failure(AppError.internal("smtp down")),
+    vi.spyOn(testApp.module.get(NotificationDeliveryRepository), "insertMany").mockResolvedValue(
+      failure(AppError.internal("Database unavailable")),
     );
 
     const result = await useCase.execute(experiment.id, request.id, adminUserId);

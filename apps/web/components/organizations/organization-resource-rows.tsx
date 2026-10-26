@@ -2,12 +2,8 @@
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { StatusBadge } from "@/components/shared/status-badge";
-import type { StatusTone } from "@/components/shared/status-badge";
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime, formatShortDate } from "@/util/date";
-import { getExperimentStatusBadgeTone } from "@/util/experiment-status";
-import { getMacroLanguageBadgeTone, getMacroLanguageLabel } from "@/util/macro-language";
-import { getSensorFamilyBadgeTone, getSensorFamilyLabel } from "@/util/sensor-family";
 import { stripHtml } from "@/util/strip-html";
 import { Lock } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -38,7 +34,12 @@ import {
   filterAndSortResources,
   hasActiveFilters,
 } from "./organization-resource-filter";
-import { GROUP_ORDER, RESOURCE_SEGMENT, RESOURCE_TYPE_COLOR } from "./organization-resource-meta";
+import {
+  GROUP_ORDER,
+  RESOURCE_SEGMENT,
+  RESOURCE_TYPE_COLOR,
+  resourceMetaBadge,
+} from "./organization-resource-meta";
 import { ResourceTransferDialog } from "./resource-transfer-dialog";
 
 /** The sort options, in the order they are offered. */
@@ -52,42 +53,6 @@ const SORT_OPTIONS: readonly { value: ResourceSort; labelKey: string }[] = [
 function transferableType(type: OrganizationResource["type"]): TransferableResourceType | null {
   const parsed = zTransferableResourceType.safeParse(type);
   return parsed.success ? parsed.data : null;
-}
-
-/** A row's one type-specific fact, in the colour that value wears on its own listing. */
-function metaBadge(
-  resource: OrganizationResource,
-  t: (key: string) => string,
-): { label: string; tone: StatusTone } | null {
-  switch (resource.type) {
-    case "experiment":
-      return {
-        label: t(`organizations.resources.status.${resource.status}`),
-        tone: getExperimentStatusBadgeTone(resource.status),
-      };
-    case "protocol":
-      return {
-        label: getSensorFamilyLabel(resource.family),
-        tone: getSensorFamilyBadgeTone(resource.family),
-      };
-    case "macro":
-      return {
-        label: getMacroLanguageLabel(resource.language),
-        tone: getMacroLanguageBadgeTone(resource.language),
-      };
-    case "device":
-      return {
-        label: getSensorFamilyLabel(resource.deviceType),
-        tone: getSensorFamilyBadgeTone(resource.deviceType),
-      };
-    // A workbook has no second fact. A group does — its roster size — but that is a
-    // quantity rather than a category, so it has no colour of its own to wear and
-    // reads as footer text beside the type instead.
-    case "workbook":
-    case "device_group":
-    case "calibration_definition":
-      return null;
-  }
 }
 
 /** The resource a transfer is being started for, held by the list rather than by its row. */
@@ -234,7 +199,7 @@ function ResourceRow({
   const { t } = useTranslation();
   const locale = useLocale();
 
-  const meta = metaBadge(resource, t);
+  const meta = resourceMetaBadge(resource, t);
   // Neither a device nor a device group has a transfer route, so they get no control
   // rather than one that refuses.
   const transferableAs = onTransfer ? transferableType(resource.type) : null;

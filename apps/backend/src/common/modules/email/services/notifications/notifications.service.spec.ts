@@ -1,9 +1,18 @@
+import { Logger } from "@nestjs/common";
 import type { MockInstance } from "vitest";
 
+import {
+  ATTEMPT_DEADLINE_MS,
+  LEASE_MS,
+} from "../../../../../notifications/application/services/notification-outbox.worker";
 import { TestHarness } from "../../../../../test/test-harness";
 import { ErrorCodes } from "../../../../utils/error-codes";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
-import { NotificationsService } from "./notifications.service";
+import {
+  MAIL_TRANSPORT_TIMEOUTS_MS,
+  NotificationsService,
+  mailTransportOptions,
+} from "./notifications.service";
 
 function spyOnProtected(instance: object, method: string): MockInstance {
   return vi.spyOn(instance as unknown as Record<string, unknown>, method as never);
@@ -205,6 +214,90 @@ describe("NotificationsService", () => {
       expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
     });
 
+    /** A transport that fails the way nodemailer does: an `Error` carrying its `code`. */
+    const failingWith = (message: string, fields: Record<string, unknown>) => ({
+      sendMail: vi.fn().mockImplementation(() => {
+        throw Object.assign(new Error(message), fields);
+      }),
+    });
+
+    const share = () =>
+      service.sendAccessGrantedNotification({
+        resourceType: "macro",
+        resourceId: MOCK_RESOURCE_ID,
+        resourceName: MOCK_RESOURCE_NAME,
+        actor: MOCK_ACTOR,
+        role: "a collaborator who can edit",
+        email: MOCK_EMAIL,
+      });
+
+    it("names a relay it could not reach, so a caller can wait out the outage", async () => {
+      mockCreateTransport.mockReturnValue(
+        failingWith("connect ECONNREFUSED 127.0.0.1:1025", { code: "ECONNECTION" }),
+      );
+
+      const result = await share();
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.EMAIL_RELAY_UNREACHABLE);
+      // The message is the one every failed send has always carried.
+      expect(result.error.message).toBe(
+        "Failed to send email: connect ECONNREFUSED 127.0.0.1:1025",
+      );
+    });
+
+    it("does not call a relay that answered and refused the message unreachable", async () => {
+      // The relay was reached and said no: a counted failure, not an outage.
+      mockCreateTransport.mockReturnValue(
+        failingWith("Can't send mail - all recipients were rejected: 550 5.1.1 unknown user", {
+          code: "EENVELOPE",
+          responseCode: 550,
+        }),
+      );
+
+      const result = await share();
+
+      assertFailure(result);
+      expect(result.error.code).not.toBe(ErrorCodes.EMAIL_RELAY_UNREACHABLE);
+    });
+
+    it("logs an unreachable relay as a warning, not an error", async () => {
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+      const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+      mockCreateTransport.mockReturnValue(
+        failingWith("connect ECONNREFUSED 127.0.0.1:1025", { code: "ECONNECTION" }),
+      );
+
+      await share();
+
+      // Every send during an outage fails the same way; none of them is an error.
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({ operation: "sendAccessGrantedNotification" }),
+      );
+      expect(error).not.toHaveBeenCalled();
+    });
+
+    it("logs a refused message as an error", async () => {
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+      const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+      mockCreateTransport.mockReturnValue(
+        failingWith("Can't send mail - all recipients were rejected: 550 5.1.1 unknown user", {
+          code: "EENVELOPE",
+          responseCode: 550,
+        }),
+      );
+
+      await share();
+
+      expect(error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: "sendAccessGrantedNotification",
+          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
+        }),
+      );
+      expect(warn).not.toHaveBeenCalled();
+    });
+
     it("reports a failed send as a failure rather than throwing", async () => {
       mockCreateTransport.mockReturnValue({
         sendMail: vi.fn().mockImplementation(() => {
@@ -223,6 +316,139 @@ describe("NotificationsService", () => {
 
       assertFailure(result);
       expect(result.error.message).toContain("Failed to send email: SMTP connection failed");
+    });
+  });
+
+  describe("sendResourceDeletedNotification", () => {
+    let mockRenderResourceDeletedNotification: MockInstance;
+
+    beforeEach(() => {
+      mockRenderResourceDeletedNotification = spyOnProtected(
+        service,
+        "renderResourceDeletedNotificationEmail",
+      ).mockResolvedValue({
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("renders the deletion template with the kind label and sends it to the address", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendResourceDeletedNotification({
+        resourceType: "device_group",
+        resourceName: "Greenhouse sensors",
+        actor: MOCK_ACTOR,
+        email: MOCK_EMAIL,
+      });
+
+      assertSuccess(result);
+      expect(mockRenderResourceDeletedNotification).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        resourceKind: "device group",
+        resourceName: "Greenhouse sensors",
+        actor: MOCK_ACTOR,
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: "Greenhouse sensors was deleted on the openJII Platform",
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("treats a rejected address as a failure", async () => {
+      mockCreateTransport.mockReturnValue({
+        sendMail: vi.fn().mockReturnValue({
+          messageId: "test-message-id",
+          accepted: [],
+          rejected: [MOCK_EMAIL],
+          pending: [],
+        }),
+      });
+
+      const result = await service.sendResourceDeletedNotification({
+        resourceType: "protocol",
+        resourceName: "Leaf Area Index",
+        actor: MOCK_ACTOR,
+        email: MOCK_EMAIL,
+      });
+
+      assertFailure(result);
+      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+    });
+  });
+
+  describe("sendExperimentMadePublicNotification", () => {
+    let mockRenderExperimentMadePublicNotification: MockInstance;
+
+    beforeEach(() => {
+      mockRenderExperimentMadePublicNotification = spyOnProtected(
+        service,
+        "renderExperimentMadePublicNotificationEmail",
+      ).mockResolvedValue({
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("renders the made-public template with the experiment link and sends it to the address", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendExperimentMadePublicNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_EMAIL,
+      );
+
+      assertSuccess(result);
+      expect(mockRenderExperimentMadePublicNotification).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        experimentName: MOCK_EXPERIMENT_NAME,
+        experimentUrl: `http://localhost:3000/platform/experiments/${MOCK_EXPERIMENT_ID}`,
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: `${MOCK_EXPERIMENT_NAME} is now public on the openJII Platform`,
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("treats a rejected address as a failure", async () => {
+      mockCreateTransport.mockReturnValue({
+        sendMail: vi.fn().mockReturnValue({
+          messageId: "test-message-id",
+          accepted: [],
+          rejected: [MOCK_EMAIL],
+          pending: [],
+        }),
+      });
+
+      const result = await service.sendExperimentMadePublicNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_EMAIL,
+      );
+
+      assertFailure(result);
+      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
     });
   });
 
@@ -1032,6 +1258,145 @@ describe("NotificationsService", () => {
     });
   });
 
+  describe("sendOrganizationRoleChangedNotification", () => {
+    const MOCK_ORGANIZATION_ID = "org-123";
+    const MOCK_ORGANIZATION_NAME = "Photosynthesis Lab";
+    let mockRenderOrganizationRoleChangedEmail: MockInstance;
+
+    beforeEach(() => {
+      mockRenderOrganizationRoleChangedEmail = spyOnProtected(
+        service,
+        "renderOrganizationRoleChangedEmail",
+      ).mockResolvedValue({
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("renders the role template with the worded role and the organization's page", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendOrganizationRoleChangedNotification({
+        organizationId: MOCK_ORGANIZATION_ID,
+        organizationName: MOCK_ORGANIZATION_NAME,
+        actor: MOCK_ACTOR,
+        role: "an admin of",
+        email: MOCK_EMAIL,
+      });
+
+      assertSuccess(result);
+      expect(mockRenderOrganizationRoleChangedEmail).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        organizationName: MOCK_ORGANIZATION_NAME,
+        organizationUrl: `http://localhost:3000/platform/organizations/${MOCK_ORGANIZATION_ID}`,
+        actor: MOCK_ACTOR,
+        role: "an admin of",
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: `Your role in ${MOCK_ORGANIZATION_NAME} changed on the openJII Platform`,
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("treats a rejected address as a failure", async () => {
+      mockCreateTransport.mockReturnValue({
+        sendMail: vi.fn().mockReturnValue({
+          messageId: "test-message-id",
+          accepted: [],
+          rejected: [MOCK_EMAIL],
+          pending: [],
+        }),
+      });
+
+      const result = await service.sendOrganizationRoleChangedNotification({
+        organizationId: MOCK_ORGANIZATION_ID,
+        organizationName: MOCK_ORGANIZATION_NAME,
+        actor: MOCK_ACTOR,
+        role: "a member of",
+        email: MOCK_EMAIL,
+      });
+
+      assertFailure(result);
+      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+    });
+  });
+
+  describe("sendOrganizationMembershipRemovedNotification", () => {
+    const MOCK_ORGANIZATION_NAME = "Photosynthesis Lab";
+    let mockRenderOrganizationMembershipRemovedEmail: MockInstance;
+
+    beforeEach(() => {
+      mockRenderOrganizationMembershipRemovedEmail = spyOnProtected(
+        service,
+        "renderOrganizationMembershipRemovedEmail",
+      ).mockResolvedValue({
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("renders the removal template with no link and sends it to the address", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendOrganizationMembershipRemovedNotification({
+        organizationName: MOCK_ORGANIZATION_NAME,
+        actor: MOCK_ACTOR,
+        email: MOCK_EMAIL,
+      });
+
+      assertSuccess(result);
+      expect(mockRenderOrganizationMembershipRemovedEmail).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        organizationName: MOCK_ORGANIZATION_NAME,
+        actor: MOCK_ACTOR,
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: `You were removed from ${MOCK_ORGANIZATION_NAME} on the openJII Platform`,
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("treats a rejected address as a failure", async () => {
+      mockCreateTransport.mockReturnValue({
+        sendMail: vi.fn().mockReturnValue({
+          messageId: "test-message-id",
+          accepted: [],
+          rejected: [MOCK_EMAIL],
+          pending: [],
+        }),
+      });
+
+      const result = await service.sendOrganizationMembershipRemovedNotification({
+        organizationName: MOCK_ORGANIZATION_NAME,
+        actor: MOCK_ACTOR,
+        email: MOCK_EMAIL,
+      });
+
+      assertFailure(result);
+      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+    });
+  });
+
   describe("verifyTransport", () => {
     it("succeeds when the SMTP server accepts the login", async () => {
       mockCreateTransport.mockReturnValue({ verify: vi.fn().mockResolvedValue(true) });
@@ -1051,6 +1416,33 @@ describe("NotificationsService", () => {
       assertFailure(result);
       expect(result.error.code).toBe(ErrorCodes.EMAIL_TRANSPORT_VERIFY_FAILED);
       expect(result.error.message).toContain("535 Authentication failed");
+    });
+  });
+
+  describe("the transport's timeouts", () => {
+    it("travel beside the url, and stay under the outbox lease", () => {
+      // Shape first: the options and the url are one object, so they cannot end up in
+      // createTransport's second argument, where nodemailer treats them as per-message
+      // defaults and silently keeps its own ten-minute socket timeout.
+      expect(mailTransportOptions("smtp://127.0.0.1:1025")).toEqual({
+        url: "smtp://127.0.0.1:1025",
+        ...MAIL_TRANSPORT_TIMEOUTS_MS,
+      });
+
+      // The lease hands a row to another task after this long on the premise that no
+      // send outlives it; that premise holds only while each timeout is under it.
+      for (const timeout of Object.values(MAIL_TRANSPORT_TIMEOUTS_MS)) {
+        expect(timeout).toBeLessThan(LEASE_MS);
+      }
+
+      // And one attempt is given up on before the lease, so the slowest a send can
+      // legitimately be — all three timeouts in turn — has to fit inside that.
+      const slowestSend = Object.values(MAIL_TRANSPORT_TIMEOUTS_MS).reduce(
+        (total, timeout) => total + timeout,
+        0,
+      );
+      expect(slowestSend).toBeLessThan(ATTEMPT_DEADLINE_MS);
+      expect(ATTEMPT_DEADLINE_MS).toBeLessThan(LEASE_MS);
     });
   });
 });

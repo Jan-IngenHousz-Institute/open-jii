@@ -66,3 +66,14 @@ dev-only UI. Use only the seeded development identity. Then copy the file to its
 
 Play any recording end to end before publishing; a sampled contact sheet is not
 sufficient.
+
+## Privacy follow-up captures
+
+Set `E2E_PRIVACY_CAPTURE_EMAIL` to a synthetic registered user's address to enable
+`experiment-registered-invite`, `organization-registered-invite`, and
+`experiment-hidden-invitations`. The user must be outside the capturing account's
+organization, without an existing grant on the experiment. Seed pending experiment
+invitations from a different manager for the hidden-invitations shot. Set
+`E2E_PRIVACY_CAPTURE_EXPERIMENT` and `E2E_PRIVACY_CAPTURE_ORGANIZATION` when the
+fixture uses names other than Access Showcase Experiment and Access Showcase Lab.
+These captures follow the same staging and frame-review rules above.

@@ -196,6 +196,27 @@ describe("MacroOverviewPage", () => {
     });
   });
 
+  describe("Visits", () => {
+    it("records a visit once the macro loads", async () => {
+      const visit = server.mount(contract.visits.recordVisit, { status: 204 });
+
+      render(<MacroOverviewPage params={mockParams} />);
+
+      await waitFor(() => expect(visit.called).toBe(true));
+      expect(visit.body).toEqual({ resourceType: "macro", resourceId: "test-macro-id" });
+    });
+
+    it("records no visit when the macro fails to load", async () => {
+      server.mount(contract.macros.getMacro, { status: 500 });
+      const visit = server.mount(contract.visits.recordVisit, { status: 204 });
+
+      render(<MacroOverviewPage params={mockParams} />);
+
+      await waitFor(() => expect(screen.getByTestId("error-display")).toBeInTheDocument());
+      expect(visit.called).toBe(false);
+    });
+  });
+
   describe("Success State — sidebar layout", () => {
     it("should render the MacroDetailsSidebar with correct props", async () => {
       render(<MacroOverviewPage params={mockParams} />);

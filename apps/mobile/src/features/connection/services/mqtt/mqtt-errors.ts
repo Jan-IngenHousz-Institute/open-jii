@@ -27,9 +27,9 @@ export function isMqttError(err: unknown): err is MqttError {
 // reconnect via Transport.ensureConnected(). The Outbox's [1, 4, 15]s
 // backoff therefore *is* the reconnect schedule.
 //
-// CredentialError stays terminal: a Cognito misconfiguration won't be
-// fixed by retrying inside the current attempt window, and burning the
-// retry budget against AWS adds noise.
+// CredentialError stays terminal: the backend refused the credentials
+// request (signed out, forbidden), which retrying inside the current
+// attempt window cannot fix.
 export function isRetryableMqttError(err: unknown): boolean {
   if (!isMqttError(err)) return true;
   switch (err.kind) {

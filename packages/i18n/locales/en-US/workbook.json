@@ -93,11 +93,45 @@
     "closeChart": "Close chart",
     "expandChart": "Expand chart for {{column}}",
     "loadingProtocol": "Loading protocol…",
+    "multispeqProtocolMismatch_one": "{{count}} recorded sub-protocol cannot be matched to the protocol definition. A reliable time series cannot be reconstructed. All readings remain available in JSON.",
+    "multispeqProtocolMismatch_other": "{{count}} recorded sub-protocols cannot be matched to the protocol definition. A reliable time series cannot be reconstructed. All readings remain available in JSON.",
+    "multispeqTimeseriesXAxis": "Modeled protocol time (s)",
     "timeseriesXAxis": "Time (s)",
     "timeseriesYAxis": "Normalized signal",
     "timeseriesActinic": "Actinic light (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "No detector readings to plot",
-    "timeseriesError": "Cannot decode this output against the source protocol"
+    "timeseriesError": "Cannot reconstruct MultispeQ timing without a compatible source protocol. The original data is available in JSON.",
+    "ambitTrace": "Ambit trace",
+    "estimatedTime": "estimated time",
+    "ambitProblems": {
+      "unsupported": "This Ambit trace version is not supported. The original data is available in JSON.",
+      "invalid": "Cannot plot this series: values, units, or timestamps are missing or invalid. The original data is available in JSON.",
+      "empty": "No readings to plot.",
+      "limit": "Some data exceeds the chart limit. View the complete result in JSON."
+    },
+    "ambitCounts": "counts",
+    "ambitRatioAxis": "Fluorescence / reference",
+    "ambitRawChannels": "Raw detector channels",
+    "ambitSingleReading": "Single reading at {{time}} s",
+    "ambitReadings": "{{count}} readings",
+    "ambitRatioExplanation": "Fluorescence signal divided by its reference at the same timestamps. This is a signal ratio, not Fv/Fm.",
+    "ambitReferenceFilled_one": "{{count}} zero reference reading uses the mean measured reference, following the Ambyte trace analysis.",
+    "ambitReferenceFilled_other": "{{count}} zero reference readings use the mean measured reference, following the Ambyte trace analysis.",
+    "ambitRatioUnavailable": {
+      "missing": "A fluorescence/reference pair is not available. Raw detector channels are shown below.",
+      "unaligned": "Fluorescence and reference timestamps do not match. Raw channels are shown separately; no ratio is inferred.",
+      "invalid": "The reference channel cannot produce a valid fluorescence ratio. Raw channels remain available."
+    },
+    "ambitChannels": {
+      "fluorescence": "Fluorescence",
+      "fluo_630_signal": "Fluorescence detector · 630 nm",
+      "fluo_630_ref": "Reference detector · 630 nm",
+      "refl_730_signal": "Reflectance detector · 730 nm",
+      "refl_730_ref": "Reference detector · 730 nm",
+      "ambient_sun_vis": "Ambient visible light",
+      "ambient_leaf_ir": "Leaf infrared signal",
+      "leaf_temp": "Leaf temperature"
+    }
   },
   "cells": {
     "command": "Command",

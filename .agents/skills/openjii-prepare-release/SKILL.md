@@ -59,9 +59,11 @@ never values. A missing optional integration does not block a local packet or an
 | Screenshots or video     | [Media recipe](references/media.md), reusing the repo Playwright and phone skills.                                                  |
 | Linear                   | [Linear recipe](references/linear.md), keeping a project update distinct from release synchronization.                              |
 
-Write release notes for researchers, grounded in included changes. A pending feature belongs in the
-internal packet, not in public copy. Keep mobile notes unpublished until that audience can get the
-release; `surfaces: both` must not announce a mobile release on web deployment day.
+Write the release note for researchers, grounded in included changes, following
+[the release note guide](references/release-notes.md) for its shape, voice and pictures. A pending
+feature belongs in the internal packet, not in public copy. Keep mobile notes unpublished until that
+audience can get the release; `surfaces: both` must not announce a mobile release on web deployment
+day.
 
 Before an external preparation write, make the exact payload and destination reviewable. Use existing
 authorization for that operation; ask only if it is missing. Selecting a CMS draft authorizes draft

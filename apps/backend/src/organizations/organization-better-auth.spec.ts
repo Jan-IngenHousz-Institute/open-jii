@@ -27,23 +27,37 @@ import * as schema from "@repo/database/schema";
 
 import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { success } from "../common/utils/fp-utils";
+import { queuedDeliveriesFor } from "../test/notification-deliveries";
 import { TestHarness } from "../test/test-harness";
+import { NotifyOrganizationInvitationAcceptedUseCase } from "./application/use-cases/notify-organization-invitation-accepted/notify-organization-invitation-accepted";
 import { NotifyOrganizationInviteeUseCase } from "./application/use-cases/notify-organization-invitee/notify-organization-invitee";
+import { NotifyOrganizationMemberRemovedUseCase } from "./application/use-cases/notify-organization-member-removed/notify-organization-member-removed";
+import { NotifyOrganizationRoleChangedUseCase } from "./application/use-cases/notify-organization-role-changed/notify-organization-role-changed";
 import { OrganizationAuthHook } from "./presentation/hooks/organization-auth.hook";
 
 /**
- * The backend's `@AfterHook("/organization/invite-member")`, reached the way the Nest
- * adapter reaches it: as one handler on the instance's own `hooks.after`, which runs
+ * The backend's `@AfterHook` methods on `OrganizationAuthHook`, reached the way the Nest
+ * adapter reaches them: as one handler on the instance's own `hooks.after`, which runs
  * before any plugin after-hook. Installed for the whole file and inert until a test
- * assigns `inviteHook`, so every other invite in here behaves exactly as before.
+ * assigns `organizationHook`, so every other call in here behaves exactly as before.
  *
- * This is the only place in the backend suite where the real endpoint runs —
+ * This is the only place in the backend suite where the real endpoints run —
  * `src/test/setup.ts` mocks `@repo/auth/server` down to `getSession`, so no
- * `TestHarness` spec can reach it — which makes it the only proof that the path
- * matches, that `ctx.context.returned` carries the invitation row, and that a refused
- * invite reaches the hook as an `APIError`.
+ * `TestHarness` spec can reach them — which makes it the only proof that the paths
+ * match, that `ctx.context.returned` carries the rows the hooks narrow on, that the
+ * session is on the context, and that a refused call reaches the hook as an `APIError`.
  */
-let inviteHook: OrganizationAuthHook | null = null;
+let organizationHook: OrganizationAuthHook | null = null;
+
+const AFTER_HOOKS = new Map<
+  string,
+  (hook: OrganizationAuthHook, ctx: AuthHookContext) => Promise<void>
+>([
+  ["/organization/invite-member", (hook, ctx) => hook.notifyInvitee(ctx)],
+  ["/organization/accept-invitation", (hook, ctx) => hook.notifyInvitationAccepted(ctx)],
+  ["/organization/update-member-role", (hook, ctx) => hook.notifyRoleChanged(ctx)],
+  ["/organization/remove-member", (hook, ctx) => hook.notifyMemberRemoved(ctx)],
+]);
 /** What the endpoint handed the after-hook, in call order. */
 const returnedToHook: unknown[] = [];
 
@@ -90,9 +104,10 @@ const auth = betterAuth({
     // shape the Nest adapter builds, which chains every `@AfterHook` method into this
     // single `hooks.after` and compares `ctx.path` by equality.
     after: createAuthMiddleware(async (ctx) => {
-      if (!inviteHook || ctx.path !== "/organization/invite-member") return;
+      const route = AFTER_HOOKS.get(ctx.path);
+      if (!organizationHook || !route) return;
       returnedToHook.push(ctx.context.returned);
-      await inviteHook.notifyInvitee(ctx);
+      await route(organizationHook, ctx);
     }),
   },
 });
@@ -242,6 +257,15 @@ describe("organization plugin configuration and protection hooks", () => {
     }
     throw new Error("The call was answered rather than refused");
   }
+
+  const hookFromModule = () =>
+    new OrganizationAuthHook(
+      testApp.database,
+      testApp.module.get(NotifyOrganizationInviteeUseCase),
+      testApp.module.get(NotifyOrganizationInvitationAcceptedUseCase),
+      testApp.module.get(NotifyOrganizationRoleChangedUseCase),
+      testApp.module.get(NotifyOrganizationMemberRemovedUseCase),
+    );
 
   const invitationsOf = (organizationId: string) =>
     testApp.database
@@ -1082,18 +1106,17 @@ describe("organization plugin configuration and protection hooks", () => {
           .mockResolvedValue(success(undefined));
 
         returnedToHook.length = 0;
-        inviteHook = new OrganizationAuthHook(
-          testApp.database,
-          testApp.module.get(NotifyOrganizationInviteeUseCase),
-        );
+        organizationHook = hookFromModule();
       });
 
       afterEach(() => {
-        inviteHook = null;
+        organizationHook = null;
       });
 
       const rowsFor = (userId: string) =>
         testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
+
+      const deliveriesFor = (userId: string) => queuedDeliveriesFor(testApp.database, userId);
 
       /**
        * A signed-in invitee with an activated profile. `signIn` goes through Better
@@ -1143,7 +1166,7 @@ describe("organization plugin configuration and protection hooks", () => {
         ]);
       });
 
-      it("emails the account holder from the backend, once", async () => {
+      it("queues the account holder's email from the backend, once", async () => {
         const { owner, org } = await orgWithAdmin();
         const invitee = await activatedInvitee();
 
@@ -1152,14 +1175,11 @@ describe("organization plugin configuration and protection hooks", () => {
           headers: owner.headers,
         });
 
-        expect(sendInvitation).toHaveBeenCalledExactlyOnceWith(
-          org.id,
-          "Photosynthesis Lab",
-          // Dispatch resolves the actor's name; these accounts carry no profile name.
-          expect.any(String),
-          "member",
-          invitee.email,
-        );
+        expect(await deliveriesFor(invitee.userId)).toMatchObject([
+          { type: "organization_invitation_received", channel: "email", status: "pending" },
+        ]);
+        // Nothing leaves the invite request itself; the worker sends from that row.
+        expect(sendInvitation).not.toHaveBeenCalled();
       });
 
       it("tells nobody and emails nobody when the address has no account", async () => {
@@ -1175,6 +1195,7 @@ describe("organization plugin configuration and protection hooks", () => {
         // address a row or a dispatch email to.
         expect(sendInvitation).not.toHaveBeenCalled();
         expect(await testApp.database.select().from(notifications)).toEqual([]);
+        expect(await deliveriesFor(owner.userId)).toEqual([]);
       });
 
       /**
@@ -1238,12 +1259,12 @@ describe("organization plugin configuration and protection hooks", () => {
         });
         // What the sign-in catch-up will do for an invitation hook 1 already told
         // them about: the invitation id is the dedupe key on both sides.
-        await inviteHook?.notifyInvitee({
+        await organizationHook?.notifyInvitee({
           context: { returned: returnedToHook[0] },
         } as unknown as AuthHookContext);
 
         expect(await rowsFor(invitee.userId)).toHaveLength(1);
-        expect(sendInvitation).toHaveBeenCalledTimes(1);
+        expect(await deliveriesFor(invitee.userId)).toHaveLength(1);
       });
 
       it("writes a second row after a cancel and a fresh invite", async () => {
@@ -1267,6 +1288,195 @@ describe("organization plugin configuration and protection hooks", () => {
         // repeat path, since nothing ever passes `resend`.
         expect(await rowsFor(invitee.userId)).toHaveLength(2);
       });
+    });
+  });
+
+  /**
+   * Who hears about an accepted invitation, a role change and a removal, driven through
+   * the real endpoints so the hooks see exactly what Better Auth hands them.
+   */
+  describe("telling members about membership changes", () => {
+    beforeEach(() => {
+      returnedToHook.length = 0;
+      organizationHook = hookFromModule();
+    });
+
+    afterEach(() => {
+      organizationHook = null;
+    });
+
+    const rowsFor = (userId: string, type: string) =>
+      testApp.database
+        .select()
+        .from(notifications)
+        .where(and(eq(notifications.recipientId, userId), eq(notifications.type, type)));
+
+    const deliveriesFor = (userId: string) => queuedDeliveriesFor(testApp.database, userId);
+
+    /** Dispatch reads addresses through activated profiles, which `signIn` does not write. */
+    const activate = (userId: string) =>
+      testApp.database
+        .insert(schema.profiles)
+        .values({ userId, firstName: "Test", lastName: "Person", activated: true });
+
+    it("tells the inviter, and no other admin, when the invitee accepts", async () => {
+      const { owner, admin, org } = await orgWithAdmin();
+      const invitee = await signIn("invitee");
+      const invitation = await auth.api.createInvitation({
+        body: { email: invitee.email, role: "member", organizationId: org.id },
+        headers: admin.headers,
+      });
+      returnedToHook.length = 0;
+
+      await auth.api.acceptInvitation({
+        body: { invitationId: invitation.id },
+        headers: invitee.headers,
+      });
+
+      expect(returnedToHook).toMatchObject([
+        {
+          invitation: { inviterId: admin.userId, organizationId: org.id },
+          member: { userId: invitee.userId },
+        },
+      ]);
+      expect(await rowsFor(admin.userId, "organization_invitation_accepted")).toMatchObject([
+        {
+          actorId: invitee.userId,
+          resourceType: "organization",
+          resourceId: org.id,
+          params: { organizationName: "Photosynthesis Lab" },
+        },
+      ]);
+      expect(await rowsFor(owner.userId, "organization_invitation_accepted")).toEqual([]);
+      expect(await deliveriesFor(admin.userId)).toEqual([]);
+    });
+
+    it("tells nobody when somebody else tries to accept the invitation", async () => {
+      const { owner, org } = await orgWithAdmin();
+      const invitee = await signIn("invitee");
+      const stranger = await signIn("stranger");
+      const invitation = await auth.api.createInvitation({
+        body: { email: invitee.email, role: "member", organizationId: org.id },
+        headers: owner.headers,
+      });
+      returnedToHook.length = 0;
+
+      await expect(
+        auth.api.acceptInvitation({
+          body: { invitationId: invitation.id },
+          headers: stranger.headers,
+        }),
+      ).rejects.toThrow(/not the recipient/i);
+
+      expect(returnedToHook).toHaveLength(1);
+      expect(returnedToHook[0]).toBeInstanceOf(APIError);
+      expect(await rowsFor(owner.userId, "organization_invitation_accepted")).toEqual([]);
+    });
+
+    it("tells a re-roled member their new role, and queues their email", async () => {
+      const { owner, admin, org, adminMemberId } = await orgWithAdmin();
+      await activate(admin.userId);
+
+      await auth.api.updateMemberRole({
+        body: { memberId: adminMemberId, role: "member", organizationId: org.id },
+        headers: owner.headers,
+      });
+
+      expect(await rowsFor(admin.userId, "organization_role_changed")).toMatchObject([
+        {
+          actorId: owner.userId,
+          resourceType: "organization",
+          resourceId: org.id,
+          params: { organizationName: "Photosynthesis Lab", role: "member" },
+        },
+      ]);
+      expect(await deliveriesFor(admin.userId)).toMatchObject([
+        { type: "organization_role_changed", channel: "email", status: "pending" },
+      ]);
+    });
+
+    it("tells nobody when an admin's update of an owner is refused", async () => {
+      const { owner, admin, org, ownerMemberId } = await orgWithAdmin();
+
+      await expect(
+        auth.api.updateMemberRole({
+          body: { memberId: ownerMemberId, role: "member", organizationId: org.id },
+          headers: admin.headers,
+        }),
+      ).rejects.toThrow(NOT_ALLOWED_TO_UPDATE_MEMBER);
+
+      expect(returnedToHook).toHaveLength(1);
+      expect(returnedToHook[0]).toBeInstanceOf(APIError);
+      expect(await rowsFor(owner.userId, "organization_role_changed")).toEqual([]);
+    });
+
+    it("tells nobody when an owner changes their own role", async () => {
+      const { owner, org, adminMemberId, ownerMemberId } = await orgWithAdmin();
+      // A second owner first, so stepping down is allowed rather than refused.
+      await auth.api.updateMemberRole({
+        body: { memberId: adminMemberId, role: "owner", organizationId: org.id },
+        headers: owner.headers,
+      });
+      returnedToHook.length = 0;
+
+      await auth.api.updateMemberRole({
+        body: { memberId: ownerMemberId, role: "admin", organizationId: org.id },
+        headers: owner.headers,
+      });
+
+      expect(returnedToHook).toEqual([
+        expect.objectContaining({ userId: owner.userId, role: "admin" }),
+      ]);
+      expect(await rowsFor(owner.userId, "organization_role_changed")).toEqual([]);
+    });
+
+    it("tells a removed member, with their email queued", async () => {
+      const { owner, admin, org, adminMemberId } = await orgWithAdmin();
+      await activate(admin.userId);
+
+      await auth.api.removeMember({
+        body: { memberIdOrEmail: adminMemberId, organizationId: org.id },
+        headers: owner.headers,
+      });
+
+      expect(await rowsFor(admin.userId, "organization_membership_removed")).toMatchObject([
+        {
+          actorId: owner.userId,
+          resourceType: "organization",
+          resourceId: org.id,
+          params: { organizationName: "Photosynthesis Lab" },
+        },
+      ]);
+      expect(await deliveriesFor(admin.userId)).toMatchObject([
+        { type: "organization_membership_removed", channel: "email", status: "pending" },
+      ]);
+    });
+
+    it("tells nobody when removing the last owner is refused", async () => {
+      const { owner, org, ownerMemberId } = await orgWithAdmin();
+
+      await expect(
+        auth.api.removeMember({
+          body: { memberIdOrEmail: ownerMemberId, organizationId: org.id },
+          headers: owner.headers,
+        }),
+      ).rejects.toThrow(ONLY_OWNER);
+
+      expect(returnedToHook).toHaveLength(1);
+      expect(returnedToHook[0]).toBeInstanceOf(APIError);
+      expect(await rowsFor(owner.userId, "organization_membership_removed")).toEqual([]);
+    });
+
+    it("tells nobody when a member removes themselves", async () => {
+      const { admin, org, adminMemberId } = await orgWithAdmin();
+
+      await auth.api.removeMember({
+        body: { memberIdOrEmail: adminMemberId, organizationId: org.id },
+        headers: admin.headers,
+      });
+
+      expect(returnedToHook).toMatchObject([{ member: { userId: admin.userId } }]);
+      expect(await rowsFor(admin.userId, "organization_membership_removed")).toEqual([]);
     });
   });
 
@@ -1478,6 +1688,114 @@ describe("organization plugin configuration and protection hooks", () => {
             ),
           ),
       ).toEqual([]);
+    });
+  });
+  describe("other people's addresses", () => {
+    const leaks = (value: unknown, ...emails: string[]) =>
+      emails.filter((email) => JSON.stringify(value).toLowerCase().includes(email.toLowerCase()));
+
+    it("are withheld from every member row a plain member lists", async () => {
+      const { owner, admin, member, org } = await orgWithPlainMember();
+
+      const listed = await auth.api.listMembers({
+        query: { organizationId: org.id },
+        headers: member.headers,
+      });
+
+      const emails = Object.fromEntries(listed.members.map((row) => [row.userId, row.user.email]));
+      expect(emails).toEqual({
+        [owner.userId]: null,
+        [admin.userId]: null,
+        [member.userId]: member.email,
+      });
+      expect(leaks(listed, owner.email, admin.email)).toEqual([]);
+    });
+
+    it("are withheld from an owner too, whose addresses come from the backend roster", async () => {
+      const { owner, admin, member, org } = await orgWithPlainMember();
+
+      const listed = await auth.api.listMembers({
+        query: { organizationId: org.id },
+        headers: owner.headers,
+      });
+
+      expect(leaks(listed, admin.email, member.email)).toEqual([]);
+      expect(listed.members.find((row) => row.userId === owner.userId)?.user.email).toBe(
+        owner.email,
+      );
+    });
+
+    it("are withheld from the full organization's members", async () => {
+      const { owner, admin, member, org } = await orgWithPlainMember();
+
+      const full = await auth.api.getFullOrganization({
+        query: { organizationId: org.id },
+        headers: member.headers,
+      });
+
+      expect(full?.members).toHaveLength(3);
+      expect(leaks(full, owner.email, admin.email)).toEqual([]);
+    });
+
+    it("leave the caller's own active membership alone", async () => {
+      const { owner, admin, member, org } = await orgWithPlainMember();
+      await auth.api.setActiveOrganization({
+        body: { organizationId: org.id },
+        headers: member.headers,
+      });
+
+      const active = await auth.api.getActiveMember({ headers: member.headers });
+
+      expect(active.user.email).toBe(member.email);
+      expect(leaks(active, owner.email, admin.email)).toEqual([]);
+    });
+
+    it("are withheld from what re-roling and removing a member answer", async () => {
+      const { owner, member, org } = await orgWithPlainMember();
+      const [memberRow] = await testApp.database
+        .select({ id: organizationMembers.id })
+        .from(organizationMembers)
+        .where(
+          and(
+            eq(organizationMembers.organizationId, org.id),
+            eq(organizationMembers.userId, member.userId),
+          ),
+        );
+
+      const updated = await auth.api.updateMemberRole({
+        body: { memberId: memberRow.id, role: "admin", organizationId: org.id },
+        headers: owner.headers,
+      });
+      const removed = await auth.api.removeMember({
+        body: { memberIdOrEmail: memberRow.id, organizationId: org.id },
+        headers: owner.headers,
+      });
+
+      expect(leaks(updated, member.email)).toEqual([]);
+      expect(leaks(removed, member.email)).toEqual([]);
+    });
+
+    it("keep the inviter's address from the invitee, before and after accepting", async () => {
+      const owner = await signIn("owner");
+      const org = await createOrganization(owner);
+      const invitee = await signIn("invitee");
+      const invitation = await auth.api.createInvitation({
+        body: { email: invitee.email, role: "member", organizationId: org.id },
+        headers: owner.headers,
+      });
+
+      const seen = await auth.api.getInvitation({
+        query: { id: invitation.id },
+        headers: invitee.headers,
+      });
+      const accepted = await auth.api.acceptInvitation({
+        body: { invitationId: invitation.id },
+        headers: invitee.headers,
+      });
+
+      expect(seen).toMatchObject({ id: invitation.id, inviterEmail: null });
+      expect(leaks(seen, owner.email)).toEqual([]);
+      expect(leaks(accepted, owner.email)).toEqual([]);
     });
   });
 });

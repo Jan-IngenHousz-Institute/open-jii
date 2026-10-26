@@ -1,6 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
+import {
+  EmailVisibilityService,
+  flatEmail,
+} from "../../../../authorization/email-visibility.service";
+import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import type { OrganizationTeamDto } from "../../../core/models/organization.model";
 import { canViewOrganization, isOrganizationMember } from "../../../core/organization-access";
 import { OrganizationRepository } from "../../../core/repositories/organization.repository";
@@ -13,7 +17,10 @@ import { OrganizationRepository } from "../../../core/repositories/organization.
 export class ListOrganizationTeamsUseCase {
   private readonly logger = new Logger(ListOrganizationTeamsUseCase.name);
 
-  constructor(private readonly organizationRepository: OrganizationRepository) {}
+  constructor(
+    private readonly organizationRepository: OrganizationRepository,
+    private readonly emailVisibility: EmailVisibilityService,
+  ) {}
 
   async execute(organizationId: string, userId: string): Promise<Result<OrganizationTeamDto[]>> {
     this.logger.log({
@@ -35,6 +42,21 @@ export class ListOrganizationTeamsUseCase {
       return failure(AppError.forbidden("Only members can see this organization's teams"));
     }
 
-    return this.organizationRepository.listTeams(organizationId);
+    const teamsResult = await this.organizationRepository.listTeams(organizationId);
+    if (teamsResult.isFailure()) {
+      return teamsResult;
+    }
+    const teams = teamsResult.value;
+    const lens = flatEmail<OrganizationTeamDto["members"][number]>();
+    const visible = await this.emailVisibility.visibleUserEmails(
+      userId,
+      teams.flatMap((team) => team.members.map((member) => member.userId)),
+    );
+    return success(
+      teams.map((team) => ({
+        ...team,
+        members: this.emailVisibility.strip(team.members, visible, lens),
+      })),
+    );
   }
 }

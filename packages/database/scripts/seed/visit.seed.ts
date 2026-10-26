@@ -1,24 +1,44 @@
 import { db } from "../../src/database";
 import { resourceVisits } from "../../src/schema";
-import type { SeedExperiment, SeedUser } from "./types";
+import type { SeedExperiment, SeedMacro, SeedProtocol, SeedUser, SeedWorkbook } from "./types";
 
 const MINUTE = 60_000;
 
 /**
- * Three recent opens with different ages, so the home row is filled and each card
- * shows a different "Opened" time. The newcomer gets none and sees the first-work cards.
+ * Recent opens of every type at different ages, so the home's Recently opened is full,
+ * offers a chip per type, and each row shows a different "Opened" time. The newcomer gets
+ * none and sees the first-work cards.
  */
-export async function seedVisits(user: SeedUser, createdExperiments: SeedExperiment[]) {
-  const openable = createdExperiments.filter((experiment) => experiment.status !== "archived");
-  const minutesAgo = [10, 3 * 60, 2 * 24 * 60];
+export async function seedVisits(
+  user: SeedUser,
+  created: {
+    experiments: SeedExperiment[];
+    protocols: SeedProtocol[];
+    macros: SeedMacro[];
+    workbooks: SeedWorkbook[];
+  },
+) {
+  const openable = created.experiments.filter((experiment) => experiment.status !== "archived");
+  const opens: {
+    resourceType: (typeof resourceVisits.$inferInsert)["resourceType"];
+    resource: { id: string };
+    minutesAgo: number;
+  }[] = [
+    { resourceType: "experiment", resource: openable[0], minutesAgo: 10 },
+    { resourceType: "workbook", resource: created.workbooks[0], minutesAgo: 60 },
+    { resourceType: "protocol", resource: created.protocols[0], minutesAgo: 26 * 60 },
+    { resourceType: "experiment", resource: openable[1], minutesAgo: 2 * 24 * 60 },
+    { resourceType: "macro", resource: created.macros[0], minutesAgo: 3 * 24 * 60 },
+    { resourceType: "experiment", resource: openable[2], minutesAgo: 4 * 24 * 60 },
+  ];
 
-  const rows = openable.slice(0, minutesAgo.length).map((experiment, index) => ({
+  const rows = opens.map(({ resourceType, resource, minutesAgo }) => ({
     userId: user.id,
-    resourceType: "experiment" as const,
-    resourceId: experiment.id,
-    visitedAt: new Date(Date.now() - minutesAgo[index] * MINUTE),
+    resourceType,
+    resourceId: resource.id,
+    visitedAt: new Date(Date.now() - minutesAgo * MINUTE),
   }));
 
   await db.insert(resourceVisits).values(rows);
-  console.log(`  Created ${rows.length} experiment visits for the seed user`);
+  console.log(`  Created ${rows.length} visits for the seed user`);
 }

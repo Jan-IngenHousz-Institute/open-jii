@@ -6,8 +6,11 @@ import { SearchUsersUseCase } from "./search-users";
 
 describe("SearchUsersUseCase", () => {
   const testApp = TestHarness.App;
-  let testUserId: string;
+  let callerId: string;
   let useCase: SearchUsersUseCase;
+
+  const search = (query: string, page: { limit?: number; offset?: number } = {}) =>
+    useCase.execute(callerId, { query, limit: page.limit ?? 20, offset: page.offset ?? 0 });
 
   beforeAll(async () => {
     await testApp.setup();
@@ -15,7 +18,7 @@ describe("SearchUsersUseCase", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    testUserId = await testApp.createTestUser({});
+    callerId = await testApp.createTestUser({ email: "caller@example.com" });
     useCase = testApp.module.get(SearchUsersUseCase);
   });
 
@@ -27,145 +30,112 @@ describe("SearchUsersUseCase", () => {
     await testApp.teardown();
   });
 
-  it("should search users without any query parameters", async () => {
-    // Arrange
-    const user1Id = await testApp.createTestUser({
-      email: "alice@example.com",
-    });
-    const user2Id = await testApp.createTestUser({
-      email: "bob@example.com",
-    });
-
-    // Act
-    const result = await useCase.execute({});
-
-    // Assert
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    const foundUsers = result.value;
-    expect(foundUsers.length).toBeGreaterThanOrEqual(3); // At least the 3 created users
-
-    const userIds = foundUsers.map((u) => u.userId);
-    expect(userIds).toContain(testUserId);
-    expect(userIds).toContain(user1Id);
-    expect(userIds).toContain(user2Id);
-  });
-
-  it("should search users by name", async () => {
-    // Arrange
-    // Search is trigram-fuzzy and the ambient test user gets a random real name, so a
-    // plain "Alice" also matches a generated "Alison". Keep the term unique.
+  it("finds a stranger by name without their address", async () => {
+    // Unique so the trigram match cannot pull in the ambient random-named users.
     const firstName = `Alice${faker.string.alphanumeric(10)}`;
-    await testApp.createTestUser({
+    const strangerId = await testApp.createTestUser({
       name: `${firstName} Smith`,
-      email: `${firstName.toLowerCase()}@example.com`,
-    });
-    await testApp.createTestUser({
-      name: "Bob Johnson",
-      email: "bob@example.com",
+      email: "alice.stranger@example.com",
     });
 
-    // Act
-    const result = await useCase.execute({ query: firstName });
+    const result = await search(firstName);
 
-    // Assert
-    expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
-    const foundUsers = result.value;
-    expect(foundUsers.length).toBe(1);
-    expect(foundUsers[0].firstName).toBe(firstName);
-    expect(foundUsers[0].lastName).toBe("Smith");
+    expect(result.value.map((user) => user.userId)).toEqual([strangerId]);
+    expect(result.value[0].email).toBeNull();
+    expect(JSON.stringify(result.value)).not.toContain("alice.stranger@example.com");
   });
 
-  it("should search users by email", async () => {
-    // Arrange
-    const email = `alice${faker.string.alphanumeric(10)}@example.com`;
-    await testApp.createTestUser({
-      name: "Alice Smith",
-      email,
-    });
-    await testApp.createTestUser({
-      name: "Bob Johnson",
-      email: "bob@example.com",
-    });
+  it("resolves a stranger by complete address without echoing it", async () => {
+    const email = `invitee${faker.string.alphanumeric(10).toLowerCase()}@example.com`;
+    const strangerId = await testApp.createTestUser({ name: "Invitee Person", email });
 
-    // Act
-    const result = await useCase.execute({ query: email });
+    const result = await search(email.toUpperCase());
 
-    // Assert
-    expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
-    const foundUsers = result.value;
-    expect(foundUsers.length).toBe(1);
-    expect(foundUsers[0].email).toBe(email);
+    expect(result.value.map((user) => user.userId)).toEqual([strangerId]);
+    expect(result.value[0].email).toBeNull();
+    expect(JSON.stringify(result.value).toLowerCase()).not.toContain(email);
   });
 
-  it("should search users with partial name match", async () => {
-    // Arrange
-    const firstName = `Alice${faker.string.alphanumeric(10)}`;
-    await testApp.createTestUser({
+  it("does not match an address by fragment", async () => {
+    const strangerId = await testApp.createTestUser({
+      name: "Zelda Quux",
+      email: "zorptastic@zorpmail.example",
+    });
+
+    const result = await search("zorptastic");
+
+    assertSuccess(result);
+    expect(result.value.map((user) => user.userId)).not.toContain(strangerId);
+  });
+
+  it("shows an organization admin the addresses of its members", async () => {
+    const orgId = await testApp.createOrganization();
+    await testApp.addOrganizationMember(orgId, callerId, "admin");
+    const firstName = `Member${faker.string.alphanumeric(10)}`;
+    const memberId = await testApp.createTestUser({
       name: `${firstName} Smith`,
-      email: `${firstName.toLowerCase()}@example.com`,
+      email: "member@example.com",
     });
-    await testApp.createTestUser({
-      name: `${firstName} Johnson`,
-      email: `${firstName.toLowerCase()}.johnson@example.com`,
-    });
+    await testApp.addOrganizationMember(orgId, memberId, "member");
 
-    // Act
-    const result = await useCase.execute({ query: firstName });
+    const result = await search(firstName);
 
-    // Assert
-    expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
-    const foundUsers = result.value;
-    expect(foundUsers.length).toBe(2);
-    expect(foundUsers.every((u) => u.firstName === firstName)).toBe(true);
+    expect(result.value).toEqual([
+      expect.objectContaining({ userId: memberId, email: "member@example.com" }),
+    ]);
   });
 
-  it("should apply limit and offset for pagination", async () => {
-    // Arrange
-    const userIds: string[] = [];
+  it("withholds a fellow member's address from a plain member", async () => {
+    const orgId = await testApp.createOrganization();
+    await testApp.addOrganizationMember(orgId, callerId, "member");
+    const firstName = `Owner${faker.string.alphanumeric(10)}`;
+    const ownerId = await testApp.createTestUser({
+      name: `${firstName} Smith`,
+      email: "owner@example.com",
+    });
+    await testApp.addOrganizationMember(orgId, ownerId, "owner");
 
+    const result = await search(firstName);
+
+    assertSuccess(result);
+    expect(result.value).toEqual([expect.objectContaining({ userId: ownerId, email: null })]);
+  });
+
+  it("shows the caller their own address", async () => {
+    const result = await search("caller@example.com");
+
+    assertSuccess(result);
+    expect(result.value).toEqual([
+      expect.objectContaining({ userId: callerId, email: "caller@example.com" }),
+    ]);
+  });
+
+  it("pages through name matches with every address withheld", async () => {
     for (let i = 0; i < 5; i++) {
-      const userId = await testApp.createTestUser({
-        name: `User ${i}`,
-        email: `user${i}@example.com`,
-      });
-
-      userIds.push(userId);
+      await testApp.createTestUser({ name: `Pagewright ${i}`, email: `page${i}@example.com` });
     }
 
-    // Act - get first 2 users
-    const firstPageResult = await useCase.execute({ limit: 2, offset: 0 });
+    const firstPage = await search("Pagewright", { limit: 2, offset: 0 });
+    const secondPage = await search("Pagewright", { limit: 2, offset: 2 });
+    const lastPage = await search("Pagewright", { limit: 2, offset: 4 });
 
-    // Assert
-    expect(firstPageResult.isSuccess()).toBe(true);
-    assertSuccess(firstPageResult);
-    const firstPageUsers = firstPageResult.value;
-    expect(firstPageUsers.length).toBe(2);
-
-    // Act - get next 2 users
-    const secondPageResult = await useCase.execute({ limit: 2, offset: 2 });
-
-    // Assert
-    expect(secondPageResult.isSuccess()).toBe(true);
-    assertSuccess(secondPageResult);
-    const secondPageUsers = secondPageResult.value;
-    expect(secondPageUsers.length).toBe(2);
-
-    // Ensure no overlap
-    const firstPageIds = firstPageUsers.map((u) => u.userId);
-    const secondPageIds = secondPageUsers.map((u) => u.userId);
-    expect(firstPageIds.some((id) => secondPageIds.includes(id))).toBe(false);
+    assertSuccess(firstPage);
+    assertSuccess(secondPage);
+    assertSuccess(lastPage);
+    expect([firstPage, secondPage, lastPage].map((page) => page.value.length)).toEqual([2, 2, 1]);
+    const ids = [...firstPage.value, ...secondPage.value, ...lastPage.value].map((u) => u.userId);
+    expect(new Set(ids).size).toBe(5);
+    for (const page of [firstPage, secondPage, lastPage]) {
+      expect(page.value.every((user) => user.email === null)).toBe(true);
+    }
   });
 
   it("should return empty array if no users match the search query", async () => {
-    // Act
-    const result = await useCase.execute({ query: "nonexistentuser" });
+    const result = await search("nonexistentuser");
 
-    // Assert
-    expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value).toEqual([]);
   });

@@ -708,6 +708,9 @@ module "backend_warehouse" {
   name             = "Backend API"
   cluster_size     = "2X-Small"
   max_num_clusters = 2
+  # A stopped warehouse takes about 12 s to answer, so a researcher's first page after a quiet
+  # minute would wait for it.
+  auto_stop_mins = 5
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -1910,6 +1913,12 @@ module "aurora_db" {
   skip_final_snapshot      = false
 }
 
+# Adopts the log group the service created before retention was set in code.
+import {
+  to = module.aurora_db.aws_cloudwatch_log_group.postgresql
+  id = "/aws/rds/cluster/open-jii-${var.environment}-db-cluster/postgresql"
+}
+
 module "secrets_rotation_trigger" {
   source = "../../modules/secrets-manager-rotation/secrets-rotation-trigger"
 
@@ -1918,6 +1927,12 @@ module "secrets_rotation_trigger" {
   region           = var.aws_region
   secret_arn       = module.aurora_db.master_user_secret_arn
   environment      = var.environment
+}
+
+# Adopts the log group the service created before retention was set in code.
+import {
+  to = module.secrets_rotation_trigger.aws_cloudwatch_log_group.lambda
+  id = "/aws/lambda/${var.environment}-ecs-force-deployment"
 }
 
 module "backup" {
@@ -2123,7 +2138,7 @@ module "opennext_waf" {
   service_name       = "opennext"
   environment        = var.environment
   rate_limit         = 2500
-  log_retention_days = 30
+  log_retention_days = 365
   enable_bot_control = true
 
   managed_rules_excluded_paths = ["/ingest"]
@@ -2741,7 +2756,7 @@ module "backend_waf" {
   service_name       = "backend"
   environment        = var.environment
   rate_limit         = 500
-  log_retention_days = 30
+  log_retention_days = 365
   enable_bot_control = true
 
   large_body_bypass_routes = [
@@ -2805,7 +2820,7 @@ module "docs_waf" {
   service_name       = "docs"
   environment        = var.environment
   rate_limit         = 500
-  log_retention_days = 30
+  log_retention_days = 365
 
   tags = {
     Environment = var.environment
@@ -3103,6 +3118,12 @@ module "grafana_metrics_publisher" {
 
   private_subnets                = module.vpc.private_subnets
   metrics_publisher_lambda_sg_id = module.vpc.metrics_publisher_lambda_sg_id
+}
+
+# Adopts the log group the service created before retention was set in code.
+import {
+  to = module.grafana_metrics_publisher.aws_cloudwatch_log_group.metrics_publisher
+  id = "/aws/lambda/${var.environment}-metrics-publisher"
 }
 
 module "heartbeat_metrics_s3" {

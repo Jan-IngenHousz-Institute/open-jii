@@ -52,7 +52,9 @@ import {
 
 import { AppModule } from "../app.module";
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
+import { NotificationOutboxWorker } from "../notifications/application/services/notification-outbox.worker";
 import { MockAnalyticsAdapter } from "./mocks/adapters/analytics.adapter.mock";
+import { QuietNotificationOutboxWorker } from "./quiet-notification-outbox.worker";
 
 // Ensure test environment is loaded
 config({ path: resolve(__dirname, "../../.env.test") });
@@ -108,6 +110,12 @@ export class TestHarness {
       const moduleBuilder = Test.createTestingModule({
         imports: this._imports,
       });
+
+      // The outbox loop is silenced for every spec: its schedule and its nudge would
+      // otherwise drain rows the spec under test had only queued. `drain()` stays real.
+      moduleBuilder
+        .overrideProvider(NotificationOutboxWorker)
+        .useClass(QuietNotificationOutboxWorker);
 
       for (const [name, { real, mock }] of Object.entries(ADAPTERS) as [
         AdapterKey,
@@ -585,7 +593,7 @@ export class TestHarness {
   public async addResourceVisit(data: {
     userId: string;
     resourceId: string;
-    resourceType?: "experiment";
+    resourceType?: "experiment" | "protocol" | "macro" | "workbook";
     visitedAt?: Date;
   }) {
     const [visit] = await this.database

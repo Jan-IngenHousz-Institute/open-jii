@@ -1,11 +1,12 @@
 "use client";
 
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
+import { useIsHydrated } from "@/hooks/useIsHydrated";
 import { orpcClient } from "@/lib/orpc";
 import { decodeBase64 } from "@/util/base64";
 import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
 import { ChevronDown, GitBranch, Play, Square, Trash2, Usb } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { ConnectionStatusCluster } from "~/components/iot/connection-status-cluster";
 import { sensorFamilyToDeviceType } from "~/hooks/iot/device-type-mapping";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
@@ -157,12 +158,10 @@ export function WorkbookHeader({
     const secondary = secondaryParts.length > 0 ? secondaryParts.join(" · ") : null;
     return { ...device, primary, secondary };
   });
-  // Resolved after mount: depends on window.location, so rendering it on the
+  // Resolved after hydration: depends on window.location, so rendering it on the
   // server would cause a hydration mismatch.
-  const [showMockDevices, setShowMockDevices] = useState(false);
-  useEffect(() => {
-    setShowMockDevices(mockDevicesEnabled());
-  }, []);
+  const isHydrated = useIsHydrated();
+  const showMockDevices = useMemo(() => isHydrated && mockDevicesEnabled(), [isHydrated]);
   const transportSupported =
     connectionType === "mock"
       ? true

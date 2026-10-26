@@ -37,3 +37,5 @@ export const invitationSchema = createSelectSchema(invitations)
 // DTOs
 export type CreateInvitationDto = z.infer<typeof createInvitationSchema>;
 export type InvitationDto = z.infer<typeof invitationSchema>;
+/** An invitation as a given caller may see it: the address can be withheld. */
+export type InvitationView = Omit<InvitationDto, "email"> & { email: string | null };

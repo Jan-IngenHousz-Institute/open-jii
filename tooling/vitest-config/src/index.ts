@@ -1,3 +1,5 @@
+import { coverageEnabled } from "./coverage.js";
+
 export const sharedConfig = {
   test: {
     globals: true,
@@ -18,7 +20,7 @@ export const sharedConfig = {
         ],
         ["text"],
       ] as const,
-      enabled: true,
+      enabled: coverageEnabled,
     },
   },
 };

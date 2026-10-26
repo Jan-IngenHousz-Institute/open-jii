@@ -1116,8 +1116,7 @@ export function extendLayoutForFacets(
   const sharedXTitleOn = options.sharedXTitle === true;
   const sharedYTitleOn = options.sharedYTitle === true;
   const ultraCompactCells = options.ultraCompactCells === true;
-  for (let i = 0; i < cells.length; i++) {
-    const cell = cells[i];
+  for (const [i, cell] of cells.entries()) {
     const { isLastRow, isFirstColumn } = cellPosition(i, options.rows, options.columns);
     const isFirstCell = i === 0;
     // X axis: cell 0 is the master; subsequent cells match it when

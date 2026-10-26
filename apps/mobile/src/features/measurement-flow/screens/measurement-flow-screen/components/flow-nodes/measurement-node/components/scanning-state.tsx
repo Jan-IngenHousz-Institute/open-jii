@@ -49,7 +49,11 @@ function formatDuration(ms: number): string {
  * moment the final reply burst lands. A multi-scan round adds a per-device
  * status list; the clock and estimate apply to the whole round (one protocol).
  */
-export function ScanningState({
+export function ScanningState(props: ScanningStateProps) {
+  return <ScanningStateView key={props.scanStartedAt} {...props} />;
+}
+
+function ScanningStateView({
   protocolName,
   deviceStates,
   progress,
@@ -66,7 +70,6 @@ export function ScanningState({
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!scanStartedAt) return;
-    setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [scanStartedAt]);

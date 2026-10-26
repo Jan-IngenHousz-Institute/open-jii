@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import { useTranslation } from "@repo/i18n";
@@ -9,7 +9,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useExperimentLocations } from "../../hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { useExperimentLocationsUpdate } from "../../hooks/experiment/useExperimentLocationsUpdate/useExperimentLocationsUpdate";
-import { useLocationGeocode } from "../../hooks/locations/useLocationGeocode";
+import { useGeocodeLocationPoint } from "../../hooks/locations/useGeocodeLocationPoint";
 import { useLocationSearch } from "../../hooks/locations/useLocationSearch";
 import { useDebounce } from "../../hooks/useDebounce";
 import { Map } from "../map";
@@ -27,7 +27,6 @@ export function ExperimentLocationManagement({
 }: ExperimentLocationManagementProps) {
   const { t } = useTranslation("experiments");
   const [searchQuery, setSearchQuery] = useState("");
-  const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const { data: locationsData, isLoading } = useExperimentLocations(experimentId);
   const updateLocationsMutation = useExperimentLocationsUpdate();
@@ -51,20 +50,15 @@ export function ExperimentLocationManagement({
     [locations],
   );
 
-  const [editedLocations, setEditedLocations] = useState<LocationPoint[]>([]);
+  const [editedLocations, setEditedLocations] = useState<LocationPoint[]>(mapLocations);
+  const [syncedLocations, setSyncedLocations] = useState(mapLocations);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Geocoding hook for when locations are added via map click
-  const { data: geocodeData, isLoading: geocodeLoading } = useLocationGeocode(
-    pendingLocation?.lat ?? 0,
-    pendingLocation?.lng ?? 0,
-    !!pendingLocation,
-  );
-
   // Sync editedLocations with API locations when data loads
-  useEffect(() => {
+  if (syncedLocations !== mapLocations) {
+    setSyncedLocations(mapLocations);
     setEditedLocations(mapLocations);
-  }, [mapLocations]);
+  }
 
   // Handle search
   const handleSearch = React.useCallback((query: string) => {
@@ -118,53 +112,31 @@ export function ExperimentLocationManagement({
     [experimentId, updateLocationsMutation, t],
   );
 
-  const handleLocationsChange = (newLocations: LocationPoint[]) => {
-    setEditedLocations(newLocations);
-    // Auto-save whenever locations change
-    saveLocations(newLocations);
-  };
+  // A geocode resolves after the click, so it appends to the list as it is then, not as it
+  // was when the map captured it; edits made meanwhile survive.
+  const latestLocationsRef = useRef(editedLocations);
+  useEffect(() => {
+    latestLocationsRef.current = editedLocations;
+  }, [editedLocations]);
 
-  // Handle adding location from map click with geocoding
-  const handleLocationAdd = React.useCallback(
-    (latitude: number, longitude: number): Promise<LocationPoint | void> => {
-      // Set pending location to trigger geocoding
-      setPendingLocation({ lat: latitude, lng: longitude });
-
-      // Return a promise that will resolve when geocoding is complete
-      return Promise.resolve();
+  const handleLocationsChange = useCallback(
+    (newLocations: LocationPoint[]) => {
+      latestLocationsRef.current = newLocations;
+      setEditedLocations(newLocations);
+      saveLocations(newLocations);
     },
-    [],
+    [saveLocations],
   );
 
-  // Effect to handle geocoded location data
-  useEffect(() => {
-    if (geocodeData && pendingLocation) {
-      const geocodeResults = geocodeData;
-      // Use the first result if available, or create a basic location
-      const firstResult = geocodeResults[0];
+  const geocodeLocationPoint = useGeocodeLocationPoint();
 
-      const newLocation: LocationPoint = {
-        id: Date.now().toString(),
-        name: firstResult.label,
-        latitude: pendingLocation.lat,
-        longitude: pendingLocation.lng,
-        country: firstResult.country,
-        region: firstResult.region,
-        municipality: firstResult.municipality,
-        postalCode: firstResult.postalCode,
-        address: firstResult.label,
-      };
-
-      const updatedLocations = [...editedLocations, newLocation];
-      setEditedLocations(updatedLocations);
-
-      // Auto-save the new location
-      saveLocations(updatedLocations);
-
-      // Clear pending location
-      setPendingLocation(null);
-    }
-  }, [geocodeData, pendingLocation, geocodeLoading, editedLocations, saveLocations]);
+  const handleLocationAdd = useCallback(
+    async (latitude: number, longitude: number): Promise<void> => {
+      const newLocation = await geocodeLocationPoint(latitude, longitude);
+      if (newLocation) handleLocationsChange([...latestLocationsRef.current, newLocation]);
+    },
+    [geocodeLocationPoint, handleLocationsChange],
+  );
 
   if (isLoading) {
     return (

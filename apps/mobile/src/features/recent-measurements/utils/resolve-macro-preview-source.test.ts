@@ -49,7 +49,7 @@ describe("resolveMacroPreviewSource", () => {
     });
   });
 
-  it("strips the injected macros routing list from sample entries", () => {
+  it("strips the macros routing list that older uploads carry in sample entries", () => {
     const result = resolveMacroPreviewSource(
       measurement({
         ...fullPayload,
@@ -202,11 +202,11 @@ describe("resolveMacroPreviewSource", () => {
     expect(result.source.rawMeasurement.sample).toEqual([{ phi2: 0.8 }, { phi2: 0.2 }]);
   });
 
-  it("replays the capture-time input from the real stored shape (compressed + injected)", () => {
+  it("replays the capture-time input from an older stored shape (compressed, with the routing list)", () => {
     const compressed = {
       ...fullPayload,
-      // gzip+base64 of the sample entries after buildUploadPayload injected
-      // `macros`: [{"phi2":0.8,"macros":["macro-1.js"]},{"phi2":0.2,"macros":["macro-1.js"]}]
+      // gzip+base64 of the sample entries as older app versions stored them, with
+      // `macros` added: [{"phi2":0.8,"macros":["macro-1.js"]},{"phi2":0.2,"macros":["macro-1.js"]}]
       sample: "H4sIAAAAAAAAA4uuVirIyDRSsjLQs9BRyk1MLsovVrKKhrB0DfWyipVia3UQioxwKooFAF3o7nVLAAAA",
       _sample_encoding: "gzip+base64",
     };

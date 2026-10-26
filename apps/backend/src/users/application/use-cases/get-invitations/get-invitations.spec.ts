@@ -177,7 +177,7 @@ describe("GetInvitationsUseCase", () => {
       expect(result.error.statusCode).toBe(StatusCodes.FORBIDDEN);
     });
 
-    it("allows a direct admin", async () => {
+    it("allows a direct admin, without the address another admin typed", async () => {
       const { experiment } = await seedWithPendingInvitation();
       await testApp.addResourceGrant({
         resourceType: "experiment",
@@ -191,6 +191,28 @@ describe("GetInvitationsUseCase", () => {
 
       assertSuccess(result);
       expect(result.value).toHaveLength(1);
+      expect(result.value[0].email).toBeNull();
+      expect(JSON.stringify(result.value)).not.toContain("secret-invitee@example.com");
+    });
+
+    it("withholds the address from an owner of the experiment's organization who did not type it", async () => {
+      const { experiment } = await seedWithPendingInvitation();
+      const orgAdminId = await testApp.createTestUser({});
+      if (!experiment.organizationId) throw new Error("Experiment has no owning organization");
+      await testApp.addOrganizationMember(experiment.organizationId, orgAdminId, "admin");
+
+      const result = await useCase.execute("experiment", experiment.id, orgAdminId);
+
+      assertSuccess(result);
+      expect(result.value[0].email).toBeNull();
+    });
+
+    it("shows the address to the admin who created the invitation", async () => {
+      const { experiment, ownerId } = await seedWithPendingInvitation();
+
+      const result = await useCase.execute("experiment", experiment.id, ownerId);
+
+      assertSuccess(result);
       expect(result.value[0].email).toBe("secret-invitee@example.com");
     });
 

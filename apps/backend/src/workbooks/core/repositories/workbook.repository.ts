@@ -21,7 +21,9 @@ import {
   or,
   profiles,
   protocols,
+  resourceVisits,
   sql,
+  workbookVersions,
   workbooks,
 } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
@@ -42,8 +44,10 @@ import {
 import {
   accessibleResourceCondition,
   relatedResourceCondition,
+  resourceRoleExpression,
   resourceTierExpression,
 } from "../../../common/utils/resource-access-scope";
+import type { ResourceRoleName } from "../../../common/utils/resource-access-scope";
 import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import {
   CreateWorkbookDto,
@@ -65,12 +69,25 @@ export interface WorkbookFilter {
 /** A listing row plus its relevance score, which global search merges on across types. */
 export type WorkbookSearchRow = WorkbookListItemDto & { score: number };
 
+export type RecentlyOpenedWorkbookRow = Pick<typeof workbooks.$inferSelect, "id" | "name"> & {
+  latestVersion: number | null;
+  openedAt: Date;
+  callerRole: ResourceRoleName | null;
+};
+
 // All workbook columns except the internal full-text `search_vector` (never returned to clients).
 const { searchVector: _workbookSearchVector, ...workbookColumns } = getTableColumns(workbooks);
 
 // List queries additionally drop `cells`: the list contract doesn't expose them and
 // they are by far the heaviest column.
 const { cells: _workbookCells, ...workbookListColumns } = workbookColumns;
+
+// Null until the workbook's first version is published.
+function latestVersionSql() {
+  return sql<
+    number | null
+  >`(select max(${workbookVersions.version}) from ${workbookVersions} where ${workbookVersions.workbookId} = ${workbooks.id})`;
+}
 
 // Number of experiments currently referencing a workbook. A correlated subquery
 // keeps findAll/findById single-query (no N+1).
@@ -370,6 +387,55 @@ export class WorkbookRepository {
       }
 
       return (await query).map(toWorkbookRow);
+    });
+  }
+
+  /**
+   * The caller's visited workbooks, most recently opened first. The listing's access
+   * condition applies, so a visit the caller can no longer open never comes back.
+   */
+  async findRecentlyOpened(
+    userId: string,
+    limit: number,
+  ): Promise<Result<RecentlyOpenedWorkbookRow[]>> {
+    return tryCatch(() => {
+      const callerRole = resourceRoleExpression({
+        database: this.database,
+        resourceType: "workbook",
+        resourceIdColumn: workbooks.id,
+        organizationIdColumn: workbooks.organizationId,
+        userId,
+      });
+
+      return this.database
+        .select({
+          id: workbooks.id,
+          name: workbooks.name,
+          latestVersion: latestVersionSql(),
+          openedAt: resourceVisits.visitedAt,
+          callerRole,
+        })
+        .from(workbooks)
+        .innerJoin(
+          resourceVisits,
+          and(
+            eq(resourceVisits.userId, userId),
+            eq(resourceVisits.resourceType, "workbook"),
+            eq(resourceVisits.resourceId, workbooks.id),
+          ),
+        )
+        .where(
+          accessibleResourceCondition({
+            database: this.database,
+            resourceType: "workbook",
+            resourceIdColumn: workbooks.id,
+            organizationIdColumn: workbooks.organizationId,
+            visibilityColumn: workbooks.visibility,
+            userId,
+          }),
+        )
+        .orderBy(desc(resourceVisits.visitedAt), asc(workbooks.id))
+        .limit(limit);
     });
   }
 

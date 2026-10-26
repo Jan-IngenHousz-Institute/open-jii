@@ -10,6 +10,7 @@ import type { EmailRichTextInterface } from "../components/ctf-rich-text";
  */
 export type CmsEmailType =
   | "access-granted-notification"
+  | "experiment-made-public-notification"
   | "otp-email"
   | "project-transfer-complete"
   | "transfer-request-confirmation"
@@ -18,7 +19,10 @@ export type CmsEmailType =
   | "organization-invitation"
   | "organization-join-request-submitted"
   | "organization-join-request-approved"
-  | "organization-join-request-rejected";
+  | "organization-join-request-rejected"
+  | "resource-deleted-notification"
+  | "organization-role-changed"
+  | "organization-membership-removed";
 
 export interface CmsEmail {
   internalName: string;

@@ -13,6 +13,8 @@ import {
   AppError,
 } from "../../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { NotificationDeliveryRepository } from "../../../../notifications/core/repositories/notification-delivery.repository";
+import { queuedDeliveriesFor } from "../../../../test/notification-deliveries";
 import { TestHarness } from "../../../../test/test-harness";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
 import { RejectJoinRequestUseCase } from "./reject-join-request";
@@ -27,6 +29,8 @@ describe("RejectJoinRequestUseCase", () => {
 
   const notificationsFor = (userId: string) =>
     testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
+
+  const deliveriesFor = (userId: string) => queuedDeliveriesFor(testApp.database, userId);
 
   beforeAll(async () => {
     await testApp.setup();
@@ -133,8 +137,8 @@ describe("RejectJoinRequestUseCase", () => {
     expect(result.error.statusCode).toBe(StatusCodes.CONFLICT);
     expect(result.error.message).toContain("already has access");
     // Nothing reaches someone who now has access: no row and no rejection email.
-    expect(emailAdapter.sendJoinRequestRejectedNotification).not.toHaveBeenCalled();
     expect(await notificationsFor(requesterUserId)).toHaveLength(0);
+    expect(await deliveriesFor(requesterUserId)).toHaveLength(0);
     const reread = await joinRequestRepository.findById(request.id);
     assertSuccess(reread);
     expect(reread.value?.status).toBe("cancelled");
@@ -184,17 +188,21 @@ describe("RejectJoinRequestUseCase", () => {
       params: { experimentName: experiment.name },
     });
 
-    expect(emailAdapter.sendJoinRequestRejectedNotification).toHaveBeenCalledWith(
-      experiment.id,
-      experiment.name,
-      "requester@example.com",
-    );
+    expect(await deliveriesFor(requesterUserId)).toEqual([
+      {
+        notificationId: row.id,
+        type: "experiment_join_request_rejected",
+        channel: "email",
+        status: "pending",
+      },
+    ]);
+    expect(emailAdapter.sendJoinRequestRejectedNotification).not.toHaveBeenCalled();
   });
 
-  it("still rejects successfully when the rejection email fails to send", async () => {
+  it("still rejects successfully when the rejection email cannot be queued", async () => {
     const { experiment, request } = await seedPendingRequest();
-    vi.spyOn(emailAdapter, "sendJoinRequestRejectedNotification").mockResolvedValue(
-      failure(AppError.internal("smtp down")),
+    vi.spyOn(testApp.module.get(NotificationDeliveryRepository), "insertMany").mockResolvedValue(
+      failure(AppError.internal("Database unavailable")),
     );
 
     const result = await useCase.execute(experiment.id, request.id, adminUserId);

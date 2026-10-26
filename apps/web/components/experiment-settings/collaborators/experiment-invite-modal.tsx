@@ -69,7 +69,7 @@ export function ExperimentInviteModal({
       description={t("experimentSettings.inviteCollaboratorsDescription")}
       disabled={isArchived || !canShare}
       existingGranteeIds={existingGranteeIds}
-      existingEmails={invitations.map((invitation) => invitation.email)}
+      existingEmails={invitations.flatMap((invitation) => invitation.email ?? [])}
       onEmailInvite={handleEmailInvite}
       isEmailInvitePending={isCreatingInvitation}
       hint={isPublic ? t("sharing.publicExperimentTierHint") : t("sharing.experimentTierHint")}

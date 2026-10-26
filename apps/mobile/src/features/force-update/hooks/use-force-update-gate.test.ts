@@ -231,6 +231,26 @@ describe("useForceUpdateGate", () => {
     await waitFor(() => expect(result.current.status).toBe("gated"));
   });
 
+  it("checks again when the locale changes", async () => {
+    setCachedGate(makeGate({ minVersion: "1.0.0" }));
+
+    const { result, rerender } = renderHook(({ locale }) => useForceUpdateGate(locale), {
+      wrapper,
+      initialProps: { locale: "en-US" },
+    });
+    await waitFor(() => expect(result.current.status).toBe("allowed"));
+
+    const fetch = pendingFetch();
+    rerender({ locale: "nl-NL" });
+
+    expect(result.current.status).toBe("checking");
+    await waitFor(() => expect(mockFetchForceUpdate).toHaveBeenCalledWith("nl-NL"));
+    expect(result.current.status).toBe("checking");
+
+    fetch.resolve(makeGate({ minVersion: "2.0.0" }));
+    await waitFor(() => expect(result.current.status).toBe("gated"));
+  });
+
   it("does not gate when the native version is unavailable", async () => {
     mockNativeVersion.value = null;
     setCachedGate(makeGate({ minVersion: "1.0.0" }));

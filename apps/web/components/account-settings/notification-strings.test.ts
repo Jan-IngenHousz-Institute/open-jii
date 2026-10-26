@@ -60,6 +60,10 @@ describe("notifications locale coverage", () => {
       }
     });
 
+    it("says how long history is kept", () => {
+      expect(bundle).toHaveProperty("retention", expect.stringMatching(/\S/));
+    });
+
     it.each(["filters", "groups", "empty"] as const)(
       "keeps %s.* in parity with en-US, with no empty value",
       (group) => {

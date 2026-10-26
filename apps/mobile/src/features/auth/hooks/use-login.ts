@@ -7,6 +7,7 @@ import {
   verifyEmailLoginOtp,
 } from "~/features/auth/api/login.api";
 import { getAuthClient } from "~/features/auth/services/auth";
+import { hasSessionToken } from "~/shared/api/session-cookie";
 import { ensureDeviceRegistered } from "~/shared/composition/ensure-device-registered";
 import { prefetchOfflineData } from "~/shared/composition/prefetch-offline-data";
 import { useTranslation } from "~/shared/i18n";
@@ -14,17 +15,51 @@ import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("auth");
 
+// Bounded so a lookup that never answers still lets a real sign-in prefetch.
+const SESSION_LOOKUP_TIMEOUT_MS = 8_000;
+
+type SessionLookup =
+  | { status: "valid"; userId: string }
+  | { status: "none" }
+  | { status: "unknown" };
+
+async function lookUpSession(authClient: ReturnType<typeof getAuthClient>): Promise<SessionLookup> {
+  const controller = new AbortController();
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<SessionLookup>((resolve) => {
+    timeoutId = setTimeout(() => {
+      controller.abort();
+      resolve({ status: "unknown" });
+    }, SESSION_LOOKUP_TIMEOUT_MS);
+  });
+  const lookup = authClient.getSession({ fetchOptions: { signal: controller.signal } }).then(
+    (res): SessionLookup => {
+      const userId = res?.data?.user?.id;
+      if (userId) return { status: "valid", userId };
+      return res?.error ? { status: "unknown" } : { status: "none" };
+    },
+    (): SessionLookup => ({ status: "unknown" }),
+  );
+  return Promise.race([lookup, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 export function useLoginFlow() {
   const { t } = useTranslation("auth");
   const queryClient = useQueryClient();
 
   const prefetch = async () => {
-    // Resolve the freshly-signed-in userId so the profile prefetch has a target.
-    const session = await getAuthClient()
-      .getSession()
-      .catch(() => null);
-    const userId = session?.data?.user?.id;
-    void prefetchOfflineData(queryClient, userId);
+    const authClient = getAuthClient();
+    // Expo resolves cancelled OAuth as a redirect response; only a completed
+    // sign-in writes a session token.
+    if (!hasSessionToken(authClient.getCookie())) return;
+
+    // A leftover token can belong to a revoked session, so the server decides.
+    // Only an answer without a user skips the work; a failed lookup still
+    // prefetches, as long as the token survived it.
+    const session = await lookUpSession(authClient);
+    if (session.status === "none" || !hasSessionToken(authClient.getCookie())) return;
+
+    void prefetchOfflineData(queryClient, session.status === "valid" ? session.userId : undefined);
     void ensureDeviceRegistered();
   };
 

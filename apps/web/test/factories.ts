@@ -30,7 +30,6 @@ import type {
   ExperimentFlowGraph,
   ExperimentListItem,
   ExperimentUploadMetadata,
-  RecentlyOpenedExperiment,
   RelatedHomeExperiment,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
@@ -73,7 +72,8 @@ import type {
   ResourceGrantDto,
   ResourceOwnerDto,
 } from "@repo/api/domains/sharing/sharing.schema";
-import type { Invitation, UserProfile } from "@repo/api/domains/user/user.schema";
+import type { Invitation, UserSearchResult } from "@repo/api/domains/user/user.schema";
+import type { RecentlyOpenedResource } from "@repo/api/domains/visit/visit.schema";
 import type {
   BranchCell,
   CommandCell,
@@ -115,21 +115,37 @@ export function createExperiment(overrides: Partial<ExperimentListItem> = {}): E
   };
 }
 
-export function createRecentlyOpenedExperiment(
-  overrides: Partial<RecentlyOpenedExperiment> = {},
-): RecentlyOpenedExperiment {
-  return {
-    ...createExperiment(),
-    openedAt: "2025-01-20T00:00:00.000Z",
-    callerRole: "owner",
-    ...overrides,
-  };
-}
-
 export function createHomeExperiment(
   overrides: Partial<RelatedHomeExperiment> = {},
 ): RelatedHomeExperiment {
   return { ...createExperiment(), callerRole: "owner", ...overrides };
+}
+
+/** Each variant's own fields; the shared ones are filled in. */
+type RecentlyOpenedDetail = RecentlyOpenedResource extends infer Row
+  ? Row extends RecentlyOpenedResource
+    ? Omit<Row, "id" | "name" | "openedAt" | "callerRole">
+    : never
+  : never;
+
+let recentlyOpenedSeq = 0;
+
+export function createRecentlyOpenedResource(
+  resource: RecentlyOpenedDetail &
+    Partial<Pick<RecentlyOpenedResource, "id" | "name" | "openedAt" | "callerRole">> = {
+    type: "experiment",
+    status: "active",
+    organizationName: "Plant Physiology Lab",
+  },
+): RecentlyOpenedResource {
+  recentlyOpenedSeq++;
+  return {
+    id: `00000000-0000-4000-8000-${String(recentlyOpenedSeq).padStart(12, "0")}`,
+    name: `Opened ${recentlyOpenedSeq}`,
+    openedAt: "2025-01-20T00:00:00.000Z",
+    callerRole: "owner",
+    ...resource,
+  };
 }
 
 // ── Transfer Request ────────────────────────────────────────────
@@ -304,7 +320,7 @@ export function createWorkbook(overrides: Partial<Workbook> = {}): Workbook {
 
 // ── User Profile ────────────────────────────────────────────────
 
-export function createUserProfile(overrides: Partial<UserProfile> = {}): UserProfile {
+export function createUserProfile(overrides: Partial<UserSearchResult> = {}): UserSearchResult {
   return {
     userId: "user-1",
     firstName: "Test",
@@ -312,6 +328,7 @@ export function createUserProfile(overrides: Partial<UserProfile> = {}): UserPro
     bio: null,
     activated: true,
     email: "test@example.com",
+    matchedEmail: false,
     ...overrides,
   };
 }
@@ -323,6 +340,7 @@ export function createGranteeUser(overrides: Partial<GranteeUserDto> = {}): Gran
     firstName: "Test",
     lastName: "User",
     email: "test@example.com",
+    matchedEmail: false,
     avatarUrl: null,
     organizationRole: null,
     existingGrantRole: null,
@@ -1384,6 +1402,27 @@ export function createDeviceGroupMember(
     connected: null,
     lastSeenAt: null,
     addedAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+interface AmbitTraceFixture {
+  schema: string;
+  sensor_id: string;
+  device: string;
+  time: { duration_ms: number };
+  series: Record<string, unknown>;
+}
+
+export function createAmbitTrace(overrides: Partial<AmbitTraceFixture> = {}): AmbitTraceFixture {
+  return {
+    schema: "ambit.trace/3",
+    sensor_id: "fixture-sensor",
+    device: "Test Ambit",
+    time: { duration_ms: 300 },
+    series: {
+      fluo_630_signal: { u: "count", t0: 0, dt: 0.1, v: [120, 160, 140] },
+      leaf_temp: { u: "Cel", t: [0.05, 0.25], v: [23.5, 23.7] },
+    },
     ...overrides,
   };
 }

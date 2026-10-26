@@ -70,8 +70,8 @@ describe("ScopedMetricsController", () => {
     expect(response.status).toBe(StatusCodes.OK);
     const body = zScopedMetricsResponse.parse(response.body);
     expect(body.scope).toBe("organization");
-    expect(body.baseline.measurements30d).toBe(4_000);
-    expect(body.scoped.measurements30d).toBe(0);
+    expect(body.baseline?.measurements30d).toBe(4_000);
+    expect(body.scoped?.measurements30d).toBe(0);
   });
 
   it("rejects org scope for non-members", async () => {

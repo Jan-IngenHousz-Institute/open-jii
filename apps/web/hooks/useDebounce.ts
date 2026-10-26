@@ -8,12 +8,15 @@ import { useState, useEffect } from "react";
  */
 export function useDebounce<T>(value: T, delay = 300): [T, boolean] {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  const [isDebounced, setIsDebounced] = useState<boolean>(true);
+  const [isDebounced, setIsDebounced] = useState<boolean>(false);
+  const [pending, setPending] = useState({ value, delay });
+
+  if (!Object.is(pending.value, value) || pending.delay !== delay) {
+    setPending({ value, delay });
+    setIsDebounced(false);
+  }
 
   useEffect(() => {
-    // Set isDebounced to false when value changes (debouncing in progress)
-    setIsDebounced(false);
-
     const timer = setTimeout(() => {
       setDebouncedValue(value);
       setIsDebounced(true);

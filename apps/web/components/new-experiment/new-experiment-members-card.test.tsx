@@ -84,6 +84,28 @@ describe("<NewExperimentMembersCard />", () => {
     });
   });
 
+  it("adds and removes a named member whose email is redacted", async () => {
+    server.mount(contract.users.searchUsers, {
+      body: [
+        createUserProfile({
+          userId: "u-hidden",
+          firstName: "Cora",
+          lastName: "Admin",
+          email: null,
+        }),
+      ],
+    });
+    renderMembersCard();
+    await userEvent.type(screen.getByPlaceholderText("experiments.searchUsersPlaceholder"), "Cora");
+    await waitFor(() => expect(screen.getByText("Cora Admin")).toBeInTheDocument());
+    await userEvent.click(screen.getByText("Cora Admin"));
+    await userEvent.click(screen.getByRole("button", { name: "common.add" }));
+    expect(screen.getByText("Cora Admin")).toBeInTheDocument();
+    expect(screen.queryByText("null")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "common.remove" }));
+    expect(screen.queryByText("Cora Admin")).not.toBeInTheDocument();
+  });
+
   it("removes a member when remove button is clicked", async () => {
     server.mount(contract.users.searchUsers, { body: users });
     renderMembersCard([{ userId: "user-1", firstName: "Alice" }]);

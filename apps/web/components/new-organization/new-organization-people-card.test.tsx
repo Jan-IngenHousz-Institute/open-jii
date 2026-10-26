@@ -190,6 +190,7 @@ describe("<NewOrganizationPeopleCard />", () => {
           firstName: "Lin",
           lastName: "Zhao",
           email: "lin@uni.edu",
+          matchedEmail: true,
         }),
       ],
     });

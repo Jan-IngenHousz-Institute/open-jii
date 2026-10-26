@@ -31,7 +31,8 @@ from openjii.variant_schema import merged_variant_schema
         "delta.autoOptimize.autoCompact": "false",
         "pipelines.autoOptimize.managed": "true",
         "delta.feature.variantType-preview": "supported",
-    }
+    },
+    spark_conf={"pipelines.trigger.interval": "1 minute"},
 )
 def experiment_table_metadata():
     """Schemas for all experiment tables."""

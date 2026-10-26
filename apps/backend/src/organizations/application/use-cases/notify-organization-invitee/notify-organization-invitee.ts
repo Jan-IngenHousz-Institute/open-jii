@@ -16,9 +16,9 @@ export interface CreatedOrganizationInvitation {
 }
 
 /**
- * Notifies an invitee who already has an account, email included, so their saved email
- * preference governs it. An invitee with no account was emailed by `packages/auth` and
- * gets their row from the sign-in catch-up instead.
+ * Notifies an invitee who already has an account and queues their email, so their saved
+ * email preference governs it. An invitee with no account is emailed by `packages/auth`
+ * directly and gets their row from the sign-in catch-up instead.
  */
 @Injectable()
 export class NotifyOrganizationInviteeUseCase {

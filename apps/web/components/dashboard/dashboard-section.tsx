@@ -1,40 +1,32 @@
-import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import type { ReactNode } from "react";
 
 interface DashboardSectionProps {
+  /** Names the heading, so the section is announced by it. */
+  id: string;
   title: string;
-  seeAllLabel: string;
-  seeAllHref: string;
-  locale: string;
-  children: React.ReactNode;
+  /** Quieter text beside the heading, such as a count. */
+  meta?: ReactNode;
+  /** At the heading's far end, usually a See all link. */
+  action?: ReactNode;
+  children: ReactNode;
 }
 
-export function DashboardSection({
-  title,
-  seeAllLabel,
-  seeAllHref,
-  locale,
-  children,
-}: DashboardSectionProps) {
+/** One section of the home: a heading row, then its content. */
+export function DashboardSection({ id, title, meta, action, children }: DashboardSectionProps) {
+  const headingId = `${id}-heading`;
+
   return (
-    <div className="flex flex-col">
-      <div className="mb-4 flex items-end justify-between">
-        {title ? (
-          <h2 className="text-foreground text-[1rem] font-bold leading-[1.3125rem]">{title}</h2>
-        ) : null}
-        <IntentLink href={seeAllHref} locale={locale} className="hidden md:block">
-          <span className="text-primary hover:text-primary/80 text-[1rem] font-semibold leading-[1.25rem]">
-            {seeAllLabel}
-          </span>
-        </IntentLink>
+    <section aria-labelledby={headingId} className="flex min-w-0 flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id={headingId} className="text-foreground text-base font-bold leading-tight">
+          {title}
+          {meta ? (
+            <span className="text-muted-foreground ml-2 text-sm font-normal">{meta}</span>
+          ) : null}
+        </h2>
+        {action}
       </div>
-      <div className="flex-1">{children}</div>
-      <IntentLink
-        href={seeAllHref}
-        locale={locale}
-        className="bg-muted text-foreground hover:bg-accent hover:text-accent-foreground mt-6 flex w-full items-center justify-center rounded-lg py-3 text-sm font-semibold transition-colors md:hidden"
-      >
-        {seeAllLabel}
-      </IntentLink>
-    </div>
+      {children}
+    </section>
   );
 }

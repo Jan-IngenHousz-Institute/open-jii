@@ -33,7 +33,7 @@ describe("Experiment home read", () => {
       .get(path())
       .withAuth(userId)
       .expect(StatusCodes.OK);
-    expect(response.body).toEqual({ source: "related", experiments: [] });
+    expect(response.body).toEqual({ experiments: [] });
   });
 
   it("requires authentication", async () => {
@@ -58,7 +58,6 @@ describe("Experiment home read", () => {
       .get(path())
       .withAuth(userId)
       .expect(StatusCodes.OK);
-    expect(response.body.source).toBe("related");
     expect(response.body.experiments.map((e: { id: string }) => e.id)).toEqual(
       ids.slice(2).reverse(),
     );
@@ -139,39 +138,29 @@ describe("Experiment home read", () => {
     expect(revoked.body.experiments).toEqual([]);
   });
 
-  it("keeps eligible real visits separate, then falls back when their access is revoked", async () => {
-    const otherId = await app.createTestUser({});
-    const { experiment: visited } = await app.createExperiment({
-      name: "Visited",
-      userId: otherId,
-    });
-    await app.addExperimentCollaborator(visited.id, userId);
+  it("orders by update whatever the caller opened", async () => {
+    const { experiment: visited } = await app.createExperiment({ name: "Visited", userId });
+    const { experiment: updated } = await app.createExperiment({ name: "Updated", userId });
+    await app.database
+      .update(experiments)
+      .set({ updatedAt: new Date(2026, 0, 1) })
+      .where(eq(experiments.id, visited.id));
     await app.addResourceVisit({ userId, resourceId: visited.id });
-    const { experiment: unvisited } = await app.createExperiment({ name: "Unvisited", userId });
     const response: SuperTestResponse<HomeExperiments> = await app
       .get(path())
       .withAuth(userId)
       .expect(StatusCodes.OK);
-    expect(response.body.source).toBe("recently-opened");
-    expect(response.body.experiments).toHaveLength(1);
-    expect(response.body.experiments[0]).toMatchObject({ id: visited.id, callerRole: "viewer" });
-    expect(response.body.experiments[0]).toHaveProperty("openedAt", expect.any(String));
-    await app.database.delete(resourceGrants).where(eq(resourceGrants.granteeId, userId));
-    const fallback: SuperTestResponse<HomeExperiments> = await app
-      .get(path())
-      .withAuth(userId)
-      .expect(StatusCodes.OK);
-    expect(fallback.body.source).toBe("related");
-    expect(fallback.body.experiments.map((e: { id: string }) => e.id)).toEqual([unvisited.id]);
+    expect(response.body.experiments.map((e: { id: string }) => e.id)).toEqual([
+      updated.id,
+      visited.id,
+    ]);
+    expect(response.body.experiments[0]).not.toHaveProperty("openedAt");
   });
 
-  it.each(["findRecentlyOpened", "findRecentlyUpdatedRelated"] as const)(
-    "propagates a %s failure",
-    async (method) => {
-      vi.spyOn(app.module.get(ExperimentRepository), method).mockResolvedValue(
-        failure(AppError.notFound("read failed")),
-      );
-      await app.get(path()).withAuth(userId).expect(StatusCodes.NOT_FOUND);
-    },
-  );
+  it("propagates a read failure", async () => {
+    vi.spyOn(app.module.get(ExperimentRepository), "findRecentlyUpdatedRelated").mockResolvedValue(
+      failure(AppError.notFound("read failed")),
+    );
+    await app.get(path()).withAuth(userId).expect(StatusCodes.NOT_FOUND);
+  });
 });

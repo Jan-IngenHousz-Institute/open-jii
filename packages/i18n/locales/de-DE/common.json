@@ -84,7 +84,9 @@
     "sortUnsorted": "unsortiert",
     "sortAscending": "aufsteigend",
     "sortDescending": "absteigend",
-    "sortSecondary": "zweite Sortierung"
+    "sortSecondary": "zweite Sortierung",
+    "searchMinCharacters": "Gib mindestens 2 Zeichen ein, um zu suchen",
+    "emailMatched": "Entspricht der eingegebenen E-Mail-Adresse"
   },
   "navigation": {
     "experiments": "Experimente",
@@ -302,6 +304,7 @@
     "experimentUnarchivedError": null,
     "remove": null,
     "pendingInvite": "Einladung ausstehend",
+    "addressHidden": "Adresse verborgen",
     "invitationRevoked": "Einladung erfolgreich widerrufen",
     "revoke": "Widerrufen",
     "collaborators": "Mitwirkende",
@@ -342,7 +345,9 @@
     "invite": "Einladen",
     "inviteCollaborators": "Mitwirkende einladen",
     "inviteCollaboratorsDescription": "Fügen Sie eine bestehende Person oder eine Ihrer Organisationen hinzu oder laden Sie jemanden per E-Mail ein. Bestehende Konten erhalten sofort Zugriff; Eingeladene erhalten eine E-Mail und treten nach dem Annehmen bei.",
-    "filterCollaboratorsPlaceholder": "Nach Name oder E-Mail filtern…"
+    "filterCollaboratorsPlaceholder": "Nach Name oder E-Mail filtern…",
+    "invitedBy": "Eingeladen von",
+    "unknownInviter": "Unbekannter Einladender"
   },
   "joinCode": {
     "title": "Beitrittscode",
@@ -693,7 +698,7 @@
     "invite": {
       "action": "Einladen",
       "title": "Jemanden einladen",
-      "description": "Suchen Sie nach einer Person mit Konto oder geben Sie eine Adresse ohne Konto ein. In beiden Fällen wird eine Einladung gesendet.",
+      "description": "Suchen Sie nach Namen oder geben Sie eine vollständige E-Mail-Adresse ein. Ist die Adresse verborgen, müssen Sie sie vollständig eingeben, um die Person einzuladen.",
       "roleLabel": "Rolle",
       "submit": "Einladung senden",
       "sending": "Wird gesendet…",
@@ -713,6 +718,7 @@
       "searchFailed": "Die Personensuche konnte nicht ausgeführt werden.",
       "alreadyMember": "Diese Person ist bereits Mitglied dieser Organisation",
       "alreadyInvited": "Für diese Adresse liegt bereits eine Einladung vor",
+      "enterExactEmail": "Geben Sie die vollständige E-Mail-Adresse ein, um diese Person einzuladen",
       "mustAccept": "{{name}} wird als {{role}} eingeladen und tritt bei, sobald die Einladung angenommen wurde.",
       "sendByEmail": "Einladung per E-Mail senden",
       "label": "Eingeladen",
@@ -900,23 +906,13 @@
     }
   },
   "dashboard": {
-    "title": "Dashboard",
+    "title": "Startseite",
     "welcome": "Willkommen bei openJII",
-    "transferBannerTitle": null,
-    "transferBannerDescription": null,
-    "transferBannerDescriptionItalic": null,
-    "transferBannerButton": null,
-    "reportBugButton": null,
     "recentExperiments": "Kürzliche Experimente",
     "recentArticles": "Neueste Blogbeiträge",
-    "recentlyOpenedExperiments": "Zuletzt geöffnet",
     "seeAll": "Alle ansehen",
     "statistics": "Statistiken",
     "quickActions": "Schnellaktionen",
-    "noBlogPosts": "Keine Blogbeiträge vorhanden",
-    "errorLoadingBlogPosts": "Fehler beim Laden der Blogbeiträge",
-    "recentPublicExperiments": "Kürzlich aktualisierte öffentliche Experimente",
-    "noPublicExperiments": "Noch keine öffentlichen Experimente.",
     "publicExperimentsLoadFailed": "Öffentliche Experimente konnten nicht geladen werden.",
     "publicExperimentsStale": "Seit dem {{date}} wurde kein öffentliches Experiment aktualisiert.",
     "browsePublicExperiments": "Öffentliche Experimente durchsuchen",
@@ -935,8 +931,24 @@
       }
     },
     "yourExperiments": "Ihre Experimente",
-    "userExperimentsLoadFailed": "Ihre Experimente konnten nicht geladen werden.",
-    "userExperimentsRetry": "Erneut versuchen"
+    "recentlyOpened": "Zuletzt geöffnet",
+    "recentlyOpenedLoadFailed": "Ihre zuletzt geöffneten Inhalte konnten nicht geladen werden.",
+    "typeFilterLabel": "Einen Typ anzeigen",
+    "allTypes": "Alle",
+    "seeAllType": {
+      "experiment": "Alle Experimente ansehen",
+      "protocol": "Alle Protokolle ansehen",
+      "macro": "Alle Makros ansehen",
+      "workbook": "Alle Arbeitsmappen ansehen"
+    },
+    "workbookVersion": "Version {{version}}",
+    "publicResearch": "Öffentliche Forschung",
+    "getStarted": "Erste Schritte",
+    "welcomeNotice": "Willkommen bei openJII. Setzen Sie Ihre Forschung ohne Unterbrechung fort; übertragen Sie jetzt Ihre Daten.",
+    "requestTransfer": "Übertragung anfordern",
+    "dismiss": "Schließen",
+    "feedback": "Funktioniert etwas nicht? <bug>Fehler melden</bug> oder <feature>eine Funktion vorschlagen</feature>.",
+    "userExperimentsLoadFailed": "Ihre Experimente konnten nicht geladen werden."
   },
   "auth": {
     "login": "Anmelden",

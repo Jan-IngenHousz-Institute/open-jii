@@ -317,7 +317,7 @@ describe("ListExperimentsUseCase", () => {
 
   it("should page public experiments by most recent update", async () => {
     const otherUserId = await testApp.createTestUser({ email: "recent-owner@example.com" });
-    const created = [];
+    const created: { id: string }[] = [];
     for (const [index, day] of ["2026-01-01", "2026-03-01", "2026-02-01"].entries()) {
       const { experiment } = await testApp.createExperiment({
         name: `Public ${index}`,

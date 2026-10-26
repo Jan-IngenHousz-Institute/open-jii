@@ -2213,7 +2213,7 @@ describe("ExperimentRepository", () => {
       await visit(newest.id, 1);
       await visit(middle.id, 10);
 
-      const result = await repository.findRecentlyOpened(testUserId, 2, "related");
+      const result = await repository.findRecentlyOpened(testUserId, 2);
 
       assertSuccess(result);
       expect(result.value.map((row) => row.name)).toEqual(["Newest", "Middle"]);
@@ -2228,13 +2228,13 @@ describe("ExperimentRepository", () => {
       });
       await visit(experiment.id, 1, otherUserId);
 
-      const result = await repository.findRecentlyOpened(testUserId, 3, "related");
+      const result = await repository.findRecentlyOpened(testUserId, 3);
 
       assertSuccess(result);
       expect(result.value).toEqual([]);
     });
 
-    it("keeps a public experiment the caller has no role on out of the related scope", async () => {
+    it("keeps a public experiment the caller has no role on, with no role", async () => {
       const otherUserId = await testApp.createTestUser({});
       const { experiment } = await testApp.createExperiment({
         name: "Someone else's public work",
@@ -2243,13 +2243,20 @@ describe("ExperimentRepository", () => {
       });
       await visit(experiment.id, 1);
 
-      const related = await repository.findRecentlyOpened(testUserId, 3, "related");
-      const all = await repository.findRecentlyOpened(testUserId, 3, "all");
+      const result = await repository.findRecentlyOpened(testUserId, 3);
 
-      assertSuccess(related);
-      assertSuccess(all);
-      expect(related.value).toEqual([]);
-      expect(all.value).toEqual([expect.objectContaining({ id: experiment.id, callerRole: null })]);
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        expect.objectContaining({
+          id: experiment.id,
+          name: "Someone else's public work",
+          status: "active",
+          organizationName: null,
+          callerRole: null,
+        }),
+      ]);
+      // Only what a row shows: no listing columns ride along.
+      expect(result.value[0]).not.toHaveProperty("membersCount");
     });
 
     it("drops an experiment once the caller can no longer open it", async () => {
@@ -2262,7 +2269,7 @@ describe("ExperimentRepository", () => {
       await visit(experiment.id, 1);
       await testApp.removeResourceGrant(grant.id);
 
-      const result = await repository.findRecentlyOpened(testUserId, 3, "all");
+      const result = await repository.findRecentlyOpened(testUserId, 3);
 
       assertSuccess(result);
       expect(result.value).toEqual([]);
@@ -2276,7 +2283,7 @@ describe("ExperimentRepository", () => {
       });
       await visit(experiment.id, 1);
 
-      const result = await repository.findRecentlyOpened(testUserId, 3, "related");
+      const result = await repository.findRecentlyOpened(testUserId, 3);
 
       assertSuccess(result);
       expect(result.value).toEqual([]);
@@ -2291,7 +2298,7 @@ describe("ExperimentRepository", () => {
 
       async function roleOn(experimentId: string) {
         await visit(experimentId, 1);
-        const result = await repository.findRecentlyOpened(testUserId, 3, "all");
+        const result = await repository.findRecentlyOpened(testUserId, 3);
         assertSuccess(result);
         return result.value.find((row) => row.id === experimentId)?.callerRole;
       }

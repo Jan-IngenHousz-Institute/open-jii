@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { StatusCodes } from "http-status-codes";
 
 import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
@@ -13,6 +12,7 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { queuedDeliveriesFor } from "../../../../test/notification-deliveries";
 import { TestHarness } from "../../../../test/test-harness";
 import { SharingRepository } from "../../../core/repositories/sharing.repository";
 import { CreateGrantUseCase } from "../create-grant/create-grant";
@@ -115,7 +115,7 @@ describe("revokeGrant", () => {
 
   // Losing access is something the person hears about in the bell. The row still
   // carries the resource, even though nothing links to it any more.
-  it("tells the grantee their access was removed, with no role and no email", async () => {
+  it("tells the grantee their access was removed, with no role and no email queued", async () => {
     const name = `Macro ${crypto.randomUUID()}`;
     const macro = await testApp.createMacro({ name, createdBy: owner });
     const collaborator = await testApp.createTestUser({ name: "Dropped Collaborator" });
@@ -143,7 +143,8 @@ describe("revokeGrant", () => {
       params: { resourceName: name },
     });
     expect(rows[0].params).not.toHaveProperty("role");
-    expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+    // A revoke owes no email, so nothing is queued for the worker to send.
+    expect(await queuedDeliveriesFor(testApp.database, collaborator)).toEqual([]);
   });
 
   // A resource deleted in the same breath as the revoke has no name left to put in

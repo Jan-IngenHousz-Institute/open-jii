@@ -9,6 +9,21 @@ import {
   benchInstrumentForHandshake,
   identifyBenchInstrument,
 } from "./registry";
+import type { BenchIdentification, BenchUnrecognised } from "./registry";
+
+function identified(result: BenchIdentification | BenchUnrecognised): BenchIdentification {
+  if (result.kind !== "identified") {
+    throw new Error(`Nothing was identified; the port answered ${result.replies.join(", ")}`);
+  }
+  return result;
+}
+
+function unrecognised(result: BenchIdentification | BenchUnrecognised): BenchUnrecognised {
+  if (result.kind !== "unrecognised") {
+    throw new Error(`Expected nothing to be recognised, but ${result.instrument.model} was`);
+  }
+  return result;
+}
 
 function respondingWith(reply: string): MockTransport {
   const transport = createMockTransport();
@@ -25,7 +40,7 @@ describe("bench instrument registry", () => {
 
     const identification = await identifyBenchInstrument(transport);
 
-    expect(identification?.instrument.model).toBe("kiprim-dc");
+    expect(identified(identification).instrument.model).toBe("kiprim-dc");
   });
 
   // Discovery is by identity reply, not by port order or configuration, so a
@@ -35,7 +50,7 @@ describe("bench instrument registry", () => {
 
     const identification = await identifyBenchInstrument(transport);
 
-    expect(identification?.instrument.model).toBe("kiprim-dc");
+    expect(identified(identification).instrument.model).toBe("kiprim-dc");
   });
 
   // The reference answers Ctrl-A, not *IDN?, so the probe order has to reach it.
@@ -50,7 +65,7 @@ describe("bench instrument registry", () => {
 
     const identification = await identifyBenchInstrument(transport);
 
-    expect(identification?.instrument.model).toBe("micropython-par-reference");
+    expect(identified(identification).instrument.model).toBe("micropython-par-reference");
   });
 
   // Two roles can be served by one instrument class and told apart only by the name
@@ -60,7 +75,7 @@ describe("bench instrument registry", () => {
 
     const identification = await identifyBenchInstrument(transport);
 
-    expect(identification?.reply).toBe("KIPRIM,DC310S,25011669,FV:V5.2.0");
+    expect(identified(identification).reply).toBe("KIPRIM,DC310S,25011669,FV:V5.2.0");
   });
 
   it("does not drive a port whose instrument it did not recognise", async () => {
@@ -68,7 +83,7 @@ describe("bench instrument registry", () => {
 
     const identification = await identifyBenchInstrument(transport);
 
-    expect(identification?.instrument.model).toBe("micropython-par-reference");
+    expect(identified(identification).instrument.model).toBe("micropython-par-reference");
     expect(transport.send).not.toHaveBeenCalledWith(KIPRIM_COMMANDS.setCurrent(0));
   });
 
@@ -98,22 +113,61 @@ describe("bench instrument registry", () => {
 
     const identification = await identifyBenchInstrument(transport);
 
-    expect(identification?.instrument.model).toBe("minipar-reference");
-    expect(identification?.reply).toContain("Par_REF");
+    expect(identified(identification).instrument.model).toBe("minipar-reference");
+    expect(identified(identification).reply).toContain("Par_REF");
   });
 
-  it("returns null for an instrument nothing recognises", async () => {
+  // An operator facing "nothing recognised" needs to see what is on the port, or a
+  // third-party unit that answers differently than expected cannot be diagnosed.
+  it("keeps what an instrument nothing recognises answered", async () => {
     const transport = respondingWith("KEITHLEY INSTRUMENTS,MODEL 2450,04123456,1.7.12b\n");
 
-    expect(await identifyBenchInstrument(transport)).toBeNull();
+    const result = unrecognised(await identifyBenchInstrument(transport));
+
+    expect(result.replies).toContain("KEITHLEY INSTRUMENTS,MODEL 2450,04123456,1.7.12b");
+  });
+
+  // A supply that echoes the query answers with the echo first, and the candidate reads
+  // only that line; the identity that tells what is plugged in comes after it.
+  it("keeps every line the port sent when a candidate read only the first", async () => {
+    const transport = createMockTransport();
+    vi.mocked(transport.send).mockImplementation((sent: string) => {
+      if (sent === KIPRIM_COMMANDS.IDENTIFY) {
+        setTimeout(() => transport.simulateData("*IDN?\nACME,PSU-3005,0042,1.2\n"), 0);
+      }
+      return Promise.resolve();
+    });
+
+    const result = unrecognised(await identifyBenchInstrument(transport));
+
+    expect(result.replies).toEqual(["*IDN?", "ACME,PSU-3005,0042,1.2"]);
+  });
+
+  // A candidate that names itself in two commands fails as a whole when the second goes
+  // unanswered, but the port did answer the first.
+  it("keeps what the port answered before a probe's later command went unanswered", async () => {
+    const transport = createMockTransport();
+    vi.mocked(transport.send).mockImplementation((sent: string) => {
+      if (sent === "hello\n") {
+        setTimeout(() => transport.simulateData("MiniPAR,1.1,1.03\n"), 0);
+      }
+      return Promise.resolve();
+    });
+
+    const result = unrecognised(await identifyBenchInstrument(transport));
+
+    expect(result.replies).toEqual(["MiniPAR,1.1,1.03"]);
   });
 
   // Every candidate asks the same port in turn, so the operator waiting on Connect pays
   // the sum of them. Each gets the probe budget, not its own working timeout.
-  it("returns null rather than hanging when the port stays silent, within the probe budget", async () => {
+  it("reports a silent port rather than hanging, within the probe budget", async () => {
     const startedAt = performance.now();
 
-    expect(await identifyBenchInstrument(createMockTransport())).toBeNull();
+    expect(await identifyBenchInstrument(createMockTransport())).toEqual({
+      kind: "unrecognised",
+      replies: [],
+    });
 
     const spent = performance.now() - startedAt;
     expect(spent).toBeLessThan(BENCH_INSTRUMENTS.length * BENCH_PROBE_TIMEOUT_MS * 1.5);

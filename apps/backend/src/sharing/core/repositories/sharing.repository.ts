@@ -70,6 +70,8 @@ import type {
 } from "../models/sharing.model";
 import {
   assertResourceStaysStaffed,
+  findResourceAdminIds,
+  findResourceMemberIds,
   findStaffedResource,
   isLivingUser,
   livingOrgAdminIdsSql,
@@ -783,6 +785,40 @@ export class SharingRepository {
   }
 
   /**
+   * Who can decide for a resource. Unscoped like the name: read only after the
+   * caller's write on this resource has succeeded.
+   */
+  listAdminIds(resourceType: SharingResourceType, resourceId: string): Promise<Result<string[]>> {
+    return tryCatch(() => findResourceAdminIds(this.db, resourceType, resourceId));
+  }
+
+  /**
+   * Everyone a deletion or move of this resource takes something from. Read
+   * before a delete, while the grants and the owning organization still exist;
+   * after a move, pass the organization that lost it.
+   */
+  listMemberIds(
+    resourceType: SharingResourceType,
+    resourceId: string,
+    owningOrganizationId?: string | null,
+  ): Promise<Result<string[]>> {
+    return tryCatch(() =>
+      findResourceMemberIds(this.db, resourceType, resourceId, { owningOrganizationId }),
+    );
+  }
+
+  findOrganization(organizationId: string): Promise<Result<{ name: string; slug: string } | null>> {
+    return tryCatch(async () => {
+      const rows = await this.db
+        .select({ name: organizations.name, slug: organizations.slug })
+        .from(organizations)
+        .where(eq(organizations.id, organizationId))
+        .limit(1);
+      return rows.at(0) ?? null;
+    });
+  }
+
+  /**
    * Move a resource to another organization.
    *
    * Everything the move depends on is re-established here under locks, because the
@@ -966,7 +1002,7 @@ export class SharingRepository {
     resourceType: SharingResourceType,
     resourceId: string,
     owningOrganizationId: string | null,
-    params: { query?: string; limit: number },
+    params: { query: string; limit: number },
   ): Promise<Result<GranteeUserDto[]>> {
     return tryCatch(async () => {
       // No owning organization means nobody holds an org role over this resource.
@@ -978,6 +1014,7 @@ export class SharingRepository {
         : sql`false`;
 
       const fullName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
+      const isExactEmail = sql<boolean>`lower(${users.email}) = lower(${params.query})`;
       const isDiscoverable = and(eq(profiles.activated, true), isNull(profiles.deletedAt));
 
       const rows = await this.db
@@ -986,6 +1023,7 @@ export class SharingRepository {
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
           email: getAnonymizedEmail(),
+          matchedEmail: isExactEmail,
           avatarUrl: getAnonymizedAvatarUrl(),
           organizationRole: organizationMembers.role,
           existingGrantRole: resourceGrants.role,
@@ -1005,22 +1043,17 @@ export class SharingRepository {
         .where(
           and(
             isDiscoverable,
-            params.query
-              ? or(
-                  trigramMatch(profiles.firstName, params.query),
-                  trigramMatch(profiles.lastName, params.query),
-                  ilike(fullName, `%${escapeLike(params.query)}%`),
-                  ilike(users.email, `%${escapeLike(params.query)}%`),
-                )
-              : undefined,
+            or(
+              trigramMatch(profiles.firstName, params.query),
+              trigramMatch(profiles.lastName, params.query),
+              ilike(fullName, `%${escapeLike(params.query)}%`),
+              isExactEmail,
+            ),
           ),
         )
         .orderBy(
-          ...(params.query
-            ? [
-                sql`greatest(similarity(${fullName}, ${params.query}), similarity(${users.email}, ${params.query})) DESC`,
-              ]
-            : []),
+          sql`CASE WHEN ${isExactEmail} THEN 0 ELSE 1 END`,
+          sql`similarity(${fullName}, ${params.query}) DESC`,
           asc(profiles.firstName),
           // Names tie constantly, and without a unique tiebreaker the cut-off drifts.
           asc(profiles.userId),
@@ -1032,6 +1065,7 @@ export class SharingRepository {
         firstName: r.firstName,
         lastName: r.lastName,
         email: r.email,
+        matchedEmail: r.matchedEmail,
         avatarUrl: r.avatarUrl,
         organizationRole: toOrganizationMemberRole(r.organizationRole),
         existingGrantRole: r.existingGrantRole ? toGrantRole(r.existingGrantRole) : null,
