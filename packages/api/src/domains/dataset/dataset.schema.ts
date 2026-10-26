@@ -4,7 +4,11 @@ import { zResourceScope } from "../../shared/listing";
 import { zExperimentAnnotationFlagType } from "../experiment/data-annotations/experiment-data-annotations.schema";
 import { zDataLicense, zFundingReferenceList } from "../experiment/experiment.schema";
 import { zSkipReason } from "../experiment/sessions/experiment-sessions.schema";
-import { zOrcid } from "../user/user.schema";
+
+/** An ORCID iD in its canonical form; it only ever comes from a connected ORCID account. */
+const zOrcid = z
+  .string()
+  .regex(/^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/, "Must be an ORCID iD like 0000-0002-1825-0097");
 
 export const zDatasetIdPathParam = z.object({
   id: z.string().uuid().describe("ID of the dataset"),
