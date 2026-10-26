@@ -7,15 +7,20 @@ import { useUrlState } from "@/hooks/useUrlState";
 import { useState } from "react";
 
 import { zOrganizationSort } from "@repo/api/domains/organization/organization.schema";
-import type { OrganizationVisibility } from "@repo/api/domains/organization/organization.schema";
+import type {
+  OrganizationType,
+  OrganizationVisibility,
+} from "@repo/api/domains/organization/organization.schema";
 
 import { useListSorting } from "../../useListSorting";
+import { useOrganizationListFilters } from "./useOrganizationListFilters";
 
 /** One organization row, whichever slice of the listing produced it. */
 export interface OrganizationListItem {
   id: string;
   name: string;
   description: string | null;
+  type: OrganizationType | null;
   memberCount: number;
   resourceCount: number;
   visibility: OrganizationVisibility;
@@ -26,9 +31,13 @@ export interface OrganizationListItem {
 const PAGE_SIZE = 20;
 
 /**
- * One ownership-ranked organization directory. The server returns the caller's
- * organizations first, followed by the rest of the searchable public directory.
+ * Search, filter, and sort the directory on the server, then paginate it in groups
+ * of 20 in the browser. Without search or explicit sorting, the server ranks the
+ * caller's owned organizations first, then joined ones, then the public directory.
  * Personal workspaces are excluded server-side.
+ *
+ * Search, sort, and types live in the URL; their setters reset the page to 1.
+ * Clearing filters resets the page and types while preserving search and sort.
  */
 export function useOrganizationsList() {
   const [search, setSearchState] = useUrlState<string>({
@@ -39,6 +48,7 @@ export function useOrganizationsList() {
   const [page, setPage] = useState(1);
   const [debouncedSearch] = useDebounce(search);
   const { sort, setSort, toggleSort } = useListSorting(zOrganizationSort);
+  const { types, setTypes, clearFilters, hasActiveFilters } = useOrganizationListFilters();
 
   const setSearch = (value: string) => {
     setSearchState(value);
@@ -49,6 +59,7 @@ export function useOrganizationsList() {
     search: debouncedSearch,
     scope: "all",
     sort,
+    types,
   });
   const isSearchPending = useSearchPending({
     search,
@@ -61,6 +72,7 @@ export function useOrganizationsList() {
       id: organization.id,
       name: organization.name,
       description: organization.description,
+      type: organization.type,
       memberCount: organization.memberCount,
       resourceCount: organization.resourceCount,
       // Read from the row, not assumed: the directory carries the caller's own private
@@ -103,5 +115,15 @@ export function useOrganizationsList() {
       toggleSort(field, multi);
       setPage(1);
     },
+    types,
+    setTypes: (values: typeof types) => {
+      setTypes(values);
+      setPage(1);
+    },
+    clearFilters: () => {
+      clearFilters();
+      setPage(1);
+    },
+    hasActiveFilters,
   };
 }
