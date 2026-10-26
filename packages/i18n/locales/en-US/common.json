@@ -1018,7 +1018,21 @@
     "checkEmail": "Check your email for a verification code",
     "loginWith-passkey": "Sign in with a passkey",
     "lastUsed": "Last used",
-    "passkeyError": "Passkey sign-in failed. Please try again."
+    "passkeyError": "Passkey sign-in failed. Please try again.",
+    "consent": {
+      "title": "Sign in with openJII",
+      "request": "{{client}} wants access to your openJII account.",
+      "loading": "Loading application details...",
+      "error": "Could not complete authorization. Return to the application and try again.",
+      "allow": "Allow",
+      "deny": "Deny",
+      "scopes": {
+        "openid": "Identify your openJII account",
+        "profile": "Read your name and profile picture",
+        "email": "Read your email address",
+        "offline_access": "Keep you signed in when you are away"
+      }
+    }
   },
   "registration": {
     "title": "Registration",

@@ -1018,7 +1018,21 @@
     "checkEmail": null,
     "loginWith-passkey": "Mit Passkey anmelden",
     "lastUsed": "Zuletzt verwendet",
-    "passkeyError": "Passkey-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut."
+    "passkeyError": "Passkey-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "consent": {
+      "title": "Mit openJII anmelden",
+      "request": "{{client}} möchte auf Ihr openJII-Konto zugreifen.",
+      "loading": "Anwendungsdetails werden geladen...",
+      "error": "Die Autorisierung konnte nicht abgeschlossen werden. Kehren Sie zur Anwendung zurück und versuchen Sie es erneut.",
+      "allow": "Erlauben",
+      "deny": "Ablehnen",
+      "scopes": {
+        "openid": "Ihr openJII-Konto identifizieren",
+        "profile": "Ihren Namen und Ihr Profilbild lesen",
+        "email": "Ihre E-Mail-Adresse lesen",
+        "offline_access": "Sie auch während Ihrer Abwesenheit angemeldet halten"
+      }
+    }
   },
   "registration": {
     "title": "Registrierung",

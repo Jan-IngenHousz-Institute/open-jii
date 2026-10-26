@@ -85,6 +85,18 @@ describe("EmailLoginForm", () => {
     });
   });
 
+  it("lets the provider redirect after OTP without navigating to the platform or onboarding", async () => {
+    vi.mocked(authClient.signIn.emailOtp).mockResolvedValue({
+      data: { redirect: true, url: "http://localhost:3100/callback?code=test" },
+      error: null,
+    });
+    const { router } = render(<EmailLoginForm {...defaultProps} />);
+    await submitEmail();
+    await submitOTP();
+    await waitFor(() => expect(authClient.signIn.emailOtp).toHaveBeenCalled());
+    expect(router.push).not.toHaveBeenCalled();
+  });
+
   it("renders email input form initially", () => {
     render(<EmailLoginForm {...defaultProps} />);
     expect(screen.getByPlaceholderText("auth.emailPlaceholder")).toBeInTheDocument();
