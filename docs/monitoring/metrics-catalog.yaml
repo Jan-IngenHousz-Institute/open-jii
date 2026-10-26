@@ -15,7 +15,8 @@
 #   report; alert additionally means a Grafana rule carries the entry's id
 # - area: where on its report an entry sits. Daily data path: volume (the how-much chart) |
 #   latency (the how-long chart) | path (the tiles beneath them). Daily rows: web | api |
-#   ingest | lakehouse | sandboxes. Weekly: usage (people and data) | platform
+#   ingest | lakehouse | sandboxes. Weekly: adoption (who is getting started) | usage (people and
+#   data) | platform | cost
 # - name: what the report shows, in the words of whoever reads it
 # - severity: critical | warning (alert slot only; critical only repeats faster)
 # - signal.dimensions values support ${ENV_PLACEHOLDER} resolution on the dashboards
@@ -77,6 +78,9 @@ passes:
   - date: 2026-10-12
     range: [100, 100]
     note: macro results the platform failed, which commit like successes and never reach the backlog
+  - date: 2026-10-26
+    range: [101, 103]
+    note: the weekly report's adoption section, so it says whether people who sign up get going
 
 metrics:
   # Ingest path
@@ -834,7 +838,7 @@ metrics:
     id: registrations
     name: New researchers
     family: usage
-    area: usage
+    area: adoption
     source: pg
     phase: P1
     active: true
@@ -872,6 +876,49 @@ metrics:
     baseline: { method: wow }
     notes: Everyone registered, published beside the week's new researchers.
 
+  - num: 102
+    id: researchers-started-7d
+    name: Researchers who started
+    family: usage
+    area: adoption
+    source: dbx
+    phase: P2
+    active: true
+    slots: [weekly]
+    signal:
+      namespace: OpenJII/Usage
+      metric: ResearchersStarted7d
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: wow }
+    notes: >-
+      People whose first measurement fell in the last seven days, counted like Active researchers:
+      by measurement time, within the plausible range. Beside New researchers it says whether people
+      who sign up get as far as measuring. Prod read 1 to 3 a week from mid September to late
+      October 2026.
+
+  - num: 103
+    id: loggers-started-7d
+    name: Loggers that started
+    family: usage
+    area: adoption
+    source: dbx
+    phase: P2
+    active: true
+    slots: [weekly]
+    signal:
+      namespace: OpenJII/Usage
+      metric: LoggersStarted7d
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: wow }
+    notes: >-
+      Devices publishing on their own, with no person behind their rows, whose first measurement fell
+      in the last seven days. Counted by broker identity, not sensor id: a calibration rig sends
+      readings for every sensor it calibrates under one identity, which by sensor id read as 178 new
+      devices in the week of 12 October 2026 when 3 loggers were new. Prod read 39 in the week of
+      the September fleet rollout, then 1 to 12.
+
   - num: 31
     id: active-users
     name: DAU/WAU
@@ -883,13 +930,46 @@ metrics:
     notes: Internal-users cohort (44) excluded before this reports anything.
 
   - num: 32
-    id: experiment-lifecycle-counts
-    name: Experiments created/archived/published
+    id: experiments-created
+    name: Experiments created
     family: usage
+    area: adoption
     source: pg
-    phase: P3
-    active: false
+    phase: P2
+    active: true
     slots: [weekly]
+    signal:
+      namespace: OpenJII/UserRegistrations
+      metric: WeeklyNewExperiments
+      # Maximum, as for the week's new researchers: a week the publisher failed stays silent.
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+      period: 604800
+    baseline: { method: wow }
+    notes: >-
+      Experiments created over the previous Monday-to-Sunday week, counted with the week's new
+      researchers each Monday at 06:00 UTC.
+
+  - num: 101
+    id: experiments-archived
+    name: Experiments archived
+    family: usage
+    area: adoption
+    source: pg
+    phase: P2
+    active: true
+    slots: [weekly]
+    signal:
+      namespace: OpenJII/UserRegistrations
+      metric: WeeklyArchivedExperiments
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+      period: 604800
+    baseline: { method: wow }
+    notes: >-
+      Experiments archived over the same week as Experiments created. Archiving leaves no timestamp
+      of its own, but an archived experiment allows no change except its status, so its last update
+      is when it was archived.
 
   - num: 33
     id: measurements-per-day
@@ -1624,7 +1704,7 @@ metrics:
     id: databricks-cost
     name: Databricks cost
     family: usage
-    area: platform
+    area: cost
     source: dbx
     phase: P2
     active: true

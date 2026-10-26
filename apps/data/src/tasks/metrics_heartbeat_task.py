@@ -35,6 +35,7 @@ from openjii.heartbeat import (
     INGEST_IDLE_METRIC,
     INGEST_LATENCY_METRIC,
     INGESTED_ROWS_METRIC,
+    LOGGERS_STARTED_7D_METRIC,
     MACRO_BACKLOG_METRIC,
     MACRO_CAUSES,
     MACRO_FAILED_ROWS_METRIC,
@@ -49,6 +50,7 @@ from openjii.heartbeat import (
     METRICS_AGE_METRIC,
     PATH_BUCKET_MINUTES,
     PROTOCOL_WINDOW_HOURS,
+    RESEARCHERS_STARTED_7D_METRIC,
     SILENT_DEVICES_DETAIL,
     SILENT_DEVICES_METRIC,
     STALE_EXPERIMENTS_DETAIL,
@@ -61,10 +63,12 @@ from openjii.heartbeat import (
     heartbeat_key,
     hop,
     latest_full_collection,
+    loggers_started_sql,
     minutes_since,
     observation,
     previous_bucket,
     protocol_failures_sql,
+    researchers_started_sql,
     run_collectors,
     to_ndjson,
 )
@@ -115,6 +119,7 @@ ACTIVITY_WINDOWS = f"{CATALOG_NAME}.{METRICS_SCHEMA}.{ACTIVITY_WINDOWS_TABLE}"
 DEVICE_SILENCE = f"{CATALOG_NAME}.{METRICS_SCHEMA}.{OPS_DEVICE_SILENCE_TABLE}"
 INGEST_QUALITY = f"{CATALOG_NAME}.{METRICS_SCHEMA}.{OPS_INGEST_QUALITY_TABLE}"
 RAW_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.raw_data"
+CLEAN_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.clean_data"
 EXPERIMENT_RAW_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.experiment_raw_data"
 EXPERIMENT_MACRO_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.experiment_macro_data"
 
@@ -218,6 +223,16 @@ def collect_metrics_tables(now: datetime) -> list[dict]:
     records.append(usage_point(ACTIVE_CONTRIBUTORS_7D_METRIC, row["contributors_7d"], now))
 
     return records
+
+
+def collect_first_measurements(now: datetime) -> list[dict]:
+    """Researchers and loggers whose first measurement fell in the last seven days."""
+    researchers = spark.sql(researchers_started_sql(CLEAN_DATA)).first()
+    loggers = spark.sql(loggers_started_sql(CLEAN_DATA)).first()
+    return [
+        usage_point(RESEARCHERS_STARTED_7D_METRIC, researchers["started"], now),
+        usage_point(LOGGERS_STARTED_7D_METRIC, loggers["started"], now),
+    ]
 
 
 def collect_device_silence(now: datetime) -> list[dict]:
@@ -544,6 +559,7 @@ records = [data_point(COLLECTOR_HEARTBEAT_METRIC, 1, now)]
 collectors = [
     ("experiment_status", collect_experiment_status),
     ("metrics_tables", collect_metrics_tables),
+    ("first_measurements", collect_first_measurements),
     ("device_silence", collect_device_silence),
     ("ingest_quality", collect_ingest_quality),
     ("ingest", collect_ingest),
