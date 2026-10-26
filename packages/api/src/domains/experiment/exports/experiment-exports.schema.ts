@@ -52,8 +52,8 @@ export const zExperimentListExportsQuery = z.object({
 });
 
 export const zExperimentExportRecord = z.object({
-  exportId: z.string().uuid(),
-  experimentId: z.string().uuid(),
+  exportId: z.string().guid(),
+  experimentId: z.string().guid(),
   tableName: z.string(),
   format: zExperimentExportFormat,
   status: zExperimentExportStatus,
@@ -61,7 +61,7 @@ export const zExperimentExportRecord = z.object({
   totalBytes: z.number().int().nullable(),
   partCount: z.number().int().nullable(),
   errorCode: zExperimentExportErrorCode.nullable(),
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
   createdAt: z.string().datetime(),
   completedAt: z.string().datetime().nullable(),
   expiresAt: z.string().datetime().nullable(),
@@ -74,7 +74,7 @@ export const zExperimentListExportsResponse = z.object({
 });
 
 export const zExperimentExportIdPathParam = z.object({
-  exportId: z.string().uuid().describe("ID of the export"),
+  exportId: z.string().guid().describe("ID of the export"),
 });
 
 export const zExperimentExportDownloadLink = z.object({

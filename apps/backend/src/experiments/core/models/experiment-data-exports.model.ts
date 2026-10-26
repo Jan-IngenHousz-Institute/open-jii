@@ -33,7 +33,7 @@ export type ExperimentExportDto = z.infer<typeof experimentExportSchema>;
 
 /** What the export job writes beside the parts once they are all in place. */
 export const exportManifestSchema = z.object({
-  exportId: z.string().uuid(),
+  exportId: z.string().guid(),
   format: zExperimentExportFormat,
   rowCount: z.number().int().nonnegative(),
   snapshotAt: z.string().datetime({ offset: true }),

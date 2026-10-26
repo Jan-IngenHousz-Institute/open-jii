@@ -3525,7 +3525,9 @@
                     "rowCount": {
                       "anyOf": [
                         {
-                          "type": "integer"
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         },
                         {
                           "type": "null"
@@ -3535,7 +3537,9 @@
                     "totalBytes": {
                       "anyOf": [
                         {
-                          "type": "integer"
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         },
                         {
                           "type": "null"
@@ -3545,7 +3549,9 @@
                     "partCount": {
                       "anyOf": [
                         {
-                          "type": "integer"
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         },
                         {
                           "type": "null"
@@ -3719,7 +3725,9 @@
                           "partCount": {
                             "anyOf": [
                               {
-                                "type": "integer"
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
                               },
                               {
                                 "type": "null"
@@ -3840,7 +3848,8 @@
                         "properties": {
                           "index": {
                             "type": "integer",
-                            "minimum": 0
+                            "minimum": 0,
+                            "maximum": 9007199254740991
                           },
                           "fileName": {
                             "type": "string",
@@ -3848,7 +3857,8 @@
                           },
                           "sizeBytes": {
                             "type": "integer",
-                            "minimum": 0
+                            "minimum": 0,
+                            "maximum": 9007199254740991
                           },
                           "url": {
                             "type": "string",
