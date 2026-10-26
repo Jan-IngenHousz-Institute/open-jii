@@ -31,11 +31,11 @@
         "pending": "In behandeling",
         "running": "Voorbereiden",
         "completed": "Voltooid",
-        "failed": "Mislukt"
+        "failed": "Mislukt",
+        "expired": "Verlopen"
       },
       "created": "Gemaakt",
       "completed": "Voltooid",
-      "rows": "Rijen",
       "size": "Grootte",
       "unknownError": "Er is een onbekende fout opgetreden",
       "error": "Fout",
@@ -44,7 +44,6 @@
       "loadingExports": "Exports laden...",
       "format": "Formaat",
       "exportTitle": "Export #{{number}}",
-      "failedTooltip": "Geen actie nodig — deze fout wordt onderzocht en opgelost. De export verschijnt hier opnieuw met de juiste status zodra het probleem is verholpen.",
       "createNew": "Nieuwe export maken",
       "creating": "Export maken...",
       "createExport": "Export maken",
@@ -57,7 +56,37 @@
       "creationError": "Export aanmaken mislukt",
       "backToList": "Terug naar exports",
       "anonymizeContributors": "Bijdragers anonimiseren in het geëxporteerde bestand",
-      "overridingDefault": "overschrijft experimentstandaard"
+      "overridingDefault": "overschrijft experimentstandaard",
+      "formats": {
+        "csv": "CSV",
+        "ndjson": "NDJSON",
+        "json-array": "JSON-array",
+        "parquet": "Parquet",
+        "xlsx": "Excel"
+      },
+      "errors": {
+        "no_data": "De tabel had geen rijen om te exporteren.",
+        "too_many_rows_for_format": "De tabel is groter dan dit formaat kan bevatten: hooguit 1.048.575 rijen, en voor Excel 16.384 kolommen. Exporteer hem in plaats daarvan als CSV, NDJSON of Parquet.",
+        "unknown": "De export is mislukt. Start hem opnieuw en neem contact op met support als het blijft mislukken."
+      },
+      "parts_one": "{{count}} bestand",
+      "parts_other": "{{count}} bestanden",
+      "expiresOn": "Beschikbaar tot {{date}}",
+      "showFiles": "Bestanden tonen",
+      "hideFiles": "Bestanden verbergen",
+      "downloadPart": "Bestand {{number}} downloaden",
+      "loadingLinks": "Downloadlinks worden voorbereid...",
+      "linksError": "De downloadlinks konden niet worden voorbereid. Probeer het opnieuw.",
+      "copyLinks": "Alle links kopiëren",
+      "linksCopied": "Links gekopieerd. Elke download moet vóór {{time}} beginnen.",
+      "linksHint": "Elke download moet vóór {{time}} beginnen. Om alle bestanden onder hun eigen naam op te halen, sla je de gekopieerde links op als links.txt en voer je uit: xargs -n 1 curl -fOJ < links.txt",
+      "activityTitle": "Export van {{name}} ({{format}})",
+      "exportReady": "De export van {{name}} staat klaar om te downloaden.",
+      "exportFailed": "De export van {{name}} is mislukt.",
+      "rowCount_one": "{{formatted}} rij",
+      "rowCount_other": "{{formatted}} rijen",
+      "copyFailed": "De links konden niet worden gekopieerd.",
+      "linkExpired": "Deze export is verlopen. Maak een nieuwe export om de gegevens te downloaden."
     },
     "uploadDataModal": {
       "title": "Gegevens uploaden",
@@ -79,7 +108,12 @@
         "rowCount_other": "{{count}} rijen"
       },
       "sourceKind": {
-        "label": "Gegevensformaat"
+        "ambyte": "Ambyte",
+        "csv": "CSV",
+        "tsv": "TSV",
+        "parquet": "Parquet",
+        "json": "JSON",
+        "ndjson": "NDJSON"
       },
       "files": {
         "dropzone": {
@@ -93,8 +127,6 @@
       },
       "validation": {
         "title": "Uploaden niet mogelijk",
-        "noTarget": "Kies of benoem een doeltabel",
-        "invalidName": "Naam moet beginnen met een letter; gebruik letters, cijfers of underscores (max. 63)",
         "noFiles": "Selecteer ten minste één gegevensbestand",
         "unsupportedFormat": "'{{fileName}}' is geen ondersteund bestandsformaat (CSV, TSV, parquet, JSON, NDJSON)",
         "wrongFormat": "'{{fileName}}' is geen {{format}}-bestand",
@@ -110,18 +142,29 @@
         "fallback": "Upload mislukt"
       },
       "status": {
-        "succeeded": {
-          "title": "Upload geslaagd",
-          "description": "Rijen worden geschreven naar '{{tableName}}'. De tabel verschijnt zodra de pipeline deze materialiseert."
-        },
-        "failed": {
-          "title": "Upload mislukt",
-          "fallback": "De verwerkingstaak is mislukt."
-        }
+        "receiving": "Wordt ontvangen",
+        "queued": "In wachtrij",
+        "pending": "In behandeling",
+        "running": "Verwerken",
+        "completed": "Voltooid",
+        "failed": "Mislukt"
+      },
+      "errors": {
+        "no_files": "De upload bevatte geen bestanden om te verwerken.",
+        "no_rows": "De bestanden bevatten geen rijen om aan de tabel toe te voegen.",
+        "not_queryable": "De rijen zijn toegevoegd, maar de tabel toonde ze niet binnen een uur. Ze kunnen nog verschijnen; neem contact op met support als dat niet gebeurt.",
+        "transfer_interrupted": "De overdracht stopte voordat alle bestanden waren aangekomen. Upload de bestanden opnieuw.",
+        "unknown": "De upload is mislukt. Start hem opnieuw en neem contact op met support als het blijft mislukken."
+      },
+      "rejectedFiles_one": "{{rejected}} van {{count}} bestand geweigerd",
+      "rejectedFiles_other": "{{rejected}} van {{count}} bestanden geweigerd",
+      "rejectedAmbyteFolders_one": "{{count}} Ambyte-map weggelaten",
+      "rejectedAmbyteFolders_other": "{{count}} Ambyte-mappen weggelaten",
+      "rejectionReasons": {
+        "unparseable": "{{name}} kon niet worden gelezen",
+        "no_rows": "{{name}} bevat geen rijen"
       },
       "actions": {
-        "cancel": "Annuleren",
-        "close": "Sluiten",
         "back": "Terug",
         "newUpload": "Nieuwe upload",
         "upload": "Uploaden"
@@ -129,29 +172,15 @@
       "history": {
         "title": "Recente uploads",
         "empty": "Nog geen uploads.",
-        "loading": "Uploads laden…",
+        "error": "Uploads konden niet worden geladen: {{message}}",
+        "unknownError": "Er is een onbekende fout opgetreden",
         "uploadCount_one": "{{count}} recente upload",
         "uploadCount_other": "{{count}} recente uploads",
         "uploadTitle": "Upload #{{number}}",
-        "status": {
-          "pending": "In behandeling",
-          "running": "Verwerken",
-          "completed": "Voltooid",
-          "failed": "Mislukt"
-        },
-        "sourceKind": {
-          "ambyte": "Ambyte",
-          "csv": "CSV",
-          "tsv": "TSV",
-          "parquet": "Parquet",
-          "json": "JSON",
-          "ndjson": "NDJSON"
-        },
-        "rowCount_one": "{{count}} rij",
-        "rowCount_other": "{{count}} rijen",
+        "rowCount_one": "{{formatted}} rij",
+        "rowCount_other": "{{formatted}} rijen",
         "fileCount_one": "{{count}} bestand",
-        "fileCount_other": "{{count}} bestanden",
-        "untargeted": "(geen tabel)"
+        "fileCount_other": "{{count}} bestanden"
       },
       "transfer": {
         "started": "Bezig met uploaden naar {{table}}. Je kunt dit venster sluiten en verder werken; houd dit tabblad open tot de upload klaar is.",

@@ -587,6 +587,7 @@ module "storage_credential" {
     module.iot_core.databricks_large_iot_read_policy_arn,
     module.iot_core.databricks_device_lifecycle_read_policy_arn,
     module.metrics_forwarder.databricks_write_policy_arn,
+    module.data_exports.databricks_write_policy_arn,
   ]
 
   providers = {
@@ -708,6 +709,9 @@ module "backend_warehouse" {
   name             = "Backend API"
   cluster_size     = "2X-Small"
   max_num_clusters = 2
+  # A stopped warehouse takes about 12 s to answer, so a researcher's first page after a quiet
+  # minute would wait for it.
+  auto_stop_mins = 5
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -1395,6 +1399,86 @@ module "data_downloads_volume" {
   depends_on = [databricks_grants.centrum_schema]
 }
 
+# Export files live in this environment's own bucket so the backend can sign
+# GetObject URLs for them. Records expire after 30 days; the files a day later,
+# since S3 counts from when each part was written and rounds up to midnight UTC
+module "data_exports_s3" {
+  source      = "../../modules/s3"
+  bucket_name = "open-jii-data-exports-${var.environment}"
+
+  enable_versioning = false
+
+  lifecycle_rules = [
+    {
+      id                                     = "expire-data-exports"
+      status                                 = "Enabled"
+      transitions                            = []
+      expiration_days                        = 31
+      abort_incomplete_multipart_upload_days = 1
+    }
+  ]
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "data-exports"
+  }
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
+module "data_exports" {
+  source = "../../modules/data-exports"
+
+  environment = var.environment
+  bucket_arn  = module.data_exports_s3.bucket_arn
+}
+
+module "data_exports_external_location" {
+  source = "../../modules/databricks/external-location"
+
+  external_location_name  = "data-exports-${var.environment}"
+  bucket_name             = module.data_exports_s3.bucket_id
+  external_location_path  = ""
+  storage_credential_name = module.storage_credential.storage_credential_name
+  environment             = var.environment
+  comment                 = "External location for experiment data export files"
+  isolation_mode          = "ISOLATION_MODE_ISOLATED"
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.storage_credential]
+}
+
+module "data_exports_volume" {
+  source = "../../modules/databricks/volume"
+
+  catalog_name     = module.databricks_catalog.catalog_name
+  schema_name      = "centrum"
+  volume_name      = "exports"
+  storage_location = "s3://${module.data_exports_s3.bucket_id}/exports"
+  comment          = "External volume for experiment data exports, written in parts with a manifest"
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["READ_VOLUME", "WRITE_VOLUME"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [databricks_grants.centrum_schema, module.data_exports_external_location]
+}
+
 module "data_imports_volume" {
   source = "../../modules/databricks/volume"
 
@@ -1910,6 +1994,12 @@ module "aurora_db" {
   skip_final_snapshot      = false
 }
 
+# Adopts the log group the service created before retention was set in code.
+import {
+  to = module.aurora_db.aws_cloudwatch_log_group.postgresql
+  id = "/aws/rds/cluster/open-jii-${var.environment}-db-cluster/postgresql"
+}
+
 module "secrets_rotation_trigger" {
   source = "../../modules/secrets-manager-rotation/secrets-rotation-trigger"
 
@@ -1918,6 +2008,12 @@ module "secrets_rotation_trigger" {
   region           = var.aws_region
   secret_arn       = module.aurora_db.master_user_secret_arn
   environment      = var.environment
+}
+
+# Adopts the log group the service created before retention was set in code.
+import {
+  to = module.secrets_rotation_trigger.aws_cloudwatch_log_group.lambda
+  id = "/aws/lambda/${var.environment}-ecs-force-deployment"
 }
 
 module "backup" {
@@ -2123,7 +2219,7 @@ module "opennext_waf" {
   service_name       = "opennext"
   environment        = var.environment
   rate_limit         = 2500
-  log_retention_days = 30
+  log_retention_days = 365
   enable_bot_control = true
 
   managed_rules_excluded_paths = ["/ingest"]
@@ -2682,6 +2778,10 @@ module "backend_ecs" {
     {
       name  = "AWS_IOT_LARGE_PAYLOAD_BUCKET_NAME"
       value = module.large_iot_s3.bucket_id
+    },
+    {
+      name  = "AWS_DATA_EXPORTS_BUCKET_NAME"
+      value = module.data_exports_s3.bucket_id
     }
   ]
 
@@ -2691,6 +2791,7 @@ module "backend_ecs" {
     module.macro_sandbox.invoke_policy_arn,
     module.calibration_sandbox.invoke_policy_arn,
     module.iot_core.backend_s3_presign_policy_arn,
+    module.data_exports.backend_read_policy_arn,
   ]
 
   tags = {
@@ -2741,7 +2842,7 @@ module "backend_waf" {
   service_name       = "backend"
   environment        = var.environment
   rate_limit         = 500
-  log_retention_days = 30
+  log_retention_days = 365
   enable_bot_control = true
 
   large_body_bypass_routes = [
@@ -2805,7 +2906,7 @@ module "docs_waf" {
   service_name       = "docs"
   environment        = var.environment
   rate_limit         = 500
-  log_retention_days = 30
+  log_retention_days = 365
 
   tags = {
     Environment = var.environment
@@ -3103,6 +3204,12 @@ module "grafana_metrics_publisher" {
 
   private_subnets                = module.vpc.private_subnets
   metrics_publisher_lambda_sg_id = module.vpc.metrics_publisher_lambda_sg_id
+}
+
+# Adopts the log group the service created before retention was set in code.
+import {
+  to = module.grafana_metrics_publisher.aws_cloudwatch_log_group.metrics_publisher
+  id = "/aws/lambda/${var.environment}-metrics-publisher"
 }
 
 module "heartbeat_metrics_s3" {

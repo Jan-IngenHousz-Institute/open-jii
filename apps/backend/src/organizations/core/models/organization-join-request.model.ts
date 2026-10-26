@@ -10,7 +10,7 @@ export const organizationJoinRequestSchema = createSelectSchema(organizationJoin
   .omit({ userId: true })
   .extend({
     user: z.object({
-      id: z.string().uuid(),
+      id: z.string().guid(),
       firstName: z.string(),
       lastName: z.string(),
       email: z.string().nullable(),

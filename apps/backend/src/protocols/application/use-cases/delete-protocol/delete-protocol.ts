@@ -2,6 +2,8 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
+import { ResourceDeletedNotifier } from "../../../../notifications/application/services/resource-deleted-notifier";
+import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
 import { ProtocolDto } from "../../../core/models/protocol.model";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
 
@@ -9,7 +11,11 @@ import { ProtocolRepository } from "../../../core/repositories/protocol.reposito
 export class DeleteProtocolUseCase {
   private readonly logger = new Logger(DeleteProtocolUseCase.name);
 
-  constructor(private readonly protocolRepository: ProtocolRepository) {}
+  constructor(
+    private readonly protocolRepository: ProtocolRepository,
+    private readonly sharingRepository: SharingRepository,
+    private readonly deletionNotifier: ResourceDeletedNotifier,
+  ) {}
 
   async execute(id: string, userId: string): Promise<Result<ProtocolDto>> {
     this.logger.log({
@@ -37,6 +43,8 @@ export class DeleteProtocolUseCase {
       return failure(AppError.notFound(`Protocol not found`));
     }
 
+    const members = await this.sharingRepository.listMemberIds("protocol", id);
+
     // Protocol exists, now delete it
     const deleteResult = await this.protocolRepository.delete(id);
 
@@ -54,6 +62,14 @@ export class DeleteProtocolUseCase {
       });
       return failure(AppError.internal("Failed to delete protocol"));
     }
+
+    await this.deletionNotifier.notify({
+      operation: "deleteProtocol",
+      actorId: userId,
+      resource: { type: "protocol", id },
+      name: protocol.name,
+      members,
+    });
 
     this.logger.log({
       msg: "Successfully deleted protocol",

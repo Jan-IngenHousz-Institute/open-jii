@@ -9,7 +9,7 @@ export const editExperimentFormSchema = zUpdateExperimentBody
     name: true,
   })
   .extend({
-    id: z.string().uuid(),
+    id: z.string().guid(),
   });
 
 export type EditExperimentForm = z.infer<typeof editExperimentFormSchema>;
@@ -20,7 +20,7 @@ export const editProtocolFormSchema = zUpdateProtocolRequestBody
     family: true,
   })
   .extend({
-    id: z.string().uuid(),
+    id: z.string().guid(),
   });
 
 export type EditProtocolForm = z.infer<typeof editProtocolFormSchema>;
@@ -31,7 +31,7 @@ export const editMacroFormSchema = zUpdateMacroRequestBody
     language: true,
   })
   .extend({
-    id: z.string().uuid(),
+    id: z.string().guid(),
   });
 
 export type EditMacroForm = z.infer<typeof editMacroFormSchema>;

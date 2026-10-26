@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 import { randomUUID } from "crypto";
-import { SafeParseReturnType, z } from "zod";
+import { z } from "zod";
 
 import { ExperimentAnnotationRowsAffected } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
@@ -28,7 +28,7 @@ export class ExperimentDataAnnotationsRepository {
 
   // Zod validation schemas
   private readonly schemas = {
-    uuid: z.string().uuid(),
+    uuid: z.string().guid(),
     identifier: z
       .string()
       .regex(/^[a-zA-Z0-9_]+$/)
@@ -39,7 +39,7 @@ export class ExperimentDataAnnotationsRepository {
         .string()
         .regex(/^[a-zA-Z0-9_]+$/)
         .max(64),
-      z.string().uuid(),
+      z.string().guid(),
     ]),
     content: z.string().max(10000).nullable().optional(),
     flag: z.string().max(100).nullable().optional(),
@@ -73,10 +73,7 @@ export class ExperimentDataAnnotationsRepository {
     },
 
     updateData: (updateData: Partial<UpdateAnnotationDto>): boolean => {
-      const validations: SafeParseReturnType<
-        string | null | undefined,
-        string | null | undefined
-      >[] = [];
+      const validations: z.ZodSafeParseResult<string | null | undefined>[] = [];
 
       if ("contentText" in updateData) {
         validations.push(this.validate.content(updateData.contentText));

@@ -1,5 +1,6 @@
 import type { ExperimentPlaceSearchResult } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 
+import type { SignedDownloadUrl } from "../../../common/modules/aws/services/s3/s3.types";
 import type { Result } from "../../../common/utils/fp-utils";
 
 // Re-export GeocodeResult type since it's the same as ExperimentPlaceSearchResult
@@ -46,4 +47,10 @@ export interface AwsPort {
    * @returns Result containing array of geocoding results
    */
   geocodeLocation(request: GeocodeLocationRequest): Promise<Result<GeocodeResult[]>>;
+
+  /** A short-lived link that downloads one export file from storage under `fileName`. */
+  getExportDownloadUrl(key: string, fileName: string): Promise<Result<SignedDownloadUrl>>;
+
+  /** The text of a small export object such as a manifest; null when it was never written. */
+  readExportObject(key: string): Promise<Result<string | null>>;
 }

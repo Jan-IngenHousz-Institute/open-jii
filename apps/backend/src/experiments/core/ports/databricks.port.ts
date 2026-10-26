@@ -1,8 +1,7 @@
-import type { Readable } from "stream";
-
 import type { UploadFileResponse } from "../../../common/modules/databricks/services/files/files.types";
 import type {
   DatabricksHealthCheck,
+  DatabricksJobRunOutputResponse,
   DatabricksJobRunResponse,
   DatabricksJobRunStatusResponse,
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
@@ -15,13 +14,23 @@ import type {
   StatementParameter,
 } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { Result } from "../../../common/utils/fp-utils";
-import type { ExportFormat, ExportMetadata } from "../models/experiment-data-exports.model";
-import type { UploadMetadata } from "../models/experiment-data-uploads.model";
+import type { ExportFormat } from "../models/experiment-data-exports.model";
 import type { ExperimentTableMetadata } from "../models/experiment-data.model";
 
+// `anonymizeContributors` is the resolved setting, the experiment's default or the export's
+// override; when true the job rewrites contributor cells to deterministic pseudonyms.
+export interface DataExportJobInput {
+  exportId: string;
+  experimentId: string;
+  tableName: string;
+  format: ExportFormat;
+  userId: string;
+  anonymizeContributors: boolean;
+}
+
 // Semantic input for the data upload job trigger. The adapter maps these onto
-// SOURCE_KIND-specific widget keys; `experimentName` only feeds the ambyte
-// branch but is always carried since every callsite has it.
+// SOURCE_KIND-specific widget keys; `experimentName` and `createdAt` only feed the
+// ambyte branch but are always carried since every callsite has them.
 export interface DataUploadJobInput {
   sourceKind: "ambyte" | "csv" | "tsv" | "parquet" | "xlsx" | "json" | "ndjson";
   experimentId: string;
@@ -31,6 +40,7 @@ export interface DataUploadJobInput {
   uploadTableId: string;
   uploadTableName: string;
   userId: string;
+  createdAt: Date;
 }
 
 export const DATABRICKS_PORT = Symbol("DATABRICKS_PORT");
@@ -102,82 +112,20 @@ export interface DatabricksPort {
 
   /**
    * Trigger the data upload Databricks job (handles all upload source kinds via SOURCE_KIND dispatch).
-   * Pass semantic input; adapter maps to per-kind widget keys.
+   * Pass semantic input; adapter maps to per-kind widget keys. The run reuses `uploadId` as its
+   * idempotency token, so a repeated trigger starts no second run.
    */
   triggerDataUploadJob(input: DataUploadJobInput): Promise<Result<DatabricksJobRunResponse>>;
 
   /** Run status for any Databricks job by runId. */
   getJobRunStatus(runId: number): Promise<Result<DatabricksJobRunStatusResponse>>;
 
-  /**
-   * Trigger the data export job. `anonymizeContributors` is the resolved
-   * boolean (experiment default vs per-export override); when true the job
-   * rewrites contributor struct cells to deterministic pseudonyms.
-   */
-  triggerDataExportJob(
-    experimentId: string,
-    tableName: string,
-    format: string,
-    userId: string,
-    anonymizeContributors: boolean,
-  ): Promise<Result<DatabricksJobRunResponse>>;
-
-  streamExport(
-    exportId: string,
-    experimentId: string,
-  ): Promise<
-    Result<{
-      stream: Readable;
-      contentLength?: number;
-      filePath: string;
-      tableName: string;
-      format: ExportFormat;
-      completedAt: string | null;
-    }>
-  >;
-
-  /** Completed export metadata for an experiment table from Delta Lake. */
-  getExportMetadata(experimentId: string, tableName: string): Promise<Result<SchemaData>>;
-
-  /** Active (in-progress) exports from job runs. */
-  getActiveExports(experimentId: string, tableName: string): Promise<Result<ExportMetadata[]>>;
+  /** Output of one task run, which carries a failed notebook's error. */
+  getJobRunOutput(taskRunId: number): Promise<Result<DatabricksJobRunOutputResponse>>;
 
   /**
-   * Failed exports from completed job runs.
-   * `completedExportRunIds` is used to deduplicate against the completed exports table.
+   * Trigger the data export job for an export the backend already recorded. The run reuses
+   * `exportId` as its folder and idempotency token, so a repeated trigger starts no second run.
    */
-  getFailedExports(
-    experimentId: string,
-    tableName: string,
-    completedExportRunIds: Set<number>,
-  ): Promise<Result<ExportMetadata[]>>;
-
-  /**
-   * Get completed upload metadata rows for an experiment from the Delta history table.
-   * Returns raw SchemaData; the repository maps it to UploadMetadata.
-   * Filters: required experiment_id, optional uploadTableId, optional uploadTableName.
-   */
-  getUploadMetadata(
-    experimentId: string,
-    options?: { uploadTableId?: string; uploadTableName?: string },
-  ): Promise<Result<SchemaData>>;
-
-  /**
-   * Get active (in-progress) uploads from the data upload job's runs.
-   * Filters by EXPERIMENT_ID widget (and optionally uploadTableId / uploadTableName).
-   */
-  getActiveUploads(
-    experimentId: string,
-    options?: { uploadTableId?: string; uploadTableName?: string },
-  ): Promise<Result<UploadMetadata[]>>;
-
-  /**
-   * Get failed uploads from completed job runs (terminated + non-SUCCESS),
-   * deduped against the set of upload_ids already in the Delta history table.
-   */
-  getFailedUploads(
-    experimentId: string,
-    completedUploadIds: Set<string>,
-    options?: { uploadTableId?: string; uploadTableName?: string },
-  ): Promise<Result<UploadMetadata[]>>;
+  triggerDataExportJob(input: DataExportJobInput): Promise<Result<DatabricksJobRunResponse>>;
 }

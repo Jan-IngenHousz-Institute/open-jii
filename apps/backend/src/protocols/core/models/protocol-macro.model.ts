@@ -8,13 +8,13 @@ export const protocolMacroSchema = createSelectSchema(protocolMacros)
   .omit({ macroId: true })
   .extend({
     macro: z.object({
-      id: z.string().uuid(),
+      id: z.string().guid(),
       name: z.string(),
       filename: z.string(),
       language: z.enum(["python", "r", "javascript"]),
-      createdBy: z.string().uuid(),
+      createdBy: z.string().guid(),
     }),
   });
 
 // DTOs
-export type ProtocolMacroDto = typeof protocolMacroSchema._type;
+export type ProtocolMacroDto = z.infer<typeof protocolMacroSchema>;

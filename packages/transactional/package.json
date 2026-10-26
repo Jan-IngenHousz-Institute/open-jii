@@ -54,6 +54,22 @@
     "./render/organization-join-request-rejected": {
       "types": "./dist/render/organization-join-request-rejected.d.ts",
       "default": "./dist/render/organization-join-request-rejected.js"
+    },
+    "./render/resource-deleted-notification": {
+      "types": "./dist/render/resource-deleted-notification.d.ts",
+      "default": "./dist/render/resource-deleted-notification.js"
+    },
+    "./render/organization-role-changed": {
+      "types": "./dist/render/organization-role-changed.d.ts",
+      "default": "./dist/render/organization-role-changed.js"
+    },
+    "./render/organization-membership-removed": {
+      "types": "./dist/render/organization-membership-removed.d.ts",
+      "default": "./dist/render/organization-membership-removed.js"
+    },
+    "./render/experiment-made-public-notification": {
+      "types": "./dist/render/experiment-made-public-notification.d.ts",
+      "default": "./dist/render/experiment-made-public-notification.js"
     }
   },
   "scripts": {

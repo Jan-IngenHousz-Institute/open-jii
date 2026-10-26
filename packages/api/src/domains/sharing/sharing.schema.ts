@@ -37,11 +37,11 @@ export const zShareableRole = z.enum(["admin", "viewer"]);
 
 export const zCollaboratorsPathParams = z.object({
   resourceType: zSharingResourceType,
-  id: z.string().uuid().describe("ID of the resource being shared"),
+  id: z.string().guid().describe("ID of the resource being shared"),
 });
 
 export const zCollaboratorGrantPathParams = zCollaboratorsPathParams.extend({
-  grantId: z.string().uuid().describe("ID of the grant to modify"),
+  grantId: z.string().guid().describe("ID of the grant to modify"),
 });
 
 /** Display info for a grant's grantee (a user, an organization or a team). */
@@ -63,16 +63,16 @@ export const zGrantee = z.object({
  * is never outside — it belongs to the owning org by construction.
  */
 export const zResourceGrant = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   resourceType: zSharingResourceType,
-  resourceId: z.string().uuid(),
+  resourceId: z.string().guid(),
   granteeType: zGranteeType,
-  granteeId: z.string().uuid(),
+  granteeId: z.string().guid(),
   // Closed set, not free text: a malformed row fails output validation here rather
   // than leaking an unknown role to clients.
   role: zGrantRole,
   createdAt: z.string(),
-  createdBy: z.string().uuid().nullable(),
+  createdBy: z.string().guid().nullable(),
   isOutsideCollaborator: z.boolean(),
   grantee: zGrantee,
 });
@@ -83,7 +83,7 @@ export const zResourceGrant = z.object({
  * owners are listed individually and carry any grant of theirs on that row.
  */
 export const zGranteeOwningOrganization = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   role: z.enum(["admin", "member"]),
 });
@@ -102,7 +102,7 @@ export const zResourceGrantRow = zResourceGrant.extend({
 
 /** A direct grant whose holder's organization role already subsumes it. */
 export const zInertGrant = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   role: zGrantRole,
 });
 
@@ -119,7 +119,7 @@ export const zInertGrant = z.object({
 export const zResourceOwnerRow = z.object({
   kind: z.literal("owner"),
   granteeType: z.literal("user"),
-  granteeId: z.string().uuid(),
+  granteeId: z.string().guid(),
   /** The organization the role comes from, so the row can name its own source. */
   organizationName: z.string(),
   grantee: zGrantee,
@@ -133,7 +133,7 @@ export const zResourceOwnerRow = z.object({
  */
 export const zResourceOrgAdminsRow = z.object({
   kind: z.literal("orgAdmins"),
-  organizationId: z.string().uuid(),
+  organizationId: z.string().guid(),
   organizationName: z.string(),
   /**
    * Admins with no direct grant. Anyone holding one is broken out onto their own row
@@ -150,7 +150,7 @@ export const zResourceOrgAdminsRow = z.object({
  */
 export const zResourceOrgMembersRow = z.object({
   kind: z.literal("orgMembers"),
-  organizationId: z.string().uuid(),
+  organizationId: z.string().guid(),
   organizationName: z.string(),
   /** Members with no direct grant — same break-out rule as {@link zResourceOrgAdminsRow}. */
   memberCount: z.number().int(),
@@ -184,7 +184,7 @@ export function isGranteeRow<T extends { kind: ResourceCollaboratorDto["kind"] }
 
 export const zCreateCollaboratorBody = z.object({
   granteeType: zGranteeType,
-  granteeId: z.string().uuid(),
+  granteeId: z.string().guid(),
   role: zShareableRole.default("viewer"),
 });
 
@@ -210,7 +210,7 @@ export const zSearchGranteeOrganizationsQuery = z.object({
 
 /** An organization the caller may pick as a grantee. */
 export const zGranteeOrganization = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   slug: z.string().nullable(),
 });
@@ -232,7 +232,7 @@ export const zOrganizationMemberRole = z.enum(["owner", "admin", "member"]);
  * is highest-wins, so a grant below what someone already has does nothing.
  */
 export const zGranteeUser = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().guid(),
   firstName: z.string(),
   lastName: z.string(),
   email: z.string().nullable(),

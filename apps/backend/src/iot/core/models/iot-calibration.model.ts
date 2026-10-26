@@ -23,7 +23,6 @@ export const createCalibrationDefinitionSchema = createInsertSchema(calibrationD
     createdBy: true,
     organizationId: true,
     version: true,
-    searchVector: true,
   })
   .extend({
     family: zCalibrationFamily,
@@ -45,8 +44,8 @@ export const selectCalibrationRunSchema = createSelectSchema(calibrationRuns).ex
   params: zCalibrationRunParams.nullable(),
   blocks: zCalibrationBlocks.nullable(),
   skippedSeries: zSkippedSeriesList.nullable(),
-  preInfo: z.record(z.unknown()).nullable(),
-  postInfo: z.record(z.unknown()).nullable(),
+  preInfo: z.record(z.string(), z.unknown()).nullable(),
+  postInfo: z.record(z.string(), z.unknown()).nullable(),
 });
 
 export const selectDeviceCalibrationSchema = createSelectSchema(deviceCalibrations).extend({

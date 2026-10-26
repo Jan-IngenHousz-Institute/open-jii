@@ -23,7 +23,8 @@ A private experiment requires an embargo end date:
 - it must be no more than 365 days from today;
 - the create flow suggests a date 90 days ahead when none is set;
 - an automated backend job checks expired embargoes daily at midnight UTC and
-  changes them to public.
+  changes them to public, and the experiment's admins hear about it in the bell
+  and, while **Experiments and resources** is on, by email.
 
 Because the job runs daily, treat the embargo date as the end of a protected
 period rather than a promise of publication at a precise local minute.

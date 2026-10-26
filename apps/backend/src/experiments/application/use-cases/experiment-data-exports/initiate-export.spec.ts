@@ -1,5 +1,7 @@
 import { faker } from "@faker-js/faker";
 
+import { experimentExports } from "@repo/database";
+
 import {
   assertFailure,
   assertSuccess,
@@ -8,15 +10,17 @@ import {
   AppError,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import { ExperimentDataExportsRepository } from "../../../core/repositories/experiment-data-exports.repository";
-import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
+import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { InitiateExportUseCase } from "./initiate-export";
 
 describe("InitiateExportUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: InitiateExportUseCase;
-  let exportsRepository: ExperimentDataExportsRepository;
+  let databricksPort: DatabricksPort;
+
+  const storedExports = () => testApp.database.select().from(experimentExports);
 
   beforeAll(async () => {
     await testApp.setup();
@@ -27,7 +31,7 @@ describe("InitiateExportUseCase", () => {
     testUserId = await testApp.createTestUser({});
 
     useCase = testApp.module.get(InitiateExportUseCase);
-    exportsRepository = testApp.module.get(ExperimentDataExportsRepository);
+    databricksPort = testApp.module.get(DATABRICKS_PORT);
   });
 
   afterEach(() => {
@@ -38,79 +42,98 @@ describe("InitiateExportUseCase", () => {
     await testApp.teardown();
   });
 
-  it("should successfully initiate an export", async () => {
+  it("records the export and starts its run under the export's id", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Test_Export_Experiment",
       userId: testUserId,
     });
-
-    vi.spyOn(exportsRepository, "initiateExport").mockResolvedValue(success(undefined));
+    const trigger = vi
+      .spyOn(databricksPort, "triggerDataExportJob")
+      .mockResolvedValue(success({ run_id: 4242, number_in_job: 1 }));
 
     const result = await useCase.execute(experiment.id, testUserId, {
       tableName: "raw_data",
       format: "csv",
     });
 
-    expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
-    expect(result.value.status).toBe("pending");
-
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(exportsRepository.initiateExport).toHaveBeenCalledWith(
-      expect.objectContaining({
-        experimentId: experiment.id,
-        tableName: "raw_data",
-        format: "csv",
-        userId: testUserId,
-      }),
-    );
-  });
-
-  it("should return not found when experiment does not exist", async () => {
-    const nonExistentId = faker.string.uuid();
-
-    const result = await useCase.execute(nonExistentId, testUserId, {
+    expect(result.value).toMatchObject({
+      experimentId: experiment.id,
       tableName: "raw_data",
       format: "csv",
+      status: "queued",
+      createdBy: testUserId,
+    });
+    expect(trigger).toHaveBeenCalledWith({
+      exportId: result.value.exportId,
+      experimentId: experiment.id,
+      tableName: "raw_data",
+      format: "csv",
+      userId: testUserId,
+      anonymizeContributors: false,
     });
 
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.code).toBe("NOT_FOUND");
-    expect(result.error.message).toContain("Experiment not found");
+    const [stored] = await storedExports();
+    expect(stored).toMatchObject({ id: result.value.exportId, jobRunId: 4242, status: "queued" });
   });
 
-  it("should allow access to public experiments without membership", async () => {
-    const anotherUserId = await testApp.createTestUser({
-      email: "public-user@example.com",
+  it("joins the export already in flight instead of starting a second run", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Twice", userId: testUserId });
+    const trigger = vi
+      .spyOn(databricksPort, "triggerDataExportJob")
+      .mockResolvedValue(success({ run_id: 4242, number_in_job: 1 }));
+
+    const first = await useCase.execute(experiment.id, testUserId, {
+      tableName: "raw_data",
+      format: "parquet",
+    });
+    const second = await useCase.execute(experiment.id, testUserId, {
+      tableName: "raw_data",
+      format: "parquet",
     });
 
+    assertSuccess(first);
+    assertSuccess(second);
+    expect(second.value.exportId).toBe(first.value.exportId);
+    expect(trigger).toHaveBeenCalledTimes(1);
+    expect(await storedExports()).toHaveLength(1);
+  });
+
+  it("uses the experiment's anonymisation setting unless the export overrides it", async () => {
     const { experiment } = await testApp.createExperiment({
-      name: "Public_Experiment",
-      visibility: "public",
+      name: "Anonymised",
       userId: testUserId,
+      anonymizeContributors: true,
     });
+    const trigger = vi
+      .spyOn(databricksPort, "triggerDataExportJob")
+      .mockResolvedValue(success({ run_id: 1, number_in_job: 1 }));
 
-    vi.spyOn(exportsRepository, "initiateExport").mockResolvedValue(success(undefined));
-
-    const result = await useCase.execute(experiment.id, anotherUserId, {
+    await useCase.execute(experiment.id, testUserId, { tableName: "raw_data", format: "csv" });
+    await useCase.execute(experiment.id, testUserId, {
       tableName: "raw_data",
       format: "ndjson",
+      anonymizeContributors: false,
     });
 
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value.status).toBe("pending");
+    expect(trigger.mock.calls.map(([input]) => input.anonymizeContributors)).toEqual([true, false]);
   });
 
-  it("should return internal error when initiateExport fails", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Test_Experiment",
-      userId: testUserId,
+  it("returns not found when the experiment does not exist", async () => {
+    const result = await useCase.execute(faker.string.uuid(), testUserId, {
+      tableName: "raw_data",
+      format: "csv",
     });
 
-    vi.spyOn(exportsRepository, "initiateExport").mockResolvedValue(
-      failure(AppError.internal("Job trigger failed")),
+    assertFailure(result);
+    expect(result.error.code).toBe("NOT_FOUND");
+    expect(await storedExports()).toHaveLength(0);
+  });
+
+  it("leaves the export queued for the reconciler when its run cannot be started", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Broken", userId: testUserId });
+    vi.spyOn(databricksPort, "triggerDataExportJob").mockResolvedValue(
+      failure(AppError.internal("Job trigger timed out")),
     );
 
     const result = await useCase.execute(experiment.id, testUserId, {
@@ -118,81 +141,24 @@ describe("InitiateExportUseCase", () => {
       format: "csv",
     });
 
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.code).toBe("INTERNAL_ERROR");
-    expect(result.error.message).toContain("Failed to initiate export");
+    assertSuccess(result);
+    expect(result.value.status).toBe("queued");
+    const [stored] = await storedExports();
+    expect(stored).toMatchObject({ status: "queued", jobRunId: null, errorCode: null });
   });
 
-  describe("anonymizeContributors override", () => {
-    it("forwards the experiment's stored setting when no override is supplied", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Anonymise_Default",
-        userId: testUserId,
-      });
-      // Flip the experiment's stored flag on so the default-path is testable.
-      await testApp.module
-        .get(ExperimentRepository)
-        .update(experiment.id, { anonymizeContributors: true });
+  it("adds whoever asks for an export already in flight to the people told how it ends", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Shared", userId: testUserId });
+    const colleagueId = await testApp.createTestUser({});
+    vi.spyOn(databricksPort, "triggerDataExportJob").mockResolvedValue(
+      success({ run_id: 7, number_in_job: 1 }),
+    );
 
-      vi.spyOn(exportsRepository, "initiateExport").mockResolvedValue(success(undefined));
+    await useCase.execute(experiment.id, testUserId, { tableName: "raw_data", format: "csv" });
+    await useCase.execute(experiment.id, colleagueId, { tableName: "raw_data", format: "csv" });
+    await useCase.execute(experiment.id, colleagueId, { tableName: "raw_data", format: "csv" });
 
-      const result = await useCase.execute(experiment.id, testUserId, {
-        tableName: "raw_data",
-        format: "csv",
-      });
-
-      expect(result.isSuccess()).toBe(true);
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(exportsRepository.initiateExport).toHaveBeenCalledWith(
-        expect.objectContaining({ anonymizeContributors: true }),
-      );
-    });
-
-    it("honours an explicit override that diverges from the experiment default", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Anonymise_Override",
-        userId: testUserId,
-      });
-      // Experiment is anonymise-OFF by default; the override flips it ON
-      // for this export only.
-      vi.spyOn(exportsRepository, "initiateExport").mockResolvedValue(success(undefined));
-
-      const result = await useCase.execute(experiment.id, testUserId, {
-        tableName: "raw_data",
-        format: "csv",
-        anonymizeContributors: true,
-      });
-
-      expect(result.isSuccess()).toBe(true);
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(exportsRepository.initiateExport).toHaveBeenCalledWith(
-        expect.objectContaining({ anonymizeContributors: true }),
-      );
-    });
-
-    it("respects an explicit `false` override even when the experiment is anonymised", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Anonymise_OptOut",
-        userId: testUserId,
-      });
-      await testApp.module
-        .get(ExperimentRepository)
-        .update(experiment.id, { anonymizeContributors: true });
-
-      vi.spyOn(exportsRepository, "initiateExport").mockResolvedValue(success(undefined));
-
-      const result = await useCase.execute(experiment.id, testUserId, {
-        tableName: "raw_data",
-        format: "csv",
-        anonymizeContributors: false,
-      });
-
-      expect(result.isSuccess()).toBe(true);
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(exportsRepository.initiateExport).toHaveBeenCalledWith(
-        expect.objectContaining({ anonymizeContributors: false }),
-      );
-    });
+    const [stored] = await storedExports();
+    expect(stored).toMatchObject({ createdBy: testUserId, watcherIds: [colleagueId] });
   });
 });

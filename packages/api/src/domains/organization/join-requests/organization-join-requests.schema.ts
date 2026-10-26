@@ -8,10 +8,10 @@ export const zOrganizationJoinRequestStatus = z.enum([
 ]);
 
 export const zOrganizationJoinRequest = z.object({
-  id: z.string().uuid(),
-  organizationId: z.string().uuid(),
+  id: z.string().guid(),
+  organizationId: z.string().guid(),
   user: z.object({
-    id: z.string().uuid(),
+    id: z.string().guid(),
     firstName: z.string(),
     lastName: z.string(),
     // Stored value returned as-is; format-validating on output can 500 the list.
@@ -20,7 +20,7 @@ export const zOrganizationJoinRequest = z.object({
   }),
   message: z.string().nullable(),
   status: zOrganizationJoinRequestStatus,
-  decidedBy: z.string().uuid().nullable(),
+  decidedBy: z.string().guid().nullable(),
   decidedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -37,8 +37,8 @@ export const zCreateOrganizationJoinRequestBody = z.object({
 });
 
 export const zOrganizationJoinRequestPathParam = z.object({
-  id: z.string().uuid().describe("ID of the organization"),
-  requestId: z.string().uuid().describe("ID of the join request"),
+  id: z.string().guid().describe("ID of the organization"),
+  requestId: z.string().guid().describe("ID of the join request"),
 });
 
 /** Approve or reject: one endpoint, because both are the same state transition. */

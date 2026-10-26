@@ -1,11 +1,16 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import type { ExperimentListUploadsResponse } from "@repo/api/domains/experiment/uploads/experiment-uploads.schema";
+
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
-import type { UploadMetadata } from "../../../core/models/experiment-data-uploads.model";
+import { toUploadRecord } from "../../../core/models/experiment-data-uploads.model";
 import { ExperimentDataUploadsRepository } from "../../../core/repositories/experiment-data-uploads.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
+/**
+ * Use case for listing the latest uploads of an experiment, optionally of one upload table
+ */
 @Injectable()
 export class ListUploadsUseCase {
   private readonly logger = new Logger(ListUploadsUseCase.name);
@@ -19,37 +24,34 @@ export class ListUploadsUseCase {
     experimentId: string,
     userId: string,
     query: { uploadTableId?: string; uploadTableName?: string },
-  ): Promise<Result<{ uploads: UploadMetadata[] }>> {
-    this.logger.debug({
-      msg: "Listing uploads",
-      operation: "listUploads",
-      experimentId,
-      userId,
-    });
-
+  ): Promise<Result<ExperimentListUploadsResponse>> {
     const experimentResult = await this.experimentRepository.findOne(experimentId);
     if (experimentResult.isFailure()) {
       return failure(experimentResult.error);
     }
     if (!experimentResult.value) {
       this.logger.warn({
-        msg: "Experiment not found",
+        msg: "Attempt to list uploads of non-existent experiment",
         errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
         operation: "listUploads",
         experimentId,
+        userId,
       });
       return failure(AppError.notFound("Experiment not found"));
     }
 
-    const uploadsResult = await this.uploadsRepository.listUploads({
-      experimentId,
-      uploadTableId: query.uploadTableId,
-      uploadTableName: query.uploadTableName,
-    });
+    const uploadsResult = await this.uploadsRepository.listForExperiment(experimentId, query);
     if (uploadsResult.isFailure()) {
-      return failure(uploadsResult.error);
+      this.logger.error({
+        msg: "Failed to list uploads",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "listUploads",
+        experimentId,
+        error: uploadsResult.error.message,
+      });
+      return failure(AppError.internal("Failed to list uploads"));
     }
 
-    return success({ uploads: uploadsResult.value });
+    return success({ uploads: uploadsResult.value.map(toUploadRecord) });
   }
 }

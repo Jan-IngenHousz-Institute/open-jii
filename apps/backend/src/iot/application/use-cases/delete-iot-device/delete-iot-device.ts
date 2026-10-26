@@ -1,6 +1,8 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { ResourceDeletedNotifier } from "../../../../notifications/application/services/resource-deleted-notifier";
+import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort } from "../../../core/ports/aws.port";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
@@ -13,6 +15,8 @@ export class DeleteIotDeviceUseCase {
     @Inject(AWS_PORT)
     private readonly awsPort: AwsPort,
     private readonly deviceRepository: IotDeviceRepository,
+    private readonly sharingRepository: SharingRepository,
+    private readonly deletionNotifier: ResourceDeletedNotifier,
   ) {}
 
   async execute(deviceId: string, userId: string): Promise<Result<void>> {
@@ -58,9 +62,22 @@ export class DeleteIotDeviceUseCase {
       return failure(deleteThingResult.error);
     }
 
+    const members = await this.sharingRepository.listMemberIds("device", deviceId);
+    const name = await this.sharingRepository.findResourceName("device", deviceId);
+
     const deleteResult = await this.deviceRepository.delete(deviceId);
     if (deleteResult.isFailure()) {
       return failure(deleteResult.error);
+    }
+
+    if (deleteResult.value.length > 0) {
+      await this.deletionNotifier.notify({
+        operation: "deleteIotDevice",
+        actorId: userId,
+        resource: { type: "device", id: deviceId },
+        name: name,
+        members,
+      });
     }
 
     return success(undefined);

@@ -31,6 +31,51 @@ vulnerabilities:
       - "pkg:rpm/amazon/pcre2-syntax@10.40-1.amzn2023.0.3"
     statement: "PCRE2 JIT memory corruption. Neither the runtime nor macro code uses PCRE2."
     expired_at: 2026-11-05
+  - id: CVE-2026-92392
+    purls:
+      - "pkg:rpm/amazon/curl-minimal@8.21.0-5.amzn2023.0.1"
+      - "pkg:rpm/amazon/libcurl-minimal@8.21.0-5.amzn2023.0.1"
+    statement: "curl HTTP/2 upload use-after-free. The sandbox makes no outbound connections."
+    expired_at: 2026-11-05
+  - id: CVE-2026-78659
+    purls:
+      - "pkg:rpm/amazon/libcap@2.73-1.amzn2023.0.7"
+    statement: "Go net/http trailer DoS filed under libcap; the installed package ships no Go binaries."
+    expired_at: 2026-11-05
+  - id: CVE-2026-78667
+    purls:
+      - "pkg:rpm/amazon/libcap@2.73-1.amzn2023.0.7"
+    statement: "Go net/http Range header DoS, same libcap filing, no Go binaries installed."
+    expired_at: 2026-11-05
+  - id: CVE-2026-94440
+    purls:
+      - "pkg:rpm/amazon/libcap@2.73-1.amzn2023.0.7"
+    statement: "Go multipart memory-limit bypass, same libcap filing, no Go binaries installed."
+    expired_at: 2026-11-05
+  - id: CVE-2026-103111
+    purls:
+      - "pkg:rpm/amazon/pcre2@10.40-1.amzn2023.0.3"
+      - "pkg:rpm/amazon/pcre2-syntax@10.40-1.amzn2023.0.3"
+    statement: "PCRE2 JIT out-of-bounds write. Neither the runtime nor macro code uses PCRE2."
+    expired_at: 2026-11-05
+  - id: CVE-2026-86145
+    purls:
+      - "pkg:rpm/amazon/pcre2@10.40-1.amzn2023.0.3"
+      - "pkg:rpm/amazon/pcre2-syntax@10.40-1.amzn2023.0.3"
+    statement: "PCRE2 DFA match out-of-bounds write. Neither the runtime nor macro code uses PCRE2."
+    expired_at: 2026-11-05
+  - id: CVE-2026-89156
+    purls:
+      - "pkg:rpm/amazon/pcre2@10.40-1.amzn2023.0.3"
+      - "pkg:rpm/amazon/pcre2-syntax@10.40-1.amzn2023.0.3"
+    statement: "PCRE2 JIT fallback out-of-bounds read. Neither the runtime nor macro code uses PCRE2."
+    expired_at: 2026-11-05
+  - id: CVE-2026-89160
+    purls:
+      - "pkg:rpm/amazon/pcre2@10.40-1.amzn2023.0.3"
+      - "pkg:rpm/amazon/pcre2-syntax@10.40-1.amzn2023.0.3"
+    statement: "PCRE2 invalid-UTF out-of-bounds read. Neither the runtime nor macro code uses PCRE2."
+    expired_at: 2026-11-05
 
   # openssl-fips-provider-latest / openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1, fixed
   # in .0.3, which the AL2023 repos do not carry yet. Every id is a QUIC, DTLS,
@@ -103,22 +148,12 @@ vulnerabilities:
     statement: "QUIC connection ID backlog DoS. No QUIC."
     expired_at: 2026-11-05
 
-  # aws-lambda-rie, Go stdlib 1.26.7, fixed in 1.26.9. The base entrypoint runs
+  # aws-lambda-rie, Go stdlib 1.26.9, fixed in 1.26.10. The base entrypoint runs
   # RIE only when AWS_LAMBDA_RUNTIME_API is unset, which Lambda always sets.
-  - id: CVE-2026-78667
+  - id: CVE-2026-111943
     purls:
-      - "pkg:golang/stdlib@v1.26.7"
-    statement: "net/http Range header DoS. RIE never runs in production."
-    expired_at: 2026-11-05
-  - id: CVE-2026-97031
-    purls:
-      - "pkg:golang/stdlib@v1.26.7"
-    statement: "crypto/tls ECH DoS. RIE never runs in production."
-    expired_at: 2026-11-05
-  - id: CVE-2026-78669
-    purls:
-      - "pkg:golang/stdlib@v1.26.7"
-    statement: "net/http HTTP/2 DoS. RIE never runs in production."
+      - "pkg:golang/stdlib@v1.26.9"
+    statement: "crypto/x509 denylist for distrusted CA intermediates. RIE never runs in production."
     expired_at: 2026-11-05
 
   # The runtime's bundled SDK tree (var/runtime/node_modules/@aws-sdk/node_modules).
@@ -158,6 +193,16 @@ vulnerabilities:
       - "pkg:npm/axios@1.19.0"
     statement: "axios form-serialization prototype pollution. SDK copy never loaded."
     expired_at: 2026-11-05
+  - id: CVE-2026-111755
+    purls:
+      - "pkg:npm/follow-redirects@1.16.0"
+    statement: "follow-redirects sensitive header leak on redirect. No outbound HTTP."
+    expired_at: 2026-11-05
+  - id: CVE-2026-111756
+    purls:
+      - "pkg:npm/follow-redirects@1.16.0"
+    statement: "follow-redirects cross-origin credential stripping bypass. No outbound HTTP."
+    expired_at: 2026-11-05
   - id: CVE-2026-102276
     purls:
       - "pkg:npm/brace-expansion@1.1.18"
@@ -177,4 +222,9 @@ vulnerabilities:
     purls:
       - "pkg:npm/undici@7.29.0"
     statement: "undici BalancedPool TLS validation bypass. No outbound TLS."
+    expired_at: 2026-11-05
+  - id: CVE-2026-109869
+    purls:
+      - "pkg:npm/undici@7.29.0"
+    statement: "undici fetch crash on a malicious server's response. The function's isolated subnets have no internet route, so no such server is reachable."
     expired_at: 2026-11-05

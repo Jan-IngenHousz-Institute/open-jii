@@ -196,7 +196,7 @@ export class ExperimentController {
         );
       }
 
-      const result = await this.deleteExperimentUseCase.execute(input.id);
+      const result = await this.deleteExperimentUseCase.execute(input.id, session.user.id);
       if (result.isSuccess()) {
         return undefined;
       }

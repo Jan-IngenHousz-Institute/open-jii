@@ -19,7 +19,7 @@ export const createInvitationSchema = createInsertSchema(invitations)
   })
   .extend({
     resourceType: z.literal("experiment"),
-    resourceId: z.string().uuid(),
+    resourceId: z.string().guid(),
   });
 
 // Select schema for returning invitations. The `role` column is surfaced as the
@@ -28,7 +28,7 @@ export const invitationSchema = createSelectSchema(invitations)
   .omit({ role: true })
   .extend({
     resourceType: z.literal("experiment"),
-    resourceId: z.string().uuid(),
+    resourceId: z.string().guid(),
     tier: zInvitationTier,
     invitedByName: z.string().optional(),
     resourceName: z.string().optional(),

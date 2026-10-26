@@ -331,4 +331,18 @@ describe("readRound", () => {
       `/api/annotations?type=alert&from=${window.from.getTime()}&to=${window.to.getTime()}&limit=1000`,
     );
   });
+
+  it("calls a rules read that returns none unavailable instead of quiet", async () => {
+    const get = vi.fn<GrafanaClient["get"]>((path) =>
+      Promise.resolve(path.startsWith("/api/prometheus") ? { status: "error" } : dashboard),
+    );
+    const query = vi.fn<GrafanaClient["query"]>().mockResolvedValue({ results: {} });
+
+    const round = await readRound({ get, query }, "prod", window, []);
+
+    expect(round.rules).toEqual([]);
+    expect(round.unavailable).toContain(
+      "alert rules: the rules read returned none, so what is firing is unknown",
+    );
+  });
 });

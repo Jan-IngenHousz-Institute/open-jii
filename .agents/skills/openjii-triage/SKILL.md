@@ -1,6 +1,6 @@
 ---
 name: openjii-triage
-description: Investigate a platform heartbeat alert or report anomaly by metric id, or an error-tracking issue by its PostHog issue id. Use when a report panel, a Grafana alert, or a runbook points at a metric such as ingest-lag, dlt-heartbeat, or stale-experiments, or when a PostHog error alert or the daily round names an issue, and you need evidence and a likely cause rather than a guess.
+description: Investigate a platform heartbeat alert or report anomaly by metric id, an error-tracking issue by its PostHog issue id, or a measurement a researcher says never arrived, by device, experiment or time window. Use when a report panel, a Grafana alert, or a runbook points at a metric such as ingest-lag, dlt-heartbeat, or stale-experiments, when a PostHog error alert or the daily round names an issue, or when someone asks where their data went, and you need evidence and a likely cause rather than a guess.
 ---
 
 # Triage a heartbeat metric
@@ -15,12 +15,16 @@ the evidence you actually pulled, and the next step. Never present an unverified
 A UUID instead of a metric id is a PostHog error-tracking issue, from a Slack alert or the daily
 round. Skip to "An error-tracking issue" below, then carry on with steps 4 and 5.
 
+A device, an experiment or a time window instead is a researcher asking where a measurement went.
+Skip to "A measurement that did not arrive" below, then report as step 5 says.
+
 Triage reads the sources themselves, so it needs more than the round does: AWS SSO through the
-`openjii-prod` and `openjii-dev` profiles for CloudWatch and the heartbeat files, and the devkit's
-PostHog key for an error issue. `aws sts get-caller-identity --profile openjii-<env>` says whether
-the AWS session is live, and the `posthog:*` commands say when the key is missing. When one is
-missing, ask the person to sign in or run the auth command, and never look for credentials in env
-files; if they cannot, name what you could not check in the report.
+`openjii-prod` and `openjii-dev` profiles for CloudWatch and the heartbeat files, the devkit's
+PostHog key for an error issue, and the person's Databricks CLI profile for the environment to query
+the lakehouse (`docs/agents/environments.md`). `aws sts get-caller-identity --profile openjii-<env>`
+says whether the AWS session is live, and the `posthog:*` commands say when the key is missing.
+When one is missing, ask the person to sign in or run the auth command, and never look for
+credentials in env files; if they cannot, name what you could not check in the report.
 
 ## 1. Ground yourself in the catalog, not memory
 
@@ -82,6 +86,18 @@ issue's page.
 
 Then correlate as step 4 says: an issue that began with a release or a deploy is that change until
 shown otherwise.
+
+## A measurement that did not arrive
+
+`docs/runbooks/support/measurement-missing.md` walks the path from the phone to gold, with the read
+for each hop. Run every read yourself, because the person asked for an answer, not for a list of
+queries. Read production only when the person asks, and a question about a production measurement
+is that ask.
+
+Go in path order and stop at the first hop that does not have the measurement; that hop and the one
+before it are the finding. Before calling a hop a miss, widen the window by the hop's normal delay
+(the daily report's hop latencies give it), because a measurement still in flight looks like one
+that was lost. A hop the runbook says cannot be traced is named as such, never skipped quietly.
 
 ## 4. Correlate before concluding
 

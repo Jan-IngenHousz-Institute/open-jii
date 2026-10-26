@@ -6,7 +6,7 @@ export const zResourceScope = z.enum(["related", "all"]);
 export const zSortDirection = z.enum(["asc", "desc"]);
 
 /** Ordered server-side sorting criteria. A resource supplies its own field allowlist. */
-export function zListSort<T extends z.ZodType<string>>(fields: T) {
+export function zListSort<T extends z.core.util.EnumLike>(fields: z.ZodEnum<T>) {
   return z
     .array(z.object({ field: fields, direction: zSortDirection }))
     .min(1)
@@ -21,7 +21,7 @@ export function zListSort<T extends z.ZodType<string>>(fields: T) {
  * accepted so callers written for the single-value inputs keep working; an empty array
  * filters nothing.
  */
-export function zListFilter<T extends z.ZodEnum<[string, ...string[]]>>(values: T) {
+export function zListFilter<T extends z.ZodEnum>(values: T) {
   return z
     .union([values, z.array(values)])
     .transform((value: z.infer<T> | z.infer<T>[]): z.infer<T>[] => [

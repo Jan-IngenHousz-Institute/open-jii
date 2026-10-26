@@ -195,7 +195,9 @@ metrics:
       per_environment:
         dev: { method: threshold, max: 7200000 }
     runbook: docs/runbooks/ingest-lag.md
-    notes: The single best pipeline-lag alarm. Consumer down => age climbs while ingest looks healthy.
+    notes: >-
+      Rises while the consumer reads too slowly. A consumer that stops reading publishes no
+      datapoints at all, which this rule treats as healthy; Ingest Stalled (89) catches that case.
 
   - num: 9
     id: kinesis-write-throttling

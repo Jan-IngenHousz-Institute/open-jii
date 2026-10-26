@@ -45,8 +45,8 @@ export interface BuildUploadPayloadArgs {
   client?: ClientMetadata;
 }
 
-// Pure: never mutates rawMeasurement or its sample entries. Macro filenames
-// are injected into cloned sample entries before compression.
+// Pure: never mutates rawMeasurement. The sample travels as the device returned it, so a
+// macro the platform runs on it reads the same input as the run on the phone.
 export function buildUploadPayload({
   rawMeasurement,
   userId,
@@ -67,22 +67,11 @@ export function buildUploadPayload({
   location,
   client,
 }: BuildUploadPayloadArgs) {
-  const macroFilenames = macro?.filename ? [macro.filename] : [];
-
   // A macro that follows its measurement reads that measurement through ctx, so
   // the scan would ride again here, uncompressed, beside the compressed `sample`.
   const leanMacroContext = macroContext
     ? elideMacroInputFromContext(macroContext, rawMeasurement)
     : undefined;
-
-  let injectedSample: unknown;
-  const hasInjectableSample = "sample" in rawMeasurement && rawMeasurement.sample;
-  if (hasInjectableSample) {
-    const raw = rawMeasurement.sample;
-    injectedSample = Array.isArray(raw)
-      ? raw.map((entry: object) => ({ ...entry, macros: macroFilenames }))
-      : { ...raw, macros: macroFilenames };
-  }
 
   const payload = {
     questions,
@@ -95,7 +84,6 @@ export function buildUploadPayload({
     // (device-defined, not a platform id) and must not clobber the platform
     // attribution.
     protocol_id: protocolId,
-    ...(hasInjectableSample ? { sample: injectedSample } : {}),
     annotations: buildAnnotations(commentText),
     // The firmware-provided device_id wins; the local USB/BT id is a weak
     // fallback (Android USB deviceIds are transient across replugs).

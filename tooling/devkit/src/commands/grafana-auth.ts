@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { text } from "node:stream/consumers";
 
 import { devkitEnvPath, repositoryRoot } from "../lib/config.js";
 import { upsertEnvFile } from "../lib/env-file.js";
@@ -17,7 +17,7 @@ export interface GrafanaAuthArgs {
 }
 
 export interface GrafanaAuthDependencies {
-  readInput: () => string;
+  readInput: () => Promise<string>;
   verify: (url: string, token: string) => Promise<number>;
   store: (values: Record<string, string>) => Promise<void>;
   write: (text: string) => void;
@@ -42,7 +42,7 @@ export async function authenticate(
   args: GrafanaAuthArgs,
   deps: GrafanaAuthDependencies,
 ): Promise<void> {
-  const token = deps.readInput().trim();
+  const token = (await deps.readInput()).trim();
   if (token.length === 0) {
     throw new Error(
       "No token received on stdin. Pipe it in, as tooling/devkit/README.md shows for pnpm grafana:auth",
@@ -81,7 +81,9 @@ async function run(argv: string[]): Promise<number> {
   const args = parseArgs(argv);
   const root = repositoryRoot();
   await authenticate(args, {
-    readInput: () => readFileSync(0, "utf8"),
+    // Waits for the pipe to close. A synchronous read fails with EAGAIN while the writer, such as
+    // the command minting the token, has not written yet.
+    readInput: () => text(process.stdin),
     verify: (url, token) => countRules(args.environment, url, token),
     store: async (values) => {
       for (const [variable, value] of Object.entries(values)) {

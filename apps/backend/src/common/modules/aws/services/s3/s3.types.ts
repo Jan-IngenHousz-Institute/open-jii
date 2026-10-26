@@ -3,3 +3,8 @@ export interface IotUploadUrl {
   key: string;
   expiresAt: Date;
 }
+
+export interface SignedDownloadUrl {
+  url: string;
+  expiresAt: Date;
+}

@@ -109,9 +109,13 @@ export const zExperimentUploadTableName = z
 
 export const zExperimentUploadTargetTable = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("new"), name: zExperimentUploadTableName }),
-  z.object({ kind: z.literal("existing"), uploadTableId: z.string().uuid() }),
+  z.object({ kind: z.literal("existing"), uploadTableId: z.string().guid() }),
 ]);
 export type ExperimentUploadTargetTable = z.infer<typeof zExperimentUploadTargetTable>;
+
+// Lets a client follow its upload before the response arrives; the backend makes one up when absent.
+// Lowercased because Postgres stores a uuid that way and the upload job echoes back what it was sent.
+const zExperimentUploadClientId = z.string().guid().toLowerCase().optional();
 
 // Form fields shared across the multipart upload boundary. The FE binds this
 // schema to react-hook-form via zodResolver; the BE validates the same shape
@@ -121,13 +125,17 @@ export const zExperimentUploadFormFields = z.discriminatedUnion("targetKind", [
     targetKind: z.literal("new"),
     sourceKind: zExperimentUploadSourceKind,
     targetName: zExperimentUploadTableName,
+    uploadId: zExperimentUploadClientId,
   }),
   z.object({
     targetKind: z.literal("existing"),
     sourceKind: zExperimentUploadSourceKind,
     uploadTableId: z
-      .string({ required_error: "Select a table to append to" })
-      .uuid("Select a table to append to"),
+      .string({
+        error: (issue) => (issue.input === undefined ? "Select a table to append to" : undefined),
+      })
+      .guid("Select a table to append to"),
+    uploadId: zExperimentUploadClientId,
   }),
 ]);
 export type ExperimentUploadFormFields = z.infer<typeof zExperimentUploadFormFields>;
@@ -268,7 +276,7 @@ export const UPLOAD_FILENAME_SCHEMAS = {
 export const zExperimentUploadDataBody = z.any();
 
 export const zExperimentUploadDataResponse = z.object({
-  uploadId: z.string().describe("UUID of this upload"),
+  uploadId: z.string().guid().describe("UUID of this upload"),
   uploadTableId: z
     .string()
     .optional()
@@ -279,7 +287,6 @@ export const zExperimentUploadDataResponse = z.object({
     .string()
     .optional()
     .describe("User-chosen display name for the upload table. Present for target-backed uploads."),
-  runId: z.number().int().optional().describe("Databricks job run id for status polling"),
   files: z.array(
     z.object({
       fileName: z.string(),
@@ -288,35 +295,58 @@ export const zExperimentUploadDataResponse = z.object({
   ),
 });
 
-export const zExperimentUploadHistoryStatus = z.enum(["pending", "running", "completed", "failed"]);
+export const zExperimentUploadStatus = z.enum([
+  "receiving",
+  "queued",
+  "pending",
+  "running",
+  "completed",
+  "failed",
+]);
 
-export const zExperimentUploadMetadata = z.object({
-  uploadId: z.string(),
-  experimentId: z.string(),
-  uploadTableId: z.string().nullable(),
+export const zExperimentUploadErrorCode = z.enum([
+  "no_files",
+  "no_rows",
+  "not_queryable",
+  "transfer_interrupted",
+  "unknown",
+]);
+
+export const zExperimentUploadRejectedFile = z.object({
+  name: z.string(),
+  reason: z.enum(["unparseable", "no_rows"]),
+});
+
+export const zExperimentUploadRecord = z.object({
+  uploadId: z.string().guid(),
+  experimentId: z.string().guid(),
+  uploadTableId: z.string().guid().nullable(),
   uploadTableName: z.string().nullable(),
   sourceKind: zExperimentUploadSourceKind,
-  status: zExperimentUploadHistoryStatus,
+  status: zExperimentUploadStatus,
   fileCount: z.number().int().nullable(),
   rowCount: z.number().int().nullable(),
-  createdBy: z.string(),
-  createdAt: z.string(),
-  completedAt: z.string().nullable(),
-  errorMessage: z.string().nullable(),
+  rejectedFiles: z.array(zExperimentUploadRejectedFile),
+  errorCode: zExperimentUploadErrorCode.nullable(),
+  createdBy: z.string().guid(),
+  createdAt: z.string().datetime(),
+  completedAt: z.string().datetime().nullable(),
 });
 
 export const zExperimentListUploadsQuery = z.object({
-  uploadTableId: z.string().uuid().optional(),
+  uploadTableId: z.string().guid().optional(),
   uploadTableName: zExperimentUploadTableName.optional(),
 });
 
 export const zExperimentListUploadsResponse = z.object({
-  uploads: z.array(zExperimentUploadMetadata),
+  uploads: z.array(zExperimentUploadRecord),
 });
 export type ExperimentUploadSourceKind = z.infer<typeof zExperimentUploadSourceKind>;
 export type ExperimentUploadDataBody = z.infer<typeof zExperimentUploadDataBody>;
 export type ExperimentUploadDataResponse = z.infer<typeof zExperimentUploadDataResponse>;
-export type ExperimentUploadHistoryStatus = z.infer<typeof zExperimentUploadHistoryStatus>;
-export type ExperimentUploadMetadata = z.infer<typeof zExperimentUploadMetadata>;
+export type ExperimentUploadStatus = z.infer<typeof zExperimentUploadStatus>;
+export type ExperimentUploadErrorCode = z.infer<typeof zExperimentUploadErrorCode>;
+export type ExperimentUploadRejectedFile = z.infer<typeof zExperimentUploadRejectedFile>;
+export type ExperimentUploadRecord = z.infer<typeof zExperimentUploadRecord>;
 export type ExperimentListUploadsQuery = z.infer<typeof zExperimentListUploadsQuery>;
 export type ExperimentListUploadsResponse = z.infer<typeof zExperimentListUploadsResponse>;

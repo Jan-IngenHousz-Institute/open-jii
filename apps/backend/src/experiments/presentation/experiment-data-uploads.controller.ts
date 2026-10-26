@@ -57,7 +57,6 @@ export class ExperimentDataUploadsController {
       uploadId: result.value.uploadId,
       uploadTableId: result.value.uploadTableId,
       uploadTableName: result.value.uploadTableName,
-      runId: result.value.runId,
       files: result.value.files,
     };
   }

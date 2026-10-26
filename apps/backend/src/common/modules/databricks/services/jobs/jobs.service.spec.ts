@@ -197,124 +197,6 @@ describe("DatabricksJobsService", () => {
     });
   });
 
-  describe("listRunsForJob", () => {
-    it("should successfully list runs for a job", async () => {
-      const jobId = 42;
-
-      const mockResponse = {
-        runs: [
-          {
-            run_id: 100,
-            job_id: 42,
-            number_in_job: 1,
-            state: { life_cycle_state: "RUNNING" },
-            start_time: Date.now(),
-            job_parameters: [
-              { name: "EXPERIMENT_ID", value: "exp-123" },
-              { name: "TABLE_NAME", value: "raw_data" },
-            ],
-          },
-          {
-            run_id: 101,
-            job_id: 42,
-            number_in_job: 2,
-            state: { life_cycle_state: "PENDING" },
-            start_time: Date.now(),
-            job_parameters: [
-              { name: "EXPERIMENT_ID", value: "exp-456" },
-              { name: "TABLE_NAME", value: "device" },
-            ],
-          },
-        ],
-        has_more: false,
-      };
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock runs list API call
-      nock(databricksHost)
-        .get(DatabricksJobsService.JOBS_ENDPOINT + "/runs/list")
-        .query(true)
-        .reply(200, mockResponse);
-
-      const result = await jobsService.listRunsForJob(jobId, true);
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value.runs).toHaveLength(2);
-      expect(result.value.has_more).toBe(false);
-    });
-
-    it("should handle API errors when listing runs", async () => {
-      const jobId = 42;
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock runs list API call with error
-      nock(databricksHost)
-        .get(DatabricksJobsService.JOBS_ENDPOINT + "/runs/list")
-        .query(true)
-        .reply(500, { message: "Internal server error" });
-
-      const result = await jobsService.listRunsForJob(jobId);
-
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to list job runs");
-    });
-
-    it("should handle token fetch failure when listing runs", async () => {
-      const jobId = 42;
-
-      // Mock token request with error
-      nock(databricksHost)
-        .post(DatabricksAuthService.TOKEN_ENDPOINT)
-        .reply(401, { error_description: "Invalid client credentials" });
-
-      const result = await jobsService.listRunsForJob(jobId);
-
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to list job runs");
-    });
-
-    it("should return empty runs when no runs exist", async () => {
-      const jobId = 42;
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock runs list API call with no runs
-      nock(databricksHost)
-        .get(DatabricksJobsService.JOBS_ENDPOINT + "/runs/list")
-        .query(true)
-        .reply(200, {
-          has_more: false,
-        });
-
-      const result = await jobsService.listRunsForJob(jobId);
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value.runs).toBeUndefined();
-      expect(result.value.has_more).toBe(false);
-    });
-  });
-
   describe("triggerJob - validateJobRunResponse", () => {
     it("should fail when Databricks returns response without run_id", async () => {
       const jobId = 12345;
@@ -410,6 +292,50 @@ describe("DatabricksJobsService", () => {
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
       expect(result.error.message).toContain("Failed to get job run status");
+    });
+  });
+
+  describe("getJobRunOutput", () => {
+    it("returns a task run's error and trace", async () => {
+      const taskRunId = 907183647783172;
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .get(DatabricksJobsService.JOBS_ENDPOINT + "/runs/get-output")
+        .query({ run_id: taskRunId })
+        .reply(200, {
+          error: "ExportError: EXPORT_ERROR[no_data] nothing to export",
+          error_trace: "Traceback (most recent call last): ...",
+        });
+
+      const result = await jobsService.getJobRunOutput(taskRunId);
+
+      assertSuccess(result);
+      expect(result.value.error).toBe("ExportError: EXPORT_ERROR[no_data] nothing to export");
+      expect(result.value.error_trace).toContain("Traceback");
+    });
+
+    it("should handle API errors when getting a job run's output", async () => {
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .get(DatabricksJobsService.JOBS_ENDPOINT + "/runs/get-output")
+        .query({ run_id: 1 })
+        .reply(400, { message: "Retrieving the output of a job run is not supported" });
+
+      const result = await jobsService.getJobRunOutput(1);
+
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to get job run output");
     });
   });
 });

@@ -51,8 +51,8 @@ export function elideMacroInputFromContext(
 }
 
 /**
- * The upload writes a `macros` routing list into every sample entry, which the
- * value in `ctx` never carried. Dropping it again is what makes the restored
+ * Uploads from older app versions carry a `macros` routing list in every sample entry,
+ * which the value in `ctx` never carried. Dropping it again is what makes the restored
  * `ctx` equal to the one the macro read on the device.
  */
 function withoutInjectedMacros(value: unknown): unknown {

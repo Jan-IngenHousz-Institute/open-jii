@@ -64,7 +64,7 @@ function saveIssues(draft: DefinitionDraft | undefined): z.ZodIssue[] {
 }
 
 /** Where a problem sits, named the way the page names it rather than as a schema path. */
-function locateIssue(path: (string | number)[], draft: DefinitionDraft, t: Translate): string {
+function locateIssue(path: PropertyKey[], draft: DefinitionDraft, t: Translate): string {
   const [section, part, index, ...rest] = path;
   const position = typeof index === "number" ? index + 1 : undefined;
 

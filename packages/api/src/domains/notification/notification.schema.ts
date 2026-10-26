@@ -188,7 +188,11 @@ export const NOTIFICATION_TYPES = {
   resource_moved_organization: {
     category: "experiments_and_resources",
     channels: { email: "never" },
-    params: resource.extend({ organizationName: z.string() }),
+    params: resource.extend({
+      organizationName: z.string(),
+      // "organization", or "personal" for the mover's own workspace.
+      organizationKind: z.string(),
+    }),
   },
   workbook_version_published: {
     category: "experiments_and_resources",
@@ -238,7 +242,7 @@ export const NOTIFICATION_TYPES = {
   data_upload_failed: {
     category: "data_jobs",
     channels: { email: "preference" },
-    params: experiment.extend({ fileName: z.string() }),
+    params: experiment.extend({ tableName: z.string() }),
   },
   api_key_created: {
     category: "account_security",
@@ -277,11 +281,11 @@ export const NOTIFICATION_CATEGORIES: Record<
 };
 
 export const zNotification = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   type: zNotificationType,
   category: zNotificationCategory,
-  actor: z.object({ id: z.string().uuid(), name: z.string() }).nullable(),
-  resource: z.object({ type: zNotificationResourceType, id: z.string().uuid() }).nullable(),
+  actor: z.object({ id: z.string().guid(), name: z.string() }).nullable(),
+  resource: z.object({ type: zNotificationResourceType, id: z.string().guid() }).nullable(),
   params: z
     .record(z.string(), z.string())
     .describe("Display values captured when the event happened, such as the experiment name"),
@@ -303,7 +307,7 @@ export const zUnreadNotificationCount = z.object({
 });
 
 export const zMarkNotificationsReadBody = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(100),
+  ids: z.array(z.string().guid()).min(1).max(100),
 });
 
 export const zMarkNotificationsReadResponse = z.object({

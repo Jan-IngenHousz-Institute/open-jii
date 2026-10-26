@@ -29,7 +29,7 @@ import type {
   ExperimentExportRecord,
   ExperimentFlowGraph,
   ExperimentListItem,
-  ExperimentUploadMetadata,
+  ExperimentUploadRecord,
   RelatedHomeExperiment,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
@@ -820,12 +820,14 @@ export function createExportRecord(
     tableName: "raw_data",
     format: "csv",
     status: "completed",
-    filePath: `/exports/export-${exportSeq}.csv`,
     rowCount: 100,
-    fileSize: 1024,
+    totalBytes: 1024,
+    partCount: 1,
+    errorCode: null,
     createdBy: "user-1",
     createdAt: "2024-01-01T00:00:00Z",
     completedAt: "2024-01-01T00:05:00Z",
+    expiresAt: "2024-01-31T00:05:00Z",
     ...overrides,
   };
 }
@@ -1089,27 +1091,28 @@ export function createWorkbookVersionSummary(
   };
 }
 
-// ── Upload Metadata ────────────────────────────────────────────
+// ── Upload Record ──────────────────────────────────────────────
 
 let uploadSeq = 0;
 
 export function createUpload(
-  overrides: Partial<ExperimentUploadMetadata> = {},
-): ExperimentUploadMetadata {
+  overrides: Partial<ExperimentUploadRecord> = {},
+): ExperimentUploadRecord {
   uploadSeq++;
   return {
-    uploadId: `upload-${uploadSeq}`,
-    experimentId: `exp-${uploadSeq}`,
-    uploadTableId: `11111111-1111-1111-1111-${uploadSeq.toString().padStart(12, "0")}`,
+    uploadId: uuid(),
+    experimentId: uuid(),
+    uploadTableId: uuid(),
     uploadTableName: `upload_table_${uploadSeq}`,
     sourceKind: "csv",
     status: "completed",
     fileCount: 1,
     rowCount: 100,
-    createdBy: "user-1",
+    rejectedFiles: [],
+    errorCode: null,
+    createdBy: uuid(),
     createdAt: "2026-01-01T00:00:00.000Z",
     completedAt: "2026-01-01T00:05:00.000Z",
-    errorMessage: null,
     ...overrides,
   };
 }
