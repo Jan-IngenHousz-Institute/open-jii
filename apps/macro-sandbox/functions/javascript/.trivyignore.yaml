@@ -226,5 +226,5 @@ vulnerabilities:
   - id: CVE-2026-109869
     purls:
       - "pkg:npm/undici@7.29.0"
-    statement: "undici fetch crash on a malicious server's content encodings. No outbound HTTP."
+    statement: "undici fetch crash on a malicious server's response. The function's isolated subnets have no internet route, so no such server is reachable."
     expired_at: 2026-11-05
