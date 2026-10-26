@@ -37,19 +37,21 @@ _TABLES = {
           ('e1', 1L, 'd1', 'MultispeQ', TIMESTAMP'2026-09-01 08:00:00', 'Europe/Amsterdam', DATE'2026-09-01',
            array(named_struct('id', 'm1', 'name', 'Fluo', 'filename', 'fluo.py')),
            parse_json('{{"plot": "A1"}}'), array({_PAYLOAD_ANNOTATION}),
-           'u1', 'c1', 'p1', 'w1', 52.0D, 5.1D, parse_json('[{{"x": 1}}]'), TIMESTAMP'2026-09-23 10:00:00'),
+           'u1', 'c1', 'p1', 'w1', 'v1', 52.0D, 5.1D, parse_json('[{{"x": 1}}]'),
+           TIMESTAMP'2026-09-23 10:00:00'),
           ('e1', 2L, 'd2', 'Ambit', TIMESTAMP'2026-09-02 09:30:00', CAST(NULL AS STRING), DATE'2026-09-02',
            CAST(array() AS ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>),
            parse_json('{{"plot": "B2"}}'), CAST(array() AS ARRAY<{_ANNOTATION}>),
-           'u2', 'c9', 'p1', 'w1', 52.1D, 5.2D, parse_json('[{{"x": 2}}]'), TIMESTAMP'2026-09-23 10:01:00'),
+           'u2', 'c9', 'p1', 'w1', 'v1', 52.1D, 5.2D, parse_json('[{{"x": 2}}]'),
+           TIMESTAMP'2026-09-23 10:01:00'),
           ('e2', 3L, 'd1', 'MultispeQ', TIMESTAMP'2026-09-03 10:00:00', CAST(NULL AS STRING), DATE'2026-09-03',
            CAST(NULL AS ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>),
            CAST(NULL AS VARIANT), CAST(NULL AS ARRAY<{_ANNOTATION}>),
-           'u1', 'c1', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS DOUBLE), CAST(NULL AS DOUBLE),
-           parse_json('[]'), TIMESTAMP'2026-09-23 10:02:00')
+           'u1', 'c1', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS DOUBLE),
+           CAST(NULL AS DOUBLE), parse_json('[]'), TIMESTAMP'2026-09-23 10:02:00')
         AS t(experiment_id, id, device_id, device_name, timestamp, timezone, date, macros, questions_data,
-             annotations, user_id, client_id, protocol_id, workbook_run_id, latitude, longitude, data,
-             processed_timestamp)
+             annotations, user_id, client_id, protocol_id, workbook_run_id, workbook_version_id, latitude,
+             longitude, data, processed_timestamp)
     """,
     "experiment_macro_data": f"""
         SELECT * FROM VALUES
@@ -137,8 +139,8 @@ def centrum(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> It
         SELECT 'e3', 10L + position, 'd9', 'MultispeQ', TIMESTAMP'2026-09-06 12:00:00', timezone,
           DATE'2026-09-06', CAST(NULL AS ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>),
           CAST(NULL AS VARIANT), CAST(NULL AS ARRAY<{_ANNOTATION}>), 'u9', 'c9', CAST(NULL AS STRING),
-          CAST(NULL AS STRING), CAST(NULL AS DOUBLE), CAST(NULL AS DOUBLE), parse_json('[]'),
-          TIMESTAMP'2026-09-23 10:03:00'
+          CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS DOUBLE), CAST(NULL AS DOUBLE),
+          parse_json('[]'), TIMESTAMP'2026-09-23 10:03:00'
         FROM timezones
         """
     )
@@ -225,6 +227,18 @@ def test_local_time_follows_the_stored_zone_and_a_measurement_without_one_is_kep
         assert row["timezone"] is None
         assert row["measurement_time_local"] is None
         assert row["local_time"] is None
+
+
+def test_measurements_and_macro_results_name_the_workbook_version_that_produced_them(
+    spark: SparkSession, centrum: str
+) -> None:
+    raw = _rows(spark, "enriched_experiment_raw_data")
+    macro = _rows(spark, "enriched_experiment_macro_data")
+
+    assert raw[1]["workbook_version_id"] == "v1"
+    # A measurement taken without a workbook keeps an empty version.
+    assert raw[3]["workbook_version_id"] is None
+    assert macro[101]["workbook_version_id"] == "v1"
 
 
 def test_macro_results_keep_their_error_and_get_the_same_enrichment(
