@@ -426,6 +426,27 @@ describe("WorkbookMetaRow", () => {
       await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
     });
 
+    it("keeps the dialog open and reports the failure when publishing fails", async () => {
+      const user = userEvent.setup();
+      mountVersions([1]);
+      const spy = server.mount(contract.workbooks.publishWorkbookVersion, { status: 403 });
+      const { toast } = await import("@repo/ui/hooks/use-toast");
+
+      renderRow({ isUpgradable: true });
+      await user.click(await publishVersionButton());
+      const dialog = await screen.findByRole("alertdialog");
+      await user.click(within(dialog).getByRole("button", { name: "workbooks.publishVersion" }));
+
+      await waitFor(() =>
+        expect(toast).toHaveBeenCalledWith({
+          description: "workbooks.publishVersionFailed",
+          variant: "destructive",
+        }),
+      );
+      expect(spy.callCount).toBe(1);
+      expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    });
+
     it("lets a keyboard reach the reason there is nothing to publish", async () => {
       mountVersions([2, 1]);
       renderRow({ isUpgradable: false });

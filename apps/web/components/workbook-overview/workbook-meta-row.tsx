@@ -104,28 +104,16 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
   // Capability, not ownership: a "Can edit" grantee renames and edits.
   const { canManage, canTransfer, canUpdate } = workbook.capabilities;
 
-  const { mutateAsync: publishVersion, isPending: isPublishingVersion } =
-    usePublishWorkbookVersion();
+  const [confirmingPublishVersion, setConfirmingPublishVersion] = useState(false);
+  const { mutate: publishVersion, isPending: isPublishingVersion } = usePublishWorkbookVersion({
+    onSuccess: () => setConfirmingPublishVersion(false),
+  });
   // `isUpgradable` is false while there is no version at all, so the first one
   // is offered as soon as the versions are known to be empty.
   const hasNoVersion = !isLoadingVersions && !isVersionsError && latestVersion == null;
   const canPublishVersion = workbook.isUpgradable === true || hasNoVersion;
   const isDraftPublished = latestVersion != null && workbook.isUpgradable !== true;
   const nextVersion = (latestVersion ?? 0) + 1;
-  const [confirmingPublishVersion, setConfirmingPublishVersion] = useState(false);
-
-  const handlePublishVersion = async () => {
-    try {
-      const published = await publishVersion({ id });
-      setConfirmingPublishVersion(false);
-      toast({ description: t("workbooks.versionPublished", { version: published.version }) });
-    } catch (err) {
-      toast({
-        description: parseApiError(err)?.message ?? t("workbooks.publishVersionFailed"),
-        variant: "destructive",
-      });
-    }
-  };
 
   const publishVersionButton = (
     <Button
@@ -323,7 +311,7 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
               disabled={isPublishingVersion}
               onClick={(e) => {
                 e.preventDefault();
-                void handlePublishVersion();
+                publishVersion({ id });
               }}
             >
               {isPublishingVersion ? (
