@@ -12,6 +12,7 @@ import { GetWorkbookUseCase } from "./application/use-cases/get-workbook/get-wor
 import { IsWorkbookUpgradableUseCase } from "./application/use-cases/is-workbook-upgradable/is-workbook-upgradable";
 import { ListWorkbookVersionsUseCase } from "./application/use-cases/list-workbook-versions/list-workbook-versions";
 import { ListWorkbooksUseCase } from "./application/use-cases/list-workbooks/list-workbooks";
+import { PublishIfDriftedUseCase } from "./application/use-cases/publish-if-drifted/publish-if-drifted";
 import { PublishVersionUseCase } from "./application/use-cases/publish-version/publish-version";
 import { UpdateWorkbookUseCase } from "./application/use-cases/update-workbook/update-workbook";
 import { WorkbookVersionRepository } from "./core/repositories/workbook-version.repository";
@@ -31,6 +32,7 @@ import { WorkbookController } from "./presentation/workbook.controller";
     UpdateWorkbookUseCase,
     DeleteWorkbookUseCase,
     PublishVersionUseCase,
+    PublishIfDriftedUseCase,
     ListWorkbookVersionsUseCase,
     GetWorkbookVersionUseCase,
     IsWorkbookUpgradableUseCase,
@@ -39,6 +41,7 @@ import { WorkbookController } from "./presentation/workbook.controller";
     WorkbookRepository,
     WorkbookVersionRepository,
     PublishVersionUseCase,
+    PublishIfDriftedUseCase,
     IsWorkbookUpgradableUseCase,
   ],
 })

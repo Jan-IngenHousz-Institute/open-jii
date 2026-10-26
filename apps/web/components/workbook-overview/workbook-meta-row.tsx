@@ -7,6 +7,7 @@ import { WorkbookDeleteAction } from "@/components/workbook-overview/workbook-de
 import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
 import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { useLocale } from "@/hooks/useLocale";
+import { usePublishWorkbookVersion } from "@/hooks/workbook/usePublishWorkbookVersion/usePublishWorkbookVersion";
 import { useSetWorkbookVisibility } from "@/hooks/workbook/useSetWorkbookVisibility/useSetWorkbookVisibility";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
@@ -17,6 +18,16 @@ import { parseApiError } from "~/util/apiError";
 
 import type { WorkbookDetail } from "@repo/api/domains/workbook/workbook.schema";
 import { useTranslation } from "@repo/i18n";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@repo/ui/components/alert-dialog";
 import { Button } from "@repo/ui/components/button";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import {
@@ -91,7 +102,41 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
   // latest published version is the meaningful number to surface here.
   const latestVersion = versionsData?.[0]?.version;
   // Capability, not ownership: a "Can edit" grantee renames and edits.
-  const { canManage, canTransfer } = workbook.capabilities;
+  const { canManage, canTransfer, canUpdate } = workbook.capabilities;
+
+  const { mutateAsync: publishVersion, isPending: isPublishingVersion } =
+    usePublishWorkbookVersion();
+  // `isUpgradable` is false while there is no version at all, so the first one
+  // is offered as soon as the versions are known to be empty.
+  const hasNoVersion = !isLoadingVersions && !isVersionsError && latestVersion == null;
+  const canPublishVersion = workbook.isUpgradable === true || hasNoVersion;
+  const isDraftPublished = latestVersion != null && workbook.isUpgradable !== true;
+  const nextVersion = (latestVersion ?? 0) + 1;
+  const [confirmingPublishVersion, setConfirmingPublishVersion] = useState(false);
+
+  const handlePublishVersion = async () => {
+    try {
+      const published = await publishVersion({ id });
+      setConfirmingPublishVersion(false);
+      toast({ description: t("workbooks.versionPublished", { version: published.version }) });
+    } catch (err) {
+      toast({
+        description: parseApiError(err)?.message ?? t("workbooks.publishVersionFailed"),
+        variant: "destructive",
+      });
+    }
+  };
+
+  const publishVersionButton = (
+    <Button
+      variant="link"
+      className="h-auto p-0"
+      onClick={() => setConfirmingPublishVersion(true)}
+      disabled={!canPublishVersion || isPublishingVersion}
+    >
+      {t("workbooks.publishVersion")}
+    </Button>
+  );
 
   return (
     // A grid, not flex-wrap: seven unlike fields packed ragged. The desktop
@@ -131,9 +176,28 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
           layout="meta"
         />
         <div className="flex flex-col gap-1">
-          <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
-            {t("workbooks.version")}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
+              {t("workbooks.version")}
+            </span>
+            {canUpdate &&
+              (isDraftPublished ? (
+                // A disabled button fires no pointer events and takes no focus, so the
+                // span carries the tooltip that says why there is nothing to publish.
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>{publishVersionButton}</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs leading-snug">
+                      {t("workbooks.publishVersionUpToDate")}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                publishVersionButton
+              ))}
+          </div>
           {isLoadingVersions ? (
             <Skeleton className="h-[21px] w-10" />
           ) : isVersionsError ? (
@@ -233,6 +297,44 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
           canManage={canManage}
         />
       </div>
+
+      <AlertDialog
+        open={confirmingPublishVersion}
+        onOpenChange={(open) => {
+          if (!isPublishingVersion) setConfirmingPublishVersion(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("workbooks.publishVersionConfirmTitle", { version: nextVersion })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("workbooks.publishVersionConfirmBody", { version: nextVersion })}
+              {workbook.experimentCount != null &&
+                ` ${t("workbooks.publishVersionUsedBy", { count: workbook.experimentCount })}`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPublishingVersion}>
+              {tCommon("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isPublishingVersion}
+              onClick={(e) => {
+                e.preventDefault();
+                void handlePublishVersion();
+              }}
+            >
+              {isPublishingVersion ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                t("workbooks.publishVersion")
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <PublishConfirmDialog
         open={showPublishConfirm}
