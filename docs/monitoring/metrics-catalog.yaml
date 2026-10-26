@@ -80,7 +80,11 @@ passes:
     note: macro results the platform failed, which commit like successes and never reach the backlog
   - date: 2026-10-26
     range: [101, 103]
-    note: the weekly report's adoption section, so it says whether people who sign up get going
+    gaps: [101]
+    note: >-
+      the weekly report's adoption section, so it says whether people who sign up get going; 101
+      (experiments archived) dropped before it was built, since no column dates an archive and
+      updated_at moves on a repeat archive or a lapsed embargo
 
 metrics:
   # Ingest path
@@ -949,27 +953,6 @@ metrics:
     notes: >-
       Experiments created over the previous Monday-to-Sunday week, counted with the week's new
       researchers each Monday at 06:00 UTC.
-
-  - num: 101
-    id: experiments-archived
-    name: Experiments archived
-    family: usage
-    area: adoption
-    source: pg
-    phase: P2
-    active: true
-    slots: [weekly]
-    signal:
-      namespace: OpenJII/UserRegistrations
-      metric: WeeklyArchivedExperiments
-      stat: Maximum
-      dimensions: { Environment: "${ENVIRONMENT}" }
-      period: 604800
-    baseline: { method: wow }
-    notes: >-
-      Experiments archived over the same week as Experiments created. Archiving leaves no timestamp
-      of its own, but an archived experiment allows no change except its status, so its last update
-      is when it was archived.
 
   - num: 33
     id: measurements-per-day

@@ -73,7 +73,7 @@ locals {
       key     = "adoption"
       title   = "Adoption"
       areas   = ["adoption"]
-      caption = "**New researchers** signed up in the previous Monday-to-Sunday week, and **Researchers who started** took their first measurement in the last seven days, so the two side by side say whether newcomers get as far as measuring. **Loggers that started** are devices publishing on their own for the first time. **Experiments created** and **Experiments archived** cover the same week as the sign-ups, counted each Monday at 06:00 UTC."
+      caption = "**New researchers** signed up in the previous Monday-to-Sunday week, and **Researchers who started** took their first measurement in the last seven days, so the two side by side say whether newcomers get as far as measuring. **Loggers that started** are devices publishing on their own for the first time. **Experiments created** covers the same week as the sign-ups, counted each Monday at 06:00 UTC."
     },
     {
       key     = "usage"

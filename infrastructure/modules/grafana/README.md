@@ -96,7 +96,7 @@ Alerts are routed to Slack via webhook with severity-based policies:
 
 ## Metrics Publisher
 
-A Lambda that runs every Monday at 06:00 UTC, queries Aurora, and publishes `TotalUsers`, `WeeklyNewUsers`, `WeeklyNewExperiments` and `WeeklyArchivedExperiments` to CloudWatch under the `OpenJII/UserRegistrations` namespace. The weekly heartbeat report shows them as Researchers, New researchers, Experiments created and Experiments archived. Its database user may read only the columns its counts filter on, never names, emails or keys, so a new count needs a migration granting `SELECT` on the columns it reads.
+A Lambda that runs every Monday at 06:00 UTC, queries Aurora, and publishes `TotalUsers`, `WeeklyNewUsers` and `WeeklyNewExperiments` to CloudWatch under the `OpenJII/UserRegistrations` namespace. The weekly heartbeat report shows them as Researchers, New researchers and Experiments created. Its database user may read only the columns its counts filter on, never names, emails or keys, so a new count needs a migration granting `SELECT` on the columns it reads.
 
 The Lambda is deployed from a committed `lambda/function.zip` that contains `index.js` and `node_modules`. The zip is committed to git so CI never needs to install dependencies.
 

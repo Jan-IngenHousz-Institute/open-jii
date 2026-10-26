@@ -6,7 +6,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM metrics_p
 REVOKE SELECT ON ALL TABLES IN SCHEMA public FROM metrics_publisher;
 
 GRANT SELECT (registered, created_at) ON TABLE "users" TO metrics_publisher;
-GRANT SELECT (status, visibility, embargo_until, workbook_id, workbook_version_id, created_at, updated_at) ON TABLE "experiments" TO metrics_publisher;
+GRANT SELECT (status, visibility, embargo_until, workbook_id, workbook_version_id, created_at) ON TABLE "experiments" TO metrics_publisher;
 GRANT SELECT (id, workbook_id, version) ON TABLE "workbook_versions" TO metrics_publisher;
 GRANT SELECT (resource_type, status, created_at) ON TABLE "invitations" TO metrics_publisher;
 GRANT SELECT (status, expires_at, created_at) ON TABLE "organization_invitations" TO metrics_publisher;

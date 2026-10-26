@@ -68,27 +68,18 @@ exports.handler = async () => {
       SELECT COUNT(*)::int AS total FROM users WHERE registered = true
     `;
 
-    // Over the same ISO week as the signups. An archived experiment allows no change but its
-    // status, so its last update is when it was archived.
-    const [{ created, archived }] = await sql`
-      SELECT
-        COUNT(*) FILTER (
-          WHERE created_at >= date_trunc('week', now() - INTERVAL '7 days')
-            AND created_at <  date_trunc('week', now())
-        )::int AS created,
-        COUNT(*) FILTER (
-          WHERE status = 'archived'
-            AND updated_at >= date_trunc('week', now() - INTERVAL '7 days')
-            AND updated_at <  date_trunc('week', now())
-        )::int AS archived
+    // Over the same ISO week as the signups.
+    const [{ created }] = await sql`
+      SELECT COUNT(*)::int AS created
       FROM experiments
+      WHERE created_at >= date_trunc('week', now() - INTERVAL '7 days')
+        AND created_at <  date_trunc('week', now())
     `;
 
     const metricData = [
       { MetricName: "WeeklyNewUsers", Value: signups },
       { MetricName: "TotalUsers", Value: total },
       { MetricName: "WeeklyNewExperiments", Value: created },
-      { MetricName: "WeeklyArchivedExperiments", Value: archived },
     ].map((point) => ({
       ...point,
       Unit: StandardUnit.Count,
@@ -103,7 +94,6 @@ exports.handler = async () => {
         signups,
         totalUsers: total,
         experimentsCreated: created,
-        experimentsArchived: archived,
       }),
     );
   } finally {
