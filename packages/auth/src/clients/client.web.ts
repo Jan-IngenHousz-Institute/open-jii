@@ -1,4 +1,5 @@
 import { apiKeyClient } from "@better-auth/api-key/client";
+import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import { passkeyClient } from "@better-auth/passkey/client";
 import { WebAuthnAbortService } from "@simplewebauthn/browser";
 import {
@@ -21,6 +22,7 @@ export const authClient = createAuthClient({
   plugins: [
     inferAdditionalFields<typeof auth>(),
     emailOTPClient(),
+    oauthProviderClient(),
     genericOAuthClient(), // Required for custom OAuth providers like ORCID
     // `schema` carries the organization additionalFields (profile fields and
     // directory visibility) into the create/update body types; `ac`/`roles` make
