@@ -23,11 +23,11 @@ export const zExperimentAnnotationContent = z.discriminatedUnion("type", [
 ]);
 
 export const zExperimentAnnotation = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   rowId: z.string().optional(),
   type: zExperimentAnnotationType,
   content: zExperimentAnnotationContent,
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
   createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -36,8 +36,8 @@ export const zExperimentAnnotation = z.object({
 export const zExperimentAnnotationList = z.array(zExperimentAnnotation);
 
 export const zExperimentAnnotationPathParam = z.object({
-  id: z.string().uuid().describe("ID of the experiment"),
-  annotationId: z.string().uuid().describe("ID of the annotation"),
+  id: z.string().guid().describe("ID of the experiment"),
+  annotationId: z.string().guid().describe("ID of the annotation"),
 });
 
 export const zExperimentAddAnnotationBody = z.object({
@@ -69,7 +69,7 @@ export const zExperimentUpdateAnnotationBody = z.object({
 });
 
 export const zExperimentAnnotationDeleteBulkPathParam = z.object({
-  id: z.string().uuid().describe("ID of the experiment"),
+  id: z.string().guid().describe("ID of the experiment"),
 });
 
 export const zExperimentAnnotationDeleteBulkBody = z.object({

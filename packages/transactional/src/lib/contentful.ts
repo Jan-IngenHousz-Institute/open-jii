@@ -10,6 +10,7 @@ import type { EmailRichTextInterface } from "../components/ctf-rich-text";
  */
 export type CmsEmailType =
   | "access-granted-notification"
+  | "experiment-made-public-notification"
   | "otp-email"
   | "project-transfer-complete"
   | "transfer-request-confirmation"

@@ -95,8 +95,8 @@ export const zMetricsScope = z.enum(["organization", "mine", "experiment"]);
  */
 export const zScopedMetricsQuery = z.object({
   scope: zMetricsScope,
-  organizationId: z.string().uuid().optional(),
-  experimentId: z.string().uuid().optional(),
+  organizationId: z.string().guid().optional(),
+  experimentId: z.string().guid().optional(),
 });
 
 /** `activity` spans the whole window, silent days included; `previousMeasurements` the one before. */

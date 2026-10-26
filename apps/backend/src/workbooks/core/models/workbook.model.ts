@@ -9,7 +9,6 @@ export const createWorkbookSchema = createInsertSchema(workbooks).omit({
   createdAt: true,
   updatedAt: true,
   createdBy: true,
-  searchVector: true,
 });
 
 export const updateWorkbookSchema = createInsertSchema(workbooks).partial().omit({
@@ -17,7 +16,6 @@ export const updateWorkbookSchema = createInsertSchema(workbooks).partial().omit
   createdAt: true,
   updatedAt: true,
   createdBy: true,
-  searchVector: true,
 });
 
 export const selectWorkbookSchema = createSelectSchema(workbooks)

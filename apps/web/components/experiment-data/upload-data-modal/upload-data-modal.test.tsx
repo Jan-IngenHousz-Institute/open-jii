@@ -1,7 +1,9 @@
-import { createExperimentTable } from "@/test/factories";
+import { useActivity } from "@/components/activity/activity-context";
+import type { ActivityEntry } from "@/components/activity/activity-context";
+import { createExperimentTable, createUpload } from "@/test/factories";
 import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor, fireEvent, within } from "@/test/test-utils";
+import { act, render, screen, userEvent, waitFor, fireEvent, within } from "@/test/test-utils";
 import { http, HttpResponse } from "msw";
 import { File as NodeFile } from "node:buffer";
 import React from "react";
@@ -33,7 +35,7 @@ function setExperimentTables(tables: ReturnType<typeof createExperimentTable>[] 
 
 // `uploadData` is a native multipart endpoint with no oRPC contract entry, so
 // mount it by its literal route and capture the FormData body directly.
-function mountUploadCapture(status = 201) {
+function mountUploadCapture(status = 201, unblock?: Promise<unknown>) {
   const calls: { body: FormData }[] = [];
   const spy = {
     calls,
@@ -51,10 +53,16 @@ function mountUploadCapture(status = 201) {
       // (jsdom's here) then brand-checks its own; parse with Node's File.
       const JsdomFile = globalThis.File;
       globalThis.File = NodeFile as unknown as typeof File;
+      let body: FormData;
       try {
-        calls.push({ body: await request.formData() });
+        body = await request.formData();
       } finally {
         globalThis.File = JsdomFile;
+      }
+      calls.push({ body });
+
+      if (unblock) {
+        await unblock;
       }
 
       if (status >= 400) {
@@ -63,10 +71,9 @@ function mountUploadCapture(status = 201) {
 
       return HttpResponse.json(
         {
-          uploadId: "u-1",
+          uploadId: postedUploadId(body),
           uploadTableId: "11111111-1111-1111-1111-111111111111",
           uploadTableName: "leaf_traits",
-          runId: 99,
           files: [{ fileName: "data.csv", filePath: "/Volumes/x" }],
         },
         { status },
@@ -77,6 +84,27 @@ function mountUploadCapture(status = 201) {
   return spy;
 }
 
+// The dialog hides everything outside it from the accessibility tree, so the ids are found by test id.
+function ActivityEntryIds() {
+  const { entries } = useActivity();
+
+  const renderEntryId = (entry: ActivityEntry) => (
+    <span key={entry.id} data-testid="activity-entry-id">
+      {entry.id}
+    </span>
+  );
+
+  return <>{entries.map(renderEntryId)}</>;
+}
+
+function postedUploadId(body: FormData): string {
+  const uploadId = body.get("uploadId");
+  if (typeof uploadId !== "string") {
+    throw new Error("uploadId was not posted");
+  }
+  return uploadId;
+}
+
 // The list view is the default; the form lives behind the "New upload" dropdown.
 async function enterCreateView(kind = "csv") {
   await userEvent.click(
@@ -84,7 +112,7 @@ async function enterCreateView(kind = "csv") {
   );
   await userEvent.click(
     await screen.findByRole("menuitem", {
-      name: `experimentData.uploadDataModal.history.sourceKind.${kind}`,
+      name: `experimentData.uploadDataModal.sourceKind.${kind}`,
     }),
   );
 }
@@ -168,7 +196,12 @@ describe("UploadDataModal", () => {
     mountEmptyHistory();
     const spy = mountUploadCapture();
 
-    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
+    render(
+      <>
+        <UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />
+        <ActivityEntryIds />
+      </>,
+    );
 
     await enterCreateView("csv");
     await userEvent.type(
@@ -188,6 +221,75 @@ describe("UploadDataModal", () => {
     expect(fd.get("targetKind")).toBe("new");
     expect(fd.get("targetName")).toBe("leaf_traits");
     expect(fd.getAll("files")).toHaveLength(1);
+
+    const fieldNames = Array.from(fd.keys());
+    expect(fieldNames.indexOf("uploadId")).toBeLessThan(fieldNames.indexOf("files"));
+    expect(postedUploadId(fd)).toBe(screen.getByTestId("activity-entry-id").textContent);
+  });
+
+  it("keeps a received transfer in view until the history lists its upload", async () => {
+    setExperimentTables();
+    mountEmptyHistory();
+    let receiveUpload: () => void = () => undefined;
+    const isReceived = new Promise<void>((resolve) => {
+      receiveUpload = resolve;
+    });
+    const uploadSpy = mountUploadCapture(201, isReceived);
+
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
+
+    await enterCreateView("csv");
+    await userEvent.type(
+      screen.getByLabelText("experimentData.uploadDataModal.newTable.label"),
+      "leaf_traits",
+    );
+    await selectFiles(["data.csv"]);
+
+    let listUpload: () => void = () => undefined;
+    const isListed = new Promise<void>((resolve) => {
+      listUpload = resolve;
+    });
+    const listRecordedUpload = () => ({
+      uploads: [
+        createUpload({
+          uploadId: postedUploadId(uploadSpy.calls[0].body),
+          uploadTableName: "leaf_traits",
+          status: "receiving",
+        }),
+      ],
+    });
+    server.mount(contract.experiments.listUploads, {
+      body: listRecordedUpload,
+      unblock: isListed,
+    });
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.upload" }),
+    );
+    expect(
+      await screen.findByText("experimentData.uploadDataModal.transfer.statusUploading"),
+    ).toBeInTheDocument();
+
+    act(() => receiveUpload());
+    await waitFor(() => {
+      expect(toast).toHaveBeenLastCalledWith({
+        description: "experimentData.uploadDataModal.transfer.received",
+      });
+    });
+    // Flushes any status change, so the row below is not merely a render behind.
+    await act(() => Promise.resolve());
+    expect(
+      screen.getByText("experimentData.uploadDataModal.transfer.statusUploading"),
+    ).toBeInTheDocument();
+
+    act(() => listUpload());
+
+    expect(
+      await screen.findByText("experimentData.uploadDataModal.status.receiving"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("experimentData.uploadDataModal.transfer.statusUploading"),
+    ).not.toBeInTheDocument();
   });
 
   it("flags a file that doesn't match the selected format on selection (before Upload)", async () => {
@@ -486,9 +588,7 @@ describe("UploadDataModal", () => {
 
     render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={onOpenChange} />);
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.close" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "common.close" }));
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });

@@ -44,6 +44,6 @@ export const selectExperimentVisualizationSchema = createSelectSchema(
 });
 
 // Define the types
-export type CreateExperimentVisualizationDto = typeof createExperimentVisualizationSchema._type;
-export type UpdateExperimentVisualizationDto = typeof updateExperimentVisualizationSchema._type;
-export type ExperimentVisualizationDto = typeof selectExperimentVisualizationSchema._type;
+export type CreateExperimentVisualizationDto = z.infer<typeof createExperimentVisualizationSchema>;
+export type UpdateExperimentVisualizationDto = z.infer<typeof updateExperimentVisualizationSchema>;
+export type ExperimentVisualizationDto = z.infer<typeof selectExperimentVisualizationSchema>;

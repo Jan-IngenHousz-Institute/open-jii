@@ -97,6 +97,30 @@ describe("<NotificationsPage />", () => {
     expect(await screen.findByText("empty.title")).toBeVisible();
   });
 
+  it("says how long history is kept, under the list and its pages", async () => {
+    server.mount(contract.notifications.getUnreadNotificationCount, { body: { count: 0 } });
+    server.mount(contract.notifications.listNotifications, {
+      body: page([createNotification()], { totalPages: 2 }),
+    });
+
+    render(<NotificationsPage />);
+
+    const next = await screen.findByRole("button", { name: "pagination.next" });
+    const retention = screen.getByText("retention");
+    expect(retention).toBeVisible();
+    expect(next.compareDocumentPosition(retention) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("says how long history is kept when there is nothing to show", async () => {
+    server.mount(contract.notifications.getUnreadNotificationCount, { body: { count: 0 } });
+    server.mount(contract.notifications.listNotifications, { body: page([]) });
+
+    render(<NotificationsPage />);
+
+    await screen.findByText("empty.title");
+    expect(screen.getByText("retention")).toBeVisible();
+  });
+
   it("heads the rows with the day they arrived, newest group first", async () => {
     server.mount(contract.notifications.getUnreadNotificationCount, { body: { count: 0 } });
     server.mount(contract.notifications.listNotifications, {

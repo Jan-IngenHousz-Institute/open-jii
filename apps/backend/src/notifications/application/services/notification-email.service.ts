@@ -160,6 +160,9 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
             failure(AppError.internal("Access notification on a non-shareable resource")),
           ),
   ),
+  experiment_made_public: aboutResource((experimentId, email, { params, recipientEmail }) =>
+    email.sendExperimentMadePublicNotification(experimentId, params.experimentName, recipientEmail),
+  ),
   // No `aboutResource`: a deleted resource has no page to link back to.
   resource_deleted: (email, { params, actorName, recipientEmail, resource }) =>
     resource && isSharingResourceType(resource.type)

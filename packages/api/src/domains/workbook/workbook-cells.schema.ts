@@ -12,7 +12,7 @@ const zBaseCell = z.object({
 
 const zProtocolPayload = z
   .object({
-    protocolId: z.string().uuid(),
+    protocolId: z.string().guid(),
     version: z.number().int().positive(),
     name: z.string().optional(),
   })
@@ -43,7 +43,7 @@ export const zCommandCell = zBaseCell.extend({
 // Macros are always persisted entities; the cell stores a ref. Versioning happens at the experiment/snapshot level.
 const zMacroPayload = z
   .object({
-    macroId: z.string().uuid(),
+    macroId: z.string().guid(),
     language: zMacroLanguage,
     name: z.string().optional(),
   })

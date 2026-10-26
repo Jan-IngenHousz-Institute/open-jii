@@ -10,4 +10,4 @@ export type FlowGraphDto = z.infer<typeof flowGraphSchema>;
 export const flowSchema = createSelectSchema(flows).extend({
   graph: flowGraphSchema,
 });
-export type FlowDto = typeof flowSchema._type;
+export type FlowDto = z.infer<typeof flowSchema>;

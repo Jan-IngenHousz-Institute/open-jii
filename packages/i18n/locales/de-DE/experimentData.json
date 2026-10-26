@@ -31,11 +31,11 @@
         "pending": "Ausstehend",
         "running": "Vorbereitung",
         "completed": "Abgeschlossen",
-        "failed": "Fehlgeschlagen"
+        "failed": "Fehlgeschlagen",
+        "expired": "Abgelaufen"
       },
       "created": "Erstellt",
       "completed": "Abgeschlossen",
-      "rows": "Zeilen",
       "size": "Größe",
       "unknownError": "Ein unbekannter Fehler ist aufgetreten",
       "error": "Fehler",
@@ -44,7 +44,6 @@
       "loadingExports": "Exporte werden geladen...",
       "format": "Format",
       "exportTitle": "Export #{{number}}",
-      "failedTooltip": "Kein Handlungsbedarf — dieser Fehler wird untersucht und behoben. Der Export wird hier mit dem korrekten Status erneut angezeigt, sobald das Problem gelöst ist.",
       "createNew": "Neuen Export erstellen",
       "creating": "Export wird erstellt...",
       "createExport": "Export erstellen",
@@ -57,7 +56,37 @@
       "creationError": "Export konnte nicht erstellt werden",
       "backToList": "Zurück zu Exporten",
       "anonymizeContributors": "Mitwirkende in der exportierten Datei anonymisieren",
-      "overridingDefault": "überschreibt Experimentstandard"
+      "overridingDefault": "überschreibt Experimentstandard",
+      "formats": {
+        "csv": "CSV",
+        "ndjson": "NDJSON",
+        "json-array": "JSON-Array",
+        "parquet": "Parquet",
+        "xlsx": "Excel"
+      },
+      "errors": {
+        "no_data": "Die Tabelle enthielt keine Zeilen zum Exportieren.",
+        "too_many_rows_for_format": "Die Tabelle ist größer, als dieses Format aufnehmen kann: höchstens 1.048.575 Zeilen und bei Excel 16.384 Spalten. Exportieren Sie sie stattdessen als CSV, NDJSON oder Parquet.",
+        "unknown": "Der Export ist fehlgeschlagen. Starten Sie ihn erneut und wenden Sie sich an den Support, falls er weiterhin fehlschlägt."
+      },
+      "parts_one": "{{count}} Datei",
+      "parts_other": "{{count}} Dateien",
+      "expiresOn": "Verfügbar bis {{date}}",
+      "showFiles": "Dateien anzeigen",
+      "hideFiles": "Dateien ausblenden",
+      "downloadPart": "Datei {{number}} herunterladen",
+      "loadingLinks": "Download-Links werden vorbereitet...",
+      "linksError": "Die Download-Links konnten nicht vorbereitet werden. Versuchen Sie es erneut.",
+      "copyLinks": "Alle Links kopieren",
+      "linksCopied": "Links kopiert. Jeder Download muss vor {{time}} beginnen.",
+      "linksHint": "Jeder Download muss vor {{time}} beginnen. Um alle Dateien unter ihrem eigenen Namen zu laden, speichern Sie die kopierten Links als links.txt und führen Sie aus: xargs -n 1 curl -fOJ < links.txt",
+      "activityTitle": "Export von {{name}} ({{format}})",
+      "exportReady": "Der Export von {{name}} steht zum Download bereit.",
+      "exportFailed": "Der Export von {{name}} ist fehlgeschlagen.",
+      "rowCount_one": "{{formatted}} Zeile",
+      "rowCount_other": "{{formatted}} Zeilen",
+      "copyFailed": "Die Links konnten nicht kopiert werden.",
+      "linkExpired": "Dieser Export ist abgelaufen. Erstellen Sie einen neuen Export, um die Daten herunterzuladen."
     },
     "uploadDataModal": {
       "title": "Daten hochladen",
@@ -79,7 +108,12 @@
         "rowCount_other": "{{count}} Zeilen"
       },
       "sourceKind": {
-        "label": "Datenformat"
+        "ambyte": "Ambyte",
+        "csv": "CSV",
+        "tsv": "TSV",
+        "parquet": "Parquet",
+        "json": "JSON",
+        "ndjson": "NDJSON"
       },
       "files": {
         "dropzone": {
@@ -93,8 +127,6 @@
       },
       "validation": {
         "title": "Hochladen nicht möglich",
-        "noTarget": "Zieltabelle auswählen oder benennen",
-        "invalidName": "Der Name muss mit einem Buchstaben beginnen; erlaubt sind Buchstaben, Ziffern und Unterstriche (max. 63)",
         "noFiles": "Wählen Sie mindestens eine Datendatei aus",
         "unsupportedFormat": "'{{fileName}}' ist kein unterstütztes Dateiformat (CSV, TSV, Parquet, JSON, NDJSON)",
         "wrongFormat": "'{{fileName}}' ist keine {{format}}-Datei",
@@ -110,18 +142,29 @@
         "fallback": "Upload fehlgeschlagen"
       },
       "status": {
-        "succeeded": {
-          "title": "Upload erfolgreich",
-          "description": "Die Zeilen werden in '{{tableName}}' geschrieben. Die Tabelle erscheint, sobald die Pipeline sie materialisiert hat."
-        },
-        "failed": {
-          "title": "Upload fehlgeschlagen",
-          "fallback": "Der Verarbeitungsjob ist fehlgeschlagen."
-        }
+        "receiving": "Wird empfangen",
+        "queued": "Warteschlange",
+        "pending": "Ausstehend",
+        "running": "Wird verarbeitet",
+        "completed": "Abgeschlossen",
+        "failed": "Fehlgeschlagen"
+      },
+      "errors": {
+        "no_files": "Der Upload enthielt keine Dateien zum Verarbeiten.",
+        "no_rows": "Die Dateien enthielten keine Zeilen, die zur Tabelle hinzugefügt werden konnten.",
+        "not_queryable": "Die Zeilen wurden hinzugefügt, aber die Tabelle hat sie nicht innerhalb einer Stunde angezeigt. Sie können noch erscheinen; wenden Sie sich an den Support, falls nicht.",
+        "transfer_interrupted": "Die Übertragung brach ab, bevor alle Dateien angekommen waren. Laden Sie die Dateien erneut hoch.",
+        "unknown": "Der Upload ist fehlgeschlagen. Starten Sie ihn erneut und wenden Sie sich an den Support, falls er weiterhin fehlschlägt."
+      },
+      "rejectedFiles_one": "{{rejected}} von {{count}} Datei abgelehnt",
+      "rejectedFiles_other": "{{rejected}} von {{count}} Dateien abgelehnt",
+      "rejectedAmbyteFolders_one": "{{count}} Ambyte-Ordner ausgelassen",
+      "rejectedAmbyteFolders_other": "{{count}} Ambyte-Ordner ausgelassen",
+      "rejectionReasons": {
+        "unparseable": "{{name}} konnte nicht gelesen werden",
+        "no_rows": "{{name}} enthält keine Zeilen"
       },
       "actions": {
-        "cancel": "Abbrechen",
-        "close": "Schließen",
         "back": "Zurück",
         "newUpload": "Neuer Upload",
         "upload": "Hochladen"
@@ -129,29 +172,15 @@
       "history": {
         "title": "Letzte Uploads",
         "empty": "Noch keine Uploads.",
-        "loading": "Uploads werden geladen…",
+        "error": "Uploads konnten nicht geladen werden: {{message}}",
+        "unknownError": "Ein unbekannter Fehler ist aufgetreten",
         "uploadCount_one": "{{count}} kürzlicher Upload",
         "uploadCount_other": "{{count}} kürzliche Uploads",
         "uploadTitle": "Upload #{{number}}",
-        "status": {
-          "pending": "Ausstehend",
-          "running": "Wird verarbeitet",
-          "completed": "Abgeschlossen",
-          "failed": "Fehlgeschlagen"
-        },
-        "sourceKind": {
-          "ambyte": "Ambyte",
-          "csv": "CSV",
-          "tsv": "TSV",
-          "parquet": "Parquet",
-          "json": "JSON",
-          "ndjson": "NDJSON"
-        },
-        "rowCount_one": "{{count}} Zeile",
-        "rowCount_other": "{{count}} Zeilen",
+        "rowCount_one": "{{formatted}} Zeile",
+        "rowCount_other": "{{formatted}} Zeilen",
         "fileCount_one": "{{count}} Datei",
-        "fileCount_other": "{{count}} Dateien",
-        "untargeted": "(keine Tabelle)"
+        "fileCount_other": "{{count}} Dateien"
       },
       "transfer": {
         "started": "Der Upload nach {{table}} läuft. Sie können diesen Dialog schließen und weiterarbeiten; lassen Sie diesen Tab geöffnet, bis der Upload abgeschlossen ist.",

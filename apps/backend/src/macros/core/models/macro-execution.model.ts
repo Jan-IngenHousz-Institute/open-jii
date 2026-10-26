@@ -55,7 +55,7 @@ export interface LambdaExecutionResponse {
   errors?: string[];
 }
 
-const MacroOutputSchema = z.record(z.unknown());
+const MacroOutputSchema = z.record(z.string(), z.unknown());
 
 // A macro can return any value, and only an object is an output. Anything else fails its own
 // item, so one macro run cannot make the whole response unreadable.

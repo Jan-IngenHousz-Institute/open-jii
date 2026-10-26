@@ -21,6 +21,7 @@ import { Button } from "@repo/ui/components/button";
 import { DialogBody, DialogFooter } from "@repo/ui/components/dialog";
 import { FileUpload } from "@repo/ui/components/file-upload";
 
+import { UPLOAD_SOURCE_KIND_LABEL_KEYS } from "./upload-source-kind-label-keys";
 import { UploadTargetPicker } from "./upload-target-picker";
 
 export interface UploadCreateViewProps {
@@ -76,7 +77,7 @@ export function UploadCreateView({
   }, [tables, hasExistingTables, form]);
 
   const extensions = isAmbyte ? [] : UPLOAD_KIND_CONSTANTS[sourceKind].extensions;
-  const formatLabel = t(`experimentData.uploadDataModal.history.sourceKind.${sourceKind}`);
+  const formatLabel = t(UPLOAD_SOURCE_KIND_LABEL_KEYS[sourceKind]);
 
   const { mutate: uploadData, validate, stripExcluded } = useExperimentDataUpload();
 
@@ -124,7 +125,10 @@ export function UploadCreateView({
       return;
     }
 
+    // Sent ahead of the files, which is where the backend reads the fields.
+    const uploadId = crypto.randomUUID();
     const formData = new FormData();
+    formData.append("uploadId", uploadId);
     formData.append("sourceKind", values.sourceKind);
     formData.append("targetKind", values.targetKind);
     if (values.targetKind === "new") {
@@ -137,7 +141,12 @@ export function UploadCreateView({
     }
 
     // The upload carries on in the background; progress and the outcome arrive as toasts.
-    uploadData({ params: { id: experimentId }, body: formData, label: targetTableName(values) });
+    uploadData({
+      params: { id: experimentId },
+      body: formData,
+      uploadId,
+      label: targetTableName(values),
+    });
     onUploaded();
   };
 
@@ -214,7 +223,7 @@ function useFileErrorMessage(error: UploadValidationError | null): string | null
     case "wrongFormat":
       return t("experimentData.uploadDataModal.validation.wrongFormat", {
         fileName: error.fileName,
-        format: t(`experimentData.uploadDataModal.history.sourceKind.${error.expected}`),
+        format: t(UPLOAD_SOURCE_KIND_LABEL_KEYS[error.expected]),
       });
     case "oversizedFiles":
       return t("experimentData.uploadDataModal.validation.oversizedFiles", {

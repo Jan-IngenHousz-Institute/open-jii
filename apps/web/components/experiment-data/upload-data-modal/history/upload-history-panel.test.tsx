@@ -1,6 +1,6 @@
+import { createUpload } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
-import React from "react";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -22,34 +22,13 @@ describe("UploadHistoryPanel", () => {
     server.mount(contract.experiments.listUploads, {
       body: {
         uploads: [
-          {
-            uploadId: "u-1",
-            experimentId: "exp-1",
-            uploadTableId: "11111111-1111-1111-1111-111111111111",
-            uploadTableName: "leaf_traits",
-            sourceKind: "csv",
-            status: "completed",
-            fileCount: 1,
-            rowCount: 12,
-            createdBy: "user-1",
-            createdAt: "2026-05-13T10:00:00.000Z",
-            completedAt: "2026-05-13T10:05:00.000Z",
-            errorMessage: null,
-          },
-          {
-            uploadId: "u-2",
-            experimentId: "exp-1",
-            uploadTableId: "22222222-2222-2222-2222-222222222222",
+          createUpload({ uploadTableName: "leaf_traits", status: "completed" }),
+          createUpload({
             uploadTableName: "soil_chem",
             sourceKind: "tsv",
             status: "failed",
-            fileCount: null,
-            rowCount: null,
-            createdBy: "user-1",
-            createdAt: "2026-05-13T11:00:00.000Z",
-            completedAt: "2026-05-13T11:01:00.000Z",
-            errorMessage: "boom",
-          },
+            errorCode: "no_rows",
+          }),
         ],
       },
     });
@@ -63,6 +42,23 @@ describe("UploadHistoryPanel", () => {
     expect(
       screen.getByText("experimentData.uploadDataModal.history.uploadCount"),
     ).toBeInTheDocument();
+    expect(screen.getByText("experimentData.uploadDataModal.errors.no_rows")).toBeInTheDocument();
+  });
+
+  it("says the list could not be loaded instead of claiming there are no uploads", async () => {
+    server.mount(contract.experiments.listUploads, {
+      status: 500,
+      body: { message: "Server error" },
+    });
+
+    render(<UploadHistoryPanel experimentId="exp-1" enabled />);
+
+    expect(
+      await screen.findByText("experimentData.uploadDataModal.history.error"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("experimentData.uploadDataModal.history.empty"),
+    ).not.toBeInTheDocument();
   });
 
   it("filters uploads by uploadTableName when provided", async () => {

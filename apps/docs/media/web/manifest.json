@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "captureContext": {
-    "capturedOn": "2026-10-13",
+    "capturedOn": "2026-10-22",
     "surface": "apps/web on the local development stack",
     "environment": "local",
     "account": "seed@openjii.local and newcomer@openjii.local (seeded development identities)",
@@ -30,7 +30,8 @@
       "notification-settings retaken on 2026-10-08 at 1920x1200 after project transfers moved onto dispatch and the Project transfers switch went live: Requests and invitations, Membership and access and Project transfers are on and enabled, the three categories whose notifications do not email yet are off, disabled and labelled Not available yet, and Account security stays checked and locked with Always on. Reviewed at full size with the seeded development identity; no experiment, organization or person is named in the frame. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp.",
       "notifications-page captured on 2026-10-08 at 1920x1200 from the local stack with the seeded development identity. The frame shows the All and Unread tabs, the category filter, Mark all read, and one row under each of Today, Yesterday and Earlier. Reviewed at full size. All three rows are seeded: a join request from Otto Outside on Field Trial 2025 — Corn Photosynthesis, and decisions on Greenhouse Tomato Stress Study and Vallei Drought Gradient. No developer-authored row, no credentials and no dev overlays are in frame. Two changes were made to the local data for the shot and both were undone after it: the three seeded rows' timestamps were set to the offsets the seed script writes (5 minutes, 26 hours, 3 days), since this database was seeded in September and all three had aged into Earlier, and four developer-authored transfer rows left by an earlier hand check were held out of frame. The before and after dumps of the table diff clean. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp.",
       "experiments-list retaken on 2026-10-12 at 1920x1200 from the local stack with the seeded development identity. Reviewed at full size and approved before publishing. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
-      "workbooks-list retaken on 2026-10-13 at 1920x1200 from the local stack with the seeded development identity, showing the Visibility filter button. Reviewed at full size and approved before publishing. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
+      "workbooks-list retaken on 2026-10-13 at 1920x1200 from the local stack with the seeded development identity, showing the Visibility filter button. Reviewed at full size and approved before publishing. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
+      "notifications-page retaken on 2026-10-22 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only notifications-page, because the page gained a line under the list: Read notifications are kept for 90 days, unread ones for a year. Reviewed at full size: the same three seeded rows as the 2026-10-08 capture, one under each of Today, Yesterday and Earlier, with no developer-authored row, no credentials and no dev overlays in frame. As before, the three seeded rows were moved to the seed script's offsets and the seed user's 108 developer-authored rows from earlier hand checks were held out of frame; both changes were undone after the shot, and the notifications and notification_deliveries tables diff clean against their pre-shot copies. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp."
     ]
   },
   "assets": [
@@ -326,8 +327,8 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 31322,
-      "sha256": "e141d2f2fb378042b49fff91f38d0df7f414d77ec93b9e1e259a5b354a274c43",
+      "bytes": 34576,
+      "sha256": "17aa4e197c067e126c3892307c7c96639edcf811584e90e29f179c4816efc5fd",
       "disposition": "published",
       "scope": "Notifications page with day groups, read-state tabs and the category filter"
     },

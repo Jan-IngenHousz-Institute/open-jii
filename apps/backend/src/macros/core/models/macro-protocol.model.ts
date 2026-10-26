@@ -8,12 +8,12 @@ export const macroProtocolSchema = createSelectSchema(protocolMacros)
   .omit({ protocolId: true })
   .extend({
     protocol: z.object({
-      id: z.string().uuid(),
+      id: z.string().guid(),
       name: z.string(),
       family: z.string(),
-      createdBy: z.string().uuid(),
+      createdBy: z.string().guid(),
     }),
   });
 
 // DTOs
-export type MacroProtocolDto = typeof macroProtocolSchema._type;
+export type MacroProtocolDto = z.infer<typeof macroProtocolSchema>;

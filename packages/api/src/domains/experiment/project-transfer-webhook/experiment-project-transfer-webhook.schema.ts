@@ -16,7 +16,7 @@ export const zExperimentProjectTransferWebhookPayload = z.object({
   experiment: z.object({
     name: z.string().min(1).max(255),
     description: z.string().optional(),
-    createdBy: z.string().uuid().describe("User ID of experiment creator/admin"),
+    createdBy: z.string().guid().describe("User ID of experiment creator/admin"),
     locations: z.array(zExperimentLocationInput).optional(),
   }),
   protocol: z
@@ -25,7 +25,7 @@ export const zExperimentProjectTransferWebhookPayload = z.object({
       description: z.string().optional(),
       code: zJsonValue,
       family: zProtocolFamily.default("multispeq"),
-      createdBy: z.string().uuid().describe("User ID of protocol creator"),
+      createdBy: z.string().guid().describe("User ID of protocol creator"),
     })
     .optional(),
   macro: z
@@ -34,7 +34,7 @@ export const zExperimentProjectTransferWebhookPayload = z.object({
       description: z.string().optional(),
       language: zMacroLanguage.default("javascript"),
       code: z.string().min(1).describe("Base64 encoded macro code"),
-      createdBy: z.string().uuid().describe("User ID of macro creator"),
+      createdBy: z.string().guid().describe("User ID of macro creator"),
     })
     .optional(),
   questions: z.array(zExperimentProjectTransferQuestionInput).optional(),
@@ -42,12 +42,12 @@ export const zExperimentProjectTransferWebhookPayload = z.object({
 
 export const zExperimentProjectTransferWebhookResponse = z.object({
   success: z.boolean(),
-  experimentId: z.string().uuid(),
-  protocolId: z.string().uuid().nullable(),
-  macroId: z.string().uuid().nullable(),
+  experimentId: z.string().guid(),
+  protocolId: z.string().guid().nullable(),
+  macroId: z.string().guid().nullable(),
   macroFilename: z.string().nullable(),
   macroName: z.string().nullable(),
-  flowId: z.string().uuid().nullable(),
+  flowId: z.string().guid().nullable(),
   message: z.string().optional(),
 });
 

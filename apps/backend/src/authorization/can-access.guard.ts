@@ -101,7 +101,7 @@ export class CanAccessGuard implements CanActivate {
       });
       throw new ForbiddenException("Forbidden");
     }
-    const parsed = z.string().uuid().safeParse(candidateId);
+    const parsed = z.string().guid().safeParse(candidateId);
     if (!parsed.success) {
       throw new BadRequestException(`Invalid ${param}`);
     }

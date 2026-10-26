@@ -1,0 +1,42 @@
+[
+  {
+    "case": "completed_with_rejected_file",
+    "outcome": {
+      "uploadId": "8c1f6a0e-4c35-4d7e-9a43-3f0b2a5d1e77",
+      "outcome": "completed",
+      "rowCount": 42,
+      "rejectedFiles": [{ "name": "broken.csv", "reason": "unparseable" }],
+      "errorCode": null
+    }
+  },
+  {
+    "case": "no_files",
+    "outcome": {
+      "uploadId": "8c1f6a0e-4c35-4d7e-9a43-3f0b2a5d1e77",
+      "outcome": "failed",
+      "rowCount": 0,
+      "rejectedFiles": [],
+      "errorCode": "no_files"
+    }
+  },
+  {
+    "case": "no_rows",
+    "outcome": {
+      "uploadId": "8c1f6a0e-4c35-4d7e-9a43-3f0b2a5d1e77",
+      "outcome": "failed",
+      "rowCount": 0,
+      "rejectedFiles": [{ "name": "header_only.csv", "reason": "no_rows" }],
+      "errorCode": "no_rows"
+    }
+  },
+  {
+    "case": "not_queryable",
+    "outcome": {
+      "uploadId": "8c1f6a0e-4c35-4d7e-9a43-3f0b2a5d1e77",
+      "outcome": "failed",
+      "rowCount": 42,
+      "rejectedFiles": [],
+      "errorCode": "not_queryable"
+    }
+  }
+]

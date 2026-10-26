@@ -9,12 +9,13 @@ terraform {
 }
 
 resource "databricks_volume" "this" {
-  provider     = databricks.workspace
-  catalog_name = var.catalog_name
-  schema_name  = var.schema_name
-  name         = var.volume_name
-  volume_type  = "MANAGED"
-  comment      = var.comment
+  provider         = databricks.workspace
+  catalog_name     = var.catalog_name
+  schema_name      = var.schema_name
+  name             = var.volume_name
+  volume_type      = var.storage_location == null ? "MANAGED" : "EXTERNAL"
+  storage_location = var.storage_location
+  comment          = var.comment
 }
 
 resource "databricks_grant" "volume" {

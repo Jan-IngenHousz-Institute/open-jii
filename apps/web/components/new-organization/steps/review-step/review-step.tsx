@@ -21,7 +21,7 @@ import { ProfileSection } from "./profile-section";
 export function reviewSchema(
   t: (key: string) => string,
   isSlugTaken: (slug: string) => boolean,
-): z.AnyZodObject {
+): z.ZodObject {
   return z.object({
     ...identitySchema(t, isSlugTaken).shape,
     ...profileSchema(t).shape,
