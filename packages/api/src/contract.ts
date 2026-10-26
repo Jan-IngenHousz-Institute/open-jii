@@ -12,7 +12,6 @@ import { experimentLocationsContract } from "./domains/experiment/locations/expe
 import { experimentMetadataContract } from "./domains/experiment/metadata/experiment-metadata.contract";
 import { experimentProjectTransferWebhookContract } from "./domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.contract";
 import { experimentTransferRequestsContract } from "./domains/experiment/transfer-requests/experiment-transfer-requests.contract";
-import { experimentUploadWebhookContract } from "./domains/experiment/upload-webhook/experiment-upload-webhook.contract";
 import { experimentUploadsContract } from "./domains/experiment/uploads/experiment-uploads.contract";
 import { experimentVisualizationsContract } from "./domains/experiment/visualizations/experiment-visualizations.contract";
 import { experimentWorkbooksContract } from "./domains/experiment/workbooks/experiment-workbooks.contract";
@@ -59,7 +58,6 @@ export const contract = {
     ...experimentJoinCodesContract,
     ...experimentTransferRequestsContract,
     ...experimentProjectTransferWebhookContract,
-    ...experimentUploadWebhookContract,
   },
   health: healthContract,
   iot: {

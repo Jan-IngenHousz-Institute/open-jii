@@ -49,7 +49,6 @@ describe("ExperimentDataUploadsController", () => {
           sourceKind: "csv",
           uploadTableId: "33333333-3333-3333-3333-333333333333",
           uploadTableName: "leaf_traits",
-          runId: 42,
           files,
         }),
       );
@@ -67,7 +66,6 @@ describe("ExperimentDataUploadsController", () => {
         uploadId: "u-2",
         uploadTableId: "33333333-3333-3333-3333-333333333333",
         uploadTableName: "leaf_traits",
-        runId: 42,
         files,
       });
       const firstCall = vi.mocked(uploadDataUseCase.execute).mock.calls[0];
@@ -186,7 +184,6 @@ describe("ExperimentDataUploadsController", () => {
           uploadId: "u-3",
           sourceKind: "csv",
           uploadTableName: "leaf_traits",
-          runId: 7,
           files: [{ fileName: "data.csv", filePath: "/Volumes/x/y" }],
         }),
       );

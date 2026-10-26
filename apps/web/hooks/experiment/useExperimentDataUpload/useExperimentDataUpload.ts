@@ -10,6 +10,7 @@ import {
   inferUploadSourceKind,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
+import { zExperimentUploadDataResponse } from "@repo/api/domains/experiment/uploads/experiment-uploads.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -29,6 +30,8 @@ export type UploadValidationResult =
 interface UploadInput {
   params: { id: string };
   body: FormData;
+  /** The id the backend records the upload under; also sent in the body. */
+  uploadId: string;
   /** The target table's name, for the progress row and toasts. */
   label: string;
 }
@@ -85,10 +88,13 @@ function validateAmbyte(files: FileList): UploadValidationResult {
     return { code: "ambyteInvalidStructure" };
   }
 
-  const max = UPLOAD_KIND_CONSTANTS.ambyte.maxFileSize;
-  const oversized = usable.filter((f) => f.size > max).length;
+  const { maxFileSize, maxFileCount } = UPLOAD_KIND_CONSTANTS.ambyte;
+  const oversized = usable.filter((f) => f.size > maxFileSize).length;
   if (oversized > 0) {
     return { code: "ambyteOversizedFiles", count: oversized };
+  }
+  if (usable.length > maxFileCount) {
+    return { code: "tooManyFiles", max: maxFileCount };
   }
 
   return { sourceKind: "ambyte" };
@@ -132,14 +138,10 @@ export const useExperimentDataUpload = () => {
   const { upsert } = useActivity();
   const { t } = useTranslation("experimentData");
 
-  const trackTransfer = (
-    transferId: string,
-    variables: UploadInput,
-    status: ActivityEntry["status"],
-  ) => {
+  const trackTransfer = (variables: UploadInput, status: ActivityEntry["status"]) => {
     const now = new Date().toISOString();
     upsert({
-      id: transferId,
+      id: variables.uploadId,
       kind: "data_upload",
       title: variables.label,
       status,
@@ -152,30 +154,34 @@ export const useExperimentDataUpload = () => {
   // Callbacks here, not on mutate(), still run once the dialog that started the upload is closed.
   const mutation = useMutation({
     onMutate: (variables: UploadInput) => {
-      const transferId = crypto.randomUUID();
-      trackTransfer(transferId, variables, "running");
+      trackTransfer(variables, "running");
       toast({
         description: t("experimentData.uploadDataModal.transfer.started", {
           table: variables.label,
         }),
       });
-      return { transferId };
     },
-    onSuccess: async (_data, variables, transfer) => {
-      trackTransfer(transfer.transferId, variables, "succeeded");
+    onSuccess: async (_data, variables) => {
       toast({
         description: t("experimentData.uploadDataModal.transfer.received", {
           table: variables.label,
         }),
       });
-      await queryClient.invalidateQueries({
-        queryKey: orpc.experiments.getExperiment.queryKey({ input: { id: variables.params.id } }),
-      });
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: orpc.experiments.getExperiment.queryKey({ input: { id: variables.params.id } }),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: orpc.experiments.listUploads.key({ input: { id: variables.params.id } }),
+        }),
+      ]);
+
+      // Succeeded only once the refetched list holds the upload's record, so it never drops out of view.
+      trackTransfer(variables, "succeeded");
     },
-    onError: (error, variables, transfer) => {
-      if (transfer) {
-        trackTransfer(transfer.transferId, variables, "failed");
-      }
+    onError: (error, variables) => {
+      trackTransfer(variables, "failed");
       toast({
         title: t("experimentData.uploadDataModal.transfer.failed", { table: variables.label }),
         description:
@@ -198,7 +204,7 @@ export const useExperimentDataUpload = () => {
         throw new UploadError(response.status, errorBody);
       }
 
-      return response.json() as Promise<unknown>;
+      return zExperimentUploadDataResponse.parse(await response.json());
     },
   });
 
