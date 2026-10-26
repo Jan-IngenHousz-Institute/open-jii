@@ -21,6 +21,7 @@ export async function generateMetadata({
   return { title: t("organizations.title") };
 }
 
+/** Render the directory with server prefetching only when `q`, `sort`, and `type` are empty or absent. */
 export default async function OrganizationsPage({ searchParams }: OrganizationsPageProps) {
   // Only the unfiltered, unsearched, unsorted directory is fetched ahead; other views come from the client.
   const [{ q, sort, type }, session] = await Promise.all([searchParams, auth()]);

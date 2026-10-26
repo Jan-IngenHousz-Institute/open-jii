@@ -59,7 +59,12 @@ export const FIXTURE_ORG_SLUGS = FIXTURE_ORGANIZATIONS.map(
   (fixture) => `${FIXTURE_ORG_SLUG_PREFIX}${fixture.slug}`,
 );
 
-/** Public organizations of every type, so a fresh directory has rows to filter. */
+/**
+ * Public organizations of every type, so a fresh directory has rows to filter.
+ * Also creates an untyped organization and owner memberships for existing contributor
+ * users. Existing fixture slugs must be cleared before rerunning.
+ * Database errors propagate; completed inserts are not rolled back on failure.
+ */
 export async function seedOrganizations() {
   for (const [index, fixture] of FIXTURE_ORGANIZATIONS.entries()) {
     const [organization] = await db

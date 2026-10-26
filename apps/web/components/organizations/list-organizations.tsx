@@ -21,6 +21,7 @@ import { SearchInput } from "@repo/ui/components/search-input";
 import { organizationTypeLabelKey } from "./organization-labels";
 import { organizationPath } from "./organization-routes";
 
+/** Choose an empty-state translation key, giving active filters precedence over search. */
 function emptyMessageKey(hasActiveFilters: boolean, hasSearch: boolean): string {
   if (hasActiveFilters) return "organizations.noFilterMatches";
   if (hasSearch) return "organizations.noMatches";
@@ -28,8 +29,8 @@ function emptyMessageKey(hasActiveFilters: boolean, hasSearch: boolean): string 
 }
 
 /**
- * One ownership-ranked organization directory. Membership is shown by ordering
- * and card metadata instead of making the reader switch between two partial lists.
+ * Organization directory table with URL-backed search, type filters, sorting,
+ * and client-side pagination.
  */
 export function ListOrganizations() {
   const { t } = useTranslation();

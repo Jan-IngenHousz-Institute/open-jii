@@ -30,6 +30,11 @@ import {
 } from "./constants";
 import { FIXTURE_ORG_SLUGS } from "./organization.seed";
 
+/**
+ * Delete seed users, contributor users, their personal organizations, directory
+ * fixtures, and the resource data selected by the seed identifiers and naming patterns.
+ * Database errors propagate; completed deletions are not rolled back on failure.
+ */
 export async function clearSeedData() {
   // User + profile (seed user)
   const seedUsers = await db

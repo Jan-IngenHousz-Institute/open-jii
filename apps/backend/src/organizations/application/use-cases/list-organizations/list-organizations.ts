@@ -31,6 +31,10 @@ export class ListOrganizationsUseCase {
 
   constructor(private readonly organizationRepository: OrganizationRepository) {}
 
+  /**
+   * Return the caller's visible directory with the requested search, scope, sort,
+   * and type filters. Repository failures are returned as a failed Result.
+   */
   async execute(
     userId: string,
     params: {

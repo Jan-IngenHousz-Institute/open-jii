@@ -398,6 +398,16 @@ export class OrganizationRepository {
    * `scope: "related"` is "my organizations": one extra condition here, never a second
    * read. The memberships used to be filtered client-side, so the two slices disagreed
    * about what matched.
+   *
+   * A nonempty `types` selection matches any selected type and excludes untyped
+   * organizations; an omitted or empty selection applies no type filter. This
+   * combines with search and scope without widening visibility.
+   *
+   * Explicit sorts override relevance and ownership ordering, with ID as the final
+   * tie-breaker. Type sorting uses stored type names, with untyped organizations
+   * last in either direction. Without an explicit sort, search uses relevance;
+   * otherwise ownership tier, name, and ID determine the order.
+   * Query errors are converted to a failed Result.
    */
   async listDirectory(
     userId: string,

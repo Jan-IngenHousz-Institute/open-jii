@@ -38,6 +38,10 @@ export class OrganizationController {
     private readonly getOrganizationDeletionBlockersUseCase: GetOrganizationDeletionBlockersUseCase,
   ) {}
 
+  /**
+   * Build the session user's directory handler. It returns all matching organizations
+   * and converts failed Results to ORPCError responses.
+   */
   @Implement(organizationContract.listOrganizations)
   listOrganizations(@Session() session: UserSession) {
     return implement(organizationContract.listOrganizations).handler(async ({ input }) => {

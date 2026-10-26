@@ -31,9 +31,13 @@ export interface OrganizationListItem {
 const PAGE_SIZE = 20;
 
 /**
- * One ownership-ranked organization directory. The server returns the caller's
- * organizations first, followed by the rest of the searchable public directory.
+ * Search, filter, and sort the directory on the server, then paginate it in groups
+ * of 20 in the browser. Without search or explicit sorting, the server ranks the
+ * caller's owned organizations first, then joined ones, then the public directory.
  * Personal workspaces are excluded server-side.
+ *
+ * Search, sort, and types live in the URL; their setters reset the page to 1.
+ * Clearing filters resets the page and types while preserving search and sort.
  */
 export function useOrganizationsList() {
   const [search, setSearchState] = useUrlState<string>({

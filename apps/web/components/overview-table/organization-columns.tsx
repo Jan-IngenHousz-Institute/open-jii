@@ -10,6 +10,7 @@ import { cn } from "@repo/ui/lib/utils";
 import type { OverviewTableColumn } from "./overview-table";
 import { overviewTableText } from "./overview-table";
 
+/** Build localized directory columns, leaving the type cell empty for untyped organizations. */
 export function getOrganizationColumns(
   t: (key: string, options?: Record<string, unknown>) => string,
 ): OverviewTableColumn<OrganizationListItem>[] {
