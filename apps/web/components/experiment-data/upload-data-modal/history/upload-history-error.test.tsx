@@ -1,40 +1,50 @@
 import { render, screen } from "@/test/test-utils";
 import { ORPCError } from "@orpc/client";
-import { describe, expect, it, vi } from "vitest";
+import type { ReactElement } from "react";
+import { I18nextProvider, useTranslation } from "react-i18next";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type * as translations from "@repo/i18n";
+import * as clientTranslations from "@repo/i18n/client";
+
+import english from "../../../../../../packages/i18n/locales/en-US/experimentData.json";
 import { UploadHistoryError } from "./upload-history-error";
 
-// The shared mock drops interpolation values, and the message is the point here.
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: Record<string, unknown>) =>
-      options ? `${key} ${JSON.stringify(options)}` : key,
-    i18n: { language: "en-US" },
-  }),
-}));
+async function renderInEnglish(ui: ReactElement) {
+  const { createInstance } = await vi.importActual<typeof translations>("@repo/i18n");
+  const i18n = createInstance();
+  await i18n.init({
+    lng: "en-US",
+    defaultNS: "experimentData",
+    resources: { "en-US": { experimentData: english } },
+    interpolation: { escapeValue: false },
+  });
+  vi.spyOn(clientTranslations, "useTranslation").mockImplementation(
+    (ns = "experimentData", options = {}) => useTranslation(ns, options),
+  );
+  return render(<I18nextProvider i18n={i18n}>{ui}</I18nextProvider>);
+}
 
 describe("UploadHistoryError", () => {
-  it("passes on the message the API gave", () => {
-    render(
+  afterEach(() => vi.restoreAllMocks());
+
+  it("passes on the message the API gave", async () => {
+    await renderInEnglish(
       <UploadHistoryError
         error={new ORPCError("NOT_FOUND", { message: "Experiment not found" })}
       />,
     );
 
     expect(
-      screen.getByText(
-        'experimentData.uploadDataModal.history.error {"message":"Experiment not found"}',
-      ),
+      screen.getByText("Uploads could not be loaded: Experiment not found"),
     ).toBeInTheDocument();
   });
 
-  it("falls back to an unknown error when the API gave no message", () => {
-    render(<UploadHistoryError error={new Error("network down")} />);
+  it("falls back to an unknown error when the API gave no message", async () => {
+    await renderInEnglish(<UploadHistoryError error={new Error("network down")} />);
 
     expect(
-      screen.getByText(
-        'experimentData.uploadDataModal.history.error {"message":"experimentData.uploadDataModal.history.unknownError"}',
-      ),
+      screen.getByText("Uploads could not be loaded: An unknown error occurred"),
     ).toBeInTheDocument();
   });
 });
