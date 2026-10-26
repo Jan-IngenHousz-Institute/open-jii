@@ -9,6 +9,9 @@
 # - ambyte: parse ambyte trace folders and JSON-encode each measurement row
 #           into uploaded_data; written to processed-uploads alongside the tabular sinks.
 # Add more SOURCE_KIND handlers below as new upload formats are added.
+# The backend creates the upload record, follows the run, and reads the outcome from the exit value
+# once the run succeeds, so this task writes no metadata of its own. Input the upload cannot use
+# ends the run with a failed outcome; only a crash fails the run.
 
 # COMMAND ----------
 
@@ -39,7 +42,6 @@ from pyspark.sql.types import (
 from ambyte import find_byte_folders, load_files_per_byte, process_trace_files
 from openjii.json_scrub import scrub_non_finite_json_value
 from openjii.variant_schema import merged_variant_schema, variant_schema_key
-from enrich.backend_client import BackendClient
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -51,6 +53,7 @@ EXPERIMENT_ID = dbutils.widgets.get("EXPERIMENT_ID")
 CATALOG_NAME = dbutils.widgets.get("CATALOG_NAME")
 UPLOAD_DIRECTORY = dbutils.widgets.get("UPLOAD_DIRECTORY")
 SOURCE_KIND = dbutils.widgets.get("SOURCE_KIND")
+UPLOAD_ID = dbutils.widgets.get("UPLOAD_ID")
 
 # Optional widgets (set only for some source kinds; not all paths use them).
 def _optional_widget(name: str) -> str | None:
@@ -63,16 +66,16 @@ def _optional_widget(name: str) -> str | None:
 
 UPLOAD_TABLE_NAME = _optional_widget("UPLOAD_TABLE_NAME")
 UPLOAD_TABLE_ID = _optional_widget("UPLOAD_TABLE_ID")
-UPLOAD_ID = _optional_widget("UPLOAD_ID")
 EXPERIMENT_NAME = _optional_widget("EXPERIMENT_NAME")
 YEAR_PREFIX = _optional_widget("YEAR_PREFIX")
 USER_ID = _optional_widget("USER_ID")
 
-# Mirrors the export-side history table; backend reads this to render an upload history.
-UPLOAD_METADATA_TABLE = f"{CATALOG_NAME}.centrum.experiment_upload_metadata"
-
 spark = SparkSession.builder.getOrCreate()
 dbutils = DBUtils(spark)
+
+PROCESSED_UPLOADS_PATH = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/processed-uploads"
+# A retry of this run reuses the upload id, so it finds what an earlier attempt wrote here.
+OUTPUT_PATH = f"{PROCESSED_UPLOADS_PATH}/upload_{UPLOAD_ID}"
 
 logger.info(
     f"Data upload task starting: experiment_id={EXPERIMENT_ID} source_kind={SOURCE_KIND} "
@@ -81,11 +84,69 @@ logger.info(
 
 # COMMAND ----------
 
+# DBTITLE 1,Outcome
+def has_committed_output(output_path: str) -> bool:
+    return os.path.exists(os.path.join(output_path, "_SUCCESS"))
+
+
+def rejected_file(path: str, reason: str) -> dict:
+    return {"name": os.path.basename(path.rstrip("/")), "reason": reason}
+
+
+def build_outcome(upload_id: str, row_count: int, rejected_files: list, queryable: bool) -> dict:
+    """``queryable`` only counts once rows were written."""
+    # Every uploaded file, or Ambyte folder, either adds rows or is rejected, so no rows and no
+    # rejections means none matched.
+    nothing_matched = row_count == 0 and not rejected_files
+
+    if nothing_matched:
+        error_code = "no_files"
+    elif row_count == 0:
+        error_code = "no_rows"
+    elif not queryable:
+        error_code = "not_queryable"
+    else:
+        error_code = None
+
+    return {
+        "uploadId": upload_id,
+        "outcome": "failed" if error_code else "completed",
+        "rowCount": row_count,
+        "rejectedFiles": rejected_files,
+        "errorCode": error_code,
+    }
+
+# COMMAND ----------
+
 # DBTITLE 1,Tabular Processor (csv/tsv/json/ndjson)
 def _serialize_dataframe_rows(frame: pd.DataFrame) -> list[str | None]:
     """Encode dataframe rows as strict JSON, replacing non-finite values with null."""
     rows = frame.astype(object).where(pd.notnull(frame), None).to_dict(orient="records")
     return [scrub_non_finite_json_value(json.dumps(row, default=str)) for row in rows]
+
+
+def _parse_tabular_files(paths: list[str], parser) -> tuple[list[str | None], list[dict]]:
+    """The rows of every usable file as JSON payloads, and the files that yielded none."""
+    payloads: list[str | None] = []
+    rejected_files: list[dict] = []
+
+    for path in paths:
+        try:
+            # pandas reads UC volumes via the /Volumes FUSE path; strip the dbfs:
+            # scheme dbutils.fs.ls prepends. /dbfs only mounts DBFS, not volumes.
+            local_path = path[len("dbfs:") :] if path.startswith("dbfs:") else path
+            file_payloads = _serialize_dataframe_rows(parser(local_path))
+            logger.info(f"Parsed {os.path.basename(path)}: {len(file_payloads)} rows")
+            if not file_payloads:
+                rejected_files.append(rejected_file(path, "no_rows"))
+                continue
+
+            payloads.extend(file_payloads)
+        except Exception as e:
+            logger.error(f"Error parsing {path}: {e}")
+            rejected_files.append(rejected_file(path, "unparseable"))
+
+    return payloads, rejected_files
 
 
 def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> dict:
@@ -98,14 +159,9 @@ def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> 
         raise Exception(f"UPLOAD_TABLE_NAME is required for source_kind={label}")
     if not UPLOAD_TABLE_ID:
         raise Exception(f"UPLOAD_TABLE_ID is required for source_kind={label}")
-    if not UPLOAD_ID:
-        raise Exception(f"UPLOAD_ID is required for source_kind={label}")
 
     upload_base_path = (
         f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/uploads/{UPLOAD_DIRECTORY}"
-    )
-    processed_output_path = (
-        f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/processed-uploads"
     )
 
     try:
@@ -115,30 +171,17 @@ def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> 
 
     matched_files = [e.path for e in entries if e.path.lower().endswith(extensions)]
     if not matched_files:
-        raise Exception(f"No {label} files found in {upload_base_path} (expected {extensions})")
+        logger.warning(f"No {label} files found in {upload_base_path} (expected {extensions})")
+        return {"rows_written": 0, "rejected_files": []}
 
     logger.info(f"Found {len(matched_files)} {label} file(s) to process")
 
     uploaded_at = datetime.now(timezone.utc)
-    all_payloads: list[str | None] = []
-    file_count = 0
-    error_count = 0
-
-    for path in matched_files:
-        try:
-            # pandas reads UC volumes via the /Volumes FUSE path; strip the dbfs:
-            # scheme dbutils.fs.ls prepends. /dbfs only mounts DBFS, not volumes.
-            local_path = path[len("dbfs:") :] if path.startswith("dbfs:") else path
-            payloads = _serialize_dataframe_rows(parser(local_path))
-            logger.info(f"Parsed {os.path.basename(path)}: {len(payloads)} rows")
-            all_payloads.extend(payloads)
-            file_count += 1
-        except Exception as e:
-            logger.error(f"Error parsing {path}: {e}")
-            error_count += 1
+    all_payloads, rejected_files = _parse_tabular_files(matched_files, parser)
 
     if not all_payloads:
-        raise Exception(f"No rows parsed from {file_count} files ({error_count} errors)")
+        logger.warning(f"No rows parsed from {len(matched_files)} files ({len(rejected_files)} rejected)")
+        return {"rows_written": 0, "rejected_files": rejected_files}
 
     records = [
         {
@@ -167,22 +210,15 @@ def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> 
 
     spark_df = spark.createDataFrame(records, schema=schema)
 
-    output_path = f"{processed_output_path}/upload_{UPLOAD_ID}"
-
     try:
-        dbutils.fs.mkdirs(processed_output_path)
+        dbutils.fs.mkdirs(PROCESSED_UPLOADS_PATH)
     except Exception:
         pass
 
-    spark_df.write.mode("overwrite").parquet(output_path)
+    spark_df.write.mode("overwrite").parquet(OUTPUT_PATH)
 
-    logger.info(f"Saved {len(records)} rows to {output_path}")
-    return {
-        "rows_written": len(records),
-        "files_processed": file_count,
-        "files_failed": error_count,
-        "output_path": output_path,
-    }
+    logger.info(f"Saved {len(records)} rows to {OUTPUT_PATH} ({len(rejected_files)} files rejected)")
+    return {"rows_written": len(records), "rejected_files": rejected_files}
 
 
 def process_csv_upload() -> dict:
@@ -222,6 +258,35 @@ def _serialize_parquet_rows(frame: DataFrame) -> DataFrame:
     )
 
 
+def _read_parquet_files(paths: list[str]) -> tuple[DataFrame | None, list[dict]]:
+    """The rows of every usable file as JSON payloads, and the files that yielded none."""
+    combined: DataFrame | None = None
+    rejected_files: list[dict] = []
+
+    for path in paths:
+        try:
+            # Spark reads UC volumes via /Volumes; strip the dbfs: scheme dbutils adds.
+            spark_path = path[len("dbfs:") :] if path.startswith("dbfs:") else path
+            row_json = _serialize_parquet_rows(spark.read.parquet(spark_path))
+
+            # Aggregating over every encoded row decodes every page, so a corrupt file fails here
+            # instead of failing the write of the whole upload.
+            decoded = row_json.agg(
+                F.count(F.lit(1)).alias("rows"),
+                F.sum(F.length("uploaded_data")).alias("json_length"),
+            ).first()
+            if decoded["rows"] == 0:
+                rejected_files.append(rejected_file(path, "no_rows"))
+                continue
+
+            combined = row_json if combined is None else combined.unionByName(row_json)
+        except Exception as e:
+            logger.error(f"Error parsing {path}: {e}")
+            rejected_files.append(rejected_file(path, "unparseable"))
+
+    return combined, rejected_files
+
+
 def process_parquet_upload() -> dict:
     """Parquet uploads via the native Spark reader (not pandas/pyarrow), so files
     written with newer parquet logical types (e.g. VARIANT in platform exports)
@@ -232,14 +297,9 @@ def process_parquet_upload() -> dict:
         raise Exception("UPLOAD_TABLE_NAME is required for source_kind=parquet")
     if not UPLOAD_TABLE_ID:
         raise Exception("UPLOAD_TABLE_ID is required for source_kind=parquet")
-    if not UPLOAD_ID:
-        raise Exception("UPLOAD_ID is required for source_kind=parquet")
 
     upload_base_path = (
         f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/uploads/{UPLOAD_DIRECTORY}"
-    )
-    processed_output_path = (
-        f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/processed-uploads"
     )
 
     try:
@@ -249,28 +309,17 @@ def process_parquet_upload() -> dict:
 
     matched_files = [e.path for e in entries if e.path.lower().endswith(".parquet")]
     if not matched_files:
-        raise Exception(f"No parquet files found in {upload_base_path}")
+        logger.warning(f"No parquet files found in {upload_base_path}")
+        return {"rows_written": 0, "rejected_files": []}
 
     logger.info(f"Found {len(matched_files)} parquet file(s) to process")
 
     uploaded_at = datetime.now(timezone.utc)
-    combined = None
-    file_count = 0
-    error_count = 0
-
-    for path in matched_files:
-        try:
-            # Spark reads UC volumes via /Volumes; strip the dbfs: scheme dbutils adds.
-            spark_path = path[len("dbfs:") :] if path.startswith("dbfs:") else path
-            row_json = _serialize_parquet_rows(spark.read.parquet(spark_path))
-            combined = row_json if combined is None else combined.unionByName(row_json)
-            file_count += 1
-        except Exception as e:
-            logger.error(f"Error parsing {path}: {e}")
-            error_count += 1
+    combined, rejected_files = _read_parquet_files(matched_files)
 
     if combined is None:
-        raise Exception(f"No rows parsed from {file_count} files ({error_count} errors)")
+        logger.warning(f"No rows parsed from {len(matched_files)} files ({len(rejected_files)} rejected)")
+        return {"rows_written": 0, "rejected_files": rejected_files}
 
     result = combined.select(
         F.lit(EXPERIMENT_ID).cast("string").alias("experiment_id"),
@@ -284,25 +333,18 @@ def process_parquet_upload() -> dict:
         F.monotonically_increasing_id().alias("row_index"),
     )
 
-    output_path = f"{processed_output_path}/upload_{UPLOAD_ID}"
-
     try:
-        dbutils.fs.mkdirs(processed_output_path)
+        dbutils.fs.mkdirs(PROCESSED_UPLOADS_PATH)
     except Exception:
         pass
 
-    result.write.mode("overwrite").parquet(output_path)
+    result.write.mode("overwrite").parquet(OUTPUT_PATH)
     # Count the written output instead of result: a second action on the plan
     # would recompute it, and persist/cache is unsupported on serverless compute.
-    row_count = spark.read.parquet(output_path).count()
+    row_count = spark.read.parquet(OUTPUT_PATH).count()
 
-    logger.info(f"Saved {row_count} rows to {output_path}")
-    return {
-        "rows_written": row_count,
-        "files_processed": file_count,
-        "files_failed": error_count,
-        "output_path": output_path,
-    }
+    logger.info(f"Saved {row_count} rows to {OUTPUT_PATH} ({len(rejected_files)} files rejected)")
+    return {"rows_written": row_count, "rejected_files": rejected_files}
 
 
 def process_json_upload() -> dict:
@@ -335,64 +377,49 @@ def process_ndjson_upload() -> dict:
 # COMMAND ----------
 
 # DBTITLE 1,Ambyte Processor
-def process_ambyte_upload() -> dict:
-    """Parse ambyte trace folders into rows, encode each row as JSON in uploaded_data,
-    and write a single parquet under processed-uploads — same sink as the tabular
-    processors. The downstream raw_uploaded_data / experiment_uploaded_data DLT
-    tables ingest these alongside csv/tsv/parquet/json/ndjson uploads."""
-    if not YEAR_PREFIX:
-        raise Exception("YEAR_PREFIX is required for source_kind=ambyte")
-    if not UPLOAD_TABLE_NAME:
-        raise Exception("UPLOAD_TABLE_NAME is required for source_kind=ambyte")
-    if not UPLOAD_TABLE_ID:
-        raise Exception("UPLOAD_TABLE_ID is required for source_kind=ambyte")
-    if not UPLOAD_ID:
-        raise Exception("UPLOAD_ID is required for source_kind=ambyte")
-
-    # Ambyte files land under the shared "uploads" volume dir (the backend uses
-    # volumeSourceType="uploads" for every kind), not a dedicated ambyte dir.
-    ambyte_base_path = (
-        f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/uploads/{UPLOAD_DIRECTORY}"
-    )
-    processed_output_path = (
-        f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/processed-uploads"
-    )
+def _find_ambyte_folders(base_path: str) -> tuple[list[str], list[dict]]:
+    """The byte folders discovery finds, and every other top-level folder of the upload as rejected."""
+    try:
+        entries = dbutils.fs.ls(base_path)
+    except Exception as e:
+        raise Exception(f"Ambyte directory not found: {base_path}. Error: {e}")
 
     try:
-        dbutils.fs.ls(ambyte_base_path)
+        byte_folders = find_byte_folders(base_path)
     except Exception as e:
-        raise Exception(f"Ambyte directory not found: {ambyte_base_path}. Error: {e}")
+        raise Exception(f"Error finding byte folders in {base_path}: {e}")
 
-    logger.info(f"Processing ambyte directory: {ambyte_base_path}")
+    # Discovery needs all four ambit subfolders or unknown_ambit, while an upload may also hold
+    # traces straight under Ambyte_N or in only some of its ambits.
+    discovered = {os.path.basename(folder.rstrip("/")) for folder in byte_folders}
+    undiscovered = [
+        entry.path
+        for entry in entries
+        if entry.isDir() and os.path.basename(entry.path.rstrip("/")) not in discovered
+    ]
+    for path in undiscovered:
+        logger.warning(f"No byte folder layout in {path}")
 
-    processed_count = 0
-    error_count = 0
-    combined_dataframes = []
+    return byte_folders, [rejected_file(path, "unparseable") for path in undiscovered]
 
-    try:
-        byte_parent_folders = find_byte_folders(ambyte_base_path)
-    except Exception as e:
-        raise Exception(f"Error finding byte folders in {ambyte_base_path}: {e}")
 
-    if not byte_parent_folders:
-        raise Exception(f"No valid byte parent folders found in {ambyte_base_path}")
+def _parse_ambyte_folders(
+    folders: list[str], year_prefixes: tuple[str, ...]
+) -> tuple[list[pd.DataFrame], list[dict]]:
+    """The trace rows of every usable folder, and the folders that yielded none."""
+    frames: list[pd.DataFrame] = []
+    rejected_files: list[dict] = []
 
-    logger.info(f"Found {len(byte_parent_folders)} valid byte parent folder(s)")
-
-    # Ambyte files are named by their record date, which can trail into the previous
-    # calendar year; accept both the upload year and the one before it.
-    year_prefixes = (YEAR_PREFIX, str(int(YEAR_PREFIX) - 1))
-
-    for ambyte_folder in byte_parent_folders:
+    for ambyte_folder in folders:
         ambyte_folder_name = os.path.basename(ambyte_folder.rstrip("/"))
         try:
             files_per_byte, _ = load_files_per_byte(ambyte_folder, year_prefix=year_prefixes)
             files_per_byte = [lst for lst in files_per_byte if lst]
 
             df = process_trace_files(ambyte_folder_name, files_per_byte)
-            if df is None:
+            if df is None or df.empty:
                 logger.warning(f"No data returned from process_trace_files for {ambyte_folder_name}")
-                error_count += 1
+                rejected_files.append(rejected_file(ambyte_folder, "no_rows"))
                 continue
 
             df = df.reset_index()
@@ -410,17 +437,54 @@ def process_ambyte_upload() -> dict:
                 if dtype_name == "category":
                     df[col] = df[col].astype(str)
 
-            combined_dataframes.append(df)
-            processed_count += 1
+            frames.append(df)
             logger.info(
                 f"Processed {ambyte_folder_name}: {len(df):,} rows, {len(df.columns)} columns"
             )
         except Exception as e:
             logger.error(f"Error processing {ambyte_folder_name}: {e}")
-            error_count += 1
+            rejected_files.append(rejected_file(ambyte_folder, "unparseable"))
+
+    return frames, rejected_files
+
+
+def process_ambyte_upload() -> dict:
+    """Parse ambyte trace folders into rows, encode each row as JSON in uploaded_data,
+    and write a single parquet under processed-uploads, the same sink as the tabular
+    processors. The downstream raw_uploaded_data / experiment_uploaded_data DLT
+    tables ingest these alongside csv/tsv/parquet/json/ndjson uploads."""
+    if not YEAR_PREFIX:
+        raise Exception("YEAR_PREFIX is required for source_kind=ambyte")
+    if not UPLOAD_TABLE_NAME:
+        raise Exception("UPLOAD_TABLE_NAME is required for source_kind=ambyte")
+    if not UPLOAD_TABLE_ID:
+        raise Exception("UPLOAD_TABLE_ID is required for source_kind=ambyte")
+
+    # Ambyte files land under the shared "uploads" volume dir (the backend uses
+    # volumeSourceType="uploads" for every kind), not a dedicated ambyte dir.
+    ambyte_base_path = (
+        f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/uploads/{UPLOAD_DIRECTORY}"
+    )
+
+    logger.info(f"Processing ambyte directory: {ambyte_base_path}")
+    byte_parent_folders, discovery_rejections = _find_ambyte_folders(ambyte_base_path)
+
+    if not byte_parent_folders:
+        logger.warning(f"No valid byte parent folders found in {ambyte_base_path}")
+        return {"rows_written": 0, "rejected_files": discovery_rejections}
+
+    logger.info(f"Found {len(byte_parent_folders)} valid byte parent folder(s)")
+
+    # Ambyte files are named by their record date, which can trail into the previous
+    # calendar year; accept both the upload year and the one before it.
+    year_prefixes = (YEAR_PREFIX, str(int(YEAR_PREFIX) - 1))
+
+    combined_dataframes, rejected_files = _parse_ambyte_folders(byte_parent_folders, year_prefixes)
+    rejected_files.extend(discovery_rejections)
 
     if not combined_dataframes:
-        raise Exception(f"All ambyte processing failed ({error_count} errors)")
+        logger.warning(f"All ambyte processing failed ({len(rejected_files)} folders rejected)")
+        return {"rows_written": 0, "rejected_files": rejected_files}
 
     combined_df = pd.concat(combined_dataframes, ignore_index=True)
     payloads = _serialize_dataframe_rows(combined_df)
@@ -453,78 +517,15 @@ def process_ambyte_upload() -> dict:
 
     spark_df = spark.createDataFrame(records, schema=schema)
 
-    output_path = f"{processed_output_path}/upload_{UPLOAD_ID}"
-
     try:
-        dbutils.fs.mkdirs(processed_output_path)
+        dbutils.fs.mkdirs(PROCESSED_UPLOADS_PATH)
     except Exception:
         pass
 
-    spark_df.write.mode("overwrite").parquet(output_path)
+    spark_df.write.mode("overwrite").parquet(OUTPUT_PATH)
 
-    logger.info(f"Saved ambyte upload: {output_path} ({len(records):,} rows)")
-    return {
-        "rows_written": len(records),
-        "files_processed": processed_count,
-        "files_failed": error_count,
-        "output_path": output_path,
-    }
-
-# COMMAND ----------
-
-# DBTITLE 1,Upload Metadata Record
-def _insert_upload_metadata(spark: SparkSession, table: str, record: dict) -> None:
-    spark.sql(
-        f"""
-        INSERT INTO {table}
-          (upload_id, experiment_id, upload_table_id, upload_table_name, source_kind, status,
-           file_count, row_count, created_by, created_at, completed_at, error_message)
-        VALUES (
-          :upload_id, :experiment_id, :upload_table_id, :upload_table_name, :source_kind, :status,
-          :file_count, :row_count, :created_by, :created_at, :completed_at, :error_message
-        )
-        """,
-        args=record,
-    )
-
-
-def write_upload_metadata(status: str, result: dict | None, error_message: str | None) -> None:
-    """Append a completion record into experiment_upload_metadata.
-
-    Mirrors the export task's create_export_metadata. Backend reads from this
-    table to render an upload history; in-flight runs are tracked via the
-    Databricks job-runs API and joined on job_run_id.
-    """
-    if not UPLOAD_ID:
-        return
-
-    try:
-        completed_at = datetime.now(timezone.utc)
-        file_count = int(result.get("files_processed", 0)) if result else 0
-        row_count = int(result.get("rows_written", 0)) if result else 0
-
-        _insert_upload_metadata(
-            spark,
-            UPLOAD_METADATA_TABLE,
-            {
-                "upload_id": UPLOAD_ID,
-                "experiment_id": EXPERIMENT_ID,
-                "upload_table_id": UPLOAD_TABLE_ID or "",
-                "upload_table_name": UPLOAD_TABLE_NAME or "",
-                "source_kind": SOURCE_KIND,
-                "status": status,
-                "file_count": file_count,
-                "row_count": row_count,
-                "created_by": USER_ID or "",
-                "created_at": completed_at,
-                "completed_at": completed_at,
-                "error_message": error_message,
-            },
-        )
-        logger.info(f"Wrote upload metadata record (status={status}, upload_id={UPLOAD_ID})")
-    except Exception as e:
-        # Don't fail the job if metadata write fails; surfacing the upstream error matters more.
-        logger.error(f"Failed to write upload metadata: {e}")
+    logger.info(f"Saved ambyte upload: {OUTPUT_PATH} ({len(records):,} rows)")
+    return {"rows_written": len(records), "rejected_files": rejected_files}
 
 # COMMAND ----------
 
@@ -539,51 +540,18 @@ PROCESSORS = {
 }
 
 
-def main() -> dict:
+def process_upload() -> dict:
     processor = PROCESSORS.get(SOURCE_KIND)
     if processor is None:
-        write_upload_metadata("failed", None, f"Unsupported source kind: {SOURCE_KIND}")
-        return {
-            "status": "error",
-            "error_message": f"Unsupported source kind: {SOURCE_KIND}",
-            "experiment_id": EXPERIMENT_ID,
-            "source_kind": SOURCE_KIND,
-        }
-    try:
-        result = processor()
-        # A processor can finish with files_failed > 0 — surface that as
-        # "partial" instead of pretending we're done with a clean success.
-        files_failed = int(result.get("files_failed", 0)) if result else 0
-        status = "partial" if files_failed > 0 else "completed"
-        run_status = "partial" if files_failed > 0 else "success"
-        write_upload_metadata(status, result, None)
-        return {
-            "status": run_status,
-            "experiment_id": EXPERIMENT_ID,
-            "source_kind": SOURCE_KIND,
-            "upload_table_name": UPLOAD_TABLE_NAME,
-            "upload_id": UPLOAD_ID,
-            **result,
-        }
-    except Exception as e:
-        logger.error(f"Task execution failed: {e}")
-        write_upload_metadata("failed", None, str(e))
-        return {
-            "status": "error",
-            "error_message": str(e),
-            "experiment_id": EXPERIMENT_ID,
-            "source_kind": SOURCE_KIND,
-            "upload_table_name": UPLOAD_TABLE_NAME,
-            "upload_id": UPLOAD_ID,
-        }
+        raise ValueError(f"Unsupported source kind: {SOURCE_KIND}")
+    return processor()
 
 # COMMAND ----------
 
-# DBTITLE 1,Notify the uploader
+# DBTITLE 1,Wait Until Queryable
 UPLOADED_DATA_TABLE = f"{CATALOG_NAME}.centrum.experiment_uploaded_data"
 UPLOADED_DATA_SCHEMAS_TABLE = f"{CATALOG_NAME}.centrum.experiment_uploaded_data_schemas"
 TABLE_METADATA = f"{CATALOG_NAME}.centrum.experiment_table_metadata"
-ENVIRONMENT = (_optional_widget("ENVIRONMENT") or "").lower()
 # The pipeline is continuous, so an upload is usually queryable within minutes; an hour means it is stuck.
 TABLE_WAIT_SECONDS = 60 * 60
 TABLE_POLL_SECONDS = 15
@@ -643,54 +611,30 @@ def wait_until_queryable(expected_rows: int) -> bool:
         time.sleep(TABLE_POLL_SECONDS)
     return False
 
-
-def notify_uploader(outcome: str) -> None:
-    """Have the backend tell the uploader how the upload ended. Never fails the task, whose
-    retries would process the upload again."""
-    if not (UPLOAD_ID and USER_ID and UPLOAD_TABLE_NAME and ENVIRONMENT):
-        logger.warning("The upload has no id, uploader, table name or environment, so nobody is notified")
-        return
-    try:
-        scope = f"node-webhook-secret-scope-{ENVIRONMENT}"
-        client = BackendClient(
-            base_url=dbutils.secrets.get(scope=scope, key="webhook_base_url"),
-            api_key_id=dbutils.secrets.get(scope=scope, key="webhook_api_key_id"),
-            webhook_secret=dbutils.secrets.get(scope=scope, key="webhook_secret"),
-        )
-        client.notify_upload_outcome(
-            {
-                "experimentId": EXPERIMENT_ID,
-                "uploadId": UPLOAD_ID,
-                "userId": USER_ID,
-                "outcome": outcome,
-                "uploadTableName": UPLOAD_TABLE_NAME,
-            }
-        )
-        logger.info(f"Notified the uploader: outcome={outcome}")
-    except Exception as e:
-        logger.error(f"Failed to notify the uploader: {e}")
-
-
-def report_outcome(result: dict) -> None:
-    rows_written = int(result.get("rows_written", 0))
-    if result["status"] == "error" or rows_written == 0:
-        notify_uploader("failed")
-    elif wait_until_queryable(rows_written):
-        notify_uploader("ready")
-    else:
-        logger.error(f"Upload {UPLOAD_ID} was not queryable within {TABLE_WAIT_SECONDS} s")
-        notify_uploader("failed")
-
 # COMMAND ----------
 
-result = main()
-logger.info(f"Status: {result['status']}")
-try:
-    report_outcome(result)
-except Exception as e:
-    # The upload is done by now; a failure here must not make the job retry and process it again.
-    logger.error(f"Failed to report the upload outcome: {e}")
-# notebook.exit serialises whatever it's given via repr(), which produces a
-# Python-literal blob that downstream callers (jobs API, runs.get) can't parse.
-# Emit JSON so consumers can ingest the result directly.
-dbutils.notebook.exit(json.dumps(result))
+# DBTITLE 1,Main Execution
+def main():
+    if has_committed_output(OUTPUT_PATH):
+        # Writing the rows again would put them in files with new names, which the pipeline
+        # would ingest a second time. Which files an earlier attempt rejected is not known here.
+        rows_written = spark.read.parquet(OUTPUT_PATH).count()
+        rejected_files: list[dict] = []
+        logger.info(f"An earlier attempt already wrote {rows_written} rows to {OUTPUT_PATH}")
+    else:
+        result = process_upload()
+        rows_written = result["rows_written"]
+        rejected_files = result["rejected_files"]
+
+    wrote_rows = rows_written > 0
+    queryable = wrote_rows and wait_until_queryable(rows_written)
+    if wrote_rows and not queryable:
+        logger.error(f"Upload {UPLOAD_ID} was not queryable within {TABLE_WAIT_SECONDS} s")
+
+    outcome = build_outcome(UPLOAD_ID, rows_written, rejected_files, queryable)
+    logger.info(f"Upload outcome: {outcome['outcome']} (error code {outcome['errorCode']})")
+
+    dbutils.notebook.exit(json.dumps(outcome))
+
+
+main()

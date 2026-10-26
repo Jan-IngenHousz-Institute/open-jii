@@ -10,8 +10,9 @@ import {
   zExperimentNdjsonFilename,
   zExperimentParquetFilename,
   zExperimentTsvFilename,
+  zExperimentUploadDataResponse,
   zExperimentUploadFormFields,
-  zExperimentUploadMetadata,
+  zExperimentUploadRecord,
   zExperimentUploadSourceKind,
   zExperimentUploadTableName,
   zExperimentUploadTargetTable,
@@ -266,41 +267,86 @@ describe("Upload schemas", () => {
     });
   });
 
-  describe("zExperimentUploadMetadata", () => {
+  describe("zExperimentUploadRecord", () => {
     const valid = {
-      uploadId: "upload-1",
-      experimentId: "exp-1",
+      uploadId: "8c1f6a0e-4c35-4d7e-9a43-3f0b2a5d1e77",
+      experimentId: "0f5c2d7e-1b3a-4c8d-9e6f-2a4b6c8d0e1f",
       uploadTableId: "11111111-1111-1111-1111-111111111111",
       uploadTableName: "leaf_traits",
-      sourceKind: "csv" as const,
-      status: "completed" as const,
+      sourceKind: "csv",
+      status: "completed",
       fileCount: 2,
       rowCount: 100,
-      createdBy: "user-1",
+      rejectedFiles: [{ name: "broken.csv", reason: "unparseable" }],
+      errorCode: null,
+      createdBy: "5d2e8f1a-7c4b-4e9d-8a3f-6b1c0d2e4f5a",
       createdAt: "2026-01-01T00:00:00Z",
       completedAt: "2026-01-01T00:05:00Z",
-      errorMessage: null,
     };
 
-    it("accepts a fully-populated completed record", () => {
-      expect(zExperimentUploadMetadata.safeParse(valid).success).toBe(true);
+    it("accepts a completed record with a rejected file", () => {
+      expect(zExperimentUploadRecord.safeParse(valid).success).toBe(true);
     });
 
-    it("accepts null uploadTableId / uploadTableName / row counts / completedAt / errorMessage", () => {
-      const result = zExperimentUploadMetadata.safeParse({
+    it("accepts the nulls of an upload carried over from the old history", () => {
+      const result = zExperimentUploadRecord.safeParse({
         ...valid,
         uploadTableId: null,
         uploadTableName: null,
         fileCount: null,
         rowCount: null,
+        rejectedFiles: [],
         completedAt: null,
-        errorMessage: null,
       });
       expect(result.success).toBe(true);
     });
 
-    it("rejects unknown status values", () => {
-      expect(zExperimentUploadMetadata.safeParse({ ...valid, status: "halfway" }).success).toBe(
+    it("rejects unknown statuses, error codes and rejection reasons", () => {
+      expect(zExperimentUploadRecord.safeParse({ ...valid, status: "partial" }).success).toBe(
+        false,
+      );
+      expect(zExperimentUploadRecord.safeParse({ ...valid, errorCode: "halfway" }).success).toBe(
+        false,
+      );
+      expect(
+        zExperimentUploadRecord.safeParse({
+          ...valid,
+          rejectedFiles: [{ name: "a.csv", reason: "too_big" }],
+        }).success,
+      ).toBe(false);
+    });
+  });
+
+  describe("zExperimentUploadFormFields", () => {
+    it("lowercases the upload id the client sends", () => {
+      const result = zExperimentUploadFormFields.safeParse({
+        targetKind: "new",
+        sourceKind: "csv",
+        targetName: "leaf_traits",
+        uploadId: "8C1F6A0E-4C35-4D7E-9A43-3F0B2A5D1E77",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.uploadId).toBe("8c1f6a0e-4c35-4d7e-9a43-3f0b2a5d1e77");
+      }
+    });
+
+    it("rejects an upload id that is not a UUID", () => {
+      const result = zExperimentUploadFormFields.safeParse({
+        targetKind: "new",
+        sourceKind: "csv",
+        targetName: "leaf_traits",
+        uploadId: "u-2",
+      });
+
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("zExperimentUploadDataResponse", () => {
+    it("rejects an upload id that is not a UUID", () => {
+      expect(zExperimentUploadDataResponse.safeParse({ uploadId: "u-2", files: [] }).success).toBe(
         false,
       );
     });

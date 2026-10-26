@@ -283,4 +283,49 @@ describe("MultipartUploadService", () => {
     expect(result.isFailure()).toBe(true);
     expect(await fileOutcome).toBeInstanceOf(Error);
   });
+
+  it("reports a broken-off request only once the file in flight has been handled", async () => {
+    const stream = new PassThrough();
+    const req = Object.assign(stream, {
+      headers: { "content-type": `multipart/form-data; boundary=${BOUNDARY}` },
+    });
+    stream.write(
+      `--${BOUNDARY}\r\nContent-Disposition: form-data; name="files"; filename="a.csv"\r\n` +
+        "Content-Type: text/csv\r\n\r\nx,y\n1,2\n",
+    );
+    let release = (): void => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const handled: string[] = [];
+
+    const parsing = service.parse({
+      requestStream: req,
+      requestHeaders: req.headers,
+      limits,
+      onField: vi.fn(),
+      onFile: async (file) => {
+        stream.destroy(new Error("aborted"));
+        await held;
+        handled.push(file.filename);
+        return success(undefined);
+      },
+    });
+    let isSettled = false;
+    void parsing.then(() => {
+      isSettled = true;
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(isSettled).toBe(false);
+
+    release();
+    const result = await parsing;
+
+    expect(handled).toEqual(["a.csv"]);
+    expect(result.isFailure()).toBe(true);
+    if (result.isFailure()) {
+      expect(result.error.code).toBe("UPLOAD_PARSE_FAILED");
+    }
+  });
 });
