@@ -79,7 +79,7 @@ Reactive surface (all subscribe APIs return an unsubscribe fn):
 - `subscribeSettled(cb: (items: ReadonlyArray<{ id, status }>) => void)` — batched. A burst of PUBACKs inside one JS turn collapses to a single dispatch via an internal `@tanstack/pacer` `Batcher` (`wait: 0`). The event carries the terminal status, so downstream consumers don't re-read the DB.
 - `getSnapshot(): { isUploading, count }` + `subscribeSnapshot(cb)` — for toolbars / tab badges.
 
-Pattern reference: transactional Outbox (Chris Richardson). The `_client_id` field embedded in the wire payload is the dedup key — an AWS IoT Rule deduplicates re-publishes after a crash between PUBACK and `markAsSuccessful`.
+Pattern reference: transactional Outbox (Chris Richardson). The `_client_id` field embedded in the wire payload is meant as the dedup key for a re-publish after a crash between PUBACK and `markAsSuccessful`, but nothing deduplicates on it yet: the IoT rule is a plain select and bronze drops the field, so such a re-publish lands as a second row.
 
 ### Measurement list cache
 
