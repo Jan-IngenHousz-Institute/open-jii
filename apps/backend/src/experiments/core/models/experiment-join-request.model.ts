@@ -12,7 +12,7 @@ export const experimentJoinRequestSchema = createSelectSchema(experimentJoinRequ
   })
   .extend({
     user: z.object({
-      id: z.string().uuid(),
+      id: z.string().guid(),
       firstName: z.string(),
       lastName: z.string(),
       email: z.string().nullable(),

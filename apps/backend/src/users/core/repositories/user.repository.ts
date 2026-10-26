@@ -182,7 +182,7 @@ export class UserRepository {
     return tryCatch(async () => {
       // users.id is a uuid column; a non-uuid id would raise a Postgres cast
       // error and fail the whole batch, so drop malformed ids here.
-      const validIds = userIds.filter((id) => z.string().uuid().safeParse(id).success);
+      const validIds = userIds.filter((id) => z.string().guid().safeParse(id).success);
       if (validIds.length === 0) {
         return [];
       }

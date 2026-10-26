@@ -169,7 +169,7 @@ export class GetExperimentTablesUseCase {
       return new Map();
     }
 
-    const isUuid = z.string().uuid();
+    const isUuid = z.string().guid();
     const macroIds = macroMetadata
       .map((m) => m.identifier)
       .filter((id) => isUuid.safeParse(id).success);

@@ -109,7 +109,7 @@ export const zExperimentUploadTableName = z
 
 export const zExperimentUploadTargetTable = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("new"), name: zExperimentUploadTableName }),
-  z.object({ kind: z.literal("existing"), uploadTableId: z.string().uuid() }),
+  z.object({ kind: z.literal("existing"), uploadTableId: z.string().guid() }),
 ]);
 export type ExperimentUploadTargetTable = z.infer<typeof zExperimentUploadTargetTable>;
 
@@ -126,8 +126,10 @@ export const zExperimentUploadFormFields = z.discriminatedUnion("targetKind", [
     targetKind: z.literal("existing"),
     sourceKind: zExperimentUploadSourceKind,
     uploadTableId: z
-      .string({ required_error: "Select a table to append to" })
-      .uuid("Select a table to append to"),
+      .string({
+        error: (issue) => (issue.input === undefined ? "Select a table to append to" : undefined),
+      })
+      .guid("Select a table to append to"),
   }),
 ]);
 export type ExperimentUploadFormFields = z.infer<typeof zExperimentUploadFormFields>;
@@ -306,7 +308,7 @@ export const zExperimentUploadMetadata = z.object({
 });
 
 export const zExperimentListUploadsQuery = z.object({
-  uploadTableId: z.string().uuid().optional(),
+  uploadTableId: z.string().guid().optional(),
   uploadTableName: zExperimentUploadTableName.optional(),
 });
 

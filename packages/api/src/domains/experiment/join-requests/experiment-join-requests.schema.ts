@@ -8,10 +8,10 @@ export const zExperimentJoinRequestStatus = z.enum([
 ]);
 
 export const zExperimentJoinRequest = z.object({
-  id: z.string().uuid(),
-  experimentId: z.string().uuid(),
+  id: z.string().guid(),
+  experimentId: z.string().guid(),
   user: z.object({
-    id: z.string().uuid(),
+    id: z.string().guid(),
     firstName: z.string(),
     lastName: z.string(),
     // Stored value returned as-is; format-validating on output can 500 the list.
@@ -20,7 +20,7 @@ export const zExperimentJoinRequest = z.object({
   }),
   message: z.string().nullable(),
   status: zExperimentJoinRequestStatus,
-  decidedBy: z.string().uuid().nullable(),
+  decidedBy: z.string().guid().nullable(),
   decidedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -37,8 +37,8 @@ export const zExperimentCreateJoinRequestBody = z.object({
 });
 
 export const zExperimentJoinRequestPathParam = z.object({
-  id: z.string().uuid().describe("ID of the experiment"),
-  requestId: z.string().uuid().describe("ID of the join request"),
+  id: z.string().guid().describe("ID of the experiment"),
+  requestId: z.string().guid().describe("ID of the join request"),
 });
 
 export type ExperimentJoinRequestStatus = z.infer<typeof zExperimentJoinRequestStatus>;

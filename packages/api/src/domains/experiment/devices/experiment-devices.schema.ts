@@ -17,7 +17,7 @@ export const zExperimentDeviceIdentity = zIotDevice
   .extend({ boundExperimentCount: z.number().int().nonnegative() });
 
 export const zExperimentDeviceBinding = z.object({
-  addedBy: z.string().uuid(),
+  addedBy: z.string().guid(),
   addedAt: z.string().datetime(),
 });
 
@@ -67,8 +67,8 @@ export const zExperimentDevicesOverview = z.object({
 });
 
 export const zExperimentDevicePathParam = z.object({
-  id: z.string().uuid().describe("ID of the experiment"),
-  deviceId: z.string().uuid().describe("ID of the device"),
+  id: z.string().guid().describe("ID of the experiment"),
+  deviceId: z.string().guid().describe("ID of the device"),
 });
 
 /**
@@ -79,7 +79,7 @@ export const zExperimentDevicePathParam = z.object({
  */
 export const zExperimentDeviceSeriesQuery = z
   .object({
-    id: z.string().uuid().describe("ID of the experiment"),
+    id: z.string().guid().describe("ID of the experiment"),
     clientId: z.string().min(1).describe("Broker client id of the publishing device"),
     from: z.string().datetime(),
     to: z.string().datetime(),

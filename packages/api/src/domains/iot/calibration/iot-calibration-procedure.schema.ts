@@ -45,7 +45,7 @@ const KEYED_SETPOINT_PLACEHOLDER = /\{value\.[a-zA-Z0-9_]+\}/;
 const zSetpointValue = z.union([
   z.number().finite(),
   z.string().min(1).max(64),
-  z.record(z.union([z.number().finite(), z.string().min(1).max(64)])),
+  z.record(z.string(), z.union([z.number().finite(), z.string().min(1).max(64)])),
 ]);
 
 // Instruments take numbers; labels and compound setpoints are for the operator.
@@ -67,7 +67,7 @@ const zOperatorStimulus = z
 export const zStimulus = z.union([zInstrumentStimulus, zOperatorStimulus]);
 
 // Sent to the device whole; checked here only by name against the procedure's declarations.
-const zMeasurementProtocol = z.record(z.unknown());
+const zMeasurementProtocol = z.record(z.string(), z.unknown());
 const MAX_PROTOCOLS = 16;
 // Definitions are read on every bench session, so the map is bounded like the
 // script (1 MB) and the device info records (16 KB) are.
