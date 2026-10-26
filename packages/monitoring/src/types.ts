@@ -15,8 +15,10 @@ export type MetricArea =
   | "ingest"
   | "lakehouse"
   | "sandboxes"
+  | "adoption"
   | "usage"
   | "platform"
+  | "cost"
   | "errors";
 
 /** Where a signal is read from. Absent means CloudWatch. */
