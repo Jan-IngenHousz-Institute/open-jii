@@ -3,7 +3,10 @@ import { ANONYMOUS_PRINCIPAL } from "@/hooks/principal-query-key";
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 
-import type { OrganizationSort } from "@repo/api/domains/organization/organization.schema";
+import type {
+  OrganizationSort,
+  OrganizationType,
+} from "@repo/api/domains/organization/organization.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 
 import { organizationsListQuery } from "./organizations-list-query";
@@ -17,7 +20,12 @@ import { organizationsListQuery } from "./organizations-list-query";
  * Unpaged: the endpoint returns every match.
  */
 export const useOrganizations = (
-  params: { search?: string; scope?: ResourceScope; sort?: OrganizationSort } = {},
+  params: {
+    search?: string;
+    scope?: ResourceScope;
+    sort?: OrganizationSort;
+    types?: OrganizationType[];
+  } = {},
   options?: { enabled?: boolean },
 ) => {
   const { userId, isPending: isSessionPending } = usePrincipal();

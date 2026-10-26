@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { zListSort, zResourceScope } from "../../shared/listing";
+import { zListFilter, zListSort, zResourceScope } from "../../shared/listing";
 import { zExperimentStatus } from "../experiment/experiment.schema";
 import { zDeviceType } from "../iot/iot.schema";
 import { zMacroLanguage } from "../macro/macro.schema";
@@ -43,7 +43,7 @@ export const zOrganizationRole = z.enum(["owner", "admin", "member"]);
  */
 export const zOrganizationMembershipStatus = z.enum(["none", "pending_request", "member"]);
 
-export const zOrganizationSort = zListSort(z.enum(["name", "members", "resources"]));
+export const zOrganizationSort = zListSort(z.enum(["name", "type", "members", "resources"]));
 export type OrganizationSort = z.infer<typeof zOrganizationSort>;
 
 export const zOrganizationIdPathParam = z.object({
@@ -66,6 +66,11 @@ export const zOrganizationDirectoryQuery = z.object({
    */
   scope: zResourceScope.optional().describe("Which slice of the visible set to return"),
   sort: zOrganizationSort.optional().describe("Up to two ordered sort criteria"),
+  type: zListFilter(zOrganizationType)
+    .optional()
+    .describe(
+      "Filter organizations by type; several values match either. Untyped organizations match no type",
+    ),
 });
 
 /**

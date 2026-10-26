@@ -517,6 +517,7 @@
     "searchPlaceholder": "Organisaties zoeken…",
     "searchLabel": "Organisaties doorzoeken",
     "noMatches": "Geen organisatie past bij je zoekopdracht",
+    "noFilterMatches": "Geen organisatie komt overeen met deze filters",
     "tabs": {
       "members": "Leden",
       "teams": "Teams",

@@ -28,7 +28,13 @@ import {
   SEED_EXPERIMENT_IDS,
   CONTRIBUTOR_SEEDS,
 } from "./constants";
+import { FIXTURE_ORG_SLUGS } from "./organization.seed";
 
+/**
+ * Delete seed users, contributor users, their personal organizations, directory
+ * fixtures, and the resource data selected by the seed identifiers and naming patterns.
+ * Database errors propagate; completed deletions are not rolled back on failure.
+ */
 export async function clearSeedData() {
   // User + profile (seed user)
   const seedUsers = await db
@@ -146,6 +152,8 @@ export async function clearSeedData() {
   if (seedOrganizationIds.length > 0) {
     await db.delete(organizations).where(inArray(organizations.id, seedOrganizationIds));
   }
+  // The directory fixtures are owned by contributors, so they go before those users do.
+  await db.delete(organizations).where(inArray(organizations.slug, FIXTURE_ORG_SLUGS));
 
   if (seedUsers.length > 0) {
     const accountIds = seedUsers.map((user) => user.id);
