@@ -115,7 +115,7 @@ export type ExperimentUploadTargetTable = z.infer<typeof zExperimentUploadTarget
 
 // Lets a client follow its upload before the response arrives; the backend makes one up when absent.
 // Lowercased because Postgres stores a uuid that way and the upload job echoes back what it was sent.
-const zExperimentUploadClientId = z.string().uuid().toLowerCase().optional();
+const zExperimentUploadClientId = z.string().guid().toLowerCase().optional();
 
 // Form fields shared across the multipart upload boundary. The FE binds this
 // schema to react-hook-form via zodResolver; the BE validates the same shape
@@ -276,7 +276,7 @@ export const UPLOAD_FILENAME_SCHEMAS = {
 export const zExperimentUploadDataBody = z.any();
 
 export const zExperimentUploadDataResponse = z.object({
-  uploadId: z.string().uuid().describe("UUID of this upload"),
+  uploadId: z.string().guid().describe("UUID of this upload"),
   uploadTableId: z
     .string()
     .optional()
@@ -318,9 +318,9 @@ export const zExperimentUploadRejectedFile = z.object({
 });
 
 export const zExperimentUploadRecord = z.object({
-  uploadId: z.string().uuid(),
-  experimentId: z.string().uuid(),
-  uploadTableId: z.string().uuid().nullable(),
+  uploadId: z.string().guid(),
+  experimentId: z.string().guid(),
+  uploadTableId: z.string().guid().nullable(),
   uploadTableName: z.string().nullable(),
   sourceKind: zExperimentUploadSourceKind,
   status: zExperimentUploadStatus,
@@ -328,7 +328,7 @@ export const zExperimentUploadRecord = z.object({
   rowCount: z.number().int().nullable(),
   rejectedFiles: z.array(zExperimentUploadRejectedFile),
   errorCode: zExperimentUploadErrorCode.nullable(),
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
   createdAt: z.string().datetime(),
   completedAt: z.string().datetime().nullable(),
 });

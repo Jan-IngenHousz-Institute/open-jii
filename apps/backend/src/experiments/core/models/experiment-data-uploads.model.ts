@@ -38,7 +38,7 @@ export type ExperimentUploadDto = z.infer<typeof experimentUploadSchema>;
  * researcher's bad file neither retries the job nor alerts the team.
  */
 export const uploadOutcomeSchema = z.object({
-  uploadId: z.string().uuid(),
+  uploadId: z.string().guid(),
   outcome: z.enum(["completed", "failed"]),
   rowCount: z.number().int().nonnegative(),
   rejectedFiles: z.array(zExperimentUploadRejectedFile),
