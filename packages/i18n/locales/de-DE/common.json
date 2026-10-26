@@ -986,6 +986,7 @@
     "emailPlaceholder": "Geben Sie Ihre E-Mail ein...",
     "createAccount": "Konto erstellen",
     "errorMessage": "Beim Anmelden ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+    "emailSendError": "Ihr Anmeldecode konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
     "account": "Konto",
     "userMenu": "Benutzermenü",
     "signingOut": "Abmelden...",

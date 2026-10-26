@@ -333,13 +333,31 @@ describe("client and recipient limits through the configured auth handler", () =
     expect(deliver).toHaveBeenCalledTimes(5);
   });
 
-  it("fails closed when quota persistence fails and does not generate a code", async () => {
+  it("fails closed when recipient-quota persistence fails and does not generate a code", async () => {
+    const before = await db.select().from(verifications);
+    const realInsert = db.insert.bind(db) as typeof db.insert;
+    vi.spyOn(db, "insert")
+      .mockImplementationOnce(realInsert)
+      .mockImplementationOnce(() => {
+        throw new Error("quota storage unavailable");
+      });
+    expect((await send(email(), "198.51.100.1")).status).toBe(500);
+    expect(await db.select().from(verifications)).toEqual(before);
+    expect((await db.select().from(authRateLimitCounters)).map((row) => row.route)).toEqual([
+      sendPath,
+    ]);
+  });
+
+  it("fails closed when address-limit persistence fails and does not generate a code", async () => {
     const before = await db.select().from(verifications);
     vi.spyOn(db, "insert").mockImplementationOnce(() => {
-      throw new Error("quota storage unavailable");
+      throw new Error("address limit storage unavailable");
     });
-    await expect(send(email(), "198.51.100.1")).rejects.toThrow("quota storage unavailable");
+    await expect(send(email(), "198.51.100.1")).rejects.toThrow(
+      "address limit storage unavailable",
+    );
     expect(await db.select().from(verifications)).toEqual(before);
+    expect(await db.select().from(authRateLimitCounters)).toEqual([]);
   });
 
   it("does not consume a recipient quota for invalid recipients or disabled email-change sends", async () => {
@@ -376,11 +394,80 @@ describe("client and recipient limits through the configured auth handler", () =
       );
       expect(results.filter((result) => result.allowed)).toHaveLength(5);
       expect((await db.select().from(authRateLimitCounters))[0].count).toBe(5);
-      const expired = await consumeRateLimitCounter(db, {
+      const expired = await consumeRateLimitCounter(other.database, {
         ...input,
         now: new Date(input.now.getTime() + 900_001),
       });
       expect(expired.allowed).toBe(true);
+    } finally {
+      await other.close();
+    }
+  });
+
+  it("shares one cleanup per minute while expired counters can be reused immediately", async () => {
+    const other = createSecondaryDatabase();
+    const now = new Date();
+    const input = { key: "reused", route: "otp:send", now, window: 1, max: 1, sliding: false };
+    try {
+      const cleanup = vi.spyOn(other.database, "delete");
+      expect((await consumeRateLimitCounter(other.database, input)).allowed).toBe(true);
+      await other.database.insert(authRateLimitCounters).values({
+        key: "expired-unused",
+        route: "otp:send",
+        count: 1,
+        lastRequest: now.getTime() - 2000,
+        expiresAt: new Date(now.getTime() - 1000),
+      });
+      const results = await Promise.all(
+        ["reused", "second", "third"].map((key) =>
+          consumeRateLimitCounter(other.database, {
+            ...input,
+            key,
+            now: new Date(now.getTime() + 2000),
+          }),
+        ),
+      );
+      expect(results.every((result) => result.allowed)).toBe(true);
+      expect(cleanup).toHaveBeenCalledTimes(1);
+      expect(
+        await other.database
+          .select()
+          .from(authRateLimitCounters)
+          .where(eq(authRateLimitCounters.key, "expired-unused")),
+      ).toHaveLength(1);
+      await consumeRateLimitCounter(other.database, {
+        ...input,
+        key: "after-interval",
+        now: new Date(now.getTime() + 60_000),
+      });
+      expect(cleanup).toHaveBeenCalledTimes(2);
+      expect(
+        (await other.database.select().from(authRateLimitCounters)).map((row) => row.key),
+      ).toEqual(["after-interval"]);
+    } finally {
+      await other.close();
+    }
+  });
+
+  it("retries cleanup after a storage failure instead of suppressing it for a minute", async () => {
+    const other = createSecondaryDatabase();
+    const input = {
+      key: "cleanup-retry",
+      route: "otp:send",
+      now: new Date(),
+      window: 900,
+      max: 5,
+      sliding: false,
+    };
+    try {
+      const cleanup = vi.spyOn(other.database, "delete").mockImplementationOnce(() => {
+        throw new Error("cleanup unavailable");
+      });
+      await expect(consumeRateLimitCounter(other.database, input)).rejects.toThrow(
+        "cleanup unavailable",
+      );
+      expect((await consumeRateLimitCounter(other.database, input)).allowed).toBe(true);
+      expect(cleanup).toHaveBeenCalledTimes(2);
     } finally {
       await other.close();
     }

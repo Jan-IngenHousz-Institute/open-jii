@@ -3,6 +3,9 @@ import type { DbOrTx } from "@repo/database";
 
 type Counter = typeof authRateLimitCounters.$inferInsert;
 
+const CLEANUP_INTERVAL_MS = 60_000;
+const cleanupAfter = new WeakMap<DbOrTx, number>();
+
 interface Consumption {
   key: string;
   route: string;
@@ -50,7 +53,15 @@ export async function consumeRateLimitCounter(database: DbOrTx, input: Consumpti
   const { key, route, now, window, max, sliding } = input;
   const expiry = new Date(now.getTime() + window * 1000);
   const table = authRateLimitCounters;
-  await deleteExpiredRateLimitCounters(database, { now });
+  if (now.getTime() >= (cleanupAfter.get(database) ?? 0)) {
+    cleanupAfter.set(database, now.getTime() + CLEANUP_INTERVAL_MS);
+    try {
+      await deleteExpiredRateLimitCounters(database, { now });
+    } catch (error) {
+      cleanupAfter.delete(database);
+      throw error;
+    }
+  }
   for (let attempt = 0; attempt < 3; attempt++) {
     const accepted = await database
       .insert(table)

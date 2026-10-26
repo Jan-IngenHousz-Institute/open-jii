@@ -986,6 +986,7 @@
     "emailPlaceholder": "m@voorbeeld.com",
     "createAccount": "Account aanmaken",
     "errorMessage": "Er is een fout opgetreden bij het inloggen. Probeer het opnieuw.",
+    "emailSendError": "We konden je inlogcode niet versturen. Probeer het opnieuw.",
     "account": "Account",
     "userMenu": "Gebruikersmenu",
     "signingOut": "Uitloggen...",

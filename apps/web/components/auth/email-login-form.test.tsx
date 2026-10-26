@@ -1,7 +1,12 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { I18nextProvider, useTranslation } from "react-i18next";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { authClient, cancelPasskeyCeremony } from "@repo/auth/client";
+import * as translations from "@repo/i18n";
+import german from "@repo/i18n/locales/de-DE/common.json";
+import english from "@repo/i18n/locales/en-US/common.json";
+import dutch from "@repo/i18n/locales/nl-NL/common.json";
 
 import { EmailLoginForm } from "./email-login-form";
 
@@ -275,6 +280,47 @@ describe("EmailLoginForm", () => {
     await waitFor(() => expect(screen.getByText("auth.emailSendError")).toBeInTheDocument());
     expect(screen.queryByText("Email failed")).not.toBeInTheDocument();
     expect(screen.queryByText("auth.checkEmail")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["en-US", english],
+    ["nl-NL", dutch],
+    ["de-DE", german],
+  ] as const)("renders send failures with the actual %s translations", async (locale, common) => {
+    const { createInstance } = await vi.importActual<typeof translations>("@repo/i18n");
+    const i18n = createInstance();
+    await i18n.init({
+      lng: locale,
+      defaultNS: "common",
+      resources: { [locale]: { common } },
+      interpolation: { escapeValue: false },
+    });
+    const translation = vi
+      .spyOn(translations, "useTranslation")
+      .mockImplementation((ns = "common", options = {}) => useTranslation(ns, options));
+    try {
+      vi.mocked(authClient.emailOtp.sendVerificationOtp).mockResolvedValue({
+        error: { message: "Private server diagnostic" },
+        data: null,
+      });
+      const user = userEvent.setup();
+      const labels = i18n.getFixedT(locale, "common");
+      render(
+        <I18nextProvider i18n={i18n}>
+          <EmailLoginForm {...defaultProps} locale={locale} />
+        </I18nextProvider>,
+      );
+      await user.type(
+        screen.getByPlaceholderText(labels("auth.emailPlaceholder")),
+        "test@example.com",
+      );
+      await user.click(screen.getByText(labels("auth.continueWithEmail")));
+      await waitFor(() => expect(screen.getByText(common.auth.emailSendError)).toBeInTheDocument());
+      expect(screen.queryByText("auth.emailSendError")).not.toBeInTheDocument();
+      expect(screen.queryByText("Private server diagnostic")).not.toBeInTheDocument();
+    } finally {
+      translation.mockRestore();
+    }
   });
 
   it("surfaces a field error when the email request throws", async () => {

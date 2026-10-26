@@ -67,7 +67,10 @@ session IPs on creation and renewal. Secret rotation creates a new counter
 namespace and resets active allowances. The old `rate_limits` table remains for
 migration compatibility but Better Auth no longer writes it.
 
-Expired counters are removed during consumption. A scheduled caller can also use
+Consumption removes expired counters at most once per minute per database handle
+in each process. Concurrent requests share that cleanup interval. A failed cleanup
+fails the triggering request and can be retried by the next request. Expired counters stop limiting requests
+immediately, even before cleanup removes them. A scheduled caller can also use
 `deleteExpiredRateLimitCounters(database, { now, route })` from
 `@repo/auth/rate-limit/rate-limit.repository`; omit `route` to delete all expired
 counters. Idle deployments retain expired rows until a cleanup runs. This is not

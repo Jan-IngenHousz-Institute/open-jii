@@ -201,6 +201,48 @@ describe.each([
   ["en-US", "Too many attempts. Try again in 15 minutes."],
   ["nl-NL", "Te veel pogingen. Probeer het over 15 minuten opnieuw."],
 ])("recipient quota guidance in %s", (locale, message) => {
+  it("retries the same code after a refused verification without resending or looping", async () => {
+    vi.useFakeTimers();
+    try {
+      await translations.changeLanguage(locale);
+      const labels = translations.getFixedT(locale, "auth");
+      probe.mockResolvedValue(true);
+      sendEmailOTP.mockResolvedValue({ data: { success: true }, error: null });
+      verifyEmailOTP
+        .mockResolvedValueOnce({
+          data: null,
+          error: { status: 429, retryAfterSeconds: 900 },
+        })
+        .mockResolvedValueOnce({ data: { success: true }, error: null });
+      renderLogin();
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      fireEvent.changeText(
+        screen.getByPlaceholderText(labels("emailPlaceholder")),
+        "retry@example.test",
+      );
+      fireEvent.press(screen.getByText(labels("continueWithEmail")));
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      await act(() =>
+        Promise.resolve(screen.UNSAFE_getByType(OTPInput).props.onChangeText("123456")),
+      );
+      expect(screen.getByText(message)).toBeTruthy();
+      await act(() => vi.advanceTimersByTimeAsync(1000));
+      expect(verifyEmailOTP).toHaveBeenCalledTimes(1);
+      await act(() =>
+        Promise.resolve(screen.UNSAFE_getByType(OTPInput).props.onChangeText("12345")),
+      );
+      await act(() =>
+        Promise.resolve(screen.UNSAFE_getByType(OTPInput).props.onChangeText("123456")),
+      );
+      expect(verifyEmailOTP).toHaveBeenCalledTimes(2);
+      expect(verifyEmailOTP).toHaveBeenLastCalledWith("retry@example.test", "123456");
+      expect(sendEmailOTP).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText(message)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it.each([429, 400])(
     "keeps a delivered code usable when its resend is refused (%s)",
     async (status) => {

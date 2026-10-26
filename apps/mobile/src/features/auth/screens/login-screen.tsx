@@ -168,6 +168,10 @@ export default function LoginScreen() {
   }, [countdown]);
 
   useEffect(() => {
+    if (otp.length < 6) setLastSubmittedOtp(null);
+  }, [otp]);
+
+  useEffect(() => {
     if (otp.length === 6 && !verifyLoading && online && otp !== lastSubmittedOtp) {
       setLastSubmittedOtp(otp);
       void handleOTPVerify(otp);

@@ -986,6 +986,7 @@
     "emailPlaceholder": "Enter your email...",
     "createAccount": "Create an account",
     "errorMessage": "An error occurred during sign in. Please try again.",
+    "emailSendError": "We couldn't send your sign-in code. Please try again.",
     "account": "Account",
     "userMenu": "User menu",
     "signingOut": "Signing out...",
