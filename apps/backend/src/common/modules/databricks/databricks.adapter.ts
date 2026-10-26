@@ -56,6 +56,7 @@ import type {
   AggregationSpec,
   FilterCondition,
   QueryParams,
+  QueryOrdering,
 } from "./services/query-builder/query-builder.types";
 import { cellNumber, cellString, cellUtcIso } from "./services/sql/cell-values";
 import { DatabricksSqlService } from "./services/sql/sql.service";
@@ -275,8 +276,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         ["experiment_id", experimentId],
         ["table_name", tableName],
       ],
-      orderBy: "created_at",
-      orderDirection: "DESC",
+      ordering: { column: "created_at", direction: "DESC" },
     });
     if (queryResult.isFailure()) {
       return queryResult;
@@ -392,8 +392,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     const queryResult = this.queryBuilder.buildQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_upload_metadata`,
       whereConditions,
-      orderBy: "created_at",
-      orderDirection: "DESC",
+      ordering: { column: "created_at", direction: "DESC" },
     });
     if (queryResult.isFailure()) {
       return queryResult;
@@ -468,8 +467,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "client_id" }],
         functions: [{ column: "*", function: "count", alias: "measurement_count" }],
       },
-      orderBy: bucketAlias,
-      orderDirection: "ASC",
+      ordering: { column: bucketAlias, direction: "ASC" },
       limit,
     });
     if (result.isFailure()) {
@@ -508,8 +506,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "experiment_id" }],
         functions: [{ column: "*", function: "count", alias: "measurement_count" }],
       },
-      orderBy: bucketAlias,
-      orderDirection: "ASC",
+      ordering: { column: bucketAlias, direction: "ASC" },
       limit,
     });
     if (result.isFailure()) {
@@ -547,8 +544,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         functions: [{ column: "timestamp", function: "max", alias: "last_seen" }],
       },
       // Newest sightings first, so a hit ceiling can only shed stale rows.
-      orderBy: "last_seen",
-      orderDirection: "DESC",
+      ordering: { column: "last_seen", direction: "DESC" },
       limit,
     });
     if (result.isFailure()) {
@@ -586,8 +582,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         { column: "client_id", operator: "in", value: thingNames },
         { column: "event_timestamp", operator: "between", value: [from, to] },
       ],
-      orderBy: "event_timestamp",
-      orderDirection: "DESC",
+      ordering: { column: "event_timestamp", direction: "DESC" },
       limit,
     });
     if (result.isFailure()) {
@@ -625,8 +620,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         "processed_timestamp",
       ],
       whereConditions: [["experiment_id", experimentId]],
-      orderBy: "processed_timestamp",
-      orderDirection: "DESC",
+      ordering: { column: "processed_timestamp", direction: "DESC" },
       limit,
     });
     if (result.isFailure()) {
@@ -669,8 +663,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
           { column: "timestamp", function: "max", alias: "last_data_at" },
         ],
       },
-      orderBy: "last_data_at",
-      orderDirection: "DESC",
+      ordering: { column: "last_data_at", direction: "DESC" },
       limit,
     });
     if (result.isFailure()) {
@@ -699,8 +692,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       columns: ["event_type", "event_timestamp", "disconnect_reason", "session_identifier"],
       whereConditions: [["client_id", thingName]],
       filters: [{ column: "event_timestamp", operator: "between", value: [from, to] }],
-      orderBy: "event_timestamp",
-      orderDirection: "ASC",
+      ordering: { column: "event_timestamp", direction: "ASC" },
       limit,
     });
     if (result.isFailure()) {
@@ -738,8 +730,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         groupBy: [{ column: "timestamp", timeBucket: bucket }],
         functions: [{ column: "*", function: "count", alias: "measurement_count" }],
       },
-      orderBy: bucketAlias,
-      orderDirection: "ASC",
+      ordering: { column: bucketAlias, direction: "ASC" },
     });
     if (result.isFailure()) {
       return failure(result.error);
@@ -770,8 +761,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "experiment_id" }],
         functions: [{ column: "*", function: "count", alias: "measurement_count" }],
       },
-      orderBy: bucketAlias,
-      orderDirection: "ASC",
+      ordering: { column: bucketAlias, direction: "ASC" },
     });
     if (result.isFailure()) {
       return failure(result.error);
@@ -803,8 +793,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         groupBy: [{ column: "timestamp", timeBucket: bucket }],
         functions: [{ column: "device_battery", function: "avg", alias: "average_battery" }],
       },
-      orderBy: bucketAlias,
-      orderDirection: "ASC",
+      ordering: { column: bucketAlias, direction: "ASC" },
     });
     if (result.isFailure()) {
       return failure(result.error);
@@ -921,8 +910,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
           { column: "*", function: "count", alias: "row_count" },
         ],
       },
-      orderBy: "first_seen",
-      orderDirection: "ASC",
+      ordering: { column: "first_seen", direction: "ASC" },
     });
     if (result.isFailure()) {
       return failure(result.error);
@@ -961,8 +949,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       ],
       whereConditions: [["client_id", thingName]],
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
-      orderBy: "timestamp",
-      orderDirection: "DESC",
+      ordering: { column: "timestamp", direction: "DESC" },
       limit,
     });
     if (result.isFailure()) {
@@ -1247,9 +1234,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     filters?: FilterCondition[];
     aggregation?: AggregationSpec;
     distinct?: boolean;
-    orderBy?: string;
-    orderDirection?: "ASC" | "DESC";
-    orderByContributorPseudonymSalt?: string;
+    ordering?: QueryOrdering;
     limit?: number;
     offset?: number;
   }): Result<string> {
@@ -1335,8 +1320,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
   private async readMetricsTable(
     tableName: string,
     options: {
-      orderBy?: string;
-      orderDirection?: "ASC" | "DESC";
+      ordering?: QueryOrdering;
       limit?: number;
       filters?: FilterCondition[];
       aggregation?: AggregationSpec;
@@ -1395,8 +1379,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
 
   async getPublicDailyActivity(days: number): Promise<Result<DailyActivityRow[]>> {
     const result = await this.readMetricsTable("daily_activity", {
-      orderBy: "date",
-      orderDirection: "DESC",
+      ordering: { column: "date", direction: "DESC" },
       limit: days,
     });
     if (result.isFailure()) {
@@ -1425,8 +1408,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
 
   async getPublicFamilyTotals(): Promise<Result<FamilyTotalsRow[]>> {
     const result = await this.readMetricsTable("family_totals", {
-      orderBy: "total_measurements",
-      orderDirection: "DESC",
+      ordering: { column: "total_measurements", direction: "DESC" },
     });
     if (result.isFailure()) {
       return result;
@@ -1482,8 +1464,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
 
   async getHourlyActivity(): Promise<Result<HourlyActivityRow[]>> {
     const result = await this.readMetricsTable("hourly_activity", {
-      orderBy: "hour_local",
-      orderDirection: "ASC",
+      ordering: { column: "hour_local", direction: "ASC" },
     });
     if (result.isFailure()) {
       return result;
@@ -1511,8 +1492,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
   async getTopParameter(category: ParameterCategory): Promise<Result<ParameterStatsRow | null>> {
     const result = await this.readMetricsTable("parameter_stats", {
       filters: [{ column: "category", operator: "equals", value: category }],
-      orderBy: "observations",
-      orderDirection: "DESC",
+      ordering: { column: "observations", direction: "DESC" },
       limit: 1,
     });
     if (result.isFailure()) {
@@ -1567,8 +1547,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
 
     const result = await this.readMetricsTable("daily_activity_by_experiment", {
       filters: [{ column: "date", operator: "between", value: [asDate(from), asDate(to)] }],
-      orderBy: "date",
-      orderDirection: "ASC",
+      ordering: { column: "date", direction: "ASC" },
     });
     if (result.isFailure()) {
       return result;
@@ -1603,8 +1582,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         { column: "resource_type", operator: "equals", value: resourceType },
         { column: "date", operator: "between", value: [asDate(from), asDate(to)] },
       ],
-      orderBy: "date",
-      orderDirection: "ASC",
+      ordering: { column: "date", direction: "ASC" },
     });
     if (result.isFailure()) {
       return result;

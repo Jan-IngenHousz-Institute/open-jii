@@ -151,7 +151,7 @@ describe("wrapWithAggregation", () => {
       aggregation: {
         functions: [{ column: "value", function: "cumsum" }],
       },
-      orderBy: "ts",
+      ordering: { column: "ts" },
     });
     // No groupBy, no row aggregates: keep every base column so non-
     // aggregated series can still find their values, append the cumsum.
@@ -187,8 +187,7 @@ describe("wrapWithAggregation", () => {
         groupBy: [{ column: "device" }],
         functions: [{ column: "value", function: "avg" }],
       },
-      orderBy: "value_avg",
-      orderDirection: "DESC",
+      ordering: { column: "value_avg", direction: "DESC" },
       limit: 5,
       offset: 10,
     });
@@ -203,14 +202,30 @@ describe("wrapWithAggregation", () => {
         groupBy: [{ column: "contributor" }],
         functions: [{ column: "value", function: "avg" }],
       },
-      orderBy: "contributor.id",
-      orderByContributorPseudonymSalt: "exp-1",
+      ordering: { column: "contributor.id", mode: { kind: "pseudonym", salt: "exp-1" } },
     });
 
     expect(sql).toContain(
       "ORDER BY concat('Contributor-', upper(substr(sha2(concat('exp-1:', `contributor`.`id`), 256), 1, 6))) ASC",
     );
   });
+
+  it.each([
+    ["a group", { groupBy: [{ column: "answer" }], functions: [] }],
+    ["a window", { functions: [{ column: "value", function: "cumsum" as const }] }],
+  ])(
+    "orders %s by the plain output when numeric string ordering is requested",
+    (_, aggregation) => {
+      const ordering = { column: "answer", direction: "DESC" as const };
+      const sql = wrapWithAggregation("SELECT * FROM t", {
+        aggregation,
+        ordering: { ...ordering, mode: { kind: "numericString", rowId: "id" } },
+      });
+
+      expect(sql).toBe(wrapWithAggregation("SELECT * FROM t", { aggregation, ordering }));
+      expect(sql).toMatch(/ORDER BY `answer` DESC$/);
+    },
+  );
 
   it("throws when called with empty aggregation content", () => {
     expect(() => wrapWithAggregation("SELECT * FROM t", { aggregation: {} })).toThrow(

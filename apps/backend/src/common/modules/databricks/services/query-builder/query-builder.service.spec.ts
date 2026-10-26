@@ -1,6 +1,7 @@
 import type { Result } from "../../../../utils/fp-utils";
 import { SqlQueryBuilder, VariantQueryBuilder } from "./query-builder.base";
 import { QueryBuilderService } from "./query-builder.service";
+import type { QueryParams } from "./query-builder.types";
 
 function unwrap<T>(r: Result<T>): T {
   if (r.isFailure()) throw new Error(`expected success, got: ${r.error.message}`);
@@ -46,8 +47,7 @@ describe("QueryBuilderService", () => {
           table: "open_jii_dev.centrum.experiment_device_data",
           exceptColumns: ["experiment_id", "raw_data"],
           whereConditions: [["experiment_id", "d89a6dce-540c-4ac2-8b8c-516afc2bd525"]],
-          orderBy: "processed_timestamp",
-          orderDirection: "DESC",
+          ordering: { column: "processed_timestamp", direction: "DESC" },
           limit: 10,
           offset: 0,
         }),
@@ -192,8 +192,7 @@ describe("QueryBuilderService", () => {
           columns: ["timestamp", "temperature"],
           whereConditions: [["experiment_id", "exp-1"]],
           filters: [{ column: "temperature", operator: "greater_than", value: 20 }],
-          orderBy: "timestamp",
-          orderDirection: "ASC",
+          ordering: { column: "timestamp", direction: "ASC" },
         }),
       );
 
@@ -234,7 +233,7 @@ describe("QueryBuilderService", () => {
             groupBy: [{ column: "timestamp", timeBucket: "hour" }],
             functions: [{ column: "temperature", function: "avg" }],
           },
-          orderBy: "timestamp_hour",
+          ordering: { column: "timestamp_hour" },
         }),
       );
 
@@ -254,8 +253,7 @@ describe("QueryBuilderService", () => {
             groupBy: [{ column: "contributor" }],
             functions: [{ column: "temperature", function: "avg" }],
           },
-          orderBy: "contributor.id",
-          orderByContributorPseudonymSalt: "exp-1",
+          ordering: { column: "contributor.id", mode: { kind: "pseudonym", salt: "exp-1" } },
         }),
       );
 
@@ -320,7 +318,7 @@ describe("QueryBuilderService", () => {
             // groupBy: omitted entirely; cumsum then operates on raw rows
             functions: [{ column: "amount", function: "cumsum" }],
           },
-          orderBy: "timestamp",
+          ordering: { column: "timestamp" },
         }),
       );
 
@@ -340,7 +338,7 @@ describe("QueryBuilderService", () => {
           aggregation: {
             functions: [{ column: "amount", function: "cumsum" }],
           },
-          orderBy: "timestamp",
+          ordering: { column: "timestamp" },
         }),
       );
 
@@ -511,5 +509,145 @@ describe("QueryBuilderService", () => {
       });
       expect(sql).toBe("SELECT COUNT(*) FROM logs WHERE level = 'ERROR'");
     });
+  });
+});
+
+describe("numeric string ordering", () => {
+  const service = new QueryBuilderService();
+  const params = {
+    table: "measurements",
+    variants: [{ columnName: "questions_data", schema: "OBJECT<answer: STRING>" }],
+    reservedColumns: ["id"],
+    ordering: { column: "answer", mode: { kind: "numericString", rowId: "id" } },
+  } satisfies QueryParams;
+  const extraction = `try_variant_get(\`questions_data\`, '$["answer"]', 'STRING')`;
+  const keys = ["group", "decimal", "value", "row"].map((key) => `\`__numeric_order_${key}\``);
+
+  function parts(sql: string) {
+    const match = /^(SELECT \* EXCEPT \(.*\))\nFROM \(\n([\s\S]*)\n\)\n(ORDER BY[\s\S]*)$/.exec(
+      sql,
+    );
+    if (!match) throw new Error(`expected sort keys computed below the sort, got: ${sql}`);
+    const [, outer, inner, order] = match;
+    return { outer, inner, order };
+  }
+
+  it.each(["ASC", "DESC"] as const)(
+    "sorts by keys computed once per row, keeping value groups fixed %s",
+    (direction) => {
+      const sql = unwrap(
+        service.buildQuery({
+          ...params,
+          ordering: { ...params.ordering, direction },
+          limit: 3,
+          offset: 3,
+        }),
+      );
+      const { outer, inner, order } = parts(sql);
+      expect(outer).toBe(`SELECT * EXCEPT (${keys.join(", ")})`);
+      expect(inner).toContain(`THEN 2 ELSE 1 END AS ${keys[0]}`);
+      expect(inner).toContain(`AS DECIMAL(38, 18)) END AS ${keys[1]}`);
+      expect(inner).toContain(`${extraction} AS ${keys[2]}`);
+      expect(inner).toContain(`\`id\` AS ${keys[3]}`);
+      expect(inner).not.toMatch(/LIMIT|OFFSET|ORDER BY/);
+      expect(order).toBe(
+        `ORDER BY ${keys[0]} ASC, (${keys[1]}) ${direction}, ${keys[2]} ${direction} NULLS LAST, ${keys[3]} ASC\nLIMIT 3\nOFFSET 3`,
+      );
+      expect(sql).not.toMatch(/\b(?:DOUBLE|FLOAT)\b/);
+    },
+  );
+
+  it.each([
+    ["the star projection", {}],
+    ["a projection with the field", { columns: ["id", "answer"] }],
+    ["an id-only read", { columns: ["id"] }],
+    ["a distinct read", { columns: ["answer"], distinct: true }],
+  ])("keeps %s and its filters unchanged inside", (_name, read) => {
+    const filters = [{ column: "answer", operator: "equals" as const, value: "001" }];
+    const unordered = unwrap(
+      service.buildQuery({ ...params, ...read, filters, ordering: undefined }),
+    );
+    const [select, ...rest] = unordered.split("\n");
+    const { inner } = parts(unwrap(service.buildQuery({ ...params, ...read, filters })));
+    const [innerSelect, ...innerRest] = inner.split("\n");
+    expect(innerSelect.startsWith(`${select}, CASE WHEN`)).toBe(true);
+    expect(innerRest).toEqual(rest);
+  });
+
+  it("reads an unprojected field's keys from its extraction", () => {
+    const { inner } = parts(unwrap(service.buildQuery({ ...params, columns: ["id"] })));
+    expect(inner).toMatch(/^SELECT `id`, CASE WHEN/);
+    expect(inner).not.toContain("`answer`");
+    expect(inner).toContain(`${extraction} AS ${keys[2]}`);
+  });
+
+  it("does not add row identity to DISTINCT", () => {
+    const sql = unwrap(service.buildQuery({ ...params, columns: ["answer"], distinct: true }));
+    const { outer, inner, order } = parts(sql);
+    expect(outer).toBe(`SELECT * EXCEPT (${keys.slice(0, 3).join(", ")})`);
+    expect(inner).toMatch(/^SELECT DISTINCT try_variant_get/);
+    expect(sql).not.toContain("`id`");
+    expect(order).toMatch(/ NULLS LAST$/);
+  });
+
+  it.each([
+    ["a question field", { schema: "OBJECT<answer: STRING, __NUMERIC_ORDER_GROUP: STRING>" }, {}],
+    ["a base column", {}, { reservedColumns: ["id", "__Numeric_Order_Row"] }],
+    ["a column the read hides", {}, { exceptColumns: ["__numeric_order_decimal"] }],
+    [
+      "an unprojected column",
+      {},
+      { reservedColumns: ["id", "__numeric_order_value"], columns: ["id"] },
+    ],
+  ])("renames every sort key when one would clash with %s", (_name, variant, read) => {
+    const sql = unwrap(
+      service.buildQuery({
+        ...params,
+        variants: [{ ...params.variants[0], ...variant }],
+        ...read,
+      }),
+    );
+    const { outer } = parts(sql);
+    expect(outer).toBe(
+      `SELECT * EXCEPT (${keys.map((key) => key.replace(/`$/, "_1`")).join(", ")})`,
+    );
+  });
+
+  it("skips every suffix a name already holds", () => {
+    const sql = unwrap(
+      service.buildQuery({
+        ...params,
+        variants: [
+          {
+            columnName: "questions_data",
+            schema: "OBJECT<answer: STRING, __NUMERIC_ORDER_GROUP: STRING>",
+          },
+        ],
+        reservedColumns: ["id", "__numeric_order_value_1"],
+      }),
+    );
+    expect(parts(sql).outer).toBe(
+      `SELECT * EXCEPT (${keys.map((key) => key.replace(/`$/, "_2`")).join(", ")})`,
+    );
+  });
+
+  it("leaves other orderings in one statement", () => {
+    const sql = unwrap(service.buildQuery({ ...params, ordering: { column: "answer" } }));
+    expect(sql).not.toContain("__numeric_order");
+    expect(sql).toMatch(/\nORDER BY `answer` ASC$/);
+  });
+
+  it("excludes numeric classification from aggregation ordering", () => {
+    const aggregation = {
+      groupBy: [{ column: "answer" }],
+      functions: [{ column: "id", function: "count" as const, alias: "n" }],
+    };
+    const withMode = unwrap(service.buildQuery({ ...params, aggregation }));
+    const withoutMode = unwrap(
+      service.buildQuery({ ...params, ordering: { column: "answer" }, aggregation }),
+    );
+    expect(withMode).toBe(withoutMode);
+    expect(withMode).not.toContain("DECIMAL(38, 18)");
+    expect(withMode).not.toContain("__numeric_order");
   });
 });
