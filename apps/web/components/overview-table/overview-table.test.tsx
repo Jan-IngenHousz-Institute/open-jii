@@ -1,9 +1,11 @@
+import type { OrganizationListItem } from "@/hooks/organization/useOrganizationsList/useOrganizationsList";
 import { createExperiment, createMacro, createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import type { OrganizationSort } from "@repo/api/domains/organization/organization.schema";
 import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -238,32 +240,103 @@ describe("experiment overview columns", () => {
 });
 
 describe("organization overview columns", () => {
-  it("keeps the organization name as the primary phone column", () => {
-    render(
+  function organizationRow(overrides: Partial<OrganizationListItem> = {}): OrganizationListItem {
+    return {
+      id: "org-1",
+      name: "JII",
+      description: null,
+      type: "university",
+      memberCount: 4,
+      resourceCount: 7,
+      visibility: "public",
+      isMember: true,
+      ...overrides,
+    };
+  }
+
+  function renderOrganizations(
+    items: OrganizationListItem[],
+    sort: OrganizationSort = [],
+    toggleSort = vi.fn(),
+  ) {
+    return render(
       <OverviewTable
         columns={getOrganizationColumns(t)}
-        items={[
-          {
-            id: "org-1",
-            name: "JII",
-            description: null,
-            memberCount: 4,
-            resourceCount: 7,
-            visibility: "public",
-            isMember: true,
-          },
-        ]}
+        sorting={createOverviewTableSorting(sort, toggleSort, {
+          unsorted: "Unsorted",
+          asc: "Ascending",
+          desc: "Descending",
+          secondary: "Secondary sort",
+        })}
+        items={items}
         getRowKey={(organization) => organization.id}
         getRowHref={(organization) => `/platform/organizations/${organization.id}`}
         emptyMessage="organizations.empty"
       />,
     );
+  }
 
+  it("keeps the organization name as the primary phone column", () => {
+    renderOrganizations([organizationRow()]);
+
+    expectColumnHiddenBelowItsBreakpoint("organizations.fields.type");
+    expect(screen.getByRole("columnheader", { name: "organizations.fields.type" })).toHaveClass(
+      "md:table-cell",
+    );
     expectColumnHiddenBelowItsBreakpoint("organizations.tabs.members");
     expectColumnHiddenBelowItsBreakpoint("organizations.resources.title");
     expect(screen.getByRole("columnheader", { name: "organizations.resources.title" })).toHaveClass(
       "lg:table-cell",
     );
+  });
+
+  it("shows each organization's type and leaves the cell empty without one", () => {
+    renderOrganizations([
+      organizationRow({ id: "typed", name: "Typed Org", type: "university" }),
+      organizationRow({ id: "untyped", name: "Untyped Org", type: null }),
+    ]);
+
+    const typedRow = screen.getByText("Typed Org").closest("tr");
+    const untypedRow = screen.getByText("Untyped Org").closest("tr");
+    expect(typedRow).toHaveTextContent("organizations.types.university");
+    expect(untypedRow).not.toHaveTextContent("organizations.types.");
+  });
+
+  it("sorts by type, and Shift-click adds type as the second sort", async () => {
+    const toggleSort = vi.fn();
+    const user = userEvent.setup();
+    renderOrganizations([organizationRow()], [{ field: "name", direction: "asc" }], toggleSort);
+
+    const typeHeader = screen.getByRole("columnheader", { name: /organizations\.fields\.type/ });
+    const typeButton = within(typeHeader).getByRole("button", {
+      name: "organizations.fields.type: Unsorted",
+    });
+
+    await user.click(typeButton);
+    expect(toggleSort).toHaveBeenLastCalledWith("type", false);
+
+    await user.keyboard("{Shift>}");
+    await user.click(typeButton);
+    await user.keyboard("{/Shift}");
+    expect(toggleSort).toHaveBeenLastCalledWith("type", true);
+  });
+
+  it("marks type as the secondary sort", () => {
+    renderOrganizations(
+      [organizationRow()],
+      [
+        { field: "name", direction: "asc" },
+        { field: "type", direction: "desc" },
+      ],
+    );
+
+    const typeHeader = screen.getByRole("columnheader", { name: /organizations\.fields\.type/ });
+    expect(typeHeader).not.toHaveAttribute("aria-sort");
+    expect(
+      within(typeHeader).getByRole("button", {
+        name: "organizations.fields.type: Descending, Secondary sort",
+      }),
+    ).toBeInTheDocument();
   });
 });
 
