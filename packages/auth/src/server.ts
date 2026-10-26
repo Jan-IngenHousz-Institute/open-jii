@@ -170,8 +170,8 @@ export const auth = betterAuth({
   plugins: [
     jwt({ disableSettingJwtHeader: true }),
     oauthProvider({
-      loginPage: `${clientUrl}/en-US/login`,
-      consentPage: `${clientUrl}/en-US/consent`,
+      loginPage: `${clientUrl}/login`,
+      consentPage: `${clientUrl}/consent`,
       scopes: ["openid", "profile", "email", "offline_access"],
       silenceWarnings: { oauthAuthServerConfig: true },
       grantTypes: ["authorization_code", "refresh_token"],

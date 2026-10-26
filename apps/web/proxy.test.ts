@@ -34,6 +34,61 @@ describe("locale proxy", () => {
     expect(response.headers.get("location")).toBe("https://openjii.org/en-US/about?source=e2e");
   });
 
+  it.each(["login", "consent"])(
+    "preserves the remembered locale and signed query for OIDC %s",
+    async (route) => {
+      const response = await proxy(
+        new NextRequest(`https://openjii.org/${route}?sig=signed&client_id=internal`, {
+          headers: { cookie: "openjii.locale=de-DE" },
+        }),
+      );
+      expect(response.headers.get("location")).toBe(
+        `https://openjii.org/de-DE/${route}?sig=signed&client_id=internal`,
+      );
+    },
+  );
+
+  it.each([undefined, "unsupported", "https://evil.example"])(
+    "defaults OIDC entries safely for locale %s",
+    async (locale) => {
+      const response = await proxy(
+        new NextRequest("https://openjii.org/login?sig=signed", {
+          headers: locale ? { cookie: `openjii.locale=${locale}` } : {},
+        }),
+      );
+      expect(response.headers.get("location")).toBe("https://openjii.org/en-US/login?sig=signed");
+    },
+  );
+
+  it("keeps ordinary unlocalized routes on the default locale despite a remembered preference", async () => {
+    const response = await proxy(
+      new NextRequest("https://openjii.org/about", {
+        headers: { cookie: "openjii.locale=de-DE" },
+      }),
+    );
+    expect(response.headers.get("location")).toBe("https://openjii.org/en-US/about");
+  });
+
+  it("remembers a permitted locale for later API-origin OIDC redirects", async () => {
+    const response = await proxy(new NextRequest("https://openjii.org/de-DE/platform"));
+    expect(response.cookies.get("openjii.locale")?.value).toBe("de-DE");
+    expect(response.headers.get("set-cookie")).toContain("HttpOnly");
+    expect(response.headers.get("set-cookie")).toContain("SameSite=lax");
+  });
+
+  it("does not renew the locale cookie on every request or bypass the locale gate", async () => {
+    const response = await proxy(
+      new NextRequest("https://openjii.org/de-DE/login", {
+        headers: { cookie: "openjii.locale=de-DE" },
+      }),
+    );
+    expect(response.headers.get("set-cookie")).toBeNull();
+    flag.mockResolvedValue(false);
+    const refused = await proxy(new NextRequest("https://openjii.org/de-DE/consent?sig=signed"));
+    expect(refused.headers.get("location")).toBe("https://openjii.org/en-US/consent?sig=signed");
+    expect(refused.headers.get("set-cookie")).toBeNull();
+  });
+
   it("passes a default-locale route's path on without asking PostHog", async () => {
     const response = await proxy(
       new NextRequest("https://openjii.org/en-US/login?callbackUrl=%2Fplatform"),

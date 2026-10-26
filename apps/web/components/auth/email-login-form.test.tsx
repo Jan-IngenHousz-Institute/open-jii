@@ -1,9 +1,11 @@
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { authClient, cancelPasskeyCeremony } from "@repo/auth/client";
 
 import { EmailLoginForm } from "./email-login-form";
+
+const otpFixture = vi.hoisted(() => ({ submission: undefined as Promise<void> | undefined }));
 
 // InputOTP doesn't work well in jsdom, provide a testable shim
 vi.mock("@repo/ui/components/input-otp", async () => {
@@ -21,7 +23,7 @@ vi.mock("@repo/ui/components/input-otp", async () => {
       maxLength: number;
       pattern?: string;
       containerClassName?: string;
-      onComplete?: () => void;
+      onComplete?: () => Promise<void>;
       value?: string;
       onChange?: (v: string) => void;
     }) => (
@@ -31,7 +33,7 @@ vi.mock("@repo/ui/components/input-otp", async () => {
           value={value}
           onChange={(e) => {
             onChange?.(e.target.value);
-            if (e.target.value.length === maxLength) onComplete?.();
+            if (e.target.value.length === maxLength) otpFixture.submission = onComplete?.();
           }}
           maxLength={maxLength}
           data-testid="otp-input"
@@ -75,6 +77,7 @@ async function submitOTP(value = "123456") {
 describe("EmailLoginForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    otpFixture.submission = undefined;
     vi.mocked(authClient.emailOtp.sendVerificationOtp).mockResolvedValue({
       error: null,
       data: null,
@@ -93,7 +96,11 @@ describe("EmailLoginForm", () => {
     const { router } = render(<EmailLoginForm {...defaultProps} />);
     await submitEmail();
     await submitOTP();
-    await waitFor(() => expect(authClient.signIn.emailOtp).toHaveBeenCalled());
+    expect(otpFixture.submission).toBeDefined();
+    await act(async () => {
+      await otpFixture.submission;
+    });
+    expect(authClient.signIn.emailOtp).toHaveBeenCalled();
     expect(router.push).not.toHaveBeenCalled();
   });
 

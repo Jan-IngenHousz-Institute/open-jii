@@ -1031,7 +1031,7 @@
         "openid": "Ihr openJII-Konto identifizieren",
         "profile": "Ihren Namen und Ihr Profilbild lesen",
         "email": "Ihre E-Mail-Adresse lesen",
-        "offline_access": "Sie auch während Ihrer Abwesenheit angemeldet halten"
+        "offline_access": "Der Anwendung erlauben, auch in Ihrer Abwesenheit auf Ihr Konto zuzugreifen"
       }
     }
   },
