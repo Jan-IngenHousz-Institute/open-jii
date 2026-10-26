@@ -1,275 +1,270 @@
-import { Injectable, Inject, Logger } from "@nestjs/common";
-import { Readable } from "stream";
+import { Injectable, Inject } from "@nestjs/common";
 
-import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
-import { Result, success } from "../../../common/utils/fp-utils";
-import type { ExportFormat, ExportMetadata } from "../models/experiment-data-exports.model";
-import { DATABRICKS_PORT } from "../ports/databricks.port";
-import type { DatabricksPort } from "../ports/databricks.port";
+import { and, desc, eq, experimentExports, gt, inArray, isNull, lt, sql } from "@repo/database";
+import type { DatabaseInstance } from "@repo/database";
 
-/**
- * Repository for experiment data export operations
- * Handles export metadata and job tracking
- */
+import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
+import {
+  EXPORT_RETENTION_DAYS,
+  IN_FLIGHT_EXPORT_STATUSES,
+  experimentExportSchema,
+} from "../models/experiment-data-exports.model";
+import type {
+  ExperimentExportDto,
+  ExportErrorCode,
+  ExportFormat,
+  ExportManifest,
+  ExportStatus,
+} from "../models/experiment-data-exports.model";
+
+const LIST_LIMIT = 50;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export interface NewExport {
+  experimentId: string;
+  tableName: string;
+  format: ExportFormat;
+  anonymizeContributors: boolean;
+  createdBy: string;
+}
+
 @Injectable()
 export class ExperimentDataExportsRepository {
-  private readonly logger = new Logger(ExperimentDataExportsRepository.name);
-
-  constructor(@Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort) {}
-
-  /**
-   * Trigger the export job
-   * The Databricks Python job uses load_experiment_table() which handles data loading internally
-   */
-  async initiateExport(params: {
-    experimentId: string;
-    tableName: string;
-    format: string;
-    userId: string;
-    anonymizeContributors: boolean;
-  }): Promise<Result<void>> {
-    const { experimentId, tableName, format, userId, anonymizeContributors } = params;
-
-    this.logger.log({
-      msg: "Initiating export",
-      operation: "initiateExport",
-      experimentId,
-      tableName,
-      format,
-      anonymizeContributors,
-    });
-
-    // Trigger the data export job (job will create metadata record on completion)
-    const jobRunResult = await this.databricksPort.triggerDataExportJob(
-      experimentId,
-      tableName,
-      format,
-      userId,
-      anonymizeContributors,
-    );
-
-    if (jobRunResult.isFailure()) {
-      return jobRunResult;
-    }
-
-    const runId = jobRunResult.value.run_id;
-
-    this.logger.log({
-      msg: "Export job triggered successfully",
-      operation: "initiateExport",
-      experimentId,
-      tableName,
-      runId,
-    });
-
-    return success(undefined);
-  }
+  constructor(
+    @Inject("DATABASE")
+    private readonly database: DatabaseInstance,
+  ) {}
 
   /**
-   * List all exports for an experiment table
-   * Includes both active (in-progress) and completed exports
+   * Records a new export, or returns the one already in flight for the same table, format and
+   * anonymisation, so a second click joins the first run instead of starting another.
    */
-  async listExports(params: {
-    experimentId: string;
-    tableName: string;
-  }): Promise<Result<ExportMetadata[]>> {
-    const { experimentId, tableName } = params;
+  async createOrJoinInFlight(
+    input: NewExport,
+  ): Promise<Result<{ record: ExperimentExportDto; created: boolean }>> {
+    return tryCatch(async () => {
+      const inserted = await this.database
+        .insert(experimentExports)
+        .values(input)
+        .onConflictDoNothing({
+          target: [
+            experimentExports.experimentId,
+            experimentExports.tableName,
+            experimentExports.format,
+            experimentExports.anonymizeContributors,
+          ],
+          where: sql`${experimentExports.status} IN ('queued', 'pending', 'running')`,
+        })
+        .returning();
 
-    this.logger.log({
-      msg: "Listing exports",
-      operation: "listExports",
-      experimentId,
-      tableName,
-    });
-
-    // Get completed exports from Delta Lake (returns raw SchemaData)
-    const completedResult = await this.databricksPort.getExportMetadata(experimentId, tableName);
-
-    if (completedResult.isFailure()) {
-      return completedResult;
-    }
-
-    const completedExports = this.mapCompletedRows(completedResult.value);
-
-    // Get active exports from job runs
-    const activeResult = await this.databricksPort.getActiveExports(experimentId, tableName);
-
-    if (activeResult.isFailure()) {
-      // If we can't get active exports, just return completed ones
-      this.logger.warn({
-        msg: "Failed to fetch active exports, returning completed only",
-        operation: "listExports",
-        experimentId,
-        tableName,
-        error: activeResult.error.message,
-      });
-      return success(completedExports);
-    }
-
-    // Collect run IDs of completed exports to avoid duplicating them when fetching failed runs
-    const completedExportRunIds = new Set<number>();
-    for (const e of completedExports) {
-      if (e.jobRunId != null) {
-        completedExportRunIds.add(e.jobRunId);
+      if (inserted.length > 0) {
+        return { record: experimentExportSchema.parse(inserted[0]), created: true };
       }
-    }
 
-    // Get failed exports from completed job runs
-    const failedResult = await this.databricksPort.getFailedExports(
-      experimentId,
-      tableName,
-      completedExportRunIds,
-    );
+      // Whoever joins hears how the export ends, as its creator does.
+      const joiner = sql`${input.createdBy}::uuid`;
+      const inFlight = (
+        await this.database
+          .update(experimentExports)
+          .set({
+            watcherIds: sql`CASE WHEN ${joiner} = ${experimentExports.createdBy} OR ${joiner} = ANY(${experimentExports.watcherIds}) THEN ${experimentExports.watcherIds} ELSE array_append(${experimentExports.watcherIds}, ${joiner}) END`,
+          })
+          .where(
+            and(
+              eq(experimentExports.experimentId, input.experimentId),
+              eq(experimentExports.tableName, input.tableName),
+              eq(experimentExports.format, input.format),
+              eq(experimentExports.anonymizeContributors, input.anonymizeContributors),
+              inArray(experimentExports.status, IN_FLIGHT_EXPORT_STATUSES),
+            ),
+          )
+          .returning()
+      ).at(0);
 
-    if (failedResult.isFailure()) {
-      this.logger.warn({
-        msg: "Failed to fetch failed exports, returning active and completed only",
-        operation: "listExports",
-        experimentId,
-        tableName,
-        error: failedResult.error.message,
-      });
-      return success([...activeResult.value, ...completedExports]);
-    }
+      // The run it collided with ended between the insert and this update.
+      if (!inFlight) {
+        throw AppError.conflict("The previous export of this table just finished; start it again");
+      }
 
-    // Merge active, failed, and completed exports (active first, then failed, then completed)
-    const allExports = [...activeResult.value, ...failedResult.value, ...completedExports];
-
-    this.logger.log({
-      msg: "Successfully retrieved exports",
-      operation: "listExports",
-      experimentId,
-      tableName,
-      activeCount: activeResult.value.length,
-      failedCount: failedResult.value.length,
-      completedCount: completedExports.length,
-      totalCount: allExports.length,
+      return { record: experimentExportSchema.parse(inFlight), created: false };
     });
-
-    return success(allExports);
   }
 
-  private mapCompletedRows(schemaData: SchemaData): ExportMetadata[] {
-    const idx = (name: string): number =>
-      schemaData.columns.findIndex((column) => column.name === name);
-    const exportIdIdx = idx("export_id");
-    const experimentIdIdx = idx("experiment_id");
-    const tableNameIdx = idx("table_name");
-    const formatIdx = idx("format");
-    const statusIdx = idx("status");
-    const filePathIdx = idx("file_path");
-    const rowCountIdx = idx("row_count");
-    const fileSizeIdx = idx("file_size");
-    const createdByIdx = idx("created_by");
-    const createdAtIdx = idx("created_at");
-    const completedAtIdx = idx("completed_at");
-    const jobRunIdIdx = idx("job_run_id");
+  async listForTable(
+    experimentId: string,
+    tableName: string,
+  ): Promise<Result<ExperimentExportDto[]>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select()
+        .from(experimentExports)
+        .where(
+          and(
+            eq(experimentExports.experimentId, experimentId),
+            eq(experimentExports.tableName, tableName),
+          ),
+        )
+        .orderBy(desc(experimentExports.createdAt))
+        .limit(LIST_LIMIT);
 
-    const emptyToNull = (value: string | null | undefined): string | null => {
-      const normalized = value?.trim();
-      if (!normalized) {
-        return null;
-      }
-      return normalized;
-    };
+      return rows.map((row) => experimentExportSchema.parse(row));
+    });
+  }
 
-    const normalizeTimestamp = (value: string | null | undefined): string | null => {
-      const normalized = emptyToNull(value);
-      if (!normalized) {
-        return null;
-      }
+  async findById(
+    experimentId: string,
+    exportId: string,
+  ): Promise<Result<ExperimentExportDto | null>> {
+    return tryCatch(async () => {
+      const row = (
+        await this.database
+          .select()
+          .from(experimentExports)
+          .where(
+            and(
+              eq(experimentExports.id, exportId),
+              eq(experimentExports.experimentId, experimentId),
+            ),
+          )
+          .limit(1)
+      ).at(0);
 
-      // Databricks SQL timestamps have no offset. Treat export metadata as UTC
-      // so the conversion is deterministic and satisfies the API contract.
-      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)) {
-        return `${normalized.replace(" ", "T")}Z`;
-      }
+      return row ? experimentExportSchema.parse(row) : null;
+    });
+  }
 
-      return normalized;
-    };
+  async findInFlight(): Promise<Result<ExperimentExportDto[]>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select()
+        .from(experimentExports)
+        .where(inArray(experimentExports.status, IN_FLIGHT_EXPORT_STATUSES));
 
-    const parseIntegerOrNull = (
-      value: string | null | undefined,
-      field: "row_count" | "file_size" | "job_run_id",
-      exportId: string | null,
-    ): number | null => {
-      const normalized = emptyToNull(value);
-      if (!normalized) {
-        return null;
-      }
+      return rows.map((row) => experimentExportSchema.parse(row));
+    });
+  }
 
-      const parsed = Number(normalized);
-      if (/^-?\d+$/.test(normalized) && Number.isSafeInteger(parsed)) {
-        return parsed;
-      }
+  async attachRun(exportId: string, jobRunId: number): Promise<Result<void>> {
+    return tryCatch(async () => {
+      await this.database
+        .update(experimentExports)
+        .set({ jobRunId })
+        .where(eq(experimentExports.id, exportId));
+    });
+  }
 
-      this.logger.warn({
-        msg: "Ignoring invalid integer in completed export metadata",
-        operation: "mapCompletedRows",
-        exportId,
-        field,
-      });
-      return null;
-    };
-
-    return schemaData.rows.map((row) => {
-      const exportId = emptyToNull(row[exportIdIdx]);
-
-      return {
-        exportId,
-        experimentId: row[experimentIdIdx] ?? "",
-        tableName: row[tableNameIdx] ?? "",
-        format: (row[formatIdx] ?? "") as ExportMetadata["format"],
-        status: (row[statusIdx] ?? "") as ExportMetadata["status"],
-        filePath: emptyToNull(row[filePathIdx]),
-        rowCount: parseIntegerOrNull(row[rowCountIdx], "row_count", exportId),
-        fileSize: parseIntegerOrNull(row[fileSizeIdx], "file_size", exportId),
-        createdBy: row[createdByIdx] ?? "",
-        createdAt: normalizeTimestamp(row[createdAtIdx]) ?? "",
-        completedAt: normalizeTimestamp(row[completedAtIdx]),
-        jobRunId: parseIntegerOrNull(row[jobRunIdIdx], "job_run_id", exportId),
-      };
+  /** Moves an export between the in-flight states; a finished export is left as it is. */
+  async updateInFlightStatus(exportId: string, status: ExportStatus): Promise<Result<void>> {
+    return tryCatch(async () => {
+      await this.database
+        .update(experimentExports)
+        .set({ status })
+        .where(
+          and(
+            eq(experimentExports.id, exportId),
+            inArray(experimentExports.status, IN_FLIGHT_EXPORT_STATUSES),
+          ),
+        );
     });
   }
 
   /**
-   * Download a completed export file by export ID
-   * Returns a stream of the exported file
+   * Finishes an in-flight export from its manifest. Null when another task finished it first,
+   * so only the caller that gets the row back announces the outcome. Retention counts from the
+   * run's start, which is before any file was written, so the record never outlives its files.
    */
-  async downloadExport(params: { experimentId: string; exportId: string }): Promise<
-    Result<{
-      stream: Readable;
-      contentLength?: number;
-      filePath: string;
-      tableName: string;
-      format: ExportFormat;
-      completedAt: string | null;
-    }>
-  > {
-    const { experimentId, exportId } = params;
+  async complete(
+    exportId: string,
+    manifest: ExportManifest,
+  ): Promise<Result<ExperimentExportDto | null>> {
+    return tryCatch(async () => {
+      const row = (
+        await this.database
+          .update(experimentExports)
+          .set({
+            status: "completed",
+            rowCount: manifest.rowCount,
+            totalBytes: manifest.parts.reduce((total, part) => total + part.sizeBytes, 0),
+            parts: manifest.parts,
+            completedAt: new Date(),
+            expiresAt: new Date(
+              new Date(manifest.snapshotAt).getTime() + EXPORT_RETENTION_DAYS * DAY_MS,
+            ),
+          })
+          .where(
+            and(
+              eq(experimentExports.id, exportId),
+              inArray(experimentExports.status, IN_FLIGHT_EXPORT_STATUSES),
+            ),
+          )
+          .returning()
+      ).at(0);
 
-    this.logger.log({
-      msg: "Downloading export",
-      operation: "downloadExport",
-      experimentId,
-      exportId,
+      return row ? experimentExportSchema.parse(row) : null;
     });
+  }
 
-    // streamExport handles metadata fetching, validation, and streaming
-    const result = await this.databricksPort.streamExport(exportId, experimentId);
+  /** Fails an in-flight export; null when another task finished it first. */
+  async fail(
+    exportId: string,
+    errorCode: ExportErrorCode,
+  ): Promise<Result<ExperimentExportDto | null>> {
+    return tryCatch(async () => {
+      const row = (
+        await this.database
+          .update(experimentExports)
+          .set({ status: "failed", errorCode, completedAt: new Date() })
+          .where(
+            and(
+              eq(experimentExports.id, exportId),
+              inArray(experimentExports.status, IN_FLIGHT_EXPORT_STATUSES),
+            ),
+          )
+          .returning()
+      ).at(0);
 
-    if (result.isFailure()) {
-      return result;
-    }
-
-    this.logger.log({
-      msg: "Export download successful",
-      operation: "downloadExport",
-      experimentId,
-      exportId,
-      filePath: result.value.filePath,
+      return row ? experimentExportSchema.parse(row) : null;
     });
+  }
 
-    return result;
+  /** Finished exports whose outcome nobody has been told about yet, finished after `since`. */
+  async findUnannounced(since: Date): Promise<Result<ExperimentExportDto[]>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select()
+        .from(experimentExports)
+        .where(
+          and(
+            inArray(experimentExports.status, ["completed", "failed"]),
+            isNull(experimentExports.announcedAt),
+            gt(experimentExports.completedAt, since),
+          ),
+        );
+
+      return rows.map((row) => experimentExportSchema.parse(row));
+    });
+  }
+
+  async markAnnounced(exportId: string): Promise<Result<void>> {
+    return tryCatch(async () => {
+      await this.database
+        .update(experimentExports)
+        .set({ announcedAt: new Date() })
+        .where(eq(experimentExports.id, exportId));
+    });
+  }
+
+  /** Marks completed exports whose files the bucket has deleted; returns how many. */
+  async expireDue(now: Date): Promise<Result<number>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .update(experimentExports)
+        .set({ status: "expired" })
+        .where(and(eq(experimentExports.status, "completed"), lt(experimentExports.expiresAt, now)))
+        .returning({ id: experimentExports.id });
+
+      return rows.length;
+    });
   }
 }

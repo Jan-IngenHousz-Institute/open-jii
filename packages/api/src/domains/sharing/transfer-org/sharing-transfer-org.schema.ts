@@ -15,13 +15,13 @@ export const zTransferableResourceType = z.enum([
 
 export const zTransferResourcePathParams = z.object({
   resourceType: zTransferableResourceType,
-  id: z.string().uuid().describe("ID of the resource being transferred"),
+  id: z.string().guid().describe("ID of the resource being transferred"),
 });
 
 export const zTransferResourceBody = z.object({
   targetOrganizationId: z
     .string()
-    .uuid()
+    .guid()
     .describe("Organization to move the resource to; the caller must be a member of it"),
 });
 
@@ -32,8 +32,8 @@ export const zTransferResourceBody = z.object({
  */
 export const zTransferResourceResponse = z.object({
   resourceType: zTransferableResourceType,
-  resourceId: z.string().uuid(),
-  organizationId: z.string().uuid(),
+  resourceId: z.string().guid(),
+  organizationId: z.string().guid(),
 });
 
 export type TransferableResourceType = z.infer<typeof zTransferableResourceType>;

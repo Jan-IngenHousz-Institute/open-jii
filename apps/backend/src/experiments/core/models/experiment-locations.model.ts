@@ -1,4 +1,5 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import type { z } from "zod";
 
 import { experimentLocations } from "@repo/database";
 
@@ -25,4 +26,4 @@ export interface CreateLocationDto {
 }
 
 // Define output type from database
-export type LocationDto = typeof selectLocationSchema._type;
+export type LocationDto = z.infer<typeof selectLocationSchema>;

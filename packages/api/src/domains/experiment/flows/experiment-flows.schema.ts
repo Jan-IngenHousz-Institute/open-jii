@@ -3,8 +3,8 @@ import { z } from "zod";
 import { zExperimentFlowGraph } from "../experiment.schema";
 
 export const zExperimentFlow = z.object({
-  id: z.string().uuid(),
-  experimentId: z.string().uuid(),
+  id: z.string().guid(),
+  experimentId: z.string().guid(),
   graph: zExperimentFlowGraph,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

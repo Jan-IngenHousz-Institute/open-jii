@@ -37,7 +37,7 @@ export class ExperimentMetadataRepository {
   // --- Validation ---
 
   private readonly schemas = {
-    uuid: z.string().uuid(),
+    uuid: z.string().guid(),
     jsonString: z.string().max(5_000_000), // 5 MB cap on serialized metadata
   };
 

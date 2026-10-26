@@ -3,9 +3,9 @@ import { z } from "zod";
 export const zExperimentUploadOutcome = z.enum(["ready", "failed"]);
 
 export const zExperimentUploadWebhookPayload = z.object({
-  experimentId: z.string().uuid(),
-  uploadId: z.string().uuid(),
-  userId: z.string().uuid().describe("User who started the upload"),
+  experimentId: z.string().guid(),
+  uploadId: z.string().guid(),
+  userId: z.string().guid().describe("User who started the upload"),
   outcome: zExperimentUploadOutcome.describe(
     "ready once the upload's rows are in its table, failed when they will not arrive",
   ),

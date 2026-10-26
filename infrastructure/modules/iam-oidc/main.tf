@@ -318,6 +318,13 @@ locals {
         "iam:UpdateAssumeRolePolicy",
         "iam:PassRole",
         "iam:TagRole",
+        # Instance profiles (the serving store's EC2 role)
+        "iam:CreateInstanceProfile",
+        "iam:DeleteInstanceProfile",
+        "iam:GetInstanceProfile",
+        "iam:AddRoleToInstanceProfile",
+        "iam:RemoveRoleFromInstanceProfile",
+        "iam:TagInstanceProfile",
         # Role policies (inline)
         "iam:PutRolePolicy",
         "iam:DeleteRolePolicy",
@@ -438,7 +445,9 @@ locals {
       resource = "*"
     }
 
-    # ── EC2 / VPC: network infrastructure management (Terraform) ──
+    # ── EC2 / VPC: network infrastructure and the serving store's instance (Terraform) ──
+    # The store's actions sit in this key rather than their own, since a new key renumbers every
+    # policy part while this role is applying its own policy.
     vpc = {
       actions = [
         # VPC
@@ -507,6 +516,25 @@ locals {
         "ec2:GetManagedPrefixListEntries",
         # EIP domain name attribute (Terraform provider reads)
         "ec2:DescribeAddressesAttribute",
+        # Serving store: its instance, data volume and reserved address
+        "ec2:RunInstances",
+        "ec2:StartInstances",
+        "ec2:StopInstances",
+        "ec2:TerminateInstances",
+        "ec2:DescribeInstances",
+        "ec2:DescribeInstanceAttribute",
+        "ec2:ModifyInstanceAttribute",
+        "ec2:DescribeInstanceTypes",
+        "ec2:DescribeImages",
+        "ec2:CreateVolume",
+        "ec2:DescribeVolumes",
+        "ec2:ModifyVolume",
+        "ec2:DescribeVolumesModifications",
+        "ec2:AttachVolume",
+        "ec2:DetachVolume",
+        "ec2:CreateSubnetCidrReservation",
+        "ec2:DeleteSubnetCidrReservation",
+        "ec2:GetSubnetCidrReservations",
       ]
       resource = "*"
     }

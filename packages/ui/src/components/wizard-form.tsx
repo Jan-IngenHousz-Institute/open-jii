@@ -125,7 +125,7 @@ export interface WizardStep<T extends FieldValues = FieldValues> {
   /**
    * Validation schema for this step
    */
-  validationSchema: z.AnyZodObject;
+  validationSchema: z.ZodObject;
   /**
    * Component to render for this step
    */

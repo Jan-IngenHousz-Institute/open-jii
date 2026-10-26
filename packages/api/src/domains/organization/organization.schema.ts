@@ -47,7 +47,7 @@ export const zOrganizationSort = zListSort(z.enum(["name", "type", "members", "r
 export type OrganizationSort = z.infer<typeof zOrganizationSort>;
 
 export const zOrganizationIdPathParam = z.object({
-  id: z.string().uuid().describe("ID of the organization"),
+  id: z.string().guid().describe("ID of the organization"),
 });
 
 export const zOrganizationDirectoryQuery = z.object({
@@ -80,7 +80,7 @@ export const zOrganizationDirectoryQuery = z.object({
  * is not a secret from you.
  */
 export const zOrganizationDirectoryEntry = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   slug: z.string().nullable(),
   logo: z.string().nullable(),
@@ -109,7 +109,7 @@ export const zOrganizationDirectory = z.object({
 
 /** The organization profile page. Private organizations 404 for non-members. */
 export const zOrganizationProfile = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   slug: z.string().nullable(),
   logo: z.string().nullable(),
@@ -134,7 +134,7 @@ export const zOrganizationProfile = z.object({
 
 /** An organization the caller belongs to. Personal workspaces are included, flagged. */
 export const zMyOrganization = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   slug: z.string().nullable(),
   description: z.string().nullable(),
@@ -153,7 +153,7 @@ export const zMyOrganizationList = z.array(zMyOrganization);
 
 /** Profile fields every people-shaped row in this domain carries. */
 const zOrganizationPerson = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().guid(),
   firstName: z.string(),
   lastName: z.string(),
   // Stored value returned as-is; format-validating on output can 500 the list.
@@ -173,7 +173,7 @@ export const zOrganizationMembers = z.object({
 
 /** What every showcase row carries, whatever its type. */
 const zOrganizationResourceBase = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   description: z.string().nullable(),
   visibility: zOrganizationVisibility,
@@ -274,9 +274,9 @@ export const zOrganizationDeletionBlockers = z.object({
 export const zOrganizationTeamMember = zOrganizationPerson;
 
 export const zOrganizationTeam = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
-  organizationId: z.string().uuid(),
+  organizationId: z.string().guid(),
   createdAt: z.string().datetime(),
   members: z.array(zOrganizationTeamMember),
 });
@@ -291,10 +291,10 @@ export const zOrganizationTeamList = z.array(zOrganizationTeam);
  * omitted a type would understate what deleting the team withdraws.
  */
 export const zOrganizationTeamGrant = z.object({
-  id: z.string().uuid().describe("ID of the grant row"),
-  teamId: z.string().uuid(),
+  id: z.string().guid().describe("ID of the grant row"),
+  teamId: z.string().guid(),
   resourceType: zSharingResourceType,
-  resourceId: z.string().uuid(),
+  resourceId: z.string().guid(),
   /**
    * Always something to render. A device is the one type whose `name` is nullable, so
    * an unnamed one falls back server-side to its thing name — never to a placeholder,
@@ -309,9 +309,9 @@ export const zOrganizationTeamGrantList = z.array(zOrganizationTeamGrant);
 
 /** A team the caller may pick as a grantee: teams of the resource's owning org. */
 export const zGranteeTeam = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
-  organizationId: z.string().uuid(),
+  organizationId: z.string().guid(),
   memberCount: z.number().int(),
 });
 
@@ -324,7 +324,7 @@ export const zGranteeTeamList = z.array(zGranteeTeam);
  */
 export const zGranteeTeamsPathParams = z.object({
   resourceType: zSharingResourceType,
-  id: z.string().uuid().describe("ID of the resource being shared"),
+  id: z.string().guid().describe("ID of the resource being shared"),
 });
 
 export type OrganizationVisibility = z.infer<typeof zOrganizationVisibility>;

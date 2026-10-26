@@ -470,7 +470,7 @@ describe("Comprehensive Protocol JSON Validator", () => {
       expect(result.error?.length).toBeGreaterThan(0); // Has errors
 
       const errorMessages = result.error?.map((e) => e.message) ?? [];
-      expect(errorMessages.some((msg) => msg.includes("Number must be"))).toBe(true);
+      expect(errorMessages.some((msg) => msg.includes("Too small"))).toBe(true);
     });
   });
 
@@ -989,12 +989,12 @@ describe("Code to determine error line numbers", () => {
       const errorInfo1 = findProtocolErrorLine(code, result.error[0]);
       expect(errorInfo1).toStrictEqual({
         line: 24,
-        message: "Item 'averages': Number must be greater than 0",
+        message: "Item 'averages': Too small: expected number to be >0",
       });
       const errorInfo2 = findProtocolErrorLine(code, result.error[1]);
       expect(errorInfo2).toStrictEqual({
         line: 30,
-        message: "Item 'averages': Number must be greater than 0",
+        message: "Item 'averages': Too small: expected number to be >0",
       });
     }
   });
@@ -1106,7 +1106,7 @@ describe("Code to determine error line numbers", () => {
       const errorInfo1 = findProtocolErrorLine(code, result.error[0]);
       expect(errorInfo1).toStrictEqual({
         line: 60,
-        message: "Item 'pulsesize': Number must be greater than 0",
+        message: "Item 'pulsesize': Too small: expected number to be >0",
       });
       const errorInfo2 = findProtocolErrorLine(code, result.error[1]);
       expect(errorInfo2).toStrictEqual({

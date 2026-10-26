@@ -5,7 +5,7 @@ import { zShareableRole, zSharingResourceType } from "../sharing/sharing.schema"
 import { zPeopleSearchLimit, zPeopleSearchTerm } from "./people-search.schema";
 
 export const zUser = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string().nullable(),
   // Stored value returned as-is; format-validating on output can 500 the endpoint.
   email: z.string().nullable(),
@@ -30,7 +30,7 @@ export const zSearchUsersQuery = z.object({
 });
 
 export const zCreateUserResponse = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
 });
 
 export const zCreateUserProfileBody = z.object({
@@ -44,7 +44,7 @@ export const zCreateUserProfileBody = z.object({
 export const zCreateUserProfileResponse = z.object({});
 
 export const zUserProfile = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().guid(),
   firstName: z.string(),
   lastName: z.string(),
   bio: z.string().nullable(),
@@ -67,7 +67,7 @@ export type UserSearchResultList = z.infer<typeof zUserSearchResultList>;
 
 // Path parameters
 export const zUserIdPathParam = z.object({
-  id: z.string().uuid().describe("ID of the user"),
+  id: z.string().guid().describe("ID of the user"),
 });
 
 // Webhook Schemas
@@ -84,7 +84,7 @@ export const zUserMetadataWebhookPayload = z.object({
 });
 
 export const zUserMetadata = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().guid(),
   firstName: z.string(),
   lastName: z.string(),
   avatarUrl: z.string().nullable(),
@@ -127,7 +127,7 @@ export type WebhookErrorResponse = z.infer<typeof zWebhookErrorResponse>;
 // so the dialog can suggest who to hand admin to.
 export const zDeletionBlocker = z.object({
   resourceType: zSharingResourceType,
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   // Only experiments have a lifecycle status; the delete dialog badges it when present.
   status: zExperimentStatus.nullable(),
@@ -138,7 +138,7 @@ export const zDeletionBlocker = z.object({
 // never a personal workspace. A sibling of `resources` rather than a pseudo resource type,
 // because it is cleared by promoting another owner or deleting it, never by the hand-off.
 export const zDeletionBlockerOrganization = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   slug: z.string(),
 });
@@ -164,15 +164,15 @@ export const zInvitationResourceType = z.enum(["platform", "experiment"]);
 export const zInvitationTier = zShareableRole;
 
 export const zInvitation = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   resourceType: zInvitationResourceType,
-  resourceId: z.string().uuid().nullable(),
+  resourceId: z.string().guid().nullable(),
   /** The invitee's address, shown only to whoever created the invitation. */
   email: z.string().email().nullable(),
   /** Access tier granted on acceptance. */
   tier: zInvitationTier,
   status: zInvitationStatus,
-  invitedBy: z.string().uuid(),
+  invitedBy: z.string().guid(),
   invitedByName: z.string().optional(),
   resourceName: z.string().optional(),
   createdAt: z.string().datetime(),
@@ -188,18 +188,18 @@ export const zInvitationList = z.array(zInvitation);
  */
 export const zCreateInvitationBody = z.object({
   resourceType: zInvitationResourceType,
-  resourceId: z.string().uuid(),
+  resourceId: z.string().guid(),
   email: z.string().email("Must be a valid email address"),
   tier: zInvitationTier.default("viewer").describe("Access tier to grant on acceptance"),
 });
 
 export const zInvitationIdPathParam = z.object({
-  invitationId: z.string().uuid().describe("ID of the invitation"),
+  invitationId: z.string().guid().describe("ID of the invitation"),
 });
 
 export const zListInvitationsQuery = z.object({
   resourceType: zInvitationResourceType,
-  resourceId: z.string().uuid(),
+  resourceId: z.string().guid(),
 });
 
 export const zWhatsNewSeenResponse = z.object({

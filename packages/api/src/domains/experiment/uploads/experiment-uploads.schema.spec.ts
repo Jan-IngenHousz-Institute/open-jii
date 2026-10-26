@@ -10,6 +10,7 @@ import {
   zExperimentNdjsonFilename,
   zExperimentParquetFilename,
   zExperimentTsvFilename,
+  zExperimentUploadFormFields,
   zExperimentUploadMetadata,
   zExperimentUploadSourceKind,
   zExperimentUploadTableName,
@@ -92,6 +93,25 @@ describe("Upload schemas", () => {
       expect(zExperimentUploadTargetTable.safeParse({ kind: "new", name: "1bad" }).success).toBe(
         false,
       );
+    });
+  });
+
+  describe("zExperimentUploadFormFields", () => {
+    it("asks for a table when an 'existing' target has none", () => {
+      const result = zExperimentUploadFormFields.safeParse({
+        targetKind: "existing",
+        sourceKind: "csv",
+      });
+      expect(result.error?.issues[0].message).toBe("Select a table to append to");
+    });
+
+    it("keeps zod's own message for an uploadTableId of the wrong type", () => {
+      const result = zExperimentUploadFormFields.safeParse({
+        targetKind: "existing",
+        sourceKind: "csv",
+        uploadTableId: 42,
+      });
+      expect(result.error?.issues[0].message).not.toBe("Select a table to append to");
     });
   });
 
