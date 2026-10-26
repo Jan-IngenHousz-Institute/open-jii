@@ -97,7 +97,7 @@ describe("UploadDataUseCase", () => {
     await testApp.teardown();
   });
 
-  const STUB_UPLOAD_TABLE_ID = "22222222-2222-2222-2222-222222222222";
+  const STUB_UPLOAD_TABLE_ID = "22222222-2222-4222-8222-222222222222";
 
   it("uploads a CSV to a new target table and triggers the job", async () => {
     const { experiment } = await testApp.createExperiment({
@@ -227,7 +227,7 @@ describe("UploadDataUseCase", () => {
       name: "Upload_Client_Id_Reused",
       userId: testUserId,
     });
-    const otherTableId = "33333333-3333-3333-3333-333333333333";
+    const otherTableId = "33333333-3333-4333-8333-333333333333";
     vi.spyOn(uploadsRepository, "validateTargetTable")
       .mockResolvedValueOnce(
         success({ uploadTableId: STUB_UPLOAD_TABLE_ID, uploadTableName: "greenhouse_temps" }),
