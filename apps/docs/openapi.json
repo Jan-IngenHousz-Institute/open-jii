@@ -31216,6 +31216,7 @@
                   "field": {
                     "enum": [
                       "name",
+                      "type",
                       "members",
                       "resources"
                     ],
@@ -31242,6 +31243,40 @@
             "allowReserved": true,
             "description": "Up to two ordered sort criteria. Encode as sort[0][field]=name&sort[0][direction]=asc (and sort[1] for a secondary criterion).",
             "example": "sort[0][field]=members&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "research_institute",
+                    "non_profit",
+                    "private_company",
+                    "government_agency",
+                    "university"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "research_institute",
+                      "non_profit",
+                      "private_company",
+                      "government_agency",
+                      "university"
+                    ],
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "Filter organizations by type; several values match either. Untyped organizations match no type"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
           }
         ],
         "responses": {
