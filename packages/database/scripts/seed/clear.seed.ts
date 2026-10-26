@@ -25,10 +25,10 @@ import {
   NEWCOMER_EMAIL,
   SEED_EMAIL,
   SEED_PREFIX,
-  FIXTURE_ORG_SLUG_PREFIX,
   SEED_EXPERIMENT_IDS,
   CONTRIBUTOR_SEEDS,
 } from "./constants";
+import { FIXTURE_ORG_SLUGS } from "./organization.seed";
 
 export async function clearSeedData() {
   // User + profile (seed user)
@@ -148,7 +148,7 @@ export async function clearSeedData() {
     await db.delete(organizations).where(inArray(organizations.id, seedOrganizationIds));
   }
   // The directory fixtures are owned by contributors, so they go before those users do.
-  await db.delete(organizations).where(like(organizations.slug, `${FIXTURE_ORG_SLUG_PREFIX}%`));
+  await db.delete(organizations).where(inArray(organizations.slug, FIXTURE_ORG_SLUGS));
 
   if (seedUsers.length > 0) {
     const accountIds = seedUsers.map((user) => user.id);

@@ -55,6 +55,10 @@ const FIXTURE_ORGANIZATIONS: {
   },
 ];
 
+export const FIXTURE_ORG_SLUGS = FIXTURE_ORGANIZATIONS.map(
+  (fixture) => `${FIXTURE_ORG_SLUG_PREFIX}${fixture.slug}`,
+);
+
 /** Public organizations of every type, so a fresh directory has rows to filter. */
 export async function seedOrganizations() {
   for (const [index, fixture] of FIXTURE_ORGANIZATIONS.entries()) {
@@ -62,7 +66,7 @@ export async function seedOrganizations() {
       .insert(organizations)
       .values({
         name: fixture.name,
-        slug: `${FIXTURE_ORG_SLUG_PREFIX}${fixture.slug}`,
+        slug: FIXTURE_ORG_SLUGS[index],
         visibility: "public",
         type: fixture.type,
         description: fixture.description,
