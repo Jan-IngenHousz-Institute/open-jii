@@ -20,15 +20,15 @@ export const zExperimentListExportsQuery = z.object({
 });
 
 export const zExperimentExportRecord = z.object({
-  exportId: z.string().uuid().nullable(),
-  experimentId: z.string().uuid(),
+  exportId: z.string().guid().nullable(),
+  experimentId: z.string().guid(),
   tableName: z.string(),
   format: z.enum(["csv", "ndjson", "json-array", "parquet", "xlsx"]),
   status: z.enum(["queued", "pending", "running", "completed", "failed"]),
   filePath: z.string().nullable(),
   rowCount: z.number().int().nullable(),
   fileSize: z.number().int().nullable(),
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
   createdAt: z.string().datetime(),
   completedAt: z.string().datetime().nullable(),
 });

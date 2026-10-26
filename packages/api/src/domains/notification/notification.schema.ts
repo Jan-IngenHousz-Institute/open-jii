@@ -281,11 +281,11 @@ export const NOTIFICATION_CATEGORIES: Record<
 };
 
 export const zNotification = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   type: zNotificationType,
   category: zNotificationCategory,
-  actor: z.object({ id: z.string().uuid(), name: z.string() }).nullable(),
-  resource: z.object({ type: zNotificationResourceType, id: z.string().uuid() }).nullable(),
+  actor: z.object({ id: z.string().guid(), name: z.string() }).nullable(),
+  resource: z.object({ type: zNotificationResourceType, id: z.string().guid() }).nullable(),
   params: z
     .record(z.string(), z.string())
     .describe("Display values captured when the event happened, such as the experiment name"),
@@ -307,7 +307,7 @@ export const zUnreadNotificationCount = z.object({
 });
 
 export const zMarkNotificationsReadBody = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(100),
+  ids: z.array(z.string().guid()).min(1).max(100),
 });
 
 export const zMarkNotificationsReadResponse = z.object({

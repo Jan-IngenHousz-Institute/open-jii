@@ -16,29 +16,29 @@ export const zEntitySnapshots = z.object({
 });
 
 export const zWorkbookVersion = z.object({
-  id: z.string().uuid(),
-  workbookId: z.string().uuid(),
+  id: z.string().guid(),
+  workbookId: z.string().guid(),
   version: z.number().int().positive(),
   cells: zWorkbookCellArray,
   metadata: z.record(z.string(), z.unknown()),
   entitySnapshots: zEntitySnapshots.optional(),
   createdAt: z.string().datetime(),
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
 });
 
 export const zWorkbookVersionSummary = z.object({
-  id: z.string().uuid(),
-  workbookId: z.string().uuid(),
+  id: z.string().guid(),
+  workbookId: z.string().guid(),
   version: z.number().int().positive(),
   createdAt: z.string().datetime(),
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
 });
 
 export const zWorkbookVersionList = z.array(zWorkbookVersionSummary);
 
 export const zWorkbookVersionIdPathParam = z.object({
-  id: z.string().uuid(),
-  versionId: z.string().uuid(),
+  id: z.string().guid(),
+  versionId: z.string().guid(),
 });
 
 export const zWorkbookVersionErrorResponse = z.object({
@@ -47,16 +47,16 @@ export const zWorkbookVersionErrorResponse = z.object({
 });
 
 export const zAttachWorkbookBody = z.object({
-  workbookId: z.string().uuid(),
+  workbookId: z.string().guid(),
 });
 
 export const zSetWorkbookVersionBody = z.object({
-  versionId: z.string().uuid(),
+  versionId: z.string().guid(),
 });
 
 export const zAttachWorkbookResponse = z.object({
-  workbookId: z.string().uuid(),
-  workbookVersionId: z.string().uuid(),
+  workbookId: z.string().guid(),
+  workbookVersionId: z.string().guid(),
   version: z.number().int().positive(),
 });
 

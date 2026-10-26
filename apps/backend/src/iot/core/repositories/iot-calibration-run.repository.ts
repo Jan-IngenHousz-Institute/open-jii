@@ -309,5 +309,5 @@ export class IotCalibrationRunRepository {
     return parsed.success ? parsed.data : null;
   }
 
-  private static readonly FREE_RECORD = z.record(z.unknown());
+  private static readonly FREE_RECORD = z.record(z.string(), z.unknown());
 }

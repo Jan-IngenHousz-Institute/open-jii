@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { z } from "zod";
 
-export type ListFilterShape = Record<string, z.ZodEnum<[string, ...string[]]>>;
+export type ListFilterShape = Record<string, z.ZodEnum<Readonly<Record<string, string>>>>;
 
 export type ListFilters<S extends ListFilterShape> = { [K in keyof S]: z.infer<S[K]>[] };
 

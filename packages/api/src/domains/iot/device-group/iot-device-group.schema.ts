@@ -12,12 +12,12 @@ import {
 // Platform-native grouping: groups never mirror to AWS thing groups, whose
 // quota stays reserved for the parked broker-enforcement design.
 export const zIotDeviceGroup = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   description: z.string().nullable(),
-  organizationId: z.string().uuid().nullable(),
+  organizationId: z.string().guid().nullable(),
   visibility: z.enum(["private", "public"]),
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -40,7 +40,7 @@ export const zIotDeviceGroupDetail = zIotDeviceGroupListItem.extend({
  * only; drill-through stays gated by the viewer's own device access.
  */
 export const zIotDeviceGroupMember = z.object({
-  deviceId: z.string().uuid(),
+  deviceId: z.string().guid(),
   name: z.string().nullable(),
   serialNumber: z.string(),
   deviceType: zDeviceType,
@@ -61,7 +61,7 @@ export const zIotDeviceGroupMemberList = z.array(zIotDeviceGroupMember);
  * client-side from these facts, with the same policy as the device page.
  */
 export const zIotDeviceGroupMemberHealth = z.object({
-  deviceId: z.string().uuid(),
+  deviceId: z.string().guid(),
   name: z.string().nullable(),
   serialNumber: z.string(),
   deviceType: zDeviceType,
@@ -77,27 +77,27 @@ export const zIotDeviceGroupMemberHealth = z.object({
 /** One (bucket, member) measurement count; deviceId null for unmapped rows. */
 export const zIotDeviceGroupThroughputBucket = z.object({
   bucketStart: z.string().datetime().nullable(),
-  deviceId: z.string().uuid().nullable(),
+  deviceId: z.string().guid().nullable(),
   count: z.number().int(),
 });
 
 /** One (bucket, experiment) measurement count aggregated across the group. */
 export const zIotDeviceGroupExperimentBucket = z.object({
   bucketStart: z.string().datetime().nullable(),
-  experimentId: z.string().uuid().nullable(),
+  experimentId: z.string().guid().nullable(),
   count: z.number().int(),
 });
 
 /** A member's most recent firmware version inside the window. */
 export const zIotDeviceGroupFirmware = z.object({
-  deviceId: z.string().uuid().nullable(),
+  deviceId: z.string().guid().nullable(),
   version: z.string().nullable(),
   lastSeen: z.string().datetime().nullable(),
 });
 
 /** A member's broker lifecycle event inside the window. */
 export const zIotDeviceGroupLifecycleEvent = z.object({
-  deviceId: z.string().uuid().nullable(),
+  deviceId: z.string().guid().nullable(),
   eventType: z.string().nullable(),
   eventTimestamp: z.string().datetime().nullable(),
   disconnectReason: z.string().nullable(),
@@ -117,7 +117,7 @@ export const zCreateIotDeviceGroupBody = z.object({
   name: z.string().trim().min(1).max(255),
   description: z.string().max(2000).optional(),
   // Defaults to the creator's personal org; the caller must be a member.
-  organizationId: z.string().uuid().optional(),
+  organizationId: z.string().guid().optional(),
 });
 
 export const zUpdateIotDeviceGroupBody = z.object({
@@ -126,17 +126,17 @@ export const zUpdateIotDeviceGroupBody = z.object({
 });
 
 export const zIotDeviceGroupPathParam = z.object({
-  groupId: z.string().uuid(),
+  groupId: z.string().guid(),
 });
 
 // Batch add: a selection is a transient group, so membership changes accept
 // many devices in one call.
 export const zAddIotDeviceGroupMembersBody = zIotDeviceGroupPathParam.extend({
-  deviceIds: z.array(z.string().uuid()).min(1).max(100),
+  deviceIds: z.array(z.string().guid()).min(1).max(100),
 });
 
 export const zRemoveIotDeviceGroupMemberParams = zIotDeviceGroupPathParam.extend({
-  deviceId: z.string().uuid(),
+  deviceId: z.string().guid(),
 });
 
 /**
@@ -146,9 +146,9 @@ export const zRemoveIotDeviceGroupMemberParams = zIotDeviceGroupPathParam.extend
  * mirroring the single-device contract.
  */
 export const zOnboardIotDeviceGroupBody = zIotDeviceGroupPathParam.extend({
-  experimentIds: z.array(z.string().uuid()).max(100).default([]),
+  experimentIds: z.array(z.string().guid()).max(100).default([]),
   deviceIds: z
-    .array(z.string().uuid())
+    .array(z.string().guid())
     .min(1)
     .max(100)
     .optional()
@@ -158,7 +158,7 @@ export const zOnboardIotDeviceGroupBody = zIotDeviceGroupPathParam.extend({
 
 /** Per-device outcome; the batch itself succeeds even when single rows fail. */
 export const zIotDeviceGroupOnboardRow = z.object({
-  deviceId: z.string().uuid(),
+  deviceId: z.string().guid(),
   config: zDeviceOnboardingConfig.nullable(),
   error: z.string().nullable(),
 });
@@ -174,7 +174,7 @@ export const zIotDeviceGroupOnboardResult = z.object({
  */
 export const zIotDeviceGroupCredentialsBody = zIotDeviceGroupPathParam.extend({
   deviceIds: z
-    .array(z.string().uuid())
+    .array(z.string().guid())
     .min(1)
     .max(100)
     .optional()
@@ -183,7 +183,7 @@ export const zIotDeviceGroupCredentialsBody = zIotDeviceGroupPathParam.extend({
 
 /** Per-device outcome; issued credentials are shown once, never re-readable. */
 export const zIotDeviceGroupCredentialRow = z.object({
-  deviceId: z.string().uuid(),
+  deviceId: z.string().guid(),
   // Null only when the row failed before resolving a member device.
   thingName: z.string().nullable(),
   credentials: zIssueIotCredentialsResponse.nullable(),
@@ -195,7 +195,7 @@ export const zIotDeviceGroupCredentialsResult = z.object({
 });
 
 export const zIotDeviceGroupRevokeRow = z.object({
-  deviceId: z.string().uuid(),
+  deviceId: z.string().guid(),
   error: z.string().nullable(),
 });
 

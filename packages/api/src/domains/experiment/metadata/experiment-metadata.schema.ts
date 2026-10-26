@@ -108,12 +108,12 @@ export const zExperimentCustomMetadataPayload = z
   });
 
 export const zExperimentMetadata = z.object({
-  metadataId: z.string().uuid(),
-  experimentId: z.string().uuid(),
+  metadataId: z.string().guid(),
+  experimentId: z.string().guid(),
   // Response stays loose: legacy records persisted before validation existed
   // may not match the structured shape.
   metadata: z.record(z.string(), z.unknown()),
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -152,8 +152,8 @@ export const zUpdateExperimentMetadataBody = z.object({
 });
 
 export const zExperimentMetadataPathParam = z.object({
-  id: z.string().uuid().describe("ID of the experiment"),
-  metadataId: z.string().uuid().describe("ID of the metadata record"),
+  id: z.string().guid().describe("ID of the experiment"),
+  metadataId: z.string().guid().describe("ID of the metadata record"),
 });
 
 export type ExperimentMetadata = z.infer<typeof zExperimentMetadata>;
