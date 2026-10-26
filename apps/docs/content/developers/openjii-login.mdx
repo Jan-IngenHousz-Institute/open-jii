@@ -51,7 +51,20 @@ Registered clients skip consent because the operator has approved them as intern
 apps. They require PKCE and support authorization code and refresh token grants.
 A client requesting explicit consent can still show the consent page with
 `prompt=consent`. Store the secret in the client's secret manager, never browser
-code, source control or logs. Disable a compromised client and provision a replacement.
+code, source control or logs. To disable a compromised client, run this in the
+approved database operator environment, replacing the client ID:
+
+```sql
+UPDATE oauth_clients SET disabled = true WHERE client_id = '<affected-client-id>';
+```
+
+This blocks new authorization, authorization-code exchange and refresh-token issuance.
+Already-issued self-contained JWT access tokens remain valid until expiry for clients
+validating them locally. Provision a replacement client and coordinate its rollout.
+
+Login and consent use a supported locale remembered in a browser cookie when the
+web proxy handles a localized page. Cached pages may retain an earlier preference.
+A new browser uses English. The existing multi-language access gate still applies.
 
 ## Read claims and restrict access
 

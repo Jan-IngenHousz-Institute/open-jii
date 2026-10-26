@@ -22,14 +22,24 @@ describe("PasskeyLoginButton", () => {
   });
 
   it("lets the provider redirect after passkey sign-in", async () => {
-    vi.mocked(authClient.signIn.passkey).mockResolvedValue({
-      data: { redirect: true, url: "http://localhost:3100/callback?code=test" },
-      error: null,
-    } as never);
+    let finishSignIn: (() => void) | undefined;
+    vi.mocked(authClient.signIn.passkey).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishSignIn = () =>
+            resolve({
+              data: { redirect: true, url: "http://localhost:3100/callback?code=test" },
+              error: null,
+            } as never);
+        }),
+    );
     const user = userEvent.setup();
     const { router } = render(<PasskeyLoginButton callbackUrl="/cb" />);
     await user.click(screen.getByRole("button", { name: "auth.loginWith-passkey" }));
-    await waitFor(() => expect(authClient.signIn.passkey).toHaveBeenCalled());
+    const button = screen.getByRole("button", { name: "auth.loginWith-passkey" });
+    await waitFor(() => expect(button).toBeDisabled());
+    finishSignIn?.();
+    await waitFor(() => expect(button).toBeEnabled());
     expect(router.push).not.toHaveBeenCalled();
   });
 

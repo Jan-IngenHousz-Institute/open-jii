@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { locales, defaultLocale } from "@repo/i18n/config";
+import { locales, defaultLocale, isKnownLocale } from "@repo/i18n/config";
+
+const localeCookie = "openjii.locale";
+const oidcEntryRoutes = new Set(["/login", "/consent"]);
 
 const localeIndependentRoutes = new Set(["/opengraph-image", "/twitter-image"]);
 
@@ -15,8 +18,12 @@ function handleI18nRouting(request: NextRequest) {
   );
 
   if (!pathnameHasLocale) {
-    // Redirect to default locale
-    const locale = defaultLocale;
+    // OIDC redirects come from the API without a locale prefix.
+    const rememberedLocale = request.cookies.get(localeCookie)?.value;
+    const locale =
+      oidcEntryRoutes.has(pathname) && rememberedLocale && isKnownLocale(rememberedLocale)
+        ? rememberedLocale
+        : defaultLocale;
     const redirectUrl = new URL(
       `/${locale}${pathname}${request.nextUrl.search}`,
       request.nextUrl.origin,
@@ -90,9 +97,20 @@ export async function proxy(request: NextRequest) {
   // Add current path header and continue
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-current-path", request.nextUrl.pathname);
-  return NextResponse.next({
+  const response = NextResponse.next({
     request: { headers: requestHeaders },
   });
+  const locale = request.nextUrl.pathname.split("/")[1];
+  if (locale && isKnownLocale(locale) && request.cookies.get(localeCookie)?.value !== locale) {
+    response.cookies.set(localeCookie, locale, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: request.nextUrl.protocol === "https:",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+    });
+  }
+  return response;
 }
 
 export const config = {

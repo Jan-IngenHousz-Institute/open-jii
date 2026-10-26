@@ -517,6 +517,7 @@
     "searchPlaceholder": "Search organizations…",
     "searchLabel": "Search organizations",
     "noMatches": "No organizations match your search",
+    "noFilterMatches": "No organizations match these filters",
     "tabs": {
       "members": "Members",
       "teams": "Teams",
@@ -1030,7 +1031,7 @@
         "openid": "Identify your openJII account",
         "profile": "Read your name and profile picture",
         "email": "Read your email address",
-        "offline_access": "Keep you signed in when you are away"
+        "offline_access": "Allow the application to access your account while you are away"
       }
     }
   },

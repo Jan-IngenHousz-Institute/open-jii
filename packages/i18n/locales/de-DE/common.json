@@ -517,6 +517,7 @@
     "searchPlaceholder": "Organisationen suchen…",
     "searchLabel": "Organisationen durchsuchen",
     "noMatches": "Keine Organisation passt zu Ihrer Suche",
+    "noFilterMatches": "Keine Organisation entspricht diesen Filtern",
     "tabs": {
       "members": "Mitglieder",
       "teams": "Teams",
@@ -1030,7 +1031,7 @@
         "openid": "Ihr openJII-Konto identifizieren",
         "profile": "Ihren Namen und Ihr Profilbild lesen",
         "email": "Ihre E-Mail-Adresse lesen",
-        "offline_access": "Sie auch während Ihrer Abwesenheit angemeldet halten"
+        "offline_access": "Der Anwendung erlauben, auch in Ihrer Abwesenheit auf Ihr Konto zuzugreifen"
       }
     }
   },
