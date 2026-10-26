@@ -11,6 +11,10 @@ from __future__ import annotations
 BRONZE_TABLE_DEFAULT = "raw_data"
 SILVER_TABLE_DEFAULT = "clean_data"
 
+# How long a streamed measurement waits at a step for that step's next update. A step takes it only
+# once its own updates are shown to finish inside it.
+MEASUREMENT_PATH_TRIGGER_INTERVAL = "2 seconds"
+
 # Gold layer
 EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
 EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"
