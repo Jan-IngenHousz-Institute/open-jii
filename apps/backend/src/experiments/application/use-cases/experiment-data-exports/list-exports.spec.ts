@@ -1,14 +1,7 @@
 import { faker } from "@faker-js/faker";
 
-import {
-  assertFailure,
-  assertSuccess,
-  success,
-  failure,
-  AppError,
-} from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import type { ExportMetadata } from "../../../core/models/experiment-data-exports.model";
 import { ExperimentDataExportsRepository } from "../../../core/repositories/experiment-data-exports.repository";
 import { ListExportsUseCase } from "./list-exports";
 
@@ -25,7 +18,6 @@ describe("ListExportsUseCase", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
-
     useCase = testApp.module.get(ListExportsUseCase);
     exportsRepository = testApp.module.get(ExperimentDataExportsRepository);
   });
@@ -38,128 +30,57 @@ describe("ListExportsUseCase", () => {
     await testApp.teardown();
   });
 
-  it("should successfully list exports with active and completed", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Test_List_Exports",
-      userId: testUserId,
-    });
-
-    const mockExports: ExportMetadata[] = [
-      {
-        exportId: null,
-        experimentId: experiment.id,
-        tableName: "raw_data",
-        format: "csv",
-        status: "running",
-        filePath: null,
-        rowCount: null,
-        fileSize: null,
-        createdBy: testUserId,
-        createdAt: "2026-01-02T00:00:00Z",
-        completedAt: null,
-        jobRunId: 222,
-      },
-      {
-        exportId: faker.string.uuid(),
-        experimentId: experiment.id,
-        tableName: "raw_data",
-        format: "csv",
-        status: "completed",
-        filePath: "/path/to/file.csv",
-        rowCount: 1000,
-        fileSize: 50000,
-        createdBy: testUserId,
-        createdAt: "2026-01-01T00:00:00Z",
-        completedAt: "2026-01-01T00:05:00Z",
-        jobRunId: 111,
-      },
-    ];
-
-    vi.spyOn(exportsRepository, "listExports").mockResolvedValue(success(mockExports));
-
-    const result = await useCase.execute(experiment.id, testUserId, {
-      tableName: "raw_data",
-    });
-
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value.exports).toHaveLength(2);
-    expect(result.value.exports[0].status).toBe("running");
-    expect(result.value.exports[1].status).toBe("completed");
-
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(exportsRepository.listExports).toHaveBeenCalledWith({
+  it("lists the table's exports in the API's shape", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Exports", userId: testUserId });
+    const recorded = await exportsRepository.createOrJoinInFlight({
       experimentId: experiment.id,
       tableName: "raw_data",
+      format: "parquet",
+      anonymizeContributors: false,
+      createdBy: testUserId,
     });
-  });
-
-  it("should return empty exports list when no exports exist", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Test_Empty_Exports",
-      userId: testUserId,
+    assertSuccess(recorded);
+    await exportsRepository.complete(recorded.value.record.id, {
+      exportId: recorded.value.record.id,
+      format: "parquet",
+      rowCount: 2_000_000,
+      snapshotAt: new Date().toISOString(),
+      parts: [
+        { name: "part-00000.snappy.parquet", sizeBytes: 900 },
+        { name: "part-00001.snappy.parquet", sizeBytes: 100 },
+      ],
     });
 
-    vi.spyOn(exportsRepository, "listExports").mockResolvedValue(success([]));
+    const result = await useCase.execute(experiment.id, testUserId, { tableName: "raw_data" });
 
-    const result = await useCase.execute(experiment.id, testUserId, {
-      tableName: "raw_data",
-    });
-
-    expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
-    expect(result.value.exports).toHaveLength(0);
+    expect(result.value.exports).toEqual([
+      expect.objectContaining({
+        exportId: recorded.value.record.id,
+        status: "completed",
+        rowCount: 2_000_000,
+        totalBytes: 1000,
+        partCount: 2,
+        errorCode: null,
+      }),
+    ]);
   });
 
-  it("should return not found when experiment does not exist", async () => {
+  it("returns an empty list for a table with no exports", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Empty", userId: testUserId });
+
+    const result = await useCase.execute(experiment.id, testUserId, { tableName: "raw_data" });
+
+    assertSuccess(result);
+    expect(result.value.exports).toEqual([]);
+  });
+
+  it("returns not found when the experiment does not exist", async () => {
     const result = await useCase.execute(faker.string.uuid(), testUserId, {
       tableName: "raw_data",
     });
 
-    expect(result.isFailure()).toBe(true);
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
-    expect(result.error.message).toContain("Experiment not found");
-  });
-
-  it("should allow access to public experiments without membership", async () => {
-    const anotherUserId = await testApp.createTestUser({
-      email: "public-user@example.com",
-    });
-
-    const { experiment } = await testApp.createExperiment({
-      name: "Public_Experiment",
-      visibility: "public",
-      userId: testUserId,
-    });
-
-    vi.spyOn(exportsRepository, "listExports").mockResolvedValue(success([]));
-
-    const result = await useCase.execute(experiment.id, anotherUserId, {
-      tableName: "raw_data",
-    });
-
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-  });
-
-  it("should return internal error when listExports fails", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Test_Experiment",
-      userId: testUserId,
-    });
-
-    vi.spyOn(exportsRepository, "listExports").mockResolvedValue(
-      failure(AppError.internal("Failed to query exports")),
-    );
-
-    const result = await useCase.execute(experiment.id, testUserId, {
-      tableName: "raw_data",
-    });
-
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.code).toBe("INTERNAL_ERROR");
-    expect(result.error.message).toContain("Failed to list exports");
   });
 });

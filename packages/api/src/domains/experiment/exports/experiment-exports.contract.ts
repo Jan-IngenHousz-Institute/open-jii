@@ -2,6 +2,8 @@ import { oc } from "@orpc/contract";
 
 import { zExperimentIdPathParam } from "../experiment.schema";
 import {
+  zExperimentExportDownloadLinksResponse,
+  zExperimentExportIdPathParam,
   zExperimentInitiateExportBody,
   zExperimentInitiateExportResponse,
   zExperimentListExportsQuery,
@@ -17,4 +19,12 @@ export const experimentExportsContract = {
     .route({ method: "GET", path: "/api/v1/experiments/{id}/data/exports", successStatus: 200 })
     .input(zExperimentIdPathParam.and(zExperimentListExportsQuery))
     .output(zExperimentListExportsResponse),
+  getExportDownloadLinks: oc
+    .route({
+      method: "GET",
+      path: "/api/v1/experiments/{id}/data/exports/{exportId}/links",
+      successStatus: 200,
+    })
+    .input(zExperimentIdPathParam.and(zExperimentExportIdPathParam))
+    .output(zExperimentExportDownloadLinksResponse),
 };
