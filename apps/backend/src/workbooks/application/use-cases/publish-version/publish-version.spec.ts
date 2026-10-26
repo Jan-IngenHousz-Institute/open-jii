@@ -1,4 +1,21 @@
+import { Logger } from "@nestjs/common";
+
+import { eq, experiments } from "@repo/database";
+
 import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
+import { AttachWorkbookUseCase } from "../../../../experiments/application/use-cases/attach-workbook/attach-workbook";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { NotificationRepository } from "../../../../notifications/core/repositories/notification.repository";
+import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
+import {
+  audienceDeliveries,
+  audienceNotifications,
+  deliveriesFor,
+  grantResourceAudience,
+  notificationsFor,
+  seedResourceAudience,
+} from "../../../../test/resource-audience";
+import type { ResourceAudience } from "../../../../test/resource-audience";
 import { TestHarness } from "../../../../test/test-harness";
 import { WorkbookVersionRepository } from "../../../core/repositories/workbook-version.repository";
 import { WorkbookRepository } from "../../../core/repositories/workbook.repository";
@@ -175,5 +192,210 @@ describe("PublishVersionUseCase", () => {
     const result = await useCase.execute(workbook.id, userId);
     assertSuccess(result);
     expect(result.value.cells).toEqual(cells);
+  });
+
+  describe("telling the experiments on an older version", () => {
+    let audience: ResourceAudience;
+    let organizationAdmin: string;
+    let adminOfA: string;
+    let workbookId: string;
+    let experimentA: string;
+    let experimentB: string;
+
+    const drift = (content: string) =>
+      workbookRepo.update(workbookId, {
+        cells: [{ id: "md1", type: "markdown", content, isCollapsed: false }],
+      });
+
+    const heardAbout = (recipientId: string, version: string) => ({
+      type: "workbook_version_published",
+      recipientId,
+      actorId: audience.actor,
+      resourceType: "experiment",
+      resourceId: experimentB,
+      params: { experimentName: "Experiment B", workbookName: "Shared workbook", version },
+    });
+
+    const createExperiment = async (name: string) => {
+      const { experiment } = await testApp.createExperiment({
+        name,
+        userId: audience.actor,
+        organizationId: audience.organizationId,
+      });
+      return experiment.id;
+    };
+
+    beforeEach(async () => {
+      audience = await seedResourceAudience(testApp);
+      organizationAdmin = await testApp.createTestUser({ name: "Org Admin" });
+      await testApp.addOrganizationMember(audience.organizationId, organizationAdmin, "admin");
+      adminOfA = await testApp.createTestUser({ name: "Admin of A" });
+
+      workbookId = (
+        await testApp.createWorkbook({
+          name: "Shared workbook",
+          cells: [{ id: "md1", type: "markdown", content: "v1", isCollapsed: false }],
+          createdBy: audience.actor,
+          organizationId: audience.organizationId,
+        })
+      ).id;
+      await testApp.addResourceGrant({
+        resourceType: "workbook",
+        resourceId: workbookId,
+        granteeType: "user",
+        granteeId: audience.actor,
+        role: "admin",
+      });
+
+      experimentA = await createExperiment("Experiment A");
+      experimentB = await createExperiment("Experiment B");
+      for (const granteeId of [audience.actor, adminOfA]) {
+        await testApp.addResourceGrant({
+          resourceType: "experiment",
+          resourceId: experimentA,
+          granteeType: "user",
+          granteeId,
+          role: "admin",
+        });
+      }
+      await grantResourceAudience(testApp, audience, "experiment", experimentB);
+
+      const attach = testApp.module.get(AttachWorkbookUseCase);
+      assertSuccess(await attach.execute(experimentA, workbookId, audience.actor));
+      assertSuccess(await attach.execute(experimentB, workbookId, audience.actor));
+    });
+
+    it("tells the admins of the other experiment once each, and nobody else", async () => {
+      await drift("v2");
+
+      const result = await useCase.execute(workbookId, audience.actor, {
+        forExperimentId: experimentA,
+      });
+
+      assertSuccess(result);
+      expect(result.value.version).toBe(2);
+      expect(await audienceNotifications(testApp, audience)).toEqual({
+        owner: [heardAbout(audience.owner, "2")],
+        actor: [],
+        admin: [heardAbout(audience.admin, "2")],
+        viewer: [],
+      });
+      expect(await notificationsFor(testApp, organizationAdmin)).toEqual([]);
+      expect(await notificationsFor(testApp, adminOfA)).toEqual([]);
+      expect(await audienceDeliveries(testApp, audience)).toEqual({
+        owner: [],
+        actor: [],
+        admin: [],
+        viewer: [],
+      });
+      expect(await deliveriesFor(testApp, organizationAdmin)).toEqual([]);
+    });
+
+    it("tells the admins of every experiment when no caller asks for one to be left out", async () => {
+      await drift("v2");
+
+      assertSuccess(await useCase.execute(workbookId, audience.actor));
+
+      expect(await notificationsFor(testApp, adminOfA)).toEqual([
+        expect.objectContaining({ resourceId: experimentA }),
+      ]);
+      expect(
+        (await notificationsFor(testApp, audience.owner)).map((row) => row.resourceId),
+      ).toEqual(expect.arrayContaining([experimentA, experimentB]));
+    });
+
+    it("tells an admin again only once they have read the first one", async () => {
+      await drift("v2");
+      assertSuccess(
+        await useCase.execute(workbookId, audience.actor, { forExperimentId: experimentA }),
+      );
+      await drift("v3");
+      assertSuccess(
+        await useCase.execute(workbookId, audience.actor, { forExperimentId: experimentA }),
+      );
+
+      expect(await notificationsFor(testApp, audience.admin)).toEqual([
+        heardAbout(audience.admin, "2"),
+      ]);
+
+      assertSuccess(await testApp.module.get(NotificationRepository).markAllRead(audience.admin));
+      await drift("v4");
+      assertSuccess(
+        await useCase.execute(workbookId, audience.actor, { forExperimentId: experimentA }),
+      );
+
+      expect(await notificationsFor(testApp, audience.admin)).toEqual([
+        heardAbout(audience.admin, "2"),
+        heardAbout(audience.admin, "4"),
+      ]);
+    });
+
+    it("tells nobody about an archived experiment", async () => {
+      await testApp.database
+        .update(experiments)
+        .set({ status: "archived" })
+        .where(eq(experiments.id, experimentB));
+      await drift("v2");
+
+      assertSuccess(
+        await useCase.execute(workbookId, audience.actor, { forExperimentId: experimentA }),
+      );
+
+      expect(await audienceNotifications(testApp, audience)).toEqual({
+        owner: [],
+        actor: [],
+        admin: [],
+        viewer: [],
+      });
+      expect(await notificationsFor(testApp, adminOfA)).toEqual([]);
+    });
+
+    it("dispatches nothing for a workbook only the saving experiment uses", async () => {
+      await testApp.database
+        .update(experiments)
+        .set({ workbookId: null, workbookVersionId: null })
+        .where(eq(experiments.id, experimentB));
+      const dispatch = vi.spyOn(testApp.module.get(NotificationDispatchService), "dispatch");
+      await drift("v2");
+
+      assertSuccess(
+        await useCase.execute(workbookId, audience.actor, { forExperimentId: experimentA }),
+      );
+
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it("dispatches nothing for a workbook no experiment uses yet", async () => {
+      const dispatch = vi.spyOn(testApp.module.get(NotificationDispatchService), "dispatch");
+      const fresh = await testApp.createWorkbook({ name: "Fresh", createdBy: audience.actor });
+
+      assertSuccess(await useCase.execute(fresh.id, audience.actor));
+
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it("still returns the version and logs when the admins cannot be looked up", async () => {
+      vi.spyOn(testApp.module.get(SharingRepository), "listAdminIds").mockResolvedValue(
+        failure(AppError.internal("Database unavailable")),
+      );
+      const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+      await drift("v2");
+
+      const result = await useCase.execute(workbookId, audience.actor, {
+        forExperimentId: experimentA,
+      });
+
+      assertSuccess(result);
+      expect(result.value.version).toBe(2);
+      expect(await audienceNotifications(testApp, audience)).toEqual({
+        owner: [],
+        actor: [],
+        admin: [],
+        viewer: [],
+      });
+      expect(error).toHaveBeenCalledWith(
+        expect.objectContaining({ operation: "publishVersion", experimentId: experimentB }),
+      );
+    });
   });
 });

@@ -1,5 +1,7 @@
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { notificationsFor } from "../../../../test/resource-audience";
 import { TestHarness } from "../../../../test/test-harness";
+import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
 import { AttachWorkbookUseCase } from "./attach-workbook";
 
@@ -111,5 +113,73 @@ describe("AttachWorkbookUseCase", () => {
     expect(flow.value?.graph.nodes).toHaveLength(1);
     expect(flow.value?.graph.nodes[0]).toMatchObject({ id: "md1", type: "instruction" });
     expect(flow.value?.graph.edges).toHaveLength(0);
+  });
+
+  /**
+   * A second experiment on the same workbook, administered by someone else and by the
+   * acting admin, who must not hear about their own save; and a co-admin on the first,
+   * who must not hear about their own experiment.
+   */
+  async function shareWorkbookWithAnotherExperiment() {
+    const otherAdmin = await testApp.createTestUser({ name: "Other Admin" });
+    const coAdmin = await testApp.createTestUser({ name: "Co Admin" });
+    await testApp.addResourceGrant({
+      resourceType: "experiment",
+      resourceId: experimentId,
+      granteeType: "user",
+      granteeId: coAdmin,
+      role: "admin",
+    });
+    await testApp.addResourceGrant({
+      resourceType: "workbook",
+      resourceId: workbookId,
+      granteeType: "user",
+      granteeId: otherAdmin,
+      role: "viewer",
+    });
+    const { experiment: otherExperiment } = await testApp.createExperiment({
+      name: "Other Experiment",
+      userId: otherAdmin,
+    });
+    await testApp.addResourceGrant({
+      resourceType: "experiment",
+      resourceId: otherExperiment.id,
+      granteeType: "user",
+      granteeId: adminUserId,
+      role: "admin",
+    });
+    assertSuccess(await useCase.execute(otherExperiment.id, workbookId, otherAdmin));
+
+    return { otherAdmin, coAdmin, otherExperimentId: otherExperiment.id };
+  }
+
+  it("tells the admins of another experiment on the workbook, not those of this one", async () => {
+    assertSuccess(await useCase.execute(experimentId, workbookId, adminUserId));
+    const { otherAdmin, coAdmin, otherExperimentId } = await shareWorkbookWithAnotherExperiment();
+    await testApp.module.get(WorkbookRepository).update(workbookId, {
+      cells: [{ id: "md1", type: "markdown", content: "Changed", isCollapsed: false }],
+    });
+
+    const result = await useCase.execute(experimentId, workbookId, adminUserId);
+
+    assertSuccess(result);
+    expect(result.value.version).toBe(2);
+
+    expect(await notificationsFor(testApp, otherAdmin)).toEqual([
+      {
+        type: "workbook_version_published",
+        recipientId: otherAdmin,
+        actorId: adminUserId,
+        resourceType: "experiment",
+        resourceId: otherExperimentId,
+        params: {
+          experimentName: "Other Experiment",
+          workbookName: "Test Workbook",
+          version: "2",
+        },
+      },
+    ]);
+    expect(await notificationsFor(testApp, coAdmin)).toEqual([]);
+    expect(await notificationsFor(testApp, adminUserId)).toEqual([]);
   });
 });

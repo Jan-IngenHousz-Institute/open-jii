@@ -31,6 +31,12 @@ export interface DispatchInput<T extends NotificationType> {
    * written; only the email step is skipped, whatever the type's channel rule says.
    */
   suppressEmail?: boolean;
+  /**
+   * For an event that repeats while what it is about stays the same for the reader:
+   * someone still holding an unread row of this type for this resource is not told
+   * again. It needs a resource; without one it does nothing.
+   */
+  onceUntilRead?: boolean;
 }
 
 /**
@@ -78,13 +84,13 @@ export class NotificationDispatchService {
 
     const actorId = input.actorId ?? null;
     // Nobody hears about their own action, and nobody hears about it twice.
-    const recipientIds = [...new Set(input.recipientIds)].filter((id) => id !== actorId);
+    const addressed = [...new Set(input.recipientIds)].filter((id) => id !== actorId);
+    const resource = input.resource ?? null;
+    const recipientIds = await this.withoutUnreadHolders(input, resource, addressed);
 
     if (recipientIds.length === 0) {
       return success({ created: 0, queued: 0 });
     }
-
-    const resource = input.resource ?? null;
 
     // Decided before anything is written, so the bell rows and the emails they owe go
     // in together: a reader never sees a notification whose delivery row is still
@@ -148,6 +154,39 @@ export class NotificationDispatchService {
     this.outbox.nudge();
 
     return success(written.value);
+  }
+
+  /**
+   * A lookup that fails tells everyone again: a duplicate row is the cheaper mistake
+   * than a missed one.
+   */
+  private async withoutUnreadHolders<T extends NotificationType>(
+    input: DispatchInput<T>,
+    resource: { type: NotificationResourceType; id: string } | null,
+    recipientIds: string[],
+  ): Promise<string[]> {
+    if (input.onceUntilRead !== true || !resource || recipientIds.length === 0) {
+      return recipientIds;
+    }
+
+    const unread = await this.notificationRepository.findUnreadRecipients(
+      input.type,
+      resource,
+      recipientIds,
+    );
+
+    if (unread.isFailure()) {
+      this.logger.error({
+        msg: "Failed to look up unread notifications, everyone will be told again",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "dispatch-notification",
+        type: input.type,
+        error: unread.error,
+      });
+      return recipientIds;
+    }
+
+    return recipientIds.filter((id) => !unread.value.has(id));
   }
 
   /**

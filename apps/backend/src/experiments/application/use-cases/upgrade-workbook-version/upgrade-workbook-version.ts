@@ -93,6 +93,7 @@ export class UpgradeWorkbookVersionUseCase {
         const versionResult = await this.publishVersionUseCase.execute(
           experiment.workbookId,
           userId,
+          { forExperimentId: experimentId },
         );
         if (versionResult.isFailure()) return versionResult;
         version = versionResult.value;

@@ -82,7 +82,9 @@ export class AttachWorkbookUseCase {
       if (latest && !upgradableResult.value) {
         version = latest;
       } else {
-        const versionResult = await this.publishVersionUseCase.execute(workbookId, userId);
+        const versionResult = await this.publishVersionUseCase.execute(workbookId, userId, {
+          forExperimentId: experimentId,
+        });
         if (versionResult.isFailure()) return versionResult;
         version = versionResult.value;
       }

@@ -213,6 +213,34 @@ export class NotificationRepository {
     });
   }
 
+  /** Of these recipients, the ones holding an unread row of this type about this resource. */
+  async findUnreadRecipients(
+    type: NotificationType,
+    resource: { type: NotificationResourceType; id: string },
+    recipientIds: string[],
+  ): Promise<Result<Set<string>>> {
+    return tryCatch(async () => {
+      if (recipientIds.length === 0) {
+        return new Set<string>();
+      }
+
+      const rows = await this.database
+        .selectDistinct({ recipientId: notifications.recipientId })
+        .from(notifications)
+        .where(
+          and(
+            inArray(notifications.recipientId, recipientIds),
+            isNull(notifications.readAt),
+            eq(notifications.type, type),
+            eq(notifications.resourceType, resource.type),
+            eq(notifications.resourceId, resource.id),
+          ),
+        );
+
+      return new Set(rows.map((row) => row.recipientId));
+    });
+  }
+
   /** Ids that belong to someone else match no row, so they are ignored rather than refused. */
   async markRead(recipientId: string, ids: string[]): Promise<Result<number>> {
     return tryCatch(async () => {

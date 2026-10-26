@@ -1,9 +1,11 @@
+import { Logger } from "@nestjs/common";
 import type { MockInstance } from "vitest";
 
 import type { NotificationParams } from "@repo/api/domains/notification/notification.schema";
 import { eq, notifications } from "@repo/database";
 
 import { EmailAdapter } from "../../../common/modules/email/services/email.adapter";
+import { ErrorCodes } from "../../../common/utils/error-codes";
 import {
   AppError,
   assertFailure,
@@ -457,6 +459,119 @@ describe("NotificationDispatchService", () => {
     expect(second.value).toEqual({ created: 0, queued: 0 });
     expect(await rowsFor(recipientId)).toHaveLength(1);
     expect(await deliveriesFor(recipientId)).toHaveLength(1);
+  });
+
+  describe("once until read", () => {
+    const versionParams = {
+      experimentName: "Photosynthesis",
+      workbookName: "Leaf protocol",
+      version: "2",
+    };
+
+    const seedRow = (
+      userId: string,
+      row: { type?: "experiment_join_request_approved"; resourceId?: string } = {},
+    ) =>
+      repository.insertMany([
+        {
+          recipientId: userId,
+          type: row.type ?? "workbook_version_published",
+          actorId,
+          resourceType: "experiment",
+          resourceId: row.resourceId ?? experiment.id,
+          params: versionParams,
+          dedupeKey: null,
+        },
+      ]);
+
+    const rejection = (onceUntilRead?: boolean) =>
+      dispatch.dispatch({
+        type: "experiment_join_request_rejected",
+        recipientIds: [recipientId],
+        actorId,
+        resource: experiment,
+        params: { experimentName: "Photosynthesis" },
+        onceUntilRead,
+      });
+
+    it("skips only a recipient holding an unread row of the same type about the same resource", async () => {
+      const readId = await testApp.createTestUser({});
+      const otherTypeId = await testApp.createTestUser({});
+      const otherResourceId = await testApp.createTestUser({});
+
+      assertSuccess(await seedRow(recipientId));
+      const readRow = await seedRow(readId);
+      assertSuccess(readRow);
+      assertSuccess(await repository.markRead(readId, [readRow.value[0].id]));
+      assertSuccess(await seedRow(otherTypeId, { type: "experiment_join_request_approved" }));
+      assertSuccess(await seedRow(otherResourceId, { resourceId: crypto.randomUUID() }));
+
+      const result = await dispatch.dispatch({
+        type: "workbook_version_published",
+        recipientIds: [recipientId, readId, otherTypeId, otherResourceId],
+        actorId,
+        resource: experiment,
+        params: versionParams,
+        onceUntilRead: true,
+      });
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ created: 3, queued: 0 });
+      expect(await rowsFor(recipientId)).toHaveLength(1);
+      expect(await rowsFor(readId)).toHaveLength(2);
+      expect(await rowsFor(otherTypeId)).toHaveLength(2);
+      expect(await rowsFor(otherResourceId)).toHaveLength(2);
+    });
+
+    it("writes and queues once while the row is unread, and again once it is read", async () => {
+      const first = await rejection(true);
+      assertSuccess(first);
+      expect(first.value).toEqual({ created: 1, queued: 1 });
+
+      const second = await rejection(true);
+      assertSuccess(second);
+      expect(second.value).toEqual({ created: 0, queued: 0 });
+      expect(await rowsFor(recipientId)).toHaveLength(1);
+      expect(await deliveriesFor(recipientId)).toHaveLength(1);
+
+      const [row] = await rowsFor(recipientId);
+      assertSuccess(await repository.markRead(recipientId, [row.id]));
+
+      const third = await rejection(true);
+      assertSuccess(third);
+      expect(third.value).toEqual({ created: 1, queued: 1 });
+      expect(await rowsFor(recipientId)).toHaveLength(2);
+      expect(await deliveriesFor(recipientId)).toHaveLength(2);
+    });
+
+    it("writes every time when the caller does not ask for it", async () => {
+      assertSuccess(await rejection());
+      const second = await rejection();
+
+      assertSuccess(second);
+      expect(second.value).toEqual({ created: 1, queued: 1 });
+      expect(await rowsFor(recipientId)).toHaveLength(2);
+    });
+
+    it("writes the row and logs when the unread rows cannot be looked up", async () => {
+      assertSuccess(await rejection());
+      vi.spyOn(repository, "findUnreadRecipients").mockResolvedValue(
+        failure(AppError.internal("Database unavailable")),
+      );
+      const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+
+      const result = await rejection(true);
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ created: 1, queued: 1 });
+      expect(await rowsFor(recipientId)).toHaveLength(2);
+      expect(error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: "dispatch-notification",
+          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        }),
+      );
+    });
   });
 
   // The access email needs a resource it can build a page link for. The registry
