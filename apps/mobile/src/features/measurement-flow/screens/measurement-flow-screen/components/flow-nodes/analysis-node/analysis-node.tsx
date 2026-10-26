@@ -36,6 +36,7 @@ import { hydrateCells } from "../utils/hydrate-cells";
 import { AnalysisActionBar, useScrollToTop } from "./analysis-action-bar";
 import { AnalysisMacroResult } from "./analysis-macro-result";
 import { AnalysisSummaryCard } from "./analysis-summary-card";
+import { RepeatScopeSheet } from "./repeat-scope-sheet";
 
 const log = createLogger("analysis-node");
 
@@ -300,10 +301,23 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
   // carry an ordinal.
   const isMeasureAgainOn = isScaffoldScreenOn("d5-measure-again");
   const measureAgain = usePlotStepStore((s) => s.measureAgain);
+  const confirmedPlot = usePlotStepStore((s) => s.confirmedPlot);
+  const setCurrentFlowStep = useMeasurementFlowStore((s) => s.setCurrentFlowStep);
+  const [isRepeatScopeOpen, setIsRepeatScopeOpen] = useState(false);
 
-  const handleMeasureAgain = () => {
+  const handleMeasureAgain = () => setIsRepeatScopeOpen(true);
+  const closeRepeatScope = () => setIsRepeatScopeOpen(false);
+
+  const handleMeasurementOnly = () => {
+    setIsRepeatScopeOpen(false);
     measureAgain();
     previousStep();
+  };
+
+  const handleWholeRound = () => {
+    setIsRepeatScopeOpen(false);
+    measureAgain();
+    setCurrentFlowStep(0);
   };
 
   const { scrollViewRef, hasScrolled, handleScroll, scrollToTop } = useScrollToTop();
@@ -380,6 +394,16 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
         onUpload={handleAccept}
         onMeasureAgain={isMeasureAgainOn ? handleMeasureAgain : undefined}
       />
+
+      {isMeasureAgainOn && confirmedPlot ? (
+        <RepeatScopeSheet
+          plot={confirmedPlot.identifier}
+          isOpen={isRepeatScopeOpen}
+          onMeasurementOnly={handleMeasurementOnly}
+          onWholeRound={handleWholeRound}
+          onClose={closeRepeatScope}
+        />
+      ) : null}
 
       <MeasurementQuestionsModal
         visible={questionsModalVisible}

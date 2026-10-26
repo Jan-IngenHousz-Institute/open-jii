@@ -44,14 +44,14 @@ function unitIds(identifiers: readonly string[]): string[] {
 }
 
 /**
- * The treatment-balanced walk over the example field: every run of 12 holds each treatment
- * 4 times, give or take one, with A4 tenth, C4 twelfth and B6 thirteenth.
+ * The treatment-balanced walk over the example field: every run of 12 holds each treatment in
+ * proportion to its plots, give or take one, with A4 tenth, C4 twelfth and B6 thirteenth.
  */
 // prettier-ignore
 export const WALK = [
-  "F8", "E8", "D8", "C8", "B7", "C7", "C6", "C5", "B5", "A4", "A5", "C4", "B6", "D2", "D3", "C3",
-  "D6", "D7", "E6", "F7", "F6", "F5", "E5", "D5", "D4", "E4", "F4", "F3", "E3", "E2", "F2", "F1",
-  "E1", "D1", "C1", "C2", "B1", "A1", "B2", "A2", "A3", "B3", "A6", "A7", "A8", "B8",
+  "F8", "E8", "D8", "C8", "B7", "C7", "C6", "C5", "B5", "A4", "A5", "C4", "B6", "D6", "D7", "C3",
+  "D2", "D3", "E6", "F7", "F6", "F5", "E5", "D5", "D4", "F4", "E3", "F3", "E4", "E2", "F2", "F1",
+  "E1", "D1", "C1", "C2", "A3", "A1", "B2", "A2", "B1", "B3", "A6", "A7", "A8", "B8",
 ] as const;
 
 const PLOT_ATTRIBUTES = PLOTS.map(({ id, treatment, genotype, block }) => ({
@@ -183,10 +183,13 @@ const sessionDays = new ExperimentPathFixture("sessions/days", [
 function plannedReadings(
   share: readonly string[],
   skipped: string,
-): { unitId: string; isRepeat: boolean }[] {
+  flagged?: string,
+): { unitId: string; isRepeat: boolean; isFlagged: boolean }[] {
+  const flaggedId = flagged ? unitId(flagged) : null;
   return unitIds(share.filter((plot) => plot !== skipped)).map((id) => ({
     unitId: id,
     isRepeat: false,
+    isFlagged: id === flaggedId,
   }));
 }
 
@@ -197,13 +200,18 @@ const seedUserSession = {
   lastUploadAt: minutesBefore(FIELD_DAY_AFTERNOON, 80),
   isUploaded: true,
   assignedUnitIds: unitIds(SEED_USER_SHARE),
-  readings: [...plannedReadings(SEED_USER_SHARE, "A4"), { unitId: unitId("C4"), isRepeat: true }],
+  readings: [
+    ...plannedReadings(SEED_USER_SHARE, "A4", "B6"),
+    { unitId: unitId("C4"), isRepeat: true, isFlagged: false },
+  ],
   skips: [{ unitId: unitId("A4"), reason: "flooded" }],
+  failedUploadUnitIds: [],
 };
 
 /**
- * End of day: Seed User skipped A4 as flooded and repeated C4 on purpose, and Alex skipped E4 with
- * no plant and also read D6 and D7, which sit in Seed User's share.
+ * End of day: Seed User skipped A4 as flooded, repeated C4 on purpose and flagged the reading on B6.
+ * Alex skipped E4 with no plant, also read D6 and D7, which sit in Seed User's share, and the phone
+ * reported that the reading on F2 never uploaded.
  */
 const endedSessions = new ExperimentPathFixture("sessions/ended", [
   seedUserSession,
@@ -215,11 +223,15 @@ const endedSessions = new ExperimentPathFixture("sessions/ended", [
     isUploaded: true,
     assignedUnitIds: unitIds(ALEX_SHARE),
     readings: [
-      ...plannedReadings(ALEX_SHARE, "E4"),
-      { unitId: unitId("D6"), isRepeat: false },
-      { unitId: unitId("D7"), isRepeat: false },
+      ...plannedReadings(
+        ALEX_SHARE.filter((plot) => plot !== "F2"),
+        "E4",
+      ),
+      { unitId: unitId("D6"), isRepeat: false, isFlagged: false },
+      { unitId: unitId("D7"), isRepeat: false, isFlagged: false },
     ],
     skips: [{ unitId: unitId("E4"), reason: "plantMissing" }],
+    failedUploadUnitIds: [unitId("F2")],
   },
 ]);
 
@@ -235,6 +247,7 @@ const endedSessionsWaiting = new ExperimentPathFixture("sessions/ended", [
     assignedUnitIds: unitIds(ALEX_SHARE),
     readings: plannedReadings(ALEX_SHARE.slice(0, 11), "E4"),
     skips: [],
+    failedUploadUnitIds: [],
   },
 ]);
 

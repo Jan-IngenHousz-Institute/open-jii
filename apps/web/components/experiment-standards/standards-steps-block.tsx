@@ -29,7 +29,7 @@ interface OpenFields {
 
 interface StandardsStepsBlockProps {
   experimentId: string;
-  /** An experiment's admins and members publish, unless it is archived. */
+  /** People who can edit the experiment publish, archived or not. */
   canPublish: boolean;
 }
 

@@ -27,8 +27,9 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
-import type { PlotListMapping } from "./plot-list-preview";
+import type { PlotListEntry, PlotListMapping } from "./plot-list-preview";
 import { PlotListPreview } from "./plot-list-preview";
+import { rowLetter } from "./row-letter";
 import { UnitName } from "./unit-name";
 
 interface LayoutPlotListDialogProps {
@@ -124,6 +125,16 @@ export function LayoutPlotListDialog({ levelName, open, onOpenChange }: LayoutPl
     return hidden > 0 ? t("layout.sheetMatch.moreNames", { names: shown, count: hidden }) : shown;
   };
 
+  const clashName = ({ identifier, clash }: PlotListEntry) =>
+    clash === undefined
+      ? identifier
+      : t("layout.plotList.clashName", {
+          plot: identifier,
+          row: rowLetter(clash.row),
+          column: clash.column,
+          keptBy: clash.keptBy,
+        });
+
   const renderColumnOption = (column: MetadataColumn) => (
     <SelectItem key={column.id} value={column.id}>
       {column.name}
@@ -200,11 +211,19 @@ export function LayoutPlotListDialog({ levelName, open, onOpenChange }: LayoutPl
                         gaps: preview.gapCount,
                       })}
                     </p>
-                    {preview.unplaced.length > 0 ? (
+                    {preview.withoutPosition.length > 0 ? (
                       <p>
                         {t("layout.plotList.unplaced", {
-                          count: preview.unplaced.length,
-                          names: listNames(preview.unplaced.map((plot) => plot.identifier)),
+                          count: preview.withoutPosition.length,
+                          names: listNames(preview.withoutPosition.map((plot) => plot.identifier)),
+                        })}
+                      </p>
+                    ) : null}
+                    {preview.clashing.length > 0 ? (
+                      <p>
+                        {t("layout.plotList.clash", {
+                          count: preview.clashing.length,
+                          names: listNames(preview.clashing.map(clashName)),
                         })}
                       </p>
                     ) : null}

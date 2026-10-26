@@ -99,6 +99,7 @@ export function DatasetPublishFlow({ dataset, experiment }: DatasetPublishFlowPr
     title: dataset.title,
     description: dataset.description ?? experiment.description ?? "",
     authors: dataset.authors,
+    contributors: dataset.contributors,
     limitations: dataset.limitations ?? "",
     license: dataset.license ?? experiment.license ?? undefined,
     access: dataset.access,

@@ -122,9 +122,7 @@ export function WalkingOrderPreview({
       {t("walkingOrder.unbalanced", { first: balance.outside?.first, last: balance.outside?.last })}
     </p>
   ) : (
-    <p className="text-sm">
-      {t("walkingOrder.balance", { window: balance.window, expected: balance.expected })}
-    </p>
+    <p className="text-sm">{t("walkingOrder.balance", { window: balance.window })}</p>
   );
 
   return (

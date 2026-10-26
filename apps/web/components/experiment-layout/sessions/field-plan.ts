@@ -13,17 +13,20 @@ import type {
 import { PlotCategories } from "../plot-state";
 import { rowLetter } from "../row-letter";
 
-/** Each treatment's count over a run of plots in walking order, and the tolerance it is held to. */
+/** Each treatment's share of a run of plots in walking order, held to its share of the field. */
 export interface WalkBalance {
   window: number;
-  expected: number;
   /** Walk positions, from 1, of the first run that leaves the tolerance. */
   outside: { first: number; last: number } | null;
 }
 
-const BALANCE_PER_TREATMENT = 4;
+const BALANCE_WINDOW = 12;
 const BALANCE_TOLERANCE = 1;
-const RANDOM_STRATEGIES: readonly WalkingStrategy[] = ["randomByBlock", "treatmentBalanced"];
+const RANDOM_STRATEGIES: readonly WalkingStrategy[] = [
+  "random",
+  "randomByBlock",
+  "treatmentBalanced",
+];
 
 /** A layout read together with its plots' attributes and walking order. */
 export class FieldPlan {
@@ -139,25 +142,18 @@ export class FieldPlan {
     return isUnbroken ? { first, last } : null;
   }
 
-  /** Whether every run of the walk holds each treatment its fair number of times, within one. */
+  /** Whether every run of the walk holds each treatment in proportion to the field, within one. */
   balance(): WalkBalance {
-    const window = this.treatments.length * BALANCE_PER_TREATMENT;
+    const window = BALANCE_WINDOW;
 
     for (let start = 0; start + window <= this.order.length; start++) {
-      const counts = this.countByTreatment(this.order.slice(start, start + window));
-      const isOutside = [...counts.values()].some(
-        (count) => Math.abs(count - BALANCE_PER_TREATMENT) > BALANCE_TOLERANCE,
-      );
-      if (isOutside) {
-        return {
-          window,
-          expected: BALANCE_PER_TREATMENT,
-          outside: { first: start + 1, last: start + window },
-        };
+      const run = this.order.slice(start, start + window);
+      if (!this.isBalanced(run)) {
+        return { window, outside: { first: start + 1, last: start + window } };
       }
     }
 
-    return { window, expected: BALANCE_PER_TREATMENT, outside: null };
+    return { window, outside: null };
   }
 
   /** Treatments a share holds none of. */

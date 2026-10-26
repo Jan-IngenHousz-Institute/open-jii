@@ -1,5 +1,6 @@
 "use client";
 
+import { useExperimentDeviceSensors } from "@/hooks/experiment/useExperimentDeviceSensors/useExperimentDeviceSensors";
 import { useExperimentLayout } from "@/hooks/experiment/useExperimentLayout/useExperimentLayout";
 import { useExperimentLayoutPlacements } from "@/hooks/experiment/useExperimentLayoutPlacements/useExperimentLayoutPlacements";
 import { formatDate } from "@/util/date";
@@ -9,11 +10,11 @@ import type { FormEvent } from "react";
 import { useForm } from "react-hook-form";
 
 import type { ExperimentDeviceIdentity } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
-import type { LayoutPlacementCreate } from "@repo/api/domains/experiment/layout/experiment-layout.schema";
-import {
-  AMBYTE_CHANNEL_COUNT,
-  zLayoutPlacementCreate,
+import type {
+  DeviceSensor,
+  LayoutPlacementCreate,
 } from "@repo/api/domains/experiment/layout/experiment-layout.schema";
+import { zLayoutPlacementCreate } from "@repo/api/domains/experiment/layout/experiment-layout.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -53,7 +54,6 @@ interface PlaceOnPlotDialogProps {
 }
 
 const WHOLE_DEVICE = "whole";
-const CHANNELS = Array.from({ length: AMBYTE_CHANNEL_COUNT }, (_, index) => index + 1);
 
 // The en-CA locale writes a local calendar date as YYYY-MM-DD.
 function today(): string {
@@ -67,19 +67,20 @@ export function PlaceOnPlotDialog({ experimentId, device, onClose }: PlaceOnPlot
   const { data: placements = [] } = useExperimentLayoutPlacements(experimentId, {
     deviceId: device.id,
   });
+  const { data: sensors = [] } = useExperimentDeviceSensors(experimentId, device.id);
 
   const form = useForm<LayoutPlacementCreate>({
     resolver: zodResolver(zLayoutPlacementCreate),
     defaultValues: {
       deviceId: device.id,
-      channel: null,
+      sensorId: null,
       plotId: "",
       startDate: today(),
       endDate: null,
     },
   });
 
-  const hasChannels = device.deviceType === "ambyte";
+  const hasSensors = sensors.length > 0;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     void form.handleSubmit(onClose)(event);
@@ -91,17 +92,21 @@ export function PlaceOnPlotDialog({ experimentId, device, onClose }: PlaceOnPlot
     }
   };
 
-  const renderChannel = (channel: number) => (
-    <SelectItem key={channel} value={String(channel)}>
-      {t("layout.placement.port", { channel })}
+  const sensorName = (sensor: DeviceSensor) =>
+    t("layout.placement.sensorName", { label: sensor.label, id: sensor.sensorId });
+
+  const renderSensor = (sensor: DeviceSensor) => (
+    <SelectItem key={sensor.sensorId} value={sensor.sensorId}>
+      {sensorName(sensor)}
     </SelectItem>
   );
 
-  const channel = form.watch("channel");
+  const sensorId = form.watch("sensorId");
   const startDate = form.watch("startDate");
+  const chosenSensor = sensors.find((sensor) => sensor.sensorId === sensorId);
   const overlapping = placements.find(
     (placement) =>
-      placement.channel === channel &&
+      placement.sensorId === sensorId &&
       (placement.endDate === null || placement.endDate >= startDate),
   );
   const overlappingPlot = layout?.units.find((unit) => unit.id === overlapping?.plotId)?.identifier;
@@ -126,17 +131,17 @@ export function PlaceOnPlotDialog({ experimentId, device, onClose }: PlaceOnPlot
               />
             </div>
 
-            {hasChannels ? (
+            {hasSensors ? (
               <FormField
                 control={form.control}
-                name="channel"
+                name="sensorId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("layout.placement.channel")}</FormLabel>
+                    <FormLabel>{t("layout.placement.sensor")}</FormLabel>
                     <Select
-                      value={field.value === null ? WHOLE_DEVICE : String(field.value)}
+                      value={field.value ?? WHOLE_DEVICE}
                       onValueChange={(value) =>
-                        field.onChange(value === WHOLE_DEVICE ? null : Number(value))
+                        field.onChange(value === WHOLE_DEVICE ? null : value)
                       }
                     >
                       <FormControl>
@@ -148,10 +153,10 @@ export function PlaceOnPlotDialog({ experimentId, device, onClose }: PlaceOnPlot
                         <SelectItem value={WHOLE_DEVICE}>
                           {t("layout.placement.wholeDevice")}
                         </SelectItem>
-                        {CHANNELS.map(renderChannel)}
+                        {sensors.map(renderSensor)}
                       </SelectContent>
                     </Select>
-                    <FormDescription>{t("layout.placement.channelHelp")}</FormDescription>
+                    <FormDescription>{t("layout.placement.sensorHelp")}</FormDescription>
                   </FormItem>
                 )}
               />
@@ -193,10 +198,10 @@ export function PlaceOnPlotDialog({ experimentId, device, onClose }: PlaceOnPlot
             {overlapping === undefined ? null : (
               <p role="alert" className="text-destructive text-sm" data-placement-overlap>
                 {t("layout.placement.overlap", {
-                  port:
-                    channel === null
+                  sensor:
+                    chosenSensor === undefined
                       ? t("layout.placement.wholeDevice")
-                      : t("layout.placement.port", { channel }),
+                      : sensorName(chosenSensor),
                   plot: overlappingPlot ?? "",
                   date: formatDate(overlapping.startDate),
                 })}

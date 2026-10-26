@@ -45,6 +45,7 @@ const AUTHORS = [
     familyName: "User",
     orcid: "0000-0002-1825-0097",
     affiliation: "Example University",
+    request: null,
   },
   {
     userId: "00000000-0000-4000-a000-000000000002",
@@ -52,6 +53,7 @@ const AUTHORS = [
     familyName: "Example",
     orcid: null,
     affiliation: "Example University",
+    request: "accepted",
   },
   {
     userId: "00000000-0000-4000-a000-000000000003",
@@ -59,8 +61,39 @@ const AUTHORS = [
     familyName: "Example",
     orcid: null,
     affiliation: "Example University",
+    request: "accepted",
   },
-  { userId: null, givenName: "Sam", familyName: "Example", orcid: null, affiliation: null },
+  {
+    userId: null,
+    givenName: "Sam",
+    familyName: "Example",
+    orcid: null,
+    affiliation: null,
+    request: null,
+  },
+];
+
+/** The draft before Alex has answered: Seed User publishes, so only Alex and Robin were asked. */
+const DRAFT_AUTHORS = AUTHORS.map((author) =>
+  author.givenName === "Alex" ? { ...author, request: "pending" } : author,
+);
+
+/** Jordan measured but is no author, so Jordan starts as a data collector. */
+const CONTRIBUTORS = [
+  {
+    userId: "00000000-0000-4000-a000-000000000004",
+    givenName: "Jordan",
+    familyName: "Example",
+    orcid: null,
+    contributorType: "DataCollector",
+  },
+  {
+    userId: "00000000-0000-4000-a000-000000000005",
+    givenName: "Kim",
+    familyName: "Example",
+    orcid: "0000-0001-5109-3700",
+    contributorType: "DataCurator",
+  },
 ];
 
 const FILES = [
@@ -113,7 +146,7 @@ interface DatasetOverrides {
   title?: string;
   description?: string;
   limitations?: string | null;
-  authors?: (typeof AUTHORS)[number][];
+  authors?: { request: string | null }[];
   files?: typeof FILES;
   relatedPublications?: (typeof PUBLICATION)[];
   studyDetails?: typeof STUDY_DETAILS | null;
@@ -132,6 +165,7 @@ function dataset(id: string, experiment: string, version: number, overrides: Dat
     description: DATASET_DESCRIPTION,
     limitations: DATASET_LIMITATIONS,
     authors: AUTHORS,
+    contributors: CONTRIBUTORS,
     license: "CC-BY-4.0",
     access: "open",
     embargoUntil: null,
@@ -320,6 +354,7 @@ const READINESS = {
 function publishFlowFixture(plotChecks: typeof PLOT_CHECKS | typeof NO_PLOT_CHECKS): Fixture {
   return pathsFixture((experiment) => ({
     [`/api/v1/datasets/${VERSION_2_ID}`]: draftVersionTwo(experiment, {
+      authors: DRAFT_AUTHORS,
       access: "embargoed",
       embargoUntil: "2027-03-01T12:00:00.000Z",
       excludedReadings: [
@@ -447,7 +482,7 @@ const measuredTwiceShot: TicketShot = {
 const describeStepShot: TicketShot = {
   slug: "f2-describe-step",
   route: publishRoute,
-  viewport: { width: 1440, height: 1900 },
+  viewport: { width: 1440, height: 2500 },
   fixtures: [publishFlowFixture(NO_PLOT_CHECKS)],
   prepare: async (page) => {
     await goToStep(page, "Describe");
@@ -460,6 +495,7 @@ const describeStepShot: TicketShot = {
 
     const marker = new ChangeMarker(page);
     await marker.mark(authors, "New", "outside-left");
+    await marker.mark(page.getByTestId("dataset-contributors"), "New", "outside-left");
     return marker.frame([tabStrip(page), nextButton(page)], 24);
   },
 };
@@ -606,7 +642,7 @@ async function addHeaderDatasetsLink(page: Page): Promise<Locator> {
   await header.getByRole("link", { name: "Platform" }).first().waitFor();
   await page.evaluate((paths) => {
     const platform = [...document.querySelectorAll("header a")].find(
-      (anchor) => anchor.textContent?.trim() === "Platform",
+      (anchor) => anchor.textContent.trim() === "Platform",
     );
     if (!(platform instanceof HTMLAnchorElement)) {
       throw new Error("The public header has no Platform link");

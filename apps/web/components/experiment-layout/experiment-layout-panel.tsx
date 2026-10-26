@@ -52,6 +52,7 @@ const EMPTY_ANCHOR: LayoutAnchor = {
   corner: null,
   rowEnd: null,
   rowSpacing: null,
+  isFlipped: false,
 };
 
 function setupOf(layout: ExperimentLayout | null, defaultUnitName: string): ExperimentLayoutSetup {

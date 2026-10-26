@@ -39,6 +39,8 @@ export const zLayoutAnchor = z.object({
     .describe("The outer corner at the far end of row A"),
   /** Meters from the start of one row to the start of the next, paths included. */
   rowSpacing: z.number().positive().nullable(),
+  /** Rows after A lie to the left of row A seen from the first plot, once the grid is flipped. */
+  isFlipped: z.boolean(),
 });
 
 /** How generated plots are named: A1 to F8, a running number such as 101 to 148, or 1-1 to 6-8. */
@@ -129,23 +131,26 @@ export const zLayoutSheetPreview = z.object({
     .describe("Readings that carry a plot, and so will show the sheet's values"),
 });
 
-/** An Ambyte gateway carries up to four sensors, one per port, numbered 1 to 4 as on the device. */
-export const AMBYTE_CHANNEL_COUNT = 4;
+/** A sensor a device's readings name, such as one Ambit on an Ambyte. */
+export const zDeviceSensor = z.object({
+  sensorId: z.string().min(1),
+  label: z.string(),
+});
 
-/** Device families that stand in a field and can be placed on a plot. A handheld is never placed. */
-export const PLACEABLE_DEVICE_TYPES: readonly string[] = ["ambyte"];
+export const zDeviceSensorList = z.array(zDeviceSensor);
 
-/** An onboarded device, or one channel of an Ambyte, standing on one plot for a period. */
+/**
+ * An onboarded device, or one of its sensors, standing on one plot for a period. A reading that
+ * names no sensor takes the placement of the whole device.
+ */
 export const zLayoutPlacement = z.object({
   id: z.string().uuid(),
   deviceId: z.string().uuid(),
-  channel: z
-    .number()
-    .int()
+  sensorId: z
+    .string()
     .min(1)
-    .max(AMBYTE_CHANNEL_COUNT)
     .nullable()
-    .describe("The Ambyte channel, or null when the whole device is placed"),
+    .describe("The sensor a reading names, or null when the whole device is placed"),
   plotId: z.string().uuid(),
   startDate: z.string().date(),
   endDate: z.string().date().nullable().describe("Null while the sensor still stands there"),
@@ -173,6 +178,7 @@ export type LayoutTerm = z.infer<typeof zLayoutTerm>;
 export type LayoutAnchor = z.infer<typeof zLayoutAnchor>;
 export type LayoutSheetPreview = z.infer<typeof zLayoutSheetPreview>;
 export type LayoutPlacement = z.infer<typeof zLayoutPlacement>;
+export type DeviceSensor = z.infer<typeof zDeviceSensor>;
 export type LayoutPlacementCreate = z.infer<typeof zLayoutPlacementCreate>;
 export type PlotAttributeSource = z.infer<typeof zPlotAttributeSource>;
 export type PlotAttribute = z.infer<typeof zPlotAttribute>;

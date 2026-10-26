@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Check, Circle, MapPin, SkipForward, TriangleAlert, X } from "lucide-react";
+import { Check, Circle, CloudOff, Flag, MapPin, SkipForward, TriangleAlert, X } from "lucide-react";
 
 import { cn } from "@repo/ui/lib/utils";
 
@@ -15,6 +15,8 @@ const GLYPHS: Record<PlotMark | "removed", { icon: LucideIcon; className: string
   skipped: { icon: SkipForward, className: "text-foreground" },
   current: { icon: MapPin, className: "text-primary fill-primary/20" },
   measuredTwice: { icon: TriangleAlert, className: "text-status-stale-foreground" },
+  flagged: { icon: Flag, className: "text-destructive" },
+  uploadFailed: { icon: CloudOff, className: "text-destructive" },
   outsideShare: { icon: Circle, className: "text-foreground" },
   removed: { icon: X, className: "text-muted-foreground" },
 };

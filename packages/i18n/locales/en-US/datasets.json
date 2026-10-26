@@ -182,13 +182,31 @@
     "add": "Add",
     "cancel": "Cancel",
     "addedByName": "Added by name",
+    "requestPending": "Waiting to accept",
+    "requestAccepted": "Accepted",
+    "requestInfo_one": "{{names}} has not accepted yet, and Freeze waits until they do. To publish sooner, remove them and add them by name.",
+    "requestInfo_other": "{{names}} have not accepted yet, and Freeze waits until they do. To publish sooner, remove them and add them by name.",
     "noAffiliation": "No affiliation",
     "orcidLabel": "ORCID iD {{orcid}}",
     "orcidMark": "iD",
     "reorder": "Move {{name}}",
     "remove": "Remove {{name}}",
     "limitationsLabel": "Limitations (optional)",
-    "limitationsHelp": "What a reader should know before reusing this data, such as gaps or conditions it does not cover."
+    "limitationsHelp": "What a reader should know before reusing this data, such as gaps or conditions it does not cover.",
+    "contributorsTitle": "Contributors",
+    "contributorsDescription": "Credited in the dataset's record with their part, not in the citation. Measurers who are not authors start here as data collectors.",
+    "addContributor": "Add a contributor",
+    "contributorType": "Role of {{name}}",
+    "contributorTypes": {
+      "DataCollector": "Data collector",
+      "DataCurator": "Data curator",
+      "DataManager": "Data manager",
+      "ProjectLeader": "Project leader",
+      "ProjectMember": "Project member",
+      "Researcher": "Researcher",
+      "Supervisor": "Supervisor",
+      "Other": "Other"
+    }
   },
   "license": {
     "title": "Data license",

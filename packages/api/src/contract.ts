@@ -16,6 +16,7 @@ import { experimentMetadataContract } from "./domains/experiment/metadata/experi
 import { experimentProjectTransferWebhookContract } from "./domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.contract";
 import { experimentSessionsContract } from "./domains/experiment/sessions/experiment-sessions.contract";
 import { experimentStandardsContract } from "./domains/experiment/standards/experiment-standards.contract";
+import { experimentStudyContract } from "./domains/experiment/study/experiment-study.contract";
 import { experimentTransferRequestsContract } from "./domains/experiment/transfer-requests/experiment-transfer-requests.contract";
 import { experimentUploadWebhookContract } from "./domains/experiment/upload-webhook/experiment-upload-webhook.contract";
 import { experimentUploadsContract } from "./domains/experiment/uploads/experiment-uploads.contract";
@@ -64,7 +65,8 @@ export type ExperimentsContract = typeof experimentContract &
   typeof experimentUploadWebhookContract &
   typeof experimentColumnsContract &
   typeof experimentStandardsContract &
-  typeof experimentSessionsContract;
+  typeof experimentSessionsContract &
+  typeof experimentStudyContract;
 const experiments: ExperimentsContract = {
   ...experimentContract,
   ...experimentDataContract,
@@ -88,6 +90,7 @@ const experiments: ExperimentsContract = {
   ...experimentColumnsContract,
   ...experimentStandardsContract,
   ...experimentSessionsContract,
+  ...experimentStudyContract,
 };
 
 export type IotContract = typeof iotContract &

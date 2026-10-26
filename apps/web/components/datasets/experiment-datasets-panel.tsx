@@ -13,7 +13,7 @@ import { PublishDatasetButton } from "./publish-dataset-button";
 
 interface ExperimentDatasetsPanelProps {
   experimentId: string;
-  /** An experiment's admins and members publish; other viewers only read. */
+  /** People who can edit the experiment publish. Everyone else only reads. */
   canPublish: boolean;
   /** Only admins withdraw a dataset or open its embargoed files early. */
   canManage?: boolean;

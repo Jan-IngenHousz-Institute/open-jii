@@ -463,7 +463,7 @@ async function hideWalkThrough(page: Page): Promise<void> {
 }
 
 const dataDictionary: TicketShot = {
-  slug: "a5-data-dictionary",
+  slug: "a4-data-dictionary",
   route: dataRoute,
   fixtures: dictionaryFixtures(),
   viewport: { width: 1440, height: 1260 },
@@ -481,7 +481,7 @@ const dataDictionary: TicketShot = {
 };
 
 const dictionaryFailed: TicketShot = {
-  slug: "a5-dictionary-failed",
+  slug: "a4-dictionary-failed",
   route: dataRoute,
   fixtures: dictionaryFixtures({ isFailing: true }),
   viewport: { width: 1440, height: 700 },
@@ -501,7 +501,7 @@ const dictionaryFailed: TicketShot = {
 };
 
 const drawerReadOnly: TicketShot = {
-  slug: "a6-drawer-read-only",
+  slug: "a5-drawer-read-only",
   route: async () => `${await dataRoute()}?access=view`,
   fixtures: dictionaryFixtures(),
   viewport: { width: 1440, height: 1000 },
@@ -512,7 +512,7 @@ const drawerReadOnly: TicketShot = {
       "4 of 6 columns described",
     );
     await drawer
-      .getByText("Only this experiment's admins and members can describe its columns.")
+      .getByText("Only people who can edit this experiment can describe its columns.")
       .waitFor();
     await blurFocus(page);
     await hideWalkThrough(page);
@@ -523,7 +523,7 @@ const drawerReadOnly: TicketShot = {
 };
 
 const describeDrawer: TicketShot = {
-  slug: "a6-describe-drawer",
+  slug: "a5-describe-drawer",
   route: dataRoute,
   fixtures: dictionaryFixtures(),
   viewport: { width: 1440, height: 1400 },
@@ -542,7 +542,7 @@ const describeDrawer: TicketShot = {
 };
 
 const termPicker: TicketShot = {
-  slug: "a6-term-picker",
+  slug: "a5-term-picker",
   route: dataRoute,
   fixtures: dictionaryFixtures(),
   viewport: { width: 1440, height: 1100 },
@@ -562,7 +562,7 @@ const termPicker: TicketShot = {
 };
 
 const suggestion: TicketShot = {
-  slug: "a7-suggestion",
+  slug: "a6-suggestion",
   route: dataRoute,
   fixtures: dictionaryFixtures({ hasSuggestions: true }),
   viewport: { width: 1440, height: 980 },
@@ -579,7 +579,7 @@ const suggestion: TicketShot = {
 };
 
 const suggestionApplied: TicketShot = {
-  slug: "a7-suggestion-applied",
+  slug: "a6-suggestion-applied",
   route: dataRoute,
   fixtures: dictionaryFixtures({ hasSuggestions: true }),
   viewport: { width: 1440, height: 980 },
@@ -600,7 +600,7 @@ const suggestionApplied: TicketShot = {
 };
 
 const reviewSuggestions: TicketShot = {
-  slug: "a7-review-suggestions",
+  slug: "a6-review-suggestions",
   route: dataRoute,
   fixtures: dictionaryFixtures({ hasSuggestions: true }),
   viewport: { width: 1440, height: 1260 },
@@ -624,7 +624,7 @@ const reviewSuggestions: TicketShot = {
 };
 
 const saveAndNext: TicketShot = {
-  slug: "a8-save-and-next",
+  slug: "a7-save-and-next",
   route: dataRoute,
   fixtures: dictionaryFixtures(),
   viewport: { width: 1440, height: 1100 },
@@ -648,7 +648,7 @@ const saveAndNext: TicketShot = {
 };
 
 const earlierVersion: TicketShot = {
-  slug: "a9-earlier-version",
+  slug: "a8-earlier-version",
   route: dataRoute,
   fixtures: dictionaryFixtures({ hasNewVersion: true }),
   viewport: { width: 1440, height: 1000 },
@@ -668,7 +668,7 @@ const earlierVersion: TicketShot = {
 };
 
 const newVersionList: TicketShot = {
-  slug: "a9-new-version-list",
+  slug: "a8-new-version-list",
   route: dataRoute,
   fixtures: dictionaryFixtures({ hasNewVersion: true }),
   viewport: { width: 1440, height: 1500 },

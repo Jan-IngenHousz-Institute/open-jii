@@ -11,6 +11,8 @@ export const PLOT_MARKS = [
   "skipped",
   "current",
   "measuredTwice",
+  "flagged",
+  "uploadFailed",
   "outsideShare",
 ] as const;
 

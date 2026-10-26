@@ -24,6 +24,8 @@ const COLUMNS = [
   "skipped",
   "repeats",
   "outsideShare",
+  "flagged",
+  "failedUploads",
   "lastUpload",
 ] as const;
 
@@ -45,6 +47,8 @@ export function SessionDayCard({ plan, shares, day }: SessionDayCardProps) {
     repeats: t("overview.repeats", { count: day.repeatCount }),
     outside: t("overview.outsideShare", { count: day.outsideShareUnitIds.length }),
     twice: t("overview.measuredTwice", { count: measuredTwice.length }),
+    flagged: t("overview.flagged", { count: day.flaggedUnitIds.length }),
+    failed: t("overview.failedUploads", { count: day.failedUploadUnitIds.length }),
   });
 
   const renderColumn = (column: (typeof COLUMNS)[number]) => (

@@ -28,6 +28,8 @@ export function DatasetAuthorRow({ id, position, author, onRemove }: DatasetAuth
   const name = `${author.givenName} ${author.familyName}`;
   const isAddedByName = author.userId === null;
   const hasNoOrcid = !isAddedByName && author.orcid === null;
+  const isWaiting = author.request === "pending";
+  const hasAccepted = author.request === "accepted";
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   const handleRemove = () => onRemove(position);
@@ -64,6 +66,12 @@ export function DatasetAuthorRow({ id, position, author, onRemove }: DatasetAuth
         <div className="flex items-center gap-2">
           <p className="truncate text-sm font-medium">{name}</p>
           {isAddedByName ? <Badge variant="secondary">{t("describe.addedByName")}</Badge> : null}
+          {isWaiting ? (
+            <Badge className="bg-status-stale text-status-stale-foreground">
+              {t("describe.requestPending")}
+            </Badge>
+          ) : null}
+          {hasAccepted ? <Badge variant="outline">{t("describe.requestAccepted")}</Badge> : null}
         </div>
         <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 text-xs">
           {author.affiliation !== null ? <span>{author.affiliation}</span> : null}

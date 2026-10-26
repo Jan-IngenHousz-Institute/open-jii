@@ -1,4 +1,4 @@
-import { ScanLine, Search } from "lucide-react-native";
+import { Plus, ScanLine, Search } from "lucide-react-native";
 import React, { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useTranslation } from "~/shared/i18n";
@@ -20,6 +20,8 @@ interface PlotPickerProps {
   onSelect: (identifier: string) => void;
   onMeasure: (plot: NextPlot) => void;
   onCancel: () => void;
+  /** Offered only to people who can edit the experiment. */
+  onAddPlot?: () => void;
 }
 
 export function PlotPicker({
@@ -30,6 +32,7 @@ export function PlotPicker({
   onSelect,
   onMeasure,
   onCancel,
+  onAddPlot,
 }: PlotPickerProps) {
   const { t } = useTranslation("measurementFlow");
   const themeColors = useThemeColors();
@@ -92,15 +95,26 @@ export function PlotPicker({
         />
       </View>
 
-      <Text className="text-muted-foreground text-sm">
-        {selected
-          ? t("measurementFlow:plotPicker.selected", {
-              plot: selected.identifier,
-              row: selected.rowLabel,
-              column: selected.column,
-            })
-          : t("measurementFlow:plotPicker.hint")}
-      </Text>
+      <View className="flex-row items-center justify-between gap-2">
+        <Text className="text-muted-foreground flex-1 text-sm">
+          {selected
+            ? t("measurementFlow:plotPicker.selected", {
+                plot: selected.identifier,
+                row: selected.rowLabel,
+                column: selected.column,
+              })
+            : t("measurementFlow:plotPicker.hint")}
+        </Text>
+        {onAddPlot ? (
+          <Button
+            title={t("measurementFlow:addPlot.open")}
+            variant="ghost"
+            size="sm"
+            icon={<Plus size={16} color={themeColors.brand} />}
+            onPress={onAddPlot}
+          />
+        ) : null}
+      </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ gap: 16, paddingBottom: 8 }}>
         <PlotGrid field={field} renderCell={renderCell} focusColumn={namedPlot.column} />

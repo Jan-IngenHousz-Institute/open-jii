@@ -142,13 +142,13 @@ const NAMED_PLOT = "C4";
 const SKIPPED_PLOT: SkippedPlot = { identifier: "A4", reason: "flooded", skippedAt: "08:36" };
 
 // The same treatment-balanced walk the web screens show: any 12 plots in a row hold each
-// treatment 4 times, give or take one. C4 is 12th and B6 13th.
+// treatment in proportion to its plots, give or take one. C4 is 12th and B6 13th.
 // prettier-ignore
 const EXAMPLE_WALK = [
   "F8", "E8", "D8", "C8", "B7", "C7", "C6", "C5", "B5", "A4", "A5", "C4",
-  "B6", "D2", "D3", "C3", "D6", "D7", "E6", "F7", "F6", "F5", "E5", "D5",
-  "D4", "E4", "F4", "F3", "E3", "E2", "F2", "F1", "E1", "D1", "C1", "C2",
-  "B1", "A1", "B2", "A2", "A3", "B3", "A6", "A7", "A8", "B8",
+  "B6", "D6", "D7", "C3", "D2", "D3", "E6", "F7", "F6", "F5", "E5", "D5",
+  "D4", "F4", "E3", "F3", "E4", "E2", "F2", "F1", "E1", "D1", "C1", "C2",
+  "A3", "A1", "B2", "A2", "B1", "B3", "A6", "A7", "A8", "B8",
 ];
 
 // The measurer's share is the first half of the walk; the second measurer holds the rest.
@@ -249,6 +249,7 @@ interface PlotStepState {
   isSkipSheetOpen: boolean;
   isComeBackOpen: boolean;
   isFieldGridOpen: boolean;
+  isAddPlotOpen: boolean;
   /** Scaffold counter for Keep and measure again, until readings carry an ordinal. */
   repeat: number;
 }
@@ -266,6 +267,8 @@ interface PlotStepActions {
   closeComeBack: () => void;
   openFieldGrid: () => void;
   closeFieldGrid: () => void;
+  openAddPlot: () => void;
+  closeAddPlot: () => void;
   measureAgain: () => void;
   reset: () => void;
 }
@@ -279,6 +282,7 @@ const initialPlotStepState: PlotStepState = {
   isSkipSheetOpen: false,
   isComeBackOpen: false,
   isFieldGridOpen: false,
+  isAddPlotOpen: false,
   repeat: 1,
 };
 
@@ -304,6 +308,8 @@ export const usePlotStepStore = create<PlotStepState & PlotStepActions>((set) =>
   closeComeBack: () => set({ isComeBackOpen: false }),
   openFieldGrid: () => set({ isFieldGridOpen: true }),
   closeFieldGrid: () => set({ isFieldGridOpen: false }),
+  openAddPlot: () => set({ isAddPlotOpen: true }),
+  closeAddPlot: () => set({ isAddPlotOpen: false }),
   measureAgain: () => set((state) => ({ repeat: state.repeat + 1 })),
   reset: () => set(initialPlotStepState),
 }));

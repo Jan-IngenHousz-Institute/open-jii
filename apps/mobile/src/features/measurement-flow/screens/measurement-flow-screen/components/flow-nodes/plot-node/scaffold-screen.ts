@@ -28,6 +28,7 @@ import {
  * - d11-end-session: the exit sheet of a session
  * - e5-route-context: the Next plot step with the plot after it in the walk
  * - e8-progress-grid: the field grid over the Next plot step
+ * - c15-add-plot: the plot picker with Add a plot, its sheet open
  */
 // Dev toasts would cover the screens being captured, so a selected screen silences them.
 if (process.env.EXPO_PUBLIC_SCAFFOLD_SCREEN) {
@@ -47,7 +48,8 @@ export type ScaffoldScreen =
   | "d10-show-treatment"
   | "d11-end-session"
   | "e5-route-context"
-  | "e8-progress-grid";
+  | "e8-progress-grid"
+  | "c15-add-plot";
 
 const SCAFFOLD_SCREENS: ScaffoldScreen[] = [
   "d2-plot-picker",
@@ -63,6 +65,7 @@ const SCAFFOLD_SCREENS: ScaffoldScreen[] = [
   "d11-end-session",
   "e5-route-context",
   "e8-progress-grid",
+  "c15-add-plot",
 ];
 
 /** Screens drawn after A4 is skipped, so the session holds it on the come-back-later list. */
@@ -93,6 +96,11 @@ export function isSkipOn(): boolean {
 /** Whether the selected screen comes after the walking order, so the step names the plot after it. */
 export function isWalkOn(): boolean {
   return isAnyScaffoldScreenOn(["e5-route-context", "e8-progress-grid"]);
+}
+
+/** Whether the measurer can edit the experiment, which offers Add a plot on the picker. */
+export function isAddPlotOn(): boolean {
+  return isScaffoldScreenOn("c15-add-plot");
 }
 
 /** The experiment setting that shows treatment and genotype to measurers, off unless selected. */
@@ -194,6 +202,10 @@ export function startScaffoldScreen(): void {
       break;
     case "e8-progress-grid":
       plotStep.openFieldGrid();
+      break;
+    case "c15-add-plot":
+      plotStep.openPicker();
+      plotStep.openAddPlot();
       break;
     case "d3-session-start":
     case "d3-continue-card":

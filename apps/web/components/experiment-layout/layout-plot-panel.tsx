@@ -23,7 +23,7 @@ import { rowLetter } from "./row-letter";
 interface LayoutPlotPanelProps {
   experimentId: string;
   plotId: string;
-  /** Shows the plot's actions, which only an experiment's admins and members take. */
+  /** Shows the plot's actions, which only people who can edit the experiment take. */
   canEdit: boolean;
   onClose: () => void;
 }

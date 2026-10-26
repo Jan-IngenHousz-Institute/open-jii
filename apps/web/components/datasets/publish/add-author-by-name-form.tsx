@@ -31,7 +31,7 @@ export function AddAuthorByNameForm({ onAdd, onCancel }: AddAuthorByNameFormProp
   });
 
   const add = (name: AuthorName) => {
-    onAdd({ ...name, userId: null, orcid: null, affiliation: null });
+    onAdd({ ...name, userId: null, orcid: null, affiliation: null, request: null });
   };
 
   const handleAdd = () => {

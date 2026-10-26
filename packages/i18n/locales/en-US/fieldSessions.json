@@ -22,6 +22,10 @@
         "label": "Serpentine",
         "description": "Walks row by row and turns back at each row end. It saves walking but keeps the time-of-day risk of by row."
       },
+      "random": {
+        "label": "Random over the whole field",
+        "description": "Shuffles every plot in the field, blocks or not. It does not balance treatments along the walk, so a run of the day can hold more of one treatment."
+      },
       "randomByBlock": {
         "label": "Random by block",
         "description": "Shuffles the plots within each block. Time of day no longer follows the layout inside a block."
@@ -43,7 +47,7 @@
     "stripStart": "Start {{plot}}",
     "stripEnd": "End {{plot}}",
     "stripStep": "Step {{position}}, {{plot}}, {{treatment}}",
-    "balance": "Any {{window}} consecutive plots in the walk hold each treatment {{expected}} times, give or take one.",
+    "balance": "Any {{window}} consecutive plots in the walk hold each treatment in proportion to its plots in the field, give or take one.",
     "unbalanced": "Steps {{first}} to {{last}} hold a treatment more or less often than the balance allows.",
     "outsideBalance": "Outside the balance",
     "orderCode": "Order code",
@@ -133,7 +137,11 @@
     "outsideShare_other": "{{count}} readings outside a share",
     "measuredTwice_one": "{{count}} plot measured twice",
     "measuredTwice_other": "{{count}} plots measured twice",
-    "summary": "{{readings}} from {{phones}}. {{measured}} of {{total}} plots measured, {{skipped}} skipped, {{repeats}}, {{outside}}, {{twice}}.",
+    "flagged_one": "{{count}} reading flagged",
+    "flagged_other": "{{count}} readings flagged",
+    "failedUploads_one": "{{count}} failed upload",
+    "failedUploads_other": "{{count}} failed uploads",
+    "summary": "{{readings}} from {{phones}}. {{measured}} of {{total}} plots measured, {{skipped}} skipped, {{repeats}}, {{outside}}, {{twice}}, {{flagged}}, {{failed}}.",
     "measuredBar": "{{measured}} of {{total}} plots measured",
     "columns": {
       "measurer": "Measurer",
@@ -142,6 +150,8 @@
       "skipped": "Skipped",
       "repeats": "Repeats",
       "outsideShare": "Outside their share",
+      "flagged": "Flagged",
+      "failedUploads": "Failed uploads",
       "lastUpload": "Last upload"
     },
     "skipWithReason": "{{plot}}, {{reason}}",

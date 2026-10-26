@@ -1,4 +1,5 @@
 import { oc } from "@orpc/contract";
+import { z } from "zod";
 
 import { zExperimentIdPathParam } from "../experiment.schema";
 import {
@@ -6,6 +7,7 @@ import {
   zExperimentLayoutPlot,
   zExperimentLayoutPlotPathParam,
   zLayoutAnchor,
+  zDeviceSensorList,
   zLayoutAttributes,
   zLayoutPlacement,
   zLayoutPlacementList,
@@ -45,6 +47,14 @@ export const experimentLayoutContract = {
     })
     .input(zExperimentIdPathParam.merge(zLayoutPlacementListQuery))
     .output(zLayoutPlacementList),
+  listDeviceSensors: oc
+    .route({
+      method: "GET",
+      path: "/api/v1/experiments/{id}/devices/{deviceId}/sensors",
+      successStatus: 200,
+    })
+    .input(zExperimentIdPathParam.merge(z.object({ deviceId: z.string().uuid() })))
+    .output(zDeviceSensorList),
   updateExperimentLayoutAnchor: oc
     .route({ method: "PUT", path: "/api/v1/experiments/{id}/layout/anchor", successStatus: 200 })
     .input(zExperimentIdPathParam.merge(zLayoutAnchor))

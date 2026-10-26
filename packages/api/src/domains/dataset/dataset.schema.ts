@@ -19,6 +19,8 @@ export const zDatasetState = z.enum(["draft", "published", "superseded", "withdr
 /** Embargo is a property of a published dataset: its metadata is public at once, its files later. */
 export const zDatasetAccess = z.enum(["open", "embargoed"]);
 
+export const zAuthorRequest = z.enum(["pending", "accepted"]);
+
 /**
  * One credited author, copied from the profile when the dataset freezes so a citation never
  * changes with an account. An author added by name has no user and never an ORCID iD.
@@ -29,6 +31,29 @@ export const zDatasetAuthor = z.object({
   familyName: z.string().trim().min(1).max(255),
   orcid: zOrcid.nullable(),
   affiliation: z.string().trim().max(255).nullable(),
+  /** A member someone else lists accepts before Freeze. Null for the publisher and a name only. */
+  request: zAuthorRequest.nullable(),
+});
+
+/** The DataCite contributorType values that describe a person's part in collecting the data. */
+export const zContributorType = z.enum([
+  "DataCollector",
+  "DataCurator",
+  "DataManager",
+  "ProjectLeader",
+  "ProjectMember",
+  "Researcher",
+  "Supervisor",
+  "Other",
+]);
+
+/** Credited in the dataset's record with a role, never in its citation. */
+export const zDatasetContributor = z.object({
+  userId: z.string().uuid().nullable(),
+  givenName: z.string().trim().min(1).max(255),
+  familyName: z.string().trim().min(1).max(255),
+  orcid: zOrcid.nullable(),
+  contributorType: zContributorType,
 });
 
 export const zDatasetFileKind = z.enum(["snapshot", "dataDictionary", "miappe", "roCrate"]);
@@ -108,6 +133,7 @@ export const zDataset = z.object({
   description: z.string().nullable(),
   limitations: z.string().nullable(),
   authors: z.array(zDatasetAuthor),
+  contributors: z.array(zDatasetContributor),
   license: zDataLicense.nullable(),
   access: zDatasetAccess,
   embargoUntil: z.string().datetime().nullable(),
@@ -241,6 +267,7 @@ export const zPublishDatasetBody = z.object({
   title: z.string().trim().min(1).max(255),
   description: z.string().trim().min(1),
   authors: z.array(zDatasetAuthor).min(1),
+  contributors: z.array(zDatasetContributor),
   limitations: z.string().trim().max(2000).optional(),
   license: zDataLicense,
   rightToPublish: z.literal(true),
@@ -268,6 +295,8 @@ export const zPublicDataset = zDataset.omit({ excludedReadings: true, deposit: t
 export type DatasetState = z.infer<typeof zDatasetState>;
 export type DatasetAccess = z.infer<typeof zDatasetAccess>;
 export type DatasetAuthor = z.infer<typeof zDatasetAuthor>;
+export type ContributorType = z.infer<typeof zContributorType>;
+export type DatasetContributor = z.infer<typeof zDatasetContributor>;
 export type DatasetFile = z.infer<typeof zDatasetFile>;
 export type DatasetDeposit = z.infer<typeof zDatasetDeposit>;
 export type DepositStatus = z.infer<typeof zDepositStatus>;

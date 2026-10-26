@@ -21,6 +21,7 @@ import { AddAuthorByNameForm } from "./add-author-by-name-form";
 import { AddAuthorMenu } from "./add-author-menu";
 import { DatasetAuthorList } from "./dataset-author-list";
 import { DatasetAuthorsNotes } from "./dataset-authors-notes";
+import { DatasetContributorList } from "./dataset-contributor-list";
 import type { PublishDatasetForm } from "./dataset-publish-schema";
 import { DatasetPublishStepFrame } from "./dataset-publish-step-frame";
 
@@ -103,6 +104,14 @@ export function DescribeStep(props: WizardStepProps<PublishDatasetForm>) {
           <AddAuthorMenu onAddByName={openAddByName} />
         )}
         <DatasetAuthorsNotes authors={authors} />
+      </SettingsCard>
+
+      <SettingsCard
+        title={t("describe.contributorsTitle")}
+        description={t("describe.contributorsDescription")}
+        data-testid="dataset-contributors"
+      >
+        <DatasetContributorList form={form} />
       </SettingsCard>
     </DatasetPublishStepFrame>
   );

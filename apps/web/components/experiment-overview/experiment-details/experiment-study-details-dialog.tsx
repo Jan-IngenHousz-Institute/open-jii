@@ -16,6 +16,8 @@ import {
   zDataLicense,
   zFundingReferenceList,
 } from "@repo/api/domains/experiment/experiment.schema";
+import type { GrowthFacilityType } from "@repo/api/domains/experiment/study/experiment-study.schema";
+import { zGrowthFacilityType } from "@repo/api/domains/experiment/study/experiment-study.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -47,14 +49,18 @@ import {
 import { Textarea } from "@repo/ui/components/textarea";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import type { OrganismChoice } from "./organism-select";
+import { OrganismSelect } from "./organism-select";
+
 // Cleared fields hold null, not undefined: react-hook-form treats an undefined
 // onChange value as "revert to the default", which un-clears the field.
 const studyDetailsFormSchema = z
   .object({
     startDate: z.string().date().nullable(),
     endDate: z.string().date().nullable(),
-    organism: z.string().trim().max(255).nullable(),
+    organism: z.object({ name: z.string().max(255), taxonId: z.string().nullable() }).nullable(),
     experimentalDesign: z.string().nullable(),
+    growthFacilityType: zGrowthFacilityType.nullable(),
     growthFacility: z.string().nullable(),
     license: zDataLicense.nullable(),
     fundingReferences: zFundingReferenceList,
@@ -66,12 +72,17 @@ const studyDetailsFormSchema = z
 type StudyDetailsFormValues = z.infer<typeof studyDetailsFormSchema>;
 
 const LICENSE_NONE = "none";
+const FACILITY_TYPE_NONE = "none";
+
+const toOrganismChoice = (name: string | null): OrganismChoice | null =>
+  name ? { name, taxonId: null } : null;
 
 const experimentToFormValues = (experiment: Experiment): StudyDetailsFormValues => ({
   startDate: experiment.startDate,
   endDate: experiment.endDate,
-  organism: experiment.organism,
+  organism: toOrganismChoice(experiment.organism),
   experimentalDesign: experiment.experimentalDesign,
+  growthFacilityType: null,
   growthFacility: experiment.growthFacility,
   license: experiment.license,
   fundingReferences: experiment.fundingReferences ?? [],
@@ -114,6 +125,19 @@ export function ExperimentStudyDetailsDialog({
     "CC0-1.0": t("studyDetails.licenseCc0"),
     "CC-BY-4.0": t("studyDetails.licenseCcBy"),
   };
+
+  const facilityTypeLabels: Record<GrowthFacilityType, string> = {
+    open_field: tStudy("facility.openField"),
+    greenhouse: tStudy("facility.greenhouse"),
+    growth_chamber: tStudy("facility.growthChamber"),
+    other: tStudy("facility.other"),
+  };
+
+  const renderFacilityType = (type: GrowthFacilityType) => (
+    <SelectItem key={type} value={type}>
+      {facilityTypeLabels[type]}
+    </SelectItem>
+  );
 
   const handleOptionalChange =
     (onChange: (value: string | null) => void) =>
@@ -184,10 +208,12 @@ export function ExperimentStudyDetailsDialog({
 
   const onSubmit = async (values: StudyDetailsFormValues) => {
     // Every field is sent; an emptied field is null so the stored value clears.
+    const { organism, growthFacilityType: _growthFacilityType, ...rest } = values;
     await updateExperiment(
       {
         id: experimentId,
-        ...values,
+        ...rest,
+        organism: organism?.name ?? null,
       },
       {
         onSuccess: () => {
@@ -264,13 +290,13 @@ export function ExperimentStudyDetailsDialog({
                     <FormItem>
                       <FormLabel>{t("studyDetails.organism")}</FormLabel>
                       <FormControl>
-                        <Input
-                          value={field.value ?? ""}
-                          onChange={handleOptionalChange(field.onChange)}
-                          placeholder={t("studyDetails.organismPlaceholder")}
+                        <OrganismSelect
+                          value={field.value}
+                          onSelect={field.onChange}
+                          onClear={() => field.onChange(null)}
                         />
                       </FormControl>
-                      <FormDescription>{t("studyDetails.organismHelp")}</FormDescription>
+                      <FormDescription>{tStudy("organism.help")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -295,24 +321,56 @@ export function ExperimentStudyDetailsDialog({
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="growthFacility"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("studyDetails.growthFacility")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          value={field.value ?? ""}
-                          onChange={handleOptionalChange(field.onChange)}
-                          placeholder={t("studyDetails.growthFacilityPlaceholder")}
-                        />
-                      </FormControl>
-                      <FormDescription>{t("studyDetails.growthFacilityHelp")}</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="space-y-2">
+                  <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+                    <FormField
+                      control={form.control}
+                      name="growthFacilityType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("studyDetails.growthFacility")}</FormLabel>
+                          <Select
+                            value={field.value ?? FACILITY_TYPE_NONE}
+                            onValueChange={(value) =>
+                              field.onChange(value === FACILITY_TYPE_NONE ? null : value)
+                            }
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value={FACILITY_TYPE_NONE}>
+                                {tStudy("facility.none")}
+                              </SelectItem>
+                              {zGrowthFacilityType.options.map(renderFacilityType)}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="growthFacility"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{tStudy("facility.description")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              value={field.value ?? ""}
+                              onChange={handleOptionalChange(field.onChange)}
+                              placeholder={tStudy("facility.descriptionPlaceholder")}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <p className="text-muted-foreground text-sm">{tStudy("facility.help")}</p>
+                </div>
 
                 <FormField
                   control={form.control}

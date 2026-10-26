@@ -12,7 +12,7 @@ const METERS_PER_DEGREE_LONGITUDE_AT_EQUATOR = 111_320;
 /**
  * Where an anchored grid lies on the earth: the bearing of row A and the spacing between columns
  * come from the two clicked corners, the spacing between rows is typed, and rows after A lie to the
- * right of row A seen from plot A1.
+ * right of row A seen from plot A1 unless the grid is flipped.
  */
 export class AnchorGeometry {
   readonly bearing: number | null;
@@ -42,13 +42,13 @@ export class AnchorGeometry {
 
   /** The field's four outer corners in order, for drawing its outline. */
   outline(): [number, number][] {
-    const { corner, rowEnd, rowSpacing } = this.anchor;
+    const { corner, rowEnd, rowSpacing, isFlipped } = this.anchor;
     if (corner === null || rowEnd === null || rowSpacing === null || this.bearing === null) {
       return [];
     }
 
     const depth = rowSpacing * this.rows;
-    const across = this.bearing + 90;
+    const across = this.bearing + (isFlipped ? -90 : 90);
     const farEnd = AnchorGeometry.move(rowEnd, across, depth);
     const farStart = AnchorGeometry.move(corner, across, depth);
     return [corner, rowEnd, farEnd, farStart].map((point) => [point.latitude, point.longitude]);

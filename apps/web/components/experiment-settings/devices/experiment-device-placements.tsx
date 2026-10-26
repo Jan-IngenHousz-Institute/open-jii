@@ -1,5 +1,6 @@
 "use client";
 
+import { useExperimentDeviceSensors } from "@/hooks/experiment/useExperimentDeviceSensors/useExperimentDeviceSensors";
 import { useExperimentLayout } from "@/hooks/experiment/useExperimentLayout/useExperimentLayout";
 import { useExperimentLayoutPlacements } from "@/hooks/experiment/useExperimentLayoutPlacements/useExperimentLayoutPlacements";
 import { formatDate } from "@/util/date";
@@ -22,6 +23,7 @@ export function ExperimentDevicePlacements({
   const { t } = useTranslation("experiments");
   const { data: placements = [] } = useExperimentLayoutPlacements(experimentId, { deviceId });
   const { data: layout } = useExperimentLayout(experimentId);
+  const { data: sensors = [] } = useExperimentDeviceSensors(experimentId, deviceId);
 
   if (placements.length === 0) {
     return null;
@@ -36,10 +38,11 @@ export function ExperimentDevicePlacements({
 
   const renderPlacement = (placement: LayoutPlacement) => {
     const isOpen = placement.endDate === null;
-    const port =
-      placement.channel === null
+    const sensor = sensors.find((candidate) => candidate.sensorId === placement.sensorId);
+    const placed =
+      placement.sensorId === null
         ? t("layout.placement.wholeDevice")
-        : t("layout.placement.port", { channel: placement.channel });
+        : (sensor?.label ?? placement.sensorId);
     const period = isOpen
       ? t("layout.placement.since", { date: formatDate(placement.startDate) })
       : t("layout.placement.between", {
@@ -62,7 +65,7 @@ export function ExperimentDevicePlacements({
           <div className="min-w-0">
             <p className="text-sm font-medium">
               {t("layout.placement.onPlot", {
-                port,
+                sensor: placed,
                 level: layout?.levelName ?? t("layout.defaultUnitName"),
                 plot: plotName(placement.plotId),
               })}

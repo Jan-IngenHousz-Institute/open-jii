@@ -402,6 +402,7 @@ const anchoredLayout = exampleLayoutWith({
     corner: CORNER,
     rowEnd: moved(CORNER, BEARING, COLUMN_SPACING * FIELD_COLUMNS),
     rowSpacing: ROW_SPACING,
+    isFlipped: false,
   },
 });
 
@@ -680,9 +681,10 @@ const onboardedDevicesFixture = new FixtureTransform(
       binding,
       device: { ...handheld.device, thingName: "mq-0342", serialNumber: "MQ-0342" },
     };
+    const others: unknown[] = body.devices.slice(1);
     return {
       ...body,
-      devices: [ambyte, multispeq, ...body.devices.slice(1)],
+      devices: [ambyte, multispeq, ...others],
       pipelineUnavailable: false,
     };
   },
@@ -702,10 +704,18 @@ async function openAmbyte(page: Page): Promise<void> {
   await hideElements([card(page.getByText("Measurements in this experiment"))]);
 }
 
+/** The Ambits the Ambyte's readings name, as the sensor resolver reports them. */
+const ambyteSensors = new ExperimentPath(`devices/${AMBYTE_ID}/sensors`, [
+  { sensorId: "AMT-1021", label: "Ambit 1" },
+  { sensorId: "AMT-1022", label: "Ambit 2" },
+  { sensorId: "AMT-1023", label: "Ambit 3" },
+  { sensorId: "AMT-1024", label: "Ambit 4" },
+]);
+
 const placeSensor: TicketShot = {
   slug: "c9-place-sensor",
   route: devicesRoute,
-  fixtures: [exampleLayoutFixture, onboardedDevicesFixture, noPlacements],
+  fixtures: [exampleLayoutFixture, onboardedDevicesFixture, ambyteSensors, noPlacements],
   viewport: VIEWPORT,
   prepare: async (page) => {
     await openAmbyte(page);
@@ -717,7 +727,7 @@ const placeSensor: TicketShot = {
     await dialog.waitFor();
 
     await dialog.getByRole("combobox").first().click();
-    await page.getByRole("option", { name: "Port 2", exact: true }).click();
+    await page.getByRole("option", { name: "Ambit 2 (AMT-1022)", exact: true }).click();
 
     await dialog.getByRole("combobox", { name: "Plot" }).click();
     await page.getByPlaceholder("Search plots").fill("C4");
@@ -754,7 +764,7 @@ const ambytePlacements = new ExperimentPath("layout/placements", [
   {
     id: "0b6f1c2d-4e5a-4b7c-8d9e-1f2a3b4c5d6e",
     deviceId: AMBYTE_ID,
-    channel: 2,
+    sensorId: "AMT-1022",
     plotId: plotId("C4"),
     startDate: "2026-05-04",
     endDate: null,
@@ -762,7 +772,7 @@ const ambytePlacements = new ExperimentPath("layout/placements", [
   {
     id: "1c7a2d3e-5f6b-4c8d-9e0f-2a3b4c5d6e7f",
     deviceId: AMBYTE_ID,
-    channel: 1,
+    sensorId: "AMT-1021",
     plotId: plotId("B6"),
     startDate: "2026-05-04",
     endDate: "2026-06-30",
@@ -772,12 +782,12 @@ const ambytePlacements = new ExperimentPath("layout/placements", [
 const placedSensor: TicketShot = {
   slug: "c9-placed-sensor",
   route: devicesRoute,
-  fixtures: [exampleLayoutFixture, onboardedDevicesFixture, ambytePlacements],
+  fixtures: [exampleLayoutFixture, onboardedDevicesFixture, ambyteSensors, ambytePlacements],
   viewport: VIEWPORT,
   prepare: async (page) => {
     await openAmbyte(page);
     const placements = page.locator("[data-device-placements]");
-    await placements.getByText("Port 2 on Plot C4").waitFor();
+    await placements.getByText("Ambit 2 on Plot C4").waitFor();
     await page.mouse.move(0, 0);
 
     const marker = new ChangeMarker(page);
@@ -789,15 +799,27 @@ const placedSensor: TicketShot = {
   },
 };
 
-/** The example field as a pasted list with row and column, where F6 to F8 have no position yet. */
+/** A breeder's code for the nth plot of the example field, in row then column order. */
+function breederCode(index: number): string {
+  return `DT26-${String(index + 1).padStart(3, "0")}`;
+}
+
+/** The plot whose sheet row repeats the position before it, F4, so it goes to Unplaced. */
+const CLASHING_PLOT = "F5";
+
+/**
+ * The example field as a breeder's pasted list with row and column, where F6 to F8 have no
+ * position yet and F5's row gives F4's position by mistake.
+ */
 function plotListSheet(): string {
   const lines = ["plot\trow\tcolumn"];
-  for (const plot of examplePlots()) {
+  for (const [index, plot] of examplePlots().entries()) {
     const isUnplaced = plot.row === FIELD_ROWS && plot.column >= 6;
+    const column = plot.identifier === CLASHING_PLOT ? plot.column - 1 : plot.column;
     lines.push(
       isUnplaced
-        ? `${plot.identifier}\t\t`
-        : `${plot.identifier}\t${rowLetter(plot.row)}\t${plot.column}`,
+        ? `${breederCode(index)}\t\t`
+        : `${breederCode(index)}\t${rowLetter(plot.row)}\t${column}`,
     );
   }
   return lines.join("\n");
@@ -819,18 +841,23 @@ const pastePlots: TicketShot = {
     await page.mouse.move(0, 0);
 
     const marker = new ChangeMarker(page);
-    await marker.mark([page.locator("[data-plot-list-mapping]"), preview], "New", "inside-right");
+    await marker.mark(
+      [page.locator("[data-plot-list-mapping]"), preview],
+      "New",
+      "inside-top-right",
+    );
     return marker.frame([dialog], 16);
   },
 };
 
-const UNPLACED = new Set(["F6", "F7", "F8"]);
+const UNPLACED = new Set([CLASHING_PLOT, "F6", "F7", "F8"]);
 
 const unplacedLayout = exampleLayoutWith({
   naming: null,
-  units: exampleFieldLayout().units.map((unit) =>
-    UNPLACED.has(unit.identifier) ? { ...unit, row: null, column: null } : unit,
-  ),
+  units: exampleFieldLayout().units.map((unit, index) => {
+    const named = { ...unit, identifier: breederCode(index) };
+    return UNPLACED.has(unit.identifier) ? { ...named, row: null, column: null } : named;
+  }),
 });
 
 const unplacedStrip: TicketShot = {

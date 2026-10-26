@@ -24,6 +24,8 @@ const ENTRY_LABELS: Record<PlotLegendEntry, string> = {
   skipped: "layout.legend.skipped",
   current: "layout.legend.current",
   measuredTwice: "layout.legend.measuredTwice",
+  flagged: "layout.legend.flagged",
+  uploadFailed: "layout.legend.uploadFailed",
   outsideShare: "layout.legend.outsideShare",
   notYours: "layout.legend.notYours",
   gap: "layout.legend.gap",

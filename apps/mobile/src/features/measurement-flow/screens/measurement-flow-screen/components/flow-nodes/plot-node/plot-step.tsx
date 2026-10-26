@@ -1,6 +1,7 @@
 import React from "react";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 
+import { AddPlotSheet } from "./add-plot-sheet";
 import { ComeBackSheet } from "./come-back-sheet";
 import { FieldGridSheet } from "./field-grid-sheet";
 import { MeasuredPlotSheet } from "./measured-plot-sheet";
@@ -9,6 +10,7 @@ import type { ExampleLayout, LayoutSession, NextPlot } from "./next-plot";
 import { PlotNode } from "./plot-node";
 import { PlotPicker } from "./plot-picker";
 import {
+  isAddPlotOn,
   isScaffoldScreenOn,
   isSkipOn,
   isTreatmentShown,
@@ -43,9 +45,13 @@ export function PlotStep({ layout, session }: PlotStepProps) {
   const closeComeBack = usePlotStepStore((s) => s.closeComeBack);
   const openFieldGrid = usePlotStepStore((s) => s.openFieldGrid);
   const closeFieldGrid = usePlotStepStore((s) => s.closeFieldGrid);
+  const isAddPlotOpen = usePlotStepStore((s) => s.isAddPlotOpen);
+  const openAddPlot = usePlotStepStore((s) => s.openAddPlot);
+  const closeAddPlot = usePlotStepStore((s) => s.closeAddPlot);
 
   const isSkipAvailable = isSkipOn();
   const isFieldGridOn = isScaffoldScreenOn("e8-progress-grid");
+  const canAddPlot = isAddPlotOn();
   const selected = layout.field.plots.find((plot) => plot.identifier === selectedPlot);
   const namedPlot = scaffoldNamedPlot(layout);
 
@@ -86,6 +92,7 @@ export function PlotStep({ layout, session }: PlotStepProps) {
           onSelect={selectPlot}
           onMeasure={measurePicked}
           onCancel={closePicker}
+          onAddPlot={canAddPlot ? openAddPlot : undefined}
         />
       ) : (
         <PlotNode
@@ -100,6 +107,10 @@ export function PlotStep({ layout, session }: PlotStepProps) {
           onShowFieldGrid={isFieldGridOn ? openFieldGrid : undefined}
         />
       )}
+
+      {canAddPlot ? (
+        <AddPlotSheet isOpen={isAddPlotOpen} onAdd={closeAddPlot} onClose={closeAddPlot} />
+      ) : null}
 
       {selected ? (
         <MeasuredPlotSheet

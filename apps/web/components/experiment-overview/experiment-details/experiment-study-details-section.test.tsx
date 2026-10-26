@@ -69,14 +69,17 @@ describe("<ExperimentStudyDetailsSection />", () => {
   it("saves edited descriptors, clearing emptied ones to null", async () => {
     const user = userEvent.setup();
     const spy = server.mount(contract.experiments.updateExperiment, { status: 200 });
+    server.mount(contract.experiments.searchOrganisms, {
+      body: { organisms: [{ taxonId: "3702", name: "Arabidopsis thaliana" }] },
+    });
     const experiment = createExperiment({ organism: "Zea mays" });
 
     renderSection({ experiment, hasAccess: true });
     await user.click(screen.getByText("common.edit"));
 
-    const organismInput = screen.getByLabelText("studyDetails.organism");
-    await user.clear(organismInput);
-    await user.type(organismInput, "Arabidopsis thaliana");
+    await user.click(screen.getByRole("combobox", { name: "studyDetails.organism" }));
+    await user.type(screen.getByPlaceholderText("organism.searchPlaceholder"), "thale");
+    await user.click(await screen.findByRole("option", { name: /Arabidopsis thaliana/ }));
     await user.click(screen.getByText("common.save"));
 
     await waitFor(() => expect(spy.called).toBe(true));

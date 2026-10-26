@@ -12,7 +12,6 @@ import type {
   ExperimentDeviceEntry,
   ExperimentDeviceIdentity,
 } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
-import { PLACEABLE_DEVICE_TYPES } from "@repo/api/domains/experiment/layout/experiment-layout.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
@@ -42,7 +41,8 @@ export function ExperimentDeviceDetail({
 
   const device = entry.device;
   const reported = entry.reported;
-  const isPlaceable = device !== null && PLACEABLE_DEVICE_TYPES.includes(device.deviceType);
+  // Any registered device can stand on a plot, whatever its family.
+  const isPlaceable = device !== null;
 
   function renderWindowCount() {
     if (pipelineUnavailable && entry.recentData === null) {

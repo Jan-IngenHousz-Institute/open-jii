@@ -12,6 +12,28 @@
     "remove": "Remove this funding reference",
     "reference": "{{funder}}, {{award}}"
   },
+  "organism": {
+    "help": "Search NCBI Taxonomy by scientific or common name. Standards and exports read the taxon, so the name is spelled one way everywhere.",
+    "choose": "Search for an organism",
+    "searchPlaceholder": "Scientific or common name",
+    "hint": "Type at least two letters.",
+    "searching": "Searching NCBI Taxonomy",
+    "unreachable": "NCBI Taxonomy did not answer. Try again in a moment.",
+    "noMatches": "No organism matches that name.",
+    "source": "NCBI Taxonomy",
+    "taxonId": "NCBI:txid{{id}}",
+    "none": "No organism"
+  },
+  "facility": {
+    "none": "Not set",
+    "openField": "Open field",
+    "greenhouse": "Greenhouse",
+    "growthChamber": "Growth chamber",
+    "other": "Other",
+    "description": "Description",
+    "descriptionPlaceholder": "e.g. Greenhouse 2, compartment 3",
+    "help": "The type is what standards read. The description says which field, greenhouse or chamber."
+  },
   "discard": {
     "title": "Discard your changes?",
     "description": "You have changes that are not saved. If you leave now, they are lost.",
@@ -66,7 +88,7 @@
     "empty": "No columns yet. They appear once this experiment has readings.",
     "allDescribed": "Every column is described.",
     "noneSuggested": "No column has a suggestion.",
-    "readOnly": "Only this experiment's admins and members can describe its columns."
+    "readOnly": "Only people who can edit this experiment can describe its columns."
   },
   "describe": {
     "intro": "Say what this column measures. Only the trait is required.",
@@ -105,7 +127,7 @@
     "cancel": "Cancel",
     "close": "Close",
     "saved": "Description saved",
-    "readOnly": "Only this experiment's admins and members can describe its columns."
+    "readOnly": "Only people who can edit this experiment can describe its columns."
   },
   "suggestion": {
     "title": "Suggested description",

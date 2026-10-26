@@ -13,6 +13,8 @@ export interface SessionTally {
   skips: SessionSkip[];
   repeatUnitIds: string[];
   outsideShareUnitIds: string[];
+  flaggedUnitIds: string[];
+  failedUploadUnitIds: string[];
 }
 
 /** What every session that ended on one day measured, as uploaded so far. */
@@ -61,6 +63,16 @@ export class SessionDay {
     return this.tallies.flatMap((tally) => tally.outsideShareUnitIds);
   }
 
+  get flaggedUnitIds(): string[] {
+    return [...new Set(this.tallies.flatMap((tally) => tally.flaggedUnitIds))];
+  }
+
+  /** Plots whose reading never arrived, unless another reading of them did. */
+  get failedUploadUnitIds(): string[] {
+    const failed = this.sessions.flatMap((session) => session.failedUploadUnitIds);
+    return [...new Set(failed)].filter((unitId) => !this.measured.has(unitId));
+  }
+
   /** Plots read in more than one session without a repeat asked for. */
   get measuredTwiceUnitIds(): string[] {
     const sessionsByPlot = new Map<string, number>();
@@ -80,13 +92,19 @@ export class SessionDay {
     if (this.measuredTwiceUnitIds.includes(unitId)) {
       return "measuredTwice";
     }
+    if (this.flaggedUnitIds.includes(unitId)) {
+      return "flagged";
+    }
     if (this.outsideShareUnitIds.includes(unitId)) {
       return "outsideShare";
     }
     if (this.skippedUnitIds.includes(unitId)) {
       return "skipped";
     }
-    return this.measured.has(unitId) ? "measured" : undefined;
+    if (this.measured.has(unitId)) {
+      return "measured";
+    }
+    return this.failedUploadUnitIds.includes(unitId) ? "uploadFailed" : undefined;
   }
 
   /** Plots of each treatment nobody measured, in the field's treatment order. */
@@ -117,6 +135,10 @@ export class SessionDay {
       outsideShareUnitIds: session.readings
         .filter((reading) => !assigned.has(reading.unitId))
         .map((reading) => reading.unitId),
+      flaggedUnitIds: session.readings
+        .filter((reading) => reading.isFlagged)
+        .map((reading) => reading.unitId),
+      failedUploadUnitIds: session.failedUploadUnitIds,
     };
   }
 }

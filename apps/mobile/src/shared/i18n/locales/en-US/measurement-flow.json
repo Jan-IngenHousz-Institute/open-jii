@@ -311,7 +311,10 @@
     "flooded": "Flooded",
     "couldNotReach": "Could not reach",
     "other": "Other",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "noteLabel": "What happened? (optional)",
+    "notePlaceholder": "Say why {{plot}} could not be measured",
+    "skip": "Skip {{plot}}"
   },
   "confirmedPlot": {
     "place": "Row {{row}}, column {{column}} · Block {{block}}",
@@ -368,5 +371,25 @@
     "endSub": "Finish for today. Plots not measured stay recorded as not measured.",
     "discardRound": "Discard this round only",
     "discardRoundSub": "Throw away this round of {{plot}}. Saved readings stay."
+  },
+  "repeatScope": {
+    "title": "Measure {{plot}} again",
+    "body": "This reading is kept. Choose what the next reading of {{plot}} takes again.",
+    "measurementOnly": "Only the measurement",
+    "measurementOnlyDetail": "Back to the measurement step. This round's answers stay as they are.",
+    "wholeRound": "The whole round",
+    "wholeRoundDetail": "Back to the round's first step for {{plot}}, so its questions are asked again."
+  },
+  "addPlot": {
+    "open": "Add a plot",
+    "title": "Add a plot",
+    "body": "For a plot the layout does not list. It joins the layout and waits on the web Layout tab until someone places it on the grid.",
+    "name": "Plot name",
+    "namePlaceholder": "e.g. F9",
+    "genotype": "Genotype (optional)",
+    "genotypePlaceholder": "e.g. Line B",
+    "add": "Add {{plot}}",
+    "nameFirst": "Name the plot",
+    "cancel": "Cancel"
   }
 }

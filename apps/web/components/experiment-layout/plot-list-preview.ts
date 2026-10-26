@@ -10,6 +10,8 @@ export interface PlotListEntry {
   identifier: string;
   row: number | null;
   column: number | null;
+  /** The position the sheet gave, which an earlier row took first, and the plot that took it. */
+  clash?: { row: number; column: number; keptBy: string };
 }
 
 /** A row given as a number, or as letters the way the grid labels rows (A, B, AA). */
@@ -36,7 +38,8 @@ function parseColumn(value: unknown): number | null {
 
 /**
  * What a pasted plot list would create: one plot per named row, placed where it gives a row and
- * a column, and listed as unplaced where it does not. A name given twice keeps its first row.
+ * a column, and listed as unplaced where it does not. A name given twice keeps its first row, and
+ * a position given twice goes to the first row naming it, so the later plot is unplaced.
  */
 export class PlotListPreview {
   readonly plots: readonly PlotListEntry[];
@@ -45,6 +48,7 @@ export class PlotListPreview {
   constructor(rows: readonly MetadataRow[], mapping: PlotListMapping) {
     const seen = new Set<string>();
     const duplicates = new Set<string>();
+    const positions = new Map<string, string>();
     const plots: PlotListEntry[] = [];
 
     for (const row of rows) {
@@ -63,12 +67,24 @@ export class PlotListPreview {
       const rowNumber = mapping.rowColumnId === null ? null : parseRow(row[mapping.rowColumnId]);
       const column =
         mapping.columnColumnId === null ? null : parseColumn(row[mapping.columnColumnId]);
-      const isPlaced = rowNumber !== null && column !== null;
-      plots.push({
-        identifier,
-        row: isPlaced ? rowNumber : null,
-        column: isPlaced ? column : null,
-      });
+      if (rowNumber === null || column === null) {
+        plots.push({ identifier, row: null, column: null });
+        continue;
+      }
+
+      const position = `${rowNumber}:${column}`;
+      const keptBy = positions.get(position);
+      if (keptBy !== undefined) {
+        plots.push({
+          identifier,
+          row: null,
+          column: null,
+          clash: { row: rowNumber, column, keptBy },
+        });
+        continue;
+      }
+      positions.set(position, identifier);
+      plots.push({ identifier, row: rowNumber, column });
     }
 
     this.plots = plots;
@@ -79,8 +95,14 @@ export class PlotListPreview {
     return this.plots.filter((plot) => plot.row !== null);
   }
 
-  get unplaced(): readonly PlotListEntry[] {
-    return this.plots.filter((plot) => plot.row === null);
+  /** Plots the sheet gave no row and column. */
+  get withoutPosition(): readonly PlotListEntry[] {
+    return this.plots.filter((plot) => plot.row === null && plot.clash === undefined);
+  }
+
+  /** Plots whose position an earlier row took. */
+  get clashing(): readonly PlotListEntry[] {
+    return this.plots.filter((plot) => plot.clash !== undefined);
   }
 
   /** The grid the placed plots span, from row 1 and column 1. */

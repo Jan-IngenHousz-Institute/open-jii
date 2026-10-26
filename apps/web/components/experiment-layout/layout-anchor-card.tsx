@@ -2,7 +2,7 @@
 
 import { Map as LocationMap } from "@/components/map";
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
-import { X } from "lucide-react";
+import { FlipVertical2, X } from "lucide-react";
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
@@ -132,6 +132,17 @@ export function LayoutAnchorCard({ experimentId, layout, form, onClose }: Layout
     setTarget(target === "corner" ? "rowEnd" : "corner");
   };
 
+  const flip = () => form.setValue("isFlipped", !anchor.isFlipped, { shouldDirty: true });
+
+  const outlineHelp = () => {
+    if (!geometry.isComplete) {
+      return t("layout.anchor.partialHelp");
+    }
+    return anchor.isFlipped
+      ? t("layout.anchor.outlineHelpLeft")
+      : t("layout.anchor.outlineHelpRight");
+  };
+
   const chooseTarget = (value: string) => {
     if (value === "corner" || value === "rowEnd") {
       setTarget(value);
@@ -254,11 +265,15 @@ export function LayoutAnchorCard({ experimentId, layout, form, onClose }: Layout
                 showDistances={false}
                 fitBoundsOnMapLoad={false}
               />
-              <p className="text-muted-foreground text-xs">
-                {geometry.isComplete
-                  ? t("layout.anchor.outlineHelp")
-                  : t("layout.anchor.partialHelp")}
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-muted-foreground text-xs">{outlineHelp()}</p>
+                {geometry.isComplete ? (
+                  <Button type="button" variant="outline" size="sm" onClick={flip}>
+                    <FlipVertical2 className="size-4" aria-hidden />
+                    {t("layout.anchor.flip")}
+                  </Button>
+                ) : null}
+              </div>
             </div>
 
             <Button type="submit">{t("layout.anchor.save")}</Button>

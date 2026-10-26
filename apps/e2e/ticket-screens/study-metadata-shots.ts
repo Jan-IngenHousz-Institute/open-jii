@@ -1,9 +1,9 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import { experimentId } from "../docs-media/seed-entities.js";
 import type { Box } from "./change-marker.js";
 import { ChangeMarker } from "./change-marker.js";
-import type { Resolvable } from "./fixture.js";
+import type { Fixture, Resolvable } from "./fixture.js";
 import { resolve } from "./fixture.js";
 import type { TicketShot } from "./shots.js";
 
@@ -78,9 +78,42 @@ const studyDetailsNotSet: TicketShot = {
   },
 };
 
+/** NCBI Taxonomy's answer for soybean, since the scaffold's organism search has no backend. */
+class SoybeanTaxonomy implements Fixture {
+  async install(page: Page): Promise<void> {
+    await page.route(
+      (url) => url.pathname === "/api/v1/organisms/search",
+      (route) =>
+        route.fulfill({
+          status: 200,
+          json: {
+            organisms: [
+              { taxonId: "3847", name: "Glycine max", commonName: "soybean" },
+              { taxonId: "3848", name: "Glycine soja", commonName: "wild soybean" },
+            ],
+          },
+        }),
+    );
+  }
+}
+
+async function chooseOrganism(page: Page, dialog: Locator, name: string): Promise<void> {
+  await dialog.getByRole("combobox").filter({ hasText: "Glycine max" }).click();
+  await page.getByPlaceholder("Scientific or common name").fill("soybean");
+  await page.getByRole("option", { name: new RegExp(name) }).click();
+}
+
+/** The seeded facility predates the type, so the shots give it one and a description. */
+async function setOpenField(page: Page, dialog: Locator): Promise<void> {
+  await dialog.getByRole("combobox").filter({ hasText: "Not set" }).click();
+  await page.getByRole("option", { name: "Open field" }).click();
+  await dialog.getByPlaceholder("e.g. Greenhouse 2, compartment 3").fill("Field 4, north block");
+}
+
 const studyDetailsDialog: TicketShot = {
   slug: "a1-study-details-dialog",
   route: overviewRoute,
+  fixtures: [new SoybeanTaxonomy()],
   viewport: { width: 1440, height: 1000 },
   prepare: async (page) => {
     await page.getByText("Glycine max").waitFor();
@@ -90,6 +123,9 @@ const studyDetailsDialog: TicketShot = {
 
     // The Funding section is A2's change, so A1's dialog is shown without it.
     await dialog.getByRole("region", { name: "Funding" }).evaluate((section) => section.remove());
+
+    await chooseOrganism(page, dialog, "Glycine max");
+    await setOpenField(page, dialog);
     await blurFocus(page);
 
     const marker = new ChangeMarker(page);
@@ -100,6 +136,7 @@ const studyDetailsDialog: TicketShot = {
 const discardChanges: TicketShot = {
   slug: "a1-discard-changes",
   route: overviewRoute,
+  fixtures: [new SoybeanTaxonomy()],
   viewport: { width: 1440, height: 1000 },
   prepare: async (page) => {
     await page.getByText("Glycine max").waitFor();
@@ -108,7 +145,8 @@ const discardChanges: TicketShot = {
     await dialog.waitFor();
 
     await dialog.getByRole("region", { name: "Funding" }).evaluate((section) => section.remove());
-    await dialog.getByLabel("Organism").fill("Glycine soja");
+    await setOpenField(page, dialog);
+    await chooseOrganism(page, dialog, "Glycine soja");
     await dialog.getByRole("button", { name: "Cancel" }).click();
     const prompt = page.getByRole("alertdialog");
     await prompt.waitFor();

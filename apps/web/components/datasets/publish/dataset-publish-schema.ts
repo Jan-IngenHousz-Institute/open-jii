@@ -17,6 +17,7 @@ export const describeSchema = zPublishDatasetForm.pick({
   title: true,
   description: true,
   authors: true,
+  contributors: true,
   limitations: true,
 });
 

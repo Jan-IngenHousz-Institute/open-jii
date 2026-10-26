@@ -30,7 +30,7 @@ export function LayoutUnplacedStrip({
   const unitName = new UnitName(levelName);
 
   const renderUnit = (unit: ExperimentUnit) => (
-    <div key={unit.id} className="h-10 w-14">
+    <div key={unit.id} className="h-10 min-w-14 whitespace-nowrap">
       <LayoutGridCell unit={unit} isSelected={unit.id === selectedPlotId} onSelect={onSelect} />
     </div>
   );

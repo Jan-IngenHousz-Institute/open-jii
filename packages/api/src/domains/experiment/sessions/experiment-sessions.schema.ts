@@ -3,6 +3,7 @@ import { z } from "zod";
 export const zWalkingStrategy = z.enum([
   "byRow",
   "serpentine",
+  "random",
   "randomByBlock",
   "treatmentBalanced",
 ]);
@@ -73,6 +74,8 @@ export const zSkipReason = z.enum(["plantMissing", "flooded", "couldNotReach", "
 export const zSessionReading = z.object({
   unitId: z.string().uuid(),
   isRepeat: z.boolean(),
+  /** Flagged on the platform or the phone, through a data annotation. */
+  isFlagged: z.boolean(),
 });
 
 export const zSessionSkip = z.object({
@@ -90,6 +93,8 @@ export const zEndedSession = z.object({
   assignedUnitIds: z.array(z.string().uuid()),
   readings: z.array(zSessionReading),
   skips: z.array(zSessionSkip),
+  /** Plots whose reading the phone gave up uploading, as it reports on its next sync. */
+  failedUploadUnitIds: z.array(z.string().uuid()),
 });
 
 export const zEndedSessionsQuery = z.object({

@@ -57,6 +57,10 @@ export function SessionTallyRow({ plan, name, style, tally }: SessionTallyRowPro
       <TableCell>
         {renderCount(tally.outsideShareUnitIds.length, plots(tally.outsideShareUnitIds))}
       </TableCell>
+      <TableCell>{renderCount(tally.flaggedUnitIds.length, plots(tally.flaggedUnitIds))}</TableCell>
+      <TableCell>
+        {renderCount(tally.failedUploadUnitIds.length, plots(tally.failedUploadUnitIds))}
+      </TableCell>
       <TableCell>
         {session.isUploaded ? null : (
           <Badge className="bg-status-stale text-status-stale-foreground mr-2">
