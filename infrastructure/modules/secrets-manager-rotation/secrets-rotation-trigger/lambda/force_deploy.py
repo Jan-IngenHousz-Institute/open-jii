@@ -29,9 +29,6 @@ def handler(event, context):
         }
     except Exception as e:
         print(f'Error: {str(e)}')
-        return {
-            'statusCode': 500,
-            'body': json.dumps({
-                'error': str(e)
-            })
-        }
+        # EventBridge invokes this asynchronously, so a returned error counts as success. Raised, it
+        # counts in Errors and Lambda retries it twice; otherwise the backend keeps the old password.
+        raise

@@ -72,6 +72,9 @@ export class AwsConfigService {
       s3: {
         iotArchiveBucketName: this.configService.getOrThrow<string>("aws.s3.iotArchiveBucketName"),
         largeIotBucketName: this.configService.getOrThrow<string>("aws.s3.largeIotBucketName"),
+        dataExportsBucketName: this.configService.getOrThrow<string>(
+          "aws.s3.dataExportsBucketName",
+        ),
       },
     };
   }

@@ -235,7 +235,7 @@ export class FlowMapper {
           // Throw only the first message if invalid
           const parsed = zExperimentQuestionContent.safeParse(candidate);
           if (!parsed.success) {
-            throw new Error(parsed.error.errors[0].message);
+            throw new Error(parsed.error.issues[0].message);
           }
           content = parsed.data;
         } else {
@@ -249,7 +249,7 @@ export class FlowMapper {
           // Throw only the first message if invalid
           const parsed = zExperimentQuestionContent.safeParse(candidate);
           if (!parsed.success) {
-            throw new Error(parsed.error.errors[0].message);
+            throw new Error(parsed.error.issues[0].message);
           }
           content = parsed.data;
         }
@@ -262,7 +262,7 @@ export class FlowMapper {
             : undefined);
         const parsed = zExperimentMeasurementCommandContent.safeParse({ command });
         if (!parsed.success) {
-          throw new Error(parsed.error.errors[0].message);
+          throw new Error(parsed.error.issues[0].message);
         }
         content = parsed.data;
       } else if (nodeType === "measurement") {
@@ -282,7 +282,7 @@ export class FlowMapper {
         // Let Zod handle all validation including missing protocol
         const parsed = zExperimentMeasurementContent.safeParse(candidate);
         if (!parsed.success) {
-          throw new Error(parsed.error.errors[0].message);
+          throw new Error(parsed.error.issues[0].message);
         }
         content = parsed.data;
       } else if (nodeType === "analysis") {
@@ -302,7 +302,7 @@ export class FlowMapper {
         // Let Zod handle all validation including missing macro
         const parsed = zExperimentAnalysisContent.safeParse(candidate);
         if (!parsed.success) {
-          throw new Error(parsed.error.errors[0].message);
+          throw new Error(parsed.error.issues[0].message);
         }
         content = parsed.data;
       } else if (nodeType === "branch") {
@@ -314,7 +314,7 @@ export class FlowMapper {
           defaultPathId: spec.defaultPathId,
         });
         if (!parsed.success) {
-          throw new Error(parsed.error.errors[0].message);
+          throw new Error(parsed.error.issues[0].message);
         }
         content = parsed.data;
       } else {
@@ -323,7 +323,7 @@ export class FlowMapper {
 
         const parsed = zExperimentInstructionContent.safeParse(candidate);
         if (!parsed.success) {
-          throw new Error(parsed.error.errors[0].message);
+          throw new Error(parsed.error.issues[0].message);
         }
         content = parsed.data;
       }
@@ -352,7 +352,7 @@ export class FlowMapper {
     const flowGraph = { nodes: apiNodes, edges: apiEdges };
     const result = zExperimentFlowGraph.safeParse(flowGraph);
     if (!result.success) {
-      throw new Error(result.error.errors[0].message);
+      throw new Error(result.error.issues[0].message);
     }
     return result.data;
   }

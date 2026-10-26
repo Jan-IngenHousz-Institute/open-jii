@@ -42,13 +42,13 @@ export const userProfileMetadataSchema = createSelectSchema(profiles).pick({
 });
 
 // Define the types
-export type CreateUserDto = typeof createUserSchema._type;
-export type UpdateUserDto = typeof updateUserSchema._type;
-export type UserDto = typeof selectUserSchema._type;
-export type CreateUserProfileDto = typeof createUserProfileSchema._type;
-export type UserProfileDto = typeof selectUserProfileSchema._type;
+export type CreateUserDto = z.infer<typeof createUserSchema>;
+export type UpdateUserDto = z.infer<typeof updateUserSchema>;
+export type UserDto = z.infer<typeof selectUserSchema>;
+export type CreateUserProfileDto = z.infer<typeof createUserProfileSchema>;
+export type UserProfileDto = z.infer<typeof selectUserProfileSchema>;
 export type UserSearchResultDto = UserProfileDto & { matchedEmail: boolean };
-export type UserProfileMetadata = typeof userProfileMetadataSchema._type;
+export type UserProfileMetadata = z.infer<typeof userProfileMetadataSchema>;
 
 // Define search parameters type
 export interface SearchUsersParams {

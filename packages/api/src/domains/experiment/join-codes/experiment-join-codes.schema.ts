@@ -44,14 +44,14 @@ export const zJoinCodePathParam = z.object({
 export const zJoinCodeExpiry = z.enum(["1d", "7d", "30d", "never"]);
 
 export const zExperimentJoinCode = z.object({
-  id: z.string().uuid(),
-  experimentId: z.string().uuid(),
+  id: z.string().guid(),
+  experimentId: z.string().guid(),
   /** Normalized, without the display hyphen; clients call {@link formatJoinCode}. */
   code: z.string(),
   expiresAt: z.string().datetime().nullable(),
   redemptionCount: z.number().int(),
   createdAt: z.string().datetime(),
-  createdBy: z.string().uuid().nullable(),
+  createdBy: z.string().guid().nullable(),
 });
 
 export const zExperimentJoinCodeResponse = z.object({
@@ -64,7 +64,7 @@ export const zCreateJoinCodeBody = z.object({
 
 export const zJoinCodePreview = z.object({
   experiment: z.object({
-    id: z.string().uuid(),
+    id: z.string().guid(),
     name: z.string(),
     description: z.string().nullable(),
     organizationName: z.string().nullish(),
@@ -77,7 +77,7 @@ export const zJoinCodePreview = z.object({
 });
 
 export const zRedeemJoinCodeResponse = z.object({
-  experimentId: z.string().uuid(),
+  experimentId: z.string().guid(),
   outcome: z.enum(["joined", "already_member"]),
 });
 

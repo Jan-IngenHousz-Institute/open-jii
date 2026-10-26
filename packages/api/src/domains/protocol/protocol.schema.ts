@@ -44,24 +44,24 @@ export const zJsonValue: z.ZodType<JsonValue> = z.lazy(() =>
     z.boolean(),
     z.null(),
     z.array(zJsonValue),
-    z.record(zJsonValue),
+    z.record(z.string(), zJsonValue),
   ]),
 );
 
 // Define Zod schemas for protocol models
 export const zProtocol = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   description: z.string().nullable(),
   code: zJsonValue,
   family: zProtocolFamily,
   sortOrder: z.number().nullable(),
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
   createdByName: z.string().optional(),
-  forkedFrom: z.string().uuid().nullish(),
+  forkedFrom: z.string().guid().nullish(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
-  organizationId: z.string().uuid().nullable(),
+  organizationId: z.string().guid().nullable(),
   /**
    * Display name of the owning organization, `null` for a personal workspace.
    * Populated by the detail read only — the lists have no room for it — which is
@@ -116,7 +116,7 @@ export const zProtocolListResponse = z.union([zProtocolList, zProtocolPaginatedL
 
 // Path parameters
 export const zProtocolIdPathParam = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
 });
 
 // Request body schemas
@@ -130,10 +130,10 @@ export const zCreateProtocolRequestBody = z.object({
   code: zJsonValue,
   family: zProtocolFamily,
   // Set when this protocol is a fork (copy) of another, to record its lineage.
-  forkedFrom: z.string().uuid().optional(),
+  forkedFrom: z.string().guid().optional(),
   // Optional target organization to create into; defaults to the creator's
   // personal org. The caller must be a member of the given organization.
-  organizationId: z.string().uuid().optional(),
+  organizationId: z.string().guid().optional(),
   // Visibility at creation: defaults to public. Post-create changes go through the
   // dedicated `setVisibility` route only, which is monotonic (private→public); the
   // update body never carries visibility.
@@ -160,15 +160,15 @@ export const zProtocolErrorResponse = z.object({
 
 // Protocol-Macro compatibility schemas
 export const zCompatibleMacroSummary = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   filename: z.string(),
   language: z.enum(["python", "r", "javascript"]),
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
 });
 
 export const zProtocolMacroEntry = z.object({
-  protocolId: z.string().uuid(),
+  protocolId: z.string().guid(),
   macro: zCompatibleMacroSummary,
   addedAt: z.string().datetime(),
 });
@@ -178,12 +178,12 @@ export const zProtocolMacroList = z.array(zProtocolMacroEntry);
 export const zAddCompatibleMacrosBody = z.object({
   // Capped so a single request can't fan out into an unbounded set of per-id
   // authorization checks (each link target is read-access validated server-side).
-  macroIds: z.array(z.string().uuid()).min(1).max(100),
+  macroIds: z.array(z.string().guid()).min(1).max(100),
 });
 
 export const zProtocolMacroPathParams = z.object({
-  id: z.string().uuid(),
-  macroId: z.string().uuid(),
+  id: z.string().guid(),
+  macroId: z.string().guid(),
 });
 
 // Infer types from Zod schemas

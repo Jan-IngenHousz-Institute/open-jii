@@ -234,7 +234,7 @@ describe("Dashboard schemas", () => {
         name: "X",
         layout: { columns: 16 },
       });
-      expect(parsed.layout).toEqual({ columns: 16 });
+      expect(parsed.layout).toEqual({ columns: 16, rowHeight: 80, gap: 16 });
     });
 
     it("update body makes every field optional including name", () => {

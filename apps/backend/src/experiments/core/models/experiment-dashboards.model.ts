@@ -43,6 +43,6 @@ export const selectExperimentDashboardSchema = createSelectSchema(experimentDash
   createdByName: z.string().optional(),
 });
 
-export type CreateExperimentDashboardDto = typeof createExperimentDashboardSchema._type;
-export type UpdateExperimentDashboardDto = typeof updateExperimentDashboardSchema._type;
-export type ExperimentDashboardDto = typeof selectExperimentDashboardSchema._type;
+export type CreateExperimentDashboardDto = z.infer<typeof createExperimentDashboardSchema>;
+export type UpdateExperimentDashboardDto = z.infer<typeof updateExperimentDashboardSchema>;
+export type ExperimentDashboardDto = z.infer<typeof selectExperimentDashboardSchema>;

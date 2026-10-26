@@ -133,8 +133,8 @@ live" and "what should I read before exploring", so those skills do not have to 
 
 ### Issue tracker
 
-Issues live in Linear (team `OJD`); GitHub Issues is a synced mirror. Projects are the unit of
-design and tickets are granular work under a project. `Done` means live on production. See
+Issues live in Linear (team `OJD`), which no longer syncs them to GitHub Issues. Projects are the
+unit of design and tickets are granular work under a project. `Done` means live on production. See
 `docs/agents/issue-tracker.md` for access, `docs/agents/ticket-standard.md` for the project and
 ticket shapes, the gates and the prose bar, and `docs/agents/linear-taxonomy.md` for the labels. The
 team runs no cycles and no estimation.
