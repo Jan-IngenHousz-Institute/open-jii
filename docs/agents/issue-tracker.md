@@ -1,8 +1,8 @@
 # Issue tracker: Linear
 
-Issues and specs live in **Linear**, team `OJD`, so tickets are `OJD-####`. GitHub Issues is a
-synced mirror, not the source of truth: a ticket may exist in both places, and closing the GitHub
-side is close-only. Status, labels and relations belong in Linear.
+Issues and specs live in **Linear**, team `OJD`, so tickets are `OJD-####`. Linear no longer syncs
+them to GitHub Issues, so an older ticket may still have a GitHub copy that nothing updates.
+Status, labels and relations belong in Linear.
 
 ## Access
 
@@ -55,16 +55,17 @@ The team runs **no cycles and no estimation**. Do not set estimates or look for 
   then comment. Doing only the status move loses the link.
 - **Canceling a parent cancels its open sub-issues.** Read `children` and `parent` as well as the
   relations before any state change, because a sub-issue may be someone else's work.
-- **Everything in `OJD` mirrors to public GitHub**, comments included. A ticket describes the fix.
-  What is weak today goes in a project document. Examples stay generic for the same reason.
+- **A ticket describes the fix.** Pull requests are public, and a ticket's testing criteria are
+  copied into its pull request. What is weak today goes in a project document. Examples stay
+  generic for the same reason.
 - **Agents read production only when the person asks, and never write to it.** Production changes
   go through a PR, `main`, dev and a release; `docs/agents/environments.md` has the access recipes.
   Test data for QA comes from the person, who can reach it.
 
 ## When a skill says "publish to the issue tracker"
 
-Create a Linear issue on team `OJD`. Do not create a GitHub issue, because the sync runs Linear to
-GitHub.
+Create a Linear issue on team `OJD`. Do not create a GitHub issue, because tracked work lives only
+in Linear.
 
 ## When a skill says "fetch the relevant ticket"
 

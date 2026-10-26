@@ -309,8 +309,9 @@ ticket proceeds on.
 and URLs are not prose and do not count, and `linear:check` leaves them out. When a body is still
 over, a criterion moves to a comment or the ticket splits; the grammar is never compressed.
 
-**Security work describes the fix only.** Every `OJD` ticket and comment mirrors to public GitHub.
-A ticket says what to build or change. What is weak today lives in a project document.
+**Security work describes the fix only.** Pull requests are public, and a ticket's testing criteria
+are copied into its pull request. A ticket says what to build or change. What is weak today lives
+in a project document.
 
 ## Put it in context
 
@@ -539,6 +540,6 @@ an inventory agent reported is a lead, not a fact, until it is read at line leve
 
 ## Relation to the GitHub templates
 
-GitHub Issues is a synced mirror fed from Linear, so `.github/ISSUE_TEMPLATE/` only serves people
-filing directly on GitHub, mostly external contributors. Those templates stay and their headings
-match the shapes above, so a synced issue parses the same on both sides.
+Linear no longer syncs to GitHub Issues, so `.github/ISSUE_TEMPLATE/` only serves people filing
+directly on GitHub, mostly external contributors. Those templates stay and their headings match
+the shapes above, so an issue filed there moves into Linear without reshaping.

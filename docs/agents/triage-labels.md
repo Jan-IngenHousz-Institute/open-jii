@@ -30,5 +30,5 @@ not change the strings: a label under a `triage` group is still named `needs-tri
 `triage/needs-triage`, so anything matching these names keeps working.
 
 They do not collide with anything in use. The existing `OJD` labels cover area, type, release and
-the WBSO reporting series, none of which express triage state. On the GitHub mirror only `wontfix`
-exists, and the mirror is fed from Linear, so Linear is where they need creating.
+the WBSO reporting series, none of which express triage state. Tickets live only in Linear, so
+Linear is where they need creating.
