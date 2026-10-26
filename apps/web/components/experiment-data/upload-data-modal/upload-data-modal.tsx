@@ -3,7 +3,7 @@
 import { Upload } from "lucide-react";
 import * as React from "react";
 
-import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/uploads/experiment-uploads.schema";
 import { useTranslation } from "@repo/i18n/client";
 import {
   Dialog,
@@ -42,6 +42,13 @@ export function UploadDataModal({
 
   const isCreating = view.name === "create";
 
+  const showList = () => setView({ name: "list" });
+
+  const showCreate = (sourceKind: ExperimentUploadSourceKind) =>
+    setView({ name: "create", sourceKind });
+
+  const handleClose = () => onOpenChange(false);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
@@ -62,15 +69,15 @@ export function UploadDataModal({
             experimentId={experimentId}
             canManage={canManage}
             sourceKind={view.sourceKind}
-            onBack={() => setView({ name: "list" })}
-            onUploaded={() => setView({ name: "list" })}
+            onBack={showList}
+            onUploaded={showList}
           />
         ) : (
           <UploadListView
             experimentId={experimentId}
             enabled={open}
-            onNewUpload={(sourceKind) => setView({ name: "create", sourceKind })}
-            onClose={() => onOpenChange(false)}
+            onNewUpload={showCreate}
+            onClose={handleClose}
           />
         )}
       </DialogContent>

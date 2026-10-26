@@ -1,33 +1,42 @@
 "use client";
 
-import type { ExperimentUploadMetadata } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentUploadRecord } from "@repo/api/domains/experiment/uploads/experiment-uploads.schema";
 import { ScrollArea } from "@repo/ui/components/scroll-area";
 
-import { UploadHistoryCard } from "./upload-history-card";
+import { UploadCard } from "./upload-card";
 import { UploadHistoryEmpty } from "./upload-history-empty";
+import { UploadHistoryError } from "./upload-history-error";
 import { UploadHistoryLoading } from "./upload-history-loading";
 
 export interface UploadHistoryContentProps {
   isLoading: boolean;
-  uploads: ExperimentUploadMetadata[];
+  error: Error | null;
+  uploads: ExperimentUploadRecord[];
 }
 
-export function UploadHistoryContent({ isLoading, uploads }: UploadHistoryContentProps) {
+export function UploadHistoryContent({ isLoading, error, uploads }: UploadHistoryContentProps) {
+  const renderUpload = (upload: ExperimentUploadRecord, index: number) => (
+    <UploadCard key={upload.uploadId} upload={upload} index={uploads.length - index} />
+  );
+
+  const hasUploads = uploads.length > 0;
+
+  // A failed poll keeps the last list it had, which says more than the error does.
+  if (error && !hasUploads) {
+    return <UploadHistoryError error={error} />;
+  }
+
   if (isLoading) {
     return <UploadHistoryLoading />;
   }
 
-  if (uploads.length === 0) {
+  if (!hasUploads) {
     return <UploadHistoryEmpty />;
   }
 
   return (
     <ScrollArea className="max-h-[280px]">
-      <div className="space-y-2">
-        {uploads.map((upload, i) => (
-          <UploadHistoryCard key={upload.uploadId} upload={upload} index={uploads.length - i} />
-        ))}
-      </div>
+      <div className="space-y-2">{uploads.map(renderUpload)}</div>
     </ScrollArea>
   );
 }

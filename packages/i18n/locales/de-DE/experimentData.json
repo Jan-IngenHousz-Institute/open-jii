@@ -108,7 +108,12 @@
         "rowCount_other": "{{count}} Zeilen"
       },
       "sourceKind": {
-        "label": "Datenformat"
+        "ambyte": "Ambyte",
+        "csv": "CSV",
+        "tsv": "TSV",
+        "parquet": "Parquet",
+        "json": "JSON",
+        "ndjson": "NDJSON"
       },
       "files": {
         "dropzone": {
@@ -122,8 +127,6 @@
       },
       "validation": {
         "title": "Hochladen nicht möglich",
-        "noTarget": "Zieltabelle auswählen oder benennen",
-        "invalidName": "Der Name muss mit einem Buchstaben beginnen; erlaubt sind Buchstaben, Ziffern und Unterstriche (max. 63)",
         "noFiles": "Wählen Sie mindestens eine Datendatei aus",
         "unsupportedFormat": "'{{fileName}}' ist kein unterstütztes Dateiformat (CSV, TSV, Parquet, JSON, NDJSON)",
         "wrongFormat": "'{{fileName}}' ist keine {{format}}-Datei",
@@ -139,18 +142,29 @@
         "fallback": "Upload fehlgeschlagen"
       },
       "status": {
-        "succeeded": {
-          "title": "Upload erfolgreich",
-          "description": "Die Zeilen werden in '{{tableName}}' geschrieben. Die Tabelle erscheint, sobald die Pipeline sie materialisiert hat."
-        },
-        "failed": {
-          "title": "Upload fehlgeschlagen",
-          "fallback": "Der Verarbeitungsjob ist fehlgeschlagen."
-        }
+        "receiving": "Wird empfangen",
+        "queued": "Warteschlange",
+        "pending": "Ausstehend",
+        "running": "Wird verarbeitet",
+        "completed": "Abgeschlossen",
+        "failed": "Fehlgeschlagen"
+      },
+      "errors": {
+        "no_files": "Der Upload enthielt keine Dateien zum Verarbeiten.",
+        "no_rows": "Die Dateien enthielten keine Zeilen, die zur Tabelle hinzugefügt werden konnten.",
+        "not_queryable": "Die Zeilen wurden hinzugefügt, aber die Tabelle hat sie nicht innerhalb einer Stunde angezeigt. Sie können noch erscheinen; wenden Sie sich an den Support, falls nicht.",
+        "transfer_interrupted": "Die Übertragung brach ab, bevor alle Dateien angekommen waren. Laden Sie die Dateien erneut hoch.",
+        "unknown": "Der Upload ist fehlgeschlagen. Starten Sie ihn erneut und wenden Sie sich an den Support, falls er weiterhin fehlschlägt."
+      },
+      "rejectedFiles_one": "{{rejected}} von {{count}} Datei abgelehnt",
+      "rejectedFiles_other": "{{rejected}} von {{count}} Dateien abgelehnt",
+      "rejectedAmbyteFolders_one": "{{count}} Ambyte-Ordner ausgelassen",
+      "rejectedAmbyteFolders_other": "{{count}} Ambyte-Ordner ausgelassen",
+      "rejectionReasons": {
+        "unparseable": "{{name}} konnte nicht gelesen werden",
+        "no_rows": "{{name}} enthält keine Zeilen"
       },
       "actions": {
-        "cancel": "Abbrechen",
-        "close": "Schließen",
         "back": "Zurück",
         "newUpload": "Neuer Upload",
         "upload": "Hochladen"
@@ -158,29 +172,15 @@
       "history": {
         "title": "Letzte Uploads",
         "empty": "Noch keine Uploads.",
-        "loading": "Uploads werden geladen…",
+        "error": "Uploads konnten nicht geladen werden: {{message}}",
+        "unknownError": "Ein unbekannter Fehler ist aufgetreten",
         "uploadCount_one": "{{count}} kürzlicher Upload",
         "uploadCount_other": "{{count}} kürzliche Uploads",
         "uploadTitle": "Upload #{{number}}",
-        "status": {
-          "pending": "Ausstehend",
-          "running": "Wird verarbeitet",
-          "completed": "Abgeschlossen",
-          "failed": "Fehlgeschlagen"
-        },
-        "sourceKind": {
-          "ambyte": "Ambyte",
-          "csv": "CSV",
-          "tsv": "TSV",
-          "parquet": "Parquet",
-          "json": "JSON",
-          "ndjson": "NDJSON"
-        },
-        "rowCount_one": "{{count}} Zeile",
-        "rowCount_other": "{{count}} Zeilen",
+        "rowCount_one": "{{formatted}} Zeile",
+        "rowCount_other": "{{formatted}} Zeilen",
         "fileCount_one": "{{count}} Datei",
-        "fileCount_other": "{{count}} Dateien",
-        "untargeted": "(keine Tabelle)"
+        "fileCount_other": "{{count}} Dateien"
       },
       "transfer": {
         "started": "Der Upload nach {{table}} läuft. Sie können diesen Dialog schließen und weiterarbeiten; lassen Sie diesen Tab geöffnet, bis der Upload abgeschlossen ist.",

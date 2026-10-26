@@ -18,7 +18,7 @@ export function UploadHistoryPanel({
   enabled,
 }: UploadHistoryPanelProps) {
   const { t } = useTranslation("experimentData");
-  const { data, isLoading } = useListUploads(experimentId, { uploadTableName, enabled });
+  const { data, isLoading, error } = useListUploads(experimentId, { uploadTableName, enabled });
   const uploads = data?.uploads ?? [];
   const hasUploads = uploads.length > 0;
 
@@ -33,7 +33,7 @@ export function UploadHistoryPanel({
         )}
       </div>
 
-      <UploadHistoryContent isLoading={isLoading} uploads={uploads} />
+      <UploadHistoryContent isLoading={isLoading} error={error} uploads={uploads} />
     </div>
   );
 }

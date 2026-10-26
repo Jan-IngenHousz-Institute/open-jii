@@ -40,10 +40,29 @@ export class MultipartUploadService {
     }
 
     const processingQueue = new AsyncQueue(1, this.logger);
-    const state: { firstFailure: Result<void> | null } = { firstFailure: null };
+    const state: { firstFailure: Result<void> | null; parseError: Error | null } = {
+      firstFailure: null,
+      parseError: null,
+    };
+    const isStopped = (): boolean => state.firstFailure !== null || state.parseError !== null;
 
     try {
       await new Promise<void>((resolve, reject) => {
+        // Waits out the file in flight even after a parse error: its handler may still be
+        // recording state the caller needs to clean up.
+        const settle = (): void => {
+          processingQueue
+            .waitForCompletion()
+            .then(() => {
+              if (state.parseError) {
+                reject(state.parseError);
+                return;
+              }
+              resolve();
+            })
+            .catch((err) => reject(err instanceof Error ? err : new Error(String(err))));
+        };
+
         const bb = busboy({
           headers: requestHeaders,
           limits: { fileSize: limits.maxFileSize, files: limits.maxFileCount },
@@ -53,11 +72,15 @@ export class MultipartUploadService {
         bb.on("field", onField);
 
         bb.on("file", (fieldname, fileStream, info) => {
+          // A client abort errors the file as well as the parser. Until a handler reads the file
+          // nothing else listens, and an unheard stream error ends the process.
+          fileStream.on("error", () => undefined);
+
           if (fieldname !== "files") {
             fileStream.resume();
             return;
           }
-          if (state.firstFailure) {
+          if (isStopped()) {
             fileStream.resume();
             return;
           }
@@ -69,7 +92,7 @@ export class MultipartUploadService {
           });
           processingQueue.add(async () => {
             // Siblings queue before the first task drains, so recheck here.
-            if (state.firstFailure) {
+            if (isStopped()) {
               fileStream.resume();
               return;
             }
@@ -91,13 +114,11 @@ export class MultipartUploadService {
           state.firstFailure ??= failure(AppError.badRequest("Too many files in upload"));
         });
 
-        bb.on("error", (err) => reject(err instanceof Error ? err : new Error(String(err))));
-        bb.on("close", () => {
-          processingQueue
-            .waitForCompletion()
-            .then(() => resolve())
-            .catch((err) => reject(err instanceof Error ? err : new Error(String(err))));
+        bb.on("error", (err) => {
+          state.parseError ??= err instanceof Error ? err : new Error(String(err));
+          settle();
         });
+        bb.on("close", settle);
 
         requestStream.pipe(bb);
         // pipe() leaves the parser waiting when the client goes away; this ends it and the file in flight.
