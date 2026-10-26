@@ -22,19 +22,19 @@ export const zExperimentStatus = z.enum(["active", "stale", "archived", "publish
 export const zExperimentVisibility = z.enum(["private", "public"]);
 
 export const zExperiment = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   description: z.string().nullable(),
   status: zExperimentStatus,
   visibility: zExperimentVisibility,
   embargoUntil: z.string().datetime(),
   anonymizeContributors: z.boolean(),
-  workbookId: z.string().uuid().nullable(),
-  workbookVersionId: z.string().uuid().nullable(),
-  organizationId: z.string().uuid().nullable(),
+  workbookId: z.string().guid().nullable(),
+  workbookVersionId: z.string().guid().nullable(),
+  organizationId: z.string().guid().nullable(),
   /** Display name of the owning organization, `null` for a personal workspace. */
   organizationName: z.string().nullish(),
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
   ownerFirstName: z.string().nullable().optional(),
   ownerLastName: z.string().nullable().optional(),
   /** Direct collaborator grants; org/team reach is unbounded and deliberately not counted. */
@@ -158,7 +158,7 @@ export const zExperimentInstructionContent = z.object({
 });
 
 export const zExperimentMeasurementContent = z.object({
-  protocolId: z.string().uuid("A valid protocol must be selected for measurement nodes"),
+  protocolId: z.string().guid("A valid protocol must be selected for measurement nodes"),
   params: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -179,7 +179,7 @@ export const zExperimentMeasurementCommandContent = z.object({
 });
 
 export const zExperimentAnalysisContent = z.object({
-  macroId: z.string().uuid("A valid macro must be selected for analysis nodes"),
+  macroId: z.string().guid("A valid macro must be selected for analysis nodes"),
   params: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -377,7 +377,7 @@ export const zCreateExperimentBodyBase = z.object({
   visibility: zExperimentVisibility.optional().describe("Experiment visibility setting"),
   organizationId: z
     .string()
-    .uuid()
+    .guid()
     .optional()
     .describe("Optional owning organization; defaults to the creator's personal org"),
   embargoUntil: z
@@ -388,7 +388,7 @@ export const zCreateExperimentBodyBase = z.object({
   members: z
     .array(
       z.object({
-        userId: z.string().uuid(),
+        userId: z.string().guid(),
         // Display fields the picker carries; the backend only reads `userId`.
         firstName: z.string().optional(),
         lastName: z.string().optional(),
@@ -408,7 +408,7 @@ export const zCreateExperimentBodyBase = z.object({
     .describe("Optional array of locations associated with the experiment"),
   workbookId: z
     .string()
-    .uuid()
+    .guid()
     .optional()
     .describe("Optional workbook ID to associate with the experiment"),
 });
@@ -499,10 +499,10 @@ export const zExperimentPaginatedList = zPaginated(zExperimentListEntry);
 export const zExperimentListResponse = z.union([zExperimentList, zExperimentPaginatedList]);
 
 export const zExperimentIdPathParam = z.object({
-  id: z.string().uuid().describe("ID of the experiment"),
+  id: z.string().guid().describe("ID of the experiment"),
 });
 
-export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
+export const zCreateExperimentResponse = z.object({ id: z.string().guid() });
 
 // Infer request and response types
 export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;

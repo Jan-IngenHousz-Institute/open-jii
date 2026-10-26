@@ -128,7 +128,7 @@ export class ExecuteMacroUseCase {
         msg: "Invalid Lambda response payload",
         operation: "executeMacro",
         macroId,
-        errors: parseResult.error.errors,
+        errors: parseResult.error.issues,
       });
 
       return success({

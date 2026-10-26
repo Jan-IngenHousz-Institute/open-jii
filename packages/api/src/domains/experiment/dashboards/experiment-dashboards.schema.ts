@@ -14,14 +14,14 @@ export const zExperimentWidgetLayout = z.object({
 });
 
 const zWidgetBase = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   layout: zExperimentWidgetLayout,
 });
 
 export const zExperimentVisualizationWidget = zWidgetBase.extend({
   type: z.literal("visualization"),
   config: z.object({
-    visualizationId: z.string().uuid().optional(),
+    visualizationId: z.string().guid().optional(),
     showTitle: z.boolean().optional().default(true),
     showDescription: z.boolean().optional().default(false),
     title: z.string().optional(),
@@ -80,13 +80,13 @@ export const zExperimentDashboardLayout = z.object({
 });
 
 export const zExperimentDashboard = z.object({
-  id: z.string().uuid(),
-  experimentId: z.string().uuid(),
+  id: z.string().guid(),
+  experimentId: z.string().guid(),
   name: z.string().min(1).max(255),
   description: z.string().nullable(),
   layout: zExperimentDashboardLayout,
   widgets: z.array(zExperimentDashboardWidget),
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
   createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -109,8 +109,8 @@ export const zListExperimentDashboardsQuery = z.object({
 });
 
 export const zExperimentDashboardPathParam = z.object({
-  id: z.string().uuid().describe("ID of the experiment"),
-  dashboardId: z.string().uuid().describe("ID of the dashboard"),
+  id: z.string().guid().describe("ID of the experiment"),
+  dashboardId: z.string().guid().describe("ID of the dashboard"),
 });
 
 export const zCreateExperimentDashboardResponse = zExperimentDashboard;

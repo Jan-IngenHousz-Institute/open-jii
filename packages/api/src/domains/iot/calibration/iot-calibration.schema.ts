@@ -102,7 +102,7 @@ export const zCalibrationBlockStatus = z.enum(["computed", "rejected", "skipped"
  */
 const BLOCK_RECORD_MAX_BYTES = 16_384;
 const zBlockRecord = z
-  .record(z.unknown())
+  .record(z.string(), z.unknown())
   .refine((record) => JSON.stringify(record).length <= BLOCK_RECORD_MAX_BYTES, {
     message: `A block record must serialise to at most ${BLOCK_RECORD_MAX_BYTES} bytes`,
   });
@@ -146,7 +146,7 @@ export const zCalibrationRunStatus = z.enum([
 export const zCalibrationInputSource = z.enum(["bench_wizard", "external_bench"]);
 
 export const zCalibrationDefinition = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   family: zCalibrationFamily,
   name: z.string(),
   description: z.string().nullable(),
@@ -156,11 +156,11 @@ export const zCalibrationDefinition = z.object({
   outputSchema: zCalibrationOutputSchema,
   // Older firmware is refused: unknown commands would produce numbers that look like data.
   minFirmwareVersion: zFirmwareVersion.nullable(),
-  organizationId: z.string().uuid().nullable(),
+  organizationId: z.string().guid().nullable(),
   /** Absent for a personal workspace, which is not a name anyone should be shown. */
   organizationName: z.string().nullish(),
   visibility: zVisibility,
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -191,7 +191,7 @@ export const zCreateCalibrationDefinitionBody = z.object({
   outputSchema: zCalibrationOutputSchema,
   minFirmwareVersion: zFirmwareVersion.optional(),
   // Defaults to the creator's personal org; the caller must be a member.
-  organizationId: z.string().uuid().optional(),
+  organizationId: z.string().guid().optional(),
 });
 
 /**
@@ -211,7 +211,7 @@ export const zUpdateCalibrationDefinitionBody = z.object({
 });
 
 export const zCalibrationDefinitionPathParam = z.object({
-  definitionId: z.string().uuid(),
+  definitionId: z.string().guid(),
 });
 
 export const zListCalibrationDefinitionsQuery = z.object({
@@ -255,7 +255,7 @@ const zReportedSerial = z.string().trim().min(1).max(64);
 /** Kept whole for the record; the cap stops a client posting megabytes into a row read on every listing. */
 const INFO_RECORD_MAX_BYTES = 16_384;
 const zInfoRecord = z
-  .record(z.unknown())
+  .record(z.string(), z.unknown())
   .refine((info) => JSON.stringify(info).length <= INFO_RECORD_MAX_BYTES, {
     message: `Device info must serialise to at most ${INFO_RECORD_MAX_BYTES} bytes`,
   });
@@ -272,11 +272,11 @@ export const zSkippedSeries = z.object({
 export const zSkippedSeriesList = z.array(zSkippedSeries).max(MAX_PROCEDURE_STEPS);
 
 export const zCalibrationRun = z.object({
-  id: z.string().uuid(),
-  definitionId: z.string().uuid(),
+  id: z.string().guid(),
+  definitionId: z.string().guid(),
   definitionVersion: z.number().int().positive(),
-  deviceId: z.string().uuid(),
-  requestedBy: z.string().uuid(),
+  deviceId: z.string().guid(),
+  requestedBy: z.string().guid(),
   inputSource: zCalibrationInputSource,
   status: zCalibrationRunStatus,
   blocks: zCalibrationBlocks.nullable(),
@@ -285,7 +285,7 @@ export const zCalibrationRun = z.object({
   postInfo: zInfoRecord.nullable(),
   firmwareVersion: z.string().nullable(),
   errorMessage: z.string().nullable(),
-  reviewedBy: z.string().uuid().nullable(),
+  reviewedBy: z.string().guid().nullable(),
   reviewedAt: z.string().datetime().nullable(),
   finishedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
@@ -310,7 +310,7 @@ export const zCalibrationRunParams = z.record(
 );
 
 export const zCreateCalibrationRunBody = zIotDevicePathParam.extend({
-  definitionId: z.string().uuid(),
+  definitionId: z.string().guid(),
   payload: zCalibrationRunPayload,
   params: zCalibrationRunParams.optional(),
   preInfo: zInfoRecord.optional(),
@@ -333,7 +333,7 @@ export function serialsMatch(reported: string, registered: string): boolean {
 
 // Blocks a bench tool computed itself: recorded without running the script; QC still applies at approval.
 export const zCreateExternalCalibrationRunBody = zIotDevicePathParam.extend({
-  definitionId: z.string().uuid(),
+  definitionId: z.string().guid(),
   blocks: zCalibrationBlocks,
   payload: zCalibrationRunPayload.optional(),
   params: zCalibrationRunParams.optional(),
@@ -343,7 +343,7 @@ export const zCreateExternalCalibrationRunBody = zIotDevicePathParam.extend({
 });
 
 export const zCalibrationRunPathParam = z.object({
-  runId: z.string().uuid(),
+  runId: z.string().guid(),
 });
 
 /**
@@ -359,12 +359,12 @@ export const zCalibrationWriteResult = z.object({
 export const zCalibrationWriteResults = z.record(zCoefficientName, zCalibrationWriteResult);
 
 export const zDeviceCalibration = z.object({
-  id: z.string().uuid(),
-  deviceId: z.string().uuid(),
-  runId: z.string().uuid(),
+  id: z.string().guid(),
+  deviceId: z.string().guid(),
+  runId: z.string().guid(),
   // Only the blocks that computed; rejected and skipped ones stay on the run.
   blocks: zAppliedCalibrationBlocks,
-  approvedBy: z.string().uuid(),
+  approvedBy: z.string().guid(),
   validFrom: z.string().datetime(),
   supersededAt: z.string().datetime().nullable(),
   writtenToDeviceAt: z.string().datetime().nullable(),
@@ -389,20 +389,20 @@ export const zActiveCalibrationBlock = z.object({
   coefficients: z.record(zCoefficientName, zCoefficientValue),
   fit: zBlockRecord.optional(),
   quality: zBlockRecord.optional(),
-  calibrationId: z.string().uuid(),
-  runId: z.string().uuid(),
+  calibrationId: z.string().guid(),
+  runId: z.string().guid(),
   validFrom: z.string().datetime(),
   writtenToDeviceAt: z.string().datetime().nullable(),
   writeResult: zCalibrationWriteResult.nullable(),
 });
 
 export const zActiveDeviceCalibration = z.object({
-  deviceId: z.string().uuid(),
+  deviceId: z.string().guid(),
   blocks: z.record(zCoefficientName, zActiveCalibrationBlock),
 });
 
 export const zDeviceCalibrationPathParam = z.object({
-  calibrationId: z.string().uuid(),
+  calibrationId: z.string().guid(),
 });
 
 // Addresses the applied row rather than the device's active calibration, so a concurrent

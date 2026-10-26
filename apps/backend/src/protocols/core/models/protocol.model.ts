@@ -21,7 +21,6 @@ export const createProtocolSchema = createInsertSchema(protocols, {
   createdAt: true,
   updatedAt: true,
   createdBy: true,
-  searchVector: true,
 });
 
 export const updateProtocolSchema = createInsertSchema(protocols, {
@@ -33,7 +32,6 @@ export const updateProtocolSchema = createInsertSchema(protocols, {
     createdAt: true,
     updatedAt: true,
     createdBy: true,
-    searchVector: true,
   });
 
 export const selectProtocolSchema = createSelectSchema(protocols, {

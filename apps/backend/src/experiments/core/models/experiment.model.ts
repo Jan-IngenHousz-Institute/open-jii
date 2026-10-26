@@ -13,7 +13,6 @@ export const createExperimentSchema = createInsertSchema(experiments)
     createdAt: true,
     updatedAt: true,
     createdBy: true,
-    searchVector: true,
   })
   .extend({
     // Only `userId` is read: everyone picked in the create form gets the
@@ -40,7 +39,6 @@ export const updateExperimentSchema = createInsertSchema(experiments)
     createdAt: true,
     updatedAt: true,
     createdBy: true,
-    searchVector: true,
   })
   .extend({
     locations: z
@@ -65,9 +63,9 @@ export const selectExperimentSchema = createSelectSchema(experiments)
   });
 
 // Define the types
-export type CreateExperimentDto = typeof createExperimentSchema._type;
-export type UpdateExperimentDto = typeof updateExperimentSchema._type;
-export type ExperimentDto = typeof selectExperimentSchema._type;
+export type CreateExperimentDto = z.infer<typeof createExperimentSchema>;
+export type UpdateExperimentDto = z.infer<typeof updateExperimentSchema>;
+export type ExperimentDto = z.infer<typeof selectExperimentSchema>;
 
 export type ExperimentDtoWithData = ExperimentDto & {
   data?: SchemaData;
