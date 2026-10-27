@@ -3,7 +3,7 @@
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
 import { useDebounce } from "@/hooks/useDebounce";
 import { orpc } from "@/lib/orpc";
-import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
+import { getSensorFamilyLabel, SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Microscope, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
@@ -230,7 +230,7 @@ export function ProtocolPicker({
                         )}
                       </div>
                       <Badge variant="outline" className="shrink-0 text-[10px]">
-                        {p.family}
+                        {getSensorFamilyLabel(p.family)}
                       </Badge>
                     </Button>
                   ))

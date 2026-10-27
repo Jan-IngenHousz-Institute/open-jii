@@ -41,7 +41,7 @@ describe("ProtocolPicker", () => {
     const onSelect = vi.fn();
     const protocols = [
       createProtocol({ id: "p1", name: "Leaf Absorbance" }),
-      createProtocol({ id: "p2", name: "SPAD Measurement" }),
+      createProtocol({ id: "p2", name: "SPAD Measurement", family: "minipar" }),
     ];
     server.mount(contract.protocols.listProtocols, { body: protocols });
 
@@ -52,6 +52,8 @@ describe("ProtocolPicker", () => {
     await waitFor(() => {
       expect(screen.getByText("Leaf Absorbance")).toBeInTheDocument();
     });
+    expect(screen.getByText("MultispeQ")).toBeInTheDocument();
+    expect(screen.getByText("MiniPAR")).toBeInTheDocument();
 
     await user.click(screen.getByText("Leaf Absorbance"));
 

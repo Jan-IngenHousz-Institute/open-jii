@@ -4,6 +4,7 @@ import { zSensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 
 import {
   SENSOR_FAMILY_OPTIONS,
+  formatSensorFamily,
   getSensorFamilyBadgeTone,
   getSensorFamilyLabel,
 } from "./sensor-family";
@@ -85,6 +86,17 @@ describe("getSensorFamilyLabel", () => {
 
   it("should return 'MiniPAR' for minipar", () => {
     expect(getSensorFamilyLabel("minipar")).toBe("MiniPAR");
+  });
+});
+
+describe("formatSensorFamily", () => {
+  it("returns the product name for a known family", () => {
+    expect(formatSensorFamily("multispeq")).toBe("MultispeQ");
+    expect(formatSensorFamily("minipar")).toBe("MiniPAR");
+  });
+
+  it("returns an unrecognised value as stored", () => {
+    expect(formatSensorFamily("prototype-x")).toBe("prototype-x");
   });
 });
 
