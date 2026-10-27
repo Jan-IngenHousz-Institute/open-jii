@@ -1,0 +1,49 @@
+{
+  "categories": [
+    { "name": "Databricks charges", "colour": "#3987e5" },
+    { "name": "Databricks VMs", "colour": "#d95926" },
+    { "name": "Network", "colour": "#199e70" },
+    { "name": "Monitoring and audit", "colour": "#c98500" },
+    { "name": "Other AWS", "colour": "#d55181" },
+    { "name": "Tax and fees", "colour": "#898781" }
+  ],
+  "services": {
+    "Amazon Elastic Compute Cloud - Compute": {
+      "label": "EC2 compute",
+      "category": "Databricks VMs"
+    },
+    "EC2 - Other": { "label": "EC2 other: disks, NAT, IPs", "category": "Network" },
+    "Amazon Virtual Private Cloud": { "label": "VPC", "category": "Network" },
+    "Amazon Elastic Load Balancing": { "label": "Load balancer", "category": "Network" },
+    "AmazonCloudWatch": { "label": "CloudWatch", "category": "Monitoring and audit" },
+    "AWS CloudTrail": { "label": "CloudTrail", "category": "Monitoring and audit" },
+    "AWS Config": { "label": "Config", "category": "Monitoring and audit" },
+    "AWS Security Hub": { "label": "Security Hub", "category": "Monitoring and audit" },
+    "Amazon Inspector": { "label": "Inspector", "category": "Monitoring and audit" },
+    "Amazon GuardDuty": { "label": "GuardDuty", "category": "Monitoring and audit" },
+    "Amazon Managed Grafana": { "label": "Grafana", "category": "Monitoring and audit" },
+    "AWS WAF": { "label": "WAF", "category": "Other AWS" },
+    "Amazon Simple Storage Service": { "label": "S3", "category": "Other AWS" },
+    "Amazon Relational Database Service": { "label": "Aurora", "category": "Other AWS" },
+    "Amazon Elastic Container Service": { "label": "ECS", "category": "Other AWS" },
+    "Amazon Kinesis": { "label": "Kinesis", "category": "Other AWS" },
+    "AWS IoT": { "label": "IoT Core", "category": "Other AWS" },
+    "AWS Lambda": { "label": "Lambda", "category": "Other AWS" },
+    "Amazon CloudFront": { "label": "CloudFront", "category": "Other AWS" },
+    "AWS Key Management Service": { "label": "KMS", "category": "Other AWS" },
+    "Amazon EC2 Container Registry (ECR)": { "label": "ECR", "category": "Other AWS" },
+    "AWS Secrets Manager": { "label": "Secrets Manager", "category": "Other AWS" },
+    "Amazon Route 53": { "label": "Route 53", "category": "Other AWS" }
+  },
+  "otherServices": { "label": "Other AWS services", "category": "Other AWS" },
+  "taxAndFees": { "label": "Tax and fees", "category": "Tax and fees" },
+  "databricksComponents": {
+    "centrum": "Centrum pipeline",
+    "macro": "Macro pipeline",
+    "metrics": "Metrics pipeline",
+    "warehouse": "Backend warehouse",
+    "investigations": "Investigations warehouse",
+    "jobs": "Jobs",
+    "other": "Other Databricks"
+  }
+}

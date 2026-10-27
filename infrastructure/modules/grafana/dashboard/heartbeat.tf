@@ -95,10 +95,12 @@ locals {
       caption = "**Site uptime** is the share of the week the site's health check passed. **Error issues** lists every issue with exceptions in the week, new ones first. Which deploys failed, and how long each took from commit to production, are on [Delivery](/d/${local.flow_uids.delivery}); database storage sits with every other store on [Throughput and storage](/d/${local.flow_uids["throughput-storage"]})."
     },
     {
-      key     = "cost"
-      title   = "Cost"
-      areas   = ["cost"]
-      caption = "**Databricks cost** is the last seven complete days at list price, from Databricks' billing tables; its chart splits it by pipeline, warehouse, jobs and the rest."
+      key         = "cost"
+      title       = "Cost"
+      areas       = ["cost"]
+      panels      = local.cost_weekly_panels
+      body_height = local.cost_weekly_body_height
+      caption     = "**Platform** is what AWS billed for usage plus Databricks' own charges at list price, for the latest complete Monday-to-Sunday week. Tax and fees, which AWS dates on the 1st of each month, are left out so every week compares fairly. This month so far, where it is heading, and what runs away day by day are on the [Cost dashboard](/d/${local.flow_uids.cost})."
     },
   ]
 
@@ -203,42 +205,8 @@ locals {
   # Entries queried one series at a time rather than through their catalogue search, which
   # forgets a series that has not published for two weeks.
   heartbeat_named_series = {
-    dora              = { total = local.flow_dora_totals.attempts, series = local.flow_dora_series.attempts }
-    "databricks-cost" = { total = local.heartbeat_cost_total, series = local.heartbeat_cost_series }
+    dora = { total = local.flow_dora_totals.attempts, series = local.flow_dora_series.attempts }
   }
-
-  # Spend is published per component, so the tile sums them and the trend shows each.
-  heartbeat_cost_series = [
-    for i, component in var.databricks_cost_components : {
-      refId            = "cost${i}"
-      id               = "cost${i}"
-      region           = var.aws_region
-      namespace        = "OpenJII/Usage"
-      queryMode        = "Metrics"
-      metricQueryType  = 0
-      metricEditorMode = 0
-      metricName       = "DatabricksCost7dUsd"
-      statistic        = "Maximum"
-      matchExact       = true
-      dimensions       = { Environment = var.environment, Component = component }
-      expression       = ""
-      label            = component
-      hide             = false
-    }
-  ]
-
-  heartbeat_cost_total = concat(
-    [for target in local.heartbeat_cost_series : merge(target, { hide = true })],
-    [merge(local.heartbeat_cost_series[0], {
-      refId            = "cost"
-      id               = "cost"
-      metricEditorMode = 1
-      metricName       = ""
-      dimensions       = {}
-      label            = ""
-      expression       = "SUM([${join(", ", [for target in local.heartbeat_cost_series : "FILL(${target.id}, 0)"])}])"
-    })],
-  )
 
   # Grafana fills ${__from} and ${__to} when a link is clicked, so encoded text carries
   # tokens and gets the variables back afterwards. Spaces go as %20, which every handler reads.
@@ -425,9 +393,10 @@ locals {
         }
         overrides = []
       }
+      # No sparkline: two weeks draw a triangle, and the chart beneath shows the 90 days.
       options = {
         colorMode   = "value"
-        graphMode   = "area"
+        graphMode   = "none"
         justifyMode = "center"
         orientation = "auto"
         textMode    = "value"
@@ -734,7 +703,8 @@ locals {
   )
 
   # Weekly layout: a section per area, a line or two on reading it, then a card per signal, the
-  # week against the week before above its 90 days, three to a line on the flows' grid.
+  # week against the week before above its 90 days, three to a line on the flows' grid. A section
+  # whose cards combine several entries brings its own panels, laid out from its top.
   heartbeat_weekly_sections = [
     for area in local.heartbeat_weekly_areas : merge(area, {
       metrics = [for m in local.heartbeat_weekly : m if contains(area.areas, try(m.area, ""))]
@@ -745,11 +715,12 @@ locals {
   heartbeat_weekly_errors_height = [
     for s in local.heartbeat_weekly_sections : try(s.errors, false) && local.heartbeat_errors_shown ? local.heartbeat_errors_panels : 0
   ]
+  heartbeat_weekly_body_heights = [
+    for j, s in local.heartbeat_weekly_sections : try(s.body_height, 9 * local.heartbeat_weekly_card_lines[j] + local.heartbeat_weekly_errors_height[j])
+  ]
   heartbeat_weekly_tops = [
     for i, s in local.heartbeat_weekly_sections :
-    sum(concat([0], [
-      for j in range(i) : 3 + 9 * local.heartbeat_weekly_card_lines[j] + local.heartbeat_weekly_errors_height[j]
-    ]))
+    sum(concat([0], [for j in range(i) : 3 + local.heartbeat_weekly_body_heights[j]]))
   ]
 
   heartbeat_weekly_panels = flatten([
@@ -767,6 +738,11 @@ locals {
         gridPos = { h = 2, w = 24, x = 0, y = local.heartbeat_weekly_tops[i] + 1 }
         options = { mode = "markdown", content = section.caption }
       })],
+      [
+        for panel in try(section.panels, []) : merge(panel, {
+          gridPos = merge(panel.gridPos, { y = panel.gridPos.y + local.heartbeat_weekly_tops[i] + 3 })
+        })
+      ],
       flatten([
         for j, m in section.metrics : [
           merge(local.heartbeat_weekly_tiles[m.id], {
@@ -794,7 +770,7 @@ locals {
               })
             })
           }),
-        ]
+        ] if try(section.panels, null) == null
       ]),
       # The daily report's issue table, over the week: its query reads the dashboard's range.
       [

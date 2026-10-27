@@ -3125,7 +3125,6 @@ module "grafana_dashboard" {
   slack_webhook_url              = var.slack_webhook_url
   posthog_project_id             = "80726"
   kinesis_shard_count            = module.kinesis.shard_count
-  databricks_cost_components     = concat(keys(local.databricks_cost_components), ["jobs", "other"])
   payload_samples_log_group_name = module.iot_core.payload_samples_log_group_name
   storage_buckets = {
     "Raw payload archive"  = module.iot_raw_archive_s3.bucket_id
@@ -3183,6 +3182,12 @@ module "grafana_metrics_publisher" {
 import {
   to = module.grafana_metrics_publisher.aws_cloudwatch_log_group.metrics_publisher
   id = "/aws/lambda/${var.environment}-metrics-publisher"
+}
+
+module "cost_publisher" {
+  source = "../../modules/grafana/cost-publisher"
+
+  environment = var.environment
 }
 
 module "heartbeat_metrics_s3" {
