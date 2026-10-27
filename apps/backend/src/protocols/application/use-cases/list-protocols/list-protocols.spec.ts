@@ -104,12 +104,56 @@ describe("ListProtocolsUseCase", () => {
     assertSuccess(await useCase.execute(undefined, "all", testUserId, [...sort]));
     assertSuccess(await useCase.executePaginated(1, 10, undefined, "all", testUserId, [...sort]));
 
-    expect(findAll).toHaveBeenCalledWith(undefined, "all", testUserId, undefined, undefined, [
-      ...sort,
-    ]);
-    expect(findPage).toHaveBeenCalledWith(1, 10, undefined, "all", testUserId, undefined, [
-      ...sort,
-    ]);
+    expect(findAll).toHaveBeenCalledWith(
+      undefined,
+      "all",
+      testUserId,
+      undefined,
+      undefined,
+      [...sort],
+      undefined,
+    );
+    expect(findPage).toHaveBeenCalledWith(
+      1,
+      10,
+      undefined,
+      "all",
+      testUserId,
+      undefined,
+      [...sort],
+      undefined,
+    );
+  });
+
+  it("forwards the family and visibility filter to both listings", async () => {
+    const filter = { families: ["ambyte" as const], visibilities: ["private" as const] };
+    const findAll = vi.spyOn(protocolRepository, "findAll");
+    const findPage = vi.spyOn(protocolRepository, "findPage");
+
+    assertSuccess(await useCase.execute(undefined, "all", testUserId, undefined, filter));
+    assertSuccess(
+      await useCase.executePaginated(1, 10, undefined, "all", testUserId, undefined, filter),
+    );
+
+    expect(findAll).toHaveBeenCalledWith(
+      undefined,
+      "all",
+      testUserId,
+      undefined,
+      undefined,
+      undefined,
+      filter,
+    );
+    expect(findPage).toHaveBeenCalledWith(
+      1,
+      10,
+      undefined,
+      "all",
+      testUserId,
+      undefined,
+      undefined,
+      filter,
+    );
   });
 
   it("should handle repository failures", async () => {
