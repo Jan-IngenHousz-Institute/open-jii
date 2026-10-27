@@ -41535,7 +41535,9 @@
                     },
                     "version": {
                       "type": "integer",
-                      "minimum": 0
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "exclusiveMinimum": 0
                     },
                     "cells": {
                       "type": "array",
@@ -41549,8 +41551,8 @@
                                 "minLength": 1
                               },
                               "isCollapsed": {
-                                "default": false,
-                                "type": "boolean"
+                                "type": "boolean",
+                                "default": false
                               },
                               "type": {
                                 "const": "protocol"
@@ -41564,7 +41566,9 @@
                                   },
                                   "version": {
                                     "type": "integer",
-                                    "minimum": 0
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991,
+                                    "exclusiveMinimum": 0
                                   },
                                   "name": {
                                     "type": "string"
@@ -41591,8 +41595,8 @@
                                 "minLength": 1
                               },
                               "isCollapsed": {
-                                "default": false,
-                                "type": "boolean"
+                                "type": "boolean",
+                                "default": false
                               },
                               "type": {
                                 "const": "command"
@@ -41637,8 +41641,8 @@
                                 "minLength": 1
                               },
                               "isCollapsed": {
-                                "default": false,
-                                "type": "boolean"
+                                "type": "boolean",
+                                "default": false
                               },
                               "type": {
                                 "const": "macro"
@@ -41683,8 +41687,8 @@
                                 "minLength": 1
                               },
                               "isCollapsed": {
-                                "default": false,
-                                "type": "boolean"
+                                "type": "boolean",
+                                "default": false
                               },
                               "type": {
                                 "const": "question"
@@ -41707,8 +41711,8 @@
                                         "maxLength": 64
                                       },
                                       "required": {
-                                        "default": false,
-                                        "type": "boolean"
+                                        "type": "boolean",
+                                        "default": false
                                       }
                                     },
                                     "required": [
@@ -41728,8 +41732,8 @@
                                         "maxLength": 64
                                       },
                                       "required": {
-                                        "default": false,
-                                        "type": "boolean"
+                                        "type": "boolean",
+                                        "default": false
                                       }
                                     },
                                     "required": [
@@ -41750,16 +41754,16 @@
                                       },
                                       "options": {
                                         "type": "array",
+                                        "minItems": 1,
                                         "items": {
                                           "type": "string",
                                           "minLength": 1,
                                           "maxLength": 64
-                                        },
-                                        "minItems": 1
+                                        }
                                       },
                                       "required": {
-                                        "default": false,
-                                        "type": "boolean"
+                                        "type": "boolean",
+                                        "default": false
                                       }
                                     },
                                     "required": [
@@ -41780,8 +41784,8 @@
                                         "maxLength": 64
                                       },
                                       "required": {
-                                        "default": false,
-                                        "type": "boolean"
+                                        "type": "boolean",
+                                        "default": false
                                       }
                                     },
                                     "required": [
@@ -41796,8 +41800,8 @@
                                 "type": "string"
                               },
                               "isAnswered": {
-                                "default": false,
-                                "type": "boolean"
+                                "type": "boolean",
+                                "default": false
                               }
                             },
                             "required": [
@@ -41815,14 +41819,15 @@
                                 "minLength": 1
                               },
                               "isCollapsed": {
-                                "default": false,
-                                "type": "boolean"
+                                "type": "boolean",
+                                "default": false
                               },
                               "type": {
                                 "const": "branch"
                               },
                               "paths": {
                                 "type": "array",
+                                "minItems": 1,
                                 "items": {
                                   "type": "object",
                                   "properties": {
@@ -41886,8 +41891,7 @@
                                     "color",
                                     "conditions"
                                   ]
-                                },
-                                "minItems": 1
+                                }
                               },
                               "defaultPathId": {
                                 "type": "string"
@@ -41910,8 +41914,8 @@
                                 "minLength": 1
                               },
                               "isCollapsed": {
-                                "default": false,
-                                "type": "boolean"
+                                "type": "boolean",
+                                "default": false
                               },
                               "type": {
                                 "const": "output"
@@ -41981,8 +41985,8 @@
                                 "minLength": 1
                               },
                               "isCollapsed": {
-                                "default": false,
-                                "type": "boolean"
+                                "type": "boolean",
+                                "default": false
                               },
                               "type": {
                                 "const": "markdown"
@@ -42002,6 +42006,9 @@
                     },
                     "metadata": {
                       "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
                       "additionalProperties": {}
                     },
                     "entitySnapshots": {
@@ -42009,6 +42016,9 @@
                       "properties": {
                         "protocols": {
                           "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
                           "additionalProperties": {
                             "type": "object",
                             "properties": {
@@ -42028,6 +42038,9 @@
                         },
                         "macros": {
                           "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
                           "additionalProperties": {
                             "type": "object",
                             "properties": {

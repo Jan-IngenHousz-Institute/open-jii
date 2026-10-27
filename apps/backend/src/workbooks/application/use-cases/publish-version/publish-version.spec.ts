@@ -305,7 +305,7 @@ describe("PublishVersionUseCase", () => {
       ).toEqual(expect.arrayContaining([experimentA, experimentB]));
     });
 
-    it("tells an admin again only once they have read the first one", async () => {
+    it("keeps one row naming the latest version until the admin reads it", async () => {
       await drift("v2");
       assertSuccess(
         await useCase.execute(workbookId, audience.actor, { forExperimentId: experimentA }),
@@ -316,7 +316,7 @@ describe("PublishVersionUseCase", () => {
       );
 
       expect(await notificationsFor(testApp, audience.admin)).toEqual([
-        heardAbout(audience.admin, "2"),
+        heardAbout(audience.admin, "3"),
       ]);
 
       assertSuccess(await testApp.module.get(NotificationRepository).markAllRead(audience.admin));
@@ -325,10 +325,11 @@ describe("PublishVersionUseCase", () => {
         await useCase.execute(workbookId, audience.actor, { forExperimentId: experimentA }),
       );
 
-      expect(await notificationsFor(testApp, audience.admin)).toEqual([
-        heardAbout(audience.admin, "2"),
-        heardAbout(audience.admin, "4"),
-      ]);
+      const rows = await notificationsFor(testApp, audience.admin);
+      expect(rows).toHaveLength(2);
+      expect(rows).toEqual(
+        expect.arrayContaining([heardAbout(audience.admin, "3"), heardAbout(audience.admin, "4")]),
+      );
     });
 
     it("tells nobody about an archived experiment", async () => {

@@ -213,11 +213,16 @@ export class NotificationRepository {
     });
   }
 
-  /** Of these recipients, the ones holding an unread row of this type about this resource. */
-  async findUnreadRecipients(
+  /**
+   * Brings these recipients' unread rows of this type about this resource up to date,
+   * as if they had just arrived, and returns whose rows it touched. Each row keeps its
+   * id and stays unread.
+   */
+  async refreshUnread(
     type: NotificationType,
     resource: { type: NotificationResourceType; id: string },
     recipientIds: string[],
+    update: { params: Record<string, string>; actorId: string | null },
   ): Promise<Result<Set<string>>> {
     return tryCatch(async () => {
       if (recipientIds.length === 0) {
@@ -225,8 +230,12 @@ export class NotificationRepository {
       }
 
       const rows = await this.database
-        .selectDistinct({ recipientId: notifications.recipientId })
-        .from(notifications)
+        .update(notifications)
+        .set({
+          params: update.params,
+          actorId: update.actorId,
+          createdAt: sql`now() AT TIME ZONE 'UTC'`,
+        })
         .where(
           and(
             inArray(notifications.recipientId, recipientIds),
@@ -235,7 +244,8 @@ export class NotificationRepository {
             eq(notifications.resourceType, resource.type),
             eq(notifications.resourceId, resource.id),
           ),
-        );
+        )
+        .returning({ recipientId: notifications.recipientId });
 
       return new Set(rows.map((row) => row.recipientId));
     });

@@ -484,22 +484,29 @@ describe("NotificationDispatchService", () => {
         },
       ]);
 
-    const rejection = (onceUntilRead?: boolean) =>
+    const rejection = (onceUntilRead?: boolean, experimentName = "Photosynthesis") =>
       dispatch.dispatch({
         type: "experiment_join_request_rejected",
         recipientIds: [recipientId],
         actorId,
         resource: experiment,
-        params: { experimentName: "Photosynthesis" },
+        params: { experimentName },
         onceUntilRead,
       });
 
-    it("skips only a recipient holding an unread row of the same type about the same resource", async () => {
+    it("refreshes only an unread row of the same type about the same resource", async () => {
+      const laterActorId = await testApp.createTestUser({ name: "Later Actor" });
       const readId = await testApp.createTestUser({});
       const otherTypeId = await testApp.createTestUser({});
       const otherResourceId = await testApp.createTestUser({});
 
-      assertSuccess(await seedRow(recipientId));
+      const unreadRow = await seedRow(recipientId);
+      assertSuccess(unreadRow);
+      const longAgo = new Date("2020-01-01T00:00:00.000Z");
+      await testApp.database
+        .update(notifications)
+        .set({ createdAt: longAgo })
+        .where(eq(notifications.id, unreadRow.value[0].id));
       const readRow = await seedRow(readId);
       assertSuccess(readRow);
       assertSuccess(await repository.markRead(readId, [readRow.value[0].id]));
@@ -509,32 +516,41 @@ describe("NotificationDispatchService", () => {
       const result = await dispatch.dispatch({
         type: "workbook_version_published",
         recipientIds: [recipientId, readId, otherTypeId, otherResourceId],
-        actorId,
+        actorId: laterActorId,
         resource: experiment,
-        params: versionParams,
+        params: { ...versionParams, version: "3" },
         onceUntilRead: true,
       });
 
       assertSuccess(result);
       expect(result.value).toEqual({ created: 3, queued: 0 });
-      expect(await rowsFor(recipientId)).toHaveLength(1);
+      const [refreshed, ...more] = await rowsFor(recipientId);
+      expect(more).toEqual([]);
+      expect(refreshed).toMatchObject({
+        id: unreadRow.value[0].id,
+        actorId: laterActorId,
+        params: { ...versionParams, version: "3" },
+        readAt: null,
+      });
+      expect(refreshed.createdAt.getTime()).toBeGreaterThan(longAgo.getTime());
       expect(await rowsFor(readId)).toHaveLength(2);
       expect(await rowsFor(otherTypeId)).toHaveLength(2);
       expect(await rowsFor(otherResourceId)).toHaveLength(2);
     });
 
-    it("writes and queues once while the row is unread, and again once it is read", async () => {
+    it("keeps one row with the latest params while it is unread, and writes again once it is read", async () => {
       const first = await rejection(true);
       assertSuccess(first);
       expect(first.value).toEqual({ created: 1, queued: 1 });
 
-      const second = await rejection(true);
+      const second = await rejection(true, "Photosynthesis II");
       assertSuccess(second);
       expect(second.value).toEqual({ created: 0, queued: 0 });
-      expect(await rowsFor(recipientId)).toHaveLength(1);
+      const [row, ...more] = await rowsFor(recipientId);
+      expect(more).toEqual([]);
+      expect(row.params).toEqual({ experimentName: "Photosynthesis II" });
       expect(await deliveriesFor(recipientId)).toHaveLength(1);
 
-      const [row] = await rowsFor(recipientId);
       assertSuccess(await repository.markRead(recipientId, [row.id]));
 
       const third = await rejection(true);
@@ -553,9 +569,9 @@ describe("NotificationDispatchService", () => {
       expect(await rowsFor(recipientId)).toHaveLength(2);
     });
 
-    it("writes the row and logs when the unread rows cannot be looked up", async () => {
+    it("writes the row and logs when the unread rows cannot be refreshed", async () => {
       assertSuccess(await rejection());
-      vi.spyOn(repository, "findUnreadRecipients").mockResolvedValue(
+      vi.spyOn(repository, "refreshUnread").mockResolvedValue(
         failure(AppError.internal("Database unavailable")),
       );
       const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);

@@ -33,8 +33,9 @@ export interface DispatchInput<T extends NotificationType> {
   suppressEmail?: boolean;
   /**
    * For an event that repeats while what it is about stays the same for the reader:
-   * someone still holding an unread row of this type for this resource is not told
-   * again. It needs a resource; without one it does nothing.
+   * someone still holding an unread row of this type for this resource has that row
+   * brought up to date instead of getting a second one. It needs a resource; without
+   * one it does nothing.
    */
   onceUntilRead?: boolean;
 }
@@ -86,7 +87,10 @@ export class NotificationDispatchService {
     // Nobody hears about their own action, and nobody hears about it twice.
     const addressed = [...new Set(input.recipientIds)].filter((id) => id !== actorId);
     const resource = input.resource ?? null;
-    const recipientIds = await this.withoutUnreadHolders(input, resource, addressed);
+    const recipientIds = await this.withoutRefreshedHolders(input, resource, addressed, {
+      params,
+      actorId,
+    });
 
     if (recipientIds.length === 0) {
       return success({ created: 0, queued: 0 });
@@ -157,36 +161,39 @@ export class NotificationDispatchService {
   }
 
   /**
-   * A lookup that fails tells everyone again: a duplicate row is the cheaper mistake
-   * than a missed one.
+   * The recipients still to be written a row: those whose unread row was refreshed
+   * are left out. A refresh that fails tells everyone again: a duplicate row is the
+   * cheaper mistake than a missed one.
    */
-  private async withoutUnreadHolders<T extends NotificationType>(
+  private async withoutRefreshedHolders<T extends NotificationType>(
     input: DispatchInput<T>,
     resource: { type: NotificationResourceType; id: string } | null,
     recipientIds: string[],
+    update: { params: Record<string, string>; actorId: string | null },
   ): Promise<string[]> {
     if (input.onceUntilRead !== true || !resource || recipientIds.length === 0) {
       return recipientIds;
     }
 
-    const unread = await this.notificationRepository.findUnreadRecipients(
+    const refreshed = await this.notificationRepository.refreshUnread(
       input.type,
       resource,
       recipientIds,
+      update,
     );
 
-    if (unread.isFailure()) {
+    if (refreshed.isFailure()) {
       this.logger.error({
-        msg: "Failed to look up unread notifications, everyone will be told again",
+        msg: "Failed to refresh unread notifications, everyone will be told again",
         errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
         operation: "dispatch-notification",
         type: input.type,
-        error: unread.error,
+        error: refreshed.error,
       });
       return recipientIds;
     }
 
-    return recipientIds.filter((id) => !unread.value.has(id));
+    return recipientIds.filter((id) => !refreshed.value.has(id));
   }
 
   /**
