@@ -87,7 +87,7 @@ passes:
       (experiments archived) dropped before it was built, since no column dates an archive and
       updated_at moves on a repeat archive or a lapsed embargo
   - date: 2026-10-27
-    range: [104, 114]
+    range: [104, 115]
     note: >-
       what the platform costs by day and month, from Cost Explorer and Databricks' billing tables,
       for the Cost dashboard; 39 and 98 became each producer's weekly figure the same day
@@ -1065,11 +1065,12 @@ metrics:
       period: 604800
     baseline: { method: wow }
     notes: >-
-      What AWS billed for the latest complete Monday-to-Sunday week, per Service and its Category from
-      docs/monitoring/cost-services.json, stamped the Monday it closed. Usage only, plus one Tax and
-      fees row for everything else, which AWS dates on the 1st of each month. The weekly figures leave
-      that row out, so a week holding the 1st compares fairly. EC2 compute is all Databricks VMs, since
-      nothing else in the account runs on EC2.
+      What AWS billed for usage in the latest complete Monday-to-Sunday week, per Service and its
+      Category from docs/monitoring/cost-services.json, stamped the Monday it closed. Tax and fees are
+      left out: AWS dates a month's on the 1st and adds to them as its usage grows, so no week carries
+      its own share; 115 has them by month. EC2 compute counts as Databricks VMs:
+      nothing in infrastructure/ runs on EC2, and on dev all but $1.46 of $950 over the 90 days to 26
+      October 2026 was on the instance types Databricks clusters use; the rest was t4g.
 
   - num: 40
     id: digest-self-check
@@ -1744,9 +1745,10 @@ metrics:
       stat: Maximum
       unit: usd
     notes: >-
-      Usage per Service and Category for one UTC day, stamped at the midnight that closed it. Each
-      run publishes yesterday and the day before again, since Cost Explorer is still adding to it,
-      and the dashboards read the fuller figure.
+      Usage per Service and Category for one UTC day, stamped at the midnight that closed it. The
+      publisher runs four times a day, at 00:30, 06:30, 12:30 and 18:30 UTC, so a day is refined on
+      the day it closed while CloudWatch still returns each point within two hours; every run also
+      republishes the day before, and the dashboards read the fuller figure.
 
   - num: 105
     id: databricks-daily-cost
@@ -1821,8 +1823,10 @@ metrics:
       unit: usd
       dimensions: { Environment: "${ENVIRONMENT}" }
     notes: >-
-      The month before 107's, from its 1st to the same day of the month or its own end, so the two
-      compare like for like.
+      The month before 107's, from its 1st to the same day of the month or its own end. AWS dates a
+      month's tax and fees on the 1st and adds to them as its usage grows, so the month before
+      carries its whole tax by then while 107 carries only what has accrued. This figure therefore
+      counts the month before's tax and fees in proportion to its usage by that day.
 
   - num: 109
     id: aws-previous-month
@@ -1934,3 +1938,22 @@ metrics:
       dimensions: { Environment: "${ENVIRONMENT}" }
     notes: >-
       111 at the pace of the month's complete days, since the billing tables have no forecast.
+
+  - num: 115
+    id: aws-previous-month-tax
+    name: AWS tax and fees, the whole month before
+    family: usage
+    area: cost
+    source: ce
+    phase: P3
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Cost
+      metric: PreviousMonthTaxAndFeesUsd
+      stat: Maximum
+      unit: usd
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      Everything AWS billed for the month before beyond usage: tax, fees and subscriptions, less any
+      credits. On dev it was a steady 21% on top of usage from August to October 2026, all of it tax.

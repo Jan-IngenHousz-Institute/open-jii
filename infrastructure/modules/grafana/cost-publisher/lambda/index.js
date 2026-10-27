@@ -37,21 +37,19 @@ async function allResults(request) {
   return results;
 }
 
+// A forecast that fails costs that one datapoint, not the day's and week's figures beside it;
+// the run's log line names the error.
 async function monthForecast(request) {
   if (request === null) {
-    return null;
+    return { value: null, error: null };
   }
 
   try {
     const response = await costExplorer.send(new GetCostForecastCommand(request));
     const value = Number(response.Total?.Amount);
-    return Number.isFinite(value) ? value : null;
+    return { value: Number.isFinite(value) ? value : null, error: null };
   } catch (error) {
-    // An account with too little history has no forecast, which costs that one datapoint.
-    if (error.name === "DataUnavailableException") {
-      return null;
-    }
-    throw error;
+    return { value: null, error: `${error.name}: ${error.message}` };
   }
 }
 
@@ -64,6 +62,7 @@ exports.handler = async () => {
 
   const now = new Date();
   const requests = costRequests(now);
+  const forecast = await monthForecast(requests.forecast);
 
   const datums = costDatums({
     now,
@@ -71,7 +70,7 @@ exports.handler = async () => {
     services,
     usageByService: await allResults(requests.usageByService),
     totals: await allResults(requests.totals),
-    forecast: await monthForecast(requests.forecast),
+    forecast: forecast.value,
   });
 
   for (const batch of batchByNamespace(datums, BATCH_SIZE)) {
@@ -80,5 +79,5 @@ exports.handler = async () => {
     );
   }
 
-  console.log(JSON.stringify({ published: datums.length, forecast: requests.forecast !== null }));
+  console.log(JSON.stringify({ published: datums.length, forecastError: forecast.error }));
 };

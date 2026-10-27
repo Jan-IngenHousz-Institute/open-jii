@@ -9,14 +9,12 @@ const SERVICES: CostServices = {
   categories: [
     { name: "Databricks VMs", colour: "#d95926" },
     { name: "Other AWS", colour: "#d55181" },
-    { name: "Tax and fees", colour: "#898781" },
   ],
   services: {
     "Amazon Elastic Compute Cloud - Compute": { label: "EC2 compute", category: "Databricks VMs" },
     "Amazon Simple Storage Service": { label: "S3", category: "Other AWS" },
   },
   otherServices: { label: "Other AWS services", category: "Other AWS" },
-  taxAndFees: { label: "Tax and fees", category: "Tax and fees" },
   databricksComponents: {},
 };
 
@@ -90,11 +88,11 @@ describe("costWindows", () => {
 });
 
 describe("costRequests", () => {
-  it("asks for usage by service over the week and every record type since the month before", () => {
+  it("asks for usage by service and every record type since the 1st of the month before", () => {
     const requests = costRequests(RUN);
 
     expect(requests.usageByService).toMatchObject({
-      TimePeriod: { Start: "2026-10-19", End: "2026-10-27" },
+      TimePeriod: { Start: "2026-09-01", End: "2026-10-27" },
       Granularity: "DAILY",
       GroupBy: [{ Type: "DIMENSION", Key: "SERVICE" }],
       Filter: { Dimensions: { Key: "RECORD_TYPE", Values: ["Usage"] } },
@@ -108,6 +106,9 @@ describe("costRequests", () => {
       TimePeriod: { Start: "2026-10-27", End: "2026-11-01" },
       Granularity: "MONTHLY",
     });
+    // The two APIs spell the same measure differently, and each refuses the other's spelling.
+    expect(requests.usageByService.Metrics).toEqual(["UnblendedCost"]);
+    expect(requests.forecast?.Metric).toBe("UNBLENDED_COST");
   });
 
   it("asks for no forecast on the 1st, since Cost Explorer only forecasts ahead", () => {
@@ -116,18 +117,21 @@ describe("costRequests", () => {
 });
 
 describe("costDatums", () => {
-  const usageByService = dates("2026-10-19", 8).map((date) =>
-    day(date, {
-      "Amazon Elastic Compute Cloud - Compute": date === "2026-10-26" ? 20 : 10,
-      "Amazon Simple Storage Service": 1,
-      "AWS Glue": 0.5,
-    }),
+  // 11.5 of usage a day, 20 rather than 10 of EC2 on the 26th, and 5 of tax dated each 1st.
+  const days = [...dates("2026-09-01", 30), ...dates("2026-10-01", 26)];
+  const usageOn = (date: string) => ({
+    "Amazon Elastic Compute Cloud - Compute": date === "2026-10-26" ? 20 : 10,
+    "Amazon Simple Storage Service": 1,
+    "AWS Glue": 0.5,
+  });
+  const usageByService = days.map((date) => day(date, usageOn(date)));
+  const totals = days.map((date) =>
+    total(
+      date,
+      Object.values(usageOn(date)).reduce((sum, usd) => sum + usd, 0) +
+        (date.endsWith("-01") ? 5 : 0),
+    ),
   );
-  // 11.5 of usage a day, plus 5 of tax on the 1st of each month.
-  const totals = [
-    ...dates("2026-09-01", 30).map((date) => total(date, date.endsWith("-01") ? 16.5 : 11.5)),
-    ...dates("2026-10-01", 26).map((date) => total(date, date.endsWith("-01") ? 16.5 : 11.5)),
-  ];
   const readings = {
     now: RUN,
     environment: "dev",
@@ -136,6 +140,8 @@ describe("costDatums", () => {
     totals,
     forecast: 400,
   };
+  const value = (datums: ForwarderDatum[], metric: string, service?: string) =>
+    find(datums, metric, service)[0].datum.Value;
 
   it("publishes yesterday per service, stamped when the day closed, with its category", () => {
     const [yesterday] = find(costDatums(readings), "DailyCostUsd", "EC2 compute");
@@ -161,15 +167,13 @@ describe("costDatums", () => {
   });
 
   it("counts a service the file does not list under other services", () => {
-    const [other] = find(costDatums(readings), "DailyCostUsd", "Other AWS services");
-
-    expect(other.datum.Value).toBe(0.5);
+    expect(value(costDatums(readings), "DailyCostUsd", "Other AWS services")).toBe(0.5);
   });
 
   it("reads zero for a listed service that spent nothing, rather than leaving a gap", () => {
     const quiet = costDatums({ ...readings, usageByService: [day("2026-10-26", {})] });
 
-    expect(find(quiet, "DailyCostUsd", "S3")[0].datum.Value).toBe(0);
+    expect(value(quiet, "DailyCostUsd", "S3")).toBe(0);
   });
 
   it("adds each service's ISO week up, stamped the Monday it closed", () => {
@@ -180,62 +184,69 @@ describe("costDatums", () => {
     expect(week.datum.Timestamp.toISOString()).toBe("2026-10-26T00:00:00.000Z");
   });
 
-  it("counts what the week cost beyond usage as tax and fees", () => {
-    const withTax = costDatums({
+  it("keeps tax and fees out of the week, since AWS dates a month's on its 1st", () => {
+    const weekly = costDatums(readings).filter(({ datum }) => datum.MetricName === "WeeklyCostUsd");
+
+    expect(weekly.map(({ datum }) => datum.Dimensions[2].Value)).toEqual([
+      "EC2 compute",
+      "S3",
+      "Other AWS services",
+    ]);
+  });
+
+  it("publishes the month so far, the whole month before, and that month's tax and fees", () => {
+    const datums = costDatums(readings);
+
+    // 25 days of 11.5 and one of 21.5, with 5 of tax on the 1st.
+    expect(value(datums, "MonthToDateCostUsd")).toBe(314);
+    expect(value(datums, "PreviousMonthCostUsd")).toBe(350);
+    expect(value(datums, "PreviousMonthTaxAndFeesUsd")).toBe(5);
+    expect(value(datums, "MonthForecastCostUsd")).toBe(400);
+    expect(find(datums, "MonthToDateCostUsd")[0].datum.Dimensions).toEqual([
+      { Name: "Environment", Value: "dev" },
+    ]);
+    expect(find(datums, "MonthToDateCostUsd")[0].datum.Timestamp.toISOString()).toBe(
+      "2026-10-27T00:00:00.000Z",
+    );
+  });
+
+  it("compares the month before with its tax in proportion to its usage by the same day", () => {
+    // AWS dates September's tax on the 1st and grows it all month, so 1 to 26 September carries
+    // the whole month's 5 while 1 to 26 October carries only what October has accrued. Prorated:
+    // 299 of usage, at September's 350 billed for 345 of usage.
+    expect(value(costDatums(readings), "PreviousMonthToDateCostUsd")).toBe(303.33);
+  });
+
+  it("falls back to what the month before cost by the same day when it has no usage", () => {
+    const datums = costDatums({
       ...readings,
-      totals: [
-        ...totals.filter(({ TimePeriod }) => TimePeriod?.Start !== "2026-10-20"),
-        total("2026-10-20", 31.5),
-      ],
+      usageByService: usageByService.filter(({ TimePeriod }) =>
+        TimePeriod?.Start?.startsWith("2026-10"),
+      ),
     });
 
-    expect(find(withTax, "WeeklyCostUsd", "Tax and fees")[0].datum).toMatchObject({
-      Value: 20,
-      Dimensions: [
-        { Name: "Environment", Value: "dev" },
-        { Name: "Category", Value: "Tax and fees" },
-        { Name: "Service", Value: "Tax and fees" },
-      ],
-    });
+    // 25 days of 11.5 and the 1st's 16.5.
+    expect(value(datums, "PreviousMonthToDateCostUsd")).toBe(304);
   });
 
   it("never publishes a negative zero, which Grafana stacks below the axis", () => {
-    // A total a tenth of a cent under its usage rounds to -0.
+    // A month billed a tenth of a cent under its usage leaves -0.001 of tax, which rounds to -0.
     const rounding = costDatums({
       ...readings,
-      totals: [
-        ...totals.filter(({ TimePeriod }) => TimePeriod?.Start !== "2026-10-21"),
-        total("2026-10-21", 11.499),
-      ],
+      totals: totals.map((result) =>
+        result.TimePeriod?.Start === "2026-09-01" ? total("2026-09-01", 11.499) : result,
+      ),
     });
-    const [tax] = find(rounding, "WeeklyCostUsd", "Tax and fees");
+    const tax = value(rounding, "PreviousMonthTaxAndFeesUsd");
 
-    expect(Object.is(tax.datum.Value, -0)).toBe(false);
-    expect(tax.datum.Value).toBe(0);
-  });
-
-  it("publishes the month so far against the same point and the whole of the month before", () => {
-    const monthly = Object.fromEntries(
-      find(costDatums(readings), "MonthToDateCostUsd")
-        .concat(find(costDatums(readings), "PreviousMonthToDateCostUsd"))
-        .concat(find(costDatums(readings), "PreviousMonthCostUsd"))
-        .concat(find(costDatums(readings), "MonthForecastCostUsd"))
-        .map(({ datum }) => [datum.MetricName, datum]),
-    );
-
-    // 26 days of 11.5, with 5 of tax on the 1st.
-    expect(monthly.MonthToDateCostUsd.Value).toBe(304);
-    expect(monthly.PreviousMonthToDateCostUsd.Value).toBe(304);
-    expect(monthly.PreviousMonthCostUsd.Value).toBe(350);
-    expect(monthly.MonthForecastCostUsd.Value).toBe(400);
-    expect(monthly.MonthToDateCostUsd.Dimensions).toEqual([{ Name: "Environment", Value: "dev" }]);
-    expect(monthly.MonthToDateCostUsd.Timestamp.toISOString()).toBe("2026-10-27T00:00:00.000Z");
+    expect(Object.is(tax, -0)).toBe(false);
+    expect(tax).toBe(0);
   });
 
   it("leaves the forecast out when Cost Explorer has none", () => {
     const datums = costDatums({ ...readings, forecast: null });
 
-    expect(datums.some(({ datum }) => datum.MetricName === "MonthForecastCostUsd")).toBe(false);
+    expect(find(datums, "MonthForecastCostUsd")).toEqual([]);
   });
 
   it("forecasts a complete month as what it cost", () => {
@@ -244,10 +255,9 @@ describe("costDatums", () => {
       now: new Date("2026-10-01T06:00:00Z"),
       forecast: null,
     });
-    const [forecast] = datums.filter(({ datum }) => datum.MetricName === "MonthForecastCostUsd");
 
     // September in full: 30 days of 11.5, with 5 of tax on the 1st.
-    expect(forecast.datum.Value).toBe(350);
+    expect(value(datums, "MonthForecastCostUsd")).toBe(350);
   });
 });
 
@@ -259,7 +269,7 @@ describe("the category file", () => {
     ),
   );
   const categories = services.categories.map(({ name }) => name);
-  const labels = [...Object.values(services.services), services.otherServices, services.taxAndFees];
+  const labels = [...Object.values(services.services), services.otherServices];
 
   it("puts every service in a category the dashboards colour", () => {
     expect(labels.filter(({ category }) => !categories.includes(category))).toEqual([]);

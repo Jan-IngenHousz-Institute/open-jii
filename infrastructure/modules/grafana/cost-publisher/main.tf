@@ -94,13 +94,14 @@ resource "aws_lambda_function" "cost_publisher" {
   depends_on = [aws_cloudwatch_log_group.cost_publisher]
 }
 
-# Cost Explorer refreshes its figures a few times a day, so a daily run loses nothing, and each
-# request costs a cent. 06:00 UTC lands the week that closed at midnight before the weekly
-# report is read on Monday morning.
+# Four runs a day. CloudWatch returns a point stamped up to a day back within two hours, but one
+# stamped further back only after two days, so a window is refined by the runs on the day it
+# closed. 00:30 lands it soon after Databricks' figure for the same window, and the later runs pick
+# up what Cost Explorer adds to yesterday. A run is three requests at a cent each.
 resource "aws_cloudwatch_event_rule" "cost_publisher" {
   name                = "${var.environment}-cost-publisher-schedule"
-  description         = "Publish Cost Explorer's spend to CloudWatch once a day"
-  schedule_expression = "cron(0 6 * * ? *)"
+  description         = "Publish Cost Explorer's spend to CloudWatch four times a day"
+  schedule_expression = "cron(30 0/6 * * ? *)"
 
   tags = local.tags
 }

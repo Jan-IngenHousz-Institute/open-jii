@@ -818,11 +818,25 @@ describe("the cost dashboards", () => {
   });
 
   it("name only categories the category file lists", () => {
-    const named = [...cost.matchAll(/cost_(?:databricks|vms)\s*=\s*"([^"]+)"/g)].map(
+    const named = [...cost.matchAll(/cost_(?:databricks|vms|tax)\s*=\s*"([^"]+)"/g)].map(
       ([, name]) => name,
     );
 
-    expect(named).toHaveLength(2);
+    expect(named).toHaveLength(3);
     expect(named.filter((name) => !services.categories.some((c) => c.name === name))).toEqual([]);
+  });
+
+  it("narrow only searches that end where the narrowing clause goes", () => {
+    // cost.tf adds a category clause by replacing the search's closing quote and statistic. A
+    // search written any other way would keep its whole series set without anything failing.
+    const narrowed = [
+      ...cost.matchAll(/replace\(local\.cost_search\["([a-z0-9-]+)"\], "([^"]+)"/g),
+    ];
+    const searchOf = (id: string) => metrics.find((m) => m.id === id)?.signal?.search ?? "";
+
+    expect(narrowed.length).toBeGreaterThan(1);
+    expect(
+      narrowed.filter(([, id, tail]) => !searchOf(id).endsWith(tail)).map(([, id]) => id),
+    ).toEqual([]);
   });
 });

@@ -152,8 +152,6 @@ export interface CostServices {
   services: Record<string, CostLabel>;
   /** Where a service the file does not list is counted. */
   otherServices: CostLabel;
-  /** Everything that is not usage: tax, fees, credits and refunds. */
-  taxAndFees: CostLabel;
   databricksComponents: Record<string, string>;
 }
 

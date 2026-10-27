@@ -10,6 +10,7 @@ export const MONTH_TO_DATE_COST_METRIC = "MonthToDateCostUsd";
 export const PREVIOUS_MONTH_TO_DATE_COST_METRIC = "PreviousMonthToDateCostUsd";
 export const PREVIOUS_MONTH_COST_METRIC = "PreviousMonthCostUsd";
 export const MONTH_FORECAST_COST_METRIC = "MonthForecastCostUsd";
+export const PREVIOUS_MONTH_TAX_AND_FEES_METRIC = "PreviousMonthTaxAndFeesUsd";
 
 export const COST_METRICS = [
   DAILY_COST_METRIC,
@@ -18,10 +19,13 @@ export const COST_METRICS = [
   PREVIOUS_MONTH_TO_DATE_COST_METRIC,
   PREVIOUS_MONTH_COST_METRIC,
   MONTH_FORECAST_COST_METRIC,
+  PREVIOUS_MONTH_TAX_AND_FEES_METRIC,
 ];
 
-/** What the account is billed before credits, the figure Cost Explorer's console leads with. */
+/** Cost Explorer's unblended cost, the figure its console leads with. */
 const COST_MEASURE = "UnblendedCost";
+/** The same measure as GetCostForecast spells it; it refuses the other spelling. */
+const FORECAST_MEASURE = "UNBLENDED_COST";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -69,7 +73,7 @@ export interface CostReadings {
   now: Date;
   environment: string;
   services: CostServices;
-  /** Every page of the usageByService request's results. */
+  /** Every page of the usageByService request's results, from the 1st of the month before. */
   usageByService: CostResultByTime[];
   totals: CostResultByTime[];
   /** The month's forecast, actuals included; null when there is none. */
@@ -87,7 +91,6 @@ function isCostServices(value: unknown): value is CostServices {
     isRecord(value.services) &&
     Object.values(value.services).every(isLabel) &&
     isLabel(value.otherServices) &&
-    isLabel(value.taxAndFees) &&
     isRecord(value.databricksComponents)
   );
 }
@@ -143,7 +146,7 @@ export function costRequests(now: Date): CostRequests {
 
   return {
     usageByService: {
-      TimePeriod: { Start: costDate(windows.weekStart), End: costDate(windows.today) },
+      TimePeriod: { Start: costDate(windows.previousMonthStart), End: costDate(windows.today) },
       Granularity: "DAILY",
       Metrics: [COST_MEASURE],
       GroupBy: [{ Type: "DIMENSION", Key: "SERVICE" }],
@@ -158,7 +161,7 @@ export function costRequests(now: Date): CostRequests {
       ? {
           TimePeriod: { Start: costDate(windows.today), End: costDate(windows.nextMonthStart) },
           Granularity: "MONTHLY",
-          Metric: COST_MEASURE,
+          Metric: FORECAST_MEASURE,
         }
       : null,
   };
@@ -242,6 +245,8 @@ export function costDatums(readings: CostReadings): ForwarderDatum[] {
 
   const usageOver = (label: string, days: string[]) =>
     days.reduce((sum, day) => sum + (usage.get(day)?.get(label) ?? 0), 0);
+  const allUsageOver = (days: string[]) =>
+    labels.reduce((sum, service) => sum + usageOver(service.label, days), 0);
   const totalOver = (days: string[]) => days.reduce((sum, day) => sum + (totals.get(day) ?? 0), 0);
 
   // Yesterday, then the day before again, since Cost Explorer is still adding to it.
@@ -253,34 +258,36 @@ export function costDatums(readings: CostReadings): ForwarderDatum[] {
     );
   });
 
+  // Usage only: AWS dates a month's tax and fees on the 1st and adds to them all month, so no
+  // week would carry its own share.
   const week = daysBetween(windows.weekStart, windows.weekEnd);
-  const weekUsage = labels.map((service) => ({ service, usd: usageOver(service.label, week) }));
-  const weekly = [
-    ...weekUsage.map(({ service, usd }) =>
-      point(WEEKLY_COST_METRIC, usd, windows.weekEnd, service),
-    ),
-    point(
-      WEEKLY_COST_METRIC,
-      totalOver(week) - weekUsage.reduce((sum, { usd }) => sum + usd, 0),
-      windows.weekEnd,
-      readings.services.taxAndFees,
-    ),
-  ];
+  const weekly = labels.map((service) =>
+    point(WEEKLY_COST_METRIC, usageOver(service.label, week), windows.weekEnd, service),
+  );
 
-  const monthToDate = totalOver(daysBetween(windows.monthStart, windows.today));
+  const month = daysBetween(windows.monthStart, windows.today);
+  const previousMonth = daysBetween(windows.previousMonthStart, windows.monthStart);
+  const previousToDate = daysBetween(windows.previousMonthStart, windows.previousMonthToDateEnd);
+  const previousUsage = allUsageOver(previousMonth);
+
+  // This month's tax so far follows its usage so far, while the month before's is already whole,
+  // so the month before is compared with its tax in proportion to its usage by the same day.
+  const previousMonthToDate =
+    previousUsage > 0
+      ? (allUsageOver(previousToDate) * totalOver(previousMonth)) / previousUsage
+      : totalOver(previousToDate);
+
+  const monthToDate = totalOver(month);
   const monthRunning = windows.nextMonthStart.getTime() > windows.today.getTime();
   const forecast = monthRunning ? readings.forecast : monthToDate;
 
   const monthly = [
     point(MONTH_TO_DATE_COST_METRIC, monthToDate, windows.today),
+    point(PREVIOUS_MONTH_TO_DATE_COST_METRIC, previousMonthToDate, windows.today),
+    point(PREVIOUS_MONTH_COST_METRIC, totalOver(previousMonth), windows.today),
     point(
-      PREVIOUS_MONTH_TO_DATE_COST_METRIC,
-      totalOver(daysBetween(windows.previousMonthStart, windows.previousMonthToDateEnd)),
-      windows.today,
-    ),
-    point(
-      PREVIOUS_MONTH_COST_METRIC,
-      totalOver(daysBetween(windows.previousMonthStart, windows.monthStart)),
+      PREVIOUS_MONTH_TAX_AND_FEES_METRIC,
+      totalOver(previousMonth) - previousUsage,
       windows.today,
     ),
     ...(forecast === null ? [] : [point(MONTH_FORECAST_COST_METRIC, forecast, windows.today)]),

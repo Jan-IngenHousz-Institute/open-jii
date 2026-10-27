@@ -36,7 +36,6 @@
     "Amazon Route 53": { "label": "Route 53", "category": "Other AWS" }
   },
   "otherServices": { "label": "Other AWS services", "category": "Other AWS" },
-  "taxAndFees": { "label": "Tax and fees", "category": "Tax and fees" },
   "databricksComponents": {
     "centrum": "Centrum pipeline",
     "macro": "Macro pipeline",

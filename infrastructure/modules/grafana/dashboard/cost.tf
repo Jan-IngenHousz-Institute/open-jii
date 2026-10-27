@@ -12,7 +12,7 @@ locals {
   # Databricks bills its own charges and AWS bills the rest, its VMs included.
   cost_databricks           = "Databricks charges"
   cost_vms                  = "Databricks VMs"
-  cost_tax                  = local.cost_services.taxAndFees.category
+  cost_tax                  = "Tax and fees"
   cost_aws_usage_categories = [for category in local.cost_services.categories : category.name if !contains([local.cost_databricks, local.cost_tax], category.name)]
   cost_measurement_colour   = "#9085e9"
 
@@ -34,22 +34,21 @@ locals {
   # The catalogue's searches, and a clause added inside one, so nothing here names a series the
   # catalogue does not.
   cost_search = { for id in ["aws-cost", "aws-daily-cost", "databricks-cost", "databricks-daily-cost"] : id => local.heartbeat_facts[id].search }
-  cost_aws_week = {
-    for name, clause in merge(
-      { usage = " NOT Category=\"${local.cost_tax}\"" },
-      { for category in concat(local.cost_aws_usage_categories, [local.cost_tax]) : category => " AND Category=\"${category}\"" },
-    ) : name => replace(local.cost_search["aws-cost"], "', 'Maximum')", "${clause}', 'Maximum')")
-  }
+  cost_aws_week = merge(
+    { usage = local.cost_search["aws-cost"] },
+    { for category in local.cost_aws_usage_categories : category => replace(local.cost_search["aws-cost"], "', 'Maximum')", " AND Category=\"${category}\"', 'Maximum')") },
+  )
   cost_aws_day = {
     for category in local.cost_aws_usage_categories : category => replace(local.cost_search["aws-daily-cost"], "', 'Maximum')", " AND Category=\"${category}\"', 'Maximum')")
   }
 
-  # A week's inputs, hidden. REPEAT carries the latest week across the hours each Monday before the
-  # cost publisher's morning run, when Databricks' week has landed and AWS's has not.
+  # A week's inputs, hidden. A figure that adds both producers' reads only where both have a point
+  # for the same window: Databricks' lands from midnight and AWS's from 00:30, and metric math
+  # counts a missing point as zero, which would add one producer's week to nothing.
   cost_week_inputs = {
-    aws          = merge(local.cost_query, { refId = "aws", id = "aws", hide = true, expression = "SUM(FILL(${local.cost_aws_week.usage}, REPEAT))" })
-    databricks   = merge(local.cost_query, { refId = "databricks", id = "databricks", hide = true, expression = "SUM(FILL(${local.cost_search["databricks-cost"]}, REPEAT))" })
-    vms          = merge(local.cost_query, { refId = "vms", id = "vms", hide = true, expression = "SUM(FILL(${local.cost_aws_week[local.cost_vms]}, REPEAT))" })
+    aws          = merge(local.cost_query, { refId = "aws", id = "aws", hide = true, expression = "SUM(${local.cost_aws_week.usage})" })
+    databricks   = merge(local.cost_query, { refId = "databricks", id = "databricks", hide = true, expression = "SUM(${local.cost_search["databricks-cost"]})" })
+    vms          = merge(local.cost_query, { refId = "vms", id = "vms", hide = true, expression = "SUM(${local.cost_aws_week[local.cost_vms]})" })
     measurements = merge(local.heartbeat_queries["weekly-measurements"], { refId = "measurements", id = "measurements", hide = true, label = "" })
   }
 
@@ -68,20 +67,20 @@ locals {
     {
       title       = "Platform cost, last week"
       description = "AWS's usage plus Databricks' charges at list price for the latest complete Monday-to-Sunday week, against the week before. Tax and fees are left out, since AWS dates a whole month's on the 1st."
-      decimals    = 0
+      decimals    = null
       timeFrom    = "14d"
       period      = "604800"
       paired      = false
       targets = [
         local.cost_week_inputs.aws,
         local.cost_week_inputs.databricks,
-        merge(local.cost_query, { refId = "platform", id = "platform", expression = "aws + databricks" }),
+        merge(local.cost_query, { refId = "platform", id = "platform", expression = "IF(aws > 0 AND databricks > 0, aws + databricks)" }),
       ]
     },
     {
       title       = "This month so far"
-      description = "What the platform cost from the 1st to yesterday, AWS with tax and fees, against the month before at the same day."
-      decimals    = 0
+      description = "What the platform cost from the 1st to yesterday, AWS with the tax and fees accrued so far, against the month before at the same day. AWS dates a month's tax and fees on the 1st and adds to them as its usage grows, so the month before counts them in proportion to its usage by that day."
+      decimals    = null
       timeFrom    = "3d"
       period      = "86400"
       paired      = true
@@ -90,14 +89,14 @@ locals {
         local.cost_month_inputs["databricks-previous-month-to-date"],
         local.cost_month_inputs["aws-month-to-date"],
         local.cost_month_inputs["databricks-month-to-date"],
-        merge(local.cost_query, { refId = "earlier", id = "earlier", label = "Last month, to the same day", expression = "FILL(aws_previous_month_to_date, REPEAT) + FILL(databricks_previous_month_to_date, REPEAT)" }),
-        merge(local.cost_query, { refId = "later", id = "later", label = "This month so far", expression = "FILL(aws_month_to_date, REPEAT) + FILL(databricks_month_to_date, REPEAT)" }),
+        merge(local.cost_query, { refId = "earlier", id = "earlier", label = "Last month, to the same day", expression = "IF(aws_previous_month_to_date > 0 AND databricks_previous_month_to_date > 0, aws_previous_month_to_date + databricks_previous_month_to_date)" }),
+        merge(local.cost_query, { refId = "later", id = "later", label = "This month so far", expression = "IF(aws_month_to_date > 0 AND databricks_month_to_date > 0, aws_month_to_date + databricks_month_to_date)" }),
       ]
     },
     {
       title       = "This month, projected"
       description = "AWS's own forecast for the month, actuals included, plus Databricks at the pace of the month's complete days, against the whole month before."
-      decimals    = 0
+      decimals    = null
       timeFrom    = "3d"
       period      = "86400"
       paired      = true
@@ -106,8 +105,8 @@ locals {
         local.cost_month_inputs["databricks-previous-month"],
         local.cost_month_inputs["aws-month-forecast"],
         local.cost_month_inputs["databricks-month-projected"],
-        merge(local.cost_query, { refId = "earlier", id = "earlier", label = "Last month", expression = "FILL(aws_previous_month, REPEAT) + FILL(databricks_previous_month, REPEAT)" }),
-        merge(local.cost_query, { refId = "later", id = "later", label = "This month, projected", expression = "FILL(aws_month_forecast, REPEAT) + FILL(databricks_month_projected, REPEAT)" }),
+        merge(local.cost_query, { refId = "earlier", id = "earlier", label = "Last month", expression = "IF(aws_previous_month > 0 AND databricks_previous_month > 0, aws_previous_month + databricks_previous_month)" }),
+        merge(local.cost_query, { refId = "later", id = "later", label = "This month, projected", expression = "IF(aws_month_forecast > 0 AND databricks_month_projected > 0, aws_month_forecast + databricks_month_projected)" }),
       ]
     },
     {
@@ -121,7 +120,7 @@ locals {
         local.cost_week_inputs.aws,
         local.cost_week_inputs.databricks,
         local.cost_week_inputs.measurements,
-        merge(local.cost_query, { refId = "per_1000", id = "per_1000", expression = "1000 * (aws + databricks) / FILL(measurements, REPEAT)" }),
+        merge(local.cost_query, { refId = "per_1000", id = "per_1000", expression = "IF(aws > 0 AND databricks > 0 AND measurements > 0, 1000 * (aws + databricks) / measurements)" }),
       ]
     },
   ]
@@ -179,7 +178,7 @@ locals {
 
   # One series per category, each bar the week its point closed.
   cost_week_series = {
-    for name in concat([local.cost_databricks], local.cost_aws_usage_categories, [local.cost_tax]) : name => merge(local.cost_query, {
+    for name in concat([local.cost_databricks], local.cost_aws_usage_categories) : name => merge(local.cost_query, {
       refId      = "c${index(local.cost_services.categories[*].name, name)}"
       id         = "c${index(local.cost_services.categories[*].name, name)}"
       label      = name
@@ -190,7 +189,6 @@ locals {
 
   cost_stacks = {
     for key, names in {
-      everything = concat([local.cost_databricks], local.cost_aws_usage_categories, [local.cost_tax])
       platform   = concat([local.cost_databricks], local.cost_aws_usage_categories)
       aws        = local.cost_aws_usage_categories
       databricks = [local.cost_databricks, local.cost_vms]
@@ -222,10 +220,10 @@ locals {
     }
     options = merge(local.cost_chart.options, { legend = { displayMode = "list", placement = "bottom", showLegend = false } })
     targets = [
-      merge(local.cost_week_inputs.aws, { expression = "SUM(${local.cost_aws_week.usage})", period = "86400" }),
-      merge(local.cost_week_inputs.databricks, { expression = "SUM(${local.cost_search["databricks-cost"]})", period = "86400" }),
+      merge(local.cost_week_inputs.aws, { period = "86400" }),
+      merge(local.cost_week_inputs.databricks, { period = "86400" }),
       merge(local.cost_week_inputs.measurements, { period = "86400" }),
-      merge(local.cost_query, { refId = "per_1000", id = "per_1000", period = "86400", label = "Per 1,000 measurements", expression = "1000 * (aws + databricks) / measurements" }),
+      merge(local.cost_query, { refId = "per_1000", id = "per_1000", period = "86400", label = "Per 1,000 measurements", expression = "IF(aws > 0 AND databricks > 0 AND measurements > 0, 1000 * (aws + databricks) / measurements)" }),
     ]
   })
 
@@ -282,6 +280,8 @@ locals {
         {
           matcher = { id = "byName", options = "Change" }
           properties = [
+            # A few cents either way would print as -$0.
+            { id = "mappings", value = [{ type = "range", options = { from = -0.5, to = 0.5, result = { text = "$0" } } }] },
             { id = "custom.cellOptions", value = { type = "color-text" } },
             { id = "thresholds", value = { mode = "absolute", steps = [{ color = "green", value = null }, { color = "text", value = -0.5 }, { color = "red", value = 0.5 }] } },
           ]
@@ -290,6 +290,7 @@ locals {
           matcher = { id = "byName", options = "Change %" }
           properties = [
             { id = "unit", value = "percentunit" },
+            { id = "mappings", value = [{ type = "range", options = { from = -0.005, to = 0.005, result = { text = "0%" } } }] },
             { id = "custom.cellOptions", value = { type = "color-text" } },
             { id = "thresholds", value = { mode = "absolute", steps = [{ color = "green", value = null }, { color = "text", value = -0.005 }, { color = "red", value = 0.005 }] } },
           ]
@@ -355,14 +356,14 @@ locals {
     [merge(local.flow_caption, {
       id      = 700
       gridPos = { h = 2, w = 24, x = 0, y = 0 }
-      options = { mode = "markdown", content = "**Platform** is what AWS bills, tax included, plus Databricks' own charges at list price, which its billing tables carry. A panel's ⓘ says how its figure is counted. Cost Explorer reports once a day, so yesterday is the latest day." }
+      options = { mode = "markdown", content = "**Platform** is what AWS bills plus Databricks' own charges at list price, which its billing tables carry. Weekly figures are usage only; the month tiles add AWS's tax and fees. A panel's ⓘ says how its figure is counted. Yesterday is the latest complete day." }
     })],
     [for i, tile in local.cost_tile_panels : merge(tile, { gridPos = { h = 4, w = 6, x = i * 6, y = 2 } })],
     [merge(local.flow_row, { id = 710, title = "Where does the money go?", gridPos = { h = 1, w = 24, x = 0, y = 6 } })],
-    [merge(local.cost_stacks.everything, {
+    [merge(local.cost_stacks.platform, {
       id          = 711
       title       = "Platform cost per week"
-      description = "Every dollar of the platform per Monday-to-Sunday week, in six parts. Databricks VMs are the EC2 its clusters run on, which AWS bills; network is EC2's disks, NAT and IPs, the VPC and the load balancer; monitoring and audit is CloudWatch, CloudTrail, Config, the security services and Grafana. AWS dates a month's tax and fees on the 1st."
+      description = "The platform's usage per Monday-to-Sunday week, in five parts. Databricks VMs are the EC2 its clusters run on, which AWS bills; network is EC2's disks, NAT and IPs, the VPC and the load balancer; monitoring and audit is CloudWatch, CloudTrail, Config, the security services and Grafana. Tax and fees are at the bottom of the page."
       gridPos     = { h = 10, w = 24, x = 0, y = 7 }
       options     = local.cost_right_legend
     })],
@@ -383,7 +384,7 @@ locals {
     [merge(local.cost_stacks.databricks, {
       id          = 731
       title       = "Databricks per week: its charges and the VMs AWS bills for it"
-      description = "Databricks bills its own charges; AWS bills the EC2 its clusters run on, which nothing else in the account uses."
+      description = "Databricks bills its own charges; AWS bills the EC2 its clusters run on. Nothing else the platform deploys runs on EC2, so all of EC2 compute counts as its VMs."
       gridPos     = { h = 8, w = 24, x = 0, y = 47 }
       options     = local.cost_right_legend
     })],
@@ -405,24 +406,56 @@ locals {
     ],
     [merge(local.flow_row, { id = 750, title = "Tax and fees", gridPos = { h = 1, w = 24, x = 0, y = 64 } })],
     [
-      merge(local.cost_chart, {
-        id          = 751
-        title       = "Tax and fees, as they land"
-        description = "Everything AWS billed beyond usage, per Monday-to-Sunday week: tax, monthly fees and subscriptions, less any credits."
-        gridPos     = { h = 6, w = 16, x = 0, y = 65 }
+      for i, stat in [
+        {
+          title       = "Tax and fees, last month"
+          description = "Everything AWS billed beyond usage for the whole month before: tax, monthly fees and subscriptions, less any credits."
+          unit        = "currencyUSD"
+          targets     = [merge(local.heartbeat_queries["aws-previous-month-tax"], { refId = "tax", id = "tax", label = "" })]
+        },
+        {
+          title       = "Share of last month's AWS bill"
+          description = "Last month's tax and fees as a share of everything AWS billed for it."
+          unit        = "percent"
+          targets = [
+            merge(local.heartbeat_queries["aws-previous-month-tax"], { refId = "tax", id = "tax", label = "", hide = true }),
+            merge(local.cost_month_inputs["aws-previous-month"], { hide = true }),
+            merge(local.cost_query, { refId = "share", id = "share", expression = "IF(aws_previous_month > 0, 100 * tax / aws_previous_month)" }),
+          ]
+        },
+        ] : {
+        id               = 751 + i
+        type             = "stat"
+        title            = stat.title
+        description      = stat.description
+        pluginVersion    = "10.4.1"
+        datasource       = local.heartbeat_datasource
+        timeFrom         = "3d"
+        hideTimeOverride = true
+        gridPos          = { h = 4, w = 6, x = i * 6, y = 65 }
         fieldConfig = {
-          defaults  = { unit = "currencyUSD", min = 0, color = { mode = "fixed", fixedColor = local.cost_colours[local.cost_tax] }, custom = local.cost_bars }
+          defaults  = { noValue = "No data", unit = stat.unit, decimals = stat.unit == "percent" ? 0 : null, color = { mode = "fixed", fixedColor = "text" } }
           overrides = []
         }
-        options = local.cost_no_legend
-        targets = [local.cost_week_series[local.cost_tax]]
-      }),
-      merge(local.flow_caption, {
-        id      = 752
-        gridPos = { h = 6, w = 8, x = 16, y = 65 }
-        options = { mode = "markdown", content = "AWS dates a whole month's tax and fees on the 1st and adds to them as the month runs, so they land in the week that holds it.\n\nOn dev in October 2026 they came to a steady 17% of the AWS bill, 21% on top of usage. The weekly figures leave them out so that week compares fairly; the month tiles count them." }
-      }),
+        options = {
+          colorMode         = "none"
+          graphMode         = "none"
+          justifyMode       = "center"
+          orientation       = "auto"
+          textMode          = "value"
+          text              = { titleSize = 13, valueSize = 34 }
+          wideLayout        = true
+          showPercentChange = false
+          reduceOptions     = { calcs = ["lastNotNull"], fields = "", values = false }
+        }
+        targets = [for target in stat.targets : merge(target, { period = "86400" })]
+      }
     ],
+    [merge(local.flow_caption, {
+      id      = 753
+      gridPos = { h = 4, w = 12, x = 12, y = 65 }
+      options = { mode = "markdown", content = "AWS dates a month's tax and fees on the 1st and adds to them as the month's usage grows, so no week carries its own share, and the weekly figures leave them out. The month tiles count them, last month's in proportion to its usage by the same day." }
+    })],
   )
 
   # The weekly report's Cost section: a card per figure, as in its other sections, each the week
