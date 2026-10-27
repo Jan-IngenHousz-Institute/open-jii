@@ -18,3 +18,24 @@ export async function getOidcClaims(
       : {}),
   };
 }
+
+export const oidcAdvertisedMetadata = {
+  claims_supported: [
+    "sub",
+    "iss",
+    "aud",
+    "exp",
+    "iat",
+    "sid",
+    "scope",
+    "azp",
+    "email",
+    "email_verified",
+    "name",
+    "picture",
+    "family_name",
+    "given_name",
+    "orgs",
+    "registered",
+  ],
+};
