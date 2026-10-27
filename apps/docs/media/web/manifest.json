@@ -33,7 +33,7 @@
       "workbooks-list retaken on 2026-10-13 at 1920x1200 from the local stack with the seeded development identity, showing the Visibility filter button. Reviewed at full size and approved before publishing. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
       "notifications-page retaken on 2026-10-22 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only notifications-page, because the page gained a line under the list: Read notifications are kept for 90 days, unread ones for a year. Reviewed at full size: the same three seeded rows as the 2026-10-08 capture, one under each of Today, Yesterday and Earlier, with no developer-authored row, no credentials and no dev overlays in frame. As before, the three seeded rows were moved to the seed script's offsets and the seed user's 108 developer-authored rows from earlier hand checks were held out of frame; both changes were undone after the shot, and the notifications and notification_deliveries tables diff clean against their pre-shot copies. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp.",
       "organizations-list retaken on 2026-10-14 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only organizations-list. The directory gained the Type filter and a sortable Type column; the shot now sorts by Type ascending. Reviewed at full size and approved before publishing: all six organization names are [Seed] fixtures, the Type filter is unselected, the untyped [Seed] Community Seed Library sorts last with an empty Type cell, and no real users, credentials, precise locations or dev overlays appear. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
-      "protocols-list retaken on 2026-10-26 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only protocols-list. Name remains sorted ascending; Family and Visibility filters are visible with no values selected, and Clear filters is absent. Reviewed at full size and approved; only [Seed] protocol names appear, with no real people's names or emails. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
+      "protocols-list retaken on 2026-10-27 at 1920x1200 from the local stack with the seeded development identity (seed@openjii.local), via pnpm --filter @repo/e2e capture-docs-media --only protocols-list. Name remains sorted ascending; Family and Visibility filters are visible with no values selected, and Clear filters is absent. Retaken because family badges now use the product names MultispeQ and Ambyte. Reviewed at full size; only [Seed] protocol names appear, with no real names, emails, credentials or dev overlays. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine lacks ffmpeg."
     ]
   },
   "assets": [
@@ -263,8 +263,8 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 80618,
-      "sha256": "057bf70d6de41b03aba3d93be7886b72aed5c853b82cf1bd17724ad8b888eaaa",
+      "bytes": 99000,
+      "sha256": "035908a07c32289c03c6891c784892f5bdc4282049cfc1a1db57a42f5e1e8478",
       "disposition": "published",
       "scope": "Protocols overview with the Name column sorted ascending"
     },
