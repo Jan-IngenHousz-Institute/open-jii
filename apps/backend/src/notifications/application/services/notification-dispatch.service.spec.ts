@@ -2,7 +2,8 @@ import { Logger } from "@nestjs/common";
 import type { MockInstance } from "vitest";
 
 import type { NotificationParams } from "@repo/api/domains/notification/notification.schema";
-import { eq, notifications } from "@repo/database";
+import { createSecondaryDatabase, eq, notifications, sql } from "@repo/database";
+import type { DatabaseInstance } from "@repo/database";
 
 import { EmailAdapter } from "../../../common/modules/email/services/email.adapter";
 import { ErrorCodes } from "../../../common/utils/error-codes";
@@ -569,24 +570,114 @@ describe("NotificationDispatchService", () => {
       expect(await rowsFor(recipientId)).toHaveLength(2);
     });
 
-    it("writes the row and logs when the unread rows cannot be refreshed", async () => {
+    it("writes nothing and logs when the unread rows cannot be refreshed", async () => {
       assertSuccess(await rejection());
       vi.spyOn(repository, "refreshUnread").mockResolvedValue(
         failure(AppError.internal("Database unavailable")),
       );
       const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
 
-      const result = await rejection(true);
+      const result = await rejection(true, "Photosynthesis II");
 
-      assertSuccess(result);
-      expect(result.value).toEqual({ created: 1, queued: 1 });
-      expect(await rowsFor(recipientId)).toHaveLength(2);
+      assertFailure(result);
+      const [row, ...more] = await rowsFor(recipientId);
+      expect(more).toEqual([]);
+      expect(row.params).toEqual({ experimentName: "Photosynthesis" });
+      expect(await deliveriesFor(recipientId)).toHaveLength(1);
       expect(error).toHaveBeenCalledWith(
         expect.objectContaining({
+          msg: "Failed to store notifications, nothing was written",
           operation: "dispatch-notification",
           errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
         }),
       );
+    });
+
+    /**
+     * Racing two dispatches directly proves nothing: the harness pools one connection, so
+     * they would run one after the other. Each runs on its own connection instead, the
+     * first held just before its insert, and the second must either wait on the first or
+     * finish before the first is let go.
+     */
+    it("leaves one row when two dispatches about the same event arrive at once", async () => {
+      const first = createSecondaryDatabase();
+      const second = createSecondaryDatabase();
+      try {
+        const serviceOn = (
+          database: DatabaseInstance,
+          notificationRepository: NotificationRepository,
+        ) =>
+          new NotificationDispatchService(
+            database,
+            notificationRepository,
+            deliveryRepository,
+            notificationEmail,
+            testApp.module.get(NotificationPreferencesService),
+            testApp.module.get(NotificationOutboxWorker),
+          );
+        const firstRepository = new NotificationRepository(first.database);
+        const secondRepository = new NotificationRepository(second.database);
+        const send = (service: NotificationDispatchService, experimentName: string) =>
+          service.dispatch({
+            type: "experiment_join_request_rejected",
+            recipientIds: [recipientId],
+            actorId,
+            resource: experiment,
+            params: { experimentName },
+            onceUntilRead: true,
+          });
+
+        let release!: () => void;
+        let reachedInsert!: () => void;
+        const released = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        const atInsert = new Promise<void>((resolve) => {
+          reachedInsert = resolve;
+        });
+        const writer = new NotificationRepository(first.database);
+        vi.spyOn(firstRepository, "insertMany").mockImplementation(async (rows, handle) => {
+          reachedInsert();
+          await released;
+          return writer.insertMany(rows, handle);
+        });
+
+        const holding = send(serviceOn(first.database, firstRepository), "First");
+        await atInsert;
+
+        const [{ pid }] = await second.database.execute<{ pid: number }>(
+          sql`SELECT pg_backend_pid() AS pid`,
+        );
+        const racingState = { done: false };
+        const racing = send(serviceOn(second.database, secondRepository), "Second").finally(() => {
+          racingState.done = true;
+        });
+        // Without the lock the second dispatch finds nothing unread and writes its own
+        // row; with it, the second waits for the first to commit.
+        for (let attempt = 0; attempt < 60 && !racingState.done; attempt++) {
+          const [{ waiting }] = await testApp.database.execute<{ waiting: number }>(
+            sql`SELECT count(*)::int AS waiting FROM pg_stat_activity
+                WHERE pid = ${Number(pid)} AND wait_event_type = 'Lock'`,
+          );
+          if (Number(waiting) > 0) break;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+
+        release();
+        const results = await Promise.all([holding, racing]);
+
+        const created = results.map((result) => {
+          assertSuccess(result);
+          return result.value.created;
+        });
+        expect(created).toEqual([1, 0]);
+        const [row, ...more] = await rowsFor(recipientId);
+        expect(more).toEqual([]);
+        expect(row.params).toEqual({ experimentName: "Second" });
+        expect(await deliveriesFor(recipientId)).toHaveLength(1);
+      } finally {
+        await Promise.all([first.close(), second.close()]);
+      }
     });
   });
 

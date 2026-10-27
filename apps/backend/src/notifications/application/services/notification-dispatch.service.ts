@@ -85,26 +85,56 @@ export class NotificationDispatchService {
 
     const actorId = input.actorId ?? null;
     // Nobody hears about their own action, and nobody hears about it twice.
-    const addressed = [...new Set(input.recipientIds)].filter((id) => id !== actorId);
-    const resource = input.resource ?? null;
-    const recipientIds = await this.withoutRefreshedHolders(input, resource, addressed, {
-      params,
-      actorId,
-    });
+    const recipientIds = [...new Set(input.recipientIds)].filter((id) => id !== actorId);
 
     if (recipientIds.length === 0) {
       return success({ created: 0, queued: 0 });
     }
 
+    const resource = input.resource ?? null;
+    const refreshedResource = input.onceUntilRead === true ? resource : null;
+
     // Decided before anything is written, so the bell rows and the emails they owe go
     // in together: a reader never sees a notification whose delivery row is still
-    // coming, or a delivery row whose notification was rolled back.
+    // coming, or a delivery row whose notification was rolled back. A recipient whose
+    // row is refreshed below gets no row inserted, so no delivery either.
     const emailRecipients = await this.emailRecipients(input, definition, recipientIds);
 
     const written = await tryCatch(() =>
       this.database.transaction(async (tx) => {
+        let insertIds = recipientIds;
+
+        // Refreshed in the same transaction as the insert, behind a lock on the event,
+        // so a second dispatch about it waits and then finds the first one's row unread.
+        if (refreshedResource) {
+          const locked = await this.notificationRepository.lockEvent(
+            input.type,
+            refreshedResource,
+            tx,
+          );
+          if (locked.isFailure()) {
+            throw locked.error;
+          }
+
+          const refreshed = await this.notificationRepository.refreshUnread(
+            input.type,
+            refreshedResource,
+            recipientIds,
+            { params, actorId },
+            tx,
+          );
+          if (refreshed.isFailure()) {
+            throw refreshed.error;
+          }
+
+          insertIds = recipientIds.filter((id) => !refreshed.value.has(id));
+          if (insertIds.length === 0) {
+            return { created: 0, queued: 0 };
+          }
+        }
+
         const created = await this.notificationRepository.insertMany(
-          recipientIds.map((recipientId) => ({
+          insertIds.map((recipientId) => ({
             recipientId,
             type: input.type,
             actorId,
@@ -158,42 +188,6 @@ export class NotificationDispatchService {
     this.outbox.nudge();
 
     return success(written.value);
-  }
-
-  /**
-   * The recipients still to be written a row: those whose unread row was refreshed
-   * are left out. A refresh that fails tells everyone again: a duplicate row is the
-   * cheaper mistake than a missed one.
-   */
-  private async withoutRefreshedHolders<T extends NotificationType>(
-    input: DispatchInput<T>,
-    resource: { type: NotificationResourceType; id: string } | null,
-    recipientIds: string[],
-    update: { params: Record<string, string>; actorId: string | null },
-  ): Promise<string[]> {
-    if (input.onceUntilRead !== true || !resource || recipientIds.length === 0) {
-      return recipientIds;
-    }
-
-    const refreshed = await this.notificationRepository.refreshUnread(
-      input.type,
-      resource,
-      recipientIds,
-      update,
-    );
-
-    if (refreshed.isFailure()) {
-      this.logger.error({
-        msg: "Failed to refresh unread notifications, everyone will be told again",
-        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-        operation: "dispatch-notification",
-        type: input.type,
-        error: refreshed.error,
-      });
-      return recipientIds;
-    }
-
-    return recipientIds.filter((id) => !refreshed.value.has(id));
   }
 
   /**
