@@ -37,6 +37,8 @@ MEASUREMENTS_7D_METRIC = "Measurements7d"
 ACTIVE_DEVICES_7D_METRIC = "ActiveDevices7d"
 ACTIVE_EXPERIMENTS_7D_METRIC = "ActiveExperiments7d"
 ACTIVE_CONTRIBUTORS_7D_METRIC = "ActiveContributors7d"
+RESEARCHERS_STARTED_7D_METRIC = "ResearchersStarted7d"
+LOGGERS_STARTED_7D_METRIC = "LoggersStarted7d"
 # Databricks spend at list price, per platform component.
 DATABRICKS_COST_7D_METRIC = "DatabricksCost7dUsd"
 
