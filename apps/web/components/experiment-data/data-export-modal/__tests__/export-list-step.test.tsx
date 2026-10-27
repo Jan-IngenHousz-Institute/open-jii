@@ -132,6 +132,8 @@ describe("ExportListStep", () => {
       status: 500,
     });
     await act(() => queryClient.refetchQueries());
+    // The failed refetch reaches the component a tick later; check after it has rendered.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
     expect(screen.getByText("experimentData.exportModal.exportCount")).toBeInTheDocument();
     expect(screen.queryByText(/experimentData\.exportModal\.error/)).not.toBeInTheDocument();
@@ -311,6 +313,31 @@ describe("ExportListStep", () => {
     expect(toast).toHaveBeenCalledWith({
       description: "experimentData.exportModal.downloadingAll",
     });
+  });
+
+  it("keeps the files and their downloads when a later link refresh fails", async () => {
+    mountExports([multiPartExport]);
+    server.mount(contract.experiments.getExportDownloadLinks, { body: twoPartLinks });
+    const queryClient = createTestQueryClient();
+
+    const { container } = render(<ExportListStep {...defaultProps} />, { queryClient });
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: /experimentData\.exportModal\.showFiles/ }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "experimentData.exportModal.downloadAll" }),
+    );
+    server.mount(contract.experiments.getExportDownloadLinks, {
+      status: 500,
+      body: { message: "Server error" },
+    });
+    await act(() => queryClient.refetchQueries());
+
+    expect(await screen.findByText("experimentData.exportModal.linksError")).toBeInTheDocument();
+    expect(screen.getByText(twoPartLinks.parts[1].fileName)).toBeInTheDocument();
+    expect(container.querySelectorAll("iframe")).toHaveLength(twoPartLinks.parts.length);
   });
 
   it("says the export has expired when its links are refused as expired", async () => {

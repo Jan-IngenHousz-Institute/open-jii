@@ -79,14 +79,16 @@ export function ExportPartsList({
     );
   }
 
-  if (isError) {
+  const errorMessage = t(
+    isExportExpiredError(error)
+      ? "experimentData.exportModal.linkExpired"
+      : "experimentData.exportModal.linksError",
+  );
+
+  if (!data) {
     return (
       <p id={id} className="text-destructive text-xs">
-        {t(
-          isExportExpiredError(error)
-            ? "experimentData.exportModal.linkExpired"
-            : "experimentData.exportModal.linksError",
-        )}
+        {errorMessage}
       </p>
     );
   }
@@ -103,6 +105,8 @@ export function ExportPartsList({
 
   return (
     <div id={id} className="space-y-2 border-t pt-2 text-xs">
+      {/* A failed refresh keeps the links it has, and the downloads already under way. */}
+      {isError && <p className="text-destructive">{errorMessage}</p>}
       <ul className="space-y-1">{data.parts.map(renderPart)}</ul>
       <div className="flex justify-end">
         <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDownloadAll}>
