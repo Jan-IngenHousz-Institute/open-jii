@@ -1,6 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import type { MacroSort } from "@repo/api/domains/macro/macro.schema";
+import type { MacroLanguage, MacroSort } from "@repo/api/domains/macro/macro.schema";
+import type { Visibility } from "@repo/api/domains/visibility/visibility.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 import {
   and,
@@ -54,7 +55,8 @@ import { CACHE_PORT, CachePort } from "../ports/cache.port";
 
 export interface MacroFilter {
   search?: string;
-  language?: "python" | "r" | "javascript";
+  languages?: MacroLanguage[];
+  visibilities?: Visibility[];
   scope?: ResourceScope;
   userId?: string;
   /** Narrow to one owning organization (the org profile's resources showcase). */
@@ -157,8 +159,11 @@ export class MacroRepository {
         );
       }
 
-      if (filter?.language) {
-        conditions.push(eq(macros.language, filter.language));
+      if (filter?.languages?.length) {
+        conditions.push(inArray(macros.language, filter.languages));
+      }
+      if (filter?.visibilities?.length) {
+        conditions.push(inArray(macros.visibility, filter.visibilities));
       }
 
       const accessScope = accessibleResourceCondition({

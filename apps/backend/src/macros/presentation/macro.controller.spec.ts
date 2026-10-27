@@ -296,6 +296,27 @@ describe("MacroController", () => {
       );
     });
 
+    it("passes the indexed language and visibility arrays the web client sends", async () => {
+      const spy = vi
+        .spyOn(listMacrosUseCase, "executePaginated")
+        .mockResolvedValue(success({ items: [], totalCount: 0 }));
+
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.macros.listMacros))
+        .query("language[0]=r&language[1]=javascript&visibility[0]=private&page=1")
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(spy).toHaveBeenCalledWith(
+        1,
+        expect.any(Number),
+        expect.objectContaining({
+          languages: ["r", "javascript"],
+          visibilities: ["private"],
+        }),
+      );
+    });
+
     it("rejects a sort field outside the allowlist", async () => {
       await testApp
         .get(testApp.resolveOrpcPath(contract.macros.listMacros))
@@ -427,10 +448,50 @@ describe("MacroController", () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(listMacrosUseCase.execute).toHaveBeenCalledWith({
         search: "test",
-        language: "python",
+        languages: ["python"],
         scope: "all",
         userId: testUserId,
       });
+    });
+
+    it("filters the unpaged list by a single language and visibility", async () => {
+      const r = await testApp.createMacro({
+        name: "Filtered r",
+        language: "r",
+        createdBy: testUserId,
+        visibility: "private",
+      });
+      const python = await testApp.createMacro({
+        name: "Filtered python",
+        language: "python",
+        createdBy: testUserId,
+        visibility: "private",
+      });
+
+      const response: SuperTestResponse<{ id: string }[]> = await testApp
+        .get(testApp.resolveOrpcPath(contract.macros.listMacros))
+        .query({ language: "r", visibility: "private" })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      const ids = response.body.map((macro) => macro.id);
+      expect(ids).toContain(r.id);
+      expect(ids).not.toContain(python.id);
+    });
+
+    it("rejects an unknown language and an unknown visibility", async () => {
+      const path = testApp.resolveOrpcPath(contract.macros.listMacros);
+
+      await testApp
+        .get(path)
+        .query({ language: "java" })
+        .withAuth(testUserId)
+        .expect(StatusCodes.BAD_REQUEST);
+      await testApp
+        .get(path)
+        .query({ visibility: "hidden" })
+        .withAuth(testUserId)
+        .expect(StatusCodes.BAD_REQUEST);
     });
 
     it("should handle use case failure", async () => {

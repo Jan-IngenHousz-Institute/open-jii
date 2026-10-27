@@ -9,7 +9,7 @@ import initTranslations from "@repo/i18n/server";
 
 interface MacroPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<{ sort?: string; language?: string; visibility?: string }>;
 }
 
 export async function generateMetadata({
@@ -22,13 +22,17 @@ export async function generateMetadata({
 }
 
 export default async function MacroPage({ searchParams }: MacroPageProps) {
-  // Only the default view is fetched ahead; a sorted view's input comes from the client's parsing.
-  const { sort } = await searchParams;
+  // Only the default view is fetched ahead; a sorted or filtered view's input comes from the
+  // client's parsing.
+  const { sort, language, visibility } = await searchParams;
+  const isDefaultView = !sort && !language && !visibility;
 
   return (
     <PageContainer width="fluid" className="space-y-6">
       <ResourceMetricsSummary kind="macro" />
-      <PrefetchedQueries queries={(utils) => (sort ? [] : [macrosListQuery(utils, { page: 1 })])}>
+      <PrefetchedQueries
+        queries={(utils) => (isDefaultView ? [macrosListQuery(utils, { page: 1 })] : [])}
+      >
         <ListMacros />
       </PrefetchedQueries>
     </PageContainer>

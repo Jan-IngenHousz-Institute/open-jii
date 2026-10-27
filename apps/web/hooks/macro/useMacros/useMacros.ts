@@ -3,39 +3,35 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { zMacroSort } from "@repo/api/domains/macro/macro.schema";
-import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 import { isPaginatedList } from "@repo/api/shared/listing";
 
 import { useDebounce } from "../../useDebounce";
 import { useListSorting } from "../../useListSorting";
 import { useSearchPending } from "../../useSearchPending";
 import { macrosListQuery } from "./macros-list-query";
+import { useMacroListFilters } from "./useMacroListFilters";
 
-export function useMacros({
-  initialSearch = "",
-  initialLanguage,
-}: {
-  initialSearch?: string;
-  initialLanguage?: MacroLanguage;
-} = {}) {
+export function useMacros({ initialSearch = "" }: { initialSearch?: string } = {}) {
   const [search, setSearchState] = useState<string>(initialSearch);
   const [debouncedSearch] = useDebounce(search, 300);
-  const [language, setLanguageState] = useState<MacroLanguage | undefined>(initialLanguage);
   const [page, setPage] = useState(1);
   const { sort, setSort, toggleSort } = useListSorting(zMacroSort);
+  const { languages, visibilities, setLanguages, setVisibilities, clearFilters, hasActiveFilters } =
+    useMacroListFilters();
 
   const setSearch = (value: string) => {
     setSearchState(value);
     setPage(1);
   };
 
-  const setLanguage = (value: MacroLanguage | undefined) => {
-    setLanguageState(value);
-    setPage(1);
-  };
-
   const query = useQuery({
-    ...macrosListQuery(orpc, { search: debouncedSearch, language, page, sort }),
+    ...macrosListQuery(orpc, {
+      search: debouncedSearch,
+      page,
+      sort,
+      languages,
+      visibilities,
+    }),
     placeholderData: (prev) => prev,
   });
 
@@ -63,8 +59,6 @@ export function useMacros({
     search,
     debouncedSearch,
     setSearch,
-    language,
-    setLanguage,
     page,
     setPage,
     sort,
@@ -76,5 +70,20 @@ export function useMacros({
       toggleSort(field, multi);
       setPage(1);
     },
+    languages,
+    setLanguages: (values: typeof languages) => {
+      setLanguages(values);
+      setPage(1);
+    },
+    visibilities,
+    setVisibilities: (values: typeof visibilities) => {
+      setVisibilities(values);
+      setPage(1);
+    },
+    clearFilters: () => {
+      clearFilters();
+      setPage(1);
+    },
+    hasActiveFilters,
   };
 }
