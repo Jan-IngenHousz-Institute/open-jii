@@ -20,6 +20,7 @@ from .constants import (
     INGEST_IDLE_METRIC,
     INGEST_LATENCY_METRIC,
     INGESTED_ROWS_METRIC,
+    LOGGERS_STARTED_7D_METRIC,
     MACRO_BACKLOG_METRIC,
     MACRO_FAILED_ROWS_METRIC,
     MACRO_IDLE_METRIC,
@@ -32,6 +33,7 @@ from .constants import (
     MEASUREMENTS_24H_METRIC,
     METRICS_AGE_METRIC,
     PATH_BUCKET_MINUTES,
+    RESEARCHERS_STARTED_7D_METRIC,
     SILENT_DEVICES_DETAIL,
     SILENT_DEVICES_METRIC,
     STALE_EXPERIMENTS_DETAIL,
@@ -40,6 +42,7 @@ from .constants import (
 )
 from .costs import cost_by_component_sql, cost_components
 from .driver_heap import FullCollection, latest_full_collection
+from .first_measurements import loggers_started_sql, researchers_started_sql
 from .macro_failures import (
     MACRO_CAUSES,
     PROTOCOL_WINDOW_HOURS,
@@ -77,6 +80,7 @@ __all__ = [
     "INGEST_BAD_PAYLOAD_RATE_METRIC",
     "INGEST_IDLE_METRIC",
     "INGEST_LATENCY_METRIC",
+    "LOGGERS_STARTED_7D_METRIC",
     "MACRO_BACKLOG_METRIC",
     "MACRO_CAUSES",
     "MACRO_FAILED_ROWS_METRIC",
@@ -91,6 +95,7 @@ __all__ = [
     "METRICS_AGE_METRIC",
     "PATH_BUCKET_MINUTES",
     "PROTOCOL_WINDOW_HOURS",
+    "RESEARCHERS_STARTED_7D_METRIC",
     "SILENT_DEVICES_DETAIL",
     "SILENT_DEVICES_METRIC",
     "STALE_EXPERIMENTS_DETAIL",
@@ -104,10 +109,12 @@ __all__ = [
     "heartbeat_key",
     "hop",
     "latest_full_collection",
+    "loggers_started_sql",
     "minutes_since",
     "observation",
     "previous_bucket",
     "protocol_failures_sql",
+    "researchers_started_sql",
     "run_collectors",
     "to_ndjson",
 ]

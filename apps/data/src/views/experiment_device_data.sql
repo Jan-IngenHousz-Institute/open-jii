@@ -2,8 +2,9 @@ WITH
 -- Each device's newest attributes and its measurement count per experiment and
 -- firmware, taken when someone reads, with its registry-resolved device struct. The
 -- newest row wins by processing time, then measurement time, then id. Silver, since
--- gold carries no firmware, battery or version; a read scans silver's columns for the
--- experiment asked for. ${catalog} is filled in by terraform.
+-- gold carries firmware, battery and version only on rows written after it gained them;
+-- a read scans silver's columns for the experiment asked for. ${catalog} is filled in by
+-- terraform.
 -- Inside the WITH because Unity Catalog drops comments above a view's first keyword.
 devices AS (
   SELECT
