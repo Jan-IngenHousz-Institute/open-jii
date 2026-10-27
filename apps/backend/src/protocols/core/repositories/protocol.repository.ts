@@ -1,6 +1,11 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import type { ProtocolFilter, ProtocolSort } from "@repo/api/domains/protocol/protocol.schema";
+import type {
+  ProtocolFamily,
+  ProtocolFilter,
+  ProtocolSort,
+} from "@repo/api/domains/protocol/protocol.schema";
+import type { Visibility } from "@repo/api/domains/visibility/visibility.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 import {
   and,
@@ -79,6 +84,11 @@ function toProtocolRow(result: {
   return augmentedResult;
 }
 
+export interface ProtocolListFilter {
+  families?: ProtocolFamily[];
+  visibilities?: Visibility[];
+}
+
 @Injectable()
 export class ProtocolRepository {
   constructor(
@@ -122,6 +132,7 @@ export class ProtocolRepository {
     userId?: string,
     organizationId?: string,
     sort?: ProtocolSort,
+    filter?: ProtocolListFilter,
   ) {
     {
       const conditions: (SQL | undefined)[] = [];
@@ -168,6 +179,13 @@ export class ProtocolRepository {
           userId,
         });
         conditions.push(userId ? or(related, eq(protocols.createdBy, userId)) : sql`false`);
+      }
+
+      if (filter?.families?.length) {
+        conditions.push(inArray(protocols.family, filter.families));
+      }
+      if (filter?.visibilities?.length) {
+        conditions.push(inArray(protocols.visibility, filter.visibilities));
       }
 
       const tier = resourceTierExpression({
@@ -234,6 +252,7 @@ export class ProtocolRepository {
     limit?: number,
     organizationId?: string,
     sort?: ProtocolSort,
+    filter?: ProtocolListFilter,
   ): Promise<Result<ProtocolSearchRow[]>> {
     return tryCatch(async () => {
       const { where, orderBy, score } = this.buildListing(
@@ -242,6 +261,7 @@ export class ProtocolRepository {
         userId,
         organizationId,
         sort,
+        filter,
       );
 
       let query = this.baseQuery(score);
@@ -315,6 +335,7 @@ export class ProtocolRepository {
     userId?: string,
     organizationId?: string,
     sort?: ProtocolSort,
+    filter?: ProtocolListFilter,
   ): Promise<Result<{ items: ProtocolSearchRow[]; totalCount: number }>> {
     return tryCatch(async () => {
       const { where, orderBy, score } = this.buildListing(
@@ -323,6 +344,7 @@ export class ProtocolRepository {
         userId,
         organizationId,
         sort,
+        filter,
       );
 
       let rows = this.baseQuery(score);

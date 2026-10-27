@@ -3,6 +3,7 @@
 import { OverviewToolbar } from "@/components/overview-toolbar";
 import React from "react";
 import { ListPagination } from "~/components/list-pagination";
+import { ClearFiltersButton } from "~/components/overview-table/clear-filters-button";
 import {
   createOverviewTableSorting,
   OverviewTable,
@@ -11,8 +12,13 @@ import { getProtocolColumns } from "~/components/overview-table/protocol-columns
 import { ResetSortingButton } from "~/components/overview-table/reset-sorting-button";
 import { useProtocols } from "~/hooks/protocol/useProtocols/useProtocols";
 import { useLocale } from "~/hooks/useLocale";
+import { getSensorFamilyLabel } from "~/util/sensor-family";
 
+import { zProtocolFamily } from "@repo/api/domains/protocol/protocol.schema";
+import { zVisibility } from "@repo/api/domains/visibility/visibility.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
+import { MultiSelectFilter } from "@repo/ui/components/multi-select-filter";
 import { SearchInput } from "@repo/ui/components/search-input";
 
 export function ListProtocols() {
@@ -31,6 +37,12 @@ export function ListProtocols() {
     sort,
     setSort,
     toggleSort,
+    families,
+    setFamilies,
+    visibilities,
+    setVisibilities,
+    clearFilters,
+    hasActiveFilters,
   } = useProtocols();
   const { t } = useTranslation("common");
   const locale = useLocale();
@@ -50,7 +62,34 @@ export function ListProtocols() {
             className="w-full md:w-[220px]"
           />
         }
-        filters={<ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />}
+        filters={
+          <>
+            <MultiSelectFilter
+              title={t("protocols.columns.family")}
+              options={zProtocolFamily.options.map((value) => ({
+                value,
+                label: getSensorFamilyLabel(value),
+              }))}
+              selected={families}
+              onChange={setFamilies}
+              emptyLabel={t("common.filterNoResults")}
+              selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
+            />
+            <MultiSelectFilter
+              title={t("protocols.visibility")}
+              options={zVisibility.options.map((value) => ({
+                value,
+                label: t(`protocols.${value}`),
+              }))}
+              selected={visibilities}
+              onChange={setVisibilities}
+              emptyLabel={t("common.filterNoResults")}
+              selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
+            />
+            <ClearFiltersButton active={hasActiveFilters} onClear={clearFilters} />
+            <ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />
+          </>
+        }
       />
 
       <div
@@ -74,7 +113,20 @@ export function ListProtocols() {
           retryLabel={t("errors.tryAgain")}
           getRowKey={(protocol) => protocol.id}
           getRowHref={(protocol) => `/${locale}/platform/protocols/${protocol.id}`}
-          emptyMessage={t(hasSearch ? "protocols.noMatches" : "protocols.noProtocols")}
+          emptyMessage={t(
+            hasActiveFilters
+              ? "protocols.noFilterMatches"
+              : hasSearch
+                ? "protocols.noMatches"
+                : "protocols.noProtocols",
+          )}
+          emptyAction={
+            hasActiveFilters && (
+              <Button variant="outline" size="sm" onClick={clearFilters}>
+                {t("common.clearFilters")}
+              </Button>
+            )
+          }
         />
 
         {data && data.items.length > 0 && (

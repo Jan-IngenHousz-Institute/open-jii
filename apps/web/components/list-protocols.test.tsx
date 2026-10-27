@@ -1,9 +1,12 @@
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import * as nav from "next/navigation";
+import { describe, expect, it, vi } from "vitest";
+import { getSensorFamilyLabel } from "~/util/sensor-family";
 
 import { contract } from "@repo/api/contract";
+import { zProtocolFamily } from "@repo/api/domains/protocol/protocol.schema";
 
 import { ListProtocols } from "./list-protocols";
 
@@ -122,5 +125,129 @@ describe("ListProtocols", () => {
 
     await user.click(screen.getByRole("button", { name: "common.resetSorting" }));
     await waitFor(() => expect(spy.calls.at(-1)?.query.sort).toBeUndefined());
+  });
+
+  describe("family and visibility filters", () => {
+    function openOnUrl(qs: string) {
+      vi.mocked(nav.usePathname).mockReturnValue("/platform/protocols");
+      vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams(qs));
+    }
+
+    it("offers both filters and hides Clear filters while nothing is picked", () => {
+      server.mount(contract.protocols.listProtocols, { body: envelope([]) });
+
+      render(<ListProtocols />);
+
+      expect(screen.getByRole("button", { name: "protocols.columns.family" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "protocols.visibility" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
+    });
+
+    it("lists the authored families without mobile and filters through the URL and the API", async () => {
+      openOnUrl("");
+      const user = userEvent.setup();
+      const replace = vi.mocked(nav.useRouter().replace);
+      replace.mockClear();
+      const spy = server.mount(contract.protocols.listProtocols, { body: envelope([]) });
+
+      render(<ListProtocols />);
+      await user.click(screen.getByRole("button", { name: "protocols.columns.family" }));
+
+      const labels = screen.getAllByRole("option").map((option) => option.textContent);
+      expect(labels).toEqual(zProtocolFamily.options.map(getSensorFamilyLabel));
+      expect(labels).not.toContain(getSensorFamilyLabel("mobile"));
+      await user.click(screen.getByRole("option", { name: getSensorFamilyLabel("ambyte") }));
+
+      expect(replace).toHaveBeenLastCalledWith("/platform/protocols?family=ambyte", {
+        scroll: false,
+      });
+      await waitFor(() => {
+        expect(spy.calls.at(-1)?.url).toContain("family%5B0%5D=ambyte");
+      });
+      expect(
+        screen.getByRole("button", { name: /^protocols\.columns\.family(?!:)/ }),
+      ).toHaveTextContent("1");
+    });
+
+    it("lists both visibilities and filters by one", async () => {
+      openOnUrl("");
+      const user = userEvent.setup();
+      const replace = vi.mocked(nav.useRouter().replace);
+      replace.mockClear();
+      const spy = server.mount(contract.protocols.listProtocols, { body: envelope([]) });
+
+      render(<ListProtocols />);
+      await user.click(screen.getByRole("button", { name: "protocols.visibility" }));
+
+      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+        "protocols.private",
+        "protocols.public",
+      ]);
+      await user.click(screen.getByRole("option", { name: "protocols.private" }));
+
+      expect(replace).toHaveBeenLastCalledWith("/platform/protocols?visibility=private", {
+        scroll: false,
+      });
+      await waitFor(() => {
+        expect(spy.calls.at(-1)?.url).toContain("visibility%5B0%5D=private");
+      });
+    });
+
+    it("restores a shared view and clears the filters while keeping search and sort", async () => {
+      const sort = encodeURIComponent(JSON.stringify([{ field: "name", direction: "asc" }]));
+      openOnUrl(`sort=${sort}&family=ambyte,multispeq&visibility=private`);
+      const user = userEvent.setup();
+      const replace = vi.mocked(nav.useRouter().replace);
+      replace.mockClear();
+      const spy = server.mount(contract.protocols.listProtocols, {
+        body: envelope([createProtocol({ id: "1", name: "Shared" })]),
+      });
+
+      render(<ListProtocols />);
+
+      expect(
+        screen.getByRole("button", { name: /^protocols\.columns\.family(?!:)/ }),
+      ).toHaveTextContent("2");
+      expect(screen.getByRole("button", { name: /protocols\.visibility/ })).toHaveTextContent("1");
+      await waitFor(() => expect(screen.getByRole("link", { name: "Shared" })).toBeInTheDocument());
+      expect(spy.calls.at(-1)?.url).toContain("family%5B1%5D=multispeq");
+      expect(spy.calls.at(-1)?.url).toContain("visibility%5B0%5D=private");
+
+      await user.type(screen.getByPlaceholderText("protocols.searchProtocols"), "fluor");
+      await waitFor(() => expect(spy.calls.at(-1)?.query.search).toBe("fluor"));
+      await user.click(screen.getByRole("button", { name: "common.clearFilters" }));
+
+      const [url] = replace.mock.lastCall ?? [];
+      expect(url).toContain("sort=");
+      expect(url).not.toContain("family");
+      expect(url).not.toContain("visibility");
+      expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
+      await waitFor(() => {
+        expect(spy.calls.at(-1)?.url).not.toContain("family");
+      });
+      expect(spy.calls.at(-1)?.query.search).toBe("fluor");
+      expect(spy.calls.at(-1)?.query["sort[0][field]"]).toBe("name");
+    });
+
+    it("offers to clear the filters when nothing matches them", async () => {
+      openOnUrl("family=ambit");
+      const user = userEvent.setup();
+      server.mount(contract.protocols.listProtocols, { body: envelope([]) });
+
+      render(<ListProtocols />);
+
+      await waitFor(() =>
+        expect(screen.getByText("protocols.noFilterMatches")).toBeInTheDocument(),
+      );
+      const clearButtons = screen.getAllByRole("button", { name: "common.clearFilters" });
+      expect(clearButtons).toHaveLength(2);
+
+      await user.click(clearButtons[1]);
+
+      await waitFor(() => {
+        expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
+      });
+      await waitFor(() => expect(screen.getByText("protocols.noProtocols")).toBeInTheDocument());
+    });
   });
 });
