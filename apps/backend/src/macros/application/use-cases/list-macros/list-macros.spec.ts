@@ -155,7 +155,7 @@ describe("ListMacrosUseCase", () => {
     await macroRepository.create(jsMacro, testUserId);
 
     // Act - Filter by Python
-    const pythonResult = await useCase.execute({ language: "python" });
+    const pythonResult = await useCase.execute({ languages: ["python"] });
 
     // Assert
     expect(pythonResult.isSuccess()).toBe(true);
@@ -192,7 +192,7 @@ describe("ListMacrosUseCase", () => {
     // Act
     const result = await useCase.execute({
       search: "analysis",
-      language: "python",
+      languages: ["python"],
     });
 
     // Assert
@@ -213,12 +213,94 @@ describe("ListMacrosUseCase", () => {
     // Act
     const result = await useCase.execute({
       search: "nonexistent-macro-search-term",
-      language: "python",
+      languages: ["python"],
     });
 
     // Assert
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value).toEqual([]);
+  });
+
+  describe("language and visibility filters", () => {
+    const ids = (rows: { id: string }[]) => rows.map((row) => row.id);
+
+    it("matches either of two languages and treats an empty list as no filter", async () => {
+      const python = await testApp.createMacro({
+        name: "Py",
+        language: "python",
+        createdBy: testUserId,
+      });
+      const r = await testApp.createMacro({ name: "Rr", language: "r", createdBy: testUserId });
+      const js = await testApp.createMacro({
+        name: "Js",
+        language: "javascript",
+        createdBy: testUserId,
+      });
+
+      const either = await useCase.execute({ languages: ["r", "javascript"], userId: testUserId });
+      assertSuccess(either);
+      expect(ids(either.value)).toEqual(expect.arrayContaining([r.id, js.id]));
+      expect(ids(either.value)).not.toContain(python.id);
+
+      const unfiltered = await useCase.execute({ languages: [], userId: testUserId });
+      assertSuccess(unfiltered);
+      expect(ids(unfiltered.value)).toEqual(expect.arrayContaining([python.id, r.id, js.id]));
+    });
+
+    it("narrows by visibility inside what the caller can see", async () => {
+      const ownPrivate = await testApp.createMacro({
+        name: "Own private",
+        createdBy: testUserId,
+        visibility: "private",
+      });
+      const ownPublic = await testApp.createMacro({
+        name: "Own public",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+      const othersPrivate = await testApp.createMacro({
+        name: "Others private",
+        createdBy: anotherUserId,
+        visibility: "private",
+      });
+
+      const result = await useCase.execute({ visibilities: ["private"], userId: testUserId });
+      assertSuccess(result);
+      expect(ids(result.value)).toContain(ownPrivate.id);
+      expect(ids(result.value)).not.toContain(ownPublic.id);
+      expect(ids(result.value)).not.toContain(othersPrivate.id);
+    });
+
+    it("needs both filters to match, also on a page whose count follows the filter", async () => {
+      const match = await testApp.createMacro({
+        name: "Filter match",
+        language: "r",
+        createdBy: testUserId,
+        visibility: "private",
+      });
+      await testApp.createMacro({
+        name: "Filter public r",
+        language: "r",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+      await testApp.createMacro({
+        name: "Filter private python",
+        language: "python",
+        createdBy: testUserId,
+        visibility: "private",
+      });
+
+      const paged = await useCase.executePaginated(1, 10, {
+        search: "filter",
+        languages: ["r"],
+        visibilities: ["private"],
+        userId: testUserId,
+      });
+      assertSuccess(paged);
+      expect(ids(paged.value.items)).toEqual([match.id]);
+      expect(paged.value.totalCount).toBe(1);
+    });
   });
 });

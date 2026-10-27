@@ -28212,12 +28212,28 @@
             "name": "language",
             "in": "query",
             "schema": {
-              "enum": [
-                "python",
-                "r",
-                "javascript"
+              "anyOf": [
+                {
+                  "enum": [
+                    "python",
+                    "r",
+                    "javascript"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "python",
+                      "r",
+                      "javascript"
+                    ],
+                    "type": "string"
+                  }
+                }
               ],
-              "type": "string"
+              "description": "Filter macros by language; several values match either"
             },
             "allowEmptyValue": true,
             "allowReserved": true
@@ -28289,6 +28305,34 @@
             "allowReserved": true,
             "description": "Up to two ordered sort criteria. Encode as sort[0][field]=name&sort[0][direction]=asc (and sort[1] for a secondary criterion).",
             "example": "sort[0][field]=protocols&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc"
+          },
+          {
+            "name": "visibility",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "private",
+                    "public"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "private",
+                      "public"
+                    ],
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "Filter macros by visibility; several values match either"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
           },
           {
             "name": "fields",
