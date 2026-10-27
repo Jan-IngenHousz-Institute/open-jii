@@ -39,6 +39,19 @@ function aboutOrganization(
   };
 }
 
+function passkeyAdded(params: Record<string, string>): Notification {
+  return {
+    id: "00000000-0000-4000-8000-000000000001",
+    type: "passkey_added",
+    category: "account_security",
+    actor: null,
+    resource: null,
+    params,
+    readAt: null,
+    createdAt: "2026-10-27T09:00:00.000Z",
+  };
+}
+
 async function renderRow(notification: Notification) {
   const { createInstance } = await vi.importActual<typeof translations>("@repo/i18n");
   const i18n = createInstance();
@@ -152,5 +165,19 @@ describe("NotificationRow", () => {
     expect(
       screen.getByText("Your upload of leaf_traits to Drought trial failed"),
     ).toBeInTheDocument();
+  });
+
+  it("names the passkey that was added", async () => {
+    await renderRow(passkeyAdded({ passkeyName: "Google Password Manager" }));
+
+    expect(
+      screen.getByText("A new passkey, Google Password Manager, was added to your account"),
+    ).toBeInTheDocument();
+  });
+
+  it("leaves the name out for a passkey added without one", async () => {
+    await renderRow(passkeyAdded({}));
+
+    expect(screen.getByText("A new passkey was added to your account")).toBeInTheDocument();
   });
 });

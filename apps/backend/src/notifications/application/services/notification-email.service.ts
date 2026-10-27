@@ -181,6 +181,11 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
   project_transfer_completed: aboutResource((experimentId, email, { params, recipientEmail }) =>
     email.sendProjectTransferComplete(recipientEmail, experimentId, params.experimentName),
   ),
+  // No `aboutResource`: an account is not a resource; both emails link to a fixed page.
+  api_key_created: (email, { params, recipientEmail }) =>
+    email.sendApiKeyCreatedNotification({ keyName: params.keyName, email: recipientEmail }),
+  passkey_added: (email, { params, recipientEmail }) =>
+    email.sendPasskeyAddedNotification({ passkeyName: params.passkeyName, email: recipientEmail }),
 };
 
 /** Turns a stored notification into the email its type sends. */
