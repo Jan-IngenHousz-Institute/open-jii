@@ -7,8 +7,11 @@ import { AuthorizationService } from "../../../../authorization/authorization.se
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
+import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
 import type { WorkbookVersionDto } from "../../../core/models/workbook-version.model";
+import type { WorkbookDto } from "../../../core/models/workbook.model";
 import { WorkbookVersionRepository } from "../../../core/repositories/workbook-version.repository";
 import { WorkbookRepository } from "../../../core/repositories/workbook.repository";
 
@@ -22,10 +25,16 @@ export class PublishVersionUseCase {
     private readonly protocolRepository: ProtocolRepository,
     private readonly macroRepository: MacroRepository,
     private readonly authz: AuthorizationService,
+    private readonly sharingRepository: SharingRepository,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   // Always mints a new version. Callers gate via IsWorkbookUpgradableUseCase; reuse the latest if undrifted.
-  async execute(workbookId: string, userId: string): Promise<Result<WorkbookVersionDto>> {
+  async execute(
+    workbookId: string,
+    userId: string,
+    options?: { forExperimentId?: string },
+  ): Promise<Result<WorkbookVersionDto>> {
     const workbookResult = await this.workbookRepository.findById(workbookId);
     if (workbookResult.isFailure()) return workbookResult;
 
@@ -145,8 +154,111 @@ export class PublishVersionUseCase {
         workbookId,
         version: nextVersion,
       });
+      return createResult;
     }
 
+    await this.notifyExperimentsBehind(
+      workbook,
+      createResult.value,
+      userId,
+      options?.forExperimentId,
+    );
+
     return createResult;
+  }
+
+  /**
+   * Tell the admins of every other experiment still on an older version. The
+   * experiment the version was made for is about to be pinned to it, so it is left
+   * out. A failure here leaves the version standing.
+   */
+  private async notifyExperimentsBehind(
+    workbook: WorkbookDto,
+    version: WorkbookVersionDto,
+    userId: string,
+    forExperimentId: string | undefined,
+  ): Promise<void> {
+    const context = {
+      errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+      operation: "publishVersion",
+      workbookId: workbook.id,
+      workbookVersionId: version.id,
+      version: version.version,
+    };
+
+    const behind = await this.workbookRepository.findExperimentsBehindVersion(
+      workbook.id,
+      version.id,
+      forExperimentId,
+    );
+    if (behind.isFailure()) {
+      this.logger.error({
+        msg: "Failed to look up the experiments on an older version, nobody was notified",
+        ...context,
+        error: behind.error,
+      });
+      return;
+    }
+
+    for (const experiment of behind.value) {
+      const adminIds = await this.sharingRepository.listAdminIds("experiment", experiment.id);
+      if (adminIds.isFailure()) {
+        this.logger.error({
+          msg: "Failed to look up the experiment's admins, they were not notified",
+          ...context,
+          experimentId: experiment.id,
+          error: adminIds.error,
+        });
+        continue;
+      }
+
+      // An experiment grant covers nothing on its workbook, so an admin who cannot read
+      // the workbook would be told its name and sent to a Design tab they cannot open.
+      const checks = await Promise.allSettled(
+        adminIds.value.map((adminId) =>
+          this.authz.can(adminId, {
+            resourceType: "workbook",
+            resourceId: workbook.id,
+            action: "read",
+          }),
+        ),
+      );
+      const uncheckedAdminIds = adminIds.value.filter((_, i) => checks[i].status === "rejected");
+      if (uncheckedAdminIds.length > 0) {
+        this.logger.error({
+          msg: "Failed to check whether the experiment's admins can read the workbook, they were not notified",
+          ...context,
+          experimentId: experiment.id,
+          adminIds: uncheckedAdminIds,
+          error: checks.find((check) => check.status === "rejected")?.reason as unknown,
+        });
+      }
+      const readerIds = adminIds.value.filter((_, i) => {
+        const check = checks[i];
+        return check.status === "fulfilled" && check.value.allow;
+      });
+
+      const dispatched = await this.notifications.dispatch({
+        type: "workbook_version_published",
+        recipientIds: readerIds,
+        actorId: userId,
+        resource: { type: "experiment", id: experiment.id },
+        params: {
+          experimentName: experiment.name,
+          workbookName: workbook.name,
+          version: String(version.version),
+        },
+        // Every drifted save on a Design tab creates a version.
+        onceUntilRead: true,
+      });
+      if (dispatched.isFailure()) {
+        this.logger.error({
+          msg: "Failed to notify the experiment's admins of the new version",
+          ...context,
+          experimentId: experiment.id,
+          error: dispatched.error,
+        });
+      }
+    }
   }
 }

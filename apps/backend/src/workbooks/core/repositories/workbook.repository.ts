@@ -15,6 +15,7 @@ import {
   getTableColumns,
   ilike,
   inArray,
+  isNotNull,
   isNull,
   macros,
   ne,
@@ -499,6 +500,32 @@ export class WorkbookRepository {
       augmented.organizationName = result[0].organizationName;
       return augmented;
     });
+  }
+
+  /**
+   * The experiments still running an earlier version of the workbook than this one.
+   * Nothing can be pinned to a version newer than the one just created, so any other
+   * pinned version is an older one.
+   */
+  async findExperimentsBehindVersion(
+    workbookId: string,
+    versionId: string,
+    exceptExperimentId?: string,
+  ): Promise<Result<{ id: string; name: string }[]>> {
+    return tryCatch(() =>
+      this.database
+        .select({ id: experiments.id, name: experiments.name })
+        .from(experiments)
+        .where(
+          and(
+            eq(experiments.workbookId, workbookId),
+            isNotNull(experiments.workbookVersionId),
+            ne(experiments.workbookVersionId, versionId),
+            ne(experiments.status, "archived"),
+            exceptExperimentId ? ne(experiments.id, exceptExperimentId) : undefined,
+          ),
+        ),
+    );
   }
 
   async update(id: string, data: UpdateWorkbookDto): Promise<Result<WorkbookDto[]>> {

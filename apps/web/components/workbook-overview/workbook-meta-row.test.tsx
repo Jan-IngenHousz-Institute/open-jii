@@ -5,7 +5,7 @@ import {
   createWorkbookVersionSummary,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { act, render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
@@ -286,5 +286,180 @@ describe("WorkbookMetaRow", () => {
     await user.click(forkButton);
 
     await waitFor(() => expect(forkButton).toBeDisabled());
+  });
+  describe("publishing a version", () => {
+    const publishVersionButton = () =>
+      screen.findByRole("button", { name: "workbooks.publishVersion" });
+
+    const mountVersions = (versions: number[]) =>
+      server.mount(contract.workbooks.listWorkbookVersions, {
+        body: versions.map((version) =>
+          createWorkbookVersionSummary({ workbookId: "wb-1", version }),
+        ),
+      });
+
+    it("offers it while the draft differs from the latest version", async () => {
+      mountVersions([1]);
+      renderRow({ isUpgradable: true });
+
+      expect(await publishVersionButton()).toBeEnabled();
+    });
+
+    it("offers the first version of a workbook that has none", async () => {
+      // A workbook with no version reports `isUpgradable: false`.
+      renderRow({ isUpgradable: false });
+
+      await screen.findByText("workbooks.draftVersion");
+      expect(await publishVersionButton()).toBeEnabled();
+    });
+
+    it("disables it and says why once the latest version matches the draft", async () => {
+      const user = userEvent.setup();
+      mountVersions([2, 1]);
+      renderRow({ isUpgradable: false });
+
+      await screen.findByText("v2");
+      const button = await publishVersionButton();
+      expect(button).toBeDisabled();
+
+      if (!button.parentElement) throw new Error("tooltip trigger not found");
+      await user.hover(button.parentElement);
+      await waitFor(() =>
+        expect(screen.getAllByText("workbooks.publishVersionUpToDate").length).toBeGreaterThan(0),
+      );
+    });
+
+    it("hides it from a caller who cannot edit the workbook", async () => {
+      mountVersions([1]);
+      renderRow({
+        isUpgradable: true,
+        capabilities: { ...workbook.capabilities, canUpdate: false },
+      });
+
+      await screen.findByText("v1");
+      expect(
+        screen.queryByRole("button", { name: "workbooks.publishVersion" }),
+      ).not.toBeInTheDocument();
+    });
+
+    const mountPublish = (version: number) =>
+      server.mount(contract.workbooks.publishWorkbookVersion, {
+        body: {
+          ...createWorkbookVersionSummary({ workbookId: "wb-1", version }),
+          cells: [],
+          metadata: {},
+        },
+      });
+
+    it("asks before publishing, naming the next version, and sends nothing on the press", async () => {
+      const user = userEvent.setup();
+      mountVersions([1]);
+      const spy = mountPublish(2);
+
+      renderRow({ isUpgradable: true, experimentCount: 3 });
+      await user.click(await publishVersionButton());
+
+      const dialog = await screen.findByRole("alertdialog");
+      expect(
+        within(dialog).getByText("workbooks.publishVersionConfirmTitle:2"),
+      ).toBeInTheDocument();
+      expect(within(dialog).getByText(/workbooks\.publishVersionConfirmBody/)).toHaveTextContent(
+        "workbooks.publishVersionUsedBy:3",
+      );
+      expect(spy.called).toBe(false);
+    });
+
+    it("numbers the first version 1", async () => {
+      const user = userEvent.setup();
+      renderRow({ isUpgradable: false });
+
+      await screen.findByText("workbooks.draftVersion");
+      await user.click(await publishVersionButton());
+
+      const dialog = await screen.findByRole("alertdialog");
+      expect(
+        within(dialog).getByText("workbooks.publishVersionConfirmTitle:1"),
+      ).toBeInTheDocument();
+    });
+
+    it("closes on Cancel or Escape without sending anything", async () => {
+      const user = userEvent.setup();
+      mountVersions([1]);
+      const spy = mountPublish(2);
+
+      renderRow({ isUpgradable: true });
+      await user.click(await publishVersionButton());
+      await user.click(
+        within(await screen.findByRole("alertdialog")).getByRole("button", {
+          name: "common.cancel",
+        }),
+      );
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+
+      await user.click(await publishVersionButton());
+      await screen.findByRole("alertdialog");
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+
+      expect(spy.called).toBe(false);
+    });
+
+    it("publishes this workbook's draft once on confirming and names the version in a toast", async () => {
+      const user = userEvent.setup();
+      mountVersions([1]);
+      const spy = mountPublish(2);
+      const { toast } = await import("@repo/ui/hooks/use-toast");
+
+      renderRow({ isUpgradable: true });
+      await user.click(await publishVersionButton());
+      await user.click(
+        within(await screen.findByRole("alertdialog")).getByRole("button", {
+          name: "workbooks.publishVersion",
+        }),
+      );
+
+      await waitFor(() =>
+        expect(toast).toHaveBeenCalledWith({ description: "workbooks.versionPublished:2" }),
+      );
+      expect(spy.callCount).toBe(1);
+      expect(spy.params).toMatchObject({ id: "wb-1" });
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    });
+
+    it("keeps the dialog open and reports the failure when publishing fails", async () => {
+      const user = userEvent.setup();
+      mountVersions([1]);
+      const spy = server.mount(contract.workbooks.publishWorkbookVersion, { status: 403 });
+      const { toast } = await import("@repo/ui/hooks/use-toast");
+
+      renderRow({ isUpgradable: true });
+      await user.click(await publishVersionButton());
+      const dialog = await screen.findByRole("alertdialog");
+      await user.click(within(dialog).getByRole("button", { name: "workbooks.publishVersion" }));
+
+      await waitFor(() =>
+        expect(toast).toHaveBeenCalledWith({
+          description: "workbooks.publishVersionFailed",
+          variant: "destructive",
+        }),
+      );
+      expect(spy.callCount).toBe(1);
+      expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    });
+
+    it("lets a keyboard reach the reason there is nothing to publish", async () => {
+      mountVersions([2, 1]);
+      renderRow({ isUpgradable: false });
+
+      await screen.findByText("v2");
+      const trigger = (await publishVersionButton()).parentElement;
+      if (!trigger) throw new Error("tooltip trigger not found");
+      expect(trigger).toHaveAttribute("tabindex", "0");
+
+      act(() => trigger.focus());
+      await waitFor(() =>
+        expect(screen.getAllByText("workbooks.publishVersionUpToDate").length).toBeGreaterThan(0),
+      );
+    });
   });
 });
