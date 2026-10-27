@@ -4,11 +4,7 @@ import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
-import { IsWorkbookUpgradableUseCase } from "../../../../workbooks/application/use-cases/is-workbook-upgradable/is-workbook-upgradable";
-import { PublishVersionUseCase } from "../../../../workbooks/application/use-cases/publish-version/publish-version";
-import type { WorkbookVersionDto } from "../../../../workbooks/core/models/workbook-version.model";
-import { WorkbookVersionRepository } from "../../../../workbooks/core/repositories/workbook-version.repository";
-import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
+import { PublishIfDriftedUseCase } from "../../../../workbooks/application/use-cases/publish-if-drifted/publish-if-drifted";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
@@ -25,10 +21,7 @@ export class AttachWorkbookUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly workbookRepository: WorkbookRepository,
-    private readonly workbookVersionRepository: WorkbookVersionRepository,
-    private readonly isWorkbookUpgradableUseCase: IsWorkbookUpgradableUseCase,
-    private readonly publishVersionUseCase: PublishVersionUseCase,
+    private readonly publishIfDriftedUseCase: PublishIfDriftedUseCase,
     private readonly flowRepository: FlowRepository,
     private readonly authz: AuthorizationService,
   ) {}
@@ -63,35 +56,11 @@ export class AttachWorkbookUseCase {
         );
       }
 
-      const workbookResult = await this.workbookRepository.findById(workbookId);
-      if (workbookResult.isFailure()) return workbookResult;
-      if (!workbookResult.value) {
-        return failure(AppError.notFound(`Workbook with ID ${workbookId} not found`));
-      }
-
-      // Pin to the latest version when nothing's drifted; otherwise mint a
-      // new version so the experiment captures the current cells.
-      const latestResult = await this.workbookVersionRepository.getLatestVersion(workbookId);
-      if (latestResult.isFailure()) return latestResult;
-      const latest = latestResult.value;
-
-      const upgradableResult = await this.isWorkbookUpgradableUseCase.execute(workbookResult.value);
-      if (upgradableResult.isFailure()) return upgradableResult;
-
-      let version: WorkbookVersionDto;
-      if (latest && !upgradableResult.value) {
-        version = latest;
-      } else {
-        const versionResult = await this.publishVersionUseCase.execute(workbookId, userId);
-        if (versionResult.isFailure()) return versionResult;
-        version = versionResult.value;
-      }
-
-      if (version.workbookId !== workbookId) {
-        return failure(
-          AppError.notFound(`No valid workbook version found for workbook ${workbookId}`),
-        );
-      }
+      const versionResult = await this.publishIfDriftedUseCase.execute(workbookId, userId, {
+        forExperimentId: experimentId,
+      });
+      if (versionResult.isFailure()) return versionResult;
+      const version = versionResult.value;
 
       const updateResult = await this.experimentRepository.update(experimentId, {
         workbookId,
