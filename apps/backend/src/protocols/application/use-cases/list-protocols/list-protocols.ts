@@ -7,6 +7,7 @@ import type { ResourceScope } from "@repo/api/shared/listing";
 import { Result, success } from "../../../../common/utils/fp-utils";
 import { ResourceMetricsService } from "../../../../metrics/application/resource-metrics.service";
 import { ProtocolDto } from "../../../core/models/protocol.model";
+import type { ProtocolListFilter } from "../../../core/repositories/protocol.repository";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
 
 type ProtocolWithActivity = ProtocolDto & { activity: ResourceSeries | null };
@@ -23,8 +24,17 @@ export class ListProtocolsUseCase {
     scope?: ResourceScope,
     userId?: string,
     sort?: ProtocolSort,
+    filter?: ProtocolListFilter,
   ): Promise<Result<ProtocolDto[]>> {
-    return this.protocolRepository.findAll(search, scope, userId, undefined, undefined, sort);
+    return this.protocolRepository.findAll(
+      search,
+      scope,
+      userId,
+      undefined,
+      undefined,
+      sort,
+      filter,
+    );
   }
 
   async executePaginated(
@@ -34,6 +44,7 @@ export class ListProtocolsUseCase {
     scope?: ResourceScope,
     userId?: string,
     sort?: ProtocolSort,
+    filter?: ProtocolListFilter,
   ): Promise<Result<{ items: ProtocolWithActivity[]; totalCount: number }>> {
     const paged = await this.protocolRepository.findPage(
       page,
@@ -43,6 +54,7 @@ export class ListProtocolsUseCase {
       userId,
       undefined,
       sort,
+      filter,
     );
     if (paged.isFailure()) {
       return paged;

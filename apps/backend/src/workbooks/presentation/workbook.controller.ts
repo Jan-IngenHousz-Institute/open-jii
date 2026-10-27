@@ -21,6 +21,7 @@ import { GetWorkbookVersionUseCase } from "../application/use-cases/get-workbook
 import { GetWorkbookUseCase } from "../application/use-cases/get-workbook/get-workbook";
 import { ListWorkbookVersionsUseCase } from "../application/use-cases/list-workbook-versions/list-workbook-versions";
 import { ListWorkbooksUseCase } from "../application/use-cases/list-workbooks/list-workbooks";
+import { PublishIfDriftedUseCase } from "../application/use-cases/publish-if-drifted/publish-if-drifted";
 import { UpdateWorkbookUseCase } from "../application/use-cases/update-workbook/update-workbook";
 
 @Controller()
@@ -35,6 +36,7 @@ export class WorkbookController {
     private readonly deleteWorkbookUseCase: DeleteWorkbookUseCase,
     private readonly listWorkbookVersionsUseCase: ListWorkbookVersionsUseCase,
     private readonly getWorkbookVersionUseCase: GetWorkbookVersionUseCase,
+    private readonly publishIfDriftedUseCase: PublishIfDriftedUseCase,
     private readonly setVisibilityUseCase: SetVisibilityUseCase,
     private readonly authz: AuthorizationService,
   ) {}
@@ -167,6 +169,20 @@ export class WorkbookController {
 
       if (result.isSuccess()) {
         return formatDatesList(result.value);
+      }
+
+      return throwOrpcFailure(result, this.logger);
+    });
+  }
+
+  @CanAccess({ resource: "workbook", action: "update" })
+  @Implement(workbookContract.publishWorkbookVersion)
+  publishWorkbookVersion(@Session() session: UserSession) {
+    return implement(workbookContract.publishWorkbookVersion).handler(async ({ input }) => {
+      const result = await this.publishIfDriftedUseCase.execute(input.id, session.user.id);
+
+      if (result.isSuccess()) {
+        return formatDates(result.value);
       }
 
       return throwOrpcFailure(result, this.logger);

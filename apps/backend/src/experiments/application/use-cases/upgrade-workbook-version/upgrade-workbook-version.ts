@@ -4,11 +4,7 @@ import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
-import { IsWorkbookUpgradableUseCase } from "../../../../workbooks/application/use-cases/is-workbook-upgradable/is-workbook-upgradable";
-import { PublishVersionUseCase } from "../../../../workbooks/application/use-cases/publish-version/publish-version";
-import type { WorkbookVersionDto } from "../../../../workbooks/core/models/workbook-version.model";
-import { WorkbookVersionRepository } from "../../../../workbooks/core/repositories/workbook-version.repository";
-import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
+import { PublishIfDriftedUseCase } from "../../../../workbooks/application/use-cases/publish-if-drifted/publish-if-drifted";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
@@ -25,10 +21,7 @@ export class UpgradeWorkbookVersionUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly workbookRepository: WorkbookRepository,
-    private readonly workbookVersionRepository: WorkbookVersionRepository,
-    private readonly isWorkbookUpgradableUseCase: IsWorkbookUpgradableUseCase,
-    private readonly publishVersionUseCase: PublishVersionUseCase,
+    private readonly publishIfDriftedUseCase: PublishIfDriftedUseCase,
     private readonly flowRepository: FlowRepository,
     private readonly authz: AuthorizationService,
   ) {}
@@ -54,8 +47,8 @@ export class UpgradeWorkbookVersionUseCase {
 
       // The route guards the experiment; this reads the workbook's current cells.
       // Without a check here, a revoked grantee could still capture the workbook's
-      // later state via an experiment they manage. Before both branches: the
-      // pin-existing path never reaches PublishVersionUseCase.
+      // later state via an experiment they manage. Here, not left to the publish step:
+      // reusing the latest version never reaches PublishVersionUseCase.
       const workbookAccess = await this.authz.can(userId, {
         resourceType: "workbook",
         resourceId: experiment.workbookId,
@@ -69,42 +62,13 @@ export class UpgradeWorkbookVersionUseCase {
         );
       }
 
-      const workbookResult = await this.workbookRepository.findById(experiment.workbookId);
-      if (workbookResult.isFailure()) return workbookResult;
-      if (!workbookResult.value) {
-        return failure(AppError.notFound(`Workbook with ID ${experiment.workbookId} not found`));
-      }
-
-      // Pin to the latest version when nothing's drifted; otherwise mint a
-      // new version capturing the current cells.
-      const latestResult = await this.workbookVersionRepository.getLatestVersion(
+      const versionResult = await this.publishIfDriftedUseCase.execute(
         experiment.workbookId,
+        userId,
+        { forExperimentId: experimentId },
       );
-      if (latestResult.isFailure()) return latestResult;
-      const latest = latestResult.value;
-
-      const upgradableResult = await this.isWorkbookUpgradableUseCase.execute(workbookResult.value);
-      if (upgradableResult.isFailure()) return upgradableResult;
-
-      let version: WorkbookVersionDto;
-      if (latest && !upgradableResult.value) {
-        version = latest;
-      } else {
-        const versionResult = await this.publishVersionUseCase.execute(
-          experiment.workbookId,
-          userId,
-        );
-        if (versionResult.isFailure()) return versionResult;
-        version = versionResult.value;
-      }
-
-      if (version.workbookId !== experiment.workbookId) {
-        return failure(
-          AppError.notFound(
-            `No valid workbook version found for workbook ${experiment.workbookId}`,
-          ),
-        );
-      }
+      if (versionResult.isFailure()) return versionResult;
+      const version = versionResult.value;
 
       const updateResult = await this.experimentRepository.update(experimentId, {
         workbookVersionId: version.id,

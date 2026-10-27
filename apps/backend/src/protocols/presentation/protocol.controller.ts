@@ -129,6 +129,7 @@ export class ProtocolController {
   listProtocols(@Session() session: UserSession) {
     return implement(protocolContract.listProtocols).handler(async ({ input }) => {
       const scope = resolveListScope(input);
+      const filter = { families: input.family, visibilities: input.visibility };
 
       if (input.page !== undefined) {
         const pageSize = input.pageSize ?? DEFAULT_PAGE_SIZE;
@@ -139,6 +140,7 @@ export class ProtocolController {
           scope,
           session.user.id,
           input.sort,
+          filter,
         );
         if (paged.isSuccess()) {
           return toPage(paged.value, input.page, pageSize, formatDatesList);
@@ -151,6 +153,7 @@ export class ProtocolController {
         scope,
         session.user.id,
         input.sort,
+        filter,
       );
 
       if (result.isSuccess()) {
