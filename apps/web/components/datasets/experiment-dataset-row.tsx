@@ -21,7 +21,8 @@ interface ExperimentDatasetRowProps {
   isSupersededAbove: boolean;
   /** Set once any dataset has been deposited, so the column means something. */
   showsDoi: boolean;
-  /** Admins and members retry a deposit. */
+  showsViews: boolean;
+  /** People who can edit the experiment retry a deposit. */
   canPublish: boolean;
   /** Only admins withdraw or open embargoed files early. */
   canManage: boolean;
@@ -32,6 +33,7 @@ export function ExperimentDatasetRow({
   supersededVersion,
   isSupersededAbove,
   showsDoi,
+  showsViews,
   canPublish,
   canManage,
 }: ExperimentDatasetRowProps) {
@@ -117,6 +119,14 @@ export function ExperimentDatasetRow({
       </TableCell>
 
       <TableCell className="text-muted-foreground tabular-nums">{readingsLabel}</TableCell>
+
+      {showsViews ? (
+        <TableCell className="text-muted-foreground tabular-nums">
+          {dataset.viewCount === null
+            ? t("list.noPage")
+            : t("list.views", { count: dataset.viewCount })}
+        </TableCell>
+      ) : null}
 
       {showsDoi ? <TableCell className="py-3">{doiCell()}</TableCell> : null}
 

@@ -104,7 +104,7 @@ async function chooseOrganism(page: Page, dialog: Locator, name: string): Promis
 }
 
 /** The seeded facility predates the type, so the shots give it one and a description. */
-async function setOpenField(page: Page, dialog: Locator): Promise<void> {
+export async function setOpenField(page: Page, dialog: Locator): Promise<void> {
   await dialog.getByRole("combobox").filter({ hasText: "Not set" }).click();
   await page.getByRole("option", { name: "Open field" }).click();
   await dialog.getByPlaceholder("e.g. Greenhouse 2, compartment 3").fill("Field 4, north block");

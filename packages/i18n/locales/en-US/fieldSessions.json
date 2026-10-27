@@ -167,7 +167,8 @@
     "measuredTwiceTitle": "Plots measured twice",
     "measuredTwiceLine": "{{plots}} hold readings nobody asked to repeat. A person decides which reading stands.",
     "resolve": "Resolve in Measured twice",
-    "gridDescription": "{{measured}} of {{total}} plots measured on this day"
+    "gridDescription": "{{measured}} of {{total}} plots measured on this day",
+    "notKnownYet": "Not known yet"
   },
   "measuredTwice": {
     "title": "Measured twice",

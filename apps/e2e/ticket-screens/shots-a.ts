@@ -18,6 +18,7 @@ import { FixtureWarehouse } from "./fixture-warehouse.js";
 import type { Fixture, Resolvable } from "./fixture.js";
 import { resolve } from "./fixture.js";
 import type { TicketShot } from "./shots.js";
+import { setOpenField } from "./study-metadata-shots.js";
 
 const DROUGHT_TRIAL: Resolvable = () => experimentId("Drought trial (example data)");
 
@@ -51,6 +52,7 @@ const funding: TicketShot = {
     await studySection(page).getByRole("button", { name: "Edit" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.waitFor();
+    await setOpenField(page, dialog);
 
     const section = dialog.getByRole("region", { name: "Funding" });
     await section.getByRole("button", { name: "Add funding" }).click();

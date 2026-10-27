@@ -59,7 +59,11 @@ export function SessionTallyRow({ plan, name, style, tally }: SessionTallyRowPro
       </TableCell>
       <TableCell>{renderCount(tally.flaggedUnitIds.length, plots(tally.flaggedUnitIds))}</TableCell>
       <TableCell>
-        {renderCount(tally.failedUploadUnitIds.length, plots(tally.failedUploadUnitIds))}
+        {session.isUploaded ? (
+          renderCount(tally.failedUploadUnitIds.length, plots(tally.failedUploadUnitIds))
+        ) : (
+          <span className="text-muted-foreground">{t("overview.notKnownYet")}</span>
+        )}
       </TableCell>
       <TableCell>
         {session.isUploaded ? null : (

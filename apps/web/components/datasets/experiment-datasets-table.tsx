@@ -20,6 +20,8 @@ export function ExperimentDatasetsTable({
 }: ExperimentDatasetsTableProps) {
   const { t } = useTranslation("datasets");
   const showsDoi = datasets.some((dataset) => dataset.doi !== null || dataset.deposit !== null);
+  // View counts are for the people who publish, and only once a page has been counted.
+  const showsViews = canPublish && datasets.some((dataset) => dataset.viewCount !== null);
 
   const renderRow = (dataset: Dataset, index: number) => {
     const below = datasets.at(index + 1);
@@ -33,6 +35,7 @@ export function ExperimentDatasetsTable({
         supersededVersion={supersededVersion}
         isSupersededAbove={above?.supersedesId === dataset.id}
         showsDoi={showsDoi}
+        showsViews={showsViews}
         canPublish={canPublish}
         canManage={canManage}
       />
@@ -49,6 +52,7 @@ export function ExperimentDatasetsTable({
             <TableHead className="w-32">{t("list.columns.state")}</TableHead>
             <TableHead className="w-48">{t("list.columns.date")}</TableHead>
             <TableHead className="w-36">{t("list.columns.readings")}</TableHead>
+            {showsViews ? <TableHead className="w-28">{t("list.columns.views")}</TableHead> : null}
             {showsDoi ? <TableHead className="w-72">{t("list.columns.doi")}</TableHead> : null}
             {canManage ? (
               <TableHead className="w-12">

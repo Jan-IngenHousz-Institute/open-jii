@@ -152,6 +152,7 @@ interface DatasetOverrides {
   studyDetails?: typeof STUDY_DETAILS | null;
   readingCount?: number | null;
   plotCount?: number | null;
+  viewCount?: number | null;
   createdAt?: string;
 }
 
@@ -175,6 +176,7 @@ function dataset(id: string, experiment: string, version: number, overrides: Dat
     studyDetails: STUDY_DETAILS,
     readingCount: READING_COUNT,
     plotCount: PLOT_COUNT,
+    viewCount: null,
     doi: null,
     deposit: null,
     supersedesId: null,
@@ -893,6 +895,26 @@ const datasetsTabShot: TicketShot = {
   },
 };
 
+/** Version 1 has been public for four weeks, and the Draft has no page to count. */
+const viewCountsShot: TicketShot = {
+  slug: "f20-view-counts",
+  route: datasetsRoute,
+  viewport: VIEWPORT,
+  fixtures: [
+    datasetListFixture((experiment) => [
+      draftVersionTwo(experiment),
+      versionOne(experiment, { viewCount: 214 }),
+    ]),
+  ],
+  prepare: async (page) => {
+    await page.getByText("214 views").waitFor();
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(datasetsList(page), "New", "below");
+    return marker.frame([experimentTitle(page), datasetsTab(page), datasetsList(page)], 24);
+  },
+};
+
 /** Opens a row's admin menu, which holds what is done to a dataset already public. */
 async function openRowMenu(page: Page, version: number): Promise<Locator> {
   await versionRow(page, version)
@@ -1052,4 +1074,5 @@ export const SHOTS_F: readonly TicketShot[] = [
   freezeStepShot,
   freezeConfirmShot,
   measuredTwiceShot,
+  viewCountsShot,
 ];

@@ -236,7 +236,10 @@ const followedEcho: Fixture = {
   install: async (page) => {
     await page.route(
       (url) => url.pathname.endsWith("/standards/followed"),
-      (route) => route.fulfill({ status: 200, json: route.request().postDataJSON() }),
+      (route) => {
+        const sent: unknown = route.request().postDataJSON();
+        return route.fulfill({ status: 200, json: sent });
+      },
     );
   },
 };
@@ -286,6 +289,7 @@ function exampleDataset(id: string, experiment: string, version: number, isDraft
     studyDetails: null,
     readingCount: isDraft ? null : 920,
     plotCount: isDraft ? null : 46,
+    viewCount: null,
     doi: isDraft ? null : "10.5281/zenodo.0000000",
     deposit: null,
     supersedesId: null,

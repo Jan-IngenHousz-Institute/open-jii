@@ -52,6 +52,7 @@
       "state": "State",
       "date": "Date",
       "readings": "Readings",
+      "views": "Views",
       "doi": "DOI",
       "actions": "Actions"
     },
@@ -65,7 +66,10 @@
     "notFrozen": "Counted at Freeze",
     "doiAtFreeze": "After freezing",
     "notDeposited": "Not deposited",
-    "supersedes": "Supersedes version {{version}}"
+    "supersedes": "Supersedes version {{version}}",
+    "views_one": "{{count}} view",
+    "views_other": "{{count}} views",
+    "noPage": "No page yet"
   },
   "actions": {
     "label": "Actions for version {{version}}",

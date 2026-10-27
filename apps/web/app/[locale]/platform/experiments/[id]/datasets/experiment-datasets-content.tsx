@@ -19,8 +19,9 @@ export default function ExperimentDatasetsContent({ params }: ExperimentDatasets
   const { t } = useTranslation("datasets");
   const { data: accessData, isLoading, error } = useExperimentAccess(id);
 
-  // An archived experiment still publishes, so data from a finished study can be cited.
-  const canPublish = Boolean(accessData?.capabilities.canUpdate);
+  // Archived experiments are left out of publishing for now and stay read-only.
+  const canPublish =
+    Boolean(accessData?.capabilities.canUpdate) && accessData?.experiment.status !== "archived";
   // Withdrawing is still possible on an archived experiment, since its datasets stay public.
   const canManage = Boolean(accessData?.isAdmin);
   // Scaffold: ?standards=off shows the tab as it is before the standards block ships.

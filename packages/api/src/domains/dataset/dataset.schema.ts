@@ -144,6 +144,8 @@ export const zDataset = z.object({
   studyDetails: zDatasetStudyDetails.nullable(),
   readingCount: z.number().int().nonnegative().nullable(),
   plotCount: z.number().int().nonnegative().nullable(),
+  /** Views of the dataset page, signed in or not. Null on a Draft, which has no page. */
+  viewCount: z.number().int().nonnegative().nullable(),
   doi: z.string().nullable(),
   deposit: zDatasetDeposit.nullable(),
   supersedesId: z.string().uuid().nullable(),
@@ -280,17 +282,23 @@ export const zWithdrawDatasetBody = z.object({
 });
 
 /** What anyone may read without an account: never a Draft, never files that are embargoed or withdrawn. */
-export const zPublicDataset = zDataset.omit({ excludedReadings: true, deposit: true }).extend({
-  state: zDatasetState.exclude(["draft"]),
-  citation: z.string(),
-  publisher: z.string(),
-  supersededById: z.string().uuid().nullable(),
-  supersededByVersion: z.number().int().positive().nullable(),
-  /** How many readings Curate left out, without saying which. */
-  excludedCount: z.number().int().nonnegative(),
-  /** A sandbox DOI is a test and is never offered as a citation. */
-  depositEnvironment: zDepositEnvironment.nullable(),
-});
+export const zPublicDataset = zDataset
+  .omit({
+    excludedReadings: true,
+    deposit: true,
+    viewCount: true,
+  })
+  .extend({
+    state: zDatasetState.exclude(["draft"]),
+    citation: z.string(),
+    publisher: z.string(),
+    supersededById: z.string().uuid().nullable(),
+    supersededByVersion: z.number().int().positive().nullable(),
+    /** How many readings Curate left out, without saying which. */
+    excludedCount: z.number().int().nonnegative(),
+    /** A sandbox DOI is a test and is never offered as a citation. */
+    depositEnvironment: zDepositEnvironment.nullable(),
+  });
 
 export type DatasetState = z.infer<typeof zDatasetState>;
 export type DatasetAccess = z.infer<typeof zDatasetAccess>;
