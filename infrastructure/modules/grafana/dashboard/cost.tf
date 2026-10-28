@@ -227,8 +227,8 @@ locals {
     ]
   })
 
-  # Every AWS service and Databricks component, read through a label that carries its category,
-  # which the table splits back into two columns.
+  # AWS's services and Databricks' components, read through a label that carries each one's
+  # category, which the table splits back into two columns.
   cost_rows = [
     { id = "reduce", options = { mode = "seriesToRows", reducers = ["firstNotNull", "lastNotNull"], includeTimeField = false } },
     { id = "calculateField", options = { mode = "binary", binary = { left = "Last *", operator = "-", right = "First *" }, alias = "Change" } },
@@ -248,7 +248,7 @@ locals {
   cost_table = {
     type        = "table"
     title       = "Last week, by service and pipeline"
-    description = "Every AWS service and Databricks component, biggest first, last week against the week before. Green cost less, red cost more."
+    description = "The twelve biggest AWS services and Databricks components last week, against the week before. Green cost less, red cost more."
     datasource  = local.heartbeat_datasource
     timeFrom    = "14d"
     fieldConfig = {
@@ -480,9 +480,10 @@ locals {
         title       = "Databricks, with its VMs"
         description = "Databricks' charges at list price plus the EC2 its clusters ran on, which AWS bills, for the latest complete week against the week before."
         targets = [
+          merge(local.cost_week_inputs.aws, { period = "604800" }),
           merge(local.cost_week_inputs.databricks, { period = "604800" }),
           merge(local.cost_week_inputs.vms, { period = "604800" }),
-          merge(local.cost_query, { refId = "total", id = "total", period = "604800", expression = "databricks + vms" }),
+          merge(local.cost_query, { refId = "total", id = "total", period = "604800", expression = "IF(aws > 0 AND databricks > 0, databricks + vms)" }),
         ]
       })
       trend = local.cost_stacks.databricks

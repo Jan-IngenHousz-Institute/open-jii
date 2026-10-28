@@ -139,6 +139,12 @@ variable "metrics_forwarder_function_name" {
   default     = ""
 }
 
+variable "cost_publisher_function_name" {
+  description = "Cost publisher Lambda to watch. Empty leaves its error rule out."
+  type        = string
+  default     = ""
+}
+
 variable "runbook_base_url" {
   description = "Where the repository's runbooks are read, so an alert's runbook_url opens the file"
   type        = string

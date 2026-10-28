@@ -91,6 +91,9 @@ passes:
     note: >-
       what the platform costs by day and month, from Cost Explorer and Databricks' billing tables,
       for the Cost dashboard; 39 and 98 became each producer's weekly figure the same day
+  - date: 2026-10-28
+    range: [116, 116]
+    note: the cost publisher's errors, since a failed run leaves the Cost dashboard showing old figures
 
 metrics:
   # Ingest path
@@ -1957,3 +1960,24 @@ metrics:
     notes: >-
       Everything AWS billed for the month before beyond usage: tax, fees and subscriptions, less any
       credits. On dev it was a steady 21% on top of usage from August to October 2026, all of it tax.
+
+  - num: 116
+    id: cost-publisher-errors
+    name: Cost publisher errors
+    family: observability
+    area: cost
+    source: aws
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: AWS/Lambda
+      metric: Errors
+      stat: Sum
+      dimensions: { FunctionName: "${COST_PUBLISHER_FUNCTION_NAME}" }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/cost-publisher-errors.md
+    notes: >-
+      A run that throws publishes nothing, and every cost panel keeps its last figures. A failed
+      forecast does not throw; the run publishes without it and names the error in its log line.

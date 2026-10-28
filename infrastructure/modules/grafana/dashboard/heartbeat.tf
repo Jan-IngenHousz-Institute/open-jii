@@ -38,13 +38,14 @@ locals {
   heartbeat_ok_colour = "#2c4a33"
 
   # Reading order: can people use the platform, is data arriving, is it processed, do
-  # macros run.
+  # macros run, and is what it costs still being counted.
   heartbeat_daily_areas = [
     { key = "web", title = "Web" },
     { key = "api", title = "API and database" },
     { key = "ingest", title = "Ingest" },
     { key = "lakehouse", title = "Lakehouse" },
     { key = "sandboxes", title = "Sandboxes" },
+    { key = "cost", title = "Cost" },
   ]
 
   heartbeat_alert_height = 6
@@ -832,6 +833,7 @@ locals {
     ECS_CLUSTER_NAME                = var.ecs_cluster_name
     ECS_SERVICE_NAME                = var.ecs_service_name
     METRICS_FORWARDER_FUNCTION_NAME = var.metrics_forwarder_function_name
+    COST_PUBLISHER_FUNCTION_NAME    = var.cost_publisher_function_name
   }
 
   # Grafana's unit ids for the units the catalog declares.

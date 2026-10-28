@@ -24,6 +24,10 @@ Cost Explorer keeps revising recent days. Every run republishes yesterday, the d
 
 AWS dates a whole month's tax and fees on the 1st and adds to them as the month's usage grows. On dev they ran at 21% on top of usage every month from August to October 2026. So no week carries its own share, and the weekly figures are usage only. The month before is compared at the same day with its tax and fees in proportion to its usage by then, since the month so far carries only what has accrued.
 
+## When a run fails
+
+A Grafana rule, `Cost Publisher Errors`, fires on the function's Lambda errors and posts to Slack, and catalogue entry 116 puts it on the daily report's board. A failed forecast does not fail the run: the run publishes everything else and names the error in its log line. See [`docs/runbooks/cost-publisher-errors.md`](../../../../docs/runbooks/cost-publisher-errors.md).
+
 ## Where the code lives
 
 `lambda/index.js` is the handler only: the Cost Explorer reads and the CloudWatch write. Which windows to ask for and how the answers become datapoints live in `packages/monitoring/src/cost.ts`, with vitest coverage.

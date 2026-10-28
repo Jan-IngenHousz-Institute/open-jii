@@ -3136,6 +3136,7 @@ module "grafana_dashboard" {
   # Passed in rather than interpolated: a rule watching a misspelled function is NoData
   # forever, which is either permanently firing or permanently silent.
   metrics_forwarder_function_name = module.metrics_forwarder.function_name
+  cost_publisher_function_name    = module.cost_publisher.function_name
   db_cluster_identifier           = "open-jii-${var.environment}-db-cluster"
 
   # Measured over 14 days on this stream while dev's consumer ran on a schedule: the median
