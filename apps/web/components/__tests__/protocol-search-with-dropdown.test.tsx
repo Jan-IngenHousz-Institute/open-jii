@@ -70,13 +70,14 @@ describe("<ProtocolSearchWithDropdown />", () => {
     expect(screen.getByText("Pick a protocol")).toBeInTheDocument();
   });
 
-  it("names the selected protocol's family by its product name", () => {
-    const { rerender, props } = renderWidget({
+  it("shows the selected protocol and its family on initial render", () => {
+    renderWidget({
       value: "p1",
-      availableProtocols: [createProtocol({ id: "p1", family: "minipar" })],
+      availableProtocols: [
+        createProtocol({ id: "p1", name: "Light measurement", family: "minipar" }),
+      ],
     });
-    // The selection is snapshotted after the first render.
-    rerender(<ProtocolSearchWithDropdown {...props} />);
+    expect(screen.getByText("Light measurement")).toBeInTheDocument();
     expect(screen.getByText(/MiniPAR/)).toBeInTheDocument();
   });
 

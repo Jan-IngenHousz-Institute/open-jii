@@ -229,9 +229,16 @@ export function ProtocolPicker({
                           </p>
                         )}
                       </div>
-                      <Badge variant="outline" className="shrink-0 text-[10px]">
-                        {getSensorFamilyLabel(p.family)}
-                      </Badge>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        {p.sortOrder !== null && (
+                          <Badge className="bg-secondary/30 text-primary text-[10px]">
+                            Preferred
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="text-[10px]">
+                          {getSensorFamilyLabel(p.family)}
+                        </Badge>
+                      </div>
                     </Button>
                   ))
                 ) : (

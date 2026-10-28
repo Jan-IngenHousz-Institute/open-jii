@@ -56,7 +56,9 @@ export function ProtocolSearchWithDropdown({
     }
   }, [value, currentMatch]);
 
-  const selectedProtocol = selectedSnapshotRef.current;
+  const selectedProtocol =
+    currentMatch ??
+    (selectedSnapshotRef.current?.id === value ? selectedSnapshotRef.current : undefined);
 
   const dropdownProtocols = availableProtocols.filter((protocol) => protocol.id !== value);
 
