@@ -4,6 +4,7 @@ import Mail from "nodemailer/lib/mailer";
 
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { renderAccessGrantedNotification } from "@repo/transactional/render/access-granted-notification";
+import { renderApiKeyCreatedNotification } from "@repo/transactional/render/api-key-created-notification";
 import { renderExperimentMadePublicNotification } from "@repo/transactional/render/experiment-made-public-notification";
 import { renderJoinRequestRejected } from "@repo/transactional/render/join-request-rejected";
 import { renderJoinRequestSubmitted } from "@repo/transactional/render/join-request-submitted";
@@ -13,6 +14,7 @@ import { renderOrganizationJoinRequestRejected } from "@repo/transactional/rende
 import { renderOrganizationJoinRequestSubmitted } from "@repo/transactional/render/organization-join-request-submitted";
 import { renderOrganizationMembershipRemoved } from "@repo/transactional/render/organization-membership-removed";
 import { renderOrganizationRoleChanged } from "@repo/transactional/render/organization-role-changed";
+import { renderPasskeyAddedNotification } from "@repo/transactional/render/passkey-added-notification";
 import { renderProjectTransferComplete } from "@repo/transactional/render/project-transfer-complete";
 import { renderResourceDeletedNotification } from "@repo/transactional/render/resource-deleted-notification";
 import { renderTransferRequestConfirmation } from "@repo/transactional/render/transfer-request-confirmation";
@@ -182,6 +184,20 @@ export class NotificationsService {
     ...args: Parameters<typeof renderOrganizationMembershipRemoved>
   ) {
     return renderOrganizationMembershipRemoved(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderApiKeyCreatedNotificationEmail(
+    ...args: Parameters<typeof renderApiKeyCreatedNotification>
+  ) {
+    return renderApiKeyCreatedNotification(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderPasskeyAddedNotificationEmail(
+    ...args: Parameters<typeof renderPasskeyAddedNotification>
+  ) {
+    return renderPasskeyAddedNotification(...args);
   }
 
   // Logs in to the SMTP server without sending anything.
@@ -703,6 +719,86 @@ export class NotificationsService {
           operation: "sendExperimentMadePublicNotification",
           email,
           experimentId,
+          error,
+        }),
+    );
+  }
+
+  async sendApiKeyCreatedNotification(input: { keyName: string; email: string }) {
+    const { keyName, email } = input;
+
+    return await tryCatch(
+      async () => {
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { href: apiKeysUrl } = new URL("/platform/account/api-keys", baseUrl);
+
+        const { html, text } = await this.renderApiKeyCreatedNotificationEmail({
+          host,
+          baseUrl,
+          keyName,
+          apiKeysUrl,
+        });
+
+        await this.dispatch({
+          to: email,
+          subject: "A new API key was added to your openJII account",
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "API key created notification sent",
+          operation: "sendApiKeyCreatedNotification",
+          email,
+          status: "success",
+        });
+      },
+      (error) =>
+        this.sendFailure(error, {
+          msg: "Failed to send API key created notification",
+          operation: "sendApiKeyCreatedNotification",
+          email,
+          error,
+        }),
+    );
+  }
+
+  async sendPasskeyAddedNotification(input: { passkeyName?: string; email: string }) {
+    const { passkeyName, email } = input;
+
+    return await tryCatch(
+      async () => {
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { href: securityUrl } = new URL("/platform/account/security", baseUrl);
+
+        const { html, text } = await this.renderPasskeyAddedNotificationEmail({
+          host,
+          baseUrl,
+          passkeyName,
+          securityUrl,
+        });
+
+        await this.dispatch({
+          to: email,
+          subject: "A new passkey was added to your openJII account",
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Passkey added notification sent",
+          operation: "sendPasskeyAddedNotification",
+          email,
+          status: "success",
+        });
+      },
+      (error) =>
+        this.sendFailure(error, {
+          msg: "Failed to send passkey added notification",
+          operation: "sendPasskeyAddedNotification",
+          email,
           error,
         }),
     );

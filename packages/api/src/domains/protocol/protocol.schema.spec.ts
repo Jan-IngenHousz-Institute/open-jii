@@ -205,6 +205,24 @@ describe("Protocol Schema", () => {
         }).success,
       ).toBe(false);
     });
+    it("turns one family or visibility into a list and keeps a list of them", () => {
+      expect(zProtocolFilterQuery.parse({ family: "ambyte" }).family).toEqual(["ambyte"]);
+      expect(
+        zProtocolFilterQuery.parse({ family: ["ambyte", "multispeq", "ambyte"] }).family,
+      ).toEqual(["ambyte", "multispeq"]);
+      expect(zProtocolFilterQuery.parse({ visibility: "private" }).visibility).toEqual(["private"]);
+      expect(
+        zProtocolFilterQuery.parse({ visibility: ["public", "private", "public"] }).visibility,
+      ).toEqual(["public", "private"]);
+    });
+
+    it("rejects the mobile family and an unknown visibility, and leaves both filters optional", () => {
+      expect(zProtocolFilterQuery.safeParse({ family: "mobile" }).success).toBe(false);
+      expect(zProtocolFilterQuery.safeParse({ visibility: "hidden" }).success).toBe(false);
+      const parsed = zProtocolFilterQuery.parse({});
+      expect(parsed.family).toBeUndefined();
+      expect(parsed.visibility).toBeUndefined();
+    });
   });
 
   describe("zProtocolIdPathParam", () => {

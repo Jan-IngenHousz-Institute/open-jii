@@ -53,11 +53,6 @@ variable "kinesis_shard_count" {
   type        = number
 }
 
-variable "databricks_cost_components" {
-  description = "Components the heartbeat export prices Databricks spend under, which the weekly report sums and charts"
-  type        = list(string)
-}
-
 variable "storage_buckets" {
   description = "S3 buckets the Throughput and storage dashboard sizes, by what they hold"
   type        = map(string)
@@ -146,6 +141,12 @@ variable "macro_latency_threshold_seconds" {
 
 variable "metrics_forwarder_function_name" {
   description = "Forwarder Lambda to watch. Empty leaves the self-health rules out entirely."
+  type        = string
+  default     = ""
+}
+
+variable "cost_publisher_function_name" {
+  description = "Cost publisher Lambda to watch. Empty leaves its error rule out."
   type        = string
   default     = ""
 }

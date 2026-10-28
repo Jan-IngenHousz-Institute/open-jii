@@ -2230,6 +2230,100 @@ resource "grafana_rule_group" "monitoring_self_health" {
   }
 }
 
+# The cost publisher is the only producer of what AWS bills. A run that throws publishes nothing, and
+# the Cost dashboard keeps showing its last figures as though they were current.
+resource "grafana_rule_group" "cost_publisher_health" {
+  count = var.cost_publisher_function_name != "" ? 1 : 0
+
+  provider         = grafana.amg
+  name             = "Cost Publisher Health"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  rule {
+    name      = "Cost Publisher Errors"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Lambda"
+        metricName = "Errors"
+        statistic  = "Sum"
+        dimensions = {
+          FunctionName = var.cost_publisher_function_name
+        }
+      })
+
+      relative_time_range {
+        from = 3600
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "The cost publisher threw, so the run published nothing. The Cost dashboard and the weekly report's Cost section keep showing the last figures that landed."
+      summary          = "Cost publisher is failing to publish"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/cost-publisher-errors.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["cost-publisher-errors"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "monitoring"
+      metric_id = "cost-publisher-errors"
+    }
+  }
+}
+
 # The lakehouse export's dead-man. It watches a Databricks job rather than a Lambda, so
 # it is not tied to a function name that could be empty.
 resource "grafana_rule_group" "collector_liveness" {

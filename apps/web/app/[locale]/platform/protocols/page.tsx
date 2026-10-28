@@ -9,7 +9,7 @@ import initTranslations from "@repo/i18n/server";
 
 interface ProtocolPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<{ sort?: string; family?: string; visibility?: string }>;
 }
 
 export async function generateMetadata({
@@ -22,14 +22,16 @@ export async function generateMetadata({
 }
 
 export default async function ProtocolPage({ searchParams }: ProtocolPageProps) {
-  // Only the default view is fetched ahead; a sorted view's input comes from the client's parsing.
-  const { sort } = await searchParams;
+  // Only the default view is fetched ahead; a sorted or filtered view's input comes from the
+  // client's parsing.
+  const { sort, family, visibility } = await searchParams;
+  const isDefaultView = !sort && !family && !visibility;
 
   return (
     <PageContainer width="fluid" className="space-y-6">
       <ResourceMetricsSummary kind="protocol" />
       <PrefetchedQueries
-        queries={(utils) => (sort ? [] : [protocolsListQuery(utils, { page: 1 })])}
+        queries={(utils) => (isDefaultView ? [protocolsListQuery(utils, { page: 1 })] : [])}
       >
         <ListProtocols />
       </PrefetchedQueries>

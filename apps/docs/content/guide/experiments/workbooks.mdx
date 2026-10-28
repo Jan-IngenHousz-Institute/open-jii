@@ -121,10 +121,13 @@ The workbook's owner, anyone with **Can edit** on the workbook, and owners and
 admins of the organization that owns it can edit the live draft. Workbooks
 autosave. Saving the draft does not change what an experiment runs: a new
 version is created when someone who can edit an experiment attaches the workbook
-or upgrades the experiment to it, and either there is no version yet or the
-draft, or the code of a protocol or macro it uses, has changed since the latest
-one. Editing the workbook from an experiment's **Design** tab moves that
-experiment to the new version on each save. If you cannot edit a protocol or
+or upgrades the experiment to it, or when someone who can edit the workbook
+selects **Publish & notify** beside the version on the workbook's page, and either
+there is no version yet or the draft, or the code of a protocol or macro it uses,
+has changed since the latest one. **Publish & notify** moves no experiment: each
+stays on its version, and its admins are notified as described below. Editing the
+workbook from an experiment's **Design** tab moves that experiment to the new
+version on each save. If you cannot edit a protocol or
 macro the workbook uses, fork it before editing so the workbook points to your
 copy.
 
@@ -135,8 +138,11 @@ experiment and adjust it. This is the recommended way to start from a
 someone else published.
 
 An experiment continues to use its pinned version until someone with **Can
-edit** changes it. A newer version produces an update indicator. Before
-upgrading, open the review:
+edit** changes it. A newer version produces an update indicator, and the admins
+of every experiment still on an older version are told in the bell, with a link
+to that experiment's **Design** tab. Each admin gets one notification, never by
+email, and it names the latest version until they open it. Before upgrading,
+open the review:
 
 - compare added, removed, and changed cells;
 - review protocol and macro code changes;

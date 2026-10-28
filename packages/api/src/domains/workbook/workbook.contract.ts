@@ -47,6 +47,10 @@ export const workbookContract = {
     .route({ method: "GET", path: "/api/v1/workbooks/{id}/versions", successStatus: 200 })
     .input(zWorkbookIdPathParam)
     .output(zWorkbookVersionList),
+  publishWorkbookVersion: oc
+    .route({ method: "POST", path: "/api/v1/workbooks/{id}/versions", successStatus: 200 })
+    .input(zWorkbookIdPathParam)
+    .output(zWorkbookVersion),
   getWorkbookVersion: oc
     .route({
       method: "GET",

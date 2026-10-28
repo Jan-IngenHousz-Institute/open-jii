@@ -130,14 +130,20 @@ const { mockRouter } = vi.hoisted(() => ({
 vi.mock("@repo/i18n", () => ({
   useTranslation: (_ns?: string) => ({
     t: (key: string, options?: Record<string, unknown>) =>
-      (key === "signInMethods.passkeysCount" || key === "sharing.collaboratorCount") &&
+      (key === "signInMethods.passkeysCount" ||
+        key === "sharing.collaboratorCount" ||
+        key === "workbooks.publishVersionUsedBy") &&
       typeof options?.count === "number"
         ? `${key}:${options.count}`
-        : key === "joinCode.redeemed" && typeof options?.joined === "number"
-          ? `${key}:${options.joined}`
-          : key === "workbooks.duplicateName" && typeof options?.name === "string"
-            ? `Fork of ${options.name}`
-            : key,
+        : (key === "workbooks.publishVersionConfirmTitle" ||
+              key === "workbooks.versionPublished") &&
+            typeof options?.version === "number"
+          ? `${key}:${options.version}`
+          : key === "joinCode.redeemed" && typeof options?.joined === "number"
+            ? `${key}:${options.joined}`
+            : key === "workbooks.duplicateName" && typeof options?.name === "string"
+              ? `Fork of ${options.name}`
+              : key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
   useCurrentLocale: () => "en-US",

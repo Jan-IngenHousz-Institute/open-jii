@@ -10,6 +10,10 @@
       "types": "./src/access.ts",
       "default": "./dist/access.js"
     },
+    "./passkey": {
+      "types": "./src/passkey.ts",
+      "default": "./dist/passkey.js"
+    },
     "./organization": {
       "types": "./src/organization/plugin.ts",
       "default": "./dist/organization/plugin.js"
