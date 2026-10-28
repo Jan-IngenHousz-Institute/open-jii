@@ -17,7 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@repo/ui/components/dialog";
-import { toast } from "@repo/ui/hooks/use-toast";
 
 const DISMISSED_KEY = "openjii.passkey-prompt-dismissed";
 const COUNT_KEY = "openjii.passkey-prompt-count";
@@ -79,14 +78,16 @@ export function PasskeyCreatePrompt({ userId, sessionId }: { userId: string; ses
     setOpen(false);
   };
 
-  const handleCreate = async () => {
-    try {
-      await addPasskey.mutateAsync({});
-      localStorage.setItem(dismissedKey, "true");
-      setCreated(true);
-    } catch {
-      toast({ description: t("passkeys.addError"), variant: "destructive" });
-    }
+  const handleCreate = () => {
+    addPasskey.mutate(
+      {},
+      {
+        onSuccess: () => {
+          localStorage.setItem(dismissedKey, "true");
+          setCreated(true);
+        },
+      },
+    );
   };
 
   return (
