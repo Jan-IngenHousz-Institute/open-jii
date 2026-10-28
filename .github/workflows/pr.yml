@@ -532,9 +532,12 @@ jobs:
         include:
           - environment: dev
             github_environment: dev
-          # Holds the read-only plan role; `prod` itself admits only main and release branches.
+            refresh: true
+          # prod-plan holds read-only credentials, which cannot read every resource, so the plan
+          # compares the change with the state. Drift shows in the release's plan.
           - environment: prod
             github_environment: prod-plan
+            refresh: false
       fail-fast: false
     environment: ${{ matrix.github_environment }}
     permissions:
@@ -598,3 +601,4 @@ jobs:
         uses: ./.github/actions/tofu/tofu-plan
         with:
           lock: false
+          refresh: ${{ matrix.refresh }}

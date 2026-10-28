@@ -43,6 +43,7 @@ jobs:
     name: Detect Changes
     runs-on: ubuntu-latest
     outputs:
+      deploy_sha: ${{ steps.pin.outputs.sha }}
       infra_changed: ${{ steps.infra.outputs.changed }}
       affected_apps: ${{ steps.apps.outputs.affected_apps }}
       has_affected_apps: ${{ steps.apps.outputs.has_affected_apps }}
@@ -77,11 +78,33 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # The branch policy and the prod role's ref condition both check the branch the run
+      # started from, not what it checks out, so the ref input is checked here. Every job then
+      # deploys this one commit, even if the branch moves after the approval.
+      - name: Pin the commit to deploy
+        id: pin
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+        run: |
+          SHA=$(git rev-parse HEAD)
+          if [ "$TARGET_ENV" = "prod" ]; then
+            case "$GITHUB_REF" in
+              refs/heads/main | refs/heads/release/*) ;;
+              *) echo "::error::Prod deploys start from main or a release branch, not $GITHUB_REF"; exit 1 ;;
+            esac
+            if [ "$SHA" != "$GITHUB_SHA" ]; then
+              echo "::error::The ref input resolves to ${SHA:0:7}, but this run started from ${GITHUB_SHA:0:7}. Start the release from the branch you want to deploy."
+              exit 1
+            fi
+          fi
+          echo "Deploying ${SHA:0:7}"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
       - name: Detect Infra Changes
         id: infra
         env:
           BASE: ${{ github.event.before }}
-          HEAD: ${{ inputs.ref || github.sha }}
+          HEAD: ${{ steps.pin.outputs.sha }}
         run: |
           # Did this push change infrastructure/ or the SQL views OpenTofu reads from apps/data?
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
@@ -110,9 +133,11 @@ jobs:
         id: apps
         uses: ./.github/actions/detect-affected-packages
 
-  # Required manual approval before anything is applied or deployed. Runs on
-  # every deploy that would change something, even when no infrastructure
-  # changed (tofu plan/apply skipped), so app-only deploys are gated too.
+  # The one approval a prod deploy waits for, before anything is applied or
+  # deployed. Runs on every deploy that would change something, even when no
+  # infrastructure changed, so app-only deploys are gated too. Prod binds
+  # prod-approval, which carries the reviewers; dev binds its own environment,
+  # which has none, so dev deploys pass straight through.
   approval-gate:
     name: Approval Gate
     needs: [detect]
@@ -129,7 +154,7 @@ jobs:
       contains(fromJSON(needs.detect.outputs.affected_apps), 'macro-sandbox') ||
       contains(fromJSON(needs.detect.outputs.affected_apps), 'calibration-sandbox')
     runs-on: ubuntu-latest
-    environment: approval-gate
+    environment: ${{ inputs.environment == 'prod' && 'prod-approval' || inputs.environment }}
     permissions:
       contents: read
     steps:
@@ -146,7 +171,7 @@ jobs:
     uses: ./.github/workflows/tofu.yml
     with:
       environment: ${{ inputs.environment }}
-      ref: ${{ inputs.ref || github.sha }}
+      ref: ${{ needs.detect.outputs.deploy_sha }}
       tofu_version: "1.9.0"
     secrets: inherit
 
@@ -169,7 +194,7 @@ jobs:
     with:
       environment: ${{ inputs.environment }}
       timeout_minutes: 10
-      ref: ${{ inputs.ref || github.sha }}
+      ref: ${{ needs.detect.outputs.deploy_sha }}
     secrets: inherit
 
   deploy-backend:
@@ -188,7 +213,7 @@ jobs:
     uses: ./.github/workflows/deploy-backend.yml
     with:
       environment: ${{ inputs.environment }}
-      ref: ${{ inputs.ref || github.sha }}
+      ref: ${{ needs.detect.outputs.deploy_sha }}
     secrets: inherit
 
   deploy-frontend:
@@ -207,7 +232,7 @@ jobs:
     uses: ./.github/workflows/deploy-nextjs-opennext.yml
     with:
       environment: ${{ inputs.environment }}
-      ref: ${{ inputs.ref || github.sha }}
+      ref: ${{ needs.detect.outputs.deploy_sha }}
     secrets: inherit
 
   deploy-docs:
@@ -225,7 +250,7 @@ jobs:
     uses: ./.github/workflows/deploy-docs.yml
     with:
       environment: ${{ inputs.environment }}
-      ref: ${{ inputs.ref || github.sha }}
+      ref: ${{ needs.detect.outputs.deploy_sha }}
     secrets: inherit
 
   deploy-databricks:
@@ -247,7 +272,7 @@ jobs:
     uses: ./.github/workflows/deploy-databricks.yml
     with:
       environment: ${{ inputs.environment }}
-      ref: ${{ inputs.ref || github.sha }}
+      ref: ${{ needs.detect.outputs.deploy_sha }}
     secrets: inherit
 
   deploy-macro-sandbox:
@@ -278,7 +303,7 @@ jobs:
     uses: ./.github/workflows/deploy-macro-sandbox.yml
     with:
       environment: ${{ inputs.environment }}
-      ref: ${{ inputs.ref || github.sha }}
+      ref: ${{ needs.detect.outputs.deploy_sha }}
       languages: ${{ (inputs.deploy_all || contains(inputs.deploy_app, 'macro-sandbox')) && '["python","javascript","r"]' || needs.detect.outputs.macro_sandbox_languages }}
     secrets: inherit
 
@@ -310,5 +335,5 @@ jobs:
     uses: ./.github/workflows/deploy-calibration-sandbox.yml
     with:
       environment: ${{ inputs.environment }}
-      ref: ${{ inputs.ref || github.sha }}
+      ref: ${{ needs.detect.outputs.deploy_sha }}
     secrets: inherit
