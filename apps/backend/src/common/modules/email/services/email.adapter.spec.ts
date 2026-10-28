@@ -404,4 +404,32 @@ describe("EmailAdapter", () => {
       );
     });
   });
+
+  describe("sendApiKeyCreatedNotification", () => {
+    it("delegates to NotificationsService with the input unchanged", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendApiKeyCreatedNotification")
+        .mockResolvedValue(success(undefined));
+      const input = { keyName: "Field laptop", email: "owner@example.com" };
+
+      const result = await adapter.sendApiKeyCreatedNotification(input);
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
+    });
+  });
+
+  describe("sendPasskeyAddedNotification", () => {
+    it("delegates to NotificationsService with the input unchanged", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendPasskeyAddedNotification")
+        .mockResolvedValue(success(undefined));
+      const input = { passkeyName: "Google Password Manager", email: "owner@example.com" };
+
+      const result = await adapter.sendPasskeyAddedNotification(input);
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
+    });
+  });
 });
