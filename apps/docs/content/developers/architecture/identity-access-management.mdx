@@ -292,9 +292,9 @@ it is claimed on `/platform/account/invitations` through Better Auth's own
 organization owns and joining is the recipient's decision to make.
 
 The same exact-path mechanism still carries the _resource_ invitation auto-accept in
-the users module, which is why its OAuth callback hooks are declared as
-`/callback/:id` and `/oauth2/callback/:providerId` — those are Better Auth's own
-route strings, compared whole, rather than patterns being matched.
+the users module, which is why its OAuth callback hook is declared as `/callback/:id`:
+that is Better Auth's own route string, compared whole, rather than a pattern being
+matched. GitHub and ORCID both complete sign-in through it.
 
 For per-resource decisions inside the Nest app, controllers declare policy
 instead of reproducing membership checks:

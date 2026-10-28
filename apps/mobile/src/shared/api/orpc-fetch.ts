@@ -3,7 +3,7 @@ import { getSessionToken, hasSessionToken } from "~/shared/api/session-cookie";
 // Auth seam, injected by shared/composition/auth-wiring.ts at module load so
 // shared/api carries no dependency on the auth feature.
 export interface AuthRefreshHandler {
-  getCookie(): string | null | undefined;
+  getCookie(): Promise<string | null | undefined>;
   hasCachedSession(): boolean;
   refreshSession(): Promise<boolean>;
   signOut(): Promise<void>;
@@ -30,7 +30,7 @@ export async function orpcFetch(
   request: Request,
   init: RequestInit | undefined,
 ): Promise<Response> {
-  const cookie = authHandler?.getCookie();
+  const cookie = await authHandler?.getCookie();
   const send = (requestCookie: string | null | undefined) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -59,20 +59,20 @@ export async function orpcFetch(
     const sentToken = getSessionToken(cookie);
     // A 401 for a session that has since been replaced says nothing about the
     // current one. Better Auth keeps the token when getSession slides it.
-    const sentCurrentSession = () => getSessionToken(handler.getCookie()) === sentToken;
+    const sentCurrentSession = async () => getSessionToken(await handler.getCookie()) === sentToken;
     if (sentToken) {
-      if (!sentCurrentSession()) return result;
-      if ((await handler.refreshSession()) && sentCurrentSession()) {
-        result = await send(handler.getCookie());
+      if (!(await sentCurrentSession())) return result;
+      if ((await handler.refreshSession()) && (await sentCurrentSession())) {
+        result = await send(await handler.getCookie());
       }
-      if (result.status === 401 && sentCurrentSession()) {
+      if (result.status === 401 && (await sentCurrentSession())) {
         await handler.signOut();
       }
-    } else if (hasSessionToken(handler.getCookie())) {
+    } else if (hasSessionToken(await handler.getCookie())) {
       // Sent before a sign-in stored its token. Only a read is replayed under the
       // new session; a write was meant for whoever the app showed when it started.
       if (SAFE_METHODS.has(request.method)) {
-        result = await send(handler.getCookie());
+        result = await send(await handler.getCookie());
       }
     } else if (handler.hasCachedSession()) {
       // Signing out with no session would wipe an OAuth sign-in in progress, but

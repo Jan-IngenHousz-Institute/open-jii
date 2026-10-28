@@ -34,11 +34,8 @@ describe("auth hook route literals", () => {
       expect(hookPath(hook, "handleOAuthCallback")).toBe(callbackOAuth.path);
     });
 
-    it("matches Better Auth's generic OAuth callback route", () => {
-      const { oAuth2Callback } = genericOAuth({ config: [] }).endpoints;
-
-      expect(oAuth2Callback.path).toBe("/oauth2/callback/:providerId");
-      expect(hookPath(hook, "handleGenericOAuthCallback")).toBe(oAuth2Callback.path);
+    it("relies on generic OAuth providers using the standard callback route", () => {
+      expect(genericOAuth({ config: [] })).not.toHaveProperty("endpoints");
     });
 
     it("registers the sign-in paths auto-accept also rides on", () => {

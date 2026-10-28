@@ -39,7 +39,7 @@ const REFRESH_TIMEOUT_MS = 8_000;
  */
 export async function refreshSession(): Promise<boolean> {
   const authClient = getAuthClient();
-  const token = getSessionToken(authClient.getCookie()) ?? "";
+  const token = getSessionToken(await authClient.getCookie()) ?? "";
   let refresh = refreshesInFlight.get(token);
   if (!refresh) {
     const controller = new AbortController();

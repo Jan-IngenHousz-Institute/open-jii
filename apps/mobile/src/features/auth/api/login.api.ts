@@ -8,8 +8,8 @@ export async function signInWithGitHub() {
 export async function signInWithOrcid() {
   const authClient = getAuthClient();
   // Absolute URL with the app scheme so the OAuth provider redirects back into the app.
-  await authClient.signIn.oauth2({
-    providerId: "orcid",
+  await authClient.signIn.social({
+    provider: "orcid",
     callbackURL: "openjii://(tabs)/",
   });
 }

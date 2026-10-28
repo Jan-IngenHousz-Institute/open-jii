@@ -4,7 +4,7 @@ import { deferred } from "~/shared/testing/deferred";
 
 const { mockGetSession, mockGetCookie } = vi.hoisted(() => ({
   mockGetSession: vi.fn(),
-  mockGetCookie: vi.fn<() => string>(),
+  mockGetCookie: vi.fn<() => Promise<string>>(),
 }));
 
 vi.mock("~/features/auth/services/auth", () => ({
@@ -15,7 +15,7 @@ describe("refreshSession", () => {
   beforeEach(() => {
     mockGetSession.mockReset();
     mockGetCookie.mockReset();
-    mockGetCookie.mockReturnValue("better-auth.dev.session_token=token-a");
+    mockGetCookie.mockResolvedValue("better-auth.dev.session_token=token-a");
   });
 
   it("returns true when getSession resolves with a valid session", async () => {
@@ -73,12 +73,14 @@ describe("refreshSession", () => {
       expect(await first).toBe(false);
 
       const second = refreshSession();
+      await vi.advanceTimersByTimeAsync(0);
       expect(mockGetSession).toHaveBeenCalledTimes(2);
 
       // A late settle of the old upstream must not evict the new refresh.
       stuck.resolve({ data: { session: { id: "s1" } } });
       await vi.advanceTimersByTimeAsync(0);
       const third = refreshSession();
+      await vi.advanceTimersByTimeAsync(0);
       expect(mockGetSession).toHaveBeenCalledTimes(2);
 
       fresh.resolve({ data: { session: { id: "s2" } } });
@@ -107,7 +109,7 @@ describe("refreshSession", () => {
     mockGetSession.mockReturnValueOnce(first.promise);
     const forTokenA = refreshSession();
 
-    mockGetCookie.mockReturnValue("better-auth.dev.session_token=token-b");
+    mockGetCookie.mockResolvedValue("better-auth.dev.session_token=token-b");
     mockGetSession.mockResolvedValueOnce({ data: { session: { id: "s-b" } } });
     expect(await refreshSession()).toBe(true);
     expect(mockGetSession).toHaveBeenCalledTimes(2);
