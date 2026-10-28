@@ -166,13 +166,23 @@ jobs:
 
       - name: Notify on Failure
         if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          TARGET: ${{ matrix.secret_environment }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          echo "❌ Grafana token rotation failed for environment: ${{ matrix.environment }}"
+          echo "❌ Grafana token rotation failed for environment: $TARGET"
           echo ""
           echo "Workflow: ${{ github.workflow }}"
           echo "Run ID: ${{ github.run_id }}"
-          echo "Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "Run URL: $RUN_URL"
           echo ""
           echo "Please investigate the logs above and rotate the token manually if needed."
+
+          # A token lives 30 days and rotates every 15, so one failure leaves about two weeks.
+          TEXT=":warning: Grafana token rotation failed for \`$TARGET\`. The current token expires within 30 days of its last rotation, and OpenTofu runs fail on Grafana after that. Re-run or fix: $RUN_URL"
+          jq -n --arg text "$TEXT" '{text: $text}' \
+            | curl -fsS -X POST -H 'Content-Type: application/json' --data @- "$SLACK_WEBHOOK_URL" \
+            || echo "::warning::Could not post the failure to Slack"
 
           exit 1
