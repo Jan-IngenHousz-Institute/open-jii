@@ -28,7 +28,7 @@ def sanitized_questions(questions: Column) -> Column:
     """Each question's label as a key, with its answer.
 
     A key shared within one measurement would make the map built from these fail, so a shared key
-    takes its question's text as a suffix, or a position when the text adds nothing.
+    takes its question's text as a suffix, or else the next position no other key holds.
     """
     present = F.filter(questions, lambda q: q.isNotNull())
     with_bases = F.transform(
@@ -50,20 +50,48 @@ def sanitized_questions(questions: Column) -> Column:
                 F.when(shared, with_text).otherwise(base).alias("candidate"),
             )
 
-        def numbered(candidates: Column) -> Column:
-            def key(item: Column, i: Column) -> Column:
+        def counted(candidates: Column) -> Column:
+            def count(item: Column, i: Column) -> Column:
                 seen = F.size(
                     F.filter(F.slice(candidates, 1, i + 1), lambda c: c["candidate"] == item["candidate"])
                 )
-                label = F.when(~item["shared"] | (seen == 1), item["candidate"]).otherwise(
-                    F.concat(item["candidate"], F.lit("_"), seen.cast("string"))
-                )
                 return F.struct(
-                    label.alias("question_label"), item["q"]["question_answer"].alias("question_answer")
+                    item["q"].alias("q"),
+                    item["candidate"].alias("candidate"),
+                    (item["shared"] & (seen > 1)).alias("repeat"),
+                    seen.alias("seen"),
                 )
 
-            return F.transform(candidates, key)
+            return _bound(F.transform(candidates, count), _numbered)
 
-        return _bound(F.transform(items, candidate), numbered)
+        return _bound(F.transform(items, candidate), counted)
 
     return _bound(with_bases, with_candidates)
+
+
+def _numbered(items: Column) -> Column:
+    # A repeat takes the next position whose key no unnumbered question holds, so "Leaf", "Leaf" and
+    # "Leaf 2" key as leaf, leaf_3 and leaf_2. Two numbered keys never meet: a position has no
+    # underscore, so a numbered key splits back into exactly one candidate and one position.
+    def with_taken(taken: Column) -> Column:
+        def key(item: Column) -> Column:
+            candidate = item["candidate"]
+
+            def numbered_key(n: Column) -> Column:
+                return F.concat(candidate, F.lit("_"), n.cast("string"))
+
+            free = F.filter(
+                F.sequence(F.lit(2), item["seen"] + F.size(taken)),
+                lambda n: ~F.array_contains(taken, numbered_key(n)),
+            )
+            # get rather than element_at, which raises on the index 0 a question that is not a repeat
+            # would ask for if an engine ever evaluated both branches.
+            label = F.when(item["repeat"], numbered_key(F.get(free, item["seen"] - 2))).otherwise(candidate)
+            return F.struct(
+                label.alias("question_label"), item["q"]["question_answer"].alias("question_answer")
+            )
+
+        return F.transform(items, key)
+
+    unnumbered = F.filter(items, lambda item: ~item["repeat"])
+    return _bound(F.transform(unnumbered, lambda item: item["candidate"]), with_taken)
