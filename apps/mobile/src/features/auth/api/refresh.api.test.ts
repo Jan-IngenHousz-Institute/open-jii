@@ -60,6 +60,24 @@ describe("refreshSession", () => {
     }
   });
 
+  it("gives up when the cookie read outlives the deadline, and a late cookie starts no refresh", async () => {
+    const cookie = deferred<string>();
+    mockGetCookie.mockReturnValueOnce(cookie.promise);
+
+    vi.useFakeTimers();
+    try {
+      const pending = refreshSession();
+      await vi.advanceTimersByTimeAsync(8_000);
+      expect(await pending).toBe(false);
+
+      cookie.resolve("better-auth.dev.session_token=token-a");
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockGetSession).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("starts a fresh refresh after a timeout even if the old upstream ignores the abort", async () => {
     // Neither upstream reacts to the abort signal, as a stuck request would not.
     const stuck = deferred<{ data: { session: { id: string } } }>();

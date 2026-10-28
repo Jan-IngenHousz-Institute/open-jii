@@ -30,8 +30,10 @@ export async function orpcFetch(
   request: Request,
   init: RequestInit | undefined,
 ): Promise<Response> {
-  const cookie = await authHandler?.getCookie();
-  const send = (requestCookie: string | null | undefined) => {
+  const cookie = authHandler?.getCookie();
+  const send = async (
+    pendingCookie: Promise<string | null | undefined> | string | null | undefined,
+  ) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
@@ -41,14 +43,24 @@ export async function orpcFetch(
       else upstream.addEventListener("abort", () => controller.abort(), { once: true });
     }
 
-    const headers = new Headers(request.headers);
-    if (requestCookie) {
-      headers.set("Cookie", requestCookie);
-    }
+    const aborted = new Promise<undefined>((resolve) => {
+      if (controller.signal.aborted) resolve(undefined);
+      else controller.signal.addEventListener("abort", () => resolve(undefined), { once: true });
+    });
 
-    return fetch(request.clone(), { signal: controller.signal, headers }).finally(() =>
-      clearTimeout(timeoutId),
-    );
+    try {
+      // An abort or timeout during the cookie read still reaches fetch, which rejects an
+      // aborted signal without sending the request.
+      const requestCookie = await Promise.race([pendingCookie, aborted]);
+      const headers = new Headers(request.headers);
+      if (requestCookie) {
+        headers.set("Cookie", requestCookie);
+      }
+
+      return await fetch(request.clone(), { signal: controller.signal, headers });
+    } finally {
+      clearTimeout(timeoutId);
+    }
   };
 
   let result = await send(cookie);
@@ -56,28 +68,36 @@ export async function orpcFetch(
   // On 401, try a single-flight session re-validation before giving up.
   if (result.status === 401 && authHandler) {
     const handler = authHandler;
-    const sentToken = getSessionToken(cookie);
+    const sentToken = getSessionToken(await cookie);
     // A 401 for a session that has since been replaced says nothing about the
     // current one. Better Auth keeps the token when getSession slides it.
     const sentCurrentSession = async () => getSessionToken(await handler.getCookie()) === sentToken;
     if (sentToken) {
       if (!(await sentCurrentSession())) return result;
-      if ((await handler.refreshSession()) && (await sentCurrentSession())) {
-        result = await send(await handler.getCookie());
+      if (await handler.refreshSession()) {
+        // Check and send one read, so a session that replaces this one in between
+        // never receives the request.
+        const retryCookie = await handler.getCookie();
+        if (getSessionToken(retryCookie) === sentToken) {
+          result = await send(retryCookie);
+        }
       }
       if (result.status === 401 && (await sentCurrentSession())) {
         await handler.signOut();
       }
-    } else if (hasSessionToken(await handler.getCookie())) {
-      // Sent before a sign-in stored its token. Only a read is replayed under the
-      // new session; a write was meant for whoever the app showed when it started.
-      if (SAFE_METHODS.has(request.method)) {
-        result = await send(await handler.getCookie());
+    } else {
+      const currentCookie = await handler.getCookie();
+      if (hasSessionToken(currentCookie)) {
+        // Sent before a sign-in stored its token. Only a read is replayed under the
+        // new session; a write was meant for whoever the app showed when it started.
+        if (SAFE_METHODS.has(request.method)) {
+          result = await send(currentCookie);
+        }
+      } else if (handler.hasCachedSession()) {
+        // Signing out with no session would wipe an OAuth sign-in in progress, but
+        // a cached session whose cookie has expired must still be cleared.
+        await handler.signOut();
       }
-    } else if (handler.hasCachedSession()) {
-      // Signing out with no session would wipe an OAuth sign-in in progress, but
-      // a cached session whose cookie has expired must still be cleared.
-      await handler.signOut();
     }
   }
 

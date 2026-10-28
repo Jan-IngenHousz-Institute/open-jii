@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { configureAuthRefresh, orpcFetch } from "~/shared/api/orpc-fetch";
+import { deferred } from "~/shared/testing/deferred";
 
 const mockFetch = vi.fn();
 const mockRefreshSession = vi.fn();
@@ -15,6 +16,13 @@ vi.stubGlobal("fetch", mockFetch);
 
 function makeRequest() {
   return new Request("https://api.test/v1/x", { method: "GET" });
+}
+
+// Like fetch, rejects a request whose signal is already aborted and never settles otherwise.
+function rejectIfAborted(_req: Request, init: { signal: AbortSignal }) {
+  return init.signal.aborted
+    ? Promise.reject(new DOMException("aborted", "AbortError"))
+    : new Promise(() => undefined);
 }
 
 describe("orpcFetch", () => {
@@ -75,6 +83,26 @@ describe("orpcFetch", () => {
     const retryHeaders: Headers = mockFetch.mock.calls[1][1].headers;
     expect(originalHeaders.get("Cookie")).toBe(SESSION);
     expect(retryHeaders.get("Cookie")).toBe(refreshed);
+  });
+
+  it("retries with the same cookie read it checked against the sent token", async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+    mockRefreshSession.mockResolvedValueOnce(true);
+    // The first send, the pre-refresh check and the post-refresh read see this session;
+    // any later read sees another user's.
+    mockGetCookie
+      .mockResolvedValueOnce(SESSION)
+      .mockResolvedValueOnce(SESSION)
+      .mockResolvedValueOnce(SESSION)
+      .mockResolvedValue(NEW_SESSION);
+
+    await orpcFetch(makeRequest(), undefined);
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    const retryHeaders: Headers = mockFetch.mock.calls[1][1].headers;
+    expect(retryHeaders.get("Cookie")).toBe(SESSION);
   });
 
   it("leaves a newer session alone when a request sent with an older token returns 401", async () => {
@@ -242,19 +270,34 @@ describe("orpcFetch", () => {
     await expect(p).rejects.toThrow();
   });
 
-  it("aborts when the upstream signal aborts while the session cookie is still being read", async () => {
+  it("rejects a cancelled request without waiting for the session cookie read", async () => {
     const upstream = new AbortController();
-    mockGetCookie.mockImplementation(() => {
-      upstream.abort();
-      return Promise.resolve(SESSION);
-    });
-    mockFetch.mockImplementation((_req: Request, init: { signal: AbortSignal }) =>
-      init.signal.aborted
-        ? Promise.reject(new DOMException("aborted", "AbortError"))
-        : new Promise(() => undefined),
-    );
+    const cookie = deferred<string>();
+    mockGetCookie.mockReturnValue(cookie.promise);
+    mockFetch.mockImplementation(rejectIfAborted);
 
-    await expect(orpcFetch(makeRequest(), { signal: upstream.signal })).rejects.toThrow();
+    const pending = orpcFetch(makeRequest(), { signal: upstream.signal });
+    upstream.abort();
+
+    await expect(pending).rejects.toThrow("aborted");
+    const sentHeaders: Headers = mockFetch.mock.calls[0][1].headers;
+    expect(sentHeaders.get("Cookie")).toBeNull();
+    cookie.resolve(SESSION);
+  });
+
+  it("times out a session cookie read that never settles", async () => {
+    vi.useFakeTimers();
+    try {
+      mockGetCookie.mockReturnValue(new Promise(() => undefined));
+      mockFetch.mockImplementation(rejectIfAborted);
+
+      const settled = orpcFetch(makeRequest(), undefined).catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      expect(await settled).toBeInstanceOf(DOMException);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("aborts a hung fetch via its internal timeout", async () => {

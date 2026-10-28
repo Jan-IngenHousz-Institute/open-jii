@@ -31,42 +31,56 @@ const REFRESH_TIMEOUT_MS = 8_000;
  * parallel requests on a stale session each tried to refresh
  * independently.
  *
- * Each caller is bounded by REFRESH_TIMEOUT_MS via Promise.race; the
- * timeout also aborts the shared upstream fetch through fetchOptions.signal
- * so the underlying request actually stops. The in-flight entry is released
+ * Each caller is bounded by REFRESH_TIMEOUT_MS via Promise.race, from before
+ * the session cookie is read; the timeout also aborts the shared upstream fetch
+ * through fetchOptions.signal so the underlying request actually stops. The
+ * in-flight entry is released
  * when its upstream settles or a caller's timeout fires, whichever comes
  * first, so an upstream that ignores the abort cannot block later refreshes.
  */
 export async function refreshSession(): Promise<boolean> {
   const authClient = getAuthClient();
-  const token = getSessionToken(await authClient.getCookie()) ?? "";
-  let refresh = refreshesInFlight.get(token);
-  if (!refresh) {
-    const controller = new AbortController();
-    const created: InFlightRefresh = {
-      controller,
-      upstream: authClient
-        .getSession({
-          query: { disableCookieCache: true },
-          fetchOptions: { signal: controller.signal },
-        })
-        .then((res) => !!res?.data?.session)
-        .catch(() => false)
-        .finally(() => release(token, created)),
-    };
-    refresh = created;
-    refreshesInFlight.set(token, refresh);
-  }
-
-  const entry = refresh;
+  let expired = false;
+  let joined: { token: string; entry: InFlightRefresh } | undefined;
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<boolean>((resolve) => {
     timeoutId = setTimeout(() => {
-      entry.controller.abort();
-      // An upstream that ignores the abort must not hold the token's slot forever.
-      release(token, entry);
+      expired = true;
+      if (joined) {
+        joined.entry.controller.abort();
+        // An upstream that ignores the abort must not hold the token's slot forever.
+        release(joined.token, joined.entry);
+      }
       resolve(false);
     }, REFRESH_TIMEOUT_MS);
   });
-  return Promise.race([entry.upstream, timeout]).finally(() => clearTimeout(timeoutId));
+
+  const refresh = authClient.getCookie().then((cookie) => {
+    // A cookie read that outlived the deadline must not start a refresh nobody awaits.
+    if (expired) return false;
+
+    const token = getSessionToken(cookie) ?? "";
+    let entry = refreshesInFlight.get(token);
+    if (!entry) {
+      const controller = new AbortController();
+      const created: InFlightRefresh = {
+        controller,
+        upstream: authClient
+          .getSession({
+            query: { disableCookieCache: true },
+            fetchOptions: { signal: controller.signal },
+          })
+          .then((res) => !!res?.data?.session)
+          .catch(() => false)
+          .finally(() => release(token, created)),
+      };
+      entry = created;
+      refreshesInFlight.set(token, entry);
+    }
+
+    joined = { token, entry };
+    return entry.upstream;
+  });
+
+  return Promise.race([refresh, timeout]).finally(() => clearTimeout(timeoutId));
 }
