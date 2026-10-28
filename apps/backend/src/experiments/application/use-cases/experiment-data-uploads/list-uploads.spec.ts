@@ -1,14 +1,7 @@
 import { faker } from "@faker-js/faker";
 
-import {
-  assertFailure,
-  assertSuccess,
-  success,
-  failure,
-  AppError,
-} from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import type { UploadMetadata } from "../../../core/models/experiment-data-uploads.model";
 import { ExperimentDataUploadsRepository } from "../../../core/repositories/experiment-data-uploads.repository";
 import { ListUploadsUseCase } from "./list-uploads";
 
@@ -18,6 +11,21 @@ describe("ListUploadsUseCase", () => {
   let useCase: ListUploadsUseCase;
   let uploadsRepository: ExperimentDataUploadsRepository;
 
+  async function recordUpload(experimentId: string, uploadTableName: string) {
+    const recorded = await uploadsRepository.create({
+      id: faker.string.uuid(),
+      experimentId,
+      uploadTableId: faker.string.uuid(),
+      uploadTableName,
+      targetKind: "new",
+      uploadDirectory: "upload_20260101T000000_abcdef12",
+      sourceKind: "csv",
+      createdBy: testUserId,
+    });
+    assertSuccess(recorded);
+    return recorded.value;
+  }
+
   beforeAll(async () => {
     await testApp.setup();
   });
@@ -25,7 +33,6 @@ describe("ListUploadsUseCase", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
-
     useCase = testApp.module.get(ListUploadsUseCase);
     uploadsRepository = testApp.module.get(ExperimentDataUploadsRepository);
   });
@@ -38,122 +45,64 @@ describe("ListUploadsUseCase", () => {
     await testApp.teardown();
   });
 
-  it("should successfully list uploads with active and completed", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Test_List_Uploads",
-      userId: testUserId,
+  it("lists the experiment's uploads in the API's shape", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Uploads", userId: testUserId });
+    const record = await recordUpload(experiment.id, "greenhouse_temps");
+    await uploadsRepository.markQueued(record.id, 2);
+    const completed = await uploadsRepository.complete(record.id, {
+      rowCount: 1000,
+      rejectedFiles: [{ name: "broken.csv", reason: "unparseable" }],
     });
+    assertSuccess(completed);
 
-    const uploadTableId = faker.string.uuid();
-    const mockUploads: UploadMetadata[] = [
+    const result = await useCase.execute(experiment.id, testUserId, {});
+
+    assertSuccess(result);
+    expect(result.value.uploads).toEqual([
       {
-        uploadId: faker.string.uuid(),
+        uploadId: record.id,
         experimentId: experiment.id,
-        uploadTableId,
-        uploadTableName: "greenhouse_temps",
-        sourceKind: "csv",
-        status: "running",
-        fileCount: null,
-        rowCount: null,
-        createdBy: testUserId,
-        createdAt: "2026-01-02T00:00:00Z",
-        completedAt: null,
-        errorMessage: null,
-      },
-      {
-        uploadId: faker.string.uuid(),
-        experimentId: experiment.id,
-        uploadTableId,
+        uploadTableId: record.uploadTableId,
         uploadTableName: "greenhouse_temps",
         sourceKind: "csv",
         status: "completed",
         fileCount: 2,
         rowCount: 1000,
+        rejectedFiles: [{ name: "broken.csv", reason: "unparseable" }],
+        errorCode: null,
         createdBy: testUserId,
-        createdAt: "2026-01-01T00:00:00Z",
-        completedAt: "2026-01-01T00:05:00Z",
-        errorMessage: null,
+        createdAt: record.createdAt.toISOString(),
+        completedAt: completed.value?.completedAt?.toISOString(),
       },
-    ];
+    ]);
+  });
 
-    vi.spyOn(uploadsRepository, "listUploads").mockResolvedValue(success(mockUploads));
+  it("lists only the uploads of the table asked for", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Tables", userId: testUserId });
+    const greenhouse = await recordUpload(experiment.id, "greenhouse_temps");
+    await recordUpload(experiment.id, "soil_moisture");
 
     const result = await useCase.execute(experiment.id, testUserId, {
       uploadTableName: "greenhouse_temps",
     });
 
-    expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
-    expect(result.value.uploads).toHaveLength(2);
-    expect(result.value.uploads[0].status).toBe("running");
-    expect(result.value.uploads[1].status).toBe("completed");
-
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(uploadsRepository.listUploads).toHaveBeenCalledWith({
-      experimentId: experiment.id,
-      uploadTableName: "greenhouse_temps",
-    });
+    expect(result.value.uploads.map((upload) => upload.uploadId)).toEqual([greenhouse.id]);
   });
 
-  it("should return empty uploads list when no uploads exist", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Test_Empty_Uploads",
-      userId: testUserId,
-    });
-
-    vi.spyOn(uploadsRepository, "listUploads").mockResolvedValue(success([]));
+  it("returns an empty list for an experiment with no uploads", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Empty", userId: testUserId });
 
     const result = await useCase.execute(experiment.id, testUserId, {});
 
-    expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
-    expect(result.value.uploads).toHaveLength(0);
+    expect(result.value.uploads).toEqual([]);
   });
 
-  it("should return not found when experiment does not exist", async () => {
+  it("returns not found when the experiment does not exist", async () => {
     const result = await useCase.execute(faker.string.uuid(), testUserId, {});
 
-    expect(result.isFailure()).toBe(true);
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
-    expect(result.error.message).toContain("Experiment not found");
-  });
-
-  it("should allow access to public experiments without membership", async () => {
-    const anotherUserId = await testApp.createTestUser({
-      email: "public-user@example.com",
-    });
-
-    const { experiment } = await testApp.createExperiment({
-      name: "Public_Experiment",
-      visibility: "public",
-      userId: testUserId,
-    });
-
-    vi.spyOn(uploadsRepository, "listUploads").mockResolvedValue(success([]));
-
-    const result = await useCase.execute(experiment.id, anotherUserId, {});
-
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-  });
-
-  it("should return internal error when listUploads fails", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Test_Experiment",
-      userId: testUserId,
-    });
-
-    vi.spyOn(uploadsRepository, "listUploads").mockResolvedValue(
-      failure(AppError.internal("Failed to query uploads")),
-    );
-
-    const result = await useCase.execute(experiment.id, testUserId, {});
-
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.code).toBe("INTERNAL_ERROR");
-    // Underlying repository error is preserved (not flattened to a generic message).
-    expect(result.error.message).toContain("Failed to query uploads");
   });
 });

@@ -152,15 +152,15 @@ export const zExperimentChartDataConfig = z.object({
 
 // Base visualization schema
 export const zExperimentVisualization = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string().min(1).max(255),
   description: z.string().nullable(),
-  experimentId: z.string().uuid(),
+  experimentId: z.string().guid(),
   chartFamily: zExperimentChartFamily,
   chartType: zExperimentChartType,
   config: zExperimentChartConfig,
   dataConfig: zExperimentChartDataConfig,
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
   createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -197,8 +197,8 @@ export const zListExperimentVisualizationsQuery = z.object({
 
 // Path parameters for visualizations
 export const zExperimentVisualizationPathParam = z.object({
-  id: z.string().uuid().describe("ID of the experiment"),
-  visualizationId: z.string().uuid().describe("ID of the visualization"),
+  id: z.string().guid().describe("ID of the experiment"),
+  visualizationId: z.string().guid().describe("ID of the visualization"),
 });
 
 // Visualization responses

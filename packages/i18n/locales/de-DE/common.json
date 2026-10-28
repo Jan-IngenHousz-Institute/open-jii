@@ -517,6 +517,7 @@
     "searchPlaceholder": "Organisationen suchen…",
     "searchLabel": "Organisationen durchsuchen",
     "noMatches": "Keine Organisation passt zu Ihrer Suche",
+    "noFilterMatches": "Keine Organisation entspricht diesen Filtern",
     "tabs": {
       "members": "Mitglieder",
       "teams": "Teams",
@@ -1261,6 +1262,10 @@
     "loadingProtocols": "Protokolle suchen...",
     "noProtocols": "Es wurden keine Protokolle gefunden, die Ihren Kriterien entsprechen.",
     "noMatches": "Keine Protokolle entsprechen Ihrer Suche",
+    "noFilterMatches": "Keine Protokolle entsprechen diesen Filtern",
+    "visibility": "Sichtbarkeit",
+    "private": "Privat",
+    "public": "Öffentlich",
     "viewDetails": "Details anzeigen",
     "protocolCreated": "Protokoll erfolgreich erstellt",
     "protocolUpdated": "Protokoll erfolgreich aktualisiert",

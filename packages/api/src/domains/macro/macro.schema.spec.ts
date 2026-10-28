@@ -164,22 +164,36 @@ describe("Macro Schema", () => {
       expect(zMacroFilterQuery.parse(q)).toEqual(q);
     });
 
-    it("accepts language filter", () => {
-      const q = { language: "python" };
-      expect(zMacroFilterQuery.parse(q)).toEqual(q);
+    it("turns one language or visibility into a list and keeps a list of them", () => {
+      expect(zMacroFilterQuery.parse({ language: "python" }).language).toEqual(["python"]);
+      expect(zMacroFilterQuery.parse({ language: ["r", "javascript", "r"] }).language).toEqual([
+        "r",
+        "javascript",
+      ]);
+      expect(zMacroFilterQuery.parse({ visibility: "private" }).visibility).toEqual(["private"]);
+      expect(
+        zMacroFilterQuery.parse({ visibility: ["public", "private", "public"] }).visibility,
+      ).toEqual(["public", "private"]);
     });
 
     it("accepts both search and language", () => {
-      const q = { search: "plot", language: "r" };
-      expect(zMacroFilterQuery.parse(q)).toEqual(q);
+      expect(zMacroFilterQuery.parse({ search: "plot", language: "r" })).toEqual({
+        search: "plot",
+        language: ["r"],
+      });
     });
 
     it("rejects non-string search", () => {
       expect(() => zMacroFilterQuery.parse({ search: 123 })).toThrow();
     });
 
-    it("rejects invalid language", () => {
-      expect(() => zMacroFilterQuery.parse({ language: "java" })).toThrow();
+    it("rejects an unknown language or visibility, and leaves both filters optional", () => {
+      expect(zMacroFilterQuery.safeParse({ language: "java" }).success).toBe(false);
+      expect(zMacroFilterQuery.safeParse({ language: ["python", "java"] }).success).toBe(false);
+      expect(zMacroFilterQuery.safeParse({ visibility: "hidden" }).success).toBe(false);
+      const parsed = zMacroFilterQuery.parse({});
+      expect(parsed.language).toBeUndefined();
+      expect(parsed.visibility).toBeUndefined();
     });
 
     it("accepts one or two allowed sort fields", () => {

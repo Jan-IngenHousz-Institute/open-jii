@@ -29,7 +29,7 @@ vi.mock("@/components/server-prefetch/prefetched-queries", () => ({
 }));
 
 describe("OrganizationsPage", () => {
-  const renderPage = async (searchParams: { q?: string; sort?: string } = {}) => {
+  const renderPage = async (searchParams: { q?: string; sort?: string; type?: string } = {}) => {
     vi.mocked(auth).mockResolvedValue(createSession({ user: { id: "user-ana" } }));
     render(
       await OrganizationsPage({
@@ -60,6 +60,11 @@ describe("OrganizationsPage", () => {
     expect(prefetched.queries).toEqual([]);
 
     await renderPage({ sort: '[{"field":"name","direction":"asc"}]' });
+    expect(prefetched.queries).toEqual([]);
+  });
+
+  it("leaves a filtered view to the browser", async () => {
+    await renderPage({ type: "university" });
     expect(prefetched.queries).toEqual([]);
   });
 });

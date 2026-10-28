@@ -38,7 +38,7 @@ export const zSetVisibilityBody = z.object({
  * serves every route and the UI can update local state without a follow-up fetch.
  */
 export const zSetVisibilityResponse = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   visibility: zVisibility,
 });
 

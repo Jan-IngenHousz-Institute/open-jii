@@ -85,6 +85,7 @@ export const envManifest: readonly EnvVar[] = [
   env("AWS_LAMBDA_CALIBRATION_SANDBOX_ENDPOINT", set, "http://localhost:9004", backend),
   env("AWS_IOT_ARCHIVE_BUCKET_NAME", set, "local-openjii-iot-archive", backend),
   env("AWS_IOT_LARGE_PAYLOAD_BUCKET_NAME", set, "local-openjii-large-payloads", backend),
+  env("AWS_DATA_EXPORTS_BUCKET_NAME", set, "local-openjii-data-exports", backend),
   env("AWS_SESSION_TOKEN", set, undefined, web),
   // Keep unset: any truthy value enables Lambda secrets-extension retries.
   env("AWS_LAMBDA_FUNCTION_NAME", unset, undefined, web),

@@ -588,6 +588,7 @@ module "storage_credential" {
     module.iot_core.databricks_large_iot_read_policy_arn,
     module.iot_core.databricks_device_lifecycle_read_policy_arn,
     module.metrics_forwarder.databricks_write_policy_arn,
+    module.data_exports.databricks_write_policy_arn,
   ]
 
   providers = {
@@ -1397,6 +1398,86 @@ module "data_downloads_volume" {
   }
 
   depends_on = [databricks_grants.centrum_schema]
+}
+
+# Export files live in this environment's own bucket so the backend can sign
+# GetObject URLs for them. Records expire after 30 days; the files a day later,
+# since S3 counts from when each part was written and rounds up to midnight UTC
+module "data_exports_s3" {
+  source      = "../../modules/s3"
+  bucket_name = "open-jii-data-exports-${var.environment}"
+
+  enable_versioning = false
+
+  lifecycle_rules = [
+    {
+      id                                     = "expire-data-exports"
+      status                                 = "Enabled"
+      transitions                            = []
+      expiration_days                        = 31
+      abort_incomplete_multipart_upload_days = 1
+    }
+  ]
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "data-exports"
+  }
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
+module "data_exports" {
+  source = "../../modules/data-exports"
+
+  environment = var.environment
+  bucket_arn  = module.data_exports_s3.bucket_arn
+}
+
+module "data_exports_external_location" {
+  source = "../../modules/databricks/external-location"
+
+  external_location_name  = "data-exports-${var.environment}"
+  bucket_name             = module.data_exports_s3.bucket_id
+  external_location_path  = ""
+  storage_credential_name = module.storage_credential.storage_credential_name
+  environment             = var.environment
+  comment                 = "External location for experiment data export files"
+  isolation_mode          = "ISOLATION_MODE_ISOLATED"
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.storage_credential]
+}
+
+module "data_exports_volume" {
+  source = "../../modules/databricks/volume"
+
+  catalog_name     = module.databricks_catalog.catalog_name
+  schema_name      = "centrum"
+  volume_name      = "exports"
+  storage_location = "s3://${module.data_exports_s3.bucket_id}/exports"
+  comment          = "External volume for experiment data exports, written in parts with a manifest"
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["READ_VOLUME", "WRITE_VOLUME"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [databricks_grants.centrum_schema, module.data_exports_external_location]
 }
 
 module "data_imports_volume" {
@@ -2698,6 +2779,10 @@ module "backend_ecs" {
     {
       name  = "AWS_IOT_LARGE_PAYLOAD_BUCKET_NAME"
       value = module.large_iot_s3.bucket_id
+    },
+    {
+      name  = "AWS_DATA_EXPORTS_BUCKET_NAME"
+      value = module.data_exports_s3.bucket_id
     }
   ]
 
@@ -2707,6 +2792,7 @@ module "backend_ecs" {
     module.macro_sandbox.invoke_policy_arn,
     module.calibration_sandbox.invoke_policy_arn,
     module.iot_core.backend_s3_presign_policy_arn,
+    module.data_exports.backend_read_policy_arn,
   ]
 
   tags = {

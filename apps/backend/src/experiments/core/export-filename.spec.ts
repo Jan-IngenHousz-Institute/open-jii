@@ -86,4 +86,27 @@ describe("buildExportFilename", () => {
       );
     }
   });
+
+  it("keeps what a gzipped part holds in its extension", () => {
+    expect(buildExportFilename({ ...base, filePath: "part-00000-tid-1-c000.csv.gz" })).toBe(
+      "my-experiment_clean-data_20260102_030405.csv.gz",
+    );
+    expect(buildExportFilename({ ...base, filePath: "part-00003-tid-1-c000.json.gz" })).toBe(
+      "my-experiment_clean-data_20260102_030405.json.gz",
+    );
+    expect(buildExportFilename({ ...base, filePath: "part-00000-tid-1.c000.snappy.parquet" })).toBe(
+      "my-experiment_clean-data_20260102_030405.parquet",
+    );
+  });
+
+  it("numbers the parts of a multi-part export so they sort in order", () => {
+    const filePath = "part-00002-tid-1-c000.csv.gz";
+
+    expect(buildExportFilename({ ...base, filePath, part: { index: 2, count: 12 } })).toBe(
+      "my-experiment_clean-data_20260102_030405_part-03-of-12.csv.gz",
+    );
+    expect(buildExportFilename({ ...base, filePath, part: { index: 0, count: 1 } })).toBe(
+      "my-experiment_clean-data_20260102_030405.csv.gz",
+    );
+  });
 });

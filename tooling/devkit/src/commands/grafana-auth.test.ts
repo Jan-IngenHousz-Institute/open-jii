@@ -13,7 +13,7 @@ function deps(overrides: Partial<GrafanaAuthDependencies> = {}) {
   const store = vi.fn<GrafanaAuthDependencies["store"]>().mockResolvedValue(undefined);
   const verify = vi.fn<GrafanaAuthDependencies["verify"]>().mockResolvedValue(22);
   const value: GrafanaAuthDependencies = {
-    readInput: () => "glsa_secret\n",
+    readInput: () => Promise.resolve("glsa_secret\n"),
     verify,
     store,
     write: (text) => lines.push(text),
@@ -50,8 +50,8 @@ describe("authenticate", () => {
   });
 
   it("refuses empty or whitespace-laden input before verifying", async () => {
-    const empty = deps({ readInput: () => "\n" });
-    const spaced = deps({ readInput: () => "glsa key\n" });
+    const empty = deps({ readInput: () => Promise.resolve("\n") });
+    const spaced = deps({ readInput: () => Promise.resolve("glsa key\n") });
 
     await expect(authenticate(args, empty.value)).rejects.toThrow("No token received");
     await expect(authenticate(args, spaced.value)).rejects.toThrow("contains whitespace");

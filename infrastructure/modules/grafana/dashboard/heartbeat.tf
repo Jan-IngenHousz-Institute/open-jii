@@ -65,14 +65,21 @@ locals {
   heartbeat_errors_panels = max(8, 4 * length(local.heartbeat_errors))
   heartbeat_errors_height = local.heartbeat_errors_shown ? 1 + local.heartbeat_errors_panels : 0
 
-  # Usage is what stakeholders open the report for, so it leads. A weekly section gathers entries
-  # from one or more areas, so the data path's own areas sit here as one section.
+  # In the order of a weekly business review: who is getting started, what people did, how the
+  # data and the platform held up, and what it cost. A weekly section gathers entries from one or
+  # more areas, so the data path's own areas sit here as one section.
   heartbeat_weekly_areas = [
+    {
+      key     = "adoption"
+      title   = "Adoption"
+      areas   = ["adoption"]
+      caption = "**New researchers** signed up in the previous Monday-to-Sunday week, and **Researchers who started** took their first measurement in the last seven days, so the two side by side say whether newcomers get as far as measuring. **Loggers that started** are devices publishing on their own for the first time. **Experiments created** covers the same week as the sign-ups, counted each Monday at 06:00 UTC."
+    },
     {
       key     = "usage"
       title   = "Usage"
       areas   = ["usage"]
-      caption = "**Active** means at least one measurement uploaded in the seven days, so people who only browse do not count. **New researchers** and **Researchers** are counted each Monday at 06:00 UTC. A sharp drop shows first on the [daily report](/d/${local.heartbeat_daily_uid}), as devices or experiments gone quiet."
+      caption = "**Active** means at least one measurement uploaded in the seven days, so people who only browse do not count. **Researchers** is everyone registered, counted each Monday at 06:00 UTC. A sharp drop shows first on the [daily report](/d/${local.heartbeat_daily_uid}), as devices or experiments gone quiet."
     },
     {
       key     = "path"
@@ -84,7 +91,14 @@ locals {
       key     = "platform"
       title   = "Platform"
       areas   = ["platform"]
-      caption = "**Site uptime** is the share of the week the site's health check passed. **Databricks cost** is the last seven complete days at list price, from Databricks' billing tables; its chart splits it by pipeline, warehouse, jobs and the rest. Which deploys failed, and how long each took from commit to production, are on [Delivery](/d/${local.flow_uids.delivery}); database storage sits with every other store on [Throughput and storage](/d/${local.flow_uids["throughput-storage"]})."
+      errors  = true
+      caption = "**Site uptime** is the share of the week the site's health check passed. **Error issues** lists every issue with exceptions in the week, new ones first. Which deploys failed, and how long each took from commit to production, are on [Delivery](/d/${local.flow_uids.delivery}); database storage sits with every other store on [Throughput and storage](/d/${local.flow_uids["throughput-storage"]})."
+    },
+    {
+      key     = "cost"
+      title   = "Cost"
+      areas   = ["cost"]
+      caption = "**Databricks cost** is the last seven complete days at list price, from Databricks' billing tables; its chart splits it by pipeline, warehouse, jobs and the rest."
     },
   ]
 
@@ -386,9 +400,10 @@ locals {
   # reads its latest half hour, the heartbeat export's cadence, so the tile is its current value
   # against a week ago rather than a day's peak; a signal counted per week compares its last two
   # weeks.
+  # Clear of the sections' rows and captions, which an entry numbered past 99 would reach at 100 + num.
   heartbeat_weekly_tiles = {
     for m in local.heartbeat_weekly : m.id => {
-      id               = 100 + m.num
+      id               = 1000 + m.num
       type             = "stat"
       title            = m.name
       pluginVersion    = "10.4.1"
@@ -727,9 +742,14 @@ locals {
   ]
 
   heartbeat_weekly_card_lines = [for s in local.heartbeat_weekly_sections : ceil(length(s.metrics) / 3)]
+  heartbeat_weekly_errors_height = [
+    for s in local.heartbeat_weekly_sections : try(s.errors, false) && local.heartbeat_errors_shown ? local.heartbeat_errors_panels : 0
+  ]
   heartbeat_weekly_tops = [
     for i, s in local.heartbeat_weekly_sections :
-    sum(concat([0], [for line in slice(local.heartbeat_weekly_card_lines, 0, i) : 3 + 9 * line]))
+    sum(concat([0], [
+      for j in range(i) : 3 + 9 * local.heartbeat_weekly_card_lines[j] + local.heartbeat_weekly_errors_height[j]
+    ]))
   ]
 
   heartbeat_weekly_panels = flatten([
@@ -776,6 +796,13 @@ locals {
           }),
         ]
       ]),
+      # The daily report's issue table, over the week: its query reads the dashboard's range.
+      [
+        for table in [local.heartbeat_error_tables.daily] : merge(table, {
+          id      = 900
+          gridPos = { h = local.heartbeat_errors_panels, w = 24, x = 0, y = local.heartbeat_weekly_tops[i] + 3 + 9 * local.heartbeat_weekly_card_lines[i] }
+        }) if local.heartbeat_weekly_errors_height[i] > 0
+      ],
     )
   ])
 

@@ -1,0 +1,67 @@
+---
+title: "Uploading data"
+description: "Add your own files to an experiment data table and follow the upload."
+---
+
+{/* verified: code@bc5e4768278f 2026-10-20 */}
+
+You can add data that was not measured through openJII, such as a weather station's CSV
+files or an Ambyte's folder, to an experiment as a data table. Each upload either creates
+a new table or adds rows to a table that an earlier upload created.
+
+## Upload files
+
+1. Open the experiment's **Data** tab and choose **Upload Data**.
+2. Choose **New upload** and pick the format of your files.
+3. Choose where the data lands:
+   - **Create new table** and give it a name. The name starts with a letter and uses
+     only letters, digits and underscores, at most 63 characters. Creating a table
+     needs management access to the experiment.
+   - **Append to existing** and pick a table that an earlier upload created.
+4. Add your files, or your Ambyte folder. openJII infers the table's columns from the files.
+5. Choose **Upload**.
+
+| Format  | Files                                 | Largest file | Files per upload |
+| ------- | ------------------------------------- | ------------ | ---------------- |
+| CSV     | `.csv`                                | 50 MB        | 100              |
+| TSV     | `.tsv`                                | 50 MB        | 100              |
+| Parquet | `.parquet`                            | 200 MB       | 100              |
+| JSON    | `.json`                               | 100 MB       | 100              |
+| NDJSON  | `.ndjson`, `.jsonl`                   | 100 MB       | 100              |
+| Ambyte  | `.txt` in an `Ambyte_N/[1-4]/` folder | 10 MB        | 1,000            |
+
+Once the files start sending you can close the dialog and keep working, but keep the
+browser tab open until they have all arrived. An archived experiment is read-only and
+takes no uploads.
+
+## Follow an upload
+
+The dialog lists the experiment's recent uploads by everyone who can open it, newest
+first, each with its table, format, status, file and row counts, and start time. An
+upload moves through these statuses:
+
+- **Receiving** while the files arrive from your browser;
+- **Queued** and **Pending** while it waits for processing to start;
+- **Processing** while openJII reads the files, adds the rows, and waits for the table
+  to show them;
+- **Completed** once the rows can be queried on the **Data** tab;
+- **Failed** when it stopped, with the reason.
+
+You get a notification when an upload completes or fails, so you do not have to keep the
+dialog open.
+
+A file that cannot be read, or that holds no rows, is left out without failing the rest
+of the upload; for an Ambyte upload, that is a whole `Ambyte_N` folder. A completed upload
+says what it left out and names each file or folder with the reason, so you can fix them
+and upload them again to the same table.
+
+An upload fails when none of its files matched the chosen format, when no rows could be
+read from them, or when the transfer from your browser stopped before every file arrived.
+It also fails when the table has not shown the new rows within an hour; those rows may
+still appear later.
+
+<Callout type="info">
+  Uploads made before October 2026 are listed with the time they finished as their start time, and
+  without the files they left out. Uploads from then that failed before adding any rows are not
+  listed.
+</Callout>

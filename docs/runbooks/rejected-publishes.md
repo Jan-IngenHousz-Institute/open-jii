@@ -31,8 +31,9 @@ A payload refusal carries `PAYLOAD_LIMIT_EXCEEDED` as its reason; an auth refusa
 - **Many clients on the same topic shape:** a release changed the topic, or the policy changed
   under the fleet. Compare with the latest firmware or app release and the IoT policy in
   `infrastructure/modules/iot-core`.
-- **Payload limit on phones:** measurements too large to publish. The app has no size guard yet
-  (OJD-1954), so the fix is on the phone side.
+- **Payload limit on phones:** app builds since #2123 send readings over 128 KiB over HTTP
+  instead, so a payload refusal from a phone means an older build. Ask the researcher to update
+  the app.
 
 ## Closing
 

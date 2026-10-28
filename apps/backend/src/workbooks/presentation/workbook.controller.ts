@@ -21,8 +21,8 @@ import { GetWorkbookVersionUseCase } from "../application/use-cases/get-workbook
 import { GetWorkbookUseCase } from "../application/use-cases/get-workbook/get-workbook";
 import { ListWorkbookVersionsUseCase } from "../application/use-cases/list-workbook-versions/list-workbook-versions";
 import { ListWorkbooksUseCase } from "../application/use-cases/list-workbooks/list-workbooks";
+import { PublishIfDriftedUseCase } from "../application/use-cases/publish-if-drifted/publish-if-drifted";
 import { UpdateWorkbookUseCase } from "../application/use-cases/update-workbook/update-workbook";
-import type { CreateWorkbookDto, UpdateWorkbookDto } from "../core/models/workbook.model";
 
 @Controller()
 export class WorkbookController {
@@ -36,6 +36,7 @@ export class WorkbookController {
     private readonly deleteWorkbookUseCase: DeleteWorkbookUseCase,
     private readonly listWorkbookVersionsUseCase: ListWorkbookVersionsUseCase,
     private readonly getWorkbookVersionUseCase: GetWorkbookVersionUseCase,
+    private readonly publishIfDriftedUseCase: PublishIfDriftedUseCase,
     private readonly setVisibilityUseCase: SetVisibilityUseCase,
     private readonly authz: AuthorizationService,
   ) {}
@@ -45,7 +46,7 @@ export class WorkbookController {
   createWorkbook(@Session() session: UserSession) {
     return implement(workbookContract.createWorkbook).handler(async ({ input }) => {
       const result = await this.createWorkbookUseCase.execute(
-        input as CreateWorkbookDto,
+        input,
         session.user.id,
         input.organizationId ?? null,
       );
@@ -120,11 +121,7 @@ export class WorkbookController {
   updateWorkbook(@Session() session: UserSession) {
     return implement(workbookContract.updateWorkbook).handler(async ({ input }) => {
       const { id, ...body } = input;
-      const result = await this.updateWorkbookUseCase.execute(
-        id,
-        body as UpdateWorkbookDto,
-        session.user.id,
-      );
+      const result = await this.updateWorkbookUseCase.execute(id, body, session.user.id);
 
       if (result.isSuccess()) {
         return formatDates(result.value);
@@ -172,6 +169,20 @@ export class WorkbookController {
 
       if (result.isSuccess()) {
         return formatDatesList(result.value);
+      }
+
+      return throwOrpcFailure(result, this.logger);
+    });
+  }
+
+  @CanAccess({ resource: "workbook", action: "update" })
+  @Implement(workbookContract.publishWorkbookVersion)
+  publishWorkbookVersion(@Session() session: UserSession) {
+    return implement(workbookContract.publishWorkbookVersion).handler(async ({ input }) => {
+      const result = await this.publishIfDriftedUseCase.execute(input.id, session.user.id);
+
+      if (result.isSuccess()) {
+        return formatDates(result.value);
       }
 
       return throwOrpcFailure(result, this.logger);

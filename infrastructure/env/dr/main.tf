@@ -9,6 +9,9 @@
 #     fresh since prod's ALB cert lives in eu-central-1.
 #   - Databricks modules are OMITTED — it's a global SaaS service unaffected by
 #     an AWS regional outage; prod workspace credentials are passed via tfvars
+#   - The large-payload and export buckets are DR-local: the backend signs links against them,
+#     but the prod Databricks workspace neither reads nor writes them, so large payloads wait
+#     for failback and exports started during a failover fail
 #   - Grafana is OMITTED — not customer-facing, not critical for recovery
 #   - Databricks S3 bucket is OMITTED — prod workspace keeps using its own bucket
 #   - AWS Backup module is OMITTED — DR doesn't back up to a third region
@@ -122,6 +125,38 @@ module "iot_raw_archive_s3" {
   }
 }
 
+module "large_iot_s3" {
+  source      = "../../modules/s3"
+  bucket_name = "open-jii-large-iot-${var.environment}"
+
+  enable_versioning = false
+
+  lifecycle_rules = [
+    {
+      id     = "archive-tiering"
+      status = "Enabled"
+      transitions = [
+        { days = 30, storage_class = "STANDARD_IA" },
+        { days = 90, storage_class = "GLACIER" },
+        { days = 365, storage_class = "DEEP_ARCHIVE" }
+      ]
+      expiration_days = null
+    }
+  ]
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "iot"
+  }
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
 module "iot_firehose" {
   source = "../../modules/firehose"
 
@@ -160,6 +195,8 @@ module "iot_core" {
   firehose_delivery_stream_arn  = module.iot_firehose.delivery_stream_arn
   iot_firehose_role_name        = "open_jii_${var.environment}_iot_firehose_role"
   iot_firehose_policy_name      = "open_jii_${var.environment}_iot_firehose_policy"
+
+  large_iot_bucket_arn = module.large_iot_s3.bucket_arn
 }
 
 module "cognito" {
@@ -493,6 +530,44 @@ module "backend_alb" {
   }
 }
 
+# Export files live in this environment's own bucket so the backend can sign GetObject URLs for
+# them. Records expire after 30 days; the files a day later.
+module "data_exports_s3" {
+  source      = "../../modules/s3"
+  bucket_name = "open-jii-data-exports-${var.environment}"
+
+  enable_versioning = false
+
+  lifecycle_rules = [
+    {
+      id                                     = "expire-data-exports"
+      status                                 = "Enabled"
+      transitions                            = []
+      expiration_days                        = 31
+      abort_incomplete_multipart_upload_days = 1
+    }
+  ]
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "data-exports"
+  }
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
+module "data_exports" {
+  source = "../../modules/data-exports"
+
+  environment = var.environment
+  bucket_arn  = module.data_exports_s3.bucket_arn
+}
+
 module "backend_ecs" {
   source = "../../modules/ecs"
 
@@ -595,11 +670,14 @@ module "backend_ecs" {
     { name = "NEXT_PUBLIC_BASE_URL", value = "https://${module.route53.environment_domain}" },
     { name = "NEXT_PUBLIC_API_URL", value = "https://${module.route53.api_domain}" },
     { name = "AWS_IOT_ARCHIVE_BUCKET_NAME", value = module.iot_raw_archive_s3.bucket_id },
+    { name = "AWS_IOT_LARGE_PAYLOAD_BUCKET_NAME", value = module.large_iot_s3.bucket_id },
+    { name = "AWS_DATA_EXPORTS_BUCKET_NAME", value = module.data_exports_s3.bucket_id },
   ]
 
   additional_task_role_policy_arns = [
     module.location_service.iam_policy_arn,
     module.iot_core.backend_s3_presign_policy_arn,
+    module.data_exports.backend_read_policy_arn,
   ]
 
   tags = {

@@ -22,7 +22,8 @@ export class ListMacrosUseCase {
     this.logger.log({
       msg: "Listing macros",
       operation: "listMacros",
-      language: filter?.language,
+      languages: filter?.languages,
+      visibilities: filter?.visibilities,
       hasSearch: !!filter?.search,
     });
     return await this.macroRepository.findAll(filter);
@@ -38,7 +39,8 @@ export class ListMacrosUseCase {
       operation: "listMacrosPaginated",
       page,
       pageSize,
-      language: filter?.language,
+      languages: filter?.languages,
+      visibilities: filter?.visibilities,
       hasSearch: !!filter?.search,
     });
     const paged = await this.macroRepository.findPage(page, pageSize, filter);

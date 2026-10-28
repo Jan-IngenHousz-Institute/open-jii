@@ -24,6 +24,7 @@ from openjii.metrics import (
     within_plausible_range,
 )
 from openjii.metrics.runtime import SILVER_TABLE, centrum_table
+from openjii.metrics.sensor_readings import sensor_readings
 
 # COMMAND ----------
 
@@ -76,39 +77,6 @@ def parameter_stats():
             .select("parameter", "label", "category", "observations", "median_value")
         )
 
-    def sensor_values(name):
-        """Every reading of one parameter in a payload, whatever its shape.
-
-        A payload is an array of samples. Ambit-family samples carry their
-        scalars in a `data` object; MultispeQ, MiniPAR and PhotosynQ samples
-        carry them in a nested `set` array, one entry per reading. Reading only
-        one of those shapes drops the other instrument's readings entirely, and
-        reading only the first entry would sample rather than aggregate.
-        """
-        return payloads.select(
-            F.explode(
-                F.expr(
-                    f"""
-                    filter(
-                      flatten(
-                        transform(
-                          from_json(sample, 'array<string>'),
-                          x -> concat(
-                            array(try_cast(get_json_object(x, '$.data.{name}') as double)),
-                            transform(
-                              from_json(coalesce(get_json_object(x, '$.set'), '[]'), 'array<string>'),
-                              s -> try_cast(get_json_object(s, '$.{name}') as double)
-                            )
-                          )
-                        )
-                      ),
-                      v -> v is not null
-                    )
-                    """
-                )
-            ).alias("value")
-        )
-
     frames = [
         stats_frame(
             name,
@@ -119,7 +87,11 @@ def parameter_stats():
         )
         for name in DERIVED_PARAMETER_ALLOWLIST
     ] + [
-        stats_frame(name, PARAMETER_CATEGORY_SENSOR, sensor_values(name))
+        stats_frame(
+            name,
+            PARAMETER_CATEGORY_SENSOR,
+            payloads.select(F.explode(sensor_readings("sample", name)).alias("value")),
+        )
         for name in SENSOR_PARAMETER_ALLOWLIST
     ]
 

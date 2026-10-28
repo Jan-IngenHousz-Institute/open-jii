@@ -44,8 +44,10 @@ const KNOWN_AREAS = [
   "ingest",
   "lakehouse",
   "sandboxes",
+  "adoption",
   "usage",
   "platform",
+  "cost",
   "errors",
 ];
 const KNOWN_SOURCES = ["aws", "dbx", "pg", "api", "posthog", "gh", "composer"];

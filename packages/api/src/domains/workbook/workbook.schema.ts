@@ -13,12 +13,12 @@ import { zVisibility } from "../visibility/visibility.schema";
 import { zWorkbookCellArray, zWorkbookCellArrayInput } from "./workbook-cells.schema";
 
 export const zWorkbook = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   description: z.string().nullable(),
   cells: zWorkbookCellArray,
   metadata: z.record(z.string(), z.unknown()),
-  organizationId: z.string().uuid().nullable(),
+  organizationId: z.string().guid().nullable(),
   /**
    * Display name of the owning organization, `null` for a personal workspace.
    * Populated by the detail read only — the lists have no room for it — which is
@@ -26,9 +26,9 @@ export const zWorkbook = z.object({
    */
   organizationName: z.string().nullish(),
   visibility: z.enum(["private", "public"]),
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
   createdByName: z.string().optional(),
-  forkedFrom: z.string().uuid().nullish(),
+  forkedFrom: z.string().guid().nullish(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   isUpgradable: z.boolean().optional(),
@@ -80,7 +80,7 @@ export const zWorkbookPaginatedList = zPaginated(zWorkbookListEntry);
 export const zWorkbookListResponse = z.union([zWorkbookList, zWorkbookPaginatedList]);
 
 export const zWorkbookIdPathParam = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
 });
 
 export const zCreateWorkbookRequestBody = z.object({
@@ -93,10 +93,10 @@ export const zCreateWorkbookRequestBody = z.object({
   cells: zWorkbookCellArrayInput.optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   // Set when duplicating an existing workbook, to record its lineage.
-  forkedFrom: z.string().uuid().optional(),
+  forkedFrom: z.string().guid().optional(),
   // Optional target organization to create into; defaults to the creator's
   // personal org. The caller must be a member of the given organization.
-  organizationId: z.string().uuid().optional(),
+  organizationId: z.string().guid().optional(),
   // Visibility at creation: defaults to public. Post-create changes go through the
   // dedicated `setVisibility` route only, which is monotonic (private→public); the
   // update body never carries visibility.

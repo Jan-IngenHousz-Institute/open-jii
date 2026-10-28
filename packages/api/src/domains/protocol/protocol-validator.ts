@@ -277,13 +277,13 @@ interface PathItem {
   arrayIndex?: number;
 }
 
-export function getPathItem(path: (string | number)[]): PathItem | undefined {
+export function getPathItem(path: PropertyKey[]): PathItem | undefined {
   const item = path.shift();
-  if (item === undefined) {
-    return undefined;
-  }
   if (typeof item === "string") {
     return { item };
+  }
+  if (typeof item !== "number") {
+    return undefined;
   }
   const arrayIndex = item;
   const nextItem = path.shift();
@@ -318,7 +318,7 @@ export function findProtocolErrorLine(text: string, e: ZodIssue) {
   if (e.path.length == 0) return { line, message };
   const codeLines = text.split("\n");
   const containsProtocolSet = e.path.includes("_protocol_set_");
-  const missingItem = e.message === "Required";
+  const missingItem = e.code === "invalid_type" && e.message.endsWith("received undefined");
 
   if (containsProtocolSet) {
     let pathItem = getPathItem(e.path);

@@ -407,6 +407,27 @@
       "when": 1791815895986,
       "tag": "0057_notification_deliveries",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1792495699712,
+      "tag": "0058_experiment_exports",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1792523857738,
+      "tag": "0059_experiment_uploads",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1793033166739,
+      "tag": "0060_metrics_publisher_reads_only_what_it_counts",
+      "breakpoints": true
     }
   ]
 }

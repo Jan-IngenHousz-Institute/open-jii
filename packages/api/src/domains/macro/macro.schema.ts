@@ -1,13 +1,19 @@
 import { z } from "zod";
 
-import { zListSort, zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
+import {
+  zListFilter,
+  zListSort,
+  zPaginated,
+  zPaginationQuery,
+  zResourceScope,
+} from "../../shared/listing";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zResourceSeries } from "../metrics/metrics.schema";
 import { zVisibility } from "../visibility/visibility.schema";
 
 // ── Helpers ──────────────────────────────────────────────────────────
 function jsonStringOrValue<T extends z.ZodTypeAny>(schema: T) {
-  return z.preprocess((val) => {
+  return z.preprocess((val): unknown => {
     if (typeof val === "string") {
       try {
         return JSON.parse(val);
@@ -26,19 +32,19 @@ export const zMacroLanguage = z.enum(["python", "r", "javascript"]);
 
 // Define Zod schemas for macro models
 export const zMacro = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   filename: z.string(),
   description: z.string().nullable(),
   language: zMacroLanguage,
   code: z.string(),
   sortOrder: z.number().nullish(),
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
   createdByName: z.string().optional(),
-  forkedFrom: z.string().uuid().nullish(),
+  forkedFrom: z.string().guid().nullish(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
-  organizationId: z.string().uuid().nullable(),
+  organizationId: z.string().guid().nullable(),
   /**
    * Display name of the owning organization, `null` for a personal workspace.
    * Populated by the detail read only — the lists have no room for it — which is
@@ -73,11 +79,16 @@ export type MacroSort = z.infer<typeof zMacroSort>;
 export const zMacroFilterQuery = z
   .object({
     search: z.string().optional(),
-    language: zMacroLanguage.optional(),
+    language: zListFilter(zMacroLanguage)
+      .optional()
+      .describe("Filter macros by language; several values match either"),
     /** @deprecated Alias for `scope: "related"`, removed once web and mobile have migrated. */
     filter: z.enum(["my"]).optional().describe("Deprecated alias for scope=related"),
     scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
     sort: zMacroSort.optional().describe("Up to two ordered sort criteria"),
+    visibility: zListFilter(zVisibility)
+      .optional()
+      .describe("Filter macros by visibility; several values match either"),
     fields: z
       .enum(["summary", "full"])
       .optional()
@@ -94,7 +105,7 @@ export const zMacroListResponse = z.union([zMacroList, zMacroPaginatedList]);
 
 // Path parameters
 export const zMacroIdPathParam = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
 });
 
 // Request body schemas - includes code for Databricks processing
@@ -108,10 +119,10 @@ export const zCreateMacroRequestBody = z.object({
   language: zMacroLanguage,
   code: z.string().min(1, "Code file content is required"), // Base64 encoded file content
   // Set when this macro is a fork (copy) of another, to record its lineage.
-  forkedFrom: z.string().uuid().optional(),
+  forkedFrom: z.string().guid().optional(),
   // Optional target organization to create into; defaults to the creator's
   // personal org. The caller must be a member of the given organization.
-  organizationId: z.string().uuid().optional(),
+  organizationId: z.string().guid().optional(),
   // Visibility at creation: defaults to public. Post-create changes go through the
   // dedicated `setVisibility` route only, which is monotonic (private→public); the
   // update body never carries visibility.
@@ -138,14 +149,14 @@ export const zMacroErrorResponse = z.object({
 
 // Macro-Protocol compatibility schemas
 export const zCompatibleProtocolSummary = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   family: z.string(),
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
 });
 
 export const zMacroProtocolEntry = z.object({
-  macroId: z.string().uuid(),
+  macroId: z.string().guid(),
   protocol: zCompatibleProtocolSummary,
   addedAt: z.string().datetime(),
 });
@@ -155,28 +166,28 @@ export const zMacroProtocolList = z.array(zMacroProtocolEntry);
 export const zAddCompatibleProtocolsBody = z.object({
   // Capped so a single request can't fan out into an unbounded set of per-id
   // authorization checks (each link target is read-access validated server-side).
-  protocolIds: z.array(z.string().uuid()).min(1).max(100),
+  protocolIds: z.array(z.string().guid()).min(1).max(100),
 });
 
 export const zMacroProtocolPathParams = z.object({
-  id: z.string().uuid(),
-  protocolId: z.string().uuid(),
+  id: z.string().guid(),
+  protocolId: z.string().guid(),
 });
 
 // ── Single Macro Execution ───────────────────────────────────────────
 
 export const zMacroExecutionRequestBody = z.object({
-  data: jsonStringOrValue(z.union([z.record(z.unknown()), z.array(z.unknown())])),
+  data: jsonStringOrValue(z.union([z.record(z.string(), z.unknown()), z.array(z.unknown())])),
   // Upstream cell outputs keyed by canonical name, injected into the sandbox as
   // read-only `ctx`. Additive: `data` still carries the nearest output (`json`).
-  context: jsonStringOrValue(z.record(z.unknown())).optional(),
+  context: jsonStringOrValue(z.record(z.string(), z.unknown())).optional(),
   timeout: z.number().int().min(1).max(60).optional(),
 });
 
 export const zMacroExecutionResponse = z.object({
-  macro_id: z.string().uuid(),
+  macro_id: z.string().guid(),
   success: z.boolean(),
-  output: z.record(z.unknown()).optional(),
+  output: z.record(z.string(), z.unknown()).optional(),
   error: z.string().optional(),
 });
 
@@ -184,12 +195,12 @@ export const zMacroExecutionResponse = z.object({
 
 export const zMacroBatchExecutionItem = z.object({
   id: z.string(),
-  macro_id: z.string().uuid(),
-  data: jsonStringOrValue(z.union([z.record(z.unknown()), z.array(z.unknown())])),
+  macro_id: z.string().guid(),
+  data: jsonStringOrValue(z.union([z.record(z.string(), z.unknown()), z.array(z.unknown())])),
   // Published workbook version that owns the exact macro snapshot. Optional
   // for legacy/non-workbook callers, which continue to resolve the live macro.
-  workbook_version_id: z.string().uuid().optional(),
-  context: jsonStringOrValue(z.record(z.unknown())).optional(),
+  workbook_version_id: z.string().guid().optional(),
+  context: jsonStringOrValue(z.record(z.string(), z.unknown())).optional(),
 });
 
 export const zMacroBatchExecutionRequestBody = z.object({
@@ -201,7 +212,7 @@ export const zMacroBatchExecutionResultItem = z.object({
   id: z.string(),
   macro_id: z.string(),
   success: z.boolean(),
-  output: z.record(z.unknown()).optional(),
+  output: z.record(z.string(), z.unknown()).optional(),
   error: z.string().optional(),
 });
 

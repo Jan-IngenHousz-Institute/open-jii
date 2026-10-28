@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import type {
   OrganizationDirectory,
   OrganizationSort,
+  OrganizationType,
 } from "@repo/api/domains/organization/organization.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 
@@ -30,15 +31,25 @@ export class ListOrganizationsUseCase {
 
   constructor(private readonly organizationRepository: OrganizationRepository) {}
 
+  /**
+   * Return the caller's visible directory with the requested search, scope, sort,
+   * and type filters. Repository failures are returned as a failed Result.
+   */
   async execute(
     userId: string,
-    params: { search?: string; scope?: ResourceScope; sort?: OrganizationSort },
+    params: {
+      search?: string;
+      scope?: ResourceScope;
+      sort?: OrganizationSort;
+      types?: OrganizationType[];
+    },
   ): Promise<Result<OrganizationDirectory>> {
     this.logger.log({
       msg: "Listing the organization directory",
       operation: "list-organizations",
       userId,
       hasSearch: Boolean(params.search),
+      typeCount: params.types?.length ?? 0,
       scope: params.scope ?? "all",
     });
 

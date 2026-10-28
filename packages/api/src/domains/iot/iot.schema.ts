@@ -13,7 +13,7 @@ export const zIotCredentials = z.object({
 });
 
 export const zIotUploadUrlRequest = z.object({
-  experimentId: z.string().uuid().describe("UUID of the experiment to associate this upload with"),
+  experimentId: z.string().guid().describe("UUID of the experiment to associate this upload with"),
 });
 
 export const zIotUploadUrl = z.object({
@@ -47,7 +47,7 @@ export const zDeviceType = zSensorFamily;
 export const zRegisterableDeviceType = zDeviceType.exclude(["mobile"]);
 
 export const zIotDevice = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   thingName: z.string(),
   thingArn: z.string(),
   serialNumber: z.string(),
@@ -56,8 +56,8 @@ export const zIotDevice = z.object({
   status: zIotDeviceStatus,
   certificateId: z.string().nullable(),
   certificateArn: z.string().nullable(),
-  createdBy: z.string().uuid(),
-  organizationId: z.string().uuid().nullable(),
+  createdBy: z.string().guid(),
+  organizationId: z.string().guid().nullable(),
   visibility: z.enum(["private", "public"]),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -121,7 +121,7 @@ export const zRegisterIotDeviceBody = z.object({
   ),
   // Optional target organization to register the device into; defaults to the
   // creator's personal org. The caller must be a member of the given organization.
-  organizationId: z.string().uuid().optional(),
+  organizationId: z.string().guid().optional(),
 });
 
 export const zRegisterIotDeviceResponse = zIotDevice;
@@ -138,10 +138,10 @@ export const zBulkRegisterIotDevicesBody = z.object({
       { message: "Serial numbers must be unique within the batch" },
     ),
   deviceType: zRegisterableDeviceType,
-  organizationId: z.string().uuid().optional(),
+  organizationId: z.string().guid().optional(),
   group: z
     .union([
-      z.object({ groupId: z.string().uuid() }),
+      z.object({ groupId: z.string().guid() }),
       z.object({ name: z.string().trim().min(1).max(255) }),
     ])
     .optional(),
@@ -156,7 +156,7 @@ export const zBulkRegisteredIotDevice = z.object({
 
 export const zBulkRegisterIotDevicesResult = z.object({
   devices: z.array(zBulkRegisteredIotDevice),
-  groupId: z.string().uuid().nullable(),
+  groupId: z.string().guid().nullable(),
   groupError: z.string().nullable(),
 });
 
@@ -179,11 +179,11 @@ export const zDeviceRegistryWebhookPayload = z.object({
 
 export const zDeviceRegistryEntry = z.object({
   thingName: z.string(),
-  id: z.string().uuid(),
+  id: z.string().guid(),
   serialNumber: z.string(),
   deviceType: zDeviceType,
   status: zIotDeviceStatus,
-  createdBy: z.string().uuid(),
+  createdBy: z.string().guid(),
 });
 
 export const zDeviceRegistryWebhookResponse = z.object({
@@ -195,7 +195,7 @@ export type DeviceRegistryEntry = z.infer<typeof zDeviceRegistryEntry>;
 export type DeviceRegistryWebhookResponse = z.infer<typeof zDeviceRegistryWebhookResponse>;
 
 export const zIotDevicePathParam = z.object({
-  deviceId: z.string().uuid().describe("ID of the device"),
+  deviceId: z.string().guid().describe("ID of the device"),
 });
 
 // Show-once certificate bundle. Returned only at issuance/rotation and never
@@ -214,7 +214,7 @@ export const zIssueIotCredentialsResponse = z.object({
 // and the pinned workbook version to run.
 export const zOnboardDeviceBody = z.object({
   experimentIds: z
-    .array(z.string().uuid())
+    .array(z.string().guid())
     .max(100)
     .default([])
     .describe("Experiments to bind the device to. An empty list re-issues the config."),
@@ -229,7 +229,7 @@ export const zOnboardDeviceBody = z.object({
 // is executable without lookups.
 export const zDeviceProcedureProtocol = z.object({
   type: z.literal("protocol"),
-  protocolId: z.string().uuid(),
+  protocolId: z.string().guid(),
   name: z.string().optional(),
   family: zProtocolFamily.optional(),
   code: z.unknown().describe("The protocol's executable code, snapshotted at workbook publish"),
@@ -264,7 +264,7 @@ export const zDeviceProcedure = z.discriminatedUnion("type", [
 ]);
 
 export const zDeviceOnboardingExperiment = z.object({
-  experimentId: z.string().uuid(),
+  experimentId: z.string().guid(),
   experimentName: z.string(),
   topicPrefix: z
     .string()
@@ -311,7 +311,7 @@ export const zMonitoringBucket = z.enum(["hour", "day"]);
 // The monitoring dashboard's range input: one query window plus its bucket.
 export const zMonitoringRangeQuery = z
   .object({
-    deviceId: z.string().uuid(),
+    deviceId: z.string().guid(),
     from: z.string().datetime(),
     to: z.string().datetime(),
     bucket: zMonitoringBucket,
@@ -349,7 +349,7 @@ export const zDeviceSession = z.object({
 
 export const zDeviceThroughputBucket = z.object({
   bucketStart: z.string().datetime(),
-  experimentId: z.string().uuid().nullable(),
+  experimentId: z.string().guid().nullable(),
   count: z.number().int(),
 });
 
@@ -428,7 +428,7 @@ export const zDeviceMonitoring = z.object({
 
 /** One experiment the device's stored rows claim, day-resolution recency. */
 export const zObservedExperiment = z.object({
-  experimentId: z.string().uuid().nullable(),
+  experimentId: z.string().guid().nullable(),
   count: z.number().int(),
   lastAt: z.string().datetime().nullable(),
 });
@@ -442,7 +442,7 @@ export const zDeviceObservedExperiments = z.object({
 
 export const zObservedExperimentsQuery = z
   .object({
-    deviceId: z.string().uuid(),
+    deviceId: z.string().guid(),
     from: z.string().datetime(),
     to: z.string().datetime(),
   })
@@ -476,20 +476,20 @@ export const zIotFleetMonitoringQuery = z
 
 /** A device's all-time last data arrival, fleet-addressed. */
 export const zIotFleetDeviceActivity = z.object({
-  deviceId: z.string().uuid(),
+  deviceId: z.string().guid(),
   lastDataAt: z.string().datetime().nullable(),
 });
 
 /** One (bucket, device) measurement count aggregated across the fleet. */
 export const zIotFleetThroughputBucket = z.object({
   bucketStart: z.string().datetime().nullable(),
-  deviceId: z.string().uuid().nullable(),
+  deviceId: z.string().guid().nullable(),
   count: z.number().int(),
 });
 
 /** A fleet device's broker lifecycle event inside the window. */
 export const zIotFleetLifecycleEvent = z.object({
-  deviceId: z.string().uuid().nullable(),
+  deviceId: z.string().guid().nullable(),
   eventType: z.string().nullable(),
   eventTimestamp: z.string().datetime().nullable(),
   disconnectReason: z.string().nullable(),

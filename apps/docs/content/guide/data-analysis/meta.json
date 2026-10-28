@@ -1,4 +1,4 @@
 {
   "title": "Data & Analysis",
-  "pages": ["index", "viewing-data", "exporting-data", "databricks"]
+  "pages": ["index", "viewing-data", "uploading-data", "exporting-data", "databricks"]
 }

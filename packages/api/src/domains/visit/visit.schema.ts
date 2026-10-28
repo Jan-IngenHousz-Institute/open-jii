@@ -9,11 +9,11 @@ export const zVisitedResourceType = z.enum(["experiment", "protocol", "macro", "
 
 export const zRecordVisitBody = z.object({
   resourceType: zVisitedResourceType.describe("Type of the opened resource"),
-  resourceId: z.string().uuid().describe("ID of the opened resource"),
+  resourceId: z.string().guid().describe("ID of the opened resource"),
 });
 
 const zRecentlyOpenedBase = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   name: z.string(),
   /** When the caller last opened the resource's overview. */
   openedAt: z.string().datetime(),
