@@ -33,7 +33,8 @@
       "workbooks-list retaken on 2026-10-13 at 1920x1200 from the local stack with the seeded development identity, showing the Visibility filter button. Reviewed at full size and approved before publishing. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
       "notifications-page retaken on 2026-10-22 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only notifications-page, because the page gained a line under the list: Read notifications are kept for 90 days, unread ones for a year. Reviewed at full size: the same three seeded rows as the 2026-10-08 capture, one under each of Today, Yesterday and Earlier, with no developer-authored row, no credentials and no dev overlays in frame. As before, the three seeded rows were moved to the seed script's offsets and the seed user's 108 developer-authored rows from earlier hand checks were held out of frame; both changes were undone after the shot, and the notifications and notification_deliveries tables diff clean against their pre-shot copies. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp.",
       "organizations-list retaken on 2026-10-14 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only organizations-list. The directory gained the Type filter and a sortable Type column; the shot now sorts by Type ascending. Reviewed at full size and approved before publishing: all six organization names are [Seed] fixtures, the Type filter is unselected, the untyped [Seed] Community Seed Library sorts last with an empty Type cell, and no real users, credentials, precise locations or dev overlays appear. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
-      "protocols-list retaken on 2026-10-26 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only protocols-list. Name remains sorted ascending; Family and Visibility filters are visible with no values selected, and Clear filters is absent. Reviewed at full size and approved; only [Seed] protocol names appear, with no real people's names or emails. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
+      "protocols-list retaken on 2026-10-26 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only protocols-list. Name remains sorted ascending; Family and Visibility filters are visible with no values selected, and Clear filters is absent. Reviewed at full size and approved; only [Seed] protocol names appear, with no real people's names or emails. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
+      "macros-list retaken on 2026-10-27 at 1920x1200 from the local stack with the expanded sidebar, matching the other platform captures. The frame shows Name sorted ascending, Language and Visibility filters with none applied, only [Seed] macro names, and no data-processing status notice. Reviewed at full size; the account details in the sidebar are the seeded development identity. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine."
     ]
   },
   "assets": [
@@ -274,10 +275,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 94348,
-      "sha256": "813d8f6062bbb78591217510f089b44ad3ee81454ec836c53410b7e2b772b73e",
+      "bytes": 86718,
+      "sha256": "ca40ecec1086c56a7cb0d57a14e0c16ff249104c6297fba2d77f8e27c3f941fb",
       "disposition": "published",
-      "scope": "Macros overview with the Name column sorted ascending"
+      "scope": "Macros overview with Name sorted ascending, Language and Visibility filters unapplied, and only seeded macro names visible"
     },
     {
       "path": "/img/chrome-refresh/sidebar-peek.webp",
