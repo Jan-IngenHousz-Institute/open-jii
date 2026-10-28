@@ -1,9 +1,12 @@
+import { Logger } from "@nestjs/common";
 import type { MockInstance } from "vitest";
 
 import type { NotificationParams } from "@repo/api/domains/notification/notification.schema";
-import { eq, notifications } from "@repo/database";
+import { createSecondaryDatabase, eq, notifications, sql } from "@repo/database";
+import type { DatabaseInstance } from "@repo/database";
 
 import { EmailAdapter } from "../../../common/modules/email/services/email.adapter";
+import { ErrorCodes } from "../../../common/utils/error-codes";
 import {
   AppError,
   assertFailure,
@@ -457,6 +460,225 @@ describe("NotificationDispatchService", () => {
     expect(second.value).toEqual({ created: 0, queued: 0 });
     expect(await rowsFor(recipientId)).toHaveLength(1);
     expect(await deliveriesFor(recipientId)).toHaveLength(1);
+  });
+
+  describe("once until read", () => {
+    const versionParams = {
+      experimentName: "Photosynthesis",
+      workbookName: "Leaf protocol",
+      version: "2",
+    };
+
+    const seedRow = (
+      userId: string,
+      row: { type?: "experiment_join_request_approved"; resourceId?: string } = {},
+    ) =>
+      repository.insertMany([
+        {
+          recipientId: userId,
+          type: row.type ?? "workbook_version_published",
+          actorId,
+          resourceType: "experiment",
+          resourceId: row.resourceId ?? experiment.id,
+          params: versionParams,
+          dedupeKey: null,
+        },
+      ]);
+
+    const rejection = (onceUntilRead?: boolean, experimentName = "Photosynthesis") =>
+      dispatch.dispatch({
+        type: "experiment_join_request_rejected",
+        recipientIds: [recipientId],
+        actorId,
+        resource: experiment,
+        params: { experimentName },
+        onceUntilRead,
+      });
+
+    it("refreshes only an unread row of the same type about the same resource", async () => {
+      const laterActorId = await testApp.createTestUser({ name: "Later Actor" });
+      const readId = await testApp.createTestUser({});
+      const otherTypeId = await testApp.createTestUser({});
+      const otherResourceId = await testApp.createTestUser({});
+
+      const unreadRow = await seedRow(recipientId);
+      assertSuccess(unreadRow);
+      const longAgo = new Date("2020-01-01T00:00:00.000Z");
+      await testApp.database
+        .update(notifications)
+        .set({ createdAt: longAgo })
+        .where(eq(notifications.id, unreadRow.value[0].id));
+      const readRow = await seedRow(readId);
+      assertSuccess(readRow);
+      assertSuccess(await repository.markRead(readId, [readRow.value[0].id]));
+      assertSuccess(await seedRow(otherTypeId, { type: "experiment_join_request_approved" }));
+      assertSuccess(await seedRow(otherResourceId, { resourceId: crypto.randomUUID() }));
+
+      const result = await dispatch.dispatch({
+        type: "workbook_version_published",
+        recipientIds: [recipientId, readId, otherTypeId, otherResourceId],
+        actorId: laterActorId,
+        resource: experiment,
+        params: { ...versionParams, version: "3" },
+        onceUntilRead: true,
+      });
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ created: 3, queued: 0 });
+      const [refreshed, ...more] = await rowsFor(recipientId);
+      expect(more).toEqual([]);
+      expect(refreshed).toMatchObject({
+        id: unreadRow.value[0].id,
+        actorId: laterActorId,
+        params: { ...versionParams, version: "3" },
+        readAt: null,
+      });
+      expect(refreshed.createdAt.getTime()).toBeGreaterThan(longAgo.getTime());
+      expect(await rowsFor(readId)).toHaveLength(2);
+      expect(await rowsFor(otherTypeId)).toHaveLength(2);
+      expect(await rowsFor(otherResourceId)).toHaveLength(2);
+    });
+
+    it("keeps one row with the latest params while it is unread, and writes again once it is read", async () => {
+      const first = await rejection(true);
+      assertSuccess(first);
+      expect(first.value).toEqual({ created: 1, queued: 1 });
+
+      const second = await rejection(true, "Photosynthesis II");
+      assertSuccess(second);
+      expect(second.value).toEqual({ created: 0, queued: 0 });
+      const [row, ...more] = await rowsFor(recipientId);
+      expect(more).toEqual([]);
+      expect(row.params).toEqual({ experimentName: "Photosynthesis II" });
+      expect(await deliveriesFor(recipientId)).toHaveLength(1);
+
+      assertSuccess(await repository.markRead(recipientId, [row.id]));
+
+      const third = await rejection(true);
+      assertSuccess(third);
+      expect(third.value).toEqual({ created: 1, queued: 1 });
+      expect(await rowsFor(recipientId)).toHaveLength(2);
+      expect(await deliveriesFor(recipientId)).toHaveLength(2);
+    });
+
+    it("writes every time when the caller does not ask for it", async () => {
+      assertSuccess(await rejection());
+      const second = await rejection();
+
+      assertSuccess(second);
+      expect(second.value).toEqual({ created: 1, queued: 1 });
+      expect(await rowsFor(recipientId)).toHaveLength(2);
+    });
+
+    it("writes nothing and logs when the unread rows cannot be refreshed", async () => {
+      assertSuccess(await rejection());
+      vi.spyOn(repository, "refreshUnread").mockResolvedValue(
+        failure(AppError.internal("Database unavailable")),
+      );
+      const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+
+      const result = await rejection(true, "Photosynthesis II");
+
+      assertFailure(result);
+      const [row, ...more] = await rowsFor(recipientId);
+      expect(more).toEqual([]);
+      expect(row.params).toEqual({ experimentName: "Photosynthesis" });
+      expect(await deliveriesFor(recipientId)).toHaveLength(1);
+      expect(error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: "Failed to store notifications, nothing was written",
+          operation: "dispatch-notification",
+          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        }),
+      );
+    });
+
+    /**
+     * Racing two dispatches directly proves nothing: the harness pools one connection, so
+     * they would run one after the other. Each runs on its own connection instead, the
+     * first held just before its insert, and the second must either wait on the first or
+     * finish before the first is let go.
+     */
+    it("leaves one row when two dispatches about the same event arrive at once", async () => {
+      const first = createSecondaryDatabase();
+      const second = createSecondaryDatabase();
+      try {
+        const serviceOn = (
+          database: DatabaseInstance,
+          notificationRepository: NotificationRepository,
+        ) =>
+          new NotificationDispatchService(
+            database,
+            notificationRepository,
+            deliveryRepository,
+            notificationEmail,
+            testApp.module.get(NotificationPreferencesService),
+            testApp.module.get(NotificationOutboxWorker),
+          );
+        const firstRepository = new NotificationRepository(first.database);
+        const secondRepository = new NotificationRepository(second.database);
+        const send = (service: NotificationDispatchService, experimentName: string) =>
+          service.dispatch({
+            type: "experiment_join_request_rejected",
+            recipientIds: [recipientId],
+            actorId,
+            resource: experiment,
+            params: { experimentName },
+            onceUntilRead: true,
+          });
+
+        let release!: () => void;
+        let reachedInsert!: () => void;
+        const released = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        const atInsert = new Promise<void>((resolve) => {
+          reachedInsert = resolve;
+        });
+        const writer = new NotificationRepository(first.database);
+        vi.spyOn(firstRepository, "insertMany").mockImplementation(async (rows, handle) => {
+          reachedInsert();
+          await released;
+          return writer.insertMany(rows, handle);
+        });
+
+        const holding = send(serviceOn(first.database, firstRepository), "First");
+        await atInsert;
+
+        const [{ pid }] = await second.database.execute<{ pid: number }>(
+          sql`SELECT pg_backend_pid() AS pid`,
+        );
+        const racingState = { done: false };
+        const racing = send(serviceOn(second.database, secondRepository), "Second").finally(() => {
+          racingState.done = true;
+        });
+        // Without the lock the second dispatch finds nothing unread and writes its own
+        // row; with it, the second waits for the first to commit.
+        for (let attempt = 0; attempt < 60 && !racingState.done; attempt++) {
+          const [{ waiting }] = await testApp.database.execute<{ waiting: number }>(
+            sql`SELECT count(*)::int AS waiting FROM pg_stat_activity
+                WHERE pid = ${Number(pid)} AND wait_event_type = 'Lock'`,
+          );
+          if (Number(waiting) > 0) break;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+
+        release();
+        const results = await Promise.all([holding, racing]);
+
+        const created = results.map((result) => {
+          assertSuccess(result);
+          return result.value.created;
+        });
+        expect(created).toEqual([1, 0]);
+        const [row, ...more] = await rowsFor(recipientId);
+        expect(more).toEqual([]);
+        expect(row.params).toEqual({ experimentName: "Second" });
+        expect(await deliveriesFor(recipientId)).toHaveLength(1);
+      } finally {
+        await Promise.all([first.close(), second.close()]);
+      }
+    });
   });
 
   // The access email needs a resource it can build a page link for. The registry

@@ -31,6 +31,13 @@ export interface DispatchInput<T extends NotificationType> {
    * written; only the email step is skipped, whatever the type's channel rule says.
    */
   suppressEmail?: boolean;
+  /**
+   * For an event that repeats while what it is about stays the same for the reader:
+   * someone still holding an unread row of this type for this resource has that row
+   * brought up to date instead of getting a second one. It needs a resource; without
+   * one it does nothing.
+   */
+  onceUntilRead?: boolean;
 }
 
 /**
@@ -85,16 +92,49 @@ export class NotificationDispatchService {
     }
 
     const resource = input.resource ?? null;
+    const refreshedResource = input.onceUntilRead === true ? resource : null;
 
     // Decided before anything is written, so the bell rows and the emails they owe go
     // in together: a reader never sees a notification whose delivery row is still
-    // coming, or a delivery row whose notification was rolled back.
+    // coming, or a delivery row whose notification was rolled back. A recipient whose
+    // row is refreshed below gets no row inserted, so no delivery either.
     const emailRecipients = await this.emailRecipients(input, definition, recipientIds);
 
     const written = await tryCatch(() =>
       this.database.transaction(async (tx) => {
+        let insertIds = recipientIds;
+
+        // Refreshed in the same transaction as the insert, behind a lock on the event,
+        // so a second dispatch about it waits and then finds the first one's row unread.
+        if (refreshedResource) {
+          const locked = await this.notificationRepository.lockEvent(
+            input.type,
+            refreshedResource,
+            tx,
+          );
+          if (locked.isFailure()) {
+            throw locked.error;
+          }
+
+          const refreshed = await this.notificationRepository.refreshUnread(
+            input.type,
+            refreshedResource,
+            recipientIds,
+            { params, actorId },
+            tx,
+          );
+          if (refreshed.isFailure()) {
+            throw refreshed.error;
+          }
+
+          insertIds = recipientIds.filter((id) => !refreshed.value.has(id));
+          if (insertIds.length === 0) {
+            return { created: 0, queued: 0 };
+          }
+        }
+
         const created = await this.notificationRepository.insertMany(
-          recipientIds.map((recipientId) => ({
+          insertIds.map((recipientId) => ({
             recipientId,
             type: input.type,
             actorId,

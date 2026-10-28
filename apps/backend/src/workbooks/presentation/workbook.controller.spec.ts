@@ -14,6 +14,7 @@ import { GetWorkbookVersionUseCase } from "../application/use-cases/get-workbook
 import { GetWorkbookUseCase } from "../application/use-cases/get-workbook/get-workbook";
 import { ListWorkbookVersionsUseCase } from "../application/use-cases/list-workbook-versions/list-workbook-versions";
 import { ListWorkbooksUseCase } from "../application/use-cases/list-workbooks/list-workbooks";
+import { PublishIfDriftedUseCase } from "../application/use-cases/publish-if-drifted/publish-if-drifted";
 import { UpdateWorkbookUseCase } from "../application/use-cases/update-workbook/update-workbook";
 import type { WorkbookVersionDto } from "../core/models/workbook-version.model";
 import type { WorkbookDto } from "../core/models/workbook.model";
@@ -522,6 +523,72 @@ describe("WorkbookController", () => {
     });
   });
 
+  describe("publishWorkbookVersion", () => {
+    const publishedVersion = (workbookId: string): WorkbookVersionDto => ({
+      id: faker.string.uuid(),
+      workbookId,
+      version: 2,
+      cells: [],
+      metadata: {},
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: testUserId,
+      entitySnapshots: { protocols: {}, macros: {} },
+    });
+
+    it("publishes the draft as the caller and returns the version", async () => {
+      const workbookId = faker.string.uuid();
+      const version = publishedVersion(workbookId);
+      const execute = vi
+        .spyOn(testApp.module.get(PublishIfDriftedUseCase), "execute")
+        .mockResolvedValue(success(version));
+
+      const path = testApp.resolveOrpcPath(contract.workbooks.publishWorkbookVersion, {
+        id: workbookId,
+      });
+      const response = await testApp.post(path).withAuth(testUserId).expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({ id: version.id, workbookId, version: 2 });
+      expect(execute).toHaveBeenCalledWith(workbookId, testUserId);
+    });
+
+    it("should return 404 for non-existent workbook", async () => {
+      vi.spyOn(testApp.module.get(PublishIfDriftedUseCase), "execute").mockResolvedValue(
+        failure(AppError.notFound("Workbook not found")),
+      );
+
+      const path = testApp.resolveOrpcPath(contract.workbooks.publishWorkbookVersion, {
+        id: faker.string.uuid(),
+      });
+      await testApp.post(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("refuses a Can view grantee on the workbook", async () => {
+      vi.spyOn(testApp.module.get(AuthorizationService), "can").mockRestore();
+      const execute = vi.spyOn(testApp.module.get(PublishIfDriftedUseCase), "execute");
+      const viewerId = await testApp.createTestUser({});
+      const workbook = await testApp.createWorkbook({
+        name: "Viewed workbook",
+        createdBy: testUserId,
+        visibility: "private",
+      });
+      await testApp.addResourceGrant({
+        resourceType: "workbook",
+        resourceId: workbook.id,
+        granteeType: "user",
+        granteeId: viewerId,
+        role: "viewer",
+      });
+
+      const path = testApp.resolveOrpcPath(contract.workbooks.publishWorkbookVersion, {
+        id: workbook.id,
+      });
+      await testApp.post(path).withAuth(viewerId).expect(StatusCodes.FORBIDDEN);
+
+      expect(execute).not.toHaveBeenCalled();
+    });
+  });
+
   // The pinned-version read is what the experiment design tab and the mobile flow
   // both depend on, and it is gated on the WORKBOOK — an experiment grant carries
   // nothing here. Runs against the real guard, so the mocked `can()` is restored.
@@ -716,6 +783,14 @@ describe("WorkbookController", () => {
             .patch(testApp.resolveOrpcPath(contract.workbooks.setVisibility, { id }))
             .withAuth(userId)
             .send({ visibility: "public" }),
+      },
+      {
+        name: "publish workbook version",
+        action: "update",
+        request: (id: string, userId: string) =>
+          testApp
+            .post(testApp.resolveOrpcPath(contract.workbooks.publishWorkbookVersion, { id }))
+            .withAuth(userId),
       },
       {
         name: "list workbook versions",

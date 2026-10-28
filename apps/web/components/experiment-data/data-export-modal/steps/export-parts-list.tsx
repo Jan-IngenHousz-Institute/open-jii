@@ -1,12 +1,11 @@
 "use client";
 
-import { formatDateTime } from "@/util/date";
-import { Copy, Download } from "lucide-react";
+import { Download } from "lucide-react";
+import * as React from "react";
 import {
   isExportExpiredError,
   useExportDownloadLinks,
 } from "~/hooks/experiment/useExportDownloadLinks/useExportDownloadLinks";
-import { useLocale } from "~/hooks/useLocale";
 import { formatFileSize } from "~/util/format-file-size";
 
 import type { ExperimentExportDownloadLink } from "@repo/api/domains/experiment/exports/experiment-exports.schema";
@@ -15,9 +14,24 @@ import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 /**
- * Every file of a multi-part export with its own download, plus the links as text for a
- * download tool, since a browser asks before letting a page start many downloads at once.
+ * Downloads a file in its own hidden frame, since navigating the page from one link to the next
+ * can cancel a download before it starts. The frame hangs off the page, not the dialog: the
+ * browser opens at most six connections to the bucket, and later files wait in their frames until
+ * one frees up. A frame goes once its link has expired, when its file can no longer start.
  */
+function downloadInHiddenFrame(url: string, expiresAt: string) {
+  const frame = document.createElement("iframe");
+  frame.hidden = true;
+  frame.tabIndex = -1;
+  // Keeps session replay from recording the signed link.
+  frame.className = "ph-no-capture";
+  frame.src = url;
+  document.body.append(frame);
+
+  window.setTimeout(() => frame.remove(), Date.parse(expiresAt) - Date.now());
+}
+
+/** Every file of a multi-part export with its own download, and a button that downloads them all. */
 export function ExportPartsList({
   id,
   experimentId,
@@ -28,8 +42,7 @@ export function ExportPartsList({
   exportId: string;
 }) {
   const { t } = useTranslation("experimentData");
-  const locale = useLocale();
-  const { data, isPending, isError, error } = useExportDownloadLinks({
+  const { data, isPending, isFetching, isError, error, refetch } = useExportDownloadLinks({
     experimentId,
     exportId,
   });
@@ -53,6 +66,22 @@ export function ExportPartsList({
     </li>
   );
 
+  // Fresh links give the files that wait for a connection the links' whole lifetime.
+  const handleDownloadAll = async () => {
+    const links = await refetch();
+    // A failed refresh shows its error above the list.
+    if (!links.isSuccess) {
+      return;
+    }
+
+    links.data.parts.forEach((part) => downloadInHiddenFrame(part.url, links.data.expiresAt));
+    toast({
+      description: t("experimentData.exportModal.downloadingAll", {
+        count: links.data.parts.length,
+      }),
+    });
+  };
+
   if (isPending) {
     return (
       <p id={id} className="text-muted-foreground text-xs">
@@ -61,45 +90,35 @@ export function ExportPartsList({
     );
   }
 
-  if (isError) {
+  const errorMessage = t(
+    isExportExpiredError(error)
+      ? "experimentData.exportModal.linkExpired"
+      : "experimentData.exportModal.linksError",
+  );
+
+  if (!data) {
     return (
       <p id={id} className="text-destructive text-xs">
-        {t(
-          isExportExpiredError(error)
-            ? "experimentData.exportModal.linkExpired"
-            : "experimentData.exportModal.linksError",
-        )}
+        {errorMessage}
       </p>
     );
   }
 
-  // Written straight from the click: Safari refuses a clipboard write that waits on the network,
-  // and the hook already refreshes these links five minutes before they stop working.
-  const handleCopyLinks = async () => {
-    try {
-      await navigator.clipboard.writeText(data.parts.map((part) => part.url).join("\n"));
-      toast({
-        description: t("experimentData.exportModal.linksCopied", {
-          time: formatDateTime(data.expiresAt, locale),
-        }),
-      });
-    } catch {
-      toast({ description: t("experimentData.exportModal.copyFailed"), variant: "destructive" });
-    }
-  };
-
   return (
     <div id={id} className="space-y-2 border-t pt-2 text-xs">
+      {/* A failed refresh keeps the links it has. */}
+      {isError && <p className="text-destructive">{errorMessage}</p>}
       <ul className="space-y-1">{data.parts.map(renderPart)}</ul>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-muted-foreground">
-          {t("experimentData.exportModal.linksHint", {
-            time: formatDateTime(data.expiresAt, locale),
-          })}
-        </p>
-        <Button variant="outline" size="sm" className="shrink-0 gap-1.5" onClick={handleCopyLinks}>
-          <Copy className="h-3.5 w-3.5" />
-          {t("experimentData.exportModal.copyLinks")}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          disabled={isFetching}
+          onClick={handleDownloadAll}
+        >
+          <Download className="h-3.5 w-3.5" />
+          {t("experimentData.exportModal.downloadAll")}
         </Button>
       </div>
     </div>

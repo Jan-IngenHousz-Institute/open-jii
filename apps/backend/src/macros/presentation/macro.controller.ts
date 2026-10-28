@@ -72,7 +72,8 @@ export class MacroController {
     return implement(macroContract.listMacros).handler(async ({ input }) => {
       const filter = {
         search: input.search,
-        language: input.language,
+        languages: input.language,
+        visibilities: input.visibility,
         scope: resolveListScope(input),
         userId: session.user.id,
         sort: input.sort,
