@@ -242,6 +242,21 @@ describe("orpcFetch", () => {
     await expect(p).rejects.toThrow();
   });
 
+  it("aborts when the upstream signal aborts while the session cookie is still being read", async () => {
+    const upstream = new AbortController();
+    mockGetCookie.mockImplementation(() => {
+      upstream.abort();
+      return Promise.resolve(SESSION);
+    });
+    mockFetch.mockImplementation((_req: Request, init: { signal: AbortSignal }) =>
+      init.signal.aborted
+        ? Promise.reject(new DOMException("aborted", "AbortError"))
+        : new Promise(() => undefined),
+    );
+
+    await expect(orpcFetch(makeRequest(), { signal: upstream.signal })).rejects.toThrow();
+  });
+
   it("aborts a hung fetch via its internal timeout", async () => {
     vi.useFakeTimers();
     try {
