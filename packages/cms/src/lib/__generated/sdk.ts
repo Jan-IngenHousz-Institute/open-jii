@@ -1552,8 +1552,6 @@ export type ComponentEmailLinkingCollections = {
   __typename?: "ComponentEmailLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
   entryCursorCollection?: Maybe<EntryCursorCollection>;
-  pageEmailsCollection?: Maybe<PageEmailsCollection>;
-  pageEmailsCursorCollection?: Maybe<PageEmailsCursorCollection>;
 };
 
 export type ComponentEmailLinkingCollectionsEntryCollectionArgs = {
@@ -1572,53 +1570,6 @@ export type ComponentEmailLinkingCollectionsEntryCursorCollectionArgs = {
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
-
-export type ComponentEmailLinkingCollectionsPageEmailsCollectionArgs = {
-  limit?: InputMaybe<Scalars["Int"]["input"]>;
-  locale?: InputMaybe<Scalars["String"]["input"]>;
-  order?: InputMaybe<Array<InputMaybe<ComponentEmailLinkingCollectionsPageEmailsCollectionOrder>>>;
-  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
-  skip?: InputMaybe<Scalars["Int"]["input"]>;
-  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
-};
-
-export type ComponentEmailLinkingCollectionsPageEmailsCursorCollectionArgs = {
-  limit?: InputMaybe<Scalars["Int"]["input"]>;
-  locale?: InputMaybe<Scalars["String"]["input"]>;
-  order?: InputMaybe<
-    Array<InputMaybe<ComponentEmailLinkingCollectionsPageEmailsCursorCollectionOrder>>
-  >;
-  pageNext?: InputMaybe<Scalars["String"]["input"]>;
-  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
-  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
-  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
-};
-
-export enum ComponentEmailLinkingCollectionsPageEmailsCollectionOrder {
-  InternalNameAsc = "internalName_ASC",
-  InternalNameDesc = "internalName_DESC",
-  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
-  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
-  SysIdAsc = "sys_id_ASC",
-  SysIdDesc = "sys_id_DESC",
-  SysPublishedAtAsc = "sys_publishedAt_ASC",
-  SysPublishedAtDesc = "sys_publishedAt_DESC",
-  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
-  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
-}
-
-export enum ComponentEmailLinkingCollectionsPageEmailsCursorCollectionOrder {
-  InternalNameAsc = "internalName_ASC",
-  InternalNameDesc = "internalName_DESC",
-  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
-  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
-  SysIdAsc = "sys_id_ASC",
-  SysIdDesc = "sys_id_DESC",
-  SysPublishedAtAsc = "sys_publishedAt_ASC",
-  SysPublishedAtDesc = "sys_publishedAt_DESC",
-  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
-  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
-}
 
 export enum ComponentEmailOrder {
   InternalNameAsc = "internalName_ASC",
@@ -4552,165 +4503,6 @@ export enum PageCookiePolicyOrder {
   TitleDesc = "title_DESC",
 }
 
-/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageEmails) */
-export type PageEmails = Entry &
-  _Node & {
-    __typename?: "PageEmails";
-    _id: Scalars["ID"]["output"];
-    contentfulMetadata: ContentfulMetadata;
-    emailsCollection?: Maybe<PageEmailsEmailsCollection>;
-    emailsCursorCollection?: Maybe<PageEmailsEmailsCursorCollection>;
-    internalName?: Maybe<Scalars["String"]["output"]>;
-    linkedFrom?: Maybe<PageEmailsLinkingCollections>;
-    sys: Sys;
-  };
-
-/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageEmails) */
-export type PageEmailsEmailsCollectionArgs = {
-  limit?: InputMaybe<Scalars["Int"]["input"]>;
-  locale?: InputMaybe<Scalars["String"]["input"]>;
-  order?: InputMaybe<Array<InputMaybe<PageEmailsEmailsCollectionOrder>>>;
-  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
-  skip?: InputMaybe<Scalars["Int"]["input"]>;
-  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
-  where?: InputMaybe<ComponentEmailFilter>;
-};
-
-/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageEmails) */
-export type PageEmailsEmailsCursorCollectionArgs = {
-  limit?: InputMaybe<Scalars["Int"]["input"]>;
-  locale?: InputMaybe<Scalars["String"]["input"]>;
-  order?: InputMaybe<Array<InputMaybe<PageEmailsEmailsCursorCollectionOrder>>>;
-  pageNext?: InputMaybe<Scalars["String"]["input"]>;
-  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
-  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
-  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
-  where?: InputMaybe<ComponentEmailFilter>;
-};
-
-/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageEmails) */
-export type PageEmailsInternalNameArgs = {
-  locale?: InputMaybe<Scalars["String"]["input"]>;
-  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
-};
-
-/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageEmails) */
-export type PageEmailsLinkedFromArgs = {
-  allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
-};
-
-export type PageEmailsCollection = {
-  __typename?: "PageEmailsCollection";
-  items: Array<Maybe<PageEmails>>;
-  limit: Scalars["Int"]["output"];
-  skip: Scalars["Int"]["output"];
-  total: Scalars["Int"]["output"];
-};
-
-export type PageEmailsCursorCollection = {
-  __typename?: "PageEmailsCursorCollection";
-  items: Array<Maybe<PageEmails>>;
-  limit: Scalars["Int"]["output"];
-  pages: CursorPages;
-};
-
-export type PageEmailsEmailsCollection = {
-  __typename?: "PageEmailsEmailsCollection";
-  items: Array<Maybe<ComponentEmail>>;
-  limit: Scalars["Int"]["output"];
-  skip: Scalars["Int"]["output"];
-  total: Scalars["Int"]["output"];
-};
-
-export enum PageEmailsEmailsCollectionOrder {
-  InternalNameAsc = "internalName_ASC",
-  InternalNameDesc = "internalName_DESC",
-  PreviewAsc = "preview_ASC",
-  PreviewDesc = "preview_DESC",
-  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
-  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
-  SysIdAsc = "sys_id_ASC",
-  SysIdDesc = "sys_id_DESC",
-  SysPublishedAtAsc = "sys_publishedAt_ASC",
-  SysPublishedAtDesc = "sys_publishedAt_DESC",
-  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
-  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
-}
-
-export type PageEmailsEmailsCursorCollection = {
-  __typename?: "PageEmailsEmailsCursorCollection";
-  items: Array<Maybe<ComponentEmail>>;
-  limit: Scalars["Int"]["output"];
-  pages: CursorPages;
-};
-
-export enum PageEmailsEmailsCursorCollectionOrder {
-  InternalNameAsc = "internalName_ASC",
-  InternalNameDesc = "internalName_DESC",
-  PreviewAsc = "preview_ASC",
-  PreviewDesc = "preview_DESC",
-  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
-  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
-  SysIdAsc = "sys_id_ASC",
-  SysIdDesc = "sys_id_DESC",
-  SysPublishedAtAsc = "sys_publishedAt_ASC",
-  SysPublishedAtDesc = "sys_publishedAt_DESC",
-  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
-  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
-}
-
-export type PageEmailsFilter = {
-  AND?: InputMaybe<Array<InputMaybe<PageEmailsFilter>>>;
-  OR?: InputMaybe<Array<InputMaybe<PageEmailsFilter>>>;
-  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
-  emails?: InputMaybe<CfComponentEmailNestedFilter>;
-  emailsCollection_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
-  internalName?: InputMaybe<Scalars["String"]["input"]>;
-  internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
-  internalName_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
-  internalName_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
-  internalName_not?: InputMaybe<Scalars["String"]["input"]>;
-  internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
-  internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
-  sys?: InputMaybe<SysFilter>;
-};
-
-export type PageEmailsLinkingCollections = {
-  __typename?: "PageEmailsLinkingCollections";
-  entryCollection?: Maybe<EntryCollection>;
-  entryCursorCollection?: Maybe<EntryCursorCollection>;
-};
-
-export type PageEmailsLinkingCollectionsEntryCollectionArgs = {
-  limit?: InputMaybe<Scalars["Int"]["input"]>;
-  locale?: InputMaybe<Scalars["String"]["input"]>;
-  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
-  skip?: InputMaybe<Scalars["Int"]["input"]>;
-  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
-};
-
-export type PageEmailsLinkingCollectionsEntryCursorCollectionArgs = {
-  limit?: InputMaybe<Scalars["Int"]["input"]>;
-  locale?: InputMaybe<Scalars["String"]["input"]>;
-  pageNext?: InputMaybe<Scalars["String"]["input"]>;
-  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
-  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
-  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
-};
-
-export enum PageEmailsOrder {
-  InternalNameAsc = "internalName_ASC",
-  InternalNameDesc = "internalName_DESC",
-  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
-  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
-  SysIdAsc = "sys_id_ASC",
-  SysIdDesc = "sys_id_DESC",
-  SysPublishedAtAsc = "sys_publishedAt_ASC",
-  SysPublishedAtDesc = "sys_publishedAt_DESC",
-  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
-  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
-}
-
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq) */
 export type PageFaq = Entry &
   _Node & {
@@ -6608,9 +6400,6 @@ export type Query = {
   pageCookiePolicy?: Maybe<PageCookiePolicy>;
   pageCookiePolicyCollection?: Maybe<PageCookiePolicyCollection>;
   pageCookiePolicyCursorCollection?: Maybe<PageCookiePolicyCursorCollection>;
-  pageEmails?: Maybe<PageEmails>;
-  pageEmailsCollection?: Maybe<PageEmailsCollection>;
-  pageEmailsCursorCollection?: Maybe<PageEmailsCursorCollection>;
   pageFaq?: Maybe<PageFaq>;
   pageFaqCollection?: Maybe<PageFaqCollection>;
   pageFaqCursorCollection?: Maybe<PageFaqCursorCollection>;
@@ -7123,34 +6912,6 @@ export type QueryPageCookiePolicyCursorCollectionArgs = {
   where?: InputMaybe<PageCookiePolicyFilter>;
 };
 
-export type QueryPageEmailsArgs = {
-  id: Scalars["String"]["input"];
-  locale?: InputMaybe<Scalars["String"]["input"]>;
-  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
-  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
-};
-
-export type QueryPageEmailsCollectionArgs = {
-  limit?: InputMaybe<Scalars["Int"]["input"]>;
-  locale?: InputMaybe<Scalars["String"]["input"]>;
-  order?: InputMaybe<Array<InputMaybe<PageEmailsOrder>>>;
-  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
-  skip?: InputMaybe<Scalars["Int"]["input"]>;
-  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
-  where?: InputMaybe<PageEmailsFilter>;
-};
-
-export type QueryPageEmailsCursorCollectionArgs = {
-  limit?: InputMaybe<Scalars["Int"]["input"]>;
-  locale?: InputMaybe<Scalars["String"]["input"]>;
-  order?: InputMaybe<Array<InputMaybe<PageEmailsOrder>>>;
-  pageNext?: InputMaybe<Scalars["String"]["input"]>;
-  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
-  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
-  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
-  where?: InputMaybe<PageEmailsFilter>;
-};
-
 export type QueryPageFaqArgs = {
   id: Scalars["String"]["input"];
   locale?: InputMaybe<Scalars["String"]["input"]>;
@@ -7539,37 +7300,6 @@ export type CfComponentButtonNestedFilter = {
   url_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
 };
 
-export type CfComponentEmailNestedFilter = {
-  AND?: InputMaybe<Array<InputMaybe<CfComponentEmailNestedFilter>>>;
-  OR?: InputMaybe<Array<InputMaybe<CfComponentEmailNestedFilter>>>;
-  availableVariables?: InputMaybe<Scalars["String"]["input"]>;
-  availableVariables_contains?: InputMaybe<Scalars["String"]["input"]>;
-  availableVariables_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
-  availableVariables_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
-  availableVariables_not?: InputMaybe<Scalars["String"]["input"]>;
-  availableVariables_not_contains?: InputMaybe<Scalars["String"]["input"]>;
-  availableVariables_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
-  content_contains?: InputMaybe<Scalars["String"]["input"]>;
-  content_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
-  content_not_contains?: InputMaybe<Scalars["String"]["input"]>;
-  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
-  internalName?: InputMaybe<Scalars["String"]["input"]>;
-  internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
-  internalName_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
-  internalName_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
-  internalName_not?: InputMaybe<Scalars["String"]["input"]>;
-  internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
-  internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
-  preview?: InputMaybe<Scalars["String"]["input"]>;
-  preview_contains?: InputMaybe<Scalars["String"]["input"]>;
-  preview_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
-  preview_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
-  preview_not?: InputMaybe<Scalars["String"]["input"]>;
-  preview_not_contains?: InputMaybe<Scalars["String"]["input"]>;
-  preview_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
-  sys?: InputMaybe<SysFilter>;
-};
-
 export type CfComponentFaqQuestionNestedFilter = {
   AND?: InputMaybe<Array<InputMaybe<CfComponentFaqQuestionNestedFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<CfComponentFaqQuestionNestedFilter>>>;
@@ -7786,6 +7516,63 @@ export type ActiveAlertsQuery = {
   } | null;
 };
 
+export type ComponentEmailFieldsFragment = {
+  __typename: "ComponentEmail";
+  internalName?: string | null;
+  availableVariables?: string | null;
+  preview?: string | null;
+  sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
+  content?: {
+    __typename?: "ComponentEmailContent";
+    json: any;
+    links: {
+      __typename?: "ComponentEmailContentLinks";
+      entries: {
+        __typename?: "ComponentEmailContentEntries";
+        block: Array<
+          | { __typename?: "ComponentAlert" }
+          | { __typename?: "ComponentAuthor" }
+          | ({ __typename?: "ComponentButton" } & ButtonFieldsFragment)
+          | { __typename?: "ComponentEmail" }
+          | { __typename?: "ComponentFaqQuestion" }
+          | { __typename?: "ComponentFeature" }
+          | { __typename?: "ComponentPartner" }
+          | { __typename?: "ComponentReleaseNote" }
+          | { __typename?: "ComponentRichImage" }
+          | { __typename?: "ComponentSeo" }
+          | { __typename?: "Footer" }
+          | { __typename?: "LandingMetadata" }
+          | { __typename?: "PageAbout" }
+          | { __typename?: "PageBlogPost" }
+          | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageFaq" }
+          | { __typename?: "PageForceUpdate" }
+          | { __typename?: "PageHomeFeatures" }
+          | { __typename?: "PageHomeHero" }
+          | { __typename?: "PageHomeMission" }
+          | { __typename?: "PageHomePartners" }
+          | { __typename?: "PageLanding" }
+          | { __typename?: "PagePolicies" }
+          | { __typename?: "PageTermsAndConditions" }
+          | null
+        >;
+      };
+    };
+  } | null;
+};
+
+export type ComponentEmailByNameQueryVariables = Exact<{
+  internalName: Scalars["String"]["input"];
+}>;
+
+export type ComponentEmailByNameQuery = {
+  __typename?: "Query";
+  componentEmailCollection?: {
+    __typename?: "ComponentEmailCollection";
+    items: Array<({ __typename?: "ComponentEmail" } & ComponentEmailFieldsFragment) | null>;
+  } | null;
+};
+
 export type FooterFieldsFragment = {
   __typename: "Footer";
   internalName?: string | null;
@@ -7888,7 +7675,6 @@ export type PageAboutFieldsFragment = {
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageCookiePolicy" }
-          | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
@@ -8002,7 +7788,6 @@ export type PageBlogPostFieldsFragment = {
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageCookiePolicy" }
-          | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
@@ -8083,7 +7868,6 @@ export type PageCookiePolicyFieldsFragment = {
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageCookiePolicy" }
-          | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
@@ -8110,64 +7894,6 @@ export type PageCookiePolicyQuery = {
   pageCookiePolicyCollection?: {
     __typename?: "PageCookiePolicyCollection";
     items: Array<({ __typename?: "PageCookiePolicy" } & PageCookiePolicyFieldsFragment) | null>;
-  } | null;
-};
-
-export type ComponentEmailFieldsFragment = {
-  __typename: "ComponentEmail";
-  internalName?: string | null;
-  availableVariables?: string | null;
-  preview?: string | null;
-  sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
-  content?: {
-    __typename?: "ComponentEmailContent";
-    json: any;
-    links: {
-      __typename?: "ComponentEmailContentLinks";
-      entries: {
-        __typename?: "ComponentEmailContentEntries";
-        block: Array<
-          | { __typename?: "ComponentAlert" }
-          | { __typename?: "ComponentAuthor" }
-          | ({ __typename?: "ComponentButton" } & ButtonFieldsFragment)
-          | { __typename?: "ComponentEmail" }
-          | { __typename?: "ComponentFaqQuestion" }
-          | { __typename?: "ComponentFeature" }
-          | { __typename?: "ComponentPartner" }
-          | { __typename?: "ComponentReleaseNote" }
-          | { __typename?: "ComponentRichImage" }
-          | { __typename?: "ComponentSeo" }
-          | { __typename?: "Footer" }
-          | { __typename?: "LandingMetadata" }
-          | { __typename?: "PageAbout" }
-          | { __typename?: "PageBlogPost" }
-          | { __typename?: "PageCookiePolicy" }
-          | { __typename?: "PageEmails" }
-          | { __typename?: "PageFaq" }
-          | { __typename?: "PageForceUpdate" }
-          | { __typename?: "PageHomeFeatures" }
-          | { __typename?: "PageHomeHero" }
-          | { __typename?: "PageHomeMission" }
-          | { __typename?: "PageHomePartners" }
-          | { __typename?: "PageLanding" }
-          | { __typename?: "PagePolicies" }
-          | { __typename?: "PageTermsAndConditions" }
-          | null
-        >;
-      };
-    };
-  } | null;
-};
-
-export type ComponentEmailByNameQueryVariables = Exact<{
-  internalName: Scalars["String"]["input"];
-}>;
-
-export type ComponentEmailByNameQuery = {
-  __typename?: "Query";
-  componentEmailCollection?: {
-    __typename?: "ComponentEmailCollection";
-    items: Array<({ __typename?: "ComponentEmail" } & ComponentEmailFieldsFragment) | null>;
   } | null;
 };
 
@@ -8358,7 +8084,6 @@ export type PageHomeMissionFieldsFragment = {
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageCookiePolicy" }
-          | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
@@ -8396,7 +8121,6 @@ export type PageHomeMissionFieldsFragment = {
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageCookiePolicy" }
-          | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
@@ -8536,7 +8260,6 @@ export type PagePoliciesFieldsFragment = {
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageCookiePolicy" }
-          | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
@@ -8596,7 +8319,6 @@ export type PageTermsAndConditionsFieldsFragment = {
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageCookiePolicy" }
-          | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
@@ -8687,7 +8409,6 @@ export type ComponentReleaseNoteDetailFieldsFragment = {
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageCookiePolicy" }
-          | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
@@ -8834,6 +8555,30 @@ export const ComponentAlertFieldsFragmentDoc = gql`
     startAt
     endAt
     active
+  }
+  ${ButtonFieldsFragmentDoc}
+`;
+export const ComponentEmailFieldsFragmentDoc = gql`
+  fragment ComponentEmailFields on ComponentEmail {
+    __typename
+    sys {
+      id
+      publishedAt
+      environmentId
+    }
+    internalName
+    availableVariables
+    preview
+    content {
+      json
+      links {
+        entries {
+          block {
+            ...ButtonFields
+          }
+        }
+      }
+    }
   }
   ${ButtonFieldsFragmentDoc}
 `;
@@ -9054,30 +8799,6 @@ export const PageCookiePolicyFieldsFragmentDoc = gql`
     }
   }
   ${RichImageFieldsFragmentDoc}
-`;
-export const ComponentEmailFieldsFragmentDoc = gql`
-  fragment ComponentEmailFields on ComponentEmail {
-    __typename
-    sys {
-      id
-      publishedAt
-      environmentId
-    }
-    internalName
-    availableVariables
-    preview
-    content {
-      json
-      links {
-        entries {
-          block {
-            ...ButtonFields
-          }
-        }
-      }
-    }
-  }
-  ${ButtonFieldsFragmentDoc}
 `;
 export const FaqQuestionFieldsFragmentDoc = gql`
   fragment FaqQuestionFields on ComponentFaqQuestion {
@@ -9437,6 +9158,16 @@ export const ActiveAlertsDocument = gql`
   }
   ${ComponentAlertFieldsFragmentDoc}
 `;
+export const ComponentEmailByNameDocument = gql`
+  query componentEmailByName($internalName: String!) {
+    componentEmailCollection(limit: 1, where: { internalName: $internalName }) {
+      items {
+        ...ComponentEmailFields
+      }
+    }
+  }
+  ${ComponentEmailFieldsFragmentDoc}
+`;
 export const FooterDocument = gql`
   query footer($locale: String, $preview: Boolean) {
     footerCollection(limit: 1, locale: $locale, preview: $preview) {
@@ -9552,16 +9283,6 @@ export const PageCookiePolicyDocument = gql`
     }
   }
   ${PageCookiePolicyFieldsFragmentDoc}
-`;
-export const ComponentEmailByNameDocument = gql`
-  query componentEmailByName($internalName: String!) {
-    componentEmailCollection(limit: 1, where: { internalName: $internalName }) {
-      items {
-        ...ComponentEmailFields
-      }
-    }
-  }
-  ${ComponentEmailFieldsFragmentDoc}
 `;
 export const PageFaqDocument = gql`
   query pageFaq($locale: String, $preview: Boolean) {
@@ -9818,6 +9539,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         variables,
       );
     },
+    componentEmailByName(
+      variables: ComponentEmailByNameQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<ComponentEmailByNameQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<ComponentEmailByNameQuery>({
+            document: ComponentEmailByNameDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "componentEmailByName",
+        "query",
+        variables,
+      );
+    },
     footer(
       variables?: FooterQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
@@ -9958,24 +9697,6 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "pageCookiePolicy",
-        "query",
-        variables,
-      );
-    },
-    componentEmailByName(
-      variables: ComponentEmailByNameQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<ComponentEmailByNameQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<ComponentEmailByNameQuery>({
-            document: ComponentEmailByNameDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "componentEmailByName",
         "query",
         variables,
       );
