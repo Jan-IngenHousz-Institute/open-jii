@@ -201,6 +201,8 @@
     "add": "Create passkey",
     "addTitle": "Create a passkey",
     "addError": "Could not create the passkey. Please try again.",
+    "sessionTooOld": "Sign in again to create a passkey. Your session is older than a day.",
+    "signInAgain": "Sign in again",
     "name": "Passkey name",
     "loadError": "Could not load your passkeys.",
     "retry": "Try again",
