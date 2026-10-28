@@ -39,8 +39,17 @@ ACTIVE_EXPERIMENTS_7D_METRIC = "ActiveExperiments7d"
 ACTIVE_CONTRIBUTORS_7D_METRIC = "ActiveContributors7d"
 RESEARCHERS_STARTED_7D_METRIC = "ResearchersStarted7d"
 LOGGERS_STARTED_7D_METRIC = "LoggersStarted7d"
-# Databricks spend at list price, per platform component.
-DATABRICKS_COST_7D_METRIC = "DatabricksCost7dUsd"
+# Databricks spend at list price, per platform component for a day and an ISO week, and in total
+# for the month. Calendar windows rather than rolling ones, so they line up with what AWS bills
+# beside them, each stamped when its window closed.
+DATABRICKS_DAILY_COST_METRIC = "DatabricksDailyCostUsd"
+DATABRICKS_WEEKLY_COST_METRIC = "DatabricksWeeklyCostUsd"
+DATABRICKS_MONTH_TO_DATE_COST_METRIC = "DatabricksMonthToDateCostUsd"
+DATABRICKS_PREVIOUS_MONTH_TO_DATE_COST_METRIC = "DatabricksPreviousMonthToDateCostUsd"
+DATABRICKS_PREVIOUS_MONTH_COST_METRIC = "DatabricksPreviousMonthCostUsd"
+DATABRICKS_MONTH_PROJECTED_COST_METRIC = "DatabricksMonthProjectedCostUsd"
+# Measurements taken in the ISO week the weekly spend covers, which it is divided over.
+WEEKLY_MEASUREMENTS_METRIC = "WeeklyMeasurements"
 
 # The data path, one half hour at a time: rows through each stage, how long
 # each hop took at p95, what is waiting for macros, and how long since each

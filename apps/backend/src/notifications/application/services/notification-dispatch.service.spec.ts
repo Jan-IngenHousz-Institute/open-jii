@@ -337,7 +337,6 @@ describe("NotificationDispatchService", () => {
   });
 
   it("ignores a saved opt-out for a type that always emails", async () => {
-    vi.spyOn(notificationEmail, "hasEmail").mockReturnValue(true);
     // The use case refuses this write; the repository does not, which is the point.
     assertSuccess(
       await repository.upsertPreference(recipientId, "account_security", "email", false),
@@ -867,6 +866,57 @@ describe("NotificationDispatchService", () => {
       expect(result.error.message).toContain("no resource to email about");
       expect(sendMadePublic).not.toHaveBeenCalled();
     });
+  });
+
+  describe("the account security email entries", () => {
+    const accountContext = <T>(params: T) => ({
+      recipientEmail,
+      actorName: null,
+      resource: null,
+      params,
+    });
+
+    let sendApiKeyCreated: MockInstance<EmailAdapter["sendApiKeyCreatedNotification"]>;
+    let sendPasskeyAdded: MockInstance<EmailAdapter["sendPasskeyAddedNotification"]>;
+
+    beforeEach(() => {
+      const emailAdapter = testApp.module.get(EmailAdapter);
+      sendApiKeyCreated = vi
+        .spyOn(emailAdapter, "sendApiKeyCreatedNotification")
+        .mockResolvedValue(success(undefined));
+      sendPasskeyAdded = vi
+        .spyOn(emailAdapter, "sendPasskeyAddedNotification")
+        .mockResolvedValue(success(undefined));
+    });
+
+    it("sends the key's name with no resource", async () => {
+      const result = await notificationEmail.send(
+        "api_key_created",
+        accountContext({ keyName: "Field laptop" }),
+      );
+
+      assertSuccess(result);
+      expect(sendApiKeyCreated).toHaveBeenCalledExactlyOnceWith({
+        keyName: "Field laptop",
+        email: recipientEmail,
+      });
+    });
+
+    it.each([["Google Password Manager"], [undefined]])(
+      "passes the passkey's name through as stored: %s",
+      async (passkeyName) => {
+        const result = await notificationEmail.send(
+          "passkey_added",
+          accountContext({ passkeyName }),
+        );
+
+        assertSuccess(result);
+        expect(sendPasskeyAdded).toHaveBeenCalledExactlyOnceWith({
+          passkeyName,
+          email: recipientEmail,
+        });
+      },
+    );
   });
 
   it("writes both rows on a replay after a first attempt rolled back", async () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { NOTIFICATIONS_KEY } from "@/hooks/notifications/useNotifications/useNotifications";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { authClient } from "@repo/auth/client";
@@ -19,6 +20,7 @@ export function useCreateApiKey() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["auth", "api-keys"] });
+      await queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
     },
   });
 }

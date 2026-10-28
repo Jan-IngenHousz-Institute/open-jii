@@ -20,6 +20,7 @@ import { GetUserUseCase } from "./application/use-cases/get-user/get-user";
 import { GetUsersMetadataUseCase } from "./application/use-cases/get-users-metadata/get-users-metadata";
 import { GetWhatsNewSeenUseCase } from "./application/use-cases/get-whats-new-seen/get-whats-new-seen";
 import { MarkWhatsNewSeenUseCase } from "./application/use-cases/mark-whats-new-seen/mark-whats-new-seen";
+import { NotifyCredentialAddedUseCase } from "./application/use-cases/notify-credential-added/notify-credential-added";
 import { NotifyPendingOrganizationInvitationsUseCase } from "./application/use-cases/notify-pending-organization-invitations/notify-pending-organization-invitations";
 import { RevokeInvitationUseCase } from "./application/use-cases/revoke-invitation/revoke-invitation";
 import { SearchUsersUseCase } from "./application/use-cases/search-users/search-users";
@@ -27,6 +28,7 @@ import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { EMAIL_PORT } from "./core/ports/email.port";
 import { InvitationRepository } from "./core/repositories/user-invitation.repository";
 import { UserRepository } from "./core/repositories/user.repository";
+import { AccountSecurityAuthHook } from "./presentation/hooks/account-security-auth.hook";
 import { UserAuthHook } from "./presentation/hooks/user-auth.hook";
 import { InvitationController } from "./presentation/user-invitation.controller";
 import { UserWebhookController } from "./presentation/user-webhook.controller";
@@ -74,12 +76,14 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
     MarkWhatsNewSeenUseCase,
     AcceptPendingInvitationsUseCase,
     NotifyPendingOrganizationInvitationsUseCase,
+    NotifyCredentialAddedUseCase,
     CreateInvitationUseCase,
     GetInvitationsUseCase,
     RevokeInvitationUseCase,
 
     // Auth hooks
     UserAuthHook,
+    AccountSecurityAuthHook,
   ],
   exports: [
     UserRepository,
