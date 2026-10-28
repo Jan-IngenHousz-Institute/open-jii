@@ -8,6 +8,7 @@
         ".env*",
         "$TURBO_ROOT$/vitest.config.ts",
         "$TURBO_ROOT$/docs/monitoring/metrics-catalog.yaml",
+        "$TURBO_ROOT$/docs/monitoring/cost-services.json",
         "$TURBO_ROOT$/docs/runbooks/**",
         "$TURBO_ROOT$/infrastructure/modules/grafana/dashboard/main.tf",
         "$TURBO_ROOT$/infrastructure/modules/grafana/dashboard/heartbeat.tf",

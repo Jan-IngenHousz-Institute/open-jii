@@ -6,7 +6,8 @@
 # Field notes:
 # - family: observability (issues) | usage (levels)
 # - source: aws (native CloudWatch) | dbx (Databricks heartbeat job) | pg (metrics-publisher)
-#           | api (the backend's own checks) | posthog | gh (GitHub Actions) | composer (retired)
+#           | ce (Cost Explorer, through the cost publisher) | api (the backend's own checks)
+#           | posthog | gh (GitHub Actions) | composer (retired)
 # - phase: roadmap phase in which the signal starts existing (P1..P5)
 # - active: the entry is charted on a report dashboard today; inactive entries are
 #           documentation until their producer publishes
@@ -85,6 +86,14 @@ passes:
       the weekly report's adoption section, so it says whether people who sign up get going; 101
       (experiments archived) dropped before it was built, since no column dates an archive and
       updated_at moves on a repeat archive or a lapsed embargo
+  - date: 2026-10-27
+    range: [104, 115]
+    note: >-
+      what the platform costs by day and month, from Cost Explorer and Databricks' billing tables,
+      for the Cost dashboard; 39 and 98 became each producer's weekly figure the same day
+  - date: 2026-10-28
+    range: [116, 116]
+    note: the cost publisher's errors, since a failed run leaves the Cost dashboard showing old figures
 
 metrics:
   # Ingest path
@@ -1043,14 +1052,28 @@ metrics:
       service that has not deployed for two weeks.
 
   - num: 39
-    id: cost-snapshot
-    name: Cost snapshot week-over-week
+    id: aws-cost
+    name: AWS cost per week
     family: usage
-    source: aws
+    area: cost
+    source: ce
     phase: P3
-    active: false
-    slots: [weekly]
-    notes: Includes 62 (top-3 delta drivers) when it lands.
+    active: true
+    slots: [weekly, dashboard]
+    signal:
+      namespace: OpenJII/Cost
+      search: SEARCH('{OpenJII/Cost,Category,Environment,Service} MetricName="WeeklyCostUsd" AND Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
+      unit: usd
+      period: 604800
+    baseline: { method: wow }
+    notes: >-
+      What AWS billed for usage in the latest complete Monday-to-Sunday week, per Service and its
+      Category from docs/monitoring/cost-services.json, stamped the Monday it closed. Tax and fees are
+      left out: AWS dates a month's on the 1st and adds to them as its usage grows, so no week carries
+      its own share; 115 has them by month. EC2 compute counts as Databricks VMs:
+      nothing in infrastructure/ runs on EC2, and on dev all but $1.46 of $950 over the 90 days to 26
+      October 2026 was on the instance types Databricks clusters use; the rest was t4g.
 
   - num: 40
     id: digest-self-check
@@ -1308,13 +1331,15 @@ metrics:
 
   - num: 62
     id: cost-movers
-    name: Cost movers (top-3 delta drivers)
+    name: What moved
     family: usage
-    source: aws
+    source: ce
     phase: P3
     active: false
     slots: [weekly]
-    notes: Folds into 39.
+    notes: >-
+      Folded into 39 and 98 on 2026-10-27: the weekly report's Cost section and the Cost dashboard
+      list their series one by one, largest change first, so it needs no series of its own.
 
   - num: 63
     id: mobile-sync-lag
@@ -1685,20 +1710,274 @@ metrics:
 
   - num: 98
     id: databricks-cost
-    name: Databricks cost
+    name: Databricks cost per week
     family: usage
     area: cost
     source: dbx
     phase: P2
     active: true
-    slots: [weekly]
+    slots: [weekly, dashboard]
     signal:
       namespace: OpenJII/Usage
-      search: SEARCH('{OpenJII/Usage,Component,Environment} MetricName="DatabricksCost7dUsd" AND Environment="${ENVIRONMENT}"', 'Maximum')
+      search: SEARCH('{OpenJII/Usage,Component,Environment} MetricName="DatabricksWeeklyCostUsd" AND Environment="${ENVIRONMENT}"', 'Maximum')
       stat: Maximum
       unit: usd
+      period: 604800
     baseline: { method: wow }
     notes: >-
-      Spend over the last seven complete days at list price, from system.billing.usage, per Component:
-      each classic and metrics pipeline and the backend and investigations warehouses by the id they bill under, job runs
-      together, and the rest of the workspace as other. The dashboards query each component by name.
+      Spend at list price for the latest complete Monday-to-Sunday week, from system.billing.usage, per
+      Component: each classic and metrics pipeline and the backend and investigations warehouses by
+      the id they bill under, job runs together, and the rest of the workspace as other. Stamped the
+      Monday it closed, beside AWS's week in 39. Before 2026-10-27 this read the last seven days.
+
+  # Cost, by day and by month: what AWS bills and Databricks charges at list price. Each figure is
+  # stamped at the close of its window, since CloudWatch holds back a point stamped a day back.
+
+  - num: 104
+    id: aws-daily-cost
+    name: AWS cost per day
+    family: usage
+    area: cost
+    source: ce
+    phase: P3
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Cost
+      search: SEARCH('{OpenJII/Cost,Category,Environment,Service} MetricName="DailyCostUsd" AND Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
+      unit: usd
+    notes: >-
+      Usage per Service and Category for one UTC day, stamped at the midnight that closed it. The
+      publisher runs four times a day, at 00:30, 06:30, 12:30 and 18:30 UTC, so a day is refined on
+      the day it closed while CloudWatch still returns each point within two hours; every run also
+      republishes the day before, and the dashboards read the fuller figure.
+
+  - num: 105
+    id: databricks-daily-cost
+    name: Databricks cost per day
+    family: usage
+    area: cost
+    source: dbx
+    phase: P3
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Usage
+      search: SEARCH('{OpenJII/Usage,Component,Environment} MetricName="DatabricksDailyCostUsd" AND Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
+      unit: usd
+    notes: >-
+      Yesterday's spend at list price per Component, stamped at the midnight that closed it and
+      republished every half hour until the next one, so the billing tables' late rows land.
+
+  - num: 106
+    id: weekly-measurements
+    name: Measurements per week
+    family: usage
+    area: cost
+    source: dbx
+    phase: P3
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Usage
+      metric: WeeklyMeasurements
+      stat: Maximum
+      period: 604800
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      Measurements taken in the latest complete ISO week, by measurement time, stamped the Monday it
+      closed and republished all week, since offline phones upload days late. The week's spend is
+      divided over it for the cost per 1,000 measurements.
+
+  - num: 107
+    id: aws-month-to-date
+    name: AWS this month so far
+    family: usage
+    area: cost
+    source: ce
+    phase: P3
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Cost
+      metric: MonthToDateCostUsd
+      stat: Maximum
+      unit: usd
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      Everything AWS billed, tax and fees included, from the 1st of the month to yesterday, stamped
+      at today's midnight. On the 1st it is the whole month just ended.
+
+  - num: 108
+    id: aws-previous-month-to-date
+    name: AWS the month before, to the same day
+    family: usage
+    area: cost
+    source: ce
+    phase: P3
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Cost
+      metric: PreviousMonthToDateCostUsd
+      stat: Maximum
+      unit: usd
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      The month before 107's, from its 1st to the same day of the month or its own end. AWS dates a
+      month's tax and fees on the 1st and adds to them as its usage grows, so the month before
+      carries its whole tax by then while 107 carries only what has accrued. This figure therefore
+      counts the month before's tax and fees in proportion to its usage by that day.
+
+  - num: 109
+    id: aws-previous-month
+    name: AWS the whole month before
+    family: usage
+    area: cost
+    source: ce
+    phase: P3
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Cost
+      metric: PreviousMonthCostUsd
+      stat: Maximum
+      unit: usd
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      The whole month before 107's, which 110's projection is read against.
+
+  - num: 110
+    id: aws-month-forecast
+    name: AWS this month, projected
+    family: usage
+    area: cost
+    source: ce
+    phase: P3
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Cost
+      metric: MonthForecastCostUsd
+      stat: Maximum
+      unit: usd
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      Cost Explorer's forecast for the whole month, actuals included: asked for the rest of October
+      on 27 October 2026, it answered for 1 October to 1 November. Absent when Cost Explorer has too
+      little history, and on the 1st the month's actual cost.
+
+  - num: 111
+    id: databricks-month-to-date
+    name: Databricks this month so far
+    family: usage
+    area: cost
+    source: dbx
+    phase: P3
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Usage
+      metric: DatabricksMonthToDateCostUsd
+      stat: Maximum
+      unit: usd
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      Spend at list price from the 1st of the month to yesterday, every component together, beside
+      107.
+
+  - num: 112
+    id: databricks-previous-month-to-date
+    name: Databricks the month before, to the same day
+    family: usage
+    area: cost
+    source: dbx
+    phase: P3
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Usage
+      metric: DatabricksPreviousMonthToDateCostUsd
+      stat: Maximum
+      unit: usd
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      The month before 111's, to the same day of the month or its own end.
+
+  - num: 113
+    id: databricks-previous-month
+    name: Databricks the whole month before
+    family: usage
+    area: cost
+    source: dbx
+    phase: P3
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Usage
+      metric: DatabricksPreviousMonthCostUsd
+      stat: Maximum
+      unit: usd
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      The whole month before 111's.
+
+  - num: 114
+    id: databricks-month-projected
+    name: Databricks this month, projected
+    family: usage
+    area: cost
+    source: dbx
+    phase: P3
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Usage
+      metric: DatabricksMonthProjectedCostUsd
+      stat: Maximum
+      unit: usd
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      111 at the pace of the month's complete days, since the billing tables have no forecast.
+
+  - num: 115
+    id: aws-previous-month-tax
+    name: AWS tax and fees, the whole month before
+    family: usage
+    area: cost
+    source: ce
+    phase: P3
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Cost
+      metric: PreviousMonthTaxAndFeesUsd
+      stat: Maximum
+      unit: usd
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      Everything AWS billed for the month before beyond usage: tax, fees and subscriptions, less any
+      credits. On dev it was a steady 21% on top of usage from August to October 2026, all of it tax.
+
+  - num: 116
+    id: cost-publisher-errors
+    name: Cost publisher errors
+    family: observability
+    area: cost
+    source: aws
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: AWS/Lambda
+      metric: Errors
+      stat: Sum
+      dimensions: { FunctionName: "${COST_PUBLISHER_FUNCTION_NAME}" }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/cost-publisher-errors.md
+    notes: >-
+      A run that throws publishes nothing, and every cost panel keeps its last figures. A failed
+      forecast does not throw; the run publishes without it and names the error in its log line.

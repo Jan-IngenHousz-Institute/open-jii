@@ -27,10 +27,15 @@ locals {
       description = "Deploys per service from GitHub Actions: how often, how many failed, and how long from commit to production."
       from        = "now-30d"
     }
+    cost = {
+      title       = "Cost"
+      description = "What the platform costs: AWS as Cost Explorer bills it and Databricks at list price, by week, by day and by month."
+      from        = "now-90d"
+    }
   }
 
   flow_uids  = { for key, flow in local.flow_dashboards : key => "${var.environment}-${key}" }
-  flow_order = ["platform", "data-pipeline", "throughput-storage", "delivery"]
+  flow_order = ["platform", "data-pipeline", "throughput-storage", "delivery", "cost"]
 
   # A report signal opens the flow its area sits on; a platform number, the flow of what it measures.
   flow_by_area = {
@@ -42,6 +47,7 @@ locals {
     volume    = "data-pipeline"
     latency   = "data-pipeline"
     path      = "data-pipeline"
+    cost      = "cost"
   }
   flow_by_namespace = {
     "AWS/Route53"  = "platform"
@@ -65,7 +71,8 @@ locals {
   }
 
   # A window picked while investigating carries across, except into Delivery, whose deploys
-  # are too sparse to read over a day, and Throughput and storage, whose growth needs its week.
+  # are too sparse to read over a day, Throughput and storage, whose growth needs its week, and
+  # Cost, whose figures land once a day.
   flow_header_links = {
     for key, flow in local.flow_dashboards : key => {
       title       = flow.title
@@ -77,7 +84,7 @@ locals {
       asDropdown  = false
       targetBlank = false
       includeVars = false
-      keepTime    = !contains(["delivery", "throughput-storage"], key)
+      keepTime    = !contains(["delivery", "throughput-storage", "cost"], key)
     }
   }
 
@@ -934,6 +941,7 @@ locals {
     ]
     "throughput-storage" = [local.flow_throughput_panels]
     delivery             = [local.flow_delivery_panels]
+    cost                 = [local.flow_cost_panels]
   }
 
   flow_heights = {
