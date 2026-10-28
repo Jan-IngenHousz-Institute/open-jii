@@ -45,7 +45,7 @@
     "@repo/database": "workspace:*",
     "@repo/transactional": "workspace:*",
     "@simplewebauthn/browser": "13.3.0",
-    "better-auth": "1.6.23",
+    "better-auth": "1.7.7",
     "nodemailer": "catalog:"
   },
   "devDependencies": {
