@@ -3126,7 +3126,6 @@ module "grafana_dashboard" {
   slack_webhook_url              = var.slack_webhook_url
   posthog_project_id             = "80726"
   kinesis_shard_count            = module.kinesis.shard_count
-  databricks_cost_components     = concat(keys(local.databricks_cost_components), ["jobs", "other"])
   payload_samples_log_group_name = module.iot_core.payload_samples_log_group_name
   storage_buckets = {
     "Raw payload archive"  = module.iot_raw_archive_s3.bucket_id
@@ -3138,6 +3137,7 @@ module "grafana_dashboard" {
   # Passed in rather than interpolated: a rule watching a misspelled function is NoData
   # forever, which is either permanently firing or permanently silent.
   metrics_forwarder_function_name = module.metrics_forwarder.function_name
+  cost_publisher_function_name    = module.cost_publisher.function_name
   db_cluster_identifier           = "open-jii-${var.environment}-db-cluster"
 
   # Measured over 14 days on this stream while dev's consumer ran on a schedule: the median
@@ -3184,6 +3184,12 @@ module "grafana_metrics_publisher" {
 import {
   to = module.grafana_metrics_publisher.aws_cloudwatch_log_group.metrics_publisher
   id = "/aws/lambda/${var.environment}-metrics-publisher"
+}
+
+module "cost_publisher" {
+  source = "../../modules/grafana/cost-publisher"
+
+  environment = var.environment
 }
 
 module "heartbeat_metrics_s3" {

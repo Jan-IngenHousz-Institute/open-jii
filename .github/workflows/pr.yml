@@ -97,7 +97,7 @@ jobs:
     env:
       DO_NOT_TRACK: 1
       TURBO_TELEMETRY_DISABLED: 1
-      BUNDLE_DIRS: "infrastructure/modules/monitoring/metrics-forwarder/lambda infrastructure/modules/grafana/metrics-publisher/lambda"
+      BUNDLE_DIRS: "infrastructure/modules/monitoring/metrics-forwarder/lambda infrastructure/modules/grafana/metrics-publisher/lambda infrastructure/modules/grafana/cost-publisher/lambda"
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -166,7 +166,7 @@ jobs:
             # Globbed from inside $rebuilt, because a bare lib/*.js expands against the
             # working directory, stays literal when it matches nothing, and silently
             # skips every compiled file it was meant to compare.
-            for source in index.js catalog.yaml $(cd "$rebuilt" && ls lib/*.js 2>/dev/null); do
+            for source in index.js catalog.yaml cost-services.json $(cd "$rebuilt" && ls lib/*.js 2>/dev/null); do
               [ -e "$rebuilt/$source" ] || continue
               if ! diff -q "$committed/$source" "$rebuilt/$source" > /dev/null 2>&1; then
                 echo "::error file=$dir/function.zip::committed $source differs from a fresh build"

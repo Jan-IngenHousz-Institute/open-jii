@@ -1,5 +1,12 @@
 /** Units a signal may declare. The report dashboards map each to a Grafana unit id. */
-export type MetricUnit = "milliseconds" | "seconds" | "minutes" | "bytes" | "percent" | "ratio";
+export type MetricUnit =
+  | "milliseconds"
+  | "seconds"
+  | "minutes"
+  | "bytes"
+  | "percent"
+  | "ratio"
+  | "usd";
 
 export type MetricFamily = "observability" | "usage";
 
@@ -131,4 +138,26 @@ export interface ForwarderDatum {
 export interface SkippedLine {
   line: number;
   reason: string;
+}
+
+export interface CostLabel {
+  label: string;
+  category: string;
+}
+
+/** `docs/monitoring/cost-services.json`, which the dashboards read too. */
+export interface CostServices {
+  categories: { name: string; colour: string }[];
+  /** By the name Cost Explorer bills the service under. */
+  services: Record<string, CostLabel>;
+  /** Where a service the file does not list is counted. */
+  otherServices: CostLabel;
+  databricksComponents: Record<string, string>;
+}
+
+/** The parts of a Cost Explorer ResultByTime the publisher reads. */
+export interface CostResultByTime {
+  TimePeriod?: { Start?: string; End?: string };
+  Total?: Record<string, { Amount?: string }>;
+  Groups?: { Keys?: string[]; Metrics?: Record<string, { Amount?: string }> }[];
 }
