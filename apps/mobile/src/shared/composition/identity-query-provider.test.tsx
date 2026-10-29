@@ -29,6 +29,10 @@ vi.mock("~/shared/ui/configured-query-client-provider", () => ({
 
 // The keys @orpc/tanstack-query gives the old build's persisted profile and experiment list.
 const profileKey = (id: string) => [["users", "getUserProfile"], { input: { id }, type: "query" }];
+const workbookVersionKey = [
+  ["workbooks", "getWorkbookVersion"],
+  { input: { id: "w-b", versionId: "v-1" }, type: "query" },
+];
 const listExperimentsKey = [
   ["experiments", "listExperiments"],
   { input: { scope: "related" }, type: "query" },
@@ -82,11 +86,10 @@ it("serializes overlapping identity changes and can retry after storage failure"
   expect(await AsyncStorage.getItem("openjii_selection_owner")).toBe("guest-b");
 });
 
-// The pre-update blob as the old build's persister wrote it, for a profile fetched for `owner`.
-function legacyBlob(owner?: string) {
+// The pre-update blob as the old build's persister wrote it.
+function legacyBlob(entries: [readonly unknown[], unknown][]) {
   const client = new QueryClient();
-  client.setQueryData(listExperimentsKey, { items: [{ id: "private-experiment" }] });
-  if (owner) client.setQueryData(profileKey(owner), { firstName: owner });
+  for (const [key, data] of entries) client.setQueryData(key, data);
   return JSON.stringify({
     buster: "v6-experiments-membership-status",
     timestamp: Date.now(),
@@ -94,36 +97,41 @@ function legacyBlob(owner?: string) {
   });
 }
 
-async function upgradeWith(blob: string) {
+async function upgradeWith(blob: string, flowExperiment: string) {
   await AsyncStorage.removeItem("openjii_selection_owner");
   await AsyncStorage.setItem("REACT_QUERY_OFFLINE_CACHE_v4", blob);
-  useMeasurementFlowStore.getState().setExperimentId("field-trial", "Field trial");
+  useMeasurementFlowStore.getState().setExperimentId(flowExperiment, "Field trial");
 }
 
-it("keeps a researcher's own cache and flow through the update that scopes caches by identity", async () => {
-  const blob = legacyBlob("researcher-a");
-  await upgradeWith(blob);
-  await prepareIdentitySelections("researcher-a", true);
-  expect(await AsyncStorage.getItem("REACT_QUERY_OFFLINE_CACHE_v4:researcher-a")).toBe(blob);
-  expect(await AsyncStorage.getItem("REACT_QUERY_OFFLINE_CACHE_v4")).toBeNull();
-  expect(useMeasurementFlowStore.getState().experimentId).toBe("field-trial");
-  expect(await AsyncStorage.getItem("openjii_selection_owner")).toBe("researcher-a");
-});
-
 it.each([
-  ["another researcher's cache", legacyBlob("researcher-a"), "researcher-b", true],
-  ["a cache with no profile to name its owner", legacyBlob(), "researcher-b", true],
-  ["a researcher's cache, to a guest", legacyBlob("researcher-a"), "guest-b", false],
-  ["a researcher's cache, while signed out", legacyBlob("researcher-a"), "signed-out", false],
-  ["an unreadable cache", "not json", "researcher-b", true],
-] as const)("discards %s and the flow on update", async (_, blob, identity, isResearcher) => {
-  await upgradeWith(blob);
-  await prepareIdentitySelections(identity, isResearcher);
-  expect(await AsyncStorage.getItem("REACT_QUERY_OFFLINE_CACHE_v4")).toBeNull();
-  expect(await AsyncStorage.getItem(`REACT_QUERY_OFFLINE_CACHE_v4:${identity}`)).toBeNull();
-  expect(useMeasurementFlowStore.getState().experimentId).toBeUndefined();
-  expect(await AsyncStorage.getItem("openjii_selection_owner")).toBe(identity);
-});
+  [
+    "a researcher's profile beside another person's private workbook",
+    legacyBlob([
+      [profileKey("researcher-a"), { firstName: "A" }],
+      [workbookVersionKey, { cells: ["researcher-b's private cell"] }],
+    ]),
+    "researcher-a",
+  ],
+  [
+    "the researcher's own profile under another person's unfinished flow",
+    legacyBlob([[profileKey("researcher-a"), { firstName: "A" }]]),
+    "researcher-a",
+  ],
+  ["another researcher's cache", legacyBlob([[profileKey("researcher-a"), {}]]), "researcher-b"],
+  ["a cache, to a guest", legacyBlob([[listExperimentsKey, { items: [] }]]), "guest-b"],
+  ["a cache, while signed out", legacyBlob([[listExperimentsKey, { items: [] }]]), "signed-out"],
+  ["an unreadable cache", "not json", "researcher-b"],
+] as const)(
+  "discards %s with its flow, since no old build recorded an owner",
+  async (_, blob, identity) => {
+    await upgradeWith(blob, "researcher-b-private-trial");
+    await prepareIdentitySelections(identity);
+    expect(await AsyncStorage.getItem("REACT_QUERY_OFFLINE_CACHE_v4")).toBeNull();
+    expect(await AsyncStorage.getItem(`REACT_QUERY_OFFLINE_CACHE_v4:${identity}`)).toBeNull();
+    expect(useMeasurementFlowStore.getState().experimentId).toBeUndefined();
+    expect(await AsyncStorage.getItem("openjii_selection_owner")).toBe(identity);
+  },
+);
 
 it("stops retrying when storage keeps failing and opens with the identity's own cache", async () => {
   vi.useFakeTimers();

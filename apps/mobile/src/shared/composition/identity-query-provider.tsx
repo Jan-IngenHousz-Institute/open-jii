@@ -14,52 +14,18 @@ const MAX_ATTEMPTS = 3;
 
 let preparation: Promise<void> = Promise.resolve();
 
-export function prepareIdentitySelections(identity: string, isResearcher = false) {
-  preparation = preparation
-    .catch(() => undefined)
-    .then(() => clearPreviousSelections(identity, isResearcher));
+export function prepareIdentitySelections(identity: string) {
+  preparation = preparation.catch(() => undefined).then(() => clearPreviousSelections(identity));
   return preparation;
 }
 
-// The pre-update cache has no owner key. Its only record of whose it is: the profile query the
-// old build fetched for the signed-in user and dropped at sign-out.
-function legacyCacheOwner(raw: string) {
-  try {
-    const queries = (JSON.parse(raw) as { clientState?: { queries?: unknown[] } }).clientState
-      ?.queries;
-    const owners = new Set<unknown>();
-    for (const query of queries ?? []) {
-      const { queryKey, state } = query as {
-        queryKey?: [unknown, { input?: { id?: unknown } }?];
-        state?: { data?: unknown };
-      };
-      const [path, options] = queryKey ?? [];
-      if (Array.isArray(path) && path.join("/") === "users/getUserProfile" && state?.data != null)
-        owners.add(options?.input?.id);
-    }
-    const [owner] = owners;
-    return owners.size === 1 && typeof owner === "string" ? owner : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-async function clearPreviousSelections(identity: string, isResearcher: boolean) {
+async function clearPreviousSelections(identity: string) {
   const previous = await AsyncStorage.getItem(OWNER_KEY);
   if (previous === identity) return;
-  // Before identity-scoped caches there was one cache and no owner marker. It survives the
-  // update only for the researcher it provably belongs to; anyone else starts clean.
-  if (previous === null) {
-    const legacy = await AsyncStorage.getItem(LEGACY_CACHE_KEY);
-    if (legacy !== null && isResearcher && legacyCacheOwner(legacy) === identity) {
-      const scoped = `${LEGACY_CACHE_KEY}:${identity}`;
-      if ((await AsyncStorage.getItem(scoped)) === null) await AsyncStorage.setItem(scoped, legacy);
-      await AsyncStorage.removeItem(LEGACY_CACHE_KEY);
-      await AsyncStorage.setItem(OWNER_KEY, identity);
-      return;
-    }
-  }
-  // Finish hydration before clearing, so an old disk read cannot restore a selection.
+  // With no owner marker the cache and flow are from a build that never recorded whose they
+  // were, so nobody can be shown to own them and both go. Unsent measurements are unaffected:
+  // they live in the SQLite outbox, keyed by their own owner. Hydration finishes before the
+  // clear, so an old disk read cannot restore a selection.
   await Promise.all([
     useMeasurementFlowStore.persist.rehydrate(),
     useFlowAnswersStore.persist.rehydrate(),
@@ -74,7 +40,6 @@ async function clearPreviousSelections(identity: string, isResearcher: boolean) 
 export function IdentityQueryProvider({ children }: { children: ReactNode }) {
   const { user, isLoaded } = useSession();
   const identity = user?.id ?? "signed-out";
-  const isResearcher = !!user && !user.isAnonymous;
   const [ready, setReady] = useState<string>();
   const [attempt, setAttempt] = useState({ identity, count: 0 });
   const attempts = attempt.identity === identity ? attempt.count : 0;
@@ -82,7 +47,7 @@ export function IdentityQueryProvider({ children }: { children: ReactNode }) {
     if (!isLoaded) return;
     let active = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    void prepareIdentitySelections(identity, isResearcher)
+    void prepareIdentitySelections(identity)
       .then(() => {
         if (active) setReady(identity);
       })
@@ -101,7 +66,7 @@ export function IdentityQueryProvider({ children }: { children: ReactNode }) {
       active = false;
       clearTimeout(timer);
     };
-  }, [identity, isResearcher, isLoaded, attempts]);
+  }, [identity, isLoaded, attempts]);
   if (!isLoaded || ready !== identity) return null;
   return (
     <ConfiguredQueryClientProvider key={identity} identity={identity}>
