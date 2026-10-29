@@ -1,5 +1,5 @@
-import { db } from "../../src/database";
-import { organizationMembers, organizations } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import { organizationMembers, organizations } from "../../src/postgres/schema";
 import { CONTRIBUTOR_SEEDS, FIXTURE_ORG_SLUG_PREFIX } from "./constants";
 
 type OrganizationType = NonNullable<typeof organizations.$inferInsert.type>;

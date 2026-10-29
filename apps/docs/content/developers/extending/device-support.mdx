@@ -28,7 +28,7 @@ A device that wants push support must implement the `SET_CONFIG` frame documente
 
 | Layer          | Artifact                                                                                               | Declares                                                                                                         |
 | -------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| Database       | `sensor_family` enum in `packages/database/src/schema.ts`                                              | Persisted family values on protocols and devices.                                                                |
+| Database       | `sensor_family` enum in `packages/database/src/postgres/schema.ts`                                     | Persisted family values on protocols and devices.                                                                |
 | API contract   | `zSensorFamily` in `packages/api/src/domains/protocol/protocol.schema.ts`                              | The wire enum shared by protocols, devices, and registration.                                                    |
 | API contract   | `DEVICE_PROFILES` in `packages/api/src/domains/iot/device-profile.ts`                                  | Canonical product spelling and display roles. The exhaustive `Record` makes a missing profile a compile error.   |
 | Device toolkit | `DEVICE_TRANSPORT_SUPPORT` in `packages/iot/src/core/types.ts`                                         | Transports, BLE/Bluetooth Classic support, and the stored-config (push) flag per `DeviceType`.                   |

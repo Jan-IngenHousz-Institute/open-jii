@@ -1,7 +1,7 @@
 import { or } from "drizzle-orm";
 
-import { db } from "../../src/database";
-import { experiments, flows } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import { experiments, flows } from "../../src/postgres/schema";
 import type { SeedExperiment } from "./types";
 
 /** Flow graphs for three experiments. */

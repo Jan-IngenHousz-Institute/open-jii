@@ -1,7 +1,7 @@
 import { and } from "drizzle-orm";
 
-import { db } from "../../src/database";
-import { deviceGroupMembers, deviceGroups } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import { deviceGroupMembers, deviceGroups } from "../../src/postgres/schema";
 import type { SeedDevice, SeedUser } from "./types";
 
 /** One populated fleet and one empty group, so both states have a page. */
