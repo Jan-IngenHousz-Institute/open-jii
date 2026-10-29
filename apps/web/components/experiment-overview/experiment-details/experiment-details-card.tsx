@@ -19,6 +19,7 @@ import { ExperimentRequestToJoin } from "../../experiment-settings/collaborators
 import { ExperimentInfoCard } from "../../experiment-settings/experiment-info-card";
 import { ExperimentVisibilityCard } from "../../experiment-settings/experiment-visibility-card";
 import { OwningOrganizationField } from "../../organizations/owning-organization-field";
+import { personName } from "../../people/person-name";
 import { ExperimentMembersTrail } from "../experiment-members-trail";
 import { ExperimentLocationsSection } from "./experiment-locations-section";
 
@@ -234,7 +235,13 @@ export function ExperimentDetailsCard({
                 <div className="space-y-1">
                   <h4 className="text-sm font-medium">{t("createdBy")}</h4>
                   <p className="text-muted-foreground text-sm">
-                    {experiment.ownerFirstName} {experiment.ownerLastName}
+                    {personName(
+                      {
+                        firstName: experiment.ownerFirstName,
+                        lastName: experiment.ownerLastName,
+                      },
+                      t,
+                    )}
                   </p>
                 </div>
               </CardContent>

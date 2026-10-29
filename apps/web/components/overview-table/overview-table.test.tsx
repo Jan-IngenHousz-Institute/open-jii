@@ -190,6 +190,12 @@ describe("experiment overview columns", () => {
     );
   }
 
+  it("names an owner without a name by the fallback rather than a dash", () => {
+    renderExperiments([createExperiment({ id: "e-1", ownerFirstName: null, ownerLastName: null })]);
+
+    expect(screen.getByText("common.unnamedAccount")).toBeInTheDocument();
+  });
+
   it("renders name link, description, and updated date", () => {
     renderExperiments([
       createExperiment({ id: "e-1", name: "Photosynthesis", description: "Light reactions" }),
@@ -510,6 +516,13 @@ describe("workbook overview columns", () => {
     expect(
       screen.queryByRole("menuitem", { name: "workbooks.actions.delete" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("names an author without a name by the fallback, never by an id prefix", () => {
+    renderWorkbooks([{ ...unused, createdByName: undefined }]);
+
+    expect(screen.getByText("common.unnamedAccount")).toBeInTheDocument();
+    expect(screen.queryByText(/00000000/u)).not.toBeInTheDocument();
   });
 
   it("reserves enough padded width for the workbook row-actions hit target", () => {

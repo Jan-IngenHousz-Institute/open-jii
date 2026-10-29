@@ -102,14 +102,15 @@ describe("ExperimentVisualizationsList", () => {
     expect(screen.getByText(label)).toHaveClass(className);
   });
 
-  it("falls back to a truncated user id when name is missing", () => {
+  it("names an author without a name by the fallback, never by an id prefix", () => {
     render(
       <ExperimentVisualizationsList
         visualizations={[viz({ createdBy: "user-1234567890", createdByName: undefined })]}
         experimentId={expId}
       />,
     );
-    expect(screen.getByText("user-123…")).toBeInTheDocument();
+    expect(screen.getByText("common.unnamedAccount")).toBeInTheDocument();
+    expect(screen.queryByText(/user-123/u)).not.toBeInTheDocument();
   });
 
   it("uses experiments-archive base path when isArchived is set", () => {

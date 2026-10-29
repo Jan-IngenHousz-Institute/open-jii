@@ -7,8 +7,8 @@ import { UserAvatar } from "@/components/user-avatar";
 export interface AvatarTrailFace {
   /** Stable across refetches — a user id, a team id. */
   id: string;
-  firstName: string;
-  lastName: string;
+  /** What the initials come from: a person's own name, or a team's. */
+  name: string;
   avatarUrl?: string | null;
 }
 
@@ -58,8 +58,7 @@ export function OrganizationAvatarTrail({
             <UserAvatar
               key={face.id}
               avatarUrl={face.avatarUrl}
-              firstName={face.firstName}
-              lastName={face.lastName}
+              name={face.name}
               className="ring-background bg-muted h-6 w-6 text-[10px] ring-2"
             />
           ))}
@@ -77,10 +76,4 @@ export function OrganizationAvatarTrail({
       </span>
     </IntentLink>
   );
-}
-
-/** A team as a trail face: split on the first space so a two-word team gets two initials. */
-export function teamAsTrailFace(team: { id: string; name: string }): AvatarTrailFace {
-  const [firstWord = "", ...rest] = team.name.trim().split(/\s+/u);
-  return { id: team.id, firstName: firstWord, lastName: rest.join(" ") };
 }

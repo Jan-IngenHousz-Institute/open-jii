@@ -69,6 +69,24 @@ describe("<CollaboratorsList />", () => {
     expect(screen.getByText("sharing.noCollaboratorsHint")).toBeInTheDocument();
   });
 
+  it("names a person with no name and no visible address by the fallback, never by their id", () => {
+    renderList([
+      grantFor("", {
+        granteeId: "user-nameless",
+        grantee: {
+          type: "user",
+          displayName: null,
+          email: null,
+          avatarUrl: null,
+          memberCount: null,
+        },
+      }),
+    ]);
+
+    expect(screen.getByText("common.unnamedAccount")).toBeInTheDocument();
+    expect(screen.queryByText(/user-nameless/u)).not.toBeInTheDocument();
+  });
+
   it("shows placeholders rather than the empty state while the list is still loading", () => {
     const { container } = renderList([], { isPending: true });
 
@@ -100,6 +118,29 @@ describe("<CollaboratorsList />", () => {
       // to move them between and no grant to take away.
       expect(within(row).queryByRole("combobox")).not.toBeInTheDocument();
       expect(within(row).queryByRole("button")).not.toBeInTheDocument();
+    });
+
+    it("states an owner's access as a fixed pill, before any button to remove a leftover grant", () => {
+      renderList([
+        createResourceOwner({
+          granteeId: "u-owner",
+          grantee: {
+            type: "user",
+            displayName: "Ada Owner",
+            email: null,
+            avatarUrl: null,
+            memberCount: null,
+          },
+          inertGrant: { id: "g-stale", role: "viewer" },
+        }),
+      ]);
+
+      const row = rowFor("Ada Owner");
+      const pill = within(row).getByText("sharing.roleCanEdit");
+      const remove = within(row).getByRole("button", {
+        name: "sharing.removeRedundantGrantForLabel",
+      });
+      expect(pill.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
     it("calls an owner's leftover grant redundant, and offers only to remove it", () => {
@@ -174,10 +215,11 @@ describe("<CollaboratorsList />", () => {
         ownerFor("Ada Owner"),
       ]);
 
-      const names = screen
-        .getAllByRole("listitem")
-        .map((row) => within(row).getByRole("heading").textContent);
-      expect(names).toEqual(["Ada Owner", "Lin Zhao", "Other Person"]);
+      const rows = screen.getAllByRole("listitem");
+      const positions = ["Ada Owner", "Lin Zhao", "Other Person"].map((name) =>
+        rows.indexOf(rowFor(name)),
+      );
+      expect(positions).toEqual([0, 1, 2]);
     });
 
     it("gives an owner no leave affordance even when they are the signed-in user", () => {

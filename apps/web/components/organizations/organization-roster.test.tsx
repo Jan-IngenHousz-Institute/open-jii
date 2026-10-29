@@ -256,6 +256,35 @@ describe("<OrganizationRoster />", () => {
     });
   });
 
+  it("marks the signed-in member's row as theirs, and nobody else's", async () => {
+    mockSession({ id: "user-member" });
+    renderRoster([ownerRow, memberRow], { actorRole: "member" });
+
+    await screen.findByText("Grace Hopper");
+    expect(within(rowFor("Grace Hopper")).getByText("sharing.you")).toBeInTheDocument();
+    expect(within(rowFor("Ada Lovelace")).queryByText("sharing.you")).not.toBeInTheDocument();
+  });
+
+  it("names a member with no name and no visible address by the fallback, never by their id", async () => {
+    mockSession({ id: "user-owner" });
+    renderRoster(
+      [
+        ownerRow,
+        createOrganizationMember({
+          userId: "user-nameless",
+          firstName: "",
+          lastName: "",
+          email: null,
+          role: "member",
+        }),
+      ],
+      { actorRole: "owner" },
+    );
+
+    expect(await screen.findByText("common.unnamedAccount")).toBeInTheDocument();
+    expect(screen.queryByText(/user-nameless/u)).not.toBeInTheDocument();
+  });
+
   describe("team badges", () => {
     it("names the set as teams and keeps a truncated name reachable", async () => {
       mockSession({ id: "user-owner" });

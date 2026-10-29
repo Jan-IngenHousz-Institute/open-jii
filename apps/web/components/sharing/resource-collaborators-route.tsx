@@ -18,6 +18,7 @@ interface ResourceCollaboratorsRouteProps {
    * Undefined means unresolved and must not be mistaken for no surface.
    */
   capabilities?: { canShare: boolean; canLeave: boolean };
+  owningOrganizationId?: string | null;
 }
 
 /**
@@ -28,6 +29,7 @@ export function ResourceCollaboratorsRoute({
   resourceType,
   resourceId,
   capabilities,
+  owningOrganizationId,
 }: ResourceCollaboratorsRouteProps) {
   const router = useRouter();
   const locale = useLocale();
@@ -47,7 +49,12 @@ export function ResourceCollaboratorsRoute({
   return (
     <div className="mx-auto w-full max-w-7xl">
       {capabilities.canShare ? (
-        <ResourceCollaborators resourceType={resourceType} resourceId={resourceId} canShare />
+        <ResourceCollaborators
+          resourceType={resourceType}
+          resourceId={resourceId}
+          canShare
+          owningOrganizationId={owningOrganizationId}
+        />
       ) : (
         <LeaveResourceCard resourceType={resourceType} resourceId={resourceId} />
       )}

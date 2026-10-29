@@ -144,6 +144,13 @@ describe("ExperimentDetailsCard", () => {
     expect(screen.getByText("John Doe")).toBeInTheDocument();
   });
 
+  it("names a creator without a name by the fallback", () => {
+    renderComponent({
+      experiment: { ...mockExperiment, ownerFirstName: null, ownerLastName: null },
+    });
+    expect(screen.getByText("common.unnamedAccount")).toBeInTheDocument();
+  });
+
   it("renders child components", () => {
     renderComponent();
     expect(screen.getByTestId("experiment-locations-section")).toBeInTheDocument();

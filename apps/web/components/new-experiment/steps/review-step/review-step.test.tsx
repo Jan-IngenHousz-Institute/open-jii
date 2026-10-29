@@ -114,6 +114,12 @@ describe("ReviewStep", () => {
       expect(screen.getByText("John Doe")).toBeInTheDocument();
     });
 
+    it("names a member with no name by the shared fallback", () => {
+      renderReviewStep({ members: [{ userId: "1" }] });
+
+      expect(screen.getByText("common.unnamedAccount")).toBeInTheDocument();
+    });
+
     it("shows message when no members added", () => {
       renderReviewStep({ members: [] });
 

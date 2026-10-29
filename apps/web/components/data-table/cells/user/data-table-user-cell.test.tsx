@@ -14,7 +14,7 @@ describe("DataTableUserCell", () => {
     render(<DataTableUserCell data={userData} columnName="User" />);
 
     expect(screen.getByText("John Doe")).toBeInTheDocument();
-    expect(screen.getByText("JD")).toBeInTheDocument();
+    expect(screen.getByAltText("JD")).toBeInTheDocument();
   });
 
   it("renders user without avatar", () => {
@@ -30,7 +30,7 @@ describe("DataTableUserCell", () => {
     expect(screen.getByText("JS")).toBeInTheDocument(); // Initials fallback
   });
 
-  it("renders fallback for single name", () => {
+  it("takes one initial from a single-word name", () => {
     const userData = JSON.stringify({
       id: "user-789",
       name: "Madonna",
@@ -40,7 +40,7 @@ describe("DataTableUserCell", () => {
     render(<DataTableUserCell data={userData} columnName="User" />);
 
     expect(screen.getByText("Madonna")).toBeInTheDocument();
-    expect(screen.getByText("MA")).toBeInTheDocument(); // First 2 letters for single name
+    expect(screen.getByText("M")).toBeInTheDocument();
   });
 
   it("renders user with single short name", () => {
@@ -185,7 +185,9 @@ describe("DataTableUserCell", () => {
     render(<DataTableUserCell data={userData} columnName="User" />);
 
     expect(screen.getByText("Alice Johnson")).toBeInTheDocument();
-    // In test environment, images don't load so fallback initials are shown
-    expect(screen.getByText("AJ")).toBeInTheDocument();
+    expect(screen.getByAltText("AJ")).toHaveAttribute(
+      "src",
+      expect.stringContaining("example.com/alice.jpg"),
+    );
   });
 });

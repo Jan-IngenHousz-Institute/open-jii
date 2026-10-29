@@ -55,8 +55,9 @@ describe("<ContributorIdentity />", () => {
     expect(screen.getByText("MC")).toBeInTheDocument();
   });
 
-  it("uses the first two characters when the name is single-word", () => {
-    render(<ContributorIdentity data={{ id: "u1", name: "Madonna", avatar: null }} />);
-    expect(screen.getByText("MA")).toBeInTheDocument();
+  it("shows a pseudonym exactly as sent, with one initial from its single word", () => {
+    render(<ContributorIdentity data={{ id: "u1", name: "Contributor-7F3A2C", avatar: null }} />);
+    expect(screen.getByText("Contributor-7F3A2C")).toBeInTheDocument();
+    expect(screen.getByText("C")).toBeInTheDocument();
   });
 });

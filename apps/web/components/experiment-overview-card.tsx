@@ -1,23 +1,20 @@
 "use client";
 
+import { ownName, personName } from "@/components/people/person-name";
 import { ResourceCard } from "@/components/shared/resource-card";
+import { UserAvatar } from "@/components/user-avatar";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { Building2, Users } from "lucide-react";
 
 import type { ExperimentListItem } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
-import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 import { Badge } from "@repo/ui/components/badge";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 
 /** True for any card in the set, so the reserved badge row is never dead space. */
 export function hasBadges(experiment: ExperimentListItem): boolean {
   return experiment.visibility === "private" || Boolean(experiment.organizationName);
-}
-
-function ownerName(experiment: ExperimentListItem): string {
-  return [experiment.ownerFirstName, experiment.ownerLastName].filter(Boolean).join(" ");
 }
 
 interface ExperimentOverviewCardProps {
@@ -40,7 +37,11 @@ export function ExperimentOverviewCard({
   const { t } = useTranslation("experiments");
   const format = useLocalDateFormat(locale);
 
-  const owner = ownerName(experiment);
+  const ownerPerson = {
+    firstName: experiment.ownerFirstName,
+    lastName: experiment.ownerLastName,
+  };
+  const owner = personName(ownerPerson, t);
   const updated = format.date(experiment.updatedAt);
   const members = experiment.membersCount ?? 0;
 
@@ -58,18 +59,14 @@ export function ExperimentOverviewCard({
 
   const renderOwner = () => (
     <span className="flex min-w-0 items-center gap-1.5" title={`${t("columns.owner")}: ${owner}`}>
-      <Avatar className="size-5 shrink-0">
-        <AvatarFallback className="text-[9px] font-medium">
-          {owner.slice(0, 1).toUpperCase()}
-        </AvatarFallback>
-      </Avatar>
+      <UserAvatar name={ownName(ownerPerson) ?? ""} className="size-5 text-[9px]" />
       <span className="truncate">{owner}</span>
     </span>
   );
 
   const renderFooter = () => (
     <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-      {owner === "" ? <span /> : renderOwner()}
+      {renderOwner()}
       <span className="flex shrink-0 items-center gap-3">
         {members > 0 ? (
           <span className="inline-flex items-center gap-1" title={t("columns.members")}>

@@ -16,6 +16,19 @@ const renderCard = (showUpdatedLabel = false) =>
   );
 
 describe("ExperimentOverviewCard", () => {
+  it("names an owner without a name by the fallback instead of leaving them out", () => {
+    render(
+      <ExperimentOverviewCard
+        experiment={createExperiment({ ownerFirstName: null, ownerLastName: null })}
+        href="/en-US/platform/experiments/1"
+        locale="en-US"
+        reserveBadgeRow
+      />,
+    );
+
+    expect(screen.getByText("common.unnamedAccount")).toBeInTheDocument();
+  });
+
   it("shows the update date", () => {
     renderCard();
 

@@ -1,6 +1,13 @@
 import { createGranteeUser } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { createTestQueryClient, render, screen, userEvent, waitFor } from "@/test/test-utils";
+import {
+  createTestQueryClient,
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+} from "@/test/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -87,7 +94,7 @@ describe("<GranteePicker />", () => {
     await user.click(screen.getByText("Lin Zhao"));
     expect(onSelectionChange.mock.lastCall?.[0]).toMatchObject({
       kind: "grantee",
-      grantee: { id: "u-1", email: null },
+      grantee: { id: "u-1" },
     });
   });
 
@@ -112,7 +119,7 @@ describe("<GranteePicker />", () => {
     await user.click(screen.getByText("Lin Zhao"));
     expect(onSelectionChange.mock.lastCall?.[0]).toMatchObject({
       kind: "grantee",
-      grantee: { id: "u-1", email: null },
+      grantee: { id: "u-1" },
     });
   });
 
@@ -172,6 +179,50 @@ describe("<GranteePicker />", () => {
     });
   });
 
+  it("keeps the organization list open when the search box takes focus", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.sharing.searchGranteeOrganizations, {
+      body: [{ id: "org-1", name: "Greenhouse Lab", slug: "greenhouse-lab" }],
+    });
+
+    renderPicker();
+
+    await user.click(screen.getByLabelText("sharing.granteeTypeLabel"));
+    await user.click(screen.getByRole("option", { name: "sharing.granteeTypeOrganization" }));
+
+    const search = screen.getByLabelText("sharing.granteeSearchLabel");
+    await user.click(search);
+    await waitFor(() => expect(screen.getByText("Greenhouse Lab")).toBeInTheDocument());
+
+    // In a browser the focus that opened the list also reaches the list's outside
+    // listener; jsdom flushes effects too late for that, so it is delivered again.
+    fireEvent.focusIn(search);
+
+    expect(screen.getByText("Greenhouse Lab")).toBeInTheDocument();
+  });
+
+  it("never offers the viewer, keeping everyone else in the search's order", async () => {
+    const user = userEvent.setup();
+    mockSession({ id: "u-me" });
+    server.mount(contract.sharing.searchGranteeUsers, {
+      body: [
+        createGranteeUser({ userId: "u-2", firstName: "Lin", lastName: "Sun" }),
+        createGranteeUser({ userId: "u-me", firstName: "Lin", lastName: "Me" }),
+        createGranteeUser({ userId: "u-3", firstName: "Lin", lastName: "Zhao" }),
+      ],
+    });
+
+    renderPicker();
+    await user.type(screen.getByLabelText("sharing.granteeSearchLabel"), "lin");
+
+    await waitFor(() => expect(screen.getByText("Lin Sun")).toBeInTheDocument());
+    expect(screen.queryByText("Lin Me")).not.toBeInTheDocument();
+    const names = screen.getAllByRole("button").flatMap((button) => button.textContent);
+    expect(names.findIndex((name) => name.includes("Lin Sun"))).toBeLessThan(
+      names.findIndex((name) => name.includes("Lin Zhao")),
+    );
+  });
+
   describe("access someone already holds", () => {
     /** The row's clickable button, which is what carries the disabled state. */
     function rowFor(name: string): HTMLElement {
@@ -201,7 +252,7 @@ describe("<GranteePicker />", () => {
       // Shown rather than filtered out: hiding them is what sends people hunting
       // for a name the picker swallowed.
       await waitFor(() => expect(screen.getByText("Already Shared")).toBeInTheDocument());
-      expect(screen.getByText("sharing.existingGrantBadge")).toBeInTheDocument();
+      expect(screen.getByText("sharing.roleCanView")).toBeInTheDocument();
       expect(screen.getByText("sharing.granteeTierAddsNothing")).toBeInTheDocument();
       expect(rowFor("Already Shared")).toBeDisabled();
       expect(rowFor("Not Shared")).toBeEnabled();
@@ -373,6 +424,82 @@ describe("<GranteePicker />", () => {
     });
   });
 
+  it("lists an organization already shared, and lets a higher level upgrade it", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.sharing.searchGranteeOrganizations, {
+      body: [{ id: "org-1", name: "Greenhouse Lab", slug: "greenhouse-lab" }],
+    });
+    const existingGrants = [
+      { granteeType: "organization" as const, granteeId: "org-1", role: "viewer" as const },
+    ];
+
+    const { onSelectionChange, rerender } = renderPicker({ existingGrants });
+
+    await user.click(screen.getByLabelText("sharing.granteeTypeLabel"));
+    await user.click(screen.getByRole("option", { name: "sharing.granteeTypeOrganization" }));
+    await user.click(screen.getByLabelText("sharing.granteeSearchLabel"));
+
+    await waitFor(() => expect(screen.getByText("Greenhouse Lab")).toBeInTheDocument());
+    expect(screen.getByText("sharing.roleCanView")).toBeInTheDocument();
+    expect(screen.getByText("sharing.granteeTierAddsNothing")).toBeInTheDocument();
+    expect(screen.getByText("Greenhouse Lab").closest("button")).toBeDisabled();
+
+    rerender(
+      <GranteePicker
+        resourceType="experiment"
+        resourceId="exp-1"
+        role="admin"
+        selection={null}
+        onSelectionChange={onSelectionChange}
+        existingGrants={existingGrants}
+      />,
+    );
+    await user.click(screen.getByText("Greenhouse Lab"));
+    expect(onSelectionChange.mock.lastCall?.[0]).toMatchObject({
+      kind: "grantee",
+      grantee: { type: "organization", id: "org-1", access: { existingGrantRole: "viewer" } },
+    });
+  });
+
+  it.each([
+    ["experiment", "sharing.ownsResource.experiment"],
+    ["macro", "sharing.ownsResource.macro"],
+  ] as const)(
+    "greys out the organization that owns the %s at both levels",
+    async (resourceType, reason) => {
+      const user = userEvent.setup();
+      server.mount(contract.sharing.searchGranteeOrganizations, {
+        body: [
+          { id: "org-own", name: "Owning Lab", slug: null },
+          { id: "org-2", name: "Partner Lab", slug: null },
+        ],
+      });
+      const picker = (role: "viewer" | "admin") => (
+        <GranteePicker
+          resourceType={resourceType}
+          resourceId="res-1"
+          role={role}
+          selection={null}
+          onSelectionChange={vi.fn()}
+          owningOrganizationId="org-own"
+        />
+      );
+
+      const { rerender } = render(picker("viewer"));
+      await user.click(screen.getByLabelText("sharing.granteeTypeLabel"));
+      await user.click(screen.getByRole("option", { name: "sharing.granteeTypeOrganization" }));
+      await user.click(screen.getByLabelText("sharing.granteeSearchLabel"));
+      await waitFor(() => expect(screen.getByText("Owning Lab")).toBeInTheDocument());
+
+      for (const role of ["viewer", "admin"] as const) {
+        rerender(picker(role));
+        expect(screen.getByText("Owning Lab").closest("button")).toBeDisabled();
+        expect(screen.getByText(reason)).toBeInTheDocument();
+        expect(screen.getByText("Partner Lab").closest("button")).toBeEnabled();
+      }
+    },
+  );
+
   describe("a failed read is not an empty one", () => {
     it("says the search failed instead of claiming nobody matches", async () => {
       const user = userEvent.setup();
@@ -382,8 +509,9 @@ describe("<GranteePicker />", () => {
 
       await user.type(screen.getByLabelText("sharing.granteeSearchLabel"), "lin");
 
-      await waitFor(() => expect(screen.getByText("sharing.loadFailed")).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText("common.searchFailed")).toBeInTheDocument());
       expect(screen.queryByText("sharing.noUsersFound")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "errors.tryAgain" })).toBeInTheDocument();
     });
 
     it("refuses to offer an email invitation it cannot rule out an account for", async () => {
@@ -396,7 +524,7 @@ describe("<GranteePicker />", () => {
 
       // Whether that address already has an account is exactly what the failed
       // search cannot answer, and an invitation to one sits pending forever.
-      await waitFor(() => expect(screen.getByText("sharing.loadFailed")).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText("common.searchFailed")).toBeInTheDocument());
       expect(screen.queryByText("sharing.sendInviteByEmail")).not.toBeInTheDocument();
       expect(onSelectionChange).not.toHaveBeenCalled();
     });
@@ -411,7 +539,7 @@ describe("<GranteePicker />", () => {
       await user.click(screen.getByRole("option", { name: "sharing.granteeTypeOrganization" }));
       await user.click(screen.getByLabelText("sharing.granteeSearchLabel"));
 
-      await waitFor(() => expect(screen.getByText("sharing.loadFailed")).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText("common.searchFailed")).toBeInTheDocument());
       expect(screen.queryByText("sharing.noOrganizationsFound")).not.toBeInTheDocument();
     });
   });
@@ -553,7 +681,12 @@ describe("<GranteePicker />", () => {
     const user = userEvent.setup();
     const selection: GranteeSelection = {
       kind: "grantee",
-      grantee: { type: "user", id: "u-1", displayName: "Lin Zhao" },
+      grantee: {
+        type: "user",
+        id: "u-1",
+        displayName: "Lin Zhao",
+        access: { organizationRole: null, existingGrantRole: null },
+      },
     };
 
     const { onSelectionChange } = renderPicker({ selection });

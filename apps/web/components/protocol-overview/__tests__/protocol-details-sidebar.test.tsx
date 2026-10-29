@@ -308,10 +308,10 @@ describe("ProtocolDetailsSidebar", () => {
     expect(screen.getByText("John Doe")).toBeInTheDocument();
   });
 
-  it("renders dash when creator name is not available", () => {
+  it("names a creator without a name by the fallback", () => {
     const protocolNoCreator = { ...mockProtocol, createdByName: undefined };
     renderComponent({ protocol: protocolNoCreator });
-    expect(screen.getByText("-")).toBeInTheDocument();
+    expect(screen.getByText("common.unnamedAccount")).toBeInTheDocument();
   });
 
   it("renders a 'view original' link when the protocol is a fork", () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { personName } from "@/components/people/person-name";
 import { formatDate } from "@/util/date";
 import { ExternalLink } from "lucide-react";
 
@@ -19,6 +20,9 @@ const THUMBNAIL_MAX_HEIGHT_PX = 460;
 
 export function FeaturedDashboardCard({ dashboard, href }: FeaturedDashboardCardProps) {
   const { t } = useTranslation("experimentDashboards");
+  const author = personName({ displayName: dashboard.createdByName }, t, {
+    placement: "byline",
+  });
   return (
     <Card className="overflow-hidden shadow-none">
       <CardContent className="space-y-3">
@@ -34,7 +38,7 @@ export function FeaturedDashboardCard({ dashboard, href }: FeaturedDashboardCard
           </h3>
           <p className="text-muted-foreground text-xs">
             {t("ui.labels.updatedAgo", { date: formatDate(dashboard.updatedAt) })}
-            {dashboard.createdByName && <> · {dashboard.createdByName}</>}
+            {author && <> · {author}</>}
           </p>
         </div>
         <DashboardThumbnail

@@ -1,6 +1,7 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/avatar";
+import { UserAvatar } from "@/components/user-avatar";
+
 import { cn } from "@repo/ui/lib/utils";
 
 interface ContributorStruct {
@@ -38,12 +39,11 @@ export function ContributorIdentity({
   const isCompact = size === "compact";
   return (
     <div className={cn("inline-flex items-center gap-2", className)}>
-      <Avatar className={cn("rounded-full", isCompact ? "h-5 w-5" : "h-6 w-6")}>
-        <AvatarImage src={avatar ?? undefined} alt={name} />
-        <AvatarFallback className={cn("rounded-full", isCompact ? "text-[10px]" : "text-xs")}>
-          {getInitials(name)}
-        </AvatarFallback>
-      </Avatar>
+      <UserAvatar
+        avatarUrl={avatar}
+        name={name}
+        className={isCompact ? "h-5 w-5 text-[10px]" : "h-6 w-6 text-xs"}
+      />
       <span className={cn("truncate font-medium", isCompact ? "text-xs" : "max-w-[120px] text-sm")}>
         {name}
       </span>
@@ -83,12 +83,4 @@ function parseContributor(
     return null;
   }
   return null;
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) {
-    return parts[0].substring(0, 2).toUpperCase();
-  }
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }

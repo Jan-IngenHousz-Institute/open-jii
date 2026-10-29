@@ -1,6 +1,7 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { personName } from "@/components/people/person-name";
 import { formatDate } from "@/util/date";
 
 import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
@@ -18,9 +19,10 @@ export interface HighlightCardProps {
 export function HighlightCard({ dashboard, href, thumbnailMaxHeight }: HighlightCardProps) {
   const { t } = useTranslation("experimentDashboards");
   const updatedLabel = t("ui.labels.updatedAgo", { date: formatDate(dashboard.updatedAt) });
-  const subtitle = dashboard.createdByName
-    ? `${updatedLabel} · ${dashboard.createdByName}`
-    : updatedLabel;
+  const author = personName({ displayName: dashboard.createdByName }, t, {
+    placement: "byline",
+  });
+  const subtitle = author ? `${updatedLabel} · ${author}` : updatedLabel;
   return (
     <Card className="hover:border-foreground/20 group relative overflow-hidden shadow-none transition-colors">
       <IntentLink

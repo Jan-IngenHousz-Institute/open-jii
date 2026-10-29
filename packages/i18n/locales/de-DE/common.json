@@ -6,7 +6,6 @@
   "common": {
     "logo": "Jan IngenHousz Institut",
     "protocolLabel": "Protokoll",
-    "by": "von",
     "homepage": "Startseite",
     "language": "Sprache:",
     "currentValue": "Aktueller Wert:",
@@ -61,6 +60,8 @@
     "name": "Name",
     "none": "Keine",
     "unknown": "Unbekannt",
+    "unnamedAccount": "Unbenanntes Konto",
+    "byPerson": "von {{name}}",
     "optional": "optional",
     "lines": "Zeilen",
     "bytes": "B",
@@ -86,6 +87,7 @@
     "sortDescending": "absteigend",
     "sortSecondary": "zweite Sortierung",
     "searchMinCharacters": "Gib mindestens 2 Zeichen ein, um zu suchen",
+    "searchFailed": "Suchergebnisse konnten nicht geladen werden.",
     "emailMatched": "Entspricht der eingegebenen E-Mail-Adresse"
   },
   "navigation": {
@@ -138,8 +140,6 @@
     "searchUsersPlaceholder": null,
     "noUsersFound": "Keine Benutzer gefunden für \"{{search}}\"",
     "inviteByEmail": "{{email}} per E-Mail einladen",
-    "sendInviteByEmail": "Einladung per E-Mail senden",
-    "emailAlreadyInvited": "Diese E-Mail wurde bereits eingeladen oder ist bereits Mitglied",
     "searchExperiments": "Experimente suchen...",
     "startTypingToSearch": "Tippen Sie, um zu suchen",
     "searchProtocols": "Protokolle suchen...",
@@ -182,7 +182,6 @@
     "embargo": "Embargo",
     "teamMembers": "Teammitglieder",
     "noMembersAdded": "Keine Mitglieder hinzugefügt",
-    "unnamedMember": "Unbenanntes Mitglied",
     "researchLocations": "Forschungsstandorte",
     "noLocationsAdded": "Keine Standorte hinzugefügt",
     "analysisPanelTitle": null,
@@ -263,7 +262,8 @@
     "locationsListTitle": "Ausgewählte Standorte",
     "addCollaboratorsTitle": "Mitwirkende hinzufügen",
     "addCollaboratorsDescription": "Legen Sie fest, wer von Anfang an Zugriff auf dieses Experiment hat",
-    "initialCollaboratorsTierNote": "Alle hier hinzugefügten Personen beginnen mit „Kann ansehen“: Sie können das Experiment öffnen sowie Messungen und Anmerkungen hinzufügen. Auf „Kann bearbeiten“ heben Sie jemanden im Tab „Mitwirkende“ an, sobald das Experiment existiert."
+    "initialCollaboratorsTierNote": "Alle hier hinzugefügten Personen beginnen mit „Kann ansehen“: Sie können das Experiment öffnen sowie Messungen und Anmerkungen hinzufügen. Auf „Kann bearbeiten“ heben Sie jemanden im Tab „Mitwirkende“ an, sobald das Experiment existiert.",
+    "alreadyAdded": "Bereits hinzugefügt"
   },
   "experimentSettings": {
     "loading": "Experimenteinstellungen werden geladen...",
@@ -346,8 +346,7 @@
     "inviteCollaborators": "Mitwirkende einladen",
     "inviteCollaboratorsDescription": "Fügen Sie eine bestehende Person oder eine Ihrer Organisationen hinzu oder laden Sie jemanden per E-Mail ein. Bestehende Konten erhalten sofort Zugriff; Eingeladene erhalten eine E-Mail und treten nach dem Annehmen bei.",
     "filterCollaboratorsPlaceholder": "Nach Name oder E-Mail filtern…",
-    "invitedBy": "Eingeladen von",
-    "unknownInviter": "Unbekannter Einladender"
+    "invitedBy": "Eingeladen von"
   },
   "joinCode": {
     "title": "Beitrittscode",
@@ -448,9 +447,9 @@
     "revokeForLabel": "{{name}} entfernen",
     "you": "(Sie)",
     "outsideCollaborator": "Externe Mitwirkende",
-    "orgOwnerBadge": "Eigentümer · über die Organisation",
-    "orgAdminBadge": "Administrator · über die Organisation",
-    "orgMemberBadge": "Mitglied · über die Organisation",
+    "orgOwnerBadge": "Org-Eigentümer",
+    "orgAdminBadge": "Org-Admin",
+    "orgMemberBadge": "Org-Mitglied",
     "redundantGrantBadge": "Überflüssige Freigabe",
     "removeRedundantGrantForLabel": "Überflüssige Freigabe von {{name}} entfernen",
     "revokeKeepsAccess": "{{name}} behält {{tier}} — {{source}}. Das Entfernen dieser Freigabe ändert sonst nichts.",
@@ -458,10 +457,18 @@
     "accessSourceOrgOwner": "als Eigentümer von {{organization}}",
     "accessSourceOrgAdmin": "als Administrator von {{organization}}",
     "accessSourceOrgMember": "als Mitglied von {{organization}}",
-    "existingGrantBadge": "{{role}} · bereits freigegeben",
     "granteeHasFullAccess": "Hat bereits vollen Zugriff über die Organisation",
     "granteeHasFullAccessViaGrant": "Hat bereits vollen Zugriff über eine bestehende Freigabe",
     "granteeTierAddsNothing": "Diese Zugriffsstufe fügt dem bestehenden Zugriff nichts hinzu",
+    "ownsResource": {
+      "experiment": "Besitzt dieses Experiment",
+      "macro": "Besitzt dieses Makro",
+      "protocol": "Besitzt dieses Protokoll",
+      "workbook": "Besitzt diese Arbeitsmappe",
+      "device": "Besitzt dieses Gerät",
+      "deviceGroup": "Besitzt diese Gerätegruppe",
+      "calibrationDefinition": "Besitzt diese Kalibrierungsdefinition"
+    },
     "orgAdminsName": "Administratoren von {{name}}",
     "orgAdminsCount_one": "{{count}} Administrator, über die Organisation",
     "orgAdminsCount_other": "{{count}} Administratoren, über die Organisation",
@@ -597,7 +604,6 @@
         "empty": "Noch niemand. Sie können die Organisation allein erstellen und Personen später über den Tab „Mitglieder“ einladen.",
         "alreadyAdded": "Diese Person wurde bereits eingeladen",
         "invitedByEmail": "Noch kein Konto",
-        "emailRole": "{{role}} · noch kein Konto",
         "addTitle": "Jemanden einladen",
         "listTitle": "Einzuladende Personen",
         "teamsNote": "Teams werden im Tab „Teams“ der Organisation eingerichtet, sobald sie existiert – ein Team ist eine Gruppe ihrer Mitglieder und kann deshalb nicht vorher entstehen.",
@@ -715,7 +721,6 @@
       "searchLabel": "Nach einer Person zum Einladen suchen",
       "clearSelection": "Auswahl aufheben",
       "noMatches": "Keine passenden Nutzer",
-      "searchFailed": "Die Personensuche konnte nicht ausgeführt werden.",
       "alreadyMember": "Diese Person ist bereits Mitglied dieser Organisation",
       "alreadyInvited": "Für diese Adresse liegt bereits eine Einladung vor",
       "enterExactEmail": "Geben Sie die vollständige E-Mail-Adresse ein, um diese Person einzuladen",
@@ -1238,7 +1243,6 @@
     },
     "details": null,
     "you": "Sie",
-    "unknownUser": "Unbekannter Benutzer",
     "preview": "Vorschau",
     "previewNote": "Dies ist eine Vorschau. Ihre Anmerkung wird verarbeitet und erscheint bald dauerhaft. Eine Aktualisierung blendet diese Vorschau aus."
   },

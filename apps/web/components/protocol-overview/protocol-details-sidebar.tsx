@@ -1,6 +1,7 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { personName } from "@/components/people/person-name";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
@@ -132,7 +133,9 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
 
       <div className="space-y-1">
         <h4 className="text-sm font-medium">{t("experiments.createdBy")}</h4>
-        <p className="text-muted-foreground text-sm">{protocol.createdByName ?? "-"}</p>
+        <p className="text-muted-foreground text-sm">
+          {personName({ displayName: protocol.createdByName }, tCommon)}
+        </p>
       </div>
 
       <OwningOrganizationField
