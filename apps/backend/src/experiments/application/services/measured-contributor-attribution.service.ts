@@ -8,9 +8,10 @@ import {
 
 import { USER_PRESENCE_PORT } from "../../../users/core/ports/user-presence.port";
 import type { UserPresencePort } from "../../../users/core/ports/user-presence.port";
+import type { MeasuredContributorAttributionPort } from "../../core/ports/measured-contributor-attribution.port";
 
 @Injectable()
-export class MeasuredContributorAttributionService {
+export class MeasuredContributorAttributionService implements MeasuredContributorAttributionPort {
   constructor(@Inject(USER_PRESENCE_PORT) private readonly users: UserPresencePort) {}
 
   async enrichRows(

@@ -36,3 +36,14 @@ $$;
 --> statement-breakpoint
 CREATE TRIGGER guest_identity_one_way BEFORE UPDATE OF is_anonymous ON users
 FOR EACH ROW EXECUTE FUNCTION refuse_becoming_guest();
+
+--> statement-breakpoint
+CREATE TABLE "guest_organization_usage" (
+	"organization_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"window_start" timestamp with time zone NOT NULL,
+	"count" integer DEFAULT 0 NOT NULL,
+	CONSTRAINT "guest_organization_usage_organization_id_kind_window_start_pk" PRIMARY KEY("organization_id","kind","window_start")
+);
+--> statement-breakpoint
+ALTER TABLE "guest_organization_usage" ADD CONSTRAINT "guest_organization_usage_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;

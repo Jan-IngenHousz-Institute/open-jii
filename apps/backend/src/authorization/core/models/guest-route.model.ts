@@ -7,15 +7,7 @@ const routeSchema = z.object({
   procedure: z.string(),
   method: z.string(),
   path: z.string(),
-  classification: z.enum([
-    "deny",
-    "public-list",
-    "public-resource",
-    "demo-upload",
-    "demo-macro",
-    "visit",
-  ]),
-  resource: z.enum(["experiment", "macro", "protocol", "workbook", "organization"]).optional(),
+  classification: z.enum(["deny", "public-list"]),
 });
 
 export const guestRouteInventory = z.array(routeSchema).parse(inventory);

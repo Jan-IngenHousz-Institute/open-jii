@@ -138,6 +138,19 @@ export const guestUsage = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.kind, t.windowStart] })],
 );
 
+export const guestOrganizationUsage = pgTable(
+  "guest_organization_usage",
+  {
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: ["upload", "macro"] }).notNull(),
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.organizationId, t.kind, t.windowStart] })],
+);
+
 // API Keys Table - for the Better Auth api-key plugin. Owner column is
 // referenceId (not userId) in the plugin's model at 1.6.23.
 export const apiKeys = pgTable(

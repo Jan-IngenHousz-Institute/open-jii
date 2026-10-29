@@ -1,4 +1,4 @@
-import { and, eq, exists, sql, users } from "@repo/database";
+import { and, eq, exists, inArray, users } from "@repo/database";
 import type { AnyColumn, DbOrTx, SQL } from "@repo/database";
 
 import { demoOrganizationCondition } from "../../../organizations/core/repositories/organization-query";
@@ -24,6 +24,6 @@ export function guestMemberCondition(
 ): SQL<boolean> {
   return (
     and(guestCondition(database, userId), demoOrganizationCondition(database, organizationId)) ??
-    sql<boolean>`false`
+    inArray(organizationId, [])
   ).mapWith(Boolean);
 }

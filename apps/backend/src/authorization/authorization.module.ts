@@ -8,7 +8,6 @@ import { CanAccessGuard } from "./can-access.guard";
 import { CanCreateInOrgGuard } from "./can-create-in-org.guard";
 import { DEMO_MODE_PORT } from "./core/ports/demo-mode.port";
 import { EmailVisibilityService } from "./email-visibility.service";
-import { GuestResourceModule } from "./guest-resource.module";
 import { GuestGuard } from "./guest.guard";
 import { RequiresPlatformRoleGuard } from "./requires-platform-role.guard";
 
@@ -20,7 +19,7 @@ import { RequiresPlatformRoleGuard } from "./requires-platform-role.guard";
  */
 @Global()
 @Module({
-  imports: [GuestRepositoryModule, GuestResourceModule],
+  imports: [GuestRepositoryModule],
   providers: [
     GuestDemoAdapter,
     { provide: DEMO_MODE_PORT, useExisting: GuestDemoAdapter },

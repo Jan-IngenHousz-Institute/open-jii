@@ -5,9 +5,9 @@ import type { ResourceAction } from "@repo/auth/access";
 import {
   and,
   isNotNull,
+  inArray,
   not,
   or,
-  sql,
   calibrationDefinitions,
   eq,
   experimentDevices,
@@ -28,8 +28,6 @@ import type { ResourceType } from "@repo/database";
 
 import { mayTransferOutOfOrganization } from "../sharing/core/transfer-authority";
 import { guestCondition, guestMemberCondition } from "../users/core/repositories/guest-query";
-import { GUEST_RESOURCE_PORT } from "./core/ports/guest-resource.port";
-import type { GuestResourcePort } from "./core/ports/guest-resource.port";
 
 type OrganizationType = (typeof organizations.$inferSelect)["type"];
 
@@ -77,6 +75,7 @@ export interface AccessDecision {
 export interface ResourceOwnership {
   organizationId: string | null;
   visibility: "private" | "public" | null;
+  organizationType?: OrganizationType | null;
 }
 
 /**
@@ -88,10 +87,7 @@ export interface ResourceOwnership {
  */
 @Injectable()
 export class AuthorizationService {
-  constructor(
-    @Inject("DATABASE") private readonly db: DatabaseInstance,
-    @Inject(GUEST_RESOURCE_PORT) private readonly guestResources: GuestResourcePort,
-  ) {}
+  constructor(@Inject("DATABASE") private readonly db: DatabaseInstance) {}
 
   /**
    * `executor` lets a caller re-ask this question **inside its own transaction**,
@@ -111,9 +107,9 @@ export class AuthorizationService {
       const publicKinds = ["experiment", "macro", "protocol", "workbook"] as const;
       const kind = publicKinds.find((value) => value === req.resourceType);
       if (!kind) return { allow: false, reason: "forbidden", organizationId: null };
-      const resource = await this.guestResources.findOwnership(kind, req.resourceId, executor);
+      const resource = ownership;
       const allow = Boolean(
-        resource?.visibility === "public" &&
+        resource.visibility === "public" &&
           (req.action === "read" ||
             (req.resourceType === "experiment" &&
               req.action === "contribute" &&
@@ -122,7 +118,7 @@ export class AuthorizationService {
       return {
         allow,
         reason: allow ? "public" : "forbidden",
-        organizationId: resource?.organizationId ?? null,
+        organizationId: resource.organizationId,
       };
     }
     const organizationId = ownership.organizationId;
@@ -377,7 +373,13 @@ export class AuthorizationService {
     resourceId: string,
   ): Promise<ResourceOwnership | null> {
     const row = await this.loadOwnership(resourceType, resourceId);
-    return row ? { organizationId: row.organizationId, visibility: row.visibility } : null;
+    return row
+      ? {
+          organizationId: row.organizationId,
+          visibility: row.visibility,
+          organizationType: row.organizationType,
+        }
+      : null;
   }
 
   /** Load owning org + visibility for a resource. Returns null when not found. */
@@ -386,15 +388,19 @@ export class AuthorizationService {
     resourceId: string,
     executor: DbOrTx = this.db,
     userId?: string,
-  ): Promise<(ResourceOwnership & { isGuest: boolean }) | null> {
+  ): Promise<
+    (ResourceOwnership & { isGuest: boolean; organizationType: OrganizationType | null }) | null
+  > {
     const table = OWNERSHIP_TABLES[resourceType];
     const rows = await executor
       .select({
         organizationId: table.organizationId,
         visibility: table.visibility,
-        isGuest: userId ? guestCondition(executor, userId) : sql<boolean>`false`,
+        organizationType: organizations.type,
+        isGuest: userId ? guestCondition(executor, userId) : inArray(table.id, []).mapWith(Boolean),
       })
       .from(table)
+      .leftJoin(organizations, eq(organizations.id, table.organizationId))
       .where(eq(table.id, resourceId))
       .limit(1);
     return rows.length > 0 ? rows[0] : null;

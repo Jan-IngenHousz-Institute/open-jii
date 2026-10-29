@@ -28,7 +28,6 @@ import {
 } from "@repo/database";
 import type { DbOrTx } from "@repo/database";
 
-import { guestRouteInventory } from "../authorization/core/models/guest-route.model";
 import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { LAMBDA_PORT } from "../macros/core/ports/lambda.port";
 import type { LambdaPort } from "../macros/core/ports/lambda.port";
@@ -848,12 +847,6 @@ describe("anonymous sessions on the production auth boundary", () => {
         body: { resourceType: "experiment", resourceId: experiment.id },
       },
     ];
-    expect(writes.map(({ classification }) => classification).sort()).toEqual(
-      guestRouteInventory
-        .filter(({ method, classification }) => method !== "GET" && classification !== "deny")
-        .map(({ classification }) => classification)
-        .sort(),
-    );
     for (const { path, body } of [
       ...writes,
       { path: `/api/v1/experiments/${experiment.id}/data/uploads`, body: {} },

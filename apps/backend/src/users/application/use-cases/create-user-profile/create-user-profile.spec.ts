@@ -46,6 +46,23 @@ describe("CreateUserProfileUseCase", () => {
     });
   });
 
+  it("refuses guests before saving a profile or marking registration complete", async () => {
+    const id = await testApp.createTestUser({
+      isAnonymous: true,
+      createProfile: false,
+      registered: false,
+    });
+    const result = await useCase.execute({ firstName: "Guest", lastName: "Visitor" }, id);
+    assertFailure(result);
+    expect(result.error.code).toBe("GUEST_ACTION_FORBIDDEN");
+    expect(await testApp.database.select().from(profiles).where(eq(profiles.userId, id))).toEqual(
+      [],
+    );
+    expect(await testApp.database.select().from(users).where(eq(users.id, id))).toMatchObject([
+      { registered: false },
+    ]);
+  });
+
   it("does not mark registration complete when the profile save fails", async () => {
     const id = await testApp.createTestUser({ createProfile: false, registered: false });
     vi.spyOn(userRepository, "createOrUpdateUserProfile").mockResolvedValue(

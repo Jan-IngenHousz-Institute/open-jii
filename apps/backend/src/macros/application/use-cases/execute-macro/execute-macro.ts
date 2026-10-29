@@ -26,7 +26,6 @@ import {
   macroSnapshotKey,
   MacroSnapshotRepository,
 } from "../../../core/repositories/macro-snapshot.repository";
-import { GuestMacroAccessRepository } from "../../../core/repositories/guest-access.repository";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 
 @Injectable()
@@ -40,7 +39,6 @@ export class ExecuteMacroUseCase {
     private readonly authz: AuthorizationService,
     @Inject(GUEST_IDENTITY_PORT) private readonly guests: GuestIdentityPort,
     @Inject(DEMO_MODE_PORT) private readonly demo: DemoModePort,
-    private readonly guestAccess: GuestMacroAccessRepository,
   ) {}
 
   async execute(
@@ -59,10 +57,12 @@ export class ExecuteMacroUseCase {
     if (userId && !identity) {
       return failure(AppError.unauthorized("This session is no longer valid"));
     }
+    let organizationId: string | null = null;
     if (identity?.isAnonymous) {
-      const owner = await this.guestAccess.findOwnership(macroId);
+      const owner = await this.authz.getOwnership("macro", macroId);
       if (
-        owner?.organizationType !== "demo" ||
+        !owner?.organizationId ||
+        owner.organizationType !== "demo" ||
         owner.visibility !== "public" ||
         !(await this.demo.isEnabled())
       ) {
@@ -73,6 +73,7 @@ export class ExecuteMacroUseCase {
           ),
         );
       }
+      organizationId = owner.organizationId;
     }
     // 1. Fetch the live macro script, or the pinned version's snapshot (both cached)
     const macroResult = request.workbookVersionId
@@ -143,8 +144,8 @@ export class ExecuteMacroUseCase {
       timeout: request.timeout ?? 30,
     };
 
-    if (userId && identity?.isAnonymous) {
-      const quota = await this.guests.takeQuota(userId, "macro");
+    if (userId && identity?.isAnonymous && organizationId) {
+      const quota = await this.guests.takeQuota(userId, organizationId, "macro");
       if (!quota.allowed)
         return failure(
           new AppError(

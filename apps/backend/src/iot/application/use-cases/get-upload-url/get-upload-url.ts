@@ -52,7 +52,11 @@ export class GetIotUploadUrlUseCase {
       return failure(AppError.unauthorized("This session is no longer valid"));
     }
     if (identity.isAnonymous) {
-      if (experimentResult.value.organizationType !== "demo" || !(await this.demo.isEnabled())) {
+      if (
+        !experimentResult.value.organizationId ||
+        experimentResult.value.organizationType !== "demo" ||
+        !(await this.demo.isEnabled())
+      ) {
         return failure(
           AppError.forbidden(
             "Guest uploads are limited to the available demo",
@@ -70,7 +74,11 @@ export class GetIotUploadUrlUseCase {
           AppError.badRequest("Guest uploads must be at most 1 MiB", "GUEST_UPLOAD_SIZE_INVALID"),
         );
       }
-      const quota = await this.guests.takeQuota(userId, "upload");
+      const quota = await this.guests.takeQuota(
+        userId,
+        experimentResult.value.organizationId,
+        "upload",
+      );
       if (!quota.allowed)
         return failure(
           new AppError(

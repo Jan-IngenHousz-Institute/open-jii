@@ -1,11 +1,5 @@
 [
   {
-    "procedure": "ExperimentDataUploadsController.uploadData",
-    "method": "POST",
-    "path": "/api/v1/experiments/{id}/data/uploads",
-    "classification": "deny"
-  },
-  {
     "procedure": "HealthController.check",
     "method": "GET",
     "path": "/health",

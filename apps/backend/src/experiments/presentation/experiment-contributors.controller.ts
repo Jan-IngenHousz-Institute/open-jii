@@ -15,7 +15,7 @@ export class ExperimentContributorsController {
     private readonly listExperimentContributorsUseCase: ListExperimentContributorsUseCase,
   ) {}
 
-  @CanAccess({ resource: "experiment", action: "read" })
+  @CanAccess({ guest: true, resource: "experiment", action: "read" })
   @Implement(experimentContributorsContract.listExperimentContributors)
   listContributors() {
     return implement(experimentContributorsContract.listExperimentContributors).handler(

@@ -33,14 +33,12 @@ import { LAMBDA_PORT } from "./core/ports/lambda.port";
 import { MacroProtocolRepository } from "./core/repositories/macro-protocol.repository";
 import { MacroSnapshotRepository } from "./core/repositories/macro-snapshot.repository";
 import { MacroRepository } from "./core/repositories/macro.repository";
-import { GuestMacroAccessModule } from "./guest-access.module";
 import { MacroWebhookController } from "./presentation/macro-webhook.controller";
 // Controllers
 import { MacroController } from "./presentation/macro.controller";
 
 @Module({
   imports: [
-    GuestMacroAccessModule,
     GuestRepositoryModule,
     MetricsModule,
     AnalyticsModule,

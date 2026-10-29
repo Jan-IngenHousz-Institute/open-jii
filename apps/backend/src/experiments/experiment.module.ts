@@ -93,6 +93,7 @@ import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { CACHE_PORT, SCHEMA_CACHE_PORT } from "./core/ports/cache.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
+import { MEASURED_CONTRIBUTOR_ATTRIBUTION_PORT } from "./core/ports/measured-contributor-attribution.port";
 import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
 // Repositories
 import { ExperimentDataAnnotationsRepository } from "./core/repositories/experiment-data-annotations.repository";
@@ -224,6 +225,10 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExportRunReconcilerService,
     ContributorAnonymizerService,
     MeasuredContributorAttributionService,
+    {
+      provide: MEASURED_CONTRIBUTOR_ATTRIBUTION_PORT,
+      useExisting: MeasuredContributorAttributionService,
+    },
     MultipartUploadService,
     UploadRunReconcilerService,
 

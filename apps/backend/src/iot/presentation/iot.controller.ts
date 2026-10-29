@@ -35,6 +35,7 @@ export class IotController {
 
   // The experiment is named in the payload, not the path.
   @CanAccess({
+    guest: true,
     resource: "experiment",
     action: "contribute",
     source: "body",

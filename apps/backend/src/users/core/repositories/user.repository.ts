@@ -76,7 +76,7 @@ import {
   PendingOrganizationInvitation,
 } from "../models/user.model";
 import type { UserPresencePort } from "../ports/user-presence.port";
-import { userMetadataFieldsSql } from "./user-display-name";
+import { mapUserMetadata, userMetadataFields } from "./user-display-name";
 
 /**
  * The two refusals account deletion can produce. Shared with the use case's pre-flight
@@ -205,7 +205,7 @@ export class UserRepository implements UserPresencePort {
       const result = await this.database
         .select({
           userId: users.id,
-          ...userMetadataFieldsSql(),
+          ...userMetadataFields(),
         })
         .from(users)
         .leftJoin(profiles, eq(users.id, profiles.userId))
@@ -216,7 +216,7 @@ export class UserRepository implements UserPresencePort {
           ),
         );
 
-      return result;
+      return result.map(mapUserMetadata);
     });
   }
 
@@ -408,30 +408,30 @@ export class UserRepository implements UserPresencePort {
     resourceId: string,
     excludeUserId: string,
   ): Promise<Result<UserProfileMetadata[]>> {
-    return tryCatch(() =>
-      this.database
-        .select({
-          userId: profiles.userId,
-          isGuest: sql<boolean>`false`,
-          isFormerGuest: sql<boolean>`false`,
-          firstName: profiles.firstName,
-          lastName: profiles.lastName,
-          avatarUrl: profiles.avatarUrl,
-        })
-        .from(resourceGrants)
-        .innerJoin(profiles, eq(profiles.userId, resourceGrants.granteeId))
-        .innerJoin(users, eq(users.id, profiles.userId))
-        .where(
-          and(
-            eq(resourceGrants.resourceType, resourceType),
-            eq(resourceGrants.resourceId, resourceId),
-            eq(resourceGrants.granteeType, "user"),
-            ne(resourceGrants.granteeId, excludeUserId),
-            eq(profiles.activated, true),
-            eq(users.isAnonymous, false),
-            isNull(profiles.deletedAt),
-          ),
-        ),
+    return tryCatch(async () =>
+      (
+        await this.database
+          .select({
+            userId: profiles.userId,
+            firstName: profiles.firstName,
+            lastName: profiles.lastName,
+            avatarUrl: profiles.avatarUrl,
+          })
+          .from(resourceGrants)
+          .innerJoin(profiles, eq(profiles.userId, resourceGrants.granteeId))
+          .innerJoin(users, eq(users.id, profiles.userId))
+          .where(
+            and(
+              eq(resourceGrants.resourceType, resourceType),
+              eq(resourceGrants.resourceId, resourceId),
+              eq(resourceGrants.granteeType, "user"),
+              ne(resourceGrants.granteeId, excludeUserId),
+              eq(profiles.activated, true),
+              eq(users.isAnonymous, false),
+              isNull(profiles.deletedAt),
+            ),
+          )
+      ).map((row) => ({ ...row, isGuest: false, isFormerGuest: false })),
     );
   }
 

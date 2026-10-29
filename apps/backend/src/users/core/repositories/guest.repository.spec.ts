@@ -8,13 +8,13 @@ import {
   eq,
   experiments,
   guestUsage,
+  guestOrganizationUsage,
   inArray,
   organizations,
   profiles,
   rateLimits,
   resourceGrants,
   sessions,
-  sql,
   users,
 } from "@repo/database";
 
@@ -23,6 +23,7 @@ import { GuestGrantCleanupRepository } from "../../../sharing/core/repositories/
 import { SharingRepository } from "../../../sharing/core/repositories/sharing.repository";
 import { backendPidOf, waitUntilBlocked } from "../../../test/lock-wait";
 import { TestHarness } from "../../../test/test-harness";
+import { GuestPurgeProcessorService } from "../../application/services/guest-purge-processor.service";
 import { PurgeExpiredGuestsUseCase } from "../../application/use-cases/purge-expired-guests/purge-expired-guests";
 import type { GuestPurgeLimits } from "../../application/use-cases/purge-expired-guests/purge-expired-guests";
 import { GUEST_LIFETIME_MS } from "../models/guest.model";
@@ -31,10 +32,12 @@ import { GuestRepository } from "./guest.repository";
 import { PlatformAdminRepository } from "./platform-admin.repository";
 import { UserRepository } from "./user.repository";
 
+let nextGuest = 0;
 async function createGuest(createdAt = new Date()) {
   const [guest] = await db
     .insert(users)
     .values({
+      id: "00000000-0000-4000-8000-" + (++nextGuest).toString(16).padStart(12, "0"),
       name: "Synthetic visitor",
       email: `${crypto.randomUUID()}@guest.openjii.invalid`,
       isAnonymous: true,
@@ -163,13 +166,17 @@ describe("guest quotas and guarded purge", () => {
     "limits %s to 60 across independent connections and resets next hour",
     async (kind) => {
       const guest = await createGuest();
+      const organizationId = await app.createOrganization(undefined, {
+        type: "demo",
+        visibility: "public",
+      });
       const other = createSecondaryDatabase();
       try {
         const second = new GuestRepository(other.database, new GuestGrantCleanupRepository());
         const now = new Date();
         const outcomes = await Promise.all(
           Array.from({ length: 64 }, (_, i) =>
-            (i % 2 ? second : repository).takeQuota(guest.id, kind, now),
+            (i % 2 ? second : repository).takeQuota(guest.id, organizationId, kind, now),
           ),
         );
         expect(outcomes.filter(({ allowed }) => allowed)).toHaveLength(60);
@@ -178,10 +185,17 @@ describe("guest quotas and guarded purge", () => {
           await db.select().from(guestUsage).where(eq(guestUsage.userId, guest.id)),
         ).toMatchObject([{ kind, count: 60 }]);
         expect(
-          await second.takeQuota(guest.id, kind, new Date(now.getTime() + 3_600_000)),
+          await second.takeQuota(
+            guest.id,
+            organizationId,
+            kind,
+            new Date(now.getTime() + 3_600_000),
+          ),
         ).toMatchObject({ allowed: true });
         const separateKind = kind === "upload" ? "macro" : "upload";
-        expect(await repository.takeQuota(guest.id, separateKind, now)).toMatchObject({
+        expect(
+          await repository.takeQuota(guest.id, organizationId, separateKind, now),
+        ).toMatchObject({
           allowed: true,
         });
       } finally {
@@ -192,9 +206,92 @@ describe("guest quotas and guarded purge", () => {
 
   it("does not issue guest quota to real or expired users", async () => {
     const researcher = await app.createTestUser();
-    expect(await repository.takeQuota(researcher, "upload")).toMatchObject({ allowed: false });
+    const organizationId = await app.createOrganization(undefined, {
+      type: "demo",
+      visibility: "public",
+    });
+    expect(await repository.takeQuota(researcher, organizationId, "upload")).toMatchObject({
+      allowed: false,
+    });
     const expired = await createGuest(new Date(Date.now() - GUEST_LIFETIME_MS - 1));
-    expect(await repository.takeQuota(expired.id, "upload")).toMatchObject({ allowed: false });
+    expect(await repository.takeQuota(expired.id, organizationId, "upload")).toMatchObject({
+      allowed: false,
+    });
+  });
+
+  it.each(["upload", "macro"] as const)(
+    "caps %s across many guests in one Demo organization without charging rejected attempts",
+    async (kind) => {
+      const organizationId = await app.createOrganization(undefined, {
+        type: "demo",
+        visibility: "public",
+      });
+      const guests = await Promise.all(Array.from({ length: 21 }, () => createGuest()));
+      const now = new Date();
+      let allowed = 0;
+      for (const guest of guests) {
+        for (let i = 0; i < 60; i++) {
+          if ((await repository.takeQuota(guest.id, organizationId, kind, now)).allowed) allowed++;
+        }
+      }
+      expect(allowed).toBe(1200);
+      expect(await db.select().from(guestOrganizationUsage)).toMatchObject([
+        { organizationId, kind, count: 1200 },
+      ]);
+      expect(
+        await db.select().from(guestUsage).where(eq(guestUsage.userId, guests[20].id)),
+      ).toEqual([]);
+      const otherOrganization = await app.createOrganization(undefined, {
+        type: "demo",
+        visibility: "public",
+      });
+      expect(await repository.takeQuota(guests[20].id, otherOrganization, kind, now)).toMatchObject(
+        { allowed: true },
+      );
+      const separateKind = kind === "upload" ? "macro" : "upload";
+      expect(
+        await repository.takeQuota(guests[20].id, organizationId, separateKind, now),
+      ).toMatchObject({ allowed: true });
+      const nextHour = new Date(now.getTime() + 3_600_000);
+      expect(
+        await repository.takeQuota(guests[0].id, organizationId, kind, nextHour),
+      ).toMatchObject({ allowed: true });
+    },
+    30_000,
+  );
+
+  it("serializes the organization budget across guests on independent connections", async () => {
+    const organizationId = await app.createOrganization(undefined, {
+      type: "demo",
+      visibility: "public",
+    });
+    const guests = await Promise.all(Array.from({ length: 16 }, () => createGuest()));
+    const now = new Date();
+    const windowStart = new Date(Math.floor(now.getTime() / 3_600_000) * 3_600_000);
+    await db
+      .insert(guestOrganizationUsage)
+      .values({ organizationId, kind: "upload", windowStart, count: 1195 });
+    const other = createSecondaryDatabase();
+    try {
+      const second = new GuestRepository(other.database, new GuestGrantCleanupRepository());
+      const decisions = await Promise.all(
+        guests.map((guest, index) =>
+          (index % 2 ? second : repository).takeQuota(guest.id, organizationId, "upload", now),
+        ),
+      );
+      expect(decisions.filter(({ allowed }) => allowed)).toHaveLength(5);
+      expect(
+        decisions.every(
+          ({ retryAfterSeconds }) => retryAfterSeconds > 0 && retryAfterSeconds <= 3600,
+        ),
+      ).toBe(true);
+      expect(await db.select().from(guestOrganizationUsage)).toMatchObject([{ count: 1200 }]);
+      expect(await db.select().from(guestUsage)).toHaveLength(5);
+      await db.delete(organizations).where(eq(organizations.id, organizationId));
+      expect(await db.select().from(guestOrganizationUsage)).toEqual([]);
+    } finally {
+      await other.close();
+    }
   });
 
   describe("nightly purge", () => {
@@ -206,13 +303,59 @@ describe("guest quotas and guarded purge", () => {
       clock: Date.now,
       ...overrides,
     });
-    // Ordered creation times, so the keyset visits guests in a known order.
+    // Guest UUIDs ascend in creation order; timestamps only decide expiry.
     const expiredAt = (offset: number) =>
       new Date(Date.now() - GUEST_LIFETIME_MS - 60_000 + offset);
 
     beforeEach(() => {
       signal.report.mockClear();
       purge = new PurgeExpiredGuestsUseCase(repository, signal);
+    });
+
+    it("runs the retention use case from the scheduled entry point", async () => {
+      const execute = vi.spyOn(app.module.get(PurgeExpiredGuestsUseCase), "execute");
+      await app.module.get(GuestPurgeProcessorService).purgeExpiredGuests();
+      expect(execute).toHaveBeenCalledExactlyOnceWith();
+    });
+
+    it.each(["guest", "counter"] as const)(
+      "reports an unexpected %s cleanup failure and returns incomplete",
+      async (phase) => {
+        const error = new Error("Cleanup unavailable");
+        vi.spyOn(
+          repository,
+          phase === "guest" ? "purgeExpiredBatch" : "deleteStaleRateLimits",
+        ).mockRejectedValueOnce(error);
+        expect(await purge.execute(new Date(), limits())).toMatchObject({ complete: false });
+        expect(signal.report).toHaveBeenCalledWith(
+          error,
+          expect.objectContaining({ error_code: "GUEST_PURGE_FAILED" }),
+        );
+      },
+    );
+
+    it("treats a counter cleanup lock timeout as a deferral without the failure signal", async () => {
+      vi.spyOn(repository, "deleteStaleRateLimits").mockRejectedValueOnce({
+        cause: { code: "55P03" },
+      });
+      const warn = vi.spyOn(Logger.prototype, "warn");
+      expect(await purge.execute(new Date(), limits())).toMatchObject({ complete: false });
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({ msg: "Guest purge stopped on a lock wait" }),
+      );
+      expect(signal.report).not.toHaveBeenCalled();
+    });
+
+    it("rolls the batch back if isolated grant cleanup fails unexpectedly after RESTRICT", async () => {
+      const guest = await createGuest(expiredAt(0));
+      const error = new Error("Grant cleanup unavailable");
+      const cleanup = vi
+        .fn()
+        .mockRejectedValueOnce({ cause: { code: "23503" } })
+        .mockRejectedValueOnce(error);
+      const failing = new GuestRepository(db, { removeUserGrants: cleanup });
+      await expect(failing.purgeExpiredBatch(new Date(), null, 100)).rejects.toBe(error);
+      expect(await db.select().from(users).where(eq(users.id, guest.id))).toHaveLength(1);
     });
 
     it("purges only old guests and stale anonymous address counters, preserving the Demo graph", async () => {
@@ -485,7 +628,7 @@ describe("guest quotas and guarded purge", () => {
             const started = Date.now();
             const pending = repository.purgeExpiredBatch(cutoff, null, restrict ? 5 : 4);
             await waitUntilBlocked(observer.database, pid);
-            const ordinary = db.execute(sql`SELECT 1 AS value`);
+            const ordinary = db.select({ id: users.id }).from(users).limit(1);
             await ordinary;
             expect(Date.now() - started).toBeLessThan(4500);
             const batch = await pending;
@@ -591,6 +734,20 @@ describe("guest quotas and guarded purge", () => {
         }
       },
     );
+
+    it("keeps counter batches bounded after repeated prepared executions", async () => {
+      const cutoff = new Date(Date.now() - GUEST_LIFETIME_MS);
+      for (let i = 0; i < 8; i++) expect(await repository.deleteStaleRateLimits(cutoff, 1)).toBe(0);
+      await db.insert(rateLimits).values(
+        [1, 2, 3].map((i) => ({
+          key: "192.0.2." + i + "|/sign-in/anonymous",
+          count: 1,
+          lastRequest: cutoff.getTime() - 1,
+        })),
+      );
+      for (let i = 0; i < 3; i++) expect(await repository.deleteStaleRateLimits(cutoff, 1)).toBe(1);
+      expect(await repository.deleteStaleRateLimits(cutoff, 1)).toBe(0);
+    });
 
     it("stops on its time budget and logs the cursor and backlog", async () => {
       const guests = await Promise.all([0, 1, 2].map((i) => createGuest(expiredAt(i))));

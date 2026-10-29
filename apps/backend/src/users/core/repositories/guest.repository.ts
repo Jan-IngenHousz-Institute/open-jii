@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import { GUEST_HOURLY_LIMIT } from "@repo/api/shared/guest";
+import { GUEST_HOURLY_LIMIT, GUEST_ORGANIZATION_HOURLY_LIMIT } from "@repo/api/shared/guest";
 import { deleteStaleAnonymousRateLimits } from "@repo/auth/guest-retention";
 import {
   and,
@@ -8,10 +8,10 @@ import {
   count,
   eq,
   guestUsage,
+  guestOrganizationUsage,
   gt,
   inArray,
   lt,
-  or,
   sessions,
   sql,
   users,
@@ -76,34 +76,56 @@ export class GuestRepository implements GuestIdentityPort, GuestDirectoryPort {
 
   async takeQuota(
     userId: string,
+    organizationId: string,
     kind: GuestQuotaKind,
     now = new Date(),
   ): Promise<GuestQuotaDecision> {
     const hour = 60 * 60 * 1000;
     const windowStart = new Date(Math.floor(now.getTime() / hour) * hour);
     const retryAfterSeconds = Math.ceil((windowStart.getTime() + hour - now.getTime()) / 1000);
-    return this.database.transaction(async (tx) => {
-      // Serialize against conversion and purge, not merely against another quota counter.
-      const guests = await tx
-        .select({ isAnonymous: users.isAnonymous, createdAt: users.createdAt })
-        .from(users)
-        .where(eq(users.id, userId))
-        .for("update");
-      const guest = guests.at(0);
-      if (!guest?.isAnonymous || now.getTime() - guest.createdAt.getTime() >= GUEST_LIFETIME_MS) {
-        return { allowed: false, retryAfterSeconds };
-      }
-      const issued = await tx
-        .insert(guestUsage)
-        .values({ userId, kind, windowStart, count: 1 })
-        .onConflictDoUpdate({
-          target: [guestUsage.userId, guestUsage.kind, guestUsage.windowStart],
-          set: { count: sql`${guestUsage.count} + 1` },
-          setWhere: lt(guestUsage.count, GUEST_HOURLY_LIMIT),
-        })
-        .returning({ count: guestUsage.count });
-      return { allowed: issued.length === 1, retryAfterSeconds };
-    });
+    const exhausted = new Error("Organization guest quota exhausted");
+    try {
+      return await this.database.transaction(async (tx) => {
+        // Serialize against conversion and purge, not merely against another quota counter.
+        const guests = await tx
+          .select({ isAnonymous: users.isAnonymous, createdAt: users.createdAt })
+          .from(users)
+          .where(eq(users.id, userId))
+          .for("update");
+        const guest = guests.at(0);
+        if (!guest?.isAnonymous || now.getTime() - guest.createdAt.getTime() >= GUEST_LIFETIME_MS) {
+          return { allowed: false, retryAfterSeconds };
+        }
+        const issued = await tx
+          .insert(guestUsage)
+          .values({ userId, kind, windowStart, count: 1 })
+          .onConflictDoUpdate({
+            target: [guestUsage.userId, guestUsage.kind, guestUsage.windowStart],
+            set: { count: sql`${guestUsage.count} + 1` },
+            setWhere: lt(guestUsage.count, GUEST_HOURLY_LIMIT),
+          })
+          .returning({ count: guestUsage.count });
+        if (issued.length === 0) return { allowed: false, retryAfterSeconds };
+        const organizationIssued = await tx
+          .insert(guestOrganizationUsage)
+          .values({ organizationId, kind, windowStart, count: 1 })
+          .onConflictDoUpdate({
+            target: [
+              guestOrganizationUsage.organizationId,
+              guestOrganizationUsage.kind,
+              guestOrganizationUsage.windowStart,
+            ],
+            set: { count: sql`${guestOrganizationUsage.count} + 1` },
+            setWhere: lt(guestOrganizationUsage.count, GUEST_ORGANIZATION_HOURLY_LIMIT),
+          })
+          .returning({ count: guestOrganizationUsage.count });
+        if (organizationIssued.length === 0) throw exhausted;
+        return { allowed: true, retryAfterSeconds };
+      });
+    } catch (error) {
+      if (error !== exhausted) throw error;
+      return { allowed: false, retryAfterSeconds };
+    }
   }
 
   /**
@@ -119,29 +141,21 @@ export class GuestRepository implements GuestIdentityPort, GuestDirectoryPort {
     return this.database.transaction(async (tx) => {
       await tx.execute(sql`SET LOCAL lock_timeout = '2s'`);
       const expired = await tx
-        .select({ id: users.id, createdAt: sql<string>`${users.createdAt}::text` })
+        .select({ id: users.id })
         .from(users)
         .where(
           and(
             eq(users.isAnonymous, true),
             lt(users.createdAt, cutoff),
-            after
-              ? or(
-                  gt(users.createdAt, sql`${after.createdAt}::timestamp`),
-                  and(
-                    eq(users.createdAt, sql`${after.createdAt}::timestamp`),
-                    gt(users.id, after.id),
-                  ),
-                )
-              : undefined,
+            after ? gt(users.id, after.id) : undefined,
           ),
         )
-        .orderBy(asc(users.createdAt), asc(users.id))
+        .orderBy(asc(users.id))
         .limit(limit)
         .for("update", { skipLocked: true });
       const last = expired.at(-1);
       const batch: GuestPurgeBatch = {
-        cursor: last ? { createdAt: last.createdAt, id: last.id } : null,
+        cursor: last ? { id: last.id } : null,
         seen: expired.length,
         deletedIds: [],
         blocked: [],

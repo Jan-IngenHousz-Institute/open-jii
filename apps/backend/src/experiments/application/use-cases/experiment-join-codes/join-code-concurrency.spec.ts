@@ -14,8 +14,6 @@ import {
 import type { DatabaseInstance, Transaction } from "@repo/database";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
-import { GUEST_RESOURCE_PORT } from "../../../../authorization/core/ports/guest-resource.port";
-import type { GuestResourcePort } from "../../../../authorization/core/ports/guest-resource.port";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
@@ -45,10 +43,7 @@ describe("join code concurrency", () => {
   function onSecondConnection() {
     const joinCodeRepository = new ExperimentJoinCodeRepository(secondary.database);
     const joinRequestRepository = new ExperimentJoinRequestRepository(secondary.database);
-    const authz = new AuthorizationService(
-      secondary.database,
-      testApp.module.get<GuestResourcePort>(GUEST_RESOURCE_PORT),
-    );
+    const authz = new AuthorizationService(secondary.database);
 
     return {
       joinCodeRepository,

@@ -14,15 +14,24 @@ export async function deleteStaleAnonymousRateLimits(
       like(rateLimits.key, "%|/sign-in/anonymous"),
       lt(rateLimits.lastRequest, cutoff.getTime()),
     );
-    const stale = tx
+    const stale = await tx
       .select({ id: rateLimits.id })
       .from(rateLimits)
       .where(eligible)
       .limit(limit)
       .for("update", { skipLocked: true });
+    if (stale.length === 0) return 0;
     const deleted = await tx
       .delete(rateLimits)
-      .where(and(inArray(rateLimits.id, stale), eligible))
+      .where(
+        and(
+          inArray(
+            rateLimits.id,
+            stale.map(({ id }) => id),
+          ),
+          eligible,
+        ),
+      )
       .returning({ id: rateLimits.id });
     return deleted.length;
   });

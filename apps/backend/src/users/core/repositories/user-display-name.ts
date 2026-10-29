@@ -1,4 +1,4 @@
-import { sql, users } from "@repo/database";
+import { users } from "@repo/database";
 
 import {
   getAnonymizedFirstName,
@@ -6,14 +6,34 @@ import {
   getAnonymizedAvatarUrl,
 } from "../../../common/utils/profile-anonymization";
 
-export function userMetadataFieldsSql() {
+export function userMetadataFields() {
   return {
-    isGuest: users.isAnonymous,
-    isFormerGuest: sql<boolean>`false`,
-    firstName: sql<string>`CASE WHEN ${users.isAnonymous} THEN ${users.name} ELSE ${getAnonymizedFirstName()} END`,
-    lastName: sql<string>`CASE WHEN ${users.isAnonymous} THEN '' ELSE ${getAnonymizedLastName()} END`,
-    avatarUrl: sql<
-      string | null
-    >`CASE WHEN ${users.isAnonymous} THEN NULL ELSE ${getAnonymizedAvatarUrl()} END`,
+    isAnonymous: users.isAnonymous,
+    name: users.name,
+    firstName: getAnonymizedFirstName(),
+    lastName: getAnonymizedLastName(),
+    avatarUrl: getAnonymizedAvatarUrl(),
   };
+}
+
+interface UserDisplayFields {
+  isAnonymous: boolean | null;
+  name: string | null;
+  firstName: string;
+  lastName: string;
+  avatarUrl: string | null;
+  email?: string | null;
+}
+
+export function mapUserMetadata<T extends UserDisplayFields>(row: T) {
+  const { isAnonymous, name, ...fields } = row;
+  const result = {
+    ...fields,
+    isGuest: isAnonymous === true,
+    isFormerGuest: false,
+    firstName: isAnonymous ? (name ?? "Guest") : row.firstName,
+    lastName: isAnonymous ? "" : row.lastName,
+    avatarUrl: isAnonymous ? null : row.avatarUrl,
+  };
+  return isAnonymous && "email" in result ? { ...result, email: null } : result;
 }

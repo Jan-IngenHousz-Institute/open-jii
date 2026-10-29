@@ -296,11 +296,11 @@ export class TestHarness {
     // Return a function that accepts an optional userId and mock session
     const extendedReq = Object.assign(req, {
       // Used for adding auth headers
-      withAuth: (userId: string) => {
+      withAuth: (userId: string, isAnonymous?: boolean) => {
         // Add mock session to request
         req.set("Authorization", `Bearer test-token-for-${userId}`);
         // Mock the Better Auth session
-        this.mockUserSession(userId);
+        this.mockUserSession(userId, isAnonymous);
         return req;
       },
       withoutAuth: () => {
@@ -320,30 +320,38 @@ export class TestHarness {
   };
 
   // Mock the Better Auth session for testing
-  private mockUserSession(userId: string) {
-    vi.mocked(auth.api.getSession).mockResolvedValue({
-      session: {
-        id: `session-${userId}`,
-        userId,
-        token: `test-token-${userId}`,
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-        ipAddress: "127.0.0.1",
-        userAgent: "test-agent",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      user: {
-        id: userId,
-        name: "Test User",
-        email: "test@example.com",
-        emailVerified: false,
-        isAnonymous: false,
-        image: null,
-        registered: true,
-        banned: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
+  private mockUserSession(userId: string, isAnonymous?: boolean) {
+    vi.mocked(auth.api.getSession).mockImplementation(async () => {
+      const identity = (
+        await this.database
+          .select({ isAnonymous: users.isAnonymous })
+          .from(users)
+          .where(eq(users.id, userId))
+      ).at(0);
+      return {
+        session: {
+          id: `session-${userId}`,
+          userId,
+          token: `test-token-${userId}`,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+          ipAddress: "127.0.0.1",
+          userAgent: "test-agent",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        user: {
+          id: userId,
+          name: "Test User",
+          email: "test@example.com",
+          emailVerified: false,
+          isAnonymous: isAnonymous ?? identity?.isAnonymous ?? false,
+          image: null,
+          registered: true,
+          banned: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      };
     });
   }
 

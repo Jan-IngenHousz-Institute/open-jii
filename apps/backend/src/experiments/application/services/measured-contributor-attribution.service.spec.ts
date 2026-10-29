@@ -17,6 +17,25 @@ describe("measured contributor attribution", () => {
   const parse = (value: string | null) =>
     zExperimentDataContributor.parse(JSON.parse(value ?? "null"));
 
+  it("clears an invalid guest identifier without querying Postgres and leaves malformed cells untouched", async () => {
+    const findExistingIds = vi.fn<UserPresencePort["findExistingIds"]>();
+    const service = new MeasuredContributorAttributionService({ findExistingIds });
+    const rows = await service.enrichRows(
+      [
+        { is_guest: "true", contributor: cell("invalid", "Cached name") },
+        { is_guest: "true", contributor: "invalid json" },
+      ],
+      columns,
+    );
+    expect(parse(rows[0].contributor)).toMatchObject({
+      name: "",
+      avatar: null,
+      isFormerGuest: true,
+    });
+    expect(rows[1].contributor).toBe("invalid json");
+    expect(findExistingIds).not.toHaveBeenCalled();
+  });
+
   it("uses trusted guest rows and current account presence without storing labels in names", async () => {
     const findExistingIds = vi.fn<UserPresencePort["findExistingIds"]>().mockResolvedValue([guest]);
     const service = new MeasuredContributorAttributionService({ findExistingIds });

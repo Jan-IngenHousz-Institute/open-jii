@@ -84,7 +84,11 @@ JSON content type for 15 minutes. Guest payloads must be between one byte and
 
 The database allows 60 validated upload attempts and, independently, 60 validated
 macro execution attempts per guest per clock hour. The window resets at the next
-UTC hour. An attempt counts even if signing, uploading or Lambda later fails.
+UTC hour. Each Demo organization also has a shared budget of 1,200 uploads and,
+independently, 1,200 macro runs per clock hour across all guests. An upload uses
+the experiment's organization; a macro run uses the macro's organization.
+Both quotas are taken in one transaction. A refused attempt consumes neither.
+An accepted attempt counts even if signing, uploading or Lambda later fails.
 Schema and permission refusals before that boundary do not consume quota. A 429
 includes `data.retryAfterSeconds`.
 
@@ -128,7 +132,7 @@ guest sessions; researcher offline caches keep their existing behavior.
 
 The job works in batches of 100 accounts, each in its own short transaction on
 the backend's shared connection, so API requests run between batches. It walks
-the expired accounts in creation order and skips any account another transaction
+the expired accounts in UUID order and skips any account another transaction
 holds, which leaves a guest with a quota call in flight for the next night. Every
 task fires the schedule, and concurrent runs split the accounts between them.
 Each lock acquisition has a two-second timeout. The job checks its five-minute

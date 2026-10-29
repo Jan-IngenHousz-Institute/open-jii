@@ -14,7 +14,6 @@ import { FlattenedFields } from "../../../common/modules/databricks/services/que
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError, tryCatch } from "../../../common/utils/fp-utils";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
-import { MeasuredContributorAttributionService } from "../../application/services/measured-contributor-attribution.service";
 import {
   MACRO_TABLE_CONFIG,
   STATIC_TABLE_CONFIG,
@@ -33,6 +32,8 @@ import { CACHE_PORT, SCHEMA_CACHE_PORT } from "../ports/cache.port";
 import type { CachePort } from "../ports/cache.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
+import { MEASURED_CONTRIBUTOR_ATTRIBUTION_PORT } from "../ports/measured-contributor-attribution.port";
+import type { MeasuredContributorAttributionPort } from "../ports/measured-contributor-attribution.port";
 
 type ReadMode =
   | "aggregation"
@@ -102,7 +103,8 @@ export class ExperimentDataRepository {
     @Inject(CACHE_PORT) private readonly cachePort: CachePort,
     @Inject(SCHEMA_CACHE_PORT) private readonly schemaCache: CachePort,
     private readonly contributorAnonymizer: ContributorAnonymizerService,
-    private readonly measuredContributors: MeasuredContributorAttributionService,
+    @Inject(MEASURED_CONTRIBUTOR_ATTRIBUTION_PORT)
+    private readonly measuredContributors: MeasuredContributorAttributionPort,
   ) {}
 
   /**

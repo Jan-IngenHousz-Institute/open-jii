@@ -16,9 +16,7 @@ export interface GuestQuotaDecision {
 export const GUEST_PURGE_BATCH_SIZE = 100;
 export const GUEST_PURGE_BUDGET_MS = 5 * 60 * 1000;
 
-/** `createdAt` is Postgres text: a `Date` would drop the microseconds the keyset orders by. */
 export interface GuestPurgeCursor {
-  createdAt: string;
   id: string;
 }
 

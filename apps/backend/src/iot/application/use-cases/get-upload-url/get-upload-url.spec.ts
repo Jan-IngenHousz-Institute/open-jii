@@ -62,6 +62,14 @@ describe("GetIotUploadUrlUseCase", () => {
     expect(awsAdapter.getIotUploadUrl).toHaveBeenCalledWith(experimentId, userId);
   });
 
+  it("refuses a deleted identity before signing an upload", async () => {
+    const signer = vi.spyOn(awsAdapter, "getIotUploadUrl");
+    const result = await useCase.execute(experimentId, crypto.randomUUID(), 20);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(401);
+    expect(signer).not.toHaveBeenCalled();
+  });
+
   it("should return failure when AWS adapter fails", async () => {
     const error = AppError.internal("S3 error", ErrorCodes.AWS_S3_PRESIGN_FAILED);
 
