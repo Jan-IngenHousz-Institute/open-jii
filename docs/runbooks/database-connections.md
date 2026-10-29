@@ -1,7 +1,7 @@
 # database-connections
 
 **More than 80 connections are open to the database, where normal is a handful.** Each backend
-process holds exactly one connection (`max: 1` in `packages/database/src/database.ts`), so the API
+process holds exactly one connection (`max: 1` in `packages/database/src/postgres/database.ts`), so the API
 accounts for one per task: one to three, and briefly up to six while a deploy runs old and new
 tasks side by side. The migration task and the weekly metrics publisher add one each while they
 run. The database's security group admits nothing else.

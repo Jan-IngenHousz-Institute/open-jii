@@ -135,6 +135,12 @@ locals {
         m.signal.stat == "Sum" ? local.heartbeat_limits[m.id] + 1 :
         local.heartbeat_limits[m.id]
       )
+      # A dead-man on a CloudWatch metric, which arrives every minute, fires within minutes, so its
+      # board row bridges no more than the gap between two of the board's five-minute buckets.
+      board_span_ms = (
+        m.source == "aws" && try(m.baseline.nodata, "") == "alert" ? 450000 :
+        local.heartbeat_dead_man_window_minutes * 60000
+      )
     }
   }
 
@@ -323,7 +329,7 @@ locals {
   # limit, since the board carries the rest.
   heartbeat_level_tiles = {
     for m in local.heartbeat_daily : m.id => {
-      id            = 100 + m.num
+      id            = 1000 + m.num
       type          = "stat"
       title         = m.name
       pluginVersion = "10.4.1"
@@ -428,7 +434,8 @@ locals {
   # Daily layout: what is firing, the errors PostHog grouped, the data path, a board of every
   # rule-backed signal over the day, the levels without a limit, then every chart in one
   # collapsed row the board and tiles link into.
-  # Panel ids below 100 are entry nums and 100 to 199 their tiles, so the rest sit above.
+  # Panel ids below 200 are entry nums, 1000 plus a num is that entry's tile, and the rest sit
+  # between.
   heartbeat_alert_list = {
     id          = 900
     type        = "alertlist"
@@ -560,6 +567,7 @@ locals {
             { id = "displayName", value = m.name },
             { id = "unit", value = local.heartbeat_facts[m.id].unit },
             { id = "thresholds", value = { mode = "absolute", steps = local.heartbeat_board_steps[m.id] } },
+            { id = "custom.spanNulls", value = local.heartbeat_facts[m.id].board_span_ms },
             {
               id = "links"
               # These replace the links Grafana adds to the values, so the console link is spelled out.
@@ -590,7 +598,7 @@ locals {
 
   heartbeat_error_tiles = [
     for j, m in local.heartbeat_errors : {
-      id            = 100 + m.num
+      id            = 1000 + m.num
       type          = "stat"
       title         = m.name
       description   = "Every exception reported over the time range, across all issues. Investigate with /openjii-triage ${m.id}, or one issue from the table."

@@ -1,6 +1,6 @@
-import { db } from "../../src/database";
-import { ensurePersonalOrganization } from "../../src/organizations";
-import { users, profiles } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import { ensurePersonalOrganization } from "../../src/postgres/organizations";
+import { users, profiles } from "../../src/postgres/schema";
 import { NEWCOMER_EMAIL, SEED_EMAIL } from "./constants";
 
 /** The account every other seeded row belongs to, and the personal organization it owns. */
