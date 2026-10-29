@@ -31,7 +31,7 @@ permissions:
 jobs:
   approval:
     runs-on: ubuntu-latest
-    environment: approval-gate
+    environment: prod-approval
     steps:
       - name: Require protected main
         env:

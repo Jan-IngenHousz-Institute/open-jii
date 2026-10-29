@@ -9,6 +9,11 @@ and production approval environments authorize a dedicated ECS task. The command
 creates no human account or session and exposes no HTTP administration endpoint.
 Ordinary user sessions still cannot manage OAuth clients.
 
+The approval job uses `prod-approval`, where another person must approve and
+self-review is prevented. The task runs in `prod` only after that approval. The
+workflow accepts dispatches from protected `main` and pins the already released
+backend image; the development-only `approval-gate` is not used for this operation.
+
 ## Release prerequisites
 
 1. Merge and release the OIDC provider and this provisioning change through the
@@ -17,10 +22,14 @@ Ordinary user sessions still cannot manage OAuth clients.
 2. Apply the tracked OpenTofu configuration through the existing infrastructure
    pipeline. `infrastructure/env/prod/oidc-client-provisioning.tf` defines the
    one-off task, its execution role, task role and SSM configuration. The private
-   foundation supplies the target role ARN through the production GitHub variable
-   `INSTRUMENT_TRACKING_OIDC_PROVISIONER_ROLE_ARN`; the OpenTofu workflow maps it to
-   `TF_VAR_instrument_tracking_oidc_provisioner_role_arn`. No account IDs are stored
-   in this public repository. The task
+   foundation supplies the real target role ARN from its applied OpenTofu output
+   through the reviewed configuration helper. Before this PR's production plan,
+   configure `INSTRUMENT_TRACKING_OIDC_PROVISIONER_ROLE_ARN` in both GitHub
+   environments: `prod-plan` for read-only PR plans and `prod` for release
+   plan/apply. Each workflow maps its environment's value to
+   `TF_VAR_instrument_tracking_oidc_provisioner_role_arn`. Do not use a repository
+   or global fallback, or a placeholder role value. No account IDs are stored in
+   this public repository. The task
    reuses private migration subnets and their database security group. Its
    execution role reads only the database credential; the task role can only
    assume the sandbox secret-writer role.
