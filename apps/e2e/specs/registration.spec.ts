@@ -1,10 +1,10 @@
-import postgres from "postgres";
-
+import { count, eq, inArray } from "@repo/database";
+import { organizations, profiles, users } from "@repo/database/schema";
 import { readLatestSignInOtp } from "@repo/devkit/otp";
 
 import { expect, test } from "../fixtures.js";
 import {
-  assertSafeFixtureDatabase,
+  withFixtureDatabase,
   databaseUrl,
   dismissCookieBanner,
   locale,
@@ -17,22 +17,24 @@ const invalidEmail = "e2e-registration-invalid";
 const fixtureEmails = [email, repairEmail, invalidEmail];
 
 async function deleteAccount(): Promise<void> {
-  assertSafeFixtureDatabase();
-  const sql = postgres(databaseUrl, { connect_timeout: 2, idle_timeout: 1, max: 1 });
-  try {
-    await sql.begin(async (transaction) => {
-      await transaction`
-        delete from organizations
-        where slug in (select 'personal-' || id from users where email in ${transaction(fixtureEmails)})
-      `;
-      await transaction`
-        delete from profiles where user_id in (select id from users where email in ${transaction(fixtureEmails)})
-      `;
-      await transaction`delete from users where email in ${transaction(fixtureEmails)}`;
-    });
-  } finally {
-    await sql.end({ timeout: 1 });
-  }
+  await withFixtureDatabase((database) =>
+    database.transaction(async (tx) => {
+      const accounts = await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(inArray(users.email, fixtureEmails));
+      if (accounts.length === 0) return;
+      const ids = accounts.map((account) => account.id);
+      await tx.delete(organizations).where(
+        inArray(
+          organizations.slug,
+          ids.map((id) => `personal-${id}`),
+        ),
+      );
+      await tx.delete(profiles).where(inArray(profiles.userId, ids));
+      await tx.delete(users).where(inArray(users.id, ids));
+    }),
+  );
 }
 
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -77,14 +79,17 @@ test("a new account lands on home once after registering", async ({ page }) => {
   const backendOrigin = new URL((await signInResponse).url()).origin;
   await page.waitForURL(`**/${locale}/register`);
   await platformPrefetch;
-  const sql = postgres(databaseUrl, { connect_timeout: 2, idle_timeout: 1, max: 1 });
-  try {
-    const [before] =
-      await sql`select u.registered, count(p.user_id)::int as profiles from users u left join profiles p on p.user_id = u.id where u.email = ${email} group by u.id`;
-    expect(before).toEqual({ registered: false, profiles: 0 });
-  } finally {
-    await sql.end({ timeout: 1 });
-  }
+  const before = await withFixtureDatabase(async (database) =>
+    (
+      await database
+        .select({ registered: users.registered, profiles: count(profiles.userId) })
+        .from(users)
+        .leftJoin(profiles, eq(profiles.userId, users.id))
+        .where(eq(users.email, email))
+        .groupBy(users.id)
+    ).at(0),
+  );
+  expect(before).toEqual({ registered: false, profiles: 0 });
 
   for (const fresh of [false, true]) {
     if (fresh) {
@@ -108,14 +113,20 @@ test("a new account lands on home once after registering", async ({ page }) => {
 
   await page.waitForURL(`**/${locale}/platform`);
   expect(forbiddenUpdates).toEqual([]);
-  const savedSql = postgres(databaseUrl, { connect_timeout: 2, idle_timeout: 1, max: 1 });
-  try {
-    const [saved] =
-      await savedSql`select u.registered, p.first_name, p.last_name from users u join profiles p on p.user_id = u.id where u.email = ${email}`;
-    expect(saved).toEqual({ registered: true, first_name: "Registration", last_name: "Probe" });
-  } finally {
-    await savedSql.end({ timeout: 1 });
-  }
+  const saved = await withFixtureDatabase(async (database) =>
+    (
+      await database
+        .select({
+          registered: users.registered,
+          firstName: profiles.firstName,
+          lastName: profiles.lastName,
+        })
+        .from(users)
+        .innerJoin(profiles, eq(profiles.userId, users.id))
+        .where(eq(users.email, email))
+    ).at(0),
+  );
+  expect(saved).toEqual({ registered: true, firstName: "Registration", lastName: "Probe" });
 
   // The prompt is modal, so the page behind it is hidden from role queries until it closes.
   const passkeyDismiss = page.getByRole("button", { name: "Not now" });
@@ -150,13 +161,24 @@ test("email-only repair re-saves the existing profile without a client registrat
   const backendOrigin = new URL((await signInResponse).url()).origin;
   await page.waitForURL(`**/${locale}/register`);
 
-  const sql = postgres(databaseUrl, { connect_timeout: 2, idle_timeout: 1, max: 1 });
-  try {
+  await withFixtureDatabase(async (database) => {
     const avatar = new URL("/favicon.ico", page.url()).toString();
-    const [user] = await sql<{ id: string }[]>`select id from users where email = ${repairEmail}`;
-    expect(user, "Repair fixture account missing").toBeDefined();
-    await sql`insert into profiles (user_id, first_name, last_name, bio, activated, avatar_url) values (${user.id}, 'Legacy', 'Researcher', 'Keep this bio', true, ${avatar})`;
-    await sql`update users set email = ${invalidEmail}, email_verified = true, registered = true where id = ${user.id}`;
+    const user = (
+      await database.select({ id: users.id }).from(users).where(eq(users.email, repairEmail))
+    ).at(0);
+    if (!user) throw new Error("Repair fixture account missing");
+    await database.insert(profiles).values({
+      userId: user.id,
+      firstName: "Legacy",
+      lastName: "Researcher",
+      bio: "Keep this bio",
+      activated: true,
+      avatarUrl: avatar,
+    });
+    await database
+      .update(users)
+      .set({ email: invalidEmail, emailVerified: true, registered: true })
+      .where(eq(users.id, user.id));
     await page.request.get(`${backendOrigin}/api/v1/auth/get-session?disableCookieCache=true`);
     await page.reload({ waitUntil: "networkidle" });
     await expect(page.getByPlaceholder("Enter your first name")).toHaveCount(0);
@@ -172,18 +194,29 @@ test("email-only repair re-saves the existing profile without a client registrat
     await page.locator('input[autocomplete="one-time-code"]').fill(repairOtp);
     await page.waitForURL(`**/${locale}/platform`);
     expect(writes).toEqual([]);
-    const [profile] =
-      await sql`select u.email, u.registered, p.first_name, p.last_name, p.bio, p.activated, p.avatar_url from users u join profiles p on p.user_id = u.id where u.id = ${user.id}`;
+    const profile = (
+      await database
+        .select({
+          email: users.email,
+          registered: users.registered,
+          firstName: profiles.firstName,
+          lastName: profiles.lastName,
+          bio: profiles.bio,
+          activated: profiles.activated,
+          avatarUrl: profiles.avatarUrl,
+        })
+        .from(users)
+        .innerJoin(profiles, eq(profiles.userId, users.id))
+        .where(eq(users.id, user.id))
+    ).at(0);
     expect(profile).toEqual({
       email: repairEmail,
       registered: true,
-      first_name: "Legacy",
-      last_name: "Researcher",
+      firstName: "Legacy",
+      lastName: "Researcher",
       bio: "Keep this bio",
       activated: true,
-      avatar_url: avatar,
+      avatarUrl: avatar,
     });
-  } finally {
-    await sql.end({ timeout: 1 });
-  }
+  });
 });

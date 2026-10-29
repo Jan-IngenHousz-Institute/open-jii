@@ -9,6 +9,7 @@ import {
   eq,
   experiments,
   guestOrganizationUsage,
+  guestUsage,
   notifications,
   organizationMembers,
   resourceGrants,
@@ -17,7 +18,7 @@ import {
 } from "@repo/database";
 
 import { AwsAdapter } from "../common/modules/aws/aws.adapter";
-import { success, failure, AppError } from "../common/utils/fp-utils";
+import { success, failure, AppError, assertSuccess } from "../common/utils/fp-utils";
 import { AddAnnotationsUseCase } from "../experiments/application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
 import { DeleteAnnotationsUseCase } from "../experiments/application/use-cases/experiment-data-annotations/delete-annotations/delete-annotations";
 import { UpdateAnnotationUseCase } from "../experiments/application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
@@ -27,6 +28,7 @@ import { UploadDataUseCase } from "../experiments/application/use-cases/experime
 import { LAMBDA_PORT } from "../macros/core/ports/lambda.port";
 import type { LambdaPort } from "../macros/core/ports/lambda.port";
 import { TestHarness } from "../test/test-harness";
+import { WorkbookVersionRepository } from "../workbooks/core/repositories/workbook-version.repository";
 import { AuthorizationService } from "./authorization.service";
 import { CAN_ACCESS_KEY } from "./can-access.guard";
 import type { CanAccessMetadata } from "./can-access.guard";
@@ -374,6 +376,89 @@ describe("guest authorization HTTP boundary", () => {
     ).toBeGreaterThan(0);
     expect(invoke).toHaveBeenCalledTimes(60);
   }, 30_000);
+
+  it("runs a guest's pinned snapshot within both Demo macro budgets", async () => {
+    const flag = vi
+      .spyOn(app.module.get<DemoModePort>(DEMO_MODE_PORT), "isEnabled")
+      .mockResolvedValue(true);
+    const lambda = app.module.get<LambdaPort>(LAMBDA_PORT);
+    vi.spyOn(lambda, "getFunctionNameForLanguage").mockReturnValue("synthetic-macro");
+    const invoke = vi.spyOn(lambda, "invokeLambda").mockResolvedValue(
+      success({
+        statusCode: 200,
+        payload: { status: "success", results: [{ id: "single", success: true, output: {} }] },
+      }),
+    );
+    const macro = await app.createMacro({
+      name: "Pinned Demo macro",
+      createdBy: researcher,
+      organizationId: demo,
+      visibility: "public",
+      code: "bGl2ZQ==",
+    });
+    const workbook = await app.createWorkbook({
+      name: "Pinned Demo workbook",
+      createdBy: researcher,
+      organizationId: demo,
+      visibility: "public",
+    });
+    const version = await app.module.get(WorkbookVersionRepository).create({
+      workbookId: workbook.id,
+      version: 1,
+      cells: [
+        {
+          id: "macro-cell",
+          type: "macro",
+          isCollapsed: false,
+          payload: { macroId: macro.id, language: "python" },
+        },
+      ],
+      metadata: {},
+      entitySnapshots: {
+        protocols: {},
+        macros: { [macro.id]: { code: "cGlubmVk", language: "python" } },
+      },
+      createdBy: researcher,
+    });
+    assertSuccess(version);
+    const run = () =>
+      app
+        .post(`/api/v1/macros/${macro.id}/execute`)
+        .withAuth(visitor, true)
+        .send({ data: { value: 1 }, workbookVersionId: version.value.id });
+
+    expect((await run()).status).toBe(200);
+    expect(invoke).toHaveBeenCalledWith(
+      "synthetic-macro",
+      expect.objectContaining({ script: "cGlubmVk" }),
+    );
+    expect(flag).toHaveBeenCalledTimes(1);
+    expect(
+      await db
+        .select({ kind: guestUsage.kind, count: guestUsage.count })
+        .from(guestUsage)
+        .where(eq(guestUsage.userId, visitor)),
+    ).toEqual([{ kind: "macro", count: 1 }]);
+    expect(
+      await db
+        .select({ kind: guestOrganizationUsage.kind, count: guestOrganizationUsage.count })
+        .from(guestOrganizationUsage)
+        .where(eq(guestOrganizationUsage.organizationId, demo)),
+    ).toEqual([{ kind: "macro", count: 1 }]);
+
+    await db
+      .update(guestOrganizationUsage)
+      .set({ count: 1200 })
+      .where(eq(guestOrganizationUsage.organizationId, demo));
+    expect((await run()).status).toBe(429);
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(
+      await db
+        .select({ count: guestUsage.count })
+        .from(guestUsage)
+        .where(eq(guestUsage.userId, visitor)),
+    ).toEqual([{ count: 1 }]);
+  });
 
   it.each(["upload", "macro"] as const)(
     "returns the same 429 for the shared %s budget before external work",
