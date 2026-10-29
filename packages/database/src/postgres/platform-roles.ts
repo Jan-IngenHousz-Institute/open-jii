@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, ne } from "drizzle-orm";
 
 import type { DbOrTx, DatabaseInstance } from "./database";
 import { auditLogs, profiles, users } from "./schema";
@@ -34,9 +34,32 @@ export interface PlatformRoleChange {
   /** The openJII account of the engineer making the change. */
   actorUserId: string;
   source: "command" | "seed";
+  /** Who started the workflow run, and who started the attempt that made the change. */
   githubActor?: string;
+  githubTriggeringActor?: string;
   githubRunId?: string;
+  githubRunAttempt?: string;
 }
+
+interface AccountState {
+  registered: boolean;
+  banned: boolean | null;
+  deletedAt: Date | null;
+}
+
+/**
+ * The one rule for which accounts hold, grant or receive a platform role: registered, not
+ * banned and not deleted. A stored role on any other account is inactive.
+ */
+export function isActiveAccount(account: AccountState): boolean {
+  return account.registered && !account.banned && !account.deletedAt;
+}
+
+const accountState = {
+  registered: users.registered,
+  banned: users.banned,
+  deletedAt: profiles.deletedAt,
+};
 
 /**
  * Grants or revokes one platform role and records who did it, in one transaction, so a
@@ -65,22 +88,22 @@ export async function changePlatformRole(
       .orderBy(users.id)
       .for("update");
     const accounts = await tx
-      .select({
-        id: users.id,
-        role: users.role,
-        registered: users.registered,
-        deletedAt: profiles.deletedAt,
-      })
+      .select({ id: users.id, role: users.role, ...accountState })
       .from(users)
       .leftJoin(profiles, eq(profiles.userId, users.id))
       .where(inArray(users.id, [targetUserId, actorUserId]));
-    const usable = (id: string) =>
-      accounts.find((account) => account.id === id && account.registered && !account.deletedAt);
+    const account = (id: string) => accounts.find((candidate) => candidate.id === id);
 
-    const actor = usable(actorUserId);
-    if (!actor) throw new PlatformRoleError("The actor is not a registered openJII account");
-    const target = usable(targetUserId);
-    if (!target) throw new PlatformRoleError("The target is not a registered openJII account");
+    const actor = account(actorUserId);
+    if (!actor || !isActiveAccount(actor)) {
+      throw new PlatformRoleError("The actor is not an active openJII account");
+    }
+    // A revoke may clear a role left on a deleted or banned account; a grant may not land there.
+    const target = account(targetUserId);
+    if (!target) throw new PlatformRoleError("The target is not an openJII account");
+    if (change.action === "grant" && !isActiveAccount(target)) {
+      throw new PlatformRoleError("The target is not an active openJII account");
+    }
 
     const held = platformRolesOf(target.role);
     if (change.action === "grant" && held.includes(change.role)) {
@@ -106,31 +129,44 @@ export async function changePlatformRole(
         role: change.role,
         source: change.source,
         githubActor: change.githubActor ?? null,
+        githubTriggeringActor: change.githubTriggeringActor ?? null,
         githubRunId: change.githubRunId ?? null,
+        githubRunAttempt: change.githubRunAttempt ?? null,
       },
     });
     return next;
   });
 }
 
-export interface PlatformRoleHolder {
+export interface PlatformRoleAssignment {
   userId: string;
   roles: PlatformRole[];
-  /** When each held role was last granted. */
+  /** When each stored role was last granted. */
   grantedAt: Partial<Record<PlatformRole, Date>>;
+  /** Whether the account is active, so the roles take effect. */
+  active: boolean;
 }
 
-/** Every account holding a platform role, for the roster and the quarterly access review. */
-export async function listPlatformRoleHolders(database: DbOrTx): Promise<PlatformRoleHolder[]> {
+export type PlatformRoleHolder = Omit<PlatformRoleAssignment, "active">;
+
+/** Every stored platform role, active or not, for the quarterly access review. */
+export async function listPlatformRoleAssignments(
+  database: DbOrTx,
+): Promise<PlatformRoleAssignment[]> {
   const rows = await database
-    .select({ id: users.id, role: users.role })
+    .select({ id: users.id, role: users.role, ...accountState })
     .from(users)
+    .leftJoin(profiles, eq(profiles.userId, users.id))
     .where(and(isNotNull(users.role), ne(users.role, DEFAULT_USER_ROLE)))
     .orderBy(users.id);
-  const holders = rows
-    .map((row) => ({ userId: row.id, roles: platformRolesOf(row.role) }))
-    .filter((holder) => holder.roles.length > 0);
-  if (holders.length === 0) return [];
+  const assignments = rows
+    .map((row) => ({
+      userId: row.id,
+      roles: platformRolesOf(row.role),
+      active: isActiveAccount(row),
+    }))
+    .filter((assignment) => assignment.roles.length > 0);
+  if (assignments.length === 0) return [];
 
   // Grants are rare staff actions, so the latest per account and role is picked here.
   const grants = await database
@@ -145,15 +181,22 @@ export async function listPlatformRoleHolders(database: DbOrTx): Promise<Platfor
     if (key && !latest.has(key)) latest.set(key, grant.at);
   }
 
-  return holders.map((holder) => ({
-    ...holder,
+  return assignments.map((assignment) => ({
+    ...assignment,
     grantedAt: Object.fromEntries(
-      holder.roles.flatMap((role) => {
-        const at = latest.get(`${holder.userId}:${role}`);
+      assignment.roles.flatMap((role) => {
+        const at = latest.get(`${assignment.userId}:${role}`);
         return at ? [[role, at]] : [];
       }),
     ),
   }));
+}
+
+/** The accounts whose platform roles take effect, for the roster. */
+export async function listPlatformRoleHolders(database: DbOrTx): Promise<PlatformRoleHolder[]> {
+  return (await listPlatformRoleAssignments(database))
+    .filter((assignment) => assignment.active)
+    .map(({ active: _active, ...holder }) => holder);
 }
 
 function grantedRole(details: unknown): { targetUserId: string; role: string } | null {
@@ -164,16 +207,14 @@ function grantedRole(details: unknown): { targetUserId: string; role: string } |
     : null;
 }
 
-/** The platform roles an account holds, provided it is registered, not banned and not deleted. */
+/** The platform roles an account holds; none unless {@link isActiveAccount}. */
 export async function heldPlatformRoles(database: DbOrTx, userId: string): Promise<PlatformRole[]> {
   const rows = await database
-    .select({ role: users.role, registered: users.registered, banned: users.banned })
+    .select({ role: users.role, ...accountState })
     .from(users)
     .leftJoin(profiles, eq(profiles.userId, users.id))
-    .where(and(eq(users.id, userId), isNull(profiles.deletedAt)))
+    .where(eq(users.id, userId))
     .limit(1);
   const [account] = rows;
-  return rows.length > 0 && account.registered && !account.banned
-    ? platformRolesOf(account.role)
-    : [];
+  return rows.length > 0 && isActiveAccount(account) ? platformRolesOf(account.role) : [];
 }

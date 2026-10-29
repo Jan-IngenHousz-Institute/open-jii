@@ -7,7 +7,7 @@ import {
   PlatformRoleError,
   changePlatformRole,
   isPlatformRole,
-  listPlatformRoleHolders,
+  listPlatformRoleAssignments,
 } from "./postgres/platform-roles";
 
 const usage = `Usage:
@@ -39,13 +39,15 @@ async function run(argv: string[]) {
   assertReachableDatabase();
 
   if (action === "list") {
-    const holders = await listPlatformRoleHolders(db);
-    if (holders.length === 0) console.log("No account holds a platform role");
-    for (const holder of holders) {
-      const roles = holder.roles.map(
-        (role) => `${role} since ${holder.grantedAt[role]?.toISOString() ?? "unknown"}`,
+    const assignments = await listPlatformRoleAssignments(db);
+    if (assignments.length === 0) console.log("No account holds a platform role");
+    for (const assignment of assignments) {
+      const roles = assignment.roles.map(
+        (role) => `${role} since ${assignment.grantedAt[role]?.toISOString() ?? "unknown"}`,
       );
-      console.log(`${holder.userId} ${roles.join(", ")}`);
+      // An inactive account's stored role grants nothing, but the review should still clear it.
+      const state = assignment.active ? "" : " (inactive account, revoke to clear)";
+      console.log(`${assignment.userId} ${roles.join(", ")}${state}`);
     }
     return;
   }
@@ -61,7 +63,9 @@ async function run(argv: string[]) {
     actorUserId: actor,
     source: "command",
     githubActor: process.env.PLATFORM_ROLE_GITHUB_ACTOR,
+    githubTriggeringActor: process.env.PLATFORM_ROLE_GITHUB_TRIGGERING_ACTOR,
     githubRunId: process.env.PLATFORM_ROLE_GITHUB_RUN_ID,
+    githubRunAttempt: process.env.PLATFORM_ROLE_GITHUB_RUN_ATTEMPT,
   });
   console.log(
     `${action === "grant" ? "Granted" : "Revoked"} ${role} for ${target.toLowerCase()}; ` +
