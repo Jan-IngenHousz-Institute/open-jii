@@ -1,5 +1,6 @@
 import { ClickHouseLogLevel, createClient } from "@clickhouse/client";
 import { migration } from "clickhouse-migrations";
+import { readdir } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
 import { z } from "zod";
 
@@ -60,7 +61,8 @@ export async function waitForClickHouse({ url, username, password }: ClickHouseC
 
   try {
     for (;;) {
-      const result = await client.ping();
+      // A SELECT rather than /ping, which answers without checking the credentials.
+      const result = await client.ping({ select: true });
       if (result.success) {
         return;
       }
@@ -73,6 +75,23 @@ export async function waitForClickHouse({ url, username, password }: ClickHouseC
     }
   } finally {
     await client.close();
+  }
+}
+
+// The runner records a migration under the number before its first underscore, so a second file
+// with the same number fails every later run on a checksum mismatch.
+export async function checkClickHouseMigrations() {
+  const files = (await readdir(MIGRATIONS_FOLDER)).filter((file) => file.endsWith(".sql"));
+  const byNumber = new Map<number, string>();
+
+  for (const file of files) {
+    const number = Number(file.split("_")[0]);
+    const other = byNumber.get(number);
+    if (other !== undefined) {
+      throw new Error(`ClickHouse migrations ${other} and ${file} share the number ${number}`);
+    }
+
+    byNumber.set(number, file);
   }
 }
 

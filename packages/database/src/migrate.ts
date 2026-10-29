@@ -1,6 +1,11 @@
 import "dotenv/config";
 
-import { migrateClickHouse, readClickHouseConfig, waitForClickHouse } from "./clickhouse/migrate";
+import {
+  checkClickHouseMigrations,
+  migrateClickHouse,
+  readClickHouseConfig,
+  waitForClickHouse,
+} from "./clickhouse/migrate";
 import { db } from "./postgres/database";
 import { migratePostgres } from "./postgres/migrate";
 
@@ -11,6 +16,7 @@ async function runMigrations() {
     // Checked before Postgres changes, so a misconfigured or unreachable store leaves both as they were.
     const clickhouse = readClickHouseConfig(process.env);
     if (clickhouse) {
+      await checkClickHouseMigrations();
       await waitForClickHouse(clickhouse);
     }
 

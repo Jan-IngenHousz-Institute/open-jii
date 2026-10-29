@@ -10,7 +10,8 @@ The schemas, migrations and clients of openJII's two databases:
   [clickhouse-migrations](https://github.com/VVVi/clickhouse-migrations).
 
 `src/migrate.ts` is the migration runner the deploy runs as a one-off ECS task. It checks that
-ClickHouse is configured and answering, then migrates Postgres, then ClickHouse. An environment
+ClickHouse is configured, that no two of its migrations share a number, and that it answers to the
+runner's credentials, then migrates Postgres, then ClickHouse. An environment
 without a serving store, such as DR, leaves `CLICKHOUSE_URL` unset and migrates Postgres only.
 
 Common commands (run from the repo root):
