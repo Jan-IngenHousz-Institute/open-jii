@@ -37,7 +37,8 @@
       "protocol-picker retaken on 2026-10-27 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only protocol-picker. The Chamber QC Scratchpad workbook shows the Protocol picker open, filtered by “chloro”, with three [Seed] protocols and MultispeQ badges; retaken because the picker still showed “multispeq”. Reviewed at full size; no real names or emails, credentials or dev overlays appear. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine.",
       "macros-list retaken on 2026-10-27 at 1920x1200 from the local stack with the expanded sidebar, matching the other platform captures. The frame shows Name sorted ascending, Language and Visibility filters with none applied, only [Seed] macro names, and no data-processing status notice. Reviewed at full size; the account details in the sidebar are the seeded development identity. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine.",
       "demo-organization-creation recorded on 2026-10-21 against the seeded local stack. The user reviewed and approved this recording before publication; bytes copied from staging without re-encoding. Only seed and demo identities and resources appear.",
-      "demo-organization-discovery recorded on 2026-10-21 against the seeded local stack. The user reviewed and approved this recording before publication; bytes copied from staging without re-encoding. Only seed and demo identities and resources appear."
+      "demo-organization-discovery recorded on 2026-10-21 against the seeded local stack. The user reviewed and approved this recording before publication; bytes copied from staging without re-encoding. Only seed and demo identities and resources appear.",
+      "demo-seed-experiments recorded on 2026-10-29 against the seeded local stack via capture-docs-media, ending at the dashboard list. Reviewed frame by frame and approved for publication by dominikvrbic on 2026-10-29. Video and poster copied from staging without re-encoding."
     ]
   },
   "assets": [
@@ -498,10 +499,21 @@
       "kind": "recording",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 681265,
-      "sha256": "badce83aaed6ea91afdd623b85af3ccfe4c767fa69eb3ccbedd4b12f17d388ba",
+      "bytes": 677974,
+      "sha256": "f5419b4ad9bbc87d43e6e21397b5c017c9da8c6b8d29ac7f35250dfe1ce99941",
       "disposition": "published",
-      "scope": "A newcomer opens the seeded Demo examples, read-only workbook and dashboard list; trimmed before the chart-loading screen"
+      "scope": "A newcomer finds the three seeded sensor examples, reads the pinned MultispeQ workbook and finds its example dashboard in the dashboard list"
+    },
+    {
+      "path": "/img/guide/web/demo-seed-experiments-poster.webp",
+      "slug": "demo-seed-experiments-poster",
+      "kind": "poster",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 31998,
+      "sha256": "1c77b5819da3ba21cc7f9be017b4e7b7779fd8c062b0dc5718eee8bb24ae8b08",
+      "disposition": "published",
+      "scope": "First frame of demo-seed-experiments.webm"
     }
   ],
   "unmetCaptures": [
