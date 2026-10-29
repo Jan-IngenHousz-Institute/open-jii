@@ -108,9 +108,20 @@ describe("<MacroCompatibleProtocolsCard />", () => {
     await waitFor(() => {
       expect(screen.getByText("Temperature Protocol")).toBeInTheDocument();
     });
-    expect(screen.getByText("multispeq")).toBeInTheDocument();
+    expect(screen.getByText("MultispeQ")).toBeInTheDocument();
     expect(screen.getByText("Humidity Protocol")).toBeInTheDocument();
-    expect(screen.getByText("ambyte")).toBeInTheDocument();
+    expect(screen.getByText("Ambyte")).toBeInTheDocument();
+  });
+
+  it("should show an unrecognised family as stored", async () => {
+    const [first] = mockCompatibleProtocols;
+    server.mount(contract.macros.listCompatibleProtocols, {
+      body: [{ ...first, protocol: { ...first.protocol, family: "prototype-x" } }],
+    });
+
+    render(<MacroCompatibleProtocolsCard macroId={MACRO_ID} />);
+
+    expect(await screen.findByText("prototype-x")).toBeInTheDocument();
   });
 
   it("should render protocol links with correct hrefs", async () => {

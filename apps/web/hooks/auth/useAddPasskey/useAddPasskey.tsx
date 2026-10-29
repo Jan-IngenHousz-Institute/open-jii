@@ -1,5 +1,6 @@
 "use client";
 
+import { NOTIFICATIONS_KEY } from "@/hooks/notifications/useNotifications/useNotifications";
 import { useLocale } from "@/hooks/useLocale";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -61,6 +62,7 @@ export function useAddPasskey(options: UseAddPasskeyOptions = {}) {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["auth", "passkeys"] });
+      await queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
       options.onSuccess?.();
     },
     onError: (error) => {

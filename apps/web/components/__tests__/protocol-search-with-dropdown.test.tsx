@@ -70,6 +70,17 @@ describe("<ProtocolSearchWithDropdown />", () => {
     expect(screen.getByText("Pick a protocol")).toBeInTheDocument();
   });
 
+  it("shows the selected protocol and its family on initial render", () => {
+    renderWidget({
+      value: "p1",
+      availableProtocols: [
+        createProtocol({ id: "p1", name: "Light measurement", family: "minipar" }),
+      ],
+    });
+    expect(screen.getByText("Light measurement")).toBeInTheDocument();
+    expect(screen.getByText(/MiniPAR/)).toBeInTheDocument();
+  });
+
   it("filters dropdown list to exclude currently selected protocol", () => {
     renderWidget({ value: "p2" });
     expect(lastPopoverProps).not.toBeNull();

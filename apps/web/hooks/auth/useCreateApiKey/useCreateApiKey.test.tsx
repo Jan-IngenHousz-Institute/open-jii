@@ -1,3 +1,4 @@
+import { NOTIFICATIONS_KEY } from "@/hooks/notifications/useNotifications/useNotifications";
 import { createTestQueryClient, renderHook } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
@@ -23,14 +24,33 @@ describe("useCreateApiKey", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["auth", "api-keys"] });
   });
 
+  it("refreshes the bell, which now holds a notification about the key", async () => {
+    vi.mocked(authClient.apiKey.create).mockResolvedValue({
+      data: { id: "k1", key: "jii_abc123" },
+      error: null,
+    });
+
+    const queryClient = createTestQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useCreateApiKey(), { queryClient });
+    await result.current.mutateAsync({ name: "CI key" });
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: NOTIFICATIONS_KEY });
+  });
+
   it("throws when the response contains an error", async () => {
     vi.mocked(authClient.apiKey.create).mockResolvedValue({
       data: null,
       error: { message: "Name taken" },
     });
 
-    const { result } = renderHook(() => useCreateApiKey());
+    const queryClient = createTestQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useCreateApiKey(), { queryClient });
 
     await expect(result.current.mutateAsync({ name: "dup" })).rejects.toThrow("Name taken");
+    expect(invalidateSpy).not.toHaveBeenCalled();
   });
 });

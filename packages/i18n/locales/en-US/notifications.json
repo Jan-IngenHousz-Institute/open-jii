@@ -91,7 +91,8 @@
     "calibration_run_approved": "{{actor}} approved the {{definitionName}} calibration of {{deviceName}}",
     "calibration_run_rejected": "{{actor}} rejected the {{definitionName}} calibration of {{deviceName}}",
     "api_key_created": "A new API key, {{keyName}}, was added to your account",
-    "passkey_added": "A new passkey, {{passkeyName}}, was added to your account"
+    "passkey_added": "A new passkey, {{passkeyName}}, was added to your account",
+    "passkey_added_unnamed": "A new passkey was added to your account"
   },
   "preferences": {
     "title": "Email notifications",

@@ -1397,6 +1397,112 @@ describe("NotificationsService", () => {
     });
   });
 
+  describe("sendApiKeyCreatedNotification", () => {
+    let mockRenderApiKeyCreatedNotificationEmail: MockInstance;
+
+    beforeEach(() => {
+      mockRenderApiKeyCreatedNotificationEmail = spyOnProtected(
+        service,
+        "renderApiKeyCreatedNotificationEmail",
+      ).mockResolvedValue({
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("renders the key's name with a link to the API keys tab and sends it to the address", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendApiKeyCreatedNotification({
+        keyName: "Field laptop",
+        email: MOCK_EMAIL,
+      });
+
+      assertSuccess(result);
+      expect(mockRenderApiKeyCreatedNotificationEmail).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        keyName: "Field laptop",
+        apiKeysUrl: "http://localhost:3000/platform/account/api-keys",
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: "A new API key was added to your openJII account",
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+  });
+
+  describe("sendPasskeyAddedNotification", () => {
+    let mockRenderPasskeyAddedNotificationEmail: MockInstance;
+    let mockSendMail: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      mockRenderPasskeyAddedNotificationEmail = spyOnProtected(
+        service,
+        "renderPasskeyAddedNotificationEmail",
+      ).mockResolvedValue({
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+      mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+    });
+
+    it("renders the passkey's name with a link to the Security tab and sends it to the address", async () => {
+      const result = await service.sendPasskeyAddedNotification({
+        passkeyName: "Google Password Manager",
+        email: MOCK_EMAIL,
+      });
+
+      assertSuccess(result);
+      expect(mockRenderPasskeyAddedNotificationEmail).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        passkeyName: "Google Password Manager",
+        securityUrl: "http://localhost:3000/platform/account/security",
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: "A new passkey was added to your openJII account",
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("renders without a name when the passkey has none", async () => {
+      const result = await service.sendPasskeyAddedNotification({ email: MOCK_EMAIL });
+
+      assertSuccess(result);
+      expect(mockRenderPasskeyAddedNotificationEmail).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        passkeyName: undefined,
+        securityUrl: "http://localhost:3000/platform/account/security",
+      });
+      expect(mockSendMail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: MOCK_EMAIL,
+          subject: "A new passkey was added to your openJII account",
+        }),
+      );
+    });
+  });
+
   describe("verifyTransport", () => {
     it("succeeds when the SMTP server accepts the login", async () => {
       mockCreateTransport.mockReturnValue({ verify: vi.fn().mockResolvedValue(true) });

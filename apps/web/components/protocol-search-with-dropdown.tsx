@@ -2,6 +2,7 @@
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { ChevronsUpDown, ExternalLink } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 
@@ -55,7 +56,9 @@ export function ProtocolSearchWithDropdown({
     }
   }, [value, currentMatch]);
 
-  const selectedProtocol = selectedSnapshotRef.current;
+  const selectedProtocol =
+    currentMatch ??
+    (selectedSnapshotRef.current?.id === value ? selectedSnapshotRef.current : undefined);
 
   const dropdownProtocols = availableProtocols.filter((protocol) => protocol.id !== value);
 
@@ -87,7 +90,8 @@ export function ProtocolSearchWithDropdown({
                   </IntentLink>
                 </div>
                 <span className="text-muted-foreground truncate text-xs">
-                  {selectedProtocol.family} • {t("common.by")} {selectedProtocol.createdByName}
+                  {getSensorFamilyLabel(selectedProtocol.family)} • {t("common.by")}{" "}
+                  {selectedProtocol.createdByName}
                 </span>
               </div>
             ) : (

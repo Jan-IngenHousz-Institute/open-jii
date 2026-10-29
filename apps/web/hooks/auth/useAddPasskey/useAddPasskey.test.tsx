@@ -1,3 +1,4 @@
+import { NOTIFICATIONS_KEY } from "@/hooks/notifications/useNotifications/useNotifications";
 import {
   createTestQueryClient,
   render,
@@ -119,6 +120,21 @@ describe("useAddPasskey", () => {
     await expect(result.current.mutateAsync({})).rejects.toBeInstanceOf(PasskeySessionTooOldError);
   });
 
+  it("refreshes the bell, which now holds a notification about the passkey", async () => {
+    vi.mocked(authClient.passkey.addPasskey).mockResolvedValue({
+      data: null,
+      error: null,
+    } as never);
+
+    const queryClient = createTestQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useAddPasskey(), { queryClient });
+    await result.current.mutateAsync({});
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: NOTIFICATIONS_KEY });
+  });
+
   it("throws when the response is undefined", async () => {
     vi.mocked(authClient.passkey.addPasskey).mockResolvedValue(undefined as never);
 
@@ -135,10 +151,14 @@ describe("useAddPasskey", () => {
       error: { message: "Ceremony cancelled" },
     } as never);
 
-    const { result } = renderHook(() => useAddPasskey());
+    const queryClient = createTestQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useAddPasskey(), { queryClient });
 
     const error = await result.current.mutateAsync({ name: "Phone" }).catch((e: unknown) => e);
     expect(error).toEqual(new Error("Ceremony cancelled"));
     expect(error).not.toBeInstanceOf(PasskeySessionTooOldError);
+    expect(invalidateSpy).not.toHaveBeenCalled();
   });
 });

@@ -252,7 +252,7 @@ export const NOTIFICATION_TYPES = {
   passkey_added: {
     category: "account_security",
     channels: { email: "always" },
-    params: z.object({ passkeyName: z.string() }),
+    params: z.object({ passkeyName: z.string().optional() }),
   },
 } satisfies Record<NotificationType, NotificationTypeDefinition>;
 

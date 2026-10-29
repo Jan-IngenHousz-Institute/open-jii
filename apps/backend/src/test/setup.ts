@@ -60,6 +60,14 @@ vi.mock("@repo/transactional/render/experiment-made-public-notification", () => 
   renderExperimentMadePublicNotification: vi.fn(),
 }));
 
+vi.mock("@repo/transactional/render/api-key-created-notification", () => ({
+  renderApiKeyCreatedNotification: vi.fn(),
+}));
+
+vi.mock("@repo/transactional/render/passkey-added-notification", () => ({
+  renderPasskeyAddedNotification: vi.fn(),
+}));
+
 // Mock analytics server
 vi.mock("@repo/analytics/server", async (importOriginal) => ({
   ...(await importOriginal<typeof AnalyticsServer>()),

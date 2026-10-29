@@ -252,6 +252,32 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     return this.notificationService.sendOrganizationMembershipRemovedNotification(input);
   }
 
+  async sendApiKeyCreatedNotification(input: {
+    keyName: string;
+    email: string;
+  }): Promise<Result<void>> {
+    this.logger.log({
+      msg: "Sending API key created notification",
+      operation: "sendApiKeyCreatedNotification",
+      email: input.email,
+    });
+
+    return this.notificationService.sendApiKeyCreatedNotification(input);
+  }
+
+  async sendPasskeyAddedNotification(input: {
+    passkeyName?: string;
+    email: string;
+  }): Promise<Result<void>> {
+    this.logger.log({
+      msg: "Sending passkey added notification",
+      operation: "sendPasskeyAddedNotification",
+      email: input.email,
+    });
+
+    return this.notificationService.sendPasskeyAddedNotification(input);
+  }
+
   verifyTransport(): Promise<Result<void>> {
     return this.notificationService.verifyTransport();
   }

@@ -67,7 +67,7 @@ describe("LineageInspectPanel", () => {
       id: "device",
       kind: "device",
       label: "Gateway",
-      family: "ambyte",
+      family: "minipar",
       status: "active",
       boundExperimentCount: 1,
       firmwareVersion: "1.2.0",
@@ -76,6 +76,7 @@ describe("LineageInspectPanel", () => {
     expect(screen.getByText("Gateway")).toBeInTheDocument();
     expect(screen.getByText("ambyte_GW-1")).toBeInTheDocument();
     expect(screen.getByText("SN-77")).toBeInTheDocument();
+    expect(screen.getByText("MiniPAR")).toBeInTheDocument();
     expect(screen.getByText("cert-x")).toBeInTheDocument();
     expect(screen.getByText("1.2.0")).toBeInTheDocument();
   });

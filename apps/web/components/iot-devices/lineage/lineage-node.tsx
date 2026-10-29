@@ -4,6 +4,7 @@ import { ConnectivityDot } from "@/components/iot-devices/device-connectivity";
 import { IotDeviceStatusBadge } from "@/components/iot-devices/iot-device-status-badge";
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime } from "@/util/date";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
 import type { NodeProps } from "@xyflow/react";
 import { Handle, Position } from "@xyflow/react";
 import {
@@ -81,7 +82,9 @@ export function LineageNode(props: NodeProps) {
       return (
         <>
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground font-mono text-[11px]">{model.family}</span>
+            <span className="text-muted-foreground font-mono text-[11px]">
+              {getSensorFamilyLabel(model.family)}
+            </span>
             <IotDeviceStatusBadge
               status={model.status}
               deviceType={model.family}

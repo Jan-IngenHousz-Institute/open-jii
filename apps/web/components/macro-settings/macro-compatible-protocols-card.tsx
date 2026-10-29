@@ -5,7 +5,7 @@ import { SettingsCard } from "@/components/shared/settings-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useLocale } from "@/hooks/useLocale";
-import { getSensorFamilyBadgeTone } from "@/util/sensor-family";
+import { formatSensorFamily, getSensorFamilyBadgeTone } from "@/util/sensor-family";
 import { ExternalLink, FileJson2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -118,11 +118,8 @@ export function MacroCompatibleProtocolsCard({
                       <ExternalLink className="h-4 w-4" />
                     </IntentLink>
                   </div>
-                  <StatusBadge
-                    tone={getSensorFamilyBadgeTone(entry.protocol.family)}
-                    className="capitalize"
-                  >
-                    {entry.protocol.family}
+                  <StatusBadge tone={getSensorFamilyBadgeTone(entry.protocol.family)}>
+                    {formatSensorFamily(entry.protocol.family)}
                   </StatusBadge>
                 </div>
                 <Button

@@ -2,6 +2,7 @@
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { SearchX, ExternalLink } from "lucide-react";
 import React, { useCallback } from "react";
 
@@ -102,7 +103,7 @@ function ProtocolList({
               {/* Family */}
               <div className="text-muted-foreground truncate text-xs">
                 <span className="opacity-75">{t("experiments.family")}</span>{" "}
-                <span className="font-medium">{protocol.family}</span>
+                <span className="font-medium">{getSensorFamilyLabel(protocol.family)}</span>
               </div>
 
               {/* Created by */}

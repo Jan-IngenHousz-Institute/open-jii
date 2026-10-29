@@ -498,7 +498,7 @@ export const SHOTS: readonly Shot[] = [
       if (await search.isVisible().catch(() => false)) await typeInto(search, "chloro");
       await settle(page, 1400);
     },
-    scope: "The searchable protocol picker with names, sensor families and preferred badges",
+    scope: "The searchable protocol picker filtered by name, with creators and sensor families",
   },
   {
     slug: "ux-question",

@@ -130,6 +130,7 @@ const TYPE_PATH: Record<NotificationType, (resource: NotificationResource) => st
 /** A move into a personal workspace and a role change each carry their own copy. */
 const copyContext = (notification: Notification): string | undefined => {
   if (notification.type === "organization_role_changed") return notification.params.role;
+  if (notification.type === "passkey_added" && !notification.params.passkeyName) return "unnamed";
   return notification.params.organizationKind === "personal" ? "personal" : undefined;
 };
 
