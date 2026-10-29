@@ -3,7 +3,7 @@
 import { parseApiError } from "@/util/apiError";
 import { QueryClient, QueryClientProvider, MutationCache, isServer } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { env } from "~/env";
 
 import { useSession } from "@repo/auth/client";
@@ -36,34 +36,61 @@ let browserIdentity: string | undefined;
 
 // One client per server render, so one request's data never reaches another's; one for the
 // whole session in the browser.
-function getQueryClient(identity?: string) {
+function getQueryClient() {
   if (isServer) {
     return makeQueryClient();
-  }
-  if (identity !== undefined && browserIdentity !== identity) {
-    void browserQueryClient?.cancelQueries();
-    browserQueryClient?.clear();
-    browserQueryClient = makeQueryClient();
-    browserIdentity = identity;
   }
   browserQueryClient ??= makeQueryClient();
   return browserQueryClient;
 }
 
+interface SessionState {
+  data: { user: { id: string } } | null;
+  isPending: boolean;
+  error?: unknown;
+}
+
+// A pending session or a failed refetch says nothing new about who is signed in.
+function settledIdentity({ data, isPending, error }: SessionState) {
+  if (isPending || error) return undefined;
+  return data?.user.id ?? "signed-out";
+}
+
+interface CacheOwner {
+  identity: string | undefined;
+  client: QueryClient;
+  generation: number;
+}
+
 export function QueryProvider({ children }: { children: React.ReactNode }) {
-  const { data: session, isPending } = useSession();
-  let identity: string | undefined;
-  if (!isPending) identity = session?.user.id ?? "signed-out";
-  const queryClient = getQueryClient(identity);
-  useEffect(
-    () => () => {
-      void queryClient.cancelQueries();
-    },
-    [queryClient],
-  );
+  const identity = settledIdentity(useSession());
+  const [owner, setOwner] = useState<CacheOwner>(() => ({
+    identity: browserIdentity,
+    client: getQueryClient(),
+    generation: 0,
+  }));
+  let current = owner;
+  if (identity !== undefined && identity !== owner.identity) {
+    // The first answer keeps the cache the page was rendered and fetched with, under the same
+    // cookie. A later change of person starts an empty cache and remounts its observers.
+    current =
+      owner.identity === undefined
+        ? { ...owner, identity }
+        : { identity, client: makeQueryClient(), generation: owner.generation + 1 };
+    setOwner(current);
+  }
+  useEffect(() => {
+    const previous = browserQueryClient;
+    browserQueryClient = current.client;
+    browserIdentity = current.identity;
+    if (previous !== undefined && previous !== current.client) {
+      void previous.cancelQueries();
+      previous.clear();
+    }
+  }, [current]);
 
   return (
-    <QueryClientProvider key={identity ?? browserIdentity} client={queryClient}>
+    <QueryClientProvider key={current.generation} client={current.client}>
       {children}
       {env.NEXT_PUBLIC_ENABLE_DEVTOOLS === "true" && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
