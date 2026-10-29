@@ -468,17 +468,6 @@
       "sha256": "20ab60d5d7bcb2c03e82fb5d15069c99154e8edc34af396729b4fbb427a79287",
       "disposition": "published",
       "scope": "Experiment Devices tab with onboarded, observed and unregistered devices and its tiles"
-    },
-    {
-      "path": "/img/guide/web/demo-organization-creation.webm",
-      "slug": "demo-organization-creation",
-      "kind": "recording",
-      "frame": "desktop",
-      "dimensions": "1920x1200",
-      "bytes": 704325,
-      "sha256": "4105c2eff8dca44da86511039128a6b031a87190035c575b1cad29eec4624ac1",
-      "disposition": "published",
-      "scope": "Creating a public Demo organization and refusing conversion while private research remains"
     }
   ],
   "unmetCaptures": [

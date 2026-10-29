@@ -1517,7 +1517,7 @@
   "platformAdmins": {
     "title": "Platformbeheerders",
     "description": "Platformbeheerders beheren demo-organisaties.",
-    "howGranted": "JII kent deze rol buiten de app toe en trekt hem daar in, nadat een tweede persoon elke wijziging heeft goedgekeurd.",
+    "howGranted": "JII kent deze rol buiten de app toe en trekt die daar weer in. In productie keurt een tweede persoon elke wijziging goed.",
     "current": "Huidige beheerders",
     "since": "Sinds {{date}}",
     "dateUnknown": "Toekenningsdatum niet beschikbaar",

@@ -1519,7 +1519,7 @@
   "platformAdmins": {
     "title": "Platform admins",
     "description": "Platform admins manage Demo organizations.",
-    "howGranted": "JII grants and removes this role outside the app, after a second person approves each change.",
+    "howGranted": "JII grants and removes this role outside the app. In production, a second person approves each change.",
     "current": "Current admins",
     "since": "Since {{date}}",
     "dateUnknown": "Grant date unavailable",

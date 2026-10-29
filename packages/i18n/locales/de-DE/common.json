@@ -1517,7 +1517,7 @@
   "platformAdmins": {
     "title": "Plattformadmins",
     "description": "Plattformadmins verwalten Demo-Organisationen.",
-    "howGranted": "JII vergibt und entzieht diese Rolle außerhalb der App, nachdem eine zweite Person jede Änderung genehmigt hat.",
+    "howGranted": "JII vergibt und entzieht diese Rolle außerhalb der App. In der Produktionsumgebung genehmigt eine zweite Person jede Änderung.",
     "current": "Aktuelle Admins",
     "since": "Seit {{date}}",
     "dateUnknown": "Vergabedatum nicht verfügbar",

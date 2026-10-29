@@ -1,6 +1,8 @@
 import { auditLogs, changePlatformRole, eq, profiles, users } from "@repo/database";
 
+import { assertSuccess } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
+import { PlatformAdminRepository } from "../core/repositories/platform-admin.repository";
 
 describe("Platform admin roster", () => {
   const app = TestHarness.App;
@@ -61,6 +63,19 @@ describe("Platform admin roster", () => {
       expect.objectContaining({ id: fallback, name: "Fallback Admin" }),
       expect.objectContaining({ id: actor, name: "Profile Admin" }),
     ]);
+  });
+
+  it("returns an empty roster when no account holds a platform role", async () => {
+    const result = await app.module.get(PlatformAdminRepository).list();
+    assertSuccess(result);
+    expect(result.value).toEqual([]);
+  });
+
+  it("returns an unknown grant date for a stored role without an audit grant", async () => {
+    const actor = await app.createTestUser({ name: "Imported Admin", createProfile: false });
+    await app.database.update(users).set({ role: "platform_admin" }).where(eq(users.id, actor));
+    const result = await app.get("/api/v1/platform-admins").withAuth(actor).expect(200);
+    expect(result.body).toEqual([{ id: actor, name: "Imported Admin", grantedAt: null }]);
   });
 
   it("refuses ordinary and API-key callers", async () => {

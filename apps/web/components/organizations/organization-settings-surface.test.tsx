@@ -101,6 +101,17 @@ describe("<OrganizationSettingsSurface />", () => {
     });
   });
 
+  it("keeps a saved Demo type fixed for an Owner without a platform role", async () => {
+    mockSession({ id: "user-1" });
+    mountProfile({ role: "owner", type: "demo", visibility: "public" });
+    server.mount(contract.users.getPlatformAdminAccess, { body: { isPlatformAdmin: false } });
+    server.mount(contract.organizations.listOrganizationResources, { body: { resources: [] } });
+    render(<OrganizationSettingsSurface organizationId="org-1" />);
+
+    expect(await screen.findByLabelText("organizations.fields.type")).toBeDisabled();
+    expect(update()).not.toHaveBeenCalled();
+  });
+
   it("localizes a refused Demo conversion and names its private resources", async () => {
     const user = userEvent.setup();
     mockSession({ id: "user-1" });

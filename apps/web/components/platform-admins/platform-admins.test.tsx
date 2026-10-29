@@ -75,6 +75,10 @@ describe.each(TEST_LOCALES)("<PlatformAdmins /> in %s", (locale) => {
 
     expect(await screen.findByText(copy.loadFailed)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: copy.retry })).toBeInTheDocument();
+    mountAdmins();
+    await userEvent.click(screen.getByRole("button", { name: copy.retry }));
+    expect(await screen.findByText("Signed-in Admin")).toBeInTheDocument();
+    expect(screen.queryByText(copy.loadFailed)).not.toBeInTheDocument();
   });
 });
 

@@ -75,11 +75,13 @@ describe("NavUser", () => {
   });
 
   it.each([
-    [true, 1],
-    [false, 0],
+    [true, 1, true],
+    [false, 0, true],
+    [true, 1, false],
+    [false, 0, false],
   ])(
-    "shows the Platform admins entry only to a platform admin (%s)",
-    async (isPlatformAdmin, count) => {
+    "shows the Platform admins entry only to a platform admin (%s, %i entries, compact %s)",
+    async (isPlatformAdmin, count, compact) => {
       useProfileOverride({ firstName: "Ada", lastName: "Lovelace" });
       server.mount(contract.users.getPlatformAdminAccess, { body: { isPlatformAdmin } });
       vi.mocked(useSession).mockReturnValue({
@@ -87,7 +89,7 @@ describe("NavUser", () => {
         isPending: false,
       } as ReturnType<typeof useSession>);
       const user = userEvent.setup();
-      renderNav();
+      renderNav({ compact });
       await user.click(await screen.findByRole("button"));
       await screen.findByRole("menuitem", { name: "auth.account" });
 
