@@ -89,6 +89,7 @@ describe("OIDC authorization-server discovery alias over HTTP", () => {
     const response = await request(app.getHttpServer()).get(discoveryPath).expect(500);
 
     expect(response.body).toEqual({ statusCode: 500, message: "Internal server error" });
+    expect(response.headers["cache-control"]).toBeUndefined();
     expect(getOAuthServerConfig).toHaveBeenCalledExactlyOnceWith();
   });
 });
