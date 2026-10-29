@@ -421,16 +421,23 @@ columns and its banned-session check. None of its routes is served: each answers
 404, and its `adminUserIds` option stays unset, because the plugin lets the users
 it names pass every permission check.
 
+One rule, `isActiveAccount`, says which accounts count: registered, not banned
+and not deleted. A role stored on any other account is inactive and grants
+nothing. `heldPlatformRoles` applies it for checks, `listPlatformRoleHolders`
+for the roster, and `listPlatformRoleAssignments` marks each stored role active
+or not for the access review.
+
 Nothing in the app grants a role. `changePlatformRole` is the only writer. It
-locks the target and the actor, then refuses a no-op or an account that is
-unregistered or deleted, and writes `users.role` and an `audit_logs` row in one
-transaction. The row's actor is the account the engineer names; the GitHub actor
-and run recorded beside it are what GitHub vouches for.
-`heldPlatformRoles` decides which roles an account holds: none unless it is
-registered, not banned and not deleted. `hasPlatformRole` and `isPlatformAdmin`
-in `packages/auth/src/platform-admin.ts` read it on every call, never the
-cookie-cached session, so a revoked role stops working on the next request. An
-API key or an anonymous session never holds a platform role.
+locks the target and the actor, then reads them, and writes `users.role` and an
+`audit_logs` row in one transaction. It refuses a no-op, an inactive actor and a
+grant to an inactive account. A revoke may clear a role left on a deleted or
+banned account, so the review can remove it. The row's actor is the account the
+engineer names. Beside it are what GitHub vouches for: the run, who started it,
+and, for a rerun, the attempt and who started that attempt.
+`hasPlatformRole` and `isPlatformAdmin` in `packages/auth/src/platform-admin.ts`
+read the roles on every call, never the cookie-cached session, so a revoked role
+stops working on the next request. An API key or an anonymous session never
+holds a platform role.
 
 | Where        | How                                                                                                                                                                                                                                                                                                                   |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

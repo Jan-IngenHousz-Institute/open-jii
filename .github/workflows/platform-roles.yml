@@ -84,7 +84,7 @@ jobs:
             echo "### Requested: $ACTION $ROLE on $ENVIRONMENT"
             echo "- Target user id: \`$TARGET\`"
             echo "- Actor user id: \`$ACTOR\`"
-            echo "- Started by: \`$GITHUB_ACTOR\`"
+            echo "- Started by: \`$GITHUB_ACTOR\`, this attempt by \`$GITHUB_TRIGGERING_ACTOR\` (attempt $GITHUB_RUN_ATTEMPT)"
           } >> "$GITHUB_STEP_SUMMARY"
 
   approval:
@@ -155,6 +155,9 @@ jobs:
           TARGET: ${{ inputs.target_user_id }}
           ACTOR: ${{ inputs.actor_user_id }}
           GITHUB_RUN: ${{ github.run_id }}
+          # A rerun keeps the original actor and run id, so record who started this attempt too.
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
           for name in ECS_CLUSTER_NAME TASK_DEFINITION_FAMILY CONTAINER_NAME SUBNETS SECURITY_GROUP_ID; do
             if [[ -z "${!name:-}" ]]; then
@@ -185,10 +188,13 @@ jobs:
           fi
           OVERRIDES=$(jq -nc \
             --arg c "$CONTAINER_NAME" --argjson cmd "$COMMAND" \
-            --arg actor "$GITHUB_ACTOR" --arg run "$GITHUB_RUN" \
+            --arg actor "$GITHUB_ACTOR" --arg triggering "$TRIGGERING_ACTOR" \
+            --arg run "$GITHUB_RUN" --arg attempt "$RUN_ATTEMPT" \
             '{containerOverrides:[{name:$c,command:$cmd,environment:[
               {name:"PLATFORM_ROLE_GITHUB_ACTOR",value:$actor},
-              {name:"PLATFORM_ROLE_GITHUB_RUN_ID",value:$run}]}]}')
+              {name:"PLATFORM_ROLE_GITHUB_TRIGGERING_ACTOR",value:$triggering},
+              {name:"PLATFORM_ROLE_GITHUB_RUN_ID",value:$run},
+              {name:"PLATFORM_ROLE_GITHUB_RUN_ATTEMPT",value:$attempt}]}]}')
 
           if [[ "$SUBNETS" =~ ^\[.*\]$ ]]; then
             SUBNET_JSON="$SUBNETS"

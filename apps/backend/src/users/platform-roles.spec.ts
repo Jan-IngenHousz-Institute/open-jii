@@ -11,6 +11,7 @@ import {
   createSecondaryDatabase,
   eq,
   heldPlatformRoles,
+  listPlatformRoleAssignments,
   listPlatformRoleHolders,
   PlatformRoleError,
   profiles,
@@ -19,6 +20,7 @@ import {
 import type { PlatformRoleChange } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
+import { backendPidOf, waitUntilBlocked } from "../test/lock-wait";
 import { TestHarness } from "../test/test-harness";
 
 function gate() {
@@ -132,7 +134,9 @@ describe("platform roles", () => {
         change({
           targetUserId: researcher.toUpperCase(),
           githubActor: "octocat",
+          githubTriggeringActor: "hubot",
           githubRunId: "42",
+          githubRunAttempt: "2",
         }),
       ),
     ).toEqual(["platform_admin"]);
@@ -154,13 +158,17 @@ describe("platform roles", () => {
       role: "platform_admin",
       source: "command",
       githubActor: "octocat",
+      githubTriggeringActor: "hubot",
       githubRunId: "42",
+      githubRunAttempt: "2",
     });
   });
 
-  it("refuses no-ops, unknown roles and unusable accounts without changing anything", async () => {
+  it("refuses no-ops, unknown roles and inactive accounts without changing anything", async () => {
     const unregistered = await app.createTestUser({ registered: false });
     const deleted = await app.createTestUser({ deletedAt: new Date() });
+    const banned = await app.createTestUser({});
+    await db.update(users).set({ banned: true }).where(eq(users.id, banned));
     await changePlatformRole(db, change());
     const auditCount = async () => (await db.select().from(auditLogs)).length;
     expect(await auditCount()).toBe(1);
@@ -173,13 +181,40 @@ describe("platform roles", () => {
       change({ targetUserId: crypto.randomUUID() }),
       change({ targetUserId: unregistered }),
       change({ targetUserId: deleted }),
+      change({ targetUserId: banned }),
+      change({ action: "revoke", targetUserId: deleted }),
       change({ actorUserId: unregistered }),
       change({ actorUserId: deleted }),
+      change({ actorUserId: banned }),
     ]) {
       await expect(changePlatformRole(db, refused)).rejects.toBeInstanceOf(PlatformRoleError);
     }
     expect(await auditCount()).toBe(1);
-    for (const id of [engineer, unregistered, deleted]) expect(await roleOf(id)).toBe("user");
+    for (const id of [engineer, unregistered, deleted, banned]) {
+      expect(await roleOf(id)).toBe("user");
+    }
+  });
+
+  it("lets a revoke clear a role left on a deleted or banned account", async () => {
+    const banned = await app.createTestUser({});
+    await changePlatformRole(db, change());
+    await changePlatformRole(db, change({ targetUserId: banned }));
+    await db.update(profiles).set({ deletedAt: new Date() }).where(eq(profiles.userId, researcher));
+    await db.update(users).set({ banned: true }).where(eq(users.id, banned));
+
+    expect(await listPlatformRoleHolders(db)).toEqual([]);
+    const assignments = await listPlatformRoleAssignments(db);
+    expect(Object.fromEntries(assignments.map(({ userId, active }) => [userId, active]))).toEqual({
+      [researcher]: false,
+      [banned]: false,
+    });
+
+    expect(await changePlatformRole(db, change({ action: "revoke" }))).toEqual([]);
+    expect(
+      await changePlatformRole(db, change({ action: "revoke", targetUserId: banned })),
+    ).toEqual([]);
+    expect(await listPlatformRoleAssignments(db)).toEqual([]);
+    expect(await db.select().from(auditLogs)).toHaveLength(4);
   });
 
   it("never counts an API key, an anonymous session or a deleted account as a role holder", async () => {
@@ -214,11 +249,12 @@ describe("platform roles", () => {
   });
 
   it("refuses a grant to an account deleted while the grant waited for its lock", async () => {
-    const secondary = createSecondaryDatabase();
+    const holder = createSecondaryDatabase();
+    const granter = createSecondaryDatabase();
     const locked = gate();
     const release = gate();
     try {
-      const deletion = secondary.database.transaction(async (tx) => {
+      const deletion = holder.database.transaction(async (tx) => {
         await tx.select({ id: users.id }).from(users).where(eq(users.id, researcher)).for("update");
         await tx
           .update(profiles)
@@ -228,18 +264,20 @@ describe("platform roles", () => {
         await release.promise;
       });
       await locked.promise;
-      const grant = changePlatformRole(db, change());
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      const granterPid = await backendPidOf(granter.database);
+      const grant = changePlatformRole(granter.database, change());
+      await waitUntilBlocked(db, granterPid);
       release.resolve();
       await deletion;
-      await expect(grant).rejects.toBeInstanceOf(PlatformRoleError);
+      await expect(grant).rejects.toThrow("The target is not an active openJII account");
       expect(await roleOf(researcher)).toBe("user");
     } finally {
-      await secondary.close();
+      release.resolve();
+      await Promise.all([holder.close(), granter.close()]);
     }
   });
 
-  it("reads held roles only from usable accounts and tolerates spacing in the stored value", async () => {
+  it("reads held roles only from active accounts and tolerates spacing in the stored value", async () => {
     await db.update(users).set({ role: "user, platform_admin" }).where(eq(users.id, researcher));
     expect(await heldPlatformRoles(db, researcher)).toEqual(["platform_admin"]);
     await db.update(users).set({ banned: true }).where(eq(users.id, researcher));
