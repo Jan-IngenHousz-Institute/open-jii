@@ -29,8 +29,8 @@ const timestamps = {
 };
 
 // Postgres tsvector column for full-text search. The actual GENERATED ALWAYS expression and the
-// GIN / pg_trgm indexes are defined in the migration SQL (see drizzle/00xx_*_search*.sql) — they
-// reference helper functions and operator classes that drizzle-kit cannot serialise reliably.
+// GIN / pg_trgm indexes are defined in the migration SQL (postgres/migrations/00xx_*_search*.sql),
+// as they reference helper functions and operator classes drizzle-kit cannot serialise reliably.
 // This column is excluded from API responses (stripped in repositories + omitted from DTO schemas).
 // The 'english' config below must match FTS_CONFIG in apps/backend/src/common/utils/fts.ts, which
 // builds the matching tsquery at search time.

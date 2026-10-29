@@ -82,3 +82,15 @@ variable "create_metrics_publisher_resources" {
   type        = bool
   default     = true
 }
+
+variable "create_serving_store_resources" {
+  description = "Whether to create the serving store security group and its ingress rules"
+  type        = bool
+  default     = true
+}
+
+variable "serving_store_port" {
+  description = "Port the serving store answers HTTP on"
+  type        = number
+  default     = 80
+}

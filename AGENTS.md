@@ -19,7 +19,7 @@ verify them against the code.
 | ----------------------------------------------------------------- | ------------------------------------------------------------------- |
 | `packages/api`                                                    | The contract layer. API shapes live here; both sides import them.   |
 | `packages/auth`                                                   | Sessions, email OTP, OAuth, passkeys, API keys.                     |
-| `packages/database`                                               | Schema, migrations, seed script.                                    |
+| `packages/database`                                               | Postgres and ClickHouse schemas and migrations, Postgres seeding.   |
 | `packages/iot`                                                    | Device connectivity and payload handling.                           |
 | `packages/ui`                                                     | Shared components, consumed from source.                            |
 | `packages/cms`                                                    | Contentful client and generated types.                              |

@@ -5,7 +5,7 @@ import type {
   protocols,
   users,
   workbooks,
-} from "../../src/schema";
+} from "../../src/postgres/schema";
 
 export type SeedUser = typeof users.$inferSelect;
 export type SeedProtocol = typeof protocols.$inferSelect;
