@@ -201,7 +201,7 @@ describe("guest authorization HTTP boundary", () => {
     const signer = vi.spyOn(app.module.get(AwsAdapter), "getIotUploadUrl").mockResolvedValue(
       success({
         uploadUrl: "https://example.test/signed",
-        key: "large-iot/demo/guest/synthetic.json",
+        key: "large-iot/demo/guest/uploader-id/synthetic.json",
         expiresAt: new Date(),
       }),
     );
@@ -221,7 +221,7 @@ describe("guest authorization HTTP boundary", () => {
       expect((await post(experiment.id, size)).status).toBe(400);
     expect(signer).not.toHaveBeenCalled();
     for (let i = 0; i < 60; i++) expect((await post(experiment.id, 20)).status).toBe(200);
-    expect(signer).toHaveBeenLastCalledWith(experiment.id, { guestContentLength: 20 });
+    expect(signer).toHaveBeenLastCalledWith(experiment.id, visitor, { guestContentLength: 20 });
     const limited = await post(experiment.id, 20);
     expect(limited.status).toBe(429);
     expect(z.object({ message: z.string() }).parse(limited.body).message).toMatch(

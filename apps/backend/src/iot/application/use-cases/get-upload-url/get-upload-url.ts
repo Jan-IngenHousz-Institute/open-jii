@@ -25,7 +25,7 @@ export class GetIotUploadUrlUseCase {
 
   async execute(
     experimentId: string,
-    userId?: string,
+    userId: string,
     contentLength?: number,
   ): Promise<Result<IotUploadUrl>> {
     this.logger.log({
@@ -47,11 +47,11 @@ export class GetIotUploadUrlUseCase {
       return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
     }
 
-    const identity = userId ? await this.guests.findIdentity(userId) : null;
-    if (userId && !identity) {
+    const identity = await this.guests.findIdentity(userId);
+    if (!identity) {
       return failure(AppError.unauthorized("This session is no longer valid"));
     }
-    if (userId && identity?.isAnonymous) {
+    if (identity.isAnonymous) {
       if (experimentResult.value.organizationType !== "demo" || !(await this.demo.isEnabled())) {
         return failure(
           AppError.forbidden(
@@ -80,10 +80,10 @@ export class GetIotUploadUrlUseCase {
             { retryAfterSeconds: quota.retryAfterSeconds },
           ),
         );
-      return this.awsPort.getIotUploadUrl(experimentResult.value.id, {
+      return this.awsPort.getIotUploadUrl(experimentResult.value.id, userId, {
         guestContentLength: contentLength,
       });
     }
-    return this.awsPort.getIotUploadUrl(experimentId);
+    return this.awsPort.getIotUploadUrl(experimentResult.value.id, userId);
   }
 }

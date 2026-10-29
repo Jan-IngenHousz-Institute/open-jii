@@ -8,7 +8,7 @@ import dlt
 from pyspark.sql import functions as F
 
 from openjii.centrum import RAW_LARGE_DATA_TABLE, large_iot_schema
-from openjii.centrum.measurement_provenance import is_guest_upload, is_simulated
+from openjii.centrum.measurement_provenance import is_simulated, parse_large_iot_key
 from openjii.centrum.runtime import LARGE_IOT_S3_PATH
 
 # COMMAND ----------
@@ -40,21 +40,35 @@ def raw_large_data():
 
 
 def extract_large_data(df):
-    # experiment_id comes from the S3 key (large-iot/{experimentId}/{uuid}.json).
-    # The key is server-issued (pre-signed URL scoped to a membership-checked
-    # experiment), so it wins over the client-controlled payload field.
-    path_experiment_id = F.regexp_extract(F.col("_metadata.file_path"), r"large-iot/([^/]+)/", 1)
+    # The signed key binds the experiment and uploader; payload authors are untrusted.
+    uploader = F.col("_upload_key.uploader_id")
 
     return (
         df
+        .withColumn("_upload_key", parse_large_iot_key(F.col("_metadata.file_path")))
         .withColumn(
             "experiment_id",
-            F.coalesce(
-                F.when(path_experiment_id != "", path_experiment_id),
-                F.col("experiment_id"),
-            )
+            F.coalesce(F.col("_upload_key.experiment_id"), F.col("experiment_id"))
+        )
+        .withColumn(
+            "user_id",
+            F.when(uploader.isNotNull(), uploader)
+            .when(F.col("_upload_key.is_guest"), F.lit(None).cast("string"))
+            .otherwise(F.col("user_id"))
+        )
+        .withColumn(
+            "annotations",
+            F.when(
+                uploader.isNotNull(),
+                F.transform(
+                    F.col("annotations"),
+                    lambda annotation: annotation.withField("createdBy", uploader)
+                    .withField("createdByName", F.lit(None).cast("string")),
+                ),
+            ).otherwise(F.col("annotations"))
         )
         .withColumn("is_simulated", is_simulated(F.col("simulated"), F.col("device_id")))
-        .withColumn("is_guest", is_guest_upload(F.col("_metadata.file_path")))
+        .withColumn("is_guest", F.col("_upload_key.is_guest"))
         .withColumn("ingestion_timestamp", F.current_timestamp())
+        .drop("_upload_key")
     )

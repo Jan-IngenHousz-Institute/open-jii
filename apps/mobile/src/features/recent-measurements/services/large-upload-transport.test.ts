@@ -17,7 +17,7 @@ vi.mock("expo-application", () => ({ nativeApplicationVersion: "2.4.1" }));
 const EXPERIMENT_ID = "11111111-1111-1111-1111-111111111111";
 const TOPIC = `experiment/data_ingest/v1/${EXPERIMENT_ID}/mobile/2.4.1/mobile_thing`;
 
-const target = { uploadUrl: "https://bucket.example/put", key: "large-iot/e/1.json" };
+const target = { uploadUrl: "https://bucket.example/put", key: "large-iot/e/u/1.json" };
 
 function response(status: number): Response {
   // A real Response rather than a shaped literal, so `ok` is derived the way

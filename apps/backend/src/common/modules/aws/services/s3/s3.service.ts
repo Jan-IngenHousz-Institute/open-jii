@@ -49,6 +49,7 @@ export class AwsS3Service {
 
   async getIotUploadUrl(
     experimentId: string,
+    userId: string,
     guest?: GuestUploadOptions,
   ): Promise<Result<IotUploadUrl>> {
     if (
@@ -65,8 +66,8 @@ export class AwsS3Service {
       async () => {
         const prefix = guest
           ? `large-iot/${experimentId.toLowerCase()}/guest`
-          : `large-iot/${experimentId}`;
-        const key = `${prefix}/${crypto.randomUUID()}.json`;
+          : `large-iot/${experimentId.toLowerCase()}`;
+        const key = `${prefix}/${userId.toLowerCase()}/${crypto.randomUUID().toLowerCase()}.json`;
         const command = new PutObjectCommand({
           Bucket: this.awsConfig.s3Config.largeIotBucketName,
           Key: key,

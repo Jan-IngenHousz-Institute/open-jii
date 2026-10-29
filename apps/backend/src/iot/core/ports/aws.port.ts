@@ -33,7 +33,11 @@ export const AWS_PORT = Symbol("AWS_PORT");
  */
 export interface AwsPort {
   getIotCredentials(userId: string): Promise<Result<IotCredentials>>;
-  getIotUploadUrl(experimentId: string, guest?: GuestUploadOptions): Promise<Result<IotUploadUrl>>;
+  getIotUploadUrl(
+    experimentId: string,
+    userId: string,
+    guest?: GuestUploadOptions,
+  ): Promise<Result<IotUploadUrl>>;
   createThing(input: CreateThingInput): Promise<Result<CreatedThing>>;
   deleteThing(thingName: string): Promise<Result<void>>;
   createDeviceCertificate(): Promise<Result<CertificateResult>>;

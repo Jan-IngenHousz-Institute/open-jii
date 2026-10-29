@@ -157,11 +157,12 @@ export class AwsAdapter implements IotAwsPort, LambdaPort, HealthAwsPort {
 
   async getIotUploadUrl(
     experimentId: string,
+    userId: string,
     guest?: GuestUploadOptions,
   ): Promise<Result<IotUploadUrl>> {
     return guest
-      ? this.awsS3Service.getIotUploadUrl(experimentId, guest)
-      : this.awsS3Service.getIotUploadUrl(experimentId);
+      ? this.awsS3Service.getIotUploadUrl(experimentId, userId, guest)
+      : this.awsS3Service.getIotUploadUrl(experimentId, userId);
   }
 
   async getExportDownloadUrl(key: string, fileName: string): Promise<Result<SignedDownloadUrl>> {
