@@ -18,7 +18,7 @@ export function GuestBanner() {
   const [confirmed, setConfirmed] = useState(false);
   const [pending, setPending] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<"upload" | "check">();
   const uploadIds = useRef(new Set<string>());
   const viewer = user?.id ? { userId: user.id, isGuest: true } : null;
   const counts = useQuery({
@@ -34,7 +34,7 @@ export function GuestBanner() {
     return getOutbox().subscribeSettled((items) => {
       for (const item of items) {
         if (!uploadIds.current.delete(item.id)) continue;
-        if (item.status === "failed") setError(true);
+        if (item.status === "failed") setError("upload");
       }
       void refetch();
       if (uploadIds.current.size === 0) setUploading(false);
@@ -48,21 +48,21 @@ export function GuestBanner() {
       if ((current.data?.pending ?? 0) + (current.data?.failed ?? 0) > 0) setConfirmed(true);
       else await logout();
     } catch {
-      setError(true);
+      setError("check");
     } finally {
       setPending(false);
     }
   }
   async function upload() {
     setUploading(true);
-    setError(false);
+    setError(undefined);
     try {
       const ids = await getMeasurementIds(["pending", "failed"], viewer);
       uploadIds.current = new Set(ids);
       getOutbox().enqueueMany(ids);
       if (!ids.length) setUploading(false);
     } catch {
-      setError(true);
+      setError("upload");
       setUploading(false);
     }
   }
@@ -76,7 +76,7 @@ export function GuestBanner() {
         variant="ghost"
         onPress={() => {
           setConfirmed(false);
-          setError(false);
+          setError(undefined);
           setUploading(false);
           setOpen(true);
         }}
@@ -100,7 +100,7 @@ export function GuestBanner() {
             )}
             {error && (
               <Text accessibilityRole="alert" className="text-error mb-4">
-                {t("demo.uploadError")}
+                {t(error === "check" ? "demo.leaveCheckError" : "demo.uploadError")}
               </Text>
             )}
             {uploading && unsent > 0 && (

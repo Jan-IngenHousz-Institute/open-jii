@@ -141,6 +141,16 @@ describe.each([
     await waitFor(() => expect(state.logout).toHaveBeenCalledOnce());
     expect(state.enqueue).not.toHaveBeenCalled();
   });
+  it("says the unsent check failed, not that uploads failed, when the count cannot be read", async () => {
+    show();
+    fireEvent.press(screen.getByText(copy.demo.leave));
+    await waitFor(() => expect(state.counts).toHaveBeenCalled());
+    state.counts.mockRejectedValue(new Error("database locked"));
+    fireEvent.press(screen.getAllByText(copy.demo.leave)[1]);
+    expect(await screen.findByText(copy.demo.leaveCheckError)).toBeTruthy();
+    expect(screen.queryByText(copy.demo.uploadError)).toBeNull();
+    expect(state.logout).not.toHaveBeenCalled();
+  });
   it("is absent for a researcher", () => {
     state.user.isAnonymous = false;
     show();

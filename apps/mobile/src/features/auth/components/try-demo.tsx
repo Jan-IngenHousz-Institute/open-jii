@@ -28,7 +28,7 @@ export function TryDemo({ online }: { online: boolean | undefined }) {
     mutationFn: async () => {
       if (busy.current) return;
       const parsed = zGuestName.safeParse(name);
-      if (!parsed.success || name.includes("@")) {
+      if (!parsed.success) {
         setError(t("demo.invalidName"));
         return;
       }
