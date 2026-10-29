@@ -1145,7 +1145,8 @@ EOT
 }
 
 # Serving store. The CloudWatch agent on its instance publishes all three signals, and only
-# the first treats silence as an outage, so a stopped instance alerts once.
+# the first treats silence as an outage, so a stopped instance alerts once here. Where the feed
+# is on, the feed's timer rule goes silent with it and alerts too.
 resource "grafana_rule_group" "serving_store_health" {
   provider         = grafana.amg
   name             = "Serving Store Health"
