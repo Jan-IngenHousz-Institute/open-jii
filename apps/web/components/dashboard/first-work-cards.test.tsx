@@ -1,3 +1,4 @@
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
@@ -30,5 +31,16 @@ describe("FirstWorkCards", () => {
       ).toBeInTheDocument();
       expect(screen.getByText(`dashboard.firstWork.${card}.description`)).toBeInTheDocument();
     }
+  });
+
+  it("points a guest only at public research", () => {
+    render(
+      <PrincipalProvider userId="guest-1" isGuest>
+        <FirstWorkCards />
+      </PrincipalProvider>,
+    );
+
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.getByRole("link", { name: /dashboard.firstWork.browse.title/ })).toBeVisible();
   });
 });

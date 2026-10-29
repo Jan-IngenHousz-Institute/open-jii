@@ -1,3 +1,4 @@
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -49,6 +50,18 @@ describe("HomeNotice", () => {
       "href",
       "/en-US/platform/transfer-request",
     );
+  });
+
+  it("does not invite a guest to request a transfer", () => {
+    mockPublicMetrics.mockReturnValue(withoutMilestone);
+
+    const { container } = render(
+      <PrincipalProvider userId="guest-1" isGuest>
+        <HomeNotice locale="en-US" />
+      </PrincipalProvider>,
+    );
+
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("remembers each dismissal on its own", async () => {

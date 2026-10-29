@@ -32,16 +32,36 @@ vi.mock("../navigation-sidebar/navigation-sidebar", () => ({
 }));
 
 describe("NavigationSidebarWrapper", () => {
-  it("omits the Create organization navigation action for a guest", async () => {
-    const component = await NavigationSidebarWrapper({
+  it("offers a guest only what the backend lets a guest use", async () => {
+    const guest = await NavigationSidebarWrapper({
       locale: "en",
       user: { ...testUser, isAnonymous: true },
       isCalibrationEnabled: true,
     });
-    render(component);
-    expect(screen.getByTestId("sidebar-navigationData").textContent).not.toContain(
+    const view = render(guest);
+    const navigation = screen.getByTestId("sidebar-navigationData").textContent;
+    for (const denied of [
+      "/experiments/new",
+      "/protocols/new",
+      "/macros/new",
       "/organizations/new",
+      "/platform/devices",
+      "/platform/calibrations",
+    ]) {
+      expect(navigation).not.toContain(denied);
+    }
+    for (const allowed of ["/platform/experiments", "/platform/protocols", "/platform/macros"]) {
+      expect(navigation).toContain(allowed);
+    }
+    view.unmount();
+
+    render(
+      await NavigationSidebarWrapper({ locale: "en", user: testUser, isCalibrationEnabled: true }),
     );
+    const researcher = screen.getByTestId("sidebar-navigationData").textContent;
+    for (const offered of ["/experiments/new", "/organizations/new", "/platform/calibrations"]) {
+      expect(researcher).toContain(offered);
+    }
   });
 
   it("renders AppSidebar with correct locale", async () => {

@@ -1,11 +1,13 @@
 "use client";
 
+import { guestMayUse } from "@/components/auth/guest-access";
+import type { GuestGatedProcedure } from "@/components/auth/guest-access";
+import { useIsGuest } from "@/components/auth/principal-context";
 import { useIsCalibrationEnabled } from "@/components/calibrations/calibration-flag-context";
 import { Archive, ArrowRightLeft, ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Separator } from "@repo/ui/components/separator";
@@ -86,7 +88,7 @@ function sectionCandidates(locale: string): SectionCandidate[] {
  * the collection they operate on instead of competing with page navigation.
  */
 export function SiteHeader({ locale }: { locale: string }) {
-  const { data: session } = useSession();
+  const isGuest = useIsGuest();
   const { t } = useTranslation();
   const pathname = usePathname();
   const detailBreadcrumb = usePlatformHeaderDetail();
@@ -98,12 +100,8 @@ export function SiteHeader({ locale }: { locale: string }) {
   const best = matches.sort((a, b) => b.url.length - a.url.length).at(0);
   const label = best ? t(best.titleKey, { ns: best.namespace }) : null;
   const isCalibrationEnabled = useIsCalibrationEnabled();
-  const actions = overviewActions(
-    pathname,
-    locale,
-    t,
-    isCalibrationEnabled,
-    !!session?.user.isAnonymous,
+  const actions = overviewActions(pathname, locale, t, isCalibrationEnabled, (procedure) =>
+    guestMayUse(procedure, isGuest),
   );
 
   return (
@@ -187,7 +185,7 @@ function overviewActions(
   locale: string,
   t: Translate,
   isCalibrationEnabled: boolean,
-  isGuest: boolean,
+  mayUse: (procedure: GuestGatedProcedure) => boolean,
 ) {
   if (pathname === `/${locale}/platform/experiments`) {
     const archiveLabel = t("experiments.viewArchived", { ns: "experiments" });
@@ -200,29 +198,33 @@ function overviewActions(
             <span className="hidden lg:inline">{archiveLabel}</span>
           </Link>
         </Button>
-        <Button asChild variant="secondary" size="sm" title={transferLabel}>
-          <Link href={`/${locale}/platform/transfer-request`} aria-label={transferLabel}>
-            <ArrowRightLeft className="size-4" aria-hidden />
-            {/* Three actions plus an open sidebar leave the section label ~30px at
-                md; the label waits for lg so the breadcrumb stays readable. */}
-            <span className="hidden lg:inline">{transferLabel}</span>
-          </Link>
-        </Button>
-        <CreateAction
-          href={`/${locale}/platform/experiments/new`}
-          label={t("experiments.create", { ns: "experiments" })}
-        />
+        {mayUse("experiments.createTransferRequest") && (
+          <Button asChild variant="secondary" size="sm" title={transferLabel}>
+            <Link href={`/${locale}/platform/transfer-request`} aria-label={transferLabel}>
+              <ArrowRightLeft className="size-4" aria-hidden />
+              {/* Three actions plus an open sidebar leave the section label ~30px at
+                  md; the label waits for lg so the breadcrumb stays readable. */}
+              <span className="hidden lg:inline">{transferLabel}</span>
+            </Link>
+          </Button>
+        )}
+        {mayUse("experiments.createExperiment") && (
+          <CreateAction
+            href={`/${locale}/platform/experiments/new`}
+            label={t("experiments.create", { ns: "experiments" })}
+          />
+        )}
       </>
     );
   }
 
-  if (pathname === `/${locale}/platform/protocols`) {
+  if (pathname === `/${locale}/platform/protocols` && mayUse("protocols.createProtocol")) {
     return (
       <CreateAction href={`/${locale}/platform/protocols/new`} label={t("protocols.create")} />
     );
   }
 
-  if (pathname === `/${locale}/platform/macros`) {
+  if (pathname === `/${locale}/platform/macros` && mayUse("macros.createMacro")) {
     return (
       <CreateAction
         href={`/${locale}/platform/macros/new`}
@@ -231,7 +233,7 @@ function overviewActions(
     );
   }
 
-  if (pathname === `/${locale}/platform/workbooks`) {
+  if (pathname === `/${locale}/platform/workbooks` && mayUse("workbooks.createWorkbook")) {
     return (
       <EventCreateAction
         event={OPEN_WORKBOOK_CREATE_EVENT}
@@ -241,7 +243,11 @@ function overviewActions(
   }
 
   // The page is not there while calibration is flagged off, so neither is its create action.
-  if (isCalibrationEnabled && pathname === `/${locale}/platform/calibrations`) {
+  if (
+    isCalibrationEnabled &&
+    pathname === `/${locale}/platform/calibrations` &&
+    mayUse("iot.createCalibrationDefinition")
+  ) {
     return (
       <EventCreateAction
         event={OPEN_CALIBRATION_CREATE_EVENT}
@@ -250,7 +256,7 @@ function overviewActions(
     );
   }
 
-  if (pathname === `/${locale}/platform/organizations` && !isGuest) {
+  if (pathname === `/${locale}/platform/organizations` && mayUse("organization.create")) {
     return (
       <CreateAction
         href={`/${locale}/platform/organizations/new`}
@@ -259,7 +265,7 @@ function overviewActions(
     );
   }
 
-  if (pathname === `/${locale}/platform/devices`) {
+  if (pathname === `/${locale}/platform/devices` && mayUse("iot.registerIotDevice")) {
     return (
       <>
         <Button

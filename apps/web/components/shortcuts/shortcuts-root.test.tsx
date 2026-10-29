@@ -1,3 +1,4 @@
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import { NOTIFICATION_BELL_OPEN_EVENT } from "@/components/notifications/notifications-popover";
 import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
 import { render, fireEvent, screen } from "@/test/test-utils";
@@ -10,12 +11,14 @@ import { ShortcutHint } from "./shortcut-hint";
 import { CHEATSHEET_OPEN_EVENT, COMMAND_PALETTE_OPEN_EVENT, ShortcutsRoot } from "./shortcuts-root";
 
 // ShortcutsRoot reads useSidebar(), so it must render inside a SidebarProvider.
-function renderShortcuts(extra?: ReactNode) {
+function renderShortcuts(extra?: ReactNode, { isGuest = false } = {}) {
   return render(
-    <SidebarProvider>
-      {extra}
-      <ShortcutsRoot locale="en-US" />
-    </SidebarProvider>,
+    <PrincipalProvider userId="user-1" isGuest={isGuest}>
+      <SidebarProvider>
+        {extra}
+        <ShortcutsRoot locale="en-US" />
+      </SidebarProvider>
+    </PrincipalProvider>,
   );
 }
 
@@ -84,6 +87,14 @@ describe("ShortcutsRoot", () => {
     const { router } = renderShortcuts();
     key("c");
     expect(router.push).toHaveBeenCalledWith("/en-US/platform/experiments/new");
+  });
+
+  it("sends a guest neither to a create form nor to transfer requests", () => {
+    const { router } = renderShortcuts(undefined, { isGuest: true });
+    key("c");
+    key("g");
+    key("t");
+    expect(router.push).not.toHaveBeenCalled();
   });
 
   it("/ focuses the page's inline search input", () => {
