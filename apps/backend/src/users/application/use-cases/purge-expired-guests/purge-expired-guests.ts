@@ -1,12 +1,10 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { z } from "zod";
 
+import { GUEST_LIFETIME_MS } from "@repo/api/shared/guest";
+
 import { LOCK_NOT_AVAILABLE, postgresErrorCode } from "../../../../common/utils/postgres-error";
-import {
-  GUEST_LIFETIME_MS,
-  GUEST_PURGE_BATCH_SIZE,
-  GUEST_PURGE_BUDGET_MS,
-} from "../../../core/models/guest.model";
+import { GUEST_PURGE_BATCH_SIZE, GUEST_PURGE_BUDGET_MS } from "../../../core/models/guest.model";
 import type { GuestPurgeCursor, GuestPurgeResult } from "../../../core/models/guest.model";
 import { GUEST_PURGE_SIGNAL } from "../../../core/ports/guest-purge-signal.port";
 import type { GuestPurgeSignal } from "../../../core/ports/guest-purge-signal.port";
