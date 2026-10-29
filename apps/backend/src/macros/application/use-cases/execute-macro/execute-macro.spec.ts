@@ -9,6 +9,7 @@ import {
   AppError,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { WorkbookVersionRepository } from "../../../../workbooks/core/repositories/workbook-version.repository";
 import type { CreateMacroDto } from "../../../core/models/macro.model";
 import type { LambdaPort } from "../../../core/ports/lambda.port";
 import { LAMBDA_PORT } from "../../../core/ports/lambda.port";
@@ -147,6 +148,120 @@ describe("ExecuteMacroUseCase", () => {
       await useCase.execute(macro.id, { data: { x: 1 } });
 
       expect(getFnSpy).toHaveBeenCalledWith("javascript");
+    });
+  });
+
+  describe("pinned workbook version", () => {
+    const liveCode = "bGl2ZQ==";
+    const pinnedCode = "cGlubmVk";
+
+    async function pinMacro(macroId: string, owner = testUserId) {
+      const workbook = await testApp.createWorkbook({
+        name: "Demo workbook",
+        createdBy: owner,
+        visibility: "private",
+      });
+      const version = await testApp.module.get(WorkbookVersionRepository).create({
+        workbookId: workbook.id,
+        version: 1,
+        cells: [
+          {
+            id: "macro-cell",
+            type: "macro",
+            isCollapsed: false,
+            payload: { macroId, language: "python" },
+          },
+        ],
+        metadata: {},
+        entitySnapshots: {
+          protocols: {},
+          macros: { [macroId]: { code: pinnedCode, language: "python" } },
+        },
+        createdBy: owner,
+      });
+      assertSuccess(version);
+      return version.value.id;
+    }
+
+    function mockLambda() {
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+      return vi.spyOn(lambdaPort, "invokeLambda").mockResolvedValue(
+        success({
+          statusCode: 200,
+          payload: { status: "success", results: [{ id: "single", success: true, output: {} }] },
+        }),
+      );
+    }
+
+    it("runs the pinned snapshot while draft execution keeps the live macro", async () => {
+      const macro = await createTestMacro({ code: liveCode });
+      const workbookVersionId = await pinMacro(macro.id);
+      const invokeSpy = mockLambda();
+
+      assertSuccess(
+        await useCase.execute(macro.id, { data: { x: 1 }, workbookVersionId }, testUserId),
+      );
+      assertSuccess(await useCase.execute(macro.id, { data: { x: 1 } }, testUserId));
+
+      expect(invokeSpy).toHaveBeenNthCalledWith(
+        1,
+        "test-fn",
+        expect.objectContaining({ script: pinnedCode }),
+      );
+      expect(invokeSpy).toHaveBeenNthCalledWith(
+        2,
+        "test-fn",
+        expect.objectContaining({ script: liveCode }),
+      );
+    });
+
+    it("refuses a caller who cannot read the pinning workbook", async () => {
+      const macro = await createTestMacro({ code: liveCode });
+      const outsider = await testApp.createTestUser({});
+      const workbookVersionId = await pinMacro(macro.id, outsider);
+      const invokeSpy = mockLambda();
+
+      const result = await useCase.execute(
+        macro.id,
+        { data: { x: 1 }, workbookVersionId },
+        testUserId,
+      );
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(403);
+      expect(invokeSpy).not.toHaveBeenCalled();
+    });
+
+    it("refuses a macro the version did not pin", async () => {
+      const pinned = await createTestMacro({ code: liveCode });
+      const other = await createTestMacro({ code: liveCode });
+      const workbookVersionId = await pinMacro(pinned.id);
+      const invokeSpy = mockLambda();
+
+      const result = await useCase.execute(
+        other.id,
+        { data: { x: 1 }, workbookVersionId },
+        testUserId,
+      );
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(404);
+      expect(invokeSpy).not.toHaveBeenCalled();
+    });
+
+    it("returns not found for an unknown version", async () => {
+      const macro = await createTestMacro({ code: liveCode });
+      const invokeSpy = mockLambda();
+
+      const result = await useCase.execute(
+        macro.id,
+        { data: { x: 1 }, workbookVersionId: faker.string.uuid() },
+        testUserId,
+      );
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(404);
+      expect(invokeSpy).not.toHaveBeenCalled();
     });
   });
 

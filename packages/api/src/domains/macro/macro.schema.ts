@@ -182,6 +182,9 @@ export const zMacroExecutionRequestBody = z.object({
   // read-only `ctx`. Additive: `data` still carries the nearest output (`json`).
   context: jsonStringOrValue(z.record(z.string(), z.unknown())).optional(),
   timeout: z.number().int().min(1).max(60).optional(),
+  // Runs the snapshot this published workbook version pinned instead of the
+  // live macro. The caller must also be able to read that workbook.
+  workbookVersionId: z.string().guid().optional(),
 });
 
 export const zMacroExecutionResponse = z.object({

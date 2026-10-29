@@ -54,6 +54,8 @@ interface CellExecutionState {
 
 interface UseWorkbookExecutionOptions {
   experiment?: Experiment;
+  // Set when running a published version: macros run its pinned snapshots.
+  workbookVersionId?: string;
   cells: WorkbookCell[];
   onCellsChange: (cells: WorkbookCell[]) => void;
   onPromptQuestion?: (cell: QuestionCell) => Promise<string | undefined>;
@@ -200,6 +202,7 @@ function toOutputData(data: unknown): Record<string, unknown> {
 
 export function useWorkbookExecution({
   experiment,
+  workbookVersionId,
   cells,
   onCellsChange,
   onPromptQuestion,
@@ -422,7 +425,12 @@ export function useWorkbookExecution({
     async (macroId: string, data: Record<string, unknown>, context?: Record<string, unknown>) => {
       let result;
       try {
-        result = await executeMacroMutationRef.current.mutateAsync({ id: macroId, data, context });
+        result = await executeMacroMutationRef.current.mutateAsync({
+          id: macroId,
+          data,
+          context,
+          workbookVersionId,
+        });
       } catch (err) {
         // oRPC throws an ORPCError on HTTP errors; surface the server's message.
         throw new Error(parseApiError(err)?.message ?? "Macro execution failed");
@@ -432,7 +440,7 @@ export function useWorkbookExecution({
       }
       return result.output;
     },
-    [],
+    [workbookVersionId],
   );
 
   // The $device entry a macro run for this connection reads from ctx.

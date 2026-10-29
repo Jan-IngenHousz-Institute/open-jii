@@ -218,6 +218,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
                 experiment={experimentData}
                 initialCells={versionedCells}
                 entitySnapshots={pinnedVersionData?.entitySnapshots}
+                workbookVersionId={workbookVersionId}
                 canEdit={false}
                 name={workbookDraft?.name ?? experimentData.name}
               />

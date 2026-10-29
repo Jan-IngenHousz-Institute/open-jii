@@ -21,6 +21,7 @@ const AUTO_SAVE_DELAY = 1500;
 interface WorkbookDraftEditorProps {
   experiment?: Experiment;
   entitySnapshots?: EntitySnapshots;
+  workbookVersionId?: string;
   id: string;
   initialCells: WorkbookCell[];
   /** `can(update)` from the detail response — a "Can edit" grantee edits too. */
@@ -39,6 +40,7 @@ interface WorkbookDraftEditorProps {
 export function WorkbookDraftEditor({
   experiment,
   entitySnapshots,
+  workbookVersionId,
   id,
   initialCells,
   canEdit,
@@ -144,6 +146,7 @@ export function WorkbookDraftEditor({
     clearOutputs,
   } = useWorkbookExecution({
     experiment,
+    workbookVersionId,
     cells,
     onCellsChange: handleCellsChange,
     onPromptQuestion: handlePromptQuestion,

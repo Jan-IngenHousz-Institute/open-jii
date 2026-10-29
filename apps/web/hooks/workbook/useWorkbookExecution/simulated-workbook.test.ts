@@ -225,6 +225,37 @@ describe("simulated workbook execution", () => {
     ]);
     hook.unmount();
   });
+  it.each([
+    ["a pinned version runs its snapshot", "8a3b8a2e-5c1f-4d2b-9f3e-1a2b3c4d5e6f"],
+    ["a draft runs the live macro", undefined],
+  ])("%s", async (_, workbookVersionId) => {
+    const protocol = createProtocolCell();
+    const macro = createMacroCell();
+    const requests: { workbookVersionId?: string }[] = [];
+    server.use(
+      http.post(`${API_URL}/api/v1/macros/:id/execute`, async ({ request }) => {
+        requests.push((await request.json()) as { workbookVersionId?: string });
+        return HttpResponse.json({ macro_id: macro.payload.macroId, success: true, output: {} });
+      }),
+    );
+    const hook = renderHook(() => {
+      const [cells, setCells] = useState<WorkbookCell[]>([
+        protocol,
+        createOutputCell({ producedBy: protocol.id, data: { Phi2: 0.7 } }),
+        macro,
+      ]);
+      return useWorkbookExecution({
+        experiment: demo,
+        workbookVersionId,
+        cells,
+        onCellsChange: setCells,
+      });
+    });
+    await act(() => hook.result.current.runCell(macro.id));
+    expect(requests).toHaveLength(1);
+    expect(requests[0].workbookVersionId).toBe(workbookVersionId);
+    hook.unmount();
+  });
   it("enables production demo simulation with developer flags off, and disables non-demo simulation with them on", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_ENABLE_MOCK_DEVICES", "false");
