@@ -21,19 +21,43 @@ export function prepareIdentitySelections(identity: string, isResearcher = false
   return preparation;
 }
 
+// The pre-update cache has no owner key. Its only record of whose it is: the profile query the
+// old build fetched for the signed-in user and dropped at sign-out.
+function legacyCacheOwner(raw: string) {
+  try {
+    const queries = (JSON.parse(raw) as { clientState?: { queries?: unknown[] } }).clientState
+      ?.queries;
+    const owners = new Set<unknown>();
+    for (const query of queries ?? []) {
+      const { queryKey, state } = query as {
+        queryKey?: [unknown, { input?: { id?: unknown } }?];
+        state?: { data?: unknown };
+      };
+      const [path, options] = queryKey ?? [];
+      if (Array.isArray(path) && path.join("/") === "users/getUserProfile" && state?.data != null)
+        owners.add(options?.input?.id);
+    }
+    const [owner] = owners;
+    return owners.size === 1 && typeof owner === "string" ? owner : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function clearPreviousSelections(identity: string, isResearcher: boolean) {
   const previous = await AsyncStorage.getItem(OWNER_KEY);
   if (previous === identity) return;
-  // Builds before identity-scoped caches kept one cache and no owner. It belongs to whoever is
-  // still signed in, so a researcher keeps it, and their flow, through the update.
+  // Before identity-scoped caches there was one cache and no owner marker. It survives the
+  // update only for the researcher it provably belongs to; anyone else starts clean.
   if (previous === null) {
     const legacy = await AsyncStorage.getItem(LEGACY_CACHE_KEY);
-    const scoped = `${LEGACY_CACHE_KEY}:${identity}`;
-    if (legacy !== null && isResearcher && (await AsyncStorage.getItem(scoped)) === null)
-      await AsyncStorage.setItem(scoped, legacy);
-    await AsyncStorage.removeItem(LEGACY_CACHE_KEY);
-    await AsyncStorage.setItem(OWNER_KEY, identity);
-    return;
+    if (legacy !== null && isResearcher && legacyCacheOwner(legacy) === identity) {
+      const scoped = `${LEGACY_CACHE_KEY}:${identity}`;
+      if ((await AsyncStorage.getItem(scoped)) === null) await AsyncStorage.setItem(scoped, legacy);
+      await AsyncStorage.removeItem(LEGACY_CACHE_KEY);
+      await AsyncStorage.setItem(OWNER_KEY, identity);
+      return;
+    }
   }
   // Finish hydration before clearing, so an old disk read cannot restore a selection.
   await Promise.all([
@@ -43,7 +67,7 @@ async function clearPreviousSelections(identity: string, isResearcher: boolean) 
   ]);
   teardownFlow();
   await AsyncStorage.removeItem(LEGACY_CACHE_KEY);
-  await AsyncStorage.removeItem(`${LEGACY_CACHE_KEY}:${previous}`);
+  if (previous !== null) await AsyncStorage.removeItem(`${LEGACY_CACHE_KEY}:${previous}`);
   await AsyncStorage.setItem(OWNER_KEY, identity);
 }
 
@@ -68,8 +92,8 @@ export function IdentityQueryProvider({ children }: { children: ReactNode }) {
           timer = setTimeout(() => setAttempt({ identity, count: attempts + 1 }), 1_000);
           return;
         }
-        // Storage keeps failing: drop the selections in memory and open on an empty cache
-        // rather than a blank screen.
+        // Storage keeps failing: drop the selections in memory and open with this identity's
+        // own scoped cache rather than a blank screen.
         teardownFlow();
         setReady(identity);
       });

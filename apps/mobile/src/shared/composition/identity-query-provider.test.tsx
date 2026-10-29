@@ -1,19 +1,38 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { QueryClient, dehydrate } from "@tanstack/react-query";
 import { act, render, screen } from "@testing-library/react-native";
 import { Text } from "react-native";
 import { beforeEach, expect, it, vi } from "vitest";
 import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
 import { useFlowSnapshotsStore } from "~/features/measurement-flow/stores/use-flow-snapshots-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { shouldPersistQuery } from "~/shared/ui/persist-query-filter";
 
 import { IdentityQueryProvider, prepareIdentitySelections } from "./identity-query-provider";
 
 vi.mock("~/features/auth/hooks/use-session", () => ({
   useSession: () => ({ user: null, isLoaded: true }),
 }));
+const { cacheFor } = vi.hoisted(() => ({ cacheFor: vi.fn() }));
 vi.mock("~/shared/ui/configured-query-client-provider", () => ({
-  ConfiguredQueryClientProvider: ({ children }: { children: React.ReactNode }) => children,
+  ConfiguredQueryClientProvider: ({
+    identity,
+    children,
+  }: {
+    identity: string;
+    children: React.ReactNode;
+  }) => {
+    cacheFor(identity);
+    return children;
+  },
 }));
+
+// The keys @orpc/tanstack-query gives the old build's persisted profile and experiment list.
+const profileKey = (id: string) => [["users", "getUserProfile"], { input: { id }, type: "query" }];
+const listExperimentsKey = [
+  ["experiments", "listExperiments"],
+  { input: { scope: "related" }, type: "query" },
+];
 
 beforeEach(async () => {
   await AsyncStorage.clear();
@@ -63,28 +82,50 @@ it("serializes overlapping identity changes and can retry after storage failure"
   expect(await AsyncStorage.getItem("openjii_selection_owner")).toBe("guest-b");
 });
 
-it("keeps a researcher's cache and flow through the update that scopes caches by identity", async () => {
+// The pre-update blob as the old build's persister wrote it, for a profile fetched for `owner`.
+function legacyBlob(owner?: string) {
+  const client = new QueryClient();
+  client.setQueryData(listExperimentsKey, { items: [{ id: "private-experiment" }] });
+  if (owner) client.setQueryData(profileKey(owner), { firstName: owner });
+  return JSON.stringify({
+    buster: "v6-experiments-membership-status",
+    timestamp: Date.now(),
+    clientState: dehydrate(client, { shouldDehydrateQuery: shouldPersistQuery }),
+  });
+}
+
+async function upgradeWith(blob: string) {
   await AsyncStorage.removeItem("openjii_selection_owner");
-  await AsyncStorage.setItem("REACT_QUERY_OFFLINE_CACHE_v4", "researcher-offline-cache");
+  await AsyncStorage.setItem("REACT_QUERY_OFFLINE_CACHE_v4", blob);
   useMeasurementFlowStore.getState().setExperimentId("field-trial", "Field trial");
-  await prepareIdentitySelections("researcher", true);
-  expect(await AsyncStorage.getItem("REACT_QUERY_OFFLINE_CACHE_v4:researcher")).toBe(
-    "researcher-offline-cache",
-  );
+}
+
+it("keeps a researcher's own cache and flow through the update that scopes caches by identity", async () => {
+  const blob = legacyBlob("researcher-a");
+  await upgradeWith(blob);
+  await prepareIdentitySelections("researcher-a", true);
+  expect(await AsyncStorage.getItem("REACT_QUERY_OFFLINE_CACHE_v4:researcher-a")).toBe(blob);
   expect(await AsyncStorage.getItem("REACT_QUERY_OFFLINE_CACHE_v4")).toBeNull();
   expect(useMeasurementFlowStore.getState().experimentId).toBe("field-trial");
-  expect(await AsyncStorage.getItem("openjii_selection_owner")).toBe("researcher");
+  expect(await AsyncStorage.getItem("openjii_selection_owner")).toBe("researcher-a");
 });
 
-it("gives the unowned cache to nobody when no researcher is signed in", async () => {
-  await AsyncStorage.removeItem("openjii_selection_owner");
-  await AsyncStorage.setItem("REACT_QUERY_OFFLINE_CACHE_v4", "someone's cache");
-  await prepareIdentitySelections("signed-out");
+it.each([
+  ["another researcher's cache", legacyBlob("researcher-a"), "researcher-b", true],
+  ["a cache with no profile to name its owner", legacyBlob(), "researcher-b", true],
+  ["a researcher's cache, to a guest", legacyBlob("researcher-a"), "guest-b", false],
+  ["a researcher's cache, while signed out", legacyBlob("researcher-a"), "signed-out", false],
+  ["an unreadable cache", "not json", "researcher-b", true],
+] as const)("discards %s and the flow on update", async (_, blob, identity, isResearcher) => {
+  await upgradeWith(blob);
+  await prepareIdentitySelections(identity, isResearcher);
   expect(await AsyncStorage.getItem("REACT_QUERY_OFFLINE_CACHE_v4")).toBeNull();
-  expect(await AsyncStorage.getItem("REACT_QUERY_OFFLINE_CACHE_v4:signed-out")).toBeNull();
+  expect(await AsyncStorage.getItem(`REACT_QUERY_OFFLINE_CACHE_v4:${identity}`)).toBeNull();
+  expect(useMeasurementFlowStore.getState().experimentId).toBeUndefined();
+  expect(await AsyncStorage.getItem("openjii_selection_owner")).toBe(identity);
 });
 
-it("opens on an empty cache when storage keeps failing", async () => {
+it("stops retrying when storage keeps failing and opens with the identity's own cache", async () => {
   vi.useFakeTimers();
   const getItem = vi.mocked(AsyncStorage.getItem);
   const original = getItem.getMockImplementation();
@@ -107,6 +148,7 @@ it("opens on an empty cache when storage keeps failing", async () => {
     expect(screen.getByText("app")).toBeTruthy();
     expect(useMeasurementFlowStore.getState().experimentId).toBeUndefined();
     expect(ownerReads().length - before).toBe(3);
+    expect(cacheFor).toHaveBeenLastCalledWith("signed-out");
   } finally {
     if (original) getItem.mockImplementation(original);
     vi.useRealTimers();
