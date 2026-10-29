@@ -39100,6 +39100,9 @@
                             "isAnswered": {
                               "type": "boolean",
                               "default": false
+                            },
+                            "simulated": {
+                              "type": "boolean"
                             }
                           },
                           "required": [
@@ -39626,6 +39629,9 @@
                               "isAnswered": {
                                 "type": "boolean",
                                 "default": false
+                              },
+                              "simulated": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -40225,6 +40231,9 @@
                               "isAnswered": {
                                 "type": "boolean",
                                 "default": false
+                              },
+                              "simulated": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -40844,6 +40853,9 @@
                             "isAnswered": {
                               "type": "boolean",
                               "default": false
+                            },
+                            "simulated": {
+                              "type": "boolean"
                             }
                           },
                           "required": [
@@ -41352,6 +41364,9 @@
                               "isAnswered": {
                                 "type": "boolean",
                                 "default": false
+                              },
+                              "simulated": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -42108,6 +42123,9 @@
                               "isAnswered": {
                                 "type": "boolean",
                                 "default": false
+                              },
+                              "simulated": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -42712,6 +42730,9 @@
                               "isAnswered": {
                                 "type": "boolean",
                                 "default": false
+                              },
+                              "simulated": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
