@@ -1,6 +1,11 @@
 import postgres from "postgres";
 
-import { databaseUrl, seedEmail } from "../helpers.js";
+import {
+  assertSafeFixtureDatabase,
+  databaseUrl,
+  deleteFixtureOrganization,
+  seedEmail,
+} from "../helpers.js";
 
 /**
  * Shots address seeded entities by name so the manifest stays readable and
@@ -47,3 +52,33 @@ export const protocolWorkbookId = (): Promise<string> =>
       limit 1
     `,
   );
+
+export async function demoRecordingOrganization(name: string, demo: boolean): Promise<string> {
+  assertSafeFixtureDatabase();
+  const sql = postgres(databaseUrl, { connect_timeout: 2, idle_timeout: 1, max: 1 });
+  try {
+    return await sql.begin(async (tx) => {
+      const users = await tx<{ id: string }[]>`select id from users where email = ${seedEmail}`;
+      const user = users.at(0);
+      if (!user) throw new Error("Seed user missing");
+      const organizations = await tx<{ id: string }[]>`
+        insert into organizations (name, slug, type, visibility)
+        values (${name}, ${name.toLowerCase().replaceAll(" ", "-")}, ${demo ? "demo" : "research_institute"}, ${demo ? "public" : "private"})
+        on conflict (slug) do update set name = excluded.name returning id
+      `;
+      const org = organizations.at(0);
+      if (!org) throw new Error("Capture organization missing");
+      await tx`insert into organization_members (organization_id, user_id, role)
+        values (${org.id}, ${user.id}, 'owner') on conflict do nothing`;
+      await tx`insert into experiments (name, created_by, organization_id, visibility)
+        values (${demo ? "Demo photosynthesis experiment" : "Unpublished trial"}, ${user.id}, ${org.id}, ${demo ? "public" : "private"})
+        on conflict (name) do nothing`;
+      return org.id;
+    });
+  } finally {
+    await sql.end({ timeout: 1 });
+  }
+}
+
+export const clearDemoTrainingRecording = (): Promise<void> =>
+  deleteFixtureOrganization("demo-training-lab", "Demo training lab");

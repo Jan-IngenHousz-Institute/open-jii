@@ -410,8 +410,10 @@ The way out is to transfer or delete each resource.
 A platform role belongs to an account rather than to an organization, and JII
 staff hold it. The catalog is `PLATFORM_ROLES` in
 `packages/database/src/postgres/platform-roles.ts`; today it holds
-`platform_admin`, which can do nothing yet. Holding a platform role gives no
-role in any organization, and no organization role gives a platform role.
+`platform_admin`. A platform admin can read the roster of platform admins, and
+can set or remove the Demo type on an organization they already own. Holding a
+platform role gives no role in any organization and no access to any resource,
+and no organization role gives a platform role.
 [ADR: Platform roles are granted outside the app](/developers/design-decisions/platform-roles-adr)
 records why.
 
@@ -434,8 +436,11 @@ grant to an inactive account. A revoke may clear a role left on a deleted or
 banned account, so the review can remove it. The row's actor is the account the
 engineer names. Beside it are what GitHub vouches for: the run, who started it,
 and, for a rerun, the attempt and who started that attempt.
-`hasPlatformRole` and `isPlatformAdmin` in `packages/auth/src/platform-admin.ts`
-read the roles on every call, never the cookie-cached session, so a revoked role
+Better Auth's hooks read held roles through `hasPlatformRole` and
+`isPlatformAdmin` in `packages/auth/src/platform-admin.ts`, and the backend
+through `AuthorizationService.hasPlatformRole`. A backend route that needs a role
+declares `@RequiresPlatformRole(...)`, a guard beside `@CanCreateInOrg`. Every
+read goes to the database, never the cookie-cached session, so a revoked role
 stops working on the next request. An API key or an anonymous session never
 holds a platform role.
 
@@ -465,6 +470,7 @@ CloudWatch log group, which the run's summary names.
 | Shared role/action matrices               | `packages/auth/src/access.ts`                                                                   |
 | Platform role catalog and writer          | `packages/database/src/postgres/platform-roles.ts`, `packages/database/src/platform-roles.ts`   |
 | Platform role checks, admin plugin        | `packages/auth/src/platform-admin.ts`, `packages/auth/src/admin/plugin.ts`                      |
+| Platform role route guard                 | `apps/backend/src/authorization/requires-platform-role.guard.ts`                                |
 | Platform role workflow                    | `.github/workflows/platform-roles.yml`                                                          |
 | Personal organization provisioning        | `packages/database/src/postgres/organizations.ts`                                               |
 | Resource ownership and grants             | `packages/database/src/postgres/schema.ts`, `packages/database/src/postgres/resource-grants.ts` |

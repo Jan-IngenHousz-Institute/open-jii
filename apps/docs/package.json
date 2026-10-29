@@ -20,7 +20,8 @@
     "start": "next start -p 3010",
     "sync-specs": "pnpm --filter @repo/api generate:openapi && node scripts/sync-specs.mjs",
     "validate:deployment": "node scripts/validate-deployment.mjs",
-    "validate:local": "node scripts/validate-local.mjs"
+    "validate:local": "node scripts/validate-local.mjs",
+    "test": "node --test scripts/check-media-references.test.mjs"
   },
   "dependencies": {
     "fumadocs-core": "^16.11.5",

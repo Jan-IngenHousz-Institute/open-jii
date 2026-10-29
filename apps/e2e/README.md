@@ -14,6 +14,9 @@ pnpm --filter database db:seed
 pnpm dev:fb
 ```
 
+The seed makes the seed user a platform admin, which `specs/platform-admins.spec.ts` and the
+platform admin and Demo organization captures need.
+
 In another terminal, once both applications are ready, run the suite:
 
 ```sh
@@ -37,6 +40,8 @@ page before authentication starts.
 - `specs/chrome-refresh.spec.ts` covers the authenticated application shell and experiment chrome.
 - `specs/workbook-search.spec.ts` covers server-side workbook search and attachment.
 - `specs/registration.spec.ts` covers a new account registering and landing on home.
+- `specs/platform-admins.spec.ts` covers the platform admin roster and creating a Demo
+  organization. It removes the organization it creates before and after each attempt.
 - `scripts/record-maintenance.ts` records maintenance-mode screenshots and video but is not a test.
 - `scripts/capture-docs-media.ts` stages documentation screenshots and recordings for `apps/docs`.
 - `scripts/capture-ticket-screens.ts` captures the screens a Linear ticket carries.
@@ -55,7 +60,8 @@ pnpm --filter @repo/e2e capture-docs-media --theme dark
 ```
 
 Captures are staged in `apps/docs/.capture/web` and are never published automatically. `ffmpeg` is
-required for the scale, metadata strip and encode.
+required for the scale, metadata strip and encode. The `platform-admin-roster` and
+`demo-organization-creation` recordings act as the seed user, whom the seed makes a platform admin.
 
 ## Ticket screens
 

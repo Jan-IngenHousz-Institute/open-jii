@@ -1,3 +1,4 @@
+import { DocsVideo } from "@/components/docs-video";
 import { Mermaid } from "@/components/mermaid";
 import { PlatformCta } from "@/components/platform-cta";
 import { PlatformLink } from "@/components/platform-link";
@@ -8,6 +9,7 @@ import type { MDXComponents } from "mdx/types";
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
     ...defaultMdxComponents,
+    DocsVideo,
     Mermaid,
     PlatformCta,
     PlatformLink,

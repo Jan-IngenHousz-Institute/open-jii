@@ -21,6 +21,22 @@ export function assertSafeFixtureDatabase(url = databaseUrl): void {
   );
 }
 
+async function withFixtureDatabase<T>(run: (sql: postgres.Sql) => Promise<T>): Promise<T> {
+  assertSafeFixtureDatabase();
+  const sql = postgres(databaseUrl, { connect_timeout: 2, idle_timeout: 1, max: 1 });
+  try {
+    return await run(sql);
+  } finally {
+    await sql.end({ timeout: 1 });
+  }
+}
+
+export async function deleteFixtureOrganization(slug: string, name: string): Promise<void> {
+  await withFixtureDatabase(
+    (sql) => sql`delete from organizations where slug = ${slug} and name = ${name}`,
+  );
+}
+
 export async function dismissCookieBanner(page: Page): Promise<void> {
   const button = page.getByRole("button", { name: "Reject all" });
   if (await button.isVisible().catch(() => false)) await button.click();
