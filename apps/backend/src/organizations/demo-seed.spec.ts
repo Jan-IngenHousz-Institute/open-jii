@@ -8,6 +8,12 @@ import { zWorkbookCellArrayInput } from "@repo/api/domains/workbook/workbook-cel
 import { zEntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 import {
   and,
+  calibrationDefinitions,
+  calibrationRuns,
+  deviceCalibrations,
+  deviceGroupMembers,
+  deviceGroups,
+  iotDevices,
   eq,
   inArray,
   experimentDashboards,
@@ -197,12 +203,21 @@ describe("Local demo seed", () => {
         .object({ expectedOutput: z.record(z.string(), z.number()) })
         .parse(JSON.parse(await readFile(resolve(folder, "manifest.json"), "utf8")));
       const chartBody = zCreateExperimentVisualizationBody.parse(chart);
+      expect(chartBody.dataConfig.tableName).toBe(macro.id);
+      expect(chartBody.dataConfig.dataSources.map((source) => source.tableName)).toEqual([
+        macro.id,
+        macro.id,
+      ]);
       expect(chartBody.dataConfig.dataSources[1].columnName).toBe(
         Object.keys(manifest.expectedOutput)[0],
       );
       const dashboardBody = zCreateExperimentDashboardBody.parse(dashboard);
       const widget = dashboardBody.widgets?.find((entry) => entry.type === "visualization");
       expect(widget?.config).toMatchObject({ visualizationId: chart.id });
+      expect(dashboardBody.widgets?.map((entry) => entry.id)).toEqual([
+        sensor.introWidgetId,
+        sensor.chartWidgetId,
+      ]);
       expect(dashboard.experimentId).toBe(experiment.id);
       expect(chart.experimentId).toBe(experiment.id);
       await app.database.update(workbooks).set({ cells: [] }).where(eq(workbooks.id, workbook.id));
@@ -216,6 +231,7 @@ describe("Local demo seed", () => {
 
   it("restores renamed and ordinary/private fixtures, removing membership and request drift", async () => {
     const { owner, newcomerId } = await fixture();
+    const dashboardsBefore = (await graph()).dashboards;
     const unrelatedId = await app.createTestUser();
     const unrelated = await app.createExperiment({
       userId: unrelatedId,
@@ -293,6 +309,11 @@ describe("Local demo seed", () => {
       { name: "openJII Demo", type: "demo", visibility: "public" },
     ]);
     expect(rows.experiments).toHaveLength(3);
+    for (const sensor of DEMO_SEED_FIXTURES) {
+      expect(findRow(rows.dashboards, sensor.dashboardId).widgets).toEqual(
+        findRow(dashboardsBefore, sensor.dashboardId).widgets,
+      );
+    }
     expect(rows.protocols.every((row) => row.visibility === "public")).toBe(true);
     const members = await app.database
       .select()
@@ -313,7 +334,122 @@ describe("Local demo seed", () => {
     ).toHaveLength(12);
   });
 
-  it("rolls back the whole trigger-protected graph when a later family conflicts", async () => {
+  it("clears private devices, groups, calibration definitions and their dependent rows before reseeding", async () => {
+    const { owner, newcomerId } = await fixture();
+    const [device] = await app.database
+      .insert(iotDevices)
+      .values({
+        thingName: "demo-local-device",
+        thingArn: "arn:local:demo-local-device",
+        serialNumber: "demo-local-serial",
+        deviceType: "multispeq",
+        organizationId: DEMO_ORGANIZATION_ID,
+        visibility: "private",
+        createdBy: owner.id,
+      })
+      .returning();
+    const [group] = await app.database
+      .insert(deviceGroups)
+      .values({
+        name: "Local demo group",
+        organizationId: DEMO_ORGANIZATION_ID,
+        visibility: "private",
+        createdBy: owner.id,
+      })
+      .returning();
+    await app.database.insert(deviceGroupMembers).values({
+      groupId: group.id,
+      deviceId: device.id,
+      addedBy: owner.id,
+    });
+    const [definition] = await app.database
+      .insert(calibrationDefinitions)
+      .values({
+        name: "Local demo calibration",
+        family: "multispeq",
+        captureProcedure: [],
+        script: "return {}",
+        outputSchema: {},
+        organizationId: DEMO_ORGANIZATION_ID,
+        visibility: "private",
+        createdBy: owner.id,
+      })
+      .returning();
+    const [run] = await app.database
+      .insert(calibrationRuns)
+      .values({
+        definitionId: definition.id,
+        deviceId: device.id,
+        requestedBy: owner.id,
+        inputSource: "bench_wizard",
+      })
+      .returning();
+    await app.database.insert(deviceCalibrations).values({
+      deviceId: device.id,
+      runId: run.id,
+      blocks: {},
+      approvedBy: owner.id,
+    });
+    const resourceIds = [device.id, group.id, definition.id];
+    for (const [resourceType, resourceId] of [
+      ["device", device.id],
+      ["device_group", group.id],
+      ["calibration_definition", definition.id],
+    ] as const) {
+      await app.addResourceGrant({
+        resourceType,
+        resourceId,
+        granteeType: "user",
+        granteeId: owner.id,
+        role: "admin",
+      });
+      await app.database
+        .insert(resourceVisits)
+        .values({ resourceType, resourceId, userId: newcomerId });
+    }
+
+    await clearDemoContent(app.database);
+    for (const table of [
+      iotDevices,
+      deviceGroups,
+      calibrationDefinitions,
+      calibrationRuns,
+      deviceCalibrations,
+    ] as const) {
+      expect(await app.database.select({ id: table.id }).from(table)).toHaveLength(0);
+    }
+    expect(await app.database.select().from(deviceGroupMembers)).toHaveLength(0);
+    expect(
+      await app.database
+        .select()
+        .from(resourceGrants)
+        .where(inArray(resourceGrants.resourceId, resourceIds)),
+    ).toHaveLength(0);
+    expect(
+      await app.database
+        .select()
+        .from(resourceVisits)
+        .where(inArray(resourceVisits.resourceId, resourceIds)),
+    ).toHaveLength(0);
+    await seedDemoContent(owner, app.database);
+    expect((await graph()).experiments).toHaveLength(3);
+  });
+
+  it("rejects a private protocol in the seeded Demo organization", async () => {
+    const { owner } = await fixture();
+    await expect(
+      app.database.insert(protocols).values({
+        name: "Private demo protocol",
+        family: "multispeq",
+        code: [],
+        organizationId: DEMO_ORGANIZATION_ID,
+        visibility: "private",
+        createdBy: owner.id,
+      }),
+    ).rejects.toMatchObject({ cause: { code: "23514" } });
+  });
+
+  it("rolls back the whole graph when a later family conflicts", async () => {
     const ownerId = await app.createTestUser();
     const [owner] = await app.database.select().from(users).where(eq(users.id, ownerId));
     await app.database.insert(macros).values({

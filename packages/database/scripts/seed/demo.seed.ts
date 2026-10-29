@@ -9,9 +9,14 @@ import { zJsonValue } from "@repo/api/domains/protocol/protocol.schema";
 import { zWorkbookCellArrayInput } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { zEntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 
-import { db, type DatabaseInstance } from "../../src/postgres/database";
+import type { DatabaseInstance } from "../../src/postgres/database";
+import { db } from "../../src/postgres/database";
 import { upsertGrant } from "../../src/postgres/resource-grants";
 import {
+  calibrationDefinitions,
+  calibrationRuns,
+  deviceGroups,
+  iotDevices,
   experimentDashboards,
   experimentMembers,
   experiments,
@@ -58,6 +63,7 @@ async function loadDefinitions() {
   );
 }
 
+/** Clear with clearDemoContent before calling again; inserts are not idempotent on their own. */
 export async function seedDemoContent(user: SeedUser, database: DatabaseInstance = db) {
   const definitions = await loadDefinitions();
   await database.transaction(async (tx) => {
@@ -174,10 +180,10 @@ export async function seedDemoContent(user: SeedUser, database: DatabaseInstance
         chartType: "line",
         config: { mode: "lines", xAxisType: "date", showLegend: false },
         dataConfig: {
-          tableName: "raw_data",
+          tableName: sensor.macroId,
           dataSources: [
-            { tableName: "raw_data", columnName: "timestamp", role: "x" },
-            { tableName: "raw_data", columnName: metric, role: "y" },
+            { tableName: sensor.macroId, columnName: "timestamp", role: "x" },
+            { tableName: sensor.macroId, columnName: metric, role: "y" },
           ],
         },
       });
@@ -193,7 +199,7 @@ export async function seedDemoContent(user: SeedUser, database: DatabaseInstance
         description,
         widgets: [
           {
-            id: crypto.randomUUID(),
+            id: sensor.introWidgetId,
             type: "richText",
             layout: { col: 0, row: 0, colSpan: 12, rowSpan: 2 },
             config: {
@@ -201,7 +207,7 @@ export async function seedDemoContent(user: SeedUser, database: DatabaseInstance
             },
           },
           {
-            id: crypto.randomUUID(),
+            id: sensor.chartWidgetId,
             type: "visualization",
             layout: { col: 0, row: 2, colSpan: 12, rowSpan: 5 },
             config: { visualizationId: sensor.chartId, showTitle: true },
@@ -284,11 +290,34 @@ export async function clearDemoContent(database: DatabaseInstance = db) {
           ),
         ),
       );
+    const definitions = await tx
+      .select({ id: calibrationDefinitions.id })
+      .from(calibrationDefinitions)
+      .where(eq(calibrationDefinitions.organizationId, DEMO_ORGANIZATION_ID));
+    const groups = await tx
+      .select({ id: deviceGroups.id })
+      .from(deviceGroups)
+      .where(eq(deviceGroups.organizationId, DEMO_ORGANIZATION_ID));
+    const devices = await tx
+      .select({ id: iotDevices.id })
+      .from(iotDevices)
+      .where(eq(iotDevices.organizationId, DEMO_ORGANIZATION_ID));
+    if (definitions.length > 0) {
+      await tx.delete(calibrationRuns).where(
+        inArray(
+          calibrationRuns.definitionId,
+          definitions.map((row) => row.id),
+        ),
+      );
+    }
     for (const [resourceType, rows] of [
       ["experiment", exp],
       ["workbook", wb],
       ["protocol", proto],
       ["macro", macro],
+      ["calibration_definition", definitions],
+      ["device_group", groups],
+      ["device", devices],
     ] as const) {
       const ids = rows.map((row) => row.id);
       if (ids.length === 0) continue;
@@ -349,6 +378,27 @@ export async function clearDemoContent(database: DatabaseInstance = db) {
         inArray(
           macros.id,
           macro.map((row) => row.id),
+        ),
+      );
+    if (definitions.length > 0)
+      await tx.delete(calibrationDefinitions).where(
+        inArray(
+          calibrationDefinitions.id,
+          definitions.map((row) => row.id),
+        ),
+      );
+    if (groups.length > 0)
+      await tx.delete(deviceGroups).where(
+        inArray(
+          deviceGroups.id,
+          groups.map((row) => row.id),
+        ),
+      );
+    if (devices.length > 0)
+      await tx.delete(iotDevices).where(
+        inArray(
+          iotDevices.id,
+          devices.map((row) => row.id),
         ),
       );
     await tx

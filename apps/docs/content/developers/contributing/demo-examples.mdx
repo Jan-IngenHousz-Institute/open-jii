@@ -9,14 +9,17 @@ before connecting a sensor or a lakehouse.
 
 ## Seed the examples
 
-After setting up the local database, run:
+After setting up the local database, build the shared packages and seed the examples.
+`db:seed` needs the built `@repo/api` schemas.
 
 ```bash
+pnpm build:packages
 pnpm --filter database db:seed
 pnpm dev:fb
 ```
 
-Seeding replaces the seed-owned rows, including previous edits to these examples.
+Seeding replaces every resource in openJII Demo, including resources you created
+there and previous edits to these examples.
 Use the local database only. Running the seed twice leaves one Demo organization
 and one experiment per sensor. It also restores a renamed or retyped demo fixture.
 The organization and experiment IDs are named exports in
