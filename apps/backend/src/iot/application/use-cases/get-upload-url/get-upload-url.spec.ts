@@ -70,6 +70,15 @@ describe("GetIotUploadUrlUseCase", () => {
     expect(signer).not.toHaveBeenCalled();
   });
 
+  it("refuses a guest upload outside Demo even when called without the HTTP guard", async () => {
+    const guest = await testApp.createTestUser({ isAnonymous: true, createProfile: false });
+    const signer = vi.spyOn(awsAdapter, "getIotUploadUrl");
+    const result = await useCase.execute(experimentId, guest, 20);
+    assertFailure(result);
+    expect(result.error.code).toBe("GUEST_ACTION_FORBIDDEN");
+    expect(signer).not.toHaveBeenCalled();
+  });
+
   it("should return failure when AWS adapter fails", async () => {
     const error = AppError.internal("S3 error", ErrorCodes.AWS_S3_PRESIGN_FAILED);
 
