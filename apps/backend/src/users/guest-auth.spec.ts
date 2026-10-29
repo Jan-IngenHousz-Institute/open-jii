@@ -32,7 +32,7 @@ import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { LAMBDA_PORT } from "../macros/core/ports/lambda.port";
 import type { LambdaPort } from "../macros/core/ports/lambda.port";
 import { TestHarness } from "../test/test-harness";
-import { GuestRepository } from "./core/repositories/guest.repository";
+import { PurgeExpiredGuestsUseCase } from "./application/use-cases/purge-expired-guests/purge-expired-guests";
 import guestAuthEndpoints from "./guest-auth-endpoints.json";
 
 const enabled = vi.fn().mockResolvedValue(true);
@@ -720,7 +720,7 @@ describe("anonymous sessions on the production auth boundary", () => {
       .update(users)
       .set({ createdAt: new Date(Date.now() - 8 * 86_400_000) })
       .where(eq(users.id, visitor.id));
-    const purged = await app.module.get(GuestRepository).purgeExpired();
+    const purged = await app.module.get(PurgeExpiredGuestsUseCase).execute();
     expect(purged.deleted).toBe(1);
     // This control proves the signed cache has not merely expired or become malformed.
     await expect(

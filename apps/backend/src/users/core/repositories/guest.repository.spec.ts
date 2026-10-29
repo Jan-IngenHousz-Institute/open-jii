@@ -1,3 +1,5 @@
+import { Logger } from "@nestjs/common";
+
 import { zExperimentContributors } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import { zOrganizationMembers } from "@repo/api/domains/organization/organization.schema";
 import {
@@ -11,7 +13,6 @@ import {
   rateLimits,
   resourceGrants,
   sessions,
-  sql,
   users,
 } from "@repo/database";
 
@@ -20,7 +21,9 @@ import { GuestGrantCleanupRepository } from "../../../sharing/core/repositories/
 import { SharingRepository } from "../../../sharing/core/repositories/sharing.repository";
 import { TestHarness } from "../../../test/test-harness";
 import { PurgeExpiredGuestsUseCase } from "../../application/use-cases/purge-expired-guests/purge-expired-guests";
+import type { GuestPurgeLimits } from "../../application/use-cases/purge-expired-guests/purge-expired-guests";
 import { GUEST_LIFETIME_MS } from "../models/guest.model";
+import type { GuestPurgeCursor } from "../models/guest.model";
 import { GuestRepository } from "./guest.repository";
 import { PlatformAdminRepository } from "./platform-admin.repository";
 import { UserRepository } from "./user.repository";
@@ -191,136 +194,251 @@ describe("guest quotas and guarded purge", () => {
     expect(await repository.takeQuota(expired.id, "upload")).toMatchObject({ allowed: false });
   });
 
-  it("purges only old guests and stale anonymous address counters, preserving the Demo graph", async () => {
-    const demo = await app.createOrganization(undefined, { type: "demo", visibility: "public" });
-    const now = new Date();
-    const expired = await createGuest(new Date(now.getTime() - GUEST_LIFETIME_MS - 1));
-    const boundary = await createGuest(new Date(now.getTime() - GUEST_LIFETIME_MS));
-    const recent = await createGuest();
-    const real = await app.createTestUser();
-    await db.update(users).set({ createdAt: expired.createdAt }).where(eq(users.id, real));
-    await db.insert(sessions).values({
-      userId: expired.id,
-      token: "expired-guest-session",
-      expiresAt: new Date(now.getTime() + 100_000),
-      ipAddress: "192.0.2.1",
-      userAgent: "Synthetic browser",
-    });
-    await db
-      .insert(guestUsage)
-      .values({ userId: expired.id, kind: "upload", windowStart: now, count: 3 });
-    await db.insert(rateLimits).values([
-      { key: "192.0.2.1|/sign-in/anonymous", count: 3, lastRequest: expired.createdAt.getTime() },
-      { key: "192.0.2.2|/sign-in/anonymous", count: 2, lastRequest: now.getTime() },
-      { key: "192.0.2.1|/sign-in/email-otp", count: 2, lastRequest: expired.createdAt.getTime() },
-    ]);
-    expect(await repository.purgeExpired(now)).toEqual({
-      skipped: false,
-      deleted: 1,
-      rateLimitRowsDeleted: 1,
-      blocked: [],
-    });
-    expect(await db.select().from(users).where(eq(users.id, expired.id))).toHaveLength(0);
-    expect(await db.select().from(sessions).where(eq(sessions.userId, expired.id))).toHaveLength(0);
-    expect(
-      await db.select().from(guestUsage).where(eq(guestUsage.userId, expired.id)),
-    ).toHaveLength(0);
-    expect(await db.select().from(organizations).where(eq(organizations.id, demo))).toHaveLength(1);
-    for (const id of [boundary.id, recent.id, real]) {
-      expect(await db.select().from(users).where(eq(users.id, id))).toHaveLength(1);
-    }
-    expect((await db.select().from(rateLimits)).map(({ key }) => key).sort()).toEqual([
-      "192.0.2.1|/sign-in/email-otp",
-      "192.0.2.2|/sign-in/anonymous",
-    ]);
-    expect(await repository.purgeExpired(now)).toEqual({
-      skipped: false,
-      deleted: 0,
-      rateLimitRowsDeleted: 0,
-      blocked: [],
-    });
-  });
-
-  it("skips when another backend connection holds the transaction advisory lock", async () => {
-    const other = createSecondaryDatabase();
-    try {
-      await other.database.transaction(async (tx) => {
-        await tx
-          .select({ acquired: sql`pg_advisory_xact_lock(2234)` })
-          .from(sql`generate_series(1, 1)`);
-        expect(await repository.purgeExpired()).toEqual({
-          skipped: true,
-          deleted: 0,
-          rateLimitRowsDeleted: 0,
-          blocked: [],
-        });
-      });
-      expect(await repository.purgeExpired()).toMatchObject({ skipped: false });
-    } finally {
-      await other.close();
-    }
-  });
-
-  it("blocks and signals once for an unexpected guest-owned resource, without partial deletion or retry", async () => {
-    const demo = await app.createOrganization(undefined, { type: "demo", visibility: "public" });
-    const guest = await createGuest(new Date(Date.now() - GUEST_LIFETIME_MS - 1));
-    const [experiment] = await db
-      .insert(experiments)
-      .values({
-        name: "Synthetic preserved experiment",
-        createdBy: guest.id,
-        organizationId: demo,
-        visibility: "public",
-      })
-      .returning();
+  describe("nightly purge", () => {
     const signal = { report: vi.fn() };
-    const purge = new PurgeExpiredGuestsUseCase(repository, signal);
-    const deletable = await createGuest(new Date(Date.now() - GUEST_LIFETIME_MS - 1));
-    await db.insert(resourceGrants).values([
-      {
-        resourceType: "experiment",
-        resourceId: experiment.id,
-        granteeType: "user",
-        granteeId: guest.id,
-        role: "viewer",
-      },
-      {
-        resourceType: "experiment",
-        resourceId: experiment.id,
-        granteeType: "user",
-        granteeId: deletable.id,
-        role: "viewer",
-      },
-    ]);
-    await db.insert(sessions).values([
-      { userId: guest.id, token: "blocked-session", expiresAt: new Date(Date.now() + 10000) },
-      { userId: deletable.id, token: "deletable-session", expiresAt: new Date(Date.now() + 10000) },
-    ]);
-    await db.insert(rateLimits).values({
-      key: "192.0.2.9|/sign-in/anonymous",
-      count: 1,
-      lastRequest: guest.createdAt.getTime(),
+    let purge: PurgeExpiredGuestsUseCase;
+    const limits = (overrides: Partial<GuestPurgeLimits> = {}): GuestPurgeLimits => ({
+      batchSize: 100,
+      budgetMs: 60_000,
+      clock: Date.now,
+      ...overrides,
     });
-    expect(await purge.execute()).toEqual({ skipped: false, deleted: 1, rateLimitRowsDeleted: 1 });
-    expect(await db.select().from(users).where(eq(users.id, deletable.id))).toHaveLength(0);
-    expect(await db.select().from(sessions).where(eq(sessions.userId, deletable.id))).toHaveLength(
-      0,
-    );
-    expect(await db.select().from(sessions).where(eq(sessions.userId, guest.id))).toHaveLength(1);
-    expect(await db.select().from(resourceGrants)).toMatchObject([{ granteeId: guest.id }]);
-    expect(await db.select().from(resourceGrants)).toHaveLength(1);
-    expect(await db.select().from(rateLimits)).toHaveLength(0);
-    expect(signal.report).toHaveBeenCalledExactlyOnceWith(expect.anything(), {
-      guest_id: guest.id,
-      blocking_table: "experiments",
-      operation: "purgeExpiredGuests",
-      error_code: "GUEST_PURGE_FAILED",
-      $exception_fingerprint: "guest-purge:blocked",
+    // Ordered creation times, so the keyset visits guests in a known order.
+    const expiredAt = (offset: number) =>
+      new Date(Date.now() - GUEST_LIFETIME_MS - 60_000 + offset);
+
+    beforeEach(() => {
+      signal.report.mockClear();
+      purge = new PurgeExpiredGuestsUseCase(repository, signal);
     });
-    expect(signal.report.mock.calls[0][0]).toMatchObject({ cause: { code: "23503" } });
-    expect(await db.select().from(users).where(eq(users.id, guest.id))).toHaveLength(1);
-    expect(
-      await db.select().from(experiments).where(eq(experiments.id, experiment.id)),
-    ).toHaveLength(1);
+
+    it("purges only old guests and stale anonymous address counters, preserving the Demo graph", async () => {
+      const demo = await app.createOrganization(undefined, { type: "demo", visibility: "public" });
+      const now = new Date();
+      const expired = await createGuest(new Date(now.getTime() - GUEST_LIFETIME_MS - 1));
+      const boundary = await createGuest(new Date(now.getTime() - GUEST_LIFETIME_MS));
+      const recent = await createGuest();
+      const real = await app.createTestUser();
+      await db.update(users).set({ createdAt: expired.createdAt }).where(eq(users.id, real));
+      await db.insert(sessions).values({
+        userId: expired.id,
+        token: "expired-guest-session",
+        expiresAt: new Date(now.getTime() + 100_000),
+        ipAddress: "192.0.2.1",
+        userAgent: "Synthetic browser",
+      });
+      await db
+        .insert(guestUsage)
+        .values({ userId: expired.id, kind: "upload", windowStart: now, count: 3 });
+      await db.insert(rateLimits).values([
+        { key: "192.0.2.1|/sign-in/anonymous", count: 3, lastRequest: expired.createdAt.getTime() },
+        { key: "192.0.2.2|/sign-in/anonymous", count: 2, lastRequest: now.getTime() },
+        { key: "192.0.2.1|/sign-in/email-otp", count: 2, lastRequest: expired.createdAt.getTime() },
+      ]);
+      expect(await purge.execute(now, limits())).toEqual({
+        deleted: 1,
+        blocked: 0,
+        deferred: 0,
+        batches: 1,
+        rateLimitRowsDeleted: 1,
+        complete: true,
+      });
+      expect(await db.select().from(users).where(eq(users.id, expired.id))).toHaveLength(0);
+      expect(await db.select().from(sessions).where(eq(sessions.userId, expired.id))).toHaveLength(
+        0,
+      );
+      expect(
+        await db.select().from(guestUsage).where(eq(guestUsage.userId, expired.id)),
+      ).toHaveLength(0);
+      expect(await db.select().from(organizations).where(eq(organizations.id, demo))).toHaveLength(
+        1,
+      );
+      for (const id of [boundary.id, recent.id, real]) {
+        expect(await db.select().from(users).where(eq(users.id, id))).toHaveLength(1);
+      }
+      expect((await db.select().from(rateLimits)).map(({ key }) => key).sort()).toEqual([
+        "192.0.2.1|/sign-in/email-otp",
+        "192.0.2.2|/sign-in/anonymous",
+      ]);
+      expect(await purge.execute(now, limits())).toMatchObject({
+        deleted: 0,
+        rateLimitRowsDeleted: 0,
+        complete: true,
+      });
+      expect(signal.report).not.toHaveBeenCalled();
+    });
+
+    it("splits the work between two workers on independent connections, each guest once", async () => {
+      const guests = await Promise.all(
+        Array.from({ length: 30 }, (_, i) => createGuest(expiredAt(i))),
+      );
+      const other = createSecondaryDatabase();
+      try {
+        const second = new GuestRepository(other.database, new GuestGrantCleanupRepository());
+        const cutoff = new Date(Date.now() - GUEST_LIFETIME_MS);
+        const work = async (worker: GuestRepository) => {
+          const deleted: string[] = [];
+          let cursor: GuestPurgeCursor | null = null;
+          for (;;) {
+            const batch = await worker.purgeExpiredBatch(cutoff, cursor, 4);
+            deleted.push(...batch.deletedIds);
+            expect(batch).toMatchObject({ blocked: [], deferred: [] });
+            if (!batch.cursor) return deleted;
+            cursor = batch.cursor;
+          }
+        };
+        const [first, last] = await Promise.all([work(repository), work(second)]);
+        expect(first.filter((id) => last.includes(id))).toEqual([]);
+        expect([...first, ...last].sort()).toEqual(guests.map(({ id }) => id).sort());
+        expect(await repository.countExpired(cutoff)).toBe(0);
+      } finally {
+        await other.close();
+      }
+    });
+
+    it("signals a RESTRICT-blocked guest once and still purges its batch and the next", async () => {
+      const demo = await app.createOrganization(undefined, { type: "demo", visibility: "public" });
+      const guest = await createGuest(expiredAt(0));
+      const deletable = await Promise.all([1, 2, 3].map((i) => createGuest(expiredAt(i))));
+      const [experiment] = await db
+        .insert(experiments)
+        .values({
+          name: "Synthetic preserved experiment",
+          createdBy: guest.id,
+          organizationId: demo,
+          visibility: "public",
+        })
+        .returning();
+      await db.insert(resourceGrants).values(
+        [guest, deletable[0]].map(({ id }) => ({
+          resourceType: "experiment" as const,
+          resourceId: experiment.id,
+          granteeType: "user" as const,
+          granteeId: id,
+          role: "viewer",
+        })),
+      );
+      await db.insert(sessions).values([
+        { userId: guest.id, token: "blocked-session", expiresAt: new Date(Date.now() + 10000) },
+        {
+          userId: deletable[0].id,
+          token: "deletable-session",
+          expiresAt: new Date(Date.now() + 10000),
+        },
+      ]);
+      await db.insert(rateLimits).values({
+        key: "192.0.2.9|/sign-in/anonymous",
+        count: 1,
+        lastRequest: guest.createdAt.getTime(),
+      });
+      expect(await purge.execute(new Date(), limits({ batchSize: 2 }))).toEqual({
+        deleted: 3,
+        blocked: 1,
+        deferred: 0,
+        batches: 3,
+        rateLimitRowsDeleted: 1,
+        complete: true,
+      });
+      for (const { id } of deletable) {
+        expect(await db.select().from(users).where(eq(users.id, id))).toHaveLength(0);
+      }
+      expect(
+        await db.select().from(sessions).where(eq(sessions.userId, deletable[0].id)),
+      ).toHaveLength(0);
+      expect(await db.select().from(sessions).where(eq(sessions.userId, guest.id))).toHaveLength(1);
+      expect(await db.select().from(resourceGrants)).toMatchObject([{ granteeId: guest.id }]);
+      expect(await db.select().from(resourceGrants)).toHaveLength(1);
+      expect(signal.report).toHaveBeenCalledExactlyOnceWith(expect.anything(), {
+        guest_id: guest.id,
+        blocking_table: "experiments",
+        operation: "purgeExpiredGuests",
+        error_code: "GUEST_PURGE_FAILED",
+        $exception_fingerprint: "guest-purge:blocked",
+      });
+      expect(signal.report.mock.calls[0][0]).toMatchObject({ cause: { code: "23503" } });
+      expect(await db.select().from(users).where(eq(users.id, guest.id))).toHaveLength(1);
+      expect(
+        await db.select().from(experiments).where(eq(experiments.id, experiment.id)),
+      ).toHaveLength(1);
+    });
+
+    it("skips a guest whose row a quota call holds, without waiting on it", async () => {
+      const held = await createGuest(expiredAt(0));
+      const others = await Promise.all([1, 2].map((i) => createGuest(expiredAt(i))));
+      const other = createSecondaryDatabase();
+      try {
+        await other.database.transaction(async (tx) => {
+          await tx.select().from(users).where(eq(users.id, held.id)).for("update");
+          // Finishing while the lock is still held is the proof: a wait would last until release.
+          expect(await purge.execute(new Date(), limits())).toMatchObject({
+            deleted: 2,
+            deferred: 0,
+            complete: true,
+          });
+        });
+      } finally {
+        await other.close();
+      }
+      expect(await db.select().from(users).where(eq(users.id, held.id))).toHaveLength(1);
+      for (const { id } of others) {
+        expect(await db.select().from(users).where(eq(users.id, id))).toHaveLength(0);
+      }
+      expect(signal.report).not.toHaveBeenCalled();
+    });
+
+    it("defers a guest behind a held session lock to the next night without signalling", async () => {
+      const waiting = await createGuest(expiredAt(0));
+      const deletable = await createGuest(expiredAt(1));
+      const [session] = await db
+        .insert(sessions)
+        .values({
+          userId: waiting.id,
+          token: "held-session",
+          expiresAt: new Date(Date.now() + 1e4),
+        })
+        .returning();
+      const other = createSecondaryDatabase();
+      try {
+        await other.database.transaction(async (tx) => {
+          await tx.select().from(sessions).where(eq(sessions.id, session.id)).for("update");
+          expect(await purge.execute(new Date(), limits())).toMatchObject({
+            deleted: 1,
+            deferred: 1,
+            blocked: 0,
+          });
+        });
+      } finally {
+        await other.close();
+      }
+      expect(await db.select().from(users).where(eq(users.id, waiting.id))).toHaveLength(1);
+      expect(await db.select().from(users).where(eq(users.id, deletable.id))).toHaveLength(0);
+      expect(signal.report).not.toHaveBeenCalled();
+    }, 15_000);
+
+    it("stops on its time budget and logs the cursor and backlog", async () => {
+      const guests = await Promise.all([0, 1, 2].map((i) => createGuest(expiredAt(i))));
+      const warn = vi.spyOn(Logger.prototype, "warn");
+      try {
+        expect(await purge.execute(new Date(), limits({ batchSize: 1, budgetMs: 0 }))).toEqual({
+          deleted: 1,
+          blocked: 0,
+          deferred: 0,
+          batches: 1,
+          rateLimitRowsDeleted: 0,
+          complete: false,
+        });
+        expect(warn).toHaveBeenCalledWith(
+          expect.objectContaining({
+            msg: "Guest purge stopped on its time budget",
+            cursor: expect.objectContaining({ id: guests[0].id }) as unknown,
+            backlog: 2,
+          }),
+        );
+      } finally {
+        warn.mockRestore();
+      }
+      expect(await db.select().from(users).where(eq(users.id, guests[0].id))).toHaveLength(0);
+      expect(await db.select().from(users).where(eq(users.id, guests[2].id))).toHaveLength(1);
+    });
   });
 });

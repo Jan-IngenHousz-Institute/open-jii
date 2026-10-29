@@ -2,15 +2,43 @@ import { Inject, Injectable } from "@nestjs/common";
 
 import { GUEST_HOURLY_LIMIT } from "@repo/api/shared/guest";
 import { deleteStaleAnonymousRateLimits } from "@repo/auth/guest-retention";
-import { and, eq, guestUsage, gt, inArray, lt, sessions, sql, users } from "@repo/database";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  guestUsage,
+  gt,
+  inArray,
+  lt,
+  or,
+  sessions,
+  sql,
+  users,
+} from "@repo/database";
 import type { DatabaseInstance, DbOrTx } from "@repo/database";
 
+import {
+  FOREIGN_KEY_VIOLATION,
+  LOCK_NOT_AVAILABLE,
+  postgresErrorCode,
+} from "../../../common/utils/postgres-error";
 import { GUEST_GRANT_CLEANUP_PORT } from "../../../sharing/core/ports/guest-grant-cleanup.port";
 import type { GuestGrantCleanupPort } from "../../../sharing/core/ports/guest-grant-cleanup.port";
 import { GUEST_LIFETIME_MS } from "../models/guest.model";
-import type { GuestPurgeBatch, GuestQuotaDecision, GuestQuotaKind } from "../models/guest.model";
+import type {
+  GuestPurgeBatch,
+  GuestPurgeCursor,
+  GuestQuotaDecision,
+  GuestQuotaKind,
+} from "../models/guest.model";
 import type { GuestDirectoryPort } from "../ports/guest-directory.port";
 import type { GuestIdentityPort } from "../ports/guest-identity.port";
+
+function isRetriedAlone(error: unknown): boolean {
+  const code = postgresErrorCode(error);
+  return code === FOREIGN_KEY_VIOLATION || code === LOCK_NOT_AVAILABLE;
+}
 
 @Injectable()
 export class GuestRepository implements GuestIdentityPort, GuestDirectoryPort {
@@ -83,38 +111,90 @@ export class GuestRepository implements GuestIdentityPort, GuestDirectoryPort {
     });
   }
 
-  async purgeExpired(now = new Date()): Promise<GuestPurgeBatch> {
+  /**
+   * Purges up to `limit` expired guests after `after`, in one short transaction. Rows another
+   * transaction holds are skipped and stay for the next night, so concurrent runs share the
+   * work. The cursor passes every account the batch saw, deleted or not.
+   */
+  async purgeExpiredBatch(
+    cutoff: Date,
+    after: GuestPurgeCursor | null,
+    limit: number,
+  ): Promise<GuestPurgeBatch> {
     return this.database.transaction(async (tx) => {
-      const [lock] = await tx
-        .select({ acquired: sql<boolean>`pg_try_advisory_xact_lock(2234)` })
-        .from(sql`generate_series(1, 1)`);
-      if (!lock.acquired)
-        return { skipped: true, deleted: 0, rateLimitRowsDeleted: 0, blocked: [] };
-      const cutoff = new Date(now.getTime() - GUEST_LIFETIME_MS);
+      await tx.execute(sql`SET LOCAL lock_timeout = '2s'`);
       const expired = await tx
-        .select({ id: users.id })
+        .select({ id: users.id, createdAt: sql<string>`${users.createdAt}::text` })
         .from(users)
-        .where(and(eq(users.isAnonymous, true), lt(users.createdAt, cutoff)))
-        .for("update");
-      let deleted = 0;
-      const blocked: GuestPurgeBatch["blocked"] = [];
-      for (const guest of expired) {
+        .where(
+          and(
+            eq(users.isAnonymous, true),
+            lt(users.createdAt, cutoff),
+            after
+              ? or(
+                  gt(users.createdAt, sql`${after.createdAt}::timestamp`),
+                  and(
+                    eq(users.createdAt, sql`${after.createdAt}::timestamp`),
+                    gt(users.id, after.id),
+                  ),
+                )
+              : undefined,
+          ),
+        )
+        .orderBy(asc(users.createdAt), asc(users.id))
+        .limit(limit)
+        .for("update", { skipLocked: true });
+      const last = expired.at(-1);
+      const batch: GuestPurgeBatch = {
+        cursor: last ? { createdAt: last.createdAt, id: last.id } : null,
+        seen: expired.length,
+        deletedIds: [],
+        blocked: [],
+        deferred: [],
+      };
+      if (!last) return batch;
+      const ids = expired.map(({ id }) => id);
+      try {
+        batch.deletedIds = await tx.transaction((savepoint) => this.deleteGuests(savepoint, ids));
+        return batch;
+      } catch (error) {
+        if (!isRetriedAlone(error)) throw error;
+      }
+      // One account per savepoint, so a RESTRICT row or a held lock keeps only its own account.
+      for (const id of ids) {
         try {
-          // A savepoint keeps an unexpected RESTRICT row from retaining every other guest.
-          deleted += await tx.transaction(async (account) => {
-            await this.grants.removeUserGrants(account, guest.id);
-            const removed = await account
-              .delete(users)
-              .where(and(eq(users.id, guest.id), eq(users.isAnonymous, true)))
-              .returning({ id: users.id });
-            return removed.length;
-          });
+          batch.deletedIds.push(
+            ...(await tx.transaction((account) => this.deleteGuests(account, [id]))),
+          );
         } catch (error) {
-          blocked.push({ userId: guest.id, error });
+          const code = postgresErrorCode(error);
+          if (code === LOCK_NOT_AVAILABLE) batch.deferred.push(id);
+          else if (code === FOREIGN_KEY_VIOLATION) batch.blocked.push({ userId: id, error });
+          else throw error;
         }
       }
-      const rateLimitRowsDeleted = await deleteStaleAnonymousRateLimits(tx, cutoff);
-      return { skipped: false, deleted, rateLimitRowsDeleted, blocked };
+      return batch;
     });
+  }
+
+  async countExpired(cutoff: Date): Promise<number> {
+    const [row] = await this.database
+      .select({ expired: count() })
+      .from(users)
+      .where(and(eq(users.isAnonymous, true), lt(users.createdAt, cutoff)));
+    return row.expired;
+  }
+
+  deleteStaleRateLimits(cutoff: Date, limit: number): Promise<number> {
+    return deleteStaleAnonymousRateLimits(this.database, cutoff, limit);
+  }
+
+  private async deleteGuests(executor: DbOrTx, ids: string[]): Promise<string[]> {
+    await this.grants.removeUserGrants(executor, ids);
+    const removed = await executor
+      .delete(users)
+      .where(and(inArray(users.id, ids), eq(users.isAnonymous, true)))
+      .returning({ id: users.id });
+    return removed.map(({ id }) => id);
   }
 }

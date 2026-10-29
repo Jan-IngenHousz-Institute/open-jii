@@ -13,12 +13,32 @@ export interface GuestQuotaDecision {
   retryAfterSeconds: number;
 }
 
-export interface GuestPurgeResult {
-  skipped: boolean;
-  deleted: number;
-  rateLimitRowsDeleted: number;
+export const GUEST_PURGE_BATCH_SIZE = 100;
+export const GUEST_PURGE_BUDGET_MS = 5 * 60 * 1000;
+
+/** `createdAt` is Postgres text: a `Date` would drop the microseconds the keyset orders by. */
+export interface GuestPurgeCursor {
+  createdAt: string;
+  id: string;
 }
 
-export interface GuestPurgeBatch extends GuestPurgeResult {
+export interface GuestPurgeBatch {
+  /** The last account the batch saw, or null when nothing expired is left after the cursor. */
+  cursor: GuestPurgeCursor | null;
+  seen: number;
+  deletedIds: string[];
+  /** A RESTRICT row keeps the account; someone has to look. */
   blocked: { userId: string; error: unknown }[];
+  /** A lock wait ran out; the next night retries the account. */
+  deferred: string[];
+}
+
+export interface GuestPurgeResult {
+  deleted: number;
+  blocked: number;
+  deferred: number;
+  batches: number;
+  rateLimitRowsDeleted: number;
+  /** False when the run stopped on its time budget with expired accounts left. */
+  complete: boolean;
 }
