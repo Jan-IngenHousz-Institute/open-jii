@@ -523,18 +523,23 @@ jobs:
         uses: ./.github/actions/tofu/tofu-scan
 
   tofu:
-    name: OpenTofu (Plan)
+    name: OpenTofu (Plan) (${{ matrix.environment }})
     needs: detect
     runs-on: ubuntu-latest
     if: github.actor != 'dependabot[bot]' && needs.detect.outputs.has_infrastructure_changes == 'true'
     strategy:
       matrix:
-        environment: [dev, prod]
+        include:
+          - environment: dev
+            github_environment: dev
+            refresh: true
+          # prod-plan holds read-only credentials, which cannot read every resource, so the plan
+          # compares the change with the state. Drift shows in the release's plan.
+          - environment: prod
+            github_environment: prod-plan
+            refresh: false
       fail-fast: false
-    environment: ${{ matrix.environment }}
-    concurrency:
-      group: opentofu-${{ matrix.environment }}
-      cancel-in-progress: false
+    environment: ${{ matrix.github_environment }}
     permissions:
       id-token: write
       contents: read
@@ -594,3 +599,6 @@ jobs:
 
       - name: OpenTofu Plan
         uses: ./.github/actions/tofu/tofu-plan
+        with:
+          lock: false
+          refresh: ${{ matrix.refresh }}

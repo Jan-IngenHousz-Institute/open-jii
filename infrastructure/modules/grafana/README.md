@@ -204,6 +204,13 @@ and pipes it into `pnpm grafana:auth <env>`, which stores it in `tooling/devkit/
 `tooling/devkit/README.md` has the commands. The `Admin_SA` account behind the CI token rotation is
 separate and lives outside OpenTofu.
 
+### The plan account
+
+The module also creates `tofu-plan`, a Viewer service account for the read-only OpenTofu plans that
+pull requests run through the `prod-plan` GitHub environment. The Rotate Grafana Token workflow
+finds it by name, mints a 30-day token on the 1st and 15th, stores it as `GRAFANA_SERVICE_TOKEN` in
+`prod-plan`, and revokes the account's older tokens.
+
 ### Access Grafana Dashboard
 
 1. Get workspace URL:

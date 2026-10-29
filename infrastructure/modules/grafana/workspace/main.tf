@@ -42,6 +42,14 @@ resource "aws_grafana_workspace_service_account" "round" {
   workspace_id = aws_grafana_workspace.this.id
 }
 
+# Pull request plans sign in to Grafana with this account's token, which the Rotate Grafana Token
+# workflow mints and stores in the <env>-plan GitHub environment.
+resource "aws_grafana_workspace_service_account" "plan" {
+  name         = "tofu-plan"
+  grafana_role = "VIEWER"
+  workspace_id = aws_grafana_workspace.this.id
+}
+
 resource "aws_iam_role" "assume" {
   name = "${local.workspace_name}-grafana-assume"
   assume_role_policy = jsonencode({

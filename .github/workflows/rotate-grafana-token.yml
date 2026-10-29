@@ -15,12 +15,20 @@ permissions:
 
 jobs:
   rotate-token:
-    name: Rotate Grafana Token - ${{ matrix.environment }}
+    name: Rotate Grafana Token - ${{ matrix.secret_environment }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        environment: [dev, prod]
+        include:
+          - environment: dev
+            secret_environment: dev
+          - environment: prod
+            secret_environment: prod
+          # The Viewer account behind prod-plan's read-only pull request plans.
+          - environment: prod
+            secret_environment: prod-plan
+            service_account_name: tofu-plan
     environment: ${{ matrix.environment }}
 
     steps:
@@ -46,6 +54,25 @@ jobs:
           echo "WORKSPACE_ID=${{ secrets.GRAFANA_WORKSPACE_ID_PROD }}" >> $GITHUB_ENV
           echo "SERVICE_ACCOUNT_ID=${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_PROD }}" >> $GITHUB_ENV
 
+      - name: Use the named service account
+        if: matrix.service_account_name != ''
+        env:
+          ACCOUNT_NAME: ${{ matrix.service_account_name }}
+        run: |
+          ACCOUNT_ID=$(aws grafana list-workspace-service-accounts \
+            --workspace-id "$WORKSPACE_ID" \
+            --region ${{ secrets.AWS_REGION }} \
+            --query "serviceAccounts[?name=='$ACCOUNT_NAME'].id | [0]" \
+            --output text)
+
+          if [ -z "$ACCOUNT_ID" ] || [ "$ACCOUNT_ID" = "None" ]; then
+            echo "::error::No service account named $ACCOUNT_NAME in the workspace"
+            exit 1
+          fi
+
+          echo "::add-mask::$ACCOUNT_ID"
+          echo "SERVICE_ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
+
       - name: Create New Token
         id: create-token
         run: |
@@ -62,6 +89,7 @@ jobs:
           # Extract token details
           TOKEN_ID=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.id')
           TOKEN_VALUE=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.key')
+          echo "::add-mask::$TOKEN_VALUE"
           TOKEN_NAME=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.name')
 
           # Calculate dates (30 days = 2592000 seconds)
@@ -88,9 +116,9 @@ jobs:
           # Update GitHub environment secret
           echo "$TOKEN_VALUE" | gh secret set "GRAFANA_SERVICE_TOKEN" \
             --repo ${{ github.repository }} \
-            --env ${{ matrix.environment }}
+            --env ${{ matrix.secret_environment }}
 
-          echo "✅ Updated GitHub Secret: GRAFANA_SERVICE_TOKEN in environment: ${{ matrix.environment }}"
+          echo "✅ Updated GitHub Secret: GRAFANA_SERVICE_TOKEN in environment: ${{ matrix.secret_environment }}"
           echo "   Token will be available as: secrets.GRAFANA_SERVICE_TOKEN"
 
       - name: List and Revoke Old Tokens
@@ -132,19 +160,29 @@ jobs:
           echo "   Token ID: ${{ steps.create-token.outputs.token_id }}"
           echo "   Created: ${{ steps.create-token.outputs.created_at }}"
           echo "   Expires: ${{ steps.create-token.outputs.expires_at }}"
-          echo "   GitHub Secret: GRAFANA_SERVICE_TOKEN (environment: ${{ matrix.environment }})"
+          echo "   GitHub Secret: GRAFANA_SERVICE_TOKEN (environment: ${{ matrix.secret_environment }})"
           echo ""
           echo "✨ Next rotation scheduled: ~15 days (1st or 15th of month)"
 
       - name: Notify on Failure
         if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          TARGET: ${{ matrix.secret_environment }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          echo "❌ Grafana token rotation failed for environment: ${{ matrix.environment }}"
+          echo "❌ Grafana token rotation failed for environment: $TARGET"
           echo ""
           echo "Workflow: ${{ github.workflow }}"
           echo "Run ID: ${{ github.run_id }}"
-          echo "Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "Run URL: $RUN_URL"
           echo ""
           echo "Please investigate the logs above and rotate the token manually if needed."
+
+          # A token lives 30 days and rotates every 15, so one failure leaves about two weeks.
+          TEXT=":warning: Grafana token rotation failed for \`$TARGET\`. The current token expires within 30 days of its last rotation, and OpenTofu runs fail on Grafana after that. Re-run or fix: $RUN_URL"
+          jq -n --arg text "$TEXT" '{text: $text}' \
+            | curl -fsS -X POST -H 'Content-Type: application/json' --data @- "$SLACK_WEBHOOK_URL" \
+            || echo "::warning::Could not post the failure to Slack"
 
           exit 1

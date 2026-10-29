@@ -31,23 +31,33 @@ variable "repository" {
   type        = string
 }
 
-variable "branch" {
-  description = "The main branch allowed to assume the role (used in the OIDC condition). Pull requests are also allowed by default."
-  type        = string
-  default     = "main"
-}
-
-
 variable "environment" {
   description = "Environment name (used for terraform backend bucket naming)"
   type        = string
   default     = "dev"
 }
 
-variable "github_environment" {
-  description = "The GitHub environment allowed to assume the role (used in the OIDC condition)."
+variable "github_environments" {
+  description = "GitHub environments whose jobs may assume the role."
+  type        = list(string)
+}
+
+variable "allowed_refs" {
+  description = "Git refs allowed to assume the role, wildcards allowed. Null allows any ref."
+  type        = list(string)
+  default     = null
+}
+
+variable "plan_role_github_environment" {
+  description = "GitHub environment allowed to assume the read-only plan role. Null skips the role."
   type        = string
-  default     = "dev"
+  default     = null
+}
+
+variable "plan_role_name" {
+  description = "Name of the read-only plan role."
+  type        = string
+  default     = "GithubActionsPlanAccess"
 }
 
 variable "enabled_services" {
