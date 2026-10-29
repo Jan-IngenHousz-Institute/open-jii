@@ -8,17 +8,20 @@ import {
   eq,
   experiments,
   guestUsage,
+  inArray,
   organizations,
   profiles,
   rateLimits,
   resourceGrants,
   sessions,
+  sql,
   users,
 } from "@repo/database";
 
 import { OrganizationRepository } from "../../../organizations/core/repositories/organization.repository";
 import { GuestGrantCleanupRepository } from "../../../sharing/core/repositories/guest-grant-cleanup.repository";
 import { SharingRepository } from "../../../sharing/core/repositories/sharing.repository";
+import { backendPidOf, waitUntilBlocked } from "../../../test/lock-wait";
 import { TestHarness } from "../../../test/test-harness";
 import { PurgeExpiredGuestsUseCase } from "../../application/use-cases/purge-expired-guests/purge-expired-guests";
 import type { GuestPurgeLimits } from "../../application/use-cases/purge-expired-guests/purge-expired-guests";
@@ -273,8 +276,24 @@ describe("guest quotas and guarded purge", () => {
         Array.from({ length: 30 }, (_, i) => createGuest(expiredAt(i))),
       );
       const other = createSecondaryDatabase();
+      let release!: () => void;
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let entered!: () => void;
+      const held = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const cleanup = new GuestGrantCleanupRepository();
+      const firstWorker = new GuestRepository(db, {
+        async removeUserGrants(executor, ids) {
+          entered();
+          await released;
+          await cleanup.removeUserGrants(executor, ids);
+        },
+      });
       try {
-        const second = new GuestRepository(other.database, new GuestGrantCleanupRepository());
+        const second = new GuestRepository(other.database, cleanup);
         const cutoff = new Date(Date.now() - GUEST_LIFETIME_MS);
         const work = async (worker: GuestRepository) => {
           const deleted: string[] = [];
@@ -287,7 +306,17 @@ describe("guest quotas and guarded purge", () => {
             cursor = batch.cursor;
           }
         };
-        const [first, last] = await Promise.all([work(repository), work(second)]);
+        const firstWork = work(firstWorker);
+        let last: string[];
+        try {
+          await held;
+          last = await work(second);
+          expect(last.length).toBeGreaterThan(0);
+        } finally {
+          release();
+        }
+        const first = await firstWork;
+        expect(first.length).toBeGreaterThan(0);
         expect(first.filter((id) => last.includes(id))).toEqual([]);
         expect([...first, ...last].sort()).toEqual(guests.map(({ id }) => id).sort());
         expect(await repository.countExpired(cutoff)).toBe(0);
@@ -386,7 +415,7 @@ describe("guest quotas and guarded purge", () => {
       expect(signal.report).not.toHaveBeenCalled();
     });
 
-    it("defers a guest behind a held session lock to the next night without signalling", async () => {
+    it("defers the whole batch behind a held session lock without signalling", async () => {
       const waiting = await createGuest(expiredAt(0));
       const deletable = await createGuest(expiredAt(1));
       const [session] = await db
@@ -402,8 +431,8 @@ describe("guest quotas and guarded purge", () => {
         await other.database.transaction(async (tx) => {
           await tx.select().from(sessions).where(eq(sessions.id, session.id)).for("update");
           expect(await purge.execute(new Date(), limits())).toMatchObject({
-            deleted: 1,
-            deferred: 1,
+            deleted: 0,
+            deferred: 2,
             blocked: 0,
           });
         });
@@ -411,9 +440,157 @@ describe("guest quotas and guarded purge", () => {
         await other.close();
       }
       expect(await db.select().from(users).where(eq(users.id, waiting.id))).toHaveLength(1);
-      expect(await db.select().from(users).where(eq(users.id, deletable.id))).toHaveLength(0);
+      expect(await db.select().from(users).where(eq(users.id, deletable.id))).toHaveLength(1);
       expect(signal.report).not.toHaveBeenCalled();
     }, 15_000);
+
+    it.each([false, true])(
+      "releases the shared connection after the first timeout with RESTRICT fallback %s",
+      async (restrict) => {
+        const blocked = restrict ? await createGuest(expiredAt(0)) : null;
+        if (blocked) {
+          const organizationId = await app.createOrganization();
+          await db.insert(experiments).values({
+            name: "Preserved research",
+            createdBy: blocked.id,
+            organizationId,
+          });
+        }
+        const locked = await Promise.all([1, 2, 3].map((i) => createGuest(expiredAt(i))));
+        const untouched = await createGuest(expiredAt(4));
+        const later = await createGuest(expiredAt(5));
+        await db.insert(sessions).values(
+          locked.map(({ id }) => ({
+            userId: id,
+            token: "held-" + id,
+            expiresAt: new Date(Date.now() + 1e4),
+          })),
+        );
+        const holder = createSecondaryDatabase();
+        const observer = createSecondaryDatabase();
+        const pid = await backendPidOf(db);
+        const cutoff = new Date(Date.now() - GUEST_LIFETIME_MS);
+        try {
+          await holder.database.transaction(async (tx) => {
+            await tx
+              .select()
+              .from(sessions)
+              .where(
+                inArray(
+                  sessions.userId,
+                  locked.map(({ id }) => id),
+                ),
+              )
+              .for("update");
+            const started = Date.now();
+            const pending = repository.purgeExpiredBatch(cutoff, null, restrict ? 5 : 4);
+            await waitUntilBlocked(observer.database, pid);
+            const ordinary = db.execute(sql`SELECT 1 AS value`);
+            await ordinary;
+            expect(Date.now() - started).toBeLessThan(4500);
+            const batch = await pending;
+            expect(batch.deletedIds).toEqual([]);
+            expect(batch.blocked.map(({ userId }) => userId)).toEqual(blocked ? [blocked.id] : []);
+            expect(batch.deferred).toEqual([...locked.map(({ id }) => id), untouched.id]);
+            expect(batch.cursor?.id).toBe(untouched.id);
+            expect(await repository.purgeExpiredBatch(cutoff, batch.cursor, 4)).toMatchObject({
+              deletedIds: [later.id],
+              blocked: [],
+              deferred: [],
+            });
+          });
+        } finally {
+          await holder.close();
+          await observer.close();
+        }
+        expect(signal.report).not.toHaveBeenCalled();
+      },
+      15_000,
+    );
+
+    it.each([false, true])(
+      "skips a held stale counter and preserves it after a concurrent refresh %s",
+      async (refresh) => {
+        const cutoff = new Date(Date.now() - GUEST_LIFETIME_MS);
+        const [held, removable] = await db
+          .insert(rateLimits)
+          .values([
+            { key: "192.0.2.1|/sign-in/anonymous", count: 1, lastRequest: cutoff.getTime() - 1 },
+            { key: "192.0.2.2|/sign-in/anonymous", count: 1, lastRequest: cutoff.getTime() - 1 },
+          ])
+          .returning();
+        const other = createSecondaryDatabase();
+        try {
+          await other.database.transaction(async (tx) => {
+            await tx.select().from(rateLimits).where(eq(rateLimits.id, held.id)).for("update");
+            if (refresh) {
+              await tx
+                .update(rateLimits)
+                .set({ count: 9, lastRequest: Date.now() })
+                .where(eq(rateLimits.id, held.id));
+            }
+            // Cleanup must finish while the stale version is still visible and the lock held.
+            expect(await repository.deleteStaleRateLimits(cutoff, 100)).toBe(1);
+          });
+        } finally {
+          await other.close();
+        }
+        expect(
+          await db.select().from(rateLimits).where(eq(rateLimits.id, removable.id)),
+        ).toHaveLength(0);
+        expect(await db.select().from(rateLimits).where(eq(rateLimits.id, held.id))).toMatchObject([
+          { count: refresh ? 9 : 1 },
+        ]);
+        expect(await repository.deleteStaleRateLimits(cutoff, 100)).toBe(refresh ? 0 : 1);
+      },
+      5000,
+    );
+
+    it.each([0, 2])(
+      "reports unfinished counter cleanup when the deadline permits %i counter batches",
+      async (allowedBatches) => {
+        const cutoff = new Date(Date.now() - GUEST_LIFETIME_MS);
+        await db.insert(rateLimits).values(
+          [1, 2, 3].map((i) => ({
+            key: "192.0.2." + i + "|/sign-in/anonymous",
+            count: 1,
+            lastRequest: cutoff.getTime() - 1,
+          })),
+        );
+        let tick = 0;
+        const warn = vi.spyOn(Logger.prototype, "warn");
+        const log = vi.spyOn(Logger.prototype, "log");
+        try {
+          expect(
+            await purge.execute(
+              new Date(),
+              limits({
+                batchSize: 1,
+                budgetMs: allowedBatches + 1,
+                clock: () => tick++,
+              }),
+            ),
+          ).toMatchObject({
+            deleted: 0,
+            rateLimitRowsDeleted: allowedBatches,
+            complete: false,
+          });
+          expect(warn).toHaveBeenCalledWith(
+            expect.objectContaining({
+              msg: "Guest purge stopped on its time budget",
+              backlog: 0,
+              rateLimitBacklog: true,
+            }),
+          );
+          expect(log).not.toHaveBeenCalledWith(
+            expect.objectContaining({ msg: "Guest purge finished" }),
+          );
+        } finally {
+          warn.mockRestore();
+          log.mockRestore();
+        }
+      },
+    );
 
     it("stops on its time budget and logs the cursor and backlog", async () => {
       const guests = await Promise.all([0, 1, 2].map((i) => createGuest(expiredAt(i))));

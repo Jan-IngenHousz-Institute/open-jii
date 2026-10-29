@@ -131,17 +131,22 @@ the backend's shared connection, so API requests run between batches. It walks
 the expired accounts in creation order and skips any account another transaction
 holds, which leaves a guest with a quota call in flight for the next night. Every
 task fires the schedule, and concurrent runs split the accounts between them.
-Each batch waits at most two seconds for a lock, and a run stops after five
-minutes and logs how many expired accounts are left.
+Each lock acquisition has a two-second timeout. The job checks its five-minute
+budget between batches and logs the expired-account backlog and whether
+rate-limit cleanup remains unfinished when that budget runs out.
 
 A batch deletes its accounts' grants and users in two statements. If an
-unexpected owned research row or a lock timeout stops it, the batch retries one
-account at a time, so deletion stays atomic per account. A research row keeps
+unexpected owned research row stops it, the batch retries one account at a time,
+so deletion stays atomic per account. A research row keeps
 that account and raises the existing heartbeat error signal with
 `GUEST_PURGE_FAILED`, fingerprint `guest-purge:blocked`, the opaque guest ID and
-the blocking table. A lock timeout is only logged, and the next night retries the
-account. The rest of the batch and later batches still purge. Grant cleanup and
-the user deletion share one rollback boundary.
+the blocking table. A lock timeout on the bulk delete defers the whole batch.
+During retries, the first lock timeout defers that account and the remaining
+accounts in the batch. These timeouts are only logged, and the next night retries
+the deferred accounts. Later batches still purge. Grant cleanup and the user
+deletion share one rollback boundary. Rate-limit cleanup also uses short
+transactions with the same lock timeout, skips held counters, and preserves
+counters refreshed by concurrent requests.
 
 Notification dispatch drops guest actors and recipients before bell or email
 rows exist. The email worker also checks already queued rows. This covers the

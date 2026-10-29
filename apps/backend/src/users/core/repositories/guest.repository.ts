@@ -35,11 +35,6 @@ import type {
 import type { GuestDirectoryPort } from "../ports/guest-directory.port";
 import type { GuestIdentityPort } from "../ports/guest-identity.port";
 
-function isRetriedAlone(error: unknown): boolean {
-  const code = postgresErrorCode(error);
-  return code === FOREIGN_KEY_VIOLATION || code === LOCK_NOT_AVAILABLE;
-}
-
 @Injectable()
 export class GuestRepository implements GuestIdentityPort, GuestDirectoryPort {
   constructor(
@@ -158,18 +153,25 @@ export class GuestRepository implements GuestIdentityPort, GuestDirectoryPort {
         batch.deletedIds = await tx.transaction((savepoint) => this.deleteGuests(savepoint, ids));
         return batch;
       } catch (error) {
-        if (!isRetriedAlone(error)) throw error;
+        const code = postgresErrorCode(error);
+        if (code === LOCK_NOT_AVAILABLE) {
+          batch.deferred.push(...ids);
+          return batch;
+        }
+        if (code !== FOREIGN_KEY_VIOLATION) throw error;
       }
-      // One account per savepoint, so a RESTRICT row or a held lock keeps only its own account.
-      for (const id of ids) {
+      // Isolate RESTRICT failures, but release the shared connection at the first lock timeout.
+      for (const [index, id] of ids.entries()) {
         try {
           batch.deletedIds.push(
             ...(await tx.transaction((account) => this.deleteGuests(account, [id]))),
           );
         } catch (error) {
           const code = postgresErrorCode(error);
-          if (code === LOCK_NOT_AVAILABLE) batch.deferred.push(id);
-          else if (code === FOREIGN_KEY_VIOLATION) batch.blocked.push({ userId: id, error });
+          if (code === LOCK_NOT_AVAILABLE) {
+            batch.deferred.push(...ids.slice(index));
+            break;
+          } else if (code === FOREIGN_KEY_VIOLATION) batch.blocked.push({ userId: id, error });
           else throw error;
         }
       }

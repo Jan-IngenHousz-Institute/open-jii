@@ -52,6 +52,7 @@ export class PurgeExpiredGuestsUseCase {
       complete: true,
     };
     let cursor: GuestPurgeCursor | null = null;
+    let rateLimitCleanupComplete = false;
     try {
       for (;;) {
         const batch = await this.guests.purgeExpiredBatch(cutoff, cursor, limits.batchSize);
@@ -77,8 +78,12 @@ export class PurgeExpiredGuestsUseCase {
       while (limits.clock() < deadline) {
         const removed = await this.guests.deleteStaleRateLimits(cutoff, limits.batchSize);
         result.rateLimitRowsDeleted += removed;
-        if (removed < limits.batchSize) break;
+        if (removed < limits.batchSize) {
+          rateLimitCleanupComplete = true;
+          break;
+        }
       }
+      result.complete &&= rateLimitCleanupComplete;
     } catch (error) {
       if (postgresErrorCode(error) === LOCK_NOT_AVAILABLE) {
         this.logger.warn({
@@ -97,6 +102,7 @@ export class PurgeExpiredGuestsUseCase {
         operation: OPERATION,
         cursor,
         backlog: await this.guests.countExpired(cutoff),
+        rateLimitBacklog: !rateLimitCleanupComplete,
         ...result,
       });
       return result;
