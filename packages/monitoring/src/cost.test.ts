@@ -199,6 +199,30 @@ describe("costDatums", () => {
     expect(limit.datum.Timestamp.toISOString()).toBe("2026-10-27T00:00:00.000Z");
   });
 
+  it("reads the 14 days before yesterday as the usual day, and no others", () => {
+    // Each day before yesterday costs ten times how far back it is, so a history shifted a day either
+    // way has a different median: with yesterday in it 65, a day further back 85.
+    const yesterday = new Date("2026-10-26T00:00:00Z").getTime();
+    const daysBack = (back: number) =>
+      new Date(yesterday - back * 86_400_000).toISOString().slice(0, 10);
+    const usage = [
+      ...Array.from({ length: 14 }, (_, i) =>
+        day(daysBack(i + 1), { "Amazon Elastic Compute Cloud - Compute": 10 * (i + 1) }),
+      ),
+      day(daysBack(0), { "Amazon Elastic Compute Cloud - Compute": 1 }),
+      day(daysBack(15), { "Amazon Elastic Compute Cloud - Compute": 1000 }),
+    ];
+
+    // A median of 75 makes the limit 150, and 1 is 0.67% of it.
+    expect(
+      value(
+        costDatums({ ...readings, usageByService: usage }),
+        "DailyCostPercentOfLimit",
+        "EC2 compute",
+      ),
+    ).toBe(0.67);
+  });
+
   it("leaves a service billed monthly out of the spend limit, but not out of its costs", () => {
     const datums = costDatums(readings);
 

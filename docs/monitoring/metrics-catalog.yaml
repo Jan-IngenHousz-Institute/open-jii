@@ -23,6 +23,8 @@
 # - signal.dimensions values support ${ENV_PLACEHOLDER} resolution on the dashboards
 # - signal.period: CloudWatch period in seconds, for a signal counted per period. The
 #   weekly report compares its last two periods instead of reading the latest value
+# - signal.cadence: seconds between points, for a signal published less often than every five
+#   minutes, such as once a day; the daily report's board and charts read it at that period
 # - baseline: for an entry with an alert rule, the limit that rule enforces. A max (a count's
 #   is per five minutes, like its rule), any-nonzero, or a min floor colours the entry's row on
 #   the daily report's board and is drawn on its chart. The rest is intent for a rule that does
@@ -1828,9 +1830,10 @@ metrics:
       unit: usd
     notes: >-
       Usage per Service and Category for one UTC day, stamped at the midnight that closed it. The
-      publisher runs four times a day, at 00:30, 06:30, 12:30 and 18:30 UTC, so a day is refined on
-      the day it closed while CloudWatch still returns each point within two hours; every run also
-      republishes the day before, and the dashboards read the fuller figure.
+      publisher runs at 06:30, 12:30 and 18:30 UTC, so a day is refined on the day it closed while
+      CloudWatch still returns each point within two hours; every run also republishes the day
+      before, and the dashboards read the fuller figure. Nothing runs earlier, since Cost Explorer
+      had only 14 to 24% of the day before at 00:30 on dev on 29 October 2026.
 
   - num: 105
     id: databricks-daily-cost
@@ -2076,6 +2079,7 @@ metrics:
       search: SEARCH('{OpenJII/Cost,Category,Environment,Service} MetricName="DailyCostPercentOfLimit" AND Environment="${ENVIRONMENT}"', 'Maximum')
       stat: Maximum
       unit: percent
+      cadence: 86400
     baseline: { method: threshold, max: 100 }
     runbook: docs/runbooks/aws-spend-limit.md
     notes: >-
@@ -2100,6 +2104,7 @@ metrics:
       search: SEARCH('{OpenJII/Usage,Component,Environment} MetricName="DatabricksDailyCostPercentOfLimit" AND Environment="${ENVIRONMENT}"', 'Maximum')
       stat: Maximum
       unit: percent
+      cadence: 86400
     baseline: { method: threshold, max: 100 }
     runbook: docs/runbooks/databricks-spend-limit.md
     notes: >-
@@ -2127,4 +2132,5 @@ metrics:
     runbook: docs/runbooks/metrics-publisher-errors.md
     notes: >-
       The metrics publisher counts researchers and experiments from the database each Monday at 06:00
-      UTC. A run that throws leaves the weekly report's adoption and usage lines without that week.
+      UTC. A run that throws leaves three weekly tiles without that week: New researchers (#30),
+      Researchers (#80) and Experiments created (#32).

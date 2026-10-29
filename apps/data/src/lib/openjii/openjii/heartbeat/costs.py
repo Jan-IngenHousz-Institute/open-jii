@@ -21,6 +21,9 @@ OTHER_COMPONENT = "other"
 SPEND_LIMIT_MULTIPLE = 2
 SPEND_LIMIT_FLOOR_USD = 10
 SPEND_BASELINE_DAYS = 14
+# The billing tables are still filling in the day before after midnight: the first exports on dev on
+# 29 October 2026 read 8 to 18% short. The cost publisher starts at 06:30 for the same reason.
+SPEND_LIMIT_FROM_HOUR = 6
 
 
 @dataclass(frozen=True)
@@ -177,6 +180,11 @@ def spend_limits(
         )
         for component in components
     }
+
+
+def spend_limit_due(now: datetime) -> bool:
+    """Whether the billing tables have enough of the day before to measure it against its limit."""
+    return now.astimezone(timezone.utc).hour >= SPEND_LIMIT_FROM_HOUR
 
 
 def percent_of_spend_limit(yesterday: float, history: list[float]) -> float:

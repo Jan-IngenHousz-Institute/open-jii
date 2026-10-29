@@ -43,7 +43,7 @@ locals {
   }
 
   # A week's inputs, hidden. A figure that adds both producers' reads only where both have a point
-  # for the same window: Databricks' lands from midnight and AWS's from 00:30, and metric math
+  # for the same window: Databricks' lands from midnight and AWS's from 06:30, and metric math
   # counts a missing point as zero, which would add one producer's week to nothing.
   cost_week_inputs = {
     aws          = merge(local.cost_query, { refId = "aws", id = "aws", hide = true, expression = "SUM(${local.cost_aws_week.usage})" })
@@ -354,7 +354,7 @@ locals {
     id          = 729
     type        = "bargauge"
     title       = "Yesterday, against each limit"
-    description = "Each AWS service's and Databricks pipeline's spend yesterday as a share of its limit: twice its usual day, and at least $10 above it. Past 100% its spend rule alerts. Grafana bills its licences monthly and is left out."
+    description = "Each AWS service's and Databricks pipeline's spend yesterday as a share of its limit: twice its usual day, and at least $10 above it. Past 100% its spend rule alerts. Grafana bills its licences monthly and is left out. Yesterday's figures land after 06:00 UTC for Databricks and 06:30 for AWS, so before then the bars show the day before."
     datasource  = local.heartbeat_datasource
     timeFrom    = "2d"
     fieldConfig = {

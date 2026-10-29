@@ -47,6 +47,11 @@ export interface MetricSignal {
    */
   period?: number;
   /**
+   * Seconds between a signal's points, for one published less often than the board's five minutes,
+   * such as once a day. The board and the charts read it at that period.
+   */
+  cadence?: number;
+  /**
    * logs_insights: the group to query and the query itself. posthog: a HogQL query returning one
    * count over `${EXCEPTIONS_SCOPE}`, which the dashboards resolve to one environment, the report's
    * time range and open issues.

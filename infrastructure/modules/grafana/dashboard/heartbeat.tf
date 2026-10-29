@@ -125,6 +125,7 @@ locals {
       floor    = try(m.baseline.min, null)
       decimals = contains(["percent", "ratio"], try(m.signal.unit, "")) ? 2 : null
       period   = try(m.signal.period, null)
+      cadence  = try(m.signal.cadence, null)
       search   = templatestring(try(m.signal.search, ""), local.heartbeat_placeholders)
       # Rules read "more than N", so a limit of zero is red from the first one, and a count,
       # always whole, from N + 1.
@@ -136,11 +137,14 @@ locals {
         local.heartbeat_limits[m.id]
       )
       # A dead-man on a CloudWatch metric, which arrives every minute, fires within minutes, so its
-      # board row bridges no more than the gap between two of the board's five-minute buckets.
+      # board row bridges no more than the gap between two of the board's five-minute buckets. A
+      # signal published once a day is read a day at a time and bridges half a day more.
       board_span_ms = (
+        try(m.signal.cadence, null) != null ? m.signal.cadence * 1500 :
         m.source == "aws" && try(m.baseline.nodata, "") == "alert" ? 450000 :
         local.heartbeat_dead_man_window_minutes * 60000
       )
+      board_period = tostring(try(m.signal.cadence, 300))
     }
   }
 
@@ -296,7 +300,7 @@ locals {
               stacking        = { mode = local.heartbeat_facts[m.id].period != null ? "normal" : "none", group = "A" }
               lineWidth       = 2
               fillOpacity     = local.heartbeat_facts[m.id].period != null ? 80 : 8
-              showPoints      = "never"
+              showPoints      = local.heartbeat_facts[m.id].cadence != null ? "always" : "never"
               thresholdsStyle = { mode = local.heartbeat_facts[m.id].red_from == null && local.heartbeat_facts[m.id].floor == null ? "off" : "dashed" }
             },
             # Keeps the limit on the chart when the data sits far below it.
@@ -592,7 +596,7 @@ locals {
       tooltip     = { mode = "single", sort = "none" }
     }
     targets = [
-      for m in local.heartbeat_watched : merge(local.heartbeat_readings[m.id], { refId = "E${m.num}", id = "e${m.num}", period = "300" })
+      for m in local.heartbeat_watched : merge(local.heartbeat_readings[m.id], { refId = "E${m.num}", id = "e${m.num}", period = local.heartbeat_facts[m.id].board_period })
     ]
   }
 
@@ -701,7 +705,7 @@ locals {
           description = "Investigate with /openjii-triage ${m.id}."
           links       = concat(local.heartbeat_flow_links[m.id], local.heartbeat_charts[m.id].links)
           gridPos     = { h = 8, w = 12, x = (j % 2) * 12, y = local.heartbeat_charts_top + 1 + floor(j / 2) * 8 }
-          targets     = [merge(local.heartbeat_queries[m.id], { period = "300" })]
+          targets     = [merge(local.heartbeat_queries[m.id], { period = local.heartbeat_facts[m.id].board_period })]
           # Rule and function names crowd a half-width chart; the tooltip still names each series.
           options = merge(local.heartbeat_charts[m.id].options, {
             legend = { displayMode = "list", placement = "bottom", showLegend = false }

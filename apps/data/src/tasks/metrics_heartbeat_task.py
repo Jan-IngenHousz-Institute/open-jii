@@ -75,6 +75,7 @@ from openjii.heartbeat import (
     loggers_started_sql,
     minutes_since,
     observation,
+    spend_limit_due,
     spend_limits,
     previous_bucket,
     protocol_failures_sql,
@@ -582,7 +583,11 @@ def collect_databricks_cost(now: datetime) -> list[dict]:
 
 
 def collect_databricks_spend_limit(now: datetime) -> list[dict]:
-    """Yesterday's spend per component as a share of its limit, stamped when the day closed."""
+    """Yesterday's spend per component as a share of its limit, stamped when the day closed, once
+    the billing tables have most of it. Until then the spend rule keeps reading the day before."""
+    if not spend_limit_due(now):
+        return []
+
     windows = cost_windows(now)
     spend = {
         (row["component"], row["usage_date"]): float(row["usd"])

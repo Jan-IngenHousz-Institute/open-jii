@@ -1,6 +1,6 @@
 # cost-publisher
 
-Publishes what AWS charges into CloudWatch four times a day, at 00:30, 06:30, 12:30 and 18:30 UTC, for the Cost dashboard and the weekly report's Cost section. It reads Cost Explorer's unblended cost and writes to `OpenJII/Cost`. Every point carries an `Environment` dimension.
+Publishes what AWS charges into CloudWatch three times a day, at 06:30, 12:30 and 18:30 UTC, for the Cost dashboard and the weekly report's Cost section. It reads Cost Explorer's unblended cost and writes to `OpenJII/Cost`. Every point carries an `Environment` dimension.
 
 | Metric                       | Dimensions            | Window, stamped when it closed                                        |
 | ---------------------------- | --------------------- | --------------------------------------------------------------------- |
@@ -19,7 +19,7 @@ A service's label and category come from `docs/monitoring/cost-services.json`, w
 
 CloudWatch holds back a point stamped a day or more in the past for at least 48 hours before GetMetricData returns it. So yesterday is stamped at today's 00:00, and the week at the Monday it closed. A window that closes at midnight lands in exactly one daily or weekly bucket, however a dashboard aligns its periods.
 
-Cost Explorer keeps revising recent days. Every run republishes yesterday, the day before, the latest week and the month figures, and the dashboards read `Maximum`, so the fuller figure wins and a retried run cannot double-count. Four runs refine a window on the day it closed, while CloudWatch still returns each one within two hours.
+Cost Explorer keeps revising recent days. Every run republishes yesterday, the day before, the latest week and the month figures, and the dashboards read `Maximum`, so the fuller figure wins and a retried run cannot double-count. The runs on the day a window closed refine it while CloudWatch still returns each one within two hours. None runs earlier: at 00:30 on dev on 29 October 2026 Cost Explorer had only 14 to 24% of the day before, against 93 to 100% at 06:30.
 
 ## Tax and fees
 
@@ -27,7 +27,7 @@ AWS dates a whole month's tax and fees on the 1st and adds to them as the month'
 
 ## The spend limit
 
-A service's limit is twice its usual day, the median of the 14 days before yesterday, and at least $10 above it. `AWS Spend Past Its Limit` alerts per service past 100%, and the Cost dashboard shows each one's share. The heartbeat export publishes the same figure for Databricks' components. Services billed monthly, flagged `billsMonthly` in the category file, are left out: their fee lands early in each month. Replayed over dev's 90 days to 26 October 2026, a $10 floor alerted about ten times, catching EC2's September ramp and the metrics pipeline's growth, against three times at $20.
+A service's limit is twice its usual day, the median of the 14 days before yesterday, and at least $10 above it. `AWS Spend Past Its Limit` alerts per service past 100%, and the Cost dashboard shows each one's share. The heartbeat export publishes the same figure for Databricks' components. Services billed monthly, flagged `billsMonthly` in the category file, are left out: their fee lands early in each month. Replayed over dev's 90 days to 26 October 2026, a $10 floor alerted about ten times across AWS and Databricks together, against three times at $20. On AWS it caught EC2's September ramp, and on Databricks the metrics pipeline's growth.
 
 ## When a run fails
 
@@ -37,7 +37,7 @@ A Grafana rule, `Cost Publisher Errors`, fires on the function's Lambda errors a
 
 `lambda/index.js` is the handler only: the Cost Explorer reads and the CloudWatch write. Which windows to ask for and how the answers become datapoints live in `packages/monitoring/src/cost.ts`, with vitest coverage.
 
-Cost Explorer charges a cent per request. A run makes three, so the publisher costs about $3.60 a month per environment.
+Cost Explorer charges a cent per request. A run makes three, so the publisher costs about $2.70 a month per environment.
 
 ## Build
 

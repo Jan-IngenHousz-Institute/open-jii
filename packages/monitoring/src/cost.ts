@@ -16,8 +16,9 @@ export const DAILY_COST_PERCENT_OF_LIMIT_METRIC = "DailyCostPercentOfLimit";
 /**
  * A day is past its limit at twice its usual day, and only when that is at least the floor above
  * it, so a service that usually costs cents does not alert for doubling. Replayed over dev's 90
- * days to 26 October 2026, this caught EC2's September ramp and the metrics pipeline's growth
- * about ten times, against three times at a $20 floor.
+ * days to 26 October 2026, AWS and Databricks together alerted about ten times, against three at a
+ * $20 floor. The alerts caught EC2's September ramp here and the metrics pipeline's growth in the
+ * heartbeat export's Databricks figures.
  */
 export const SPEND_LIMIT_MULTIPLE = 2;
 export const SPEND_LIMIT_FLOOR_USD = 10;

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from openjii.heartbeat import (
@@ -12,6 +12,7 @@ from openjii.heartbeat import (
     cost_windows_sql,
     daily_cost_sql,
     percent_of_spend_limit,
+    spend_limit_due,
     spend_limits,
     weekly_measurements_sql,
 )
@@ -143,6 +144,27 @@ def test_sets_each_limit_at_twice_the_usual_day():
 
     # Usually 10, so the limit is 20 and 30 is 150% of it; a component that spent nothing reads 0.
     assert spend_limits(spend, ["centrum", "jobs"], windows) == {"centrum": 150.0, "jobs": 0.0}
+
+
+def test_reads_the_14_days_before_yesterday_and_no_others():
+    windows = cost_windows(RUN)
+
+    def day(back: int) -> date:
+        return windows.yesterday - timedelta(days=back)
+
+    # Each day before yesterday costs ten times how far back it is, so a history shifted a day either
+    # way has a different median: with yesterday in it 65, a day further back 85.
+    spend = {("centrum", day(back)): 10.0 * back for back in range(1, 15)}
+    spend[("centrum", day(0))] = 1.0
+    spend[("centrum", day(15))] = 1000.0
+
+    # A median of 75 makes the limit 150, and 1 is 0.67% of it.
+    assert spend_limits(spend, ["centrum"], windows) == {"centrum": 0.67}
+
+
+def test_measures_a_day_only_once_the_billing_tables_have_most_of_it():
+    assert not spend_limit_due(datetime(2026, 10, 27, 5, 59, tzinfo=timezone.utc))
+    assert spend_limit_due(datetime(2026, 10, 27, 6, 0, tzinfo=timezone.utc))
 
 
 def test_raises_the_limit_to_the_floor_above_a_component_that_usually_costs_little():

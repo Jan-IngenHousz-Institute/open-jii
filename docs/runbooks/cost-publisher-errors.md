@@ -5,7 +5,7 @@ report's Cost section keep showing the last figures that landed, which look curr
 Nothing is lost: Cost Explorer still holds every figure, and the next run that succeeds publishes
 yesterday, the day before, the latest week and the month again.
 
-The publisher runs at 00:30, 06:30, 12:30 and 18:30 UTC, and Lambda retries a failed run
+The publisher runs at 06:30, 12:30 and 18:30 UTC, and Lambda retries a failed run
 twice, so one failure can count up to three errors.
 
 ## Read what it said

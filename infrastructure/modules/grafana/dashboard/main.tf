@@ -2656,7 +2656,7 @@ resource "grafana_rule_group" "metrics_publisher_health" {
     for            = "5m"
 
     annotations = {
-      description      = "The metrics publisher threw, so this week's researcher and experiment counts did not reach CloudWatch, and the weekly report's adoption and usage lines read no data for the week."
+      description      = "The metrics publisher threw, so this week's researcher and experiment counts did not reach CloudWatch, and the weekly report's New researchers, Researchers and Experiments created tiles read no data for the week."
       summary          = "Metrics publisher is failing to publish"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/metrics-publisher-errors.md"
       __dashboardUid__ = local.heartbeat_daily_uid
@@ -2671,9 +2671,12 @@ resource "grafana_rule_group" "metrics_publisher_health" {
 }
 
 # A day's spend past its limit, one alert per service or pipeline. Each producer works out the
-# limit, since Grafana's reduce has no median, and publishes yesterday as a share of it. The range
-# reaches back 26 hours, so the hours each night before the new day's point lands still read the
-# day before rather than nothing.
+# limit and publishes yesterday as a share of it, the same figure the daily board and the Cost
+# dashboard draw. Neither publishes a day before 06:00 UTC, when the billing data has most of it, so
+# the range reaches back 36 hours to keep reading the day before until then. A reading that is
+# still filling in can dip under a lasting step, which keep_firing_for rides out. Grafana labels a
+# series only by the dimensions its query names, so the wildcards put each alert's service or
+# pipeline in its labels and its message.
 resource "grafana_rule_group" "spend" {
   provider         = grafana.amg
   name             = "Spend"
@@ -2697,12 +2700,14 @@ resource "grafana_rule_group" "spend" {
         statistic  = "Maximum"
         dimensions = {
           Environment = var.environment
+          Category    = "*"
+          Service     = "*"
         }
         matchExact = false
       })
 
       relative_time_range {
-        from = 93600
+        from = 129600
         to   = 0
       }
     }
@@ -2742,9 +2747,10 @@ resource "grafana_rule_group" "spend" {
         to   = 0
       }
     }
-    no_data_state  = "OK"
-    exec_err_state = "OK"
-    for            = "5m"
+    no_data_state   = "OK"
+    exec_err_state  = "OK"
+    for             = "5m"
+    keep_firing_for = "6h"
 
     annotations = {
       description      = "{{ $labels.Service }} cost {{ humanize $values.B.Value }}% of its limit yesterday: more than twice its usual day and at least $10 above it. It stops once the new level has become its usual."
@@ -2776,12 +2782,13 @@ resource "grafana_rule_group" "spend" {
         statistic  = "Maximum"
         dimensions = {
           Environment = var.environment
+          Component   = "*"
         }
         matchExact = false
       })
 
       relative_time_range {
-        from = 93600
+        from = 129600
         to   = 0
       }
     }
@@ -2821,9 +2828,10 @@ resource "grafana_rule_group" "spend" {
         to   = 0
       }
     }
-    no_data_state  = "OK"
-    exec_err_state = "OK"
-    for            = "5m"
+    no_data_state   = "OK"
+    exec_err_state  = "OK"
+    for             = "5m"
+    keep_firing_for = "6h"
 
     annotations = {
       description      = "{{ $labels.Component }} cost {{ humanize $values.B.Value }}% of its limit yesterday: more than twice its usual day and at least $10 above it. It stops once the new level has become its usual."
@@ -3532,8 +3540,8 @@ resource "grafana_notification_policy" "policy" {
   group_interval  = "5m"
   repeat_interval = "12h"
 
-  # A spend step lasts days and its alert fires the whole time, so it posts when it fires and
-  # when it clears rather than every 12 hours.
+  # A spend step fires for about a week, until it has become the usual day, so it posts when it
+  # fires and when it clears rather than every 12 hours.
   policy {
     matcher {
       label = "metric_id"
@@ -3541,7 +3549,7 @@ resource "grafana_notification_policy" "policy" {
       value = "aws-spend-limit|databricks-spend-limit"
     }
     contact_point   = grafana_contact_point.slack.name
-    repeat_interval = "168h"
+    repeat_interval = "336h"
   }
 
   policy {

@@ -114,7 +114,7 @@ git commit -m "build: rebuild metrics-publisher function.zip"
 
 ## Cost Publisher
 
-A Lambda that runs four times a day, reads Cost Explorer, and publishes yesterday's, the latest complete week's and the month's spend under `OpenJII/Cost`. The Cost dashboard and the weekly report's Cost section read it beside Databricks' own charges, which the heartbeat export prices from Databricks' billing tables. Which category each AWS service counts under is `docs/monitoring/cost-services.json`. See [`cost-publisher/README.md`](cost-publisher/README.md) for what it publishes and why each figure is stamped when its window closed.
+A Lambda that runs three times a day, reads Cost Explorer, and publishes yesterday's, the latest complete week's and the month's spend under `OpenJII/Cost`. The Cost dashboard and the weekly report's Cost section read it beside Databricks' own charges, which the heartbeat export prices from Databricks' billing tables. Which category each AWS service counts under is `docs/monitoring/cost-services.json`. See [`cost-publisher/README.md`](cost-publisher/README.md) for what it publishes and why each figure is stamped when its window closed.
 
 ## Setup Instructions
 
@@ -426,8 +426,8 @@ tofu force-unlock LOCK_ID
 | Amazon Managed Grafana | ~$9/month      | Free tier: 744 hours  |
 | CloudWatch Metrics     | ~$0.50         | Custom metrics (DORA) |
 | CloudWatch Logs        | ~$1            | Dashboard queries     |
-| Cost Explorer API      | ~$3.60         | Twelve requests a day |
-| **Total**              | **~$14/month** | Varies with usage     |
+| Cost Explorer API      | ~$2.70         | Nine requests a day   |
+| **Total**              | **~$13/month** | Varies with usage     |
 
 **Free Tier Included:**
 

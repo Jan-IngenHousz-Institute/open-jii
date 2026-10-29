@@ -54,6 +54,7 @@ from .costs import (
     cost_windows_sql,
     daily_cost_sql,
     percent_of_spend_limit,
+    spend_limit_due,
     spend_limits,
     weekly_measurements_sql,
 )
@@ -143,6 +144,7 @@ __all__ = [
     "protocol_failures_sql",
     "researchers_started_sql",
     "run_collectors",
+    "spend_limit_due",
     "spend_limits",
     "to_ndjson",
     "weekly_measurements_sql",
