@@ -856,12 +856,14 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_raw_data_schemas",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_uploaded_data_schemas",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/sources",
+    # serving store
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/serving_store_feed",
     # event hooks
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/hooks",
   ]
 
   # Use Databricks per-flow trigger defaults; notebooks may override individual tables.
-  configuration = {
+  configuration = merge({
     "CATALOG_NAME"                    = module.databricks_catalog.catalog_name
     "BRONZE_TABLE"                    = "raw_data"
     "SILVER_TABLE"                    = "clean_data"
@@ -875,7 +877,12 @@ module "centrum_pipeline" {
     "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust a 16 GB driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
-  }
+    "SERVING_STORE_FEED"                              = local.serving_store_feed ? "on" : "off"
+    }, {
+    for table in ["measurements", "uploads"] :
+    "SERVING_STORE_FEED_START_${upper(table)}" => local.serving_store_feed_start_versions[table]
+    if local.serving_store_feed
+  })
 
   # AUTO CDC needs PRO, and the silver expectations need ADVANCED.
   edition = "ADVANCED"
@@ -946,16 +953,22 @@ module "macro_execution_pipeline" {
   notebook_paths = [
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/experiment_macro_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/experiment_macro_data_schemas",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/serving_store_feed",
   ]
 
-  configuration = {
+  configuration = merge({
     "MACRO_MAX_FILES_PER_TRIGGER" = "16"
     "MACRO_MAX_BYTES_PER_TRIGGER" = "16777216"
     "MACRO_EXECUTION_PARTITIONS"  = "16"
     "CATALOG_NAME"                = module.databricks_catalog.catalog_name
     "CENTRUM_SCHEMA_NAME"         = "centrum"
     "ENVIRONMENT"                 = var.environment
-  }
+    "SERVING_STORE_FEED"          = local.serving_store_feed ? "on" : "off"
+    }, {
+    for table in ["macro_results"] :
+    "SERVING_STORE_FEED_START_${upper(table)}" => local.serving_store_feed_start_versions[table]
+    if local.serving_store_feed
+  })
 
   # Neither AUTO CDC nor expectations, so CORE is enough.
   edition = "CORE"
@@ -2028,6 +2041,38 @@ module "serving_store" {
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "serving-store"
+  }
+}
+
+locals {
+  # The gold version each feed sink starts at when its checkpoint is new. Gold keeps old versions'
+  # files for seven days, so read these on the day the feed first ships, and again before any
+  # checkpoint reset (docs/runbooks/store-feed-stalled.md). Empty switches the feed off, and with it
+  # the feed's alerts.
+  serving_store_feed_start_versions = {
+    measurements  = "41574"
+    uploads       = "42"
+    macro_results = "40330"
+  }
+  serving_store_feed = length(local.serving_store_feed_start_versions) > 0
+}
+
+# Where the pipelines' feed sends gold's changes, and the credentials it inserts with
+module "serving_store_secret_scope" {
+  source = "../../modules/databricks/secret_scope"
+
+  scope_name = "serving-store-${var.environment}"
+  secrets = {
+    "url"             = module.serving_store.url
+    "writer-username" = module.serving_store.writer_credentials.username
+    "writer-password" = module.serving_store.writer_credentials.password
+  }
+
+  acl_principals  = [module.node_service_principal.service_principal_application_id]
+  acl_permissions = ["READ"]
+
+  providers = {
+    databricks.workspace = databricks.workspace
   }
 }
 
