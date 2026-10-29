@@ -233,18 +233,31 @@ describe("platform roles", () => {
   });
 
   it("records one grant when two runs grant the same role at once", async () => {
-    const secondary = createSecondaryDatabase();
+    const holder = createSecondaryDatabase();
+    const contender = createSecondaryDatabase();
+    const locked = gate();
+    const release = gate();
     try {
-      const outcomes = await Promise.allSettled([
-        changePlatformRole(db, change()),
-        changePlatformRole(secondary.database, change()),
-      ]);
-      expect(outcomes.filter((outcome) => outcome.status === "fulfilled")).toHaveLength(1);
-      const refused = outcomes.find((outcome) => outcome.status === "rejected");
+      const first = holder.database.transaction(async (tx) => {
+        const roles = await changePlatformRole(tx, change());
+        locked.resolve();
+        await release.promise;
+        return roles;
+      });
+      await locked.promise;
+      const contenderPid = await backendPidOf(contender.database);
+      const second = changePlatformRole(contender.database, change());
+      const outcomes = Promise.allSettled([first, second]);
+      await waitUntilBlocked(db, contenderPid);
+      release.resolve();
+      const settled = await outcomes;
+      expect(settled.filter((outcome) => outcome.status === "fulfilled")).toHaveLength(1);
+      const refused = settled.find((outcome) => outcome.status === "rejected");
       expect(refused?.reason).toBeInstanceOf(PlatformRoleError);
       expect(await db.select().from(auditLogs)).toHaveLength(1);
     } finally {
-      await secondary.close();
+      release.resolve();
+      await Promise.all([holder.close(), contender.close()]);
     }
   });
 

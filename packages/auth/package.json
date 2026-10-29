@@ -64,6 +64,7 @@
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@repo/vitest-config": "workspace:*",
+    "@total-typescript/shoehorn": "^0.1.2",
     "@types/express": "^5.0.6",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:testing",

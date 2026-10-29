@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, isNotNull, ne } from "drizzle-orm";
 
-import type { DbOrTx, DatabaseInstance } from "./database";
+import type { DbOrTx } from "./database";
 import { auditLogs, profiles, users } from "./schema";
 
 /**
@@ -66,7 +66,7 @@ const accountState = {
  * role never changes without its audit row.
  */
 export async function changePlatformRole(
-  database: DatabaseInstance,
+  database: DbOrTx,
   change: PlatformRoleChange,
 ): Promise<PlatformRole[]> {
   if (!isPlatformRole(change.role)) {

@@ -444,6 +444,10 @@ holds a platform role.
 | Local        | `pnpm --filter database db:seed` grants the seed user `platform_admin`. `pnpm platform-role grant --role platform_admin --target <user id> --actor <your user id>`, `revoke` and `list` change the local database.                                                                                                    |
 | Dev and prod | Run the **Platform Roles Workflow** from `main`; it refuses other refs and runner images built off `main`. It starts the migration runner task with the command. In prod, a grant or revoke waits for one approval in `prod-approval`, from someone other than the person who started the run. Dev needs no approval. |
 
+The `prod-approval` and `prod` environments admit `main` and `release/*`, while
+the workflow itself accepts only `main`. The `dev` environment has no branch rule
+and requires no approval.
+
 The command refuses a database that is not local unless it runs inside ECS. The
 repository is public, so the workflow takes user ids rather than email addresses
 and its output names accounts by id. The output lands in the migration runner's
