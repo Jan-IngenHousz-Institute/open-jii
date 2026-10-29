@@ -6,7 +6,7 @@ import {
   eq,
   experiments,
   guestUsage,
-  organizationMembers,
+  organizations,
   profiles,
   rateLimits,
   resourceGrants,
@@ -70,18 +70,7 @@ describe("guest quotas and guarded purge", () => {
       ]);
     const roster = await app.module.get(OrganizationRepository).listMembers(demo);
     expect(roster.isSuccess()).toBe(true);
-    if (roster.isSuccess())
-      expect(roster.value).toMatchObject([
-        {
-          userId: guest.id,
-          firstName: "Synthetic visitor",
-          isGuest: true,
-          isFormerGuest: false,
-          lastName: "",
-          email: null,
-          avatarUrl: null,
-        },
-      ]);
+    if (roster.isSuccess()) expect(roster.value).toEqual([]);
   });
 
   it("keeps anonymous grant targets out of public collaborator credits", async () => {
@@ -114,7 +103,7 @@ describe("guest quotas and guarded purge", () => {
     });
   });
 
-  it("returns raw guest names and attribution flags through the member API", async () => {
+  it("keeps guests off the Demo roster the member API returns", async () => {
     const researcher = await app.createTestUser();
     const demo = await app.createOrganization(undefined, { type: "demo", visibility: "public" });
     await app.addOrganizationMember(demo, researcher, "owner");
@@ -122,14 +111,7 @@ describe("guest quotas and guarded purge", () => {
     const response = await app.get(`/api/v1/organizations/${demo}/members`).withAuth(researcher);
     expect(response.status).toBe(200);
     const result = zOrganizationMembers.parse(response.body);
-    expect(result.members.find(({ userId }) => userId === guest.id)).toMatchObject({
-      firstName: "Synthetic visitor",
-      lastName: "",
-      email: null,
-      avatarUrl: null,
-      isGuest: true,
-      isFormerGuest: false,
-    });
+    expect(result.members.find(({ userId }) => userId === guest.id)).toBeUndefined();
     expect(result.members.find(({ userId }) => userId === researcher)).toMatchObject({
       isGuest: false,
       isFormerGuest: false,
@@ -243,12 +225,7 @@ describe("guest quotas and guarded purge", () => {
     expect(
       await db.select().from(guestUsage).where(eq(guestUsage.userId, expired.id)),
     ).toHaveLength(0);
-    expect(
-      await db
-        .select()
-        .from(organizationMembers)
-        .where(eq(organizationMembers.organizationId, demo)),
-    ).toHaveLength(2);
+    expect(await db.select().from(organizations).where(eq(organizations.id, demo))).toHaveLength(1);
     for (const id of [boundary.id, recent.id, real]) {
       expect(await db.select().from(users).where(eq(users.id, id))).toHaveLength(1);
     }
@@ -344,9 +321,6 @@ describe("guest quotas and guarded purge", () => {
     expect(await db.select().from(users).where(eq(users.id, guest.id))).toHaveLength(1);
     expect(
       await db.select().from(experiments).where(eq(experiments.id, experiment.id)),
-    ).toHaveLength(1);
-    expect(
-      await db.select().from(organizationMembers).where(eq(organizationMembers.userId, guest.id)),
     ).toHaveLength(1);
   });
 });

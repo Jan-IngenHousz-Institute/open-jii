@@ -94,19 +94,18 @@ describe("NotificationOutboxWorker", () => {
     return row;
   }
 
-  it.each(["actor", "recipient"])(
-    "skips a previously queued email when its %s is now a guest",
-    async (side) => {
-      await queueOne();
-      await testApp.database
-        .update(users)
-        .set({ isAnonymous: true })
-        .where(eq(users.id, side === "actor" ? actorId : recipientId));
-      const result = await worker.drain();
-      expect(result.skipped).toBe(1);
-      expect(sendSubmitted).not.toHaveBeenCalled();
-    },
-  );
+  it.each(["actor", "recipient"])("skips a queued email whose %s is a guest", async (side) => {
+    const { notificationId } = await queueOne();
+    // Dispatch refuses guests and no account becomes one, so the queued row is repointed.
+    const guest = await testApp.createTestUser({ isAnonymous: true });
+    await testApp.database
+      .update(notifications)
+      .set(side === "actor" ? { actorId: guest } : { recipientId: guest })
+      .where(eq(notifications.id, notificationId));
+    const result = await worker.drain();
+    expect(result.skipped).toBe(1);
+    expect(sendSubmitted).not.toHaveBeenCalled();
+  });
 
   const deliveryRows = () => testApp.database.select().from(notificationDeliveries);
 

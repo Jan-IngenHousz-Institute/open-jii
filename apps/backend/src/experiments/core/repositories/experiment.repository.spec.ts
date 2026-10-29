@@ -6,7 +6,6 @@ import {
   experimentMembers,
   organizationMembers,
   resourceGrants,
-  users,
   eq,
   and,
 } from "@repo/database";
@@ -90,8 +89,7 @@ describe("ExperimentRepository", () => {
         name: "Synthetic grant check",
         userId: testUserId,
       });
-      const guest = await testApp.createTestUser({ name: "Synthetic visitor" });
-      await testApp.database.update(users).set({ isAnonymous: true }).where(eq(users.id, guest));
+      const guest = await testApp.createTestUser({ name: "Synthetic visitor", isAnonymous: true });
       await testApp.addExperimentCollaborator(experiment.id, guest);
       const result = await repository.listCollaborators(experiment.id);
       assertSuccess(result);

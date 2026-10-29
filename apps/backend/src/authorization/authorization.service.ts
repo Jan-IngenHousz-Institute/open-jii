@@ -4,7 +4,9 @@ import { grantRoleCan, orgRoleCan } from "@repo/auth/access";
 import type { ResourceAction } from "@repo/auth/access";
 import {
   and,
+  isNotNull,
   not,
+  or,
   sql,
   calibrationDefinitions,
   eq,
@@ -25,7 +27,7 @@ import type { DatabaseInstance, DbOrTx, PlatformRole } from "@repo/database";
 import type { ResourceType } from "@repo/database";
 
 import { mayTransferOutOfOrganization } from "../sharing/core/transfer-authority";
-import { guestCondition } from "../users/core/repositories/guest-query";
+import { guestCondition, guestMemberCondition } from "../users/core/repositories/guest-query";
 import { GUEST_RESOURCE_PORT } from "./core/ports/guest-resource.port";
 import type { GuestResourcePort } from "./core/ports/guest-resource.port";
 
@@ -331,15 +333,28 @@ export class AuthorizationService {
   }
 
   /**
-   * Every organization the user belongs to, in any role, including their personal one. Ordered,
-   * so the same memberships always produce the same flag cache key.
+   * Every organization the user belongs to, in any role, including their personal one, and every
+   * Demo organization for a guest. Ordered, so the same memberships always produce the same flag
+   * cache key.
    */
   async listMemberOrganizationIds(userId: string): Promise<string[]> {
     const rows = await this.db
-      .select({ organizationId: organizationMembers.organizationId })
-      .from(organizationMembers)
-      .where(eq(organizationMembers.userId, userId))
-      .orderBy(organizationMembers.organizationId);
+      .select({ organizationId: organizations.id })
+      .from(organizations)
+      .leftJoin(
+        organizationMembers,
+        and(
+          eq(organizationMembers.organizationId, organizations.id),
+          eq(organizationMembers.userId, userId),
+        ),
+      )
+      .where(
+        or(
+          isNotNull(organizationMembers.id),
+          guestMemberCondition(this.db, userId, organizations.id),
+        ),
+      )
+      .orderBy(organizations.id);
     return rows.map((row) => row.organizationId);
   }
 

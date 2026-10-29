@@ -15,7 +15,7 @@ import type { AnyColumn, DatabaseInstance, ResourceType, SQL } from "@repo/datab
 
 import { roleTokenIncludes } from "../../../common/utils/role-tokens";
 import { demoOrganizationCondition } from "../../../organizations/core/repositories/organization-query";
-import { guestCondition } from "../../../users/core/repositories/guest-query";
+import { guestCondition, guestMemberCondition } from "../../../users/core/repositories/guest-query";
 
 /**
  * The roles that carry `contribute` on an experiment, as literal values SQL can
@@ -69,6 +69,10 @@ function resourceRelationshipParts(params: {
   const owningOrgRole = roleFilters
     ? roleTokenIncludes(organizationMembers.role, roleFilters.owningOrg)
     : undefined;
+  const guestMember =
+    !roleFilters || roleFilters.owningOrg.includes("member")
+      ? guestMemberCondition(database, userId, organizationIdColumn)
+      : undefined;
 
   return {
     userGrantExists: exists(
@@ -118,17 +122,20 @@ function resourceRelationshipParts(params: {
           ),
         ),
     ),
-    owningOrgMemberExists: exists(
-      database
-        .select()
-        .from(organizationMembers)
-        .where(
-          and(
-            eq(organizationMembers.organizationId, organizationIdColumn),
-            eq(organizationMembers.userId, userId),
-            owningOrgRole,
+    owningOrgMemberExists: or(
+      exists(
+        database
+          .select()
+          .from(organizationMembers)
+          .where(
+            and(
+              eq(organizationMembers.organizationId, organizationIdColumn),
+              eq(organizationMembers.userId, userId),
+              owningOrgRole,
+            ),
           ),
-        ),
+      ),
+      guestMember,
     ),
   };
 }

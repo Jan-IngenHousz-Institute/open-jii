@@ -375,6 +375,7 @@ export class TestHarness {
     createProfile = true,
     registered = true,
     deletedAt = null,
+    isAnonymous = false,
   }: {
     email?: string;
     name?: string;
@@ -384,10 +385,11 @@ export class TestHarness {
     createProfile?: boolean;
     registered?: boolean;
     deletedAt?: Date | null;
+    isAnonymous?: boolean;
   } = {}): Promise<string> {
     const [user] = await this.database
       .insert(users)
-      .values({ email, name, emailVerified, image, registered })
+      .values({ email, name, emailVerified, image, registered, isAnonymous })
       .returning();
 
     if (createProfile) {

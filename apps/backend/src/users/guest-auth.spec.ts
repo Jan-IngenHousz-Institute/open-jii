@@ -21,9 +21,11 @@ import {
   resourceVisits,
   rateLimits,
   sessions,
+  sql,
   users,
   verifications,
 } from "@repo/database";
+import type { DbOrTx } from "@repo/database";
 
 import { guestRouteInventory } from "../authorization/core/models/guest-route.model";
 import { AwsAdapter } from "../common/modules/aws/aws.adapter";
@@ -246,8 +248,8 @@ describe("anonymous sessions on the production auth boundary", () => {
     expect(await db.select().from(organizationMembers)).toEqual(before.members);
   });
 
-  it("creates a named member only in Demo, without a profile or workspace", async () => {
-    const demo = await app.createOrganization(undefined, { type: "demo", visibility: "public" });
+  it("creates a named guest without a profile, workspace or membership rows", async () => {
+    await app.createOrganization(undefined, { type: "demo", visibility: "public" });
     await app.createOrganization(undefined, { type: "university", visibility: "public" });
     const user = await guest("  Synthetic Visitor  ");
     expect(user).toMatchObject({ name: "Synthetic Visitor", isAnonymous: true });
@@ -260,7 +262,7 @@ describe("anonymous sessions on the production auth boundary", () => {
     ).toHaveLength(0);
     expect(
       await db.select().from(organizationMembers).where(eq(organizationMembers.userId, user.id)),
-    ).toMatchObject([{ organizationId: demo, role: "member" }]);
+    ).toEqual([]);
     expect(await db.select().from(notifications)).toEqual([]);
     const [stored] = await db.select().from(users).where(eq(users.id, user.id));
     expect(stored.email).toMatch(/@guest\.openjii\.invalid$/);
@@ -308,95 +310,136 @@ describe("anonymous sessions on the production auth boundary", () => {
     expect(await db.select().from(users)).toEqual(before);
   });
 
-  it("admits current guests to later Demo organizations and removes only guests on exit", async () => {
+  it("refuses guest membership rows and turning a researcher into a guest", async () => {
     const visitor = await guest();
     const demo = await app.createOrganization(undefined, { type: "demo", visibility: "public" });
     const researcher = await app.createTestUser();
-    await db
-      .insert(organizationMembers)
-      .values({ organizationId: demo, userId: researcher, role: "owner" });
-    expect(
-      await db
-        .select()
-        .from(organizationMembers)
-        .where(
-          and(
-            eq(organizationMembers.userId, visitor.id),
-            eq(organizationMembers.organizationId, demo),
-          ),
-        ),
-    ).toHaveLength(1);
-    await db.update(organizations).set({ type: "university" }).where(eq(organizations.id, demo));
+    await expect(
+      db.insert(organizationMembers).values({ organizationId: demo, userId: visitor.id }),
+    ).rejects.toMatchObject({ cause: { code: "23514" } });
+    await db.insert(organizationMembers).values({ organizationId: demo, userId: researcher });
+    await expect(
+      db
+        .update(organizationMembers)
+        .set({ userId: visitor.id })
+        .where(eq(organizationMembers.userId, researcher)),
+    ).rejects.toMatchObject({ cause: { code: "23514" } });
+    await expect(
+      db.update(users).set({ isAnonymous: true }).where(eq(users.id, researcher)),
+    ).rejects.toMatchObject({ cause: { code: "23514" } });
     expect(
       await db.select().from(organizationMembers).where(eq(organizationMembers.userId, visitor.id)),
-    ).toHaveLength(0);
-    expect(
-      await db.select().from(organizationMembers).where(eq(organizationMembers.userId, researcher)),
-    ).toHaveLength(1);
-    await db.update(organizations).set({ type: "demo" }).where(eq(organizations.id, demo));
-    expect(
-      await db.select().from(organizationMembers).where(eq(organizationMembers.userId, visitor.id)),
-    ).toHaveLength(1);
-    expect(await db.select().from(notifications)).toEqual([]);
+    ).toEqual([]);
   });
 
-  it("serializes simultaneous guest and Demo creation across database connections", async () => {
-    const other = createSecondaryDatabase();
-    let release!: () => void;
-    let acquired!: () => void;
-    const held = new Promise<void>((resolve) => {
-      acquired = resolve;
-    });
-    const resume = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const visitorId = crypto.randomUUID();
-    const organizationId = crypto.randomUUID();
-    const creatingGuest = db.transaction(async (tx) => {
-      await tx.insert(users).values({
-        id: visitorId,
+  describe("the review deadlock schedules", () => {
+    // Each side holds its row locks open while the other runs on its own connection. The second
+    // side committing before the first releases proves it never waited; a wait fails it on the
+    // lock timeout instead of hanging.
+    async function whileHeld(
+      hold: (tx: DbOrTx) => Promise<unknown>,
+      contend: (database: DbOrTx) => Promise<unknown>,
+    ) {
+      const other = createSecondaryDatabase();
+      let release!: () => void;
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let acquired!: () => void;
+      const held = new Promise<void>((resolve) => {
+        acquired = resolve;
+      });
+      const holder = db.transaction(async (tx) => {
+        await hold(tx);
+        acquired();
+        await released;
+      });
+      try {
+        await held;
+        await other.database.transaction(async (tx) => {
+          await tx.execute(sql`SET LOCAL lock_timeout = '1s'`);
+          await contend(tx);
+        });
+      } finally {
+        release();
+        await holder;
+        await other.close();
+      }
+    }
+
+    async function demoWithMember() {
+      const demo = await app.createOrganization(undefined, {
+        type: "demo",
+        visibility: "public",
+      });
+      const member = await app.createTestUser();
+      await db.insert(organizationMembers).values({ organizationId: demo, userId: member });
+      return { demo, member };
+    }
+
+    function convert(database: DbOrTx, demo: string, slug?: string) {
+      return database
+        .update(organizations)
+        .set({ type: "university", ...(slug ? { slug } : {}) })
+        .where(eq(organizations.id, demo));
+    }
+
+    function updateRole(database: DbOrTx, demo: string, member: string) {
+      return database
+        .update(organizationMembers)
+        .set({ role: "admin" })
+        .where(
+          and(eq(organizationMembers.organizationId, demo), eq(organizationMembers.userId, member)),
+        );
+    }
+
+    function createGuestRow(database: DbOrTx) {
+      const id = crypto.randomUUID();
+      return database.insert(users).values({
+        id,
         name: "Synthetic visitor",
-        email: `${visitorId}@guest.openjii.invalid`,
+        email: `${id}@guest.openjii.invalid`,
         isAnonymous: true,
       });
-      acquired();
-      await resume;
+    }
+
+    it("converts a Demo organization and updates a member's role without either waiting", async () => {
+      const first = await demoWithMember();
+      await whileHeld(
+        (tx) => convert(tx, first.demo),
+        (other) => updateRole(other, first.demo, first.member),
+      );
+      const second = await demoWithMember();
+      await whileHeld(
+        (tx) => updateRole(tx, second.demo, second.member),
+        (other) => convert(other, second.demo),
+      );
+      expect(
+        await db
+          .select({ type: organizations.type })
+          .from(organizations)
+          .where(eq(organizations.id, second.demo)),
+      ).toEqual([{ type: "university" }]);
     });
-    try {
-      await held;
-      let finished = false;
-      const creatingOrganization = other.database
-        .insert(organizations)
-        .values({
-          id: organizationId,
-          name: "Synthetic demo",
-          slug: `demo-${organizationId}`,
-          type: "demo",
-          visibility: "public",
-        })
-        .then(() => {
-          finished = true;
-        });
-      await new Promise((resolve) => setTimeout(resolve, 30));
-      expect(finished).toBe(false);
-      release();
-      await Promise.all([creatingGuest, creatingOrganization]);
+
+    it("creates a guest and saves a Demo's slug and type without either waiting", async () => {
+      const { demo } = await demoWithMember();
+      await whileHeld(
+        (tx) => convert(tx, demo, `renamed-${demo}`),
+        (other) => createGuestRow(other),
+      );
+      const { demo: second } = await demoWithMember();
+      await whileHeld(
+        (tx) => createGuestRow(tx),
+        (other) => convert(other, second, `renamed-${second}`),
+      );
       expect(
         await db
           .select()
           .from(organizationMembers)
-          .where(
-            and(
-              eq(organizationMembers.userId, visitorId),
-              eq(organizationMembers.organizationId, organizationId),
-            ),
-          ),
+          .where(eq(organizationMembers.organizationId, second)),
       ).toHaveLength(1);
-    } finally {
-      release();
-      await creatingGuest;
-      await other.close();
-    }
+    });
   });
 
   it("refuses re-entry without creating a second guest or replacing a researcher's session", async () => {

@@ -218,8 +218,7 @@ describe("platform roles", () => {
   });
 
   it("refuses a guest account as the target or the actor", async () => {
-    const guest = await app.createTestUser({});
-    await db.update(users).set({ isAnonymous: true }).where(eq(users.id, guest));
+    const guest = await app.createTestUser({ isAnonymous: true });
     for (const refused of [change({ targetUserId: guest }), change({ actorUserId: guest })]) {
       await expect(changePlatformRole(db, refused)).rejects.toBeInstanceOf(PlatformRoleError);
     }
