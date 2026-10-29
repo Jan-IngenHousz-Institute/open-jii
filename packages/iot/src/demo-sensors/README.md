@@ -8,7 +8,7 @@ Each sensor folder contains:
 
 - `protocol.json`: the protocol array sent through that sensor's existing driver.
 - `recording.placeholder.json`: one sanitized measurement envelope.
-- `macro.py`: a Python macro body, compatible with the sandbox and Android runner.
+- `macro.py`: a Python macro body for the sandbox and Android runner.
 - `manifest.json`: placeholder provenance, protocol/recording versions, wire framing
   and expected macro outputs.
 
@@ -27,9 +27,9 @@ calculates Phi2 from two synthetic fluorescence groups. Ambit summarizes its
 Validate the definitions with:
 
 ```sh
-python3 packages/iot/src/demo-sensors/test_definitions.py
+pnpm --filter @repo/iot test:demo-sensors
 ```
 
-This runs the actual macro bodies with the same normalized input and dictionary
-output convention as the Python sandbox. It also rejects identifying data in the
-recordings. Driver-level replay tests belong to the simulated transport.
+This runs the macro bodies through `apps/macro-sandbox/lib/wrappers/wrapper.py`
+with the first sample as input and checks the returned dictionaries. It also
+rejects identifying data in the recordings. Driver-level replay tests belong to the simulated transport.

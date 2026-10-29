@@ -2,13 +2,17 @@
 
 import json
 import math
+import os
 from pathlib import Path
 import re
-import textwrap
+import subprocess
+import sys
+import tempfile
 import unittest
 
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).resolve().parent
+WRAPPER = ROOT.parents[3] / "apps/macro-sandbox/lib/wrappers/wrapper.py"
 FAMILIES = ("multispeq", "ambit", "minipar")
 IDENTITIES = {f"simulated:{family}" for family in FAMILIES}
 
@@ -21,7 +25,11 @@ def check_recording(value, key=""):
         for child in value:
             check_recording(child, key)
     else:
-        if re.search(r"latitude|longitude|gps|user[_-]?id|person[_-]?id|serial|address", key, re.I):
+        if re.search(
+            r"latitude|longitude|gps|user[_-]?id|person[_-]?id|serial|address",
+            key,
+            re.I,
+        ):
             assert value in (None, ""), f"Identifying field: {key}"
         if key in ("device_id", "sensor_id"):
             assert value in IDENTITIES, f"Unreserved identity: {value}"
@@ -46,10 +54,42 @@ class DemoDefinitionsTest(unittest.TestCase):
                 self.assertEqual(recording["device_id"], f"simulated:{family}")
                 self.assertEqual(recording["device_firmware"], manifest["firmwareVersion"])
                 self.assertEqual(recording["sample"][0]["protocol_id"], manifest["protocolVersion"])
-                body = (folder / "macro.py").read_text()
-                namespace = {}
-                exec("def macro(json, ctx):\n" + textwrap.indent(body, "    "), namespace)
-                output = namespace["macro"](recording["sample"][0], {})
+                with tempfile.TemporaryDirectory() as temporary:
+                    input_path = Path(temporary) / "input.json"
+                    input_path.write_text(
+                        json.dumps(
+                            [
+                                {
+                                    "id": family,
+                                    "data": recording["sample"][0],
+                                    "context": {},
+                                }
+                            ]
+                        )
+                    )
+                    process = subprocess.run(
+                        [
+                            sys.executable,
+                            str(WRAPPER),
+                            str(folder / "macro.py"),
+                            str(input_path),
+                        ],
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                        env={
+                            **os.environ,
+                            "PYTHONPATH": str(WRAPPER.parent.parent / "helpers"),
+                        },
+                    )
+                response = json.loads(process.stdout)
+                self.assertEqual(response["status"], "success", response)
+                self.assertEqual(len(response["results"]), 1)
+                result = response["results"][0]
+                self.assertEqual(result["id"], family)
+                self.assertTrue(result["success"], result)
+                output = result["output"]
                 self.assertEqual(output, manifest["expectedOutput"])
                 self.assertTrue(all(math.isfinite(value) for value in output.values()))
                 json.dumps(output, allow_nan=False)

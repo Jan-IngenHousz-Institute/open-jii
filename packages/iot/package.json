@@ -26,7 +26,8 @@
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "check-types": "tsc --noEmit",
-    "test": "python3 src/demo-sensors/test_definitions.py && vitest",
+    "test": "vitest",
+    "test:demo-sensors": "python3 src/demo-sensors/test_definitions.py",
     "test:ui": "vitest --ui",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage"
