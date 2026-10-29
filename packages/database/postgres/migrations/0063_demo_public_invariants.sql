@@ -51,3 +51,22 @@ FOR EACH ROW EXECUTE FUNCTION enforce_demo_resource();
 --> statement-breakpoint
 CREATE TRIGGER demo_macro_public BEFORE INSERT OR UPDATE OF organization_id, visibility ON macros
 FOR EACH ROW EXECUTE FUNCTION enforce_demo_resource();
+--> statement-breakpoint
+-- The triggers above check new writes only. Their table locks hold off every write until this
+-- migration commits, so this check sees settled rows and refuses to apply over a broken one.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM organizations o
+    WHERE o.type::text = 'demo' AND (
+      o.visibility::text <> 'public' OR o.slug LIKE 'personal-%'
+      OR EXISTS (SELECT 1 FROM experiments WHERE organization_id = o.id AND visibility::text = 'private')
+      OR EXISTS (SELECT 1 FROM workbooks WHERE organization_id = o.id AND visibility::text = 'private')
+      OR EXISTS (SELECT 1 FROM protocols WHERE organization_id = o.id AND visibility::text = 'private')
+      OR EXISTS (SELECT 1 FROM macros WHERE organization_id = o.id AND visibility::text = 'private')
+    )
+  ) THEN
+    RAISE EXCEPTION 'A Demo organization is private, a personal workspace or owns a private resource; publish or retype it, then migrate' USING ERRCODE = '23514';
+  END IF;
+END;
+$$;

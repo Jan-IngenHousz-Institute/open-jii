@@ -2,6 +2,8 @@ import { betterAuth } from "better-auth";
 import type { BetterAuthPlugin, DBAdapter } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { z } from "zod";
 
 import { DISABLED_ADMIN_PATHS, openJiiAdmin } from "@repo/auth/admin";
@@ -19,12 +21,19 @@ import {
   organizationMembers,
   organizations,
   protocols,
+  sql,
   users,
   workbooks,
 } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
+import { backendPidOf, waitUntilBlocked } from "../test/lock-wait";
 import { TestHarness } from "../test/test-harness";
+
+const DEMO_MIGRATION = resolve(
+  __dirname,
+  "../../../../packages/database/postgres/migrations/0063_demo_public_invariants.sql",
+);
 
 function gate() {
   let resolve!: () => void;
@@ -313,6 +322,7 @@ describe("platform admin and Demo security through Better Auth", () => {
       const userId = await app.createTestUser();
       const organizationId = await app.createOrganization();
       const secondary = createSecondaryDatabase();
+      const contender = createSecondaryDatabase();
       const held = gate();
       const release = gate();
       const createPrivate = (
@@ -338,20 +348,17 @@ describe("platform admin and Demo security through Better Auth", () => {
           await release.promise;
         });
         await held.promise;
-        competing = Promise.resolve(order === "resource first" ? convert(db) : createPrivate(db));
-        const outcome = competing.then(
-          () => "completed",
-          () => "rejected",
+        const contenderPid = await backendPidOf(contender.database);
+        competing = Promise.resolve(
+          order === "resource first"
+            ? convert(contender.database)
+            : createPrivate(contender.database),
         );
-        expect(
-          await Promise.race([
-            outcome,
-            new Promise<string>((resolve) => setTimeout(() => resolve("blocked"), 100)),
-          ]),
-        ).toBe("blocked");
+        competing.catch(() => undefined);
+        await waitUntilBlocked(db, contenderPid);
         release.resolve();
         await holding;
-        await expect(competing).rejects.toThrow();
+        await expect(competing).rejects.toMatchObject({ cause: { code: "23514" } });
         const invalid = await db
           .select({ id: workbooks.id })
           .from(workbooks)
@@ -361,10 +368,51 @@ describe("platform admin and Demo security through Better Auth", () => {
       } finally {
         release.resolve();
         await Promise.allSettled([holding, competing]);
-        await secondary.close();
+        await Promise.all([secondary.close(), contender.close()]);
       }
     },
   );
+
+  it("refuses to migrate over a Demo organization that already breaks the rules", async () => {
+    const guard = readFileSync(DEMO_MIGRATION, "utf-8")
+      .split("--> statement-breakpoint")
+      .find((statement) => statement.includes("DO $$"));
+    if (!guard) throw new Error("0063 lost its pre-check");
+    const userId = await app.createTestUser();
+    const organizationId = await app.createOrganization();
+    await db
+      .update(organizations)
+      .set({ type: "demo", visibility: "public" })
+      .where(eq(organizations.id, organizationId));
+    await db.execute(sql.raw(guard));
+
+    // Rows written before 0063, which its triggers never checked.
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`ALTER TABLE workbooks DISABLE TRIGGER demo_workbook_public`);
+      await tx.insert(workbooks).values({
+        name: "Older private work",
+        createdBy: userId,
+        organizationId,
+        visibility: "private",
+      });
+      await tx.execute(sql`ALTER TABLE workbooks ENABLE TRIGGER demo_workbook_public`);
+    });
+    await expect(db.execute(sql.raw(guard))).rejects.toMatchObject({ cause: { code: "23514" } });
+
+    await db
+      .update(workbooks)
+      .set({ visibility: "public" })
+      .where(eq(workbooks.organizationId, organizationId));
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`ALTER TABLE organizations DISABLE TRIGGER demo_organization_public`);
+      await tx
+        .update(organizations)
+        .set({ visibility: "private" })
+        .where(eq(organizations.id, organizationId));
+      await tx.execute(sql`ALTER TABLE organizations ENABLE TRIGGER demo_organization_public`);
+    });
+    await expect(db.execute(sql.raw(guard))).rejects.toMatchObject({ cause: { code: "23514" } });
+  });
 
   // The two schedules review found deadlocking under the old per-organization advisory lock.
   // Both transactions must now finish.
@@ -425,6 +473,7 @@ describe("platform admin and Demo security through Better Auth", () => {
     const userId = await app.createTestUser();
     const workspaceId = await ensurePersonalOrganization(db, { id: userId, name: "Leaving" });
     const secondary = createSecondaryDatabase();
+    const creator = createSecondaryDatabase();
     const userLocked = gate();
     const insertWaiting = gate();
     try {
@@ -440,18 +489,22 @@ describe("platform admin and Demo security through Better Auth", () => {
       });
       await userLocked.promise;
       // The insert's foreign key check on created_by waits for the deletion's user lock.
-      const create = db.insert(workbooks).values({
-        name: "Late work",
-        createdBy: userId,
-        organizationId: workspaceId,
-        visibility: "private",
-      });
-      setTimeout(() => insertWaiting.resolve(), 200);
+      const creatorPid = await backendPidOf(creator.database);
+      const create = Promise.resolve(
+        creator.database.insert(workbooks).values({
+          name: "Late work",
+          createdBy: userId,
+          organizationId: workspaceId,
+          visibility: "private",
+        }),
+      );
+      await waitUntilBlocked(db, creatorPid);
+      insertWaiting.resolve();
       const outcomes = await Promise.allSettled([deletion, create]);
       expect(outcomes.map((outcome) => outcome.status)).toEqual(["fulfilled", "fulfilled"]);
     } finally {
       insertWaiting.resolve();
-      await secondary.close();
+      await Promise.all([secondary.close(), creator.close()]);
     }
   });
 

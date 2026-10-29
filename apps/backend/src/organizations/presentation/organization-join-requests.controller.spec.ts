@@ -22,6 +22,7 @@ import { EmailAdapter } from "../../common/modules/email/services/email.adapter"
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../notifications/application/services/notification-dispatch.service";
 import { NotificationDeliveryRepository } from "../../notifications/core/repositories/notification-delivery.repository";
+import { backendPidOf, waitUntilBlocked } from "../../test/lock-wait";
 import { queuedDeliveriesFor } from "../../test/notification-deliveries";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
@@ -245,6 +246,7 @@ describe("OrganizationJoinRequestsController", () => {
       const organizationId = await seedOrg("public");
       const repository = testApp.module.get(OrganizationJoinRequestRepository);
       const secondary = createSecondaryDatabase();
+      const observer = createSecondaryDatabase();
       let releaseFlip!: () => void;
       const released = new Promise<void>((resolve) => (releaseFlip = resolve));
       let flipped!: () => void;
@@ -259,19 +261,17 @@ describe("OrganizationJoinRequestsController", () => {
           await released;
         });
         await flipHeld;
+        // The repository runs on the harness's single shared connection.
+        const requestPid = await backendPidOf(testApp.database);
         const create = repository.createIfJoinable(organizationId, requesterId, undefined);
-        const early = await Promise.race([
-          create.then(() => "finished"),
-          new Promise((resolve) => setTimeout(() => resolve("waiting"), 150)),
-        ]);
-        expect(early).toBe("waiting");
+        await waitUntilBlocked(observer.database, requestPid);
         releaseFlip();
         await flip;
         const result = await create;
         expect(result.isSuccess() && result.value.outcome).toBe("not-joinable");
       } finally {
         releaseFlip();
-        await secondary.close();
+        await Promise.all([secondary.close(), observer.close()]);
       }
     });
 
