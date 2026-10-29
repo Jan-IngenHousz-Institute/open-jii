@@ -143,6 +143,8 @@ export interface SkippedLine {
 export interface CostLabel {
   label: string;
   category: string;
+  /** Bills a monthly fee early in the month, which the spend limit would read as a spike. */
+  billsMonthly?: boolean;
 }
 
 /** `docs/monitoring/cost-services.json`, which the dashboards read too. */

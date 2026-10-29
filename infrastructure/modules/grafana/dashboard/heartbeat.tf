@@ -842,6 +842,7 @@ locals {
     ECS_SERVICE_NAME                = var.ecs_service_name
     METRICS_FORWARDER_FUNCTION_NAME = var.metrics_forwarder_function_name
     COST_PUBLISHER_FUNCTION_NAME    = var.cost_publisher_function_name
+    METRICS_PUBLISHER_FUNCTION_NAME = var.metrics_publisher_function_name
   }
 
   # Grafana's unit ids for the units the catalog declares.

@@ -97,6 +97,11 @@ passes:
   - date: 2026-10-28
     range: [117, 119]
     note: the serving store's health, whether it answers and how full its memory and disk are
+  - date: 2026-10-29
+    range: [120, 122]
+    note: >-
+      a day's spend past its limit, for AWS and for Databricks, and the metrics publisher's errors,
+      so the weekly report's database counts going quiet reaches someone
 
 metrics:
   # Ingest path
@@ -2052,3 +2057,71 @@ metrics:
     notes: >-
       A run that throws publishes nothing, and every cost panel keeps its last figures. A failed
       forecast does not throw; the run publishes without it and names the error in its log line.
+
+  - num: 120
+    id: aws-spend-limit
+    name: AWS spend against its limit
+    family: observability
+    area: cost
+    source: ce
+    phase: P3
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: OpenJII/Cost
+      search: SEARCH('{OpenJII/Cost,Category,Environment,Service} MetricName="DailyCostPercentOfLimit" AND Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
+      unit: percent
+    baseline: { method: threshold, max: 100 }
+    runbook: docs/runbooks/aws-spend-limit.md
+    notes: >-
+      Yesterday's usage per Service as a share of its limit: twice the median of the 14 days before,
+      and at least $10 above it, so a service that usually costs cents does not alert for doubling.
+      Replayed over dev's 90 days to 26 October 2026, it fired on EC2's ramp from 24 to 30 September.
+      Services that bill monthly, Grafana's licences, are left out. The rule alerts per Service, and
+      a lasting step stops alerting once it has become the median.
+
+  - num: 121
+    id: databricks-spend-limit
+    name: Databricks spend against its limit
+    family: observability
+    area: cost
+    source: dbx
+    phase: P3
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: OpenJII/Usage
+      search: SEARCH('{OpenJII/Usage,Component,Environment} MetricName="DatabricksDailyCostPercentOfLimit" AND Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
+      unit: percent
+    baseline: { method: threshold, max: 100 }
+    runbook: docs/runbooks/databricks-spend-limit.md
+    notes: >-
+      Yesterday's spend at list price per Component as a share of the same limit as 120's, a day the
+      component spent nothing counting as zero. Replayed over dev's 90 days to 26 October 2026, it
+      fired on the metrics pipeline's growth from late August, the backend warehouse three times and
+      a jobs bump around 1 October.
+
+  - num: 122
+    id: metrics-publisher-errors
+    name: Metrics publisher errors
+    family: observability
+    area: api
+    source: aws
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: AWS/Lambda
+      metric: Errors
+      stat: Sum
+      dimensions: { FunctionName: "${METRICS_PUBLISHER_FUNCTION_NAME}" }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/metrics-publisher-errors.md
+    notes: >-
+      The metrics publisher counts researchers and experiments from the database each Monday at 06:00
+      UTC. A run that throws leaves the weekly report's adoption and usage lines without that week.

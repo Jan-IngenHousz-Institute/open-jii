@@ -2578,6 +2578,268 @@ resource "grafana_rule_group" "cost_publisher_health" {
   }
 }
 
+resource "grafana_rule_group" "metrics_publisher_health" {
+  count = var.metrics_publisher_function_name != "" ? 1 : 0
+
+  provider         = grafana.amg
+  name             = "Metrics Publisher Health"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  rule {
+    name      = "Metrics Publisher Errors"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Lambda"
+        metricName = "Errors"
+        statistic  = "Sum"
+        dimensions = {
+          FunctionName = var.metrics_publisher_function_name
+        }
+      })
+
+      relative_time_range {
+        from = 3600
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "The metrics publisher threw, so this week's researcher and experiment counts did not reach CloudWatch, and the weekly report's adoption and usage lines read no data for the week."
+      summary          = "Metrics publisher is failing to publish"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/metrics-publisher-errors.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["metrics-publisher-errors"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "monitoring"
+      metric_id = "metrics-publisher-errors"
+    }
+  }
+}
+
+# A day's spend past its limit, one alert per service or pipeline. Each producer works out the
+# limit, since Grafana's reduce has no median, and publishes yesterday as a share of it. The range
+# reaches back 26 hours, so the hours each night before the new day's point lands still read the
+# day before rather than nothing.
+resource "grafana_rule_group" "spend" {
+  provider         = grafana.amg
+  name             = "Spend"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  rule {
+    name      = "AWS Spend Past Its Limit"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Cost"
+        metricName = "DailyCostPercentOfLimit"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+        matchExact = false
+      })
+
+      relative_time_range {
+        from = 93600
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 100"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "{{ $labels.Service }} cost {{ humanize $values.B.Value }}% of its limit yesterday: more than twice its usual day and at least $10 above it. It stops once the new level has become its usual."
+      summary          = "AWS spend past its limit: {{ $labels.Service }}"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/aws-spend-limit.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["aws-spend-limit"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "cost"
+      metric_id = "aws-spend-limit"
+    }
+  }
+  rule {
+    name      = "Databricks Spend Past Its Limit"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Usage"
+        metricName = "DatabricksDailyCostPercentOfLimit"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+        matchExact = false
+      })
+
+      relative_time_range {
+        from = 93600
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 100"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "{{ $labels.Component }} cost {{ humanize $values.B.Value }}% of its limit yesterday: more than twice its usual day and at least $10 above it. It stops once the new level has become its usual."
+      summary          = "Databricks spend past its limit: {{ $labels.Component }}"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/databricks-spend-limit.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["databricks-spend-limit"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "cost"
+      metric_id = "databricks-spend-limit"
+    }
+  }
+}
+
 # The lakehouse export's dead-man. It watches a Databricks job rather than a Lambda, so
 # it is not tied to a function name that could be empty.
 resource "grafana_rule_group" "collector_liveness" {
@@ -3188,6 +3450,18 @@ resource "grafana_notification_policy" "policy" {
   group_wait      = "30s"
   group_interval  = "5m"
   repeat_interval = "12h"
+
+  # A spend step lasts days and its alert fires the whole time, so it posts when it fires and
+  # when it clears rather than every 12 hours.
+  policy {
+    matcher {
+      label = "metric_id"
+      match = "=~"
+      value = "aws-spend-limit|databricks-spend-limit"
+    }
+    contact_point   = grafana_contact_point.slack.name
+    repeat_interval = "168h"
+  }
 
   policy {
     matcher {

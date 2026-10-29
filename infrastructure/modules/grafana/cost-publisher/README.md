@@ -11,6 +11,7 @@ Publishes what AWS charges into CloudWatch four times a day, at 00:30, 06:30, 12
 | `PreviousMonthCostUsd`       |                       | The whole month before, tax and fees included                         |
 | `PreviousMonthTaxAndFeesUsd` |                       | What the whole month before billed beyond usage                       |
 | `MonthForecastCostUsd`       |                       | Cost Explorer's forecast for the month, actuals included              |
+| `DailyCostPercentOfLimit`    | `Category`, `Service` | Yesterday as a share of its spend limit, in percent                   |
 
 A service's label and category come from `docs/monitoring/cost-services.json`, which the dashboards read too. A service the file does not list is counted as `Other AWS services`.
 
@@ -23,6 +24,10 @@ Cost Explorer keeps revising recent days. Every run republishes yesterday, the d
 ## Tax and fees
 
 AWS dates a whole month's tax and fees on the 1st and adds to them as the month's usage grows. On dev they ran at 21% on top of usage every month from August to October 2026. So no week carries its own share, and the weekly figures are usage only. The month before is compared at the same day with its tax and fees in proportion to its usage by then, since the month so far carries only what has accrued.
+
+## The spend limit
+
+A service's limit is twice its usual day, the median of the 14 days before yesterday, and at least $10 above it. `AWS Spend Past Its Limit` alerts per service past 100%, and the Cost dashboard shows each one's share. The heartbeat export publishes the same figure for Databricks' components. Services billed monthly, flagged `billsMonthly` in the category file, are left out: their fee lands early in each month. Replayed over dev's 90 days to 26 October 2026, a $10 floor alerted about ten times, catching EC2's September ramp and the metrics pipeline's growth, against three times at $20.
 
 ## When a run fails
 
