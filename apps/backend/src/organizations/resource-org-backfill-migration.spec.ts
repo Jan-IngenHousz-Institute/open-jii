@@ -18,7 +18,7 @@ import { TestHarness } from "../test/test-harness";
 
 /**
  * These statements mirror the Phase 2 data backfill hand-written in
- * `packages/database/drizzle/0038_cheerful_lucky_pierre.sql` (own every resource
+ * `packages/database/postgres/migrations/0038_cheerful_lucky_pierre.sql` (own every resource
  * with its creator's personal org + seed per-resource grants). They are
  * duplicated here so the migration's data ops are locked by tests — update both
  * together if the migration changes.
