@@ -20,6 +20,11 @@ terraform {
       source  = "posthog/posthog"
       version = ">= 1.0.21"
     }
+
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.6"
+    }
   }
 }
 
