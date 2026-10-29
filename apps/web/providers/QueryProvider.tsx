@@ -1,5 +1,6 @@
 "use client";
 
+import { settledIdentity } from "@/lib/session-identity";
 import { parseApiError } from "@/util/apiError";
 import { QueryClient, QueryClientProvider, MutationCache, isServer } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -42,18 +43,6 @@ function getQueryClient() {
   }
   browserQueryClient ??= makeQueryClient();
   return browserQueryClient;
-}
-
-interface SessionState {
-  data: { user: { id: string } } | null;
-  isPending: boolean;
-  error?: unknown;
-}
-
-// A pending session or a failed refetch says nothing new about who is signed in.
-function settledIdentity({ data, isPending, error }: SessionState) {
-  if (isPending || error) return undefined;
-  return data?.user.id ?? "signed-out";
 }
 
 interface CacheOwner {

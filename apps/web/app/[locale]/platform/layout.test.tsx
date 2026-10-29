@@ -6,7 +6,17 @@ import { auth } from "~/app/actions/auth";
 
 import AppLayout from "./layout";
 
-const { mockSidebarWrapper } = vi.hoisted(() => ({ mockSidebarWrapper: vi.fn() }));
+const { mockSidebarWrapper, mockGate } = vi.hoisted(() => ({
+  mockSidebarWrapper: vi.fn(),
+  mockGate: vi.fn(),
+}));
+
+vi.mock("@/components/auth/principal-gate", () => ({
+  PrincipalGate: ({ userId, children }: { userId: string; children: React.ReactNode }) => {
+    mockGate(userId);
+    return children;
+  },
+}));
 
 vi.mock("@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper", () => ({
   NavigationSidebarWrapper: (props: unknown) => {
@@ -46,6 +56,12 @@ describe("AppLayout", () => {
     expect(screen.getByText("Page content")).toBeInTheDocument();
     expect(screen.getByText("Sidebar")).toBeInTheDocument();
     expect(screen.getByText("Site header")).toBeInTheDocument();
+  });
+
+  it("gates the platform on the user it was rendered for", async () => {
+    render(await AppLayout(defaultProps));
+
+    expect(mockGate).toHaveBeenCalledWith("user-1");
   });
 
   it("passes the session user to the sidebar for the footer account menu", async () => {
