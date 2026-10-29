@@ -76,6 +76,8 @@ export const NOTIFICATION_RETENTION_LOCK_KEY = "notifications_retention";
 
 const RETENTION_LOCK = sql`hashtext(${NOTIFICATION_RETENTION_LOCK_KEY})`;
 
+const EVENT_LOCK_NAMESPACE = "notifications_event";
+
 @Injectable()
 export class NotificationRepository {
   constructor(
@@ -210,6 +212,62 @@ export class NotificationRepository {
         .where(and(eq(notifications.recipientId, recipientId), isNull(notifications.readAt)));
 
       return row.count;
+    });
+  }
+
+  /**
+   * Holds back every other transaction dispatching this type about this resource until
+   * this one ends. Two keys, so it never shares a key with a single-key lock such as the
+   * retention one.
+   */
+  async lockEvent(
+    type: NotificationType,
+    resource: { type: NotificationResourceType; id: string },
+    handle: DbOrTx = this.database,
+  ): Promise<Result<void>> {
+    return tryCatch(async () => {
+      await handle.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtext(${EVENT_LOCK_NAMESPACE}), hashtext(${`${type}:${resource.type}:${resource.id}`}))`,
+      );
+    });
+  }
+
+  /**
+   * Brings these recipients' unread rows of this type about this resource up to date,
+   * as if they had just arrived, and returns whose rows it touched. Each row keeps its
+   * id and stays unread.
+   */
+  async refreshUnread(
+    type: NotificationType,
+    resource: { type: NotificationResourceType; id: string },
+    recipientIds: string[],
+    update: { params: Record<string, string>; actorId: string | null },
+    handle: DbOrTx = this.database,
+  ): Promise<Result<Set<string>>> {
+    return tryCatch(async () => {
+      if (recipientIds.length === 0) {
+        return new Set<string>();
+      }
+
+      const rows = await handle
+        .update(notifications)
+        .set({
+          params: update.params,
+          actorId: update.actorId,
+          createdAt: sql`now() AT TIME ZONE 'UTC'`,
+        })
+        .where(
+          and(
+            inArray(notifications.recipientId, recipientIds),
+            isNull(notifications.readAt),
+            eq(notifications.type, type),
+            eq(notifications.resourceType, resource.type),
+            eq(notifications.resourceId, resource.id),
+          ),
+        )
+        .returning({ recipientId: notifications.recipientId });
+
+      return new Set(rows.map((row) => row.recipientId));
     });
   }
 

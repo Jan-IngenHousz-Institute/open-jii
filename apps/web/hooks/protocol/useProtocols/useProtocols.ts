@@ -9,11 +9,14 @@ import { useDebounce } from "../../useDebounce";
 import { useListSorting } from "../../useListSorting";
 import { useSearchPending } from "../../useSearchPending";
 import { protocolsListQuery } from "./protocols-list-query";
+import { useProtocolListFilters } from "./useProtocolListFilters";
 
 export const useProtocols = ({ initialSearch = "" }: { initialSearch?: string } = {}) => {
   const [search, setSearchState] = useState<string>(initialSearch);
   const [page, setPage] = useState(1);
   const { sort, setSort, toggleSort } = useListSorting(zProtocolSort);
+  const { families, visibilities, setFamilies, setVisibilities, clearFilters, hasActiveFilters } =
+    useProtocolListFilters();
   const [debouncedSearch] = useDebounce(search, 300);
 
   const setSearch = (value: string) => {
@@ -22,7 +25,13 @@ export const useProtocols = ({ initialSearch = "" }: { initialSearch?: string } 
   };
 
   const query = useQuery({
-    ...protocolsListQuery(orpc, { search: debouncedSearch, page, sort }),
+    ...protocolsListQuery(orpc, {
+      search: debouncedSearch,
+      page,
+      sort,
+      families,
+      visibilities,
+    }),
     placeholderData: (prev) => prev,
   });
 
@@ -61,5 +70,20 @@ export const useProtocols = ({ initialSearch = "" }: { initialSearch?: string } 
       toggleSort(field, multi);
       setPage(1);
     },
+    families,
+    setFamilies: (values: typeof families) => {
+      setFamilies(values);
+      setPage(1);
+    },
+    visibilities,
+    setVisibilities: (values: typeof visibilities) => {
+      setVisibilities(values);
+      setPage(1);
+    },
+    clearFilters: () => {
+      clearFilters();
+      setPage(1);
+    },
+    hasActiveFilters,
   };
 };

@@ -4,157 +4,13 @@
 # Verify with the ghcr trivy DB (mirror.gcr.io lags): --db-repository ghcr.io/aquasecurity/trivy-db:2
 
 vulnerabilities:
-  # AL2023 packages in the 2023.12.20260914 base. AWS names the fixed builds,
-  # but the repos do not carry them yet, so upgrading in the Dockerfile is a
-  # no-op ("Nothing to do").
-  - id: CVE-2026-78367
-    purls:
-      - "pkg:rpm/amazon/rpm@4.16.1.3-29.amzn2023.0.7"
-      - "pkg:rpm/amazon/rpm-libs@4.16.1.3-29.amzn2023.0.7"
-    statement: "rpmbuild tar-spec macro injection. No rpm operations at runtime."
-    expired_at: 2026-11-05
-  - id: CVE-2026-84233
-    purls:
-      - "pkg:rpm/amazon/rpm@4.16.1.3-29.amzn2023.0.7"
-      - "pkg:rpm/amazon/rpm-libs@4.16.1.3-29.amzn2023.0.7"
-    statement: "rpmuncompress macro expansion on crafted filenames. No rpm operations at runtime."
-    expired_at: 2026-11-05
-  - id: CVE-2026-80230
-    purls:
-      - "pkg:rpm/amazon/curl-minimal@8.21.0-5.amzn2023.0.1"
-      - "pkg:rpm/amazon/libcurl-minimal@8.21.0-5.amzn2023.0.1"
-    statement: "curl public key pinning bypass. The sandbox makes no outbound TLS connections."
-    expired_at: 2026-11-05
-  - id: CVE-2026-89161
-    purls:
-      - "pkg:rpm/amazon/pcre2@10.40-1.amzn2023.0.3"
-      - "pkg:rpm/amazon/pcre2-syntax@10.40-1.amzn2023.0.3"
-    statement: "PCRE2 JIT memory corruption. Neither the runtime nor macro code uses PCRE2."
-    expired_at: 2026-11-05
-  - id: CVE-2026-92392
-    purls:
-      - "pkg:rpm/amazon/curl-minimal@8.21.0-5.amzn2023.0.1"
-      - "pkg:rpm/amazon/libcurl-minimal@8.21.0-5.amzn2023.0.1"
-    statement: "curl HTTP/2 upload use-after-free. The sandbox makes no outbound connections."
-    expired_at: 2026-11-05
-  - id: CVE-2026-78659
-    purls:
-      - "pkg:rpm/amazon/libcap@2.73-1.amzn2023.0.7"
-    statement: "Go net/http trailer DoS filed under libcap; the installed package ships no Go binaries."
-    expired_at: 2026-11-05
-  - id: CVE-2026-78667
-    purls:
-      - "pkg:rpm/amazon/libcap@2.73-1.amzn2023.0.7"
-    statement: "Go net/http Range header DoS, same libcap filing, no Go binaries installed."
-    expired_at: 2026-11-05
-  - id: CVE-2026-94440
-    purls:
-      - "pkg:rpm/amazon/libcap@2.73-1.amzn2023.0.7"
-    statement: "Go multipart memory-limit bypass, same libcap filing, no Go binaries installed."
-    expired_at: 2026-11-05
-  - id: CVE-2026-103111
-    purls:
-      - "pkg:rpm/amazon/pcre2@10.40-1.amzn2023.0.3"
-      - "pkg:rpm/amazon/pcre2-syntax@10.40-1.amzn2023.0.3"
-    statement: "PCRE2 JIT out-of-bounds write. Neither the runtime nor macro code uses PCRE2."
-    expired_at: 2026-11-05
-  - id: CVE-2026-86145
-    purls:
-      - "pkg:rpm/amazon/pcre2@10.40-1.amzn2023.0.3"
-      - "pkg:rpm/amazon/pcre2-syntax@10.40-1.amzn2023.0.3"
-    statement: "PCRE2 DFA match out-of-bounds write. Neither the runtime nor macro code uses PCRE2."
-    expired_at: 2026-11-05
-  - id: CVE-2026-89156
-    purls:
-      - "pkg:rpm/amazon/pcre2@10.40-1.amzn2023.0.3"
-      - "pkg:rpm/amazon/pcre2-syntax@10.40-1.amzn2023.0.3"
-    statement: "PCRE2 JIT fallback out-of-bounds read. Neither the runtime nor macro code uses PCRE2."
-    expired_at: 2026-11-05
-  - id: CVE-2026-89160
-    purls:
-      - "pkg:rpm/amazon/pcre2@10.40-1.amzn2023.0.3"
-      - "pkg:rpm/amazon/pcre2-syntax@10.40-1.amzn2023.0.3"
-    statement: "PCRE2 invalid-UTF out-of-bounds read. Neither the runtime nor macro code uses PCRE2."
-    expired_at: 2026-11-05
-
-  # openssl-fips-provider-latest / openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1, fixed
-  # in .0.3, which the AL2023 repos do not carry yet. Every id is a QUIC, DTLS,
-  # TLS-server, CMP, peer-certificate or signing path: the sandbox serves none of
-  # them and has no outbound network to meet a malicious peer.
-  - id: CVE-2026-35189
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
-    statement: "Crafted peer certificate CRL heap growth. No TLS peers."
-    expired_at: 2026-11-05
-  - id: CVE-2026-35191
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
-    statement: "QUIC server amplification. No QUIC."
-    expired_at: 2026-11-05
-  - id: CVE-2026-42772
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
-    statement: "QUIC stream reassembly DoS. No QUIC."
-    expired_at: 2026-11-05
-  - id: CVE-2026-54872
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
-    statement: "Generic-curve ECDSA nonce timing leak. No signing endpoint to time."
-    expired_at: 2026-11-05
-  - id: CVE-2026-54873
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
-    statement: "QUIC packet buffer retention. No QUIC."
-    expired_at: 2026-11-05
-  - id: CVE-2026-72897
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
-    statement: "TLS server context switch out-of-bounds write. No TLS server."
-    expired_at: 2026-11-05
-  - id: CVE-2026-75804
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
-    statement: "QUIC connection flow control DoS. No QUIC."
-    expired_at: 2026-11-05
-  - id: CVE-2026-75805
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
-    statement: "CMP revocation response NULL deref. No CMP client."
-    expired_at: 2026-11-05
-  - id: CVE-2026-75806
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
-    statement: "Undersized DTLS record DoS. No DTLS."
-    expired_at: 2026-11-05
-  - id: CVE-2026-84782
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
-    statement: "DTLS retransmission information disclosure. No DTLS."
-    expired_at: 2026-11-05
-  - id: CVE-2026-84784
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.8-1.amzn2023.0.1"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.8-1.amzn2023.0.1"
-    statement: "QUIC connection ID backlog DoS. No QUIC."
-    expired_at: 2026-11-05
-
   # aws-lambda-rie, Go stdlib 1.26.9, fixed in 1.26.10. The base entrypoint runs
   # RIE only when AWS_LAMBDA_RUNTIME_API is unset, which Lambda always sets.
   - id: CVE-2026-111943
     purls:
       - "pkg:golang/stdlib@v1.26.9"
     statement: "crypto/x509 denylist for distrusted CA intermediates. RIE never runs in production."
-    expired_at: 2026-11-05
+    expired_at: 2026-11-30
 
   # The runtime's bundled SDK tree (var/runtime/node_modules/@aws-sdk/node_modules).
   # The handler never loads @aws-sdk and macro code runs with require undefined.
@@ -162,69 +18,84 @@ vulnerabilities:
     purls:
       - "pkg:npm/axios@1.19.0"
     statement: "axios HTTP/2 proxy and DNS settings ignored. No outbound HTTP."
-    expired_at: 2026-11-05
+    expired_at: 2026-11-30
   - id: CVE-2026-101901
     purls:
       - "pkg:npm/axios@1.19.0"
     statement: "axios HTTP/2 session DoS. No outbound HTTP."
-    expired_at: 2026-11-05
+    expired_at: 2026-11-30
   - id: CVE-2026-101903
     purls:
       - "pkg:npm/axios@1.19.0"
     statement: "axios malformed data URL DoS. SDK copy never loaded."
-    expired_at: 2026-11-05
+    expired_at: 2026-11-30
   - id: CVE-2026-101905
     purls:
       - "pkg:npm/axios@1.19.0"
     statement: "axios socket hijack via inherited createConnection. No outbound HTTP."
-    expired_at: 2026-11-05
+    expired_at: 2026-11-30
   - id: CVE-2026-101906
     purls:
       - "pkg:npm/axios@1.19.0"
     statement: "axios crafted redirect hostname DoS. No outbound HTTP."
-    expired_at: 2026-11-05
+    expired_at: 2026-11-30
   - id: CVE-2026-101907
     purls:
       - "pkg:npm/axios@1.19.0"
     statement: "axios fetch-adapter redirect SSRF. No outbound HTTP."
-    expired_at: 2026-11-05
+    expired_at: 2026-11-30
   - id: CVE-2026-101909
     purls:
       - "pkg:npm/axios@1.19.0"
     statement: "axios form-serialization prototype pollution. SDK copy never loaded."
-    expired_at: 2026-11-05
+    expired_at: 2026-11-30
   - id: CVE-2026-111755
     purls:
       - "pkg:npm/follow-redirects@1.16.0"
     statement: "follow-redirects sensitive header leak on redirect. No outbound HTTP."
-    expired_at: 2026-11-05
+    expired_at: 2026-11-30
   - id: CVE-2026-111756
     purls:
       - "pkg:npm/follow-redirects@1.16.0"
     statement: "follow-redirects cross-origin credential stripping bypass. No outbound HTTP."
-    expired_at: 2026-11-05
+    expired_at: 2026-11-30
   - id: CVE-2026-102276
     purls:
       - "pkg:npm/brace-expansion@1.1.18"
     statement: "brace-expansion stack exhaustion. SDK copy never loaded."
-    expired_at: 2026-11-05
+    expired_at: 2026-11-30
   - id: CVE-2026-102278
     purls:
       - "pkg:npm/brace-expansion@1.1.18"
     statement: "brace-expansion nested recursion, same copy."
-    expired_at: 2026-11-05
+    expired_at: 2026-11-30
   - id: CVE-2026-19534
     purls:
       - "pkg:npm/undici@7.29.0"
     statement: "undici WebSocket subprotocol DoS. No WebSockets."
-    expired_at: 2026-11-05
+    expired_at: 2026-11-30
   - id: CVE-2026-84961
     purls:
       - "pkg:npm/undici@7.29.0"
     statement: "undici BalancedPool TLS validation bypass. No outbound TLS."
-    expired_at: 2026-11-05
+    expired_at: 2026-11-30
   - id: CVE-2026-109869
     purls:
       - "pkg:npm/undici@7.29.0"
     statement: "undici fetch crash on a malicious server's response. The function's isolated subnets have no internet route, so no such server is reachable."
-    expired_at: 2026-11-05
+    expired_at: 2026-11-30
+  - id: CVE-2026-109383
+    purls:
+      - "pkg:npm/undici@7.29.0"
+    statement: "undici certificate validation bypass. No outbound TLS."
+    expired_at: 2026-11-30
+  - id: CVE-2026-109829
+    purls:
+      - "pkg:npm/undici@7.29.0"
+    statement: "undici cache poisoning and information disclosure. SDK copy never loaded, no outbound HTTP."
+    expired_at: 2026-11-30
+  - id: CVE-2026-87018
+    purls:
+      - "pkg:npm/undici@7.29.0"
+    statement: "undici DoS via TLS renegotiation. No outbound TLS."
+    expired_at: 2026-11-30

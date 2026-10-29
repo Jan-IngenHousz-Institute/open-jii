@@ -91,7 +91,8 @@
     "calibration_run_approved": "{{actor}} heeft de {{definitionName}}-kalibratie van {{deviceName}} goedgekeurd",
     "calibration_run_rejected": "{{actor}} heeft de {{definitionName}}-kalibratie van {{deviceName}} afgewezen",
     "api_key_created": "Er is een nieuwe API-sleutel aan je account toegevoegd: {{keyName}}",
-    "passkey_added": "Er is een nieuwe passkey aan je account toegevoegd: {{passkeyName}}"
+    "passkey_added": "Er is een nieuwe passkey aan je account toegevoegd: {{passkeyName}}",
+    "passkey_added_unnamed": "Er is een nieuwe passkey aan je account toegevoegd"
   },
   "preferences": {
     "title": "E-mailmeldingen",

@@ -306,28 +306,26 @@
       ]
     },
     {
-      "asset": "protocol-picker.png",
-      "sha256": "ff278c57663539775432ae5fa38725d88af6e5077a9cd9c6e61d7ee83f9469c9",
-      "script": "apps/web/e2e/docs_media/capture_protocols.py",
-      "environment": "dev.openjii.org",
-      "route": "/en-US/platform/experiments/<experiment-id>/design",
-      "captured_at": "2026-07-19T22:16:04.979253+00:00",
+      "asset": "protocol-picker.webp",
+      "sha256": "34449b2a3b14c85042b70db6305532309fd237fdde8c0a1e0c64b51ddb7ec3b2",
+      "script": "apps/e2e/docs-media/shots.ts",
+      "environment": "localhost (seeded local stack)",
+      "route": "/en-US/platform/workbooks/<workbook-id>",
+      "captured_at": "2026-10-27T19:18:44+01:00",
       "viewport": {
-        "width": 1440,
-        "height": 1024
+        "width": 1920,
+        "height": 1200
       },
       "color_scheme": "light",
       "locale": "en-US",
       "review_status": "approved",
-      "reviewed_at": "2026-07-19T22:17:36.412297+00:00",
-      "reviewer": "ticket-06-media-pass",
-      "review_notes": "Searchable protocol picker shows names, creators, and sensor-family badges; no protocol selected or created.",
-      "redactions": [
-        "visible email addresses replaced with [email hidden]",
-        "testing-account avatar hidden",
-        "visible UUID identifiers replaced with [id hidden]"
-      ],
-      "live_checks_observed": ["Picker shows protocol name, creator, and sensor family on dev."]
+      "reviewed_at": "2026-10-27T19:18:44+01:00",
+      "reviewer": "Codex capture review",
+      "review_notes": "Chamber QC Scratchpad workbook with the Protocol picker open and filtered by “chloro”; three [Seed] protocols show MultispeQ badges. Reviewed full-size: no real names or emails, credentials or dev overlays. WebP encoded at quality 90 with metadata omitted using cwebp.",
+      "redactions": [],
+      "live_checks_observed": [
+        "Protocol picker rendered from the local backend with three seeded protocols."
+      ]
     },
     {
       "asset": "quick-start-web.webm",
@@ -646,6 +644,28 @@
       "redactions": [],
       "live_checks_observed": [
         "Dialog rendered from the local backend with the join-code routes present."
+      ]
+    },
+    {
+      "asset": "protocols-list.webp",
+      "sha256": "035908a07c32289c03c6891c784892f5bdc4282049cfc1a1db57a42f5e1e8478",
+      "script": "apps/e2e/docs-media/shots.ts",
+      "environment": "localhost (seeded local stack)",
+      "route": "/platform/protocols",
+      "captured_at": "2026-10-27T17:55:00+01:00",
+      "viewport": {
+        "width": 1920,
+        "height": 1200
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-10-27T17:55:00+01:00",
+      "reviewer": "Codex capture review",
+      "review_notes": "Name sorted ascending; Family and Visibility filters visible with no selection; Clear filters absent. Family badges read MultispeQ and Ambyte. Full-size review confirmed only [Seed] protocol names and no real names, emails, credentials or dev overlays. Encoded from the capture tool frame at WebP quality 90 with metadata omitted using cwebp.",
+      "redactions": [],
+      "live_checks_observed": [
+        "Local protocols list rendered all seeded protocol rows and updated product family labels."
       ]
     }
   ]

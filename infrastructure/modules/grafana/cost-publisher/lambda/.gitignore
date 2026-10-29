@@ -1,0 +1,4 @@
+node_modules/
+lib/
+cost-services.json
+!function.zip

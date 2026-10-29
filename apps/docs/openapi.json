@@ -28212,12 +28212,28 @@
             "name": "language",
             "in": "query",
             "schema": {
-              "enum": [
-                "python",
-                "r",
-                "javascript"
+              "anyOf": [
+                {
+                  "enum": [
+                    "python",
+                    "r",
+                    "javascript"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "python",
+                      "r",
+                      "javascript"
+                    ],
+                    "type": "string"
+                  }
+                }
               ],
-              "type": "string"
+              "description": "Filter macros by language; several values match either"
             },
             "allowEmptyValue": true,
             "allowReserved": true
@@ -28289,6 +28305,34 @@
             "allowReserved": true,
             "description": "Up to two ordered sort criteria. Encode as sort[0][field]=name&sort[0][direction]=asc (and sort[1] for a secondary criterion).",
             "example": "sort[0][field]=protocols&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc"
+          },
+          {
+            "name": "visibility",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "private",
+                    "public"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "private",
+                      "public"
+                    ],
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "Filter macros by visibility; several values match either"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
           },
           {
             "name": "fields",
@@ -33162,6 +33206,68 @@
             "allowReserved": true,
             "description": "Up to two ordered sort criteria. Encode as sort[0][field]=name&sort[0][direction]=asc (and sort[1] for a secondary criterion).",
             "example": "sort[0][field]=macros&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc"
+          },
+          {
+            "name": "family",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "multispeq",
+                    "ambyte",
+                    "minipar",
+                    "generic",
+                    "ambit"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "multispeq",
+                      "ambyte",
+                      "minipar",
+                      "generic",
+                      "ambit"
+                    ],
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "Filter protocols by sensor family; several values match either"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "visibility",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "private",
+                    "public"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "private",
+                      "public"
+                    ],
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "Filter protocols by visibility; several values match either"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
           },
           {
             "name": "page",
@@ -41436,6 +41542,593 @@
                       "createdBy"
                     ]
                   }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "workbooks.publishWorkbookVersion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "workbookId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "exclusiveMinimum": 0
+                    },
+                    "cells": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "isCollapsed": {
+                                "type": "boolean",
+                                "default": false
+                              },
+                              "type": {
+                                "const": "protocol"
+                              },
+                              "payload": {
+                                "type": "object",
+                                "properties": {
+                                  "protocolId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "version": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991,
+                                    "exclusiveMinimum": 0
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "protocolId",
+                                  "version"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "type",
+                              "payload"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "isCollapsed": {
+                                "type": "boolean",
+                                "default": false
+                              },
+                              "type": {
+                                "const": "command"
+                              },
+                              "payload": {
+                                "type": "object",
+                                "properties": {
+                                  "format": {
+                                    "enum": [
+                                      "string",
+                                      "json",
+                                      "yaml"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "content": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "format",
+                                  "content"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "type",
+                              "payload"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "isCollapsed": {
+                                "type": "boolean",
+                                "default": false
+                              },
+                              "type": {
+                                "const": "macro"
+                              },
+                              "payload": {
+                                "type": "object",
+                                "properties": {
+                                  "macroId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "language": {
+                                    "enum": [
+                                      "python",
+                                      "r",
+                                      "javascript"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "macroId",
+                                  "language"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "type",
+                              "payload"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "isCollapsed": {
+                                "type": "boolean",
+                                "default": false
+                              },
+                              "type": {
+                                "const": "question"
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 64
+                              },
+                              "question": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "yes_no"
+                                      },
+                                      "text": {
+                                        "type": "string",
+                                        "maxLength": 64
+                                      },
+                                      "required": {
+                                        "type": "boolean",
+                                        "default": false
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "text"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "open_ended"
+                                      },
+                                      "text": {
+                                        "type": "string",
+                                        "maxLength": 64
+                                      },
+                                      "required": {
+                                        "type": "boolean",
+                                        "default": false
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "text"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "multi_choice"
+                                      },
+                                      "text": {
+                                        "type": "string",
+                                        "maxLength": 64
+                                      },
+                                      "options": {
+                                        "type": "array",
+                                        "minItems": 1,
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 64
+                                        }
+                                      },
+                                      "required": {
+                                        "type": "boolean",
+                                        "default": false
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "text",
+                                      "options"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "number"
+                                      },
+                                      "text": {
+                                        "type": "string",
+                                        "maxLength": 64
+                                      },
+                                      "required": {
+                                        "type": "boolean",
+                                        "default": false
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "text"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "answer": {
+                                "type": "string"
+                              },
+                              "isAnswered": {
+                                "type": "boolean",
+                                "default": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "type",
+                              "name",
+                              "question"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "isCollapsed": {
+                                "type": "boolean",
+                                "default": false
+                              },
+                              "type": {
+                                "const": "branch"
+                              },
+                              "paths": {
+                                "type": "array",
+                                "minItems": 1,
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "label": {
+                                      "type": "string",
+                                      "maxLength": 64
+                                    },
+                                    "color": {
+                                      "type": "string"
+                                    },
+                                    "conditions": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          },
+                                          "sourceCellId": {
+                                            "type": "string"
+                                          },
+                                          "field": {
+                                            "type": "string"
+                                          },
+                                          "operator": {
+                                            "enum": [
+                                              "eq",
+                                              "neq",
+                                              "gt",
+                                              "lt",
+                                              "gte",
+                                              "lte"
+                                            ],
+                                            "type": "string"
+                                          },
+                                          "value": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "id",
+                                          "sourceCellId",
+                                          "field",
+                                          "operator",
+                                          "value"
+                                        ]
+                                      }
+                                    },
+                                    "gotoCellId": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "label",
+                                    "color",
+                                    "conditions"
+                                  ]
+                                }
+                              },
+                              "defaultPathId": {
+                                "type": "string"
+                              },
+                              "evaluatedPathId": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "type",
+                              "paths"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "isCollapsed": {
+                                "type": "boolean",
+                                "default": false
+                              },
+                              "type": {
+                                "const": "output"
+                              },
+                              "producedBy": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "data": {},
+                              "executionTime": {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              "messages": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "deviceResults": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "deviceId": {
+                                      "type": "string"
+                                    },
+                                    "deviceLabel": {
+                                      "type": "string"
+                                    },
+                                    "family": {
+                                      "enum": [
+                                        "multispeq",
+                                        "ambyte",
+                                        "minipar",
+                                        "generic",
+                                        "ambit",
+                                        "mobile"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "deviceName": {
+                                      "type": "string"
+                                    },
+                                    "data": {},
+                                    "error": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "deviceId"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "type",
+                              "producedBy"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "isCollapsed": {
+                                "type": "boolean",
+                                "default": false
+                              },
+                              "type": {
+                                "const": "markdown"
+                              },
+                              "content": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "type",
+                              "content"
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "metadata": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "entitySnapshots": {
+                      "type": "object",
+                      "properties": {
+                        "protocols": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "code": {},
+                              "family": {
+                                "enum": [
+                                  "multispeq",
+                                  "ambyte",
+                                  "minipar",
+                                  "generic",
+                                  "ambit"
+                                ],
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "macros": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "code": {
+                                "type": "string"
+                              },
+                              "language": {
+                                "enum": [
+                                  "python",
+                                  "r",
+                                  "javascript"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "code"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "protocols",
+                        "macros"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "workbookId",
+                    "version",
+                    "cells",
+                    "metadata",
+                    "createdAt",
+                    "createdBy"
+                  ]
                 }
               }
             }

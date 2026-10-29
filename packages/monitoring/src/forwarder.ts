@@ -38,7 +38,7 @@ const CLOUDWATCH_UNITS = new Set([
 ]);
 
 /** JSON.parse happily returns null, a number or an array; none of them has fields. */
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 

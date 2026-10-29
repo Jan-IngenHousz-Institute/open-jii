@@ -10,7 +10,7 @@ import {
   within,
 } from "@/test/test-utils";
 import type React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentExportRecord } from "@repo/api/domains/experiment/experiment.schema";
@@ -132,6 +132,8 @@ describe("ExportListStep", () => {
       status: 500,
     });
     await act(() => queryClient.refetchQueries());
+    // The failed refetch reaches the component a tick later; check after it has rendered.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
     expect(screen.getByText("experimentData.exportModal.exportCount")).toBeInTheDocument();
     expect(screen.queryByText(/experimentData\.exportModal\.error/)).not.toBeInTheDocument();
@@ -290,28 +292,117 @@ describe("ExportListStep", () => {
     expect(screen.getByText(twoPartLinks.parts[1].fileName)).toBeInTheDocument();
   });
 
-  it("copies every file link of a multi-part export, one per line", async () => {
-    mountExports([multiPartExport]);
-    server.mount(contract.experiments.getExportDownloadLinks, { body: twoPartLinks });
-
-    render(<ExportListStep {...defaultProps} />);
-
-    const user = userEvent.setup();
-    // `userEvent.setup()` installs its own clipboard stub, so this has to land after it.
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", {
-      value: { writeText },
-      writable: true,
-      configurable: true,
+  describe("Download all", () => {
+    const freshLinks = () => ({
+      ...twoPartLinks,
+      expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
     });
-    await user.click(
-      await screen.findByRole("button", { name: /experimentData\.exportModal\.showFiles/ }),
-    );
-    await user.click(
-      await screen.findByRole("button", { name: /experimentData\.exportModal\.copyLinks/ }),
-    );
 
-    expect(writeText).toHaveBeenCalledWith(twoPartLinks.parts.map((part) => part.url).join("\n"));
+    const downloadFrames = () => Array.from(document.body.querySelectorAll("iframe"));
+
+    const clickDownloadAll = async () => {
+      const user = userEvent.setup();
+      await user.click(
+        await screen.findByRole("button", { name: /experimentData\.exportModal\.showFiles/ }),
+      );
+      await user.click(
+        await screen.findByRole("button", { name: "experimentData.exportModal.downloadAll" }),
+      );
+    };
+
+    afterEach(() => {
+      downloadFrames().forEach((frame) => frame.remove());
+    });
+
+    it("downloads every file from freshly signed links", async () => {
+      mountExports([multiPartExport]);
+      const links = server.mount(contract.experiments.getExportDownloadLinks, {
+        body: freshLinks(),
+      });
+
+      render(<ExportListStep {...defaultProps} />);
+      await clickDownloadAll();
+
+      await waitFor(() => {
+        expect(downloadFrames().map((frame) => frame.getAttribute("src"))).toEqual(
+          twoPartLinks.parts.map((part) => part.url),
+        );
+      });
+      expect(links.callCount).toBe(2);
+      expect(toast).toHaveBeenCalledWith({
+        description: "experimentData.exportModal.downloadingAll",
+      });
+    });
+
+    it("keeps session replay from recording the signed links", async () => {
+      mountExports([multiPartExport]);
+      server.mount(contract.experiments.getExportDownloadLinks, { body: freshLinks() });
+
+      render(<ExportListStep {...defaultProps} />);
+      await clickDownloadAll();
+
+      await waitFor(() => {
+        expect(downloadFrames()).toHaveLength(twoPartLinks.parts.length);
+      });
+      for (const frame of downloadFrames()) {
+        expect(frame).toHaveClass("ph-no-capture");
+      }
+    });
+
+    it("keeps the downloads waiting for a connection once the dialog closes", async () => {
+      mountExports([multiPartExport]);
+      server.mount(contract.experiments.getExportDownloadLinks, { body: freshLinks() });
+
+      const { unmount } = render(<ExportListStep {...defaultProps} />);
+      await clickDownloadAll();
+      await waitFor(() => {
+        expect(downloadFrames()).toHaveLength(twoPartLinks.parts.length);
+      });
+
+      unmount();
+
+      expect(downloadFrames()).toHaveLength(twoPartLinks.parts.length);
+    });
+
+    it("removes the frames once their links have expired", async () => {
+      mountExports([multiPartExport]);
+      server.mount(contract.experiments.getExportDownloadLinks, {
+        body: { ...twoPartLinks, expiresAt: new Date(Date.now() + 200).toISOString() },
+      });
+
+      render(<ExportListStep {...defaultProps} />);
+      await clickDownloadAll();
+
+      await waitFor(() => {
+        expect(downloadFrames()).toHaveLength(0);
+      });
+    });
+
+    it("starts nothing and keeps the files when the links cannot be signed", async () => {
+      mountExports([multiPartExport]);
+      server.mount(contract.experiments.getExportDownloadLinks, { body: freshLinks() });
+
+      render(<ExportListStep {...defaultProps} />);
+      const user = userEvent.setup();
+      await user.click(
+        await screen.findByRole("button", { name: /experimentData\.exportModal\.showFiles/ }),
+      );
+      const downloadAll = await screen.findByRole("button", {
+        name: "experimentData.exportModal.downloadAll",
+      });
+      server.mount(contract.experiments.getExportDownloadLinks, {
+        status: 500,
+        body: { message: "Server error" },
+      });
+      await user.click(downloadAll);
+
+      expect(await screen.findByText("experimentData.exportModal.linksError")).toBeInTheDocument();
+      expect(screen.getByText(twoPartLinks.parts[1].fileName)).toBeInTheDocument();
+      expect(downloadFrames()).toHaveLength(0);
+      expect(toast).not.toHaveBeenCalledWith({
+        description: "experimentData.exportModal.downloadingAll",
+      });
+    });
   });
 
   it("says the export has expired when its links are refused as expired", async () => {
@@ -337,33 +428,6 @@ describe("ExportListStep", () => {
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith({
         description: "experimentData.exportModal.linkExpired",
-        variant: "destructive",
-      });
-    });
-  });
-
-  it("says so when the links cannot be copied", async () => {
-    mountExports([multiPartExport]);
-    server.mount(contract.experiments.getExportDownloadLinks, { body: twoPartLinks });
-
-    render(<ExportListStep {...defaultProps} />);
-
-    const user = userEvent.setup();
-    Object.defineProperty(navigator, "clipboard", {
-      value: { writeText: vi.fn().mockRejectedValue(new Error("Write permission denied")) },
-      writable: true,
-      configurable: true,
-    });
-    await user.click(
-      await screen.findByRole("button", { name: /experimentData\.exportModal\.showFiles/ }),
-    );
-    await user.click(
-      await screen.findByRole("button", { name: /experimentData\.exportModal\.copyLinks/ }),
-    );
-
-    await waitFor(() => {
-      expect(toast).toHaveBeenCalledWith({
-        description: "experimentData.exportModal.copyFailed",
         variant: "destructive",
       });
     });

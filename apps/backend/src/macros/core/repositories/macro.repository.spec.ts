@@ -484,7 +484,7 @@ describe("MacroRepository", () => {
         testUserId,
       );
 
-      const filter: MacroFilter = { language: "python" };
+      const filter: MacroFilter = { languages: ["python"] };
 
       // Act
       const result = await repository.findAll(filter);
@@ -531,7 +531,7 @@ describe("MacroRepository", () => {
         testUserId,
       );
 
-      const filter: MacroFilter = { search: "data", language: "python" };
+      const filter: MacroFilter = { search: "data", languages: ["python"] };
 
       // Act
       const result = await repository.findAll(filter);

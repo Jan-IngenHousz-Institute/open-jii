@@ -1,3 +1,4 @@
+import { NOTIFICATIONS_KEY } from "@/hooks/notifications/useNotifications/useNotifications";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -48,7 +49,9 @@ export const useTransferRequestCreate = (props?: TransferRequestCreateProps) => 
           queryKey: orpc.experiments.listTransferRequests.key(),
         });
       },
-      onSuccess: (data) => {
+      onSuccess: async (data) => {
+        await queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
+
         // Call the provided onSuccess callback if it exists
         props?.onSuccess?.(data.requestId);
       },

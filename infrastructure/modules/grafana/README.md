@@ -20,8 +20,9 @@ Dashboard Visualization
 
 1. **Workspace Module** (`workspace/`) - AMG workspace and the daily round's Viewer service account
 2. **Dashboard Module** (`dashboard/`) - Pre-configured monitoring dashboards
-3. **Metrics Publisher** (`metrics-publisher/`) - Weekly Lambda that publishes user registration stats to CloudWatch
-4. **Token Rotation** (`TOKEN_ROTATION.md`) - Automated token management
+3. **Metrics Publisher** (`metrics-publisher/`) - Weekly Lambda that publishes registration and experiment counts to CloudWatch
+4. **Cost Publisher** (`cost-publisher/`) - Daily Lambda that publishes what AWS bills, from Cost Explorer, to CloudWatch
+5. **Token Rotation** (`TOKEN_ROTATION.md`) - Automated token management
 
 ### Monitored Metrics
 
@@ -96,7 +97,7 @@ Alerts are routed to Slack via webhook with severity-based policies:
 
 ## Metrics Publisher
 
-A Lambda that runs every Monday at 06:00 UTC, queries Aurora for user registration counts, and publishes `TotalUsers` and `WeeklyNewUsers` metrics to CloudWatch under the `OpenJII/UserRegistrations` namespace. The weekly heartbeat report shows them as Researchers and New researchers.
+A Lambda that runs every Monday at 06:00 UTC, queries Aurora, and publishes `TotalUsers`, `WeeklyNewUsers` and `WeeklyNewExperiments` to CloudWatch under the `OpenJII/UserRegistrations` namespace. The weekly heartbeat report shows them as Researchers, New researchers and Experiments created. Its database user may read only the columns its counts filter on, never names, emails or keys, so a new count needs a migration granting `SELECT` on the columns it reads.
 
 The Lambda is deployed from a committed `lambda/function.zip` that contains `index.js` and `node_modules`. The zip is committed to git so CI never needs to install dependencies.
 
@@ -110,6 +111,10 @@ npm run build
 git add function.zip
 git commit -m "build: rebuild metrics-publisher function.zip"
 ```
+
+## Cost Publisher
+
+A Lambda that runs four times a day, reads Cost Explorer, and publishes yesterday's, the latest complete week's and the month's spend under `OpenJII/Cost`. The Cost dashboard and the weekly report's Cost section read it beside Databricks' own charges, which the heartbeat export prices from Databricks' billing tables. Which category each AWS service counts under is `docs/monitoring/cost-services.json`. See [`cost-publisher/README.md`](cost-publisher/README.md) for what it publishes and why each figure is stamped when its window closed.
 
 ## Setup Instructions
 
@@ -304,7 +309,8 @@ Platform, Data pipeline and Delivery dashboards come from `dashboard/flows.tf`. 
 pipeline have a section per question (traffic or volume, errors, latency, saturation or
 freshness): the question's chart, what to check first when it looks wrong, then each hop's panels
 from `dashboard/flows/*.json.tftpl` in the order a request or a measurement travels, in the hop's
-colour. Throughput and storage is laid out in `dashboard/throughput.tf`.
+colour. Throughput and storage is laid out in `dashboard/throughput.tf`, and Cost in
+`dashboard/cost.tf`, which also builds the weekly report's Cost section.
 
 1. Edit the section's panels in `dashboard/flows/<dashboard>.json.tftpl`, or the generated
    panels in `dashboard/flows.tf`
@@ -415,12 +421,13 @@ tofu force-unlock LOCK_ID
 
 ### Monthly Costs (Dev Environment)
 
-| Service                | Cost              | Notes                 |
-| ---------------------- | ----------------- | --------------------- |
-| Amazon Managed Grafana | ~$9/month         | Free tier: 744 hours  |
-| CloudWatch Metrics     | ~$0.50            | Custom metrics (DORA) |
-| CloudWatch Logs        | ~$1               | Dashboard queries     |
-| **Total**              | **~$10.50/month** | Varies with usage     |
+| Service                | Cost           | Notes                 |
+| ---------------------- | -------------- | --------------------- |
+| Amazon Managed Grafana | ~$9/month      | Free tier: 744 hours  |
+| CloudWatch Metrics     | ~$0.50         | Custom metrics (DORA) |
+| CloudWatch Logs        | ~$1            | Dashboard queries     |
+| Cost Explorer API      | ~$3.60         | Twelve requests a day |
+| **Total**              | **~$14/month** | Varies with usage     |
 
 **Free Tier Included:**
 

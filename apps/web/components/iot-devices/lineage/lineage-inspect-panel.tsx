@@ -6,6 +6,7 @@ import { EntityLink } from "@/components/iot-devices/monitoring/entity-link";
 import { SettingsCard } from "@/components/shared/settings-card";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDateTime, formatRelativeTime } from "@/util/date";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
 
 import type { DeviceMonitoring, IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
@@ -61,7 +62,10 @@ export function LineageInspectPanel({ selected, device, monitoring }: LineageIns
             label={t("iot.devices.lineage.serialLabel")}
             value={<span className="font-mono text-xs">{device.serialNumber}</span>}
           />
-          <FactRow label={t("iot.devices.lineage.familyLabel")} value={selected.family} />
+          <FactRow
+            label={t("iot.devices.lineage.familyLabel")}
+            value={getSensorFamilyLabel(selected.family)}
+          />
           <FactRow
             label={t("iot.devices.lineage.statusLabel")}
             value={

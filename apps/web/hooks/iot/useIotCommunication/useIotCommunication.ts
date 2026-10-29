@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getSensorFamilyLabel } from "~/util/sensor-family";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { IDeviceDriver, ITransportAdapter } from "@repo/iot";
@@ -36,7 +37,7 @@ export async function createAdapter(
   // Check transport support at the driver level
   if (!isTransportSupported(deviceType, connectionType)) {
     throw new Error(
-      `${sensorFamily} does not support ${connectionType} transport. ` +
+      `${getSensorFamilyLabel(sensorFamily)} does not support ${connectionType} transport. ` +
         (connectionType === "bluetooth"
           ? "This device uses Bluetooth Classic which is not available via Web Bluetooth (BLE-only). Use a serial connection instead."
           : "Use a Bluetooth connection instead."),

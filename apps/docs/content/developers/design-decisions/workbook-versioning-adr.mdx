@@ -44,6 +44,8 @@ The durable boundaries are:
    design and referenced entity code have not drifted, attach/upgrade reuses the
    latest version. Otherwise it publishes a new version and repins the
    experiment. Runtime-only output fields do not count as design drift.
+   **Publish & notify** on the workbook page is a third boundary with the same
+   reuse-or-publish rule, except that it repins no experiment.
 5. **Rollback and roll-forward repin existing versions.** An experiment admin
    may select any existing version belonging to that workbook. This does not
    publish a duplicate version.

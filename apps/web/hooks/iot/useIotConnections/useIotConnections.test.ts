@@ -109,7 +109,10 @@ describe("useIotConnections", () => {
 
     expect(result.current.connections[0].family).toBe("ambit");
     expect(mockToast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Different device identified" }),
+      expect.objectContaining({
+        title: "Different device identified",
+        description: "Connected as MultispeQ, but the device identifies as Ambit. Using Ambit.",
+      }),
     );
   });
 

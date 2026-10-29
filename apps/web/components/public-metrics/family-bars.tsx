@@ -1,5 +1,7 @@
 "use client";
 
+import { formatSensorFamily } from "@/util/sensor-family";
+
 import type { MetricsFamily } from "@repo/api/domains/metrics/metrics.schema";
 import { useTranslation } from "@repo/i18n";
 
@@ -22,13 +24,11 @@ export function FamilyBars({ families, unresolved, locale }: FamilyBarsProps) {
     new Intl.NumberFormat(locale, { notation: "compact" }).format(value);
 
   const familyLabel = (family: string) =>
-    family === UNATTRIBUTED_FAMILY ? t("families.unattributed") : family;
+    family === UNATTRIBUTED_FAMILY ? t("families.unattributed") : formatSensorFamily(family);
 
   const renderRow = (family: MetricsFamily) => (
     <li key={family.family} className="flex items-center gap-3">
-      <span className="text-foreground w-28 truncate text-sm capitalize">
-        {familyLabel(family.family)}
-      </span>
+      <span className="text-foreground w-28 truncate text-sm">{familyLabel(family.family)}</span>
       <span className="bg-muted h-4 flex-1 overflow-hidden rounded">
         <span
           className="bg-primary block h-full rounded"
