@@ -20,9 +20,16 @@ organizations across the platform. Private memberships and sharing grants never
 extend those permissions. Personal feeds, exports, credential issuers, member
 rosters and account administration are denied.
 
-Guests automatically become members of Demo organizations. That membership lets
-them measure in public Demo experiments and run their public macros. It does not
-allow editing the experiment, workbook, protocol, macro or organization. Demo
+A guest counts as a member of every Demo organization, but the platform never
+writes a membership row for one. The backend derives the membership from the
+organization's type, so a guest's related organizations and experiments follow a
+Demo conversion at once, and Demo rosters and member counts leave guests out. The
+database refuses a membership row for a guest and refuses turning a registered
+account into a guest, both with `23514`.
+
+That membership lets guests measure in public Demo experiments and run their
+public macros. It does not allow editing the experiment, workbook, protocol,
+macro or organization. Demo
 experiments do not offer Request to join. An ordinary public experiment keeps
 its existing researcher join flow.
 
@@ -112,26 +119,36 @@ off prevents new guest sessions, uploads and macro runs. Existing guests can
 still read public resources and sign out.
 
 A nightly UTC job removes anonymous accounts strictly older than seven days,
-including sessions, memberships, visits, quotas and guest-addressed grants. It
+including sessions, visits, quotas and guest-addressed grants. It
 also removes stale anonymous-entry rate-limit records. Refreshing a session does
 not restart the account's lifetime. Measurements and Demo resources remain.
 Server deletion cannot erase an offline phone's SecureStore session cache. The
 guest client milestone must clear that cache on Leave demo and handle expired
 guest sessions; researcher offline caches keep their existing behavior.
 
-Deletion is atomic per account. An unexpected owned research row blocks that
-account's deletion and raises the existing heartbeat error signal with
+The job works in batches of 100 accounts, each in its own short transaction on
+the backend's shared connection, so API requests run between batches. It walks
+the expired accounts in creation order and skips any account another transaction
+holds, which leaves a guest with a quota call in flight for the next night. Every
+task fires the schedule, and concurrent runs split the accounts between them.
+Each batch waits at most two seconds for a lock, and a run stops after five
+minutes and logs how many expired accounts are left.
+
+A batch deletes its accounts' grants and users in two statements. If an
+unexpected owned research row or a lock timeout stops it, the batch retries one
+account at a time, so deletion stays atomic per account. A research row keeps
+that account and raises the existing heartbeat error signal with
 `GUEST_PURGE_FAILED`, fingerprint `guest-purge:blocked`, the opaque guest ID and
-the blocking table. Other expired accounts still purge. The transaction and its
-per-account savepoint stay in the users repository so sharing-owned grant cleanup
-and the user deletion use the same rollback boundary.
+the blocking table. A lock timeout is only logged, and the next night retries the
+account. The rest of the batch and later batches still purge. Grant cleanup and
+the user deletion share one rollback boundary.
 
 Notification dispatch drops guest actors and recipients before bell or email
 rows exist. The email worker also checks already queued rows. This covers the
 join-code, invitation-acceptance, leave, member-removal and role-change producers.
-Auto-admission and retirement use database triggers and produce no notifications.
+Guests never join organizations, so no membership notification names one.
 
-Member and contributor APIs return raw names with `isGuest` and `isFormerGuest`
+Contributor APIs return raw names with `isGuest` and `isFormerGuest`
 flags. Web renders the guest label through translation context. Current relational
 projections return `isFormerGuest: false`. Measurement-data reads derive guest
 attribution from the pipeline's server-derived `is_guest` column and check current
