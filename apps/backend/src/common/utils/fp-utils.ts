@@ -281,8 +281,10 @@ export function defaultRepositoryErrorMapper(error: unknown): AppError {
   if (causeCode === CauseCode.CHECK_VIOLATION) {
     const constraintMessage =
       error instanceof Error && error.cause instanceof Error ? error.cause.message : "";
+    if (constraintMessage === "Demo organizations can only own public resources") {
+      return AppError.badRequest(constraintMessage, "DEMO_RESOURCE_PUBLIC_REQUIRED");
+    }
     const publicMessages = [
-      "Demo organizations can only own public resources",
       "Demo organizations must be public and cannot be personal workspaces",
       "Publish every experiment, workbook, protocol and macro before choosing Demo",
     ];

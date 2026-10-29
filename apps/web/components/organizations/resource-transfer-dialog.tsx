@@ -29,6 +29,10 @@ import {
 } from "@repo/ui/components/select";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+const TRANSFER_ERROR_REASONS: Record<string, string | undefined> = {
+  DEMO_RESOURCE_PUBLIC_REQUIRED: "demoPublicRequired",
+};
+
 interface ResourceTransferDialogProps {
   resourceType: TransferableResourceType;
   resourceId: string;
@@ -94,8 +98,12 @@ export function ResourceTransferDialog({
       setTargetOrganizationId("");
       onOpenChange(false);
     } catch (err) {
+      const error = parseApiError(err);
+      const reason = error?.code ? TRANSFER_ERROR_REASONS[error.code] : undefined;
       toast({
-        description: parseApiError(err)?.message ?? t("organizations.transfer.failed"),
+        description: reason
+          ? t("organizations.transfer.failed", { context: reason })
+          : (error?.message ?? t("organizations.transfer.failed")),
         variant: "destructive",
       });
     }

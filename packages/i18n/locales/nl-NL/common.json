@@ -733,6 +733,7 @@
       "approved": "{{name}} is lid geworden van de organisatie",
       "rejected": "De aanvraag van {{name}} is afgewezen",
       "decisionFailed": "Deze beslissing kon niet worden vastgelegd.",
+      "decisionFailed_demoApprovalDisabled": "Demo-organisaties kunnen geen lidmaatschapsverzoeken goedkeuren.",
       "requestedOn": "Aangevraagd op {{date}}",
       "decidedOn": "Besloten op {{date}}",
       "noPending": "Geen openstaande beslissing.",
@@ -870,6 +871,7 @@
       "transferring": "Overdragen…",
       "transferred": "Overgedragen",
       "failed": "Deze resource kon niet worden overgedragen.",
+      "failed_demoPublicRequired": "Publiceer deze resource voordat je deze naar een Demo-organisatie verplaatst.",
       "membershipHint": "Je kunt alleen overdragen aan een organisatie waar je bij hoort.",
       "personalNote": "Je persoonlijke werkruimte is alleen van jou. Iedereen die hier via de huidige organisatie bij kan, verliest de toegang — alleen wie het direct gedeeld heeft, behoudt die.",
       "personalCaption": "Alleen jij. Er komen geen organisatieleden mee."

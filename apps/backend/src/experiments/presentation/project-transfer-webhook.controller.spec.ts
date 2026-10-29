@@ -8,7 +8,7 @@ import type {
   ExperimentProjectTransferWebhookResponse,
 } from "@repo/api/domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.schema";
 import type { WebhookErrorResponse } from "@repo/api/domains/user/user.schema";
-import { sql } from "@repo/database";
+import { eq, experiments, protocols, macros, organizations } from "@repo/database";
 
 import { stableStringify } from "../../common/utils/stable-json";
 import { TestHarness } from "../../test/test-harness";
@@ -123,15 +123,29 @@ describe("ProjectTransferWebhookController", () => {
         .set("x-databricks-timestamp", timestamp)
         .send(payload)
         .expect(201);
-      const rows = await testApp.database.execute(sql`
-        select o.slug, e.organization_id from experiments e join organizations o on o.id = e.organization_id where e.name = 'Imported experiment'
-        union all select o.slug, p.organization_id from protocols p join organizations o on o.id = p.organization_id where p.name = 'Imported protocol'
-        union all select o.slug, m.organization_id from macros m join organizations o on o.id = m.organization_id where m.name = 'Imported macro'
-      `);
+      const rows = (
+        await Promise.all([
+          testApp.database
+            .select({ slug: organizations.slug, organizationId: experiments.organizationId })
+            .from(experiments)
+            .innerJoin(organizations, eq(organizations.id, experiments.organizationId))
+            .where(eq(experiments.name, "Imported experiment")),
+          testApp.database
+            .select({ slug: organizations.slug, organizationId: protocols.organizationId })
+            .from(protocols)
+            .innerJoin(organizations, eq(organizations.id, protocols.organizationId))
+            .where(eq(protocols.name, "Imported protocol")),
+          testApp.database
+            .select({ slug: organizations.slug, organizationId: macros.organizationId })
+            .from(macros)
+            .innerJoin(organizations, eq(organizations.id, macros.organizationId))
+            .where(eq(macros.name, "Imported macro")),
+        ])
+      ).flat();
       expect(rows).toHaveLength(3);
       for (const row of rows) {
         expect(row.slug).toBe(`personal-${importer}`);
-        expect(row.organization_id).not.toBe(demo);
+        expect(row.organizationId).not.toBe(demo);
       }
     });
 

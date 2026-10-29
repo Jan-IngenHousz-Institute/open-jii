@@ -733,6 +733,7 @@
       "approved": "{{name}} ist der Organisation beigetreten",
       "rejected": "Die Anfrage von {{name}} wurde abgelehnt",
       "decisionFailed": "Diese Entscheidung konnte nicht gespeichert werden.",
+      "decisionFailed_demoApprovalDisabled": "Demo-Organisationen können keine Beitrittsanfragen genehmigen.",
       "requestedOn": "Angefragt am {{date}}",
       "decidedOn": "Entschieden am {{date}}",
       "noPending": "Keine offene Entscheidung.",
@@ -870,6 +871,7 @@
       "transferring": "Wird übertragen…",
       "transferred": "Übertragen",
       "failed": "Diese Ressource konnte nicht übertragen werden.",
+      "failed_demoPublicRequired": "Veröffentliche diese Ressource, bevor du sie an eine Demo-Organisation überträgst.",
       "membershipHint": "Du kannst nur an eine Organisation übertragen, der du angehörst.",
       "personalNote": "Dein persönlicher Arbeitsbereich gehört dir allein. Alle, die über die aktuelle Organisation Zugriff haben, verlieren ihn — nur direkt geteilte Personen behalten ihn.",
       "personalCaption": "Nur du. Keine Organisationsmitglieder kommen mit."

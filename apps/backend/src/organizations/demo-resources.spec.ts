@@ -167,6 +167,7 @@ describe("Demo resource and directory HTTP behavior", () => {
         .expect(400);
       expect(response.body).toMatchObject({
         message: "Demo organizations can only own public resources",
+        data: { code: "DEMO_RESOURCE_PUBLIC_REQUIRED" },
       });
       expect(JSON.stringify(response.body)).not.toMatch(/UPDATE|params:|Failed query/i);
       const table = resourceTables[`${resourceType}s`];

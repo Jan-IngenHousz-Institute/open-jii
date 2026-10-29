@@ -17,6 +17,10 @@ import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+const DECISION_ERROR_REASONS: Record<string, string | undefined> = {
+  DEMO_JOIN_REQUEST_APPROVAL_DISABLED: "demoApprovalDisabled",
+};
+
 /**
  * The decision queue: people who asked to join. Pending requests carry the
  * decision buttons; the decided ones stay as history, without them — a decision is
@@ -53,8 +57,12 @@ export function OrganizationJoinRequests({
             : t("organizations.requests.rejected", { name: requesterName(request) }),
       });
     } catch (err) {
+      const error = parseApiError(err);
+      const reason = error?.code ? DECISION_ERROR_REASONS[error.code] : undefined;
       toast({
-        description: parseApiError(err)?.message ?? t("organizations.requests.decisionFailed"),
+        description: reason
+          ? t("organizations.requests.decisionFailed", { context: reason })
+          : (error?.message ?? t("organizations.requests.decisionFailed")),
         variant: "destructive",
       });
     } finally {

@@ -33,8 +33,8 @@ type MemberRowsPage = NonNullable<Awaited<ReturnType<typeof readPage>>>;
 
 /**
  * Every membership row, not only the first page. Demo organizations lift the 100-member
- * cap, and the first 100 rows are all a bare `listMembers` answers with — so a member
- * past them would have no row id to change a role or remove them by.
+ * cap. A bare `listMembers` call returns only the first 100 rows, so later members
+ * would have no row id to change their role or remove them by.
  */
 export async function listAllMemberRows(organizationId: string): Promise<MemberRowsPage> {
   const rows = new Map<string, MemberRowsPage["members"][number]>();

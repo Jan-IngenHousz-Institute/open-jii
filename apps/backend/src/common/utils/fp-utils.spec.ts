@@ -270,6 +270,7 @@ describe("Functional Programming Utilities", () => {
       const mapped = defaultRepositoryErrorMapper(error);
       expect(mapped.statusCode).toBe(400);
       expect(mapped.message).toBe("Demo organizations can only own public resources");
+      expect(mapped.code).toBe("DEMO_RESOURCE_PUBLIC_REQUIRED");
       expect(JSON.stringify(mapped)).not.toMatch(/UPDATE|sensitive|params:/);
     });
 
