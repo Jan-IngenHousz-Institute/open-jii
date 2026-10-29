@@ -390,6 +390,43 @@ describe("Local demo seed", () => {
       blocks: {},
       approvedBy: owner.id,
     });
+    const otherUserId = await app.createTestUser();
+    const otherOrganizationId = await app.personalOrganizationId(otherUserId);
+    const otherDevice = await app.createIotDevice({
+      createdBy: otherUserId,
+      organizationId: otherOrganizationId,
+      deviceType: "multispeq",
+    });
+    const otherDefinition = await app.createCalibrationDefinition({
+      name: "Preserved calibration",
+      createdBy: otherUserId,
+      organizationId: otherOrganizationId,
+      family: "multispeq",
+    });
+    const [otherRun] = await app.database
+      .insert(calibrationRuns)
+      .values({
+        definitionId: otherDefinition.id,
+        deviceId: otherDevice.id,
+        requestedBy: otherUserId,
+        inputSource: "bench_wizard",
+      })
+      .returning();
+    const [crossOrganizationRun] = await app.database
+      .insert(calibrationRuns)
+      .values({
+        definitionId: definition.id,
+        deviceId: otherDevice.id,
+        requestedBy: otherUserId,
+        inputSource: "bench_wizard",
+      })
+      .returning();
+    await app.database.insert(deviceCalibrations).values({
+      deviceId: otherDevice.id,
+      runId: crossOrganizationRun.id,
+      blocks: {},
+      approvedBy: otherUserId,
+    });
     const resourceIds = [device.id, group.id, definition.id];
     for (const [resourceType, resourceId] of [
       ["device", device.id],
@@ -409,13 +446,16 @@ describe("Local demo seed", () => {
     }
 
     await clearDemoContent(app.database);
-    for (const table of [
-      iotDevices,
-      deviceGroups,
-      calibrationDefinitions,
-      calibrationRuns,
-      deviceCalibrations,
-    ] as const) {
+    expect(await app.database.select({ id: iotDevices.id }).from(iotDevices)).toEqual([
+      { id: otherDevice.id },
+    ]);
+    expect(
+      await app.database.select({ id: calibrationDefinitions.id }).from(calibrationDefinitions),
+    ).toEqual([{ id: otherDefinition.id }]);
+    expect(await app.database.select({ id: calibrationRuns.id }).from(calibrationRuns)).toEqual([
+      { id: otherRun.id },
+    ]);
+    for (const table of [deviceGroups, deviceCalibrations] as const) {
       expect(await app.database.select({ id: table.id }).from(table)).toHaveLength(0);
     }
     expect(await app.database.select().from(deviceGroupMembers)).toHaveLength(0);

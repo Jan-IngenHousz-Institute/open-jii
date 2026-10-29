@@ -19,7 +19,9 @@ pnpm dev:fb
 ```
 
 Seeding replaces every resource in openJII Demo, including resources you created
-there and previous edits to these examples.
+there and previous edits to these examples. It also deletes calibration runs that
+used a Demo calibration definition and the calibrations those runs applied, even
+on devices outside openJII Demo.
 Use the local database only. Running the seed twice leaves one Demo organization
 and one experiment per sensor. It also restores a renamed or retyped demo fixture.
 The organization and experiment IDs are named exports in

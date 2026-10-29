@@ -1,3 +1,4 @@
+// The package seed exports are raw TypeScript for tsx and Vitest consumers.
 /** What every seed module agrees the seed owns, so a clear-out finds exactly those rows. */
 
 export const SEED_EMAIL = "seed@openjii.local";
@@ -64,7 +65,6 @@ export const CONTRIBUTOR_SEEDS = [
   },
 ] as const;
 
-/** The package seed exports are raw TypeScript for tsx and Vitest consumers. */
 export const DEMO_ORGANIZATION_ID = "82e9a684-8c1c-4967-b940-09735bb4b7ed";
 export const DEMO_EXPERIMENT_ID_MULTISPEQ = "94d8b584-2d27-46fa-aa6c-8908ce13d521";
 export const DEMO_EXPERIMENT_ID_AMBIT = "559e2a57-e120-44d6-8326-b929a359159b";
