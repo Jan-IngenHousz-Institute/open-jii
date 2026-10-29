@@ -35,8 +35,10 @@ sudo du -xh --max-depth=2 /var/lib/clickhouse | sort -h | tail
 - **Parts waiting for removal,** the rows with `active = 0`, which a mutation or a large merge
   leaves behind until it finishes. They clear on their own.
 - **Detached parts,** in `system.detached_parts`, which ClickHouse never removes by itself.
-- **System logs,** the `system` database. They keep 30 days (`system_log_retention_days` in the
-  store's inputs); lower it if they lead.
+- **System logs,** the `system` database, which keep 30 days. If they lead,
+  `TRUNCATE TABLE system.<log>` as the admin frees the space at once. Lowering
+  `system_log_retention_days` in the store's inputs is no quick fix: it changes the instance's user
+  data, which replaces the instance, and the logs already written keep their old retention.
 - **Query spill** under `/var/lib/clickhouse/tmp`, which clears when the query ends.
 
 ## Grow the volume

@@ -36,15 +36,15 @@ locals {
     system_log_retention_days = var.system_log_retention_days
   })
 
-  # No grants means the admin, which manages access and applies the schema. The writer keeps out of
-  # the migration ledger, which records what the schema already holds.
+  # No grants means the admin, which manages access and applies the schema. The writer only inserts,
+  # and keeps out of the migration ledger, which records what the schema already holds.
   users = {
     admin = { name = "openjii_admin", grants = [] }
     writer = {
       name = "openjii_writer"
       grants = [
-        "GRANT SELECT, INSERT, ALTER DELETE, ALTER UPDATE ON store.*",
-        "REVOKE INSERT, ALTER DELETE, ALTER UPDATE ON store._migrations",
+        "GRANT SELECT, INSERT ON store.*",
+        "REVOKE INSERT ON store._migrations",
       ]
     }
     reader = { name = "openjii_reader", grants = ["GRANT SELECT ON store.*"] }
@@ -219,6 +219,8 @@ resource "aws_ebs_volume" "data" {
   size              = var.data_volume_size_gb
   type              = "gp3"
   encrypted         = true
+  # prevent_destroy guards only while this block is in the configuration.
+  final_snapshot = true
 
   tags = merge(var.tags, { Name = "${local.name}-data" })
 

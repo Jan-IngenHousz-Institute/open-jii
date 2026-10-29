@@ -135,6 +135,12 @@ locals {
         m.signal.stat == "Sum" ? local.heartbeat_limits[m.id] + 1 :
         local.heartbeat_limits[m.id]
       )
+      # A dead-man on a CloudWatch metric, which arrives every minute, fires within minutes, so its
+      # board row bridges no more than the gap between two of the board's five-minute buckets.
+      board_span_ms = (
+        m.source == "aws" && try(m.baseline.nodata, "") == "alert" ? 450000 :
+        local.heartbeat_dead_man_window_minutes * 60000
+      )
     }
   }
 
@@ -561,6 +567,7 @@ locals {
             { id = "displayName", value = m.name },
             { id = "unit", value = local.heartbeat_facts[m.id].unit },
             { id = "thresholds", value = { mode = "absolute", steps = local.heartbeat_board_steps[m.id] } },
+            { id = "custom.spanNulls", value = local.heartbeat_facts[m.id].board_span_ms },
             {
               id = "links"
               # These replace the links Grafana adds to the values, so the console link is spelled out.

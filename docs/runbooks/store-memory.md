@@ -16,11 +16,14 @@ aws secretsmanager get-secret-value --secret-id openjii-serving-store-<env>-admi
   --query SecretString --output text | jq -r .password
 ```
 
-Whether the memory is ClickHouse's at all:
+Whether the memory is ClickHouse's at all, and how much of it its caches hold:
 
 ```sql
 SELECT metric, formatReadableSize(value) FROM system.asynchronous_metrics
-WHERE metric = 'MemoryResident' OR metric LIKE '%CacheBytes'
+WHERE metric = 'MemoryResident';
+
+SELECT metric, formatReadableSize(value) FROM system.metrics
+WHERE metric LIKE '%CacheBytes' AND value > 0
 ORDER BY value DESC;
 ```
 
