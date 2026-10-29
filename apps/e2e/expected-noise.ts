@@ -1,11 +1,11 @@
 import type { ConsoleMessage, Page, Request } from "@playwright/test";
 
-const expectedHttpFailures = [
-  {
-    // useMyJoinRequest treats this 404 as no pending request for a nonmember.
-    url: /\/api\/v1\/experiments\/[^/]+\/join-requests\/me(?:[?#]|$)/,
-    statuses: new Set([404]),
-  },
+export interface ExpectedHttpFailure {
+  url: RegExp;
+  statuses: ReadonlySet<number>;
+}
+
+const expectedHttpFailures: readonly ExpectedHttpFailure[] = [
   {
     // Local runs deliberately have no Contentful credentials.
     url: /(?:contentful\.com|graphql\.contentful\.com)/i,
@@ -33,8 +33,12 @@ const expectedHttpFailures = [
   },
 ];
 
-function isExpectedHttpFailure(url: string, status: number): boolean {
-  return expectedHttpFailures.some(
+function isExpectedHttpFailure(
+  url: string,
+  status: number,
+  additionalFailures: readonly ExpectedHttpFailure[],
+): boolean {
+  return [...expectedHttpFailures, ...additionalFailures].some(
     (failure) => failure.statuses.has(status) && failure.url.test(url),
   );
 }
@@ -43,7 +47,10 @@ export interface UnexpectedBrowserErrors {
   stop(): string[];
 }
 
-export function watchForUnexpectedBrowserErrors(page: Page): UnexpectedBrowserErrors {
+export function watchForUnexpectedBrowserErrors(
+  page: Page,
+  additionalFailures: readonly ExpectedHttpFailure[] = [],
+): UnexpectedBrowserErrors {
   const errors: string[] = [];
 
   const onPageError = (error: Error) => errors.push(`pageerror: ${error.message}`);
@@ -51,7 +58,10 @@ export function watchForUnexpectedBrowserErrors(page: Page): UnexpectedBrowserEr
     if (message.type() !== "error") return;
     const failedResource =
       /^Failed to load resource: the server responded with a status of (\d+)/.exec(message.text());
-    if (failedResource && isExpectedHttpFailure(message.location().url, Number(failedResource[1])))
+    if (
+      failedResource &&
+      isExpectedHttpFailure(message.location().url, Number(failedResource[1]), additionalFailures)
+    )
       return;
     errors.push(`console.error: ${message.text()}`);
   };

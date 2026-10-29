@@ -3,6 +3,16 @@ import path from "node:path";
 import { expect, test } from "../fixtures.js";
 import { dismissCookieBanner, locale } from "../helpers.js";
 
+test.use({
+  expectedHttpFailures: [
+    {
+      // useMyJoinRequest returns 404 when the newcomer has no pending request.
+      url: /\/api\/v1\/experiments\/[^/]+\/join-requests\/me(?:[?#]|$)/,
+      statuses: new Set([404]),
+    },
+  ],
+});
+
 const examples = [
   "[Seed] MultispeQ Demo Example",
   "[Seed] Ambit Demo Example",

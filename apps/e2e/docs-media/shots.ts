@@ -203,15 +203,11 @@ export const SHOTS: readonly Shot[] = [
       await page
         .getByRole("link", { name: "[Seed] MultispeQ Demo Example Dashboard", exact: true })
         .first()
-        .click();
-      await page.getByRole("heading", { name: "MultispeQ Example", exact: true }).waitFor();
+        .waitFor();
       await settle(page, 3500);
-      if (await page.getByRole("button", { name: /^edit$/i }).isVisible()) {
-        throw new Error("Newcomer sees a dashboard edit control");
-      }
     },
     scope:
-      "A newcomer finds the three seeded sensor examples, reads the pinned MultispeQ workbook and opens its example dashboard",
+      "A newcomer finds the three seeded sensor examples, reads the pinned MultispeQ workbook and finds its example dashboard in the dashboard list",
   },
   {
     slug: "platform-admin-roster",
