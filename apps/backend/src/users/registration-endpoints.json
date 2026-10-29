@@ -267,7 +267,7 @@
   {
     "name": "setRole",
     "path": "/admin/set-role",
-    "classification": "HTTP: registration forbidden"
+    "classification": "unreachable:404"
   },
   {
     "name": "setUserPassword",
