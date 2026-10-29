@@ -1,0 +1,200 @@
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { admin, emailOTP } from "better-auth/plugins";
+
+import { DISABLED_ADMIN_PATHS, openJiiAdmin } from "@repo/auth/admin";
+import { hasPlatformRole, isPlatformAdmin } from "@repo/auth/platform-admin";
+import {
+  db,
+  auditLogs,
+  changePlatformRole,
+  eq,
+  listPlatformRoleHolders,
+  PlatformRoleError,
+  users,
+} from "@repo/database";
+import type { PlatformRoleChange } from "@repo/database";
+import * as schema from "@repo/database/schema";
+
+import { TestHarness } from "../test/test-harness";
+
+const auth = betterAuth({
+  secret: "test-secret",
+  baseURL: "http://localhost:3020",
+  basePath: "/api/v1/auth",
+  advanced: { database: { generateId: false } },
+  user: { additionalFields: { registered: { type: "boolean", defaultValue: false } } },
+  disabledPaths: DISABLED_ADMIN_PATHS,
+  database: drizzleAdapter(db, {
+    provider: "pg",
+    schema: {
+      user: schema.users,
+      session: schema.sessions,
+      account: schema.accounts,
+      verification: schema.verifications,
+    },
+  }),
+  plugins: [openJiiAdmin(), emailOTP({ sendVerificationOTP: () => Promise.resolve() })],
+});
+
+async function signIn() {
+  const email = `role-${crypto.randomUUID()}@example.com`;
+  await auth.api.sendVerificationOTP({ body: { email, type: "sign-in" } });
+  const { otp } = await auth.api.getVerificationOTP({ query: { email, type: "sign-in" } });
+  if (!otp) throw new Error("Missing OTP");
+  const { headers, response } = await auth.api.signInEmailOTP({
+    body: { email, otp },
+    returnHeaders: true,
+  });
+  await db.update(users).set({ registered: true }).where(eq(users.id, response.user.id));
+  const cookie = headers
+    .getSetCookie()
+    .map((value) => value.split(";")[0])
+    .join("; ");
+  return { id: response.user.id, cookie };
+}
+
+function call(path: string, cookie?: string, body?: unknown) {
+  return auth.handler(
+    new Request(`http://localhost:3020/api/v1/auth${path}`, {
+      method: body === undefined ? "GET" : "POST",
+      headers: {
+        ...(cookie ? { cookie } : {}),
+        ...(body === undefined ? {} : { "content-type": "application/json" }),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    }),
+  );
+}
+
+describe("platform roles", () => {
+  const app = TestHarness.App;
+  let engineer: string;
+  let researcher: string;
+  const change = (overrides: Partial<PlatformRoleChange> = {}): PlatformRoleChange => ({
+    action: "grant",
+    role: "platform_admin",
+    targetUserId: researcher,
+    actorUserId: engineer,
+    source: "command",
+    ...overrides,
+  });
+  const roleOf = async (id: string) =>
+    (await db.select({ role: users.role }).from(users).where(eq(users.id, id)))[0].role;
+
+  beforeAll(() => app.setup());
+  beforeEach(async () => {
+    await app.beforeEach();
+    engineer = await app.createTestUser({});
+    researcher = await app.createTestUser({});
+  });
+  afterEach(() => app.afterEach());
+  afterAll(() => app.teardown());
+
+  it("disables every admin endpoint the installed plugin serves", () => {
+    const paths = Object.values(admin().endpoints).map((endpoint) => endpoint.path);
+    expect([...DISABLED_ADMIN_PATHS].sort()).toEqual(paths.sort());
+  });
+
+  it("answers 404 on every admin route, even for a platform admin", async () => {
+    const holder = await signIn();
+    const ordinary = await signIn();
+    await changePlatformRole(db, change({ targetUserId: holder.id }));
+    expect(await isPlatformAdmin({ id: holder.id })).toBe(true);
+    for (const path of DISABLED_ADMIN_PATHS) {
+      for (const cookie of [holder.cookie, ordinary.cookie, undefined]) {
+        expect((await call(path, cookie)).status, path).toBe(404);
+        expect(
+          (await call(path, cookie, { userId: ordinary.id, role: "platform_admin" })).status,
+          path,
+        ).toBe(404);
+      }
+    }
+    expect(await roleOf(ordinary.id)).toBe("user");
+  });
+
+  it("grants and revokes with an audit row naming the engineer, effective on the next check", async () => {
+    expect(await isPlatformAdmin({ id: researcher })).toBe(false);
+    expect(
+      await changePlatformRole(
+        db,
+        change({
+          targetUserId: researcher.toUpperCase(),
+          githubActor: "octocat",
+          githubRunId: "42",
+        }),
+      ),
+    ).toEqual(["platform_admin"]);
+    expect(await roleOf(researcher)).toBe("platform_admin");
+    expect(await isPlatformAdmin({ id: researcher })).toBe(true);
+    expect(await hasPlatformRole({ id: researcher }, "platform_admin")).toBe(true);
+
+    expect(await changePlatformRole(db, change({ action: "revoke" }))).toEqual([]);
+    expect(await roleOf(researcher)).toBe("user");
+    expect(await isPlatformAdmin({ id: researcher })).toBe(false);
+
+    const rows = await db.select().from(auditLogs).orderBy(auditLogs.timestamp);
+    expect(rows.map((row) => [row.userId, row.action])).toEqual([
+      [engineer, "platform_role.grant"],
+      [engineer, "platform_role.revoke"],
+    ]);
+    expect(rows[0].details).toEqual({
+      targetUserId: researcher,
+      role: "platform_admin",
+      source: "command",
+      githubActor: "octocat",
+      githubRunId: "42",
+    });
+  });
+
+  it("refuses no-ops, unknown roles and unusable accounts without changing anything", async () => {
+    const unregistered = await app.createTestUser({ registered: false });
+    const deleted = await app.createTestUser({ deletedAt: new Date() });
+    await changePlatformRole(db, change());
+    const auditCount = async () => (await db.select().from(auditLogs)).length;
+    expect(await auditCount()).toBe(1);
+
+    for (const refused of [
+      change(),
+      change({ action: "revoke", targetUserId: engineer }),
+      change({ role: "owner" as PlatformRoleChange["role"] }),
+      change({ targetUserId: "not-a-uuid" }),
+      change({ targetUserId: crypto.randomUUID() }),
+      change({ targetUserId: unregistered }),
+      change({ targetUserId: deleted }),
+      change({ actorUserId: unregistered }),
+      change({ actorUserId: deleted }),
+    ]) {
+      await expect(changePlatformRole(db, refused)).rejects.toBeInstanceOf(PlatformRoleError);
+    }
+    expect(await auditCount()).toBe(1);
+    for (const id of [engineer, unregistered, deleted]) expect(await roleOf(id)).toBe("user");
+  });
+
+  it("never counts an API key, an anonymous session or a deleted account as a role holder", async () => {
+    await changePlatformRole(db, change());
+    expect(await isPlatformAdmin({ id: researcher }, new Headers({ "x-api-key": "k" }))).toBe(
+      false,
+    );
+    expect(await isPlatformAdmin({ id: researcher, isAnonymous: true })).toBe(false);
+    expect(await isPlatformAdmin(null)).toBe(false);
+
+    await db
+      .update(schema.profiles)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.profiles.userId, researcher));
+    expect(await isPlatformAdmin({ id: researcher })).toBe(false);
+  });
+
+  it("lists current holders with the date each role was last granted", async () => {
+    const other = await app.createTestUser({});
+    await changePlatformRole(db, change());
+    await changePlatformRole(db, change({ targetUserId: other }));
+    await changePlatformRole(db, change({ targetUserId: other, action: "revoke" }));
+
+    const holders = await listPlatformRoleHolders(db);
+    expect(holders).toHaveLength(1);
+    expect(holders[0]).toMatchObject({ userId: researcher, roles: ["platform_admin"] });
+    expect(holders[0].grantedAt.platform_admin).toBeInstanceOf(Date);
+  });
+});

@@ -9,6 +9,7 @@ import { emailOTP, genericOAuth, lastLoginMethod } from "better-auth/plugins";
 import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
+import { DISABLED_ADMIN_PATHS, openJiiAdmin } from "./admin/plugin";
 import { getApiKeyForSessionCheck } from "./api-key-session";
 import { sendOtpEmail } from "./email/otpEmail";
 import { openJiiOrganization } from "./organization/plugin";
@@ -142,7 +143,9 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: false,
   },
+  disabledPaths: DISABLED_ADMIN_PATHS,
   plugins: [
+    openJiiAdmin(),
     expo(), // Add Expo plugin for mobile app support
     emailOTP({
       async sendVerificationOTP({ email, otp }) {

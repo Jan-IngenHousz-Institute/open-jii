@@ -1,5 +1,6 @@
 import { db } from "../../src/postgres/database";
 import { ensurePersonalOrganization } from "../../src/postgres/organizations";
+import { changePlatformRole } from "../../src/postgres/platform-roles";
 import { users, profiles } from "../../src/postgres/schema";
 import { NEWCOMER_EMAIL, SEED_EMAIL } from "./constants";
 
@@ -29,6 +30,18 @@ export async function seedUser() {
   console.log(`  Created user: ${user.id}`);
 
   return { user, personalOrganizationId };
+}
+
+/** Through the same function the Platform Roles workflow runs, so the seed leaves an audit row. */
+export async function seedPlatformAdmin(user: { id: string }) {
+  await changePlatformRole(db, {
+    action: "grant",
+    role: "platform_admin",
+    targetUserId: user.id,
+    actorUserId: user.id,
+    source: "seed",
+  });
+  console.log("  Granted platform_admin to the seed user");
 }
 
 /** An activated account for documentation captures that need an empty dashboard. */

@@ -1,0 +1,180 @@
+# Platform Roles Workflow
+# Grants, revokes or lists platform roles by running `dist/platform-roles.js` in the migration
+# runner task, the only path from GitHub to a deployed database. A prod grant or revoke waits for
+# one approval from someone other than the person who started the run. The repository is public,
+# so inputs and output name accounts by user id only.
+
+name: Platform Roles Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "The environment whose database to change"
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+      action:
+        description: "What to do"
+        required: true
+        type: choice
+        default: list
+        options:
+          - list
+          - grant
+          - revoke
+      role:
+        description: "The platform role to grant or revoke"
+        required: true
+        type: choice
+        options:
+          - platform_admin
+      target_user_id:
+        description: "User id of the account to change (grant and revoke)"
+        required: false
+        type: string
+      actor_user_id:
+        description: "Your own openJII user id, recorded as the actor (grant and revoke)"
+        required: false
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: platform-roles-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate Input
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate input
+        env:
+          ACTION: ${{ inputs.action }}
+          TARGET: ${{ inputs.target_user_id }}
+          ACTOR: ${{ inputs.actor_user_id }}
+        run: |
+          uuid='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+          if [[ "$ACTION" == "list" ]]; then exit 0; fi
+          if [[ ! "$TARGET" =~ $uuid || ! "$ACTOR" =~ $uuid ]]; then
+            echo "::error::Grant and revoke need target_user_id and actor_user_id as user ids"
+            exit 1
+          fi
+
+  approval:
+    name: Approval
+    needs: validate
+    if: inputs.environment == 'prod' && inputs.action != 'list'
+    runs-on: ubuntu-latest
+    environment: prod-approval
+    steps:
+      - name: Record approval
+        run: echo "Approved ${{ inputs.action }} of ${{ inputs.role }} on prod."
+
+  change:
+    name: Run Platform Role Command
+    needs: [validate, approval]
+    if: >-
+      always() &&
+      needs.validate.result == 'success' &&
+      (needs.approval.result == 'success' || needs.approval.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Get Infrastructure Configuration
+        uses: ./.github/actions/get-infrastructure-config
+        with:
+          environment: ${{ inputs.environment }}
+          prefix: "/migration"
+
+      # The latest revision runs the image the last migration run built, so a role change only
+      # ever runs code that was merged and deployed.
+      - name: Run the command in the migration runner task
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ACTION: ${{ inputs.action }}
+          ROLE: ${{ inputs.role }}
+          TARGET: ${{ inputs.target_user_id }}
+          ACTOR: ${{ inputs.actor_user_id }}
+          GITHUB_RUN: ${{ github.run_id }}
+        run: |
+          for name in ECS_CLUSTER_NAME TASK_DEFINITION_FAMILY CONTAINER_NAME SUBNETS SECURITY_GROUP_ID; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing $name from the /migration/${{ inputs.environment }}/ parameters"
+              exit 1
+            fi
+          done
+
+          aws ecs describe-task-definition --task-definition "$TASK_DEFINITION_FAMILY" \
+            --query taskDefinition --output json > task-definition.json
+          TASK_DEF=$(jq -r .taskDefinitionArn task-definition.json)
+
+          if [[ "$ACTION" == "list" ]]; then
+            COMMAND=$(jq -nc '["node","dist/platform-roles.js","list"]')
+          else
+            COMMAND=$(jq -nc --arg a "$ACTION" --arg r "$ROLE" --arg t "$TARGET" --arg u "$ACTOR" \
+              '["node","dist/platform-roles.js",$a,"--role",$r,"--target",$t,"--actor",$u]')
+          fi
+          OVERRIDES=$(jq -nc \
+            --arg c "$CONTAINER_NAME" --argjson cmd "$COMMAND" \
+            --arg actor "$GITHUB_ACTOR" --arg run "$GITHUB_RUN" \
+            '{containerOverrides:[{name:$c,command:$cmd,environment:[
+              {name:"PLATFORM_ROLE_GITHUB_ACTOR",value:$actor},
+              {name:"PLATFORM_ROLE_GITHUB_RUN_ID",value:$run}]}]}')
+
+          if [[ "$SUBNETS" =~ ^\[.*\]$ ]]; then
+            SUBNET_JSON="$SUBNETS"
+          else
+            SUBNET_JSON=$(jq -nc --arg s "$SUBNETS" '$s | split(",")')
+          fi
+          NETWORK=$(jq -nc --argjson s "$SUBNET_JSON" --arg g "$SECURITY_GROUP_ID" \
+            '{awsvpcConfiguration:{subnets:$s,securityGroups:[$g],assignPublicIp:"DISABLED"}}')
+
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "$ECS_CLUSTER_NAME" \
+            --task-definition "$TASK_DEF" \
+            --launch-type FARGATE \
+            --count 1 \
+            --network-configuration "$NETWORK" \
+            --overrides "$OVERRIDES" \
+            --query 'tasks[0].taskArn' --output text)
+          if [[ -z "$TASK_ARN" || "$TASK_ARN" == "None" ]]; then
+            echo "::error::Failed to start the task"
+            exit 1
+          fi
+
+          timeout 900 aws ecs wait tasks-stopped --cluster "$ECS_CLUSTER_NAME" --tasks "$TASK_ARN"
+          EXIT_CODE=$(aws ecs describe-tasks --cluster "$ECS_CLUSTER_NAME" --tasks "$TASK_ARN" \
+            --query "tasks[0].containers[?name=='$CONTAINER_NAME'].exitCode | [0]" --output text)
+
+          LOG_GROUP=$(jq -r --arg c "$CONTAINER_NAME" '.containerDefinitions[] | select(.name==$c) | .logConfiguration.options["awslogs-group"]' task-definition.json)
+          LOG_PREFIX=$(jq -r --arg c "$CONTAINER_NAME" '.containerDefinitions[] | select(.name==$c) | .logConfiguration.options["awslogs-stream-prefix"]' task-definition.json)
+          {
+            echo "### Platform role ${ACTION} on ${{ inputs.environment }}"
+            echo "Exit code: \`${EXIT_CODE}\`"
+            echo "Output: CloudWatch \`${LOG_GROUP}\`, stream \`${LOG_PREFIX}/${CONTAINER_NAME}/${TASK_ARN##*/}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          case "$EXIT_CODE" in
+            0) echo "Done." ;;
+            2) echo "::error::The command refused the request; its reason is in the task log"; exit 1 ;;
+            *) echo "::error::The command failed with exit code $EXIT_CODE"; exit 1 ;;
+          esac

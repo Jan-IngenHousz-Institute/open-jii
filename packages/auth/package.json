@@ -29,6 +29,14 @@
     "./types": {
       "types": "./src/types.ts",
       "default": "./dist/types.js"
+    },
+    "./platform-admin": {
+      "types": "./src/platform-admin.ts",
+      "default": "./dist/platform-admin.js"
+    },
+    "./admin": {
+      "types": "./src/admin/plugin.ts",
+      "default": "./dist/admin/plugin.js"
     }
   },
   "private": true,
