@@ -36,13 +36,19 @@ the app.
   joins it later.
 - Each role grants only what its own feature needs. A platform role gives no
   role in any organization and no access to any resource.
-- `changePlatformRole` is the only code that changes a role. It writes the role
-  and an `audit_logs` row in one transaction, naming the engineer's account,
-  the GitHub actor and the run.
+- `changePlatformRole` is the only application code that changes a role. It
+  writes the role and an `audit_logs` row in one transaction. The row's actor is
+  the account the engineer names; the GitHub actor and run beside it are the
+  identity GitHub vouches for.
 - On dev and prod it runs only inside the migration runner task, started by the
-  Platform Roles Workflow from `main`. A prod grant or revoke waits for one
-  approval in the `prod-approval` environment, and the person who started the
-  run cannot approve it.
+  Platform Roles Workflow. The workflow refuses any ref but `main` and any
+  runner image built from a commit that is not on `main`. A prod grant or revoke
+  waits for one approval in the `prod-approval` environment, and the person who
+  started the run cannot approve it.
+- Those last guarantees rest on GitHub environment settings rather than this
+  repository, because a branch can edit its own copy of the workflow:
+  `prod-approval` keeps its required reviewers with self-review blocked, and each
+  environment's deployment-branch rule admits `main` only.
 - No route of the admin plugin is served, and `adminUserIds` stays unset.
 - Role checks read the database on every request, never the session cookie
   cache, and refuse API keys and anonymous sessions.
@@ -51,16 +57,20 @@ the app.
 
 **Benefits:**
 
-- Every grant has a second approver and a durable record, and the quarterly
-  review reads one place: `platform-role list`.
+- Every production grant has a second approver, every grant has a durable
+  record, and the quarterly review reads one place: `platform-role list`.
 - Revoking a role works on the next request, without a deploy.
 - One compromised staff account cannot mint further admins.
 - The moderator role reuses the same writer, workflow and checks.
 
 **Trade-offs / Risks:**
 
-- Granting needs GitHub write access and an approver, which is slower than a
-  page in the app.
+- Granting needs GitHub write access and, in production, an approver, which is
+  slower than a page in the app. Dev grants need no approver.
+- A migration, or anyone with database access, can still write `users.role`
+  without an audit row. Migrations go through pull request review, and the audit
+  trail work (OJD-2020) can add a database rule that refuses a role change
+  without its audit row.
 - The workflow can read only the task's exit code. Its output, such as a list,
   is in the migration runner's CloudWatch log group, so reading it needs AWS
   access.

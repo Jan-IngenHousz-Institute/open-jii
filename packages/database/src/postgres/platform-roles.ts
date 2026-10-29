@@ -56,6 +56,14 @@ export async function changePlatformRole(
   const actorUserId = change.actorUserId.toLowerCase();
 
   return database.transaction(async (tx) => {
+    // Lock first, then read: a profile read in the locking statement can predate a deletion
+    // that statement waited for.
+    await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(inArray(users.id, [targetUserId, actorUserId]))
+      .orderBy(users.id)
+      .for("update");
     const accounts = await tx
       .select({
         id: users.id,
@@ -65,8 +73,7 @@ export async function changePlatformRole(
       })
       .from(users)
       .leftJoin(profiles, eq(profiles.userId, users.id))
-      .where(inArray(users.id, [targetUserId, actorUserId]))
-      .for("update", { of: users });
+      .where(inArray(users.id, [targetUserId, actorUserId]));
     const usable = (id: string) =>
       accounts.find((account) => account.id === id && account.registered && !account.deletedAt);
 
@@ -157,14 +164,16 @@ function grantedRole(details: unknown): { targetUserId: string; role: string } |
     : null;
 }
 
-/** The platform roles an account holds, provided it is registered and not deleted. */
+/** The platform roles an account holds, provided it is registered, not banned and not deleted. */
 export async function heldPlatformRoles(database: DbOrTx, userId: string): Promise<PlatformRole[]> {
   const rows = await database
-    .select({ role: users.role, registered: users.registered })
+    .select({ role: users.role, registered: users.registered, banned: users.banned })
     .from(users)
     .leftJoin(profiles, eq(profiles.userId, users.id))
     .where(and(eq(users.id, userId), isNull(profiles.deletedAt)))
     .limit(1);
   const [account] = rows;
-  return rows.length > 0 && account.registered ? platformRolesOf(account.role) : [];
+  return rows.length > 0 && account.registered && !account.banned
+    ? platformRolesOf(account.role)
+    : [];
 }

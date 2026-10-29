@@ -422,18 +422,20 @@ columns and its banned-session check. None of its routes is served: each answers
 it names pass every permission check.
 
 Nothing in the app grants a role. `changePlatformRole` is the only writer. It
-locks the target, refuses a no-op or an account that is unregistered or deleted,
-and writes `users.role` and an `audit_logs` row in one transaction. The row names
-the engineer's own account as the actor and records the GitHub actor and run.
-`hasPlatformRole` and `isPlatformAdmin` in `packages/auth/src/platform-admin.ts`
-read the database on every call, never the cookie-cached session, so a revoked
-role stops working on the next request. An API key or an anonymous session never
-holds a platform role.
+locks the target and the actor, then refuses a no-op or an account that is
+unregistered or deleted, and writes `users.role` and an `audit_logs` row in one
+transaction. The row's actor is the account the engineer names; the GitHub actor
+and run recorded beside it are what GitHub vouches for.
+`heldPlatformRoles` decides which roles an account holds: none unless it is
+registered, not banned and not deleted. `hasPlatformRole` and `isPlatformAdmin`
+in `packages/auth/src/platform-admin.ts` read it on every call, never the
+cookie-cached session, so a revoked role stops working on the next request. An
+API key or an anonymous session never holds a platform role.
 
-| Where        | How                                                                                                                                                                                                                                  |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Local        | `pnpm --filter database db:seed` grants the seed user `platform_admin`. `pnpm platform-role grant --role platform_admin --target <user id> --actor <your user id>`, `revoke` and `list` change the local database.                   |
-| Dev and prod | Run the **Platform Roles Workflow** from `main`. It starts the migration runner task with the command. In prod, a grant or revoke waits for one approval in `prod-approval`, from someone other than the person who started the run. |
+| Where        | How                                                                                                                                                                                                                                                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Local        | `pnpm --filter database db:seed` grants the seed user `platform_admin`. `pnpm platform-role grant --role platform_admin --target <user id> --actor <your user id>`, `revoke` and `list` change the local database.                                                                                                    |
+| Dev and prod | Run the **Platform Roles Workflow** from `main`; it refuses other refs and runner images built off `main`. It starts the migration runner task with the command. In prod, a grant or revoke waits for one approval in `prod-approval`, from someone other than the person who started the run. Dev needs no approval. |
 
 The command refuses a database that is not local unless it runs inside ECS. The
 repository is public, so the workflow takes user ids rather than email addresses
