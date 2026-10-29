@@ -149,7 +149,10 @@ describe("guest quotas and guarded purge", () => {
     await db
       .insert(profiles)
       .values({ userId: guest.id, firstName: "Synthetic", lastName: "Visitor", activated: true });
-    await db.update(users).set({ registered: true, role: "admin" }).where(eq(users.id, guest.id));
+    await db
+      .update(users)
+      .set({ registered: true, role: "platform_admin" })
+      .where(eq(users.id, guest.id));
     for (const query of ["Synthetic", guest.email]) {
       const people = await app.module.get(UserRepository).search({ query, limit: 20, offset: 0 });
       if (people.isFailure()) throw people.error;
@@ -159,7 +162,7 @@ describe("guest quotas and guarded purge", () => {
         .searchGranteeUsers("experiment", crypto.randomUUID(), null, { query, limit: 20 });
       if (sharing.isFailure()) throw sharing.error;
       expect(sharing.value).toEqual([]);
-      const admins = await app.module.get(PlatformAdminRepository).search(query);
+      const admins = await app.module.get(PlatformAdminRepository).list();
       if (admins.isFailure()) throw admins.error;
       expect(admins.value).toEqual([]);
     }

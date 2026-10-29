@@ -991,12 +991,6 @@
     "classification": "public-list"
   },
   {
-    "procedure": "users.searchPlatformAdminCandidates",
-    "method": "GET",
-    "path": "/api/v1/platform-admins/candidates",
-    "classification": "deny"
-  },
-  {
     "procedure": "protocols.listProtocols",
     "method": "GET",
     "path": "/api/v1/protocols",
