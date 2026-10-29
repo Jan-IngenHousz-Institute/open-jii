@@ -8,6 +8,7 @@ import type {
   ExperimentProjectTransferWebhookResponse,
 } from "@repo/api/domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.schema";
 import type { WebhookErrorResponse } from "@repo/api/domains/user/user.schema";
+import { sql } from "@repo/database";
 
 import { stableStringify } from "../../common/utils/stable-json";
 import { TestHarness } from "../../test/test-harness";
@@ -81,6 +82,57 @@ describe("ProjectTransferWebhookController", () => {
       expect(body.macroId).toBeDefined();
       expect(body.macroFilename).toBeDefined();
       expect(body.macroName).toBeDefined();
+    });
+
+    it("keeps forged Demo ownership fields out of a signed project import", async () => {
+      const importer = await testApp.createTestUser();
+      const demo = await testApp.createOrganization("Demo destination", {
+        type: "demo",
+        visibility: "public",
+      });
+      await testApp.addOrganizationMember(demo, importer, "owner");
+      const forged = {
+        organizationId: demo,
+        targetOrganizationId: demo,
+        type: "demo",
+        visibility: "private",
+      };
+      const payload = {
+        ...forged,
+        experiment: { name: "Imported experiment", createdBy: importer, ...forged },
+        protocol: {
+          name: "Imported protocol",
+          createdBy: importer,
+          code: [{}],
+          family: "multispeq",
+          ...forged,
+        },
+        macro: {
+          name: "Imported macro",
+          createdBy: importer,
+          code: btoa("return {}"),
+          language: "python",
+          ...forged,
+        },
+      };
+      const { signature, timestamp } = signPayload(payload);
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.experiments.projectTransfer))
+        .set("x-api-key-id", apiKeyId)
+        .set("x-databricks-signature", signature)
+        .set("x-databricks-timestamp", timestamp)
+        .send(payload)
+        .expect(201);
+      const rows = await testApp.database.execute(sql`
+        select o.slug, e.organization_id from experiments e join organizations o on o.id = e.organization_id where e.name = 'Imported experiment'
+        union all select o.slug, p.organization_id from protocols p join organizations o on o.id = p.organization_id where p.name = 'Imported protocol'
+        union all select o.slug, m.organization_id from macros m join organizations o on o.id = m.organization_id where m.name = 'Imported macro'
+      `);
+      expect(rows).toHaveLength(3);
+      for (const row of rows) {
+        expect(row.slug).toBe(`personal-${importer}`);
+        expect(row.organization_id).not.toBe(demo);
+      }
     });
 
     it("should reject requests without valid API key ID", async () => {

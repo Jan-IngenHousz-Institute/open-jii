@@ -191,12 +191,14 @@ export function OrganizationDetailScreen() {
           </View>
         ) : null}
 
-        <OrganizationJoinCta
-          id={organization.id}
-          name={organization.name}
-          membershipStatus={organization.membershipStatus}
-          visibility={organization.visibility}
-        />
+        {organization.type !== "demo" && (
+          <OrganizationJoinCta
+            id={organization.id}
+            name={organization.name}
+            membershipStatus={organization.membershipStatus}
+            visibility={organization.visibility}
+          />
+        )}
       </Card>
     </ScrollView>
   );

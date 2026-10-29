@@ -35,7 +35,9 @@
       "organizations-list retaken on 2026-10-14 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only organizations-list. The directory gained the Type filter and a sortable Type column; the shot now sorts by Type ascending. Reviewed at full size and approved before publishing: all six organization names are [Seed] fixtures, the Type filter is unselected, the untyped [Seed] Community Seed Library sorts last with an empty Type cell, and no real users, credentials, precise locations or dev overlays appear. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
       "protocols-list retaken on 2026-10-27 at 1920x1200 from the local stack with the seeded development identity (seed@openjii.local), via pnpm --filter @repo/e2e capture-docs-media --only protocols-list. Name remains sorted ascending; Family and Visibility filters are visible with no values selected, and Clear filters is absent. Retaken because family badges now use the product names MultispeQ and Ambyte. Reviewed at full size; only [Seed] protocol names appear, with no real names, emails, credentials or dev overlays. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine lacks ffmpeg.",
       "protocol-picker retaken on 2026-10-27 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only protocol-picker. The Chamber QC Scratchpad workbook shows the Protocol picker open, filtered by “chloro”, with three [Seed] protocols and MultispeQ badges; retaken because the picker still showed “multispeq”. Reviewed at full size; no real names or emails, credentials or dev overlays appear. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine.",
-      "macros-list retaken on 2026-10-27 at 1920x1200 from the local stack with the expanded sidebar, matching the other platform captures. The frame shows Name sorted ascending, Language and Visibility filters with none applied, only [Seed] macro names, and no data-processing status notice. Reviewed at full size; the account details in the sidebar are the seeded development identity. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine."
+      "macros-list retaken on 2026-10-27 at 1920x1200 from the local stack with the expanded sidebar, matching the other platform captures. The frame shows Name sorted ascending, Language and Visibility filters with none applied, only [Seed] macro names, and no data-processing status notice. Reviewed at full size; the account details in the sidebar are the seeded development identity. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine.",
+      "demo-organization-creation recorded on 2026-10-21 against the seeded local stack. The user reviewed and approved this recording before publication; bytes copied from staging without re-encoding. Only seed and demo identities and resources appear.",
+      "demo-organization-discovery recorded on 2026-10-21 against the seeded local stack. The user reviewed and approved this recording before publication; bytes copied from staging without re-encoding. Only seed and demo identities and resources appear."
     ]
   },
   "assets": [
@@ -467,6 +469,28 @@
       "sha256": "20ab60d5d7bcb2c03e82fb5d15069c99154e8edc34af396729b4fbb427a79287",
       "disposition": "published",
       "scope": "Experiment Devices tab with onboarded, observed and unregistered devices and its tiles"
+    },
+    {
+      "path": "/img/guide/web/demo-organization-creation.webm",
+      "slug": "demo-organization-creation",
+      "kind": "recording",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 704325,
+      "sha256": "4105c2eff8dca44da86511039128a6b031a87190035c575b1cad29eec4624ac1",
+      "disposition": "published",
+      "scope": "Creating a public Demo organization and refusing conversion while private research remains"
+    },
+    {
+      "path": "/img/guide/web/demo-organization-discovery.webm",
+      "slug": "demo-organization-discovery",
+      "kind": "recording",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 317215,
+      "sha256": "70f0c67f06a5225f1a4cdc43f7dd50cae0edaeaa28afff4156e1d891ba562ee8",
+      "disposition": "published",
+      "scope": "A newcomer discovers a Demo organization and opens its public experiment without edit controls"
     }
   ],
   "unmetCaptures": [

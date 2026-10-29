@@ -28,7 +28,9 @@ import { NotifyOrganizationInviteeUseCase } from "./application/use-cases/notify
 import { NotifyOrganizationMemberRemovedUseCase } from "./application/use-cases/notify-organization-member-removed/notify-organization-member-removed";
 import { NotifyOrganizationRoleChangedUseCase } from "./application/use-cases/notify-organization-role-changed/notify-organization-role-changed";
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
+import { MEMBER_ADMISSION_PORT } from "./core/ports/member-admission.port";
 import { OrganizationJoinRequestRepository } from "./core/repositories/organization-join-request.repository";
+import { OrganizationMemberRepository } from "./core/repositories/organization-member.repository";
 import { OrganizationRepository } from "./core/repositories/organization.repository";
 import { OrganizationAuthHook } from "./presentation/hooks/organization-auth.hook";
 import { OrganizationJoinRequestsController } from "./presentation/organization-join-requests.controller";
@@ -60,6 +62,8 @@ import { OrganizationController } from "./presentation/organization.controller";
   controllers: [OrganizationController, OrganizationJoinRequestsController],
   providers: [
     OrganizationRepository,
+    OrganizationMemberRepository,
+    { provide: MEMBER_ADMISSION_PORT, useExisting: OrganizationMemberRepository },
     OrganizationJoinRequestRepository,
     {
       provide: ANALYTICS_PORT,

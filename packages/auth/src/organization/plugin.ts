@@ -78,7 +78,8 @@ export const openJiiOrganization = () => {
     teams: { enabled: true, defaultTeam: { enabled: false }, allowRemovingAllTeams: true },
     // Better Auth's own defaults, set here so they are a decision rather than an
     // inherited number, and so the limits are visible next to the surface they cap.
-    membershipLimit: ORGANIZATION_MEMBERSHIP_LIMIT,
+    membershipLimit: (_user, org) =>
+      (org as { type?: string }).type === "demo" ? Infinity : ORGANIZATION_MEMBERSHIP_LIMIT,
     invitationLimit: 100,
     invitationExpiresIn: 60 * 60 * 48,
     // Set explicitly: left unset, Better Auth infers it from

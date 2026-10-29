@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import type { ExecutionContext } from "@nestjs/common";
 import { ForbiddenException } from "@nestjs/common";
 
@@ -6,14 +5,12 @@ import type { AuthorizationService } from "./authorization.service";
 import { CanCreateInOrgGuard } from "./can-create-in-org.guard";
 
 describe("CanCreateInOrgGuard", () => {
-  let authorizationService: AuthorizationService;
+  let authz: Pick<AuthorizationService, "findOrgMembership">;
   let guard: CanCreateInOrgGuard;
 
   beforeEach(() => {
-    authorizationService = {
-      isOrgMember: vi.fn(),
-    } as unknown as AuthorizationService;
-    guard = new CanCreateInOrgGuard(authorizationService);
+    authz = { findOrgMembership: vi.fn() };
+    guard = new CanCreateInOrgGuard(authz as AuthorizationService);
   });
 
   function createContext(options?: {
@@ -36,7 +33,7 @@ describe("CanCreateInOrgGuard", () => {
     await expect(guard.canActivate(createContext({ userId: crypto.randomUUID() }))).resolves.toBe(
       true,
     );
-    expect(authorizationService.isOrgMember).not.toHaveBeenCalled();
+    expect(authz.findOrgMembership).not.toHaveBeenCalled();
   });
 
   it("allows creation when organizationId is an empty string", async () => {
@@ -45,7 +42,7 @@ describe("CanCreateInOrgGuard", () => {
         createContext({ userId: crypto.randomUUID(), body: { organizationId: "" } }),
       ),
     ).resolves.toBe(true);
-    expect(authorizationService.isOrgMember).not.toHaveBeenCalled();
+    expect(authz.findOrgMembership).not.toHaveBeenCalled();
   });
 
   it("ignores a non-string organizationId and defers to schema validation", async () => {
@@ -54,35 +51,60 @@ describe("CanCreateInOrgGuard", () => {
         createContext({ userId: crypto.randomUUID(), body: { organizationId: 123 } }),
       ),
     ).resolves.toBe(true);
-    expect(authorizationService.isOrgMember).not.toHaveBeenCalled();
+    expect(authz.findOrgMembership).not.toHaveBeenCalled();
   });
 
   it("allows a member of the target organization", async () => {
     const userId = crypto.randomUUID();
     const organizationId = crypto.randomUUID();
-    vi.mocked(authorizationService.isOrgMember).mockResolvedValue(true);
+    vi.mocked(authz.findOrgMembership).mockResolvedValue({ isMember: true, type: null });
 
     await expect(
       guard.canActivate(createContext({ userId, body: { organizationId } })),
     ).resolves.toBe(true);
-    expect(authorizationService.isOrgMember).toHaveBeenCalledWith(userId, organizationId);
+    expect(authz.findOrgMembership).toHaveBeenCalledWith(userId, organizationId);
   });
 
   it("denies a caller who is not a member of the target organization", async () => {
     const userId = crypto.randomUUID();
     const organizationId = crypto.randomUUID();
-    vi.mocked(authorizationService.isOrgMember).mockResolvedValue(false);
+    vi.mocked(authz.findOrgMembership).mockResolvedValue({ isMember: false, type: null });
 
     await expect(
       guard.canActivate(createContext({ userId, body: { organizationId } })),
     ).rejects.toThrow(ForbiddenException);
-    expect(authorizationService.isOrgMember).toHaveBeenCalledWith(userId, organizationId);
+    expect(authz.findOrgMembership).toHaveBeenCalledWith(userId, organizationId);
   });
 
   it("fails closed when a target organization is given but the user is missing", async () => {
     await expect(
       guard.canActivate(createContext({ body: { organizationId: crypto.randomUUID() } })),
     ).rejects.toThrow(ForbiddenException);
-    expect(authorizationService.isOrgMember).not.toHaveBeenCalled();
+    expect(authz.findOrgMembership).not.toHaveBeenCalled();
+  });
+
+  it("refuses private resources in a Demo organization", async () => {
+    const organizationId = crypto.randomUUID();
+    vi.mocked(authz.findOrgMembership).mockResolvedValue({ isMember: true, type: "demo" });
+    await expect(
+      guard.canActivate(
+        createContext({
+          userId: crypto.randomUUID(),
+          body: { organizationId, visibility: "private" },
+        }),
+      ),
+    ).rejects.toThrow("Demo organizations can only own public resources");
+  });
+
+  it("denies an organization that does not exist", async () => {
+    vi.mocked(authz.findOrgMembership).mockResolvedValue(null);
+    await expect(
+      guard.canActivate(
+        createContext({
+          userId: crypto.randomUUID(),
+          body: { organizationId: crypto.randomUUID() },
+        }),
+      ),
+    ).rejects.toThrow(ForbiddenException);
   });
 });

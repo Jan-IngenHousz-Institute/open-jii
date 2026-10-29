@@ -11,6 +11,7 @@ import {
   and,
   changePlatformRole,
   createSecondaryDatabase,
+  ensurePersonalOrganization,
   organizationOwnsPrivateResources,
   eq,
   experiments,
@@ -234,7 +235,7 @@ describe("platform admin and Demo security through Better Auth", () => {
   });
 
   it.each(["experiment", "workbook", "protocol", "macro"] as const)(
-    "refuses conversion while the organization owns a private %s",
+    "refuses conversion and private ownership writes for %s",
     async (kind) => {
       const signed = await signIn("configured");
       await grantPlatformAdmin(signed.id);
@@ -296,6 +297,9 @@ describe("platform admin and Demo security through Better Auth", () => {
       ).toBe(200);
       const [stored] = await db.select().from(organizations).where(eq(organizations.id, org.id));
       expect(stored.visibility).toBe("public");
+      await expect(
+        db.update(table).set({ visibility: "private" }).where(eq(table.id, id)),
+      ).rejects.toThrow();
       const invalid = await db
         .select({ id: organizations.id })
         .from(organizations)
@@ -303,6 +307,154 @@ describe("platform admin and Demo security through Better Auth", () => {
       expect(invalid).toHaveLength(0);
     },
   );
+  it.each(["resource first", "conversion first"])(
+    "serializes concurrent writes: %s",
+    async (order) => {
+      const userId = await app.createTestUser();
+      const organizationId = await app.createOrganization();
+      const secondary = createSecondaryDatabase();
+      const held = gate();
+      const release = gate();
+      const createPrivate = (
+        database: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0],
+      ) =>
+        database.insert(workbooks).values({
+          name: "Private concurrent work",
+          createdBy: userId,
+          organizationId,
+          visibility: "private",
+        });
+      const convert = (database: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]) =>
+        database
+          .update(organizations)
+          .set({ type: "demo", visibility: "public" })
+          .where(eq(organizations.id, organizationId));
+      let holding: Promise<unknown> | undefined;
+      let competing: Promise<unknown> | undefined;
+      try {
+        holding = secondary.database.transaction(async (tx) => {
+          await (order === "resource first" ? createPrivate(tx) : convert(tx));
+          held.resolve();
+          await release.promise;
+        });
+        await held.promise;
+        competing = Promise.resolve(order === "resource first" ? convert(db) : createPrivate(db));
+        const outcome = competing.then(
+          () => "completed",
+          () => "rejected",
+        );
+        expect(
+          await Promise.race([
+            outcome,
+            new Promise<string>((resolve) => setTimeout(() => resolve("blocked"), 100)),
+          ]),
+        ).toBe("blocked");
+        release.resolve();
+        await holding;
+        await expect(competing).rejects.toThrow();
+        const invalid = await db
+          .select({ id: workbooks.id })
+          .from(workbooks)
+          .innerJoin(organizations, eq(organizations.id, workbooks.organizationId))
+          .where(and(eq(organizations.type, "demo"), eq(workbooks.visibility, "private")));
+        expect(invalid).toHaveLength(0);
+      } finally {
+        release.resolve();
+        await Promise.allSettled([holding, competing]);
+        await secondary.close();
+      }
+    },
+  );
+
+  // The two schedules review found deadlocking under the old per-organization advisory lock.
+  // Both transactions must now finish.
+  it("lets a resource create and a transfer into the same organization run side by side", async () => {
+    const userId = await app.createTestUser();
+    const organizationId = await app.createOrganization();
+    const elsewhere = await app.createOrganization();
+    const [membership] = await db
+      .insert(organizationMembers)
+      .values({ organizationId, userId, role: "owner" })
+      .returning({ id: organizationMembers.id });
+    const [moving] = await db
+      .insert(workbooks)
+      .values({
+        name: "Moving work",
+        createdBy: userId,
+        organizationId: elsewhere,
+        visibility: "private",
+      })
+      .returning({ id: workbooks.id });
+    const secondary = createSecondaryDatabase();
+    const ownersLocked = gate();
+    const created = gate();
+    try {
+      // A transfer locks the destination's owner memberships, then moves the resource.
+      const transfer = secondary.database.transaction(async (tx) => {
+        await tx
+          .select({ id: organizationMembers.id })
+          .from(organizationMembers)
+          .where(eq(organizationMembers.id, membership.id))
+          .for("update");
+        ownersLocked.resolve();
+        await created.promise;
+        await tx.update(workbooks).set({ organizationId }).where(eq(workbooks.id, moving.id));
+      });
+      await ownersLocked.promise;
+      // A create inserts the resource, then locks the same memberships to seed its owner.
+      const create = db.transaction(async (tx) => {
+        await tx
+          .insert(workbooks)
+          .values({ name: "New work", createdBy: userId, organizationId, visibility: "private" });
+        created.resolve();
+        await tx
+          .select({ id: organizationMembers.id })
+          .from(organizationMembers)
+          .where(eq(organizationMembers.id, membership.id))
+          .for("update");
+      });
+      const outcomes = await Promise.allSettled([transfer, create]);
+      expect(outcomes.map((outcome) => outcome.status)).toEqual(["fulfilled", "fulfilled"]);
+    } finally {
+      created.resolve();
+      await secondary.close();
+    }
+  });
+
+  it("lets account deletion rename a personal workspace while a resource is created in it", async () => {
+    const userId = await app.createTestUser();
+    const workspaceId = await ensurePersonalOrganization(db, { id: userId, name: "Leaving" });
+    const secondary = createSecondaryDatabase();
+    const userLocked = gate();
+    const insertWaiting = gate();
+    try {
+      // Account deletion locks the user, then scrubs the personal workspace's name.
+      const deletion = secondary.database.transaction(async (tx) => {
+        await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).for("update");
+        userLocked.resolve();
+        await insertWaiting.promise;
+        await tx
+          .update(organizations)
+          .set({ name: "Deleted workspace" })
+          .where(eq(organizations.id, workspaceId));
+      });
+      await userLocked.promise;
+      // The insert's foreign key check on created_by waits for the deletion's user lock.
+      const create = db.insert(workbooks).values({
+        name: "Late work",
+        createdBy: userId,
+        organizationId: workspaceId,
+        visibility: "private",
+      });
+      setTimeout(() => insertWaiting.resolve(), 200);
+      const outcomes = await Promise.allSettled([deletion, create]);
+      expect(outcomes.map((outcome) => outcome.status)).toEqual(["fulfilled", "fulfilled"]);
+    } finally {
+      insertWaiting.resolve();
+      await secondary.close();
+    }
+  });
+
   it("does not let an ordinary owner overwrite a concurrently converted Demo type", async () => {
     const admin = await signIn("configured");
     const owner = await signIn("ordinary-owner");
@@ -342,6 +494,46 @@ describe("platform admin and Demo security through Better Auth", () => {
     } finally {
       release.resolve();
       await ordinary;
+      await secondary.close();
+    }
+  });
+
+  it("answers a raced private-resource conversion with a safe actionable 400", async () => {
+    const admin = await signIn("configured");
+    await grantPlatformAdmin(admin.id);
+    const org = await organizationResponse(await createOrg(admin));
+    const reachedWrite = gate();
+    const release = gate();
+    beforeOrganizationWrite = async () => {
+      reachedWrite.resolve();
+      await release.promise;
+    };
+    const secondary = createSecondaryDatabase();
+    let converting: Promise<Response> | undefined;
+    try {
+      converting = call("/organization/update", admin, {
+        organizationId: org.id,
+        data: { type: "demo" },
+      });
+      await reachedWrite.promise;
+      await secondary.database.insert(workbooks).values({
+        name: "Raced private workbook",
+        createdBy: admin.id,
+        organizationId: org.id,
+        visibility: "private",
+      });
+      release.resolve();
+      const response = await converting;
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({
+        code: "DEMO_PRIVATE_RESOURCES",
+        message: "Publish every experiment, workbook, protocol and macro before choosing Demo",
+      });
+      const [stored] = await db.select().from(organizations).where(eq(organizations.id, org.id));
+      expect(stored.type).not.toBe("demo");
+    } finally {
+      release.resolve();
+      await converting;
       await secondary.close();
     }
   });
@@ -399,4 +591,42 @@ describe("platform admin and Demo security through Better Auth", () => {
       expect(await organizationOwnsPrivateResources(db, organizationId)).toBe(false);
     },
   );
+
+  it("admits more than 100 Demo members through add and invitation acceptance", async () => {
+    const owner = await signIn("configured");
+    await grantPlatformAdmin(owner.id);
+    const org = await organizationResponse(await createOrg(owner, { type: "demo" }));
+    const filler = await db
+      .insert(users)
+      .values(
+        Array.from({ length: 99 }, (_, index) => ({
+          name: `Member ${index}`,
+          email: `${crypto.randomUUID()}@example.com`,
+        })),
+      )
+      .returning({ id: users.id });
+    await db
+      .insert(organizationMembers)
+      .values(filler.map((user) => ({ organizationId: org.id, userId: user.id, role: "member" })));
+    const additional = await signIn("additional");
+    const added = await auth.api.addMember({
+      headers: new Headers({ cookie: owner.cookie }),
+      body: { organizationId: org.id, userId: additional.id, role: "member" },
+    });
+    expect(added.userId).toBe(additional.id);
+    const invited = await signIn("invited");
+    const invitation = await auth.api.createInvitation({
+      headers: new Headers({ cookie: owner.cookie }),
+      body: { organizationId: org.id, email: invited.email, role: "member" },
+    });
+    await auth.api.acceptInvitation({
+      headers: new Headers({ cookie: invited.cookie }),
+      body: { invitationId: invitation.id },
+    });
+    const members = await db
+      .select()
+      .from(organizationMembers)
+      .where(eq(organizationMembers.organizationId, org.id));
+    expect(members).toHaveLength(102);
+  });
 });

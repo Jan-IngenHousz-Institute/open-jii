@@ -604,7 +604,7 @@
         "teamsNote": "Teams stel je in via het tabblad Teams van de organisatie, zodra die bestaat — een team is een groep van haar leden en kan er dus niet eerder zijn.",
         "failed": "De organisatie is aangemaakt, maar {{names}} kon niet worden uitgenodigd. Probeer het opnieuw via het tabblad Leden."
       },
-      "visibilityNote_demo": "Deze demo-organisatie wordt openbaar. Ze verschijnt zodra ze is aangemaakt in de directory."
+      "visibilityNote_demo": "Deze demo-organisatie en alle inhoud zijn openbaar. Bekijken kan zonder lidmaatschap; lidmaatschapsverzoeken worden niet geaccepteerd."
     },
     "directory": {
       "emptyTitle": "Nog geen organisaties",
@@ -727,6 +727,7 @@
       "invitedByAndExpiry": "Uitgenodigd door {{name}} · {{expiry}}"
     },
     "requests": {
+      "approvalNotice_demo": "Demo-organisaties accepteren geen lidmaatschapsverzoeken. Je kunt verzoeken afwijzen die vóór de omzetting nog openstonden.",
       "approveAction": "Goedkeuren",
       "rejectAction": "Afwijzen",
       "approved": "{{name}} is lid geworden van de organisatie",
@@ -816,8 +817,8 @@
       "changeFailed": "De zichtbaarheid van de organisatie kon niet worden gewijzigd.",
       "hint_private": "Onzichtbaar van buiten. Niet-leden krijgen een niet-gevonden-pagina en niemand kan lidmaatschap aanvragen.",
       "hint_public": "Vermeld in de directory. Iedereen die is ingelogd ziet het profiel en de openbare resources, en kan lidmaatschap aanvragen.",
-      "description_demo": "Demo-organisaties zijn altijd openbaar en staan in het overzicht.",
-      "hint_demo": "Vermeld in de directory. Iedereen die is ingelogd ziet het profiel en de openbare resources."
+      "description_demo": "Demo-organisaties en alle experimenten, werkboeken, protocollen en macro's die ze bezitten zijn openbaar. Mensen kunnen ze bekijken zonder lid te worden.",
+      "hint_demo": "Zichtbaar in de lijst. Iedereen kan de inhoud bekijken. Demo-organisaties accepteren geen lidmaatschapsverzoeken."
     },
     "delete": {
       "description": "Een organisatie verwijderen kan niet worden teruggedraaid. Wat ze bezit wordt niet meeverwijderd, dus ze moet eerst leeg zijn.",
@@ -909,7 +910,8 @@
       "title": "Samenstelling van resources"
     },
     "overview": {
-      "visitorNotice": "Je bekijkt een openbaar profiel. Leden zien alles waartoe ze toegang hebben; vraag om lid te worden en een eigenaar beslist."
+      "visitorNotice": "Je bekijkt een openbaar profiel. Leden zien alles waartoe ze toegang hebben; vraag om lid te worden en een eigenaar beslist.",
+      "visitorNotice_demo": "Je bekijkt een demo-organisatie. De inhoud is openbaar. Bekijken geeft je geen toestemming om iets te bewerken."
     }
   },
   "dashboard": {

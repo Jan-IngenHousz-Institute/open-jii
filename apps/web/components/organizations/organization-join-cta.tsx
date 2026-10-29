@@ -26,6 +26,7 @@ const MESSAGE_MAX_LENGTH =
   zCreateOrganizationJoinRequestBody.shape.message.unwrap().maxLength ?? 250;
 
 interface OrganizationJoinCtaProps {
+  isDemo?: boolean;
   organizationId: string;
   organizationName: string;
   membershipStatus: OrganizationMembershipStatus;
@@ -42,6 +43,7 @@ interface OrganizationJoinCtaProps {
  * caller renders instead.
  */
 export function OrganizationJoinCta({
+  isDemo,
   organizationId,
   organizationName,
   membershipStatus,
@@ -55,7 +57,7 @@ export function OrganizationJoinCta({
   const { mutateAsync: cancelRequest, isPending: isCancelling } =
     useCancelMyOrganizationJoinRequest();
 
-  if (membershipStatus === "member") return null;
+  if (isDemo || membershipStatus === "member") return null;
 
   const submitRequest = async () => {
     try {

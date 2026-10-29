@@ -56,4 +56,5 @@ export interface OrganizationAccessRow {
   visibility: "private" | "public";
   /** The caller's stored role string, or `null` when they are not a member. */
   memberRole: string | null;
+  type?: OrganizationDirectoryEntry["type"];
 }
