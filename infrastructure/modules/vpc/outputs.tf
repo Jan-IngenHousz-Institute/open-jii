@@ -80,3 +80,13 @@ output "calibration_sandbox_lambda_security_group_id" {
   description = "ID of the calibration-sandbox Lambda security group (isolated, no inbound, HTTPS to VPC endpoints only)"
   value       = var.create_calibration_sandbox_resources ? aws_security_group.calibration_sandbox_lambda[0].id : null
 }
+
+output "serving_store_security_group_id" {
+  description = "ID of the serving store security group"
+  value       = var.create_serving_store_resources ? aws_security_group.serving_store_sg[0].id : null
+}
+
+output "serving_store_port" {
+  description = "Port the serving store answers HTTP on"
+  value       = var.serving_store_port
+}

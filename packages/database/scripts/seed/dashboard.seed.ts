@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
-import { db } from "../../src/database";
-import { experimentDashboards, experimentVisualizations } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import { experimentDashboards, experimentVisualizations } from "../../src/postgres/schema";
 import { CONTRIBUTOR_SEEDS } from "./constants";
 import type { SeedExperiment, SeedUser } from "./types";
 

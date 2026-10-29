@@ -1,5 +1,5 @@
-import { db } from "../../src/database";
-import { notifications } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import { notifications } from "../../src/postgres/schema";
 import { CONTRIBUTOR_SEEDS } from "./constants";
 import type { SeedExperiment, SeedUser } from "./types";
 

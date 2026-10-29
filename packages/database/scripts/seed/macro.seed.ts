@@ -1,7 +1,7 @@
 import { and } from "drizzle-orm";
 
-import { db } from "../../src/database";
-import { macros } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import { macros } from "../../src/postgres/schema";
 import type { SeedUser } from "./types";
 
 /** Analysis macros across the three sandbox languages. */

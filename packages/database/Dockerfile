@@ -69,7 +69,8 @@ USER nodejs
 WORKDIR /app/packages/${PROJECT}
 
 # Copy necessary files for migrations
-COPY --from=builder --chown=nodejs:nodejs /app/packages/${PROJECT}/drizzle ./drizzle
+COPY --from=builder --chown=nodejs:nodejs /app/packages/${PROJECT}/postgres/migrations ./postgres/migrations
+COPY --from=builder --chown=nodejs:nodejs /app/packages/${PROJECT}/clickhouse/migrations ./clickhouse/migrations
 COPY --from=builder --chown=nodejs:nodejs /app/packages/${PROJECT}/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/packages/${PROJECT}/package.json ./package.json
 # Copy only the production dependencies from the dedicated directory

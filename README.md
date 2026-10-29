@@ -60,17 +60,17 @@ A pnpm + Turborepo workspace.
 
 ### Packages
 
-| Package                  | What it is                                                                       |
-| ------------------------ | -------------------------------------------------------------------------------- |
-| `packages/api`           | oRPC API contract shared by backend, web, and mobile; generates the OpenAPI spec |
-| `packages/auth`          | [Better Auth](https://better-auth.com) configuration (web + mobile)              |
-| `packages/database`      | Drizzle ORM schema, migrations, seeding, and local Postgres compose scripts      |
-| `packages/ui`            | Shared React component library (shadcn/Radix, charts, maps, forms)               |
-| `packages/cms`           | Contentful integration for the public site (GraphQL codegen, live preview)       |
-| `packages/i18n`          | i18next internationalization (en-US, de-DE)                                      |
-| `packages/iot`           | Shared IoT device types and connector logic                                      |
-| `packages/transactional` | Transactional email templates (React Email)                                      |
-| `packages/analytics`     | PostHog analytics and feature flags (client + server)                            |
+| Package                  | What it is                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------------ |
+| `packages/api`           | oRPC API contract shared by backend, web, and mobile; generates the OpenAPI spec     |
+| `packages/auth`          | [Better Auth](https://better-auth.com) configuration (web + mobile)                  |
+| `packages/database`      | Postgres and ClickHouse schemas and migrations, Postgres seeding and compose scripts |
+| `packages/ui`            | Shared React component library (shadcn/Radix, charts, maps, forms)                   |
+| `packages/cms`           | Contentful integration for the public site (GraphQL codegen, live preview)           |
+| `packages/i18n`          | i18next internationalization (en-US, de-DE)                                          |
+| `packages/iot`           | Shared IoT device types and connector logic                                          |
+| `packages/transactional` | Transactional email templates (React Email)                                          |
+| `packages/analytics`     | PostHog analytics and feature flags (client + server)                                |
 
 Infrastructure lives in `infrastructure/` (AWS, managed with [OpenTofu](https://opentofu.org)), and shared configs (ESLint, TypeScript, Tailwind, Vitest, release tooling) in `tooling/`.
 

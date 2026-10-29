@@ -1,7 +1,7 @@
 import { and, eq, inArray, like, or } from "drizzle-orm";
 
-import { db } from "../../src/database";
-import { personalOrgSlug } from "../../src/organizations";
+import { db } from "../../src/postgres/database";
+import { personalOrgSlug } from "../../src/postgres/organizations";
 import {
   users,
   profiles,
@@ -20,7 +20,7 @@ import {
   resourceGrants,
   resourceVisits,
   workbooks,
-} from "../../src/schema";
+} from "../../src/postgres/schema";
 import {
   NEWCOMER_EMAIL,
   SEED_EMAIL,

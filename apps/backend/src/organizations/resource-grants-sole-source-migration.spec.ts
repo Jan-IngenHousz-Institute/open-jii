@@ -17,7 +17,7 @@ import { TestHarness } from "../test/test-harness";
 
 /**
  * These statements mirror the data migration hand-written in
- * `packages/database/drizzle/0041_iam_grants_sole_access_source.sql`, which makes
+ * `packages/database/postgres/migrations/0041_iam_grants_sole_access_source.sql`, which makes
  * `resource_grants` the only thing that confers *explicit* access to a shared
  * resource, and strips the creator grants that ownership makes redundant. They are
  * duplicated here so the migration's data ops are locked by tests — update both

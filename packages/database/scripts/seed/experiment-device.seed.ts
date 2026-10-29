@@ -1,7 +1,7 @@
 import { and } from "drizzle-orm";
 
-import { db } from "../../src/database";
-import { experiments, experimentDevices } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import { experiments, experimentDevices } from "../../src/postgres/schema";
 import type { SeedDevice, SeedExperiment, SeedUser } from "./types";
 
 /** Which device reports into which experiment. */

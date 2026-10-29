@@ -1,0 +1,30 @@
+<clickhouse>
+    <listen_host>0.0.0.0</listen_host>
+    <http_port>${http_port}</http_port>
+
+    <!-- The packaged defaults log at trace level into ten 1 GB files on the root volume. -->
+    <logger>
+        <level>information</level>
+        <size>100M</size>
+        <count>5</count>
+    </logger>
+
+    <prometheus>
+        <endpoint>/metrics</endpoint>
+        <port>${prometheus_port}</port>
+        <metrics>false</metrics>
+        <events>false</events>
+        <asynchronous_metrics>true</asynchronous_metrics>
+        <errors>false</errors>
+    </prometheus>
+
+    <!-- Most system log tables ship without a TTL and would grow on the data volume forever. -->
+%{ for table in system_log_tables ~}
+    <${table}>
+        <ttl>event_date + INTERVAL ${system_log_retention_days} DAY DELETE</ttl>
+%{ if table == "text_log" ~}
+        <level>information</level>
+%{ endif ~}
+    </${table}>
+%{ endfor ~}
+</clickhouse>
