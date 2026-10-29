@@ -12,6 +12,7 @@ import {
   createSecondaryDatabase,
   db,
   eq,
+  ensurePersonalOrganization,
   experiments,
   guestUsage,
   organizationMembers,
@@ -330,6 +331,57 @@ describe("anonymous sessions on the production auth boundary", () => {
     expect(
       await db.select().from(organizationMembers).where(eq(organizationMembers.userId, visitor.id)),
     ).toEqual([]);
+  });
+
+  it("refuses an uncommitted guest before its organization FK can wait and admit it", async () => {
+    const organizationId = await app.createOrganization(undefined, {
+      type: "university",
+      visibility: "private",
+    });
+    const other = createSecondaryDatabase();
+    const userId = crypto.randomUUID();
+    try {
+      await db.transaction(async (tx) => {
+        await tx.insert(users).values({
+          id: userId,
+          name: "Uncommitted visitor",
+          email: `${userId}@guest.openjii.invalid`,
+          isAnonymous: true,
+        });
+        await tx
+          .select()
+          .from(organizations)
+          .where(eq(organizations.id, organizationId))
+          .for("update");
+        await expect(
+          other.database.transaction(async (contender) => {
+            await contender.execute(sql`SET LOCAL lock_timeout = '1s'`);
+            await contender
+              .insert(organizationMembers)
+              .values({ organizationId, userId, role: "owner" });
+          }),
+        ).rejects.toMatchObject({ cause: { code: "23514" } });
+      });
+      expect(
+        await db.select().from(organizationMembers).where(eq(organizationMembers.userId, userId)),
+      ).toEqual([]);
+    } finally {
+      await other.close();
+    }
+  });
+
+  it("provisions a researcher's personal membership in the transaction creating the user", async () => {
+    const userId = crypto.randomUUID();
+    const organizationId = await db.transaction(async (tx) => {
+      const [user] = await tx
+        .insert(users)
+        .values({ id: userId, name: "New researcher", email: `${userId}@example.test` })
+        .returning();
+      return ensurePersonalOrganization(tx, user);
+    });
+    expect(
+      await db.select().from(organizationMembers).where(eq(organizationMembers.userId, userId)),
+    ).toMatchObject([{ organizationId, role: "owner" }]);
   });
 
   describe("the review deadlock schedules", () => {

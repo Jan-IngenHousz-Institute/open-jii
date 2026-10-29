@@ -11,7 +11,7 @@ ALTER TABLE "guest_usage" ADD CONSTRAINT "guest_usage_user_id_users_id_fk" FOREI
 --> statement-breakpoint
 CREATE FUNCTION refuse_guest_membership() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM users WHERE id = NEW.user_id AND is_anonymous) THEN
+  IF NOT EXISTS (SELECT 1 FROM users WHERE id = NEW.user_id AND NOT is_anonymous) THEN
     RAISE EXCEPTION 'Guests cannot hold organization memberships' USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
