@@ -15,7 +15,7 @@ import pytest
 import requests
 import responses
 from openjii.serving_store import writer
-from openjii.serving_store.writer import StoreWriter, Written, storable
+from openjii.serving_store.writer import StoreUnavailable, StoreWriter, Written, storable
 from pyspark.sql import SparkSession
 
 URL = "http://store.test/"
@@ -88,16 +88,53 @@ def test_the_token_names_the_loader_table_and_body_so_a_replay_repeats_it(store:
 
 
 @responses.activate
+def test_a_partition_is_posted_chunk_by_chunk_as_it_arrives(store: StoreWriter) -> None:
+    read = 0
+    read_at_each_insert: list[int] = []
+
+    def partition() -> Iterator[str]:
+        nonlocal read
+        for line in _lines(12_001):
+            read += 1
+            yield line
+
+    def accept(request: requests.PreparedRequest) -> tuple[int, dict, str]:
+        read_at_each_insert.append(read)
+        return 200, {}, ""
+
+    responses.add_callback(responses.POST, URL, callback=accept)
+
+    assert store.insert("measurements", partition()) == Written(inserted=12_001)
+    # A chunk goes once the next line would not fit, before the rest of the partition is read.
+    assert read_at_each_insert == [5_001, 10_001, 12_001]
+
+
+@responses.activate
 def test_a_busy_store_is_waited_out_within_the_executors_attempts(store: StoreWriter) -> None:
     responses.add(responses.POST, URL, status=500, headers={"X-ClickHouse-Exception-Code": "241"})
     responses.add(responses.POST, URL, status=500, headers={"X-ClickHouse-Exception-Code": "252"})
-    responses.add(responses.POST, URL, body=requests.ConnectionError("store restarting"))
     responses.add(responses.POST, URL)
 
     written = store.insert("measurements", _lines(4))
 
     assert written == Written(inserted=4)
-    assert len(responses.calls) == 4
+    assert len(responses.calls) == 3
+
+
+@pytest.mark.parametrize(
+    "silence", [requests.ConnectionError("connection refused"), requests.ReadTimeout("read timed out")]
+)
+@responses.activate
+def test_a_store_that_does_not_answer_gets_its_rows_handed_back_at_once(
+    store: StoreWriter, silence: requests.RequestException
+) -> None:
+    responses.add(responses.POST, URL)
+    responses.add(responses.POST, URL, body=silence)
+
+    written = store.insert("measurements", _lines(6_000))
+
+    assert written == Written(inserted=5_000, unfinished=1_000)
+    assert len(responses.calls) == 2
 
 
 @responses.activate
@@ -154,6 +191,48 @@ def test_rows_the_store_cannot_read_are_set_aside_in_one_insert_and_the_rest_lan
         }
         for line in (lines[2], lines[5])
     ]
+
+
+@responses.activate
+def test_a_rejected_row_too_long_to_keep_whole_is_cut_and_says_so(
+    store: StoreWriter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(writer, "_REJECT_ROW_CHARS", 40)
+    responses.add_callback(responses.POST, URL, callback=_refuse_bad_rows)
+    line = json.dumps({"id": "bad", "_commit_version": 4, "pad": "x" * 40})
+
+    assert store.insert("measurements", [line]) == Written(rejected=1)
+
+    [[reject]] = [chunk for table, _, chunk in _inserts() if table == "store.feed_rejects"]
+    assert json.loads(reject)["row"] == line[:40]
+    assert json.loads(reject)["message"].endswith(f"(row cut to its first 40 of {len(line)} characters)")
+
+
+@responses.activate
+def test_the_driver_check_queries_as_the_writer(store: StoreWriter) -> None:
+    responses.add(responses.GET, URL, body="1\n")
+
+    store.check()
+
+    [call] = responses.calls
+    assert parse_qs(urlparse(str(call.request.url)).query) == {"query": ["SELECT 1"]}
+    assert call.request.headers["X-ClickHouse-User"] == "openjii_writer"
+    assert call.request.headers["X-ClickHouse-Key"] == "secret"
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        {"body": requests.ConnectionError("connection refused")},
+        {"status": 516, "headers": {"X-ClickHouse-Exception-Code": "516"}, "body": "Authentication failed"},
+    ],
+)
+@responses.activate
+def test_the_driver_check_fails_on_silence_or_an_error(store: StoreWriter, answer: dict) -> None:
+    responses.add(responses.GET, URL, **answer)
+
+    with pytest.raises(StoreUnavailable):
+        store.check()
 
 
 def test_integers_the_store_cannot_hold_become_floats_and_nothing_else_changes() -> None:
