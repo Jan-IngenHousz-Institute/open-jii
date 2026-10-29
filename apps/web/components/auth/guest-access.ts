@@ -1,5 +1,5 @@
 // Whether a guest may call the procedure behind each action or view the UI offers. The answers
-// mirror the backend's guest route inventories, which guest-access.test.ts checks. Creating an
+// mirror backend route metadata and inventories, which guest-access.test.ts checks. Creating an
 // organization goes through Better Auth, whose organization plugin refuses guests.
 const GUEST_ACCESS = {
   "experiments.createExperiment": false,
