@@ -4,7 +4,12 @@
 store's instance scrapes ClickHouse's Prometheus endpoint (port 9363) every minute and ships its
 uptime, so the series stops when ClickHouse stops answering, or when the instance or the agent
 stops. While ClickHouse is the cause, the pipelines cannot write to the store and nothing can read
-from it.
+from it. The deploy's database migrations fail too, since they migrate the store first, and that
+holds back the backend and web deploys; see
+[Shipping a Postgres change while the store is down](#shipping-a-postgres-change-while-the-store-is-down).
+
+A change to the instance's user data replaces the instance, so an apply that changes it fires this
+alert for the few minutes the new instance takes to boot.
 
 If `store-memory` and `store-disk` are still reporting, the instance is up and the cause is
 ClickHouse or the agent's shipping of its scrape. If all three went quiet together, the instance or
@@ -48,9 +53,10 @@ findmnt /var/lib/clickhouse
 ```
 
 Nothing mounted after a boot usually means the volume did not attach within the ten minutes systemd
-waits for it. Check the attachment with
-`aws ec2 describe-volumes --filters Name=tag:Name,Values=openjii-serving-store-<env>-data`, then run
-`sudo systemctl start clickhouse-server`, which mounts the volume first.
+waits for it, and the service does not try again by itself. Check the attachment with
+`aws ec2 describe-volumes --filters Name=tag:Name,Values=openjii-serving-store-<env>-data`. A volume
+that is not attached is attached by rerunning the infrastructure deploy, which owns the attachment.
+Once it is attached, run `sudo systemctl start clickhouse-server`, which mounts the volume first.
 
 **4. Does it answer on the instance?**
 
@@ -61,6 +67,17 @@ curl -s http://127.0.0.1:9363/metrics | grep '^ClickHouseAsyncMetrics_Uptime '
 
 `Ok.` from the first and an uptime line from the second, with the alert still firing, means the
 agent is the break. Its errors are in `/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log`.
+
+## Shipping a Postgres change while the store is down
+
+1. Run the **Database Migrations Workflow** for the environment and ref with
+   `skip_store_migrations` ticked. It migrates Postgres alone and logs
+   `ClickHouse migrations skipped on request`.
+2. Run the environment's release workflow with `deploy_app` set to `backend,web`, which deploys
+   both without running the migrations again.
+
+Once the store answers again, run the Database Migrations Workflow once more without the tick, so
+the store catches up. A later deploy migrates only when `@repo/database` changed, so it may not.
 
 ## Closing
 

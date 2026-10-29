@@ -23,6 +23,11 @@ on:
         required: false
         type: number
         default: 10
+      skip_store_migrations:
+        description: "Migrate Postgres alone, for a Postgres change while the serving store is down"
+        required: false
+        type: boolean
+        default: false
 
   workflow_call:
     inputs:
@@ -40,6 +45,11 @@ on:
         required: false
         type: string
         default: ""
+      skip_store_migrations:
+        description: "Migrate Postgres alone, for a Postgres change while the serving store is down"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: migrations-${{ github.workflow }}-${{ inputs.environment }}-${{ github.ref }}
@@ -329,6 +339,8 @@ jobs:
           task-definition: task-definition.json
           container-name: ${{ env.MIGRATION_RUNNER_CONTAINER_NAME }}
           image: ${{ steps.build-image.outputs.full_image_ref }}
+          # Set on every run, since the next run starts from the revision this one registers.
+          environment-variables: SKIP_CLICKHOUSE_MIGRATIONS=${{ inputs.skip_store_migrations }}
 
       - name: Register rendered task definition
         id: register-task-def

@@ -1,4 +1,4 @@
-import { ClickHouseLogLevel, createClient } from "@clickhouse/client";
+import { ClickHouseError, ClickHouseLogLevel, createClient } from "@clickhouse/client";
 import { migration } from "clickhouse-migrations";
 import { readdir } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
@@ -10,6 +10,13 @@ const MIGRATIONS_FOLDER = "clickhouse/migrations";
 // The store's instance may just have been replaced, so it gets a few minutes to boot.
 const READY_TIMEOUT_MS = 5 * 60 * 1000;
 const READY_POLL_MS = 5 * 1000;
+
+// Without it the client gives up after 30 seconds while the server finishes the statement, and the
+// next run applies it again. Work that takes longer belongs in a runbook, not a migration.
+const STATEMENT_TIMEOUT_MS = 8 * 60 * 1000;
+
+// The runner's ledger keeps a version as a UInt32.
+const MAX_VERSION = 4_294_967_295;
 
 // A fixed message, since JSON.parse quotes the start of its input and this input is a secret.
 const credentialsSchema = z
@@ -67,6 +74,11 @@ export async function waitForClickHouse({ url, username, password }: ClickHouseC
         return;
       }
 
+      // The server answered, with an error such as a wrong password, so waiting will not change it.
+      if (result.error instanceof ClickHouseError) {
+        throw new Error(`ClickHouse refused the runner: ${result.error.message}`);
+      }
+
       if (Date.now() > deadline) {
         throw new Error(`ClickHouse did not answer in time: ${result.error.message}`);
       }
@@ -78,14 +90,21 @@ export async function waitForClickHouse({ url, username, password }: ClickHouseC
   }
 }
 
-// The runner records a migration under the number before its first underscore, so a second file
-// with the same number fails every later run on a checksum mismatch.
+// The runner records a migration under the number before its first underscore. It exits on a zero or
+// a missing number, records one past UInt32 as a different number that no file has, and on a second
+// file with the same number fails every later run on a checksum mismatch.
 export async function checkClickHouseMigrations() {
   const files = (await readdir(MIGRATIONS_FOLDER)).filter((file) => file.endsWith(".sql"));
   const byNumber = new Map<number, string>();
 
   for (const file of files) {
     const number = Number(file.split("_")[0]);
+    if (!Number.isInteger(number) || number < 1 || number > MAX_VERSION) {
+      throw new Error(
+        `ClickHouse migration ${file} needs a whole number from 1 to ${MAX_VERSION} before its first underscore`,
+      );
+    }
+
     const other = byNumber.get(number);
     if (other !== undefined) {
       throw new Error(`ClickHouse migrations ${other} and ${file} share the number ${number}`);
@@ -96,5 +115,14 @@ export async function checkClickHouseMigrations() {
 }
 
 export async function migrateClickHouse({ url, username, password }: ClickHouseConfig) {
-  await migration(MIGRATIONS_FOLDER, url, username, password, DATABASE);
+  await migration(
+    MIGRATIONS_FOLDER,
+    url,
+    username,
+    password,
+    DATABASE,
+    undefined,
+    undefined,
+    String(STATEMENT_TIMEOUT_MS),
+  );
 }
