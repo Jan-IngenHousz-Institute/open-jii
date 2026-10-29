@@ -49,36 +49,7 @@ interface OrganizationSnapshot {
 const organizationUpdateScope = new AsyncLocalStorage<{ current?: OrganizationSnapshot }>();
 
 export function withDemoOrganizationUpdate<T>(run: () => Promise<T>): Promise<T> {
-  return organizationUpdateScope.run({}, async () => {
-    try {
-      return await run();
-    } catch (error) {
-      for (let current: unknown = error; typeof current === "object" && current !== null; ) {
-        const { code, message, cause } = current as {
-          code?: unknown;
-          message?: unknown;
-          cause?: unknown;
-        };
-        if (
-          code === "23514" &&
-          message === "Publish every experiment, workbook, protocol and macro before choosing Demo"
-        ) {
-          throw new APIError("BAD_REQUEST", {
-            message: "Publish every experiment, workbook, protocol and macro before choosing Demo",
-            code: "DEMO_PRIVATE_RESOURCES",
-          });
-        }
-        if (
-          code === "23514" &&
-          message === "Demo organizations must be public and cannot be personal workspaces"
-        ) {
-          throw new APIError("BAD_REQUEST", { message: "Demo organizations must be public" });
-        }
-        current = cause;
-      }
-      throw error;
-    }
-  });
+  return organizationUpdateScope.run({}, run);
 }
 
 /** Match the authorized type in the write, including when another request changed it. */

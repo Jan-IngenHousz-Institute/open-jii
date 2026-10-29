@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import { and, eq, inArray, isNull, listPlatformRoleHolders, profiles, users } from "@repo/database";
+import { eq, inArray, listPlatformRoleHolders, profiles, users } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { tryCatch } from "../../../common/utils/fp-utils";
@@ -25,12 +25,9 @@ export class PlatformAdminRepository {
         .from(users)
         .leftJoin(profiles, eq(profiles.userId, users.id))
         .where(
-          and(
-            inArray(
-              users.id,
-              holders.map((holder) => holder.userId),
-            ),
-            isNull(profiles.deletedAt),
+          inArray(
+            users.id,
+            holders.map((holder) => holder.userId),
           ),
         );
       return rows

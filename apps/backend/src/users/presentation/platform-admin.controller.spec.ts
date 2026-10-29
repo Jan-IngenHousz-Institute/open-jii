@@ -1,4 +1,4 @@
-import { auditLogs, changePlatformRole, eq, profiles } from "@repo/database";
+import { auditLogs, changePlatformRole, eq, profiles, users } from "@repo/database";
 
 import { TestHarness } from "../../test/test-harness";
 
@@ -40,15 +40,17 @@ describe("Platform admin roster", () => {
     ]);
   });
 
-  it("omits soft-deleted holders and prefers profile names over the account name", async () => {
+  it("omits deleted and banned holders and prefers profile names over the account name", async () => {
     const actor = await app.createTestUser({ name: "Account Admin" });
     const deleted = await app.createTestUser({ name: "Deleted Admin" });
+    const banned = await app.createTestUser({ name: "Banned Admin" });
     const fallback = await app.createTestUser({ name: "Fallback Admin", createProfile: false });
-    for (const id of [actor, deleted, fallback]) await change(id);
+    for (const id of [actor, deleted, banned, fallback]) await change(id);
     await app.database
       .update(profiles)
       .set({ deletedAt: new Date() })
       .where(eq(profiles.userId, deleted));
+    await app.database.update(users).set({ banned: true }).where(eq(users.id, banned));
     await app.database
       .update(profiles)
       .set({ firstName: "Profile", lastName: "Admin" })
