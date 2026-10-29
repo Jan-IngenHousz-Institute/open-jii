@@ -1,0 +1,88 @@
+---
+title: "ADR: Platform roles are granted outside the app"
+description: "Why JII staff get platform roles through an approved workflow that writes an audit row, rather than through configuration or an in-app page."
+---
+
+{/* verified: code@4dfe7a048fe0 2026-10-29 */}
+
+# ADR: Platform roles are granted outside the app
+
+**Date:** 2026-10-29  
+**Status:** Accepted
+
+## Context
+
+Some work needs a person whose authority reaches beyond their own
+organizations. Try openJII without an account needs JII staff to run Demo
+organizations, and Content safety and fair use needs moderators who can act on
+any account. Until now there was no platform-wide role at all.
+
+SOC 2 readiness shapes how such a role is handed out. An auditor samples access
+grants and expects each one to be approved by someone other than the person who
+asked for it, recorded, limited to what the job needs, reviewed each quarter and
+removed when the job ends. openJII's own sign-in is an email code, ORCID or
+GitHub, or a passkey, so whatever holds a role is only as strong as that
+sign-in.
+
+The first design named admins in a deployment setting, `ADMIN_USER_IDS`, passed
+to Better Auth's `adminUserIds`, and let admins appoint more admins on a page in
+the app.
+
+## Decision
+
+- Platform roles live in `users.role`, the column Better Auth's admin plugin
+  adds. An account may hold several, comma-separated. The catalog is
+  `PLATFORM_ROLES`; it starts with `platform_admin`, and the moderator role
+  joins it later.
+- Each role grants only what its own feature needs. A platform role gives no
+  role in any organization and no access to any resource.
+- `changePlatformRole` is the only code that changes a role. It writes the role
+  and an `audit_logs` row in one transaction, naming the engineer's account,
+  the GitHub actor and the run.
+- On dev and prod it runs only inside the migration runner task, started by the
+  Platform Roles Workflow from `main`. A prod grant or revoke waits for one
+  approval in the `prod-approval` environment, and the person who started the
+  run cannot approve it.
+- No route of the admin plugin is served, and `adminUserIds` stays unset.
+- Role checks read the database on every request, never the session cookie
+  cache, and refuse API keys and anonymous sessions.
+
+## Consequences
+
+**Benefits:**
+
+- Every grant has a second approver and a durable record, and the quarterly
+  review reads one place: `platform-role list`.
+- Revoking a role works on the next request, without a deploy.
+- One compromised staff account cannot mint further admins.
+- The moderator role reuses the same writer, workflow and checks.
+
+**Trade-offs / Risks:**
+
+- Granting needs GitHub write access and an approver, which is slower than a
+  page in the app.
+- The workflow can read only the task's exit code. Its output, such as a list,
+  is in the migration runner's CloudWatch log group, so reading it needs AWS
+  access.
+- The repository is public, so the workflow takes user ids rather than email
+  addresses. Finding someone's id takes a step.
+- A role is still only as strong as its holder's sign-in. A second factor for
+  role holders is not yet required.
+
+## Alternatives Considered
+
+- **`ADMIN_USER_IDS` in deployment configuration:** a pull request approves each
+  change, but the plugin lets every listed id pass every permission check,
+  impersonation included. Configured admins never appear in `users.role`, so a
+  review has to read two places, and removing one needs a deploy.
+- **Admins appoint admins in the app:** quick, but a single signed-in admin can
+  make more with no second approval, and nothing durable records it before the
+  audit trail (OJD-2020) exists.
+- **One role for every platform power:** simpler, but anyone who runs Demo
+  organizations would also see every account's email address once moderation
+  ships.
+
+## Conclusion
+
+Platform roles change only through a reviewed, recorded path outside the app.
+Each one starts with no powers and gains only what its own feature needs.

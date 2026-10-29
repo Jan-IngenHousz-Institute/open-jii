@@ -140,7 +140,8 @@ source gets to refuse.
 Two consequences follow. A grant can only ever raise access, never lower it: an
 organization member handed a higher grant gets the higher one, and an admin
 holding a stale low grant keeps their admin access. And there is no
-platform-administrator tier anywhere in the chain.
+platform-administrator tier anywhere in the chain: a
+[platform role](#platform-roles) gives no access to any resource.
 
 Denials distinguish `not-found` from `forbidden`, and `can()` also returns the
 owning organization it resolved against. That return value matters: a caller
@@ -404,6 +405,41 @@ naming a group that no longer exists. What the six share is that dropping a row 
 SQL leaves something behind.
 The way out is to transfer or delete each resource.
 
+## Platform roles
+
+A platform role belongs to an account rather than to an organization, and JII
+staff hold it. The catalog is `PLATFORM_ROLES` in
+`packages/database/src/postgres/platform-roles.ts`; today it holds
+`platform_admin`, which can do nothing yet. Holding a platform role gives no
+role in any organization, and no organization role gives a platform role.
+[ADR: Platform roles are granted outside the app](/developers/design-decisions/platform-roles-adr)
+records why.
+
+Better Auth's admin plugin stores the roles in `users.role`, comma-separated,
+with `user` meaning none. The plugin is installed for that column, its ban
+columns and its banned-session check. None of its routes is served: each answers
+404, and its `adminUserIds` option stays unset, because the plugin lets the users
+it names pass every permission check.
+
+Nothing in the app grants a role. `changePlatformRole` is the only writer. It
+locks the target, refuses a no-op or an account that is unregistered or deleted,
+and writes `users.role` and an `audit_logs` row in one transaction. The row names
+the engineer's own account as the actor and records the GitHub actor and run.
+`hasPlatformRole` and `isPlatformAdmin` in `packages/auth/src/platform-admin.ts`
+read the database on every call, never the cookie-cached session, so a revoked
+role stops working on the next request. An API key or an anonymous session never
+holds a platform role.
+
+| Where        | How                                                                                                                                                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Local        | `pnpm --filter database db:seed` grants the seed user `platform_admin`. `pnpm platform-role grant --role platform_admin --target <user id> --actor <your user id>`, `revoke` and `list` change the local database.                   |
+| Dev and prod | Run the **Platform Roles Workflow** from `main`. It starts the migration runner task with the command. In prod, a grant or revoke waits for one approval in `prod-approval`, from someone other than the person who started the run. |
+
+The command refuses a database that is not local unless it runs inside ECS. The
+repository is public, so the workflow takes user ids rather than email addresses
+and its output names accounts by id. The output lands in the migration runner's
+CloudWatch log group, which the run's summary names.
+
 ## Implementation map
 
 | Concern                                   | Source                                                                                          |
@@ -414,6 +450,9 @@ The way out is to transfer or delete each resource.
 | Browser auth client                       | `packages/auth/src/clients/client.web.ts`                                                       |
 | API-key session boundary                  | `packages/auth/src/api-key-session.ts`                                                          |
 | Shared role/action matrices               | `packages/auth/src/access.ts`                                                                   |
+| Platform role catalog and writer          | `packages/database/src/postgres/platform-roles.ts`, `packages/database/src/platform-roles.ts`   |
+| Platform role checks, admin plugin        | `packages/auth/src/platform-admin.ts`, `packages/auth/src/admin/plugin.ts`                      |
+| Platform role workflow                    | `.github/workflows/platform-roles.yml`                                                          |
 | Personal organization provisioning        | `packages/database/src/postgres/organizations.ts`                                               |
 | Resource ownership and grants             | `packages/database/src/postgres/schema.ts`, `packages/database/src/postgres/resource-grants.ts` |
 | Central resource decisions                | `apps/backend/src/authorization/authorization.service.ts`                                       |
