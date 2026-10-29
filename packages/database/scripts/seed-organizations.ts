@@ -1,9 +1,9 @@
 import { and, eq, inArray, like } from "drizzle-orm";
 
-import { db } from "../src/database";
-import { ensurePersonalOrganization, personalOrgSlug } from "../src/organizations";
-import { upsertGrant } from "../src/resource-grants";
-import type { GrantRole, ResourceType } from "../src/resource-grants";
+import { db } from "../src/postgres/database";
+import { ensurePersonalOrganization, personalOrgSlug } from "../src/postgres/organizations";
+import { upsertGrant } from "../src/postgres/resource-grants";
+import type { GrantRole, ResourceType } from "../src/postgres/resource-grants";
 import {
   experiments,
   iotDevices,
@@ -19,7 +19,7 @@ import {
   teams,
   users,
   workbooks,
-} from "../src/schema";
+} from "../src/postgres/schema";
 
 /**
  * Local-dev seed for the organization detail pages.

@@ -1,8 +1,8 @@
 import { and } from "drizzle-orm";
 
-import { db } from "../../src/database";
-import { upsertGrant } from "../../src/resource-grants";
-import { experiments } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import { upsertGrant } from "../../src/postgres/resource-grants";
+import { experiments } from "../../src/postgres/schema";
 import {
   EXPERIMENT_ID_SOIL_HEALTH,
   EXPERIMENT_ID_WINTER_WHEAT,
