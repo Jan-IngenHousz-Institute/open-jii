@@ -21,6 +21,10 @@ $$;
 CREATE TRIGGER guest_membership_refused BEFORE INSERT OR UPDATE OF user_id ON organization_members
 FOR EACH ROW EXECUTE FUNCTION refuse_guest_membership();
 --> statement-breakpoint
+-- AFTER triggers run in name order; recheck after RI_ConstraintTrigger_* has locked the user.
+CREATE TRIGGER zz_guest_membership_refused AFTER INSERT OR UPDATE OF user_id ON organization_members
+FOR EACH ROW EXECUTE FUNCTION refuse_guest_membership();
+--> statement-breakpoint
 CREATE FUNCTION refuse_becoming_guest() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF NEW.is_anonymous AND NOT OLD.is_anonymous THEN

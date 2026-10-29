@@ -32,6 +32,7 @@ import { guestRouteInventory } from "../authorization/core/models/guest-route.mo
 import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { LAMBDA_PORT } from "../macros/core/ports/lambda.port";
 import type { LambdaPort } from "../macros/core/ports/lambda.port";
+import { backendPidOf, waitUntilBlocked } from "../test/lock-wait";
 import { TestHarness } from "../test/test-harness";
 import { PurgeExpiredGuestsUseCase } from "./application/use-cases/purge-expired-guests/purge-expired-guests";
 import guestAuthEndpoints from "./guest-auth-endpoints.json";
@@ -382,6 +383,58 @@ describe("anonymous sessions on the production auth boundary", () => {
     expect(
       await db.select().from(organizationMembers).where(eq(organizationMembers.userId, userId)),
     ).toMatchObject([{ organizationId, role: "owner" }]);
+  });
+
+  it("refuses membership when a researcher is replaced by a guest while its organization FK waits", async () => {
+    const organizationId = await app.createOrganization(undefined, {
+      type: "university",
+      visibility: "private",
+    });
+    const userId = crypto.randomUUID();
+    await db.insert(users).values({
+      id: userId,
+      name: "Replaceable researcher",
+      email: userId + "@example.test",
+    });
+    const contender = createSecondaryDatabase();
+    const observer = createSecondaryDatabase();
+    const pid = await backendPidOf(contender.database);
+    let outcome: Promise<unknown> | undefined;
+    try {
+      await db.transaction(async (tx) => {
+        await tx
+          .select()
+          .from(organizations)
+          .where(eq(organizations.id, organizationId))
+          .for("update");
+        await tx.delete(users).where(eq(users.id, userId));
+        await tx.insert(users).values({
+          id: userId,
+          name: "Replacement visitor",
+          email: userId + "@guest.openjii.invalid",
+          isAnonymous: true,
+        });
+        const membership = contender.database.transaction(async (other) => {
+          await other.execute(sql`SET LOCAL lock_timeout = '5s'`);
+          await other.insert(organizationMembers).values({ organizationId, userId, role: "owner" });
+        });
+        outcome = membership.then(
+          () => null,
+          (error: unknown) => error,
+        );
+        await waitUntilBlocked(observer.database, pid);
+      });
+      expect(await outcome).toMatchObject({ cause: { code: "23514" } });
+      expect(
+        await db.select().from(organizationMembers).where(eq(organizationMembers.userId, userId)),
+      ).toEqual([]);
+      expect(await db.select().from(users).where(eq(users.id, userId))).toMatchObject([
+        { isAnonymous: true },
+      ]);
+    } finally {
+      await contender.close();
+      await observer.close();
+    }
   });
 
   describe("the review deadlock schedules", () => {
