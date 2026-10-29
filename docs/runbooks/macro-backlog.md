@@ -14,7 +14,7 @@ backlog every half hour.
   `Macro-Execution-DLT-Pipeline-<ENV>` and read its latest update. "Since last macro" on the daily
   report says how long since it last wrote.
 - **The backend or the sandboxes are refusing.** This rarely shows here: the pipeline retries a
-  batch that got no answer, a 429 or a 5xx twice, writes a rejected one at once, and in both cases
+  batch that got no answer, a 429 or a 5xx for about five minutes, writes a rejected one at once, and in both cases
   records the error on each of its rows and carries on, so the rows are no longer waiting.
   `macro-failures` watches for that. Check the same alert list for `backend-5xx`, `sandbox-errors`,
   `sandbox-throttles` and `sandbox-blocked-connections`.

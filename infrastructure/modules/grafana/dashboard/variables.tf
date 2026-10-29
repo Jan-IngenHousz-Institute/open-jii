@@ -133,6 +133,12 @@ variable "experiment_latency_threshold_seconds" {
   default     = 60
 }
 
+variable "macro_latency_threshold_seconds" {
+  description = "p95 seconds from the experiment tables to macro results, per half hour, that counts as falling behind."
+  type        = number
+  default     = 300
+}
+
 variable "metrics_forwarder_function_name" {
   description = "Forwarder Lambda to watch. Empty leaves the self-health rules out entirely."
   type        = string

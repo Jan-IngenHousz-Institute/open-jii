@@ -3358,6 +3358,87 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     }
   }
 
+  # Catalog entry 87. Shaped like entry 86: two slow half hours in a row, so one spot reclaim
+  # of the macro pipeline's worker, which pauses results for about ten minutes, does not page.
+  rule {
+    name      = "Macro Latency"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Data"
+        metricName = "MacroLatencyP95Seconds"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+      })
+
+      relative_time_range {
+        from = 4500
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > ${var.macro_latency_threshold_seconds}"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "45m"
+
+    annotations = {
+      description      = "Macro results take longer than the environment's tolerance to follow their measurements, so researchers wait for derived values. The macro pipeline or the backend that runs macros is falling behind."
+      summary          = "Macro results are slow to arrive"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/macro-latency.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["macro-latency"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "lakehouse"
+      metric_id = "macro-latency"
+    }
+  }
+
   # Catalog entry 97. Published per pipeline, so matchExact false with only the environment
   # covers every driver and each series alerts on its own. A point is a full collection in
   # the last hour; a driver without one is under no pressure.
