@@ -1,6 +1,7 @@
 -- Gold's experiment_macro_data. A result's id hashes its measurement's processing time, which changes
 -- whenever silver reprocesses it, so the key names the measurement and the macro file instead: a
--- recomputed result replaces the old one.
+-- recomputed result replaces the old one. The device keeps apart measurements whose 32-bit ids
+-- collide at one time, as in measurements.
 CREATE TABLE IF NOT EXISTS macro_results
 (
     experiment_id String,
@@ -43,5 +44,5 @@ CREATE TABLE IF NOT EXISTS macro_results
 )
 ENGINE = ReplacingMergeTree(_commit_version)
 PARTITION BY toYYYYMM(timestamp)
-ORDER BY (experiment_id, macro_id, timestamp, raw_id, macro_filename)
+ORDER BY (experiment_id, macro_id, timestamp, raw_id, macro_filename, ifNull(device_id, ''))
 SETTINGS non_replicated_deduplication_window = 10000

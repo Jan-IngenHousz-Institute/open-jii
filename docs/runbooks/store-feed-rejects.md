@@ -29,25 +29,30 @@ disagree, usually a gold column changed without a matching store migration; fix 
 rows pile up, and switch the feed off (`store-feed-stalled`) if it will take a while.
 
 **3. Send them again once the store can take them.** As the admin, whose password is in the Secrets
-Manager secret `openjii-serving-store-<env>-admin`. A session starts in `/usr/bin`, where it cannot
-write, so work from its home directory, and insert with the settings the feed inserts with:
+Manager secret `openjii-serving-store-<env>-admin`. Paste it at the `read` prompt, which neither
+echoes it nor keeps it in the shell's history, and hand it to each command through the environment
+rather than its arguments, which every process on the instance can list. A session starts in
+`/usr/bin`, where it cannot write, so work from its home directory, and insert with the settings the
+feed inserts with:
 
 ```bash
 cd ~
+read -rs ADMIN_PASSWORD
 clickhouse-client --user openjii_monitor --format TSVRaw --query "
   SELECT row FROM store.feed_rejects
   WHERE source_table = '<table>' AND rejected_at BETWEEN '<from>' AND '<to>'" > rejected.jsonl
-clickhouse-client --user openjii_admin --password '<admin password>' \
+CLICKHOUSE_PASSWORD="$ADMIN_PASSWORD" clickhouse-client --user openjii_admin \
   --throw_on_max_partitions_per_insert_block=0 --input_format_skip_unknown_fields=0 \
   --query "INSERT INTO store.<table> FORMAT JSONEachRow" < rejected.jsonl
 ```
 
-Only once that insert has succeeded, clear the rows it sent:
+Only once that insert has succeeded, clear the rows it sent, then forget the password:
 
 ```bash
-clickhouse-client --user openjii_admin --password '<admin password>' --query "
+CLICKHOUSE_PASSWORD="$ADMIN_PASSWORD" clickhouse-client --user openjii_admin --query "
   DELETE FROM store.feed_rejects
   WHERE source_table = '<table>' AND rejected_at BETWEEN '<from>' AND '<to>'"
+unset ADMIN_PASSWORD
 ```
 
 A row that only the feed's normalisation can fix cannot be sent as it is, and neither can one whose

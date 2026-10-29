@@ -1,8 +1,7 @@
 -- Gold's experiment_raw_data, one row per measurement. ReplacingMergeTree keeps the newest commit of a
 -- row that gold sends again; the versions are gold's own, so a recreated gold table, whose versions
--- restart, needs this table emptied before it feeds it. Ids are 32-bit hashes until row ids land, so
--- the key leads with the experiment and time, where two measurements sharing an id is all but
--- impossible.
+-- restart, needs this table emptied before it feeds it. Ids are 32-bit hashes, and measurements from
+-- two devices can share one at the same time, as dev's gold holds, so the key ends with the device.
 CREATE TABLE IF NOT EXISTS measurements
 (
     experiment_id String,
@@ -61,5 +60,5 @@ CREATE TABLE IF NOT EXISTS measurements
 )
 ENGINE = ReplacingMergeTree(_commit_version)
 PARTITION BY toYYYYMM(timestamp)
-ORDER BY (experiment_id, timestamp, id)
+ORDER BY (experiment_id, timestamp, id, ifNull(device_id, ''))
 SETTINGS non_replicated_deduplication_window = 10000

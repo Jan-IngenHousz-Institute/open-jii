@@ -2050,9 +2050,9 @@ locals {
   # checkpoint reset (docs/runbooks/store-feed-stalled.md). Empty switches the feed off, and with it
   # the feed's alerts.
   serving_store_feed_start_versions = {
-    measurements  = "41574"
-    uploads       = "42"
-    macro_results = "40330"
+    measurements  = "58430"
+    uploads       = "44"
+    macro_results = "57120"
   }
   serving_store_feed = length(local.serving_store_feed_start_versions) > 0
 }
