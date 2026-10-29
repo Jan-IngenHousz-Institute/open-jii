@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { env } from "~/env";
 
 import { contract } from "@repo/api/contract";
-import { authClient } from "@repo/auth/client";
+import { authClient, useSession } from "@repo/auth/client";
 import { SidebarProvider } from "@repo/ui/components/sidebar";
 
 import { NavUser } from "./nav-user";
@@ -73,6 +73,37 @@ describe("NavUser", () => {
       "/en-US/faq",
     );
   });
+
+  it.each([
+    [true, 1],
+    [false, 0],
+  ])(
+    "shows the Platform admins entry only to a platform admin (%s)",
+    async (isPlatformAdmin, count) => {
+      useProfileOverride({ firstName: "Ada", lastName: "Lovelace" });
+      server.mount(contract.users.getPlatformAdminAccess, { body: { isPlatformAdmin } });
+      vi.mocked(useSession).mockReturnValue({
+        data: { user: { id: baseUser.id } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      const user = userEvent.setup();
+      renderNav();
+      await user.click(await screen.findByRole("button"));
+      await screen.findByRole("menuitem", { name: "auth.account" });
+
+      await waitFor(() =>
+        expect(screen.queryAllByRole("menuitem", { name: "platformAdmins.title" })).toHaveLength(
+          count,
+        ),
+      );
+      if (isPlatformAdmin) {
+        expect(screen.getByRole("menuitem", { name: "platformAdmins.title" })).toHaveAttribute(
+          "href",
+          "/en-US/platform/platform-admins",
+        );
+      }
+    },
+  );
 
   it("calls signOut and navigates home on logout click", async () => {
     useProfileOverride({ firstName: "Ada", lastName: "Lovelace" });
