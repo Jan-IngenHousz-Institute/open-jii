@@ -6,6 +6,7 @@ import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useLocale } from "@/hooks/useLocale";
 import { encodeBase64 } from "@/util/base64";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -250,7 +251,9 @@ export function NewMacroForm() {
                     >
                       <div className="flex min-w-0 items-center gap-2">
                         <span className="truncate text-sm font-medium">{protocol.name}</span>
-                        <span className="text-muted-foreground text-xs">{protocol.family}</span>
+                        <span className="text-muted-foreground text-xs">
+                          {getSensorFamilyLabel(protocol.family)}
+                        </span>
                       </div>
                       <Button
                         type="button"

@@ -3,6 +3,7 @@
 import { useAddIotDeviceGroupMembers } from "@/hooks/iot/useAddIotDeviceGroupMembers/useAddIotDeviceGroupMembers";
 import { useIotDevices } from "@/hooks/iot/useIotDevices/useIotDevices";
 import { resolveDeviceLabel } from "@/util/device-presentation";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { useMemo, useState } from "react";
 
 import { useSession } from "@repo/auth/client";
@@ -98,7 +99,7 @@ export function AddGroupMembersDialog({
                   />
                   <span className="text-sm">{resolveDeviceLabel(device, t)}</span>
                   <span className="text-muted-foreground ml-auto font-mono text-xs">
-                    {device.deviceType}
+                    {getSensorFamilyLabel(device.deviceType)}
                   </span>
                 </label>
               </li>

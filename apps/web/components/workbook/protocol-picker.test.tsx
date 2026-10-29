@@ -1,6 +1,6 @@
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, waitFor, userEvent } from "@/test/test-utils";
+import { render, screen, waitFor, userEvent, within } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -40,8 +40,8 @@ describe("ProtocolPicker", () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
     const protocols = [
-      createProtocol({ id: "p1", name: "Leaf Absorbance" }),
-      createProtocol({ id: "p2", name: "SPAD Measurement" }),
+      createProtocol({ id: "p1", name: "Leaf Absorbance", sortOrder: 0 }),
+      createProtocol({ id: "p2", name: "SPAD Measurement", family: "minipar", sortOrder: null }),
     ];
     server.mount(contract.protocols.listProtocols, { body: protocols });
 
@@ -52,6 +52,14 @@ describe("ProtocolPicker", () => {
     await waitFor(() => {
       expect(screen.getByText("Leaf Absorbance")).toBeInTheDocument();
     });
+    expect(screen.getByText("MultispeQ")).toBeInTheDocument();
+    expect(screen.getByText("MiniPAR")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("button", { name: /Leaf Absorbance/ })).getByText("Preferred"),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("button", { name: /SPAD Measurement/ })).queryByText("Preferred"),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByText("Leaf Absorbance"));
 

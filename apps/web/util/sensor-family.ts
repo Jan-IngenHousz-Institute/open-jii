@@ -47,6 +47,15 @@ export function getSensorFamilyLabel(family: SensorFamily): string {
 }
 
 /**
+ * Display label for a family that arrives as a plain string, such as search
+ * results or platform metrics. An unrecognised value renders as stored.
+ */
+export function formatSensorFamily(family: string): string {
+  const parsed = zSensorFamily.safeParse(family);
+  return parsed.success ? getSensorFamilyLabel(parsed.data) : family;
+}
+
+/**
  * Badge tone for a sensor family. Unknown values fall back to the neutral
  * tone, so this accepts the raw `family` string carried on a protocol.
  */

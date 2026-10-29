@@ -362,7 +362,7 @@ describe("protocol overview columns", () => {
     const preferredRow = screen.getByText("Preferred P").closest("tr");
     if (!preferredRow) throw new Error("row not found");
     expect(within(preferredRow).getByText("common.preferred")).toBeInTheDocument();
-    expect(within(preferredRow).getByText("multispeq")).toBeInTheDocument();
+    expect(within(preferredRow).getByText("MultispeQ")).toBeInTheDocument();
     expect(within(preferredRow).getByRole("link", { name: "Preferred P" })).toHaveAttribute(
       "title",
       "Preferred P",
