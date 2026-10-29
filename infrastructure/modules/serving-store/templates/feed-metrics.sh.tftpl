@@ -1,26 +1,27 @@
 #!/bin/bash
-# Each store table's feed, once a minute: rows it took and rows it refused in the last minute and,
-# over the last five, the p95 from gold's commit to the store's insert. A table nothing reached
-# reports zero rows.
+# Each store table's feed, once a minute: rows it took in the last minute and, over the last five,
+# rows it refused and the p95 from gold's commit to the store's insert. Refused rows are counted
+# over five minutes so that a run that fails or comes late cannot leave them unreported. A table
+# nothing reached reports zero rows.
 set -euo pipefail
 
 query="
   SELECT 'measurements', countIf(inserted_at > now64(6) - INTERVAL 1 MINUTE),
     quantile(0.95)(dateDiff('millisecond', _commit_timestamp, inserted_at)) / 1000,
     (SELECT count() FROM store.feed_rejects
-      WHERE source_table = 'measurements' AND rejected_at > now64(6) - INTERVAL 1 MINUTE)
+      WHERE source_table = 'measurements' AND rejected_at > now64(6) - INTERVAL 5 MINUTE)
   FROM store.measurements WHERE inserted_at > now64(6) - INTERVAL 5 MINUTE
   UNION ALL
   SELECT 'macro_results', countIf(inserted_at > now64(6) - INTERVAL 1 MINUTE),
     quantile(0.95)(dateDiff('millisecond', _commit_timestamp, inserted_at)) / 1000,
     (SELECT count() FROM store.feed_rejects
-      WHERE source_table = 'macro_results' AND rejected_at > now64(6) - INTERVAL 1 MINUTE)
+      WHERE source_table = 'macro_results' AND rejected_at > now64(6) - INTERVAL 5 MINUTE)
   FROM store.macro_results WHERE inserted_at > now64(6) - INTERVAL 5 MINUTE
   UNION ALL
   SELECT 'uploads', countIf(inserted_at > now64(6) - INTERVAL 1 MINUTE),
     quantile(0.95)(dateDiff('millisecond', _commit_timestamp, inserted_at)) / 1000,
     (SELECT count() FROM store.feed_rejects
-      WHERE source_table = 'uploads' AND rejected_at > now64(6) - INTERVAL 1 MINUTE)
+      WHERE source_table = 'uploads' AND rejected_at > now64(6) - INTERVAL 5 MINUTE)
   FROM store.uploads WHERE inserted_at > now64(6) - INTERVAL 5 MINUTE
 "
 

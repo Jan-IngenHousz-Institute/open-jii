@@ -76,12 +76,17 @@ class StoreTable:
 
     name: str
     gold_table: str
+    # The time the store table's month partitions follow.
+    partitioned_by = "timestamp"
 
     def lines(self, changes: DataFrame) -> DataFrame:
-        """One JSON line, in column ``line``, per row gold inserted or updated in ``changes``."""
+        """One JSON line, in column ``line``, per row gold inserted or updated in ``changes``, with
+        the time the store partitions it by in ``partition_time``."""
         rows = self.prepared(changes.filter(F.col("_change_type").isin(*_KEPT_CHANGES)))
         row = F.struct(*self.columns(), "_commit_version", "_commit_timestamp")
-        return rows.select(F.to_json(row, JSON_OPTIONS).alias("line"))
+        return rows.select(
+            F.to_json(row, JSON_OPTIONS).alias("line"), F.col(self.partitioned_by).alias("partition_time")
+        )
 
     def prepared(self, changes: DataFrame) -> DataFrame:
         return changes
@@ -167,6 +172,7 @@ class MacroResults(StoreTable):
 class Uploads(StoreTable):
     name = "uploads"
     gold_table = EXPERIMENT_UPLOADED_DATA_TABLE
+    partitioned_by = "uploaded_at"
 
     def columns(self) -> list[str | Column]:
         return [

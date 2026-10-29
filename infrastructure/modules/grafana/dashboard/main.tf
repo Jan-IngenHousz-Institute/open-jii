@@ -1506,8 +1506,9 @@ resource "grafana_rule_group" "serving_store_feed" {
     }
   }
 
-  # Catalog entry 121. Gold's count is stamped at the start of each closed half hour, so its newest
-  # bucket ended at most an hour ago, and 75 minutes of the store's count covers that bucket's rows.
+  # Catalog entry 121. Gold's count is stamped at the start of each closed half hour. The store's
+  # count reaches 30 minutes further back than gold's, so whichever half hour is the newest in gold's
+  # window, however its edges fall, the store's count covers all of it.
   dynamic "rule" {
     for_each = { for table, gold_rows in local.serving_store_feed_tables : table => gold_rows if gold_rows != "" }
     content {
@@ -1533,7 +1534,7 @@ resource "grafana_rule_group" "serving_store_feed" {
         })
 
         relative_time_range {
-          from = 4500
+          from = 6300
           to   = 0
         }
       }
@@ -1628,7 +1629,7 @@ resource "grafana_rule_group" "serving_store_feed" {
       for            = "5m"
 
       annotations = {
-        description      = "Gold's newest half hour gained ${rule.key} rows, and the serving store took none in 75 minutes: the feed has stalled."
+        description      = "Gold's newest half hour gained ${rule.key} rows, and the serving store took none in 105 minutes: the feed has stalled."
         summary          = "Serving store feed stalled: ${rule.key}"
         runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-feed-stalled.md"
         __dashboardUid__ = local.heartbeat_daily_uid
@@ -1746,7 +1747,7 @@ resource "grafana_rule_group" "serving_store_feed" {
           region     = var.aws_region
           namespace  = "OpenJII/ServingStore"
           metricName = "FeedRejectedRows"
-          statistic  = "Sum"
+          statistic  = "Maximum"
           period     = "300"
           dimensions = {
             Environment = var.environment
@@ -1768,7 +1769,7 @@ resource "grafana_rule_group" "serving_store_feed" {
         model = jsonencode({
           expression = "A"
           type       = "reduce"
-          reducer    = "sum"
+          reducer    = "max"
           refId      = "B"
           settings = {
             mode             = "replaceNN"
@@ -1804,7 +1805,7 @@ resource "grafana_rule_group" "serving_store_feed" {
       for            = "0m"
 
       annotations = {
-        description      = "The serving store refused ${rule.key} rows in the last five minutes; they are in store.feed_rejects, and the store lacks them until they are sent again."
+        description      = "The serving store refused ${rule.key} rows in the last ten minutes; they are in store.feed_rejects, and the store lacks them until they are sent again."
         summary          = "Serving store refused rows: ${rule.key}"
         runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-feed-rejects.md"
         __dashboardUid__ = local.heartbeat_daily_uid

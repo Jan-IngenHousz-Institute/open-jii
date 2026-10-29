@@ -19,8 +19,10 @@ from pyspark.sql import functions as F
 CHUNK_ROWS = 5_000
 CHUNK_BYTES = 8_000_000
 
-# A batch is posted from this many partitions, hashed and sorted by line, so a replayed batch builds
-# the same chunks, and so the same dedup tokens, on a cluster of any size.
+# A batch is posted from this many partitions, hashed by line and sorted by the time the store
+# partitions rows by, then by line. So a replayed batch builds the same chunks, and so the same dedup
+# tokens, on a cluster of any size, and each chunk holds a run of times, so its insert writes few of
+# the store's monthly parts.
 WRITE_PARTITIONS = 4
 
 # Waits between an executor's attempts at an insert the store answered with an error. After the last,
@@ -28,13 +30,20 @@ WRITE_PARTITIONS = 4
 # the pipeline's ingestion needs; the sink then waits on the driver.
 EXECUTOR_RETRY_DELAYS = (1, 2, 5, 10, 15)
 
+# A table, or a field of one, that the feed's code sends and the store's migrations have not made.
+# Only a migration fixes that, so the executor hands the rows back without retrying. A field comes
+# back with the code of many values the store cannot read, so its message tells it apart.
+_UNKNOWN_TABLE = 60
+_INCORRECT_DATA = 117
+_UNKNOWN_FIELD = "Unknown field found"
+
 # Connecting, then waiting for the answer. One chunk's insert takes seconds, so a store that has
 # been silent for a minute is not about to answer.
 INSERT_TIMEOUT = (5, 60)
 CHECK_TIMEOUT = (5, 10)
 
 # The store could not read the body. Anything else (memory, too many parts, a timeout, a wrong
-# password, a missing table) is the store's state or configuration, and waiting it out is right.
+# password) is the store's state or configuration, and waiting it out is right.
 BAD_DATA_CODES = frozenset({6, 26, 27, 32, 33, 38, 41, 53, 69, 70, 72, 117, 130, 131, 349})
 
 _LONG_DIGITS = re.compile(r"\d{19,}")
@@ -70,7 +79,8 @@ class StoreRefusedData(Exception):
 
 
 class StoreUnavailable(Exception):
-    """The store did not answer, or did not take an insert within an executor's attempts."""
+    """The store did not answer, lacks a table or field the rows need, or did not take an insert
+    within an executor's attempts."""
 
 
 @dataclass(frozen=True)
@@ -131,7 +141,8 @@ class StoreWriter:
             )
 
     def write(self, lines: DataFrame, table: str) -> Written:
-        """Inserts ``lines`` (one JSON line per row, in column ``line``) from the executors."""
+        """Inserts ``lines`` (one JSON line per row in column ``line``, with the time the store
+        partitions it by in ``partition_time``) from the executors."""
         writer = self
 
         def insert_partition(frames: Iterable[pd.DataFrame]) -> Iterator[pd.DataFrame]:
@@ -144,7 +155,12 @@ class StoreWriter:
                 }
             )
 
-        partitioned = lines.repartition(WRITE_PARTITIONS, F.xxhash64("line")).sortWithinPartitions("line")
+        # Only the lines reach Python: pandas cannot hold the store's earliest and latest times.
+        partitioned = (
+            lines.repartition(WRITE_PARTITIONS, F.xxhash64("line"))
+            .sortWithinPartitions("partition_time", "line")
+            .select("line")
+        )
         [(inserted, rejected, unfinished)] = (
             partitioned.mapInPandas(insert_partition, "inserted long, rejected long, unfinished long")
             .agg(F.sum("inserted"), F.sum("rejected"), F.sum("unfinished"))
@@ -220,7 +236,8 @@ class StoreWriter:
             "insert_deduplication_token": f"{self.loader}:{table}:{hashlib.sha256(body).hexdigest()}",
             # Rows from many months in one insert are normal after an outage.
             "throw_on_max_partitions_per_insert_block": "0",
-            # A field the table lacks is refused rather than dropped, so it shows in feed_rejects.
+            # A field the table lacks is refused rather than dropped, and holds the feed back until a
+            # migration adds it.
             "input_format_skip_unknown_fields": "0",
         }
 
@@ -238,9 +255,14 @@ class StoreWriter:
                 return
             # The HTTP status cannot tell bad data from a busy store; the exception code can.
             code = int(response.headers.get("X-ClickHouse-Exception-Code", "0"))
+            failure = f"HTTP {response.status_code}, code {code}: {response.text[:300]}"
+            needs_migration = code == _UNKNOWN_TABLE or (
+                code == _INCORRECT_DATA and _UNKNOWN_FIELD in response.text
+            )
+            if needs_migration:
+                raise StoreUnavailable(f"insert into {table} needs the store's migrations: {failure}")
             if code in BAD_DATA_CODES:
                 raise StoreRefusedData(code, response.text)
-            failure = f"HTTP {response.status_code}, code {code}: {response.text[:300]}"
 
             if delay is None:
                 raise StoreUnavailable(f"insert into {table} failed {attempt} times, last: {failure}")

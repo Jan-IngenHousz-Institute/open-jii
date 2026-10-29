@@ -3,13 +3,14 @@
 **For five minutes, the slowest twentieth of the rows reaching one of the serving store's tables
 took over a minute from gold.** A timer on the store's instance measures it once a minute, from
 each row's gold commit (`_commit_timestamp`) to its insert (`inserted_at`). Rows still arrive, so
-the app reads data that is minutes old rather than missing. If rows stopped arriving altogether,
+the store holds data that is minutes old rather than missing. If rows stopped arriving altogether,
 `store-feed-stalled` fires instead.
 
 The feed's sinks run inside the pipelines that write gold: measurements and uploads in Centrum,
 macro results in the macro pipeline. Before each attempt at a batch the driver checks that the
 store answers, so while it does not, the executors get no work from the feed at all. When the store
-answers inserts with errors, the executors retry for about half a minute, then hand the batch back.
+answers inserts with errors, the executors retry for about half a minute, then hand the batch back;
+a missing table or column they hand back at once.
 Either way the sink waits on the pipeline's driver and writes the batch again, so a slow feed is
 either a store taking inserts slowly or a pipeline reaching its sink late.
 
@@ -63,9 +64,10 @@ answer the driver's check, in the driver's:
 **3. Is the pipeline reaching its sink late?** In the pipeline's event log, the flow
 `serving_store_<table>_changes` reports each batch. Batches far apart while gold commits often mean
 the pipeline's worker is busy, which a catch-up of gold itself also causes. The sink reads at most
-128 MB per batch, so it cannot hold the worker for long; if the pipeline stays slow with the feed
-on and is fast with it off, it needs a second worker, which is a sizing decision for the pipeline's
-owner.
+128 MB per batch, but a gold commit larger than that, such as a refresh's, is one batch however
+large, and holds the worker until it has gone. Outside such a commit, if the pipeline stays slow
+with the feed on and is fast with it off, it needs a second worker, which is a sizing decision for
+the pipeline's owner.
 
 ## Closing
 

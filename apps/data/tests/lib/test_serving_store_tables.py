@@ -19,8 +19,8 @@ from pathlib import Path
 
 import pytest
 import requests
-from openjii.serving_store.tables import MACRO_RESULTS, MEASUREMENTS, UPLOADS
-from openjii.serving_store.writer import BAD_DATA_CODES, StoreWriter, Written
+from openjii.serving_store.tables import MACRO_RESULTS, MEASUREMENTS, UPLOADS, StoreTable
+from openjii.serving_store.writer import StoreWriter, Written
 from pyspark.sql import DataFrame, SparkSession
 
 pytestmark = pytest.mark.spark
@@ -159,6 +159,24 @@ def test_an_upload_row_wraps_its_data_and_has_a_table_id(spark: SparkSession) ->
     assert row["uploaded_at"] == "2026-10-19 09:00:00.000000"
 
 
+@pytest.mark.parametrize(
+    ("table", "changes", "column"),
+    [
+        (MEASUREMENTS, _RAW_DATA_CHANGES, "timestamp"),
+        (MACRO_RESULTS, _MACRO_DATA_CHANGES, "timestamp"),
+        (UPLOADS, _UPLOADED_DATA_CHANGES, "uploaded_at"),
+    ],
+)
+def test_each_line_carries_the_time_its_store_table_is_partitioned_by(
+    spark: SparkSession, table: StoreTable, changes: str, column: str
+) -> None:
+    gold = spark.sql(changes).where("_change_type IN ('insert', 'update_postimage')")
+
+    sent = {json.loads(row.line)["id"]: row.partition_time for row in table.lines(gold).collect()}
+
+    assert sent == {row.id: row[column] for row in gold.collect()}
+
+
 class _Store:
     """The test's view of a real store, as its admin."""
 
@@ -275,13 +293,12 @@ def test_a_replayed_batch_lands_once_and_a_row_the_store_cannot_read_is_set_asid
 
 
 @pytest.mark.clickhouse
-def test_a_field_the_table_lacks_is_refused_rather_than_dropped(
+def test_a_field_the_table_lacks_holds_the_rows_back_for_a_migration(
     spark: SparkSession, store: _Store, writer: StoreWriter
 ) -> None:
     [line, *_] = [row.line for row in MEASUREMENTS.lines(spark.sql(_RAW_DATA_CHANGES)).collect()]
     renamed = json.dumps({**json.loads(line), "id": 99, "client_os_release": "15"})
 
-    assert writer.insert(MEASUREMENTS.name, [renamed]) == Written(rejected=1)
+    assert writer.insert(MEASUREMENTS.name, [line, renamed]) == Written(unfinished=2)
     assert store.rows(f"SELECT id FROM {_DATABASE}.measurements WHERE id = 99") == []
-    [reject] = store.rows(f"SELECT code FROM {_DATABASE}.feed_rejects WHERE source_table = 'measurements'")
-    assert reject["code"] in BAD_DATA_CODES
+    assert store.rows(f"SELECT code FROM {_DATABASE}.feed_rejects WHERE source_table = 'measurements'") == []

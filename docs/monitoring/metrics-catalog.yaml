@@ -643,7 +643,7 @@ metrics:
     notes: >-
       Rows each store table took per minute, from the same timer, which reports zero when none
       arrived. One rule fires when gold's newest half hour gained measurements or macro results and
-      the store took none in 75 minutes; another when the timer has sent nothing for five minutes.
+      the store took none in 105 minutes; another when the timer has sent nothing for five minutes.
       A quiet night is neither, so the board turns red only when the counts stop arriving.
 
   - num: 122
@@ -658,14 +658,15 @@ metrics:
     severity: warning
     signal:
       namespace: OpenJII/ServingStore
-      search: SEARCH('{OpenJII/ServingStore,Environment,Table} MetricName="FeedRejectedRows" Environment="${ENVIRONMENT}"', 'Sum')
-      stat: Sum
+      search: SEARCH('{OpenJII/ServingStore,Environment,Table} MetricName="FeedRejectedRows" Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
     baseline: { method: threshold, max: 0 }
     runbook: docs/runbooks/store-feed-rejects.md
     notes: >-
-      Rows per store table the store could not read in the last minute, from the same timer. The
-      writer sets them aside in store.feed_rejects so the rest of their batch lands, so any at all
-      means the store lacks rows gold holds.
+      Rows per store table the store could not read in the last five minutes, from the same timer
+      each minute, so one run that fails leaves none unreported. The writer sets them aside in
+      store.feed_rejects so the rest of their batch lands, so any at all means the store lacks rows
+      gold holds.
 
   - num: 18
     id: backend-4xx-split

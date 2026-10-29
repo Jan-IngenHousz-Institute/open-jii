@@ -7,6 +7,7 @@ import hashlib
 import json
 import threading
 from collections.abc import Iterator
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import ClassVar
 from urllib.parse import parse_qs, urlparse
@@ -16,7 +17,7 @@ import requests
 import responses
 from openjii.serving_store import writer
 from openjii.serving_store.writer import StoreUnavailable, StoreWriter, Written, storable
-from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame, SparkSession
 
 URL = "http://store.test/"
 
@@ -157,6 +158,32 @@ def test_a_code_the_writer_does_not_know_is_retried_rather_than_rejected(store: 
     assert store.insert("measurements", _lines(2)) == Written(inserted=2)
 
 
+@pytest.mark.parametrize(
+    ("status", "code", "text"),
+    [
+        (404, "60", "Code: 60. DB::Exception: Table store.measurements does not exist. (UNKNOWN_TABLE)"),
+        (
+            400,
+            "117",
+            "Code: 117. DB::Exception: Unknown field found while parsing JSONEachRow format: "
+            "client_os_release: (at row 1)",
+        ),
+    ],
+)
+@responses.activate
+def test_a_table_or_field_the_store_lacks_hands_the_rows_back_at_once(
+    store: StoreWriter, status: int, code: str, text: str
+) -> None:
+    responses.add(
+        responses.POST, URL, status=status, headers={"X-ClickHouse-Exception-Code": code}, body=text
+    )
+
+    written = store.insert("measurements", _lines(6_000))
+
+    assert written == Written(unfinished=6_000)
+    assert len(responses.calls) == 1
+
+
 def _refuse_bad_rows(request: requests.PreparedRequest) -> tuple[int, dict, str]:
     body = request.body
     assert isinstance(body, bytes) and request.url is not None
@@ -282,12 +309,23 @@ def recording_store() -> Iterator[tuple[str, list[tuple[str, bytes]]]]:
     server.server_close()
 
 
+def _batch(spark: SparkSession, count: int) -> DataFrame:
+    """Lines over 24 months whose order as text is not their order in time, like gold's, which
+    start with ids."""
+    rows = []
+    for index in range(count):
+        month = index % 24
+        line = json.dumps({"id": index, "month": month, "_commit_version": 3})
+        rows.append((line, datetime(2024 + month // 12, month % 12 + 1, 1)))
+    return spark.createDataFrame(rows, "line string, partition_time timestamp")
+
+
 @pytest.mark.spark
 def test_a_batch_posts_the_same_chunks_however_its_input_is_partitioned(
     spark: SparkSession, recording_store: tuple[str, list[tuple[str, bytes]]]
 ) -> None:
     url, received = recording_store
-    batch = spark.createDataFrame([(line,) for line in _lines(2_000)], "line string")
+    batch = _batch(spark, 2_000)
 
     first = StoreWriter(url, "openjii_writer", "secret").write(batch.repartition(1), "measurements")
     first_inserts = sorted(received)
@@ -297,4 +335,18 @@ def test_a_batch_posts_the_same_chunks_however_its_input_is_partitioned(
     assert first == replay == Written(inserted=2_000)
     assert sorted(received) == first_inserts
     sent = [line for _, body in first_inserts for line in body.decode().split("\n")]
-    assert sorted(sent) == sorted(_lines(2_000))
+    assert sorted(sent) == sorted(row.line for row in batch.collect())
+
+
+@pytest.mark.spark
+def test_a_chunk_holds_its_rows_in_time_order_so_its_insert_writes_few_months(
+    spark: SparkSession, recording_store: tuple[str, list[tuple[str, bytes]]]
+) -> None:
+    url, received = recording_store
+
+    StoreWriter(url, "openjii_writer", "secret").write(_batch(spark, 2_000), "measurements")
+
+    assert received
+    for _, body in received:
+        months = [json.loads(line)["month"] for line in body.decode().split("\n")]
+        assert months == sorted(months)

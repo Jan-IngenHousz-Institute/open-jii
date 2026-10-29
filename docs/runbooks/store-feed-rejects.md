@@ -1,10 +1,10 @@
 # store-feed-rejects
 
-**The serving store refused rows of one of its tables in the last five minutes.** When the store
+**The serving store refused rows of one of its tables in the last ten minutes.** When the store
 cannot read a row, the feed's writer halves the row's chunk until the row stands alone, inserts the
 rest, and writes the refused row to `store.feed_rejects` with the store's exception code and
-message. The feed keeps moving, but the store now lacks rows gold holds, so the app does not show
-them. `feed_rejects` keeps them for 90 days.
+message. The feed keeps moving, but the store now lacks rows gold holds, and `feed_rejects` keeps
+them for 90 days.
 
 ## Work the chain in order
 
@@ -25,8 +25,9 @@ Read one row with `SELECT row FROM store.feed_rejects WHERE source_table = '<tab
 **2. Is it the row, or the store?** A handful of rows with odd values (a value the column's type
 cannot hold) is the row: the store table or the feed's normalisation needs to learn that shape,
 which is a change in code. Every row of a table refused with the same code means the table and gold
-disagree, usually a gold column changed without a matching store migration; fix that before more
-rows pile up, and switch the feed off (`store-feed-stalled`) if it will take a while.
+disagree, usually a column whose type changed in gold without a matching store migration; fix that
+before more rows pile up, and switch the feed off (`store-feed-stalled`) if it will take a while. A
+table or column the store lacks never lands here: the feed waits for the migration instead.
 
 **3. Send them again once the store can take them.** As the admin, whose password is in the Secrets
 Manager secret `openjii-serving-store-<env>-admin`. Paste it at the `read` prompt, which neither
