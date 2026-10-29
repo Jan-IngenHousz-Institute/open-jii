@@ -2,6 +2,7 @@ import { Logger } from "@nestjs/common";
 
 import { zExperimentContributors } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import { zOrganizationMembers } from "@repo/api/domains/organization/organization.schema";
+import { GUEST_LIFETIME_MS } from "@repo/api/shared/guest";
 import {
   createSecondaryDatabase,
   db,
@@ -26,7 +27,6 @@ import { TestHarness } from "../../../test/test-harness";
 import { GuestPurgeProcessorService } from "../../application/services/guest-purge-processor.service";
 import { PurgeExpiredGuestsUseCase } from "../../application/use-cases/purge-expired-guests/purge-expired-guests";
 import type { GuestPurgeLimits } from "../../application/use-cases/purge-expired-guests/purge-expired-guests";
-import { GUEST_LIFETIME_MS } from "../models/guest.model";
 import type { GuestPurgeCursor } from "../models/guest.model";
 import { GuestRepository } from "./guest.repository";
 import { PlatformAdminRepository } from "./platform-admin.repository";
