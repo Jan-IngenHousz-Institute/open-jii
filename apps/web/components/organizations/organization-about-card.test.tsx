@@ -1,3 +1,4 @@
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import {
   createOrganizationMember,
   createOrganizationProfile,
@@ -128,6 +129,22 @@ describe("<OrganizationAboutCard />", () => {
 
       expect(screen.queryByText("organizations.tabs.members")).toBeNull();
       expect(screen.queryByText("organizations.tabs.teams")).toBeNull();
+    });
+
+    it("shows neither to a guest member of a demo organization, whom both refuse", () => {
+      render(
+        <PrincipalProvider userId="guest" isGuest>
+          <OrganizationAboutCard
+            organization={createOrganizationProfile({ type: "demo", role: "member" })}
+            members={[createOrganizationMember({ userId: "u-1" })]}
+            teams={[createOrganizationTeam({ id: "t-1", name: "Field crew" })]}
+          />
+        </PrincipalProvider>,
+      );
+
+      expect(screen.queryByText("organizations.tabs.members")).toBeNull();
+      expect(screen.queryByText("organizations.tabs.teams")).toBeNull();
+      expect(screen.queryByRole("link")).toBeNull();
     });
   });
 });

@@ -17,6 +17,8 @@ const GUEST_ACCESS = {
   "search.globalSearch": false,
   "users.getUserProfile": false,
   "users.getWhatsNewSeen": false,
+  "users.createUserProfile": false,
+  "newsletter.subscribe": false,
   "experiments.createTransferRequest": false,
   "protocols.createProtocol": false,
   "macros.createMacro": false,

@@ -1,5 +1,8 @@
+import { createSession, createUseSessionResult } from "@/test/factories";
 import { render, screen, userEvent, waitFor, fireEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import { useSession } from "@repo/auth/client";
 
 import { NewsletterSubscribeForm } from "./newsletter-subscribe-form";
 
@@ -27,6 +30,15 @@ describe("NewsletterSubscribeForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSubscribe.mockResolvedValue({ success: true });
+  });
+
+  it("offers no subscription to a guest, whose session the endpoint refuses", () => {
+    vi.mocked(useSession).mockReturnValueOnce(
+      createUseSessionResult({ data: createSession({ user: { isAnonymous: true } }) }),
+    );
+    render(<NewsletterSubscribeForm />);
+
+    expect(screen.queryByLabelText("footer.emailLabel")).not.toBeInTheDocument();
   });
 
   it("renders the idle form with heading, email input and submit button", () => {
