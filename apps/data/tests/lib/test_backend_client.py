@@ -26,9 +26,12 @@ def client() -> BackendClient:
     return BackendClient(base_url=BASE_URL, api_key_id=API_KEY_ID, webhook_secret=SECRET)
 
 
+_RETRY_DELAYS = backend_client.MACRO_REQUEST_RETRY_DELAYS
+
+
 @pytest.fixture(autouse=True)
 def no_retry_delay(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(backend_client, "MACRO_REQUEST_RETRY_DELAYS", (0, 0))
+    monkeypatch.setattr(backend_client, "MACRO_REQUEST_RETRY_DELAYS", tuple(0 for _ in _RETRY_DELAYS))
 
 
 def _sent_batches() -> list[list[dict[str, Any]]]:
@@ -326,6 +329,21 @@ def test_a_transient_failure_is_retried_before_the_items_fail(client: BackendCli
 
     assert len(responses.calls) == 3
     assert [result["success"] for result in response["results"]] == [True]
+
+
+@responses.activate
+def test_a_backend_down_for_several_minutes_still_gets_the_batch(client: BackendClient) -> None:
+    for _ in range(len(_RETRY_DELAYS)):
+        responses.add(responses.POST, _BATCH_URL, body=requests.ConnectionError("connection refused"))
+    responses.add_callback(responses.POST, _BATCH_URL, callback=_echo_results)
+
+    response = _one_item_batch(client)
+
+    assert [result["success"] for result in response["results"]] == [True]
+
+
+def test_the_retries_wait_out_about_five_minutes() -> None:
+    assert 240 <= sum(_RETRY_DELAYS) <= 360
 
 
 @responses.activate

@@ -15,6 +15,7 @@ from openjii.centrum import (
     RAW_LARGE_DATA_TABLE,
     question_schema,
 )
+from openjii.centrum.constants import MEASUREMENT_PATH_TRIGGER_INTERVAL
 from openjii.centrum.runtime import (
     BRONZE_TABLE,
     LEGACY_MACRO_ID_MAP,
@@ -54,7 +55,11 @@ def _remap_macro_id(id_col):
 # The flow keeps the name "clean_data" so the original two-source streaming
 # checkpoint stays valid; large-IoT arrives via a separate append flow below,
 # added without a full refresh.
-@dlt.append_flow(target=SILVER_TABLE, name="clean_data")
+@dlt.append_flow(
+    target=SILVER_TABLE,
+    name="clean_data",
+    spark_conf={"pipelines.trigger.interval": MEASUREMENT_PATH_TRIGGER_INTERVAL},
+)
 def clean_data():
     """Silver layer: Clean and standardize sensor data, including imported data."""
     bronze_df = dlt.read_stream(BRONZE_TABLE)

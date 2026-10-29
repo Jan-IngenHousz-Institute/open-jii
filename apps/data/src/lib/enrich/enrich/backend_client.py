@@ -34,10 +34,11 @@ DEFAULT_MACRO_BATCH_SIZE = 25
 # failed request, so this is not a global bound on physical Lambda executions.
 MACRO_REQUESTS_IN_FLIGHT = 3
 
-# Seconds to wait before each retry of a macro request that failed transiently.
-# A failed request writes a permanent error into every row it carried, so a
-# backend restart or a throttled moment should not decide a measurement's result.
-MACRO_REQUEST_RETRY_DELAYS = (1, 4)
+# Seconds to wait before each retry of a macro request that failed transiently,
+# about five minutes in all. A failed request writes a permanent error into every
+# row it carried, so a backend restart or a throttled moment should not decide a
+# measurement's result. The wait holds only the macro pipeline's own cluster.
+MACRO_REQUEST_RETRY_DELAYS = (1, 2, 4, 8, 15, 30, 60, 60, 60, 60)
 
 
 class BackendIntegrationError(Exception):
