@@ -197,4 +197,18 @@ describe("platform roles", () => {
     expect(holders[0]).toMatchObject({ userId: researcher, roles: ["platform_admin"] });
     expect(holders[0].grantedAt.platform_admin).toBeInstanceOf(Date);
   });
+
+  it("dates a role regranted after a revoke from the latest grant", async () => {
+    await changePlatformRole(db, change());
+    await changePlatformRole(db, change({ action: "revoke" }));
+    await changePlatformRole(db, change());
+    const grants = await db
+      .select({ at: auditLogs.timestamp })
+      .from(auditLogs)
+      .where(eq(auditLogs.action, "platform_role.grant"))
+      .orderBy(auditLogs.timestamp);
+
+    const [holder] = await listPlatformRoleHolders(db);
+    expect(holder.grantedAt.platform_admin).toEqual(grants[1].at);
+  });
 });

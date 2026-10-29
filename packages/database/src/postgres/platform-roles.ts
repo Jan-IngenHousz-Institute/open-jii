@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 
 import type { DbOrTx, DatabaseInstance } from "./database";
 import { auditLogs, profiles, users } from "./schema";
@@ -125,32 +125,46 @@ export async function listPlatformRoleHolders(database: DbOrTx): Promise<Platfor
     .filter((holder) => holder.roles.length > 0);
   if (holders.length === 0) return [];
 
-  const targetUserId = sql<string>`${auditLogs.details}->>'targetUserId'`;
-  const role = sql<string>`${auditLogs.details}->>'role'`;
+  // Grants are rare staff actions, so the latest per account and role is picked here.
   const grants = await database
-    .select({
-      targetUserId,
-      role,
-      at: sql<Date>`max(${auditLogs.timestamp})`.mapWith(auditLogs.timestamp),
-    })
+    .select({ details: auditLogs.details, at: auditLogs.timestamp })
     .from(auditLogs)
-    .where(
-      and(
-        eq(auditLogs.action, "platform_role.grant"),
-        inArray(
-          targetUserId,
-          holders.map((holder) => holder.userId),
-        ),
-      ),
-    )
-    .groupBy(targetUserId, role);
+    .where(eq(auditLogs.action, "platform_role.grant"))
+    .orderBy(desc(auditLogs.timestamp));
+  const latest = new Map<string, Date>();
+  for (const grant of grants) {
+    const granted = grantedRole(grant.details);
+    const key = granted && `${granted.targetUserId}:${granted.role}`;
+    if (key && !latest.has(key)) latest.set(key, grant.at);
+  }
 
   return holders.map((holder) => ({
     ...holder,
     grantedAt: Object.fromEntries(
-      grants
-        .filter((grant) => grant.targetUserId === holder.userId && isPlatformRole(grant.role))
-        .map((grant) => [grant.role, grant.at]),
+      holder.roles.flatMap((role) => {
+        const at = latest.get(`${holder.userId}:${role}`);
+        return at ? [[role, at]] : [];
+      }),
     ),
   }));
+}
+
+function grantedRole(details: unknown): { targetUserId: string; role: string } | null {
+  if (typeof details !== "object" || details === null) return null;
+  const { targetUserId, role } = details as Record<string, unknown>;
+  return typeof targetUserId === "string" && typeof role === "string"
+    ? { targetUserId, role }
+    : null;
+}
+
+/** The platform roles an account holds, provided it is registered and not deleted. */
+export async function heldPlatformRoles(database: DbOrTx, userId: string): Promise<PlatformRole[]> {
+  const rows = await database
+    .select({ role: users.role, registered: users.registered })
+    .from(users)
+    .leftJoin(profiles, eq(profiles.userId, users.id))
+    .where(and(eq(users.id, userId), isNull(profiles.deletedAt)))
+    .limit(1);
+  const [account] = rows;
+  return rows.length > 0 && account.registered ? platformRolesOf(account.role) : [];
 }

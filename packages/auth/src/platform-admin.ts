@@ -1,4 +1,4 @@
-import { db, and, eq, isNull, platformRolesOf, profiles, users } from "@repo/database";
+import { db, heldPlatformRoles } from "@repo/database";
 import type { PlatformRole } from "@repo/database";
 
 interface RoleCandidate {
@@ -14,14 +14,7 @@ export async function hasPlatformRole(
   headers?: Headers,
 ): Promise<boolean> {
   if (!user || user.isAnonymous || headers?.has("x-api-key")) return false;
-  const rows = await db
-    .select({ role: users.role, registered: users.registered })
-    .from(users)
-    .leftJoin(profiles, eq(profiles.userId, users.id))
-    .where(and(eq(users.id, user.id), isNull(profiles.deletedAt)))
-    .limit(1);
-  const [account] = rows;
-  return rows.length > 0 && account.registered && platformRolesOf(account.role).includes(role);
+  return (await heldPlatformRoles(db, user.id)).includes(role);
 }
 
 export function isPlatformAdmin(
