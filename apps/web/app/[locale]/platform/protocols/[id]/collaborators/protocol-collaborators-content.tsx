@@ -18,6 +18,7 @@ export default function ProtocolCollaboratorsPage({ params }: ProtocolCollaborat
       resourceType="protocol"
       resourceId={id}
       capabilities={data?.capabilities}
+      owningOrganizationId={data?.organizationId}
     />
   );
 }

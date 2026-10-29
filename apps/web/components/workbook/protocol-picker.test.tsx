@@ -184,6 +184,23 @@ describe("ProtocolPicker", () => {
     await waitFor(() => expect(spy.callCount).toBeGreaterThan(1));
   });
 
+  it("credits each protocol's author through the translated line, and only when named", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.protocols.listProtocols, {
+      body: [
+        createProtocol({ id: "a1", name: "Named", createdByName: "Ada Lovelace" }),
+        createProtocol({ id: "a2", name: "Nameless", createdByName: undefined }),
+      ],
+    });
+
+    renderPicker();
+    await user.click(screen.getByRole("button", { name: /add protocol/i }));
+
+    await waitFor(() => expect(screen.getByText("Nameless")).toBeInTheDocument());
+    expect(screen.getAllByText("common.byPerson")).toHaveLength(1);
+    expect(screen.queryByText(/^by /u)).not.toBeInTheDocument();
+  });
+
   it("trims surrounding whitespace from the search query", async () => {
     const user = userEvent.setup();
     const spy = server.mount(contract.protocols.listProtocols, { body: [] });

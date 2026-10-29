@@ -9,6 +9,7 @@ import { authClient } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardContent } from "@repo/ui/components/card";
 
+import { ownName, personName } from "../people/person-name";
 import { UserAvatar } from "../user-avatar";
 import { InlineEditableProfileField } from "./inline-editable-profile-field";
 
@@ -44,9 +45,9 @@ export function AccountIdentityCard({
   // Read-only: the user's active organization (Better Auth). In phase 1 this is
   // their auto-provisioned personal workspace.
   const { data: activeOrg } = authClient.useActiveOrganization();
-  const displayName =
-    [profile.firstName, profile.lastName].filter(Boolean).join(" ") ||
-    t("settings.profileCard.emptyName");
+  const person = { ...profile, email };
+  const displayName = personName(person, t);
+  const own = ownName(person);
   const previewAvatarUrl = getAvatarPreviewUrl(profile.avatarUrl);
 
   // `Card` brings `py-6` and `gap-6`, which left a 24px band of card background
@@ -58,8 +59,7 @@ export function AccountIdentityCard({
         <div className="flex min-w-0 flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-5 sm:text-left">
           <UserAvatar
             avatarUrl={previewAvatarUrl}
-            firstName={profile.firstName}
-            lastName={profile.lastName}
+            name={own ?? ""}
             className="border-card bg-muted ring-primary/15 h-24 w-24 shrink-0 border-4 text-2xl shadow-md ring-1"
           />
 
@@ -75,7 +75,7 @@ export function AccountIdentityCard({
             </div>
 
             <div className="flex max-w-full flex-wrap justify-center gap-2 sm:justify-start">
-              {email && (
+              {own && email && (
                 <span className="bg-muted text-foreground/80 inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs">
                   <Mail className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{email}</span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { personName } from "@/components/people/person-name";
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
 import { useDebounce } from "@/hooks/useDebounce";
 import { orpc } from "@/lib/orpc";
@@ -13,6 +14,7 @@ import type { ProtocolFamily, SensorFamily } from "@repo/api/domains/protocol/pr
 import { zProtocolFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { ProtocolCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { listItems } from "@repo/api/shared/listing";
+import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
@@ -39,6 +41,17 @@ export function ProtocolPicker({
   onSelect,
   children,
 }: ProtocolPickerProps) {
+  const { t } = useTranslation();
+  const byline = (item: { createdBy: string; createdByName?: string }) => {
+    const name = personName({ displayName: item.createdByName }, t, {
+      placement: "byline",
+    });
+    return (
+      name && (
+        <p className="text-muted-foreground truncate text-xs">{t("common.byPerson", { name })}</p>
+      )
+    );
+  };
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 300);
@@ -223,11 +236,7 @@ export function ProtocolPicker({
                       <Microscope className="text-node-measurement h-3.5 w-3.5 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm">{p.name}</p>
-                        {p.createdByName && (
-                          <p className="text-muted-foreground truncate text-xs">
-                            by {p.createdByName}
-                          </p>
-                        )}
+                        {byline(p)}
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
                         {p.sortOrder !== null && (

@@ -6,7 +6,6 @@
   "common": {
     "logo": "Jan IngenHousz Institute",
     "protocolLabel": "Protocol",
-    "by": "by",
     "homepage": "Homepage",
     "language": "Language:",
     "currentValue": "Current value:",
@@ -61,6 +60,8 @@
     "name": "Name",
     "none": "None",
     "unknown": "Unknown",
+    "unnamedAccount": "Unnamed account",
+    "byPerson": "by {{name}}",
     "optional": "optional",
     "lines": "lines",
     "bytes": "B",
@@ -86,6 +87,7 @@
     "sortDescending": "descending",
     "sortSecondary": "secondary sort",
     "searchMinCharacters": "Type at least 2 characters to search",
+    "searchFailed": "Could not load search results.",
     "emailMatched": "Matches the email you entered"
   },
   "navigation": {
@@ -138,8 +140,6 @@
     "searchUsersPlaceholder": "Add by name or email...",
     "noUsersFound": "No users found for \"{{search}}\"",
     "inviteByEmail": "Invite {{email}} by email",
-    "sendInviteByEmail": "Send invite by email",
-    "emailAlreadyInvited": "This email has already been invited or is already a member",
     "searchExperiments": "Search experiments...",
     "startTypingToSearch": "Start typing to search",
     "searchProtocols": "Search protocols...",
@@ -182,7 +182,6 @@
     "embargo": "Embargo",
     "teamMembers": "Team Members",
     "noMembersAdded": "No members added",
-    "unnamedMember": "Unnamed Member",
     "researchLocations": "Research Locations",
     "noLocationsAdded": "No locations added",
     "analysisPanelTitle": "Analysis Options",
@@ -263,7 +262,8 @@
     "locationsListTitle": "Selected Locations",
     "addCollaboratorsTitle": "Add collaborators",
     "addCollaboratorsDescription": "Choose who starts out with access to this experiment",
-    "initialCollaboratorsTierNote": "Everyone added here starts on \"Can view\": they can open the experiment and add measurements and annotations. Raise someone to \"Can edit\" from the Collaborators tab once the experiment exists."
+    "initialCollaboratorsTierNote": "Everyone added here starts on \"Can view\": they can open the experiment and add measurements and annotations. Raise someone to \"Can edit\" from the Collaborators tab once the experiment exists.",
+    "alreadyAdded": "Already added"
   },
   "experimentSettings": {
     "loading": "Loading experiment settings...",
@@ -346,8 +346,7 @@
     "inviteCollaborators": "Invite collaborators",
     "inviteCollaboratorsDescription": "Add an existing user or one of your organizations, or invite someone by email. Existing accounts get access right away; invitees are emailed and join once they accept.",
     "filterCollaboratorsPlaceholder": "Filter by name or email…",
-    "invitedBy": "Invited by",
-    "unknownInviter": "Unknown inviter"
+    "invitedBy": "Invited by"
   },
   "joinCode": {
     "title": "Join code",
@@ -448,9 +447,9 @@
     "revokeForLabel": "Remove {{name}}",
     "you": "(you)",
     "outsideCollaborator": "Outside Collaborator",
-    "orgOwnerBadge": "Owner · via organization",
-    "orgAdminBadge": "Admin · via organization",
-    "orgMemberBadge": "Member · via organization",
+    "orgOwnerBadge": "Org owner",
+    "orgAdminBadge": "Org admin",
+    "orgMemberBadge": "Org member",
     "redundantGrantBadge": "Redundant grant",
     "removeRedundantGrantForLabel": "Remove {{name}}'s redundant grant",
     "revokeKeepsAccess": "{{name}} will still have {{tier}} — {{source}}. Removing this grant changes nothing else.",
@@ -458,10 +457,18 @@
     "accessSourceOrgOwner": "as an owner of {{organization}}",
     "accessSourceOrgAdmin": "as an admin of {{organization}}",
     "accessSourceOrgMember": "as a member of {{organization}}",
-    "existingGrantBadge": "{{role}} · already shared",
     "granteeHasFullAccess": "Already has full access through the organization",
     "granteeHasFullAccessViaGrant": "Already has full access through an existing share",
     "granteeTierAddsNothing": "This access level adds nothing to what they already have",
+    "ownsResource": {
+      "experiment": "Owns this experiment",
+      "macro": "Owns this macro",
+      "protocol": "Owns this protocol",
+      "workbook": "Owns this workbook",
+      "device": "Owns this device",
+      "deviceGroup": "Owns this device group",
+      "calibrationDefinition": "Owns this calibration definition"
+    },
     "orgAdminsName": "Admins of {{name}}",
     "orgAdminsCount_one": "{{count}} admin, through the organization",
     "orgAdminsCount_other": "{{count}} admins, through the organization",
@@ -597,7 +604,6 @@
         "empty": "Nobody yet. You can create the organization on your own and invite people from its Members tab.",
         "alreadyAdded": "This person has already been invited",
         "invitedByEmail": "No account yet",
-        "emailRole": "{{role}} · no account yet",
         "addTitle": "Invite someone",
         "listTitle": "People to invite",
         "teamsNote": "Teams are set up from the organization's Teams tab once it exists — a team is a group of its members, so it cannot come first.",
@@ -715,7 +721,6 @@
       "searchLabel": "Search for someone to invite",
       "clearSelection": "Clear selection",
       "noMatches": "No matching users",
-      "searchFailed": "Could not search for people.",
       "alreadyMember": "This person is already a member of this organization",
       "alreadyInvited": "This address already has a pending invitation",
       "enterExactEmail": "Enter their exact email address to invite them",
@@ -1238,7 +1243,6 @@
     },
     "details": "Show table details",
     "you": "You",
-    "unknownUser": "Unknown User",
     "preview": "Preview",
     "previewNote": "This is a preview. Your annotation is being processed and will appear permanently soon. Refreshing will hide this preview."
   },
