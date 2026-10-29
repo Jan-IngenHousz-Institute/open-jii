@@ -1398,6 +1398,426 @@ resource "grafana_rule_group" "serving_store_health" {
   }
 }
 
+# Serving store feed alerts, only where the pipelines feed the store
+locals {
+  # Each store table with the heartbeat metric counting the gold rows that feed it. Uploads have
+  # none, so a stall there shows only as a slow feed once rows arrive.
+  serving_store_feed_tables = {
+    measurements  = "ExperimentRows"
+    macro_results = "MacroResultRows"
+    uploads       = ""
+  }
+}
+
+resource "grafana_rule_group" "serving_store_feed" {
+  count = var.serving_store_feed_enabled ? 1 : 0
+
+  provider           = grafana.amg
+  name               = "Serving Store Feed"
+  folder_uid         = grafana_folder.folder.uid
+  interval_seconds   = 60
+  disable_provenance = true
+
+  # Catalog entry 120. The store's timer reports a p95 only while rows arrive, so silence is idle.
+  dynamic "rule" {
+    for_each = local.serving_store_feed_tables
+    content {
+      name      = "Serving Store Feed Slow: ${rule.key}"
+      condition = "C"
+
+      data {
+        ref_id         = "A"
+        query_type     = ""
+        datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+        model = jsonencode({
+          refId      = "A"
+          region     = var.aws_region
+          namespace  = "OpenJII/ServingStore"
+          metricName = "FeedDeliveryP95Seconds"
+          statistic  = "Maximum"
+          period     = "60"
+          dimensions = {
+            Environment = var.environment
+            Table       = rule.key
+          }
+        })
+
+        relative_time_range {
+          from = 300
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "B"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        # The newest reading already covers five minutes of rows; a max over the window would hold
+        # one late batch above the limit for longer than the rule waits.
+        model = jsonencode({
+          expression = "A"
+          type       = "reduce"
+          reducer    = "last"
+          refId      = "B"
+        })
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "C"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = jsonencode({
+          expression = "$B > 60"
+          type       = "math"
+          refId      = "C"
+        })
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      no_data_state  = "OK"
+      exec_err_state = "OK"
+      for            = "5m"
+
+      annotations = {
+        description      = "For five minutes, the slowest twentieth of the rows reaching the serving store's ${rule.key} took over a minute from gold."
+        summary          = "Serving store feed slow: ${rule.key}"
+        runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-feed-latency.md"
+        __dashboardUid__ = local.heartbeat_daily_uid
+        __panelId__      = local.heartbeat_panel_ids["store-feed-latency"]
+      }
+      labels = {
+        metric_id = "store-feed-latency"
+        severity  = "warning"
+        service   = "serving-store"
+      }
+    }
+  }
+
+  # Catalog entry 121. Gold's count is stamped at the start of each closed half hour, so its newest
+  # bucket ended at most an hour ago, and 75 minutes of the store's count covers that bucket's rows.
+  dynamic "rule" {
+    for_each = { for table, gold_rows in local.serving_store_feed_tables : table => gold_rows if gold_rows != "" }
+    content {
+      name      = "Serving Store Feed Stalled: ${rule.key}"
+      condition = "E"
+
+      data {
+        ref_id         = "A"
+        query_type     = ""
+        datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+        model = jsonencode({
+          refId      = "A"
+          region     = var.aws_region
+          namespace  = "OpenJII/ServingStore"
+          metricName = "FeedInsertedRows"
+          statistic  = "Sum"
+          period     = "300"
+          dimensions = {
+            Environment = var.environment
+            Table       = rule.key
+          }
+        })
+
+        relative_time_range {
+          from = 4500
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "B"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = jsonencode({
+          expression = "A"
+          type       = "reduce"
+          reducer    = "sum"
+          refId      = "B"
+          settings = {
+            mode             = "replaceNN"
+            replaceWithValue = 0
+          }
+        })
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "C"
+        query_type     = ""
+        datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+        model = jsonencode({
+          refId      = "C"
+          region     = var.aws_region
+          namespace  = "OpenJII/Data"
+          metricName = rule.value
+          statistic  = "Sum"
+          period     = "1800"
+          dimensions = {
+            Environment = var.environment
+          }
+        })
+
+        relative_time_range {
+          from = 4500
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "D"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = jsonencode({
+          expression = "C"
+          type       = "reduce"
+          reducer    = "last"
+          refId      = "D"
+          settings = {
+            mode             = "replaceNN"
+            replaceWithValue = 0
+          }
+        })
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "E"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = jsonencode({
+          expression = "$B < 1 && $D > 0"
+          type       = "math"
+          refId      = "E"
+        })
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      # A missing heartbeat count is the heartbeat's own alert, and a silent timer is the rule below.
+      no_data_state  = "OK"
+      exec_err_state = "OK"
+      for            = "5m"
+
+      annotations = {
+        description      = "Gold's newest half hour gained ${rule.key} rows, and the serving store took none in 75 minutes: the feed has stalled."
+        summary          = "Serving store feed stalled: ${rule.key}"
+        runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-feed-stalled.md"
+        __dashboardUid__ = local.heartbeat_daily_uid
+        __panelId__      = local.heartbeat_panel_ids["store-feed-stalled"]
+      }
+      labels = {
+        metric_id = "store-feed-stalled"
+        severity  = "warning"
+        service   = "serving-store"
+      }
+    }
+  }
+
+  # Catalog entry 121 as well. The timer reports every table every minute, zeros included, so five
+  # quiet minutes mean the timer or the store has stopped, and the stall rules above see nothing.
+  rule {
+    name      = "Serving Store Feed Timer Silent"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/ServingStore"
+        metricName = "FeedInsertedRows"
+        statistic  = "SampleCount"
+        period     = "60"
+        dimensions = {
+          Environment = var.environment
+          Table       = "measurements"
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "count"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B < 1"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "Alerting"
+    exec_err_state = "Alerting"
+    for            = "1m"
+
+    annotations = {
+      description      = "No feed counts have arrived from the serving store's timer for five minutes: the timer or ClickHouse has stopped, so a stalled feed would go unseen."
+      summary          = "Serving store feed timer silent"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-feed-stalled.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["store-feed-stalled"]
+    }
+    labels = {
+      metric_id = "store-feed-stalled"
+      severity  = "warning"
+      service   = "serving-store"
+    }
+  }
+
+  # Catalog entry 122. A refused row never stalls the feed, so only this says the store lacks it.
+  dynamic "rule" {
+    for_each = local.serving_store_feed_tables
+    content {
+      name      = "Serving Store Feed Rejected Rows: ${rule.key}"
+      condition = "C"
+
+      data {
+        ref_id         = "A"
+        query_type     = ""
+        datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+        model = jsonencode({
+          refId      = "A"
+          region     = var.aws_region
+          namespace  = "OpenJII/ServingStore"
+          metricName = "FeedRejectedRows"
+          statistic  = "Sum"
+          period     = "300"
+          dimensions = {
+            Environment = var.environment
+            Table       = rule.key
+          }
+        })
+
+        relative_time_range {
+          from = 300
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "B"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = jsonencode({
+          expression = "A"
+          type       = "reduce"
+          reducer    = "sum"
+          refId      = "B"
+          settings = {
+            mode             = "replaceNN"
+            replaceWithValue = 0
+          }
+        })
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "C"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = jsonencode({
+          expression = "$B > 0"
+          type       = "math"
+          refId      = "C"
+        })
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      no_data_state  = "OK"
+      exec_err_state = "OK"
+      for            = "0m"
+
+      annotations = {
+        description      = "The serving store refused ${rule.key} rows in the last five minutes; they are in store.feed_rejects, and the store lacks them until they are sent again."
+        summary          = "Serving store refused rows: ${rule.key}"
+        runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-feed-rejects.md"
+        __dashboardUid__ = local.heartbeat_daily_uid
+        __panelId__      = local.heartbeat_panel_ids["store-feed-rejects"]
+      }
+      labels = {
+        metric_id = "store-feed-rejects"
+        severity  = "warning"
+        service   = "serving-store"
+      }
+    }
+  }
+}
+
 # Macro Sandbox Alerts
 resource "grafana_rule_group" "macro_sandbox_health" {
   count = length(var.macro_sandbox_function_names) > 0 ? 1 : 0

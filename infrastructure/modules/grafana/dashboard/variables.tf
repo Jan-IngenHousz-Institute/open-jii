@@ -151,6 +151,12 @@ variable "cost_publisher_function_name" {
   default     = ""
 }
 
+variable "serving_store_feed_enabled" {
+  description = "Whether the pipelines feed the serving store here. Off leaves the feed's rules out, which would otherwise read the switched-off feed as stalled."
+  type        = bool
+  default     = false
+}
+
 variable "runbook_base_url" {
   description = "Where the repository's runbooks are read, so an alert's runbook_url opens the file"
   type        = string

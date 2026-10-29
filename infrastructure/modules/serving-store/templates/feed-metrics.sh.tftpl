@@ -1,0 +1,40 @@
+#!/bin/bash
+# Each store table's feed, once a minute: rows it took and rows it refused in the last minute and,
+# over the last five, the p95 from gold's commit to the store's insert. A table nothing reached
+# reports zero rows.
+set -euo pipefail
+
+query="
+  SELECT 'measurements', countIf(inserted_at > now64(6) - INTERVAL 1 MINUTE),
+    quantile(0.95)(dateDiff('millisecond', _commit_timestamp, inserted_at)) / 1000,
+    (SELECT count() FROM store.feed_rejects
+      WHERE source_table = 'measurements' AND rejected_at > now64(6) - INTERVAL 1 MINUTE)
+  FROM store.measurements WHERE inserted_at > now64(6) - INTERVAL 5 MINUTE
+  UNION ALL
+  SELECT 'macro_results', countIf(inserted_at > now64(6) - INTERVAL 1 MINUTE),
+    quantile(0.95)(dateDiff('millisecond', _commit_timestamp, inserted_at)) / 1000,
+    (SELECT count() FROM store.feed_rejects
+      WHERE source_table = 'macro_results' AND rejected_at > now64(6) - INTERVAL 1 MINUTE)
+  FROM store.macro_results WHERE inserted_at > now64(6) - INTERVAL 5 MINUTE
+  UNION ALL
+  SELECT 'uploads', countIf(inserted_at > now64(6) - INTERVAL 1 MINUTE),
+    quantile(0.95)(dateDiff('millisecond', _commit_timestamp, inserted_at)) / 1000,
+    (SELECT count() FROM store.feed_rejects
+      WHERE source_table = 'uploads' AND rejected_at > now64(6) - INTERVAL 1 MINUTE)
+  FROM store.uploads WHERE inserted_at > now64(6) - INTERVAL 5 MINUTE
+"
+
+# Read first, so a store that does not answer fails the run instead of sending no metrics.
+rows=$(clickhouse-client --user openjii_monitor --format TSV --query "$query")
+
+metrics=""
+while IFS=$'\t' read -r table inserted p95 rejected; do
+  dimensions="[{\"Name\":\"Environment\",\"Value\":\"${environment}\"},{\"Name\":\"Table\",\"Value\":\"$table\"}]"
+  metrics+="{\"MetricName\":\"FeedInsertedRows\",\"Dimensions\":$dimensions,\"Value\":$inserted,\"Unit\":\"Count\"},"
+  metrics+="{\"MetricName\":\"FeedRejectedRows\",\"Dimensions\":$dimensions,\"Value\":$rejected,\"Unit\":\"Count\"},"
+  if [ "$p95" != "nan" ]; then
+    metrics+="{\"MetricName\":\"FeedDeliveryP95Seconds\",\"Dimensions\":$dimensions,\"Value\":$p95,\"Unit\":\"Seconds\"},"
+  fi
+done <<<"$rows"
+
+aws cloudwatch put-metric-data --region "${region}" --namespace "${namespace}" --metric-data "[$${metrics%,}]"

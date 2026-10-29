@@ -53,7 +53,34 @@ write_files:
     defer: true
     content: ${jsonencode(cloudwatch_agent_config)}
 
+  - path: /usr/local/bin/openjii-feed-metrics
+    permissions: "0755"
+    content: ${jsonencode(feed_metrics_script)}
+
+  - path: /etc/systemd/system/openjii-feed-metrics.service
+    content: |
+      [Unit]
+      Description=Send the serving store feed's lag to CloudWatch
+      After=clickhouse-server.service
+
+      [Service]
+      Type=oneshot
+      DynamicUser=yes
+      ExecStart=/usr/local/bin/openjii-feed-metrics
+
+  - path: /etc/systemd/system/openjii-feed-metrics.timer
+    content: |
+      [Unit]
+      Description=Send the serving store feed's lag to CloudWatch every minute
+
+      [Timer]
+      OnCalendar=minutely
+
+      [Install]
+      WantedBy=timers.target
+
 runcmd:
   - [systemctl, daemon-reload]
   - [systemctl, enable, --now, clickhouse-server]
   - [/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl, -a, fetch-config, -m, ec2, -s, -c, "file:${cloudwatch_agent_config_path}"]
+  - [systemctl, enable, --now, openjii-feed-metrics.timer]

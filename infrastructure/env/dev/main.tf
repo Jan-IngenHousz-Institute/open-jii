@@ -3206,7 +3206,8 @@ module "grafana_dashboard" {
     "Large payloads"       = module.large_iot_s3.bucket_id
     "Databricks workspace" = "open-jii-databricks-root-bucket-${var.environment}"
   }
-  posthog_grafana_api_key = var.posthog_grafana_api_key
+  posthog_grafana_api_key    = var.posthog_grafana_api_key
+  serving_store_feed_enabled = local.serving_store_feed
 
   # Passed in rather than interpolated: a rule watching a misspelled function is NoData
   # forever, which is either permanently firing or permanently silent.

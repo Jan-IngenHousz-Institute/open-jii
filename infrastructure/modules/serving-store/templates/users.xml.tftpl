@@ -26,5 +26,15 @@
 %{ endif ~}
         </${user.name}>
 %{ endfor ~}
+        <!-- The feed lag timer's user: no password, so it only answers on the instance itself. -->
+        <openjii_monitor>
+            <no_password/>
+            <networks><ip>127.0.0.1</ip><ip>::1</ip></networks>
+            <profile>default</profile>
+            <quota>default</quota>
+            <grants>
+                <query>GRANT SELECT ON store.*</query>
+            </grants>
+        </openjii_monitor>
     </users>
 </clickhouse>
