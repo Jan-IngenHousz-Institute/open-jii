@@ -67,20 +67,24 @@ describe("diffCells", () => {
     expect(changes[0].label).toBeUndefined();
   });
 
-  it("ignores runtime fields and output cells (a re-run is not a change)", () => {
-    const before = [protocol("p1"), question("q1", "reading")];
-    const answered: WorkbookCell = {
-      id: "q1",
-      type: "question",
-      isCollapsed: false,
-      isAnswered: true,
-      answer: "42",
-      name: "reading",
-      question: { kind: "open_ended", text: "?", required: false },
-    };
-    const afterRun: WorkbookCell[] = [protocol("p1"), answered, output("out1", "p1")];
-    expect(diffCells(before, afterRun)).toEqual([]);
-  });
+  it.each([undefined, false, true])(
+    "ignores runtime fields and output cells, simulated %s (a re-run is not a change)",
+    (simulated) => {
+      const before = [protocol("p1"), question("q1", "reading")];
+      const answered: WorkbookCell = {
+        id: "q1",
+        type: "question",
+        isCollapsed: false,
+        isAnswered: true,
+        answer: "42",
+        simulated,
+        name: "reading",
+        question: { kind: "open_ended", text: "?", required: false },
+      };
+      const afterRun: WorkbookCell[] = [protocol("p1"), answered, output("out1", "p1")];
+      expect(diffCells(before, afterRun)).toEqual([]);
+    },
+  );
 
   it("detects a reordered cell", () => {
     const before = [protocol("p1"), question("q1", "reading"), protocol("p2")];
