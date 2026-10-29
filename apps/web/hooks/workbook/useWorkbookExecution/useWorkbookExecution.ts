@@ -28,6 +28,7 @@ import type {
   QuestionCell,
   WorkbookCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { namespaceNameOf } from "@repo/api/domains/workbook/workbook-cells.schema";
 import {
   buildCellNamespace,
   isOutputDataNormalizationError,
@@ -100,6 +101,35 @@ function findPrecedingOutput(cells: WorkbookCell[], beforeIndex: number): Output
     }
   }
   return null;
+}
+
+// A macro reads its nearest input as data and every named upstream output
+// through ctx, so a simulated one among them marks its result simulated. A
+// per-device run reads that device's own result where one exists.
+function readsSimulatedOutput(
+  cells: WorkbookCell[],
+  beforeIndex: number,
+  input: OutputCell | null,
+  deviceId?: string,
+): boolean {
+  const readable = new Set(
+    cells
+      .slice(0, beforeIndex)
+      .filter((c) => namespaceNameOf(c))
+      .map((c) => c.id),
+  );
+  if (input) readable.add(input.producedBy);
+  return cells.some((c) => {
+    if (c.type !== "output" || !readable.has(c.producedBy)) return false;
+    if (c.simulated === true) return true;
+    const own =
+      deviceId === undefined
+        ? undefined
+        : c.deviceResults?.find((r) => r.deviceId === deviceId && r.data !== undefined);
+    return own
+      ? own.simulated === true
+      : c.deviceResults?.some((r) => r.simulated === true) === true;
+  });
 }
 
 // Replaces any previous output produced by the same source cell.
@@ -416,8 +446,7 @@ export function useWorkbookExecution({
   const runMacroCell = useCallback(
     async (cell: MacroCell, cellIndex: number, currentCells: WorkbookCell[]) => {
       const input = findPrecedingOutput(currentCells, cellIndex);
-      const simulated =
-        input?.simulated === true || input?.deviceResults?.some((r) => r.simulated) === true;
+      const simulated = readsSimulatedOutput(currentCells, cellIndex, input);
       // A macro can run from ctx alone; error only when there is neither a
       // nearest measurement nor any upstream output to read.
       if (!input) {
@@ -470,7 +499,12 @@ export function useWorkbookExecution({
 
         const results: OutputDeviceResult[] = inputResults.map((r, i) => {
           const outcome = settled[i];
-          const identity = { family: r.family, deviceName: r.deviceName, simulated: r.simulated };
+          const identity = {
+            family: r.family,
+            deviceName: r.deviceName,
+            simulated:
+              readsSimulatedOutput(currentCells, cellIndex, input, r.deviceId) || undefined,
+          };
           return outcome.status === "fulfilled"
             ? { deviceId: r.deviceId, deviceLabel: r.deviceLabel, ...identity, data: outcome.value }
             : {
@@ -533,7 +567,7 @@ export function useWorkbookExecution({
                     deviceLabel: singleInputIdentity.deviceLabel,
                     family: singleInputIdentity.family,
                     deviceName: singleInputIdentity.deviceName,
-                    simulated: singleInputIdentity.simulated,
+                    simulated: simulated || undefined,
                     data: output,
                   },
                 ],
@@ -556,7 +590,7 @@ export function useWorkbookExecution({
                     deviceLabel: singleInputIdentity.deviceLabel,
                     family: singleInputIdentity.family,
                     deviceName: singleInputIdentity.deviceName,
-                    simulated: singleInputIdentity.simulated,
+                    simulated: simulated || undefined,
                     error: message,
                   },
                 ],
