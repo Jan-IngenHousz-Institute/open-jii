@@ -1,5 +1,6 @@
 "use client";
 
+import { GuestGate } from "@/components/auth/guest-gate";
 import { ErrorDisplay } from "@/components/error-display";
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { PlatformHeaderDetail } from "@/components/navigation/site-header/platform-header-context";
@@ -142,14 +143,16 @@ export function ExperimentArchiveLayoutShell({ children }: ExperimentArchiveLayo
               {t("flow.tabLabel")}
             </IntentLink>
           </NavTabsTrigger>
-          <NavTabsTrigger value="collaborators" asChild>
-            <IntentLink
-              prefetchWhileVisible
-              href={`/${locale}/platform/experiments-archive/${id}/collaborators`}
-            >
-              {tSettings("experimentSettings.collaborators")}
-            </IntentLink>
-          </NavTabsTrigger>
+          <GuestGate procedure="sharing.listGrants">
+            <NavTabsTrigger value="collaborators" asChild>
+              <IntentLink
+                prefetchWhileVisible
+                href={`/${locale}/platform/experiments-archive/${id}/collaborators`}
+              >
+                {tSettings("experimentSettings.collaborators")}
+              </IntentLink>
+            </NavTabsTrigger>
+          </GuestGate>
         </NavTabsList>
 
         <div className="mt-6">{children}</div>

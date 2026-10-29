@@ -89,11 +89,13 @@ describe("ShortcutsRoot", () => {
     expect(router.push).toHaveBeenCalledWith("/en-US/platform/experiments/new");
   });
 
-  it("sends a guest neither to a create form nor to transfer requests", () => {
+  it("sends a guest neither to a create form, transfer requests nor account settings", () => {
     const { router } = renderShortcuts(undefined, { isGuest: true });
     key("c");
-    key("g");
-    key("t");
+    for (const target of ["t", "s", "a"]) {
+      key("g");
+      key(target);
+    }
     expect(router.push).not.toHaveBeenCalled();
   });
 

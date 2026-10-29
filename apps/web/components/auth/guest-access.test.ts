@@ -4,12 +4,14 @@ import { describe, expect, it } from "vitest";
 
 import { guestGatedProcedures, guestMayUse } from "./guest-access";
 
-const inventory = JSON.parse(
-  readFileSync(
-    resolve(__dirname, "../../../backend/src/authorization/core/models/guest-routes.json"),
-    "utf8",
-  ),
-) as { procedure: string; classification: string }[];
+const read = (name: string) =>
+  JSON.parse(
+    readFileSync(
+      resolve(__dirname, "../../../backend/src/authorization/core/models", name),
+      "utf8",
+    ),
+  ) as { procedure: string; classification: string }[];
+const inventory = [...read("guest-routes.json"), ...read("guest-native-routes.json")];
 
 const BETTER_AUTH_ROUTES = new Set(["organization.create"]);
 
@@ -18,7 +20,7 @@ describe("guestMayUse", () => {
     "agrees with the backend's guest route inventory on %s",
     (procedure) => {
       const route = inventory.find((entry) => entry.procedure === procedure);
-      expect(route, `${procedure} is not in guest-routes.json`).toBeDefined();
+      expect(route, `${procedure} is not in the guest route inventories`).toBeDefined();
       expect(guestMayUse(procedure, true)).toBe(route?.classification !== "deny");
     },
   );

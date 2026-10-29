@@ -22,8 +22,9 @@ vi.mock("@/components/server-prefetch/prefetched-queries", () => ({
   },
 }));
 
+const viewer = vi.hoisted(() => ({ isAnonymous: false }));
 vi.mock("~/app/actions/auth", () => ({
-  auth: () => Promise.resolve({ user: { id: "user-1" } }),
+  auth: () => Promise.resolve({ user: { id: "user-1", isAnonymous: viewer.isAnonymous } }),
 }));
 
 vi.mock("@/components/whats-new/fetch-release-notes", () => ({
@@ -108,5 +109,19 @@ describe("PlatformHome", () => {
     expect(queries).toContain('"readState":"unread"');
     expect(queries).not.toContain('"getUnreadNotificationCount"');
     expect(queries).toContain('"principal":"user-1"');
+  });
+
+  it("leaves out for a guest the notifications and activity the server refuses them", async () => {
+    viewer.isAnonymous = true;
+    try {
+      const { container } = await renderHome();
+
+      expect(container).not.toHaveTextContent("Notifications");
+      expect(container).not.toHaveTextContent("Last 30 days");
+      expect(container).toHaveTextContent("Recently opened");
+      expect(JSON.stringify(prefetched.queries)).not.toContain('"listNotifications"');
+    } finally {
+      viewer.isAnonymous = false;
+    }
   });
 });

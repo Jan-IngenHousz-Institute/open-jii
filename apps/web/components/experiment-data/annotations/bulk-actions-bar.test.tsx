@@ -1,3 +1,4 @@
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
@@ -40,6 +41,15 @@ describe("BulkActionsBar", () => {
 
     expect(screen.getByText(/2 comments/)).toBeInTheDocument();
     expect(screen.getByText(/1 flag/)).toBeInTheDocument();
+  });
+
+  it("offers no download to a guest, whom exports refuse", () => {
+    render(
+      <PrincipalProvider userId="guest" isGuest>
+        <BulkActionsBar {...mockProps} />
+      </PrincipalProvider>,
+    );
+    expect(screen.queryByText("experimentDataTable.download")).not.toBeInTheDocument();
   });
 
   it("should show no rows selected when empty", () => {

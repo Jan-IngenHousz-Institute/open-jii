@@ -1,3 +1,4 @@
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import { useLocale } from "@/hooks/useLocale";
 import { createExperimentAccess } from "@/test/factories";
 import { server } from "@/test/msw/server";
@@ -115,6 +116,23 @@ describe("<ExperimentArchiveLayoutShell />", () => {
       expect(screen.getByText("data")).toBeInTheDocument();
       expect(screen.getByText("analysis.title")).toBeInTheDocument();
       expect(screen.getByText("flow.tabLabel")).toBeInTheDocument();
+    });
+
+    it("offers no collaborators tab to a guest", async () => {
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: createExperimentAccess({ experiment: { id: "test-id" } }),
+      });
+      render(
+        <PrincipalProvider userId="guest" isGuest>
+          <ExperimentArchiveLayoutShell>
+            <div>Child Content</div>
+          </ExperimentArchiveLayoutShell>
+        </PrincipalProvider>,
+      );
+
+      await screen.findByText("overview");
+      expect(screen.queryByText("experimentSettings.collaborators")).not.toBeInTheDocument();
+      expect(screen.getByText("data")).toBeInTheDocument();
     });
 
     it("all tabs render as links with correct hrefs", async () => {

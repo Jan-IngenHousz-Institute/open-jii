@@ -1,6 +1,7 @@
 "use client";
 
 import { guestMayUse } from "@/components/auth/guest-access";
+import type { GuestGatedProcedure } from "@/components/auth/guest-access";
 import { useIsGuest } from "@/components/auth/principal-context";
 import { NOTIFICATION_BELL_OPEN_EVENT } from "@/components/notifications/notifications-popover";
 import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
@@ -65,6 +66,7 @@ interface GoToShortcut {
   label: string;
   path?: string;
   action?: () => void;
+  procedure?: GuestGatedProcedure;
 }
 
 // One G-then-<key> sequence, as a component so the hook count stays stable.
@@ -93,20 +95,26 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
   const isGuest = useIsGuest();
   const { toggleSidebar } = useSidebar();
 
-  const goToShortcuts = React.useMemo<GoToShortcut[]>(
-    () => [
+  const goToShortcuts = React.useMemo<GoToShortcut[]>(() => {
+    const shortcuts: GoToShortcut[] = [
       { key: "H", label: "Home", path: `/${locale}/platform` },
       { key: "E", label: "Experiments", path: `/${locale}/platform/experiments` },
       { key: "W", label: "Workbooks", path: `/${locale}/platform/workbooks` },
       { key: "P", label: "Protocols", path: `/${locale}/platform/protocols` },
       { key: "M", label: "Macros", path: `/${locale}/platform/macros` },
       { key: "O", label: "Organizations", path: `/${locale}/platform/organizations` },
-      ...(guestMayUse("experiments.createTransferRequest", isGuest)
-        ? ([
-            { key: "T", label: "Transfer requests", path: `/${locale}/platform/transfer-request` },
-          ] satisfies GoToShortcut[])
-        : []),
-      { key: "S", label: "Settings", path: `/${locale}/platform/account` },
+      {
+        key: "T",
+        label: "Transfer requests",
+        path: `/${locale}/platform/transfer-request`,
+        procedure: "experiments.createTransferRequest",
+      },
+      {
+        key: "S",
+        label: "Settings",
+        path: `/${locale}/platform/account`,
+        procedure: "users.getUserProfile",
+      },
       {
         key: "N",
         label: "Notifications",
@@ -117,10 +125,15 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
         label: "What's new",
         action: () => window.dispatchEvent(new Event(WHATS_NEW_OPEN_EVENT)),
       },
-      { key: "A", label: "Account", path: `/${locale}/platform/account` },
-    ],
-    [locale, isGuest],
-  );
+      {
+        key: "A",
+        label: "Account",
+        path: `/${locale}/platform/account`,
+        procedure: "users.getUserProfile",
+      },
+    ];
+    return shortcuts.filter((shortcut) => guestMayUse(shortcut.procedure, isGuest));
+  }, [locale, isGuest]);
 
   const navigate = React.useCallback(
     (shortcut: GoToShortcut) => {

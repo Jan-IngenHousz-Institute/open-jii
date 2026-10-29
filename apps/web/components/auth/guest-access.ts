@@ -1,8 +1,22 @@
-// Whether a guest may call the procedure behind each action the UI offers. The answers mirror
-// the backend's guest-routes.json, which guest-access.test.ts checks. Creating an organization
-// goes through Better Auth, whose organization plugin refuses guests.
+// Whether a guest may call the procedure behind each action or view the UI offers. The answers
+// mirror the backend's guest route inventories, which guest-access.test.ts checks. Creating an
+// organization goes through Better Auth, whose organization plugin refuses guests.
 const GUEST_ACCESS = {
   "experiments.createExperiment": false,
+  "experiments.listExperimentDevices": false,
+  "experiments.addAnnotation": false,
+  "experiments.initiateExport": false,
+  "ExperimentDataUploadsController.uploadData": false,
+  "sharing.listGrants": false,
+  "metrics.getResourceMetrics": false,
+  "metrics.getScopedMetrics": false,
+  "notifications.listNotifications": false,
+  "notifications.getUnreadNotificationCount": false,
+  "organizations.listOrganizationMembers": false,
+  "organizations.listOrganizationTeams": false,
+  "search.globalSearch": false,
+  "users.getUserProfile": false,
+  "users.getWhatsNewSeen": false,
   "experiments.createTransferRequest": false,
   "protocols.createProtocol": false,
   "macros.createMacro": false,

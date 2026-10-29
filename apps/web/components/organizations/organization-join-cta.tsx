@@ -1,5 +1,7 @@
 "use client";
 
+import { guestMayUse } from "@/components/auth/guest-access";
+import { useIsGuest } from "@/components/auth/principal-context";
 import { useCancelMyOrganizationJoinRequest } from "@/hooks/organization/join-request/useCancelMyOrganizationJoinRequest/useCancelMyOrganizationJoinRequest";
 import { useRequestJoinOrganization } from "@/hooks/organization/join-request/useRequestJoinOrganization/useRequestJoinOrganization";
 import { Clock, UserPlus } from "lucide-react";
@@ -50,6 +52,7 @@ export function OrganizationJoinCta({
   size = "default",
 }: OrganizationJoinCtaProps) {
   const { t } = useTranslation();
+  const isGuest = useIsGuest();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -57,7 +60,12 @@ export function OrganizationJoinCta({
   const { mutateAsync: cancelRequest, isPending: isCancelling } =
     useCancelMyOrganizationJoinRequest();
 
-  if (isDemo || membershipStatus === "member") return null;
+  if (
+    isDemo ||
+    membershipStatus === "member" ||
+    !guestMayUse("organizations.createOrganizationJoinRequest", isGuest)
+  )
+    return null;
 
   const submitRequest = async () => {
     try {

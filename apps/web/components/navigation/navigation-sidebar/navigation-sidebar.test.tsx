@@ -1,3 +1,4 @@
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import { COMMAND_PALETTE_OPEN_EVENT } from "@/components/shortcuts/shortcuts-root";
 import { render, screen, fireEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
@@ -57,16 +58,18 @@ const translations = {
   organizationsTitle: "Organizations",
 };
 
-function renderSidebar() {
+function renderSidebar({ isGuest = false } = {}) {
   return render(
-    <SidebarProvider>
-      <AppSidebar
-        locale="en"
-        navigationData={navigationData}
-        translations={translations}
-        user={{ id: "user-1", email: "test@example.com" }}
-      />
-    </SidebarProvider>,
+    <PrincipalProvider userId="user-1" isGuest={isGuest}>
+      <SidebarProvider>
+        <AppSidebar
+          locale="en"
+          navigationData={navigationData}
+          translations={translations}
+          user={{ id: "user-1", email: "test@example.com" }}
+        />
+      </SidebarProvider>
+    </PrincipalProvider>,
   );
 }
 
@@ -151,6 +154,14 @@ describe("AppSidebar", () => {
     expect(identityRow).toContainElement(screen.getByText("test@example.com"));
     expect(identityRow).toContainElement(themeToggle);
     expect(screen.getByText("test@example.com").closest("div.min-w-0.flex-1")).toBeInTheDocument();
+  });
+
+  it("offers a guest neither notifications nor what's new, which the server refuses them", () => {
+    renderSidebar({ isGuest: true });
+
+    expect(screen.queryByRole("button", { name: "title" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "whatsNew.navLabel" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /navigation.documentation/i })).toBeInTheDocument();
   });
 
   it("removes the redundant in-sidebar collapse control", () => {

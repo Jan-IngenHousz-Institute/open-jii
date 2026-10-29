@@ -1,5 +1,6 @@
 "use client";
 
+import { GuestGate } from "@/components/auth/guest-gate";
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { OwningOrganizationField } from "@/components/organizations/owning-organization-field";
 import { PublishConfirmDialog } from "@/components/visibility/publish-confirm-dialog";
@@ -264,20 +265,22 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
             {tCommon("resourceVisibility.publishAction")}
           </Button>
         )}
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 sm:flex-none"
-          onClick={handleFork}
-          disabled={isForking}
-        >
-          {isForking ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <GitFork className="mr-2 h-4 w-4" />
-          )}
-          {t("workbooks.actions.fork")}
-        </Button>
+        <GuestGate procedure="workbooks.createWorkbook">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 sm:flex-none"
+            onClick={handleFork}
+            disabled={isForking}
+          >
+            {isForking ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <GitFork className="mr-2 h-4 w-4" />
+            )}
+            {t("workbooks.actions.fork")}
+          </Button>
+        </GuestGate>
         <WorkbookDeleteAction
           workbookId={id}
           workbookName={workbook.name}

@@ -1,7 +1,9 @@
+import { guestMayUse } from "@/components/auth/guest-access";
 import { PageContainer } from "@/components/page-container";
 import { PrefetchedQueries } from "@/components/server-prefetch/prefetched-queries";
 import { notificationsListQuery } from "@/hooks/notifications/useNotifications/notifications-list-query";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { auth } from "~/app/actions/auth";
 import { NotificationsPage } from "~/components/notifications/notifications-page";
 
@@ -18,8 +20,11 @@ export async function generateMetadata({ params }: NotificationsRouteProps): Pro
   return { title: t("title") };
 }
 
-export default async function NotificationsRoute() {
+export default async function NotificationsRoute({ params }: NotificationsRouteProps) {
   const session = await auth();
+  if (!guestMayUse("notifications.listNotifications", session?.user.isAnonymous === true)) {
+    redirect(`/${(await params).locale}/platform`);
+  }
 
   return (
     <PageContainer width="reading">

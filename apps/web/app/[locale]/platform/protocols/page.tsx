@@ -1,3 +1,4 @@
+import { GuestGate } from "@/components/auth/guest-gate";
 import { ListProtocols } from "@/components/list-protocols";
 import { ResourceMetricsSummary } from "@/components/metrics/resource-metrics-summary";
 import { PageContainer } from "@/components/page-container";
@@ -29,7 +30,9 @@ export default async function ProtocolPage({ searchParams }: ProtocolPageProps) 
 
   return (
     <PageContainer width="fluid" className="space-y-6">
-      <ResourceMetricsSummary kind="protocol" />
+      <GuestGate procedure="metrics.getResourceMetrics">
+        <ResourceMetricsSummary kind="protocol" />
+      </GuestGate>
       <PrefetchedQueries
         queries={(utils) => (isDefaultView ? [protocolsListQuery(utils, { page: 1 })] : [])}
       >

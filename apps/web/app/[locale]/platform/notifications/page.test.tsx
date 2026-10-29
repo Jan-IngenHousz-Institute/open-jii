@@ -1,5 +1,6 @@
 import { createSession } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
+import { redirect } from "next/navigation";
 import { describe, it, expect, vi } from "vitest";
 import { auth } from "~/app/actions/auth";
 import { orpc } from "~/lib/orpc";
@@ -32,12 +33,20 @@ describe("NotificationsRoute", () => {
   it("fetches the person's first page of notifications while the server renders", async () => {
     vi.mocked(auth).mockResolvedValue(createSession({ user: { id: "user-ana" } }));
 
-    render(await NotificationsRoute());
+    render(await NotificationsRoute({ params: Promise.resolve({ locale: "en-US" }) }));
 
     const queries = JSON.stringify(prefetched.queries);
     expect(screen.getByTestId("notifications")).toBeInTheDocument();
     expect(queries).toContain("listNotifications");
     expect(queries).toContain('{"readState":"all","page":1}');
     expect(queries).toContain("user-ana");
+  });
+
+  it("sends a guest home instead of to notifications the server refuses them", async () => {
+    vi.mocked(auth).mockResolvedValue(createSession({ user: { id: "guest", isAnonymous: true } }));
+
+    await NotificationsRoute({ params: Promise.resolve({ locale: "en-US" }) });
+
+    expect(redirect).toHaveBeenCalledWith("/en-US/platform");
   });
 });

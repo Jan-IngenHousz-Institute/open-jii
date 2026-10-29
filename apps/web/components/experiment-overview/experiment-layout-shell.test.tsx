@@ -1,3 +1,4 @@
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import { createExperimentAccess } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
@@ -101,5 +102,28 @@ describe("ExperimentLayoutShell", () => {
     expect(screen.getByText("analysis.title")).toBeInTheDocument();
     expect(screen.getByText("flow.tabLabel")).toBeInTheDocument();
     expect(screen.getByTestId("child")).toBeInTheDocument();
+  });
+
+  it.each([
+    [false, true],
+    [true, false],
+  ])("as guest=%s offers the collaborators and devices tabs: %s", async (isGuest, offered) => {
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: createExperimentAccess({
+        experiment: { id: "test-id", name: "Demo field trial", status: "active" },
+      }),
+    });
+    render(
+      <PrincipalProvider userId="viewer" isGuest={isGuest}>
+        <ExperimentLayoutShell>
+          <div data-testid="child">Child</div>
+        </ExperimentLayoutShell>
+      </PrincipalProvider>,
+    );
+    await screen.findByText("Demo field trial");
+    for (const tab of ["experimentSettings.collaborators", "iot.experimentDevices.tabLabel"]) {
+      expect(screen.queryByText(tab) !== null).toBe(offered);
+    }
+    expect(screen.getByText("data")).toBeInTheDocument();
   });
 });

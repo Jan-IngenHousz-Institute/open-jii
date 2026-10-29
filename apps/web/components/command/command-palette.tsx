@@ -68,7 +68,10 @@ export function CommandPalette({ locale }: { locale: string }) {
     [router],
   );
 
-  const { results, isSearching, isError, enabled } = useGlobalSearch(query);
+  // Search runs on the server only for someone it may answer.
+  const { results, isSearching, isError, enabled } = useGlobalSearch(
+    guestMayUse("search.globalSearch", isGuest) ? query : "",
+  );
 
   const entries: PaletteEntry[] = React.useMemo(
     () => [
@@ -135,6 +138,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         group: "pages",
         icon: iconMap.Settings,
         shortcut: "G S",
+        procedure: "users.getUserProfile",
         run: () => navigate(`/${locale}/platform/account`),
       },
       {

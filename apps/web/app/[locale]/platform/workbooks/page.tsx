@@ -1,3 +1,4 @@
+import { GuestGate } from "@/components/auth/guest-gate";
 import { ListWorkbooks } from "@/components/list-workbooks";
 import { ResourceMetricsSummary } from "@/components/metrics/resource-metrics-summary";
 import { PageContainer } from "@/components/page-container";
@@ -29,7 +30,9 @@ export default async function WorkbookPage({ searchParams }: WorkbookPageProps) 
 
   return (
     <PageContainer width="fluid" className="space-y-6">
-      <ResourceMetricsSummary kind="workbook" />
+      <GuestGate procedure="metrics.getResourceMetrics">
+        <ResourceMetricsSummary kind="workbook" />
+      </GuestGate>
       <PrefetchedQueries
         queries={(utils) => (isDefaultView ? [workbooksListQuery(utils, { page: 1 })] : [])}
       >

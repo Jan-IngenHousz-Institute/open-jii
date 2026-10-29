@@ -1,5 +1,7 @@
 "use client";
 
+import { guestMayUse } from "@/components/auth/guest-access";
+import { useIsGuest } from "@/components/auth/principal-context";
 import { ErrorDisplay } from "@/components/error-display";
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { PageContainer } from "@/components/page-container";
@@ -29,6 +31,7 @@ interface ExperimentDataPageProps {
 export default function ExperimentDataPage({ params }: ExperimentDataPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useExperimentAccess(id);
+  const isGuest = useIsGuest();
   const { tables, isLoading: isLoadingTables, error: tablesError } = useExperimentTables(id);
   const { t } = useTranslation("experiments");
   const [uploadDataOpen, setUploadDataOpen] = React.useState(false);
@@ -88,7 +91,12 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
   // contributing (`can(contribute)`), which a collaborator may do without
   // administering anything.
   const hasAccess = data.isAdmin;
-  const canContribute = data.capabilities.canContribute;
+  // A guest contributes to a demo experiment from the phone only; the web's upload and
+  // annotation routes refuse guests.
+  const canContribute =
+    data.capabilities.canContribute &&
+    guestMayUse("ExperimentDataUploadsController.uploadData", isGuest) &&
+    guestMayUse("experiments.addAnnotation", isGuest);
   const canManage = data.capabilities.canManage;
 
   // Check if experiment is archived - if so, redirect to not found (should use archive route)

@@ -1,5 +1,6 @@
 "use client";
 
+import { GuestGate } from "@/components/auth/guest-gate";
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
 import { LocalTime } from "@/components/shared/local-time";
@@ -87,16 +88,18 @@ function WorkbookActionsCell({ workbook, href }: { workbook: WorkbookListItem; h
               {t("workbooks.actions.open")}
             </IntentLink>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={isDuplicating}
-            onSelect={(e) => {
-              e.preventDefault();
-              void handleDuplicate();
-            }}
-          >
-            <GitFork className="mr-2 size-4" />
-            {t("workbooks.actions.fork")}
-          </DropdownMenuItem>
+          <GuestGate procedure="workbooks.createWorkbook">
+            <DropdownMenuItem
+              disabled={isDuplicating}
+              onSelect={(e) => {
+                e.preventDefault();
+                void handleDuplicate();
+              }}
+            >
+              <GitFork className="mr-2 size-4" />
+              {t("workbooks.actions.fork")}
+            </DropdownMenuItem>
+          </GuestGate>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
