@@ -1,7 +1,16 @@
 import type { Page } from "@playwright/test";
+import type * as DrizzlePostgres from "drizzle-orm/postgres-js" with { "resolution-mode": "require" };
+import { createRequire } from "node:module";
 import postgres from "postgres";
 
+import { and, eq } from "@repo/database";
+import { organizations } from "@repo/database/schema";
 import { readLatestSignInOtp } from "@repo/devkit/otp";
+
+// The shared schema uses Drizzle's CommonJS types; load the same driver entry.
+const drizzlePostgres = createRequire(import.meta.url)(
+  "drizzle-orm/postgres-js",
+) as typeof DrizzlePostgres;
 
 export const locale = process.env.E2E_LOCALE ?? "en-US";
 export const seedEmail = process.env.E2E_EMAIL ?? "seed@openjii.local";
@@ -21,20 +30,24 @@ export function assertSafeFixtureDatabase(url = databaseUrl): void {
   );
 }
 
-async function withFixtureDatabase<T>(run: (sql: postgres.Sql) => Promise<T>): Promise<T> {
+export async function withFixtureDatabase<T>(
+  run: (database: DrizzlePostgres.PostgresJsDatabase) => Promise<T>,
+): Promise<T> {
   assertSafeFixtureDatabase();
   const sql = postgres(databaseUrl, { connect_timeout: 2, idle_timeout: 1, max: 1 });
   try {
-    return await run(sql);
+    return await run(drizzlePostgres.drizzle(sql));
   } finally {
     await sql.end({ timeout: 1 });
   }
 }
 
 export async function deleteFixtureOrganization(slug: string, name: string): Promise<void> {
-  await withFixtureDatabase(
-    (sql) => sql`delete from organizations where slug = ${slug} and name = ${name}`,
-  );
+  await withFixtureDatabase(async (database) => {
+    await database
+      .delete(organizations)
+      .where(and(eq(organizations.slug, slug), eq(organizations.name, name)));
+  });
 }
 
 export async function dismissCookieBanner(page: Page): Promise<void> {

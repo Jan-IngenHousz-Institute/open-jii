@@ -1,7 +1,10 @@
 import postgres from "postgres";
 
+import { eq } from "@repo/database";
+import { users, organizations, organizationMembers, experiments } from "@repo/database/schema";
+
 import {
-  assertSafeFixtureDatabase,
+  withFixtureDatabase,
   databaseUrl,
   deleteFixtureOrganization,
   seedEmail,
@@ -54,30 +57,41 @@ export const protocolWorkbookId = (): Promise<string> =>
   );
 
 export async function demoRecordingOrganization(name: string, demo: boolean): Promise<string> {
-  assertSafeFixtureDatabase();
-  const sql = postgres(databaseUrl, { connect_timeout: 2, idle_timeout: 1, max: 1 });
-  try {
-    return await sql.begin(async (tx) => {
-      const users = await tx<{ id: string }[]>`select id from users where email = ${seedEmail}`;
-      const user = users.at(0);
+  return withFixtureDatabase((database) =>
+    database.transaction(async (tx) => {
+      const user = (
+        await tx.select({ id: users.id }).from(users).where(eq(users.email, seedEmail)).limit(1)
+      ).at(0);
       if (!user) throw new Error("Seed user missing");
-      const organizations = await tx<{ id: string }[]>`
-        insert into organizations (name, slug, type, visibility)
-        values (${name}, ${name.toLowerCase().replaceAll(" ", "-")}, ${demo ? "demo" : "research_institute"}, ${demo ? "public" : "private"})
-        on conflict (slug) do update set name = excluded.name returning id
-      `;
-      const org = organizations.at(0);
+      const org = (
+        await tx
+          .insert(organizations)
+          .values({
+            name,
+            slug: name.toLowerCase().replaceAll(" ", "-"),
+            type: demo ? "demo" : "research_institute",
+            visibility: demo ? "public" : "private",
+          })
+          .onConflictDoUpdate({ target: organizations.slug, set: { name } })
+          .returning({ id: organizations.id })
+      ).at(0);
       if (!org) throw new Error("Capture organization missing");
-      await tx`insert into organization_members (organization_id, user_id, role)
-        values (${org.id}, ${user.id}, 'owner') on conflict do nothing`;
-      await tx`insert into experiments (name, created_by, organization_id, visibility)
-        values (${demo ? "Demo photosynthesis experiment" : "Unpublished trial"}, ${user.id}, ${org.id}, ${demo ? "public" : "private"})
-        on conflict (name) do nothing`;
+      await tx
+        .insert(organizationMembers)
+        .values({ organizationId: org.id, userId: user.id, role: "owner" })
+        .onConflictDoNothing();
+      await tx
+        .insert(experiments)
+        .values({
+          name: demo ? "Demo photosynthesis experiment" : "Unpublished trial",
+          createdBy: user.id,
+          organizationId: org.id,
+          visibility: demo ? "public" : "private",
+        })
+        .onConflictDoNothing({ target: experiments.name });
       return org.id;
-    });
-  } finally {
-    await sql.end({ timeout: 1 });
-  }
+    }),
+  );
 }
 
 export const clearDemoTrainingRecording = (): Promise<void> =>
