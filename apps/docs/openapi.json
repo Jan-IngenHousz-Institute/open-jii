@@ -42830,6 +42830,9 @@
                                 "type": "string",
                                 "minLength": 1
                               },
+                              "simulated": {
+                                "type": "boolean"
+                              },
                               "data": {},
                               "executionTime": {
                                 "type": "number",
@@ -42848,6 +42851,9 @@
                                   "properties": {
                                     "deviceId": {
                                       "type": "string"
+                                    },
+                                    "simulated": {
+                                      "type": "boolean"
                                     },
                                     "deviceLabel": {
                                       "type": "string"
