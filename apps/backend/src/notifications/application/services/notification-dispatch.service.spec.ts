@@ -662,6 +662,7 @@ describe("NotificationDispatchService", () => {
             notificationEmail,
             testApp.module.get(NotificationPreferencesService),
             testApp.module.get(NotificationOutboxWorker),
+            testApp.module.get<GuestDirectoryPort>(GUEST_DIRECTORY_PORT),
           );
         const firstRepository = new NotificationRepository(first.database);
         const secondRepository = new NotificationRepository(second.database);

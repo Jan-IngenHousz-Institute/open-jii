@@ -27,6 +27,7 @@ class RecordingSignerS3Service extends AwsS3Service {
 
   protected override createSignedUrl(
     command: PutObjectCommand | GetObjectCommand,
+    _guest?: GuestUploadOptions,
     expiresIn?: number,
   ) {
     if (command instanceof GetObjectCommand) {

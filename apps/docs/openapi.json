@@ -381,13 +381,13 @@
                                             ]
                                           },
                                           "isGuest": {
-                                            "default": false,
                                             "type": "boolean",
+                                            "default": false,
                                             "description": "Derived from the trusted measurement provenance"
                                           },
                                           "isFormerGuest": {
-                                            "default": false,
                                             "type": "boolean",
+                                            "default": false,
                                             "description": "A guest measurement whose account no longer exists"
                                           }
                                         },
@@ -910,13 +910,13 @@
                                                   ]
                                                 },
                                                 "isGuest": {
-                                                  "default": false,
                                                   "type": "boolean",
+                                                  "default": false,
                                                   "description": "Derived from the trusted measurement provenance"
                                                 },
                                                 "isFormerGuest": {
-                                                  "default": false,
                                                   "type": "boolean",
+                                                  "default": false,
                                                   "description": "A guest measurement whose account no longer exists"
                                                 }
                                               },
@@ -1309,13 +1309,13 @@
                                                       ]
                                                     },
                                                     "isGuest": {
-                                                      "default": false,
                                                       "type": "boolean",
+                                                      "default": false,
                                                       "description": "Derived from the trusted measurement provenance"
                                                     },
                                                     "isFormerGuest": {
-                                                      "default": false,
                                                       "type": "boolean",
+                                                      "default": false,
                                                       "description": "A guest measurement whose account no longer exists"
                                                     }
                                                   },
@@ -1767,13 +1767,13 @@
                                                   ]
                                                 },
                                                 "isGuest": {
-                                                  "default": false,
                                                   "type": "boolean",
+                                                  "default": false,
                                                   "description": "Derived from the trusted measurement provenance"
                                                 },
                                                 "isFormerGuest": {
-                                                  "default": false,
                                                   "type": "boolean",
+                                                  "default": false,
                                                   "description": "A guest measurement whose account no longer exists"
                                                 }
                                               },
@@ -2209,13 +2209,13 @@
                                             ]
                                           },
                                           "isGuest": {
-                                            "default": false,
                                             "type": "boolean",
+                                            "default": false,
                                             "description": "Derived from the trusted measurement provenance"
                                           },
                                           "isFormerGuest": {
-                                            "default": false,
                                             "type": "boolean",
+                                            "default": false,
                                             "description": "A guest measurement whose account no longer exists"
                                           }
                                         },
@@ -2665,13 +2665,13 @@
                                             ]
                                           },
                                           "isGuest": {
-                                            "default": false,
                                             "type": "boolean",
+                                            "default": false,
                                             "description": "Derived from the trusted measurement provenance"
                                           },
                                           "isFormerGuest": {
-                                            "default": false,
                                             "type": "boolean",
+                                            "default": false,
                                             "description": "A guest measurement whose account no longer exists"
                                           }
                                         },
@@ -3075,13 +3075,13 @@
                                                 ]
                                               },
                                               "isGuest": {
-                                                "default": false,
                                                 "type": "boolean",
+                                                "default": false,
                                                 "description": "Derived from the trusted measurement provenance"
                                               },
                                               "isFormerGuest": {
-                                                "default": false,
                                                 "type": "boolean",
+                                                "default": false,
                                                 "description": "A guest measurement whose account no longer exists"
                                               }
                                             },
@@ -3664,13 +3664,13 @@
                                               ]
                                             },
                                             "isGuest": {
-                                              "default": false,
                                               "type": "boolean",
+                                              "default": false,
                                               "description": "Derived from the trusted measurement provenance"
                                             },
                                             "isFormerGuest": {
-                                              "default": false,
                                               "type": "boolean",
+                                              "default": false,
                                               "description": "A guest measurement whose account no longer exists"
                                             }
                                           },
@@ -5664,12 +5664,12 @@
                             "minLength": 1
                           },
                           "isGuest": {
-                            "default": false,
-                            "type": "boolean"
+                            "type": "boolean",
+                            "default": false
                           },
                           "isFormerGuest": {
-                            "default": false,
                             "type": "boolean",
+                            "default": false,
                             "description": "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal."
                           },
                           "firstName": {
@@ -8727,13 +8727,13 @@
                                             ]
                                           },
                                           "isGuest": {
-                                            "default": false,
                                             "type": "boolean",
+                                            "default": false,
                                             "description": "Derived from the trusted measurement provenance"
                                           },
                                           "isFormerGuest": {
-                                            "default": false,
                                             "type": "boolean",
+                                            "default": false,
                                             "description": "A guest measurement whose account no longer exists"
                                           }
                                         },
@@ -16040,7 +16040,9 @@
                   },
                   "contentLength": {
                     "type": "integer",
-                    "minimum": 0,
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "exclusiveMinimum": 0,
                     "description": "UTF-8 payload bytes; required and capped at 1 MiB for guests"
                   }
                 },
@@ -32864,12 +32866,12 @@
                             "format": "uuid"
                           },
                           "isGuest": {
-                            "default": false,
-                            "type": "boolean"
+                            "type": "boolean",
+                            "default": false
                           },
                           "isFormerGuest": {
-                            "default": false,
                             "type": "boolean",
+                            "default": false,
                             "description": "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal."
                           },
                           "firstName": {
@@ -33048,12 +33050,12 @@
                               "format": "uuid"
                             },
                             "isGuest": {
-                              "default": false,
-                              "type": "boolean"
+                              "type": "boolean",
+                              "default": false
                             },
                             "isFormerGuest": {
-                              "default": false,
                               "type": "boolean",
+                              "default": false,
                               "description": "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal."
                             },
                             "firstName": {
@@ -37868,12 +37870,12 @@
                                   "format": "uuid"
                                 },
                                 "isGuest": {
-                                  "default": false,
-                                  "type": "boolean"
+                                  "type": "boolean",
+                                  "default": false
                                 },
                                 "isFormerGuest": {
-                                  "default": false,
                                   "type": "boolean",
+                                  "default": false,
                                   "description": "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal."
                                 },
                                 "firstName": {
@@ -37990,12 +37992,12 @@
                             "format": "uuid"
                           },
                           "isGuest": {
-                            "default": false,
-                            "type": "boolean"
+                            "type": "boolean",
+                            "default": false
                           },
                           "isFormerGuest": {
-                            "default": false,
                             "type": "boolean",
+                            "default": false,
                             "description": "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal."
                           },
                           "firstName": {

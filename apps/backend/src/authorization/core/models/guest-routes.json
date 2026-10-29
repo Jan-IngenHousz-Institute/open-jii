@@ -482,6 +482,12 @@
     "classification": "deny"
   },
   {
+    "procedure": "experiments.getExportDownloadLinks",
+    "method": "GET",
+    "path": "/api/v1/experiments/{id}/data/exports/{exportId}/links",
+    "classification": "deny"
+  },
+  {
     "procedure": "experiments.listUploads",
     "method": "GET",
     "path": "/api/v1/experiments/{id}/data/uploads",
@@ -1125,12 +1131,6 @@
     "classification": "visit"
   },
   {
-    "procedure": "experiments.uploadOutcome",
-    "method": "POST",
-    "path": "/api/v1/webhooks/data-upload",
-    "classification": "deny"
-  },
-  {
     "procedure": "experiments.projectTransfer",
     "method": "POST",
     "path": "/api/v1/webhooks/project-transfer",
@@ -1185,6 +1185,12 @@
     "path": "/api/v1/workbooks/{id}/versions",
     "classification": "public-resource",
     "resource": "workbook"
+  },
+  {
+    "procedure": "workbooks.publishWorkbookVersion",
+    "method": "POST",
+    "path": "/api/v1/workbooks/{id}/versions",
+    "classification": "deny"
   },
   {
     "procedure": "workbooks.getWorkbookVersion",

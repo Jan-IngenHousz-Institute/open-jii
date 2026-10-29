@@ -70,7 +70,7 @@ export type ExperimentDataRow = Record<string, unknown> & {
   contributor?: ExperimentDataContributor | string | null;
 };
 
-export const zExperimentDataRow: z.ZodType<ExperimentDataRow, z.ZodTypeDef, unknown> = z
+export const zExperimentDataRow: z.ZodType<ExperimentDataRow, unknown> = z
   .object({
     contributor: z
       .union([

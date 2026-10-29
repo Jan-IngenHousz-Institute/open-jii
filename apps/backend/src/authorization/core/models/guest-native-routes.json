@@ -1,11 +1,5 @@
 [
   {
-    "procedure": "ExperimentDataExportsController.downloadExport",
-    "method": "GET",
-    "path": "/api/v1/experiments/{id}/data/exports/{exportId}",
-    "classification": "deny"
-  },
-  {
     "procedure": "ExperimentDataUploadsController.uploadData",
     "method": "POST",
     "path": "/api/v1/experiments/{id}/data/uploads",

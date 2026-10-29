@@ -37,8 +37,8 @@ import { USER_PRESENCE_PORT } from "./core/ports/user-presence.port";
 import { PlatformAdminRepository } from "./core/repositories/platform-admin.repository";
 import { InvitationRepository } from "./core/repositories/user-invitation.repository";
 import { UserRepository } from "./core/repositories/user.repository";
-import { AccountSecurityAuthHook } from "./presentation/hooks/account-security-auth.hook";
 import { GuestRepositoryModule } from "./guest-repository.module";
+import { AccountSecurityAuthHook } from "./presentation/hooks/account-security-auth.hook";
 import { UserAuthHook } from "./presentation/hooks/user-auth.hook";
 // Controllers
 import { PlatformAdminController } from "./presentation/platform-admin.controller";
