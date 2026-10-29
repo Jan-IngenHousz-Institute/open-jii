@@ -33,6 +33,14 @@
     "./oauth-redirect": {
       "types": "./src/clients/oauth-redirect.ts",
       "default": "./dist/clients/oauth-redirect.js"
+    },
+    "./oidc-client-manifest": {
+      "types": "./src/oidc/provisioning/manifest.ts",
+      "default": "./dist/oidc/provisioning/manifest.js"
+    },
+    "./oidc-client-reconcile": {
+      "types": "./src/oidc/provisioning/reconcile.ts",
+      "default": "./dist/oidc/provisioning/reconcile.js"
     }
   },
   "private": true,
@@ -48,6 +56,8 @@
     "oauth:register": "node --env-file=../../apps/backend/.env dist/scripts/register-oauth-client.js"
   },
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "catalog:aws-sdk",
+    "@aws-sdk/client-sts": "catalog:aws-sdk",
     "@better-auth/api-key": "1.6.23",
     "@better-auth/expo": "1.6.23",
     "@better-auth/oauth-provider": "1.6.23",

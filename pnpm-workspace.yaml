@@ -89,6 +89,8 @@ catalogs:
     "@testing-library/user-event": 14.6.1
     "@vitejs/plugin-react": 4.7.0
   aws-sdk:
+    "@aws-sdk/client-sts": 3.1048.0
+    "@aws-sdk/client-secrets-manager": 3.1048.0
     "@aws-sdk/client-cognito-identity": 3.1048.0
     "@aws-sdk/client-cloudwatch": 3.1048.0
     "@aws-sdk/client-iot": 3.1048.0
