@@ -1,12 +1,16 @@
 import type { QueryClient } from "@tanstack/react-query";
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { connectionKeys } from "~/features/connection/services/connection-keys";
+import {
+  connectedSimulatedDevices,
+  subscribeSimulatedExperiment,
+} from "~/features/connection/services/simulated-device";
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import type { Device } from "~/shared/types/device";
 
 /**
  * The single home of disconnect-detection wiring, mounted once at app boot
- * (mirrors mountOutboxBridge). Two paths feed it:
+ * (mirrors mountOutboxBridge). Three paths feed it:
  *
  *   1. Native onDeviceDisconnected: fires immediately when the OS reports
  *      a disconnect (when it bothers to). Invalidates the query so the UI
@@ -17,8 +21,10 @@ import type { Device } from "~/shared/types/device";
  *      the native event case after the invalidation refetches. The id-set
  *      diff clears exactly the disappeared devices' executors, so unplugging
  *      one of N hub devices fails only that device's in-flight scan.
+ *   3. Losing demo eligibility: drops the simulator from the cache and its
+ *      executor at once, because a failing refetch would keep both alive.
  *
- * Returns an unmount fn that detaches both listeners.
+ * Returns an unmount fn that detaches every listener.
  */
 export function mountConnectionLifecycle({
   queryClient,
@@ -46,8 +52,23 @@ export function mountConnectionLifecycle({
     prevIds = nextIds;
   });
 
+  const unsubscribeSimulated = subscribeSimulatedExperiment(() => {
+    const cached = queryClient.getQueryData<Device[]>(connectionKeys.connectedDevices);
+    const live = new Set(connectedSimulatedDevices().map((d) => d.id));
+    const stale = cached?.filter((d) => d.type === "simulated-device" && !live.has(d.id)) ?? [];
+    if (!cached || stale.length === 0) return;
+    queryClient.setQueryData<Device[]>(
+      connectionKeys.connectedDevices,
+      cached.filter((d) => !stale.includes(d)),
+    );
+    for (const device of stale) {
+      void useScannerCommandExecutorStore.getState().removeDevice(device.id);
+    }
+  });
+
   return () => {
     nativeSub.remove();
     unsubscribeCache();
+    unsubscribeSimulated();
   };
 }

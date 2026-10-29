@@ -2,6 +2,7 @@ import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { listSerialPortDevices } from "~/features/connection/services/device-connection-manager/android-serial-port-connection/open-serial-port-connection";
 import { getConnectedMockDevices } from "~/features/connection/services/multispeq/mock-device/mock-device-registry";
 import { mockDevicesEnabled } from "~/features/connection/services/multispeq/mock-device/mock-devices-enabled";
+import { hasBluetoothPermission } from "~/features/connection/services/request-bluetooth-permissions";
 import { connectedSimulatedDevices } from "~/features/connection/services/simulated-device";
 import type { Device } from "~/shared/types/device";
 
@@ -36,6 +37,7 @@ export async function getConnectedDevices(): Promise<Device[]> {
   }
 
   if (simulatedDevices.length > 0) return simulatedDevices;
+  if (!(await hasBluetoothPermission())) return [];
 
   const [device] = await RNBluetoothClassic.getConnectedDevices();
   if (!device) {
