@@ -45,10 +45,16 @@ export function GuestBanner({ name, locale }: { name: string; locale: string }) 
   return (
     <aside
       className="bg-muted flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3"
-      aria-label={t("demo.try")}
+      aria-label={t("demo.bannerLabel")}
     >
       <p className="text-sm">{t("demo.banner", { name })}</p>
-      <Button variant="outline" onClick={() => setOpen(true)}>
+      <Button
+        variant="outline"
+        onClick={() => {
+          setError(false);
+          setOpen(true);
+        }}
+      >
         {t("demo.leave")}
       </Button>
       <Dialog

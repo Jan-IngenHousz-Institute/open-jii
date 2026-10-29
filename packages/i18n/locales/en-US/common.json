@@ -1571,6 +1571,7 @@
     "noContent": "The demo experiments could not be loaded. Try again without starting a new session.",
     "retry": "Try again",
     "banner": "You are trying the demo as {{name}}. This guest session lasts seven days.",
+    "bannerLabel": "Guest session",
     "leave": "Leave demo",
     "leaveTitle": "Leave the demo?",
     "leaveDescription": "Your public measurements stay. You will need a new guest session to try the demo again.",

@@ -50,7 +50,9 @@ describe.each([
       within(screen.getByRole("dialog")).getByRole("button", { name: copy.demo.leave }),
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(copy.demo.leaveError);
-    expect(screen.getByRole("complementary", { hidden: true })).toHaveTextContent("Visitor");
+    expect(
+      screen.getByRole("complementary", { name: copy.demo.bannerLabel, hidden: true }),
+    ).toHaveTextContent("Visitor");
     expect(client.getQueryData(["guest-result"])).toBe("Saved demo output");
     expect(screen.queryByText("raw server error")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: copy.demo.retry }));
@@ -74,5 +76,23 @@ describe.each([
     fireEvent.click(screen.getByRole("button", { name: copy.demo.cancel }));
     expect(state.signOut).not.toHaveBeenCalled();
     expect(client.getQueryData(["guest-result"])).toBe("result");
+  });
+  it("starts a reopened dialog without the previous failure", async () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <GuestBanner name="Visitor" locale={locale} />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: copy.demo.leave }));
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: copy.demo.leave }),
+    );
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByRole("button", { name: copy.demo.cancel }));
+    fireEvent.click(screen.getByRole("button", { name: copy.demo.leave }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByRole("alert")).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: copy.demo.leave })).toBeEnabled();
   });
 });

@@ -1569,6 +1569,7 @@
     "noContent": "De demo-experimenten konden niet worden geladen. Probeer het opnieuw zonder een nieuwe sessie te starten.",
     "retry": "Opnieuw proberen",
     "banner": "Je probeert de demo als {{name}}. Deze gastsessie duurt zeven dagen.",
+    "bannerLabel": "Gastsessie",
     "leave": "Demo verlaten",
     "leaveTitle": "De demo verlaten?",
     "leaveDescription": "Je openbare metingen blijven staan. Je hebt een nieuwe gastsessie nodig om de demo opnieuw te proberen.",

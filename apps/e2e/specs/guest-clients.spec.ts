@@ -1,16 +1,26 @@
 import { expect, test } from "@playwright/test";
 import { readFile, writeFile } from "node:fs/promises";
 
+import de from "../../../packages/i18n/locales/de-DE/common.json" with { type: "json" };
 import en from "../../../packages/i18n/locales/en-US/common.json" with { type: "json" };
+import nl from "../../../packages/i18n/locales/nl-NL/common.json" with { type: "json" };
 
 // These flows use the real local demo flag fixture and seeded Demo organization.
 test.skip(process.env.E2E_DEMO_MODE !== "true", "Requires the local demo flag fixture");
 test.setTimeout(90_000);
 test.use({ storageState: { cookies: [], origins: [] } });
-for (const [locale, copy] of [["en-US", en.demo]] as const) {
+for (const [locale, copy] of [
+  ["en-US", en.demo],
+  ["nl-NL", nl.demo],
+  ["de-DE", de.demo],
+] as const) {
   test(`guest entry, failed leave, reload and successful retry (${locale})`, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/${locale}/login`);
+    test.skip(
+      !page.url().includes(`/${locale}/`),
+      "The multi-language flag is off in this fixture, so the locale redirects to en-US",
+    );
     const reject = page.getByRole("button", { name: /^(Reject all|Alles weigeren)$/ });
     await reject.click();
     await page.getByRole("button", { name: copy.try, exact: true }).focus();
@@ -21,7 +31,9 @@ for (const [locale, copy] of [["en-US", en.demo]] as const) {
     await expect(page).toHaveURL(new RegExp(`/${locale}/platform/organizations/[^/]+$`));
     await expect(page.getByRole("heading", { name: "openJII Demo", exact: true })).toBeVisible();
     const destination = page.url();
-    await expect(page.getByRole("complementary", { name: copy.try })).toContainText("River");
+    await expect(page.getByRole("complementary", { name: copy.bannerLabel })).toContainText(
+      "River",
+    );
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
@@ -33,7 +45,9 @@ for (const [locale, copy] of [["en-US", en.demo]] as const) {
     await expect(page.getByRole("alert")).toHaveText(copy.leaveError);
     await expect(page.getByRole("dialog").getByRole("button", { name: copy.retry })).toBeEnabled();
     await page.reload();
-    await expect(page.getByRole("complementary", { name: copy.try })).toContainText("River");
+    await expect(page.getByRole("complementary", { name: copy.bannerLabel })).toContainText(
+      "River",
+    );
     await expect(page).toHaveURL(destination);
     await page.unroute(signOut);
     await page.getByRole("button", { name: copy.leave, exact: true }).click();

@@ -30,20 +30,22 @@ export function TryDemo({ locale }: { locale: string }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
-  const entered = useRef(false);
+  const [nameInvalid, setNameInvalid] = useState(false);
+  const [entered, setEntered] = useState(false);
   const busy = useRef(false);
   const entry = useMutation({
     mutationFn: async () => {
       if (busy.current) return;
       const parsed = zGuestName.safeParse(name);
-      if (!parsed.success || name.includes("@")) {
+      setNameInvalid(!parsed.success);
+      if (!parsed.success) {
         setError(t("demo.invalidName"));
         return;
       }
       busy.current = true;
       setError("");
       try {
-        if (!entered.current) {
+        if (!entered) {
           const sessionClient = authClient;
           const existing = await sessionClient.getSession();
           if (existing.error || (existing.data && !existing.data.user.isAnonymous)) {
@@ -70,7 +72,7 @@ export function TryDemo({ locale }: { locale: string }) {
             setError(t("demo.entryError"));
             return;
           }
-          entered.current = true;
+          setEntered(true);
           await client.cancelQueries();
           client.clear();
         }
@@ -118,8 +120,9 @@ export function TryDemo({ locale }: { locale: string }) {
             id="guest-name"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            aria-describedby="guest-name-hint"
-            disabled={entered.current || entry.isPending}
+            aria-describedby={nameInvalid ? "guest-name-hint guest-name-error" : "guest-name-hint"}
+            aria-invalid={nameInvalid}
+            disabled={entered || entry.isPending}
           />
           <p id="guest-name-hint" className="text-muted-foreground text-sm">
             {t("demo.nameHint")}
@@ -131,8 +134,13 @@ export function TryDemo({ locale }: { locale: string }) {
             rel="noreferrer"
           >
             {t("demo.terms")}
+            <span className="sr-only"> ({t("docsHelp.opensNewTab")})</span>
           </a>
-          {error && <p role="alert">{error}</p>}
+          {error && (
+            <p id="guest-name-error" role="alert">
+              {error}
+            </p>
+          )}
           <div className="flex flex-wrap justify-end gap-2">
             <Button
               type="button"

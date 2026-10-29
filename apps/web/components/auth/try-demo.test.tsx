@@ -73,10 +73,9 @@ async function open() {
 it("Cancel and opening the dialog never create a user", async () => {
   await open();
   expect(screen.getByText("demo.permanent")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "demo.terms" })).toHaveAttribute(
-    "href",
-    "/en-US/terms-and-conditions",
-  );
+  const terms = screen.getByRole("link", { name: "demo.terms (docsHelp.opensNewTab)" });
+  expect(terms).toHaveAttribute("href", "/en-US/terms-and-conditions");
+  expect(terms).toHaveAttribute("target", "_blank");
   fireEvent.click(screen.getByRole("button", { name: "demo.cancel" }));
   expect(api.session).not.toHaveBeenCalled();
   expect(api.create).not.toHaveBeenCalled();
@@ -90,6 +89,7 @@ it("retries a missing directory without creating another guest", async () => {
     method: "POST",
     body: { name: "River" },
   });
+  expect(screen.getByLabelText("demo.name")).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "demo.continue" }));
   await waitFor(() => expect(api.directory).toHaveBeenCalledTimes(2));
   expect(api.directory).toHaveBeenCalledWith({ scope: "related" });
@@ -137,7 +137,11 @@ it.each(["a@b", "person@example.test", "https://example.test", "a".repeat(61)])(
     await open();
     fireEvent.change(screen.getByLabelText("demo.name"), { target: { value: name } });
     fireEvent.click(screen.getByRole("button", { name: "demo.continue" }));
-    await screen.findByText("demo.invalidName");
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("demo.invalidName");
+    const input = screen.getByLabelText("demo.name");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(alert.id);
     expect(api.create).not.toHaveBeenCalled();
   },
 );
