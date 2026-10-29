@@ -144,6 +144,7 @@ def test_guest_key_requires_exact_server_shape(spark):
         f"large-iot/{EXPERIMENT}/guest.json",
         f"large-iot/guest/{EXPERIMENT}/{UPLOAD}.json",
         valid + "/extra",
+        valid + "\n",
         "prefix/" + valid,
         valid.replace("/guest/", "/%67uest/"),
         valid.replace("/guest/", "/Guest/"),
@@ -172,16 +173,22 @@ def test_upload_key_parser_accepts_current_and_legacy_keys(spark):
                     path += "guest/" if guest else ""
                     path += f"{user}/" if uploader else ""
                     path += f"{upload}.json"
-                    cases.append((path, EXPERIMENT, uploader, guest))
+                    cases.append((path, EXPERIMENT, uploader, guest, True))
     cases.extend(
-        (path, None, None, False)
+        (path, None, None, False, False)
         for path in (
             None,
             "",
+        )
+    )
+    cases.extend(
+        (path, EXPERIMENT, None, False, False)
+        for path in (
             f"large-iot/{EXPERIMENT}/file.json",
             f"prefix/large-iot/{EXPERIMENT}/{UPLOADER}/{UPLOAD}.json",
             f"large-iot/{EXPERIMENT}/guest/not-a-user/{UPLOAD}.json",
             f"large-iot/{EXPERIMENT}/{UPLOADER}/{UPLOAD}.json/extra",
+            f"large-iot/{EXPERIMENT}/{UPLOADER}/{UPLOAD}.json\n",
         )
     )
     source = spark.createDataFrame(
@@ -192,9 +199,9 @@ def test_upload_key_parser_accepts_current_and_legacy_keys(spark):
         .orderBy("position")
         .collect()
     )
-    assert [(row.key.experiment_id, row.key.uploader_id, row.key.is_guest) for row in result] == [
-        case[1:] for case in cases
-    ]
+    assert [
+        (row.key.experiment_id, row.key.uploader_id, row.key.is_guest, row.key.is_valid) for row in result
+    ] == [case[1:] for case in cases]
 
 
 def test_large_upload_authors_follow_the_signed_key_through_gold(pipelines, spark, fake_dlt, monkeypatch):
@@ -267,7 +274,50 @@ def test_large_upload_authors_follow_the_signed_key_through_gold(pipelines, spar
             assert row.annotations[1].content.flagType == "interesting"
             expected_authors = (
                 [(FORGED_USER, "Forged researcher"), (None, None)]
-                if device.startswith("legacy-")
-                else [(UPLOADER, None), (UPLOADER, None)]
+                if device == "legacy-researcher"
+                else [(expected_user, None), (expected_user, None)]
             )
             assert [(a.createdBy, a.createdByName) for a in row.annotations] == expected_authors
+
+
+def test_unparsed_large_upload_keys_never_trust_payload_authors_or_experiment(pipelines, spark):
+    paths = [
+        (f"s3://bucket/large-iot/{EXPERIMENT.upper()}/GUEST/{UPLOADER}/{UPLOAD}.json", EXPERIMENT),
+        (f"large-iot/{EXPERIMENT}/{UPLOADER}/{UPLOAD}.json\n", EXPERIMENT),
+        ("s3://bucket/unknown/file.json", None),
+        (None, None),
+    ]
+    body = json.dumps(
+        payload(
+            "forged",
+            experiment_id=FORGED_USER,
+            user_id=FORGED_USER,
+            annotations=[
+                {
+                    "type": "comment",
+                    "content": {"text": "Keep this note"},
+                    "createdBy": FORGED_USER,
+                    "createdByName": "Forged researcher",
+                }
+            ],
+        )
+    )
+    source = (
+        spark.createDataFrame(
+            [(i, path, body) for i, (path, _) in enumerate(paths)],
+            "position int, path string, body string",
+        )
+        .select(
+            "position",
+            F.from_json("body", large_iot_schema).alias("parsed"),
+            F.struct(F.col("path").alias("file_path")).alias("_metadata"),
+        )
+        .select("position", "parsed.*", "_metadata")
+    )
+    result = pipelines("bronze/raw_large_data").extract_large_data(source).orderBy("position").collect()
+    for row, (_, experiment) in zip(result, paths, strict=True):
+        assert row.experiment_id == experiment
+        assert row.user_id is None
+        assert row.is_guest is False
+        assert [(a.createdBy, a.createdByName) for a in row.annotations] == [(None, None)]
+        assert row.annotations[0].content.text == "Keep this note"

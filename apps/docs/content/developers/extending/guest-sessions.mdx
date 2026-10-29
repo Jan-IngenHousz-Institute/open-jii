@@ -67,7 +67,9 @@ UUID. All IDs are lowercase. Researcher uploads use
 `large-iot/{experimentUuid}/{userUuid}/{uploadUuid}.json`. Bronze takes `user_id`
 from the key and sets each annotation's `createdBy` to that user and
 `createdByName` to null. Older researcher keys without a user segment keep the
-payload's `user_id`; older guest keys get a null `user_id`.
+payload's user and annotation authors. Older guest keys clear `user_id` and both
+annotation author fields. A key that does not parse also clears those fields;
+its experiment comes only from the path, never the payload.
 
 The issuer signs the declared UTF-8 byte length and
 JSON content type for 15 minutes. Guest payloads must be between one byte and

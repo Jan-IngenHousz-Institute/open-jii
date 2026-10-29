@@ -132,7 +132,7 @@ Not all data starts in MQTT:
 
 - external project-transfer Parquet files enter `raw_imported_data` with Auto Loader;
 - web uploads enter `raw_uploaded_data`;
-- payloads too large for MQTT (over 128 KB) are uploaded straight to S3 through a backend-issued pre-signed URL (`/api/v1/iot/upload-url`, keyed `large-iot/{experimentId}/{userId}/{uploadId}.json`, or `large-iot/{experimentId}/guest/{userId}/{uploadId}.json` for guests) and enter `raw_large_data` with Auto Loader directory listing. The signed key supplies the experiment and uploader; bronze overrides payload `user_id` and annotation authors with that uploader;
+- payloads too large for MQTT (over 128 KB) are uploaded straight to S3 through a backend-issued pre-signed URL (`/api/v1/iot/upload-url`, keyed `large-iot/{experimentId}/{userId}/{uploadId}.json`, or `large-iot/{experimentId}/guest/{userId}/{uploadId}.json` for guests) and enter `raw_large_data` with Auto Loader directory listing. The key supplies the experiment. Bronze sets `user_id` and each annotation's `createdBy` to the uploader and clears `createdByName`. Older researcher keys keep the payload's user and annotation authors. Older guest keys and unparsed keys clear all author fields;
 - all are normalized into the same central model downstream.
 
 Because pre-signed uploads never touch the broker, there is no authenticated MQTT client identity: `client_id` stays null and the payload's self-reported `device_id` is not promoted to a trusted identity.

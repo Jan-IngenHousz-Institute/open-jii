@@ -40,26 +40,27 @@ def raw_large_data():
 
 
 def extract_large_data(df):
-    # The signed key binds the experiment and uploader; payload authors are untrusted.
+    # Only legacy researcher keys may retain payload authors.
     uploader = F.col("_upload_key.uploader_id")
+    legacy_researcher = (
+        F.col("_upload_key.is_valid") & ~F.col("_upload_key.is_guest") & uploader.isNull()
+    )
 
     return (
         df
         .withColumn("_upload_key", parse_large_iot_key(F.col("_metadata.file_path")))
         .withColumn(
             "experiment_id",
-            F.coalesce(F.col("_upload_key.experiment_id"), F.col("experiment_id"))
+            F.col("_upload_key.experiment_id")
         )
         .withColumn(
             "user_id",
-            F.when(uploader.isNotNull(), uploader)
-            .when(F.col("_upload_key.is_guest"), F.lit(None).cast("string"))
-            .otherwise(F.col("user_id"))
+            F.when(legacy_researcher, F.col("user_id")).otherwise(uploader)
         )
         .withColumn(
             "annotations",
             F.when(
-                uploader.isNotNull(),
+                ~legacy_researcher,
                 F.transform(
                     F.col("annotations"),
                     lambda annotation: annotation.withField("createdBy", uploader)
