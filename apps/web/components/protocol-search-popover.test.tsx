@@ -72,8 +72,8 @@ describe("<ProtocolSearchPopover />", () => {
     expect(screen.getByText("Ambient Light")).toBeInTheDocument();
     expect(screen.getByText("PAM Fluorometry")).toBeInTheDocument();
 
-    expect(screen.getAllByText("multispeq")).toHaveLength(2);
-    expect(screen.getByText("ambyte")).toBeInTheDocument();
+    expect(screen.getAllByText("MultispeQ")).toHaveLength(2);
+    expect(screen.getByText("Ambyte")).toBeInTheDocument();
   });
 
   it("displays protocol details correctly with created by info", () => {

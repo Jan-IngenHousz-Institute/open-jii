@@ -1326,7 +1326,7 @@ describe("useWorkbookExecution", () => {
       const updated = onCellsChange.mock.calls.at(-1)?.[0] as WorkbookCell[];
       const branchOutput = findOutput(updated, branch.id);
       expect(branchOutput?.messages?.join("\n")).toContain(
-        "Ambit B (ambit): no measurement resolved this round",
+        "Ambit B (Ambit): no measurement resolved this round",
       );
       const branchCell = updated.find((c) => c.id === branch.id);
       expect(branchCell).toHaveProperty("evaluatedPathId", undefined);

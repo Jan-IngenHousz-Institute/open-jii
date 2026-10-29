@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MockTransportAdapter, parseMockFamilies } from "~/lib/iot/mock-devices";
+import { getSensorFamilyLabel } from "~/util/sensor-family";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { DeviceIdentity, IDeviceDriver, ITransportAdapter } from "@repo/iot";
@@ -108,7 +109,7 @@ export function useIotConnections(sensorFamily: SensorFamily, options?: IotConne
         if (family !== sensorFamily) {
           toast({
             title: "Different device identified",
-            description: `Connected as ${sensorFamily}, but the device identifies as ${family}. Using ${family}.`,
+            description: `Connected as ${getSensorFamilyLabel(sensorFamily)}, but the device identifies as ${getSensorFamilyLabel(family)}. Using ${getSensorFamilyLabel(family)}.`,
           });
         }
 

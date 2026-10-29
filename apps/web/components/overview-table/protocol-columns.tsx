@@ -4,7 +4,7 @@ import { ResourceMetricsCell } from "@/components/overview-table/resource-metric
 import { LocalTime } from "@/components/shared/local-time";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
-import { getSensorFamilyBadgeTone } from "@/util/sensor-family";
+import { getSensorFamilyBadgeTone, getSensorFamilyLabel } from "@/util/sensor-family";
 
 import type { ProtocolListItem } from "@repo/api/domains/protocol/protocol.schema";
 import { Badge } from "@repo/ui/components/badge";
@@ -60,8 +60,8 @@ export function getProtocolColumns(
       sortId: "family",
       className: "hidden w-36 sm:table-cell",
       cell: (protocol) => (
-        <StatusBadge tone={getSensorFamilyBadgeTone(protocol.family)} className="capitalize">
-          {protocol.family}
+        <StatusBadge tone={getSensorFamilyBadgeTone(protocol.family)}>
+          {getSensorFamilyLabel(protocol.family)}
         </StatusBadge>
       ),
     },

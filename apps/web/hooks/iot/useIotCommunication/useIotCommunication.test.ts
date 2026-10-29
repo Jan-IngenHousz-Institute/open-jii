@@ -148,7 +148,7 @@ describe("useIotCommunication", () => {
 
       await waitFor(() => {
         expect(result.current.isConnected).toBe(false);
-        expect(result.current.error).toMatch(/does not support bluetooth transport/);
+        expect(result.current.error).toMatch(/^MultispeQ does not support bluetooth transport/);
       });
     });
 
@@ -176,7 +176,7 @@ describe("useIotCommunication", () => {
 
       await waitFor(() => {
         expect(result.current.isConnected).toBe(false);
-        expect(result.current.error).toMatch(/does not support bluetooth transport/);
+        expect(result.current.error).toMatch(/^Ambyte does not support bluetooth transport/);
       });
     });
 

@@ -16,7 +16,7 @@ const GROUP_ID = "11111111-1111-4111-8111-111111111111";
 
 describe("AddGroupMembersDialog", () => {
   it("offers only the caller's own devices that are not yet members", async () => {
-    const mine = createIotDevice({ createdBy: "user-1", name: "Mine" });
+    const mine = createIotDevice({ createdBy: "user-1", name: "Mine", deviceType: "minipar" });
     const alreadyMember = createIotDevice({ createdBy: "user-1", name: "Member" });
     const foreign = createIotDevice({ createdBy: "user-2", name: "Foreign" });
     server.mount(contract.iot.listIotDevices, { body: [mine, alreadyMember, foreign] });
@@ -31,6 +31,7 @@ describe("AddGroupMembersDialog", () => {
     );
 
     expect(await screen.findByText("Mine")).toBeInTheDocument();
+    expect(screen.getByText("MiniPAR")).toBeInTheDocument();
     expect(screen.queryByText("Member")).not.toBeInTheDocument();
     expect(screen.queryByText("Foreign")).not.toBeInTheDocument();
   });
