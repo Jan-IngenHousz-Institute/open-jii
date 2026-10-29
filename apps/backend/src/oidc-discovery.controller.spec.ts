@@ -11,6 +11,9 @@ import { auth } from "@repo/auth/server";
 
 import { OidcDiscoveryController } from "./oidc-discovery.controller";
 
+// Other specs cache this controller before setupFiles replaces the provider mock.
+vi.hoisted(() => vi.resetModules());
+
 const getOAuthServerConfig = vi.mocked(auth.api.getOAuthServerConfig);
 const getSession = vi.mocked(auth.api.getSession);
 
