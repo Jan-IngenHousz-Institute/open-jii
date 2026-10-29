@@ -1,5 +1,14 @@
 name: "OpenTofu Plan"
 description: "Runs OpenTofu plan"
+inputs:
+  lock:
+    description: "Hold the state lock while planning"
+    required: false
+    default: "true"
+  refresh:
+    description: "Read every resource before planning; false compares the configuration with the state"
+    required: false
+    default: "true"
 runs:
   using: "composite"
   steps:
@@ -14,6 +23,9 @@ runs:
     - name: OpenTofu Plan
       shell: bash
       working-directory: infrastructure/env/${{ env.RESOLVED_ENV }}
+      env:
+        LOCK: ${{ inputs.lock }}
+        REFRESH: ${{ inputs.refresh }}
       run: |
         exec 2>&1
-        tofu plan
+        tofu plan -input=false -lock="$LOCK" -refresh="$REFRESH"

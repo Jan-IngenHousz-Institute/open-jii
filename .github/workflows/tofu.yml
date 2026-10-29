@@ -126,9 +126,8 @@ jobs:
     name: Approval Gate
     needs: plan
     runs-on: ubuntu-latest
-    environment: approval-gate
+    environment: ${{ inputs.environment == 'prod' && 'prod-approval' || 'approval-gate' }}
     permissions:
-      id-token: write
       contents: read
     steps:
       - name: Await Approval for Apply
@@ -143,7 +142,7 @@ jobs:
       needs.plan.result == 'success' &&
       needs.approval_gate.result == 'success'
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }} # This environment should have required reviewers for approval
+    environment: ${{ inputs.environment }}
     permissions:
       id-token: write
       contents: read
