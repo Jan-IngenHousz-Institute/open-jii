@@ -9,6 +9,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import StringType
 
 from openjii.centrum import sensor_schema
+from openjii.centrum.constants import MEASUREMENT_PATH_TRIGGER_INTERVAL
 from openjii.centrum.runtime import (
     BRONZE_TABLE,
     KINESIS_STREAM_NAME,
@@ -20,6 +21,7 @@ from openjii.centrum.runtime import (
 @dlt.table(
     name=BRONZE_TABLE,
     comment="Bronze layer: Raw sensor data ingested from Kinesis",
+    spark_conf={"pipelines.trigger.interval": MEASUREMENT_PATH_TRIGGER_INTERVAL},
     table_properties={
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
