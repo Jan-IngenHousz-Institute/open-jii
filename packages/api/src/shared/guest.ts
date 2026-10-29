@@ -11,6 +11,7 @@ export const zGuestName = z
   .string()
   .trim()
   .max(60)
+  .refine((name) => !name.includes("@"), "Names cannot contain an email address")
   .refine((name) => !webAddress.test(name), "Names cannot contain a web address")
   .transform((name) => name || "Guest");
 
