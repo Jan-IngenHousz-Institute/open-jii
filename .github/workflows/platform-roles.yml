@@ -62,18 +62,30 @@ jobs:
           echo "::error::Platform roles change from main only; got $REF"
           exit 1
 
+      # The summary is on the run page before approval, so the approver sees the exact change.
       - name: Validate input
         env:
+          ENVIRONMENT: ${{ inputs.environment }}
           ACTION: ${{ inputs.action }}
+          ROLE: ${{ inputs.role }}
           TARGET: ${{ inputs.target_user_id }}
           ACTOR: ${{ inputs.actor_user_id }}
         run: |
           uuid='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
-          if [[ "$ACTION" == "list" ]]; then exit 0; fi
+          if [[ "$ACTION" == "list" ]]; then
+            echo "### Requested: list platform roles on $ENVIRONMENT" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           if [[ ! "$TARGET" =~ $uuid || ! "$ACTOR" =~ $uuid ]]; then
             echo "::error::Grant and revoke need target_user_id and actor_user_id as user ids"
             exit 1
           fi
+          {
+            echo "### Requested: $ACTION $ROLE on $ENVIRONMENT"
+            echo "- Target user id: \`$TARGET\`"
+            echo "- Actor user id: \`$ACTOR\`"
+            echo "- Started by: \`$GITHUB_ACTOR\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   approval:
     name: Approval
@@ -86,7 +98,8 @@ jobs:
         env:
           ACTION: ${{ inputs.action }}
           ROLE: ${{ inputs.role }}
-        run: echo "Approved $ACTION of $ROLE on prod."
+          TARGET: ${{ inputs.target_user_id }}
+        run: echo "Approved $ACTION of $ROLE on prod for $TARGET."
 
   change:
     name: Run Platform Role Command
