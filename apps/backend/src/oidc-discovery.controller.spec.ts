@@ -11,14 +11,8 @@ import { auth } from "@repo/auth/server";
 
 import { OidcDiscoveryController } from "./oidc-discovery.controller";
 
-const { getOAuthServerConfig, getSession } = vi.hoisted(() => ({
-  getOAuthServerConfig: vi.fn(),
-  getSession: vi.fn(),
-}));
-
-vi.mock("@repo/auth/server", () => ({
-  auth: { api: { getOAuthServerConfig, getSession } },
-}));
+const getOAuthServerConfig = vi.mocked(auth.api.getOAuthServerConfig);
+const getSession = vi.mocked(auth.api.getSession);
 
 @Controller("protected-discovery-control")
 class ProtectedController {
@@ -54,14 +48,18 @@ describe("OIDC authorization-server discovery alias over HTTP", () => {
 
   afterAll(async () => {
     await app.close();
+    getOAuthServerConfig.mockReset();
+    getSession.mockReset().mockResolvedValue(null);
   });
 
   it("returns the provider metadata and cache policy without a session", async () => {
-    const metadata = {
+    const metadata: Awaited<ReturnType<typeof auth.api.getOAuthServerConfig>> = {
       issuer: "https://issuer.example/api/v1/auth",
       authorization_endpoint: "https://issuer.example/api/v1/auth/oauth2/authorize",
       token_endpoint: "https://issuer.example/api/v1/auth/oauth2/token",
       response_types_supported: ["code"],
+      response_modes_supported: ["query"],
+      grant_types_supported: ["authorization_code"],
       code_challenge_methods_supported: ["S256"],
     };
     getOAuthServerConfig.mockResolvedValue(metadata);

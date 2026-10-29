@@ -13,6 +13,7 @@ vi.mock("@repo/auth/server", () => ({
   auth: {
     api: {
       getSession: mockGetSession,
+      getOAuthServerConfig: vi.fn(),
     },
     options: {
       trustedOrigins: ["http://localhost:3000"],
