@@ -1587,5 +1587,11 @@
     "leaveAction_retry": "$t(demo.retry)",
     "entryError_limited": "Too many attempts. Wait a minute, then try again.",
     "entryError_disabled": "$t(demo.unavailable)"
+  },
+  "principalGate": {
+    "title": "We could not confirm who is signed in",
+    "description": "Your session changed or the connection dropped, so this page is hidden. Reload to try again, or sign in.",
+    "reload": "Reload",
+    "signIn": "Sign in"
   }
 }

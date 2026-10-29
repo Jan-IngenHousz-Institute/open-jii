@@ -1582,5 +1582,11 @@
     "leaveAction_retry": "$t(demo.retry)",
     "entryError_limited": "Zu viele Versuche. Warte eine Minute und versuche es dann erneut.",
     "entryError_disabled": "$t(demo.unavailable)"
+  },
+  "principalGate": {
+    "title": "Wir konnten nicht bestätigen, wer angemeldet ist",
+    "description": "Deine Sitzung hat sich geändert oder die Verbindung ist abgebrochen, deshalb ist diese Seite ausgeblendet. Lade sie neu, um es noch einmal zu versuchen, oder melde dich an.",
+    "reload": "Neu laden",
+    "signIn": "Anmelden"
   }
 }

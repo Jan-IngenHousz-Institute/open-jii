@@ -1585,5 +1585,11 @@
     "leaveAction_retry": "$t(demo.retry)",
     "entryError_limited": "Te veel pogingen. Wacht een minuut en probeer het opnieuw.",
     "entryError_disabled": "$t(demo.unavailable)"
+  },
+  "principalGate": {
+    "title": "We konden niet bevestigen wie er is ingelogd",
+    "description": "Je sessie is gewijzigd of de verbinding is weggevallen, daarom is deze pagina verborgen. Laad de pagina opnieuw om het nog eens te proberen, of log in.",
+    "reload": "Opnieuw laden",
+    "signIn": "Inloggen"
   }
 }

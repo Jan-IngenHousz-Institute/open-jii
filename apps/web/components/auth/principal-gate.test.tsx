@@ -1,6 +1,7 @@
 import { HydrationBoundary, QueryClient, dehydrate, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient as QueryClientType } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import type { ReactNode } from "react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -40,17 +41,24 @@ const idOf = (who: Who) => (who === "signed-out" ? "signed-out" : people[who].id
 
 let current: Who = "researcher";
 let gets = 0;
+// Answers served before falling back to `current`, one per get-session request.
+let queue: (() => Response | Promise<Response>)[] = [];
 beforeEach(() => {
   gets = 0;
+  queue = [];
   reloadPage.mockClear();
   window.sessionStorage.clear();
   server.use(
     http.get("*/api/v1/auth/get-session", () => {
       gets++;
-      return HttpResponse.json(sessionOf(current));
+      return queue.shift()?.() ?? HttpResponse.json(sessionOf(current));
     }),
   );
 });
+
+const as = (who: Who) => () => HttpResponse.json(sessionOf(who));
+const unavailable = () => HttpResponse.json({ message: "unavailable" }, { status: 503 });
+const stalled = () => new Promise<Response>(() => undefined);
 
 // What the server put into the page for the person it rendered it for.
 function dehydratedFor(who: Who) {
@@ -146,13 +154,87 @@ describe("the same person", () => {
     expect(reloadPage).not.toHaveBeenCalled();
   });
 
-  it("stops reloading when the same mismatch survives a reload", async () => {
+  it("shows a recovery screen instead of reloading again when a mismatch survives a reload", async () => {
+    const user = userEvent.setup();
     window.sessionStorage.setItem("openjii.principal-reload", "researcher-a>guest-a");
     current = "guest";
     renderPlatformFor("researcher");
     await settle();
-    await waitFor(() => expect(gets).toBeGreaterThan(1));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("principalGate.title");
     expect(reloadPage).not.toHaveBeenCalled();
     expect(screen.queryByText(/private experiment/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "principalGate.signIn" })).toHaveAttribute(
+      "href",
+      "/en-US/login",
+    );
+
+    await user.click(screen.getByRole("button", { name: "principalGate.reload" }));
+    expect(reloadPage).toHaveBeenCalledOnce();
+    expect(window.sessionStorage.getItem("openjii.principal-reload")).toBeNull();
   });
+});
+
+describe("a browser session that is only stale", () => {
+  // The browser settles on the guest while the server, asked directly, says the researcher.
+  async function renderStale(...answers: (() => Response | Promise<Response>)[]) {
+    current = "researcher";
+    renderPlatformFor("researcher");
+    await settle();
+    const before = gets;
+    queue = [as("guest"), ...answers];
+    await settle();
+    return before;
+  }
+
+  it("reopens without a reload once the refreshed session agrees", async () => {
+    await renderStale(as("researcher"), as("researcher"));
+
+    expect(await screen.findByText("researcher's private experiment")).toBeInTheDocument();
+    expect(reloadPage).not.toHaveBeenCalled();
+  });
+
+  it("offers recovery when the refresh keeps failing", async () => {
+    const settled = await renderStale(
+      ...Array.from({ length: 3 }, () => [as("researcher"), unavailable]).flat(),
+    );
+
+    expect(await screen.findByRole("alert", undefined, { timeout: 8_000 })).toHaveTextContent(
+      "principalGate.title",
+    );
+    expect(gets - settled).toBe(7);
+    expect(reloadPage).not.toHaveBeenCalled();
+    expect(screen.queryByText(/private experiment/)).not.toBeInTheDocument();
+  }, 15_000);
+
+  it("offers recovery when the server cannot be asked", async () => {
+    const settled = await renderStale(
+      ...Array.from({ length: 3 }, () => () => HttpResponse.error()),
+    );
+
+    expect(await screen.findByRole("alert", undefined, { timeout: 8_000 })).toHaveTextContent(
+      "principalGate.title",
+    );
+    expect(gets - settled).toBe(4);
+    expect(reloadPage).not.toHaveBeenCalled();
+  }, 15_000);
+
+  it("offers recovery when the server never answers", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const settled = await renderStale(stalled, stalled, stalled);
+      await waitFor(() => expect(gets - settled).toBe(2));
+      for (let check = 0; check < 3; check++) {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(6_000);
+        });
+      }
+
+      expect(screen.getByRole("alert")).toHaveTextContent("principalGate.title");
+      expect(gets - settled).toBe(4);
+      expect(reloadPage).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 15_000);
 });
