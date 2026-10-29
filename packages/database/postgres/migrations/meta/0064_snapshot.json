@@ -5269,12 +5269,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "admin_granted_at": {
-          "name": "admin_granted_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
         "is_anonymous": {
           "name": "is_anonymous",
           "type": "boolean",

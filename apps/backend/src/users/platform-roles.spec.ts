@@ -217,6 +217,15 @@ describe("platform roles", () => {
     expect(await db.select().from(auditLogs)).toHaveLength(4);
   });
 
+  it("refuses a guest account as the target or the actor", async () => {
+    const guest = await app.createTestUser({});
+    await db.update(users).set({ isAnonymous: true }).where(eq(users.id, guest));
+    for (const refused of [change({ targetUserId: guest }), change({ actorUserId: guest })]) {
+      await expect(changePlatformRole(db, refused)).rejects.toBeInstanceOf(PlatformRoleError);
+    }
+    expect(await roleOf(guest)).toBe("user");
+  });
+
   it("never counts an API key, an anonymous session or a deleted account as a role holder", async () => {
     await changePlatformRole(db, change());
     expect(await isPlatformAdmin({ id: researcher }, new Headers({ "x-api-key": "k" }))).toBe(
