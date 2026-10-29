@@ -16,7 +16,7 @@ on:
         options:
           - prod
       ref:
-        description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
+        description: "Leave empty: prod deploys the commit of the main or release branch this run starts from, and refuses a ref that resolves to another commit"
         required: false
         type: string
         default: ""
