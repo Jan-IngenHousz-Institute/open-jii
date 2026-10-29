@@ -51,6 +51,17 @@ jobs:
     name: Validate Input
     runs-on: ubuntu-latest
     steps:
+      # workflow_dispatch accepts any branch, and the checkout below would load that branch's
+      # composite action with the deploy role. Belt to each environment's own deployment-branch
+      # rule, which is the real control, not a replacement for it.
+      - name: Refuse to run from a non-default ref
+        if: github.ref != 'refs/heads/main'
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          echo "::error::Platform roles change from main only; got $REF"
+          exit 1
+
       - name: Validate input
         env:
           ACTION: ${{ inputs.action }}
@@ -72,7 +83,10 @@ jobs:
     environment: prod-approval
     steps:
       - name: Record approval
-        run: echo "Approved ${{ inputs.action }} of ${{ inputs.role }} on prod."
+        env:
+          ACTION: ${{ inputs.action }}
+          ROLE: ${{ inputs.role }}
+        run: echo "Approved $ACTION of $ROLE on prod."
 
   change:
     name: Run Platform Role Command
@@ -88,9 +102,21 @@ jobs:
       contents: read
     timeout-minutes: 20
     steps:
+      # workflow_dispatch accepts any branch, and the checkout below would load that branch's
+      # composite action with the deploy role. Belt to each environment's own deployment-branch
+      # rule, which is the real control, not a replacement for it.
+      - name: Refuse to run from a non-default ref
+        if: github.ref != 'refs/heads/main'
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          echo "::error::Platform roles change from main only; got $REF"
+          exit 1
+
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Configure AWS credentials
@@ -105,10 +131,11 @@ jobs:
           environment: ${{ inputs.environment }}
           prefix: "/migration"
 
-      # The latest revision runs the image the last migration run built, so a role change only
-      # ever runs code that was merged and deployed.
+      # The latest revision runs the image the last migration run built. A migration run can
+      # build from any ref, so the image's commit has to be on main before it may change a role.
       - name: Run the command in the migration runner task
         env:
+          ENVIRONMENT: ${{ inputs.environment }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ACTION: ${{ inputs.action }}
           ROLE: ${{ inputs.role }}
@@ -118,7 +145,7 @@ jobs:
         run: |
           for name in ECS_CLUSTER_NAME TASK_DEFINITION_FAMILY CONTAINER_NAME SUBNETS SECURITY_GROUP_ID; do
             if [[ -z "${!name:-}" ]]; then
-              echo "::error::Missing $name from the /migration/${{ inputs.environment }}/ parameters"
+              echo "::error::Missing $name from the /migration/$ENVIRONMENT/ parameters"
               exit 1
             fi
           done
@@ -126,6 +153,16 @@ jobs:
           aws ecs describe-task-definition --task-definition "$TASK_DEFINITION_FAMILY" \
             --query taskDefinition --output json > task-definition.json
           TASK_DEF=$(jq -r .taskDefinitionArn task-definition.json)
+          IMAGE=$(jq -r --arg c "$CONTAINER_NAME" '.containerDefinitions[] | select(.name==$c) | .image' task-definition.json)
+          if [[ ! "$IMAGE" =~ :migrations-([0-9a-f]{7})-[0-9]+$ ]]; then
+            echo "::error::Cannot tell which commit the migration runner image was built from: $IMAGE"
+            exit 1
+          fi
+          IMAGE_SHA="${BASH_REMATCH[1]}"
+          if ! git merge-base --is-ancestor "$IMAGE_SHA" HEAD 2>/dev/null; then
+            echo "::error::The migration runner image was built from $IMAGE_SHA, which is not on main"
+            exit 1
+          fi
 
           if [[ "$ACTION" == "list" ]]; then
             COMMAND=$(jq -nc '["node","dist/platform-roles.js","list"]')
@@ -161,14 +198,19 @@ jobs:
             exit 1
           fi
 
-          timeout 900 aws ecs wait tasks-stopped --cluster "$ECS_CLUSTER_NAME" --tasks "$TASK_ARN"
+          if ! timeout 900 aws ecs wait tasks-stopped --cluster "$ECS_CLUSTER_NAME" --tasks "$TASK_ARN"; then
+            STATUS=$(aws ecs describe-tasks --cluster "$ECS_CLUSTER_NAME" --tasks "$TASK_ARN" \
+              --query 'tasks[0].lastStatus' --output text)
+            echo "::error::Task ${TASK_ARN##*/} is still $STATUS and may yet change the role; read its log before retrying"
+            exit 1
+          fi
           EXIT_CODE=$(aws ecs describe-tasks --cluster "$ECS_CLUSTER_NAME" --tasks "$TASK_ARN" \
             --query "tasks[0].containers[?name=='$CONTAINER_NAME'].exitCode | [0]" --output text)
 
           LOG_GROUP=$(jq -r --arg c "$CONTAINER_NAME" '.containerDefinitions[] | select(.name==$c) | .logConfiguration.options["awslogs-group"]' task-definition.json)
           LOG_PREFIX=$(jq -r --arg c "$CONTAINER_NAME" '.containerDefinitions[] | select(.name==$c) | .logConfiguration.options["awslogs-stream-prefix"]' task-definition.json)
           {
-            echo "### Platform role ${ACTION} on ${{ inputs.environment }}"
+            echo "### Platform role ${ACTION} on ${ENVIRONMENT}"
             echo "Exit code: \`${EXIT_CODE}\`"
             echo "Output: CloudWatch \`${LOG_GROUP}\`, stream \`${LOG_PREFIX}/${CONTAINER_NAME}/${TASK_ARN##*/}\`"
           } >> "$GITHUB_STEP_SUMMARY"

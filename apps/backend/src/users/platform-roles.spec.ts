@@ -8,15 +8,26 @@ import {
   db,
   auditLogs,
   changePlatformRole,
+  createSecondaryDatabase,
   eq,
+  heldPlatformRoles,
   listPlatformRoleHolders,
   PlatformRoleError,
+  profiles,
   users,
 } from "@repo/database";
 import type { PlatformRoleChange } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
 import { TestHarness } from "../test/test-harness";
+
+function gate() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
 
 const auth = betterAuth({
   secret: "test-secret",
@@ -184,6 +195,60 @@ describe("platform roles", () => {
       .set({ deletedAt: new Date() })
       .where(eq(schema.profiles.userId, researcher));
     expect(await isPlatformAdmin({ id: researcher })).toBe(false);
+  });
+
+  it("records one grant when two runs grant the same role at once", async () => {
+    const secondary = createSecondaryDatabase();
+    try {
+      const outcomes = await Promise.allSettled([
+        changePlatformRole(db, change()),
+        changePlatformRole(secondary.database, change()),
+      ]);
+      expect(outcomes.filter((outcome) => outcome.status === "fulfilled")).toHaveLength(1);
+      const refused = outcomes.find((outcome) => outcome.status === "rejected");
+      expect(refused?.reason).toBeInstanceOf(PlatformRoleError);
+      expect(await db.select().from(auditLogs)).toHaveLength(1);
+    } finally {
+      await secondary.close();
+    }
+  });
+
+  it("refuses a grant to an account deleted while the grant waited for its lock", async () => {
+    const secondary = createSecondaryDatabase();
+    const locked = gate();
+    const release = gate();
+    try {
+      const deletion = secondary.database.transaction(async (tx) => {
+        await tx.select({ id: users.id }).from(users).where(eq(users.id, researcher)).for("update");
+        await tx
+          .update(profiles)
+          .set({ deletedAt: new Date() })
+          .where(eq(profiles.userId, researcher));
+        locked.resolve();
+        await release.promise;
+      });
+      await locked.promise;
+      const grant = changePlatformRole(db, change());
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      release.resolve();
+      await deletion;
+      await expect(grant).rejects.toBeInstanceOf(PlatformRoleError);
+      expect(await roleOf(researcher)).toBe("user");
+    } finally {
+      await secondary.close();
+    }
+  });
+
+  it("reads held roles only from usable accounts and tolerates spacing in the stored value", async () => {
+    await db.update(users).set({ role: "user, platform_admin" }).where(eq(users.id, researcher));
+    expect(await heldPlatformRoles(db, researcher)).toEqual(["platform_admin"]);
+    await db.update(users).set({ banned: true }).where(eq(users.id, researcher));
+    expect(await heldPlatformRoles(db, researcher)).toEqual([]);
+    await db
+      .update(users)
+      .set({ banned: false, registered: false })
+      .where(eq(users.id, researcher));
+    expect(await heldPlatformRoles(db, researcher)).toEqual([]);
   });
 
   it("lists current holders with the date each role was last granted", async () => {
