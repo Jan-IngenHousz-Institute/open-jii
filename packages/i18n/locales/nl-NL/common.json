@@ -529,7 +529,8 @@
       "non_profit": "Non-profit",
       "private_company": "Particulier bedrijf",
       "government_agency": "Overheidsinstantie",
-      "university": "Universiteit"
+      "university": "Universiteit",
+      "demo": "Demo"
     },
     "roles": {
       "owner": "Eigenaar",
@@ -571,8 +572,8 @@
       "creating": "Aanmaken…",
       "created": "{{name}} is aangemaakt",
       "failed": "Deze organisatie kon niet worden aangemaakt.",
-      "privateNote": "Deze organisatie wordt privé. Niemand daarbuiten ziet haar, en je kunt haar later via de instellingen publiceren.",
-      "publicNote": "Deze organisatie wordt openbaar. Ze verschijnt zodra ze is aangemaakt in de directory, waar iedereen die is ingelogd haar kan vinden en lidmaatschap kan aanvragen.",
+      "visibilityNote_private": "Deze organisatie wordt privé. Niemand daarbuiten ziet haar, en je kunt haar later via de instellingen publiceren.",
+      "visibilityNote_public": "Deze organisatie wordt openbaar. Ze verschijnt zodra ze is aangemaakt in de directory, waar iedereen die is ingelogd haar kan vinden en lidmaatschap kan aanvragen.",
       "next": "Volgende",
       "identityStep": "Identiteit",
       "identityTitle": "Identiteit",
@@ -602,7 +603,8 @@
         "listTitle": "Uit te nodigen personen",
         "teamsNote": "Teams stel je in via het tabblad Teams van de organisatie, zodra die bestaat — een team is een groep van haar leden en kan er dus niet eerder zijn.",
         "failed": "De organisatie is aangemaakt, maar {{names}} kon niet worden uitgenodigd. Probeer het opnieuw via het tabblad Leden."
-      }
+      },
+      "visibilityNote_demo": "Deze demo-organisatie en alle inhoud zijn openbaar. Bekijken kan zonder lidmaatschap; lidmaatschapsverzoeken worden niet geaccepteerd."
     },
     "directory": {
       "emptyTitle": "Nog geen organisaties",
@@ -794,10 +796,13 @@
       "profileTitle": "Profiel",
       "profileDescription": "Hoe deze organisatie eruitziet voor haar leden en, als ze openbaar is, in het overzicht.",
       "saved": "Organisatie bijgewerkt",
-      "saveFailed": "Deze wijzigingen konden niet worden opgeslagen.",
+      "saveError": "Deze wijzigingen konden niet worden opgeslagen.",
+      "saveError_demoPrivateResources": "Publiceer alle experimenten, werkboeken, protocollen en macro's voordat je Demo kiest.",
+      "saveError_organization_changed": "De organisatie is gewijzigd. Laad haar opnieuw voordat je weer opslaat.",
       "title": "Instellingen",
       "description": "Alleen eigenaren kunnen dit wijzigen. Beheerders beheren personen en teams.",
-      "unsaved": "Niet-opgeslagen wijzigingen in het profiel."
+      "unsaved": "Niet-opgeslagen wijzigingen in het profiel.",
+      "demoPrivateResources": "Publiceer deze privé-inhoud voordat je Demo kiest."
     },
     "visibility": {
       "title": "Zichtbaarheid",
@@ -809,8 +814,10 @@
       "nowPublic": "Deze organisatie is nu openbaar",
       "nowPrivate": "Deze organisatie is nu privé",
       "changeFailed": "De zichtbaarheid van de organisatie kon niet worden gewijzigd.",
-      "privateHint": "Onzichtbaar van buiten. Niet-leden krijgen een niet-gevonden-pagina en niemand kan lidmaatschap aanvragen.",
-      "publicHint": "Vermeld in de directory. Iedereen die is ingelogd ziet het profiel en de openbare resources, en kan lidmaatschap aanvragen."
+      "hint_private": "Onzichtbaar van buiten. Niet-leden krijgen een niet-gevonden-pagina en niemand kan lidmaatschap aanvragen.",
+      "hint_public": "Vermeld in de directory. Iedereen die is ingelogd ziet het profiel en de openbare resources, en kan lidmaatschap aanvragen.",
+      "description_demo": "Demo-organisaties en alle experimenten, werkboeken, protocollen en macro's die ze bezitten zijn openbaar. Mensen kunnen ze bekijken zonder lid te worden.",
+      "hint_demo": "Zichtbaar in de lijst. Iedereen kan de inhoud bekijken. Demo-organisaties accepteren geen lidmaatschapsverzoeken."
     },
     "delete": {
       "description": "Een organisatie verwijderen kan niet worden teruggedraaid. Wat ze bezit wordt niet meeverwijderd, dus ze moet eerst leeg zijn.",
@@ -903,7 +910,8 @@
     },
     "overview": {
       "visitorNotice": "Je bekijkt een openbaar profiel. Leden zien alles waartoe ze toegang hebben; vraag om lid te worden en een eigenaar beslist."
-    }
+    },
+    "allTypes": "Alle typen"
   },
   "dashboard": {
     "title": "Home",
@@ -1506,5 +1514,16 @@
     "previous": "Vorige",
     "next": "Volgende",
     "pageOf": "Pagina {{page}} van {{totalPages}}"
+  },
+  "platformAdmins": {
+    "title": "Platformbeheerders",
+    "description": "Platformbeheerders beheren demo-organisaties.",
+    "howGranted": "JII kent deze rol buiten de app toe en trekt hem daar in, nadat een tweede persoon elke wijziging heeft goedgekeurd.",
+    "current": "Huidige beheerders",
+    "since": "Sinds {{date}}",
+    "dateUnknown": "Toekenningsdatum niet beschikbaar",
+    "userId": "Gebruikers-id",
+    "loadFailed": "Platformbeheerders konden niet worden geladen.",
+    "retry": "Opnieuw proberen"
   }
 }

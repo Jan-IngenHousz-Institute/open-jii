@@ -233,7 +233,7 @@ describe("<ListOrganizations />", () => {
       vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams(qs));
     }
 
-    it("offers the five types in order and hides Clear filters while nothing is picked", async () => {
+    it("offers the six types in order and hides Clear filters while nothing is picked", async () => {
       openOnUrl("");
       const user = userEvent.setup();
       mockSession({ id: "user-1" });
@@ -249,6 +249,7 @@ describe("<ListOrganizations />", () => {
         "organizations.types.private_company",
         "organizations.types.government_agency",
         "organizations.types.university",
+        "organizations.types.demo",
       ]);
     });
 

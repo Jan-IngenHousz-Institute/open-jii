@@ -56,6 +56,9 @@ export function NewOrganizationForm() {
   // Shared with the identity card, which fills it from the availability check.
   const takenSlugs = useRef(new Set<string>());
   const isSlugTaken = (slug: string) => takenSlugs.current.has(slug);
+  // What choosing Demo overwrote, so leaving it gives the choice back even after the
+  // identity step has been unmounted by Next.
+  const visibilityBeforeDemo = useRef<NewOrganizationFormValues["visibility"] | null>(null);
 
   /**
    * The step components, memoized for the wizard's whole life and deliberately apart from
@@ -80,7 +83,13 @@ export function NewOrganizationForm() {
 
     return {
       identity: createFormStep([
-        (props) => <NewOrganizationIdentityCard {...props} takenSlugs={takenSlugs.current} />,
+        (props) => (
+          <NewOrganizationIdentityCard
+            {...props}
+            takenSlugs={takenSlugs.current}
+            visibilityBeforeDemo={visibilityBeforeDemo}
+          />
+        ),
       ]),
       profile: createFormStep([NewOrganizationProfileCard, NewOrganizationVisibilityCard]),
       people: createFormStep([NewOrganizationPeopleCard]),

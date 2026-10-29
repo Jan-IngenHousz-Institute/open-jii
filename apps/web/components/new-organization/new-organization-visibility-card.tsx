@@ -9,6 +9,7 @@ import { Button } from "@repo/ui/components/button";
 import { FormField, FormItem, FormMessage } from "@repo/ui/components/form";
 import { cn } from "@repo/ui/lib/utils";
 
+import { visibilityKind } from "../organizations/organization-labels";
 import type { NewOrganizationFormValues } from "./steps/form-step";
 
 interface NewOrganizationVisibilityCardProps {
@@ -22,12 +23,14 @@ interface NewOrganizationVisibilityCardProps {
  */
 export function NewOrganizationVisibilityCard({ form }: NewOrganizationVisibilityCardProps) {
   const { t } = useTranslation();
+  const type = form.watch("type");
+  const isDemo = type === "demo";
 
   return (
     // `min-w-0` because this card shares a grid row and would otherwise widen it.
     <SettingsCard
       title={t("organizations.visibility.title")}
-      description={t("organizations.visibility.description")}
+      description={t("organizations.visibility.description", { context: type })}
     >
       <FormField
         control={form.control}
@@ -43,14 +46,17 @@ export function NewOrganizationVisibilityCard({ form }: NewOrganizationVisibilit
               <VisibilityOption
                 icon={Lock}
                 title={t("organizations.visibility.privateLabel")}
-                description={t("organizations.visibility.privateHint")}
+                description={t("organizations.visibility.hint", { context: "private" })}
                 isSelected={field.value === "private"}
+                disabled={isDemo}
                 onSelect={() => field.onChange("private")}
               />
               <VisibilityOption
                 icon={Globe}
                 title={t("organizations.visibility.publicLabel")}
-                description={t("organizations.visibility.publicHint")}
+                description={t("organizations.visibility.hint", {
+                  context: visibilityKind(type, "public"),
+                })}
                 isSelected={field.value === "public"}
                 onSelect={() => field.onChange("public")}
               />
@@ -69,12 +75,14 @@ function VisibilityOption({
   description,
   isSelected,
   onSelect,
+  disabled,
 }: {
   icon: typeof Lock;
   title: string;
   description: string;
   isSelected: boolean;
   onSelect: () => void;
+  disabled?: boolean;
 }) {
   return (
     <Button
@@ -83,6 +91,7 @@ function VisibilityOption({
       variant="outline"
       aria-checked={isSelected}
       onClick={onSelect}
+      disabled={disabled}
       className={cn(
         "h-auto min-w-0 flex-col items-stretch whitespace-normal p-3.5 text-left font-normal",
         isSelected ? "border-primary bg-primary/5" : "hover:border-primary/60",
