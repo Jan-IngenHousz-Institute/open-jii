@@ -4,6 +4,7 @@ export const GUEST_EMAIL_DOMAIN = "guest.openjii.invalid";
 export const GUEST_UPLOAD_MAX_BYTES = 1_048_576;
 export const GUEST_HOURLY_LIMIT = 60;
 export const GUEST_ORGANIZATION_HOURLY_LIMIT = 1200;
+export const GUEST_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 
 const webAddress = /(?:[a-z][a-z\d+.-]*:\/\/|\bwww\.|\b(?:[\p{L}\d-]+\.)+[\p{L}]{2,}(?:\b|\/))/iu;
 

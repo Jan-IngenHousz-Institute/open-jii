@@ -1,46 +1,51 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
-import { AppState } from "react-native";
+import { useEffect, useSyncExternalStore } from "react";
 import { useAuthClient } from "~/features/auth/services/auth";
 import {
   clearLocalCredentials,
+  currentSession,
+  expireGuest,
   readCachedSession,
+  recordGuestClock,
+  sessionClock,
   sessionRevision,
-  subscribeSessionCache,
-  validLocalSession,
 } from "~/features/auth/services/session-cache";
+import { subscribeSession } from "~/features/auth/services/session-clock";
 
 export function useSession() {
   const authClient = useAuthClient();
   const { data: betterAuthSession, isPending, error } = authClient.useSession();
-  useSyncExternalStore(subscribeSessionCache, sessionRevision);
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => setTick((value) => value + 1), 30_000);
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") setTick((value) => value + 1);
-    });
-    return () => {
-      clearInterval(timer);
-      sub.remove();
-    };
-  }, []);
+  useSyncExternalStore(subscribeSession, sessionRevision);
   const cachedSession = readCachedSession();
-  let activeSession = validLocalSession(betterAuthSession ?? cachedSession);
+  const now = sessionClock();
+  const assessed = currentSession(betterAuthSession ?? cachedSession);
+  let activeSession = assessed.session;
+  let expired = assessed.expired;
   // An authoritative empty response must not resurrect a cached guest.
-  if (!betterAuthSession && !isPending && !error && cachedSession?.user.isAnonymous)
+  if (!betterAuthSession && !isPending && !error && cachedSession?.user.isAnonymous) {
+    expired ||= activeSession !== null;
     activeSession = null;
+  }
   let rejectedGuestId: string | undefined;
   if (!activeSession && (betterAuthSession?.user.isAnonymous || cachedSession?.user.isAnonymous)) {
     rejectedGuestId = betterAuthSession?.user.id ?? cachedSession?.user.id;
   }
+  const guestId = activeSession?.user.isAnonymous ? activeSession.user.id : undefined;
   useEffect(() => {
-    if (!rejectedGuestId) return;
+    if (!guestId) return;
     try {
-      clearLocalCredentials(rejectedGuestId, true);
+      recordGuestClock(guestId, now);
+    } catch {
+      /* The mark is kept in memory even if secure storage fails. */
+    }
+  }, [guestId, now]);
+  useEffect(() => {
+    if (!rejectedGuestId || !expired) return;
+    try {
+      expireGuest(rejectedGuestId);
     } catch {
       /* The identity is revoked in memory even if secure storage fails. */
     }
-  }, [rejectedGuestId]);
+  }, [rejectedGuestId, expired]);
   const session = activeSession
     ? {
         data: {

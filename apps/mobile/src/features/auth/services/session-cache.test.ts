@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  _resetSessionCacheForTests,
   acceptNewSession,
+  assessLocalSession,
   clearLocalCredentials,
   getCachedSession,
+  recordGuestClock,
   sessionGeneration,
   validLocalSession,
 } from "./session-cache";
@@ -30,6 +33,7 @@ function guest(id = "guest-a") {
 }
 beforeEach(() => {
   storage.clear();
+  _resetSessionCacheForTests();
   setItem.mockClear();
   vi.setSystemTime(now);
   acceptNewSession("guest-a");
@@ -47,6 +51,10 @@ describe("guest credential lifecycle", () => {
     storage.set("openjii_session_data", JSON.stringify(guest()));
     vi.setSystemTime(now.getTime() + 86400000);
     expect(getCachedSession()).not.toBeNull();
+    setItem.mockClear();
+    recordGuestClock("guest-a");
+    recordGuestClock("guest-a");
+    expect(setItem).toHaveBeenCalledOnce();
     vi.setSystemTime(now.getTime() + 86400000 - 120001);
     expect(validLocalSession(guest())).toBeNull();
     expect(getCachedSession()).toBeNull();
@@ -77,6 +85,21 @@ describe("guest credential lifecycle", () => {
     expect(storage.get("openjii_session_data")).toBe("{}");
     expect(validLocalSession(guest())).toBeNull();
     expect(() => clearLocalCredentials("guest-a")).not.toThrow();
+  });
+  it("validates without writing to secure storage", () => {
+    storage.set("openjii_session_data", JSON.stringify(guest()));
+    setItem.mockClear();
+    getCachedSession();
+    validLocalSession(guest());
+    expect(setItem).not.toHaveBeenCalled();
+  });
+  it("tells a departed guest apart from an expired one", () => {
+    expect(assessLocalSession(guest("guest-c"), now.getTime() + 7 * 86400000)).toEqual({
+      session: null,
+      expired: true,
+    });
+    clearLocalCredentials("guest-d");
+    expect(assessLocalSession(guest("guest-d"))).toEqual({ session: null, expired: false });
   });
   it("preserves researcher offline access without a guest creation date", () => {
     expect(validLocalSession({ user: { id: "researcher" }, session: {} })?.user.id).toBe(

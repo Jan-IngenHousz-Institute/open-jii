@@ -19,22 +19,42 @@ const sessionSchema = z.object({
     .passthrough(),
   session: z.object({ expiresAt: z.union([z.string(), z.date()]).optional() }).passthrough(),
 });
+type LocalSession = z.infer<typeof sessionSchema>;
+
 const listeners = new Set<() => void>();
 let revision = 0;
 let credentialGeneration = 0;
 const departed = new Set<string>();
+const leftFlags = new Map<string, boolean>();
+const guestClocks = new Map<string, number>();
+let cached: { value: LocalSession | null } | undefined;
+let clock = Date.now();
+
 export const hasExpiredGuestSession = () => SecureStore.getItem("openjii_guest_expired") === "true";
 export const sessionGeneration = () => credentialGeneration;
 export const sessionRevision = () => revision;
+export const sessionClock = () => clock;
+
+function emit() {
+  revision++;
+  for (const listener of listeners) listener();
+}
+
+export function advanceSessionClock(now = Date.now()) {
+  clock = now;
+  emit();
+}
+
 export function subscribeSessionCache(listener: () => void) {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
   };
 }
+
 export function notifySessionCache() {
-  revision++;
-  for (const listener of listeners) listener();
+  cached = undefined;
+  emit();
 }
 
 function readValue(key: string) {
@@ -51,27 +71,60 @@ function readValue(key: string) {
   return value;
 }
 
-export function validLocalSession(value: unknown) {
-  const parsed = sessionSchema.safeParse(value);
-  if (!parsed.success) return null;
-  const user = parsed.data.user;
-  if (departed.has(user.id) || SecureStore.getItem(`openjii_left_${user.id}`) === "true")
-    return null;
-  if (user.isAnonymous) {
-    const key = `openjii_guest_clock_${user.id}`;
-    const stored = Number(SecureStore.getItem(key) ?? 0);
-    const lifetime = guestLifetime(
-      user.createdAt,
-      Date.now(),
-      Number.isFinite(stored) ? stored : 0,
-    );
-    if (!lifetime.valid) return null;
-    SecureStore.setItem(key, String(lifetime.highWater));
+function hasLeft(userId: string) {
+  if (departed.has(userId)) return true;
+  let left = leftFlags.get(userId);
+  if (left === undefined) {
+    left = SecureStore.getItem(`openjii_left_${userId}`) === "true";
+    leftFlags.set(userId, left);
   }
-  return parsed.data;
+  return left;
 }
 
-export function readCachedSession() {
+function guestHighWater(userId: string) {
+  let highWater = guestClocks.get(userId);
+  if (highWater === undefined) {
+    const stored = Number(SecureStore.getItem(`openjii_guest_clock_${userId}`) ?? 0);
+    highWater = Number.isFinite(stored) ? stored : 0;
+    guestClocks.set(userId, highWater);
+  }
+  return highWater;
+}
+
+export function assessLocalSession(value: unknown, now = Date.now()) {
+  const parsed = sessionSchema.safeParse(value);
+  if (!parsed.success) return { session: null, expired: false };
+  const user = parsed.data.user;
+  if (hasLeft(user.id)) return { session: null, expired: false };
+  if (user.isAnonymous && !guestLifetime(user.createdAt, now, guestHighWater(user.id)).valid)
+    return { session: null, expired: true };
+  return { session: parsed.data, expired: false };
+}
+
+export function validLocalSession(value: unknown, now = Date.now()) {
+  return assessLocalSession(value, now).session;
+}
+
+type Assessment = ReturnType<typeof assessLocalSession>;
+let assessment: { value: unknown; revision: number; result: Assessment } | undefined;
+
+/** Judged once per change of session, store or clock, however many readers render it. */
+export function currentSession(value: unknown) {
+  if (assessment && assessment.value === value && assessment.revision === revision)
+    return assessment.result;
+  const result = assessLocalSession(value, clock);
+  assessment = { value, revision, result };
+  return result;
+}
+
+/** Keeps the latest time a guest was seen, so winding the clock back cannot extend the session. */
+export function recordGuestClock(userId: string, now = Date.now()) {
+  if (now <= guestHighWater(userId)) return;
+  guestClocks.set(userId, now);
+  SecureStore.setItem(`openjii_guest_clock_${userId}`, String(now));
+}
+
+function readStoredSession() {
   try {
     const raw = readValue(SESSION_CACHE_KEY);
     if (!raw) return null;
@@ -82,8 +135,17 @@ export function readCachedSession() {
   }
 }
 
+export function readCachedSession() {
+  cached ??= { value: readStoredSession() };
+  return cached.value;
+}
+
+export function isSessionCacheKey(key: string) {
+  return key === SESSION_CACHE_KEY || key.startsWith(`${SESSION_CACHE_KEY}.`);
+}
+
 export function getCachedSession() {
-  return validLocalSession(readCachedSession());
+  return validLocalSession(readStoredSession());
 }
 
 function clearSecureValue(key: string) {
@@ -102,7 +164,10 @@ export function clearCachedSession() {
 
 export function clearLocalCredentials(userId?: string, expired = false) {
   credentialGeneration++;
-  if (userId) departed.add(userId);
+  if (userId) {
+    departed.add(userId);
+    leftFlags.set(userId, true);
+  }
   const operations = [
     () => {
       if (userId) SecureStore.setItem(`openjii_left_${userId}`, "true");
@@ -126,9 +191,24 @@ export function clearLocalCredentials(userId?: string, expired = false) {
     throw failure instanceof Error ? failure : new Error("Could not clear local credentials");
 }
 
+/** Once, however many readers notice the expiry. */
+export function expireGuest(userId: string) {
+  if (!departed.has(userId)) clearLocalCredentials(userId, true);
+}
+
 export function acceptNewSession(userId: string) {
   departed.delete(userId);
+  leftFlags.set(userId, false);
   SecureStore.setItem(`openjii_left_${userId}`, "false");
   SecureStore.setItem("openjii_guest_expired", "false");
   notifySessionCache();
+}
+
+// Tests that wipe secure storage between cases reset its in-memory mirror here.
+export function _resetSessionCacheForTests(): void {
+  leftFlags.clear();
+  guestClocks.clear();
+  cached = undefined;
+  assessment = undefined;
+  clock = Date.now();
 }

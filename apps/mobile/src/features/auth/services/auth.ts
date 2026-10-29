@@ -1,5 +1,9 @@
 import * as SecureStore from "expo-secure-store";
-import { sessionGeneration } from "~/features/auth/services/session-cache";
+import {
+  isSessionCacheKey,
+  notifySessionCache,
+  sessionGeneration,
+} from "~/features/auth/services/session-cache";
 import { getEnvVar, useEnvVar } from "~/shared/stores/environment-store";
 
 import { createOpenJiiAuthClient } from "@repo/auth/client.native";
@@ -17,7 +21,9 @@ function clientFor(backendUri: string) {
   const client = createOpenJiiAuthClient(backendUri, {
     getItem: (key) => (generation === sessionGeneration() ? SecureStore.getItem(key) : null),
     setItem: (key, value) => {
-      if (generation === sessionGeneration()) SecureStore.setItem(key, value);
+      if (generation !== sessionGeneration()) return;
+      SecureStore.setItem(key, value);
+      if (isSessionCacheKey(key)) notifySessionCache();
     },
   });
   authClients[backendUri] = { generation, client };
