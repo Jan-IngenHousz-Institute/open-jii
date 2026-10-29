@@ -64,6 +64,8 @@ export const zQuestionCell = zBaseCell.extend({
   question: zExperimentQuestionContent,
   answer: z.string().optional(),
   isAnswered: z.boolean().optional().default(false),
+  // Provenance of the answer, kept here because Clear outputs keeps the answer.
+  simulated: z.boolean().optional(),
 });
 
 const zBranchOperator = z.enum(["eq", "neq", "gt", "lt", "gte", "lte"]);

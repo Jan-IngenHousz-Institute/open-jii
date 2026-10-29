@@ -184,31 +184,33 @@ describe("simulated workbook execution", () => {
     });
     const realProtocol = createProtocolCell();
     const macro = createMacroCell();
-    const device = (deviceId: string, simulated: boolean) => ({
+    const device = (deviceId: string, Phi2: number, simulated?: boolean) => ({
       deviceId,
       deviceLabel: deviceId,
       family: "multispeq" as const,
       simulated,
-      data: { Phi2: 0.8 },
+      data: { Phi2 },
     });
+    const requests: { data: unknown; context?: Record<string, unknown> }[] = [];
     server.use(
-      http.post(`${API_URL}/api/v1/macros/:id/execute`, () =>
-        HttpResponse.json({ macro_id: macro.payload.macroId, success: true, output: { ok: 1 } }),
-      ),
+      http.post(`${API_URL}/api/v1/macros/:id/execute`, async ({ request }) => {
+        requests.push((await request.json()) as (typeof requests)[number]);
+        return HttpResponse.json({ macro_id: macro.payload.macroId, success: true, output: {} });
+      }),
     );
     const hook = renderHook(() => {
       const [cells, setCells] = useState<WorkbookCell[]>([
         scan,
         createOutputCell({
           producedBy: scan.id,
-          data: { Phi2: 0.8 },
-          deviceResults: [device("a", true), device("b", false)],
+          data: { Phi2: 0.1 },
+          deviceResults: [device("a", 0.1, true), device("b", 0.2)],
         }),
         realProtocol,
         createOutputCell({
           producedBy: realProtocol.id,
-          data: { Phi2: 0.8 },
-          deviceResults: [device("a", false), device("b", false)],
+          data: { Phi2: 0.3 },
+          deviceResults: [device("a", 0.3), device("b", 0.4)],
         }),
         macro,
       ]);
@@ -216,18 +218,111 @@ describe("simulated workbook execution", () => {
       return { cells, ...execution };
     });
     await act(() => hook.result.current.runCell(macro.id));
+    expect(requests).toEqual([
+      expect.objectContaining({ data: { Phi2: 0.3 }, context: { scan: { Phi2: 0.1 } } }),
+      expect.objectContaining({ data: { Phi2: 0.4 }, context: { scan: { Phi2: 0.2 } } }),
+    ]);
     const output = hook.result.current.cells.find(
       (c) => c.type === "output" && c.producedBy === macro.id,
     );
     expect(output?.type === "output" && output.deviceResults).toEqual([
-      expect.objectContaining({ deviceId: "a", simulated: true, data: { ok: 1 } }),
-      expect.objectContaining({ deviceId: "b", simulated: undefined, data: { ok: 1 } }),
+      expect.objectContaining({ deviceId: "a", simulated: true }),
+      expect.objectContaining({ deviceId: "b", simulated: undefined }),
     ]);
     hook.unmount();
   });
   it.each([
-    ["a pinned version runs its snapshot", "8a3b8a2e-5c1f-4d2b-9f3e-1a2b3c4d5e6f"],
-    ["a draft runs the live macro", undefined],
+    ["a physical single-device output", ["physical"]],
+    ["a fan-out input whose devices are no longer connected", ["gone-a", "gone-b"]],
+  ])(
+    "labels a macro simulated when the simulator supplies $device for %s",
+    async (_, deviceIds) => {
+      const protocol = createProtocolCell();
+      const macro = createMacroCell();
+      const requests: { context?: Record<string, unknown> }[] = [];
+      server.use(
+        http.post(`${API_URL}/api/v1/macros/:id/execute`, async ({ request }) => {
+          requests.push((await request.json()) as (typeof requests)[number]);
+          return HttpResponse.json({ macro_id: macro.payload.macroId, success: true, output: {} });
+        }),
+      );
+      const hook = renderHook(() => {
+        const [cells, setCells] = useState<WorkbookCell[]>([
+          protocol,
+          createOutputCell({
+            producedBy: protocol.id,
+            data: { Phi2: 0.8 },
+            deviceResults: deviceIds.map((deviceId) => ({ deviceId, data: { Phi2: 0.8 } })),
+          }),
+          macro,
+        ]);
+        const execution = useWorkbookExecution({
+          experiment: demo,
+          cells,
+          onCellsChange: setCells,
+        });
+        return { cells, ...execution };
+      });
+      act(() => hook.result.current.setConnectionType("simulated-multispeq"));
+      await act(() => hook.result.current.connect());
+      await act(() => hook.result.current.runCell(macro.id));
+      expect(requests).toHaveLength(deviceIds.length);
+      for (const request of requests) {
+        expect(request.context?.$device).toMatchObject({ id: "simulated:multispeq" });
+      }
+      const output = hook.result.current.cells.find(
+        (c) => c.type === "output" && c.producedBy === macro.id,
+      );
+      expect(output?.type === "output" && output.deviceResults?.map((r) => r.simulated)).toEqual(
+        deviceIds.map(() => true),
+      );
+      hook.unmount();
+    },
+  );
+  it("keeps a simulated answer's provenance through Clear outputs", async () => {
+    const protocol = createProtocolCell();
+    const question = createQuestionCell();
+    const macro = createMacroCell();
+    const requests: { context?: Record<string, unknown> }[] = [];
+    server.use(
+      http.post(`${API_URL}/api/v1/macros/:id/execute`, async ({ request }) => {
+        requests.push((await request.json()) as (typeof requests)[number]);
+        return HttpResponse.json({ macro_id: macro.payload.macroId, success: true, output: {} });
+      }),
+    );
+    const hook = renderHook(() => {
+      const [cells, setCells] = useState<WorkbookCell[]>([
+        protocol,
+        createOutputCell({ producedBy: protocol.id, data: { Phi2: 0.7 }, simulated: true }),
+        question,
+        macro,
+      ]);
+      const execution = useWorkbookExecution({
+        experiment: demo,
+        cells,
+        onCellsChange: setCells,
+        onPromptQuestion: () => Promise.resolve("leaf 3"),
+      });
+      return { cells, ...execution };
+    });
+    await act(() => hook.result.current.runCell(question.id));
+    act(() => hook.result.current.clearOutputs());
+    expect(hook.result.current.cells.some((c) => c.type === "output")).toBe(false);
+    await act(() => hook.result.current.runCell(macro.id));
+    expect(requests[0].context).toMatchObject({ [question.name]: { answer: "leaf 3" } });
+    expect(hook.result.current.cells.find((c) => c.id === question.id)).toMatchObject({
+      answer: "leaf 3",
+      simulated: true,
+    });
+    const output = hook.result.current.cells.find(
+      (c) => c.type === "output" && c.producedBy === macro.id,
+    );
+    expect(output?.type === "output" && output.simulated).toBe(true);
+    hook.unmount();
+  });
+  it.each([
+    ["sends a published version's id with its macro runs", "8a3b8a2e-5c1f-4d2b-9f3e-1a2b3c4d5e6f"],
+    ["sends no version id with draft macro runs", undefined],
   ])("%s", async (_, workbookVersionId) => {
     const protocol = createProtocolCell();
     const macro = createMacroCell();
