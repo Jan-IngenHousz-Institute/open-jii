@@ -39,6 +39,9 @@ The platform UI is auth-gated, so a real check needs Postgres and the backend, n
 - `pnpm local:login` — signs in the seed user with no browser and no email (it reads the OTP from
   Postgres) and writes the session to `.claude/session.header` for
   `curl -H @.claude/session.header`; the cookie never prints unless you pass `--print`.
+- `pnpm platform-role list`, or `grant`/`revoke --role platform_admin --target <id> --actor <id>`,
+  changes platform roles in the local database; the seed already makes the seed user a platform
+  admin. Dev and prod use the Platform Roles Workflow, never this command.
 - `pnpm dev:fb` — runs backend and web together.
 - `pnpm e2e` — the browser end-to-end suite, against an already-running stack.
 - `pnpm lint`, `pnpm test`, `pnpm typecheck`, `pnpm format:check` — validation.
