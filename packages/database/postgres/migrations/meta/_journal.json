@@ -435,6 +435,13 @@
       "when": 1793196587382,
       "tag": "0061_better_auth_team_seat_counts",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1793196587383,
+      "tag": "0062_cheerful_flatman",
+      "breakpoints": true
     }
   ]
 }

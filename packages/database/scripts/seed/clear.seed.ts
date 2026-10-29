@@ -3,6 +3,7 @@ import { and, eq, inArray, like, or } from "drizzle-orm";
 import { db } from "../../src/postgres/database";
 import { personalOrgSlug } from "../../src/postgres/organizations";
 import {
+  auditLogs,
   users,
   profiles,
   protocols,
@@ -157,6 +158,8 @@ export async function clearSeedData() {
 
   if (seedUsers.length > 0) {
     const accountIds = seedUsers.map((user) => user.id);
+    // The seed grants the seed user a platform role, and its audit rows reference the account.
+    await db.delete(auditLogs).where(inArray(auditLogs.userId, accountIds));
     await db.delete(profiles).where(inArray(profiles.userId, accountIds));
     await db.delete(users).where(inArray(users.id, accountIds));
   }

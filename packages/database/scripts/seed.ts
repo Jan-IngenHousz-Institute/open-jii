@@ -13,7 +13,7 @@ import { seedNotifications } from "./seed/notification.seed";
 import { seedOrganizations } from "./seed/organization.seed";
 import { seedProtocolMacroLinks } from "./seed/protocol-macro.seed";
 import { seedProtocols } from "./seed/protocol.seed";
-import { seedNewcomer, seedUser } from "./seed/user.seed";
+import { seedNewcomer, seedPlatformAdmin, seedUser } from "./seed/user.seed";
 import { seedVisits } from "./seed/visit.seed";
 import { seedWorkbooks } from "./seed/workbook.seed";
 
@@ -29,6 +29,7 @@ async function main() {
 
   const { user, personalOrganizationId } = await seedUser();
   await seedNewcomer();
+  await seedPlatformAdmin(user);
 
   const createdProtocols = await seedProtocols(user, personalOrganizationId);
   const createdMacros = await seedMacros(user, personalOrganizationId);

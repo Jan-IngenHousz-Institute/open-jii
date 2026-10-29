@@ -33,6 +33,7 @@
     "ui-add": "turbo run ui-add",
     "dev:fb": "turbo run dev --filter=backend --filter=web",
     "local:login": "pnpm --filter @repo/devkit run login --",
+    "platform-role": "pnpm --filter @repo/database platform-role --",
     "linear:apply": "pnpm --filter @repo/devkit linear:apply --",
     "linear:auth": "pnpm --filter @repo/devkit linear:auth --",
     "linear:check": "pnpm --filter @repo/devkit linear:check --",
