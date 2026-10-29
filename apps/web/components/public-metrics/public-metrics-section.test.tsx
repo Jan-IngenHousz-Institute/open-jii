@@ -65,7 +65,7 @@ describe("PublicMetricsSection", () => {
     expect(screen.getByText("community.sentence")).toBeInTheDocument();
     expect(screen.getByText("activityChart.title.daily")).toBeInTheDocument();
     expect(screen.getByText("families.title")).toBeInTheDocument();
-    expect(screen.getByText("multispeq")).toBeInTheDocument();
+    expect(screen.getByText("MultispeQ")).toBeInTheDocument();
     expect(screen.getByText("parameter.derivedSentence")).toBeInTheDocument();
     expect(screen.getByText("parameter.sensorSentence")).toBeInTheDocument();
     expect(screen.getByText("captions.streak")).toBeInTheDocument();
@@ -108,10 +108,21 @@ describe("PublicMetricsSection", () => {
     );
 
     expect(screen.getByText("families.title")).toBeInTheDocument();
-    expect(screen.getByText("multispeq")).toBeInTheDocument();
+    expect(screen.getByText("MultispeQ")).toBeInTheDocument();
     // The unresolvable bulk is reported, not drawn as an instrument.
     expect(screen.queryByText("families.unattributed")).not.toBeInTheDocument();
     expect(screen.getByText("families.unresolved")).toBeInTheDocument();
+  });
+
+  it("shows an unrecognised family as stored", () => {
+    render(
+      <PublicMetricsSection
+        metrics={{ ...metrics, families: [{ family: "prototype-x", measurements: 9_000 }] }}
+        locale="en-US"
+      />,
+    );
+
+    expect(screen.getByText("prototype-x")).toBeInTheDocument();
   });
 
   it("omits absent slots while rendering the rest", () => {

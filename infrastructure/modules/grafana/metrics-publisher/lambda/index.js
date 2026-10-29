@@ -68,9 +68,18 @@ exports.handler = async () => {
       SELECT COUNT(*)::int AS total FROM users WHERE registered = true
     `;
 
+    // Over the same ISO week as the signups.
+    const [{ created }] = await sql`
+      SELECT COUNT(*)::int AS created
+      FROM experiments
+      WHERE created_at >= date_trunc('week', now() - INTERVAL '7 days')
+        AND created_at <  date_trunc('week', now())
+    `;
+
     const metricData = [
       { MetricName: "WeeklyNewUsers", Value: signups },
       { MetricName: "TotalUsers", Value: total },
+      { MetricName: "WeeklyNewExperiments", Value: created },
     ].map((point) => ({
       ...point,
       Unit: StandardUnit.Count,
@@ -80,7 +89,13 @@ exports.handler = async () => {
 
     await cw.send(new PutMetricDataCommand({ Namespace: namespace, MetricData: metricData }));
 
-    console.log(JSON.stringify({ signups, totalUsers: total }));
+    console.log(
+      JSON.stringify({
+        signups,
+        totalUsers: total,
+        experimentsCreated: created,
+      }),
+    );
   } finally {
     await sql.end();
   }

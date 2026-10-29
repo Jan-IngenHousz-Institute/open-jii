@@ -26,7 +26,12 @@ from openjii.heartbeat import (
     BROKER_TO_API_LATENCY_METRIC,
     COLLECTOR_HEARTBEAT_METRIC,
     DATA_NAMESPACE,
-    DATABRICKS_COST_7D_METRIC,
+    DATABRICKS_DAILY_COST_METRIC,
+    DATABRICKS_MONTH_PROJECTED_COST_METRIC,
+    DATABRICKS_MONTH_TO_DATE_COST_METRIC,
+    DATABRICKS_PREVIOUS_MONTH_COST_METRIC,
+    DATABRICKS_PREVIOUS_MONTH_TO_DATE_COST_METRIC,
+    DATABRICKS_WEEKLY_COST_METRIC,
     DRIVER_OLD_GEN_METRIC,
     EXPERIMENT_LATENCY_METRIC,
     EXPERIMENT_ROWS_METRIC,
@@ -35,6 +40,7 @@ from openjii.heartbeat import (
     INGEST_IDLE_METRIC,
     INGEST_LATENCY_METRIC,
     INGESTED_ROWS_METRIC,
+    LOGGERS_STARTED_7D_METRIC,
     MACRO_BACKLOG_METRIC,
     MACRO_CAUSES,
     MACRO_FAILED_ROWS_METRIC,
@@ -49,24 +55,30 @@ from openjii.heartbeat import (
     METRICS_AGE_METRIC,
     PATH_BUCKET_MINUTES,
     PROTOCOL_WINDOW_HOURS,
+    RESEARCHERS_STARTED_7D_METRIC,
     SILENT_DEVICES_DETAIL,
     SILENT_DEVICES_METRIC,
     STALE_EXPERIMENTS_DETAIL,
     STALE_EXPERIMENTS_METRIC,
     USAGE_NAMESPACE,
-    cost_by_component_sql,
+    WEEKLY_MEASUREMENTS_METRIC,
     cost_components,
+    cost_windows,
+    cost_windows_sql,
     detail,
     failed_rows_by_cause_sql,
     heartbeat_key,
     hop,
     latest_full_collection,
+    loggers_started_sql,
     minutes_since,
     observation,
     previous_bucket,
     protocol_failures_sql,
+    researchers_started_sql,
     run_collectors,
     to_ndjson,
+    weekly_measurements_sql,
 )
 from openjii.metrics import (
     ACTIVITY_WINDOW_DAYS,
@@ -115,6 +127,7 @@ ACTIVITY_WINDOWS = f"{CATALOG_NAME}.{METRICS_SCHEMA}.{ACTIVITY_WINDOWS_TABLE}"
 DEVICE_SILENCE = f"{CATALOG_NAME}.{METRICS_SCHEMA}.{OPS_DEVICE_SILENCE_TABLE}"
 INGEST_QUALITY = f"{CATALOG_NAME}.{METRICS_SCHEMA}.{OPS_INGEST_QUALITY_TABLE}"
 RAW_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.raw_data"
+CLEAN_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.clean_data"
 EXPERIMENT_RAW_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.experiment_raw_data"
 EXPERIMENT_MACRO_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.experiment_macro_data"
 
@@ -218,6 +231,16 @@ def collect_metrics_tables(now: datetime) -> list[dict]:
     records.append(usage_point(ACTIVE_CONTRIBUTORS_7D_METRIC, row["contributors_7d"], now))
 
     return records
+
+
+def collect_first_measurements(now: datetime) -> list[dict]:
+    """Researchers and loggers whose first measurement fell in the last seven days."""
+    researchers = spark.sql(researchers_started_sql(CLEAN_DATA)).first()
+    loggers = spark.sql(loggers_started_sql(CLEAN_DATA)).first()
+    return [
+        usage_point(RESEARCHERS_STARTED_7D_METRIC, researchers["started"], now),
+        usage_point(LOGGERS_STARTED_7D_METRIC, loggers["started"], now),
+    ]
 
 
 def collect_device_silence(now: datetime) -> list[dict]:
@@ -512,24 +535,56 @@ def collect_driver_heap(now: datetime) -> list[dict]:
 
 
 def collect_databricks_cost(now: datetime) -> list[dict]:
-    """Databricks spend at list price over the last seven complete days, per
-    component, zero for one that spent nothing so its series never goes quiet."""
-    spend = {
-        row["component"]: row["usd"] for row in spark.sql(cost_by_component_sql(COST_COMPONENTS)).collect()
-    }
+    """Databricks spend at list price per component for yesterday and the latest complete
+    week, and in total for the month, each stamped when its window closed. A component that
+    spent nothing reads zero, so its series never goes quiet."""
+    windows = cost_windows(now)
+    spend = {row["component"]: row for row in spark.sql(cost_windows_sql(COST_COMPONENTS, windows)).collect()}
+    components = cost_components(COST_COMPONENTS)
+
+    def usd(component: str, window: str) -> float:
+        return float(spend[component][window]) if component in spend else 0.0
+
+    def total(window: str) -> float:
+        return round(sum(usd(component, window) for component in components), 2)
+
+    def cost_point(metric: str, value: float, at: datetime, component: str | None = None) -> dict:
+        dimensions = None if component is None else {"Component": component}
+        return observation(metric, value, USAGE_NAMESPACE, at, ENVIRONMENT, "None", dimensions)
+
+    month_to_date = total("month_to_date_usd")
 
     return [
-        observation(
-            DATABRICKS_COST_7D_METRIC,
-            float(spend.get(component, 0)),
-            USAGE_NAMESPACE,
-            now,
-            ENVIRONMENT,
-            "None",
-            {"Component": component},
-        )
-        for component in cost_components(COST_COMPONENTS)
+        *[
+            cost_point(DATABRICKS_DAILY_COST_METRIC, usd(c, "day_usd"), windows.day_closed_at, c)
+            for c in components
+        ],
+        *[
+            cost_point(DATABRICKS_WEEKLY_COST_METRIC, usd(c, "week_usd"), windows.week_closed_at, c)
+            for c in components
+        ],
+        cost_point(DATABRICKS_MONTH_TO_DATE_COST_METRIC, month_to_date, windows.day_closed_at),
+        cost_point(
+            DATABRICKS_PREVIOUS_MONTH_TO_DATE_COST_METRIC,
+            total("previous_month_to_date_usd"),
+            windows.day_closed_at,
+        ),
+        cost_point(DATABRICKS_PREVIOUS_MONTH_COST_METRIC, total("previous_month_usd"), windows.day_closed_at),
+        cost_point(
+            DATABRICKS_MONTH_PROJECTED_COST_METRIC,
+            round(windows.projected(month_to_date), 2),
+            windows.day_closed_at,
+        ),
     ]
+
+
+def collect_weekly_measurements(now: datetime) -> list[dict]:
+    """Measurements taken in the latest complete week, stamped when it closed, for its cost per
+    measurement. Republished all week, since offline phones upload days late."""
+    windows = cost_windows(now)
+    row = spark.sql(weekly_measurements_sql(CLEAN_DATA, windows)).first()
+
+    return [usage_point(WEEKLY_MEASUREMENTS_METRIC, row["measurements"], windows.week_closed_at)]
 
 
 # COMMAND ----------
@@ -544,6 +599,7 @@ records = [data_point(COLLECTOR_HEARTBEAT_METRIC, 1, now)]
 collectors = [
     ("experiment_status", collect_experiment_status),
     ("metrics_tables", collect_metrics_tables),
+    ("first_measurements", collect_first_measurements),
     ("device_silence", collect_device_silence),
     ("ingest_quality", collect_ingest_quality),
     ("ingest", collect_ingest),
@@ -556,6 +612,7 @@ collectors = [
     ("path_idle", collect_path_idle),
     ("driver_heap", collect_driver_heap),
     ("databricks_cost", collect_databricks_cost),
+    ("weekly_measurements", collect_weekly_measurements),
 ]
 records.extend(run_collectors(collectors, now, ENVIRONMENT, log))
 

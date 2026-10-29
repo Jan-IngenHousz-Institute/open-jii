@@ -6,7 +6,7 @@ import type { ProtocolMacroList } from "@repo/api/domains/protocol/protocol.sche
 import { macros } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
-import { AppError, failure } from "../../common/utils/fp-utils";
+import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
@@ -182,6 +182,68 @@ describe("ProtocolController - read and update endpoints", () => {
     await testApp
       .get(testApp.resolveOrpcPath(contract.protocols.listProtocols))
       .query({ page: 1, "sort[0][field]": "activity", "sort[0][direction]": "asc" })
+      .withAuth(testUserId)
+      .expect(StatusCodes.BAD_REQUEST);
+  });
+
+  it("listProtocols passes the indexed family and visibility arrays the web client sends", async () => {
+    const executeSpy = vi
+      .spyOn(testApp.module.get(ListProtocolsUseCase), "executePaginated")
+      .mockResolvedValue(success({ items: [], totalCount: 0 }));
+
+    await testApp
+      .get(testApp.resolveOrpcPath(contract.protocols.listProtocols))
+      .query("family[0]=ambyte&family[1]=multispeq&visibility[0]=private&page=1")
+      .withAuth(testUserId)
+      .expect(StatusCodes.OK);
+
+    expect(executeSpy).toHaveBeenCalledWith(
+      1,
+      expect.any(Number),
+      undefined,
+      "all",
+      testUserId,
+      undefined,
+      { families: ["ambyte", "multispeq"], visibilities: ["private"] },
+    );
+  });
+
+  it("listProtocols filters the unpaged list by a single family and visibility", async () => {
+    const ambyte = await testApp.createProtocol({
+      name: "Filtered ambyte",
+      family: "ambyte",
+      createdBy: testUserId,
+      visibility: "private",
+    });
+    const multispeq = await testApp.createProtocol({
+      name: "Filtered multispeq",
+      family: "multispeq",
+      createdBy: testUserId,
+      visibility: "private",
+    });
+
+    const response: SuperTestResponse<{ id: string }[]> = await testApp
+      .get(testApp.resolveOrpcPath(contract.protocols.listProtocols))
+      .query({ family: "ambyte", visibility: "private" })
+      .withAuth(testUserId)
+      .expect(StatusCodes.OK);
+
+    const ids = response.body.map((protocol) => protocol.id);
+    expect(ids).toContain(ambyte.id);
+    expect(ids).not.toContain(multispeq.id);
+  });
+
+  it("listProtocols rejects the mobile family and an unknown visibility", async () => {
+    const path = testApp.resolveOrpcPath(contract.protocols.listProtocols);
+
+    await testApp
+      .get(path)
+      .query({ family: "mobile" })
+      .withAuth(testUserId)
+      .expect(StatusCodes.BAD_REQUEST);
+    await testApp
+      .get(path)
+      .query({ visibility: "hidden" })
       .withAuth(testUserId)
       .expect(StatusCodes.BAD_REQUEST);
   });

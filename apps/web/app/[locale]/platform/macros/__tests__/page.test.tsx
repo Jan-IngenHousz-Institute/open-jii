@@ -27,11 +27,13 @@ vi.mock("@/components/server-prefetch/prefetched-queries", () => ({
 }));
 
 describe("MacroPage", () => {
-  const renderPage = async (sort?: string) =>
+  const renderPage = async (
+    searchParams: { sort?: string; language?: string; visibility?: string } = {},
+  ) =>
     render(
       await Page({
         params: Promise.resolve({ locale: "en-US" }),
-        searchParams: Promise.resolve({ sort }),
+        searchParams: Promise.resolve(searchParams),
       }),
     );
 
@@ -53,7 +55,17 @@ describe("MacroPage", () => {
   });
 
   it("leaves a sorted view to the browser, which parses the sort itself", async () => {
-    await renderPage('[{"field":"name","direction":"asc"}]');
+    await renderPage({ sort: '[{"field":"name","direction":"asc"}]' });
+    expect(prefetched.queries).toEqual([]);
+  });
+
+  it("leaves a language-filtered view to the browser, which parses the filter itself", async () => {
+    await renderPage({ language: "r" });
+    expect(prefetched.queries).toEqual([]);
+  });
+
+  it("leaves a visibility-filtered view to the browser, which parses the filter itself", async () => {
+    await renderPage({ visibility: "private" });
     expect(prefetched.queries).toEqual([]);
   });
 });

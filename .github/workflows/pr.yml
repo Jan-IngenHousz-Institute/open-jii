@@ -100,7 +100,7 @@ jobs:
     env:
       DO_NOT_TRACK: 1
       TURBO_TELEMETRY_DISABLED: 1
-      BUNDLE_DIRS: "infrastructure/modules/monitoring/metrics-forwarder/lambda infrastructure/modules/grafana/metrics-publisher/lambda"
+      BUNDLE_DIRS: "infrastructure/modules/monitoring/metrics-forwarder/lambda infrastructure/modules/grafana/metrics-publisher/lambda infrastructure/modules/grafana/cost-publisher/lambda"
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -169,7 +169,7 @@ jobs:
             # Globbed from inside $rebuilt, because a bare lib/*.js expands against the
             # working directory, stays literal when it matches nothing, and silently
             # skips every compiled file it was meant to compare.
-            for source in index.js catalog.yaml $(cd "$rebuilt" && ls lib/*.js 2>/dev/null); do
+            for source in index.js catalog.yaml cost-services.json $(cd "$rebuilt" && ls lib/*.js 2>/dev/null); do
               [ -e "$rebuilt/$source" ] || continue
               if ! diff -q "$committed/$source" "$rebuilt/$source" > /dev/null 2>&1; then
                 echo "::error file=$dir/function.zip::committed $source differs from a fresh build"
@@ -345,7 +345,7 @@ jobs:
       # apps/data builds/lints/tests through uv; only provision it when that app is affected.
       - name: Setup uv
         if: contains(fromJSON(needs.detect.outputs.affected_apps), 'data')
-        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           enable-cache: true
           # Only apps/data uses uv. Without this, the cache key scan walks the

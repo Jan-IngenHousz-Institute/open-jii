@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { parseCatalog, parsePasses } from "./catalog.js";
+import { COST_METRICS, COST_NAMESPACE, parseCostServices } from "./cost.js";
 import { ALLOWED_NAMESPACES } from "./forwarder.js";
 import type { CatalogMetric } from "./types.js";
 
@@ -44,11 +45,13 @@ const KNOWN_AREAS = [
   "ingest",
   "lakehouse",
   "sandboxes",
+  "adoption",
   "usage",
   "platform",
+  "cost",
   "errors",
 ];
-const KNOWN_SOURCES = ["aws", "dbx", "pg", "api", "posthog", "gh", "composer"];
+const KNOWN_SOURCES = ["aws", "dbx", "pg", "ce", "api", "posthog", "gh", "composer"];
 const KNOWN_STATS = ["Sum", "Maximum", "Minimum", "Average", "SampleCount"];
 const KNOWN_SEVERITIES = ["critical", "warning"];
 // The report dashboards map these to Grafana unit ids; anything else charts as a bare number.
@@ -372,6 +375,20 @@ describe("signals", () => {
     expect([...emitted].filter((name) => !catalogued.some((m) => metricOf(m) === name))).toEqual(
       [],
     );
+  });
+
+  it("name the same series the cost publisher emits, in both directions", () => {
+    const catalogued = metrics.filter((m) => m.signal?.namespace === COST_NAMESPACE);
+    const metricOf = (m: CatalogMetric) =>
+      m.signal?.metric ?? /MetricName="([^"]+)"/.exec(m.signal?.search ?? "")?.[1] ?? "";
+
+    expect(catalogued.filter((m) => !COST_METRICS.includes(metricOf(m))).map((m) => m.id)).toEqual(
+      [],
+    );
+    expect(COST_METRICS.filter((name) => !catalogued.some((m) => metricOf(m) === name))).toEqual(
+      [],
+    );
+    expect(catalogued.filter((m) => m.source !== "ce").map((m) => m.id)).toEqual([]);
   });
 });
 
@@ -772,5 +789,54 @@ describe("the report dashboards", () => {
         ).toEqual([]);
       }
     });
+  });
+});
+
+describe("the cost dashboards", () => {
+  // The panels read the catalogue's own queries and colour by the category file the publisher
+  // maps services with, so an id or a category either side drops is a panel that reads nothing.
+  const costPath = "infrastructure/modules/grafana/dashboard/cost.tf";
+  const cost = readFileSync(join(repoRoot, costPath), "utf8");
+  const services = parseCostServices(
+    readFileSync(join(repoRoot, "docs/monitoring/cost-services.json"), "utf8"),
+  );
+
+  it("read only active catalogue entries", () => {
+    const listed = [...cost.matchAll(/for id in \[([^\]]*)\]/g)].flatMap(([, body]) =>
+      [...body.matchAll(/"([a-z0-9-]+)"/g)].map(([, id]) => id),
+    );
+    const indexed = [...cost.matchAll(/heartbeat_(?:facts|queries)\["([a-z0-9-]+)"\]/g)].map(
+      ([, id]) => id,
+    );
+    const active = new Set(metrics.filter((m) => m.active).map((m) => m.id));
+
+    expect(listed.length + indexed.length).toBeGreaterThan(5);
+    expect(
+      [...listed, ...indexed].filter((id) => !active.has(id)),
+      costPath,
+    ).toEqual([]);
+  });
+
+  it("name only categories the category file lists", () => {
+    const named = [...cost.matchAll(/cost_(?:databricks|vms|tax)\s*=\s*"([^"]+)"/g)].map(
+      ([, name]) => name,
+    );
+
+    expect(named).toHaveLength(3);
+    expect(named.filter((name) => !services.categories.some((c) => c.name === name))).toEqual([]);
+  });
+
+  it("narrow only searches that end where the narrowing clause goes", () => {
+    // cost.tf adds a category clause by replacing the search's closing quote and statistic. A
+    // search written any other way would keep its whole series set without anything failing.
+    const narrowed = [
+      ...cost.matchAll(/replace\(local\.cost_search\["([a-z0-9-]+)"\], "([^"]+)"/g),
+    ];
+    const searchOf = (id: string) => metrics.find((m) => m.id === id)?.signal?.search ?? "";
+
+    expect(narrowed.length).toBeGreaterThan(1);
+    expect(
+      narrowed.filter(([, id, tail]) => !searchOf(id).endsWith(tail)).map(([, id]) => id),
+    ).toEqual([]);
   });
 });

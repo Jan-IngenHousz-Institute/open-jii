@@ -218,4 +218,131 @@ describe("ProtocolRepository explicit sorting", () => {
     assertSuccess(result);
     expect(result.value.map((protocol) => protocol.id)).toEqual([linked.id, unlinked.id]);
   });
+
+  describe("family and visibility filters", () => {
+    async function createListingFixtures() {
+      const other = await testApp.createTestUser({});
+      const ambyte = await testApp.createProtocol({
+        name: "Ambyte public",
+        family: "ambyte",
+        createdBy: owner,
+        visibility: "public",
+      });
+      const multispeq = await testApp.createProtocol({
+        name: "MultispeQ public",
+        family: "multispeq",
+        createdBy: owner,
+        visibility: "public",
+      });
+      const minipar = await testApp.createProtocol({
+        name: "MiniPAR private",
+        family: "minipar",
+        createdBy: owner,
+        visibility: "private",
+      });
+      const othersAmbyte = await testApp.createProtocol({
+        name: "Zeta ambyte public",
+        family: "ambyte",
+        createdBy: other,
+        visibility: "public",
+      });
+      const othersPrivate = await testApp.createProtocol({
+        name: "Zeta ambyte private",
+        family: "ambyte",
+        createdBy: other,
+        visibility: "private",
+      });
+      return { ambyte, multispeq, minipar, othersAmbyte, othersPrivate };
+    }
+
+    async function listIds(
+      filter: Parameters<ProtocolRepository["findAll"]>[6],
+      options: { search?: string; scope?: "all" | "related" } = {},
+    ) {
+      const result = await repository.findAll(
+        options.search,
+        options.scope,
+        owner,
+        undefined,
+        undefined,
+        [{ field: "name", direction: "asc" }],
+        filter,
+      );
+      assertSuccess(result);
+      return result.value.map((protocol) => protocol.id);
+    }
+
+    it("keeps only the picked family, and matches either of two", async () => {
+      const { ambyte, multispeq, othersAmbyte } = await createListingFixtures();
+
+      expect(await listIds({ families: ["ambyte"] })).toEqual([ambyte.id, othersAmbyte.id]);
+      expect(await listIds({ families: ["ambyte", "multispeq"] })).toEqual([
+        ambyte.id,
+        multispeq.id,
+        othersAmbyte.id,
+      ]);
+    });
+
+    it("keeps only the picked visibility, and never shows someone else's private protocol", async () => {
+      const { ambyte, multispeq, minipar, othersAmbyte, othersPrivate } =
+        await createListingFixtures();
+
+      const privateIds = await listIds({ visibilities: ["private"] });
+      expect(privateIds).toEqual([minipar.id]);
+      expect(privateIds).not.toContain(othersPrivate.id);
+      expect(await listIds({ visibilities: ["public"] })).toEqual([
+        ambyte.id,
+        multispeq.id,
+        othersAmbyte.id,
+      ]);
+    });
+
+    it("treats empty lists as no filter", async () => {
+      const { ambyte, multispeq, minipar, othersAmbyte } = await createListingFixtures();
+
+      expect(await listIds({ families: [], visibilities: [] })).toEqual([
+        ambyte.id,
+        minipar.id,
+        multispeq.id,
+        othersAmbyte.id,
+      ]);
+    });
+
+    it("requires both filters to match when both are set", async () => {
+      const { minipar } = await createListingFixtures();
+
+      expect(await listIds({ families: ["ambyte"], visibilities: ["private"] })).toEqual([]);
+      expect(await listIds({ families: ["ambyte", "minipar"], visibilities: ["private"] })).toEqual(
+        [minipar.id],
+      );
+    });
+
+    it("combines with search and with the related scope", async () => {
+      const { ambyte, othersAmbyte } = await createListingFixtures();
+
+      expect(await listIds({ families: ["ambyte"] }, { search: "Zeta" })).toEqual([
+        othersAmbyte.id,
+      ]);
+      expect(await listIds({ families: ["ambyte"] }, { scope: "related" })).toEqual([ambyte.id]);
+    });
+
+    it("counts only the filtered rows in a page's total", async () => {
+      const { ambyte } = await createListingFixtures();
+
+      const result = await repository.findPage(
+        1,
+        1,
+        undefined,
+        undefined,
+        owner,
+        undefined,
+        [{ field: "name", direction: "asc" }],
+        { families: ["ambyte"] },
+      );
+
+      assertSuccess(result);
+      expect(result.value.items.map((protocol) => protocol.id)).toEqual([ambyte.id]);
+      expect(result.value.totalCount).toBe(2);
+    });
+  });
 });

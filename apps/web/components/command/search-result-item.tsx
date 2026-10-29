@@ -1,6 +1,7 @@
 "use client";
 
 import { organizationTypeLabelKey } from "@/components/organizations/organization-labels";
+import { formatSensorFamily } from "@/util/sensor-family";
 import { stripHtml } from "@/util/strip-html";
 import { BookOpen, Building2, Code, FileSliders, Leaf, Microscope } from "lucide-react";
 import * as React from "react";
@@ -39,7 +40,8 @@ function metaLabel(type: SearchResultType, meta: string, t: (key: string) => str
     // An unrecognised spelling renders as stored rather than as a missing-key placeholder.
     return parsed.success ? t(organizationTypeLabelKey(parsed.data)) : meta;
   }
-  // Protocol family and any other label: capitalize the first letter.
+  if (type === "protocol") return formatSensorFamily(meta);
+  // Any other label: capitalize the first letter.
   return meta.charAt(0).toUpperCase() + meta.slice(1);
 }
 

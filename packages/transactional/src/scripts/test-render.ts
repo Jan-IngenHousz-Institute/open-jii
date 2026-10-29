@@ -5,10 +5,12 @@ import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 
 import { renderAccessGrantedNotification } from "../render/access-granted-notification";
+import { renderApiKeyCreatedNotification } from "../render/api-key-created-notification";
 import { renderExperimentMadePublicNotification } from "../render/experiment-made-public-notification";
 import { renderOrganizationMembershipRemoved } from "../render/organization-membership-removed";
 import { renderOrganizationRoleChanged } from "../render/organization-role-changed";
 import { renderOtpEmail } from "../render/otp-email";
+import { renderPasskeyAddedNotification } from "../render/passkey-added-notification";
 import { renderProjectTransferComplete } from "../render/project-transfer-complete";
 import { renderResourceDeletedNotification } from "../render/resource-deleted-notification";
 import { renderTransferRequestConfirmation } from "../render/transfer-request-confirmation";
@@ -90,6 +92,35 @@ async function main(): Promise<void> {
       baseUrl,
       experimentName: "Leaf Area Index",
       experimentUrl: `${baseUrl}/en-US/platform/experiments/123`,
+    }),
+  );
+
+  write(
+    "api-key-created",
+    await renderApiKeyCreatedNotification({
+      host,
+      baseUrl,
+      keyName: "Field laptop",
+      apiKeysUrl: `${baseUrl}/en-US/platform/account/api-keys`,
+    }),
+  );
+
+  write(
+    "passkey-added",
+    await renderPasskeyAddedNotification({
+      host,
+      baseUrl,
+      passkeyName: "Google Password Manager",
+      securityUrl: `${baseUrl}/en-US/platform/account/security`,
+    }),
+  );
+
+  write(
+    "passkey-added-unnamed",
+    await renderPasskeyAddedNotification({
+      host,
+      baseUrl,
+      securityUrl: `${baseUrl}/en-US/platform/account/security`,
     }),
   );
 

@@ -14,6 +14,7 @@ import {
 import { orpc, orpcClient } from "~/lib/orpc";
 import { getLiveProtocolCode } from "~/lib/protocol-code-registry";
 import { parseApiError } from "~/util/apiError";
+import { getSensorFamilyLabel } from "~/util/sensor-family";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type {
@@ -646,7 +647,9 @@ export function useWorkbookExecution({
               : updated;
       }
       for (const s of skipped) {
-        messages.push(`${s.label} (${s.family}): no measurement resolved this round`);
+        messages.push(
+          `${s.label} (${getSensorFamilyLabel(s.family)}): no measurement resolved this round`,
+        );
       }
 
       setCellState(cell.id, { status: "completed" });

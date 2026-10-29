@@ -177,6 +177,7 @@ describe("CommandPalette", () => {
     ).not.toBe(0);
     expect(experiment).toBeInTheDocument();
     expect(screen.getByText("Photosynthesis protocol")).toBeInTheDocument();
+    expect(screen.getByText("MultispeQ")).toBeInTheDocument();
     expect(screen.getByText("Photosynthesis workbook")).toBeInTheDocument();
     expect(screen.getByText("commandPalette.groups.searchResults")).toBeInTheDocument();
 
@@ -212,6 +213,28 @@ describe("CommandPalette", () => {
     expect(router.push).toHaveBeenCalledWith(
       "/en-US/platform/organizations/44444444-4444-4444-4444-444444444444",
     );
+  });
+
+  it("shows an unrecognised protocol family as stored", async () => {
+    mockSearch({
+      enabled: true,
+      results: [
+        {
+          type: "protocol",
+          id: "22222222-2222-2222-2222-222222222222",
+          title: "Photosynthesis protocol",
+          subtitle: null,
+          meta: "prototype-x",
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<CommandPalette locale="en-US" />);
+    openPalette();
+    const input = await screen.findByPlaceholderText("commandPalette.placeholder");
+    await user.type(input, "photo");
+
+    expect(await screen.findByText("prototype-x")).toBeInTheDocument();
   });
 
   it("shows a loading state while searching", async () => {

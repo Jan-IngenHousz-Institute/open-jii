@@ -3,6 +3,7 @@
 import { OverviewToolbar } from "@/components/overview-toolbar";
 import React from "react";
 import { ListPagination } from "~/components/list-pagination";
+import { ClearFiltersButton } from "~/components/overview-table/clear-filters-button";
 import { getMacroColumns } from "~/components/overview-table/macro-columns";
 import {
   createOverviewTableSorting,
@@ -11,17 +12,14 @@ import {
 import { ResetSortingButton } from "~/components/overview-table/reset-sorting-button";
 import { useMacros } from "~/hooks/macro/useMacros/useMacros";
 import { useLocale } from "~/hooks/useLocale";
+import { getMacroLanguageLabel } from "~/util/macro-language";
 
-import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
+import { zMacroLanguage } from "@repo/api/domains/macro/macro.schema";
+import { zVisibility } from "@repo/api/domains/visibility/visibility.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
+import { MultiSelectFilter } from "@repo/ui/components/multi-select-filter";
 import { SearchInput } from "@repo/ui/components/search-input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/select";
 
 export function ListMacros() {
   const {
@@ -34,13 +32,17 @@ export function ListMacros() {
     search,
     debouncedSearch,
     setSearch,
-    language,
-    setLanguage,
     page,
     setPage,
     sort,
     setSort,
     toggleSort,
+    languages,
+    setLanguages,
+    visibilities,
+    setVisibilities,
+    clearFilters,
+    hasActiveFilters,
   } = useMacros();
   const { t } = useTranslation(["macro", "common"]);
   const locale = useLocale();
@@ -62,22 +64,29 @@ export function ListMacros() {
         }
         filters={
           <>
-            <Select
-              value={language ?? "all"}
-              onValueChange={(value: string) =>
-                setLanguage(value === "all" ? undefined : (value as MacroLanguage))
-              }
-            >
-              <SelectTrigger className="w-full md:w-[150px]">
-                <SelectValue placeholder={t("macros.filterByLanguage")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("macros.allLanguages")}</SelectItem>
-                <SelectItem value="python">Python</SelectItem>
-                <SelectItem value="r">R</SelectItem>
-                <SelectItem value="javascript">JavaScript</SelectItem>
-              </SelectContent>
-            </Select>
+            <MultiSelectFilter
+              title={t("macros.columns.language")}
+              options={zMacroLanguage.options.map((value) => ({
+                value,
+                label: getMacroLanguageLabel(value),
+              }))}
+              selected={languages}
+              onChange={setLanguages}
+              emptyLabel={t("common.filterNoResults")}
+              selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
+            />
+            <MultiSelectFilter
+              title={t("macros.visibility")}
+              options={zVisibility.options.map((value) => ({
+                value,
+                label: t(`macros.${value}`),
+              }))}
+              selected={visibilities}
+              onChange={setVisibilities}
+              emptyLabel={t("common.filterNoResults")}
+              selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
+            />
+            <ClearFiltersButton active={hasActiveFilters} onClear={clearFilters} />
             <ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />
           </>
         }
@@ -104,7 +113,20 @@ export function ListMacros() {
           retryLabel={t("common.errors.tryAgain")}
           getRowKey={(macro) => macro.id}
           getRowHref={(macro) => `/${locale}/platform/macros/${macro.id}`}
-          emptyMessage={t(hasSearch ? "macros.noMatches" : "macros.noMacros")}
+          emptyMessage={t(
+            hasActiveFilters
+              ? "macros.noFilterMatches"
+              : hasSearch
+                ? "macros.noMatches"
+                : "macros.noMacros",
+          )}
+          emptyAction={
+            hasActiveFilters && (
+              <Button variant="outline" size="sm" onClick={clearFilters}>
+                {t("common.clearFilters")}
+              </Button>
+            )
+          }
         />
 
         {macros && macros.items.length > 0 && (

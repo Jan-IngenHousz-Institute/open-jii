@@ -70,6 +70,14 @@
     "./render/experiment-made-public-notification": {
       "types": "./dist/render/experiment-made-public-notification.d.ts",
       "default": "./dist/render/experiment-made-public-notification.js"
+    },
+    "./render/api-key-created-notification": {
+      "types": "./dist/render/api-key-created-notification.d.ts",
+      "default": "./dist/render/api-key-created-notification.js"
+    },
+    "./render/passkey-added-notification": {
+      "types": "./dist/render/passkey-added-notification.d.ts",
+      "default": "./dist/render/passkey-added-notification.js"
     }
   },
   "scripts": {
