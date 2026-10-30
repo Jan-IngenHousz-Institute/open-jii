@@ -102,6 +102,11 @@ when that same owner returns. An unresolved row can remain beyond seven days;
 cleanup does not guess whether it belongs to a researcher. Same-ID account
 conversion and its historical provenance are reviewed in the conversion milestone.
 
+Android also checks the capture owner before requesting an S3 URL and when the
+issuer returns it. The same checks apply to an expired URL's refresh. If the
+account changes while a PUT is pending, its 403 cannot request a key for the
+new account. The unsent row stays pending until its capture owner returns.
+
 The mobile guest outbox stops automatic retry
 on authorization, size and quota refusals, while transient failures retain the
 existing retry behavior.

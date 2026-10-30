@@ -20,6 +20,7 @@ export interface PublishMeta {
   // to serialize anyway (to size the payload), so a multi-megabyte measurement
   // is not stringified twice per attempt.
   serialized?: string;
+  ownerUserId?: string;
   guest?: boolean;
 }
 

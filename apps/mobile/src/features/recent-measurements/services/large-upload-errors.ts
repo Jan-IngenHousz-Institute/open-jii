@@ -4,6 +4,7 @@ export type LargeUploadErrorKind =
   /** The stored topic carries no experiment id, so no upload URL can be minted. */
   | "NoExperiment"
   | "TooLarge"
+  | "IdentityChanged"
   /** The session is gone, so re-authenticating is the only way forward. */
   | "Unauthenticated"
   /** The signed-in user may not contribute to this experiment. */

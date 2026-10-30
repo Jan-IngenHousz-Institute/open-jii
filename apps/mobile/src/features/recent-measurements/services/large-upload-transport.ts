@@ -1,3 +1,4 @@
+import { getLocalUploadIdentity } from "~/features/auth/services/local-upload-identity";
 import type { PublishMeta, Transport } from "~/features/connection/services/mqtt/mqtt-transport";
 import { apiErrorCode } from "~/features/experiments/utils/api-error";
 import { getApiClient } from "~/shared/api/client";
@@ -54,7 +55,27 @@ class LargeUploadTransportImpl implements Transport {
     trace?.event("large_upload_start", { bytes, experiment_id: experimentId });
     log.info("upload start", { experimentId, bytes });
 
-    const target = await this.requestTarget(experimentId, guest ? bytes : undefined);
+    const assertOwner = () => {
+      const identity = getLocalUploadIdentity();
+      if (
+        !meta?.ownerUserId ||
+        identity?.userId !== meta.ownerUserId ||
+        identity.isGuest !== guest
+      ) {
+        throw new LargeUploadError(
+          "IdentityChanged",
+          "capture owner is no longer signed in",
+          false,
+        );
+      }
+    };
+    const issueTarget = async () => {
+      assertOwner();
+      const issued = await this.requestTarget(experimentId, guest ? bytes : undefined);
+      assertOwner();
+      return issued;
+    };
+    const target = await issueTarget();
     const response = await this.put(target.uploadUrl, body);
     if (response.ok) {
       trace?.event("large_upload_stored", { key: target.key });
@@ -66,7 +87,7 @@ class LargeUploadTransportImpl implements Transport {
     // answers a stale signature with 403, which one fresh URL resolves.
     if (response.status === 403 && !guest) {
       trace?.event("large_upload_url_expired");
-      const retryTarget = await this.requestTarget(experimentId, guest ? bytes : undefined);
+      const retryTarget = await issueTarget();
       const retried = await this.put(retryTarget.uploadUrl, body);
       if (retried.ok) {
         trace?.event("large_upload_stored", { key: retryTarget.key, after_refresh: true });

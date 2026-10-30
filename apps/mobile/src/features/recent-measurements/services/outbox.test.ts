@@ -170,6 +170,26 @@ function assertDefined<T>(value: T | null | undefined, label: string): T {
 }
 
 describe("Outbox", () => {
+  it("holds an unsent row when its S3 transport observes an account switch", async () => {
+    const transport = makeTransport();
+    const largeTransport = makeTransport();
+    const { outbox, LargeUploadError } = await freshOutbox(transport, { largeTransport });
+    mockGetMeasurementById.mockResolvedValue(row({ result: { large: "x".repeat(200_000) } }));
+    const settled = vi.fn();
+    outbox.subscribeSettled(settled);
+    outbox.enqueue("row-1");
+    await waitUntil(() => largeTransport.calls.length === 1);
+    expect(largeTransport.calls).toHaveLength(1);
+    largeTransport.rejectNext(
+      new LargeUploadError("IdentityChanged", "capture owner changed", false),
+    );
+    await waitUntil(() => !outbox.isProcessing("row-1"));
+    expect(mockMarkAsFailed).not.toHaveBeenCalled();
+    expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
+    expect(settled).not.toHaveBeenCalled();
+    outbox.destroy();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetMeasurementIds.mockResolvedValue([]);

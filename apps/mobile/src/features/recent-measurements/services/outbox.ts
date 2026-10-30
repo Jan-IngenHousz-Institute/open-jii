@@ -13,7 +13,7 @@ import { onAppForeground } from "~/shared/device/app-lifecycle";
 import { createLogger } from "~/shared/observability/logger";
 import { getTrace, startTrace } from "~/shared/observability/trace";
 
-import { isRetryableUploadError } from "./large-upload-errors";
+import { isLargeUploadError, isRetryableUploadError } from "./large-upload-errors";
 import {
   MQTT_PAYLOAD_LIMIT_BYTES,
   UPLOAD_CONCURRENCY,
@@ -383,6 +383,7 @@ class OutboxImpl implements Outbox {
     try {
       await transport.publish(row.data.topic, payload, {
         traceId: id,
+        ownerUserId: ownerId,
         serialized,
         ...(guest ? { guest: true } : {}),
       });
@@ -390,6 +391,10 @@ class OutboxImpl implements Outbox {
       // A teardown in flight rejects pending publishes; don't reschedule them
       // onto a queue we're about to discard.
       if (this.destroyed) return;
+      if (isLargeUploadError(err) && err.kind === "IdentityChanged") {
+        trace?.end("ok", { skipped: "owner_not_signed_in" });
+        return;
+      }
       const kind = errorKind(err);
       if (isRetryableUploadError(err)) {
         // Rethrow so the AsyncRetryer schedules the next attempt. When every
