@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { QueryClient, dehydrate } from "@tanstack/react-query";
-import { act, render, screen } from "@testing-library/react-native";
+import { act, render, screen, waitFor } from "@testing-library/react-native";
 import { Text } from "react-native";
 import { beforeEach, expect, it, vi } from "vitest";
 import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
@@ -161,4 +161,14 @@ it("stops retrying when storage keeps failing and opens with the identity's own 
     if (original) getItem.mockImplementation(original);
     vi.useRealTimers();
   }
+});
+
+it("opens the identity-scoped provider after its selection storage succeeds", async () => {
+  render(
+    <IdentityQueryProvider>
+      <Text>ready app</Text>
+    </IdentityQueryProvider>,
+  );
+  await waitFor(() => expect(screen.getByText("ready app")).toBeTruthy());
+  expect(cacheFor).toHaveBeenLastCalledWith("signed-out");
 });

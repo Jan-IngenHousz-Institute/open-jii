@@ -3,7 +3,7 @@ import { COMMAND_PALETTE_OPEN_EVENT } from "@/components/shortcuts/shortcuts-roo
 import { render, screen, fireEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { SidebarProvider } from "@repo/ui/components/sidebar";
+import { SidebarProvider, useSidebar } from "@repo/ui/components/sidebar";
 
 import { AppSidebar } from "./navigation-sidebar";
 
@@ -58,10 +58,20 @@ const translations = {
   organizationsTitle: "Organizations",
 };
 
-function renderSidebar({ isGuest = false } = {}) {
+function MobileState() {
+  const { openMobile, setOpenMobile } = useSidebar();
+  return (
+    <>
+      <button onClick={() => setOpenMobile(true)}>Open mobile sidebar</button>
+      <output>{String(openMobile)}</output>
+    </>
+  );
+}
+function renderSidebar({ isGuest = false, withMobileState = false } = {}) {
   return render(
     <PrincipalProvider userId="user-1" isGuest={isGuest}>
       <SidebarProvider>
+        {withMobileState && <MobileState />}
         <AppSidebar
           locale="en"
           navigationData={navigationData}
@@ -168,6 +178,18 @@ describe("AppSidebar", () => {
     const { container } = renderSidebar();
 
     expect(container.querySelector('[data-sidebar="trigger"]')).toBeNull();
+  });
+
+  it("closes mobile navigation when What's new opens", () => {
+    const opened = vi.fn();
+    window.addEventListener("openjii:open-whats-new", opened);
+    renderSidebar({ withMobileState: true });
+    fireEvent.click(screen.getByRole("button", { name: "Open mobile sidebar" }));
+    expect(screen.getByRole("status")).toHaveTextContent("true");
+    fireEvent.click(screen.getByRole("button", { name: "whatsNew.navLabel" }));
+    expect(screen.getByRole("status")).toHaveTextContent("false");
+    expect(opened).toHaveBeenCalledTimes(1);
+    window.removeEventListener("openjii:open-whats-new", opened);
   });
 
   it("aligns every secondary utility as the same compact sidebar row", () => {

@@ -4,6 +4,7 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
+  useTopMeasurements,
   useAllMeasurements,
   useHasAnyMeasurements,
   useMeasurementCounts,
@@ -86,6 +87,20 @@ describe("useAllMeasurements", () => {
 
   afterEach(() => {
     queryClient.clear();
+  });
+
+  it("loads a top-measurement preview scoped to the current researcher", async () => {
+    mockGetMeasurementsList.mockResolvedValueOnce([
+      row("preview", "pending", "2026-10-30", "Demo"),
+    ]);
+    const { result } = renderHook(() => useTopMeasurements(3), { wrapper });
+    await waitFor(() => expect(result.current.measurements).toHaveLength(1));
+    expect(mockGetMeasurementsList).toHaveBeenCalledWith(["pending", "failed", "successful"], {
+      viewer: { userId: "researcher", isGuest: false },
+      limit: 3,
+      offset: 0,
+    });
+    expect(result.current.measurements[0].key).toBe("preview");
   });
 
   // ---------------------------------------------------------------------------

@@ -2,6 +2,7 @@ import { PrincipalProvider } from "@/components/auth/principal-context";
 import { NOTIFICATION_BELL_OPEN_EVENT } from "@/components/notifications/notifications-popover";
 import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
 import { render, fireEvent, screen } from "@/test/test-utils";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -87,6 +88,13 @@ describe("ShortcutsRoot", () => {
     const { router } = renderShortcuts();
     key("c");
     expect(router.push).toHaveBeenCalledWith("/en-US/platform/experiments/new");
+  });
+
+  it.each(["protocols", "macros"])("C opens the %s create form for a researcher", (section) => {
+    vi.mocked(usePathname).mockReturnValue(`/platform/${section}`);
+    const { router } = renderShortcuts();
+    key("c");
+    expect(router.push).toHaveBeenCalledWith(`/en-US/platform/${section}/new`);
   });
 
   it("sends a guest neither to a create form, transfer requests nor account settings", () => {

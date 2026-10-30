@@ -4,6 +4,8 @@ import {
   _resetSessionCacheForTests,
   acceptNewSession,
   assessLocalSession,
+  clearCachedSession,
+  subscribeSessionCache,
   clearLocalCredentials,
   getCachedSession,
   recordGuestClock,
@@ -106,4 +108,16 @@ describe("guest credential lifecycle", () => {
       "researcher",
     );
   });
+});
+
+it("clears the stored identity snapshot and notifies readers", () => {
+  storage.set("openjii_session_data", JSON.stringify(guest()));
+  expect(getCachedSession()?.user.id).toBe("guest-a");
+  const listener = vi.fn();
+  const unsubscribe = subscribeSessionCache(listener);
+  clearCachedSession();
+  expect(storage.get("openjii_session_data")).toBe("{}");
+  expect(getCachedSession()).toBeNull();
+  expect(listener).toHaveBeenCalledTimes(1);
+  unsubscribe();
 });

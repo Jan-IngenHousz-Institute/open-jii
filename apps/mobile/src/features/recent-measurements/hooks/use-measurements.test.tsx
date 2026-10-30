@@ -7,6 +7,8 @@ import type { Measurement } from "~/shared/db/measurements-storage";
 
 import { useMeasurements } from "./use-measurements";
 
+vi.mock("~/features/auth/hooks/use-session", () => ({ useSession: () => ({ user: null }) }));
+
 vi.mock("~/shared/db/measurements-storage", () => ({
   saveMeasurement: vi.fn(),
   UNSYNCED_STATUSES: ["pending", "failed"],

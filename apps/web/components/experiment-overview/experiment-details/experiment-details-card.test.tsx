@@ -1,3 +1,4 @@
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import { createExperiment, createLocation } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent } from "@/test/test-utils";
@@ -94,7 +95,10 @@ const mockContributors: ExperimentContributor[] = [
   },
 ];
 
-function renderComponent(props: Partial<ComponentProps<typeof ExperimentDetailsCard>> = {}) {
+function renderComponent(
+  props: Partial<ComponentProps<typeof ExperimentDetailsCard>> = {},
+  isGuest = false,
+) {
   const defaultProps: React.ComponentProps<typeof ExperimentDetailsCard> = {
     experimentId: "exp-123",
     experiment: mockExperiment,
@@ -109,7 +113,11 @@ function renderComponent(props: Partial<ComponentProps<typeof ExperimentDetailsC
     ...props,
   };
 
-  return render(<ExperimentDetailsCard {...defaultProps} />);
+  return render(
+    <PrincipalProvider userId="viewer" isGuest={isGuest}>
+      <ExperimentDetailsCard {...defaultProps} />
+    </PrincipalProvider>,
+  );
 }
 
 describe("ExperimentDetailsCard", () => {
@@ -119,6 +127,11 @@ describe("ExperimentDetailsCard", () => {
       data: { user: { id: "user-1" } },
       isPending: false,
     } as unknown as ReturnType<typeof useSession>);
+  });
+
+  it("shows guest contributor labels without linking to denied collaborator management", () => {
+    renderComponent({}, true);
+    expect(screen.getByTestId("experiment-members-trail")).not.toHaveAttribute("data-href");
   });
 
   it("renders title", () => {

@@ -59,6 +59,17 @@ describe.each([
     await waitFor(() => expect(client.getQueryData(["guest-result"])).toBeUndefined());
     expect(state.signOut).toHaveBeenCalledTimes(2);
   });
+  it("closes the dialog with Escape without leaving", async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <GuestBanner name="Visitor" locale={locale} />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: copy.demo.leave }));
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(state.signOut).not.toHaveBeenCalled();
+  });
   it("offline and Cancel leave the guest data untouched", async () => {
     Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
     const client = new QueryClient();

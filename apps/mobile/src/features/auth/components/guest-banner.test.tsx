@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { Modal } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SettledItem } from "~/features/recent-measurements/services/outbox";
 import english from "~/shared/i18n/locales/en-US/auth.json";
@@ -149,6 +150,25 @@ describe.each([
     fireEvent.press(screen.getAllByText(copy.demo.leave)[1]);
     expect(await screen.findByText(copy.demo.leaveCheckError)).toBeTruthy();
     expect(screen.queryByText(copy.demo.uploadError)).toBeNull();
+    expect(state.logout).not.toHaveBeenCalled();
+  });
+  it("keeps the guest signed in when listing uploads fails or returns no rows", async () => {
+    await warn();
+    state.ids.mockRejectedValueOnce(new Error("disk unavailable"));
+    fireEvent.press(screen.getByText(copy.demo.upload));
+    expect(await screen.findByText(copy.demo.uploadError)).toBeTruthy();
+    expect(state.logout).not.toHaveBeenCalled();
+    state.ids.mockResolvedValueOnce([]);
+    fireEvent.press(screen.getByText(copy.demo.upload));
+    await waitFor(() => expect(state.enqueue).toHaveBeenCalledWith([]));
+    expect(screen.queryByText(copy.demo.uploading)).toBeNull();
+    expect(screen.queryByText(copy.demo.uploadError)).toBeNull();
+  });
+  it("closes the leave dialog with the Android back action", () => {
+    const view = show();
+    fireEvent.press(screen.getByText(copy.demo.leave));
+    fireEvent(view.UNSAFE_getByType(Modal), "requestClose");
+    expect(screen.queryByText(copy.demo.leaveTitle)).toBeNull();
     expect(state.logout).not.toHaveBeenCalled();
   });
   it("is absent for a researcher", () => {

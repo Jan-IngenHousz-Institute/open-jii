@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
-import { getAuthClient, _resetAuthClientsForTests } from "./auth";
+import { useAuthClient, getAuthClient, _resetAuthClientsForTests } from "./auth";
 import { acceptNewSession, clearLocalCredentials } from "./session-cache";
 
 const { storage, clients } = vi.hoisted(() => ({
@@ -43,4 +43,9 @@ it("a late auth response cannot restore guest A credentials after leave or overw
   clients[0].setItem("openjii_session_data", "guest-a-data");
   expect(storage.get("openjii_cookie")).toBe("guest-b-token");
   expect(storage.get("openjii_session_data")).toBe("{}");
+});
+
+it("uses the same identity-scoped client for hook and imperative consumers", () => {
+  expect(useAuthClient()).toBe(getAuthClient());
+  expect(clients).toHaveLength(1);
 });

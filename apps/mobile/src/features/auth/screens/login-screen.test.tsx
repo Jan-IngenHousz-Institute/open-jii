@@ -4,6 +4,7 @@ import React from "react";
 import { TouchableOpacity } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import LoginScreen from "~/features/auth/screens/login-screen";
+import { hasExpiredGuestSession } from "~/features/auth/services/session-cache";
 import auth from "~/shared/i18n/locales/en-US/auth.json";
 import common from "~/shared/i18n/locales/en-US/common.json";
 import { deferred } from "~/shared/testing/deferred";
@@ -13,7 +14,7 @@ import { OTPInput } from "~/shared/ui/OTPInput";
 vi.mock("~/features/auth/services/auth", () => ({ getAuthClient: () => ({ $fetch: vi.fn() }) }));
 vi.mock("~/features/auth/services/session-cache", () => ({
   acceptNewSession: vi.fn(),
-  hasExpiredGuestSession: () => false,
+  hasExpiredGuestSession: vi.fn(() => false),
 }));
 
 const { probe, verifyEmailOTP } = vi.hoisted(() => ({
@@ -44,6 +45,7 @@ vi.mock("~/shared/i18n", () => ({
   useTranslation: (namespace?: string) => ({
     t: (key: string) => {
       const authKey = key.startsWith("auth:") ? key.slice(5) : key;
+      if (authKey === "demo.expired") return auth.demo.expired;
       const labels: Record<string, unknown> =
         key.startsWith("auth:") || namespace === "auth" ? auth : common;
       return labels[authKey] ?? key;
@@ -58,6 +60,7 @@ let client: QueryClient;
 beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   probe.mockReset();
+  vi.mocked(hasExpiredGuestSession).mockReturnValue(false);
   verifyEmailOTP.mockReset();
 });
 
@@ -208,4 +211,10 @@ it("accepts OTP success for a new account without a registration screen", async 
     expect(verifyEmailOTP).toHaveBeenCalledExactlyOnceWith("new@example.test", "123456"),
   );
   expect(screen.queryByText("errors.expiredOtp")).toBeNull();
+});
+
+it("explains an expired guest session before offering a new demo entry", () => {
+  vi.mocked(hasExpiredGuestSession).mockReturnValue(true);
+  renderLogin();
+  expect(screen.getByText(auth.demo.expired)).toBeTruthy();
 });
