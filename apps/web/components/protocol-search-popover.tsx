@@ -1,6 +1,7 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { personName } from "@/components/people/person-name";
 import { useLocale } from "@/hooks/useLocale";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { SearchX, ExternalLink } from "lucide-react";
@@ -67,6 +68,9 @@ function ProtocolList({
     <>
       {protocols.map((protocol) => {
         const isPreferred = protocol.sortOrder !== null;
+        const author = personName({ displayName: protocol.createdByName }, t, {
+          placement: "byline",
+        });
         return (
           <CommandItem
             key={protocol.id}
@@ -107,10 +111,10 @@ function ProtocolList({
               </div>
 
               {/* Created by */}
-              {protocol.createdByName && (
+              {author && (
                 <div className="text-muted-foreground truncate text-xs">
                   <span className="opacity-75">{t("experiments.createdBy")}</span>{" "}
-                  <span className="font-medium">{protocol.createdByName}</span>
+                  <span className="font-medium">{author}</span>
                 </div>
               )}
             </div>

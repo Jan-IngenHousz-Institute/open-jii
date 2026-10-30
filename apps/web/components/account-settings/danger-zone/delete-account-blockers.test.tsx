@@ -1,10 +1,11 @@
 import { createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { DeletionBlocker, UserMetadata } from "@repo/api/domains/user/user.schema";
+import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { DeleteAccountBlockers } from "./delete-account-blockers";
@@ -64,6 +65,12 @@ function renderBlockers(
 describe("DeleteAccountBlockers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+      typeof useSession
+    >);
   });
 
   describe("rendering", () => {
@@ -175,6 +182,15 @@ describe("DeleteAccountBlockers", () => {
   });
 
   describe("transferring admin", () => {
+    it("names a suggested person with no name by the fallback, with a blank avatar", () => {
+      const nameless: UserMetadata = { ...ALICE, firstName: "", lastName: "" };
+      renderBlockers({ blockers: [makeBlocker({ id: ID_1, candidates: [nameless] })] });
+
+      const chips = screen.getAllByRole("button", { name: "common.unnamedAccount" });
+      expect(chips.length).toBeGreaterThan(0);
+      expect(chips[0].querySelector(".rounded-full")).toHaveTextContent(/^$/u);
+    });
+
     it("selecting a candidate enables the transfer and posts the assignment", async () => {
       const user = userEvent.setup();
       const spy = server.mount(contract.sharing.transferResourceAdmin, {
@@ -297,8 +313,7 @@ describe("DeleteAccountBlockers", () => {
       await user.click(applyToAll.getByRole("button", { name: /alice smith/i }));
       expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", "2/2");
 
-      // Clicking the selected (read-only) input clears the apply-to-all choice.
-      await user.click(getApplyToAllSection().getByRole("textbox"));
+      await user.click(getApplyToAllSection().getByRole("button", { name: "common.clear" }));
 
       await waitFor(() =>
         expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", "0/2"),
@@ -327,6 +342,29 @@ describe("DeleteAccountBlockers", () => {
       await user.click(await screen.findByText("Bob Jones"));
 
       expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
+    });
+
+    it("never offers the person deleting their account", async () => {
+      const user = userEvent.setup();
+      vi.mocked(useSession).mockReturnValue({
+        data: { user: { id: CURRENT_USER_ID } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      server.mount(contract.users.searchUsers, {
+        body: [
+          createUserProfile({ userId: CURRENT_USER_ID, firstName: "Me", lastName: "Myself" }),
+          createUserProfile({ userId: BOB.userId, firstName: "Bob", lastName: "Jones" }),
+        ],
+      });
+
+      renderBlockers();
+      await user.type(
+        screen.getByPlaceholderText("dangerZone.delete.blockers.rowPlaceholder"),
+        "bob",
+      );
+
+      expect(await screen.findByText("Bob Jones")).toBeInTheDocument();
+      expect(screen.queryByText("Me Myself")).not.toBeInTheDocument();
     });
   });
 });

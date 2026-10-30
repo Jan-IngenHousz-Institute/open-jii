@@ -193,23 +193,25 @@ describe("team grantees in the collaborators surface", () => {
       });
     });
 
-    it("does not re-offer a team that already holds a grant", async () => {
+    it("lists a team that already holds a grant, upgradable only to a higher level", async () => {
       const user = userEvent.setup();
       mockSession({ id: "user-1" });
       server.mount(contract.organizations.listGranteeTeams, {
         body: [{ id: "team-1", name: "Imaging", organizationId: "org-1", memberCount: 4 }],
       });
-
-      render(
+      const onSelectionChange = vi.fn();
+      const picker = (role: "viewer" | "admin") => (
         <GranteePicker
           resourceType="experiment"
           resourceId="exp-1"
-          role="viewer"
+          role={role}
           selection={null}
-          onSelectionChange={vi.fn()}
-          existingGranteeIds={["team-1"]}
-        />,
+          onSelectionChange={onSelectionChange}
+          existingGrants={[{ granteeType: "team", granteeId: "team-1", role: "viewer" }]}
+        />
       );
+
+      const { rerender } = render(picker("viewer"));
 
       await user.click(await screen.findByRole("combobox", { name: "sharing.granteeTypeLabel" }));
       await user.click(
@@ -219,7 +221,23 @@ describe("team grantees in the collaborators surface", () => {
       );
       await user.click(screen.getByRole("textbox", { name: "sharing.granteeSearchLabel" }));
 
-      expect(await screen.findByText("sharing.noTeamsFound")).toBeVisible();
+      const row = await screen.findByRole("button", { name: /Imaging/u });
+      expect(within(row).getByText("sharing.roleCanView")).toBeVisible();
+      expect(within(row).getByText("sharing.granteeTierAddsNothing")).toBeVisible();
+      expect(row).toBeDisabled();
+
+      rerender(picker("admin"));
+      expect(screen.getByRole("button", { name: /Imaging/u })).toBeEnabled();
+      await user.click(screen.getByRole("button", { name: /Imaging/u }));
+      expect(onSelectionChange).toHaveBeenCalledWith({
+        kind: "grantee",
+        grantee: {
+          type: "team",
+          id: "team-1",
+          displayName: "Imaging",
+          access: { organizationRole: null, existingGrantRole: "viewer" },
+        },
+      });
     });
 
     it("reports a chosen team as a team grantee", async () => {
@@ -251,7 +269,12 @@ describe("team grantees in the collaborators surface", () => {
 
       expect(onSelectionChange).toHaveBeenCalledWith({
         kind: "grantee",
-        grantee: { type: "team", id: "team-1", displayName: "Imaging", memberCount: 4 },
+        grantee: {
+          type: "team",
+          id: "team-1",
+          displayName: "Imaging",
+          access: { organizationRole: null, existingGrantRole: null },
+        },
       });
     });
   });

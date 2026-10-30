@@ -1,5 +1,6 @@
 "use client";
 
+import { PersonIdentity } from "@/components/people/person-identity";
 import { SettingsCard } from "@/components/shared/settings-card";
 
 import type { CreateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
@@ -9,7 +10,6 @@ import { Button } from "@repo/ui/components/button";
 import { Card } from "@repo/ui/components/card";
 import { cva } from "@repo/ui/lib/utils";
 
-import { UserAvatar } from "../../../user-avatar";
 import { embargoUntilHelperString } from "../../embargo-utils";
 
 interface MembersVisibilitySectionProps {
@@ -79,17 +79,7 @@ export function MembersVisibilitySection({
                 key={m.userId || i}
                 className="flex items-center gap-2 rounded-md border px-3 py-2"
               >
-                <UserAvatar
-                  avatarUrl={m.avatarUrl}
-                  firstName={m.firstName}
-                  lastName={m.lastName}
-                  className="h-8 w-8"
-                />
-                <div className="text-sm font-medium">
-                  {m.firstName || m.lastName
-                    ? `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim()
-                    : t("experiments.unnamedMember")}
-                </div>
+                <PersonIdentity person={{ ...m, id: m.userId }} size="sm" />
               </div>
             ))}
           </div>

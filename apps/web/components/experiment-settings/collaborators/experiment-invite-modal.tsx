@@ -1,6 +1,7 @@
 "use client";
 
 import { CollaboratorInviteDialog } from "@/components/sharing/collaborator-invite-dialog";
+import type { ExistingGrant } from "@/components/sharing/share-candidates";
 import { useEffect } from "react";
 
 import type { ShareableRole } from "@repo/api/domains/sharing/sharing.schema";
@@ -13,9 +14,9 @@ import { useUserInvitationCreate } from "../../../hooks/user-invitation/useUserI
 interface ExperimentInviteModalProps {
   experimentId: string;
   invitations: Invitation[];
-  /** Grantees already on the experiment; teams and organizations among them are not
-   * offered again. People are, annotated with the access they already hold. */
-  existingGranteeIds?: string[];
+  /** Grants already on the experiment, with their levels. */
+  existingGrants?: ExistingGrant[];
+  owningOrganizationId?: string | null;
   isArchived: boolean;
   /** `can(share)`: losing it mid-session takes the form away, not just the button. */
   canShare: boolean;
@@ -29,7 +30,8 @@ interface ExperimentInviteModalProps {
 export function ExperimentInviteModal({
   experimentId,
   invitations,
-  existingGranteeIds,
+  existingGrants,
+  owningOrganizationId,
   isArchived,
   canShare,
   isPublic = false,
@@ -68,7 +70,8 @@ export function ExperimentInviteModal({
       title={t("experimentSettings.inviteCollaborators")}
       description={t("experimentSettings.inviteCollaboratorsDescription")}
       disabled={isArchived || !canShare}
-      existingGranteeIds={existingGranteeIds}
+      existingGrants={existingGrants}
+      owningOrganizationId={owningOrganizationId}
       existingEmails={invitations.flatMap((invitation) => invitation.email ?? [])}
       onEmailInvite={handleEmailInvite}
       isEmailInvitePending={isCreatingInvitation}

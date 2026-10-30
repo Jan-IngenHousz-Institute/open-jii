@@ -1,5 +1,7 @@
 "use client";
 
+import { usePrincipal } from "@/components/auth/principal-context";
+import { personName } from "@/components/people/person-name";
 import { useCollaboratorRevoke } from "@/hooks/sharing/useCollaboratorRevoke/useCollaboratorRevoke";
 import { useCollaboratorRoleUpdate } from "@/hooks/sharing/useCollaboratorRoleUpdate/useCollaboratorRoleUpdate";
 import { Users } from "lucide-react";
@@ -13,7 +15,6 @@ import type {
   ShareableRole,
   SharingResourceType,
 } from "@repo/api/domains/sharing/sharing.schema";
-import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -86,8 +87,7 @@ export function CollaboratorsList({
   isFiltered = false,
 }: CollaboratorsListProps) {
   const { t } = useTranslation();
-  const { data: session } = useSession();
-  const currentUserId = session?.user.id;
+  const { userId: currentUserId } = usePrincipal();
 
   const { mutateAsync: updateRole } = useCollaboratorRoleUpdate();
   const { mutateAsync: revoke, isPending: isRevoking } = useCollaboratorRevoke();
@@ -116,9 +116,7 @@ export function CollaboratorsList({
 
   /** The name a revoke confirmation names, for either row shape. */
   const revokeTargetName = (row: ResourceCollaboratorDto) =>
-    isGranteeRow(row)
-      ? (row.grantee.displayName ?? row.grantee.email ?? row.granteeId)
-      : row.organizationName;
+    isGranteeRow(row) ? personName(row.grantee, t) : row.organizationName;
 
   const handleRoleChange = async (grant: ResourceGrantDto, role: ShareableRole) => {
     setBusyGrantId(grant.id);

@@ -1,6 +1,7 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { personName } from "@/components/people/person-name";
 import { useLocale } from "@/hooks/useLocale";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { ChevronsUpDown, ExternalLink } from "lucide-react";
@@ -59,6 +60,11 @@ export function ProtocolSearchWithDropdown({
   const selectedProtocol =
     currentMatch ??
     (selectedSnapshotRef.current?.id === value ? selectedSnapshotRef.current : undefined);
+  const author =
+    selectedProtocol &&
+    personName({ displayName: selectedProtocol.createdByName }, t, {
+      placement: "byline",
+    });
 
   const dropdownProtocols = availableProtocols.filter((protocol) => protocol.id !== value);
 
@@ -90,8 +96,8 @@ export function ProtocolSearchWithDropdown({
                   </IntentLink>
                 </div>
                 <span className="text-muted-foreground truncate text-xs">
-                  {getSensorFamilyLabel(selectedProtocol.family)} • {t("common.by")}{" "}
-                  {selectedProtocol.createdByName}
+                  {getSensorFamilyLabel(selectedProtocol.family)}
+                  {author && <> • {t("common.byPerson", { name: author })}</>}
                 </span>
               </div>
             ) : (

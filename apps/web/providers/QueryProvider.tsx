@@ -9,7 +9,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 // A page visited again within this window renders from cache, and data the server put into the
 // page is not fetched again the moment it loads.
-const FRESH_FOR_MS = 30_000;
+export const FRESH_FOR_MS = 30_000;
 
 function makeQueryClient() {
   return new QueryClient({

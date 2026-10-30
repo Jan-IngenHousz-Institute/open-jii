@@ -22,6 +22,7 @@ import { roleRaisesAccess } from "./collaborator-roles";
 import type { GranteeSelection } from "./grantee-picker";
 import { GranteePicker } from "./grantee-picker";
 import { RoleSelect } from "./role-select";
+import type { ExistingGrant } from "./share-candidates";
 
 /** The tier the create endpoint applies when the field is omitted. */
 const DEFAULT_ROLE: ShareableRole = zCreateCollaboratorBody.shape.role.parse(undefined);
@@ -35,8 +36,10 @@ interface CollaboratorInviteDialogProps {
   description: string;
   /** Archived or otherwise frozen resource: the form stays inert. */
   disabled?: boolean;
-  /** Grantee ids already on the resource — not offered again. */
-  existingGranteeIds?: string[];
+  /** Grants already on the resource, with their levels. */
+  existingGrants?: ExistingGrant[];
+  /** The organization that owns the resource, which is never a grantee. */
+  owningOrganizationId?: string | null;
   /** Addresses with a pending invitation — not offered again either. */
   existingEmails?: string[];
   /** Omit when the host has nowhere to persist a pending email invitation. */
@@ -54,7 +57,8 @@ export function CollaboratorInviteDialog({
   title,
   description,
   disabled = false,
-  existingGranteeIds = [],
+  existingGrants = [],
+  owningOrganizationId,
   existingEmails = [],
   onEmailInvite,
   isEmailInvitePending = false,
@@ -72,8 +76,9 @@ export function CollaboratorInviteDialog({
 
   // The tier can be changed after the grantee was picked, so what the picker ruled
   // selectable at the time says nothing about what is about to be submitted.
-  const access = selection?.kind === "grantee" ? selection.grantee.access : undefined;
-  const isInertShare = !!access && !roleRaisesAccess(access, role, resourceType);
+  const isInertShare =
+    selection?.kind === "grantee" &&
+    !roleRaisesAccess(selection.grantee.access, role, resourceType);
 
   const reset = () => {
     setSelection(null);
@@ -139,7 +144,8 @@ export function CollaboratorInviteDialog({
             selection={selection}
             onSelectionChange={setSelection}
             allowEmailInvite={!!onEmailInvite}
-            existingGranteeIds={existingGranteeIds}
+            existingGrants={existingGrants}
+            owningOrganizationId={owningOrganizationId}
             existingEmails={existingEmails}
             disabled={controlsDisabled}
           />

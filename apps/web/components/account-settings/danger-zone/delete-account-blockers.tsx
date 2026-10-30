@@ -6,8 +6,6 @@ import { getExperimentStatusBadgeTone } from "@/util/experiment-status";
 import { AlertTriangle, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTransferResourceAdmin } from "~/hooks/sharing/useTransferResourceAdmin/useTransferResourceAdmin";
-import { useDebounce } from "~/hooks/useDebounce";
-import { useUserSearch } from "~/hooks/useUserSearch";
 
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import type {
@@ -20,9 +18,12 @@ import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
+import { ownName, personName } from "../../people/person-name";
+import { PeoplePicker } from "../../people/picking/people-picker";
+import { describeSearchedUser, usePickerRows } from "../../people/picking/picking-rule";
+import { usePeopleSearch } from "../../people/picking/use-people-search";
 import { resourceCollaboratorsPath } from "../../sharing/resource-routes";
 import { UserAvatar } from "../../user-avatar";
-import { UserSearchPopover } from "../../user-search-popover";
 
 /** One blocker's identity: its type + id, which is what a transfer is keyed on. */
 const blockerKey = (blocker: DeletionBlocker) => `${blocker.resourceType}:${blocker.id}`;
@@ -314,6 +315,7 @@ interface TransferUserPickerProps {
   selectedUser: UserProfile | null;
   onSelect: (user: UserProfile | null) => void;
   placeholder: string;
+  /** Left out of the suggestion chips. */
   excludeUserId: string;
   disabled?: boolean;
 }
@@ -327,16 +329,11 @@ function TransferUserPicker({
   excludeUserId,
   disabled,
 }: TransferUserPickerProps) {
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, isDebounced] = useDebounce(search, 300);
-  const { data, isLoading } = useUserSearch(debouncedSearch);
-  const isSearching = search.trim().length > 0;
-
-  const availableUsers = useMemo<UserProfile[]>(() => {
-    if (!isSearching) return [];
-    const results = Array.isArray(data) ? data : [];
-    return results.filter((user) => user.userId !== excludeUserId);
-  }, [isSearching, data, excludeUserId]);
+  const { t } = useTranslation();
+  const search = usePeopleSearch({ kind: "global" });
+  const rows = usePickerRows(search.people, (user) =>
+    describeSearchedUser(user, { typedEmail: search.typedEmail, t }),
+  );
 
   const selectableSuggestions = useMemo(() => {
     const seen = new Set<string>();
@@ -357,17 +354,18 @@ function TransferUserPicker({
 
   return (
     <div className="space-y-2">
-      <UserSearchPopover
-        availableUsers={availableUsers}
-        searchValue={search}
-        onSearchChange={setSearch}
-        isAddingUser={false}
-        loading={isSearching && (!isDebounced || isLoading)}
-        onSelectUser={(user) => onSelect(user)}
+      <PeoplePicker
+        term={search.term}
+        onTermChange={search.setTerm}
+        selectionLabel={selectedUser ? personName(selectedUser, t) : null}
+        onClear={() => onSelect(null)}
         placeholder={placeholder}
-        selectedUser={selectedUser}
-        onClearSelection={() => onSelect(null)}
+        ariaLabel={placeholder}
         disabled={disabled}
+        status={search.status}
+        rows={rows}
+        onPick={onSelect}
+        emptyMessage={t("experiments.noUsersFound", { search: search.term.trim() })}
       />
 
       {!selectedUser && selectableSuggestions.length > 0 && (
@@ -383,11 +381,10 @@ function TransferUserPicker({
             >
               <UserAvatar
                 avatarUrl={candidate.avatarUrl}
-                firstName={candidate.firstName}
-                lastName={candidate.lastName}
+                name={ownName(candidate) ?? ""}
                 className="text-md h-6 w-6"
               />
-              {candidate.firstName} {candidate.lastName}
+              <span className="truncate">{personName(candidate, t)}</span>
             </Button>
           ))}
         </div>

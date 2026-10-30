@@ -1,7 +1,9 @@
 "use client";
 
-import { UserAvatar } from "@/components/user-avatar";
+import { NameLine, PersonIdentity } from "@/components/people/person-identity";
+import { personName } from "@/components/people/person-name";
 import { Building2, LogOut, Trash2, Users } from "lucide-react";
+import type { ReactNode } from "react";
 
 import type {
   OrganizationMemberRole,
@@ -25,6 +27,7 @@ import {
   shareableRoleLabelKey,
 } from "./collaborator-roles";
 import { RoleSelect } from "./role-select";
+import { orgRoleBadge } from "./share-candidates";
 
 interface CollaboratorRowProps {
   collaborator: ResourceCollaboratorDto;
@@ -36,18 +39,6 @@ interface CollaboratorRowProps {
   disabled?: boolean;
   /** This grant is the signed-in user's own, so revoking it means leaving. */
   isSelf?: boolean;
-}
-
-// Literal keys, spelled out: an interpolated one is invisible to the string guard.
-const ORG_ROLE_BADGE = {
-  admin: "sharing.orgAdminBadge",
-  member: "sharing.orgMemberBadge",
-} as const;
-
-/** Split a grantee display name into initials-friendly parts for the avatar. */
-function nameParts(displayName: string): { firstName: string; lastName: string } {
-  const [first = "", ...rest] = displayName.trim().split(/\s+/);
-  return { firstName: first, lastName: rest.join(" ") };
 }
 
 /**
@@ -83,7 +74,7 @@ function OrgGroupRow({ name, count, tier }: { name: string; count: string; tier:
         <Users className="text-muted-foreground h-4 w-4" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
-        <h4 className="text-foreground truncate text-sm font-medium">{name}</h4>
+        <span className="text-foreground truncate text-sm font-medium">{name}</span>
         <span className="text-muted-foreground truncate text-xs">{count}</span>
       </div>
       <Badge variant="secondary" className="shrink-0 text-xs font-normal">
@@ -146,6 +137,7 @@ function OrgMembersRow({
 
 function PersonRow({
   collaborator,
+  resourceType,
   onRoleChange,
   onRevoke,
   isBusy,
@@ -154,11 +146,38 @@ function PersonRow({
 }: CollaboratorRowProps & { collaborator: ResourceOwnerDto | ResourceGrantDto }) {
   const { t } = useTranslation();
 
-  const displayName =
-    collaborator.grantee.displayName ?? collaborator.grantee.email ?? collaborator.granteeId;
-  const { firstName, lastName } = nameParts(displayName);
+  const displayName = personName(collaborator.grantee, t);
   const isOrganization = collaborator.granteeType === "organization";
   const isTeam = collaborator.granteeType === "team";
+
+  const isRedundant =
+    collaborator.kind === "owner"
+      ? !!collaborator.inertGrant
+      : grantFacts(collaborator).isRedundant;
+  const organizationRole =
+    collaborator.kind === "owner" ? "owner" : collaborator.owningOrganization?.role;
+
+  const badges = (
+    <>
+      {/* A team belongs to the owning organization by construction, so it is
+        never an outside collaborator — the badge says what it is instead. */}
+      {isTeam && <RowBadge>{t("sharing.granteeTypeTeam")}</RowBadge>}
+      {/*
+        Informational only — capability comes from the role. Never shown for a
+        team: "outside collaborator" means the grantee is not in the owning
+        organization, which a team cannot be, so the badge could only ever
+        mislead here. Suppressed rather than trusted, because the flag arrives
+        computed and a wrong `true` would otherwise be rendered as fact.
+      */}
+      {collaborator.kind === "grant" && !isTeam && collaborator.isOutsideCollaborator && (
+        <RowBadge>{t("sharing.outsideCollaborator")}</RowBadge>
+      )}
+      {/* Access from two sources at once: this names the other one, so the row
+        is not read as the whole story of what this person can reach. */}
+      {organizationRole && <RowBadge>{orgRoleBadge(t)[organizationRole]}</RowBadge>}
+      {isRedundant && <RowBadge>{t("sharing.redundantGrantBadge")}</RowBadge>}
+    </>
+  );
 
   return (
     // Stacked below sm: ~174px of shrink-0 controls left the name ~100px on a
@@ -169,75 +188,42 @@ function PersonRow({
     >
       <div className="flex w-full min-w-0 items-center gap-3 sm:contents">
         {isOrganization || isTeam ? (
-          <div className="bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full border">
-            {isTeam ? (
-              <Users className="text-muted-foreground h-4 w-4" />
-            ) : (
-              <Building2 className="text-muted-foreground h-4 w-4" />
-            )}
-          </div>
+          <>
+            <div className="bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full border">
+              {isTeam ? (
+                <Users className="text-muted-foreground h-4 w-4" />
+              ) : (
+                <Building2 className="text-muted-foreground h-4 w-4" />
+              )}
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <NameLine badges={badges}>
+                <span className="text-foreground truncate text-sm font-medium" title={displayName}>
+                  {displayName}
+                </span>
+              </NameLine>
+              <span className="text-muted-foreground truncate text-xs">
+                {isTeam
+                  ? // The head count is the one thing a team row carries that a name does
+                    // not: it is how many people this single grant actually admits.
+                    t("sharing.teamMemberCount", { count: collaborator.grantee.memberCount ?? 0 })
+                  : t("sharing.granteeTypeOrganization")}
+              </span>
+            </div>
+          </>
         ) : (
-          <UserAvatar
-            avatarUrl={collaborator.grantee.avatarUrl}
-            firstName={firstName}
-            lastName={lastName}
-            className="h-9 w-9"
+          <PersonIdentity
+            person={{ id: collaborator.granteeId, ...collaborator.grantee }}
+            badges={badges}
           />
         )}
-
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <h4 className="text-foreground truncate text-sm font-medium" title={displayName}>
-              {displayName}
-            </h4>
-            {isSelf && (
-              <span className="text-muted-foreground shrink-0 text-xs">{t("sharing.you")}</span>
-            )}
-            {/* A team belongs to the owning organization by construction, so it is
-              never an outside collaborator — the badge says what it is instead. */}
-            {isTeam && (
-              <Badge variant="outline" className="shrink-0 text-xs font-normal">
-                {t("sharing.granteeTypeTeam")}
-              </Badge>
-            )}
-            {/*
-            Informational only — capability comes from the role. Never shown for a
-            team: "outside collaborator" means the grantee is not in the owning
-            organization, which a team cannot be, so the badge could only ever
-            mislead here. Suppressed rather than trusted, because the flag arrives
-            computed and a wrong `true` would otherwise be rendered as fact.
-          */}
-            {collaborator.kind === "grant" && !isTeam && collaborator.isOutsideCollaborator && (
-              <Badge variant="outline" className="shrink-0 text-xs font-normal">
-                {t("sharing.outsideCollaborator")}
-              </Badge>
-            )}
-            {/* Access from two sources at once: this names the other one, so the row
-              is not read as the whole story of what this person can reach. */}
-            {collaborator.kind === "grant" && collaborator.owningOrganization && (
-              <Badge variant="outline" className="shrink-0 text-xs font-normal">
-                {t(ORG_ROLE_BADGE[collaborator.owningOrganization.role])}
-              </Badge>
-            )}
-          </div>
-          {(isTeam || isOrganization || collaborator.grantee.email) && (
-            <span className="text-muted-foreground truncate text-xs">
-              {isTeam
-                ? // The head count is the one thing a team row carries that a name does
-                  // not: it is how many people this single grant actually admits.
-                  t("sharing.teamMemberCount", { count: collaborator.grantee.memberCount ?? 0 })
-                : isOrganization
-                  ? t("sharing.granteeTypeOrganization")
-                  : collaborator.grantee.email}
-            </span>
-          )}
-        </div>
       </div>
 
       <div className="flex w-full flex-wrap items-center gap-1 sm:w-auto sm:shrink-0 sm:flex-nowrap sm:justify-end">
         {collaborator.kind === "owner" ? (
           <OwnerControls
             row={collaborator}
+            resourceType={resourceType}
             displayName={displayName}
             onRevoke={onRevoke}
             disabled={disabled || isBusy}
@@ -263,11 +249,13 @@ function PersonRow({
  */
 function OwnerControls({
   row,
+  resourceType,
   displayName,
   onRevoke,
   disabled,
 }: {
   row: ResourceOwnerDto;
+  resourceType: SharingResourceType;
   displayName: string;
   onRevoke: () => void;
   disabled: boolean;
@@ -276,21 +264,16 @@ function OwnerControls({
 
   return (
     <>
-      {row.inertGrant && (
-        <>
-          <Badge variant="outline" className="shrink-0 text-xs font-normal">
-            {t("sharing.redundantGrantBadge")}
-          </Badge>
-          <RemoveGrantButton
-            label={t("sharing.removeRedundantGrantForLabel", { name: displayName })}
-            onClick={onRevoke}
-            disabled={disabled}
-          />
-        </>
-      )}
       <Badge variant="secondary" className="shrink-0 text-xs font-normal">
-        {t("sharing.orgOwnerBadge")}
+        {t(orgRoleTierKey("owner", resourceType))}
       </Badge>
+      {row.inertGrant && (
+        <RemoveGrantButton
+          label={t("sharing.removeRedundantGrantForLabel", { name: displayName })}
+          onClick={onRevoke}
+          disabled={disabled}
+        />
+      )}
     </>
   );
 }
@@ -319,25 +302,10 @@ function GrantControls({
 }) {
   const { t } = useTranslation();
 
-  // Both asked against the org role alone, since changing the tier replaces the grant.
-  const orgAccess = {
-    organizationRole: row.owningOrganization?.role ?? null,
-    existingGrantRole: null,
-  };
-  // Does the tier they hold *now* add anything? Governs the badge.
-  const isRedundant = !roleRaisesAccess(orgAccess, collapseRole(row.role), row.resourceType);
-  // Could any offerable tier? A separate question, and only false for an org role that
-  // already carries everything — otherwise a member stuck on an inert tier would be
-  // shown a badge and no way to raise the one tier that would work.
-  const canBeRaised = !holdsEveryGrantableAction(orgAccess, row.resourceType);
+  const { orgAccess, isRedundant, canBeRaised } = grantFacts(row);
 
   return (
     <>
-      {isRedundant && (
-        <Badge variant="outline" className="shrink-0 text-xs font-normal">
-          {t("sharing.redundantGrantBadge")}
-        </Badge>
-      )}
       {canBeRaised ? (
         <RoleSelect
           value={collapseRole(row.role)}
@@ -381,6 +349,31 @@ function GrantControls({
         />
       )}
     </>
+  );
+}
+
+/** Both asked against the org role alone, since changing the tier replaces the grant. */
+function grantFacts(row: ResourceGrantDto) {
+  const orgAccess = {
+    organizationRole: row.owningOrganization?.role ?? null,
+    existingGrantRole: null,
+  };
+  return {
+    orgAccess,
+    // Does the tier they hold *now* add anything? Governs the badge.
+    isRedundant: !roleRaisesAccess(orgAccess, collapseRole(row.role), row.resourceType),
+    // Could any offerable tier? A separate question, and only false for an org role that
+    // already carries everything — otherwise a member stuck on an inert tier would be
+    // shown a badge and no way to raise the one tier that would work.
+    canBeRaised: !holdsEveryGrantableAction(orgAccess, row.resourceType),
+  };
+}
+
+function RowBadge({ children }: { children: ReactNode }) {
+  return (
+    <Badge variant="outline" className="text-xs font-normal">
+      {children}
+    </Badge>
   );
 }
 

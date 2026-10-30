@@ -1,5 +1,6 @@
 "use client";
 
+import { personName } from "@/components/people/person-name";
 import { useCancelOrganizationInvitation } from "@/hooks/organization/useCancelOrganizationInvitation/useCancelOrganizationInvitation";
 import { useOrganizationInvitations } from "@/hooks/organization/useOrganizationInvitations/useOrganizationInvitations";
 import { useOrganizationMembers } from "@/hooks/organization/useOrganizationMembers/useOrganizationMembers";
@@ -45,7 +46,7 @@ export function OrganizationInvitations({ organizationId }: { organizationId: st
   const inviterNames = new Map(
     (roster?.members ?? []).map((member) => [
       member.userId,
-      `${member.firstName} ${member.lastName}`.trim() || member.email,
+      personName(member, t, { placement: "byline" }),
     ]),
   );
 
