@@ -83,7 +83,6 @@ jobs:
       TF_VAR_slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
       TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
-      TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
       TF_VAR_posthog_tofu_api_key: ${{ secrets.POSTHOG_TOFU_API_KEY }}
       TF_VAR_posthog_grafana_api_key: ${{ secrets.POSTHOG_GRAFANA_API_KEY }}
     steps:
@@ -118,8 +117,25 @@ jobs:
       - name: OpenTofu Init and Validate
         uses: ./.github/actions/tofu/tofu-init-validate
 
+      - name: Create a Grafana token for this run
+        id: grafana
+        uses: ./.github/actions/tofu/grafana-token
+        with:
+          workspace_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_WORKSPACE_ID_PROD || secrets.GRAFANA_WORKSPACE_ID_DEV }}
+          service_account_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_SERVICE_ACCOUNT_ID_PROD || secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
+
       - name: OpenTofu Plan
         uses: ./.github/actions/tofu/tofu-plan
+        env:
+          TF_VAR_grafana_auth_service_token: ${{ steps.grafana.outputs.token }}
+
+      - name: Delete the Grafana token
+        if: always() && steps.grafana.outputs.token_id != ''
+        uses: ./.github/actions/tofu/grafana-token-delete
+        with:
+          workspace_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_WORKSPACE_ID_PROD || secrets.GRAFANA_WORKSPACE_ID_DEV }}
+          service_account_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_SERVICE_ACCOUNT_ID_PROD || secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
+          token_id: ${{ steps.grafana.outputs.token_id }}
 
   approval_gate:
     name: Approval Gate
@@ -175,7 +191,6 @@ jobs:
       TF_VAR_slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
       TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
-      TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
       TF_VAR_posthog_tofu_api_key: ${{ secrets.POSTHOG_TOFU_API_KEY }}
       TF_VAR_posthog_grafana_api_key: ${{ secrets.POSTHOG_GRAFANA_API_KEY }}
     steps:
@@ -195,5 +210,23 @@ jobs:
       - name: OpenTofu Init and Validate
         uses: ./.github/actions/tofu/tofu-init-validate
 
+      - name: Create a Grafana token for this run
+        id: grafana
+        uses: ./.github/actions/tofu/grafana-token
+        with:
+          workspace_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_WORKSPACE_ID_PROD || secrets.GRAFANA_WORKSPACE_ID_DEV }}
+          service_account_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_SERVICE_ACCOUNT_ID_PROD || secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
+          seconds_to_live: "7200"
+
       - name: OpenTofu Apply
         uses: ./.github/actions/tofu/tofu-apply
+        env:
+          TF_VAR_grafana_auth_service_token: ${{ steps.grafana.outputs.token }}
+
+      - name: Delete the Grafana token
+        if: always() && steps.grafana.outputs.token_id != ''
+        uses: ./.github/actions/tofu/grafana-token-delete
+        with:
+          workspace_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_WORKSPACE_ID_PROD || secrets.GRAFANA_WORKSPACE_ID_DEV }}
+          service_account_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_SERVICE_ACCOUNT_ID_PROD || secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
+          token_id: ${{ steps.grafana.outputs.token_id }}
