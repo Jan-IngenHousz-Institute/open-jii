@@ -12,6 +12,7 @@ import { CacheModule } from "../common/modules/cache/cache.module";
 import { MetricsModule } from "../metrics/metrics.module";
 import { NotificationModule } from "../notifications/notification.module";
 import { SharingModule } from "../sharing/sharing.module";
+import { GuestRepositoryModule } from "../users/guest-repository.module";
 import { MacroSandboxService } from "./application/services/macro-sandbox.service";
 // Use Cases
 import { AddCompatibleProtocolsUseCase } from "./application/use-cases/add-compatible-protocols/add-compatible-protocols";
@@ -38,6 +39,7 @@ import { MacroController } from "./presentation/macro.controller";
 
 @Module({
   imports: [
+    GuestRepositoryModule,
     MetricsModule,
     AnalyticsModule,
     AwsModule,

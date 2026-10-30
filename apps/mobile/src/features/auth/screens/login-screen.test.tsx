@@ -184,3 +184,22 @@ describe("login connection polling", () => {
     expect(verifyEmailOTP).toHaveBeenCalledExactlyOnceWith("field@example.test", "123456");
   });
 });
+
+it("accepts OTP success for a new account without a registration screen", async () => {
+  probe.mockResolvedValue(true);
+  verifyEmailOTP.mockResolvedValue({
+    data: { user: { id: "new-user", registered: false } },
+    error: null,
+  });
+  renderLogin();
+  await waitFor(() => expect(buttonDisabled(auth.continueWithEmail)).toBe(false));
+  fireEvent.changeText(screen.getByPlaceholderText(auth.emailPlaceholder), "new@example.test");
+  fireEvent.press(screen.getByText(auth.continueWithEmail));
+  await waitFor(() => expect(screen.UNSAFE_getByType(OTPInput)).toBeTruthy());
+  const otp = screen.UNSAFE_getByType(OTPInput);
+  await act(() => Promise.resolve(otp.props.onChangeText("123456")));
+  await waitFor(() =>
+    expect(verifyEmailOTP).toHaveBeenCalledExactlyOnceWith("new@example.test", "123456"),
+  );
+  expect(screen.queryByText("errors.expiredOtp")).toBeNull();
+});

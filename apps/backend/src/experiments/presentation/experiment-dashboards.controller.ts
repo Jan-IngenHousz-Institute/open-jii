@@ -26,7 +26,7 @@ export class ExperimentDashboardsController {
     private readonly deleteExperimentDashboardUseCase: DeleteExperimentDashboardUseCase,
   ) {}
 
-  @CanAccess({ resource: "experiment", action: "read" })
+  @CanAccess({ guest: true, resource: "experiment", action: "read" })
   @Implement(experimentDashboardsContract.listExperimentDashboards)
   listDashboards(@Session() session: UserSession) {
     return implement(experimentDashboardsContract.listExperimentDashboards).handler(
@@ -64,7 +64,7 @@ export class ExperimentDashboardsController {
     );
   }
 
-  @CanAccess({ resource: "experiment", action: "read" })
+  @CanAccess({ guest: true, resource: "experiment", action: "read" })
   @Implement(experimentDashboardsContract.getExperimentDashboard)
   getDashboard(@Session() session: UserSession) {
     return implement(experimentDashboardsContract.getExperimentDashboard).handler(

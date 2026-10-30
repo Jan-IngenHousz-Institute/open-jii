@@ -64,7 +64,7 @@ export default async function AppLayout({
     // Redirect to login if no session
     redirect(`/${locale}/login?callbackUrl=${callbackUrl}`);
   }
-  if (!session.user.registered) {
+  if (!session.user.registered && !session.user.isAnonymous) {
     const callbackUrl = await getCallbackUrl();
 
     // If the user is not registered, redirect them to the registration page.
@@ -78,6 +78,9 @@ export default async function AppLayout({
     loadNamespaceBundles(locale, PLATFORM_NAMESPACES),
   ]);
   const releaseDates = publishedDates(releaseNotes);
+  const sidebarUser = session.user.isAnonymous
+    ? { id: session.user.id, email: "", name: session.user.name, isAnonymous: true }
+    : { id: session.user.id, email: session.user.email };
 
   return (
     <TranslationBundles resources={bundles}>
@@ -88,7 +91,7 @@ export default async function AppLayout({
               <NavigationSidebarWrapper
                 locale={locale}
                 releaseDates={releaseDates}
-                user={{ id: session.user.id, email: session.user.email }}
+                user={sidebarUser}
                 isCalibrationEnabled={isCalibrationEnabled}
               />
               <SidebarEdgePeek />
@@ -107,8 +110,10 @@ export default async function AppLayout({
               <CommandPalette locale={locale} />
               <Toaster />
               <ShortcutHint />
-              <PasskeyCreatePrompt userId={session.user.id} sessionId={session.session.id} />
-              <WhatsNewSheet releaseDates={releaseDates} />
+              {!session.user.isAnonymous && (
+                <PasskeyCreatePrompt userId={session.user.id} sessionId={session.session.id} />
+              )}
+              {!session.user.isAnonymous && <WhatsNewSheet releaseDates={releaseDates} />}
             </ActivityProvider>
           </CalibrationFlagProvider>
         </SidebarProvider>

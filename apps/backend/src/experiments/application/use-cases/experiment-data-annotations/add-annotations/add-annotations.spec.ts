@@ -283,6 +283,8 @@ describe("AddAnnotations", () => {
       success([
         {
           userId: emptyNameUserId,
+          isGuest: false,
+          isFormerGuest: false,
           firstName: "   ",
           lastName: "   ",
           avatarUrl: null,

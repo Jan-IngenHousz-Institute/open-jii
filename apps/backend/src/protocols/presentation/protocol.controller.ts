@@ -166,7 +166,7 @@ export class ProtocolController {
     });
   }
 
-  @CanAccess({ resource: "protocol", action: "read" })
+  @CanAccess({ guest: true, resource: "protocol", action: "read" })
   @Implement(protocolContract.getProtocol)
   getProtocol(@Session() session: UserSession) {
     return implement(protocolContract.getProtocol).handler(async ({ input }) => {
@@ -343,7 +343,7 @@ export class ProtocolController {
     });
   }
 
-  @CanAccess({ resource: "protocol", action: "read" })
+  @CanAccess({ guest: true, resource: "protocol", action: "read" })
   @Implement(protocolContract.listCompatibleMacros)
   listCompatibleMacros(@Session() session: UserSession) {
     return implement(protocolContract.listCompatibleMacros).handler(async ({ input }) => {

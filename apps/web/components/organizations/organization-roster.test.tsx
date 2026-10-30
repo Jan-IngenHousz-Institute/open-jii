@@ -1,4 +1,5 @@
 import { createOrganizationMember } from "@/test/factories";
+import { mockRealTranslations } from "@/test/real-i18n";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -92,11 +93,48 @@ async function roleSelectFor(name: string): Promise<HTMLElement> {
 
 describe("<OrganizationRoster />", () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     mockSession(null);
     updateRole().mockResolvedValue({ data: null, error: null });
     removeMember().mockResolvedValue({ data: null, error: null });
     listMembers().mockResolvedValue({ data: { members: [], total: 0 }, error: null });
   });
+
+  it.each([
+    { locale: "en-US" as const, guest: "Synthetic (guest)", former: "Former guest" },
+    { locale: "nl-NL" as const, guest: "Synthetic (gast)", former: "Voormalige gast" },
+    { locale: "de-DE" as const, guest: "Synthetic (Gast)", former: "Ehemaliger Gast" },
+  ])(
+    "renders guest and former-guest flags as localized labels in $locale",
+    async ({ locale, guest, former }) => {
+      await mockRealTranslations(locale);
+      mockSession({ id: "reader" });
+      renderRoster(
+        [
+          createOrganizationMember({
+            userId: "guest",
+            firstName: "Synthetic",
+            lastName: "",
+            email: null,
+            isGuest: true,
+            isFormerGuest: false,
+          }),
+          createOrganizationMember({
+            userId: "former",
+            firstName: "",
+            lastName: "",
+            email: null,
+            isGuest: true,
+            isFormerGuest: true,
+          }),
+        ],
+        { actorRole: "member" },
+      );
+      expect(await screen.findByText(guest)).toBeInTheDocument();
+      expect(screen.getByText(former)).toBeInTheDocument();
+      expect(document.body.textContent).not.toContain("guest.openjii.invalid");
+    },
+  );
 
   it("gives a plain member a read-only roster", async () => {
     mockSession({ id: "user-member" });

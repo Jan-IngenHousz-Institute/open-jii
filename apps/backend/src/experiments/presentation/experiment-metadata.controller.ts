@@ -24,7 +24,7 @@ export class ExperimentMetadataController {
     private readonly deleteExperimentMetadataUseCase: DeleteExperimentMetadataUseCase,
   ) {}
 
-  @CanAccess({ resource: "experiment", action: "read" })
+  @CanAccess({ guest: true, resource: "experiment", action: "read" })
   @Implement(experimentMetadataContract.listExperimentMetadata)
   listExperimentMetadata(@Session() session: UserSession) {
     return implement(experimentMetadataContract.listExperimentMetadata).handler(

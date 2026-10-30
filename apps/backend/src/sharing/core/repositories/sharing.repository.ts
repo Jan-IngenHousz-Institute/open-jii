@@ -1015,7 +1015,11 @@ export class SharingRepository {
 
       const fullName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
       const isExactEmail = sql<boolean>`lower(${users.email}) = lower(${params.query})`;
-      const isDiscoverable = and(eq(profiles.activated, true), isNull(profiles.deletedAt));
+      const isDiscoverable = and(
+        eq(profiles.activated, true),
+        isNull(profiles.deletedAt),
+        eq(users.isAnonymous, false),
+      );
 
       const rows = await this.db
         .select({

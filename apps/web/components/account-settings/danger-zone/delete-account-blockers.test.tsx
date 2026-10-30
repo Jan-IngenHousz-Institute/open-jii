@@ -13,6 +13,8 @@ import { DeleteAccountBlockers } from "./delete-account-blockers";
 const CURRENT_USER_ID = "00000000-0000-4000-8000-000000000000";
 
 const ALICE: UserMetadata = {
+  isGuest: false,
+  isFormerGuest: false,
   userId: "11111111-1111-4111-8111-111111111111",
   firstName: "Alice",
   lastName: "Smith",
@@ -20,6 +22,8 @@ const ALICE: UserMetadata = {
 };
 
 const BOB: UserMetadata = {
+  isGuest: false,
+  isFormerGuest: false,
   userId: "22222222-2222-4222-8222-222222222222",
   firstName: "Bob",
   lastName: "Jones",

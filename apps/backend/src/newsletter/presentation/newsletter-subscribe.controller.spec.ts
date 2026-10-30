@@ -164,13 +164,14 @@ describe("NewsletterSubscribeController", () => {
   });
 
   it("does not throttle the authenticated newsletter routes", async () => {
+    const userId = await testApp.createTestUser();
     vi.spyOn(mailchimp, "getStatus").mockResolvedValue(success("subscribed"));
 
     // Well beyond the anonymous limit, all from one address, all authenticated.
     for (let i = 0; i < 8; i++) {
       await testApp
         .get(statusPath())
-        .withAuth("11111111-1111-1111-1111-111111111111")
+        .withAuth(userId)
         .set("X-Forwarded-For", "198.51.100.9")
         .expect(StatusCodes.OK);
     }

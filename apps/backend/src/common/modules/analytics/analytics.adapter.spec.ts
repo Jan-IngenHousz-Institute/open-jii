@@ -44,6 +44,21 @@ describe("AnalyticsAdapter", () => {
   }
 
   describe("isFeatureFlagEnabled", () => {
+    it("uses a guest id and marker without its placeholder address", async () => {
+      const userId = await testApp.createTestUser();
+      const evaluate = vi.spyOn(flagsService, "isFeatureFlagEnabled").mockResolvedValue(false);
+      await adapter.isFeatureFlagEnabled(FEATURE_FLAGS.CALIBRATION, {
+        id: userId,
+        email: "synthetic@guest.openjii.invalid",
+        isAnonymous: true,
+      });
+      expect(evaluate).toHaveBeenCalledWith(FEATURE_FLAGS.CALIBRATION, userId, {
+        organization_ids: "",
+        is_guest: "true",
+      });
+      expect(JSON.stringify(evaluate.mock.calls)).not.toContain("guest.openjii.invalid");
+    });
+
     it("should send a signed-in user's email and memberships with the evaluation", async () => {
       const email = "flag-member@example.com";
       const userId = await testApp.createTestUser({ email });

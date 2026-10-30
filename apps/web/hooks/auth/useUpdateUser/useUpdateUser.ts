@@ -12,7 +12,7 @@ export function useUpdateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { name?: string; image?: string; registered?: boolean }) => {
+    mutationFn: async (data: { name?: string; image?: string }) => {
       const response = await authClient.updateUser(data);
       return response;
     },
@@ -20,8 +20,6 @@ export function useUpdateUser() {
       if (response.data) {
         await queryClient.invalidateQueries({ queryKey: ["auth"] });
 
-        // `registered` decides whether the platform layout redirects to registration, and a
-        // prefetch made before the change would keep replaying that redirect.
         await revalidateAuth();
       }
     },

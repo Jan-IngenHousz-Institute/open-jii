@@ -14,7 +14,14 @@ export async function userIsSelectableGrantee(db: DbOrTx, userId: string): Promi
     .select({ id: users.id })
     .from(users)
     .innerJoin(profiles, eq(profiles.userId, users.id))
-    .where(and(eq(users.id, userId), eq(profiles.activated, true), isNull(profiles.deletedAt)))
+    .where(
+      and(
+        eq(users.id, userId),
+        eq(users.isAnonymous, false),
+        eq(profiles.activated, true),
+        isNull(profiles.deletedAt),
+      ),
+    )
     .limit(1);
   return rows.length > 0;
 }

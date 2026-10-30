@@ -137,7 +137,14 @@ web view filters it, not at the pipeline.
 ## The large-payload path
 
 A reading over 128 KiB never passes the broker or the archive. The phone asks the API for an upload
-URL and puts the file at `s3://open-jii-large-iot-<env>/large-iot/<experiment id>/<uuid>.json`.
+URL and puts the file at
+`s3://open-jii-large-iot-<env>/large-iot/<experiment id>/<user id>/<upload id>.json`.
+Guest uploads add `guest/` between the experiment and user IDs. All IDs are lowercase.
+The signed key supplies the experiment and uploader, overriding the payload's `user_id`
+and each annotation's `createdBy`, and clears `createdByName`. Older researcher keys
+without a user segment retain the payload's user and annotation authors. Older guest
+keys and unparsed keys clear `user_id` and both annotation author fields. Even for
+unparsed keys, the experiment comes only from the path, never the payload.
 Bronze reads it into `raw_large_data` by experiment, and silver adds it to `clean_data` with no
 `client_id` and no `arrival_timestamp`. Look for the object by experiment and time, then for the row
 in silver by experiment and `timestamp`. The only earlier record is the request for the upload

@@ -12,6 +12,7 @@ function createMockContext(
     userId?: string | null;
     email?: string | null;
     registered?: boolean;
+    isAnonymous?: boolean;
   } = {},
 ): AuthHookContext {
   return {
@@ -21,6 +22,7 @@ function createMockContext(
           id: "userId" in overrides ? overrides.userId : "user-123",
           email: "email" in overrides ? overrides.email : "test@example.com",
           registered: overrides.registered ?? false,
+          isAnonymous: overrides.isAnonymous ?? false,
         },
       },
     },
@@ -60,6 +62,23 @@ describe("UserAuthHook", () => {
       vi.spyOn(hook as any, "getSessionFromCtx").mockResolvedValue({
         user: { id: "user-123", email: null, registered: false },
       });
+    });
+
+    it("refuses a guest before the legacy email repair", async () => {
+      vi.spyOn(hook as any, "getSessionFromCtx").mockResolvedValue({
+        user: { id: "guest", isAnonymous: true, registered: false },
+      });
+      await expect(
+        hook.handleEmailOtpSignInBefore(createBeforeHookContext("victim@example.test")),
+      ).rejects.toThrow("This action is not available to guests");
+      expect(mockUserRepository.update).not.toHaveBeenCalled();
+    });
+
+    it("refuses the reserved address domain before session or email repair", async () => {
+      await expect(
+        hook.handleEmailOtpSignInBefore(createBeforeHookContext("visitor@guest.openjii.invalid")),
+      ).rejects.toThrow("This address cannot be used");
+      expect(mockUserRepository.update).not.toHaveBeenCalled();
     });
 
     it("should return early if no session", async () => {
@@ -119,6 +138,12 @@ describe("UserAuthHook", () => {
 
       await expect(hook.handleEmailOtpSignInBefore(ctx)).rejects.toThrow();
     });
+  });
+
+  it("does not accept invitations or send catch-up notifications for a guest", async () => {
+    await hook.handleEmailOtpSignIn(createMockContext({ isAnonymous: true }));
+    expect(mockUseCase.execute).not.toHaveBeenCalled();
+    expect(mockNotifyUseCase.execute).not.toHaveBeenCalled();
   });
 
   describe("handleEmailSignIn", () => {

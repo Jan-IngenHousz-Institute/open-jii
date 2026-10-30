@@ -86,6 +86,8 @@ const mockLocations = [
 const mockContributors: ExperimentContributor[] = [
   {
     userId: "user-1",
+    isGuest: false,
+    isFormerGuest: false,
     firstName: "John",
     lastName: "Doe",
     avatarUrl: null,
@@ -170,6 +172,16 @@ describe("ExperimentDetailsCard", () => {
   it("separates the actions from the details for a manager", () => {
     renderComponent();
     expect(screen.getByRole("separator")).toBeInTheDocument();
+  });
+
+  it("offers no join request for a public Demo experiment", () => {
+    renderComponent({
+      canManage: false,
+      experiment: { ...mockExperiment, visibility: "public", organizationType: "demo" },
+    });
+    expect(screen.getByTestId("experiment-locations-section")).toBeInTheDocument();
+    expect(screen.queryByText("experimentSettings.requestToJoinPrompt")).not.toBeInTheDocument();
+    expect(screen.queryByRole("separator")).not.toBeInTheDocument();
   });
 
   it("separates the request to join from the details", async () => {

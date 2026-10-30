@@ -35,15 +35,20 @@ export class IotController {
 
   // The experiment is named in the payload, not the path.
   @CanAccess({
+    guest: true,
     resource: "experiment",
     action: "contribute",
     source: "body",
     param: "experimentId",
   })
   @Implement(iotContract.getUploadUrl)
-  getUploadUrl() {
+  getUploadUrl(@Session() session: UserSession) {
     return implement(iotContract.getUploadUrl).handler(async ({ input }) => {
-      const result = await this.getIotUploadUrlUseCase.execute(input.experimentId);
+      const result = await this.getIotUploadUrlUseCase.execute(
+        input.experimentId,
+        session.user.id,
+        input.contentLength,
+      );
 
       if (result.isSuccess()) {
         return formatDates(result.value);

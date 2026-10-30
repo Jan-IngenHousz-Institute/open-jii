@@ -20,6 +20,8 @@ export interface PublishMeta {
   // to serialize anyway (to size the payload), so a multi-megabyte measurement
   // is not stringified twice per attempt.
   serialized?: string;
+  ownerUserId?: string;
+  guest?: boolean;
 }
 
 export interface Transport {
@@ -44,6 +46,7 @@ interface Pending {
   timeoutHandle: TimerHandle | null;
   traceId?: string;
   serialized?: string;
+  guest?: boolean;
   settled: boolean;
 }
 

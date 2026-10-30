@@ -6,7 +6,14 @@ import type { ExperimentContributor } from "@repo/api/domains/experiment/contrib
 import { ExperimentMembersTrail } from "./experiment-members-trail";
 
 function contributor(userId: string): ExperimentContributor {
-  return { userId, firstName: "Ada", lastName: "Lovelace", avatarUrl: null };
+  return {
+    userId,
+    isGuest: false,
+    isFormerGuest: false,
+    firstName: "Ada",
+    lastName: "Lovelace",
+    avatarUrl: null,
+  };
 }
 
 function renderTrail(props: Partial<React.ComponentProps<typeof ExperimentMembersTrail>> = {}) {

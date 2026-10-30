@@ -356,8 +356,58 @@
                           "type": "array",
                           "items": {
                             "type": "object",
-                            "propertyNames": {
-                              "type": "string"
+                            "properties": {
+                              "contributor": {
+                                "anyOf": [
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string"
+                                          },
+                                          "name": {
+                                            "type": "string"
+                                          },
+                                          "avatar": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string"
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "isGuest": {
+                                            "type": "boolean",
+                                            "default": false,
+                                            "description": "Derived from the trusted measurement provenance"
+                                          },
+                                          "isFormerGuest": {
+                                            "type": "boolean",
+                                            "default": false,
+                                            "description": "A guest measurement whose account no longer exists"
+                                          }
+                                        },
+                                        "required": [
+                                          "id",
+                                          "name",
+                                          "avatar"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "description": "JSON-encoded ExperimentDataContributor, including attribution flags"
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
                             },
                             "additionalProperties": {
                               "anyOf": [
@@ -835,8 +885,58 @@
                                 "type": "array",
                                 "items": {
                                   "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
+                                  "properties": {
+                                    "contributor": {
+                                      "anyOf": [
+                                        {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "id": {
+                                                  "type": "string"
+                                                },
+                                                "name": {
+                                                  "type": "string"
+                                                },
+                                                "avatar": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "string"
+                                                    },
+                                                    {
+                                                      "type": "null"
+                                                    }
+                                                  ]
+                                                },
+                                                "isGuest": {
+                                                  "type": "boolean",
+                                                  "default": false,
+                                                  "description": "Derived from the trusted measurement provenance"
+                                                },
+                                                "isFormerGuest": {
+                                                  "type": "boolean",
+                                                  "default": false,
+                                                  "description": "A guest measurement whose account no longer exists"
+                                                }
+                                              },
+                                              "required": [
+                                                "id",
+                                                "name",
+                                                "avatar"
+                                              ]
+                                            },
+                                            {
+                                              "type": "string",
+                                              "description": "JSON-encoded ExperimentDataContributor, including attribution flags"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   "additionalProperties": {
                                     "anyOf": [
@@ -1184,8 +1284,58 @@
                                     "type": "array",
                                     "items": {
                                       "type": "object",
-                                      "propertyNames": {
-                                        "type": "string"
+                                      "properties": {
+                                        "contributor": {
+                                          "anyOf": [
+                                            {
+                                              "anyOf": [
+                                                {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "id": {
+                                                      "type": "string"
+                                                    },
+                                                    "name": {
+                                                      "type": "string"
+                                                    },
+                                                    "avatar": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "string"
+                                                        },
+                                                        {
+                                                          "type": "null"
+                                                        }
+                                                      ]
+                                                    },
+                                                    "isGuest": {
+                                                      "type": "boolean",
+                                                      "default": false,
+                                                      "description": "Derived from the trusted measurement provenance"
+                                                    },
+                                                    "isFormerGuest": {
+                                                      "type": "boolean",
+                                                      "default": false,
+                                                      "description": "A guest measurement whose account no longer exists"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "id",
+                                                    "name",
+                                                    "avatar"
+                                                  ]
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "description": "JSON-encoded ExperimentDataContributor, including attribution flags"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        }
                                       },
                                       "additionalProperties": {
                                         "anyOf": [
@@ -1592,8 +1742,58 @@
                                 "type": "array",
                                 "items": {
                                   "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
+                                  "properties": {
+                                    "contributor": {
+                                      "anyOf": [
+                                        {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "id": {
+                                                  "type": "string"
+                                                },
+                                                "name": {
+                                                  "type": "string"
+                                                },
+                                                "avatar": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "string"
+                                                    },
+                                                    {
+                                                      "type": "null"
+                                                    }
+                                                  ]
+                                                },
+                                                "isGuest": {
+                                                  "type": "boolean",
+                                                  "default": false,
+                                                  "description": "Derived from the trusted measurement provenance"
+                                                },
+                                                "isFormerGuest": {
+                                                  "type": "boolean",
+                                                  "default": false,
+                                                  "description": "A guest measurement whose account no longer exists"
+                                                }
+                                              },
+                                              "required": [
+                                                "id",
+                                                "name",
+                                                "avatar"
+                                              ]
+                                            },
+                                            {
+                                              "type": "string",
+                                              "description": "JSON-encoded ExperimentDataContributor, including attribution flags"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   "additionalProperties": {
                                     "anyOf": [
@@ -1984,8 +2184,58 @@
                           "type": "array",
                           "items": {
                             "type": "object",
-                            "propertyNames": {
-                              "type": "string"
+                            "properties": {
+                              "contributor": {
+                                "anyOf": [
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string"
+                                          },
+                                          "name": {
+                                            "type": "string"
+                                          },
+                                          "avatar": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string"
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "isGuest": {
+                                            "type": "boolean",
+                                            "default": false,
+                                            "description": "Derived from the trusted measurement provenance"
+                                          },
+                                          "isFormerGuest": {
+                                            "type": "boolean",
+                                            "default": false,
+                                            "description": "A guest measurement whose account no longer exists"
+                                          }
+                                        },
+                                        "required": [
+                                          "id",
+                                          "name",
+                                          "avatar"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "description": "JSON-encoded ExperimentDataContributor, including attribution flags"
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
                             },
                             "additionalProperties": {
                               "anyOf": [
@@ -2390,8 +2640,58 @@
                           "type": "array",
                           "items": {
                             "type": "object",
-                            "propertyNames": {
-                              "type": "string"
+                            "properties": {
+                              "contributor": {
+                                "anyOf": [
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string"
+                                          },
+                                          "name": {
+                                            "type": "string"
+                                          },
+                                          "avatar": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string"
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "isGuest": {
+                                            "type": "boolean",
+                                            "default": false,
+                                            "description": "Derived from the trusted measurement provenance"
+                                          },
+                                          "isFormerGuest": {
+                                            "type": "boolean",
+                                            "default": false,
+                                            "description": "A guest measurement whose account no longer exists"
+                                          }
+                                        },
+                                        "required": [
+                                          "id",
+                                          "name",
+                                          "avatar"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "description": "JSON-encoded ExperimentDataContributor, including attribution flags"
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
                             },
                             "additionalProperties": {
                               "anyOf": [
@@ -2750,8 +3050,58 @@
                               "type": "array",
                               "items": {
                                 "type": "object",
-                                "propertyNames": {
-                                  "type": "string"
+                                "properties": {
+                                  "contributor": {
+                                    "anyOf": [
+                                      {
+                                        "anyOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "id": {
+                                                "type": "string"
+                                              },
+                                              "name": {
+                                                "type": "string"
+                                              },
+                                              "avatar": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "string"
+                                                  },
+                                                  {
+                                                    "type": "null"
+                                                  }
+                                                ]
+                                              },
+                                              "isGuest": {
+                                                "type": "boolean",
+                                                "default": false,
+                                                "description": "Derived from the trusted measurement provenance"
+                                              },
+                                              "isFormerGuest": {
+                                                "type": "boolean",
+                                                "default": false,
+                                                "description": "A guest measurement whose account no longer exists"
+                                              }
+                                            },
+                                            "required": [
+                                              "id",
+                                              "name",
+                                              "avatar"
+                                            ]
+                                          },
+                                          {
+                                            "type": "string",
+                                            "description": "JSON-encoded ExperimentDataContributor, including attribution flags"
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
                                 },
                                 "additionalProperties": {
                                   "anyOf": [
@@ -3289,8 +3639,58 @@
                             "type": "array",
                             "items": {
                               "type": "object",
-                              "propertyNames": {
-                                "type": "string"
+                              "properties": {
+                                "contributor": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string"
+                                            },
+                                            "name": {
+                                              "type": "string"
+                                            },
+                                            "avatar": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "type": "null"
+                                                }
+                                              ]
+                                            },
+                                            "isGuest": {
+                                              "type": "boolean",
+                                              "default": false,
+                                              "description": "Derived from the trusted measurement provenance"
+                                            },
+                                            "isFormerGuest": {
+                                              "type": "boolean",
+                                              "default": false,
+                                              "description": "A guest measurement whose account no longer exists"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "name",
+                                            "avatar"
+                                          ]
+                                        },
+                                        {
+                                          "type": "string",
+                                          "description": "JSON-encoded ExperimentDataContributor, including attribution flags"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
                               },
                               "additionalProperties": {
                                 "anyOf": [
@@ -5262,6 +5662,15 @@
                           "userId": {
                             "type": "string",
                             "minLength": 1
+                          },
+                          "isGuest": {
+                            "type": "boolean",
+                            "default": false
+                          },
+                          "isFormerGuest": {
+                            "type": "boolean",
+                            "default": false,
+                            "description": "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal."
                           },
                           "firstName": {
                             "type": "string"
@@ -8293,8 +8702,58 @@
                           "type": "array",
                           "items": {
                             "type": "object",
-                            "propertyNames": {
-                              "type": "string"
+                            "properties": {
+                              "contributor": {
+                                "anyOf": [
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string"
+                                          },
+                                          "name": {
+                                            "type": "string"
+                                          },
+                                          "avatar": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string"
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "isGuest": {
+                                            "type": "boolean",
+                                            "default": false,
+                                            "description": "Derived from the trusted measurement provenance"
+                                          },
+                                          "isFormerGuest": {
+                                            "type": "boolean",
+                                            "default": false,
+                                            "description": "A guest measurement whose account no longer exists"
+                                          }
+                                        },
+                                        "required": [
+                                          "id",
+                                          "name",
+                                          "avatar"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "description": "JSON-encoded ExperimentDataContributor, including attribution flags"
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
                             },
                             "additionalProperties": {
                               "anyOf": [
@@ -15578,6 +16037,13 @@
                     "type": "string",
                     "format": "uuid",
                     "description": "UUID of the experiment to associate this upload with"
+                  },
+                  "contentLength": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "exclusiveMinimum": 0,
+                    "description": "UTF-8 payload bytes; required and capped at 1 MiB for guests"
                   }
                 },
                 "required": [
@@ -32399,6 +32865,15 @@
                             "type": "string",
                             "format": "uuid"
                           },
+                          "isGuest": {
+                            "type": "boolean",
+                            "default": false
+                          },
+                          "isFormerGuest": {
+                            "type": "boolean",
+                            "default": false,
+                            "description": "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal."
+                          },
                           "firstName": {
                             "type": "string"
                           },
@@ -32573,6 +33048,15 @@
                             "userId": {
                               "type": "string",
                               "format": "uuid"
+                            },
+                            "isGuest": {
+                              "type": "boolean",
+                              "default": false
+                            },
+                            "isFormerGuest": {
+                              "type": "boolean",
+                              "default": false,
+                              "description": "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal."
                             },
                             "firstName": {
                               "type": "string"
@@ -37385,6 +37869,15 @@
                                   "type": "string",
                                   "format": "uuid"
                                 },
+                                "isGuest": {
+                                  "type": "boolean",
+                                  "default": false
+                                },
+                                "isFormerGuest": {
+                                  "type": "boolean",
+                                  "default": false,
+                                  "description": "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal."
+                                },
                                 "firstName": {
                                   "type": "string"
                                 },
@@ -37497,6 +37990,15 @@
                           "userId": {
                             "type": "string",
                             "format": "uuid"
+                          },
+                          "isGuest": {
+                            "type": "boolean",
+                            "default": false
+                          },
+                          "isFormerGuest": {
+                            "type": "boolean",
+                            "default": false,
+                            "description": "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal."
                           },
                           "firstName": {
                             "type": "string"

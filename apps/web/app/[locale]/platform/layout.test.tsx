@@ -19,6 +19,10 @@ vi.mock("@/components/navigation/site-header/site-header", () => ({
   SiteHeader: () => <header aria-label="site-header">Site header</header>,
 }));
 
+vi.mock("~/lib/posthog-server", () => ({
+  isFeatureFlagEnabledForSession: vi.fn().mockResolvedValue(false),
+}));
+
 vi.mock("@/components/whats-new/whats-new-sheet", () => ({
   WhatsNewSheet: () => null,
 }));
@@ -50,6 +54,28 @@ describe("AppLayout", () => {
     expect(mockSidebarWrapper).toHaveBeenCalledWith(
       expect.objectContaining({
         user: { id: "user-1", email: "test@example.com" },
+      }),
+    );
+  });
+
+  it("admits a guest without registration and sends no placeholder address to the sidebar", async () => {
+    vi.mocked(auth).mockResolvedValue(
+      createSession({
+        user: {
+          id: "guest",
+          name: "Synthetic",
+          email: "synthetic@guest.openjii.invalid",
+          registered: false,
+          isAnonymous: true,
+        },
+      }),
+    );
+    render(await AppLayout(defaultProps));
+    expect(screen.getByText("Page content")).toBeInTheDocument();
+    expect(mockRedirect).not.toHaveBeenCalled();
+    expect(mockSidebarWrapper).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user: { id: "guest", name: "Synthetic", email: "", isAnonymous: true },
       }),
     );
   });

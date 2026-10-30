@@ -5,6 +5,7 @@ import {
   exists,
   GRANT_ROLES,
   or,
+  not,
   organizationMembers,
   resourceGrants,
   sql,
@@ -12,7 +13,9 @@ import {
 } from "@repo/database";
 import type { AnyColumn, DatabaseInstance, ResourceType, SQL } from "@repo/database";
 
-import { roleTokenIncludes } from "./role-tokens";
+import { roleTokenIncludes } from "../../../common/utils/role-tokens";
+import { demoOrganizationCondition } from "../../../organizations/core/repositories/organization-query";
+import { guestCondition, guestMemberCondition } from "../../../users/core/repositories/guest-query";
 
 /**
  * The roles that carry `contribute` on an experiment, as literal values SQL can
@@ -66,6 +69,10 @@ function resourceRelationshipParts(params: {
   const owningOrgRole = roleFilters
     ? roleTokenIncludes(organizationMembers.role, roleFilters.owningOrg)
     : undefined;
+  const guestMember =
+    !roleFilters || roleFilters.owningOrg.includes("member")
+      ? guestMemberCondition(database, userId, organizationIdColumn)
+      : undefined;
 
   return {
     userGrantExists: exists(
@@ -115,17 +122,20 @@ function resourceRelationshipParts(params: {
           ),
         ),
     ),
-    owningOrgMemberExists: exists(
-      database
-        .select()
-        .from(organizationMembers)
-        .where(
-          and(
-            eq(organizationMembers.organizationId, organizationIdColumn),
-            eq(organizationMembers.userId, userId),
-            owningOrgRole,
+    owningOrgMemberExists: or(
+      exists(
+        database
+          .select()
+          .from(organizationMembers)
+          .where(
+            and(
+              eq(organizationMembers.organizationId, organizationIdColumn),
+              eq(organizationMembers.userId, userId),
+              owningOrgRole,
+            ),
           ),
-        ),
+      ),
+      guestMember,
     ),
   };
 }
@@ -189,7 +199,13 @@ export function contributingResourceCondition(params: {
       },
     });
 
-  return or(userGrantExists, teamGrantExists, orgGrantExists, owningOrgMemberExists);
+  return and(
+    or(
+      not(guestCondition(params.database, params.userId)),
+      demoOrganizationCondition(params.database, params.organizationIdColumn),
+    ),
+    or(userGrantExists, teamGrantExists, orgGrantExists, owningOrgMemberExists),
+  );
 }
 
 /** Relationship tiers, highest wins. Ordering only: access is decided elsewhere. */
@@ -268,6 +284,9 @@ export function resourceRoleExpression(params: {
   };
 
   return sql<ResourceRoleName | null>`(CASE
+    WHEN ${guestCondition(params.database, userId)} THEN
+      CASE WHEN ${demoOrganizationCondition(params.database, params.organizationIdColumn)}
+        THEN 'member'::text ELSE null::text END
     WHEN ${holds({ grant: ["owner"], owningOrg: ["owner"] })} THEN 'owner'
     WHEN ${holds({ grant: ["admin"], owningOrg: ["admin"] })} THEN 'admin'
     WHEN ${holds({ grant: ["viewer"] })} THEN 'viewer'
@@ -300,5 +319,7 @@ export function accessibleResourceCondition(params: {
   const isPublic = eq(params.visibilityColumn, "public");
   const related = relatedResourceCondition(params);
 
-  return related ? or(isPublic, related) : isPublic;
+  if (!related || !params.userId) return isPublic;
+  const isGuest = guestCondition(params.database, params.userId);
+  return or(isPublic, and(not(isGuest), related));
 }

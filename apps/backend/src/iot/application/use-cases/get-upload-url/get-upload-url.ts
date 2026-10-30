@@ -1,7 +1,13 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
+import { GUEST_UPLOAD_MAX_BYTES } from "@repo/api/shared/guest";
+
+import { DEMO_MODE_PORT } from "../../../../authorization/core/ports/demo-mode.port";
+import type { DemoModePort } from "../../../../authorization/core/ports/demo-mode.port";
 import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
+import { GUEST_IDENTITY_PORT } from "../../../../users/core/ports/guest-identity.port";
+import type { GuestIdentityPort } from "../../../../users/core/ports/guest-identity.port";
 import type { AwsPort, IotUploadUrl } from "../../../core/ports/aws.port";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 
@@ -13,9 +19,15 @@ export class GetIotUploadUrlUseCase {
     @Inject(AWS_PORT)
     private readonly awsPort: AwsPort,
     private readonly experimentRepository: ExperimentRepository,
+    @Inject(GUEST_IDENTITY_PORT) private readonly guests: GuestIdentityPort,
+    @Inject(DEMO_MODE_PORT) private readonly demo: DemoModePort,
   ) {}
 
-  async execute(experimentId: string): Promise<Result<IotUploadUrl>> {
+  async execute(
+    experimentId: string,
+    userId: string,
+    contentLength?: number,
+  ): Promise<Result<IotUploadUrl>> {
     this.logger.log({
       msg: "Generating IoT upload URL",
       operation: "getIotUploadUrl",
@@ -35,7 +47,51 @@ export class GetIotUploadUrlUseCase {
       return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
     }
 
-    // The right to contribute here is enforced by @CanAccess.
-    return this.awsPort.getIotUploadUrl(experimentId);
+    const identity = await this.guests.findIdentity(userId);
+    if (!identity) {
+      return failure(AppError.unauthorized("This session is no longer valid"));
+    }
+    if (identity.isAnonymous) {
+      if (
+        !experimentResult.value.organizationId ||
+        experimentResult.value.organizationType !== "demo" ||
+        !(await this.demo.isEnabled())
+      ) {
+        return failure(
+          AppError.forbidden(
+            "Guest uploads are limited to the available demo",
+            "GUEST_ACTION_FORBIDDEN",
+          ),
+        );
+      }
+      if (
+        contentLength === undefined ||
+        !Number.isInteger(contentLength) ||
+        contentLength <= 0 ||
+        contentLength > GUEST_UPLOAD_MAX_BYTES
+      ) {
+        return failure(
+          AppError.badRequest("Guest uploads must be at most 1 MiB", "GUEST_UPLOAD_SIZE_INVALID"),
+        );
+      }
+      const quota = await this.guests.takeQuota(
+        userId,
+        experimentResult.value.organizationId,
+        "upload",
+      );
+      if (!quota.allowed)
+        return failure(
+          new AppError(
+            `Guest limit reached. Try again in ${quota.retryAfterSeconds} seconds`,
+            "GUEST_RATE_LIMITED",
+            429,
+            { retryAfterSeconds: quota.retryAfterSeconds },
+          ),
+        );
+      return this.awsPort.getIotUploadUrl(experimentResult.value.id, userId, {
+        guestContentLength: contentLength,
+      });
+    }
+    return this.awsPort.getIotUploadUrl(experimentResult.value.id, userId);
   }
 }

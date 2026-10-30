@@ -163,6 +163,16 @@ beforeEach(() => {
 });
 
 describe("ExperimentJoinCta", () => {
+  it("hides join controls for a Demo outsider but keeps measuring for a member", () => {
+    const { rerender, toJSON } = render(
+      <ExperimentJoinCta {...BASE} organizationType="demo" membershipStatus="none" />,
+    );
+    expect(toJSON()).toBeNull();
+    rerender(<ExperimentJoinCta {...BASE} organizationType="demo" membershipStatus="member" />);
+    expect(screen.getByText("Start measuring")).toBeTruthy();
+    expect(screen.queryByText("Request to join")).toBeNull();
+  });
+
   describe("member", () => {
     it("selects the experiment and opens the picker, not the flow itself", () => {
       render(<ExperimentJoinCta {...BASE} membershipStatus="member" />);

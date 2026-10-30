@@ -3,6 +3,8 @@ import type { SentMessageInfo } from "nodemailer";
 
 import { renderVerificationRequest } from "@repo/transactional/render/verification-request";
 
+import { isGuestRecipient } from "../guest/recipient";
+
 interface ExtendedSentMessageInfo extends SentMessageInfo {
   rejected?: string[];
   pending?: string[];
@@ -17,6 +19,7 @@ interface SendVerificationEmailParams {
 }
 
 export async function sendVerificationEmail(params: SendVerificationEmailParams) {
+  if (await isGuestRecipient(params.to)) return;
   const { to, url, emailServer, emailFrom } = params;
 
   const { host } = new URL(url);

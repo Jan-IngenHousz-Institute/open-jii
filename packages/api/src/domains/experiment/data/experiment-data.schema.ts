@@ -53,10 +53,38 @@ export const zExperimentDataColumn = z.object({
 
 export type ExperimentDataColumn = z.infer<typeof zExperimentDataColumn>;
 
+export const zExperimentDataContributor = z.object({
+  id: z.string(),
+  name: z.string(),
+  avatar: z.string().nullable(),
+  isGuest: z.boolean().default(false).describe("Derived from the trusted measurement provenance"),
+  isFormerGuest: z
+    .boolean()
+    .default(false)
+    .describe("A guest measurement whose account no longer exists"),
+});
+
+export type ExperimentDataContributor = z.infer<typeof zExperimentDataContributor>;
+
+export type ExperimentDataRow = Record<string, unknown> & {
+  contributor?: ExperimentDataContributor | string | null;
+};
+
+export const zExperimentDataRow: z.ZodType<ExperimentDataRow, unknown> = z
+  .object({
+    contributor: z
+      .union([
+        zExperimentDataContributor,
+        z.string().describe("JSON-encoded ExperimentDataContributor, including attribution flags"),
+      ])
+      .nullish(),
+  })
+  .catchall(z.unknown().nullable());
+
 // Experiment data schema
 export const zExperimentData = z.object({
   columns: z.array(zExperimentDataColumn),
-  rows: z.array(z.record(z.string(), z.unknown().nullable())),
+  rows: z.array(zExperimentDataRow),
   totalRows: z.number().int(),
   truncated: z
     .boolean()

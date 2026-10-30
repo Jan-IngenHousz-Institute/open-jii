@@ -15,8 +15,8 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
+import { accessibleResourceCondition } from "../../../authorization/core/repositories/resource-access-query";
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import {
   CreateIotDeviceGroupDto,

@@ -9,7 +9,7 @@ import type {
   DeletionBlockersResponse,
 } from "@repo/api/domains/user/user.schema";
 import type { ErrorResponse } from "@repo/api/shared/errors";
-import { eq, users } from "@repo/database";
+import { eq, users, profiles } from "@repo/database";
 
 import { failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
@@ -353,6 +353,49 @@ describe("UserController", () => {
   });
 
   describe("createUserProfile", () => {
+    it("completes only the current user's registration through a valid profile save", async () => {
+      const userId = await testApp.createTestUser({ createProfile: false, registered: false });
+      const otherId = await testApp.createTestUser({ createProfile: false, registered: false });
+      await testApp.database.update(users).set({ registered: false }).where(eq(users.id, userId));
+      await testApp.database.update(users).set({ registered: false }).where(eq(users.id, otherId));
+      const path = testApp.resolveOrpcPath(contract.users.createUserProfile);
+      await testApp
+        .post(path)
+        .withAuth(userId)
+        .send({ firstName: "New", lastName: "Researcher", userId: otherId, registered: false })
+        .expect(StatusCodes.CREATED);
+      const [saved] = await testApp.database.select().from(users).where(eq(users.id, userId));
+      const [other] = await testApp.database.select().from(users).where(eq(users.id, otherId));
+      expect(saved.registered).toBe(true);
+      expect(other.registered).toBe(false);
+      expect(
+        await testApp.database.select().from(profiles).where(eq(profiles.userId, userId)),
+      ).toHaveLength(1);
+      expect(
+        await testApp.database.select().from(profiles).where(eq(profiles.userId, otherId)),
+      ).toHaveLength(0);
+    });
+
+    it("leaves registration and profile absent on invalid or unauthenticated saves", async () => {
+      const userId = await testApp.createTestUser({ createProfile: false, registered: false });
+      const path = testApp.resolveOrpcPath(contract.users.createUserProfile);
+      await testApp
+        .post(path)
+        .withAuth(userId)
+        .send({ firstName: "A", lastName: "B" })
+        .expect(StatusCodes.BAD_REQUEST);
+      await testApp
+        .post(path)
+        .withoutAuth()
+        .send({ firstName: "Valid", lastName: "Researcher" })
+        .expect(StatusCodes.UNAUTHORIZED);
+      const [user] = await testApp.database.select().from(users).where(eq(users.id, userId));
+      expect(user.registered).toBe(false);
+      expect(
+        await testApp.database.select().from(profiles).where(eq(profiles.userId, userId)),
+      ).toHaveLength(0);
+    });
+
     it("should successfully create a user profile", async () => {
       const response = await testApp
         .post(testApp.resolveOrpcPath(contract.users.createUserProfile))

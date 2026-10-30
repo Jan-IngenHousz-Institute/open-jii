@@ -97,12 +97,16 @@ describe("UserWebhookController", () => {
         expect.arrayContaining([
           {
             userId: testUser1Id,
+            isGuest: false,
+            isFormerGuest: false,
             firstName: "John",
             lastName: "Doe",
             avatarUrl: null,
           },
           {
             userId: testUser2Id,
+            isGuest: false,
+            isFormerGuest: false,
             firstName: "Jane",
             lastName: "Smith",
             avatarUrl: null,
@@ -171,6 +175,8 @@ describe("UserWebhookController", () => {
         users: [
           {
             userId: testUserId,
+            isGuest: false,
+            isFormerGuest: false,
             firstName: "Valid",
             lastName: "User",
             avatarUrl: null,
@@ -258,6 +264,8 @@ describe("UserWebhookController", () => {
         users: [
           {
             userId: userWithProfileId,
+            isGuest: false,
+            isFormerGuest: false,
             firstName: "With",
             lastName: "Profile",
             avatarUrl: null,
@@ -414,6 +422,8 @@ describe("UserWebhookController", () => {
         users: [
           {
             userId: testUserId,
+            isGuest: false,
+            isFormerGuest: false,
             firstName: "Duplicate",
             lastName: "Test",
             avatarUrl: null,

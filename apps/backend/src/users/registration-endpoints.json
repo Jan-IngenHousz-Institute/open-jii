@@ -1,0 +1,387 @@
+[
+  {
+    "name": "acceptInvitation",
+    "path": "/organization/accept-invitation",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "addMember",
+    "path": null,
+    "classification": "server-only: no HTTP route"
+  },
+  {
+    "name": "addTeamMember",
+    "path": "/organization/add-team-member",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "adminUpdateUser",
+    "path": "/admin/update-user",
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "banUser",
+    "path": "/admin/ban-user",
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "callbackOAuth",
+    "path": "/callback/:id",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "cancelInvitation",
+    "path": "/organization/cancel-invitation",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "changeEmail",
+    "path": "/change-email",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "changeEmailEmailOTP",
+    "path": "/email-otp/change-email",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "changePassword",
+    "path": "/change-password",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "checkOrganizationSlug",
+    "path": "/organization/check-slug",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "checkVerificationOTP",
+    "path": "/email-otp/check-verification-otp",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "createApiKey",
+    "path": "/api-key/create",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "createInvitation",
+    "path": "/organization/invite-member",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "createOrganization",
+    "path": "/organization/create",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "createTeam",
+    "path": "/organization/create-team",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "createUser",
+    "path": "/admin/create-user",
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "createVerificationOTP",
+    "path": null,
+    "classification": "server-only: no HTTP route"
+  },
+  {
+    "name": "deleteAllExpiredApiKeys",
+    "path": null,
+    "classification": "server-only: no HTTP route"
+  },
+  {
+    "name": "deleteAnonymousUser",
+    "path": "/delete-anonymous-user",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "deleteApiKey",
+    "path": "/api-key/delete",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "deleteOrganization",
+    "path": "/organization/delete",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "deletePasskey",
+    "path": "/passkey/delete-passkey",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "deleteUser",
+    "path": "/delete-user",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "forgetPasswordEmailOTP",
+    "path": "/forget-password/email-otp",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "getAccessToken",
+    "path": "/get-access-token",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "getSession",
+    "path": "/get-session",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "hasPermission",
+    "path": "/organization/has-permission",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "impersonateUser",
+    "path": "/admin/impersonate-user",
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "leaveOrganization",
+    "path": "/organization/leave",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "linkSocialAccount",
+    "path": "/link-social",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "listUserSessions",
+    "path": "/admin/list-user-sessions",
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "refreshToken",
+    "path": "/refresh-token",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "rejectInvitation",
+    "path": "/organization/reject-invitation",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "removeMember",
+    "path": "/organization/remove-member",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "removeTeam",
+    "path": "/organization/remove-team",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "removeTeamMember",
+    "path": "/organization/remove-team-member",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "removeUser",
+    "path": "/admin/remove-user",
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "requestEmailChangeEmailOTP",
+    "path": "/email-otp/request-email-change",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "requestPasswordReset",
+    "path": "/request-password-reset",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "requestPasswordResetEmailOTP",
+    "path": "/email-otp/request-password-reset",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "resetPassword",
+    "path": "/reset-password",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "resetPasswordEmailOTP",
+    "path": "/email-otp/reset-password",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "revokeOtherSessions",
+    "path": "/revoke-other-sessions",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "revokeSession",
+    "path": "/revoke-session",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "revokeSessions",
+    "path": "/revoke-sessions",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "revokeUserSession",
+    "path": "/admin/revoke-user-session",
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "revokeUserSessions",
+    "path": "/admin/revoke-user-sessions",
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "sendVerificationEmail",
+    "path": "/send-verification-email",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "sendVerificationOTP",
+    "path": "/email-otp/send-verification-otp",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "setActiveOrganization",
+    "path": "/organization/set-active",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "setActiveTeam",
+    "path": "/organization/set-active-team",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "setPassword",
+    "path": null,
+    "classification": "server-only: no HTTP route"
+  },
+  {
+    "name": "setRole",
+    "path": "/admin/set-role",
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "setUserPassword",
+    "path": "/admin/set-user-password",
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "signInAnonymous",
+    "path": "/sign-in/anonymous",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "signInEmail",
+    "path": "/sign-in/email",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "signInEmailOTP",
+    "path": "/sign-in/email-otp",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "signInSocial",
+    "path": "/sign-in/social",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "signOut",
+    "path": "/sign-out",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "signUpEmail",
+    "path": "/sign-up/email",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "stopImpersonating",
+    "path": "/admin/stop-impersonating",
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "unbanUser",
+    "path": "/admin/unban-user",
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "unlinkAccount",
+    "path": "/unlink-account",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "updateApiKey",
+    "path": "/api-key/update",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "updateMemberRole",
+    "path": "/organization/update-member-role",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "updateOrganization",
+    "path": "/organization/update",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "updatePasskey",
+    "path": "/passkey/update-passkey",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "updateSession",
+    "path": "/update-session",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "updateTeam",
+    "path": "/organization/update-team",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "updateUser",
+    "path": "/update-user",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "userHasPermission",
+    "path": "/admin/has-permission",
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "verifyApiKey",
+    "path": null,
+    "classification": "server-only: no HTTP route"
+  },
+  {
+    "name": "verifyEmailOTP",
+    "path": "/email-otp/verify-email",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "verifyPasskeyAuthentication",
+    "path": "/passkey/verify-authentication",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "verifyPasskeyRegistration",
+    "path": "/passkey/verify-registration",
+    "classification": "HTTP: registration forbidden"
+  },
+  {
+    "name": "verifyPassword",
+    "path": "/verify-password",
+    "classification": "HTTP: registration forbidden"
+  }
+]

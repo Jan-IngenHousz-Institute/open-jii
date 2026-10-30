@@ -38,6 +38,15 @@ export function throwOrpcError(
     cause: logObject,
     data: {
       code: error.code,
+      ...(error.statusCode === 429 &&
+      typeof error.details === "object" &&
+      error.details !== null &&
+      "retryAfterSeconds" in error.details &&
+      typeof error.details.retryAfterSeconds === "number" &&
+      Number.isInteger(error.details.retryAfterSeconds) &&
+      error.details.retryAfterSeconds > 0
+        ? { retryAfterSeconds: error.details.retryAfterSeconds }
+        : {}),
       ...(process.env.NODE_ENV !== "production" && error.details ? { details: error.details } : {}),
     },
   });

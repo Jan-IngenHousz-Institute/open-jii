@@ -22,7 +22,7 @@ export class ExperimentFlowsController {
     private readonly updateFlowUseCase: UpdateFlowUseCase,
   ) {}
 
-  @CanAccess({ resource: "experiment", action: "read" })
+  @CanAccess({ guest: true, resource: "experiment", action: "read" })
   @Implement(experimentFlowsContract.getFlow)
   getFlow(@Session() session: UserSession) {
     return implement(experimentFlowsContract.getFlow).handler(async ({ input }) => {

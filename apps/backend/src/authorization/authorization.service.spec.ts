@@ -389,6 +389,7 @@ describe("AuthorizationService.can", () => {
       await expect(authz.getOwnership("macro", macro.id)).resolves.toEqual({
         organizationId: orgId,
         visibility: "private",
+        organizationType: null,
       });
     });
 

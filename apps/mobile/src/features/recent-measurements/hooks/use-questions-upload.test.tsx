@@ -34,6 +34,9 @@ vi.mock("react-native", () => ({ Platform: platform }));
 vi.mock("expo-device", () => device);
 vi.mock("expo-application", () => application);
 
+vi.mock("~/features/auth/services/local-upload-identity", () => ({
+  getLocalUploadIdentity: () => ({ userId: "user-1", isGuest: false }),
+}));
 vi.mock("~/features/recent-measurements/hooks/use-measurements", () => ({
   useMeasurements: () => ({ saveMeasurement }),
 }));
@@ -121,6 +124,7 @@ describe("useQuestionsUpload", () => {
         },
       },
       "pending",
+      { userId: "user-1", isGuest: false },
     );
     expect(saveMeasurement.mock.invocationCallOrder[0]).toBeLessThan(
       enqueue.mock.invocationCallOrder[0],

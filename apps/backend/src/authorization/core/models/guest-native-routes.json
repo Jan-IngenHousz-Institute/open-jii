@@ -1,0 +1,8 @@
+[
+  {
+    "procedure": "HealthController.check",
+    "method": "GET",
+    "path": "/health",
+    "classification": "public-list"
+  }
+]

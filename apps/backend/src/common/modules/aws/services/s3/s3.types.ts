@@ -8,3 +8,7 @@ export interface SignedDownloadUrl {
   url: string;
   expiresAt: Date;
 }
+
+export interface GuestUploadOptions {
+  guestContentLength: number;
+}

@@ -28,6 +28,15 @@ describe("EnsureMobileDeviceUseCase", () => {
 
   const body = { installId: INSTALL_ID, name: "iPhone 15" };
 
+  it("refuses guest device registration before provisioning a thing", async () => {
+    const guest = await testApp.createTestUser({ isAnonymous: true, createProfile: false });
+    const createThing = vi.spyOn(awsAdapter, "createThing");
+    const result = await useCase.execute(body, guest);
+    assertFailure(result);
+    expect(result.error.code).toBe("GUEST_ACTION_FORBIDDEN");
+    expect(createThing).not.toHaveBeenCalled();
+  });
+
   beforeAll(async () => {
     await testApp.setup();
   });

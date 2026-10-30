@@ -55,7 +55,7 @@ export class ExperimentLocationsController {
     };
   }
 
-  @CanAccess({ resource: "experiment", action: "read" })
+  @CanAccess({ guest: true, resource: "experiment", action: "read" })
   @Implement(experimentLocationsContract.getExperimentLocations)
   getLocations(@Session() session: UserSession) {
     return implement(experimentLocationsContract.getExperimentLocations).handler(

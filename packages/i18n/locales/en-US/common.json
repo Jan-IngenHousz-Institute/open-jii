@@ -1030,7 +1030,10 @@
     "checkEmail": "Check your email for a verification code",
     "loginWith-passkey": "Sign in with a passkey",
     "lastUsed": "Last used",
-    "passkeyError": "Passkey sign-in failed. Please try again."
+    "passkeyError": "Passkey sign-in failed. Please try again.",
+    "userDisplayName": "{{name}}",
+    "userDisplayName_guest": "{{name}} (guest)",
+    "userDisplayName_unnamedGuest": "Guest"
   },
   "registration": {
     "title": "Registration",
@@ -1459,9 +1462,6 @@
     "renamedExportName": "Exported files call it {{key}}."
   },
   "dataFilters": {
-    "booleanValue": "Value",
-    "booleanValue_true": "Yes",
-    "booleanValue_false": "No",
     "placeholderSubstring": "Substring",
     "placeholderValue": "Value",
     "placeholderCommaSeparated": "value1, value2, …",
@@ -1499,7 +1499,10 @@
     "presetThisMonth": "This month",
     "presetLastMonth": "Last month",
     "presetThisYear": "This year",
-    "presetYearToDate": "Year to date"
+    "presetYearToDate": "Year to date",
+    "booleanValue": "Value",
+    "booleanValue_true": "Yes",
+    "booleanValue_false": "No"
   },
   "ui": {
     "actions": {
@@ -1533,6 +1536,20 @@
     "userId": "User id",
     "loadFailed": "Could not load platform admins.",
     "retry": "Try again"
+  },
+  "guestSession": {
+    "nameLabel": "Name, optional",
+    "nameHint": "Use a nickname. Do not enter an email address.",
+    "accountRetention": "Your guest account and session details become eligible for nightly removal after seven days. Names in derived contributor caches and measurements held on this phone may remain longer. Public measurements remain.",
+    "permanentMeasurements": "Measurements you take here stay in the public demo permanently.",
+    "quotaHint": "Uploads and analysis each allow 60 validated attempts per clock hour. An attempt counts even if the external service fails.",
+    "formerGuest": "Former guest"
+  },
+  "members": {
+    "displayName": "{{name}}",
+    "displayName_guest": "{{name}} (guest)",
+    "displayName_formerGuest": "Former guest",
+    "displayName_unnamedGuest": "Guest"
   },
   "provenance": {
     "simulated": "Simulated",

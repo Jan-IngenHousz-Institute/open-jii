@@ -1734,7 +1734,14 @@ describe("UserRepository", () => {
 
       assertSuccess(result);
       expect(result.value).toEqual([
-        { userId: inactiveId, firstName: "Unknown", lastName: "User", avatarUrl: null },
+        {
+          userId: inactiveId,
+          firstName: "Unknown",
+          lastName: "User",
+          avatarUrl: null,
+          isGuest: false,
+          isFormerGuest: false,
+        },
       ]);
     });
   });
