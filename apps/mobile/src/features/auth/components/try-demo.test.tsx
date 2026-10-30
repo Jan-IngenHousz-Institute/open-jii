@@ -216,7 +216,8 @@ it.each([false, "error"])(
 it.each(["missing-id", "session-error", "network", "issuer-failed"])(
   "keeps the entry retryable after %s",
   async (failure) => {
-    if (failure === "missing-id") state.create.mockResolvedValue({ data: {}, error: null });
+    if (failure === "missing-id")
+      state.create.mockResolvedValue({ data: { user: { id: "" } }, error: null });
     if (failure === "session-error")
       state.session.mockResolvedValue({ data: null, error: { message: "expired" } });
     if (failure === "network") state.session.mockRejectedValue(new Error("offline"));
