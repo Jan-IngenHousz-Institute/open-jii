@@ -445,6 +445,8 @@ pnpm equipment:navigation --footer-id <published-footer-id> \
 
 Apply first checks that the public Equipment origin responds successfully over
 HTTPS. It refuses unpublished footer edits and uses Contentful version headers.
+A full six-link navbar needs an operator to review its contents first; the command
+refuses to append an invisible seventh link and preserves every existing entry.
 A completed run is idempotent. If a write or publish fails partway, inspect both
 entries before retrying; the command never retries writes automatically. It does
 not write drafts during a dry run.
