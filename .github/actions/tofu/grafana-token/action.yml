@@ -1,0 +1,40 @@
+name: "Grafana Token"
+description: "Creates a Grafana service account token that lives only as long as this run"
+inputs:
+  workspace_id:
+    description: "Amazon Managed Grafana workspace id"
+    required: true
+  service_account_id:
+    description: "Service account the token is created for"
+    required: true
+  seconds_to_live:
+    description: "How long the token works, in seconds"
+    required: false
+    default: "3600"
+outputs:
+  token:
+    description: "The token, masked in the logs"
+    value: ${{ steps.create.outputs.token }}
+  token_id:
+    description: "The token's id, for deleting it when the run ends"
+    value: ${{ steps.create.outputs.token_id }}
+runs:
+  using: "composite"
+  steps:
+    - name: Create the token
+      id: create
+      shell: bash
+      env:
+        WORKSPACE_ID: ${{ inputs.workspace_id }}
+        SERVICE_ACCOUNT_ID: ${{ inputs.service_account_id }}
+        SECONDS_TO_LIVE: ${{ inputs.seconds_to_live }}
+      run: |
+        OUTPUT=$(aws grafana create-workspace-service-account-token \
+          --workspace-id "$WORKSPACE_ID" \
+          --service-account-id "$SERVICE_ACCOUNT_ID" \
+          --name "ci-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$GITHUB_JOB" \
+          --seconds-to-live "$SECONDS_TO_LIVE")
+        TOKEN=$(echo "$OUTPUT" | jq -r '.serviceAccountToken.key')
+        echo "::add-mask::$TOKEN"
+        echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+        echo "token_id=$(echo "$OUTPUT" | jq -r '.serviceAccountToken.id')" >> "$GITHUB_OUTPUT"
