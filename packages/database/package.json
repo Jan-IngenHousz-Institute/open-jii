@@ -22,6 +22,7 @@
     "env:test": "dotenv -e .env.test --",
     "db:seed": "pnpm env:default tsx scripts/seed.ts",
     "db:seed:orgs": "pnpm env:default tsx scripts/seed-organizations.ts",
+    "platform-role": "pnpm env:default tsx src/platform-roles.ts",
     "db:reset": "pnpm env:default tsx scripts/reset.ts",
     "db:migrate": "pnpm env:default drizzle-kit migrate",
     "db:studio": "pnpm env:default drizzle-kit studio",
@@ -42,7 +43,9 @@
     "db:test:reset": "pnpm env:test tsx scripts/reset.ts",
     "db:test:migrate": "pnpm env:test drizzle-kit migrate",
     "db:test:setup": "pnpm db:test:start && pnpm run db:test:reset && pnpm run db:test:migrate",
-    "db:test:teardown": "pnpm db:test:stop"
+    "db:test:teardown": "pnpm db:test:stop",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": [],
   "author": "",
@@ -59,11 +62,15 @@
     "@repo/api": "workspace:*",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
+    "@total-typescript/shoehorn": "^0.1.2",
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:testing",
     "dotenv-cli": "^8.0.0",
     "drizzle-kit": "^0.31.10",
     "eslint": "catalog:",
     "tsx": "^4.21.0",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:testing"
   }
 }
