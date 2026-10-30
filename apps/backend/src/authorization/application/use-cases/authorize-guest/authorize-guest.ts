@@ -3,7 +3,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { AppError, failure, success } from "../../../../common/utils/fp-utils";
 import { GUEST_IDENTITY_PORT } from "../../../../users/core/ports/guest-identity.port";
 import type { GuestIdentityPort } from "../../../../users/core/ports/guest-identity.port";
-import { matchGuestRoute } from "../../../core/models/guest-route.model";
+import { matchGuestRoute } from "../../../guest-routes";
 
 interface GuestRequest {
   userId: string;

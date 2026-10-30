@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import nativeInventory from "./guest-native-routes.json";
-import inventory from "./guest-routes.json";
+import nativeInventory from "./core/models/guest-native-routes.json";
+import inventory from "./core/models/guest-routes.json";
 
 const routeSchema = z.object({
   procedure: z.string(),

@@ -1,5 +1,5 @@
 import type { GuestIdentityPort } from "../../../../users/core/ports/guest-identity.port";
-import { guestRouteInventory, matchGuestRoute } from "../../../core/models/guest-route.model";
+import { guestRouteInventory, matchGuestRoute } from "../../../guest-routes";
 import { AuthorizeGuestUseCase } from "./authorize-guest";
 
 const userId = "82e9a684-8c1c-4967-b940-09735bb4b7ed";

@@ -32,9 +32,9 @@ import { WorkbookVersionRepository } from "../workbooks/core/repositories/workbo
 import { AuthorizationService } from "./authorization.service";
 import { CAN_ACCESS_KEY } from "./can-access.guard";
 import type { CanAccessMetadata } from "./can-access.guard";
-import { guestRouteInventory, guestNativeRouteInventory } from "./core/models/guest-route.model";
 import { DEMO_MODE_PORT } from "./core/ports/demo-mode.port";
 import type { DemoModePort } from "./core/ports/demo-mode.port";
+import { guestRouteInventory, guestNativeRouteInventory } from "./guest-routes";
 
 describe("guest authorization HTTP boundary", () => {
   const app = TestHarness.App;

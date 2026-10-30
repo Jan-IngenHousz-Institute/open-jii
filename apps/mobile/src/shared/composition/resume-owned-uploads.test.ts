@@ -20,6 +20,11 @@ beforeEach(() => {
 });
 
 describe("resumeOwnedUploads", () => {
+  it("leaves held rows unchanged when the local storage read fails", async () => {
+    getMeasurementIds.mockRejectedValueOnce(new Error("storage unavailable"));
+    await expect(resumeOwnedUploads("owner")).resolves.toBeUndefined();
+    expect(enqueueMany).not.toHaveBeenCalled();
+  });
   it("requeues held rows when the owner's local session is ready", async () => {
     getLocalUploadIdentity.mockReturnValue({ userId: "owner", isGuest: true });
     await resumeOwnedUploads("owner");
