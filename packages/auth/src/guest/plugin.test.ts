@@ -189,7 +189,7 @@ describe("guest response privacy", () => {
       context: { ...ctx.context, responseHeaders: undefined },
     };
     await plugin().hooks.after.slice(-1)[0].handler(withoutCache);
-    expect(ctx.context.returned).toEqual({ status: true });
+    expect(withoutCache.context.returned).toEqual({ status: true });
     expect(expireCookie).toHaveBeenCalledTimes(1);
   });
   it("ignores absent requests, non-user responses and researchers", async () => {

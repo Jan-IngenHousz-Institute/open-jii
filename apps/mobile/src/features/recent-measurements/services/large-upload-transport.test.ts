@@ -183,6 +183,50 @@ describe("largeUploadTransport", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it.each([401, 403])(
+    "holds the capture if initial issuance rejects with %s after sign-out",
+    async (status) => {
+      mockGetUploadUrl.mockImplementationOnce(() => {
+        vi.mocked(getLocalUploadIdentity).mockReturnValue(null);
+        return Promise.reject(Object.assign(new Error("issuer refused"), { status }));
+      });
+      await expect(
+        createLargeUploadTransport().publish(TOPIC, { v: 1 }, { ownerUserId: "owner" }),
+      ).rejects.toMatchObject({ kind: "IdentityChanged", retryable: false });
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([401, 403])(
+    "holds the capture if refresh issuance rejects with %s after an account switch",
+    async (status) => {
+      mockGetUploadUrl.mockResolvedValueOnce(target).mockImplementationOnce(() => {
+        vi.mocked(getLocalUploadIdentity).mockReturnValue({ userId: "B", isGuest: false });
+        return Promise.reject(Object.assign(new Error("issuer refused"), { status }));
+      });
+      fetchMock.mockResolvedValue(response(403));
+      await expect(
+        createLargeUploadTransport().publish(TOPIC, { v: 1 }, { ownerUserId: "owner" }),
+      ).rejects.toMatchObject({ kind: "IdentityChanged", retryable: false });
+      expect(mockGetUploadUrl).toHaveBeenCalledTimes(2);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([
+    [401, "Unauthenticated"],
+    [403, "Forbidden"],
+  ] as const)(
+    "preserves the original refresh refusal %s when identity is unchanged",
+    async (status, kind) => {
+      mockGetUploadUrl.mockResolvedValueOnce(target).mockRejectedValueOnce({ status });
+      fetchMock.mockResolvedValue(response(403));
+      await expect(
+        createLargeUploadTransport().publish(TOPIC, { v: 1 }, { ownerUserId: "owner" }),
+      ).rejects.toMatchObject({ kind, retryable: false });
+    },
+  );
+
   it("mints a URL for the topic's experiment and PUTs the payload", async () => {
     mockGetUploadUrl.mockResolvedValue(target);
     fetchMock.mockResolvedValue(response(200));

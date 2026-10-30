@@ -71,7 +71,13 @@ class LargeUploadTransportImpl implements Transport {
     };
     const issueTarget = async () => {
       assertOwner();
-      const issued = await this.requestTarget(experimentId, guest ? bytes : undefined);
+      let issued: UploadTarget;
+      try {
+        issued = await this.requestTarget(experimentId, guest ? bytes : undefined);
+      } catch (error) {
+        assertOwner();
+        throw error;
+      }
       assertOwner();
       return issued;
     };
