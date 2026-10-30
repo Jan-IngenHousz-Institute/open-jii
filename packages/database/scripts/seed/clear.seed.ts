@@ -29,8 +29,8 @@ import {
   SEED_EXPERIMENT_IDS,
   CONTRIBUTOR_SEEDS,
 } from "./constants";
-import { FIXTURE_ORG_SLUGS } from "./organization.seed";
 import { clearDemoContent } from "./demo.seed";
+import { FIXTURE_ORG_SLUGS } from "./organization.seed";
 
 /**
  * Delete seed users, contributor users, their personal organizations, directory
