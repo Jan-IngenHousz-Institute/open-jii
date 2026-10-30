@@ -161,7 +161,14 @@ export async function equipmentNavigation(
         const sys = item.sys;
         return !!sys && typeof sys === "object" && "id" in sys && sys.id === buttonId;
       });
-      if (!present) values[locale] = [...items, link];
+      const updated = present ? items : [...items, link];
+      // The public navigation query reads at most six entries.
+      if (field === "navigationButtons" && updated.length > 6) {
+        throw new Error(
+          `Footer ${field}.${locale} exceeds the six-link navbar capacity; review the navigation before adding Equipment`,
+        );
+      }
+      values[locale] = updated;
     }
   }
   const footerChanged = !isDeepStrictEqual(footer.fields, nextFields);

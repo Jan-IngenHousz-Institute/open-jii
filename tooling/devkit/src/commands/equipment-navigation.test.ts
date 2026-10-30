@@ -143,6 +143,35 @@ describe("Equipment CMS navigation", () => {
     ).rejects.toThrow("reviewed dry run");
     expect(request.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
   });
+  it.each([false, true])(
+    "refuses a seventh navbar entry before any write (apply=%s)",
+    async (applyMode) => {
+      const { request, footer } = fixture();
+      footer().fields.navigationButtons["en-US"] = Array.from({ length: 6 }, (_, index) => ({
+        sys: { ...oldLink.sys, id: `existing-${index}` },
+      }));
+      await expect(
+        equipmentNavigation({ ...apply, apply: applyMode }, config, request),
+      ).rejects.toThrow("six-link navbar capacity");
+      expect(request.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
+    },
+  );
+  it("keeps an existing Equipment entry when all six navbar slots are occupied", async () => {
+    const { request, footer } = fixture();
+    footer().fields.navigationButtons["en-US"] = [
+      ...Array.from({ length: 5 }, (_, index) => ({
+        sys: { ...oldLink.sys, id: `existing-${index}` },
+      })),
+      { sys: { ...oldLink.sys, id: "openjii-equipment-navigation" } },
+    ];
+    await expect(equipmentNavigation(apply, config, request)).resolves.toMatchObject({
+      applied: true,
+    });
+    expect(footer().fields.navigationButtons["en-US"]).toHaveLength(6);
+    request.mockClear();
+    await equipmentNavigation({ ...apply, footerVersion: 6, buttonVersion: 2 }, config, request);
+    expect(request.mock.calls.every(([, init]) => init?.method === "GET")).toBe(true);
+  });
   it("refuses to publish unrelated pending footer edits", async () => {
     const { request, footer } = fixture();
     footer().sys.version = 5;
