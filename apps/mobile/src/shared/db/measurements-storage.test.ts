@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Database from "better-sqlite3";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { readFileSync } from "fs";
 import { resolve } from "path";
@@ -1131,9 +1132,10 @@ describe("measurements-storage", () => {
         ["researcher-failed", "failed", false, old],
       ] as const) {
         insertRow(id, status, { createdAt });
-        sqlite
-          .prepare("UPDATE measurements SET owner_is_guest = ? WHERE id = ?")
-          .run(Number(guest), id);
+        db.update(schema.measurements)
+          .set({ ownerIsGuest: guest })
+          .where(eq(schema.measurements.id, id))
+          .run();
       }
       const mod = await import("~/shared/db/measurements-storage");
       await mod.pruneExpiredMeasurements();
