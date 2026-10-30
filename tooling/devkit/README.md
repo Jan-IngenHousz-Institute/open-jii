@@ -411,6 +411,44 @@ the evidence its row carries:
 This touches a workspace nine people share and Linear has no undo for a bulk change. Dry run,
 show someone the counts, then apply one phase at a time.
 
+## Equipment links in public navigation
+
+`pnpm equipment:navigation` prints the proposed Contentful entry without making
+network requests. It uses the public navbar's existing `navigationButtons` and
+the footer's `menuButtons` collections. No website code injects an extra link.
+
+After `https://equipment.openjii.org` is live, use the existing Contentful
+management configuration in the owner-only devkit environment:
+`CONTENTFUL_SPACE_ID`, `CONTENTFUL_SPACE_ENVIRONMENT` and
+`CONTENTFUL_MANAGEMENT_TOKEN` (or `CMA`). The command can also read the main
+checkout's devkit environment, as the Linear commands do. Values stay in process.
+
+```bash
+pnpm equipment:navigation --list-footers
+pnpm equipment:navigation --footer-id <published-footer-id>
+```
+
+Review the returned entry, footer fields and observed versions. The command
+proposes one `componentButton`, ID `openjii-equipment-navigation`, labelled
+`Equipment`, pointing to `https://equipment.openjii.org`. It appends a reference
+to both collections for each locale already present, preserving the other entries.
+The label is `Equipment` for each configured locale; the URL and internal name
+follow the live content model's localization settings.
+
+Only after reviewing that plan, publish with its exact versions:
+
+```bash
+pnpm equipment:navigation --footer-id <published-footer-id> \
+  --footer-version <observed-footer-version> \
+  --button-version <observed-button-version-or-0> --apply
+```
+
+Apply first checks that the public Equipment origin responds successfully over
+HTTPS. It refuses unpublished footer edits and uses Contentful version headers.
+A completed run is idempotent. If a write or publish fails partway, inspect both
+entries before retrying; the command never retries writes automatically. It does
+not write drafts during a dry run.
+
 ## Why a command may refuse you
 
 Repo-wide rules in `.claude/` keep secrets out of an agent's context and releases in human hands, so

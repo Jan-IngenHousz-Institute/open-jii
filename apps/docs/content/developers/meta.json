@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "architecture",
+    "oidc-client-registration",
     "design-decisions",
     "multispeq-mqtt-tool",
     "device-integration",
