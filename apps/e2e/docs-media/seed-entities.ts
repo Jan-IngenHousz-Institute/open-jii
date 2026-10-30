@@ -1,6 +1,14 @@
 import postgres from "postgres";
 
-import { databaseUrl, seedEmail } from "../helpers.js";
+import { eq } from "@repo/database";
+import { users, organizations, organizationMembers, experiments } from "@repo/database/schema";
+
+import {
+  withFixtureDatabase,
+  databaseUrl,
+  deleteFixtureOrganization,
+  seedEmail,
+} from "../helpers.js";
 
 /**
  * Shots address seeded entities by name so the manifest stays readable and
@@ -47,3 +55,44 @@ export const protocolWorkbookId = (): Promise<string> =>
       limit 1
     `,
   );
+
+export async function demoRecordingOrganization(name: string, demo: boolean): Promise<string> {
+  return withFixtureDatabase((database) =>
+    database.transaction(async (tx) => {
+      const user = (
+        await tx.select({ id: users.id }).from(users).where(eq(users.email, seedEmail)).limit(1)
+      ).at(0);
+      if (!user) throw new Error("Seed user missing");
+      const org = (
+        await tx
+          .insert(organizations)
+          .values({
+            name,
+            slug: name.toLowerCase().replaceAll(" ", "-"),
+            type: demo ? "demo" : "research_institute",
+            visibility: demo ? "public" : "private",
+          })
+          .onConflictDoUpdate({ target: organizations.slug, set: { name } })
+          .returning({ id: organizations.id })
+      ).at(0);
+      if (!org) throw new Error("Capture organization missing");
+      await tx
+        .insert(organizationMembers)
+        .values({ organizationId: org.id, userId: user.id, role: "owner" })
+        .onConflictDoNothing();
+      await tx
+        .insert(experiments)
+        .values({
+          name: demo ? "Demo photosynthesis experiment" : "Unpublished trial",
+          createdBy: user.id,
+          organizationId: org.id,
+          visibility: demo ? "public" : "private",
+        })
+        .onConflictDoNothing({ target: experiments.name });
+      return org.id;
+    }),
+  );
+}
+
+export const clearDemoTrainingRecording = (): Promise<void> =>
+  deleteFixtureOrganization("demo-training-lab", "Demo training lab");

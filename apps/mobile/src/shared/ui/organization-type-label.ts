@@ -7,6 +7,7 @@ const TYPE_LABEL_KEYS = {
   non_profit: "organizations:type.non_profit",
   private_company: "organizations:type.private_company",
   government_agency: "organizations:type.government_agency",
+  demo: "organizations:type.demo",
   university: "organizations:type.university",
 } as const satisfies Record<OrganizationType, string>;
 

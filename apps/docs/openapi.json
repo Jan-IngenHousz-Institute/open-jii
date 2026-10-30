@@ -31299,7 +31299,8 @@
                     "non_profit",
                     "private_company",
                     "government_agency",
-                    "university"
+                    "university",
+                    "demo"
                   ],
                   "type": "string"
                 },
@@ -31311,7 +31312,8 @@
                       "non_profit",
                       "private_company",
                       "government_agency",
-                      "university"
+                      "university",
+                      "demo"
                     ],
                     "type": "string"
                   }
@@ -31371,7 +31373,8 @@
                                   "non_profit",
                                   "private_company",
                                   "government_agency",
-                                  "university"
+                                  "university",
+                                  "demo"
                                 ],
                                 "type": "string"
                               },
@@ -31598,7 +31601,8 @@
                             "non_profit",
                             "private_company",
                             "government_agency",
-                            "university"
+                            "university",
+                            "demo"
                           ],
                           "type": "string"
                         },
@@ -37744,6 +37748,78 @@
                   "required": [
                     "lastSeenAt"
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform-admins/access": {
+      "get": {
+        "operationId": "users.getPlatformAdminAccess",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isPlatformAdmin": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "isPlatformAdmin"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform-admins": {
+      "get": {
+        "operationId": "users.listPlatformAdmins",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "grantedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "grantedAt"
+                    ]
+                  }
                 }
               }
             }

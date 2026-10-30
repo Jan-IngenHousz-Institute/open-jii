@@ -1,4 +1,4 @@
-import { createOrganizationProfile } from "@/test/factories";
+import { createOrganizationProfile, createOrganizationResource } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
@@ -99,6 +99,44 @@ describe("<OrganizationSettingsSurface />", () => {
       organizationId: "org-1",
       data: { location: null },
     });
+  });
+
+  it("keeps a saved Demo type fixed for an Owner without a platform role", async () => {
+    mockSession({ id: "user-1" });
+    mountProfile({ role: "owner", type: "demo", visibility: "public" });
+    server.mount(contract.users.getPlatformAdminAccess, { body: { isPlatformAdmin: false } });
+    server.mount(contract.organizations.listOrganizationResources, { body: { resources: [] } });
+    render(<OrganizationSettingsSurface organizationId="org-1" />);
+
+    expect(await screen.findByLabelText("organizations.fields.type")).toBeDisabled();
+    expect(update()).not.toHaveBeenCalled();
+  });
+
+  it("localizes a refused Demo conversion and names its private resources", async () => {
+    const user = userEvent.setup();
+    mockSession({ id: "user-1" });
+    mountProfile({ role: "owner", type: "university" });
+    server.mount(contract.users.getPlatformAdminAccess, { body: { isPlatformAdmin: true } });
+    server.mount(contract.organizations.listOrganizationResources, {
+      body: {
+        resources: [
+          createOrganizationResource({ name: "Unpublished trial", visibility: "private" }),
+        ],
+      },
+    });
+    update().mockResolvedValueOnce({
+      data: null,
+      error: { code: "DEMO_PRIVATE_RESOURCES", message: "Server English" },
+    });
+    render(<OrganizationSettingsSurface organizationId="org-1" />);
+    await user.click(await screen.findByLabelText("organizations.fields.type"));
+    await user.click(await screen.findByRole("option", { name: "organizations.types.demo" }));
+    await user.click(screen.getByRole("button", { name: "common.save" }));
+    expect(
+      await screen.findByText("organizations.settings.demoPrivateResources"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Unpublished trial" })).toBeInTheDocument();
+    expect(screen.queryByText("Server English")).not.toBeInTheDocument();
   });
 
   it("sends only the visibility change when the other card is chosen", async () => {

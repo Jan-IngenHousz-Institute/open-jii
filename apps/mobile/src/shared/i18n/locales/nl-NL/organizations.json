@@ -18,7 +18,8 @@
     "non_profit": "Non-profit",
     "private_company": "Particulier bedrijf",
     "government_agency": "Overheidsinstantie",
-    "university": "Universiteit"
+    "university": "Universiteit",
+    "demo": "Demo"
   },
   "role": {
     "owner": "Eigenaar",

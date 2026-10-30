@@ -2,17 +2,21 @@
 
 import { DocsHelpLink } from "@/components/docs-help-link";
 import { useOrganization } from "@/hooks/organization/useOrganization/useOrganization";
+import { useOrganizationResources } from "@/hooks/organization/useOrganizationResources/useOrganizationResources";
 import { useUpdateOrganization } from "@/hooks/organization/useUpdateOrganization/useUpdateOrganization";
 import { useLocale } from "@/hooks/useLocale";
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { Globe, Lock } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { authErrorMessage } from "~/hooks/organization/auth-organization-result";
+import { AuthClientError, authErrorMessage } from "~/hooks/organization/auth-organization-result";
 import { organizationSlugRejection } from "~/util/organization-slug";
 
 import type {
   OrganizationProfile,
+  OrganizationResource,
   OrganizationType,
   OrganizationVisibility,
 } from "@repo/api/domains/organization/organization.schema";
@@ -33,8 +37,27 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
 
 import { OrganizationDangerZone } from "./organization-danger-zone";
-import { ORGANIZATION_TYPES, organizationTypeLabelKey } from "./organization-labels";
+import {
+  ORGANIZATION_TYPES,
+  organizationTypeLabelKey,
+  visibilityKind,
+} from "./organization-labels";
+import { RESOURCE_SEGMENT } from "./organization-resource-meta";
 import { organizationPath } from "./organization-routes";
+
+/** Better Auth refusal codes this screen words itself, as the `saveError` context. */
+const SAVE_ERROR_REASONS: Record<string, string | undefined> = {
+  DEMO_PRIVATE_RESOURCES: "demoPrivateResources",
+  ORGANIZATION_CHANGED: "organization_changed",
+};
+
+/** What a Demo organization may own, and so what a refused conversion asks to publish. */
+const DEMO_PUBLIC_RESOURCE_TYPES: readonly OrganizationResource["type"][] = [
+  "experiment",
+  "workbook",
+  "protocol",
+  "macro",
+];
 
 /** Sentinel for "no type chosen": a Radix select item cannot carry an empty value. */
 const NO_TYPE = "none";
@@ -67,6 +90,10 @@ export function OrganizationSettingsSurface({ organizationId }: { organizationId
 
 function OwnerSettingsForm({ organization }: { organization: OrganizationProfile }) {
   const { t } = useTranslation();
+  const { data: adminAccess } = usePlatformAdmin();
+  const locale = useLocale();
+  const resources = useOrganizationResources(organization.id, { enabled: false });
+  const [privateResources, setPrivateResources] = useState<OrganizationResource[]>([]);
 
   const { mutateAsync: updateOrganization, isPending: isSaving } = useUpdateOrganization(
     organization.id,
@@ -78,6 +105,14 @@ function OwnerSettingsForm({ organization }: { organization: OrganizationProfile
   const [description, setDescription] = useState(organization.description ?? "");
   const [website, setWebsite] = useState(organization.website ?? "");
   const [location, setLocation] = useState(organization.location ?? "");
+
+  // A visibility click saves on its own and only sends the visibility, so the server still
+  // judges it against the saved type: Private stays ruled out while the saved type is Demo,
+  // and, as a preview of what saving the type will do, while the draft is Demo.
+  const demoInPlay = organization.type === "demo" || type === "demo";
+  const shownVisibility = demoInPlay ? "public" : organization.visibility;
+  // Until a saved Demo type has actually been changed, the copy keeps describing Demo.
+  const copyType = demoInPlay ? "demo" : type;
 
   const trimmedName = name.trim();
   const slugRejection = organizationSlugRejection(slug);
@@ -108,21 +143,40 @@ function OwnerSettingsForm({ organization }: { organization: OrganizationProfile
 
   const saveProfile = async () => {
     if (isInvalid) return;
+    setPrivateResources([]);
     try {
       await updateOrganization({
         name: trimmedName,
         slug,
         // Cleared optional fields are sent as null, which is what makes them
         // absent again rather than set to an empty string.
-        type: type === NO_TYPE ? null : (type as OrganizationType),
+        ...(type !== (organization.type ?? NO_TYPE)
+          ? { type: type === NO_TYPE ? null : (type as OrganizationType) }
+          : {}),
         description: emptyToNull(description),
         website: emptyToNull(website),
         location: emptyToNull(location),
       });
       toast({ description: t("organizations.settings.saved") });
     } catch (err) {
+      const reason =
+        err instanceof AuthClientError ? SAVE_ERROR_REASONS[err.code ?? ""] : undefined;
+      if (reason === "demoPrivateResources") {
+        const refreshed = await resources.refetch();
+        setPrivateResources(
+          refreshed.data?.resources.filter(
+            (resource) =>
+              DEMO_PUBLIC_RESOURCE_TYPES.includes(resource.type) &&
+              resource.visibility === "private",
+          ) ?? [],
+        );
+      }
+      // A refusal this screen has copy for is shown in the locale; any other keeps the
+      // server's own message ahead of the generic one.
+      let serverMessage = authErrorMessage(err);
+      if (reason) serverMessage = undefined;
       toast({
-        description: authErrorMessage(err) ?? t("organizations.settings.saveFailed"),
+        description: serverMessage ?? t("organizations.settings.saveError", { context: reason }),
         variant: "destructive",
       });
     }
@@ -206,19 +260,48 @@ function OwnerSettingsForm({ organization }: { organization: OrganizationProfile
 
           <div className="space-y-1.5">
             <Label htmlFor="organization-settings-type">{t("organizations.fields.type")}</Label>
-            <Select value={type} onValueChange={setType} disabled={isSaving}>
+            <Select
+              value={type}
+              onValueChange={(value) => {
+                setType(value);
+                setPrivateResources([]);
+              }}
+              disabled={isSaving || (organization.type === "demo" && !adminAccess?.isPlatformAdmin)}
+            >
               <SelectTrigger id="organization-settings-type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={NO_TYPE}>{t("organizations.types.unspecified")}</SelectItem>
-                {ORGANIZATION_TYPES.map((organizationType) => (
+                {ORGANIZATION_TYPES.filter(
+                  (type) =>
+                    type !== "demo" ||
+                    adminAccess?.isPlatformAdmin === true ||
+                    organization.type === "demo",
+                ).map((organizationType) => (
                   <SelectItem key={organizationType} value={organizationType}>
                     {t(organizationTypeLabelKey(organizationType))}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {privateResources.length > 0 && (
+              <div role="alert" className="text-destructive text-sm">
+                <p>{t("organizations.settings.demoPrivateResources")}</p>
+                <ul className="list-inside list-disc">
+                  {privateResources.map((resource) => (
+                    <li key={`${resource.type}-${resource.id}`}>
+                      <Link
+                        className="underline"
+                        href={`/${locale}/platform/${RESOURCE_SEGMENT[resource.type]}/${resource.id}`}
+                      >
+                        {resource.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -270,7 +353,7 @@ function OwnerSettingsForm({ organization }: { organization: OrganizationProfile
         <div className="space-y-0.5">
           <h3 className="text-sm font-semibold">{t("organizations.visibility.title")}</h3>
           <p className="text-muted-foreground text-xs leading-relaxed">
-            {t("organizations.visibility.description")}
+            {t("organizations.visibility.description", { context: copyType })}
           </p>
         </div>
 
@@ -285,16 +368,18 @@ function OwnerSettingsForm({ organization }: { organization: OrganizationProfile
           <VisibilityCard
             icon={Lock}
             title={t("organizations.visibility.privateLabel")}
-            description={t("organizations.visibility.privateHint")}
-            isSelected={organization.visibility === "private"}
-            disabled={isSaving}
+            description={t("organizations.visibility.hint", { context: "private" })}
+            isSelected={shownVisibility === "private"}
+            disabled={isSaving || demoInPlay}
             onSelect={() => void setVisibility("private")}
           />
           <VisibilityCard
             icon={Globe}
             title={t("organizations.visibility.publicLabel")}
-            description={t("organizations.visibility.publicHint")}
-            isSelected={organization.visibility === "public"}
+            description={t("organizations.visibility.hint", {
+              context: visibilityKind(copyType, "public"),
+            })}
+            isSelected={shownVisibility === "public"}
             disabled={isSaving}
             onSelect={() => void setVisibility("public")}
           />

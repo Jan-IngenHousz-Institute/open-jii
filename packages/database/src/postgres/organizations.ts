@@ -1,7 +1,14 @@
-import { eq, isNull, like, not, or } from "drizzle-orm";
+import { and, eq, isNull, like, not, or } from "drizzle-orm";
 
 import type { DbOrTx } from "./database";
-import { organizationMembers, organizations } from "./schema";
+import {
+  experiments,
+  macros,
+  organizationMembers,
+  organizations,
+  protocols,
+  workbooks,
+} from "./schema";
 
 /** The reserved slug namespace personal organizations live in. */
 export const PERSONAL_ORG_SLUG_PREFIX = "personal-";
@@ -115,4 +122,41 @@ export async function syncPersonalOrganizationName(
     .where(eq(organizations.id, organizationId));
 
   return organizationId;
+}
+
+/** Shared by organization auth hooks, which cannot depend on the backend domain. */
+export async function organizationOwnsPrivateResources(
+  database: DbOrTx,
+  organizationId: string,
+): Promise<boolean> {
+  const rows = await database
+    .select({ id: experiments.id })
+    .from(experiments)
+    .where(
+      and(eq(experiments.organizationId, organizationId), eq(experiments.visibility, "private")),
+    )
+    .unionAll(
+      database
+        .select({ id: workbooks.id })
+        .from(workbooks)
+        .where(
+          and(eq(workbooks.organizationId, organizationId), eq(workbooks.visibility, "private")),
+        ),
+    )
+    .unionAll(
+      database
+        .select({ id: protocols.id })
+        .from(protocols)
+        .where(
+          and(eq(protocols.organizationId, organizationId), eq(protocols.visibility, "private")),
+        ),
+    )
+    .unionAll(
+      database
+        .select({ id: macros.id })
+        .from(macros)
+        .where(and(eq(macros.organizationId, organizationId), eq(macros.visibility, "private"))),
+    )
+    .limit(1);
+  return rows.length > 0;
 }

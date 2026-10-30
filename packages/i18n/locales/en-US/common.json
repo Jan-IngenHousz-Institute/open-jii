@@ -529,7 +529,8 @@
       "non_profit": "Non-profit",
       "private_company": "Private company",
       "government_agency": "Government agency",
-      "university": "University"
+      "university": "University",
+      "demo": "Demo"
     },
     "roles": {
       "owner": "Owner",
@@ -571,8 +572,8 @@
       "creating": "Creating…",
       "created": "{{name}} created",
       "failed": "Could not create this organization.",
-      "privateNote": "This organization will be private. Nobody outside it will see it, and you can publish it later from its settings.",
-      "publicNote": "This organization will be public. It appears in the directory as soon as it is created, where anyone signed in can find it and ask to join.",
+      "visibilityNote_private": "This organization will be private. Nobody outside it will see it, and you can publish it later from its settings.",
+      "visibilityNote_public": "This organization will be public. It appears in the directory as soon as it is created, where anyone signed in can find it and ask to join.",
       "next": "Next",
       "identityStep": "Identity",
       "identityTitle": "Identity",
@@ -602,7 +603,8 @@
         "listTitle": "People to invite",
         "teamsNote": "Teams are set up from the organization's Teams tab once it exists — a team is a group of its members, so it cannot come first.",
         "failed": "The organization was created, but {{names}} could not be invited. Try again from its Members tab."
-      }
+      },
+      "visibilityNote_demo": "This Demo organization will be public. It appears in the directory as soon as it is created."
     },
     "directory": {
       "emptyTitle": "No organizations yet",
@@ -794,10 +796,13 @@
       "profileTitle": "Profile",
       "profileDescription": "How this organization appears to its members and, if it is public, in the directory.",
       "saved": "Organization updated",
-      "saveFailed": "Could not save these changes.",
+      "saveError": "Could not save these changes.",
+      "saveError_demoPrivateResources": "Publish every experiment, workbook, protocol and macro before choosing Demo.",
+      "saveError_organization_changed": "The organization changed. Reload it before saving again.",
       "title": "Settings",
       "description": "Only owners can change these. Admins manage people and teams.",
-      "unsaved": "Unsaved changes to the profile."
+      "unsaved": "Unsaved changes to the profile.",
+      "demoPrivateResources": "Publish these private resources before choosing Demo."
     },
     "visibility": {
       "title": "Visibility",
@@ -809,8 +814,10 @@
       "nowPublic": "This organization is now public",
       "nowPrivate": "This organization is now private",
       "changeFailed": "Could not change the organization's visibility.",
-      "privateHint": "Invisible from outside. A non-member gets a not-found page, and nobody can ask to join.",
-      "publicHint": "Listed in the directory. Anyone signed in sees the profile and its public resources, and can ask to join."
+      "hint_private": "Invisible from outside. A non-member gets a not-found page, and nobody can ask to join.",
+      "hint_public": "Listed in the directory. Anyone signed in sees the profile and its public resources, and can ask to join.",
+      "description_demo": "Demo organizations are always public and appear in the directory.",
+      "hint_demo": "Listed in the directory. Anyone signed in sees the profile and its public resources."
     },
     "delete": {
       "description": "Deleting an organization cannot be undone. Nothing it owns is deleted with it, so it has to be empty first.",
@@ -1508,5 +1515,16 @@
     "previous": "Previous",
     "next": "Next",
     "pageOf": "Page {{page}} of {{totalPages}}"
+  },
+  "platformAdmins": {
+    "title": "Platform admins",
+    "description": "Platform admins manage Demo organizations.",
+    "howGranted": "JII grants and removes this role outside the app. In production, a second person approves each change.",
+    "current": "Current admins",
+    "since": "Since {{date}}",
+    "dateUnknown": "Grant date unavailable",
+    "userId": "User id",
+    "loadFailed": "Could not load platform admins.",
+    "retry": "Try again"
   }
 }

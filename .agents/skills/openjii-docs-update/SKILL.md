@@ -85,6 +85,18 @@ pnpm --filter docs validate:local   # needs a build first
 `check-media-references` is what catches an image path that no longer resolves, and a published web
 capture that drifted off the standard frame. The link crawler only follows anchors, so it will not.
 
+## Recordings awaiting publication
+
+List each unpublished recording in `apps/docs/media/pending.json` as an object with
+`path` (the planned `/img/...` destination), `staged` (its `apps/docs/.capture/...`
+source), `ticket` and `date` in YYYY-MM-DD format. Embed a `<video src="/img/...">`
+in the explaining page, wrapped in `<DocsVideo>...</DocsVideo>`. The docs render a "Recording pending review" callout for
+listed videos. The media check reports them separately and passes while the PR is
+a draft. Run `pnpm --filter docs check-media-references --strict` before leaving
+draft or releasing. After a person reviews every frame and publishes the file,
+remove its entry and record its checksum in the existing media manifest. A
+published file still listed pending fails the check.
+
 ## What to report
 
 State which pages you changed and why, which screenshots were re-captured versus left alone, and

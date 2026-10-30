@@ -31,6 +31,7 @@ import { searchContract } from "./domains/search/search.contract";
 import { sharingContract } from "./domains/sharing/sharing.contract";
 import { sharingTransferAdminContract } from "./domains/sharing/transfer-admin/sharing-transfer-admin.contract";
 import { sharingTransferOrgContract } from "./domains/sharing/transfer-org/sharing-transfer-org.contract";
+import { platformAdminContract } from "./domains/user/platform-admin.contract";
 import { userContract } from "./domains/user/user.contract";
 import { visitContract } from "./domains/visit/visit.contract";
 import { workbookContract } from "./domains/workbook/workbook.contract";
@@ -74,7 +75,7 @@ export const contract = {
   protocols: protocolContract,
   search: searchContract,
   sharing: { ...sharingContract, ...sharingTransferAdminContract, ...sharingTransferOrgContract },
-  users: userContract,
+  users: { ...userContract, ...platformAdminContract },
   visits: visitContract,
   workbooks: workbookContract,
 };
