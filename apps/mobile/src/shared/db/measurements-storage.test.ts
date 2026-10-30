@@ -119,6 +119,13 @@ describe("measurements-storage", () => {
       ]);
       await mod.updateMeasurement(id, measurement);
       expect((await mod.getMeasurement(id))?.data.measurementResult.simulated).toBe(true);
+      await mod.markAsFailed(id, "Upload failed");
+      expect(await mod.getMeasurementsList(["failed"], { limit: 10, offset: 0 })).toEqual([
+        expect.objectContaining({ simulated: true, workbookRunId: "run-demo" }),
+      ]);
+      expect((await mod.getMeasurement(id))?.data.measurementResult).toEqual(
+        measurement.measurementResult,
+      );
     });
 
     it("inserts a pending row and returns its id (save-first default)", async () => {
