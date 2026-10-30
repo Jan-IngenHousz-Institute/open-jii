@@ -7,7 +7,10 @@ import type { Device } from "~/shared/types/device";
 
 import { connectionKeys } from "./connection-keys";
 import { mountConnectionLifecycle } from "./connection-lifecycle";
-import { connectToDevice } from "./device-connection-manager/device-connection";
+import {
+  connectToDevice,
+  disconnectFromDevice,
+} from "./device-connection-manager/device-connection";
 import { getConnectedDevices } from "./device-connection-manager/device-queries";
 import { mountSimulatedDevices } from "./simulated-device";
 
@@ -77,6 +80,14 @@ afterEach(async () => {
 });
 
 describe("connection lifecycle with a simulated device", () => {
+  it("disconnects a simulated device through the shared transport manager", async () => {
+    await connectToDevice(simulator);
+    await expect(getConnectedDevices()).resolves.toEqual([simulator]);
+    mocks.hasBluetoothPermission.mockResolvedValue(false);
+    await disconnectFromDevice(simulator);
+    await expect(getConnectedDevices()).resolves.toEqual([]);
+  });
+
   it("drops a cached simulator and its executor when navigation leaves the demo", async () => {
     await connectToDevice(simulator);
     await useScannerCommandExecutorStore.getState().addDevice(simulator);

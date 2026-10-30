@@ -19,6 +19,8 @@ const mocks = vi.hoisted(() => ({
   getBondedDevices: vi.fn<() => Promise<{ address: string; name: string }[]>>(),
   getConnectedDevices: vi.fn<() => Promise<{ address: string; name: string }[]>>(),
   startDiscovery: vi.fn<() => Promise<unknown[]>>(),
+  closeSimulatedDevice: vi.fn(),
+  simulatedExperiment: undefined as string | undefined,
 }));
 
 vi.mock("react-native-bluetooth-classic", () => ({
@@ -89,6 +91,14 @@ function renderConnectHook() {
 }
 
 describe("useConnectToDevice", () => {
+  it("closes the simulator when switching to Bluetooth", async () => {
+    const device: Device = { id: "physical", name: "MultispeQ", type: "bluetooth-classic" };
+    const { result } = renderConnectHook();
+    await act(() => result.current.connectToDevice(device));
+    expect(mocks.closeSimulatedDevice).toHaveBeenCalledTimes(1);
+    expect(mocks.transportConnect).toHaveBeenCalledWith(device);
+  });
+
   it("connects simulation without querying Bluetooth when permission is denied", async () => {
     mocks.hasBluetoothPermission.mockResolvedValue(false);
     const { result } = renderConnectHook();
@@ -109,6 +119,7 @@ describe("useConnectToDevice", () => {
     mocks.setLastConnectedDevice.mockReset();
     mocks.serialDevices = [];
     mocks.serialListError = undefined;
+    mocks.closeSimulatedDevice.mockClear();
   });
 
   it("joins a connect already in flight for the same device from another instance", async () => {
@@ -193,6 +204,7 @@ describe("useAllDevices", () => {
   const bonded = { address: "00:11:22:33:44:55", name: "MultispeQ" };
 
   beforeEach(() => {
+    mocks.simulatedExperiment = undefined;
     mocks.serialDevices = [{ deviceId: 2002, vendorId: 0x1a86, productId: 0x55d4 }];
     mocks.serialListError = undefined;
     mocks.hasBluetoothPermission.mockReset().mockResolvedValue(true);
@@ -209,6 +221,18 @@ describe("useAllDevices", () => {
     });
     return hook;
   }
+
+  it("offers the simulated sensor alongside USB discovery in an eligible Demo", async () => {
+    mocks.simulatedExperiment = "demo";
+    mocks.hasBluetoothPermission.mockResolvedValue(false);
+    const { result } = await refetch();
+    expect(result.current.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "simulated:multispeq", type: "simulated-device" }),
+        expect.objectContaining({ id: "2002", type: "usb" }),
+      ]),
+    );
+  });
 
   it("never touches Bluetooth without the scan permission, but still lists USB devices", async () => {
     mocks.hasBluetoothPermission.mockResolvedValue(false);
@@ -250,8 +274,8 @@ describe("useAllDevices", () => {
 });
 
 vi.mock("~/features/connection/services/simulated-device", () => ({
-  closeSimulatedDevice: () => undefined,
-  simulatedExperimentId: () => undefined,
+  closeSimulatedDevice: () => mocks.closeSimulatedDevice(),
+  simulatedExperimentId: () => mocks.simulatedExperiment,
   subscribeSimulatedExperiment: () => () => undefined,
 }));
 

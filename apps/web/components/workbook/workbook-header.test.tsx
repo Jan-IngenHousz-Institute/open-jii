@@ -82,6 +82,17 @@ beforeEach(() => {
 });
 
 describe("WorkbookHeader", () => {
+  it("offers all simulated sensor families in the Demo connection menu", async () => {
+    const user = userEvent.setup();
+    renderHeader({ simulationAvailable: true });
+    await user.click(screen.getAllByRole("combobox")[1]);
+    for (const family of ["Multispeq", "Ambit", "Minipar"]) {
+      expect(
+        screen.getByRole("option", { name: `iot.workbookBar.simulated${family}` }),
+      ).toBeInTheDocument();
+    }
+  });
+
   it("calls onConnect when user clicks the Connect button", async () => {
     const user = userEvent.setup();
     const { props } = renderHeader();

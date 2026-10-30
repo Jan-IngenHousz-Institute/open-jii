@@ -80,6 +80,16 @@ describe("operatorsForKind", () => {
 });
 
 describe("operatorsForColumn", () => {
+  it("defaults provenance boolean columns to equality", () => {
+    expect(
+      defaultOperatorForColumn({
+        name: "is_simulated",
+        type_name: "BOOLEAN",
+        type_text: "BOOLEAN",
+      }),
+    ).toBe("equals");
+  });
+
   it("derives the kind from the column's type_text", () => {
     expect(operatorsForColumn(numericColumn)).toBe(operatorsForKind("numeric"));
     expect(operatorsForColumn(stringColumn)).toBe(operatorsForKind("categorical"));

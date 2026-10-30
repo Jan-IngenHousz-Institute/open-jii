@@ -1,12 +1,46 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { identifyDevice } from "../core/identify-device";
-import { getDemoRecording, SIMULATED_SENSOR_FAMILIES } from "./recordings";
+import multispeqManifest from "../demo-sensors/multispeq/manifest.json";
+import { getDemoRecording, simulatedDeviceId, SIMULATED_SENSOR_FAMILIES } from "./recordings";
 import { SimulatedTransportAdapter } from "./transport";
 
 afterEach(() => vi.useRealTimers());
 
 describe("recorded sensor replay", () => {
+  it.each(SIMULATED_SENSOR_FAMILIES)("reserves a distinct simulated identity for %s", (family) => {
+    expect(simulatedDeviceId(family)).toBe(`simulated:${family}`);
+  });
+
+  it("refuses a recording with an unsupported manifest version", () => {
+    const version = multispeqManifest.recordingVersion;
+    try {
+      multispeqManifest.recordingVersion = 2;
+      expect(() => getDemoRecording("multispeq")).toThrow("Invalid demo sensor recording");
+    } finally {
+      multispeqManifest.recordingVersion = version;
+    }
+  });
+
+  it("reports battery and disconnect status and refuses malformed commands", async () => {
+    vi.useFakeTimers();
+    const adapter = new SimulatedTransportAdapter("multispeq");
+    const received = vi.fn();
+    const status = vi.fn();
+    adapter.onDataReceived(received);
+    adapter.onStatusChanged(status);
+    await expect(adapter.send("not-json")).rejects.toThrow("no demo recording");
+    expect(received).not.toHaveBeenCalled();
+    await adapter.send("battery");
+    await vi.runAllTimersAsync();
+    expect(received).toHaveBeenCalledWith(
+      `${String(getDemoRecording("multispeq").measurement.device_battery)}\n`,
+    );
+    await adapter.disconnect();
+    expect(status).toHaveBeenCalledWith(false);
+    expect(adapter.isConnected()).toBe(false);
+  });
+
   it.each(SIMULATED_SENSOR_FAMILIES)(
     "identifies and executes %s through its real driver",
     async (family) => {

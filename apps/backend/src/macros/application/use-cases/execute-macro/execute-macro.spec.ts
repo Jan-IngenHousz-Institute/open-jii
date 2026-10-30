@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { Logger } from "@nestjs/common";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import {
   assertFailure,
   assertSuccess,
@@ -13,6 +14,7 @@ import { WorkbookVersionRepository } from "../../../../workbooks/core/repositori
 import type { CreateMacroDto } from "../../../core/models/macro.model";
 import type { LambdaPort } from "../../../core/ports/lambda.port";
 import { LAMBDA_PORT } from "../../../core/ports/lambda.port";
+import { MacroSnapshotRepository } from "../../../core/repositories/macro-snapshot.repository";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { ExecuteMacroUseCase } from "./execute-macro";
 
@@ -192,6 +194,53 @@ describe("ExecuteMacroUseCase", () => {
         }),
       );
     }
+
+    it.each(["findWorkbookIdByVersionId", "findScriptsByVersionIds"] as const)(
+      "returns a safe fetch error when %s fails, without invoking Lambda",
+      async (method) => {
+        const macro = await createTestMacro({ code: liveCode });
+        const workbookVersionId = await pinMacro(macro.id);
+        const invoke = mockLambda();
+        vi.spyOn(testApp.module.get(MacroSnapshotRepository), method).mockResolvedValue(
+          failure(AppError.internal("Private database details")),
+        );
+
+        const result = await useCase.execute(macro.id, { data: {}, workbookVersionId }, testUserId);
+
+        assertFailure(result);
+        expect(result.error).toMatchObject({
+          message: "Failed to fetch macro script",
+          statusCode: 500,
+        });
+        expect(invoke).not.toHaveBeenCalled();
+      },
+    );
+
+    it("returns not found when workbook authorization reports the resource missing", async () => {
+      const macro = await createTestMacro({ code: liveCode });
+      const workbookVersionId = await pinMacro(macro.id);
+      const invoke = mockLambda();
+      vi.spyOn(testApp.module.get(AuthorizationService), "can").mockResolvedValue({
+        allow: false,
+        reason: "not-found",
+      });
+
+      const result = await useCase.execute(macro.id, { data: {}, workbookVersionId }, testUserId);
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(404);
+      expect(invoke).not.toHaveBeenCalled();
+    });
+
+    it("refuses pinned execution without a caller identity", async () => {
+      const macro = await createTestMacro({ code: liveCode });
+      const workbookVersionId = await pinMacro(macro.id);
+      const invoke = mockLambda();
+      const result = await useCase.execute(macro.id, { data: {}, workbookVersionId });
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(404);
+      expect(invoke).not.toHaveBeenCalled();
+    });
 
     it("runs the pinned snapshot while draft execution keeps the live macro", async () => {
       const macro = await createTestMacro({ code: liveCode });

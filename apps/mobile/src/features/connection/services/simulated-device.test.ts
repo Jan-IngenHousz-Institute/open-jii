@@ -5,7 +5,9 @@ import { createStore } from "zustand/vanilla";
 
 import { getDemoRecording } from "@repo/iot/simulation/recordings";
 
+import * as identifiedExecutors from "./identified-command-executor";
 import {
+  closeSimulatedDevice,
   connectedSimulatedDevices,
   createSimulatedExecutor,
   mountSimulatedDevices,
@@ -38,6 +40,7 @@ const device = {
 let unmount: (() => void) | undefined;
 afterEach(() => {
   unmount?.();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
@@ -51,6 +54,53 @@ function setup(organizationType: unknown) {
 }
 
 describe("simulated mobile device", () => {
+  it("closes the session and refuses executor creation until reopened", async () => {
+    setup("demo");
+    await expect(createSimulatedExecutor()).rejects.toThrow("demo experiment");
+    await openSimulatedDevice(device);
+    closeSimulatedDevice();
+    expect(connectedSimulatedDevices()).toEqual([]);
+    await expect(createSimulatedExecutor()).rejects.toThrow("demo experiment");
+  });
+
+  it("destroys an executor whose identification handshake fails", async () => {
+    setup("demo");
+    await openSimulatedDevice(device);
+    const destroy = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+    vi.spyOn(identifiedExecutors, "createIdentifiedCommandExecutor").mockReturnValue({
+      execute: vi.fn(),
+      cancel: vi.fn(),
+      getIdentity: vi.fn().mockRejectedValue(new Error("Invalid handshake")),
+      onProgress: () => () => undefined,
+      destroy,
+    });
+    await expect(createSimulatedExecutor()).rejects.toThrow("Invalid handshake");
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("delegates progress and cancels an in-flight recording without poisoning the next run", async () => {
+    setup("demo");
+    await openSimulatedDevice(device);
+    const executor = await createSimulatedExecutor();
+    const progress = vi.fn();
+    const unsubscribe = executor.onProgress(progress);
+    const command = getDemoRecording("multispeq").protocol;
+    try {
+      const pending = executor.execute(command).catch((error: unknown) => error);
+      await vi.waitFor(() => expect(progress).toHaveBeenCalled());
+      await executor.cancel();
+      await expect(pending).resolves.toMatchObject({ message: "Command cancelled" });
+      unsubscribe();
+      progress.mockClear();
+      await expect(executor.execute(command)).resolves.toEqual(
+        getDemoRecording("multispeq").measurement,
+      );
+      expect(progress).not.toHaveBeenCalled();
+    } finally {
+      await executor.destroy();
+    }
+  });
+
   it("is available in a release build without development flags, identifies and runs the recording", async () => {
     vi.stubGlobal("__DEV__", false);
     vi.stubEnv("NODE_ENV", "production");

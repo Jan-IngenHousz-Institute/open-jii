@@ -89,6 +89,34 @@ describe("OutputCellComponent", () => {
     useProtocolMock.mockReturnValue({ data: undefined, isLoading: false });
   });
 
+  it("labels a simulated branch output even when it only contains messages", () => {
+    const cell = createOutputCell({
+      simulated: true,
+      data: undefined,
+      messages: ["Matched: High Phi2"],
+    });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+    expect(screen.getByText("output.simulated")).toBeInTheDocument();
+    expect(screen.getByText("Matched: High Phi2")).toBeInTheDocument();
+  });
+
+  it("labels both the aggregate and the simulated device result", () => {
+    const cell = createOutputCell({
+      deviceResults: [
+        {
+          deviceId: "simulated:multispeq",
+          deviceLabel: "Simulated MultispeQ",
+          family: "multispeq",
+          simulated: true,
+          data: { Phi2: 0.8 },
+        },
+        { deviceId: "physical", deviceLabel: "Physical", family: "multispeq", data: { Phi2: 0.7 } },
+      ],
+    });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+    expect(screen.getAllByText("output.simulated")).toHaveLength(2);
+  });
+
   it("displays execution time and messages with correct severity styling", () => {
     const cell = createOutputCell({
       executionTime: 2500,
