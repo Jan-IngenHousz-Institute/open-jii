@@ -30,7 +30,7 @@ export class CanCreateInOrgGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const body = request.body as { organizationId?: unknown } | undefined;
+    const body = request.body as { organizationId?: unknown; visibility?: unknown } | undefined;
     const orgId = body?.organizationId;
     // No explicit target org → defaults to the caller's personal org later.
     if (typeof orgId !== "string" || orgId.length === 0) {
@@ -42,8 +42,8 @@ export class CanCreateInOrgGuard implements CanActivate {
       throw new ForbiddenException("Unauthorized");
     }
 
-    const isMember = await this.authz.isOrgMember(userId, orgId);
-    if (!isMember) {
+    const membership = await this.authz.findOrgMembership(userId, orgId);
+    if (!membership?.isMember) {
       this.logger.warn({
         msg: "Attempt to create a resource in an organization the caller is not a member of",
         operation: "canCreateInOrg",
@@ -51,6 +51,9 @@ export class CanCreateInOrgGuard implements CanActivate {
         userId,
       });
       throw new ForbiddenException("You cannot create resources in this organization");
+    }
+    if (body?.visibility === "private" && membership.type === "demo") {
+      throw new ForbiddenException("Demo organizations can only own public resources");
     }
     return true;
   }

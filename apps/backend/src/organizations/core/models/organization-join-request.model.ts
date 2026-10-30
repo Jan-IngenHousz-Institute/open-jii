@@ -19,3 +19,8 @@ export const organizationJoinRequestSchema = createSelectSchema(organizationJoin
   });
 
 export type OrganizationJoinRequestDto = z.infer<typeof organizationJoinRequestSchema>;
+
+export const DEMO_JOIN_APPROVAL_ERROR = {
+  code: "DEMO_JOIN_REQUEST_APPROVAL_DISABLED",
+  message: "Demo organizations do not accept join request approvals",
+} as const;

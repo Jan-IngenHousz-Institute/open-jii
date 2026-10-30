@@ -9,6 +9,7 @@ import { useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import type { OrganizationJoinRequest } from "@repo/api/domains/organization/join-requests/organization-join-requests.schema";
+import type { OrganizationType } from "@repo/api/domains/organization/organization-type.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -16,12 +17,22 @@ import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+const DECISION_ERROR_REASONS: Record<string, string | undefined> = {
+  DEMO_JOIN_REQUEST_APPROVAL_DISABLED: "demoApprovalDisabled",
+};
+
 /**
  * The decision queue: people who asked to join. Pending requests carry the
  * decision buttons; the decided ones stay as history, without them — a decision is
  * not reversible here, the person is either a member now or has to ask again.
  */
-export function OrganizationJoinRequests({ organizationId }: { organizationId: string }) {
+export function OrganizationJoinRequests({
+  organizationId,
+  organizationType,
+}: {
+  organizationId: string;
+  organizationType?: OrganizationType | null;
+}) {
   const { t } = useTranslation();
   const { data, isPending, isError } = useOrganizationJoinRequests(organizationId);
   const { mutateAsync: decide } = useDecideOrganizationJoinRequest();
@@ -46,8 +57,12 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
             : t("organizations.requests.rejected", { name: requesterName(request) }),
       });
     } catch (err) {
+      const error = parseApiError(err);
+      const reason = error?.code ? DECISION_ERROR_REASONS[error.code] : undefined;
       toast({
-        description: parseApiError(err)?.message ?? t("organizations.requests.decisionFailed"),
+        description: reason
+          ? t("organizations.requests.decisionFailed", { context: reason })
+          : (error?.message ?? t("organizations.requests.decisionFailed")),
         variant: "destructive",
       });
     } finally {
@@ -94,6 +109,11 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
 
   return (
     <div className="flex flex-col gap-6">
+      {organizationType === "demo" && pending.length > 0 && (
+        <p className="text-muted-foreground text-sm">
+          {t("organizations.requests.approvalNotice", { context: organizationType })}
+        </p>
+      )}
       <div
         role="list"
         aria-label={t("organizations.requests.label")}
@@ -124,13 +144,15 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
               ) : null}
             </div>
             <div className="flex shrink-0 gap-2">
-              <Button
-                size="sm"
-                onClick={() => void submitDecision(request, "approve")}
-                disabled={busyRequestId === request.id}
-              >
-                {t("organizations.requests.approveAction")}
-              </Button>
+              {organizationType !== "demo" && (
+                <Button
+                  size="sm"
+                  onClick={() => void submitDecision(request, "approve")}
+                  disabled={busyRequestId === request.id}
+                >
+                  {t("organizations.requests.approveAction")}
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="outline"

@@ -1261,10 +1261,7 @@ describe("ExperimentController", () => {
     });
 
     it("returns 403 when creating an experiment in an organization the caller is not a member of", async () => {
-      const organizationId = faker.string.uuid();
-      const isOrgMemberSpy = vi
-        .spyOn(testApp.module.get(AuthorizationService), "isOrgMember")
-        .mockResolvedValue(false);
+      const organizationId = await testApp.createOrganization();
 
       await testApp
         .post(testApp.resolveOrpcPath(contract.experiments.createExperiment))
@@ -1278,7 +1275,11 @@ describe("ExperimentController", () => {
         })
         .expect(StatusCodes.FORBIDDEN);
 
-      expect(isOrgMemberSpy).toHaveBeenCalledWith(testUserId, organizationId);
+      const resources = await testApp.database
+        .select({ id: experiments.id })
+        .from(experiments)
+        .where(eq(experiments.organizationId, organizationId));
+      expect(resources).toHaveLength(0);
     });
   });
 });

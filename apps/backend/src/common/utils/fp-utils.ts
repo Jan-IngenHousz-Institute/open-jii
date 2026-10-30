@@ -52,6 +52,7 @@ export function assertSuccess<T, E>(result: Result<T, E>): asserts result is Suc
 enum CauseCode {
   // Postgres error code 23505 = unique_violation
   UNIQUE_VIOLATION = "23505",
+  CHECK_VIOLATION = "23514",
 }
 
 enum CauseMessageCheck {
@@ -276,6 +277,24 @@ export function defaultRepositoryErrorMapper(error: unknown): AppError {
     return error;
   }
   const { causeCode, causeMessage, causeMessageLower } = mapErrorMessage(error);
+
+  if (causeCode === CauseCode.CHECK_VIOLATION) {
+    const constraintMessage =
+      error instanceof Error && error.cause instanceof Error ? error.cause.message : "";
+    if (constraintMessage === "Demo organizations can only own public resources") {
+      return AppError.badRequest(constraintMessage, "DEMO_RESOURCE_PUBLIC_REQUIRED");
+    }
+    const publicMessages = [
+      "Demo organizations must be public and cannot be personal workspaces",
+      "Publish every experiment, workbook, protocol and macro before choosing Demo",
+    ];
+    return AppError.badRequest(
+      publicMessages.includes(constraintMessage)
+        ? constraintMessage
+        : "This change violates a data constraint",
+      "REPOSITORY_CONSTRAINT",
+    );
+  }
 
   // Check for common database error patterns
   if (

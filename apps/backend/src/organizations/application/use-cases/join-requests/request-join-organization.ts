@@ -124,6 +124,10 @@ export class RequestJoinOrganizationUseCase {
       return AppError.notFound(`Organization with ID ${organizationId} not found`);
     }
 
+    if (access.type === "demo") {
+      return AppError.forbidden("Demo organizations do not accept join requests");
+    }
+
     if (isOrganizationMember(access)) {
       return AppError.conflict(
         "You are already a member of this organization",

@@ -10,6 +10,7 @@ import {
 import { sanitizeQuestionLabel } from "../../transforms/label-sanitization";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zResourceSeries } from "../metrics/metrics.schema";
+import { zOrganizationType } from "../organization/organization-type.schema";
 import { zExperimentData } from "./data/experiment-data.schema";
 import {
   zExperimentLocationInput,
@@ -34,6 +35,7 @@ export const zExperiment = z.object({
   organizationId: z.string().guid().nullable(),
   /** Display name of the owning organization, `null` for a personal workspace. */
   organizationName: z.string().nullish(),
+  organizationType: zOrganizationType.nullable().default(null),
   createdBy: z.string().guid(),
   ownerFirstName: z.string().nullable().optional(),
   ownerLastName: z.string().nullable().optional(),

@@ -221,6 +221,41 @@ export const SHOTS: readonly Shot[] = [
     scope:
       "Creating a public Demo organization and refusing conversion of a lab with private research",
   },
+  {
+    slug: "demo-organization-discovery",
+    publish: "img/guide/web/demo-organization-discovery.webm",
+    frame: "desktop",
+    session: "newcomer",
+    route: async () => {
+      await demoRecordingOrganization("Demo discovery lab", true);
+      return "/platform/organizations";
+    },
+    async perform(page) {
+      page.setDefaultTimeout(15_000);
+      await page.getByRole("button", { name: "Type", exact: true }).click();
+      await page.getByRole("option", { name: "Demo", exact: true }).click();
+      await settle(page, 1800);
+      await page.getByRole("link", { name: "Demo discovery lab", exact: true }).click();
+      await page.getByRole("heading", { name: "Demo discovery lab", exact: true }).waitFor();
+      await settle(page, 2500);
+      if (await page.getByRole("button", { name: /request to join/i }).isVisible()) {
+        throw new Error("Demo organization offers a join request");
+      }
+      await page.getByRole("link", { name: "Demo photosynthesis experiment", exact: true }).click();
+      await page
+        .getByRole("heading", { name: "Demo photosynthesis experiment", exact: true })
+        .waitFor();
+      if (
+        (await page.getByRole("tab", { name: "Settings", exact: true }).isVisible()) ||
+        (await page.getByRole("button", { name: /^edit$/i }).isVisible())
+      ) {
+        throw new Error("Newcomer sees an experiment edit control");
+      }
+      await settle(page, 2500);
+    },
+    scope:
+      "A newcomer filters the directory to Demo organizations and opens public work without joining",
+  },
   ...privacyShots,
   // ------------------------------------------- tier 1: shell, overviews, access
   {
