@@ -103,15 +103,18 @@ describe("measurements-storage", () => {
     insertRow("b", "failed");
     insertRow("researcher", "successful");
     insertRow("legacy", "successful");
-    sqlite
-      .prepare("UPDATE measurements SET owner_user_id = ?, owner_is_guest = 1 WHERE id = ?")
-      .run("guest-a", "a");
-    sqlite
-      .prepare("UPDATE measurements SET owner_user_id = ?, owner_is_guest = 1 WHERE id = ?")
-      .run("guest-b", "b");
-    sqlite
-      .prepare("UPDATE measurements SET owner_user_id = ?, owner_is_guest = 0 WHERE id = ?")
-      .run("researcher", "researcher");
+    db.update(schema.measurements)
+      .set({ ownerUserId: "guest-a", ownerIsGuest: true })
+      .where(eq(schema.measurements.id, "a"))
+      .run();
+    db.update(schema.measurements)
+      .set({ ownerUserId: "guest-b", ownerIsGuest: true })
+      .where(eq(schema.measurements.id, "b"))
+      .run();
+    db.update(schema.measurements)
+      .set({ ownerUserId: "researcher", ownerIsGuest: false })
+      .where(eq(schema.measurements.id, "researcher"))
+      .run();
     const a = { userId: "guest-a", isGuest: true };
     const b = { userId: "guest-b", isGuest: true };
     const researcher = { userId: "researcher", isGuest: false };
