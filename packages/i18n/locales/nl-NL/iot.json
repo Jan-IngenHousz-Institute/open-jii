@@ -375,7 +375,8 @@
         },
         "about": {
           "title": "Over"
-        }
+        },
+        "equipmentLink": "Bekijk in openJII Equipment"
       },
       "credentials": {
         "registeredDescription": "Dit apparaat heeft nog geen certificaat. Geef er een uit om het in te richten en verbinding met AWS IoT toe te staan.",

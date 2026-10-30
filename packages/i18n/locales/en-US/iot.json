@@ -375,7 +375,8 @@
         },
         "about": {
           "title": "About"
-        }
+        },
+        "equipmentLink": "See in openJII Equipment"
       },
       "credentials": {
         "registeredDescription": "This device has no certificate yet. Issue one to provision it and let it connect to AWS IoT.",
