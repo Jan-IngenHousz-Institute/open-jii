@@ -816,7 +816,7 @@ module "centrum_pipeline" {
   schema_name  = "centrum"
   catalog_name = module.databricks_catalog.catalog_name
 
-  notebook_paths = [
+  notebook_paths = concat([
     # bronze
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_imported_data",
@@ -840,10 +840,10 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/sources",
     # event hooks
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/hooks",
-  ]
+  ], local.centrum_feed_notebooks)
 
   # Use Databricks per-flow trigger defaults; notebooks may override individual tables.
-  configuration = {
+  configuration = merge({
     "CATALOG_NAME"                    = module.databricks_catalog.catalog_name
     "BRONZE_TABLE"                    = "raw_data"
     "SILVER_TABLE"                    = "clean_data"
@@ -857,7 +857,7 @@ module "centrum_pipeline" {
     "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust a 16 GB driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
-  }
+  }, local.serving_store_feed_settings)
 
   # AUTO CDC needs PRO, and the silver expectations need ADVANCED.
   edition = "ADVANCED"
@@ -934,19 +934,19 @@ module "macro_execution_pipeline" {
   schema_name  = "centrum"
   catalog_name = module.databricks_catalog.catalog_name
 
-  notebook_paths = [
+  notebook_paths = concat([
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/macros/experiment_macro_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/macros/experiment_macro_data_schemas",
-  ]
+  ], local.macro_feed_notebooks)
 
-  configuration = {
+  configuration = merge({
     "MACRO_MAX_FILES_PER_TRIGGER" = "16"
     "MACRO_MAX_BYTES_PER_TRIGGER" = "16777216"
     "MACRO_EXECUTION_PARTITIONS"  = "16"
     "CATALOG_NAME"                = module.databricks_catalog.catalog_name
     "CENTRUM_SCHEMA_NAME"         = "centrum"
     "ENVIRONMENT"                 = upper(var.environment)
-  }
+  }, local.serving_store_feed_settings)
 
   # Neither AUTO CDC nor expectations, so CORE is enough.
   edition = "CORE"
@@ -2018,6 +2018,43 @@ module "serving_store" {
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "serving-store"
+  }
+}
+
+locals {
+  # The gold version each feed sink starts at when its checkpoint is new, as in dev. Empty keeps the
+  # feed and its alerts off; switching on means filling in all three, read from gold on the day they
+  # ship (docs/runbooks/store-feed-stalled.md).
+  serving_store_feed_start_versions = {}
+  serving_store_feed                = length(local.serving_store_feed_start_versions) > 0
+
+  # Only while the feed is on do the pipelines carry it: a settings change starts a pipeline
+  # before a release has deployed the notebook.
+  centrum_feed_notebooks = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/serving_store_feed"] : []
+  macro_feed_notebooks   = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/macros/serving_store_feed"] : []
+  serving_store_feed_settings = local.serving_store_feed ? {
+    SERVING_STORE_FEED_START_MEASUREMENTS  = local.serving_store_feed_start_versions.measurements
+    SERVING_STORE_FEED_START_UPLOADS       = local.serving_store_feed_start_versions.uploads
+    SERVING_STORE_FEED_START_MACRO_RESULTS = local.serving_store_feed_start_versions.macro_results
+  } : {}
+}
+
+# Where the pipelines' feed sends gold's changes, and the credentials it inserts with
+module "serving_store_secret_scope" {
+  source = "../../modules/databricks/secret_scope"
+
+  scope_name = "serving-store-${var.environment}"
+  secrets = {
+    "url"             = module.serving_store.url
+    "writer-username" = module.serving_store.writer_credentials.username
+    "writer-password" = module.serving_store.writer_credentials.password
+  }
+
+  acl_principals  = [module.node_service_principal.service_principal_application_id]
+  acl_permissions = ["READ"]
+
+  providers = {
+    databricks.workspace = databricks.workspace
   }
 }
 
@@ -3194,7 +3231,8 @@ module "grafana_dashboard" {
     "Large payloads"       = module.large_iot_s3.bucket_id
     "Databricks workspace" = "open-jii-databricks-root-bucket-${var.environment}"
   }
-  posthog_grafana_api_key = var.posthog_grafana_api_key
+  posthog_grafana_api_key    = var.posthog_grafana_api_key
+  serving_store_feed_enabled = local.serving_store_feed
 
   # Passed in rather than interpolated: a rule watching a misspelled function is NoData
   # forever, which is either permanently firing or permanently silent.

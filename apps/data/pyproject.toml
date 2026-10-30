@@ -96,6 +96,7 @@ filterwarnings = [
 ]
 markers = [
     "spark: tests that require a local Spark session (slow startup)",
+    "clickhouse: tests against the ClickHouse at CLICKHOUSE_TEST_URL (skipped when it is unset)",
 ]
 
 [tool.coverage.run]
