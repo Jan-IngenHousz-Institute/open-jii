@@ -222,6 +222,7 @@ describe("ExecuteMacroUseCase", () => {
       const invoke = mockLambda();
       vi.spyOn(testApp.module.get(AuthorizationService), "can").mockResolvedValue({
         allow: false,
+        organizationId: null,
         reason: "not-found",
       });
 

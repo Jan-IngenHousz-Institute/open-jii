@@ -62,7 +62,7 @@ describe("SwipeableMeasurementRow", () => {
           questions: [],
           hasComment: false,
           dayKey: "2026-04-20",
-          workbookRunId: null,
+          workbookRunId: "run-demo",
           failureReason: null,
           simulated: true,
         }}
