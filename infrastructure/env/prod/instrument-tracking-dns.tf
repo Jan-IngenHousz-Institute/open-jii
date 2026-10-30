@@ -1,12 +1,12 @@
-# Child-zone nameservers from the standalone app's successful DNS workflow 40927946148.
+# Child-zone nameservers of the standalone openjii-equipment app.
 module "instrument_tracking_subdomain_delegation" {
   source         = "../../modules/route53-delegation"
   parent_zone_id = module.route53.route53_zone_id
-  subdomain      = "assets.${var.domain_name}"
+  subdomain      = "equipment.${var.domain_name}"
   name_servers = [
-    "ns-1504.awsdns-60.org",
-    "ns-2005.awsdns-58.co.uk",
-    "ns-403.awsdns-50.com",
-    "ns-651.awsdns-17.net",
+    "ns-1444.awsdns-52.org",
+    "ns-1580.awsdns-05.co.uk",
+    "ns-378.awsdns-47.com",
+    "ns-821.awsdns-38.net",
   ]
 }
