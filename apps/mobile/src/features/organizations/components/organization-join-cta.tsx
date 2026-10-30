@@ -2,6 +2,7 @@ import type { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { Clock } from "lucide-react-native";
 import React, { useRef } from "react";
 import { Text, View } from "react-native";
+import { useSession } from "~/features/auth/hooks/use-session";
 import { JoinRequestSheet } from "~/features/organizations/components/join-request-sheet";
 import { isJoinable } from "~/features/organizations/domain/membership";
 import { useCancelMyJoinRequest } from "~/features/organizations/hooks/use-cancel-my-join-request";
@@ -30,6 +31,7 @@ export function OrganizationJoinCta({
   membershipStatus,
   visibility,
 }: OrganizationJoinCtaProps) {
+  const { user } = useSession();
   const { t } = useTranslation(["common", "organizations"]);
   const { warningFg } = useThemeColors();
   const { data: online } = useIsOnline();
@@ -37,7 +39,7 @@ export function OrganizationJoinCta({
   const sheetRef = useRef<BottomSheetModal>(null);
   const { cancelRequest, isPending: isCancelling } = useCancelMyJoinRequest();
 
-  if (membershipStatus === "member") return null;
+  if (user?.isAnonymous || membershipStatus === "member") return null;
 
   if (membershipStatus === "pending_request") {
     const confirmCancel = () => {

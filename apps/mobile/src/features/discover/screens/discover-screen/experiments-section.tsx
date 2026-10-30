@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { KeyRound } from "lucide-react-native";
 import React, { useCallback, useEffect } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, Text, View } from "react-native";
+import { useSession } from "~/features/auth/hooks/use-session";
 import { DiscoverEmptyState } from "~/features/discover/components/discover-empty-state";
 import { DiscoverExperimentRow } from "~/features/discover/components/discover-experiment-row";
 import { useDiscoverExperiments } from "~/features/experiments/hooks/use-discover-experiments";
@@ -21,6 +22,7 @@ interface ExperimentsSectionProps {
 }
 
 export function ExperimentsSection({ search, enabled, onStatusChange }: ExperimentsSectionProps) {
+  const { user } = useSession();
   const themeColors = useThemeColors();
   const { t } = useTranslation(["discover", "common"]);
   const { open: openCodeSheet, sheet: codeSheet } = useJoinCodeEntrySheet();
@@ -50,7 +52,7 @@ export function ExperimentsSection({ search, enabled, onStatusChange }: Experime
 
   const hasAppliedTerm = search.trim().length > 0;
 
-  const joinCodeRow = (
+  const joinCodeRow = user?.isAnonymous ? null : (
     <>
       <Card padded={false} style={{ marginTop: 10 }}>
         <RowItem

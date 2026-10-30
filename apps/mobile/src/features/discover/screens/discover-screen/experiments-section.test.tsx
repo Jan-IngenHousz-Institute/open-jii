@@ -40,6 +40,14 @@ const capturedArgs = vi.hoisted(() => [] as Record<string, unknown>[]);
 const push = vi.hoisted(() => vi.fn<(href: unknown) => void>());
 const openSheet = vi.hoisted(() => vi.fn<() => void>());
 
+const viewer = vi.hoisted(() => ({ isGuest: false }));
+vi.mock("~/features/auth/hooks/use-session", () => ({
+  useSession: () => ({ user: { isAnonymous: viewer.isGuest } }),
+}));
+beforeEach(() => {
+  viewer.isGuest = false;
+});
+
 vi.mock("expo-router", () => ({ router: { push: (href: unknown) => push(href) } }));
 vi.mock("~/features/experiments/hooks/use-discover-experiments", () => ({
   useDiscoverExperiments: (args: Record<string, unknown>) => {
@@ -274,4 +282,14 @@ describe("ExperimentsSection", () => {
 
     expect(onStatusChange).toHaveBeenCalledWith({ count: 0, isFetching: false });
   });
+});
+
+it("lets a guest browse from Discover without a join-code action or sheet", () => {
+  viewer.isGuest = true;
+  renderSection();
+  expect(screen.queryByText("Have a join code?")).toBeNull();
+  expect(screen.queryByTestId("code-sheet")).toBeNull();
+  fireEvent.press(screen.getByText("Canopy Phi2 Sweep"));
+  expect(push).toHaveBeenCalledWith({ pathname: "/discover/[id]", params: { id: "exp-1" } });
+  expect(openSheet).not.toHaveBeenCalled();
 });

@@ -57,6 +57,14 @@ const state = vi.hoisted<CtaTestState>(() => ({
   alertMessage: "",
 }));
 
+const viewer = vi.hoisted(() => ({ isGuest: false }));
+vi.mock("~/features/auth/hooks/use-session", () => ({
+  useSession: () => ({ user: { isAnonymous: viewer.isGuest } }),
+}));
+beforeEach(() => {
+  viewer.isGuest = false;
+});
+
 vi.mock("expo-router", () => ({
   router: { push: (target: unknown) => state.pushed.push(target as string) },
 }));
@@ -313,4 +321,20 @@ describe("ExperimentJoinCta", () => {
       expect(toJSON()).toBeNull();
     });
   });
+});
+
+it("lets guests measure in Demo but hides ordinary experiment join actions", () => {
+  viewer.isGuest = true;
+  const { rerender, toJSON } = render(
+    <ExperimentJoinCta {...BASE} organizationType="university" membershipStatus="none" />,
+  );
+  expect(toJSON()).toBeNull();
+  expect(state.presentedRequestSheet).not.toHaveBeenCalled();
+  expect(state.presentedCodeSheet).not.toHaveBeenCalled();
+  rerender(<ExperimentJoinCta {...BASE} organizationType="demo" membershipStatus="member" />);
+  fireEvent.press(screen.getByText("Start measuring"));
+  expect(state.pushed).toEqual(["/measurement-flow"]);
+  expect(screen.queryByText("Request to join")).toBeNull();
+  rerender(<ExperimentJoinCta {...BASE} organizationType="demo" membershipStatus="none" />);
+  expect(toJSON()).toBeNull();
 });
