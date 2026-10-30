@@ -13,3 +13,9 @@ variable "name_servers" {
   type        = list(string)
   sensitive   = true
 }
+
+variable "ttl" {
+  description = "TTL in seconds for the NS delegation record."
+  type        = number
+  default     = 172800
+}
