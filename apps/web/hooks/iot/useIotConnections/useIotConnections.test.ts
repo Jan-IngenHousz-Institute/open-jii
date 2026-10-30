@@ -77,6 +77,22 @@ describe("useIotConnections", () => {
     expect(connector.destroy).toHaveBeenCalledTimes(1);
   });
 
+  it("destroys a connected simulator when switching between eligible Demo experiments", async () => {
+    const connector = identifyAs("multispeq", "Simulated MultispeQ");
+    const { result, rerender } = renderHook(
+      ({ experiment }) => useIotConnections("multispeq", { experiment }),
+      {
+        initialProps: { experiment: createExperiment({ id: "demo-a", organizationType: "demo" }) },
+      },
+    );
+    await act(() => result.current.connect("simulated-multispeq"));
+    expect(result.current.connections).toHaveLength(1);
+    expect(result.current.connections[0].simulationExperimentId).toBe("demo-a");
+    rerender({ experiment: createExperiment({ id: "demo-b", organizationType: "demo" }) });
+    expect(connector.destroy).toHaveBeenCalledTimes(1);
+    expect(result.current.connections).toEqual([]);
+  });
+
   it("discards a simulated handshake that finishes after switching experiments", async () => {
     const connector = makeConnector();
     let finish: () => void = () => undefined;

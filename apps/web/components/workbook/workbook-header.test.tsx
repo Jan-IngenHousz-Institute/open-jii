@@ -93,6 +93,29 @@ describe("WorkbookHeader", () => {
     }
   });
 
+  it.each([true, false])(
+    "supports a simulator only when eligible, without hardware APIs (%s)",
+    async (eligible) => {
+      browserSupport.current = {
+        bluetooth: false,
+        serial: false,
+        any: false,
+        bluetoothReason: "browser",
+        serialReason: "browser",
+      };
+      const user = userEvent.setup();
+      const { props } = renderHeader({
+        connectionType: "simulated-multispeq",
+        simulationAvailable: eligible,
+      });
+      const connect = screen.getByRole("button", { name: "iot.workbookBar.connect" });
+      if (eligible) expect(connect).toBeEnabled();
+      else expect(connect).toBeDisabled();
+      await user.click(connect);
+      expect(props.onConnect).toHaveBeenCalledTimes(eligible ? 1 : 0);
+    },
+  );
+
   it("calls onConnect when user clicks the Connect button", async () => {
     const user = userEvent.setup();
     const { props } = renderHeader();
