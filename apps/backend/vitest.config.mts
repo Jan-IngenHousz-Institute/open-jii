@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import swc from "unplugin-swc";
 import { defineConfig, mergeConfig } from "vitest/config";
 import { BaseSequencer } from "vitest/node";
@@ -78,6 +79,13 @@ export default mergeConfig(
       isolate: false,
       include: ["src/**/*.spec.ts", "src/**/*.test.ts"],
       coverage: {
+        include: [
+          fileURLToPath(new URL("./src/**", import.meta.url)),
+          fileURLToPath(
+            new URL("../../packages/database/scripts/seed/demo.seed.ts", import.meta.url),
+          ),
+        ],
+        allowExternal: true,
         exclude: [
           // Backend-specific exclusions (extends base config)
           "src/main.ts", // Application entry point

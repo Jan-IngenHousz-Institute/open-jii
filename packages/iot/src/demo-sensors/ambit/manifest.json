@@ -1,0 +1,18 @@
+{
+  "family": "ambit",
+  "placeholder": true,
+  "recordingVersion": 1,
+  "firmwareVersion": "synthetic",
+  "protocolVersion": "placeholder-v1",
+  "protocolName": "Demo Ambit placeholder protocol",
+  "macroName": "Demo Ambit analysis",
+  "description": "Synthetic placeholder for hardware-team replacement. Not recorded from a physical sensor or validated for hardware use.",
+  "frameFooter": "7A1E3AA1",
+  "hello": "NEW Ambit Ready\n",
+  "expectedOutput": {
+    "signal_630_mean": 162.0,
+    "reference_630_mean": 4604.0,
+    "signal_reference_ratio": 0.035187,
+    "temperature_c": 23.1
+  }
+}
