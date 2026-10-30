@@ -2,7 +2,7 @@
 
 import { orpc, orpcClient } from "@/lib/orpc";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 
 import { zGuestName } from "@repo/api/shared/guest";
 import { authClient } from "@repo/auth/client";
@@ -21,8 +21,20 @@ import { Label } from "@repo/ui/components/label";
 
 import { demoLandingOrganization } from "./demo-landing";
 
+function subscribeOnline(notify: () => void) {
+  window.addEventListener("online", notify);
+  window.addEventListener("offline", notify);
+  return () => {
+    window.removeEventListener("online", notify);
+    window.removeEventListener("offline", notify);
+  };
+}
+const onlineSnapshot = () => navigator.onLine;
+const serverOnlineSnapshot = () => false;
+
 export function TryDemo({ locale }: { locale: string }) {
   const { t } = useTranslation();
+  const online = useSyncExternalStore(subscribeOnline, onlineSnapshot, serverOnlineSnapshot);
   const client = useQueryClient();
   const availability = useQuery(
     orpc.users.getDemoAvailability.queryOptions({ staleTime: 0, retry: false }),
@@ -34,12 +46,17 @@ export function TryDemo({ locale }: { locale: string }) {
   const [entered, setEntered] = useState(false);
   const busy = useRef(false);
   const entry = useMutation({
+    networkMode: "always",
     mutationFn: async () => {
       if (busy.current) return;
       const parsed = zGuestName.safeParse(name);
       setNameInvalid(!parsed.success);
       if (!parsed.success) {
         setError(t("demo.invalidName"));
+        return;
+      }
+      if (!online) {
+        setError(t("demo.offline"));
         return;
       }
       busy.current = true;
@@ -90,7 +107,7 @@ export function TryDemo({ locale }: { locale: string }) {
       }
     },
   });
-  if (!availability.data?.enabled && !open) return null;
+  if (availability.data?.enabled === false && !open) return null;
   return (
     <Dialog
       open={open}
@@ -99,10 +116,17 @@ export function TryDemo({ locale }: { locale: string }) {
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline" className="mb-6 w-full">
+        <Button
+          variant="outline"
+          className="mb-6 w-full"
+          disabled={!online || availability.data?.enabled !== true}
+        >
           {t("demo.try")}
         </Button>
       </DialogTrigger>
+      {(!online || availability.data?.enabled !== true) && (
+        <p className="mb-6 text-sm">{t("demo.offline")}</p>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("demo.title")}</DialogTitle>
@@ -150,7 +174,7 @@ export function TryDemo({ locale }: { locale: string }) {
             >
               {t("demo.cancel")}
             </Button>
-            <Button type="submit" disabled={entry.isPending}>
+            <Button type="submit" disabled={entry.isPending || !online}>
               {t("demo.continue")}
             </Button>
           </div>

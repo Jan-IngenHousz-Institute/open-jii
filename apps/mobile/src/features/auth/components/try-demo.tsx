@@ -73,16 +73,20 @@ export function TryDemo({ online }: { online: boolean | undefined }) {
       }
     },
   });
-  if (!availability.data?.enabled && !open) return null;
+  if (availability.data?.enabled === false && !open) return null;
   return (
     <View>
       <Button
         title={t("demo.try")}
         variant="outline"
-        isDisabled={online !== true}
-        onPress={() => setOpen(true)}
+        isDisabled={online !== true || availability.data?.enabled !== true}
+        onPress={() => {
+          if (online === true && availability.data?.enabled) setOpen(true);
+        }}
       />
-      {online !== true && <Text className="text-on-surface">{t("demo.offline")}</Text>}
+      {(online !== true || availability.data?.enabled !== true) && (
+        <Text className="text-on-surface">{t("demo.offline")}</Text>
+      )}
       <Modal
         visible={open}
         transparent

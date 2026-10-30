@@ -1,6 +1,6 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type * as I18nModule from "@repo/i18n";
 import english from "@repo/i18n/locales/en-US/common.json";
@@ -50,6 +50,9 @@ vi.mock("@repo/auth/client", () => ({
   authClient: { getSession: api.session, $fetch: api.create },
 }));
 beforeEach(() => {
+  onlineManager.setOnline(true);
+  Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+  fireEvent(window, new Event("online"));
   vi.clearAllMocks();
   api.language = "keys";
   api.available.mockResolvedValue({ enabled: true });
@@ -57,6 +60,7 @@ beforeEach(() => {
   api.create.mockResolvedValue({ data: { user: { id: "new-guest" } }, error: null });
   api.directory.mockResolvedValue({ organizations: [] });
 });
+afterEach(() => onlineManager.setOnline(true));
 function show() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
@@ -66,9 +70,14 @@ function show() {
   );
   return client;
 }
+async function readyEntry(name: string) {
+  const button = await screen.findByRole("button", { name });
+  await waitFor(() => expect(button).toBeEnabled());
+  return button;
+}
 async function open() {
   show();
-  fireEvent.click(await screen.findByRole("button", { name: "demo.try" }));
+  fireEvent.click(await readyEntry("demo.try"));
 }
 it("Cancel and opening the dialog never create a user", async () => {
   await open();
@@ -153,10 +162,92 @@ describe.each([
   it("discloses permanent location data and the temporary public nickname before creating an account", async () => {
     api.language = locale;
     show();
-    fireEvent.click(await screen.findByRole("button", { name: copy.demo.try }));
+    fireEvent.click(await readyEntry(copy.demo.try));
     expect(screen.getByText(copy.demo.permanent)).toHaveTextContent(location);
     expect(screen.getByText(copy.demo.permanent)).toHaveTextContent(former);
     expect(screen.getByText(copy.demo.nameHint)).toHaveTextContent(realName);
     expect(api.create).not.toHaveBeenCalled();
   });
+});
+it.each([
+  [{ status: 429 }, english.demo.entryError_limited],
+  [{ status: 403, code: "DEMO_DISABLED" }, english.demo.unavailable],
+  [{ status: 500 }, english.demo.entryError],
+] as const)("translates a refused anonymous entry: %s", async (error, expected) => {
+  api.language = "en-US";
+  api.create.mockResolvedValue({ data: null, error });
+  await openWithName();
+  expect(await screen.findByRole("alert")).toHaveTextContent(expected);
+});
+async function openWithName() {
+  show();
+  const label = api.language === "en-US" ? english.demo.try : "demo.try";
+  fireEvent.click(await readyEntry(label));
+  const continueLabel = api.language === "en-US" ? english.demo.continue : "demo.continue";
+  fireEvent.click(screen.getByRole("button", { name: continueLabel }));
+}
+it.each(["missing-id", "session-error", "network"])(
+  "keeps entry retryable after %s",
+  async (failure) => {
+    if (failure === "missing-id")
+      api.create.mockResolvedValue({ data: { user: { id: "" } }, error: null });
+    if (failure === "session-error")
+      api.session.mockResolvedValue({ data: null, error: { message: "expired" } });
+    if (failure === "network") api.session.mockRejectedValue(new Error("offline"));
+    await openWithName();
+    expect(await screen.findByRole("alert")).toHaveTextContent("demo.entryError");
+    expect(screen.getByRole("button", { name: "demo.continue" })).toBeEnabled();
+  },
+);
+it("shows an unknown/offline entry disabled and reacts to restored connectivity", async () => {
+  api.available.mockReturnValue(new Promise(() => undefined));
+  const client = show();
+  expect(screen.getByRole("button", { name: "demo.try" })).toBeDisabled();
+  expect(screen.getByText("demo.offline")).toBeInTheDocument();
+  client.setQueryData(["availability"], { enabled: true });
+  await waitFor(() => expect(screen.getByRole("button", { name: "demo.try" })).toBeEnabled());
+  Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+  fireEvent(window, new Event("offline"));
+  expect(screen.getByRole("button", { name: "demo.try" })).toBeDisabled();
+  Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+  fireEvent(window, new Event("online"));
+  expect(screen.getByRole("button", { name: "demo.try" })).toBeEnabled();
+  expect(api.create).not.toHaveBeenCalled();
+});
+it("hides the entry only after a known-off availability response", async () => {
+  api.available.mockResolvedValue({ enabled: false });
+  const client = show();
+  await waitFor(() => expect(client.getQueryData(["availability"])).toEqual({ enabled: false }));
+  expect(screen.queryByRole("button", { name: "demo.try" })).toBeNull();
+});
+it("handles Escape and blocks a queued form submission after going offline", async () => {
+  await open();
+  Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+  fireEvent(window, new Event("offline"));
+  const form = screen.getByRole("button", { name: "demo.continue" }).closest("form");
+  if (!form) throw new Error("missing entry form");
+  fireEvent.submit(form);
+  expect(await screen.findByRole("alert")).toHaveTextContent("demo.offline");
+  expect(api.session).not.toHaveBeenCalled();
+  fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+it("navigates a ready guest to the related Demo organization", async () => {
+  const assign = vi.fn();
+  const originalWindow = window;
+  vi.stubGlobal(
+    "window",
+    new Proxy(originalWindow, {
+      get(target, property): unknown {
+        return property === "location" ? { assign } : Reflect.get(target, property, target);
+      },
+    }),
+  );
+  try {
+    api.directory.mockResolvedValue({ organizations: [{ id: "demo", type: "demo" }] });
+    await openWithName();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/en-US/platform/organizations/demo"));
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });
