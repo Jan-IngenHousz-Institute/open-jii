@@ -1,3 +1,4 @@
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
@@ -13,6 +14,18 @@ import { OrganizationJoinCta } from "./organization-join-cta";
  */
 describe("<OrganizationJoinCta />", () => {
   const props = { organizationId: "org-9", organizationName: "Greenhouse Lab" };
+
+  it("offers a guest no join request, which the server refuses them", () => {
+    render(
+      <PrincipalProvider userId="guest" isGuest>
+        <OrganizationJoinCta {...props} membershipStatus="none" />
+      </PrincipalProvider>,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "organizations.join.requestAction" }),
+    ).not.toBeInTheDocument();
+  });
 
   it("sends the join request with the optional message", async () => {
     const user = userEvent.setup();

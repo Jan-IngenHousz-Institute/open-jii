@@ -1,5 +1,6 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { QueryProvider } from "~/providers/QueryProvider";
 
 import { authClient } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -36,7 +37,11 @@ describe("PasskeyLoginButton", () => {
       error: { message: "Cancelled" },
     } as never);
     const user = userEvent.setup();
-    const { router } = render(<PasskeyLoginButton callbackUrl="/cb" />);
+    const { router } = render(
+      <QueryProvider>
+        <PasskeyLoginButton callbackUrl="/cb" />
+      </QueryProvider>,
+    );
 
     await user.click(screen.getByRole("button", { name: "auth.loginWith-passkey" }));
 
@@ -46,6 +51,7 @@ describe("PasskeyLoginButton", () => {
         variant: "destructive",
       }),
     );
+    expect(toast).toHaveBeenCalledTimes(1);
     expect(router.push).not.toHaveBeenCalled();
   });
 

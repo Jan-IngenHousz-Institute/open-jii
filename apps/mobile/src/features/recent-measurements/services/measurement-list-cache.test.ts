@@ -47,6 +47,19 @@ beforeEach(() => {
   qc = new QueryClient();
 });
 
+it("does not insert a departed guest's late upload into another identity's cache or counts", () => {
+  const client = new QueryClient();
+  const listKey = [...queryKeys.list("all"), "guest-b:true"];
+  const countKey = [...queryKeys.counts, "guest-b:true"];
+  const rows = { pages: [[item("b", "pending")]], pageParams: [0] };
+  client.setQueryData(listKey, rows);
+  client.setQueryData(countKey, { pending: 1, successful: 0, failed: 0 });
+  applySettledPatchBatch(client, [{ id: "a", status: "successful" }]);
+  expect(client.getQueryData(listKey)).toEqual(rows);
+  expect(client.getQueryData(countKey)).toEqual({ pending: 1, successful: 0, failed: 0 });
+  expect(client.getQueryState(countKey)?.isInvalidated).toBe(true);
+});
+
 describe("applySettledPatchBatch — list pages", () => {
   it("flips a row's status in the 'all' filter list cache", () => {
     seedList(qc, "all", [item("r1", "pending")]);

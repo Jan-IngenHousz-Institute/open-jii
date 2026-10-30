@@ -1,62 +1,92 @@
-/**
- * Hook to access the current user session.
- *
- * Uses Better Auth's useSession() as the primary source. When offline,
- * Better Auth can't validate the session and returns null — in that case
- * we fall back to the SecureStore cache written by the expo client plugin.
- */
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useAuthClient } from "~/features/auth/services/auth";
-import { clearCachedSession, getCachedSession } from "~/features/auth/services/session-cache";
+import {
+  clearLocalCredentials,
+  currentSession,
+  expireGuest,
+  readCachedSession,
+  recordGuestClock,
+  sessionClock,
+  sessionRevision,
+} from "~/features/auth/services/session-cache";
+import { subscribeSession } from "~/features/auth/services/session-clock";
 
 export function useSession() {
   const authClient = useAuthClient();
   const { data: betterAuthSession, isPending, error } = authClient.useSession();
-  const [cachedSession, setCachedSession] = useState(() => getCachedSession());
-
-  // Re-check cache when Better Auth finishes loading but has no session
+  useSyncExternalStore(subscribeSession, sessionRevision);
+  const cachedSession = readCachedSession();
+  const now = sessionClock();
+  const assessed = currentSession(betterAuthSession ?? cachedSession);
+  let activeSession = assessed.session;
+  let expired = assessed.expired;
+  // An authoritative empty response must not resurrect a cached guest.
+  if (!betterAuthSession && !isPending && !error && cachedSession?.user.isAnonymous) {
+    expired ||= activeSession !== null;
+    activeSession = null;
+  }
+  let rejectedGuestId: string | undefined;
+  if (!activeSession && (betterAuthSession?.user.isAnonymous || cachedSession?.user.isAnonymous)) {
+    rejectedGuestId = betterAuthSession?.user.id ?? cachedSession?.user.id;
+  }
+  const guestId = activeSession?.user.isAnonymous ? activeSession.user.id : undefined;
   useEffect(() => {
-    if (!isPending && !betterAuthSession) {
-      setCachedSession(getCachedSession());
+    if (!guestId) return;
+    try {
+      recordGuestClock(guestId, now);
+    } catch {
+      /* The mark is kept in memory even if secure storage fails. */
     }
-  }, [isPending, betterAuthSession]);
-
-  // Use Better Auth session when available, fall back to cache
-  const activeSession = betterAuthSession ?? cachedSession;
-
-  // If we have a cached session, consider loaded immediately so the
-  // splash screen hides without waiting for server validation.
-  const isLoaded = !isPending || !!cachedSession;
-
+  }, [guestId, now]);
+  useEffect(() => {
+    if (!rejectedGuestId || !expired) return;
+    try {
+      expireGuest(rejectedGuestId);
+    } catch {
+      /* The identity is revoked in memory even if secure storage fails. */
+    }
+  }, [rejectedGuestId, expired]);
   const session = activeSession
     ? {
         data: {
-          user: {
-            id: activeSession.user?.id,
-            name: activeSession.user?.name,
-            email: activeSession.user?.email,
-            image: activeSession.user?.image,
-          },
-          expires: activeSession.session?.expiresAt
+          user: activeSession.user,
+          expires: activeSession.session.expiresAt
             ? new Date(activeSession.session.expiresAt).toISOString()
             : undefined,
         },
       }
     : undefined;
-
   return {
     session,
-    isLoaded,
+    isLoaded: !isPending || !!activeSession || !!rejectedGuestId,
     isPending,
     error,
     user: activeSession?.user,
     signOut: async () => {
-      clearCachedSession();
+      const id = activeSession?.user.id;
+      const controller = new AbortController();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const deadline = new Promise<void>((resolve) => {
+        timer = setTimeout(() => {
+          controller.abort();
+          resolve();
+        }, 5_000);
+      });
       try {
-        await authClient.signOut();
+        await Promise.race([
+          authClient.signOut({ fetchOptions: { signal: controller.signal } }),
+          deadline,
+        ]);
       } catch {
-        // Network call may fail offline — that's fine,
-        // the server session will expire on its own.
+        /* Local departure also works offline. */
+      } finally {
+        clearTimeout(timer);
+        try {
+          clearLocalCredentials(id);
+        } finally {
+          const atom = authClient.$store.atoms.session;
+          atom.set({ ...atom.get(), data: null, error: null, isPending: false });
+        }
       }
     },
   };

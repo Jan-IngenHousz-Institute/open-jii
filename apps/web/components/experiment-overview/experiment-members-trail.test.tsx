@@ -90,4 +90,11 @@ describe("<ExperimentMembersTrail />", () => {
 
     expect(screen.queryByText(/^\+/)).not.toBeInTheDocument();
   });
+
+  it("states the count without a link when the collaborators surface would refuse the viewer", () => {
+    renderTrail({ href: undefined, collaboratorCount: 2 });
+
+    expect(screen.getByText("sharing.collaboratorCount:2")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
 });

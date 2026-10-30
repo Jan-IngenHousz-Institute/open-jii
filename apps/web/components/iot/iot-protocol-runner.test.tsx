@@ -1,3 +1,4 @@
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import { createIotDevice } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
@@ -657,6 +658,26 @@ describe("IotProtocolRunner", () => {
       expect(
         screen.queryByRole("button", { name: "iot.protocolRunner.registerDevice" }),
       ).not.toBeInTheDocument();
+    });
+
+    it("lets a guest run on local hardware without reading or joining the registry", async () => {
+      mockIsConnected = true;
+      mockDeviceInfo = { device_id: "SN-IN-HAND" };
+      const registry = server.mount(contract.iot.listIotDevices, { body: [] });
+
+      render(
+        <PrincipalProvider userId="guest" isGuest>
+          <IotProtocolRunner {...defaultProps} />
+        </PrincipalProvider>,
+      );
+
+      expect(
+        await screen.findByRole("button", { name: /iot\.protocolRunner\.runProtocol/i }),
+      ).toBeEnabled();
+      expect(
+        screen.queryByRole("button", { name: "iot.protocolRunner.registerDevice" }),
+      ).not.toBeInTheDocument();
+      expect(registry.called).toBe(false);
     });
   });
 });

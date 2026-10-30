@@ -20,6 +20,7 @@ import { useLastLoginMethod } from "../../hooks/auth/useLastLoginMethod/useLastL
 import { EmailLoginForm } from "./email-login-form";
 import { OAuthLoginForm } from "./oauth-login-form";
 import { PasskeyLoginButton } from "./passkey-login-button";
+import { TryDemo } from "./try-demo";
 
 /**
  * Provider map for displaying available auth providers
@@ -130,6 +131,8 @@ export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
       {!showOTP && webAuthnSupported && (
         <PasskeyLoginButton callbackUrl={callbackUrl} isLastUsed={lastLoginMethod === "passkey"} />
       )}
+
+      {!showOTP && <TryDemo locale={locale} />}
 
       {/* Terms */}
       {!showOTP && (

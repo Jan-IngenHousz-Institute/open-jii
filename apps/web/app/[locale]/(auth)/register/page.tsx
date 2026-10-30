@@ -1,3 +1,4 @@
+import { guestMayUse } from "@/components/auth/guest-access";
 import { PublicNavbar } from "@/components/navigation/public-navbar";
 import type { SearchParamsType } from "@/util/searchParams";
 import { getFirstSearchParam } from "@/util/searchParams";
@@ -21,6 +22,11 @@ export default async function UserRegistrationPage(props: {
 
   if (!session?.user) {
     redirect(`/${locale}/login?callbackUrl=/${locale}/register`);
+  }
+
+  // A guest has no profile to register, and the server refuses to create one.
+  if (!guestMayUse("users.createUserProfile", session.user.isAnonymous === true)) {
+    redirect(`/${locale}/platform`);
   }
 
   const hasValidEmail = z.string().email().safeParse(session.user.email).success;

@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "quick-start",
+    "try-demo",
     "create-account",
     "account-security-api-keys",
     "key-concepts",

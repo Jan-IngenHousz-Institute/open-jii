@@ -45,6 +45,14 @@ const state = vi.hoisted<CtaTestState>(() => ({
   alertMessage: "",
 }));
 
+const viewer = vi.hoisted(() => ({ isGuest: false }));
+vi.mock("~/features/auth/hooks/use-session", () => ({
+  useSession: () => ({ user: { isAnonymous: viewer.isGuest } }),
+}));
+beforeEach(() => {
+  viewer.isGuest = false;
+});
+
 vi.mock("~/shared/ui/hooks/use-is-online", () => ({
   useIsOnline: () => ({ data: state.online }),
 }));
@@ -229,4 +237,13 @@ describe("OrganizationJoinCta", () => {
       expect(screen.queryByText("Joined")).toBeNull();
     });
   });
+});
+
+it("hides ordinary public organization join actions from guests", () => {
+  viewer.isGuest = true;
+  const { toJSON } = render(
+    <OrganizationJoinCta id="org" name="Public Lab" visibility="public" membershipStatus="none" />,
+  );
+  expect(toJSON()).toBeNull();
+  expect(state.present).not.toHaveBeenCalled();
 });

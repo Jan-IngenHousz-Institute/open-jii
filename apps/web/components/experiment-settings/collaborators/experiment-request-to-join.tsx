@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 
 import type { ExperimentCreateJoinRequestBody } from "@repo/api/domains/experiment/join-requests/experiment-join-requests.schema";
 import { zExperimentCreateJoinRequestBody } from "@repo/api/domains/experiment/join-requests/experiment-join-requests.schema";
+import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -28,7 +29,13 @@ interface ExperimentRequestToJoinProps {
   experimentId: string;
 }
 
-export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoinProps) {
+export function ExperimentRequestToJoin(props: ExperimentRequestToJoinProps) {
+  const { data, isPending } = useSession();
+  if (isPending || data?.user.isAnonymous) return null;
+  return <ResearcherRequestToJoin {...props} />;
+}
+
+function ResearcherRequestToJoin({ experimentId }: ExperimentRequestToJoinProps) {
   const { t } = useTranslation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const form = useForm<ExperimentCreateJoinRequestBody>({
@@ -132,9 +139,7 @@ export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoi
                 {t("experimentSettings.cancel")}
               </Button>
               <Button variant="default" type="submit" disabled={isRequesting}>
-                {isRequesting
-                  ? t("experimentSettings.requestToJoinSubmitting")
-                  : t("experimentSettings.requestToJoinSubmit")}
+                {t("experimentSettings.requestToJoinSubmit", { context: String(isRequesting) })}
               </Button>
             </DialogFooter>
           </form>

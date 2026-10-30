@@ -4,10 +4,9 @@ description: "Server permissions, measurement limits and cleanup for the public 
 ---
 
 Guest sessions use Better Auth anonymous accounts. They have a name but no email
-sign-in, personal workspace, profile or device credentials. This server milestone
-prepares the guest session and measurement transport. The Try the demo entry,
-name dialog and guest banner arrive in the next client milestone; account
-conversion arrives separately.
+sign-in, personal workspace, profile or device credentials. Web and Android
+provide [Try the demo](/guide/get-started/try-demo), a nickname dialog, a guest
+banner and a confirmed Leave demo flow. Account conversion arrives separately.
 
 <DocsVideo>
   <video controls preload="metadata" src="/img/guide/web/guest-demo-public-read.webm" />
@@ -33,11 +32,9 @@ macro or organization. Demo
 experiments do not offer Request to join. An ordinary public experiment keeps
 its existing researcher join flow.
 
-Two web controls still need the guest client milestone. Guests can see Create
-organization and, on ordinary public experiments, Request to join. The server
-refuses both. M5 must hide those controls for guests and remove the join dialog's
-email-notification promise from the guest experience. Researcher joining remains
-unchanged.
+The web hides Create organization and Request to join from guests, including
+the join dialog's email-notification promise. Direct requests remain refused by
+the server. Researcher joining is unchanged.
 
 On Android, a signed-in researcher visiting a Demo experiment also sees no join
 action. The example below opens a synthetic Demo experiment as a non-member.
@@ -117,8 +114,10 @@ back to a shared bucket until OJD-2040 supplies trusted client attribution. The 
 address over five minutes on `/api/v1/auth/sign-in/anonymous`. Address attribution
 still depends on the existing trusted-proxy configuration tracked in OJD-2040.
 A local test does not prove the deployed edge configuration. Keep `demo-mode`
-off in production until OJD-2040 is merged, deployed and proves per-client
-attribution. Until then, the WAF rule is the per-address control.
+off in production until OJD-2040 / PR #2296 is deployed and its 24-hour BLOCK
+check passes under OJD-2218 stage 2. Repeat monitoring after seven days. These
+client instructions and the Play reviewer path apply only after that gate and
+explicit demo enablement.
 
 ## Switch and cleanup
 
@@ -131,9 +130,24 @@ A nightly UTC job removes anonymous accounts strictly older than seven days,
 including sessions, visits, quotas and guest-addressed grants. It
 also removes stale anonymous-entry rate-limit records. Refreshing a session does
 not restart the account's lifetime. Measurements and Demo resources remain.
-Server deletion cannot erase an offline phone's SecureStore session cache. The
-guest client milestone must clear that cache on Leave demo and handle expired
-guest sessions; researcher offline caches keep their existing behavior.
+Android bounds offline guest access by the original account creation time plus
+seven days. A secure per-guest clock high-water mark detects observed rollback
+beyond two minutes; smaller corrections use that mark for deadline checks.
+Foreground and timer checks clear expired guest credentials. An authoritative
+empty server session cannot fall back to the same cached guest.
+
+Every mobile identity gets a separate persisted query cache. Before switching
+identities, the app clears prior flow selections and the previous cache, including
+legacy unscoped data. Late auth responses cannot rewrite departed credentials.
+Leaving retains owner-bound unsent rows for the existing guest cleanup. Android
+cleans up locally even on sign-out failure; web retains its live session and UI
+until sign-out succeeds.
+
+The public `GET /api/v1/users/demo-availability` returns only a boolean. The users
+use case shares a 30-second cache across requests and coalesces concurrent flag
+reads. False and failed reads are cached for the same duration and fail closed.
+Anonymous admission still checks the flag live, so a cached enabled button cannot
+grant a session after the switch is turned off.
 
 The job works in batches of 100 accounts, each in its own short transaction on
 the backend's shared connection, so API requests run between batches. It walks

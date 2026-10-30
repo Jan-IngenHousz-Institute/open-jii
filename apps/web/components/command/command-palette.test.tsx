@@ -1,3 +1,4 @@
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import {
   CHEATSHEET_OPEN_EVENT,
   COMMAND_PALETTE_OPEN_EVENT,
@@ -84,6 +85,22 @@ describe("CommandPalette", () => {
       await user.click(await screen.findByText(label));
       expect(router.push).toHaveBeenCalledWith(path);
     }
+  });
+
+  it("offers a guest no transfer request, experiment creation, settings or search", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrincipalProvider userId="guest-1" isGuest>
+        <CommandPalette locale="en-US" />
+      </PrincipalProvider>,
+    );
+    openPalette();
+    expect(await screen.findByText("commandPalette.entries.experiments")).toBeInTheDocument();
+    expect(screen.queryByText("commandPalette.entries.transferRequests")).not.toBeInTheDocument();
+    expect(screen.queryByText("commandPalette.entries.createExperiment")).not.toBeInTheDocument();
+    expect(screen.queryByText("commandPalette.entries.settings")).not.toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText("commandPalette.placeholder"), "leaf");
+    expect(mockUseGlobalSearch).toHaveBeenLastCalledWith("");
   });
 
   it("dispatches the cheatsheet event from the palette action", async () => {

@@ -55,6 +55,8 @@ export function usePostHogAuth() {
       const properties = isGuest
         ? { is_guest: true }
         : { email, ...(identifiedGuest.current ? { is_guest: false } : {}) };
+      if (posthog.get_distinct_id() !== id && posthog.get_property("$user_state") === "identified")
+        posthog.reset();
       posthog.identify(id, properties);
       identifiedGuest.current = isGuest;
     }

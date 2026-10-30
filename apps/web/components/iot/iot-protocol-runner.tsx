@@ -1,5 +1,7 @@
 "use client";
 
+import { guestMayUse } from "@/components/auth/guest-access";
+import { useIsGuest } from "@/components/auth/principal-context";
 import { Hand, Loader2, Play, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { RegisterIotDeviceDialog } from "~/components/iot-devices/register-iot-device-dialog";
@@ -76,8 +78,12 @@ export function IotProtocolRunner({
     useIotCommunication(sensorFamily, connectionType);
 
   const serialInHand = deviceInfo?.device_id?.trim() ?? "";
+  // A guest runs protocols on local hardware but has no registry to read or join.
+  const isGuest = useIsGuest();
+  const mayRegister =
+    guestMayUse("iot.listIotDevices", isGuest) && guestMayUse("iot.registerIotDevice", isGuest);
   const { data: registeredDevices, isSuccess: registryLoaded } = useIotDevices({
-    enabled: isConnected && serialInHand !== "",
+    enabled: mayRegister && isConnected && serialInHand !== "",
   });
   const isUnregistered =
     registryLoaded &&

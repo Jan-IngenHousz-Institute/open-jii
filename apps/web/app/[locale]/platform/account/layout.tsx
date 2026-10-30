@@ -1,9 +1,11 @@
 "use client";
 
+import { guestMayUse } from "@/components/auth/guest-access";
+import { useIsGuest } from "@/components/auth/principal-context";
 import { PageContainer } from "@/components/page-container";
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { redirect, usePathname } from "next/navigation";
 
 import { useTranslation } from "@repo/i18n";
 import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
@@ -12,6 +14,8 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname();
   const { t } = useTranslation("account");
   const locale = useLocale();
+  // Profile, sign-in methods, keys, invitations and notifications all refuse a guest.
+  if (!guestMayUse("users.getUserProfile", useIsGuest())) redirect(`/${locale}/platform`);
 
   const getActiveTab = () => {
     if (pathname.includes("/security")) return "security";

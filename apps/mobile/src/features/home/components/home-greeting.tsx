@@ -8,7 +8,7 @@ import { useTranslation } from "~/shared/i18n";
 export function HomeGreeting() {
   const { t } = useTranslation("home");
   const { user } = useSession();
-  const { userProfile } = useGetUserProfile(user?.id);
+  const { userProfile } = useGetUserProfile(user?.id, user?.isAnonymous !== true);
   const { greeting, weekdayAndDate } = useGreeting();
 
   const fallback = t("greeting.fallbackName");

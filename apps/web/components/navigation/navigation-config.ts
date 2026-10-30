@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { env } from "~/env";
 
+import type { GuestGatedProcedure } from "../auth/guest-access";
+
 export interface NavLink {
   titleKey: string; // i18n key for the title
   namespace?: string; // i18n namespace (defaults to "common")
@@ -29,6 +31,7 @@ export interface NavLink {
   items?: NavLink[]; // Optional sub-navigation items
   navigable?: boolean; // Whether the item itself is a link (default true)
   children?: NavLink[]; // Nested nav groups (non-navigable parent)
+  procedure?: GuestGatedProcedure; // Backend procedure behind the link, for guestMayUse
 }
 
 export interface NavSection {
@@ -80,6 +83,7 @@ export const mainNavigation = {
         titleKey: "sidebar.newExperiment",
         namespace: "navigation",
         url: (locale: string) => `/${locale}/platform/experiments/new`,
+        procedure: "experiments.createExperiment",
       },
       {
         titleKey: "sidebar.overview",
@@ -97,16 +101,19 @@ export const mainNavigation = {
     url: (locale: string) => `/${locale}/platform/devices`,
     icon: "RadioReceiver",
     navigable: false,
+    procedure: "iot.listIotDevices" as GuestGatedProcedure,
     children: [
       {
         titleKey: "sidebar.overview",
         namespace: "navigation",
         url: (locale: string) => `/${locale}/platform/devices`,
+        procedure: "iot.listIotDevices",
       },
       {
         titleKey: "sidebar.calibrations",
         namespace: "navigation",
         url: (locale: string) => `/${locale}/platform/calibrations`,
+        procedure: "iot.listCalibrationDefinitions",
       },
     ] as NavLink[],
     items: [] as NavLink[],
@@ -134,6 +141,7 @@ export const mainNavigation = {
         titleKey: "sidebar.newOrganization",
         namespace: "navigation",
         url: (locale: string) => `/${locale}/platform/organizations/new`,
+        procedure: "organization.create",
       },
     ] as NavLink[],
   },
@@ -154,6 +162,7 @@ export const mainNavigation = {
             titleKey: "sidebar.newProtocol",
             namespace: "navigation",
             url: (locale: string) => `/${locale}/platform/protocols/new`,
+            procedure: "protocols.createProtocol",
           },
           {
             titleKey: "sidebar.overview",
@@ -172,6 +181,7 @@ export const mainNavigation = {
             titleKey: "sidebar.newMacro",
             namespace: "navigation",
             url: (locale: string) => `/${locale}/platform/macros/new`,
+            procedure: "macros.createMacro",
           },
           {
             titleKey: "sidebar.overview",

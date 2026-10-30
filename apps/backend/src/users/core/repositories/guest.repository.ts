@@ -1,6 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import { GUEST_HOURLY_LIMIT, GUEST_ORGANIZATION_HOURLY_LIMIT } from "@repo/api/shared/guest";
+import {
+  GUEST_HOURLY_LIMIT,
+  GUEST_LIFETIME_MS,
+  GUEST_ORGANIZATION_HOURLY_LIMIT,
+} from "@repo/api/shared/guest";
 import { deleteStaleAnonymousRateLimits } from "@repo/auth/guest-retention";
 import {
   and,
@@ -25,7 +29,6 @@ import {
 } from "../../../common/utils/postgres-error";
 import { GUEST_GRANT_CLEANUP_PORT } from "../../../sharing/core/ports/guest-grant-cleanup.port";
 import type { GuestGrantCleanupPort } from "../../../sharing/core/ports/guest-grant-cleanup.port";
-import { GUEST_LIFETIME_MS } from "../models/guest.model";
 import type {
   GuestPurgeBatch,
   GuestPurgeCursor,

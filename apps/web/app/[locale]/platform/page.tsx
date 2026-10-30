@@ -1,3 +1,5 @@
+import { guestMayUse } from "@/components/auth/guest-access";
+import type { GuestGatedProcedure } from "@/components/auth/guest-access";
 import { ActivitySection } from "@/components/dashboard/activity-section";
 import { BlogPostsSection } from "@/components/dashboard/blog-posts-section";
 import {
@@ -26,6 +28,11 @@ import initTranslations from "@repo/i18n/server";
 
 const WHATS_NEW_ENTRIES = 2;
 
+const GUEST_GATED_SECTIONS: Partial<Record<string, GuestGatedProcedure>> = {
+  notifications: "notifications.listNotifications",
+  "last-30-days": "metrics.getScopedMetrics",
+};
+
 interface PlatformPageProps {
   params: Promise<{ locale: string }>;
 }
@@ -45,6 +52,7 @@ export default async function PlatformHome({ params }: PlatformPageProps) {
   const { locale } = await params;
   const [session, releaseNotes] = await Promise.all([auth(), fetchWebReleaseNotes(locale)]);
   const userId = session?.user.id;
+  const isGuest = session?.user.isAnonymous === true;
 
   const whatsNew: WhatsNewEntry[] = releaseNotes
     .flatMap((note) =>
@@ -61,19 +69,21 @@ export default async function PlatformHome({ params }: PlatformPageProps) {
     )
     .slice(0, WHATS_NEW_ENTRIES);
 
-  const sections: HomeSection[] = [
-    { key: "notifications", column: "rail", node: <NotificationsSection /> },
-    { key: "recently-opened", column: "main", node: <RecentlyOpenedSection /> },
-    { key: "public-research", column: "main", node: <PublicResearchSection /> },
-    { key: "blog-posts", column: "main", node: <BlogPostsSection locale={locale} /> },
-    { key: "last-30-days", column: "rail", node: <ActivitySection locale={locale} /> },
-    {
-      key: "whats-new",
-      column: "rail",
-      node: <WhatsNewSection entries={whatsNew} locale={locale} />,
-    },
-    { key: "feedback", column: "rail", node: <FeedbackLinks /> },
-  ];
+  const sections = (
+    [
+      { key: "notifications", column: "rail", node: <NotificationsSection /> },
+      { key: "recently-opened", column: "main", node: <RecentlyOpenedSection /> },
+      { key: "public-research", column: "main", node: <PublicResearchSection /> },
+      { key: "blog-posts", column: "main", node: <BlogPostsSection locale={locale} /> },
+      { key: "last-30-days", column: "rail", node: <ActivitySection locale={locale} /> },
+      {
+        key: "whats-new",
+        column: "rail",
+        node: <WhatsNewSection entries={whatsNew} locale={locale} />,
+      },
+      { key: "feedback", column: "rail", node: <FeedbackLinks /> },
+    ] satisfies HomeSection[]
+  ).filter(({ key }) => guestMayUse(GUEST_GATED_SECTIONS[key], isGuest));
 
   return (
     <PrefetchedQueries
@@ -82,7 +92,9 @@ export default async function PlatformHome({ params }: PlatformPageProps) {
         homeExperimentsQuery(utils),
         publicExperimentsQuery(utils),
         // Not the unread count: the sidebar's bell reads that key, and it hydrates before the page.
-        notificationsListQuery(utils, userId, UNREAD_NOTIFICATIONS_INPUT),
+        ...(guestMayUse("notifications.listNotifications", isGuest)
+          ? [notificationsListQuery(utils, userId, UNREAD_NOTIFICATIONS_INPUT)]
+          : []),
       ]}
     >
       {/* The shell widens pages on very large screens; the home keeps its columns readable. */}

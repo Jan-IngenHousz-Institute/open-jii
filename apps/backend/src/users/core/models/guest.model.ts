@@ -1,5 +1,3 @@
-export const GUEST_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
-
 export interface GuestIdentity {
   id: string;
   isAnonymous: boolean;

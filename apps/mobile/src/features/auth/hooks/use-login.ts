@@ -7,6 +7,7 @@ import {
   verifyEmailLoginOtp,
 } from "~/features/auth/api/login.api";
 import { getAuthClient } from "~/features/auth/services/auth";
+import { acceptNewSession } from "~/features/auth/services/session-cache";
 import { hasSessionToken } from "~/shared/api/session-cookie";
 import { ensureDeviceRegistered } from "~/shared/composition/ensure-device-registered";
 import { prefetchOfflineData } from "~/shared/composition/prefetch-offline-data";
@@ -58,6 +59,7 @@ export function useLoginFlow() {
     // prefetches, as long as the token survived it.
     const session = await lookUpSession(authClient);
     if (session.status === "none" || !hasSessionToken(authClient.getCookie())) return;
+    if (session.status === "valid") acceptNewSession(session.userId);
 
     void prefetchOfflineData(queryClient, session.status === "valid" ? session.userId : undefined);
     void ensureDeviceRegistered();

@@ -62,6 +62,7 @@ export function applySettledPatchBatch(
     updates.set(item.id, { status: item.status, failureReason: item.reason ?? null });
   }
 
+  void queryClient.invalidateQueries({ queryKey: queryKeys.counts, exact: false });
   notifyManager.batch(() => {
     for (const query of queryClient.getQueryCache().findAll({ queryKey: queryKeys.listAll })) {
       queryClient.setQueryData<InfiniteData<MeasurementItem[]>>(query.queryKey, (old) =>

@@ -46,6 +46,15 @@ describe("exportMeasurementsToFile", () => {
     mockGetMeasurements.mockResolvedValue([]);
   });
 
+  it("reads both export groups through the active guest scope", async () => {
+    const viewer = { userId: "guest-b", isGuest: true };
+    await exportMeasurementsToFile(viewer);
+    expect(mockGetMeasurements.mock.calls).toEqual([
+      ["failed", viewer],
+      ["successful", viewer],
+    ]);
+  });
+
   it("creates and writes a file with correct counts", async () => {
     mockGetMeasurements
       .mockResolvedValueOnce([{ id: "failed-1", status: "failed", data: mockStoredMeasurement() }])
@@ -53,7 +62,7 @@ describe("exportMeasurementsToFile", () => {
         { id: "synced-1", status: "successful", data: mockStoredMeasurement() },
       ]);
 
-    await exportMeasurementsToFile();
+    await exportMeasurementsToFile({ userId: "researcher", isGuest: false });
 
     const writtenData = JSON.parse(mockWrite.mock.calls[0][0]);
     expect(writtenData.totalCount).toBe(2);
@@ -78,7 +87,7 @@ describe("exportMeasurementsToFile", () => {
         },
       ]);
 
-    await exportMeasurementsToFile();
+    await exportMeasurementsToFile({ userId: "researcher", isGuest: false });
 
     const writtenData = JSON.parse(mockWrite.mock.calls[0][0]);
     const unsynced = writtenData.measurements.find(
@@ -106,7 +115,7 @@ describe("exportMeasurementsToFile", () => {
       ])
       .mockResolvedValueOnce([]);
 
-    await exportMeasurementsToFile();
+    await exportMeasurementsToFile({ userId: "researcher", isGuest: false });
 
     const writtenData = JSON.parse(mockWrite.mock.calls[0][0]);
     expect(writtenData.measurements[0].timestamp).toBe("2026-03-01T00:00:00.000Z");
@@ -114,7 +123,7 @@ describe("exportMeasurementsToFile", () => {
   });
 
   it("opens the native share dialog with correct options", async () => {
-    await exportMeasurementsToFile();
+    await exportMeasurementsToFile({ userId: "researcher", isGuest: false });
 
     expect(Sharing.shareAsync).toHaveBeenCalledWith("file:///cache/test-file.json", {
       mimeType: "application/json",
@@ -125,14 +134,16 @@ describe("exportMeasurementsToFile", () => {
   it("uses an export filename pattern", async () => {
     const { File } = await import("expo-file-system");
 
-    await exportMeasurementsToFile();
+    await exportMeasurementsToFile({ userId: "researcher", isGuest: false });
 
     const constructorCall = vi.mocked(File).mock.calls[vi.mocked(File).mock.calls.length - 1];
     expect(constructorCall[1]).toMatch(/^measurements-export-/);
   });
 
   it("handles empty storage without throwing", async () => {
-    await expect(exportMeasurementsToFile()).resolves.toBeUndefined();
+    await expect(
+      exportMeasurementsToFile({ userId: "researcher", isGuest: false }),
+    ).resolves.toBeUndefined();
 
     const writtenData = JSON.parse(mockWrite.mock.calls[0][0]);
     expect(writtenData.totalCount).toBe(0);

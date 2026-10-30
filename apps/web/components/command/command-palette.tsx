@@ -1,5 +1,8 @@
 "use client";
 
+import { guestMayUse } from "@/components/auth/guest-access";
+import type { GuestGatedProcedure } from "@/components/auth/guest-access";
+import { useIsGuest } from "@/components/auth/principal-context";
 import { iconMap } from "@/components/navigation/navigation-config";
 import {
   CHEATSHEET_OPEN_EVENT,
@@ -33,6 +36,7 @@ interface PaletteEntry {
   group: "pages" | "actions";
   icon?: React.ComponentType<{ className?: string }>;
   shortcut?: string;
+  procedure?: GuestGatedProcedure;
   run: () => void;
 }
 
@@ -41,6 +45,7 @@ export function CommandPalette({ locale }: { locale: string }) {
   const [query, setQuery] = React.useState("");
   const router = useRouter();
   const { t } = useTranslation("navigation");
+  const isGuest = useIsGuest();
 
   React.useEffect(() => {
     const onOpen = () => setOpen(true);
@@ -63,7 +68,10 @@ export function CommandPalette({ locale }: { locale: string }) {
     [router],
   );
 
-  const { results, isSearching, isError, enabled } = useGlobalSearch(query);
+  // Search runs on the server only for someone it may answer.
+  const { results, isSearching, isError, enabled } = useGlobalSearch(
+    guestMayUse("search.globalSearch", isGuest) ? query : "",
+  );
 
   const entries: PaletteEntry[] = React.useMemo(
     () => [
@@ -121,6 +129,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         group: "pages",
         icon: Send,
         shortcut: "G T",
+        procedure: "experiments.createTransferRequest",
         run: () => navigate(`/${locale}/platform/transfer-request`),
       },
       {
@@ -129,6 +138,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         group: "pages",
         icon: iconMap.Settings,
         shortcut: "G S",
+        procedure: "users.getUserProfile",
         run: () => navigate(`/${locale}/platform/account`),
       },
       {
@@ -136,6 +146,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         labelKey: "commandPalette.entries.createExperiment",
         group: "actions",
         icon: iconMap.CirclePlus,
+        procedure: "experiments.createExperiment",
         run: () => navigate(`/${locale}/platform/experiments/new`),
       },
       {
@@ -179,8 +190,9 @@ export function CommandPalette({ locale }: { locale: string }) {
   const normalizedQuery = query.trim().toLowerCase();
   const matchesQuery = (label: string) =>
     normalizedQuery === "" || label.toLowerCase().includes(normalizedQuery);
-  const pages = entries.filter((e) => e.group === "pages" && matchesQuery(t(e.labelKey)));
-  const actions = entries.filter((e) => e.group === "actions" && matchesQuery(t(e.labelKey)));
+  const offered = entries.filter((e) => guestMayUse(e.procedure, isGuest));
+  const pages = offered.filter((e) => e.group === "pages" && matchesQuery(t(e.labelKey)));
+  const actions = offered.filter((e) => e.group === "actions" && matchesQuery(t(e.labelKey)));
 
   const onSelectResult = React.useCallback(
     (result: SearchResult) => {

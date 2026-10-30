@@ -1,3 +1,4 @@
+import { GuestGate } from "@/components/auth/guest-gate";
 import { MessageSquare, ChevronDown, Trash2, Download, Flag } from "lucide-react";
 import React from "react";
 import {
@@ -95,16 +96,18 @@ export function BulkActionsBar({
         )}
       </div>
       <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={downloadTable}
-          className="flex items-center gap-2"
-        >
-          <Download className="h-4 w-4" />
-          {t("experimentDataTable.download")}
-        </Button>
+        <GuestGate procedure="experiments.initiateExport">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={downloadTable}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            {t("experimentDataTable.download")}
+          </Button>
+        </GuestGate>
         {canContribute && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
