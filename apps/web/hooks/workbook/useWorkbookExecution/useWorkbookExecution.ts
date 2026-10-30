@@ -34,7 +34,7 @@ import {
   isOutputDataNormalizationError,
 } from "@repo/api/transforms/build-cell-namespace";
 import { resolveInlineCommand } from "@repo/api/transforms/command-payload";
-import { toDeviceContext } from "@repo/api/transforms/device-context";
+import { DEVICE_CONTEXT_KEY, toDeviceContext } from "@repo/api/transforms/device-context";
 import { presentDevice } from "@repo/api/transforms/device-presentation";
 import {
   evaluateBranch,
@@ -115,10 +115,18 @@ function readsSimulatedOutput(
   deviceId?: string,
 ): boolean {
   const named = cells.slice(0, beforeIndex).filter((c) => namespaceNameOf(c));
-  if (named.some((c) => c.type === "question" && c.simulated === true)) return true;
   const readable = new Set(named.map((c) => c.id));
   if (input) readable.add(input.producedBy);
+  return readsSimulatedSources(cells, readable, deviceId);
+}
+
+function readsSimulatedSources(
+  cells: WorkbookCell[],
+  readable: Set<string>,
+  deviceId?: string,
+): boolean {
   return cells.some((c) => {
+    if (c.type === "question") return readable.has(c.id) && c.simulated === true;
     if (c.type !== "output" || !readable.has(c.producedBy)) return false;
     if (c.simulated === true) return true;
     const own =
@@ -129,6 +137,20 @@ function readsSimulatedOutput(
       ? own.simulated === true
       : c.deviceResults?.some((r) => r.simulated === true) === true;
   });
+}
+
+function branchUsesSimulation(
+  cell: BranchCell,
+  cells: WorkbookCell[],
+  connection?: IotDeviceConnection,
+): boolean {
+  const sources = new Set(
+    cell.paths.flatMap((path) => path.conditions.map((condition) => condition.sourceCellId)),
+  );
+  return (
+    (sources.has(DEVICE_CONTEXT_KEY) && connection?.simulated === true) ||
+    readsSimulatedSources(cells, sources, connection?.id)
+  );
 }
 
 // Replaces any previous output produced by the same source cell.
@@ -727,11 +749,12 @@ export function useWorkbookExecution({
       }
 
       setCellState(cell.id, { status: "completed" });
-      updated = insertOutputAfterCell(
-        updated,
-        cell.id,
-        makeOutputCell(cell.id, undefined, 0, messages),
-      );
+      updated = insertOutputAfterCell(updated, cell.id, {
+        ...makeOutputCell(cell.id, undefined, 0, messages),
+        simulated: connections.some((connection) =>
+          branchUsesSimulation(cell, currentCells, connection),
+        ),
+      });
       // A dispatcher matches several paths at once; no single ACTIVE path.
       return updated.map((c) => (c.id === cell.id ? { ...cell, evaluatedPathId: undefined } : c));
     },
@@ -792,11 +815,10 @@ export function useWorkbookExecution({
         ? [`Matched: ${matchedPath.label || "Unnamed path"}${passLabel}`]
         : [`No path matched${passLabel}`];
 
-      const updated = insertOutputAfterCell(
-        currentCells,
-        cell.id,
-        makeOutputCell(cell.id, undefined, 0, messages),
-      );
+      const updated = insertOutputAfterCell(currentCells, cell.id, {
+        ...makeOutputCell(cell.id, undefined, 0, messages),
+        simulated: branchUsesSimulation(cell, currentCells),
+      });
       return updated.map((c) =>
         c.id === cell.id ? { ...cell, evaluatedPathId: matchedPath?.id } : c,
       );

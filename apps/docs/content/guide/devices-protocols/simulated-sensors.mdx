@@ -13,8 +13,9 @@ experiments keep their physical device connections.
 2. Choose **Simulated MultispeQ**, **Simulated Ambit**, or **Simulated MiniPAR** in
    the connection selector. Match the sensor to the demo workbook's protocol.
 3. Connect and run the workbook. No Bluetooth or USB permission is needed.
-4. Review the result and its **Simulated** label. Outputs from later macro and
-   question cells retain that label.
+4. Review the result and its **Simulated** label. Outputs from later macro,
+   question and branch cells retain that label when they read simulated results.
+   A branch that dispatches simulated devices also labels its matched-path output.
 
 A simulator accepts its matching demo protocol. A different protocol reports an
 error rather than returning an unrelated example. Repeating a measurement

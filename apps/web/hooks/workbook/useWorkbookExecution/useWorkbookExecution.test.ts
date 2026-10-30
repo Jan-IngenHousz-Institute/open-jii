@@ -20,6 +20,7 @@ import {
 
 import { contract } from "@repo/api/contract";
 import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { zWorkbookCellArray } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import type { IotDeviceConnection } from "../../iot/useIotConnections/useIotConnections";
 import { useWorkbookExecution } from "./useWorkbookExecution";
@@ -1074,6 +1075,46 @@ describe("useWorkbookExecution", () => {
   });
 
   describe("runCell - branch", () => {
+    it.each([true, false])(
+      "keeps source provenance on a matched branch, simulated=%s",
+      async (simulated) => {
+        const macro = createMacroCell({ id: "source-macro" });
+        const output = createOutputCell({
+          producedBy: macro.id,
+          data: { Phi2: 0.8 },
+          simulated,
+        });
+        const unrelated = createOutputCell({ producedBy: "unused", simulated: true });
+        const branch = createBranchCell({
+          paths: [
+            {
+              id: "matched",
+              label: "High Phi2",
+              color: "#22c55e",
+              conditions: [
+                {
+                  id: "condition",
+                  sourceCellId: macro.id,
+                  field: "Phi2",
+                  operator: "gt",
+                  value: "0.5",
+                },
+              ],
+            },
+          ],
+        });
+        const { result, onCellsChange } = renderExecution([macro, output, unrelated, branch]);
+
+        await act(() => result.current.runCell(branch.id));
+
+        const updated = zWorkbookCellArray.parse(onCellsChange.mock.lastCall?.[0]);
+        expect(findOutput(updated, branch.id)).toMatchObject({
+          messages: ["Matched: High Phi2"],
+          simulated,
+        });
+      },
+    );
+
     it("evaluates branch and records matched path", async () => {
       const q = createQuestionCell({
         id: "q-1",
@@ -1256,7 +1297,7 @@ describe("useWorkbookExecution", () => {
       const proto = createProtocolCell({ id: "proto-ms" });
       const command = createCommandCell({ id: "cmd-other" });
       mockConnections = [
-        mockConnection("dev-1", "MultispeQ A"),
+        { ...mockConnection("dev-1", "MultispeQ A"), simulated: true },
         {
           ...mockConnection("dev-2", "Ambit B"),
           family: "ambit",
@@ -1283,6 +1324,7 @@ describe("useWorkbookExecution", () => {
       const branchOutput = findOutput(updated, branch.id);
       expect(branchOutput?.messages?.join("\n")).toContain("MultispeQ path");
       expect(branchOutput?.messages?.join("\n")).toContain("Other path");
+      expect(branchOutput?.simulated).toBe(true);
     });
 
     it("skips (not errors) devices whose branch resolves no measurement", async () => {
