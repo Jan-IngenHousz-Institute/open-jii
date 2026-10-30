@@ -125,9 +125,12 @@ def centrum(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> It
     location = tmp_path_factory.mktemp("centrum")
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {_CATALOG}.centrum LOCATION '{location}'")
     for name, query in _TABLES.items():
+        rows = spark.sql(query)
         if name in ("experiment_raw_data", "experiment_macro_data"):
-            query = f"SELECT t.*, CASE WHEN device_id = 'd1' THEN true ELSE NULL END AS is_simulated, device_id = 'd2' AS is_guest FROM ({query}) t"
-        spark.sql(f"CREATE TABLE {_CATALOG}.centrum.{name} USING parquet AS {query}")
+            rows = rows.withColumn(
+                "is_simulated", F.when(F.col("device_id") == "d1", F.lit(True))
+            ).withColumn("is_guest", F.col("device_id") == F.lit("d2"))
+        rows.write.format("parquet").saveAsTable(f"{_CATALOG}.centrum.{name}")
 
     # One measurement per timezone in experiment e3, ids from 10 up.
     spark.createDataFrame(
