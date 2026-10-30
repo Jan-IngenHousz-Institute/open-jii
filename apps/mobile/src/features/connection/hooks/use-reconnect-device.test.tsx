@@ -7,8 +7,21 @@ import { createStore } from "zustand/vanilla";
 import type { Device } from "~/shared/types/device";
 
 import { mountSimulatedDevices } from "../services/simulated-device";
+import { useDeviceChip } from "./use-device-chip";
 import { useDeviceConnectionStore } from "./use-device-connection-store";
 import { useReconnectDevice } from "./use-reconnect-device";
+
+vi.mock("./use-device-connection", () => ({ useConnectedDevice: () => ({ data: undefined }) }));
+vi.mock("./use-battery-level", () => ({ useBatteryLevel: () => 80 }));
+vi.mock("~/shared/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("~/features/connection/stores/use-device-sheet-store", () => ({
+  useDeviceSheetStore: (select: (state: { open: () => void }) => unknown) =>
+    select({ open: () => undefined }),
+}));
+vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () => ({
+  useScannerCommandExecutorStore: (select: (state: { executors: Map<string, never> }) => unknown) =>
+    select({ executors: new Map<string, never>() }),
+}));
 
 const flow = vi.hoisted(() => ({
   current: undefined as StoreApi<{ experimentId: string }> | undefined,
@@ -58,14 +71,18 @@ afterEach(() => {
 describe("eligible remembered devices", () => {
   it("hides a remembered simulator when leaving a demo and restores it in a demo", () => {
     const { result } = renderHook(useReconnectDevice);
+    const chip = renderHook(useDeviceChip);
     expect(result.current).toEqual(simulated);
+    expect(chip.result.current.state).toBe("last-known");
 
     act(() => flow.current?.setState({ experimentId: "ordinary" }));
     expect(result.current).toBeUndefined();
+    expect(chip.result.current.state).toBe("never");
     act(() => flow.current?.setState({ experimentId: "" }));
     expect(result.current).toBeUndefined();
     act(() => flow.current?.setState({ experimentId: "demo" }));
     expect(result.current).toEqual(simulated);
+    expect(chip.result.current.state).toBe("last-known");
   });
 
   it("hides a simulator restored from storage outside a demo", () => {

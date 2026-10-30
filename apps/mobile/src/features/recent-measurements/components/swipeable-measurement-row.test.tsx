@@ -3,6 +3,7 @@ import React from "react";
 import { Dimensions } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { MeasurementsRow } from "./measurements-row";
 import { SwipeableMeasurementRow } from "./swipeable-measurement-row";
 
 vi.mock("~/shared/i18n", () => ({
@@ -51,6 +52,29 @@ const defaultProps = {
 };
 
 describe("SwipeableMeasurementRow", () => {
+  it("keeps the simulated label through the measurement list row", () => {
+    render(
+      <MeasurementsRow
+        item={{
+          ...defaultProps,
+          key: "m1",
+          protocolName: "Demo protocol",
+          questions: [],
+          hasComment: false,
+          dayKey: "2026-04-20",
+          workbookRunId: null,
+          failureReason: null,
+          simulated: true,
+        }}
+        onPress={vi.fn()}
+        onComment={vi.fn()}
+        onDelete={vi.fn()}
+        onSync={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("common:simulated")).toBeTruthy();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseIsOnline.mockReturnValue({ data: true });
