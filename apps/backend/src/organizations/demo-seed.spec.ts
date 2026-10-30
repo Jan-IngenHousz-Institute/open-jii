@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import type * as FileSystem from "node:fs/promises";
 import { resolve } from "node:path";
 import { z } from "zod";
 
@@ -37,11 +38,19 @@ import { clearDemoContent, seedDemoContent } from "@repo/database/seed/demo";
 
 import { TestHarness } from "../test/test-harness";
 
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof FileSystem>();
+  return { ...actual, readFile: vi.fn(actual.readFile) };
+});
+
 describe("Local demo seed", () => {
   const app = TestHarness.App;
   beforeAll(() => app.setup());
   beforeEach(() => app.beforeEach());
-  afterEach(() => app.afterEach());
+  afterEach(() => {
+    vi.mocked(readFile).mockReset();
+    app.afterEach();
+  });
   afterAll(() => app.teardown());
 
   function findRow<T extends { id: string }>(rows: T[], id: string): T {
@@ -129,6 +138,46 @@ describe("Local demo seed", () => {
         ),
     };
   }
+
+  it.each([
+    { file: "manifest.json", error: "Demo sensor family mismatch" },
+    { file: "macro.py", error: "Demo macro is empty" },
+  ])("refuses an invalid $file before creating Demo content", async ({ file, error }) => {
+    const actual = await vi.importActual<typeof FileSystem>("node:fs/promises");
+    const folder = resolve(__dirname, "../../../../packages/iot/src/demo-sensors/multispeq");
+    vi.mocked(readFile).mockImplementation(async (path, options) => {
+      const contents = await actual.readFile(path, options);
+      if (path !== resolve(folder, file)) return contents;
+      if (file === "macro.py") return " \n\t";
+      return JSON.stringify({
+        ...z.record(z.string(), z.unknown()).parse(JSON.parse(String(contents))),
+        family: "ambit",
+      });
+    });
+    const ownerId = await app.createTestUser();
+    const [owner] = await app.database.select().from(users).where(eq(users.id, ownerId));
+
+    await expect(seedDemoContent(owner, app.database)).rejects.toThrow(error);
+
+    for (const rows of Object.values(await graph())) expect(rows).toHaveLength(0);
+    expect(
+      await app.database.select().from(resourceGrants).where(eq(resourceGrants.granteeId, ownerId)),
+    ).toHaveLength(0);
+  });
+
+  it("clears safely before seeding and after a previous cleanup", async () => {
+    await clearDemoContent(app.database);
+    const { owner } = await fixture();
+    await clearDemoContent(app.database);
+    await clearDemoContent(app.database);
+    for (const rows of Object.values(await graph())) expect(rows).toHaveLength(0);
+
+    await seedDemoContent(owner, app.database);
+
+    for (const [key, rows] of Object.entries(await graph())) {
+      expect(rows).toHaveLength(key === "organizations" ? 1 : 3);
+    }
+  });
 
   it("pins complete public family graphs with the exact shared definitions", async () => {
     const { owner, newcomerId } = await fixture();
