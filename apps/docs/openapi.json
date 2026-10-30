@@ -29745,6 +29745,10 @@
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 60
+                  },
+                  "workbookVersionId": {
+                    "type": "string",
+                    "format": "uuid"
                   }
                 },
                 "required": [
@@ -39096,6 +39100,9 @@
                             "isAnswered": {
                               "type": "boolean",
                               "default": false
+                            },
+                            "simulated": {
+                              "type": "boolean"
                             }
                           },
                           "required": [
@@ -39218,6 +39225,9 @@
                               "type": "string",
                               "minLength": 1
                             },
+                            "simulated": {
+                              "type": "boolean"
+                            },
                             "data": {},
                             "executionTime": {
                               "type": "number",
@@ -39236,6 +39246,9 @@
                                 "properties": {
                                   "deviceId": {
                                     "type": "string"
+                                  },
+                                  "simulated": {
+                                    "type": "boolean"
                                   },
                                   "deviceLabel": {
                                     "type": "string"
@@ -39616,6 +39629,9 @@
                               "isAnswered": {
                                 "type": "boolean",
                                 "default": false
+                              },
+                              "simulated": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -39738,6 +39754,9 @@
                                 "type": "string",
                                 "minLength": 1
                               },
+                              "simulated": {
+                                "type": "boolean"
+                              },
                               "data": {},
                               "executionTime": {
                                 "type": "number",
@@ -39756,6 +39775,9 @@
                                   "properties": {
                                     "deviceId": {
                                       "type": "string"
+                                    },
+                                    "simulated": {
+                                      "type": "boolean"
                                     },
                                     "deviceLabel": {
                                       "type": "string"
@@ -40209,6 +40231,9 @@
                               "isAnswered": {
                                 "type": "boolean",
                                 "default": false
+                              },
+                              "simulated": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -40331,6 +40356,9 @@
                                 "type": "string",
                                 "minLength": 1
                               },
+                              "simulated": {
+                                "type": "boolean"
+                              },
                               "data": {},
                               "executionTime": {
                                 "type": "number",
@@ -40349,6 +40377,9 @@
                                   "properties": {
                                     "deviceId": {
                                       "type": "string"
+                                    },
+                                    "simulated": {
+                                      "type": "boolean"
                                     },
                                     "deviceLabel": {
                                       "type": "string"
@@ -40822,6 +40853,9 @@
                             "isAnswered": {
                               "type": "boolean",
                               "default": false
+                            },
+                            "simulated": {
+                              "type": "boolean"
                             }
                           },
                           "required": [
@@ -40944,6 +40978,9 @@
                               "type": "string",
                               "minLength": 1
                             },
+                            "simulated": {
+                              "type": "boolean"
+                            },
                             "data": {},
                             "executionTime": {
                               "type": "number",
@@ -40962,6 +40999,9 @@
                                 "properties": {
                                   "deviceId": {
                                     "type": "string"
+                                  },
+                                  "simulated": {
+                                    "type": "boolean"
                                   },
                                   "deviceLabel": {
                                     "type": "string"
@@ -41324,6 +41364,9 @@
                               "isAnswered": {
                                 "type": "boolean",
                                 "default": false
+                              },
+                              "simulated": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -41446,6 +41489,9 @@
                                 "type": "string",
                                 "minLength": 1
                               },
+                              "simulated": {
+                                "type": "boolean"
+                              },
                               "data": {},
                               "executionTime": {
                                 "type": "number",
@@ -41464,6 +41510,9 @@
                                   "properties": {
                                     "deviceId": {
                                       "type": "string"
+                                    },
+                                    "simulated": {
+                                      "type": "boolean"
                                     },
                                     "deviceLabel": {
                                       "type": "string"
@@ -42074,6 +42123,9 @@
                               "isAnswered": {
                                 "type": "boolean",
                                 "default": false
+                              },
+                              "simulated": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -42196,6 +42248,9 @@
                                 "type": "string",
                                 "minLength": 1
                               },
+                              "simulated": {
+                                "type": "boolean"
+                              },
                               "data": {},
                               "executionTime": {
                                 "type": "number",
@@ -42214,6 +42269,9 @@
                                   "properties": {
                                     "deviceId": {
                                       "type": "string"
+                                    },
+                                    "simulated": {
+                                      "type": "boolean"
                                     },
                                     "deviceLabel": {
                                       "type": "string"
@@ -42672,6 +42730,9 @@
                               "isAnswered": {
                                 "type": "boolean",
                                 "default": false
+                              },
+                              "simulated": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -42794,6 +42855,9 @@
                                 "type": "string",
                                 "minLength": 1
                               },
+                              "simulated": {
+                                "type": "boolean"
+                              },
                               "data": {},
                               "executionTime": {
                                 "type": "number",
@@ -42812,6 +42876,9 @@
                                   "properties": {
                                     "deviceId": {
                                       "type": "string"
+                                    },
+                                    "simulated": {
+                                      "type": "boolean"
                                     },
                                     "deviceLabel": {
                                       "type": "string"

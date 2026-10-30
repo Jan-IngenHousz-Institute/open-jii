@@ -43,6 +43,7 @@ import { useIsMobile, useIsLgTablet, useIsTablet } from "@repo/ui/hooks/use-mobi
 import { cn } from "@repo/ui/lib/utils";
 
 interface WorkbookHeaderProps {
+  simulationAvailable?: boolean;
   title: string;
   cells: WorkbookCell[];
   isConnected: boolean;
@@ -105,6 +106,7 @@ function macroExtension(language: "python" | "r" | "javascript"): string {
 }
 
 export function WorkbookHeader({
+  simulationAvailable = false,
   title,
   cells,
   isConnected,
@@ -162,8 +164,9 @@ export function WorkbookHeader({
   // server would cause a hydration mismatch.
   const isHydrated = useIsHydrated();
   const showMockDevices = useMemo(() => isHydrated && mockDevicesEnabled(), [isHydrated]);
-  const transportSupported =
-    connectionType === "mock"
+  const transportSupported = connectionType.startsWith("simulated-")
+    ? simulationAvailable
+    : connectionType === "mock"
       ? true
       : connectionType === "serial"
         ? browserSupport.serial
@@ -311,6 +314,19 @@ export function WorkbookHeader({
               <SelectItem value="bluetooth" disabled={sensorFamily === "multispeq"}>
                 {t("iot.protocolRunner.bluetooth")}
               </SelectItem>
+              {simulationAvailable && (
+                <>
+                  <SelectItem value="simulated-multispeq">
+                    {t("iot.workbookBar.simulatedMultispeq")}
+                  </SelectItem>
+                  <SelectItem value="simulated-ambit">
+                    {t("iot.workbookBar.simulatedAmbit")}
+                  </SelectItem>
+                  <SelectItem value="simulated-minipar">
+                    {t("iot.workbookBar.simulatedMinipar")}
+                  </SelectItem>
+                </>
+              )}
               {showMockDevices && <SelectItem value="mock">{t("iot.workbookBar.mock")}</SelectItem>}
             </SelectContent>
           </Select>
@@ -341,10 +357,11 @@ export function WorkbookHeader({
               onClick={onConnect}
               disabled={isConnecting || !transportSupported}
               data-testid="connect-device"
+              aria-label={t("iot.workbookBar.connect", { context: String(isConnected) })}
             >
               <Usb className="size-4" />
               <span className="hidden xl:inline">
-                {isConnected ? t("iot.workbookBar.addDevice") : t("iot.workbookBar.connect")}
+                {t("iot.workbookBar.connect", { context: String(isConnected) })}
               </span>
             </Button>
           </TooltipTrigger>
@@ -425,6 +442,7 @@ export function WorkbookHeader({
           "bg-muted text-foreground h-[34px] shrink-0 gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
           !hasOutputs && "cursor-not-allowed opacity-50",
         )}
+        aria-label={t("iot.workbookBar.clearAll")}
         onClick={onClearOutputs}
         disabled={!hasOutputs}
       >
@@ -432,14 +450,13 @@ export function WorkbookHeader({
         <span className="hidden xl:inline">{t("iot.workbookBar.clearAll")}</span>
       </Button>
 
-      {/* Only the workbook creator can run cells; the backend rejects updates
-          from others, so non-creators don't see the Run all / Stop control. */}
-      {!readOnly &&
+      {(!readOnly || simulationAvailable) &&
         (isRunningAll ? (
           <Button
             type="button"
             variant="destructive"
             className="h-[34px] shrink-0 gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]"
+            aria-label={t("iot.workbookBar.stop")}
             onClick={onStopExecution}
           >
             <Square className="size-4 fill-current" />
@@ -452,6 +469,7 @@ export function WorkbookHeader({
               "h-[34px] shrink-0 gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
               cells.length === 0 && "cursor-not-allowed opacity-50",
             )}
+            aria-label={t("iot.workbookBar.runAll")}
             onClick={onRunAll}
             disabled={cells.length === 0}
           >

@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
-import { inArray, workbookVersions } from "@repo/database";
+import { eq, inArray, workbookVersions } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import type { Result } from "../../../common/utils/fp-utils";
@@ -60,6 +60,17 @@ export class MacroSnapshotRepository {
         }
       }
       return scripts;
+    });
+  }
+
+  async findWorkbookIdByVersionId(versionId: string): Promise<Result<string | null>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select({ workbookId: workbookVersions.workbookId })
+        .from(workbookVersions)
+        .where(eq(workbookVersions.id, versionId))
+        .limit(1);
+      return rows.length > 0 ? rows[0].workbookId : null;
     });
   }
 

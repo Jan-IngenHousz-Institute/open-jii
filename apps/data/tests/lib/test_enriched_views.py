@@ -125,7 +125,12 @@ def centrum(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> It
     location = tmp_path_factory.mktemp("centrum")
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {_CATALOG}.centrum LOCATION '{location}'")
     for name, query in _TABLES.items():
-        spark.sql(f"CREATE TABLE {_CATALOG}.centrum.{name} USING parquet AS {query}")
+        rows = spark.sql(query)
+        if name in ("experiment_raw_data", "experiment_macro_data"):
+            rows = rows.withColumn(
+                "is_simulated", F.when(F.col("device_id") == "d1", F.lit(True))
+            ).withColumn("is_guest", F.col("device_id") == F.lit("d2"))
+        rows.write.format("parquet").saveAsTable(f"{_CATALOG}.centrum.{name}")
 
     # One measurement per timezone in experiment e3, ids from 10 up.
     spark.createDataFrame(
@@ -138,7 +143,7 @@ def centrum(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> It
           DATE'2026-09-06', CAST(NULL AS ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>),
           CAST(NULL AS VARIANT), CAST(NULL AS ARRAY<{_ANNOTATION}>), 'u9', 'c9', CAST(NULL AS STRING),
           CAST(NULL AS STRING), CAST(NULL AS DOUBLE), CAST(NULL AS DOUBLE), parse_json('[]'),
-          TIMESTAMP'2026-09-23 10:03:00'
+          TIMESTAMP'2026-09-23 10:03:00', false, false
         FROM timezones
         """
     )
@@ -256,3 +261,14 @@ def test_uploaded_rows_credit_their_uploader_and_carry_their_annotations(
     # u3 is not a contributor of e1.
     assert rows[1002]["contributor"] is None
     assert rows[1002]["annotations"] == []
+
+
+def test_provenance_survives_the_real_enriched_views(spark, centrum):
+    raw = _rows(spark, "enriched_experiment_raw_data")
+    macro = _rows(spark, "enriched_experiment_macro_data")
+    assert (raw[1]["is_simulated"], raw[1]["is_guest"]) == (True, False)
+    assert (raw[2]["is_simulated"], raw[2]["is_guest"]) == (False, True)
+    assert (macro[101]["is_simulated"], macro[101]["is_guest"]) == (True, False)
+    assert (macro[102]["is_simulated"], macro[102]["is_guest"]) == (False, True)
+    uploaded = _rows(spark, "enriched_experiment_uploaded_data")
+    assert all(not row["is_simulated"] and not row["is_guest"] for row in uploaded.values())

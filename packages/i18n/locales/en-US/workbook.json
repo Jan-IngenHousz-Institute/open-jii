@@ -140,7 +140,8 @@
       "ambient_sun_vis": "Ambient visible light",
       "ambient_leaf_ir": "Leaf infrared signal",
       "leaf_temp": "Leaf temperature"
-    }
+    },
+    "simulated": "Simulated"
   },
   "cells": {
     "command": "Command",

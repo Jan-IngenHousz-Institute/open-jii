@@ -7,6 +7,7 @@ import type {
 import { restoreMacroInputInContext } from "@repo/api/transforms/macro-context-ref";
 import { normalizeMacroInput } from "@repo/api/transforms/normalize-macro-input";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import type { Result } from "../../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../../common/utils/fp-utils";
@@ -15,7 +16,12 @@ import {
   emptyEnvelopeError,
   LambdaExecutionResponseSchema,
 } from "../../../core/models/macro-execution.model";
+import type { MacroScript } from "../../../core/models/macro.model";
 import { LAMBDA_PORT, LambdaPort } from "../../../core/ports/lambda.port";
+import {
+  macroSnapshotKey,
+  MacroSnapshotRepository,
+} from "../../../core/repositories/macro-snapshot.repository";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 
 @Injectable()
@@ -24,12 +30,15 @@ export class ExecuteMacroUseCase {
 
   constructor(
     private readonly macroRepository: MacroRepository,
+    private readonly macroSnapshotRepository: MacroSnapshotRepository,
     @Inject(LAMBDA_PORT) private readonly lambdaPort: LambdaPort,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async execute(
     macroId: string,
     request: MacroExecutionRequestBody,
+    userId?: string,
   ): Promise<Result<MacroExecutionResponse>> {
     this.logger.log({
       msg: "Starting single macro execution",
@@ -38,9 +47,12 @@ export class ExecuteMacroUseCase {
       timeout: request.timeout,
     });
 
-    // 1. Fetch the macro script (cached in repository)
-    const macroResult = await this.macroRepository.findScriptById(macroId);
+    // 1. Fetch the live macro script, or the pinned version's snapshot (both cached)
+    const macroResult = request.workbookVersionId
+      ? await this.findPinnedScript(macroId, request.workbookVersionId, userId)
+      : await this.macroRepository.findScriptById(macroId);
     if (macroResult.isFailure()) {
+      if (request.workbookVersionId) return macroResult;
       return failure(
         AppError.internal("Failed to fetch macro script", ErrorCodes.MACRO_EXECUTION_FAILED),
       );
@@ -181,5 +193,39 @@ export class ExecuteMacroUseCase {
       output: result.output,
       error: result.error,
     });
+  }
+
+  // The caller already read the live macro through the route guard; a pinned run
+  // also needs read on the workbook, and runs only a macro that version pinned.
+  private async findPinnedScript(
+    macroId: string,
+    versionId: string,
+    userId?: string,
+  ): Promise<Result<MacroScript | null>> {
+    const fetchFailed = () =>
+      failure(AppError.internal("Failed to fetch macro script", ErrorCodes.MACRO_EXECUTION_FAILED));
+    const workbookResult = await this.macroSnapshotRepository.findWorkbookIdByVersionId(versionId);
+    if (workbookResult.isFailure()) return fetchFailed();
+    const workbookId = workbookResult.value;
+    if (!workbookId || !userId) {
+      return failure(AppError.notFound(`Workbook version with ID ${versionId} not found`));
+    }
+
+    const access = await this.authz.can(userId, {
+      resourceType: "workbook",
+      resourceId: workbookId,
+      action: "read",
+    });
+    if (!access.allow) {
+      return failure(
+        access.reason === "not-found"
+          ? AppError.notFound(`Workbook version with ID ${versionId} not found`)
+          : AppError.forbidden("You do not have access to this workbook"),
+      );
+    }
+
+    const scriptsResult = await this.macroSnapshotRepository.findScriptsByVersionIds([versionId]);
+    if (scriptsResult.isFailure()) return fetchFailed();
+    return success(scriptsResult.value.get(macroSnapshotKey(versionId, macroId)) ?? null);
   }
 }

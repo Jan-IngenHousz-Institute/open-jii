@@ -52,7 +52,7 @@ def fake_dlt(monkeypatch: pytest.MonkeyPatch) -> Iterator[types.ModuleType]:
 
         return _wrap
 
-    for name in ("table", "view", "expect", "expect_or_drop", "expect_all", "on_event_hook"):
+    for name in ("table", "view", "expect", "expect_or_drop", "expect_all", "on_event_hook", "append_flow"):
         setattr(fake, name, _passthrough_decorator)
 
     fake.read = lambda name: None  # type: ignore[attr-defined]

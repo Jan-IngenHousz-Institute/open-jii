@@ -132,6 +132,7 @@ interface CreateTableColumnsParams {
   errorColumn?: string;
   /** Keep the given order, for callers whose order already carries meaning. */
   preserveOrder?: boolean;
+  provenanceLabels?: { simulated: string; guest: string };
 }
 
 /**
@@ -147,6 +148,7 @@ export function createTableColumns({
   onToggleCellExpansion,
   errorColumn,
   preserveOrder = false,
+  provenanceLabels,
 }: CreateTableColumnsParams) {
   const columnHelper = createColumnHelper<DataTableFeatures, DataRow>();
 
@@ -158,6 +160,8 @@ export function createTableColumns({
   const sortedColumns = preserveOrder ? dataColumns : sortColumnsForDisplay(dataColumns);
 
   function getHeader(dataColumn: ExperimentDataColumn) {
+    if (provenanceLabels && dataColumn.name === "is_simulated") return provenanceLabels.simulated;
+    if (provenanceLabels && dataColumn.name === "is_guest") return provenanceLabels.guest;
     return dataColumn.renamedFrom?.name ?? dataColumn.name;
   }
 

@@ -15,6 +15,7 @@ const migrationFiles = [
   "0004_add_day_key.sql",
   "0005_add_workbook_run_id.sql",
   "0006_add_failure_reason.sql",
+  "0007_add_simulated_provenance.sql",
 ];
 const migrationSqls = migrationFiles.map((f) =>
   readFileSync(resolve(__dirname, "../../../drizzle", f), "utf-8"),
@@ -99,6 +100,34 @@ describe("measurements-storage", () => {
   // ---------------------------------------------------------------------------
 
   describe("saveMeasurement", () => {
+    it("keeps simulated provenance through save, reload, list and upload failure", async () => {
+      const mod = await import("~/shared/db/measurements-storage");
+      const measurement = {
+        ...mockMeasurement,
+        measurementResult: {
+          simulated: true,
+          device_id: "simulated:multispeq",
+          workbook_run_id: "run-demo",
+        },
+      };
+      const id = await mod.saveMeasurement(measurement, "pending");
+      expect((await mod.getMeasurement(id))?.data.measurementResult).toEqual(
+        measurement.measurementResult,
+      );
+      expect(await mod.getMeasurementsList(["pending"], { limit: 10, offset: 0 })).toEqual([
+        expect.objectContaining({ simulated: true, workbookRunId: "run-demo" }),
+      ]);
+      await mod.updateMeasurement(id, measurement);
+      expect((await mod.getMeasurement(id))?.data.measurementResult.simulated).toBe(true);
+      await mod.markAsFailed(id, "Upload failed");
+      expect(await mod.getMeasurementsList(["failed"], { limit: 10, offset: 0 })).toEqual([
+        expect.objectContaining({ simulated: true, workbookRunId: "run-demo" }),
+      ]);
+      expect((await mod.getMeasurement(id))?.data.measurementResult).toEqual(
+        measurement.measurementResult,
+      );
+    });
+
     it("inserts a pending row and returns its id (save-first default)", async () => {
       const mod = await import("~/shared/db/measurements-storage");
       const id = await mod.saveMeasurement(mockMeasurement, "pending");

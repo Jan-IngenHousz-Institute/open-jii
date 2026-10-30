@@ -67,6 +67,7 @@ async function migrateLegacyEntries(): Promise<void> {
             timestamp: parsed.metadata.timestamp,
             questionsText: derived.questionsText,
             hasComment: derived.hasComment,
+            simulated: derived.simulated,
             dayKey: derived.dayKey,
             workbookRunId: derived.workbookRunId,
             ...createdAt,
@@ -120,6 +121,7 @@ export async function saveMeasurement(
       timestamp: upload.metadata.timestamp,
       questionsText: derived.questionsText,
       hasComment: derived.hasComment,
+      simulated: derived.simulated,
       dayKey: derived.dayKey,
       workbookRunId: derived.workbookRunId,
     })
@@ -135,12 +137,14 @@ function deriveListColumns(
 ): {
   questionsText: string;
   hasComment: boolean;
+  simulated?: boolean;
   dayKey: string;
   workbookRunId: string;
 } {
   return {
     questionsText: JSON.stringify(parseQuestions(measurementResult)),
     hasComment: !!getCommentFromMeasurementResult(measurementResult),
+    simulated: measurementResult.simulated === true,
     dayKey: computeDayKey(timestamp),
     workbookRunId: extractWorkbookRunId(measurementResult),
   };
@@ -261,6 +265,7 @@ export interface MeasurementListRow {
   timestamp: string;
   questions: AnswerData[];
   hasComment: boolean;
+  simulated?: boolean;
   dayKey: string;
   /** Workbook attempt this row belongs to; "" when it has none. */
   workbookRunId: string;
@@ -290,6 +295,7 @@ export async function getMeasurementsList(
         timestamp: measurements.timestamp,
         questionsText: measurements.questionsText,
         hasComment: measurements.hasComment,
+        simulated: measurements.simulated,
         dayKey: measurements.dayKey,
         workbookRunId: measurements.workbookRunId,
         failureReason: measurements.failureReason,
@@ -313,6 +319,7 @@ export async function getMeasurementsList(
       // of the list still renders.
       questions: safeParseQuestionsText(r.questionsText, r.id),
       hasComment: !!r.hasComment,
+      simulated: !!r.simulated,
       dayKey: r.dayKey ?? "",
       // NULL means "legacy row, not backfilled yet"; both it and "" mean the
       // row groups on its own.
@@ -468,6 +475,7 @@ export async function updateMeasurement(key: string, data: Measurement): Promise
         timestamp: data.metadata.timestamp,
         questionsText: derived.questionsText,
         hasComment: derived.hasComment,
+        simulated: derived.simulated,
         dayKey: derived.dayKey,
         workbookRunId: derived.workbookRunId,
       })

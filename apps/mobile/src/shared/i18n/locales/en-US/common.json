@@ -40,5 +40,6 @@
     "member": "Joined",
     "requested": "Requested",
     "private": "Private"
-  }
+  },
+  "simulated": "Simulated"
 }

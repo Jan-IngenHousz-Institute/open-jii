@@ -8,6 +8,7 @@ const RUNTIME_CELL_FIELDS = new Set([
   "isCollapsed",
   "isAnswered",
   "answer",
+  "simulated",
   "evaluatedPathId",
   "data",
   "executionTime",

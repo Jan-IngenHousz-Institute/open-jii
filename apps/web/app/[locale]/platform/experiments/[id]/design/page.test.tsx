@@ -1,3 +1,4 @@
+import * as workbookQueries from "@/hooks/workbook/useWorkbook/useWorkbook";
 import {
   createExperiment,
   createExperimentAccess,
@@ -56,11 +57,22 @@ vi.mock("@/components/workbook/workbook-draft-editor", () => ({
   WorkbookDraftEditor: ({
     initialCells,
     onSaved,
+    canEdit,
+    workbookVersionId,
+    name,
   }: {
     initialCells: unknown[];
     onSaved?: () => void;
+    canEdit?: boolean;
+    workbookVersionId?: string;
+    name?: string;
   }) => (
-    <div data-testid="workbook-draft-editor">
+    <div
+      data-testid="workbook-draft-editor"
+      data-readonly={canEdit === false}
+      data-version={workbookVersionId}
+      data-name={name}
+    >
       Draft Editor ({initialCells.length} cells)
       <button data-testid="trigger-save" onClick={() => onSaved?.()}>
         save
@@ -157,6 +169,35 @@ function mountWithWorkbook(overrides?: {
 }
 
 describe("ExperimentDesignPage", () => {
+  it.each([false, true])(
+    "renders the pinned read-only Demo runner with missing draft=%s",
+    async (missingDraft) => {
+      mountWithWorkbook({ isAdmin: false, canUpdateWorkbook: false });
+      server.mount(contract.experiments.getExperiment, {
+        body: { ...experimentWithWorkbook, organizationType: "demo" },
+      });
+      const missing = missingDraft
+        ? vi
+            .spyOn(workbookQueries, "useWorkbook")
+            .mockReturnValue({ data: undefined, isLoading: false, error: null })
+        : undefined;
+
+      try {
+        render(<ExperimentDesignPage params={defaultProps.params} />);
+        const runner = await screen.findByTestId("workbook-draft-editor");
+        expect(runner).toHaveAttribute("data-readonly", "true");
+        expect(runner).toHaveAttribute("data-version", VERSION_ID);
+        expect(runner).toHaveAttribute(
+          "data-name",
+          missingDraft ? experimentWithWorkbook.name : "Test Workbook",
+        );
+        expect(screen.queryByTestId("workbook-editor")).not.toBeInTheDocument();
+      } finally {
+        missing?.mockRestore();
+      }
+    },
+  );
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(use).mockReturnValue({ id: EXP_ID, locale: LOCALE });

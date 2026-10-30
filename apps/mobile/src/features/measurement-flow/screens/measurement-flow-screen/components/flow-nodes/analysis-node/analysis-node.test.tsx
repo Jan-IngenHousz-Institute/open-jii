@@ -653,3 +653,28 @@ describe("AnalysisNode upload with a command in the flow", () => {
     });
   });
 });
+
+describe("simulated result provenance", () => {
+  it("labels the saved scan while its macro result is being resolved and clears the label for a physical scan", async () => {
+    useMeasurementFlowStore.setState({
+      experimentId: "demo",
+      scanResults: [
+        {
+          device: { id: "simulated:multispeq", name: "Simulated MultispeQ", simulated: true },
+          result: { sample: [{ value: 1 }] },
+        },
+      ],
+    });
+    const view = render(<AnalysisNode content={CONTENT} nodeId="m1" />);
+    expect(screen.getByText("common:simulated").props.numberOfLines).toBeUndefined();
+    await act(() =>
+      useMeasurementFlowStore.setState({
+        scanResults: [
+          { device: { id: "real", name: "MultispeQ" }, result: { sample: [{ value: 2 }] } },
+        ],
+      }),
+    );
+    view.rerender(<AnalysisNode content={CONTENT} nodeId="m1" />);
+    expect(screen.queryByText("common:simulated")).toBeNull();
+  });
+});

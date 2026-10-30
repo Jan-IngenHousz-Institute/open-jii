@@ -16,6 +16,7 @@ interface SwipeableMeasurementRowProps {
   onSync?: (id: string) => void;
   onDelete?: (id: string) => void;
   hasComment?: boolean;
+  simulated?: boolean;
   peekToken?: number;
   /** Nested under an expanded workbook-run row. */
   indented?: boolean;
@@ -33,6 +34,7 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
   onSync,
   onDelete,
   hasComment = false,
+  simulated = false,
   peekToken = 0,
   indented = false,
 }: SwipeableMeasurementRowProps) {
@@ -56,6 +58,7 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
         onPress={onPress}
         hideActions
         hasComment={hasComment}
+        simulated={simulated}
         indented={indented}
       />
     </SwipeableRow>

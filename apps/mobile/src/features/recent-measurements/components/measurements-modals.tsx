@@ -5,6 +5,7 @@ import { parseQuestions } from "~/shared/measurements/convert-cycle-answers-to-a
 import { getCommentFromMeasurementResult } from "~/shared/measurements/measurement-annotations";
 import { CommentModal } from "~/shared/ui/measurement/comment-modal";
 import { MeasurementQuestionsModal } from "~/shared/ui/measurement/measurement-questions-modal";
+import { SimulatedLabel } from "~/shared/ui/simulated-label";
 
 export type ModalState =
   | { kind: "none" }
@@ -29,6 +30,7 @@ export function MeasurementsModals({ state, onClose, onSaveComment }: Props) {
       >
         {/* Mounted with the sheet, so the macro is fetched and re-run only
             once a measurement is actually opened. */}
+        {m.data.measurementResult.simulated === true && <SimulatedLabel />}
         <MeasurementMacroPreview measurement={m} />
       </MeasurementQuestionsModal>
     );

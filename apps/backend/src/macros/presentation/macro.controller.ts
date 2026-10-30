@@ -138,10 +138,10 @@ export class MacroController {
 
   @CanAccess({ resource: "macro", action: "read" })
   @Implement(macroContract.executeMacro)
-  executeMacro() {
+  executeMacro(@Session() session: UserSession) {
     return implement(macroContract.executeMacro).handler(async ({ input }) => {
       const { id, ...body } = input;
-      const result = await this.executeMacroUseCase.execute(id, body);
+      const result = await this.executeMacroUseCase.execute(id, body, session.user.id);
       if (result.isSuccess()) {
         return result.value;
       }
