@@ -59,9 +59,9 @@ The feed is on in an environment when `local.serving_store_feed_start_versions` 
 `infrastructure/env/<env>/main.tf` holds a start version for each table, and off when it is empty;
 the pipelines carry the feed's notebook and settings only while it is on. Changing it and applying
 restarts both pipelines, and the feed's alerts go with the switch. When minutes matter more than a
-pull request, set `SERVING_STORE_FEED` to `off` in each pipeline's settings in the Databricks UI.
-That restarts the pipeline at once (3 to 7 minutes waiting for nodes) and the next apply reverts
-it, so follow up in code.
+pull request, remove the `serving_store_feed` notebook from each pipeline's source code in the
+Databricks UI. That restarts the pipeline at once (3 to 7 minutes waiting for nodes) and the next
+apply reverts it, so follow up in code.
 
 A start version is the gold version a sink starts at when its checkpoint is new: the first time the
 feed runs in an environment, and after a checkpoint reset or a full refresh of the whole pipeline.

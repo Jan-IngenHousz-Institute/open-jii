@@ -12,13 +12,12 @@ CREATE TABLE IF NOT EXISTS macro_results
     device_name Nullable(String),
     timestamp DateTime64(6, 'UTC'),
     timezone LowCardinality(Nullable(String)),
-    measurement_time_local Nullable(String),
     user_id Nullable(String),
     latitude Nullable(Float64),
     longitude Nullable(Float64),
-    macro_id String,
+    macro_id Nullable(String),
     macro_name Nullable(String),
-    macro_filename String,
+    macro_filename Nullable(String),
     workbook_run_id Nullable(String),
     workbook_version_id Nullable(String),
     -- Per-row path functions such as JSONAllPaths need assumeNotNull(macro_output).
@@ -44,5 +43,5 @@ CREATE TABLE IF NOT EXISTS macro_results
 )
 ENGINE = ReplacingMergeTree(_commit_version)
 PARTITION BY toYYYYMM(timestamp)
-ORDER BY (experiment_id, macro_id, timestamp, raw_id, macro_filename, ifNull(device_id, ''))
+ORDER BY (experiment_id, ifNull(macro_id, ''), timestamp, raw_id, ifNull(macro_filename, ''), ifNull(device_id, ''))
 SETTINGS non_replicated_deduplication_window = 10000

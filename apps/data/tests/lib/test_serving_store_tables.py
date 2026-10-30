@@ -93,7 +93,7 @@ _UPLOADED_DATA_CHANGES = """
 
 @pytest.fixture(autouse=True)
 def utc(spark: SparkSession) -> Iterator[None]:
-    """Databricks sessions run in UTC, which the local time and the fixtures' timestamps assume."""
+    """Databricks sessions run in UTC, which the fixtures' timestamps assume."""
     spark.conf.set("spark.sql.session.timeZone", "UTC")
     yield
     spark.conf.unset("spark.sql.session.timeZone")
@@ -104,11 +104,10 @@ def _rows(lines: DataFrame) -> dict[int, dict]:
     return {row["id"]: row for row in rows}
 
 
-def test_a_measurement_carries_its_columns_readings_and_local_time(spark: SparkSession) -> None:
+def test_a_measurement_carries_its_columns(spark: SparkSession) -> None:
     row = _rows(MEASUREMENTS.lines(spark.sql(_RAW_DATA_CHANGES)))[1]
 
     assert row["timestamp"] == "2026-10-19 10:00:00.123456"
-    assert row["measurement_time_local"] == "2026-10-19 12:00:00"
     assert row["device_family"] == "multispeq"
     assert row["client_app_version"] == "1.42.0"
     assert row["questions_data"] == {"plot": "A1", "note": None}
@@ -119,9 +118,6 @@ def test_a_measurement_carries_its_columns_readings_and_local_time(spark: SparkS
         {"data": {"par": 120}},
     ]
     assert json.loads(row["output_data"]) == {"phi2": 0.7}
-    assert row["sensor_temperature"] == [19.5, 20.0]
-    assert row["sensor_par"] == [120.0]
-    assert row["sensor_humidity"] == []
     assert row["_commit_version"] == 7
     assert row["_commit_timestamp"] == "2026-10-19 10:00:04.000000"
     assert "date" not in row
@@ -138,7 +134,7 @@ def test_timestamps_outside_the_stores_range_are_clamped_whole(spark: SparkSessi
     assert rows[3]["timestamp"] == "1900-01-01 00:00:00.000000"
 
 
-def test_macro_output_is_an_object_or_missing_and_null_keys_become_empty(spark: SparkSession) -> None:
+def test_macro_output_is_an_object_or_missing(spark: SparkSession) -> None:
     rows = _rows(MACRO_RESULTS.lines(spark.sql(_MACRO_DATA_CHANGES)))
 
     assert rows[11]["macro_output"] == {"phi2": 0.7, "Plot no.": "A1"}
@@ -146,16 +142,15 @@ def test_macro_output_is_an_object_or_missing_and_null_keys_become_empty(spark: 
     assert rows[13]["macro_output"] == {"_value": 0.7}
     assert "macro_output" not in rows[14]
     assert "macro_output" not in rows[15]
-    assert (rows[15]["macro_id"], rows[15]["macro_filename"]) == ("", "")
+    assert "macro_id" not in rows[15]
     assert rows[11]["raw_id"] == 1
-    assert rows[11]["measurement_time_local"] == "2026-10-19 10:00:00"
 
 
-def test_an_upload_row_wraps_its_data_and_has_a_table_id(spark: SparkSession) -> None:
+def test_an_upload_row_wraps_its_data(spark: SparkSession) -> None:
     row = _rows(UPLOADS.lines(spark.sql(_UPLOADED_DATA_CHANGES)))[21]
 
     assert row["uploaded_data"] == {"_items": [{"ph": 6.5}]}
-    assert row["upload_table_id"] == ""
+    assert "upload_table_id" not in row
     assert row["uploaded_at"] == "2026-10-19 09:00:00.000000"
 
 
@@ -243,7 +238,7 @@ def test_measurements_land_from_executors_as_sent(
         store,
         "measurements",
         lines,
-        "id, timestamp, measurement_time_local, questions_data, sensor_temperature",
+        "id, timestamp, questions_data",
     )
     assert stored == sent
     assert [row["timestamp"] for row in stored][1:] == [

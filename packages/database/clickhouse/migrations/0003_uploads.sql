@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS uploads
 (
     experiment_id String,
     id Int64,
-    upload_table_id String,
+    upload_table_id Nullable(String),
     upload_table_name Nullable(String),
     upload_id Nullable(String),
     created_by Nullable(String),
@@ -18,5 +18,5 @@ CREATE TABLE IF NOT EXISTS uploads
 )
 ENGINE = ReplacingMergeTree(_commit_version)
 PARTITION BY toYYYYMM(uploaded_at)
-ORDER BY (experiment_id, upload_table_id, uploaded_at, id)
+ORDER BY (experiment_id, ifNull(upload_table_id, ''), uploaded_at, id)
 SETTINGS non_replicated_deduplication_window = 10000

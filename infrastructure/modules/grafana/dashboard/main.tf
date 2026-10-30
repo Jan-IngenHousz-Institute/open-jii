@@ -1401,12 +1401,13 @@ resource "grafana_rule_group" "serving_store_health" {
 
 # Serving store feed alerts, only where the pipelines feed the store
 locals {
-  # Each store table with the heartbeat metric counting the gold rows that feed it. Uploads have
-  # none, so a stall there shows only as a slow feed once rows arrive.
-  serving_store_feed_tables = {
+  serving_store_feed_tables = toset(["measurements", "macro_results", "uploads"])
+
+  # The heartbeat metric counting the gold rows each table is fed from. Uploads have none, so a stall
+  # there shows only as a slow feed once rows arrive.
+  serving_store_feed_gold_rows = {
     measurements  = "ExperimentRows"
     macro_results = "MacroResultRows"
-    uploads       = ""
   }
 }
 
@@ -1510,7 +1511,7 @@ resource "grafana_rule_group" "serving_store_feed" {
   # count reaches 30 minutes further back than gold's, so whichever half hour is the newest in gold's
   # window, however its edges fall, the store's count covers all of it.
   dynamic "rule" {
-    for_each = { for table, gold_rows in local.serving_store_feed_tables : table => gold_rows if gold_rows != "" }
+    for_each = local.serving_store_feed_gold_rows
     content {
       name      = "Serving Store Feed Stalled: ${rule.key}"
       condition = "E"

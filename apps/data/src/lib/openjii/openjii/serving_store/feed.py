@@ -25,10 +25,9 @@ DRIVER_RETRY_DELAYS = (10, 30, 60)
 class StoreFeed:
     """One pipeline's store sinks, each reading its gold table's change feed in the same pipeline.
 
-    With ``SERVING_STORE_FEED`` off the pipeline defines no sink at all, so nothing about the store
-    can fail its update. Turning it back on resumes each sink from its checkpoint. A sink with a new
-    checkpoint starts at the version in ``SERVING_STORE_FEED_START_<TABLE>``, which must still be
-    within the gold table's file retention (seven days unless the table sets its own).
+    A sink with a new checkpoint starts at the version in ``SERVING_STORE_FEED_START_<TABLE>``,
+    which must still be within the gold table's file retention (seven days unless the table sets
+    its own).
     """
 
     def __init__(self, dp: ModuleType, spark: SparkSession, dbutils: Any, environment: str):
@@ -36,12 +35,8 @@ class StoreFeed:
         self.spark = spark
         self.dbutils = dbutils
         self.scope = f"serving-store-{environment}"
-        self.enabled = spark.conf.get("SERVING_STORE_FEED", "off") == "on"
 
     def define(self, table: StoreTable) -> None:
-        if not self.enabled:
-            return
-
         start_version = self.spark.conf.get(f"SERVING_STORE_FEED_START_{table.name.upper()}")
         sink = f"serving_store_{table.name}"
         spark = self.spark

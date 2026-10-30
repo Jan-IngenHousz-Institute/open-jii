@@ -19,10 +19,8 @@ from pyspark.sql import functions as F
 CHUNK_ROWS = 5_000
 CHUNK_BYTES = 8_000_000
 
-# A batch is posted from this many partitions, hashed by line and sorted by the time the store
-# partitions rows by, then by line. So a replayed batch builds the same chunks, and so the same dedup
-# tokens, on a cluster of any size, and each chunk holds a run of times, so its insert writes few of
-# the store's monthly parts.
+# Partitions hashed by line and sorted by partition time, then line: a replay builds the same chunks,
+# and so the same dedup tokens, on any cluster size, and a chunk's insert writes few monthly parts.
 WRITE_PARTITIONS = 4
 
 # Waits between an executor's attempts at an insert the store answered with an error. After the last,
@@ -101,13 +99,11 @@ class Written:
 class StoreWriter:
     """Writes JSON lines to one database of the store, from Spark executors or in process."""
 
-    def __init__(self, url: str, user: str, key: str, database: str = "store", loader: str = "feed"):
+    def __init__(self, url: str, user: str, key: str, database: str = "store"):
         self.url = url
         self.user = user
         self.key = key
         self.database = database
-        # Part of every dedup token, so a reload's inserts never collide with the feed's.
-        self.loader = loader
         self._session: requests.Session | None = None
 
     def __getstate__(self) -> dict:
@@ -232,8 +228,8 @@ class StoreWriter:
         body = "\n".join(lines).encode()
         params = {
             "query": f"INSERT INTO {self.database}.{table} FORMAT JSONEachRow",
-            # A replayed batch sends the same bodies, and the store drops a token it has seen.
-            "insert_deduplication_token": f"{self.loader}:{table}:{hashlib.sha256(body).hexdigest()}",
+            # A replayed batch sends the same bodies, and the table drops a token it has seen.
+            "insert_deduplication_token": hashlib.sha256(body).hexdigest(),
             # Rows from many months in one insert are normal after an outage.
             "throw_on_max_partitions_per_insert_block": "0",
             # A field the table lacks is refused rather than dropped, and holds the feed back until a

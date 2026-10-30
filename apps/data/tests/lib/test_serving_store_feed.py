@@ -85,23 +85,13 @@ def store_answers(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(StoreWriter, "check", lambda self: None)
 
 
-def _settings(spark: SparkSession, switch: str) -> Iterator[None]:
-    settings = {**_START_VERSIONS, "SERVING_STORE_FEED": switch}
-    for key, value in settings.items():
+@pytest.fixture
+def start_versions(spark: SparkSession) -> Iterator[None]:
+    for key, value in _START_VERSIONS.items():
         spark.conf.set(key, value)
     yield
-    for key in settings:
+    for key in _START_VERSIONS:
         spark.conf.unset(key)
-
-
-@pytest.fixture
-def feed_on(spark: SparkSession) -> Iterator[None]:
-    yield from _settings(spark, "on")
-
-
-@pytest.fixture
-def feed_off(spark: SparkSession) -> Iterator[None]:
-    yield from _settings(spark, "off")
 
 
 def _load(notebook: str, spark: SparkSession | _Spark, secrets: _Secrets) -> None:
@@ -113,18 +103,8 @@ def _load(notebook: str, spark: SparkSession | _Spark, secrets: _Secrets) -> Non
     spec.loader.exec_module(module)
 
 
-def test_with_the_switch_off_no_sink_is_defined(
-    spark: SparkSession, fake_dp: types.ModuleType, feed_off: None
-) -> None:
-    _load("centrum/serving_store_feed.py", spark, _Secrets())
-    _load("macros/serving_store_feed.py", spark, _Secrets())
-
-    assert fake_dp.sinks == {}
-    assert fake_dp.flows == {}
-
-
 def test_each_pipeline_feeds_the_gold_tables_it_writes_without_reading_secrets_yet(
-    spark: SparkSession, fake_dp: types.ModuleType, feed_on: None
+    spark: SparkSession, fake_dp: types.ModuleType, start_versions: None
 ) -> None:
     secrets = _Secrets()
 
@@ -144,7 +124,7 @@ def test_each_pipeline_feeds_the_gold_tables_it_writes_without_reading_secrets_y
 
 
 def test_a_flow_reads_its_gold_tables_change_feed_from_the_start_version(
-    spark: SparkSession, fake_dp: types.ModuleType, feed_on: None
+    spark: SparkSession, fake_dp: types.ModuleType, start_versions: None
 ) -> None:
     session = _Spark(spark)
     _load("centrum/serving_store_feed.py", session, _Secrets())
@@ -161,7 +141,7 @@ def test_a_flow_reads_its_gold_tables_change_feed_from_the_start_version(
 
 
 def test_a_batch_goes_to_the_store_as_its_tables_lines_with_fresh_credentials(
-    spark: SparkSession, fake_dp: types.ModuleType, feed_on: None, monkeypatch: pytest.MonkeyPatch
+    spark: SparkSession, fake_dp: types.ModuleType, start_versions: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     sent: list[tuple[str, str, list[str]]] = []
 
@@ -182,7 +162,7 @@ def test_a_batch_goes_to_the_store_as_its_tables_lines_with_fresh_credentials(
 
 
 def test_a_batch_the_store_could_not_take_is_written_again_from_the_driver(
-    spark: SparkSession, fake_dp: types.ModuleType, feed_on: None, monkeypatch: pytest.MonkeyPatch
+    spark: SparkSession, fake_dp: types.ModuleType, start_versions: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     results = iter([Written(inserted=1, unfinished=1), Written(inserted=1)])
     attempts: list[str] = []
@@ -203,7 +183,7 @@ def test_a_batch_the_store_could_not_take_is_written_again_from_the_driver(
 
 
 def test_a_store_that_does_not_answer_the_driver_gets_no_batch_until_it_does(
-    spark: SparkSession, fake_dp: types.ModuleType, feed_on: None, monkeypatch: pytest.MonkeyPatch
+    spark: SparkSession, fake_dp: types.ModuleType, start_versions: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     answers = iter([StoreUnavailable("the store did not answer"), None])
     checks: list[str] = []

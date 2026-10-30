@@ -840,11 +840,7 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/sources",
     # event hooks
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/hooks",
-    ],
-    # Only where the feed is on: a settings change starts the pipeline before a release has
-    # deployed the notebook.
-    local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/serving_store_feed"] : [],
-  )
+  ], local.centrum_feed_notebooks)
 
   # Use Databricks per-flow trigger defaults; notebooks may override individual tables.
   configuration = merge({
@@ -861,13 +857,7 @@ module "centrum_pipeline" {
     "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust a 16 GB driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
-    },
-    local.serving_store_feed ? { "SERVING_STORE_FEED" = "on" } : {},
-    {
-      for table in ["measurements", "uploads"] :
-      "SERVING_STORE_FEED_START_${upper(table)}" => local.serving_store_feed_start_versions[table]
-      if local.serving_store_feed
-  })
+  }, local.serving_store_feed_settings)
 
   # AUTO CDC needs PRO, and the silver expectations need ADVANCED.
   edition = "ADVANCED"
@@ -947,9 +937,7 @@ module "macro_execution_pipeline" {
   notebook_paths = concat([
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/macros/experiment_macro_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/macros/experiment_macro_data_schemas",
-    ],
-    local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/macros/serving_store_feed"] : [],
-  )
+  ], local.macro_feed_notebooks)
 
   configuration = merge({
     "MACRO_MAX_FILES_PER_TRIGGER" = "16"
@@ -958,13 +946,7 @@ module "macro_execution_pipeline" {
     "CATALOG_NAME"                = module.databricks_catalog.catalog_name
     "CENTRUM_SCHEMA_NAME"         = "centrum"
     "ENVIRONMENT"                 = upper(var.environment)
-    },
-    local.serving_store_feed ? { "SERVING_STORE_FEED" = "on" } : {},
-    {
-      for table in ["macro_results"] :
-      "SERVING_STORE_FEED_START_${upper(table)}" => local.serving_store_feed_start_versions[table]
-      if local.serving_store_feed
-  })
+  }, local.serving_store_feed_settings)
 
   # Neither AUTO CDC nor expectations, so CORE is enough.
   edition = "CORE"
@@ -2045,6 +2027,16 @@ locals {
   # ship (docs/runbooks/store-feed-stalled.md).
   serving_store_feed_start_versions = {}
   serving_store_feed                = length(local.serving_store_feed_start_versions) > 0
+
+  # Only while the feed is on do the pipelines carry it: a settings change starts a pipeline
+  # before a release has deployed the notebook.
+  centrum_feed_notebooks = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/serving_store_feed"] : []
+  macro_feed_notebooks   = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/macros/serving_store_feed"] : []
+  serving_store_feed_settings = local.serving_store_feed ? {
+    SERVING_STORE_FEED_START_MEASUREMENTS  = local.serving_store_feed_start_versions.measurements
+    SERVING_STORE_FEED_START_UPLOADS       = local.serving_store_feed_start_versions.uploads
+    SERVING_STORE_FEED_START_MACRO_RESULTS = local.serving_store_feed_start_versions.macro_results
+  } : {}
 }
 
 # Where the pipelines' feed sends gold's changes, and the credentials it inserts with

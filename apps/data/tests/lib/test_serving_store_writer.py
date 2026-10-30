@@ -76,7 +76,7 @@ def test_a_chunk_stays_under_its_byte_budget_in_bytes(
 
 
 @responses.activate
-def test_the_token_names_the_loader_table_and_body_so_a_replay_repeats_it(store: StoreWriter) -> None:
+def test_the_token_is_the_bodys_hash_so_a_replay_repeats_it(store: StoreWriter) -> None:
     responses.add(responses.POST, URL)
     lines = _lines(3)
 
@@ -84,7 +84,7 @@ def test_the_token_names_the_loader_table_and_body_so_a_replay_repeats_it(store:
     store.insert("uploads", lines)
 
     body = "\n".join(lines).encode()
-    expected = f"feed:uploads:{hashlib.sha256(body).hexdigest()}"
+    expected = hashlib.sha256(body).hexdigest()
     assert [token for _, token, _ in _inserts()] == [expected, expected]
 
 
