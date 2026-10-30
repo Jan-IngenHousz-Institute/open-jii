@@ -1,0 +1,29 @@
+---
+title: "ADR: Use openJII as an OpenID Connect provider for internal apps"
+description: "Proposed identity boundary for Equipment and other approved internal clients."
+---
+
+**Date:** 2026-10-30  
+**Status:** Proposed, pending [PR 2310](https://github.com/Jan-IngenHousz-Institute/open-jii/pull/2310)
+
+Researchers already have openJII accounts, organization memberships and sign-in
+methods. Internal apps such as Equipment need that identity without copying
+passwords or sharing the platform's session cookie across applications.
+
+The proposal makes openJII an OpenID Connect provider for operator-registered
+first-party clients. Authorization code flow with S256 PKCE, signing keys and
+discovery give each app a standard way to verify the account. Public dynamic
+registration stays disabled; operators approve exact callback URLs.
+
+The provider supplies account identity, verification, onboarding state and current
+organization memberships. Each client owns admission and its session policy.
+Signing in to openJII does not authorize access to Equipment. Clients match
+organization IDs and recheck membership when freshness matters.
+
+Sharing session cookies would couple unrelated apps to openJII's authentication
+internals. Separate account systems would duplicate researcher identities and
+membership administration. OIDC adds key management, client provisioning and token
+validation, but keeps those application boundaries explicit.
+
+See [Register an internal client app](/developers/oidc-client-registration)
+for the proposed operator workflow and client configuration.

@@ -1,0 +1,66 @@
+---
+title: Register an internal client app
+description: Proposed operator workflow for connecting an internal app to openJII accounts.
+---
+
+<Callout type="warn">
+  Proposed until [the OpenID Connect provider
+  change](https://github.com/Jan-IngenHousz-Institute/open-jii/pull/2310) ships. The commands and
+  endpoints below describe that change; they are not available on the current release. Production
+  provisioning is reviewed separately in [PR
+  2313](https://github.com/Jan-IngenHousz-Institute/open-jii/pull/2313).
+</Callout>
+
+openJII Equipment is an internal client of openJII's proposed OpenID Connect
+provider. This lets a researcher use their existing openJII account while each
+client app decides who may enter. See the [provider decision](/developers/design-decisions/openjii-oidc-provider-adr)
+for the boundary between identity and admission.
+
+## Register locally
+
+An operator registers a first-party client inside the auth process. Public dynamic
+registration and client changes from ordinary HTTP sessions are disabled.
+Use a seeded local stack and an operator's session:
+
+```bash
+pnpm build:packages
+pnpm local:login
+pnpm --filter @repo/auth oauth:register \
+  --name "openJII Equipment" \
+  --redirect-uri http://localhost:3100/api/auth/oauth2/callback/openjii
+```
+
+Repeat `--redirect-uri` for additional exact callback URLs. The command reads the
+private `.claude/session.header` file, then prints the client ID and secret once.
+Put the secret in the client's secret manager. Never include it in browser code,
+source control or logs. Register production clients only through the approved
+operator workflow with the production configuration and exact HTTPS callback.
+
+## Configure discovery and token validation
+
+| Environment | Issuer                                    |
+| ----------- | ----------------------------------------- |
+| Local       | `http://localhost:3020/api/v1/auth`       |
+| Development | `https://api.dev.openjii.org/api/v1/auth` |
+| Production  | `https://api.openjii.org/api/v1/auth`     |
+
+Discover endpoints at `<issuer>/.well-known/openid-configuration`. Use authorization
+code flow, an S256 PKCE challenge and `client_secret_basic` at the token endpoint.
+Request `openid profile email`, adding `offline_access` only when refresh tokens
+are needed. First-party clients skip consent unless they request `prompt=consent`.
+
+Use an OIDC library to validate the ID token signature against JWKS and check
+issuer, audience, expiry and nonce. Use `sub` as the stable account identifier.
+Trust `email_verified` only from the verified provider response.
+
+## Keep admission in the client
+
+The `orgs` claim lists current memberships as objects with `id`, `slug`, `name`
+and `role`. It includes personal workspaces. Match an approved organization by
+immutable ID, never display name, slug or email domain. The `registered` claim
+reports whether openJII profile onboarding is complete; it does not grant access.
+
+Issued tokens are snapshots. An app that needs current membership must check
+userinfo or refresh its tokens. Equipment must enforce its own membership or
+account allowlist on session reads and private endpoints. A link from openJII is
+navigation, not authorization.
