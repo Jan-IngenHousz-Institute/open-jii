@@ -11,6 +11,19 @@ export const PREVIOUS_MONTH_TO_DATE_COST_METRIC = "PreviousMonthToDateCostUsd";
 export const PREVIOUS_MONTH_COST_METRIC = "PreviousMonthCostUsd";
 export const MONTH_FORECAST_COST_METRIC = "MonthForecastCostUsd";
 export const PREVIOUS_MONTH_TAX_AND_FEES_METRIC = "PreviousMonthTaxAndFeesUsd";
+export const DAILY_COST_PERCENT_OF_LIMIT_METRIC = "DailyCostPercentOfLimit";
+
+/**
+ * A day is past its limit at twice its usual day, and only when that is at least the floor above
+ * it, so a service that usually costs cents does not alert for doubling. Replayed over dev's 90
+ * days to 26 October 2026, AWS and Databricks together alerted about ten times, against three at a
+ * $20 floor. The alerts caught EC2's September ramp here and the metrics pipeline's growth in the
+ * heartbeat export's Databricks figures.
+ */
+export const SPEND_LIMIT_MULTIPLE = 2;
+export const SPEND_LIMIT_FLOOR_USD = 10;
+/** The days before yesterday whose median is a service's usual day. */
+export const SPEND_BASELINE_DAYS = 14;
 
 export const COST_METRICS = [
   DAILY_COST_METRIC,
@@ -20,6 +33,7 @@ export const COST_METRICS = [
   PREVIOUS_MONTH_COST_METRIC,
   MONTH_FORECAST_COST_METRIC,
   PREVIOUS_MONTH_TAX_AND_FEES_METRIC,
+  DAILY_COST_PERCENT_OF_LIMIT_METRIC,
 ];
 
 /** Cost Explorer's unblended cost, the figure its console leads with. */
@@ -177,6 +191,20 @@ function cents(value: number): number {
   return Math.round(value * 100) / 100 || 0;
 }
 
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2
+    : (sorted[middle] ?? 0);
+}
+
+/** Yesterday as a share of its limit, in percent; past 100 the spend rule fires. */
+export function percentOfSpendLimit(yesterday: number, history: number[]): number {
+  const usual = median(history);
+  return (100 * yesterday) / Math.max(SPEND_LIMIT_MULTIPLE * usual, usual + SPEND_LIMIT_FLOOR_USD);
+}
+
 /** Every label the publisher reports, so a service that spent nothing reads zero, not a gap. */
 function serviceLabels(services: CostServices): CostLabel[] {
   const labels = [...Object.values(services.services), services.otherServices];
@@ -258,6 +286,26 @@ export function costDatums(readings: CostReadings): ForwarderDatum[] {
     );
   });
 
+  // Against the median of the days before it, so a lasting step stops alerting once it has become
+  // the usual. A service billed monthly is left out: its fee lands early in the month every month.
+  const yesterday = costDate(addDays(windows.today, -1));
+  const history = Array.from({ length: SPEND_BASELINE_DAYS }, (_, i) =>
+    costDate(addDays(windows.today, -2 - i)),
+  );
+  const limits = labels
+    .filter((service) => service.billsMonthly !== true)
+    .map((service) =>
+      point(
+        DAILY_COST_PERCENT_OF_LIMIT_METRIC,
+        percentOfSpendLimit(
+          usageOver(service.label, [yesterday]),
+          history.map((day) => usageOver(service.label, [day])),
+        ),
+        windows.today,
+        service,
+      ),
+    );
+
   // Usage only: AWS dates a month's tax and fees on the 1st and adds to them all month, so no
   // week would carry its own share.
   const week = daysBetween(windows.weekStart, windows.weekEnd);
@@ -293,5 +341,5 @@ export function costDatums(readings: CostReadings): ForwarderDatum[] {
     ...(forecast === null ? [] : [point(MONTH_FORECAST_COST_METRIC, forecast, windows.today)]),
   ];
 
-  return [...daily, ...weekly, ...monthly];
+  return [...daily, ...limits, ...weekly, ...monthly];
 }

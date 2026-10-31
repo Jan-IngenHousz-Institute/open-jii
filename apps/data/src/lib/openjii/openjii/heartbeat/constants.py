@@ -48,6 +48,8 @@ DATABRICKS_MONTH_TO_DATE_COST_METRIC = "DatabricksMonthToDateCostUsd"
 DATABRICKS_PREVIOUS_MONTH_TO_DATE_COST_METRIC = "DatabricksPreviousMonthToDateCostUsd"
 DATABRICKS_PREVIOUS_MONTH_COST_METRIC = "DatabricksPreviousMonthCostUsd"
 DATABRICKS_MONTH_PROJECTED_COST_METRIC = "DatabricksMonthProjectedCostUsd"
+# Yesterday's spend per component as a share of its limit, in percent; past 100 the rule fires.
+DATABRICKS_DAILY_COST_PERCENT_OF_LIMIT_METRIC = "DatabricksDailyCostPercentOfLimit"
 # Measurements taken in the ISO week the weekly spend covers, which it is divided over.
 WEEKLY_MEASUREMENTS_METRIC = "WeeklyMeasurements"
 
