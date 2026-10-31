@@ -82,5 +82,6 @@ export async function refreshSession(): Promise<boolean> {
     return entry.upstream;
   });
 
-  return Promise.race([refresh, timeout]).finally(() => clearTimeout(timeoutId));
+  // A failed cookie read is a failed refresh, like every other failure here.
+  return Promise.race([refresh.catch(() => false), timeout]).finally(() => clearTimeout(timeoutId));
 }

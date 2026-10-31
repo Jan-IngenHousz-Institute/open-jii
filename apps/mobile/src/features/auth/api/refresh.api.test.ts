@@ -60,6 +60,13 @@ describe("refreshSession", () => {
     }
   });
 
+  it("returns false without refreshing when the session cookie cannot be read", async () => {
+    mockGetCookie.mockRejectedValueOnce(new Error("secure storage unavailable"));
+
+    expect(await refreshSession()).toBe(false);
+    expect(mockGetSession).not.toHaveBeenCalled();
+  });
+
   it("gives up when the cookie read outlives the deadline, and a late cookie starts no refresh", async () => {
     const cookie = deferred<string>();
     mockGetCookie.mockReturnValueOnce(cookie.promise);
