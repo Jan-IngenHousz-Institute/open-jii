@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { cancelPasskeyCeremony } from "@repo/auth/client";
+import { isOAuthRedirect } from "@repo/auth/oauth-redirect";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -79,7 +80,9 @@ export function EmailLoginForm({
         if (!supported || cancelled) return;
         signInPasskeyMutation
           .mutateAsync({ autoFill: true })
-          .then(() => router.push(callbackUrl ?? "/platform"))
+          .then((data) => {
+            if (!isOAuthRedirect(data)) router.push(callbackUrl ?? "/platform");
+          })
           .catch(() => undefined);
       })
       .catch(() => undefined);
@@ -149,6 +152,8 @@ export function EmailLoginForm({
         otpForm.setError("code", { message: errorMessage });
         return;
       }
+
+      if (isOAuthRedirect(result.data)) return;
 
       const user = result.data.user as { registered?: boolean } | undefined;
       const isRegistered = user?.registered;

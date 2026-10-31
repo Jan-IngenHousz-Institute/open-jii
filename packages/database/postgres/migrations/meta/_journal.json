@@ -428,6 +428,13 @@
       "when": 1793033166739,
       "tag": "0060_metrics_publisher_reads_only_what_it_counts",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1793034053790,
+      "tag": "0061_strange_thing",
+      "breakpoints": true
     }
   ]
 }

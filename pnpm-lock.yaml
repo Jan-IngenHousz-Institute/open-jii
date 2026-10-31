@@ -687,7 +687,7 @@ importers:
         version: 57.0.1(expo@57.0.7)(react@19.2.3)
       expo-router:
         specifier: ~57.0.7
-        version: 57.0.7(e2d54dfbdd57e2fe13e3da0a9a9e6dff)
+        version: 57.0.7(d5353d397dfc0cc4edc2d1e7c2caf949)
       expo-secure-store:
         specifier: ~57.0.1
         version: 57.0.1(expo@57.0.7)
@@ -1255,6 +1255,9 @@ importers:
       '@better-auth/expo':
         specifier: 1.6.23
         version: 1.6.23(patch_hash=a79a5f58ca28dc1ddc18aee40ef635f684ae579f1b7f9fe4f5586627e71376c5)(9c66ab818fac7a7b873c4cc143a43d93)
+      '@better-auth/oauth-provider':
+        specifier: 1.6.23
+        version: 1.6.23(3a2e6a6b4c02a6fc270f7ae4dad1f79c)
       '@better-auth/passkey':
         specifier: 1.6.23
         version: 1.6.23(5b7f9037e2c2d485205c2f8f4acab574)
@@ -2718,6 +2721,15 @@ packages:
     peerDependenciesMeta:
       mongodb:
         optional: true
+
+  '@better-auth/oauth-provider@1.6.23':
+    resolution: {integrity: sha512-1sDN+N4Sztmpk8ziCU3MXicxOTfvYoHvHvhJMQ7PSfr+pLXnYN+dJFI9S3zBRwstmTeJx/OhRIZWrwFJ0TgBnA==}
+    peerDependencies:
+      '@better-auth/core': ^1.6.23
+      '@better-auth/utils': 0.4.2
+      '@better-fetch/fetch': 1.3.1
+      better-auth: ^1.6.23
+      better-call: 1.3.7
 
   '@better-auth/passkey@1.6.23':
     resolution: {integrity: sha512-nr5tKaNd/huUwTYX4DUm4HcXgBkixj0lXrRHdy9azY4fFjF49Tyif4sPyRMWnQJYxlRJ1HVEMJq2nGyr5CLXQg==}
@@ -18044,6 +18056,16 @@ snapshots:
       '@better-auth/core': 1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@opentelemetry/api@1.9.1)(better-call@1.3.7(zod@4.6.7))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.4.0)
       '@better-auth/utils': 0.4.2
 
+  '@better-auth/oauth-provider@1.6.23(3a2e6a6b4c02a6fc270f7ae4dad1f79c)':
+    dependencies:
+      '@better-auth/core': 1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@opentelemetry/api@1.9.1)(better-call@1.3.7(zod@4.6.7))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.4.0)
+      '@better-auth/utils': 0.4.2
+      '@better-fetch/fetch': 1.3.1
+      better-auth: 1.6.23(@opentelemetry/api@1.9.1)(better-sqlite3@12.11.1)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.11.1)(expo-sqlite@57.0.1(expo@57.0.7)(react-native@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3))(kysely@0.28.17)(postgres@3.4.9))(next@16.4.2(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.13.3)(babel-plugin-macros@2.8.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(vitest@4.1.12)
+      better-call: 1.3.7(zod@4.6.7)
+      jose: 6.2.3
+      zod: 4.6.7
+
   '@better-auth/passkey@1.6.23(5b7f9037e2c2d485205c2f8f4acab574)':
     dependencies:
       '@better-auth/core': 1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@opentelemetry/api@1.9.1)(better-call@1.3.7(zod@4.6.7))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.4.0)
@@ -18867,7 +18889,7 @@ snapshots:
       ws: 8.21.0
       zod: 3.25.76
     optionalDependencies:
-      expo-router: 57.0.7(e2d54dfbdd57e2fe13e3da0a9a9e6dff)
+      expo-router: 57.0.7(d5353d397dfc0cc4edc2d1e7c2caf949)
       react-native: 0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1)
     transitivePeerDependencies:
       - '@expo/dom-webview'
@@ -19144,7 +19166,7 @@ snapshots:
       react: 19.2.3
     optionalDependencies:
       '@expo/metro-runtime': 57.0.6(@expo/log-box@57.0.1)(expo@57.0.7)(react-dom@19.2.3(react@19.2.3))(react-native@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
-      expo-router: 57.0.7(e2d54dfbdd57e2fe13e3da0a9a9e6dff)
+      expo-router: 57.0.7(d5353d397dfc0cc4edc2d1e7c2caf949)
       react-dom: 19.2.3(react@19.2.3)
     transitivePeerDependencies:
       - supports-color
@@ -27170,7 +27192,7 @@ snapshots:
       expo: 57.0.7(e9df6e9ed48861f4c9b09c90f6c33001)
       react: 19.2.3
 
-  expo-router@57.0.7(e2d54dfbdd57e2fe13e3da0a9a9e6dff):
+  expo-router@57.0.7(d5353d397dfc0cc4edc2d1e7c2caf949):
     dependencies:
       '@expo/log-box': 57.0.1(@expo/dom-webview@57.0.1)(expo@57.0.7)(react-native@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
       '@expo/metro-runtime': 57.0.6(@expo/log-box@57.0.1)(expo@57.0.7)(react-dom@19.2.3(react@19.2.3))(react-native@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
