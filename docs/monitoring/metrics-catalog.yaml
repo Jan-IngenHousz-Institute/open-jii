@@ -101,6 +101,9 @@ passes:
     note: the serving store's health, whether it answers and how full its memory and disk are
   - date: 2026-10-29
     range: [120, 122]
+    note: the serving store's feed, how long rows take from gold to the store, whether it stalls, and the rows the store refuses
+  - date: 2026-10-31
+    range: [123, 125]
     note: >-
       a day's spend past its limit, for AWS and for Databricks, and the metrics publisher's errors,
       so the weekly report's database counts going quiet reaches someone
@@ -605,6 +608,72 @@ metrics:
     notes: >-
       How full the store's data volume is, from the CloudWatch agent. Growing the volume is an
       online change, so 80% leaves time to do it without a window.
+
+  - num: 120
+    id: store-feed-latency
+    name: Gold to serving store
+    family: observability
+    area: latency
+    source: aws
+    phase: P2
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: OpenJII/ServingStore
+      search: SEARCH('{OpenJII/ServingStore,Environment,Table} MetricName="FeedDeliveryP95Seconds" Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
+      unit: seconds
+    baseline: { method: threshold, max: 60 }
+    runbook: docs/runbooks/store-feed-latency.md
+    notes: >-
+      The p95 per store table, over the last five minutes, from gold's commit to the store's insert.
+      A timer on the store's instance queries ClickHouse once a minute and sends it while rows
+      arrive. The target is a minute. Rules exist only where the pipelines feed the store.
+
+  - num: 121
+    id: store-feed-stalled
+    name: Serving store feed taking rows
+    family: observability
+    area: path
+    source: aws
+    phase: P2
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: OpenJII/ServingStore
+      search: SEARCH('{OpenJII/ServingStore,Environment,Table} MetricName="FeedInsertedRows" Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
+    baseline: { nodata: alert }
+    runbook: docs/runbooks/store-feed-stalled.md
+    notes: >-
+      Rows each store table took per minute, from the same timer, which reports zero when none
+      arrived. One rule fires when gold's newest half hour gained measurements or macro results and
+      the store took none in 105 minutes; another when the timer has sent nothing for five minutes.
+      A quiet night is neither, so the board turns red only when the counts stop arriving.
+
+  - num: 122
+    id: store-feed-rejects
+    name: Rows the serving store refused
+    family: observability
+    area: path
+    source: aws
+    phase: P2
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: OpenJII/ServingStore
+      search: SEARCH('{OpenJII/ServingStore,Environment,Table} MetricName="FeedRejectedRows" Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/store-feed-rejects.md
+    notes: >-
+      Rows per store table the store could not read in the last five minutes, from the same timer
+      each minute, so one run that fails leaves none unreported. The writer sets them aside in
+      store.feed_rejects so the rest of their batch lands, so any at all means the store lacks rows
+      gold holds.
 
   - num: 18
     id: backend-4xx-split
@@ -2064,7 +2133,7 @@ metrics:
       A run that throws publishes nothing, and every cost panel keeps its last figures. A failed
       forecast does not throw; the run publishes without it and names the error in its log line.
 
-  - num: 120
+  - num: 123
     id: aws-spend-limit
     name: AWS spend against its limit
     family: observability
@@ -2089,7 +2158,7 @@ metrics:
       Services that bill monthly, Grafana's licences, are left out. The rule alerts per Service, and
       a lasting step stops alerting once it has become the median.
 
-  - num: 121
+  - num: 124
     id: databricks-spend-limit
     name: Databricks spend against its limit
     family: observability
@@ -2108,12 +2177,12 @@ metrics:
     baseline: { method: threshold, max: 100 }
     runbook: docs/runbooks/databricks-spend-limit.md
     notes: >-
-      Yesterday's spend at list price per Component as a share of the same limit as 120's, a day the
+      Yesterday's spend at list price per Component as a share of the same limit as 123's, a day the
       component spent nothing counting as zero. Replayed over dev's 90 days to 26 October 2026, it
       fired on the metrics pipeline's growth from late August, the backend warehouse three times and
       a jobs bump around 1 October.
 
-  - num: 122
+  - num: 125
     id: metrics-publisher-errors
     name: Metrics publisher errors
     family: observability

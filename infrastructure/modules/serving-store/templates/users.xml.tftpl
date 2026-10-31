@@ -1,4 +1,12 @@
 <clickhouse>
+    <!-- Every user shares this profile, so a key such as "Plot no." stays one key, never a path into
+         a nested object. Its stored path is escaped, so a reader names the subcolumn the same way,
+         as uploaded_data.`Plot no%2E`. -->
+    <profiles>
+        <default>
+            <json_type_escape_dots_in_keys>1</json_type_escape_dots_in_keys>
+        </default>
+    </profiles>
     <users>
         <default remove="remove"/>
 %{ for user in users ~}
@@ -18,5 +26,15 @@
 %{ endif ~}
         </${user.name}>
 %{ endfor ~}
+        <!-- The feed lag timer's user: no password, so it only answers on the instance itself. -->
+        <openjii_monitor>
+            <no_password/>
+            <networks><ip>127.0.0.1</ip><ip>::1</ip></networks>
+            <profile>default</profile>
+            <quota>default</quota>
+            <grants>
+                <query>GRANT SELECT ON store.*</query>
+            </grants>
+        </openjii_monitor>
     </users>
 </clickhouse>
