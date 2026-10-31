@@ -5,25 +5,6 @@
 # The dependency scan of the lockfile reads the root .trivyignore instead. Add an
 # id there too only when its justification holds for the lockfile as well.
 
-vulnerabilities:
-  # purls pin a suppression to the detected copy: a bump that ships a different
-  # vulnerable version re-fails the scan instead of inheriting it.
-
-  # better-auth@1.6.23 in the backend's own tree, fixed only in 1.7.x, whose breaking
-  # changes need their own upgrade. Each id needs a plugin packages/auth does not
-  # enable. The dependency scan suppresses the critical one in the root .trivyignore.
-  - id: CVE-2026-114607
-    purls:
-      - "pkg:npm/better-auth@1.6.23"
-    statement: "OAuth state accepted as a Magic Link token. The Magic Link plugin is not enabled."
-    expired_at: 2026-11-30
-  - id: GHSA-r4xp-prcw-77qf
-    purls:
-      - "pkg:npm/better-auth@1.6.23"
-    statement: "OAuth Proxy trusts forged profiles. The OAuth Proxy plugin is not enabled."
-    expired_at: 2026-11-30
-  - id: GHSA-q84f-53jg-9ppm
-    purls:
-      - "pkg:npm/better-auth@1.6.23"
-    statement: "Device approval omits the requesting client. The deviceAuthorization plugin is not enabled."
-    expired_at: 2026-11-30
+# Currently empty. Pin each suppression with purls to the detected copy, so a bump that
+# ships a different vulnerable version re-fails the scan instead of inheriting it.
+vulnerabilities: []

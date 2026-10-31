@@ -3,7 +3,6 @@ import { passkeyClient } from "@better-auth/passkey/client";
 import { WebAuthnAbortService } from "@simplewebauthn/browser";
 import {
   emailOTPClient,
-  genericOAuthClient,
   inferAdditionalFields,
   inferOrgAdditionalFields,
   lastLoginMethodClient,
@@ -21,7 +20,6 @@ export const authClient = createAuthClient({
   plugins: [
     inferAdditionalFields<typeof auth>(),
     emailOTPClient(),
-    genericOAuthClient(), // Required for custom OAuth providers like ORCID
     // `schema` carries the organization additionalFields (profile fields and
     // directory visibility) into the create/update body types; `ac`/`roles` make
     // `checkRolePermission` evaluate our matrix instead of Better Auth's defaults.

@@ -262,7 +262,6 @@ vi.mock("@repo/auth/client", () => ({
     signIn: {
       emailOtp: vi.fn().mockResolvedValue({ data: null, error: null }),
       social: vi.fn().mockResolvedValue({ data: null, error: null }),
-      oauth2: vi.fn().mockResolvedValue({ data: null, error: null }),
       passkey: vi.fn().mockResolvedValue({ data: null, error: null }),
     },
     apiKey: {

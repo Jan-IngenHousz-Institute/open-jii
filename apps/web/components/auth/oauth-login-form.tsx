@@ -37,20 +37,11 @@ export function OAuthLoginForm({
 
     const errorURL = `${env.NEXT_PUBLIC_BASE_URL}/login-error`;
 
-    // ORCID uses genericOAuth plugin (oauth2), GitHub uses built-in social provider
-    if (provider.id === "orcid") {
-      await authClient.signIn.oauth2({
-        providerId: "orcid",
-        callbackURL: redirectUrl,
-        errorCallbackURL: errorURL,
-      });
-    } else {
-      await authClient.signIn.social({
-        provider: provider.id,
-        callbackURL: redirectUrl,
-        errorCallbackURL: errorURL,
-      });
-    }
+    await authClient.signIn.social({
+      provider: provider.id,
+      callbackURL: redirectUrl,
+      errorCallbackURL: errorURL,
+    });
   }
 
   const providerName = provider.id.charAt(0).toUpperCase() + provider.id.slice(1);
