@@ -86,6 +86,8 @@ feat(web): add experiment archive filter
 fix(backend): reject expired API keys
 ```
 
+Keep the title to 72 characters or fewer. It becomes the commit subject on `main` and a line in the release notes, so name the change and leave the detail to the description. The `Linear ref check` warns about a longer title but does not block it.
+
 Use one of the Conventional Commit types configured in [`.releaserc.js`](.releaserc.js): `feat`, `fix`, `perf`, `revert`, `docs`, `style`, `chore`, `refactor`, `test`, `build`, or `ci`.
 
 In the PR body's **Linear issues** section, add one relation line for every issue represented by the PR:
