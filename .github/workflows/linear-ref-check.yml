@@ -45,15 +45,6 @@ jobs:
               return;
             }
 
-            // The title becomes the squash commit subject and a release-notes line. A warning, not a gate.
-            const titleSoftLimit = 72;
-            if (title.length > titleSoftLimit) {
-              core.warning(
-                `PR title is ${title.length} characters; keep it to ${titleSoftLimit} or fewer and put the detail in the description.`,
-                { title: "PR title is long" },
-              );
-            }
-
             const optedOut = labels.includes("no-linear") || labels.includes("dependencies");
             const isDependencyUpdate = /^(chore|build|fix)\(deps\)/i.test(title);
 
