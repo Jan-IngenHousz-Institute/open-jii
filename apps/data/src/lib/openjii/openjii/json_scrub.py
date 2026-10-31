@@ -10,12 +10,17 @@ parsing.
 
 import re
 
+from pyspark.sql import Column
 from pyspark.sql import functions as F
-from pyspark.sql.types import StringType
 
 # The string-literal branch wins the leftmost alternation and consumes
 # literals whole (escapes included), so tokens only match outside strings.
 _STRING_OR_NON_FINITE_TOKEN = re.compile(r'"(?:[^"\\]|\\.)*"|-?Infinity|NaN')
+
+# A string literal, the text between literals, or a lone quote, so the pieces join back into the
+# payload. Possessive runs keep Java's regex engine from backtracking through an unterminated literal.
+_PIECES = r'"(?:[^"\\]++|\\.)*+"|[^"]++|"'
+_NON_FINITE_TOKEN = r"-?Infinity|NaN"
 
 
 def _null_unless_string(match: re.Match[str]) -> str:
@@ -40,6 +45,18 @@ def scrub_non_finite_json_value(payload: str | None) -> str | None:
     return _STRING_OR_NON_FINITE_TOKEN.sub(_null_unless_string, payload)
 
 
-#: Spark UDF wrapping :func:`scrub_non_finite_json_value`.
-#: Use this directly in ``.withColumn()`` calls.
-scrub_non_finite_json = F.udf(scrub_non_finite_json_value, StringType())
+def scrub_non_finite_json(payload: Column) -> Column:
+    """:func:`scrub_non_finite_json_value` as Spark expressions. A Python UDF makes a batch start a
+    sandboxed Python worker, which on the pipelines' compute takes seconds."""
+    pieces = F.regexp_extract_all(payload, F.lit(_PIECES), 0)
+    scrubbed = F.array_join(
+        F.transform(
+            pieces,
+            lambda piece: F.when(piece.startswith('"'), piece).otherwise(
+                F.regexp_replace(piece, _NON_FINITE_TOKEN, "null")
+            ),
+        ),
+        "",
+    )
+    suspicious = payload.contains("NaN") | payload.contains("Infinity")
+    return F.when(suspicious, scrubbed).otherwise(payload)
