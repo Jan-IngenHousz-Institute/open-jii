@@ -761,6 +761,11 @@ module "databricks_catalog" {
   isolation_mode         = "ISOLATED"
 
   grants = {
+    instrument_tracking = {
+      principal  = data.databricks_service_principal.instrument_tracking.application_id
+      privileges = ["USE_CATALOG"]
+    }
+
     node_service_principal = {
       principal = module.node_service_principal.service_principal_application_id
       privileges = [
@@ -822,6 +827,12 @@ resource "databricks_grants" "centrum_schema" {
       "SELECT",
       "MODIFY",
     ]
+  }
+
+  # This resource owns the schema ACL. Keep the app alongside existing principals.
+  grant {
+    principal  = data.databricks_service_principal.instrument_tracking.application_id
+    privileges = ["USE_SCHEMA"]
   }
 
   depends_on = [module.databricks_catalog]
