@@ -435,6 +435,13 @@
       "when": 1793196587382,
       "tag": "0061_better_auth_team_seat_counts",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1793550554048,
+      "tag": "0062_metrics_publisher_counts_exports_and_uploads",
+      "breakpoints": true
     }
   ]
 }

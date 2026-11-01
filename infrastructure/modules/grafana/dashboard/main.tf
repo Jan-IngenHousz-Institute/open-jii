@@ -3079,7 +3079,7 @@ resource "grafana_rule_group" "metrics_publisher_health" {
     for            = "5m"
 
     annotations = {
-      description      = "The metrics publisher threw, so this week's researcher and experiment counts did not reach CloudWatch, and the weekly report's New researchers, Researchers and Experiments created tiles read no data for the week."
+      description      = "The metrics publisher threw, so this week's database counts did not reach CloudWatch, and the weekly report's New researchers, Researchers, Experiments created, Researchers who exported and Researchers who uploaded tiles read no data for the week."
       summary          = "Metrics publisher is failing to publish"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/metrics-publisher-errors.md"
       __dashboardUid__ = local.heartbeat_daily_uid

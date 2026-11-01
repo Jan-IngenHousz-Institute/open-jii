@@ -80,7 +80,7 @@ locals {
       key     = "usage"
       title   = "Usage"
       areas   = ["usage"]
-      caption = "**Active** means at least one measurement uploaded in the seven days, so people who only browse do not count. **Researchers** is everyone registered, counted each Monday at 06:00 UTC. A sharp drop shows first on the [daily report](/d/${local.heartbeat_daily_uid}), as devices or experiments gone quiet."
+      caption = "**Active** means at least one measurement uploaded in the seven days, so people who only browse do not count. **Researchers** is everyone registered, counted each Monday at 06:00 UTC. **Researchers who exported** and **Researchers who uploaded** count the people whose export or file upload finished in the previous Monday-to-Sunday week, each once however many they ran; failed ones do not count, and an upload here is files added to an experiment, not measurements from a phone. A sharp drop shows first on the [daily report](/d/${local.heartbeat_daily_uid}), as devices or experiments gone quiet."
     },
     {
       key     = "path"
