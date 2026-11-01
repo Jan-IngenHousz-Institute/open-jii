@@ -1,16 +1,19 @@
 import { apiKey } from "@better-auth/api-key";
 import { expo } from "@better-auth/expo";
+import { oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
-import { emailOTP, genericOAuth, lastLoginMethod } from "better-auth/plugins";
+import { emailOTP, genericOAuth, jwt, lastLoginMethod } from "better-auth/plugins";
 
 import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
 import { getApiKeyForSessionCheck } from "./api-key-session";
 import { sendOtpEmail } from "./email/otpEmail";
+import { getOidcClaims, oidcAdvertisedMetadata } from "./oidc/claims";
+import { oauthClientManagement } from "./oidc/client-management";
 import { openJiiOrganization } from "./organization/plugin";
 import { orcidProvider } from "./providers/orcid";
 
@@ -37,6 +40,23 @@ if (process.env.AUTH_ORCID_ID && process.env.AUTH_ORCID_SECRET) {
   );
 }
 
+async function loadMemberships(userId: string) {
+  return db
+    .select({
+      id: schema.organizations.id,
+      slug: schema.organizations.slug,
+      name: schema.organizations.name,
+      role: schema.organizationMembers.role,
+    })
+    .from(schema.organizationMembers)
+    .innerJoin(
+      schema.organizations,
+      eq(schema.organizationMembers.organizationId, schema.organizations.id),
+    )
+    .where(eq(schema.organizationMembers.userId, userId))
+    .orderBy(schema.organizations.id);
+}
+
 export const auth = betterAuth({
   logger: {
     level: "info",
@@ -57,6 +77,11 @@ export const auth = betterAuth({
       teamMember: schema.teamMembers,
       apikey: schema.apiKeys,
       passkey: schema.passkeys,
+      jwks: schema.jwks,
+      oauthClient: schema.oauthClients,
+      oauthAccessToken: schema.oauthAccessTokens,
+      oauthRefreshToken: schema.oauthRefreshTokens,
+      oauthConsent: schema.oauthConsents,
     },
   }),
   secret: process.env.AUTH_SECRET,
@@ -143,6 +168,18 @@ export const auth = betterAuth({
     enabled: false,
   },
   plugins: [
+    jwt({ disableSettingJwtHeader: true }),
+    oauthProvider({
+      loginPage: `${clientUrl}/login`,
+      consentPage: `${clientUrl}/consent`,
+      scopes: ["openid", "profile", "email", "offline_access"],
+      advertisedMetadata: oidcAdvertisedMetadata,
+      silenceWarnings: { oauthAuthServerConfig: true },
+      grantTypes: ["authorization_code", "refresh_token"],
+      clientPrivileges: () => oauthClientManagement.getStore() === true,
+      customIdTokenClaims: ({ user, scopes }) => getOidcClaims(user, scopes, loadMemberships),
+      customUserInfoClaims: ({ user, scopes }) => getOidcClaims(user, scopes, loadMemberships),
+    }),
     expo(), // Add Expo plugin for mobile app support
     emailOTP({
       async sendVerificationOTP({ email, otp }) {

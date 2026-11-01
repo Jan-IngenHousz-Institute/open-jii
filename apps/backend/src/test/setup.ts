@@ -7,12 +7,14 @@ import type * as AnalyticsServer from "@repo/analytics/server";
 config({ path: resolve(__dirname, "../../.env.test") });
 
 const mockGetSession = vi.fn().mockResolvedValue(null);
+const mockGetOAuthServerConfig = vi.fn();
 
 // Mock Better Auth to prevent database connection during import
 vi.mock("@repo/auth/server", () => ({
   auth: {
     api: {
       getSession: mockGetSession,
+      getOAuthServerConfig: mockGetOAuthServerConfig,
     },
     options: {
       trustedOrigins: ["http://localhost:3000"],

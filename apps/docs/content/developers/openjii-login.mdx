@@ -1,0 +1,104 @@
+---
+title: Sign in to an internal app with openJII
+description: Register an internal OpenID Connect client and read account and organization claims.
+---
+
+openJII supports OpenID Connect authorization code flow with PKCE. Internal apps
+can use the platform's existing email code, passkey, ORCID or GitHub sign-in.
+
+## Configure the client
+
+Use the issuer for the environment hosting the accounts:
+
+| Environment | Issuer                                    |
+| ----------- | ----------------------------------------- |
+| Local       | `http://localhost:3020/api/v1/auth`       |
+| Development | `https://api.dev.openjii.org/api/v1/auth` |
+| Production  | `https://api.openjii.org/api/v1/auth`     |
+
+Discovery is at `<issuer>/.well-known/openid-configuration`; it lists the
+authorization, token, userinfo and JWKS endpoints. Request `openid profile email`
+and use an S256 PKCE challenge. Request `offline_access` as well if the app needs
+refresh tokens. The token endpoint accepts `client_secret_basic` authentication.
+
+## Register a first-party client
+
+Registration runs inside the auth process. HTTP sessions cannot create, update or
+delete OAuth clients, and public dynamic registration is disabled. Registration
+requires database access, the environment's auth configuration, and a valid session
+header for an operator account. It prints the client ID and secret once; the
+database stores a hash of the secret.
+
+For local development, build the packages, run the seeded local stack, then run:
+
+```bash
+pnpm build:packages
+pnpm local:login
+pnpm --filter @repo/auth oauth:register \
+  --name "Asset register" \
+  --redirect-uri http://localhost:3100/api/auth/oauth2/callback/openjii
+```
+
+Repeat `--redirect-uri` to register multiple exact callback URLs. To use another
+session header, pass `--session-header /absolute/path/to/session.header`. The file
+must contain a `Cookie:` header, as produced by `pnpm local:login`. Keep it private.
+The package command loads the local backend environment. For a deployed environment,
+run the compiled `packages/auth/dist/scripts/register-oauth-client.js` in the
+approved operator environment with that environment's configuration and session.
+Never point a local development configuration at production.
+
+Registered clients skip consent because the operator has approved them as internal
+apps. They require PKCE and support authorization code and refresh token grants.
+A client requesting explicit consent can still show the consent page with
+`prompt=consent`. Store the secret in the client's secret manager, never browser
+code, source control or logs. To disable a compromised client, run this in the
+approved database operator environment, replacing the client ID:
+
+```sql
+UPDATE oauth_clients SET disabled = true WHERE client_id = '<affected-client-id>';
+```
+
+This blocks new authorization, authorization-code exchange and refresh-token issuance.
+Already-issued self-contained JWT access tokens remain valid until expiry for clients
+validating them locally. Provision a replacement client and coordinate its rollout.
+
+Login and consent use a supported locale remembered in a browser cookie when the
+web proxy handles a localized page. Cached pages may retain an earlier preference.
+A new browser uses English. The existing multi-language access gate still applies.
+
+## Read claims and restrict access
+
+Validate the ID token signature against JWKS, issuer, audience, expiry and nonce
+with the client's OIDC library. `sub` is the stable openJII user ID. With `profile`,
+`name` contains the account name, falling back to its email address when blank.
+With `email`, the token includes `email` and `email_verified`.
+
+ID tokens and userinfo also include:
+
+```json
+{
+  "registered": true,
+  "orgs": [
+    {
+      "id": "organization-uuid",
+      "slug": "institute",
+      "name": "Institute",
+      "role": "member"
+    }
+  ]
+}
+```
+
+`orgs` contains the user's current organization memberships, including their
+personal workspace. An empty list means no memberships. Match the required
+organization by ID, not its display name, slug or email domain. Signing in alone
+does not grant admission to an internal app.
+
+Memberships are read again when issuing tokens and serving userinfo. An issued ID
+token is a snapshot; an app needing fresh authorization must check userinfo or
+refresh its tokens rather than retaining the original membership indefinitely.
+
+Accounts with `registered: false` can authorize before finishing openJII profile
+onboarding. Clients can use that flag to decide whether they require a completed
+profile. Continuing an authorization request through openJII onboarding is a
+follow-up; v1 does not enforce it.

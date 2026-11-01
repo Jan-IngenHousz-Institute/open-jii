@@ -105,6 +105,40 @@ async function assertNoSecretVisible(page: Page): Promise<void> {
   }
 }
 
+const oidcClientId = process.env.E2E_OIDC_CLIENT_ID;
+const oidcConsentShots: Shot[] = oidcClientId
+  ? [
+      {
+        slug: "oauth-consent",
+        publish: "img/guide/web/oauth-consent.webp",
+        frame: "desktop",
+        route: "/consent",
+        async prepare(page) {
+          const query = new URLSearchParams({
+            client_id: oidcClientId,
+            redirect_uri:
+              process.env.E2E_OIDC_REDIRECT_URI ??
+              "http://localhost:3100/api/auth/oauth2/callback/openjii",
+            response_type: "code",
+            scope: "openid profile email offline_access",
+            prompt: "consent",
+            code_challenge: "a".repeat(43),
+            code_challenge_method: "S256",
+            state: "docs-consent-preview",
+          });
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3020";
+          await page.goto(`${apiUrl}/api/v1/auth/oauth2/authorize?${query}`, {
+            waitUntil: "networkidle",
+          });
+          await page.getByRole("button", { name: "Allow", exact: true }).waitFor();
+          await settle(page);
+        },
+        scope:
+          "Consent screen showing the internal application name, requested scopes and Allow or Deny controls",
+      },
+    ]
+  : [];
+
 const privacyCaptureEmail = process.env.E2E_PRIVACY_CAPTURE_EMAIL;
 const privacyExperimentName =
   process.env.E2E_PRIVACY_CAPTURE_EXPERIMENT ?? "Access Showcase Experiment";
@@ -158,6 +192,7 @@ const privacyShots: readonly Shot[] = privacyCaptureEmail
   : [];
 
 export const SHOTS: readonly Shot[] = [
+  ...oidcConsentShots,
   ...privacyShots,
   // ------------------------------------------- tier 1: shell, overviews, access
   {

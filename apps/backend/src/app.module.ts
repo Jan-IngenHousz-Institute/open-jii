@@ -35,6 +35,7 @@ import { MacroModule } from "./macros/macro.module";
 import { MetricsModule } from "./metrics/metrics.module";
 import { NewsletterModule } from "./newsletter/newsletter.module";
 import { NotificationModule } from "./notifications/notification.module";
+import { OidcDiscoveryController } from "./oidc-discovery.controller";
 import { OrganizationModule } from "./organizations/organization.module";
 import { ProtocolModule } from "./protocols/protocol.module";
 import { SearchModule } from "./search/search.module";
@@ -45,6 +46,7 @@ import { VisitModule } from "./visits/visit.module";
 import { WorkbookModule } from "./workbooks/workbook.module";
 
 @Module({
+  controllers: [OidcDiscoveryController],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
