@@ -1,7 +1,7 @@
 import { eq, experiments } from "@repo/database";
 
-import { TestHarness } from "../../test/test-harness";
-import { resourceRoleExpression } from "./resource-access-scope";
+import { TestHarness } from "../../../test/test-harness";
+import { resourceRoleExpression } from "./resource-access-query";
 
 describe("resourceRoleExpression", () => {
   const testApp = TestHarness.App;

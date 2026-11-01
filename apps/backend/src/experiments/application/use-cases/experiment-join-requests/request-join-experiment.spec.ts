@@ -4,7 +4,13 @@ import { faker } from "@faker-js/faker";
 import { eq, notifications } from "@repo/database";
 
 import { EmailAdapter } from "../../../../common/modules/email/services/email.adapter";
-import { assertSuccess, failure, success, AppError } from "../../../../common/utils/fp-utils";
+import {
+  assertSuccess,
+  assertFailure,
+  failure,
+  success,
+  AppError,
+} from "../../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import { queuedDeliveriesFor } from "../../../../test/notification-deliveries";
 import { TestHarness } from "../../../../test/test-harness";
@@ -62,6 +68,29 @@ describe("RequestJoinExperimentUseCase", () => {
     await testApp.addExperimentAdmin(experiment.id, secondAdminUserId);
     return experiment;
   }
+
+  it("refuses a Demo experiment join request without notifying or persisting", async () => {
+    const organization = await testApp.createOrganization("Synthetic demo", {
+      type: "demo",
+      visibility: "public",
+    });
+    const { experiment } = await testApp.createExperiment({
+      name: "Synthetic example",
+      userId: ownerUserId,
+      organizationId: organization,
+      visibility: "public",
+    });
+    const dispatch = vi.spyOn(testApp.module.get(NotificationDispatchService), "dispatch");
+    const result = await useCase.execute(experiment.id, requesterUserId, "let me in");
+    assertFailure(result);
+    expect(result.error).toMatchObject({ statusCode: 403, code: "DEMO_JOIN_REQUESTS_DISABLED" });
+    const pending = await testApp.module
+      .get(ExperimentJoinRequestRepository)
+      .findPendingByExperimentAndUser(experiment.id, requesterUserId);
+    assertSuccess(pending);
+    expect(pending.value).toBeNull();
+    expect(dispatch).not.toHaveBeenCalled();
+  });
 
   it("notifies every admin and the owning org's owner, and queues one email each", async () => {
     const experiment = await seedExperiment();

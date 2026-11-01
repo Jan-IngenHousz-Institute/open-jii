@@ -37,6 +37,7 @@ describe("orpc-fp", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   describe("throwOrpcError", () => {
@@ -93,6 +94,27 @@ describe("orpc-fp", () => {
 
       vi.unstubAllEnvs();
     });
+
+    it("exposes only a valid retry interval on production rate-limit errors", () => {
+      vi.stubEnv("NODE_ENV", "production");
+      const error = new AppError("Try later", "GUEST_RATE_LIMITED", 429, {
+        retryAfterSeconds: 120,
+        privateDetail: "not public",
+      });
+      const thrown = captureOrpcError(() => throwOrpcError(error, logger));
+      expect(thrown.data).toEqual({ code: "GUEST_RATE_LIMITED", retryAfterSeconds: 120 });
+    });
+
+    it.each([0, -1, 0.5, "120", Infinity])(
+      "omits invalid retry interval %s",
+      (retryAfterSeconds) => {
+        vi.stubEnv("NODE_ENV", "production");
+        const error = new AppError("Try later", "LIMITED", 429, { retryAfterSeconds });
+        expect(captureOrpcError(() => throwOrpcError(error, logger)).data).toEqual({
+          code: "LIMITED",
+        });
+      },
+    );
 
     it("falls back to INTERNAL_SERVER_ERROR for an unmapped 5xx status and logs at error level", () => {
       const error = new AppError("Service unavailable", "UNAVAILABLE", 503, {

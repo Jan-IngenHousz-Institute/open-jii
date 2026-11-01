@@ -37,6 +37,14 @@
     "./admin": {
       "types": "./src/admin/plugin.ts",
       "default": "./dist/admin/plugin.js"
+    },
+    "./guest": {
+      "types": "./src/guest/plugin.ts",
+      "default": "./dist/guest/plugin.js"
+    },
+    "./guest-retention": {
+      "types": "./src/guest/retention.ts",
+      "default": "./dist/guest/retention.js"
     }
   },
   "private": true,
@@ -54,6 +62,8 @@
     "@better-auth/api-key": "1.6.23",
     "@better-auth/expo": "1.6.23",
     "@better-auth/passkey": "1.6.23",
+    "@repo/analytics": "workspace:*",
+    "@repo/api": "workspace:*",
     "@repo/database": "workspace:*",
     "@repo/transactional": "workspace:*",
     "@simplewebauthn/browser": "13.3.0",

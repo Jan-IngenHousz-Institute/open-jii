@@ -18,6 +18,13 @@ export const zExperimentContributor = z.object({
    * two and recover who is who. Treat it as an identifier for display keys only.
    */
   userId: z.string().min(1),
+  isGuest: z.boolean().default(false),
+  isFormerGuest: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Post-purge attribution signal. Current relational account and member reads return false; enrichment may set it after account removal.",
+    ),
   firstName: z.string(),
   lastName: z.string(),
   avatarUrl: z.string().nullable(),

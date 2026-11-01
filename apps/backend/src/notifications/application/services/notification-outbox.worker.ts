@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { OnApplicationShutdown } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
 import { z } from "zod";
@@ -11,6 +11,8 @@ import {
 
 import { ErrorCodes } from "../../../common/utils/error-codes";
 import type { Result } from "../../../common/utils/fp-utils";
+import { GUEST_DIRECTORY_PORT } from "../../../users/core/ports/guest-directory.port";
+import type { GuestDirectoryPort } from "../../../users/core/ports/guest-directory.port";
 import type { ClaimedDelivery } from "../../core/models/notification-delivery.model";
 import { NotificationDeliveryRepository } from "../../core/repositories/notification-delivery.repository";
 import { NotificationRepository } from "../../core/repositories/notification.repository";
@@ -90,6 +92,7 @@ export class NotificationOutboxWorker implements OnApplicationShutdown {
     private readonly deliveries: NotificationDeliveryRepository,
     private readonly notificationRepository: NotificationRepository,
     private readonly notificationEmail: NotificationEmailService,
+    @Inject(GUEST_DIRECTORY_PORT) private readonly guests: GuestDirectoryPort,
   ) {}
 
   @Interval(OUTBOX_INTERVAL, INTERVAL_MS)
@@ -278,6 +281,9 @@ export class NotificationOutboxWorker implements OnApplicationShutdown {
     }
 
     const ids = row.actorId === null ? [row.recipientId] : [row.recipientId, row.actorId];
+    if ((await this.guests.findGuestIds(ids)).length > 0) {
+      return this.recordSkipped(row, "Guest notifications are disabled");
+    }
     const users = await this.notificationRepository.findUsers([...new Set(ids)]);
     // A lookup that failed says nothing about the recipient, so this attempt retries.
     if (users.isFailure()) {

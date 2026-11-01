@@ -16,6 +16,7 @@ import { ErrorCodes } from "../../../common/utils/error-codes";
 import { AppError, assertSuccess, failure, success } from "../../../common/utils/fp-utils";
 import { claimedRow } from "../../../test/notification-deliveries";
 import { TestHarness } from "../../../test/test-harness";
+import { GUEST_DIRECTORY_PORT } from "../../../users/core/ports/guest-directory.port";
 import { NotificationDeliveryRepository } from "../../core/repositories/notification-delivery.repository";
 import { NotificationRepository } from "../../core/repositories/notification.repository";
 import { NotificationDispatchService } from "./notification-dispatch.service";
@@ -92,6 +93,19 @@ describe("NotificationOutboxWorker", () => {
 
     return row;
   }
+
+  it.each(["actor", "recipient"])("skips a queued email whose %s is a guest", async (side) => {
+    const { notificationId } = await queueOne();
+    // Dispatch refuses guests and no account becomes one, so the queued row is repointed.
+    const guest = await testApp.createTestUser({ isAnonymous: true });
+    await testApp.database
+      .update(notifications)
+      .set(side === "actor" ? { actorId: guest } : { recipientId: guest })
+      .where(eq(notifications.id, notificationId));
+    const result = await worker.drain();
+    expect(result.skipped).toBe(1);
+    expect(sendSubmitted).not.toHaveBeenCalled();
+  });
 
   const deliveryRows = () => testApp.database.select().from(notificationDeliveries);
 
@@ -368,6 +382,7 @@ describe("NotificationOutboxWorker", () => {
         new NotificationDeliveryRepository(secondary.database),
         testApp.module.get(NotificationRepository),
         testApp.module.get(NotificationEmailService),
+        testApp.module.get(GUEST_DIRECTORY_PORT),
       );
 
       const [first, second] = await Promise.all([worker.drain(), otherTask.drain()]);
@@ -410,6 +425,7 @@ describe("NotificationOutboxWorker", () => {
         deliveryRepository,
         testApp.module.get(NotificationRepository),
         testApp.module.get(NotificationEmailService),
+        testApp.module.get(GUEST_DIRECTORY_PORT),
       );
       const drain = vi
         .spyOn(real, "drain")
@@ -516,6 +532,7 @@ describe("NotificationOutboxWorker", () => {
         deliveryRepository,
         testApp.module.get(NotificationRepository),
         testApp.module.get(NotificationEmailService),
+        testApp.module.get(GUEST_DIRECTORY_PORT),
       );
 
       expect(await impatient.drain()).toEqual({
@@ -541,6 +558,7 @@ describe("NotificationOutboxWorker", () => {
         deliveryRepository,
         testApp.module.get(NotificationRepository),
         testApp.module.get(NotificationEmailService),
+        testApp.module.get(GUEST_DIRECTORY_PORT),
       );
 
       // Shutdown is called while the first row is mid-send, as a signal would.
@@ -752,6 +770,7 @@ describe("NotificationOutboxWorker", () => {
       deliveryRepository,
       testApp.module.get(NotificationRepository),
       testApp.module.get(NotificationEmailService),
+      testApp.module.get(GUEST_DIRECTORY_PORT),
     );
 
     // Nothing is queued, so the first claim comes back empty; the nudge arriving in

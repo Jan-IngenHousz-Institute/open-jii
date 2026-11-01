@@ -8,7 +8,7 @@ export function PostHogSession() {
   const posthog = usePostHog();
   const { user } = useSession();
 
-  usePostHogIdentity(posthog, user?.id);
+  usePostHogIdentity(posthog, user?.id, user?.isAnonymous === true);
   useScreenViews(posthog);
 
   return null;

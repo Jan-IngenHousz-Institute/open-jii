@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common";
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
 import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
 import { EmailModule } from "../common/modules/email/services/email.module";
+import { GuestRepositoryModule } from "../users/guest-repository.module";
 // Services
 import { NotificationDispatchService } from "./application/services/notification-dispatch.service";
 import { NotificationEmailService } from "./application/services/notification-email.service";
@@ -26,7 +27,7 @@ import { NotificationRepository } from "./core/repositories/notification.reposit
 import { NotificationController } from "./presentation/notification.controller";
 
 @Module({
-  imports: [EmailModule, AnalyticsModule],
+  imports: [EmailModule, AnalyticsModule, GuestRepositoryModule],
   controllers: [NotificationController],
   providers: [
     // Ports

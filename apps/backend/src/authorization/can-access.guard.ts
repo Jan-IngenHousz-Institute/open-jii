@@ -20,6 +20,8 @@ import { AuthorizationService } from "./authorization.service";
 export const CAN_ACCESS_KEY = "can-access";
 
 export interface CanAccessMetadata {
+  /** Guest routes opt in explicitly; the resource policy still decides access. */
+  guest?: boolean;
   resource: ResourceType;
   action: ResourceAction;
   /**

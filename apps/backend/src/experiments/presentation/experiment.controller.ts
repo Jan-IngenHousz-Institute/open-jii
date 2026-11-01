@@ -119,7 +119,7 @@ export class ExperimentController {
     });
   }
 
-  @CanAccess({ resource: "experiment", action: "read" })
+  @CanAccess({ guest: true, resource: "experiment", action: "read" })
   @Implement(experimentContract.getExperiment)
   getExperiment(@Session() session: UserSession) {
     return implement(experimentContract.getExperiment).handler(async ({ input }) => {
@@ -131,7 +131,7 @@ export class ExperimentController {
     });
   }
 
-  @CanAccess({ resource: "experiment", action: "read" })
+  @CanAccess({ guest: true, resource: "experiment", action: "read" })
   @Implement(experimentContract.getExperimentAccess)
   getExperimentAccess(@Session() session: UserSession) {
     return implement(experimentContract.getExperimentAccess).handler(async ({ input }) => {

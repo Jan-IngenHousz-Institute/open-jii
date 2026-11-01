@@ -108,7 +108,11 @@ export function ExperimentDetailsCard({
   // Anyone who already contributes has nothing to request; `canContribute` is the
   // server's answer to "is this person already a collaborator".
   const canRequestToJoin =
-    currentUserId && !canContribute && !isArchived && experiment.visibility === "public";
+    currentUserId &&
+    !canContribute &&
+    !isArchived &&
+    experiment.visibility === "public" &&
+    experiment.organizationType !== "demo";
 
   useEffect(() => {
     // Enable transitions only after the initial state is painted

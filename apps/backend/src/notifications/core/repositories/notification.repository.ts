@@ -135,7 +135,7 @@ export class NotificationRepository {
         })
         .from(users)
         .leftJoin(profiles, eq(profiles.userId, users.id))
-        .where(inArray(users.id, ids));
+        .where(and(inArray(users.id, ids), eq(users.isAnonymous, false)));
     });
   }
 

@@ -95,7 +95,7 @@ export class WorkbookController {
     });
   }
 
-  @CanAccess({ resource: "workbook", action: "read" })
+  @CanAccess({ guest: true, resource: "workbook", action: "read" })
   @Implement(workbookContract.getWorkbook)
   getWorkbook(@Session() session: UserSession) {
     return implement(workbookContract.getWorkbook).handler(async ({ input }) => {
@@ -161,7 +161,7 @@ export class WorkbookController {
     });
   }
 
-  @CanAccess({ resource: "workbook", action: "read" })
+  @CanAccess({ guest: true, resource: "workbook", action: "read" })
   @Implement(workbookContract.listWorkbookVersions)
   listWorkbookVersions() {
     return implement(workbookContract.listWorkbookVersions).handler(async ({ input }) => {
@@ -189,7 +189,7 @@ export class WorkbookController {
     });
   }
 
-  @CanAccess({ resource: "workbook", action: "read" })
+  @CanAccess({ guest: true, resource: "workbook", action: "read" })
   @Implement(workbookContract.getWorkbookVersion)
   getWorkbookVersion() {
     return implement(workbookContract.getWorkbookVersion).handler(async ({ input }) => {

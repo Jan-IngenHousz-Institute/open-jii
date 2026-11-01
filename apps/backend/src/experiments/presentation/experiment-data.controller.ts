@@ -23,7 +23,7 @@ export class ExperimentDataController {
     private readonly getExperimentTableColumnsUseCase: GetExperimentTableColumnsUseCase,
   ) {}
 
-  @CanAccess({ resource: "experiment", action: "read" })
+  @CanAccess({ guest: true, resource: "experiment", action: "read" })
   @Implement(experimentDataContract.getExperimentTables)
   getExperimentTables(@Session() session: UserSession) {
     return implement(experimentDataContract.getExperimentTables).handler(async ({ input }) => {
@@ -35,7 +35,7 @@ export class ExperimentDataController {
     });
   }
 
-  @CanAccess({ resource: "experiment", action: "read" })
+  @CanAccess({ guest: true, resource: "experiment", action: "read" })
   @Implement(experimentDataContract.getExperimentData)
   getExperimentData(@Session() session: UserSession) {
     return implement(experimentDataContract.getExperimentData).handler(async ({ input }) => {
@@ -48,7 +48,7 @@ export class ExperimentDataController {
     });
   }
 
-  @CanAccess({ resource: "experiment", action: "read" })
+  @CanAccess({ guest: true, resource: "experiment", action: "read" })
   @Implement(experimentDataContract.getDistinctColumnValues)
   getDistinctColumnValues(@Session() session: UserSession) {
     return implement(experimentDataContract.getDistinctColumnValues).handler(async ({ input }) => {
@@ -61,7 +61,7 @@ export class ExperimentDataController {
     });
   }
 
-  @CanAccess({ resource: "experiment", action: "read" })
+  @CanAccess({ guest: true, resource: "experiment", action: "read" })
   @Implement(experimentDataContract.getExperimentTableColumns)
   getExperimentTableColumns(@Session() session: UserSession) {
     return implement(experimentDataContract.getExperimentTableColumns).handler(

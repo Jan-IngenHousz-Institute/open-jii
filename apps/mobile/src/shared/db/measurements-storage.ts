@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { eq, and, gte, lt, inArray, count, desc } from "drizzle-orm";
+import { eq, and, or, gte, lt, inArray, count, desc, isNull } from "drizzle-orm";
 import { DateTime, Duration } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -106,6 +106,7 @@ async function ensureMigrated(): Promise<void> {
 export async function saveMeasurement(
   upload: Measurement,
   status: MeasurementStatus,
+  owner?: { userId: string; isGuest: boolean | null } | null,
 ): Promise<string> {
   await ensureMigrated();
   const id = uuidv4();
@@ -114,6 +115,12 @@ export async function saveMeasurement(
     .values({
       id,
       status,
+      ownerUserId:
+        owner?.userId ??
+        (typeof upload.measurementResult.user_id === "string"
+          ? upload.measurementResult.user_id
+          : null),
+      ownerIsGuest: owner === undefined ? false : (owner?.isGuest ?? null),
       topic: upload.topic,
       measurementResult: compressForStorage(upload.measurementResult),
       experimentName: upload.metadata.experimentName,
@@ -127,6 +134,27 @@ export async function saveMeasurement(
     })
     .run();
   return id;
+}
+
+export async function resolveMeasurementOwner(
+  id: string,
+  userId: string,
+  isGuest: boolean,
+): Promise<boolean> {
+  await ensureMigrated();
+  return (
+    db
+      .update(measurements)
+      .set({ ownerIsGuest: isGuest })
+      .where(
+        and(
+          eq(measurements.id, id),
+          eq(measurements.ownerUserId, userId),
+          isNull(measurements.ownerIsGuest),
+        ),
+      )
+      .run().changes === 1
+  );
 }
 
 // Computed at save/update time so the list query never decompresses
@@ -198,6 +226,7 @@ function safeParseQuestionsText(text: string | null, id: string): AnswerData[] {
 
 export interface StoredMeasurement {
   id: string;
+  owner?: { userId: string; isGuest: boolean | null };
   status: MeasurementStatus;
   data: Measurement;
 }
@@ -396,12 +425,17 @@ export async function getMeasurement(id: string): Promise<StoredMeasurement | nu
   try {
     const row = db.select().from(measurements).where(eq(measurements.id, id)).get();
     if (!row) return null;
+    const measurementResult = decompressFromStorage<Record<string, unknown>>(row.measurementResult);
+    const ownerId = row.ownerUserId ?? measurementResult.user_id;
     return {
       id: row.id,
+      ...(typeof ownerId === "string"
+        ? { owner: { userId: ownerId, isGuest: row.ownerIsGuest } }
+        : {}),
       status: row.status,
       data: {
         topic: row.topic,
-        measurementResult: decompressFromStorage(row.measurementResult),
+        measurementResult,
         metadata: {
           experimentName: row.experimentName,
           protocolName: row.protocolName,
@@ -569,9 +603,14 @@ export async function pruneExpiredMeasurements(): Promise<void> {
     const cutoff = new Date(Date.now() - MAX_AGE_MS);
     const result = db
       .delete(measurements)
-      .where(and(eq(measurements.status, "successful"), lt(measurements.createdAt, cutoff)))
+      .where(
+        and(
+          lt(measurements.createdAt, cutoff),
+          or(eq(measurements.status, "successful"), eq(measurements.ownerIsGuest, true)),
+        ),
+      )
       .run();
-    log.info("pruned successful uploads", {
+    log.info("pruned expired local measurements", {
       count: result.changes,
       older_than_days: Duration.fromMillis(MAX_AGE_MS).as("days"),
     });

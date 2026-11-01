@@ -84,6 +84,19 @@ describe("ExperimentRepository", () => {
   });
 
   describe("listCollaborators credit", () => {
+    it("excludes anonymous grant targets even when they have an activated legacy profile", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Synthetic grant check",
+        userId: testUserId,
+      });
+      const guest = await testApp.createTestUser({ name: "Synthetic visitor", isAnonymous: true });
+      await testApp.addExperimentCollaborator(experiment.id, guest);
+      const result = await repository.listCollaborators(experiment.id);
+      assertSuccess(result);
+      expect(result.value.collaborators.some((person) => person.userId === guest)).toBe(false);
+      expect(result.value.collaborators.some((person) => person.userId === testUserId)).toBe(true);
+    });
+
     it("credits the creator themselves, not the org owner in their place", async () => {
       const org = await testApp.createOrganization();
       const orgOwner = await testApp.createTestUser({ name: "Olive Owner" });

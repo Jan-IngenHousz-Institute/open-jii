@@ -66,7 +66,7 @@ function wrapEndpoint<Endpoint extends object>(
  */
 export const openJiiOrganization = () => {
   const plugin = organizationPlugin({
-    allowUserToCreateOrganization: true,
+    allowUserToCreateOrganization: (user) => !(user as { isAnonymous?: boolean }).isAnonymous,
     creatorRole: "owner",
     // `defaultTeam` off: with teams enabled Better Auth otherwise creates a team
     // named after the organization on every create, which would show up in the

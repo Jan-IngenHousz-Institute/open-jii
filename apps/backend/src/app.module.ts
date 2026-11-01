@@ -14,6 +14,7 @@ import { pinoConfig } from "@repo/analytics";
 import { auth } from "@repo/auth/server";
 
 import { AuthorizationModule } from "./authorization/authorization.module";
+import { GuestGuard } from "./authorization/guest.guard";
 import analyticsConfig from "./common/config/analytics.config";
 import awsConfig from "./common/config/aws.config";
 import databaseConfig from "./common/config/database.config";
@@ -107,6 +108,7 @@ import { WorkbookModule } from "./workbooks/workbook.module";
       provide: APP_GUARD,
       useClass: AuthGuard,
     },
+    { provide: APP_GUARD, useClass: GuestGuard },
     {
       provide: APP_INTERCEPTOR,
       useClass: ErrorContextInterceptor,

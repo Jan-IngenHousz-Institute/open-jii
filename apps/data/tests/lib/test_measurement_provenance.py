@@ -8,13 +8,15 @@ from pathlib import Path
 
 import pytest
 from openjii.centrum import large_iot_schema, sensor_schema
-from openjii.centrum.measurement_provenance import is_guest_upload
+from openjii.centrum.measurement_provenance import parse_large_iot_key
 from pyspark.sql import functions as F
 
 pytestmark = pytest.mark.spark
 ROOT = Path(__file__).parents[2] / "src/pipelines/centrum"
-EXPERIMENT = "11111111-1111-4111-8111-111111111111"
-UPLOAD = "22222222-2222-4222-8222-222222222222"
+EXPERIMENT = "abcdef01-1111-4111-8111-111111111111"
+UPLOAD = "abcdef02-2222-4222-8222-222222222222"
+UPLOADER = "abcdef03-3333-4333-8333-333333333333"
+FORGED_USER = "abcdef04-4444-4444-8444-444444444444"
 
 
 @pytest.fixture
@@ -106,10 +108,10 @@ def test_large_upload_markers_survive_silver_and_gold(pipelines, spark, fake_dlt
     rows = [
         (
             json.dumps(payload("guest-simulated", simulated=True)),
-            f"large-iot/{EXPERIMENT}/guest/{UPLOAD}.json",
+            f"large-iot/{EXPERIMENT}/guest/{UPLOADER}/{UPLOAD}.json",
         ),
-        (json.dumps(payload("guest-real")), f"large-iot/{EXPERIMENT}/guest/{UPLOAD}.json"),
-        (json.dumps(payload("real", is_guest=True)), f"large-iot/{EXPERIMENT}/{UPLOAD}.json"),
+        (json.dumps(payload("guest-real")), f"large-iot/{EXPERIMENT}/guest/{UPLOADER}/{UPLOAD}.json"),
+        (json.dumps(payload("real", is_guest=True)), f"large-iot/{EXPERIMENT}/{UPLOADER}/{UPLOAD}.json"),
         (json.dumps(payload("simulated:multispeq")), f"large-iot/{EXPERIMENT}/{UPLOAD}.json"),
     ]
     source = (
@@ -142,6 +144,7 @@ def test_guest_key_requires_exact_server_shape(spark):
         f"large-iot/{EXPERIMENT}/guest.json",
         f"large-iot/guest/{EXPERIMENT}/{UPLOAD}.json",
         valid + "/extra",
+        valid + "\n",
         "prefix/" + valid,
         valid.replace("/guest/", "/%67uest/"),
         valid.replace("/guest/", "/Guest/"),
@@ -150,8 +153,171 @@ def test_guest_key_requires_exact_server_shape(spark):
     ]
     result = (
         spark.createDataFrame(list(enumerate(paths)), "position int, path string")
-        .select("position", is_guest_upload(F.col("path")).alias("is_guest"))
+        .select("position", parse_large_iot_key(F.col("path"))["is_guest"].alias("is_guest"))
         .orderBy("position")
         .collect()
     )
     assert [row.is_guest for row in result] == [True, True] + [False] * (len(paths) - 2)
+
+
+def test_upload_key_parser_accepts_current_and_legacy_keys(spark):
+    cases = []
+    for prefix in ("", "s3://bucket/", "s3a://bucket/"):
+        for guest in (False, True):
+            for uploader in (None, UPLOADER):
+                for uppercase in (False, True):
+                    experiment = EXPERIMENT.upper() if uppercase else EXPERIMENT
+                    user = UPLOADER.upper() if uppercase else UPLOADER
+                    upload = UPLOAD.upper() if uppercase else UPLOAD
+                    path = f"{prefix}large-iot/{experiment}/"
+                    path += "guest/" if guest else ""
+                    path += f"{user}/" if uploader else ""
+                    path += f"{upload}.json"
+                    cases.append((path, EXPERIMENT, uploader, guest, True))
+    cases.extend(
+        (path, None, None, False, False)
+        for path in (
+            None,
+            "",
+        )
+    )
+    cases.extend(
+        (path, EXPERIMENT, None, False, False)
+        for path in (
+            f"large-iot/{EXPERIMENT}/file.json",
+            f"prefix/large-iot/{EXPERIMENT}/{UPLOADER}/{UPLOAD}.json",
+            f"large-iot/{EXPERIMENT}/guest/not-a-user/{UPLOAD}.json",
+            f"large-iot/{EXPERIMENT}/{UPLOADER}/{UPLOAD}.json/extra",
+            f"large-iot/{EXPERIMENT}/{UPLOADER}/{UPLOAD}.json\n",
+        )
+    )
+    source = spark.createDataFrame(
+        [(i, case[0]) for i, case in enumerate(cases)], "position int, path string"
+    )
+    result = (
+        source.select("position", parse_large_iot_key(F.col("path")).alias("key"))
+        .orderBy("position")
+        .collect()
+    )
+    assert [
+        (row.key.experiment_id, row.key.uploader_id, row.key.is_guest, row.key.is_valid) for row in result
+    ] == [case[1:] for case in cases]
+
+
+def test_large_upload_authors_follow_the_signed_key_through_gold(pipelines, spark, fake_dlt, monkeypatch):
+    annotations = [
+        {
+            "id": UPLOAD,
+            "type": "comment",
+            "content": {"text": "Field note"},
+            "createdBy": FORGED_USER,
+            "createdByName": "Forged researcher",
+            "createdAt": "2026-01-01T10:00:00Z",
+        },
+        {"type": "flag", "content": {"flagType": "interesting"}},
+    ]
+    cases = [
+        ("researcher", f"{UPLOADER}/{UPLOAD}", UPLOADER, False),
+        ("guest", f"guest/{UPLOADER}/{UPLOAD}", UPLOADER, True),
+        ("uppercase-researcher", f"{UPLOADER.upper()}/{UPLOAD.upper()}", UPLOADER, False),
+        ("uppercase-guest", f"guest/{UPLOADER.upper()}/{UPLOAD.upper()}", UPLOADER, True),
+        ("legacy-researcher", UPLOAD, FORGED_USER, False),
+        ("legacy-guest", f"guest/{UPLOAD}", None, True),
+    ]
+    rows = [
+        (
+            json.dumps(
+                payload(
+                    device,
+                    user_id=FORGED_USER,
+                    experiment_id=FORGED_USER,
+                    annotations=annotations,
+                )
+            ),
+            f"s3://bucket/large-iot/{EXPERIMENT.upper()}/{suffix}.json",
+        )
+        for device, suffix, _, _ in cases
+    ]
+    for device, value in (("empty-annotations", []), ("null-annotations", None)):
+        rows.append(
+            (
+                json.dumps(payload(device, user_id=FORGED_USER, annotations=value)),
+                f"large-iot/{EXPERIMENT}/guest/{UPLOADER}/{UPLOAD}.json",
+            )
+        )
+    source = (
+        spark.createDataFrame(rows, "body string, path string")
+        .select(
+            F.from_json("body", large_iot_schema).alias("parsed"),
+            F.struct(F.col("path").alias("file_path")).alias("_metadata"),
+        )
+        .select("parsed.*", "_metadata")
+    )
+    created_at = source.select("annotations").first().annotations[0].createdAt
+    bronze = pipelines("bronze/raw_large_data").extract_large_data(source)
+    bronze_rows = {row.device_id: row for row in bronze.collect()}
+    assert bronze_rows["empty-annotations"].annotations == []
+    assert bronze_rows["null-annotations"].annotations is None
+    sources = {"raw_large_data": bronze}
+    monkeypatch.setattr(fake_dlt, "read_stream", sources.__getitem__)
+    sources["clean_data"] = pipelines("silver/clean_data").clean_data_large_iot()
+    gold = pipelines("gold/experiment_raw_data").experiment_raw_data()
+    gold_rows = {row.device_id: row for row in gold.collect()}
+    for result in (bronze_rows, gold_rows):
+        for device, _, expected_user, guest in cases:
+            row = result[device]
+            assert (row.experiment_id, row.user_id, row.is_guest) == (EXPERIMENT, expected_user, guest)
+            assert len(row.annotations) == 2
+            assert row.annotations[0].id == UPLOAD
+            assert row.annotations[0].content.text == "Field note"
+            assert row.annotations[0].createdAt == created_at
+            assert row.annotations[1].content.flagType == "interesting"
+            expected_authors = (
+                [(FORGED_USER, "Forged researcher"), (None, None)]
+                if device == "legacy-researcher"
+                else [(expected_user, None), (expected_user, None)]
+            )
+            assert [(a.createdBy, a.createdByName) for a in row.annotations] == expected_authors
+
+
+def test_unparsed_large_upload_keys_never_trust_payload_authors_or_experiment(pipelines, spark):
+    paths = [
+        (f"s3://bucket/large-iot/{EXPERIMENT.upper()}/GUEST/{UPLOADER}/{UPLOAD}.json", EXPERIMENT),
+        (f"large-iot/{EXPERIMENT}/{UPLOADER}/{UPLOAD}.json\n", EXPERIMENT),
+        ("s3://bucket/unknown/file.json", None),
+        (None, None),
+    ]
+    body = json.dumps(
+        payload(
+            "forged",
+            experiment_id=FORGED_USER,
+            user_id=FORGED_USER,
+            annotations=[
+                {
+                    "type": "comment",
+                    "content": {"text": "Keep this note"},
+                    "createdBy": FORGED_USER,
+                    "createdByName": "Forged researcher",
+                }
+            ],
+        )
+    )
+    source = (
+        spark.createDataFrame(
+            [(i, path, body) for i, (path, _) in enumerate(paths)],
+            "position int, path string, body string",
+        )
+        .select(
+            "position",
+            F.from_json("body", large_iot_schema).alias("parsed"),
+            F.struct(F.col("path").alias("file_path")).alias("_metadata"),
+        )
+        .select("position", "parsed.*", "_metadata")
+    )
+    result = pipelines("bronze/raw_large_data").extract_large_data(source).orderBy("position").collect()
+    for row, (_, experiment) in zip(result, paths, strict=True):
+        assert row.experiment_id == experiment
+        assert row.user_id is None
+        assert row.is_guest is False
+        assert [(a.createdBy, a.createdByName) for a in row.annotations] == [(None, None)]
+        assert row.annotations[0].content.text == "Keep this note"

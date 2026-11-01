@@ -350,19 +350,20 @@ describe("AwsAdapter", () => {
   describe("getIotUploadUrl", () => {
     it("delegates to AwsS3Service and returns the upload URL on success", async () => {
       const mockUploadUrl: IotUploadUrl = {
-        uploadUrl: "https://s3.amazonaws.com/bucket/large-iot/exp-123/uuid.json?signed=1",
-        key: "large-iot/exp-123/uuid.json",
+        uploadUrl:
+          "https://s3.amazonaws.com/bucket/large-iot/exp-123/uploader-id/uuid.json?signed=1",
+        key: "large-iot/exp-123/uploader-id/uuid.json",
         expiresAt: new Date("2026-05-21T00:00:00Z"),
       };
 
       vi.spyOn(awsS3Service, "getIotUploadUrl").mockResolvedValue(success(mockUploadUrl));
 
-      const result = await awsAdapter.getIotUploadUrl("exp-123");
+      const result = await awsAdapter.getIotUploadUrl("exp-123", "uploader-id");
 
       assertSuccess(result);
       expect(result.value).toEqual(mockUploadUrl);
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(awsS3Service.getIotUploadUrl).toHaveBeenCalledWith("exp-123");
+      expect(awsS3Service.getIotUploadUrl).toHaveBeenCalledWith("exp-123", "uploader-id");
     });
 
     it("propagates failure from AwsS3Service", async () => {
@@ -370,7 +371,7 @@ describe("AwsAdapter", () => {
 
       vi.spyOn(awsS3Service, "getIotUploadUrl").mockResolvedValue(failure(error));
 
-      const result = await awsAdapter.getIotUploadUrl("exp-123");
+      const result = await awsAdapter.getIotUploadUrl("exp-123", "uploader-id");
 
       assertFailure(result);
       expect(result.error.message).toBe("S3 presign failed");

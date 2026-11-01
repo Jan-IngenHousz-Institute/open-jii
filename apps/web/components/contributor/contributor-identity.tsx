@@ -1,5 +1,9 @@
 "use client";
 
+import { personDisplayName } from "@/util/person-display-name";
+
+import { zExperimentDataContributor } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { useTranslation } from "@repo/i18n";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/avatar";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -7,6 +11,8 @@ interface ContributorStruct {
   id: string;
   name: string;
   avatar: string | null;
+  isGuest?: boolean;
+  isFormerGuest?: boolean;
 }
 
 interface ContributorIdentityProps {
@@ -26,42 +32,30 @@ export function ContributorIdentity({
   size = "default",
   className,
 }: ContributorIdentityProps) {
+  const { t } = useTranslation();
   const struct = parseContributor(data);
   if (!struct) {
     return null;
   }
-  const { name, avatar } = struct;
-  if (!name || name.trim().length === 0) {
+  const { name, avatar, isGuest, isFormerGuest } = struct;
+  if ((!name || name.trim().length === 0) && !isGuest && !isFormerGuest) {
     return null;
   }
+  const label = personDisplayName({ firstName: name, isGuest, isFormerGuest }, t);
 
   const isCompact = size === "compact";
   return (
     <div className={cn("inline-flex items-center gap-2", className)}>
       <Avatar className={cn("rounded-full", isCompact ? "h-5 w-5" : "h-6 w-6")}>
-        <AvatarImage src={avatar ?? undefined} alt={name} />
+        <AvatarImage src={avatar ?? undefined} alt={label} />
         <AvatarFallback className={cn("rounded-full", isCompact ? "text-[10px]" : "text-xs")}>
-          {getInitials(name)}
+          {getInitials(label)}
         </AvatarFallback>
       </Avatar>
       <span className={cn("truncate font-medium", isCompact ? "text-xs" : "max-w-[120px] text-sm")}>
-        {name}
+        {label}
       </span>
     </div>
-  );
-}
-
-function isContributorStruct(value: unknown): value is ContributorStruct {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  if (!("id" in value) || !("name" in value) || !("avatar" in value)) {
-    return false;
-  }
-  return (
-    typeof value.id === "string" &&
-    typeof value.name === "string" &&
-    (value.avatar === null || typeof value.avatar === "string")
   );
 }
 
@@ -71,14 +65,11 @@ function parseContributor(
   if (data == null) {
     return null;
   }
-  if (typeof data === "object") {
-    return isContributorStruct(data) ? data : null;
-  }
   try {
-    const parsed: unknown = JSON.parse(data);
-    if (isContributorStruct(parsed)) {
-      return parsed;
-    }
+    const parsed = zExperimentDataContributor.safeParse(
+      typeof data === "string" ? JSON.parse(data) : data,
+    );
+    return parsed.success ? parsed.data : null;
   } catch {
     return null;
   }

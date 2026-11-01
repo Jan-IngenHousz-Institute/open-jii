@@ -7,7 +7,9 @@ import { expect } from "vitest";
 import {
   DATA_QUERY_MAX_LIMIT,
   WellKnownColumnTypes,
+  zExperimentDataContributor,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { db, eq, users } from "@repo/database";
 
 import type { AggregationSpec } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
 import {
@@ -69,6 +71,112 @@ describe("ExperimentDataRepository", () => {
 
   afterAll(async () => {
     await testApp.teardown();
+  });
+
+  describe("trusted measured-contributor attribution", () => {
+    it.each(["page", "projected", "grouped", "distinct"])(
+      "reads current guest status in %s results",
+      async (mode) => {
+        const [visitor] = await db
+          .insert(users)
+          .values({
+            name: "Synthetic",
+            email: `${crypto.randomUUID()}@guest.openjii.invalid`,
+            isAnonymous: true,
+          })
+          .returning();
+        const metadata: ExperimentTableMetadata[] = [
+          {
+            identifier: "raw_data",
+            tableType: "static",
+            displayName: null,
+            rowCount: 1,
+            latestRowAt: null,
+            schemaRevision: null,
+          },
+        ];
+        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+        const build = vi
+          .spyOn(databricksPort, "buildExperimentQuery")
+          .mockReturnValue(success("SELECT synthetic"));
+        vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+          success({
+            columns: [
+              {
+                name: "contributor",
+                type_name: "STRUCT",
+                type_text: WellKnownColumnTypes.CONTRIBUTOR,
+                position: 0,
+              },
+              { name: "is_guest", type_name: "BOOLEAN", type_text: "BOOLEAN", position: 1 },
+            ],
+            rows: [
+              [JSON.stringify({ id: visitor.id, name: "Synthetic", avatar: "old-cache" }), "true"],
+            ],
+            totalRows: 1,
+            truncated: false,
+          }),
+        );
+        const read = async () => {
+          if (mode === "distinct") {
+            const result = await repository.getDistinctColumnValues({
+              experimentId: mockExperiment.id,
+              experiment: mockExperiment,
+              tableName: "raw_data",
+              column: "contributor",
+              limit: 20,
+            });
+            assertSuccess(result);
+            return zExperimentDataContributor.parse(JSON.parse(String(result.value.values[0])));
+          }
+          const result = await repository.getTableData({
+            experimentId: mockExperiment.id,
+            experiment: mockExperiment,
+            tableName: "raw_data",
+            ...(mode === "page" ? { page: 1, pageSize: 10 } : {}),
+            ...(mode === "projected" ? { columns: ["contributor"] } : {}),
+            ...(mode === "grouped"
+              ? { aggregation: { groupBy: [{ column: "contributor" }] } }
+              : {}),
+          });
+          assertSuccess(result);
+          const data = result.value[0].data;
+          expect(data).toBeDefined();
+          if (mode === "projected" || mode === "grouped") {
+            expect(data?.columns.map(({ name }) => name)).toEqual(["contributor"]);
+            expect(data?.rows[0]).not.toHaveProperty("is_guest");
+          }
+          return zExperimentDataContributor.parse(JSON.parse(data?.rows[0].contributor ?? "null"));
+        };
+        expect(await read()).toEqual({
+          id: visitor.id,
+          name: "Synthetic",
+          avatar: null,
+          isGuest: true,
+          isFormerGuest: false,
+        });
+        if (mode === "projected" || mode === "distinct") {
+          expect(build).toHaveBeenCalledWith(
+            expect.objectContaining({ columns: ["contributor", "is_guest"] }),
+          );
+        }
+        if (mode === "grouped") {
+          expect(build).toHaveBeenCalledWith(
+            expect.objectContaining({
+              aggregation: { groupBy: [{ column: "contributor" }, { column: "is_guest" }] },
+            }),
+          );
+        }
+        await db.delete(users).where(eq(users.id, visitor.id));
+        expect(await read()).toEqual({
+          id: visitor.id,
+          name: "",
+          avatar: null,
+          isGuest: true,
+          isFormerGuest: true,
+        });
+      },
+    );
   });
 
   describe("getTableData", () => {

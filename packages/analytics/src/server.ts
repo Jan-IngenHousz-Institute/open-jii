@@ -1,5 +1,5 @@
 import type { FeatureFlagKey } from "./feature-flags";
-import { FEATURE_FLAG_DEFAULTS } from "./feature-flags";
+import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "./feature-flags";
 import type { PostHogServerConfig, PostHogService, ServerEvent } from "./posthog-config";
 
 /**
@@ -114,6 +114,20 @@ export async function isFeatureFlagEnabled(
     (await evaluateFeatureFlag(flagKey, distinctId, personProperties)) ??
     FEATURE_FLAG_DEFAULTS[flagKey]
   );
+}
+
+export async function isDemoModeEnabled(): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      isFeatureFlagEnabled(FEATURE_FLAGS.DEMO_MODE),
+      new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(false), 2_000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export interface ExceptionReport {

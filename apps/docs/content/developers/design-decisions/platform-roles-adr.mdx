@@ -40,9 +40,9 @@ the app.
   writes the role and an `audit_logs` row in one transaction. The row's actor is
   the account the engineer names; the GitHub run, who started it and who started
   the attempt beside it are the identity GitHub vouches for.
-- A role counts only on a registered account that is neither banned nor deleted.
-  The same rule decides who holds a role, who is listed, who may act and who may
-  receive a grant. A revoke may still clear a role left on a deleted or banned
+- A role counts only on a registered account that is not a guest, banned or
+  deleted. The same rule decides who holds a role, who is listed, who may act
+  and who may receive a grant. A revoke may still clear a role left on a deleted or banned
   account, so the quarterly review can remove it.
 - On dev and prod it runs only inside the migration runner task, started by the
   Platform Roles Workflow. The workflow refuses any ref but `main` and any

@@ -97,7 +97,7 @@ describe("IotController", () => {
   describe("getUploadUrl", () => {
     const mockUploadUrl = {
       uploadUrl: "https://bucket.s3.amazonaws.com/presigned",
-      key: "large-iot/exp-id/uuid.json",
+      key: "large-iot/exp-id/uploader-id/uuid.json",
       expiresAt: new Date("2026-05-13T12:15:00Z"),
     };
 
@@ -107,7 +107,9 @@ describe("IotController", () => {
         userId: testUserId,
       });
 
-      vi.spyOn(awsAdapter, "getIotUploadUrl").mockResolvedValue(success(mockUploadUrl));
+      const signer = vi
+        .spyOn(awsAdapter, "getIotUploadUrl")
+        .mockResolvedValue(success(mockUploadUrl));
 
       const response = await testApp
         .post(testApp.resolveOrpcPath(contract.iot.getUploadUrl))
@@ -120,6 +122,7 @@ describe("IotController", () => {
         key: mockUploadUrl.key,
         expiresAt: mockUploadUrl.expiresAt.toISOString(),
       });
+      expect(signer).toHaveBeenCalledWith(experiment.id, testUserId);
     });
 
     it("should return 401 when user is not authenticated", async () => {

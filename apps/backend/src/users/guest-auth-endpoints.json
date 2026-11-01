@@ -1,0 +1,632 @@
+[
+  {
+    "name": "acceptInvitation",
+    "path": "/organization/accept-invitation",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "accountInfo",
+    "path": "/account-info",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "addMember",
+    "path": null,
+    "methods": ["POST"],
+    "classification": "server-only"
+  },
+  {
+    "name": "addTeamMember",
+    "path": "/organization/add-team-member",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "adminUpdateUser",
+    "path": "/admin/update-user",
+    "methods": ["POST"],
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "banUser",
+    "path": "/admin/ban-user",
+    "methods": ["POST"],
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "callbackOAuth",
+    "path": "/callback/:id",
+    "methods": ["GET", "POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "cancelInvitation",
+    "path": "/organization/cancel-invitation",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "changeEmail",
+    "path": "/change-email",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "changeEmailEmailOTP",
+    "path": "/email-otp/change-email",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "changePassword",
+    "path": "/change-password",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "checkOrganizationSlug",
+    "path": "/organization/check-slug",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "checkVerificationOTP",
+    "path": "/email-otp/check-verification-otp",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "createApiKey",
+    "path": "/api-key/create",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "createInvitation",
+    "path": "/organization/invite-member",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "createOrganization",
+    "path": "/organization/create",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "createTeam",
+    "path": "/organization/create-team",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "createUser",
+    "path": "/admin/create-user",
+    "methods": ["POST"],
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "createVerificationOTP",
+    "path": null,
+    "methods": ["POST"],
+    "classification": "server-only"
+  },
+  {
+    "name": "deleteAllExpiredApiKeys",
+    "path": null,
+    "methods": ["POST"],
+    "classification": "server-only"
+  },
+  {
+    "name": "deleteAnonymousUser",
+    "path": "/delete-anonymous-user",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "deleteApiKey",
+    "path": "/api-key/delete",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "deleteOrganization",
+    "path": "/organization/delete",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "deletePasskey",
+    "path": "/passkey/delete-passkey",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "deleteUser",
+    "path": "/delete-user",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "deleteUserCallback",
+    "path": "/delete-user/callback",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "error",
+    "path": "/error",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "expoAuthorizationProxy",
+    "path": "/expo-authorization-proxy",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "forgetPasswordEmailOTP",
+    "path": "/forget-password/email-otp",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "generatePasskeyAuthenticationOptions",
+    "path": "/passkey/generate-authenticate-options",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "generatePasskeyRegistrationOptions",
+    "path": "/passkey/generate-register-options",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "getAccessToken",
+    "path": "/get-access-token",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "getActiveMember",
+    "path": "/organization/get-active-member",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "getActiveMemberRole",
+    "path": "/organization/get-active-member-role",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "getApiKey",
+    "path": "/api-key/get",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "getFullOrganization",
+    "path": "/organization/get-full-organization",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "getInvitation",
+    "path": "/organization/get-invitation",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "getSession",
+    "path": "/get-session",
+    "methods": ["GET", "POST"],
+    "classification": "session-read"
+  },
+  {
+    "name": "getUser",
+    "path": "/admin/get-user",
+    "methods": ["GET"],
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "getVerificationOTP",
+    "path": null,
+    "methods": ["GET"],
+    "classification": "server-only"
+  },
+  {
+    "name": "hasPermission",
+    "path": "/organization/has-permission",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "impersonateUser",
+    "path": "/admin/impersonate-user",
+    "methods": ["POST"],
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "leaveOrganization",
+    "path": "/organization/leave",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "linkSocialAccount",
+    "path": "/link-social",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "listApiKeys",
+    "path": "/api-key/list",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "listInvitations",
+    "path": "/organization/list-invitations",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "listMembers",
+    "path": "/organization/list-members",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "listOrganizations",
+    "path": "/organization/list",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "listOrganizationTeams",
+    "path": "/organization/list-teams",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "listPasskeys",
+    "path": "/passkey/list-user-passkeys",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "listSessions",
+    "path": "/list-sessions",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "listTeamMembers",
+    "path": "/organization/list-team-members",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "listUserAccounts",
+    "path": "/list-accounts",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "listUserInvitations",
+    "path": "/organization/list-user-invitations",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "listUsers",
+    "path": "/admin/list-users",
+    "methods": ["GET"],
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "listUserSessions",
+    "path": "/admin/list-user-sessions",
+    "methods": ["POST"],
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "listUserTeams",
+    "path": "/organization/list-user-teams",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "ok",
+    "path": "/ok",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "refreshToken",
+    "path": "/refresh-token",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "rejectInvitation",
+    "path": "/organization/reject-invitation",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "removeMember",
+    "path": "/organization/remove-member",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "removeTeam",
+    "path": "/organization/remove-team",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "removeTeamMember",
+    "path": "/organization/remove-team-member",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "removeUser",
+    "path": "/admin/remove-user",
+    "methods": ["POST"],
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "requestEmailChangeEmailOTP",
+    "path": "/email-otp/request-email-change",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "requestPasswordReset",
+    "path": "/request-password-reset",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "requestPasswordResetCallback",
+    "path": "/reset-password/:token",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "requestPasswordResetEmailOTP",
+    "path": "/email-otp/request-password-reset",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "resetPassword",
+    "path": "/reset-password",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "resetPasswordEmailOTP",
+    "path": "/email-otp/reset-password",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "revokeOtherSessions",
+    "path": "/revoke-other-sessions",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "revokeSession",
+    "path": "/revoke-session",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "revokeSessions",
+    "path": "/revoke-sessions",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "revokeUserSession",
+    "path": "/admin/revoke-user-session",
+    "methods": ["POST"],
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "revokeUserSessions",
+    "path": "/admin/revoke-user-sessions",
+    "methods": ["POST"],
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "sendVerificationEmail",
+    "path": "/send-verification-email",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "sendVerificationOTP",
+    "path": "/email-otp/send-verification-otp",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "setActiveOrganization",
+    "path": "/organization/set-active",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "setActiveTeam",
+    "path": "/organization/set-active-team",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "setPassword",
+    "path": null,
+    "methods": ["POST"],
+    "classification": "server-only"
+  },
+  {
+    "name": "setRole",
+    "path": "/admin/set-role",
+    "methods": ["POST"],
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "setUserPassword",
+    "path": "/admin/set-user-password",
+    "methods": ["POST"],
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "signInAnonymous",
+    "path": "/sign-in/anonymous",
+    "methods": ["POST"],
+    "classification": "reentry:400"
+  },
+  {
+    "name": "signInEmail",
+    "path": "/sign-in/email",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "signInEmailOTP",
+    "path": "/sign-in/email-otp",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "signInSocial",
+    "path": "/sign-in/social",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "signOut",
+    "path": "/sign-out",
+    "methods": ["POST"],
+    "classification": "session-exit"
+  },
+  {
+    "name": "signUpEmail",
+    "path": "/sign-up/email",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "stopImpersonating",
+    "path": "/admin/stop-impersonating",
+    "methods": ["POST"],
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "unbanUser",
+    "path": "/admin/unban-user",
+    "methods": ["POST"],
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "unlinkAccount",
+    "path": "/unlink-account",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "updateApiKey",
+    "path": "/api-key/update",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "updateMemberRole",
+    "path": "/organization/update-member-role",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "updateOrganization",
+    "path": "/organization/update",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "updatePasskey",
+    "path": "/passkey/update-passkey",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "updateSession",
+    "path": "/update-session",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "updateTeam",
+    "path": "/organization/update-team",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "updateUser",
+    "path": "/update-user",
+    "methods": ["POST"],
+    "classification": "name-only"
+  },
+  {
+    "name": "userHasPermission",
+    "path": "/admin/has-permission",
+    "methods": ["POST"],
+    "classification": "unreachable:404"
+  },
+  {
+    "name": "verifyApiKey",
+    "path": null,
+    "methods": ["POST"],
+    "classification": "server-only"
+  },
+  {
+    "name": "verifyEmail",
+    "path": "/verify-email",
+    "methods": ["GET"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "verifyEmailOTP",
+    "path": "/email-otp/verify-email",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "verifyPasskeyAuthentication",
+    "path": "/passkey/verify-authentication",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "verifyPasskeyRegistration",
+    "path": "/passkey/verify-registration",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  },
+  {
+    "name": "verifyPassword",
+    "path": "/verify-password",
+    "methods": ["POST"],
+    "classification": "deny:403"
+  }
+]

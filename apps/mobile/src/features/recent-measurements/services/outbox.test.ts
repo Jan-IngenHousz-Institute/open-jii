@@ -1,9 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Transport } from "~/features/connection/services/mqtt/mqtt-transport";
 
+import type { UploadIdentity } from "./outbox";
+
 const {
   mockGetMeasurementById,
   mockGetMeasurementIds,
+  mockResolveMeasurementOwner,
   mockMarkAsSuccessful,
   mockMarkAsFailed,
   mockOnlineIsOnline,
@@ -12,6 +15,7 @@ const {
 } = vi.hoisted(() => ({
   mockGetMeasurementById: vi.fn(),
   mockGetMeasurementIds: vi.fn(),
+  mockResolveMeasurementOwner: vi.fn(),
   mockMarkAsSuccessful: vi.fn(),
   mockMarkAsFailed: vi.fn(),
   mockOnlineIsOnline: vi.fn(() => true),
@@ -22,6 +26,7 @@ const {
 vi.mock("~/shared/db/measurements-storage", () => ({
   getMeasurementById: mockGetMeasurementById,
   getMeasurementIds: mockGetMeasurementIds,
+  resolveMeasurementOwner: mockResolveMeasurementOwner,
   markAsSuccessful: mockMarkAsSuccessful,
   markAsFailed: mockMarkAsFailed,
   UNSYNCED_STATUSES: ["pending", "failed"],
@@ -61,6 +66,7 @@ async function freshOutbox(
     concurrency?: number;
     retryBackoffMs?: readonly number[];
     largeTransport?: Transport;
+    getIdentity?: () => UploadIdentity | null;
   },
 ) {
   vi.resetModules();
@@ -72,6 +78,7 @@ async function freshOutbox(
   const outbox = outboxMod.createOutbox({
     transport,
     largeTransport: opts?.largeTransport ?? makeTransport(),
+    getIdentity: opts?.getIdentity ?? (() => ({ userId: "user-1", isGuest: false })),
     concurrency: opts?.concurrency ?? 1,
     retryBackoffMs: opts?.retryBackoffMs ?? [],
   });
@@ -126,9 +133,10 @@ const row = (
 ) => ({
   id: overrides.id ?? "row-1",
   status: overrides.status ?? "pending",
+  owner: { userId: "user-1", isGuest: false },
   data: {
     topic: overrides.topic ?? "exp/proto",
-    measurementResult: overrides.result ?? { foo: 1 },
+    measurementResult: { user_id: "user-1", ...(overrides.result ?? { foo: 1 }) },
     metadata: { experimentName: "e", protocolName: "p", timestamp: "t" },
   },
 });
@@ -162,9 +170,30 @@ function assertDefined<T>(value: T | null | undefined, label: string): T {
 }
 
 describe("Outbox", () => {
+  it("holds an unsent row when its S3 transport observes an account switch", async () => {
+    const transport = makeTransport();
+    const largeTransport = makeTransport();
+    const { outbox, LargeUploadError } = await freshOutbox(transport, { largeTransport });
+    mockGetMeasurementById.mockResolvedValue(row({ result: { large: "x".repeat(200_000) } }));
+    const settled = vi.fn();
+    outbox.subscribeSettled(settled);
+    outbox.enqueue("row-1");
+    await waitUntil(() => largeTransport.calls.length === 1);
+    expect(largeTransport.calls).toHaveLength(1);
+    largeTransport.rejectNext(
+      new LargeUploadError("IdentityChanged", "capture owner changed", false),
+    );
+    await waitUntil(() => !outbox.isProcessing("row-1"));
+    expect(mockMarkAsFailed).not.toHaveBeenCalled();
+    expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
+    expect(settled).not.toHaveBeenCalled();
+    outbox.destroy();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetMeasurementIds.mockResolvedValue([]);
+    mockResolveMeasurementOwner.mockResolvedValue(true);
     mockOnlineIsOnline.mockReturnValue(true);
     mockOnlineSubscribe.mockReturnValue(() => undefined);
   });
@@ -219,6 +248,7 @@ describe("Outbox", () => {
       expect(transport.calls).toHaveLength(1);
       expect(transport.calls[0].topic).toBe("exp/p");
       expect(transport.calls[0].payload).toEqual({
+        user_id: "user-1",
         v: 42,
         device_family: "multispeq",
         device_firmware: "2.311",
@@ -717,9 +747,135 @@ describe("Outbox", () => {
   });
 
   describe("transport routing by payload size", () => {
+    it("uses S3 for a small guest measurement and rechecks identity on the next row", async () => {
+      let guest = true;
+      const mqtt = makeTransport();
+      const large = makeTransport();
+      mockGetMeasurementById.mockImplementation((id: string) =>
+        Promise.resolve({
+          ...row({ id, result: { value: "é🌱" } }),
+          owner: { userId: "user-1", isGuest: guest },
+        }),
+      );
+      const { outbox } = await freshOutbox(mqtt, {
+        largeTransport: large,
+        getIdentity: () => ({ userId: "user-1", isGuest: guest }),
+      });
+      await flushTasks();
+      outbox.enqueue("guest-row");
+      await waitUntil(() => large.calls.length === 1, 30);
+      expect(mqtt.calls).toHaveLength(0);
+      large.resolveNext();
+      await flushTasks(20);
+      guest = false;
+      outbox.enqueue("researcher-row");
+      await waitUntil(() => mqtt.calls.length === 1, 30);
+      mqtt.resolveNext();
+      await flushTasks(20);
+      expect(large.calls).toHaveLength(1);
+      outbox.destroy();
+    });
+
+    it.each([false, true])(
+      "resolves an unknown capture role once for its matching owner (%s)",
+      async (guest) => {
+        mockGetMeasurementById.mockResolvedValue({
+          ...row(),
+          owner: { userId: "user-1", isGuest: null },
+        });
+        const transport = makeTransport();
+        const largeTransport = makeTransport();
+        const { outbox } = await freshOutbox(transport, {
+          largeTransport,
+          getIdentity: () => ({ userId: "user-1", isGuest: guest }),
+        });
+        outbox.enqueue("row-1");
+        await waitUntil(() => transport.calls.length + largeTransport.calls.length > 0);
+        expect(mockResolveMeasurementOwner).toHaveBeenCalledExactlyOnceWith(
+          "row-1",
+          "user-1",
+          guest,
+        );
+        expect(transport.calls).toHaveLength(guest ? 0 : 1);
+        expect(largeTransport.calls).toHaveLength(guest ? 1 : 0);
+        (guest ? largeTransport : transport).resolveNext();
+        await flushTasks();
+        outbox.destroy();
+      },
+    );
+
+    it("holds unknown ownership when another account is signed in", async () => {
+      mockGetMeasurementById.mockResolvedValue({
+        ...row(),
+        owner: { userId: "departed", isGuest: null },
+      });
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+      outbox.enqueue("row-1");
+      await flushTasks();
+      expect(mockResolveMeasurementOwner).not.toHaveBeenCalled();
+      expect(transport.calls).toHaveLength(0);
+      expect(mockMarkAsFailed).not.toHaveBeenCalled();
+      outbox.destroy();
+    });
+
+    it("holds a row if the account switches while its unknown role is being resolved", async () => {
+      mockGetMeasurementById.mockResolvedValue({
+        ...row(),
+        owner: { userId: "user-1", isGuest: null },
+      });
+      let active: UploadIdentity = { userId: "user-1", isGuest: true };
+      mockResolveMeasurementOwner.mockImplementation(() => {
+        active = { userId: "another", isGuest: false };
+        return Promise.resolve(true);
+      });
+      const transport = makeTransport();
+      const largeTransport = makeTransport();
+      const { outbox } = await freshOutbox(transport, {
+        largeTransport,
+        getIdentity: () => active,
+      });
+      outbox.enqueue("row-1");
+      await flushTasks();
+      expect(transport.calls).toHaveLength(0);
+      expect(largeTransport.calls).toHaveLength(0);
+      expect(mockMarkAsFailed).not.toHaveBeenCalled();
+      outbox.destroy();
+    });
+
+    it.each([
+      { owner: "researcher", active: { userId: "guest", isGuest: true } },
+      { owner: "guest", active: { userId: "researcher", isGuest: false } },
+      { owner: "guest", active: null },
+    ])("holds $owner rows when another or no identity is active", async ({ owner, active }) => {
+      const mqtt = makeTransport();
+      const large = makeTransport();
+      mockGetMeasurementById.mockResolvedValue({
+        ...row({ result: { user_id: owner } }),
+        owner: { userId: owner, isGuest: owner === "guest" },
+      });
+      const { outbox } = await freshOutbox(mqtt, {
+        largeTransport: large,
+        getIdentity: () => active,
+      });
+      await flushTasks();
+      outbox.enqueue("row-1");
+      await flushTasks(20);
+      expect(mqtt.calls).toHaveLength(0);
+      expect(large.calls).toHaveLength(0);
+      expect(mockMarkAsFailed).not.toHaveBeenCalled();
+      expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
+      expect(outbox.isProcessing("row-1")).toBe(false);
+      outbox.destroy();
+    });
+
     // `{"blob":"<n>","_client_id":"row-1"}` is the serialized payload, and the
     // literal characters around the blob account for the difference.
-    const ENVELOPE_CHARS = 32;
+    const ENVELOPE_CHARS = JSON.stringify({
+      user_id: "user-1",
+      blob: "",
+      _client_id: "row-1",
+    }).length;
     const LIMIT = 128 * 1024;
 
     async function runOne(result: object) {

@@ -1,0 +1,542 @@
+[
+  {
+    "procedure": "sharing.listGrants",
+    "method": "GET",
+    "path": "/api/v1/{resourceType}/{id}/collaborators",
+    "classification": "deny"
+  },
+  {
+    "procedure": "sharing.createGrant",
+    "method": "POST",
+    "path": "/api/v1/{resourceType}/{id}/collaborators",
+    "classification": "deny"
+  },
+  {
+    "procedure": "sharing.revokeGrant",
+    "method": "DELETE",
+    "path": "/api/v1/{resourceType}/{id}/collaborators/{grantId}",
+    "classification": "deny"
+  },
+  {
+    "procedure": "sharing.updateGrant",
+    "method": "PATCH",
+    "path": "/api/v1/{resourceType}/{id}/collaborators/{grantId}",
+    "classification": "deny"
+  },
+  {
+    "procedure": "sharing.leaveResource",
+    "method": "DELETE",
+    "path": "/api/v1/{resourceType}/{id}/collaborators/me",
+    "classification": "deny"
+  },
+  {
+    "procedure": "organizations.listGranteeTeams",
+    "method": "GET",
+    "path": "/api/v1/{resourceType}/{id}/grantee-teams",
+    "classification": "deny"
+  },
+  {
+    "procedure": "sharing.searchGranteeUsers",
+    "method": "GET",
+    "path": "/api/v1/{resourceType}/{id}/grantee-users",
+    "classification": "deny"
+  },
+  {
+    "procedure": "sharing.transferResourceOrganization",
+    "method": "POST",
+    "path": "/api/v1/{resourceType}/{id}/transfer",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.listCalibrationDefinitions",
+    "method": "GET",
+    "path": "/api/v1/calibration-definitions",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.createCalibrationDefinition",
+    "method": "POST",
+    "path": "/api/v1/calibration-definitions",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.getCalibrationRun",
+    "method": "GET",
+    "path": "/api/v1/calibration-runs/{runId}",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.approveCalibrationRun",
+    "method": "POST",
+    "path": "/api/v1/calibration-runs/{runId}/approve",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.rejectCalibrationRun",
+    "method": "POST",
+    "path": "/api/v1/calibration-runs/{runId}/reject",
+    "classification": "deny"
+  },
+  {
+    "procedure": "sharing.transferResourceAdmin",
+    "method": "POST",
+    "path": "/api/v1/collaborators/transfer-admin",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.reportDeviceCalibrationWrite",
+    "method": "POST",
+    "path": "/api/v1/device-calibrations/{calibrationId}/written",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.listIotDeviceGroups",
+    "method": "GET",
+    "path": "/api/v1/device-groups",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.createIotDeviceGroup",
+    "method": "POST",
+    "path": "/api/v1/device-groups",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.listIotDevices",
+    "method": "GET",
+    "path": "/api/v1/devices",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.registerIotDevice",
+    "method": "POST",
+    "path": "/api/v1/devices",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.bulkRegisterIotDevices",
+    "method": "POST",
+    "path": "/api/v1/devices/bulk",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.ensureMobileDevice",
+    "method": "POST",
+    "path": "/api/v1/devices/mobile",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.getIotFleetMonitoring",
+    "method": "GET",
+    "path": "/api/v1/devices/monitoring",
+    "classification": "deny"
+  },
+  {
+    "procedure": "experiments.resolveJoinCode",
+    "method": "GET",
+    "path": "/api/v1/experiment-join-codes/{code}",
+    "classification": "deny"
+  },
+  {
+    "procedure": "experiments.redeemJoinCode",
+    "method": "POST",
+    "path": "/api/v1/experiment-join-codes/{code}/redeem",
+    "classification": "deny"
+  },
+  {
+    "procedure": "experiments.listExperiments",
+    "method": "GET",
+    "path": "/api/v1/experiments",
+    "classification": "public-list"
+  },
+  {
+    "procedure": "experiments.createExperiment",
+    "method": "POST",
+    "path": "/api/v1/experiments",
+    "classification": "deny"
+  },
+  {
+    "procedure": "experiments.removeExperimentDevice",
+    "method": "DELETE",
+    "path": "/api/v1/experiments/{id}/devices/{deviceId}",
+    "classification": "deny"
+  },
+  {
+    "procedure": "experiments.createJoinRequest",
+    "method": "POST",
+    "path": "/api/v1/experiments/{id}/join-requests",
+    "classification": "deny"
+  },
+  {
+    "procedure": "experiments.cancelJoinRequest",
+    "method": "DELETE",
+    "path": "/api/v1/experiments/{id}/join-requests/{requestId}",
+    "classification": "deny"
+  },
+  {
+    "procedure": "experiments.getMyJoinRequest",
+    "method": "GET",
+    "path": "/api/v1/experiments/{id}/join-requests/me",
+    "classification": "deny"
+  },
+  {
+    "procedure": "experiments.listHomeExperiments",
+    "method": "GET",
+    "path": "/api/v1/experiments/home",
+    "classification": "public-list"
+  },
+  {
+    "procedure": "sharing.searchGranteeOrganizations",
+    "method": "GET",
+    "path": "/api/v1/grantee-organizations",
+    "classification": "deny"
+  },
+  {
+    "procedure": "users.listInvitations",
+    "method": "GET",
+    "path": "/api/v1/invitations",
+    "classification": "deny"
+  },
+  {
+    "procedure": "users.createInvitation",
+    "method": "POST",
+    "path": "/api/v1/invitations",
+    "classification": "deny"
+  },
+  {
+    "procedure": "users.revokeInvitation",
+    "method": "DELETE",
+    "path": "/api/v1/invitations/{invitationId}",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.getCredentials",
+    "method": "GET",
+    "path": "/api/v1/iot/credentials",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.getDeviceRegistry",
+    "method": "POST",
+    "path": "/api/v1/iot/devices/registry",
+    "classification": "deny"
+  },
+  {
+    "procedure": "iot.listIotFirmwareReleases",
+    "method": "GET",
+    "path": "/api/v1/iot/firmware/{family}/releases",
+    "classification": "deny"
+  },
+  {
+    "procedure": "experiments.geocodeLocation",
+    "method": "GET",
+    "path": "/api/v1/locations/geocode",
+    "classification": "deny"
+  },
+  {
+    "procedure": "experiments.searchPlaces",
+    "method": "GET",
+    "path": "/api/v1/locations/search",
+    "classification": "deny"
+  },
+  {
+    "procedure": "macros.listMacros",
+    "method": "GET",
+    "path": "/api/v1/macros",
+    "classification": "public-list"
+  },
+  {
+    "procedure": "macros.createMacro",
+    "method": "POST",
+    "path": "/api/v1/macros",
+    "classification": "deny"
+  },
+  {
+    "procedure": "macros.executeMacroBatch",
+    "method": "POST",
+    "path": "/api/v1/macros/execute-batch",
+    "classification": "deny"
+  },
+  {
+    "procedure": "metrics.getPublicMetrics",
+    "method": "GET",
+    "path": "/api/v1/metrics/public",
+    "classification": "public-list"
+  },
+  {
+    "procedure": "metrics.getResourceMetrics",
+    "method": "GET",
+    "path": "/api/v1/metrics/resource-metrics",
+    "classification": "deny"
+  },
+  {
+    "procedure": "metrics.getScopedMetrics",
+    "method": "GET",
+    "path": "/api/v1/metrics/scoped",
+    "classification": "deny"
+  },
+  {
+    "procedure": "newsletter.getStatus",
+    "method": "GET",
+    "path": "/api/v1/newsletter/status",
+    "classification": "deny"
+  },
+  {
+    "procedure": "newsletter.subscribe",
+    "method": "POST",
+    "path": "/api/v1/newsletter/subscribe",
+    "classification": "deny"
+  },
+  {
+    "procedure": "newsletter.unsubscribe",
+    "method": "DELETE",
+    "path": "/api/v1/newsletter/subscription",
+    "classification": "deny"
+  },
+  {
+    "procedure": "newsletter.subscribeDirect",
+    "method": "POST",
+    "path": "/api/v1/newsletter/subscription",
+    "classification": "deny"
+  },
+  {
+    "procedure": "notifications.listNotifications",
+    "method": "GET",
+    "path": "/api/v1/notifications",
+    "classification": "deny"
+  },
+  {
+    "procedure": "notifications.getNotificationPreferences",
+    "method": "GET",
+    "path": "/api/v1/notifications/preferences",
+    "classification": "deny"
+  },
+  {
+    "procedure": "notifications.updateNotificationPreference",
+    "method": "PUT",
+    "path": "/api/v1/notifications/preferences",
+    "classification": "deny"
+  },
+  {
+    "procedure": "notifications.markNotificationsRead",
+    "method": "POST",
+    "path": "/api/v1/notifications/read",
+    "classification": "deny"
+  },
+  {
+    "procedure": "notifications.markAllNotificationsRead",
+    "method": "POST",
+    "path": "/api/v1/notifications/read-all",
+    "classification": "deny"
+  },
+  {
+    "procedure": "notifications.getUnreadNotificationCount",
+    "method": "GET",
+    "path": "/api/v1/notifications/unread-count",
+    "classification": "deny"
+  },
+  {
+    "procedure": "organizations.listOrganizations",
+    "method": "GET",
+    "path": "/api/v1/organizations",
+    "classification": "public-list"
+  },
+  {
+    "procedure": "organizations.getOrganization",
+    "method": "GET",
+    "path": "/api/v1/organizations/{id}",
+    "classification": "public-list"
+  },
+  {
+    "procedure": "organizations.getOrganizationDeletionBlockers",
+    "method": "GET",
+    "path": "/api/v1/organizations/{id}/deletion-blockers",
+    "classification": "deny"
+  },
+  {
+    "procedure": "organizations.listOrganizationJoinRequests",
+    "method": "GET",
+    "path": "/api/v1/organizations/{id}/join-requests",
+    "classification": "deny"
+  },
+  {
+    "procedure": "organizations.createOrganizationJoinRequest",
+    "method": "POST",
+    "path": "/api/v1/organizations/{id}/join-requests",
+    "classification": "deny"
+  },
+  {
+    "procedure": "organizations.decideOrganizationJoinRequest",
+    "method": "PATCH",
+    "path": "/api/v1/organizations/{id}/join-requests/{requestId}",
+    "classification": "deny"
+  },
+  {
+    "procedure": "organizations.cancelMyOrganizationJoinRequest",
+    "method": "DELETE",
+    "path": "/api/v1/organizations/{id}/join-requests/me",
+    "classification": "deny"
+  },
+  {
+    "procedure": "organizations.listOrganizationMembers",
+    "method": "GET",
+    "path": "/api/v1/organizations/{id}/members",
+    "classification": "deny"
+  },
+  {
+    "procedure": "organizations.listOrganizationResources",
+    "method": "GET",
+    "path": "/api/v1/organizations/{id}/resources",
+    "classification": "public-list"
+  },
+  {
+    "procedure": "organizations.listOrganizationTeamGrants",
+    "method": "GET",
+    "path": "/api/v1/organizations/{id}/team-grants",
+    "classification": "deny"
+  },
+  {
+    "procedure": "organizations.listOrganizationTeams",
+    "method": "GET",
+    "path": "/api/v1/organizations/{id}/teams",
+    "classification": "deny"
+  },
+  {
+    "procedure": "users.listPlatformAdmins",
+    "method": "GET",
+    "path": "/api/v1/platform-admins",
+    "classification": "deny"
+  },
+  {
+    "procedure": "users.getPlatformAdminAccess",
+    "method": "GET",
+    "path": "/api/v1/platform-admins/access",
+    "classification": "public-list"
+  },
+  {
+    "procedure": "protocols.listProtocols",
+    "method": "GET",
+    "path": "/api/v1/protocols",
+    "classification": "public-list"
+  },
+  {
+    "procedure": "protocols.createProtocol",
+    "method": "POST",
+    "path": "/api/v1/protocols",
+    "classification": "deny"
+  },
+  {
+    "procedure": "visits.listRecentlyOpened",
+    "method": "GET",
+    "path": "/api/v1/recently-opened",
+    "classification": "public-list"
+  },
+  {
+    "procedure": "search.globalSearch",
+    "method": "GET",
+    "path": "/api/v1/search",
+    "classification": "deny"
+  },
+  {
+    "procedure": "experiments.listTransferRequests",
+    "method": "GET",
+    "path": "/api/v1/transfer-requests",
+    "classification": "deny"
+  },
+  {
+    "procedure": "experiments.createTransferRequest",
+    "method": "POST",
+    "path": "/api/v1/transfer-requests",
+    "classification": "deny"
+  },
+  {
+    "procedure": "users.deleteUser",
+    "method": "DELETE",
+    "path": "/api/v1/users/{id}",
+    "classification": "deny"
+  },
+  {
+    "procedure": "users.getUser",
+    "method": "GET",
+    "path": "/api/v1/users/{id}",
+    "classification": "deny"
+  },
+  {
+    "procedure": "users.getDeletionBlockers",
+    "method": "GET",
+    "path": "/api/v1/users/{id}/deletion-blockers",
+    "classification": "deny"
+  },
+  {
+    "procedure": "users.getUserProfile",
+    "method": "GET",
+    "path": "/api/v1/users/{id}/profile",
+    "classification": "deny"
+  },
+  {
+    "procedure": "organizations.listMyOrganizations",
+    "method": "GET",
+    "path": "/api/v1/users/me/organizations",
+    "classification": "public-list"
+  },
+  {
+    "procedure": "users.getUserMetadata",
+    "method": "POST",
+    "path": "/api/v1/users/metadata",
+    "classification": "deny"
+  },
+  {
+    "procedure": "users.createUserProfile",
+    "method": "POST",
+    "path": "/api/v1/users/profile",
+    "classification": "deny"
+  },
+  {
+    "procedure": "users.searchUsers",
+    "method": "GET",
+    "path": "/api/v1/users/search",
+    "classification": "deny"
+  },
+  {
+    "procedure": "visits.recordVisit",
+    "method": "POST",
+    "path": "/api/v1/visits",
+    "classification": "public-list"
+  },
+  {
+    "procedure": "experiments.projectTransfer",
+    "method": "POST",
+    "path": "/api/v1/webhooks/project-transfer",
+    "classification": "deny"
+  },
+  {
+    "procedure": "users.getWhatsNewSeen",
+    "method": "GET",
+    "path": "/api/v1/whats-new/seen",
+    "classification": "deny"
+  },
+  {
+    "procedure": "users.markWhatsNewSeen",
+    "method": "POST",
+    "path": "/api/v1/whats-new/seen",
+    "classification": "deny"
+  },
+  {
+    "procedure": "workbooks.listWorkbooks",
+    "method": "GET",
+    "path": "/api/v1/workbooks",
+    "classification": "public-list"
+  },
+  {
+    "procedure": "workbooks.createWorkbook",
+    "method": "POST",
+    "path": "/api/v1/workbooks",
+    "classification": "deny"
+  },
+  {
+    "procedure": "health.getTime",
+    "method": "GET",
+    "path": "/health/time",
+    "classification": "public-list"
+  }
+]

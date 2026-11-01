@@ -3,8 +3,8 @@ import { Injectable, Inject } from "@nestjs/common";
 import { and, eq, inArray, protocols, protocolMacros } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
+import { accessibleResourceCondition } from "../../../authorization/core/repositories/resource-access-query";
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { MacroProtocolDto } from "../models/macro-protocol.model";
 
 @Injectable()

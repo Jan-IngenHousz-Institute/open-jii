@@ -102,7 +102,7 @@ export class MacroController {
     });
   }
 
-  @CanAccess({ resource: "macro", action: "read" })
+  @CanAccess({ guest: true, resource: "macro", action: "read" })
   @Implement(macroContract.getMacro)
   getMacro(@Session() session: UserSession) {
     return implement(macroContract.getMacro).handler(async ({ input }) => {
@@ -136,7 +136,7 @@ export class MacroController {
     });
   }
 
-  @CanAccess({ resource: "macro", action: "read" })
+  @CanAccess({ guest: true, resource: "macro", action: "read" })
   @Implement(macroContract.executeMacro)
   executeMacro(@Session() session: UserSession) {
     return implement(macroContract.executeMacro).handler(async ({ input }) => {
@@ -186,7 +186,7 @@ export class MacroController {
     });
   }
 
-  @CanAccess({ resource: "macro", action: "read" })
+  @CanAccess({ guest: true, resource: "macro", action: "read" })
   @Implement(macroContract.listCompatibleProtocols)
   listCompatibleProtocols(@Session() session: UserSession) {
     return implement(macroContract.listCompatibleProtocols).handler(async ({ input }) => {

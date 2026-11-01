@@ -35,6 +35,7 @@ import {
   sql,
   teamMembers,
   isNull,
+  isNotNull,
   syncPersonalOrganizationName,
   personalOrgSlug,
   personalOrgName,
@@ -74,6 +75,8 @@ import {
   SoleOwnedOrganization,
   PendingOrganizationInvitation,
 } from "../models/user.model";
+import type { UserPresencePort } from "../ports/user-presence.port";
+import { mapUserMetadata, userMetadataFields } from "./user-display-name";
 
 /**
  * The two refusals account deletion can produce. Shared with the use case's pre-flight
@@ -86,11 +89,23 @@ export const SOLE_ORGANIZATION_OWNER_MESSAGE =
   "Cannot delete account - you are the only owner of one or more organizations. Please make someone else an owner, or delete those organizations, before deleting your account.";
 
 @Injectable()
-export class UserRepository {
+export class UserRepository implements UserPresencePort {
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
   ) {}
+
+  async findExistingIds(userIds: string[]): Promise<string[]> {
+    const found: string[] = [];
+    for (let offset = 0; offset < userIds.length; offset += 1000) {
+      const rows = await this.database
+        .select({ id: users.id })
+        .from(users)
+        .where(inArray(users.id, userIds.slice(offset, offset + 1000)));
+      found.push(...rows.map(({ id }) => id));
+    }
+    return found;
+  }
 
   async create(createUserDto: CreateUserDto): Promise<Result<UserDto[]>> {
     return tryCatch(() => this.database.insert(users).values(createUserDto).returning());
@@ -190,15 +205,18 @@ export class UserRepository {
       const result = await this.database
         .select({
           userId: users.id,
-          firstName: getAnonymizedFirstName(),
-          lastName: getAnonymizedLastName(),
-          avatarUrl: getAnonymizedAvatarUrl(),
+          ...userMetadataFields(),
         })
         .from(users)
-        .innerJoin(profiles, eq(users.id, profiles.userId))
-        .where(inArray(users.id, validIds));
+        .leftJoin(profiles, eq(users.id, profiles.userId))
+        .where(
+          and(
+            inArray(users.id, validIds),
+            or(eq(users.isAnonymous, true), isNotNull(profiles.userId)),
+          ),
+        );
 
-      return result;
+      return result.map(mapUserMetadata);
     });
   }
 
@@ -228,6 +246,7 @@ export class UserRepository {
         .where(
           and(
             eq(profiles.activated, true),
+            eq(users.isAnonymous, false),
             isNull(profiles.deletedAt),
             or(
               trigramMatch(profiles.firstName, params.query),
@@ -389,26 +408,30 @@ export class UserRepository {
     resourceId: string,
     excludeUserId: string,
   ): Promise<Result<UserProfileMetadata[]>> {
-    return tryCatch(() =>
-      this.database
-        .select({
-          userId: profiles.userId,
-          firstName: profiles.firstName,
-          lastName: profiles.lastName,
-          avatarUrl: profiles.avatarUrl,
-        })
-        .from(resourceGrants)
-        .innerJoin(profiles, eq(profiles.userId, resourceGrants.granteeId))
-        .where(
-          and(
-            eq(resourceGrants.resourceType, resourceType),
-            eq(resourceGrants.resourceId, resourceId),
-            eq(resourceGrants.granteeType, "user"),
-            ne(resourceGrants.granteeId, excludeUserId),
-            eq(profiles.activated, true),
-            isNull(profiles.deletedAt),
-          ),
-        ),
+    return tryCatch(async () =>
+      (
+        await this.database
+          .select({
+            userId: profiles.userId,
+            firstName: profiles.firstName,
+            lastName: profiles.lastName,
+            avatarUrl: profiles.avatarUrl,
+          })
+          .from(resourceGrants)
+          .innerJoin(profiles, eq(profiles.userId, resourceGrants.granteeId))
+          .innerJoin(users, eq(users.id, profiles.userId))
+          .where(
+            and(
+              eq(resourceGrants.resourceType, resourceType),
+              eq(resourceGrants.resourceId, resourceId),
+              eq(resourceGrants.granteeType, "user"),
+              ne(resourceGrants.granteeId, excludeUserId),
+              eq(profiles.activated, true),
+              eq(users.isAnonymous, false),
+              isNull(profiles.deletedAt),
+            ),
+          )
+      ).map((row) => ({ ...row, isGuest: false, isFormerGuest: false })),
     );
   }
 

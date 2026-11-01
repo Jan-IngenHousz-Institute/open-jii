@@ -1,3 +1,4 @@
+import { getLocalUploadIdentity } from "~/features/auth/services/local-upload-identity";
 import { createPahoSessionFactory } from "~/features/connection/services/mqtt/mqtt-paho-session";
 import { createTransport } from "~/features/connection/services/mqtt/mqtt-transport";
 import type { Transport } from "~/features/connection/services/mqtt/mqtt-transport";
@@ -61,6 +62,7 @@ export function getOutbox(): Outbox {
   g.outbox ??= createOutbox({
     transport: getTransport(),
     largeTransport: getLargeUploadTransport(),
+    getIdentity: getLocalUploadIdentity,
   });
   return g.outbox;
 }

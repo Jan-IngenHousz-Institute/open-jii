@@ -19,6 +19,7 @@ import {
   ilike,
   inArray,
   iotDevices,
+  isNotNull,
   isNotPersonalOrgSql,
   isNull,
   isPersonalOrgSlug,
@@ -38,6 +39,10 @@ import {
 } from "@repo/database";
 import type { AnyColumn, DatabaseInstance, ResourceType, SQL } from "@repo/database";
 
+import {
+  RESOURCE_TIER,
+  accessibleResourceCondition,
+} from "../../../authorization/core/repositories/resource-access-query";
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
   crossTableBonus,
@@ -47,16 +52,12 @@ import {
   searchScore,
   tsQuery,
 } from "../../../common/utils/fts";
+import { getAnonymizedEmail } from "../../../common/utils/profile-anonymization";
+import { guestMemberCondition } from "../../../users/core/repositories/guest-query";
 import {
-  getAnonymizedAvatarUrl,
-  getAnonymizedEmail,
-  getAnonymizedFirstName,
-  getAnonymizedLastName,
-} from "../../../common/utils/profile-anonymization";
-import {
-  RESOURCE_TIER,
-  accessibleResourceCondition,
-} from "../../../common/utils/resource-access-scope";
+  mapUserMetadata,
+  userMetadataFields,
+} from "../../../users/core/repositories/user-display-name";
 import type {
   GranteeTeamDto,
   MembershipStatus,
@@ -231,10 +232,8 @@ END)`;
 /** Profile columns every people-shaped read in this domain selects. */
 const personFields = {
   userId: users.id,
-  firstName: getAnonymizedFirstName(),
-  lastName: getAnonymizedLastName(),
+  ...userMetadataFields(),
   email: getAnonymizedEmail(),
-  avatarUrl: getAnonymizedAvatarUrl(),
 };
 
 @Injectable()
@@ -260,6 +259,7 @@ export class OrganizationRepository {
           slug: organizations.slug,
           visibility: organizations.visibility,
           memberRole: organizationMembers.role,
+          isGuestMember: guestMemberCondition(this.database, userId, organizations.id),
           type: organizations.type,
         })
         .from(organizations)
@@ -273,7 +273,10 @@ export class OrganizationRepository {
         .where(eq(organizations.id, organizationId))
         .limit(1);
 
-      return rows.length > 0 ? rows[0] : null;
+      const row = rows.at(0);
+      if (!row) return null;
+      const { isGuestMember, ...access } = row;
+      return isGuestMember ? { ...access, memberRole: "member" } : access;
     });
   }
 
@@ -520,6 +523,14 @@ export class OrganizationRepository {
 
   /** Whether the caller belongs to the `organizations` row the outer query is on. */
   private membershipExists(userId: string) {
+    return or(
+      this.membershipRowExists(userId),
+      guestMemberCondition(this.database, userId, organizations.id),
+    );
+  }
+
+  /** Row membership only: the roster gate, which guests never pass. */
+  private membershipRowExists(userId: string) {
     return exists(
       this.database
         .select()
@@ -582,23 +593,28 @@ export class OrganizationRepository {
    * so matching them would surface a name the response never prints.
    */
   private memberNameMatch(userId: string, term: string): SQL {
-    return sql`(${this.membershipExists(userId)} AND ${exists(
-      this.database
-        .select()
-        .from(organizationMembers)
-        .innerJoin(profiles, eq(profiles.userId, organizationMembers.userId))
-        .where(
-          and(
-            eq(organizationMembers.organizationId, organizations.id),
-            eq(profiles.activated, true),
-            isNull(profiles.deletedAt),
-            ilike(
-              sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`,
-              `%${escapeLike(term)}%`,
+    return (
+      and(
+        this.membershipRowExists(userId),
+        exists(
+          this.database
+            .select()
+            .from(organizationMembers)
+            .innerJoin(profiles, eq(profiles.userId, organizationMembers.userId))
+            .where(
+              and(
+                eq(organizationMembers.organizationId, organizations.id),
+                eq(profiles.activated, true),
+                isNull(profiles.deletedAt),
+                ilike(
+                  sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`,
+                  `%${escapeLike(term)}%`,
+                ),
+              ),
             ),
-          ),
         ),
-    )})`;
+      ) ?? inArray(organizations.id, [])
+    );
   }
 
   /**
@@ -606,17 +622,22 @@ export class OrganizationRepository {
    * be less private than one.
    */
   private teamNameMatch(userId: string, term: string): SQL {
-    return sql`(${this.membershipExists(userId)} AND ${exists(
-      this.database
-        .select()
-        .from(teams)
-        .where(
-          and(
-            eq(teams.organizationId, organizations.id),
-            ilike(teams.name, `%${escapeLike(term)}%`),
-          ),
+    return (
+      and(
+        this.membershipRowExists(userId),
+        exists(
+          this.database
+            .select()
+            .from(teams)
+            .where(
+              and(
+                eq(teams.organizationId, organizations.id),
+                ilike(teams.name, `%${escapeLike(term)}%`),
+              ),
+            ),
         ),
-    )})`;
+      ) ?? inArray(organizations.id, [])
+    );
   }
 
   /**
@@ -664,9 +685,20 @@ export class OrganizationRepository {
           resourceCount: resourceCountSql(this.database, userId),
           memberCount: memberCountSql(),
         })
-        .from(organizationMembers)
-        .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
-        .where(eq(organizationMembers.userId, userId))
+        .from(organizations)
+        .leftJoin(
+          organizationMembers,
+          and(
+            eq(organizationMembers.organizationId, organizations.id),
+            eq(organizationMembers.userId, userId),
+          ),
+        )
+        .where(
+          or(
+            isNotNull(organizationMembers.id),
+            guestMemberCondition(this.database, userId, organizations.id),
+          ),
+        )
         .orderBy(asc(organizations.name));
 
       return rows.map((row) => ({
@@ -678,20 +710,22 @@ export class OrganizationRepository {
   }
 
   async listMembers(organizationId: string): Promise<Result<OrganizationMemberDto[]>> {
-    return tryCatch(() =>
-      this.database
-        .select({
-          ...personFields,
-          role: organizationMembers.role,
-          joinedAt: organizationMembers.createdAt,
-        })
-        .from(organizationMembers)
-        .innerJoin(users, eq(users.id, organizationMembers.userId))
-        // Left, not inner: a member who accepted an invitation before completing
-        // onboarding has no profile row yet and must still appear on the roster.
-        .leftJoin(profiles, eq(profiles.userId, users.id))
-        .where(eq(organizationMembers.organizationId, organizationId))
-        .orderBy(asc(organizationMembers.createdAt)),
+    return tryCatch(async () =>
+      (
+        await this.database
+          .select({
+            ...personFields,
+            role: organizationMembers.role,
+            joinedAt: organizationMembers.createdAt,
+          })
+          .from(organizationMembers)
+          .innerJoin(users, eq(users.id, organizationMembers.userId))
+          // Left, not inner: a member who accepted an invitation before completing
+          // onboarding has no profile row yet and must still appear on the roster.
+          .leftJoin(profiles, eq(profiles.userId, users.id))
+          .where(eq(organizationMembers.organizationId, organizationId))
+          .orderBy(asc(organizationMembers.createdAt))
+      ).map(mapUserMetadata),
     );
   }
 
@@ -802,7 +836,7 @@ export class OrganizationRepository {
         ...team,
         members: memberRows
           .filter((member) => member.teamId === team.id)
-          .map(({ teamId: _teamId, ...member }) => member),
+          .map(({ teamId: _teamId, ...member }) => mapUserMetadata(member)),
       }));
     });
   }

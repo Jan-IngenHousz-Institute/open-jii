@@ -423,11 +423,11 @@ columns and its banned-session check. None of its routes is served: each answers
 404, and its `adminUserIds` option stays unset, because the plugin lets the users
 it names pass every permission check.
 
-One rule, `isActiveAccount`, says which accounts count: registered, not banned
-and not deleted. A role stored on any other account is inactive and grants
-nothing. `heldPlatformRoles` applies it for checks, `listPlatformRoleHolders`
-for the roster, and `listPlatformRoleAssignments` marks each stored role active
-or not for the access review.
+One rule, `isActiveAccount`, says which accounts count: registered, not a
+guest, not banned and not deleted. A role stored on any other account is
+inactive and grants nothing. `heldPlatformRoles` applies it for checks,
+`listPlatformRoleHolders` for the roster, and `listPlatformRoleAssignments`
+marks each stored role active or not for the access review.
 
 Nothing in the app grants a role. `changePlatformRole` is the only writer. It
 locks the target and the actor, then reads them, and writes `users.role` and an

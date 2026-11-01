@@ -26,7 +26,7 @@ export class ExperimentVisualizationsController {
     private readonly deleteExperimentVisualizationUseCase: DeleteExperimentVisualizationUseCase,
   ) {}
 
-  @CanAccess({ resource: "experiment", action: "read" })
+  @CanAccess({ guest: true, resource: "experiment", action: "read" })
   @Implement(experimentVisualizationsContract.listExperimentVisualizations)
   listVisualizations(@Session() session: UserSession) {
     return implement(experimentVisualizationsContract.listExperimentVisualizations).handler(
@@ -62,7 +62,7 @@ export class ExperimentVisualizationsController {
     );
   }
 
-  @CanAccess({ resource: "experiment", action: "read" })
+  @CanAccess({ guest: true, resource: "experiment", action: "read" })
   @Implement(experimentVisualizationsContract.getExperimentVisualization)
   getVisualization(@Session() session: UserSession) {
     return implement(experimentVisualizationsContract.getExperimentVisualization).handler(

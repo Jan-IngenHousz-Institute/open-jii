@@ -41,6 +41,11 @@ export class CreateUserProfileUseCase {
         });
         return failure(AppError.notFound(`User with ID ${userId} not found`));
       }
+      if (user.isAnonymous) {
+        return failure(
+          AppError.forbidden("Guests cannot create a profile", "GUEST_ACTION_FORBIDDEN"),
+        );
+      }
 
       // Get existing profile to compare changes
       const existingProfileResult = await this.userRepository.findUserProfile(userId);

@@ -22,6 +22,7 @@ const CATEGORY_BY_KIND: Readonly<Record<string, UploadFailureCategory>> = {
   Forbidden: "permission",
   NotFound: "permission",
   NoExperiment: "rejected",
+  TooLarge: "rejected",
   Rejected: "rejected",
 };
 

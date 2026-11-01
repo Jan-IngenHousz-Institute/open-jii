@@ -31,7 +31,7 @@ import type { InvokeLambdaResponse } from "./services/lambda/lambda.types";
 import { AwsLocationService } from "./services/location/location.service";
 import { AwsRdsService } from "./services/rds/rds.service";
 import { AwsS3Service } from "./services/s3/s3.service";
-import type { IotUploadUrl, SignedDownloadUrl } from "./services/s3/s3.types";
+import type { IotUploadUrl, SignedDownloadUrl, GuestUploadOptions } from "./services/s3/s3.types";
 
 @Injectable()
 export class AwsAdapter implements IotAwsPort, LambdaPort, HealthAwsPort {
@@ -155,8 +155,14 @@ export class AwsAdapter implements IotAwsPort, LambdaPort, HealthAwsPort {
     return credentialsResult;
   }
 
-  async getIotUploadUrl(experimentId: string): Promise<Result<IotUploadUrl>> {
-    return this.awsS3Service.getIotUploadUrl(experimentId);
+  async getIotUploadUrl(
+    experimentId: string,
+    userId: string,
+    guest?: GuestUploadOptions,
+  ): Promise<Result<IotUploadUrl>> {
+    return guest
+      ? this.awsS3Service.getIotUploadUrl(experimentId, userId, guest)
+      : this.awsS3Service.getIotUploadUrl(experimentId, userId);
   }
 
   async getExportDownloadUrl(key: string, fileName: string): Promise<Result<SignedDownloadUrl>> {

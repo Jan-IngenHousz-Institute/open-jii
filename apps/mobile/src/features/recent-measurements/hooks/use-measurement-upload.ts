@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner-native";
+import { getLocalUploadIdentity } from "~/features/auth/services/local-upload-identity";
 import type { ScanResultEntry } from "~/features/measurement-flow/domain/flow-transitions";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { buildUploadPayload } from "~/features/recent-measurements/services/build-upload-payload";
@@ -116,6 +117,11 @@ export function useMeasurementUpload() {
 
       // Topics carry the phone's thing name; await rehydration structurally
       // rather than relying on upload always happening late in the session.
+      const identity = getLocalUploadIdentity();
+      const owner = {
+        userId,
+        isGuest: identity?.userId === userId ? identity.isGuest : null,
+      };
       await whenDeviceIdentityLoaded();
 
       // One fix per round: all devices measured at the same physical spot.
@@ -160,7 +166,7 @@ export function useMeasurementUpload() {
         };
 
         try {
-          savedIds.push(await saveMeasurement(measurement, "pending"));
+          savedIds.push(await saveMeasurement(measurement, "pending", owner));
         } catch (storageError) {
           log.error("Failed to save measurement to local storage", {
             err: (storageError as Error)?.message,

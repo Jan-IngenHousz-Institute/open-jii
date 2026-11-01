@@ -198,7 +198,7 @@ describe.each(["GitHub", "ORCID"] as const)("%s sign-in", (provider) => {
     });
 
     getCookie.mockReturnValue("better-auth.dev.session_token=valid");
-    getSession.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    getSession.mockResolvedValue({ data: { user: { id: "user-1", registered: false } } });
     await act(async () => {
       await start(result.current);
     });
@@ -224,7 +224,7 @@ it("can start ORCID immediately after cancelling GitHub", async () => {
       error: null,
     });
   });
-  getSession.mockResolvedValue({ data: { user: { id: "user-1" } } });
+  getSession.mockResolvedValue({ data: { user: { id: "user-1", registered: false } } });
   await act(async () => {
     await result.current.startOrcidLogin();
   });
@@ -239,10 +239,10 @@ it("can start ORCID immediately after cancelling GitHub", async () => {
   expect(toastError).not.toHaveBeenCalled();
 });
 
-it("still prefetches and registers after a successful email OTP sign-in", async () => {
-  emailOtp.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+it("still prefetches and registers a brand-new registered-false account after email OTP sign-in", async () => {
+  emailOtp.mockResolvedValue({ data: { user: { id: "user-1", registered: false } }, error: null });
   getCookie.mockReturnValue("better-auth.dev.session_token=valid");
-  getSession.mockResolvedValue({ data: { user: { id: "user-1" } } });
+  getSession.mockResolvedValue({ data: { user: { id: "user-1", registered: false } } });
   const { result } = renderHook(() => useLoginFlow(), { wrapper });
 
   await act(async () => {

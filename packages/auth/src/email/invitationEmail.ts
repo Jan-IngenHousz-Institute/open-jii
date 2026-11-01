@@ -2,6 +2,8 @@ import { createTransport } from "nodemailer";
 
 import { renderOrganizationInvitation } from "@repo/transactional/render/organization-invitation";
 
+import { isGuestRecipient } from "../guest/recipient";
+
 interface SendOrganizationInvitationEmailParams {
   to: string;
   inviteUrl: string;
@@ -17,6 +19,7 @@ interface SendOrganizationInvitationEmailParams {
 export async function sendOrganizationInvitationEmail(
   params: SendOrganizationInvitationEmailParams,
 ) {
+  if (await isGuestRecipient(params.to)) return;
   const {
     to,
     inviteUrl,

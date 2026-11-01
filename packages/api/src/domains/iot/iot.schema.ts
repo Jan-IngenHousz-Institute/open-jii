@@ -14,6 +14,12 @@ export const zIotCredentials = z.object({
 
 export const zIotUploadUrlRequest = z.object({
   experimentId: z.string().guid().describe("UUID of the experiment to associate this upload with"),
+  contentLength: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe("UTF-8 payload bytes; required and capped at 1 MiB for guests"),
 });
 
 export const zIotUploadUrl = z.object({
