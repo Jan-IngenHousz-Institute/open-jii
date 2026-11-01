@@ -339,6 +339,7 @@ export class TestHarness {
         emailVerified: false,
         image: null,
         registered: true,
+        banned: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       },

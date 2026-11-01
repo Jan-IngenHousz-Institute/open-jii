@@ -5,4 +5,5 @@ export { alias } from "drizzle-orm/pg-core";
 export * from "./database";
 export * from "./schema";
 export * from "./organizations";
+export * from "./platform-roles";
 export * from "./resource-grants";
