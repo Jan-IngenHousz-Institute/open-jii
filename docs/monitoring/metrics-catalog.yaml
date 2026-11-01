@@ -316,10 +316,12 @@ metrics:
       dimensions: { Environment: "${ENVIRONMENT}" }
     baseline: { method: same-weekday-4w, anomaly_pct: 100 }
     notes: >
-      Percent of the last day's bronze rows that were unparseable, unroutable or had no
-      payload timestamp, read from bronze because a payload that fails to parse never
-      reaches silver to be counted there. Creeping up means a device fleet problem
-      (firmware, clocks, encoding) rather than a pipeline one.
+      Percent of the last day's bronze rows that were unparseable, unroutable, or had no
+      payload timestamp or device id, plus silver rows whose sample hid its macros, read
+      mostly from bronze because a payload that fails to parse never reaches silver to be
+      counted there. Ambyte status messages have no timestamp by design and are counted
+      apart. Creeping up means a device fleet problem (firmware, clocks, encoding) rather
+      than a pipeline one; the per-reason counts are in metrics.ops_ingest_quality.
 
   - num: 13
     id: stale-experiments

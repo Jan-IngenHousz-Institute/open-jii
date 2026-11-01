@@ -131,6 +131,31 @@ Silver and gold are searched by the measurement's own `timestamp`. The tables ar
 | Silver | `clean_data`          | `client_id`, `device_id`, `experiment_id`, `timestamp` | It had no `timestamp`, which silver drops, or silver has not caught up.                                |
 | Gold   | `experiment_raw_data` | `client_id`, `device_id`, `experiment_id`, `timestamp` | It carried no experiment, which gold drops, or gold has not refreshed (`gold-materialization-age.md`). |
 
+Bronze keeps every message, so it says why one went no further. Put this in `SQL` and run the same
+command; a message it does not list passed every check:
+
+```sql
+SELECT * FROM (
+  SELECT kinesis_arrival_time, experiment_id, parsed_data.device_id, parsed_data.topic,
+    CASE
+      WHEN parsed_data IS NULL THEN 'unparseable, dropped'
+      WHEN coalesce(experiment_id, '') = '' THEN 'no experiment, dropped by gold'
+      WHEN parsed_data.topic RLIKE '^(?:[^/]+/){7}status$' THEN 'device status message, not a measurement'
+      WHEN parsed_data.timestamp IS NULL THEN 'no timestamp, dropped by silver'
+      WHEN parsed_data.device_id IS NULL THEN 'no device id, kept'
+    END AS reason
+  FROM open_jii_<env>.centrum.raw_data
+  WHERE client_id = :client AND kinesis_arrival_time BETWEEN :from AND :to
+)
+WHERE reason IS NOT NULL
+ORDER BY kinesis_arrival_time
+```
+
+One more kind of damage shows only in silver: a sample that is not a JSON array leaves the row's
+macro list empty, so its macros never run. On `clean_data`, `NOT startswith(ltrim(sample), '[')
+AND get_json_object(sample, '$.macros') IS NOT NULL AND size(macros) = 0` finds it. `metrics.ops_ingest_quality` counts each reason over the
+last day, and their share is `ingest-bad-payload-rate` on the board and in the daily report.
+
 A row in gold is what the platform shows. If the researcher still cannot see it, look at how the
 web view filters it, not at the pipeline.
 
