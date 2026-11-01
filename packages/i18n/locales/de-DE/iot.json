@@ -375,7 +375,8 @@
         },
         "about": {
           "title": "Details"
-        }
+        },
+        "equipmentLink": "In openJII Equipment ansehen"
       },
       "credentials": {
         "registeredDescription": "Dieses Gerät hat noch kein Zertifikat. Stellen Sie eines aus, um es bereitzustellen und die Verbindung zu AWS IoT zu ermöglichen.",

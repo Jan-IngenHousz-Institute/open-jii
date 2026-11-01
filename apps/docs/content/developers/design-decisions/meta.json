@@ -2,6 +2,7 @@
   "title": "Design Decisions",
   "pages": [
     "index",
+    "openjii-oidc-provider-adr",
     "centrum-data-architecture-adr",
     "orpc-migration-adr",
     "workbook-versioning-adr",
