@@ -604,7 +604,7 @@
         "teamsNote": "Teams are set up from the organization's Teams tab once it exists — a team is a group of its members, so it cannot come first.",
         "failed": "The organization was created, but {{names}} could not be invited. Try again from its Members tab."
       },
-      "visibilityNote_demo": "This Demo organization will be public. It appears in the directory as soon as it is created."
+      "visibilityNote_demo": "This Demo organization and all its resources are public. People can browse without joining; join requests are not accepted."
     },
     "directory": {
       "emptyTitle": "No organizations yet",
@@ -727,11 +727,13 @@
       "invitedByAndExpiry": "Invited by {{name}} · {{expiry}}"
     },
     "requests": {
+      "approvalNotice_demo": "Demo organizations don't accept join requests. You can reject requests left pending before conversion.",
       "approveAction": "Approve",
       "rejectAction": "Reject",
       "approved": "{{name}} joined the organization",
       "rejected": "{{name}}'s request was rejected",
       "decisionFailed": "Could not record this decision.",
+      "decisionFailed_demoApprovalDisabled": "Demo organizations cannot approve join requests.",
       "requestedOn": "Asked {{date}}",
       "decidedOn": "Decided {{date}}",
       "noPending": "Nothing waiting on a decision.",
@@ -816,8 +818,8 @@
       "changeFailed": "Could not change the organization's visibility.",
       "hint_private": "Invisible from outside. A non-member gets a not-found page, and nobody can ask to join.",
       "hint_public": "Listed in the directory. Anyone signed in sees the profile and its public resources, and can ask to join.",
-      "description_demo": "Demo organizations are always public and appear in the directory.",
-      "hint_demo": "Listed in the directory. Anyone signed in sees the profile and its public resources."
+      "description_demo": "Demo organizations and every experiment, workbook, protocol and macro they own are public. People can browse them without joining.",
+      "hint_demo": "Listed in the directory. Everyone can view its resources. Demo organizations do not accept join requests."
     },
     "delete": {
       "description": "Deleting an organization cannot be undone. Nothing it owns is deleted with it, so it has to be empty first.",
@@ -869,6 +871,7 @@
       "transferring": "Transferring…",
       "transferred": "Transferred",
       "failed": "Could not transfer this resource.",
+      "failed_demoPublicRequired": "Publish this resource before moving it into a Demo organization.",
       "membershipHint": "You can only transfer to an organization you belong to.",
       "personalNote": "Your personal workspace is yours alone. Everyone who reaches this through the current organization loses access — only people it is shared with directly keep it.",
       "personalCaption": "Only you. No organization members come with it."
@@ -909,7 +912,8 @@
       "title": "Resource mix"
     },
     "overview": {
-      "visitorNotice": "You are looking at a public profile. Members see everything they have access to; ask to join and an owner decides."
+      "visitorNotice": "You are looking at a public profile. Members see everything they have access to; ask to join and an owner decides.",
+      "visitorNotice_demo": "You are viewing a Demo organization. Its resources are public. Viewing does not give you permission to edit them."
     }
   },
   "dashboard": {

@@ -604,7 +604,7 @@
         "teamsNote": "Teams werden im Tab „Teams“ der Organisation eingerichtet, sobald sie existiert – ein Team ist eine Gruppe ihrer Mitglieder und kann deshalb nicht vorher entstehen.",
         "failed": "Die Organisation wurde erstellt, aber {{names}} konnte nicht eingeladen werden. Versuchen Sie es über den Tab „Mitglieder“ erneut."
       },
-      "visibilityNote_demo": "Diese Demo-Organisation wird öffentlich sein. Sie erscheint direkt nach dem Anlegen im Verzeichnis."
+      "visibilityNote_demo": "Diese Demo-Organisation und alle ihre Inhalte sind öffentlich. Sie können ohne Mitgliedschaft angesehen werden; Beitrittsanfragen werden nicht angenommen."
     },
     "directory": {
       "emptyTitle": "Noch keine Organisationen",
@@ -727,11 +727,13 @@
       "invitedByAndExpiry": "Eingeladen von {{name}} · {{expiry}}"
     },
     "requests": {
+      "approvalNotice_demo": "Demo-Organisationen nehmen keine Beitrittsanfragen an. Du kannst Anfragen ablehnen, die vor der Umstellung noch offen waren.",
       "approveAction": "Annehmen",
       "rejectAction": "Ablehnen",
       "approved": "{{name}} ist der Organisation beigetreten",
       "rejected": "Die Anfrage von {{name}} wurde abgelehnt",
       "decisionFailed": "Diese Entscheidung konnte nicht gespeichert werden.",
+      "decisionFailed_demoApprovalDisabled": "Demo-Organisationen können keine Beitrittsanfragen genehmigen.",
       "requestedOn": "Angefragt am {{date}}",
       "decidedOn": "Entschieden am {{date}}",
       "noPending": "Keine offene Entscheidung.",
@@ -816,8 +818,8 @@
       "changeFailed": "Die Sichtbarkeit der Organisation konnte nicht geändert werden.",
       "hint_private": "Von außen unsichtbar. Nichtmitglieder erhalten eine „Nicht gefunden“-Seite, und niemand kann eine Beitrittsanfrage stellen.",
       "hint_public": "Im Verzeichnis aufgeführt. Alle angemeldeten Personen sehen das Profil und seine öffentlichen Ressourcen und können eine Beitrittsanfrage stellen.",
-      "description_demo": "Demo-Organisationen sind immer öffentlich und erscheinen im Verzeichnis.",
-      "hint_demo": "Im Verzeichnis aufgeführt. Alle angemeldeten Personen sehen das Profil und seine öffentlichen Ressourcen."
+      "description_demo": "Demo-Organisationen und alle ihre Experimente, Arbeitsmappen, Protokolle und Makros sind öffentlich. Sie können ohne Mitgliedschaft angesehen werden.",
+      "hint_demo": "Im Verzeichnis sichtbar. Alle können die Inhalte ansehen. Demo-Organisationen nehmen keine Beitrittsanfragen an."
     },
     "delete": {
       "description": "Das Löschen einer Organisation kann nicht rückgängig gemacht werden. Ihre Inhalte werden nicht mitgelöscht, sie muss also zuerst leer sein.",
@@ -869,6 +871,7 @@
       "transferring": "Wird übertragen…",
       "transferred": "Übertragen",
       "failed": "Diese Ressource konnte nicht übertragen werden.",
+      "failed_demoPublicRequired": "Veröffentliche diese Ressource, bevor du sie an eine Demo-Organisation überträgst.",
       "membershipHint": "Du kannst nur an eine Organisation übertragen, der du angehörst.",
       "personalNote": "Dein persönlicher Arbeitsbereich gehört dir allein. Alle, die über die aktuelle Organisation Zugriff haben, verlieren ihn — nur direkt geteilte Personen behalten ihn.",
       "personalCaption": "Nur du. Keine Organisationsmitglieder kommen mit."
@@ -909,7 +912,8 @@
       "title": "Zusammensetzung der Ressourcen"
     },
     "overview": {
-      "visitorNotice": "Du siehst ein öffentliches Profil. Mitglieder sehen alles, worauf sie Zugriff haben; stelle eine Anfrage, und ein Inhaber entscheidet."
+      "visitorNotice": "Du siehst ein öffentliches Profil. Mitglieder sehen alles, worauf sie Zugriff haben; stelle eine Anfrage, und ein Inhaber entscheidet.",
+      "visitorNotice_demo": "Du siehst eine Demo-Organisation. Ihre Inhalte sind öffentlich. Der Lesezugriff berechtigt nicht zum Bearbeiten."
     }
   },
   "dashboard": {

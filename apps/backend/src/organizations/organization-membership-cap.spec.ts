@@ -10,7 +10,8 @@ import type { DatabaseInstance } from "@repo/database";
 
 import { assertSuccess } from "../common/utils/fp-utils";
 import { TestHarness } from "../test/test-harness";
-import { admitMember } from "./core/admit-member";
+import { MEMBER_ADMISSION_PORT } from "./core/ports/member-admission.port";
+import type { MemberAdmissionPort } from "./core/ports/member-admission.port";
 import { OrganizationJoinRequestRepository } from "./core/repositories/organization-join-request.repository";
 
 /**
@@ -27,6 +28,7 @@ import { OrganizationJoinRequestRepository } from "./core/repositories/organizat
 describe("organization membership cap", () => {
   const testApp = TestHarness.App;
   let joinRequests: OrganizationJoinRequestRepository;
+  let members: MemberAdmissionPort;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -35,6 +37,7 @@ describe("organization membership cap", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     joinRequests = testApp.module.get(OrganizationJoinRequestRepository);
+    members = testApp.module.get<MemberAdmissionPort>(MEMBER_ADMISSION_PORT);
   });
 
   afterEach(() => {
@@ -188,7 +191,7 @@ describe("organization membership cap", () => {
 
         let firstOutcome: string | undefined;
         const holding = first.database.transaction(async (tx) => {
-          firstOutcome = await admitMember(tx, {
+          firstOutcome = await members.admit(tx, {
             organizationId,
             userId: joinerA,
             role: "member",
@@ -200,7 +203,7 @@ describe("organization membership cap", () => {
 
         const secondPid = await backendPidOf(second.database);
         const racing = second.database.transaction((tx) =>
-          admitMember(tx, { organizationId, userId: joinerB, role: "member" }),
+          members.admit(tx, { organizationId, userId: joinerB, role: "member" }),
         );
         // The proof: with the first admission's row lock still held, the second cannot
         // even reach its count. Without it both would read 99 and both would insert.

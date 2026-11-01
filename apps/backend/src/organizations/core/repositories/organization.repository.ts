@@ -260,6 +260,7 @@ export class OrganizationRepository {
           slug: organizations.slug,
           visibility: organizations.visibility,
           memberRole: organizationMembers.role,
+          type: organizations.type,
         })
         .from(organizations)
         .leftJoin(

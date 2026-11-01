@@ -259,6 +259,28 @@ describe("Functional Programming Utilities", () => {
       expect(mappedError.code).toBe("REPOSITORY_NOT_FOUND");
     });
 
+    it("maps a wrapped check violation without exposing SQL or parameters", () => {
+      const cause = Object.assign(new Error("Demo organizations can only own public resources"), {
+        code: "23514",
+      });
+      const error = new Error(
+        "Failed query: UPDATE protocols SET organization_id = $1 params: sensitive",
+        { cause },
+      );
+      const mapped = defaultRepositoryErrorMapper(error);
+      expect(mapped.statusCode).toBe(400);
+      expect(mapped.message).toBe("Demo organizations can only own public resources");
+      expect(mapped.code).toBe("DEMO_RESOURCE_PUBLIC_REQUIRED");
+      expect(JSON.stringify(mapped)).not.toMatch(/UPDATE|sensitive|params:/);
+    });
+
+    it("does not expose an unknown check constraint message", () => {
+      const cause = Object.assign(new Error("private SQL detail"), { code: "23514" });
+      const mapped = defaultRepositoryErrorMapper(new Error("Failed query", { cause }));
+      expect(mapped.statusCode).toBe(400);
+      expect(mapped.message).toBe("This change violates a data constraint");
+    });
+
     it('should map "does not exist" errors correctly', () => {
       const error = new Error("Record does not exist");
       const mappedError = defaultRepositoryErrorMapper(error);

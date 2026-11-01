@@ -250,6 +250,25 @@
                         }
                       ]
                     },
+                    "organizationType": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "research_institute",
+                            "non_profit",
+                            "private_company",
+                            "government_agency",
+                            "university",
+                            "demo"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -710,6 +729,25 @@
                               }
                             ]
                           },
+                          "organizationType": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "research_institute",
+                                  "non_profit",
+                                  "private_company",
+                                  "government_agency",
+                                  "university",
+                                  "demo"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "default": null
+                          },
                           "createdBy": {
                             "type": "string",
                             "format": "uuid"
@@ -1039,6 +1077,25 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "organizationType": {
+                                "anyOf": [
+                                  {
+                                    "enum": [
+                                      "research_institute",
+                                      "non_profit",
+                                      "private_company",
+                                      "government_agency",
+                                      "university",
+                                      "demo"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "default": null
                               },
                               "createdBy": {
                                 "type": "string",
@@ -1429,6 +1486,25 @@
                               }
                             ]
                           },
+                          "organizationType": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "research_institute",
+                                  "non_profit",
+                                  "private_company",
+                                  "government_agency",
+                                  "university",
+                                  "demo"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "default": null
+                          },
                           "createdBy": {
                             "type": "string",
                             "format": "uuid"
@@ -1801,6 +1877,25 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "organizationType": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "research_institute",
+                            "non_profit",
+                            "private_company",
+                            "government_agency",
+                            "university",
+                            "demo"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null
                     },
                     "createdBy": {
                       "type": "string",
@@ -2189,6 +2284,25 @@
                         }
                       ]
                     },
+                    "organizationType": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "research_institute",
+                            "non_profit",
+                            "private_company",
+                            "government_agency",
+                            "university",
+                            "demo"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -2529,6 +2643,25 @@
                               "type": "null"
                             }
                           ]
+                        },
+                        "organizationType": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "research_institute",
+                                "non_profit",
+                                "private_company",
+                                "government_agency",
+                                "university",
+                                "demo"
+                              ],
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "default": null
                         },
                         "createdBy": {
                           "type": "string",
@@ -8053,6 +8186,25 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "organizationType": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "research_institute",
+                            "non_profit",
+                            "private_company",
+                            "government_agency",
+                            "university",
+                            "demo"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null
                     },
                     "createdBy": {
                       "type": "string",

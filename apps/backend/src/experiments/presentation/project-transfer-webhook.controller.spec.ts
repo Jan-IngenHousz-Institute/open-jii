@@ -8,6 +8,7 @@ import type {
   ExperimentProjectTransferWebhookResponse,
 } from "@repo/api/domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.schema";
 import type { WebhookErrorResponse } from "@repo/api/domains/user/user.schema";
+import { eq, experiments, protocols, macros, organizations } from "@repo/database";
 
 import { stableStringify } from "../../common/utils/stable-json";
 import { TestHarness } from "../../test/test-harness";
@@ -81,6 +82,71 @@ describe("ProjectTransferWebhookController", () => {
       expect(body.macroId).toBeDefined();
       expect(body.macroFilename).toBeDefined();
       expect(body.macroName).toBeDefined();
+    });
+
+    it("keeps forged Demo ownership fields out of a signed project import", async () => {
+      const importer = await testApp.createTestUser();
+      const demo = await testApp.createOrganization("Demo destination", {
+        type: "demo",
+        visibility: "public",
+      });
+      await testApp.addOrganizationMember(demo, importer, "owner");
+      const forged = {
+        organizationId: demo,
+        targetOrganizationId: demo,
+        type: "demo",
+        visibility: "private",
+      };
+      const payload = {
+        ...forged,
+        experiment: { name: "Imported experiment", createdBy: importer, ...forged },
+        protocol: {
+          name: "Imported protocol",
+          createdBy: importer,
+          code: [{}],
+          family: "multispeq",
+          ...forged,
+        },
+        macro: {
+          name: "Imported macro",
+          createdBy: importer,
+          code: btoa("return {}"),
+          language: "python",
+          ...forged,
+        },
+      };
+      const { signature, timestamp } = signPayload(payload);
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.experiments.projectTransfer))
+        .set("x-api-key-id", apiKeyId)
+        .set("x-databricks-signature", signature)
+        .set("x-databricks-timestamp", timestamp)
+        .send(payload)
+        .expect(201);
+      const rows = (
+        await Promise.all([
+          testApp.database
+            .select({ slug: organizations.slug, organizationId: experiments.organizationId })
+            .from(experiments)
+            .innerJoin(organizations, eq(organizations.id, experiments.organizationId))
+            .where(eq(experiments.name, "Imported experiment")),
+          testApp.database
+            .select({ slug: organizations.slug, organizationId: protocols.organizationId })
+            .from(protocols)
+            .innerJoin(organizations, eq(organizations.id, protocols.organizationId))
+            .where(eq(protocols.name, "Imported protocol")),
+          testApp.database
+            .select({ slug: organizations.slug, organizationId: macros.organizationId })
+            .from(macros)
+            .innerJoin(organizations, eq(organizations.id, macros.organizationId))
+            .where(eq(macros.name, "Imported macro")),
+        ])
+      ).flat();
+      expect(rows).toHaveLength(3);
+      for (const row of rows) {
+        expect(row.slug).toBe(`personal-${importer}`);
+        expect(row.organizationId).not.toBe(demo);
+      }
     });
 
     it("should reject requests without valid API key ID", async () => {

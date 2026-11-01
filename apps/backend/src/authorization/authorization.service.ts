@@ -13,6 +13,7 @@ import {
   iotDevices,
   macros,
   organizationMembers,
+  organizations,
   protocols,
   resourceGrants,
   teamMembers,
@@ -22,6 +23,8 @@ import type { DatabaseInstance, DbOrTx, PlatformRole } from "@repo/database";
 import type { ResourceType } from "@repo/database";
 
 import { mayTransferOutOfOrganization } from "../sharing/core/transfer-authority";
+
+type OrganizationType = (typeof organizations.$inferSelect)["type"];
 
 // Every shareable resource type is org-scoped and resolvable to its owning
 // org + visibility here; the total record makes a new type a compile error.
@@ -269,6 +272,29 @@ export class AuthorizationService {
       )
       .limit(1);
     return rows.length > 0;
+  }
+
+  /**
+   * Whether the user belongs to the organization, and the organization's type, or null when
+   * there is no such organization. Gates creating a resource into a specific organization.
+   */
+  async findOrgMembership(
+    userId: string,
+    organizationId: string,
+  ): Promise<{ isMember: boolean; type: OrganizationType } | null> {
+    const rows = await this.db
+      .select({ memberId: organizationMembers.id, type: organizations.type })
+      .from(organizations)
+      .leftJoin(
+        organizationMembers,
+        and(
+          eq(organizationMembers.organizationId, organizations.id),
+          eq(organizationMembers.userId, userId),
+        ),
+      )
+      .where(eq(organizations.id, organizationId))
+      .limit(1);
+    return rows.length > 0 ? { isMember: rows[0].memberId !== null, type: rows[0].type } : null;
   }
 
   /**
