@@ -107,6 +107,9 @@ passes:
     note: >-
       a day's spend past its limit, for AWS and for Databricks, and the metrics publisher's errors,
       so the weekly report's database counts going quiet reaches someone
+  - date: 2026-11-01
+    range: [126, 126]
+    note: who uploaded in the week, beside the exports that entry 35 now counts
 
 metrics:
   # Ingest path
@@ -1151,13 +1154,25 @@ metrics:
       entry 1.
 
   - num: 35
-    id: adoption-counts
-    name: Macro/upload/export adoption counts
+    id: researchers-exported
+    name: Researchers who exported
     family: usage
+    area: usage
     source: pg
     phase: P3
-    active: false
+    active: true
     slots: [weekly]
+    signal:
+      namespace: OpenJII/UserRegistrations
+      metric: WeeklyResearchersExported
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+      period: 604800
+    baseline: { method: wow }
+    notes: >-
+      People whose export finished over the previous Monday-to-Sunday week, whoever started it and
+      whoever asked for it while it ran, each counted once. Failed exports do not count. Published
+      with the week's new researchers each Monday at 06:00 UTC.
 
   - num: 36
     id: workbook-activity
@@ -2201,5 +2216,27 @@ metrics:
     runbook: docs/runbooks/metrics-publisher-errors.md
     notes: >-
       The metrics publisher counts researchers and experiments from the database each Monday at 06:00
-      UTC. A run that throws leaves three weekly tiles without that week: New researchers (#30),
-      Researchers (#80) and Experiments created (#32).
+      UTC. A run that throws leaves five weekly tiles without that week: New researchers (#30),
+      Researchers (#80), Experiments created (#32), Researchers who exported (#35) and Researchers
+      who uploaded (#126).
+
+  - num: 126
+    id: researchers-uploaded
+    name: Researchers who uploaded
+    family: usage
+    area: usage
+    source: pg
+    phase: P3
+    active: true
+    slots: [weekly]
+    signal:
+      namespace: OpenJII/UserRegistrations
+      metric: WeeklyResearchersUploaded
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+      period: 604800
+    baseline: { method: wow }
+    notes: >-
+      People whose upload finished over the previous Monday-to-Sunday week, each counted once.
+      Failed uploads do not count. Published with the week's new researchers each Monday at 06:00
+      UTC.

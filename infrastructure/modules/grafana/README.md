@@ -20,7 +20,7 @@ Dashboard Visualization
 
 1. **Workspace Module** (`workspace/`) - AMG workspace and the daily round's Viewer service account
 2. **Dashboard Module** (`dashboard/`) - Pre-configured monitoring dashboards
-3. **Metrics Publisher** (`metrics-publisher/`) - Weekly Lambda that publishes registration and experiment counts to CloudWatch
+3. **Metrics Publisher** (`metrics-publisher/`) - Weekly Lambda that publishes registration, experiment, export and upload counts to CloudWatch
 4. **Cost Publisher** (`cost-publisher/`) - Daily Lambda that publishes what AWS bills, from Cost Explorer, to CloudWatch
 5. **Token Rotation** (`TOKEN_ROTATION.md`) - Automated token management
 
@@ -97,7 +97,7 @@ Alerts are routed to Slack via webhook with severity-based policies:
 
 ## Metrics Publisher
 
-A Lambda that runs every Monday at 06:00 UTC, queries Aurora, and publishes `TotalUsers`, `WeeklyNewUsers` and `WeeklyNewExperiments` to CloudWatch under the `OpenJII/UserRegistrations` namespace. The weekly heartbeat report shows them as Researchers, New researchers and Experiments created. Its database user may read only the columns its counts filter on, never names, emails or keys, so a new count needs a migration granting `SELECT` on the columns it reads.
+A Lambda that runs every Monday at 06:00 UTC, queries Aurora, and publishes `TotalUsers`, `WeeklyNewUsers`, `WeeklyNewExperiments`, `WeeklyResearchersExported` and `WeeklyResearchersUploaded` to CloudWatch under the `OpenJII/UserRegistrations` namespace. The weekly heartbeat report shows them as Researchers, New researchers, Experiments created, Researchers who exported and Researchers who uploaded. Its database user may read only the columns its counts filter on, never names, emails or keys, so a new count needs a migration granting `SELECT` on the columns it reads.
 
 The Lambda is deployed from a committed `lambda/function.zip` that contains `index.js` and `node_modules`. The zip is committed to git so CI never needs to install dependencies.
 
