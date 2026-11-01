@@ -22,7 +22,7 @@ Dashboard Visualization
 2. **Dashboard Module** (`dashboard/`) - Pre-configured monitoring dashboards
 3. **Metrics Publisher** (`metrics-publisher/`) - Weekly Lambda that publishes registration and experiment counts to CloudWatch
 4. **Cost Publisher** (`cost-publisher/`) - Daily Lambda that publishes what AWS bills, from Cost Explorer, to CloudWatch
-5. **Token Rotation** (`TOKEN_ROTATION.md`) - Automated token management
+5. **Grafana tokens** - Each OpenTofu run creates its own token; a scheduled workflow keeps the pull request plans' Viewer token current
 
 ### Monitored Metrics
 
@@ -154,55 +154,34 @@ tofu apply -target=module.grafana_dashboard
 tofu apply
 ```
 
-### Initial Token Setup
+### How OpenTofu signs in to Grafana
 
-#### Option A: Use GitHub Actions Workflow (Recommended)
+Each OpenTofu plan and apply in the deploys, and the dev plan on a pull request, creates a token
+for the workspace's `Admin_SA` service account after it signs in to AWS, and deletes it when the
+run ends. A plan's token lives one hour and an apply's two, so a token a cancelled run leaves
+behind stops working on its own. GitHub stores no token for these runs, only the two ids:
 
-1. Get workspace and service account IDs:
+1. Get the workspace and service account IDs:
 
    ```bash
-   # Workspace ID
    aws grafana list-workspaces --region eu-central-1
 
-   # Service account ID
    aws grafana list-workspace-service-accounts \
      --workspace-id YOUR_WORKSPACE_ID \
      --region eu-central-1
    ```
 
-2. Add to GitHub Secrets (Settings → Secrets → Environments → dev):
-
-   - `GRAFANA_WORKSPACE_ID_DEV` = your workspace ID
-   - `GRAFANA_SERVICE_ACCOUNT_ID_DEV` = your service account ID
-
-3. Run rotation workflow manually:
-
-   ```bash
-   gh workflow run rotate-grafana-token.yml
-   ```
-
-   This creates the token and stores it in `GRAFANA_SERVICE_TOKEN` secret.
-
-#### Option B: Manual Token Creation
-
-```bash
-aws grafana create-workspace-service-account-token \
-  --name "initial-token-$(date +%Y%m%d)" \
-  --workspace-id YOUR_WORKSPACE_ID \
-  --service-account-id YOUR_SERVICE_ACCOUNT_ID \
-  --seconds-to-live 2592000 \
-  --region eu-central-1
-```
-
-Add the token to GitHub Secrets as `GRAFANA_SERVICE_TOKEN` in the dev environment.
+2. Add them to the environment (Settings → Environments → dev or prod) as
+   `GRAFANA_WORKSPACE_ID_<ENV>` and `GRAFANA_SERVICE_ACCOUNT_ID_<ENV>`, for example
+   `GRAFANA_WORKSPACE_ID_DEV`.
 
 ### The daily round's account
 
 The workspace module creates `daily-round`, a Viewer service account the daily round reads Grafana
 with. OpenTofu holds the account and never a token: each developer mints their own with the AWS CLI
 and pipes it into `pnpm grafana:auth <env>`, which stores it in `tooling/devkit/.env`.
-`tooling/devkit/README.md` has the commands. The `Admin_SA` account behind the CI token rotation is
-separate and lives outside OpenTofu.
+`tooling/devkit/README.md` has the commands. The `Admin_SA` account behind the deploys' per-run tokens
+is separate and lives outside OpenTofu.
 
 ### The plan account
 
@@ -302,12 +281,12 @@ Each workflow uses `.github/actions/publish-dora-metric/action.yml` composite ac
 
 ### Token Rotation
 
-Tokens automatically rotate every ~15 days via GitHub Actions:
+Deploys need no rotation, since each run creates its own token. Only the `tofu-plan` Viewer token
+in `prod-plan` rotates:
 
 - Workflow: `.github/workflows/rotate-grafana-token.yml`
 - Schedule: 1st and 15th of each month
 - Token validity: 30 days
-- See [TOKEN_ROTATION.md](TOKEN_ROTATION.md) for details
 
 ### Updating Dashboards
 
@@ -368,15 +347,14 @@ aws cloudwatch list-metrics \
 
 ### Token Expired
 
-If you see authentication errors:
+If a deploy's plan or apply fails to sign in to Grafana, check that the "Create a Grafana token for
+this run" step passed and that the environment's `GRAFANA_WORKSPACE_ID_<ENV>` and
+`GRAFANA_SERVICE_ACCOUNT_ID_<ENV>` still match the workspace. If a pull request's prod plan fails
+to sign in, run the token rotation manually:
 
-1. Run token rotation manually:
-
-   ```bash
-   gh workflow run rotate-grafana-token.yml
-   ```
-
-2. Or create new token manually (see Initial Token Setup)
+```bash
+gh workflow run rotate-grafana-token.yml
+```
 
 ### Deployment Metrics Not Appearing
 
@@ -446,7 +424,7 @@ tofu force-unlock LOCK_ID
 - [Amazon Managed Grafana Docs](https://docs.aws.amazon.com/grafana/)
 - [DORA Metrics Guide](https://cloud.google.com/blog/products/devops-sre/using-the-four-keys-to-measure-your-devops-performance)
 - [CloudWatch Metrics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/working_with_metrics.html)
-- [Token Rotation Setup](TOKEN_ROTATION.md)
+- [Amazon Managed Grafana service accounts](https://docs.aws.amazon.com/grafana/latest/userguide/service-accounts.html)
 
 ## Support
 

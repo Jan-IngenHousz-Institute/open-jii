@@ -573,7 +573,6 @@ jobs:
       TF_VAR_slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
       TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
-      TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
       TF_VAR_posthog_tofu_api_key: ${{ secrets.POSTHOG_TOFU_API_KEY }}
       TF_VAR_posthog_grafana_api_key: ${{ secrets.POSTHOG_GRAFANA_API_KEY }}
 
@@ -597,8 +596,28 @@ jobs:
       - name: OpenTofu Init and Validate
         uses: ./.github/actions/tofu/tofu-init-validate
 
+      # prod-plan's read-only role cannot create Grafana tokens, so the prod plan uses the stored
+      # Viewer token that the Rotate Grafana Token workflow keeps current.
+      - name: Create a Grafana token for this run
+        id: grafana
+        if: matrix.environment == 'dev'
+        uses: ./.github/actions/tofu/grafana-token
+        with:
+          workspace_id: ${{ secrets.GRAFANA_WORKSPACE_ID_DEV }}
+          service_account_id: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
+
       - name: OpenTofu Plan
         uses: ./.github/actions/tofu/tofu-plan
+        env:
+          TF_VAR_grafana_auth_service_token: ${{ steps.grafana.outputs.token || secrets.GRAFANA_SERVICE_TOKEN }}
         with:
           lock: false
           refresh: ${{ matrix.refresh }}
+
+      - name: Delete the Grafana token
+        if: always() && steps.grafana.outputs.token_id != ''
+        uses: ./.github/actions/tofu/grafana-token-delete
+        with:
+          workspace_id: ${{ secrets.GRAFANA_WORKSPACE_ID_DEV }}
+          service_account_id: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
+          token_id: ${{ steps.grafana.outputs.token_id }}
