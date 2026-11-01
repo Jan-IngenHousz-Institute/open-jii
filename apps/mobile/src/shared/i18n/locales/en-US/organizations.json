@@ -18,7 +18,8 @@
     "non_profit": "Non-profit",
     "private_company": "Private company",
     "government_agency": "Government agency",
-    "university": "University"
+    "university": "University",
+    "demo": "Demo"
   },
   "role": {
     "owner": "Owner",

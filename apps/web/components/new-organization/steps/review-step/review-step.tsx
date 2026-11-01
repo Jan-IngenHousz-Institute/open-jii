@@ -7,6 +7,7 @@ import { useTranslation } from "@repo/i18n";
 import { WizardStepButtons } from "@repo/ui/components/wizard-form";
 import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 
+import { visibilityKind } from "../../../organizations/organization-labels";
 import type { NewOrganizationFormValues } from "../form-step";
 import { identitySchema, peopleSchema, profileSchema } from "../form-step";
 import { IdentitySection } from "./identity-section";
@@ -40,7 +41,7 @@ export function ReviewStep({
 }: WizardStepProps<NewOrganizationFormValues>) {
   const { t } = useTranslation();
   const formData = form.getValues();
-  const isPublic = formData.visibility === "public";
+  const kind = visibilityKind(formData.type, formData.visibility);
 
   return (
     <div className="mx-auto space-y-8">
@@ -62,14 +63,13 @@ export function ReviewStep({
         <PeopleSection className="min-w-0" formData={formData} onEdit={() => goToStep(2)} />
       </div>
 
-      {/* Two literal keys rather than one interpolated: only literals are guarded. */}
       <p className="text-muted-foreground flex items-start gap-2 text-xs leading-relaxed">
-        {isPublic ? (
+        {kind !== "private" ? (
           <Globe className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
         ) : (
           <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
         )}
-        {isPublic ? t("organizations.create.publicNote") : t("organizations.create.privateNote")}
+        {t("organizations.create.visibilityNote", { context: kind })}
       </p>
 
       <WizardStepButtons

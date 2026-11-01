@@ -3,8 +3,10 @@
 import { SettingsCard } from "@/components/shared/settings-card";
 import { useOrganizationSlugAvailability } from "@/hooks/organization/useOrganizationSlugAvailability/useOrganizationSlugAvailability";
 import { useDebounce } from "@/hooks/useDebounce";
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { Check, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { MutableRefObject } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { organizationSlugRejection, suggestOrganizationSlug } from "~/util/organization-slug";
 
@@ -37,13 +39,20 @@ interface NewOrganizationIdentityCardProps {
    * so an answer that lands here also refuses to advance the step.
    */
   takenSlugs: Set<string>;
+  /**
+   * The visibility Demo overwrote, kept by the wizard rather than this card: the wizard
+   * mounts only the step in view, so a ref owned here is gone after Next and Back.
+   */
+  visibilityBeforeDemo: MutableRefObject<NewOrganizationFormValues["visibility"] | null>;
 }
 
 export function NewOrganizationIdentityCard({
   form,
   takenSlugs,
+  visibilityBeforeDemo,
 }: NewOrganizationIdentityCardProps) {
   const { t } = useTranslation();
+  const { data: adminAccess } = usePlatformAdmin();
 
   const slug = form.watch("slug");
   const [isSlugEdited, setIsSlugEdited] = useState(false);
@@ -147,7 +156,20 @@ export function NewOrganizationIdentityCard({
         render={({ field }) => (
           <FormItem>
             <FormLabel>{t("organizations.fields.type")}</FormLabel>
-            <Select value={field.value} onValueChange={field.onChange}>
+            <Select
+              value={field.value}
+              onValueChange={(value) => {
+                const enteringDemo = value === "demo" && field.value !== "demo";
+                const leavingDemo = value !== "demo" && field.value === "demo";
+                if (enteringDemo) visibilityBeforeDemo.current = form.getValues("visibility");
+                field.onChange(value);
+                if (value === "demo") form.setValue("visibility", "public");
+                if (leavingDemo && visibilityBeforeDemo.current) {
+                  form.setValue("visibility", visibilityBeforeDemo.current);
+                  visibilityBeforeDemo.current = null;
+                }
+              }}
+            >
               <FormControl>
                 <SelectTrigger>
                   <SelectValue />
@@ -155,7 +177,9 @@ export function NewOrganizationIdentityCard({
               </FormControl>
               <SelectContent>
                 <SelectItem value={NO_TYPE}>{t("organizations.types.unspecified")}</SelectItem>
-                {ORGANIZATION_TYPES.map((organizationType) => (
+                {ORGANIZATION_TYPES.filter(
+                  (type) => type !== "demo" || adminAccess?.isPlatformAdmin,
+                ).map((organizationType) => (
                   <SelectItem key={organizationType} value={organizationType}>
                     {t(organizationTypeLabelKey(organizationType))}
                   </SelectItem>

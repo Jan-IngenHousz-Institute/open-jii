@@ -529,7 +529,8 @@
       "non_profit": "Gemeinnützige Organisation",
       "private_company": "Privatunternehmen",
       "government_agency": "Behörde",
-      "university": "Universität"
+      "university": "Universität",
+      "demo": "Demo"
     },
     "roles": {
       "owner": "Eigentümer",
@@ -571,8 +572,8 @@
       "creating": "Wird erstellt…",
       "created": "{{name}} wurde erstellt",
       "failed": "Diese Organisation konnte nicht erstellt werden.",
-      "privateNote": "Diese Organisation wird privat sein. Von außen sieht sie niemand, und Sie können sie später in den Einstellungen veröffentlichen.",
-      "publicNote": "Diese Organisation wird öffentlich sein. Sie erscheint direkt nach dem Anlegen im Verzeichnis, wo alle angemeldeten Personen sie finden und eine Beitrittsanfrage stellen können.",
+      "visibilityNote_private": "Diese Organisation wird privat sein. Von außen sieht sie niemand, und Sie können sie später in den Einstellungen veröffentlichen.",
+      "visibilityNote_public": "Diese Organisation wird öffentlich sein. Sie erscheint direkt nach dem Anlegen im Verzeichnis, wo alle angemeldeten Personen sie finden und eine Beitrittsanfrage stellen können.",
       "next": "Weiter",
       "identityStep": "Identität",
       "identityTitle": "Identität",
@@ -602,7 +603,8 @@
         "listTitle": "Einzuladende Personen",
         "teamsNote": "Teams werden im Tab „Teams“ der Organisation eingerichtet, sobald sie existiert – ein Team ist eine Gruppe ihrer Mitglieder und kann deshalb nicht vorher entstehen.",
         "failed": "Die Organisation wurde erstellt, aber {{names}} konnte nicht eingeladen werden. Versuchen Sie es über den Tab „Mitglieder“ erneut."
-      }
+      },
+      "visibilityNote_demo": "Diese Demo-Organisation wird öffentlich sein. Sie erscheint direkt nach dem Anlegen im Verzeichnis."
     },
     "directory": {
       "emptyTitle": "Noch keine Organisationen",
@@ -794,10 +796,13 @@
       "profileTitle": "Profil",
       "profileDescription": "Wie diese Organisation ihren Mitgliedern und — wenn sie öffentlich ist — im Verzeichnis erscheint.",
       "saved": "Organisation aktualisiert",
-      "saveFailed": "Diese Änderungen konnten nicht gespeichert werden.",
+      "saveError": "Diese Änderungen konnten nicht gespeichert werden.",
+      "saveError_demoPrivateResources": "Veröffentliche alle Experimente, Arbeitsmappen, Protokolle und Makros, bevor du Demo auswählst.",
+      "saveError_organization_changed": "Die Organisation wurde geändert. Lade sie neu, bevor du erneut speicherst.",
       "title": "Einstellungen",
       "description": "Nur Inhaber können diese ändern. Administratoren verwalten Personen und Teams.",
-      "unsaved": "Nicht gespeicherte Änderungen am Profil."
+      "unsaved": "Nicht gespeicherte Änderungen am Profil.",
+      "demoPrivateResources": "Veröffentliche diese privaten Inhalte, bevor du Demo auswählst."
     },
     "visibility": {
       "title": "Sichtbarkeit",
@@ -809,8 +814,10 @@
       "nowPublic": "Diese Organisation ist jetzt öffentlich",
       "nowPrivate": "Diese Organisation ist jetzt privat",
       "changeFailed": "Die Sichtbarkeit der Organisation konnte nicht geändert werden.",
-      "privateHint": "Von außen unsichtbar. Nichtmitglieder erhalten eine „Nicht gefunden“-Seite, und niemand kann eine Beitrittsanfrage stellen.",
-      "publicHint": "Im Verzeichnis aufgeführt. Alle angemeldeten Personen sehen das Profil und seine öffentlichen Ressourcen und können eine Beitrittsanfrage stellen."
+      "hint_private": "Von außen unsichtbar. Nichtmitglieder erhalten eine „Nicht gefunden“-Seite, und niemand kann eine Beitrittsanfrage stellen.",
+      "hint_public": "Im Verzeichnis aufgeführt. Alle angemeldeten Personen sehen das Profil und seine öffentlichen Ressourcen und können eine Beitrittsanfrage stellen.",
+      "description_demo": "Demo-Organisationen sind immer öffentlich und erscheinen im Verzeichnis.",
+      "hint_demo": "Im Verzeichnis aufgeführt. Alle angemeldeten Personen sehen das Profil und seine öffentlichen Ressourcen."
     },
     "delete": {
       "description": "Das Löschen einer Organisation kann nicht rückgängig gemacht werden. Ihre Inhalte werden nicht mitgelöscht, sie muss also zuerst leer sein.",
@@ -1506,5 +1513,16 @@
     "previous": "Zurück",
     "next": "Weiter",
     "pageOf": "Seite {{page}} von {{totalPages}}"
+  },
+  "platformAdmins": {
+    "title": "Plattformadmins",
+    "description": "Plattformadmins verwalten Demo-Organisationen.",
+    "howGranted": "JII vergibt und entzieht diese Rolle außerhalb der App. In der Produktionsumgebung genehmigt eine zweite Person jede Änderung.",
+    "current": "Aktuelle Admins",
+    "since": "Seit {{date}}",
+    "dateUnknown": "Vergabedatum nicht verfügbar",
+    "userId": "Benutzer-ID",
+    "loadFailed": "Plattformadmins konnten nicht geladen werden.",
+    "retry": "Erneut versuchen"
   }
 }

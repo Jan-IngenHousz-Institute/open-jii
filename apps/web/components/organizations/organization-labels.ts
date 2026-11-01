@@ -1,6 +1,7 @@
 import type {
   OrganizationRole,
   OrganizationType,
+  OrganizationVisibility,
 } from "@repo/api/domains/organization/organization.schema";
 import {
   zOrganizationRole,
@@ -17,6 +18,16 @@ export const ORGANIZATION_ROLES: readonly OrganizationRole[] = zOrganizationRole
 
 export function organizationTypeLabelKey(type: OrganizationType): string {
   return `organizations.types.${type}`;
+}
+
+/** Which hint and note an organization's visibility choice gets: a Demo type outranks the choice. */
+export type VisibilityKind = "demo" | OrganizationVisibility;
+
+export function visibilityKind(
+  type: string | null | undefined,
+  visibility: OrganizationVisibility,
+): VisibilityKind {
+  return type === "demo" ? "demo" : visibility;
 }
 
 export function organizationRoleLabelKey(role: OrganizationRole): string {

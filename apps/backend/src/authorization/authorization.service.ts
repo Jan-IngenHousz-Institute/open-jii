@@ -9,6 +9,7 @@ import {
   experimentDevices,
   experiments,
   deviceGroups,
+  heldPlatformRoles,
   iotDevices,
   macros,
   organizationMembers,
@@ -17,7 +18,7 @@ import {
   teamMembers,
   workbooks,
 } from "@repo/database";
-import type { DatabaseInstance, DbOrTx } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, PlatformRole } from "@repo/database";
 import type { ResourceType } from "@repo/database";
 
 import { mayTransferOutOfOrganization } from "../sharing/core/transfer-authority";
@@ -268,6 +269,14 @@ export class AuthorizationService {
       )
       .limit(1);
     return rows.length > 0;
+  }
+
+  /**
+   * Whether the account holds a platform role, read fresh so a revoked role stops the next
+   * request. A platform role gives no access to any resource, so `can()` never consults it.
+   */
+  async hasPlatformRole(userId: string, role: PlatformRole): Promise<boolean> {
+    return (await heldPlatformRoles(this.db, userId)).includes(role);
   }
 
   /**
