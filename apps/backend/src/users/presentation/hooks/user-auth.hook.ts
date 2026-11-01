@@ -64,18 +64,12 @@ export class UserAuthHook {
 
   /**
    * `/sign-in/social` only hands out the provider's redirect URL — the session is
-   * created when the provider redirects back, so these two callback paths are the
-   * only place an OAuth sign-up can be caught. Better Auth matches hooks on the
-   * route pattern by exact equality, so the parameter names have to be its own.
+   * created when the provider redirects back, so this callback path is the only
+   * place an OAuth sign-up can be caught. Better Auth matches hooks on the route
+   * pattern by exact equality, so the parameter name has to be its own.
    */
   @AfterHook("/callback/:id")
   async handleOAuthCallback(ctx: AuthHookContext) {
-    await this.acceptInvitationsForNewUser(ctx);
-    await this.notifyPendingOrganizationInvitations(ctx);
-  }
-
-  @AfterHook("/oauth2/callback/:providerId")
-  async handleGenericOAuthCallback(ctx: AuthHookContext) {
     await this.acceptInvitationsForNewUser(ctx);
     await this.notifyPendingOrganizationInvitations(ctx);
   }

@@ -84,6 +84,8 @@ export function orcidProvider(config: OrcidProviderConfig) {
     authorizationUrl: `${baseUrl}/oauth/authorize`,
     tokenUrl: `${baseUrl}/oauth/token`,
     scopes: config.scopes ?? ["openid", "/authenticate"],
+    // ORCID's discovery document advertises no code_challenge_methods_supported.
+    pkce: false,
     redirectURI: config.redirectURI,
     disableImplicitSignUp: config.disableImplicitSignUp,
     overrideUserInfo: config.overrideUserInfo,
