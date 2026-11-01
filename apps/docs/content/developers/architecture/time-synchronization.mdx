@@ -48,8 +48,13 @@ const { timezone } = getTimeSyncState();
 ## Measurement coordinates
 
 Timezone resolution and measurement coordinates share the foreground location
-permission but use separate code paths. `getMeasurementLocation()` never requests
-permission. It checks the existing grant, prefers a last-known position at most
+permission but use separate code paths. Neither requests it. Time sync starts
+before sign-in, so it only checks the grant and falls back to `UTC` without one.
+The measurement flow asks once through `requestMeasurementLocationPermission()`
+when the user starts a flow, before the first step, and the first time sync after
+a grant resolves the timezone.
+
+`getMeasurementLocation()` checks the existing grant, prefers a last-known position at most
 60 seconds old, and otherwise races a balanced-accuracy position request against
 a 10-second timeout. It catches every failure and returns `null`, so location
 lookup cannot block an upload.

@@ -1,31 +1,38 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
 import { View } from "react-native";
 import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { deferred } from "~/shared/testing/deferred";
 
 import { ExperimentSelectionStep } from "./experiment-selection-step";
 
 interface PickerState {
   selectedExperimentId: string | undefined;
   flowError: unknown;
+  flowReady: boolean;
   options: { value: string; label: string }[];
   rows: { id: string }[] | undefined;
   isLoading: boolean;
   isPaused: boolean;
   error: unknown;
   push: Mock<(href: unknown) => void>;
+  setExperimentId: Mock<(id: string, label?: string) => void>;
+  requestLocation: Mock<() => Promise<void>>;
 }
 
 const state = vi.hoisted<PickerState>(() => ({
   selectedExperimentId: "exp-1",
   flowError: undefined,
+  flowReady: false,
   options: [{ value: "exp-1", label: "Canopy Phi2 Sweep" }],
   rows: [{ id: "exp-1" }],
   isLoading: false,
   isPaused: false,
   error: undefined,
   push: vi.fn<(href: unknown) => void>(),
+  setExperimentId: vi.fn<(id: string, label?: string) => void>(),
+  requestLocation: vi.fn<() => Promise<void>>(),
 }));
 
 vi.mock("expo-router", () => ({ router: { push: (href: unknown) => state.push(href) } }));
@@ -62,14 +69,22 @@ vi.mock("~/features/measurement-flow/hooks/use-experiments-flow-meta", () => ({
   useExperimentsFlowMeta: () => ({}),
 }));
 vi.mock("~/features/measurement-flow/hooks/use-load-experiment-flow", () => ({
-  useLoadExperimentFlow: () => ({ isLoading: false, error: state.flowError, isReady: false }),
+  useLoadExperimentFlow: () => ({
+    isLoading: false,
+    error: state.flowError,
+    isReady: state.flowReady,
+  }),
 }));
 vi.mock("~/features/measurement-flow/stores/use-flow-answers-store", () => ({
   useFlowAnswersStore: () => ({ clearHistory: vi.fn() }),
 }));
 vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => ({
-  useMeasurementFlowStore: (selector: (s: { setExperimentId: () => void }) => unknown) =>
-    selector({ setExperimentId: vi.fn() }),
+  useMeasurementFlowStore: (
+    selector: (s: { setExperimentId: PickerState["setExperimentId"] }) => unknown,
+  ) => selector({ setExperimentId: state.setExperimentId }),
+}));
+vi.mock("~/shared/location/measurement-location", () => ({
+  requestMeasurementLocationPermission: () => state.requestLocation(),
 }));
 vi.mock("./experiment-card", () => ({ ExperimentCard: () => <View testID="experiment-card" /> }));
 vi.mock("./offline-mode-indicator", () => ({ OfflineModeIndicator: () => null }));
@@ -102,12 +117,15 @@ const EMPTY_PROMPT = "You're not in any experiment yet";
 beforeEach(() => {
   state.selectedExperimentId = "exp-1";
   state.flowError = undefined;
+  state.flowReady = false;
   state.options = [{ value: "exp-1", label: "Canopy Phi2 Sweep" }];
   state.rows = [{ id: "exp-1" }];
   state.isLoading = false;
   state.isPaused = false;
   state.error = undefined;
   state.push.mockClear();
+  state.setExperimentId.mockReset();
+  state.requestLocation.mockReset();
 });
 
 describe("ExperimentSelectionStep empty prompt", () => {
@@ -224,5 +242,23 @@ describe("ExperimentSelectionStep flow-load failures", () => {
 
     expect(screen.queryByText(NOT_SHARED)).toBeNull();
     expect(screen.queryByText(GENERIC)).toBeNull();
+  });
+});
+
+describe("ExperimentSelectionStep start", () => {
+  it("asks for location before the flow starts and starts once the prompt is answered", async () => {
+    state.flowReady = true;
+    const prompt = deferred<void>();
+    state.requestLocation.mockReturnValue(prompt.promise);
+    render(<ExperimentSelectionStep />);
+
+    fireEvent.press(screen.getByText("experimentSelection.startNamedFlow"));
+
+    expect(state.requestLocation).toHaveBeenCalledTimes(1);
+    expect(state.setExperimentId).not.toHaveBeenCalled();
+
+    await act(() => Promise.resolve(prompt.resolve()));
+
+    expect(state.setExperimentId).toHaveBeenCalledExactlyOnceWith("exp-1", "Canopy Phi2 Sweep");
   });
 });

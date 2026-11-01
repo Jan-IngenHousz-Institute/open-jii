@@ -64,15 +64,17 @@ describe.each(["GitHub", "ORCID"] as const)("%s sign-in", (provider) => {
   }
 
   it.each(["", "better-auth.dev.oauth_state=pending"])(
-    "returns silently after cancel with cookie %j and makes no follow-up requests",
+    "reports an unfinished sign-in after cancel with cookie %j and makes no follow-up requests",
     async (cookie) => {
       getCookie.mockResolvedValue(cookie);
       const { result } = renderHook(() => useLoginFlow(), { wrapper });
 
+      let completed: boolean | undefined;
       await act(async () => {
-        await start(result.current);
+        completed = await start(result.current);
       });
 
+      expect(completed).toBe(false);
       expect(getSession).not.toHaveBeenCalled();
       expect(prefetchOfflineData).not.toHaveBeenCalled();
       expect(ensureDeviceRegistered).not.toHaveBeenCalled();
@@ -102,10 +104,33 @@ describe.each(["GitHub", "ORCID"] as const)("%s sign-in", (provider) => {
 
   async function signIn() {
     const { result } = renderHook(() => useLoginFlow(), { wrapper });
+    let completed: boolean | undefined;
     await act(async () => {
-      await start(result.current);
+      completed = await start(result.current);
     });
+    return completed;
   }
+
+  it("reports a finished sign-in once the browser stores a new session token", async () => {
+    social.mockImplementation(() => {
+      getCookie.mockResolvedValue("better-auth.dev.session_token=valid");
+      return Promise.resolve({
+        data: { redirect: true, url: "https://provider.test" },
+        error: null,
+      });
+    });
+    getSession.mockResolvedValue({ data: { user: { id: "user-1" } } });
+
+    expect(await signIn()).toBe(true);
+    expect(prefetchOfflineData).toHaveBeenCalledExactlyOnceWith(queryClient, "user-1");
+  });
+
+  it("reports an unfinished sign-in when a cancel leaves an old session token in place", async () => {
+    getCookie.mockResolvedValue("better-auth.dev.session_token=revoked");
+    getSession.mockResolvedValue({ data: null, error: null });
+
+    expect(await signIn()).toBe(false);
+  });
 
   it("skips prefetch and registration when the server reports no session for the token", async () => {
     getCookie.mockResolvedValue("better-auth.dev.session_token=revoked");

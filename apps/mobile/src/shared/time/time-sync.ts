@@ -82,11 +82,13 @@ async function restoreState(): Promise<void> {
   }
 }
 
+// Never prompts: time sync starts before sign-in, and the measurement flow asks
+// for location when it starts.
 async function resolveTimezone(): Promise<string> {
   try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
+    const { status } = await Location.getForegroundPermissionsAsync();
     if (status !== "granted") {
-      log.warn("Location permission not granted, falling back to UTC");
+      log.info("Location permission not granted, falling back to UTC");
       return "UTC";
     }
 

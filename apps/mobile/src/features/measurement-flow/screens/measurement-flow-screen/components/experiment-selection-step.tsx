@@ -22,6 +22,7 @@ import { useLoadExperimentFlow } from "~/features/measurement-flow/hooks/use-loa
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
+import { requestMeasurementLocationPermission } from "~/shared/location/measurement-location";
 import { Banner } from "~/shared/ui/Banner";
 import { Button } from "~/shared/ui/Button";
 import { Input } from "~/shared/ui/Input";
@@ -79,8 +80,12 @@ export function ExperimentSelectionStep() {
   const isConnected = !!connectedDevice;
   const showDeviceBanner = !!selectedExperimentId && requiresDevice && !isConnected;
 
-  const handleStart = () => {
-    if (!selectedExperimentId || !experimentFlowReady) return;
+  const handleStart = async () => {
+    if (!selectedExperimentId || !experimentFlowReady) {
+      return;
+    }
+
+    await requestMeasurementLocationPermission();
     clearHistory();
     setExperimentId(selectedExperimentId, selectedExperiment?.label);
   };
@@ -219,7 +224,7 @@ export function ExperimentSelectionStep() {
                 })
               : t("experimentSelection.startFlow")
           }
-          onPress={handleStart}
+          onPress={() => void handleStart()}
           isDisabled={!selectedExperimentId || !experimentFlowReady}
           size="lg"
         />
