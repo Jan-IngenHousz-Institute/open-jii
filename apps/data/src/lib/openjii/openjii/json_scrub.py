@@ -14,12 +14,14 @@ from pyspark.sql import Column
 from pyspark.sql import functions as F
 
 # A string literal runs to its closing quote, or to the end of the payload when it has none, so a
-# literal never fails and the scan never retries from a later quote: the cost stays linear.
-_STRING_OR_NON_FINITE_TOKEN = re.compile(r'"(?:[^"\\]|\\[\s\S]?)*(?:"|(?![\s\S]))|-?Infinity|NaN')
+# literal never fails and the scan never retries from a later quote: the cost stays linear. Each
+# character inside has one way to match, so nothing can backtrack either; a lone backslash can only
+# end the payload.
+_STRING_OR_NON_FINITE_TOKEN = re.compile(r'"(?:[^"\\]|\\[\s\S])*(?:"|\\?(?![\s\S]))|-?Infinity|NaN')
 
 # The same literals for Spark, plus the text between them, so the pieces join back into the payload.
 # Possessive runs let Java's regex engine scan a long literal without recursing.
-_SPARK_PIECES = r'"(?:[^"\\]++|\\[\s\S]?)*+(?:"|(?![\s\S]))|[^"]++'
+_SPARK_PIECES = r'"(?:[^"\\]++|\\[\s\S])*+(?:"|\\?(?![\s\S]))|[^"]++'
 _NON_FINITE_TOKEN = r"-?Infinity|NaN"
 
 

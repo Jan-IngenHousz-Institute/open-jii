@@ -33,6 +33,8 @@ _PAYLOADS = [
     # Every escaped quote here once made the scan retry the literal to the end: quadratic time.
     '{"t": NaN, "open": "' + '\\"' * 200_000,
     '{"t": NaN, "trailing": "\\',
+    # The shape a backslash with an optional next character could match two ways.
+    '{"t": NaN, "s": "\\' + "!\\" * 100_000,
     '{"t": NaN} "',
     '{"t": NaN, "s": "line\\\nbreak"}',
 ]
