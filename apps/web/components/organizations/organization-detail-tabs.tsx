@@ -1,5 +1,7 @@
 "use client";
 
+import { guestMayUse } from "@/components/auth/guest-access";
+import { useIsGuest } from "@/components/auth/principal-context";
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -38,10 +40,12 @@ export function OrganizationDetailTabs({ organization, children }: OrganizationD
   const pathname = usePathname();
   const locale = useLocale();
 
+  const isGuest = useIsGuest();
   const isMember = organization.role !== null;
   const isOwner = organization.role === "owner";
 
-  if (!isMember) {
+  // A guest in a demo organization cannot list its people, so has no strip to choose from.
+  if (!isMember || !guestMayUse("organizations.listOrganizationMembers", isGuest)) {
     return (
       <div className="flex flex-1 flex-col">
         <div className="border-border border-b pb-5">

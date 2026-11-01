@@ -1,6 +1,8 @@
 import { ActivityProvider } from "@/components/activity/activity-context";
+import { GuestBanner } from "@/components/auth/guest-banner";
 import { PasskeyCreatePrompt } from "@/components/auth/passkey-create-prompt";
 import { PrincipalProvider } from "@/components/auth/principal-context";
+import { PrincipalGate } from "@/components/auth/principal-gate";
 import { CalibrationFlagProvider } from "@/components/calibrations/calibration-flag-context";
 import { CommandPalette } from "@/components/command/command-palette";
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
@@ -84,39 +86,44 @@ export default async function AppLayout({
 
   return (
     <TranslationBundles resources={bundles}>
-      <PrincipalProvider userId={session.user.id}>
-        <SidebarProvider defaultWidth={232}>
-          <CalibrationFlagProvider isEnabled={isCalibrationEnabled}>
-            <ActivityProvider>
-              <NavigationSidebarWrapper
-                locale={locale}
-                releaseDates={releaseDates}
-                user={sidebarUser}
-                isCalibrationEnabled={isCalibrationEnabled}
-              />
-              <SidebarEdgePeek />
-              <SidebarInset>
-                <PlatformHeaderProvider>
-                  <SiteHeader locale={locale} />
-                  <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 py-4 md:px-6 md:py-6">
-                    <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
-                      <Suspense>{children}</Suspense>
-                    </PageContainer>
-                  </div>
-                </PlatformHeaderProvider>
-              </SidebarInset>
-              <NavigationTimingReporter />
-              <ShortcutsRoot locale={locale} />
-              <CommandPalette locale={locale} />
-              <Toaster />
-              <ShortcutHint />
-              {!session.user.isAnonymous && (
-                <PasskeyCreatePrompt userId={session.user.id} sessionId={session.session.id} />
-              )}
-              {!session.user.isAnonymous && <WhatsNewSheet releaseDates={releaseDates} />}
-            </ActivityProvider>
-          </CalibrationFlagProvider>
-        </SidebarProvider>
+      <PrincipalProvider userId={session.user.id} isGuest={session.user.isAnonymous === true}>
+        <PrincipalGate userId={session.user.id}>
+          <SidebarProvider defaultWidth={232}>
+            <CalibrationFlagProvider isEnabled={isCalibrationEnabled}>
+              <ActivityProvider>
+                <NavigationSidebarWrapper
+                  locale={locale}
+                  releaseDates={releaseDates}
+                  user={sidebarUser}
+                  isCalibrationEnabled={isCalibrationEnabled}
+                />
+                <SidebarEdgePeek />
+                <SidebarInset>
+                  <PlatformHeaderProvider>
+                    <SiteHeader locale={locale} />
+                    {session.user.isAnonymous && (
+                      <GuestBanner name={session.user.name} locale={locale} />
+                    )}
+                    <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 py-4 md:px-6 md:py-6">
+                      <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
+                        <Suspense>{children}</Suspense>
+                      </PageContainer>
+                    </div>
+                  </PlatformHeaderProvider>
+                </SidebarInset>
+                <NavigationTimingReporter />
+                <ShortcutsRoot locale={locale} />
+                <CommandPalette locale={locale} />
+                <Toaster />
+                <ShortcutHint />
+                {!session.user.isAnonymous && (
+                  <PasskeyCreatePrompt userId={session.user.id} sessionId={session.session.id} />
+                )}
+                {!session.user.isAnonymous && <WhatsNewSheet releaseDates={releaseDates} />}
+              </ActivityProvider>
+            </CalibrationFlagProvider>
+          </SidebarProvider>
+        </PrincipalGate>
       </PrincipalProvider>
     </TranslationBundles>
   );

@@ -1,5 +1,7 @@
 "use client";
 
+import { guestMayUse } from "@/components/auth/guest-access";
+import { useIsGuest } from "@/components/auth/principal-context";
 import { DocsHelpLink } from "@/components/docs-help-link";
 import { useOrganization } from "@/hooks/organization/useOrganization/useOrganization";
 import { useOrganizationMembers } from "@/hooks/organization/useOrganizationMembers/useOrganizationMembers";
@@ -38,11 +40,14 @@ export function OrganizationOverview({ organizationId }: { organizationId: strin
   // One answer for the page: every row is owned by this one organization.
   const canTransfer = organization?.role === "owner" || organization?.role === "admin";
   // Members only, like the endpoints behind them.
+  const isGuest = useIsGuest();
+  const seesTeams = isMember && guestMayUse("organizations.listOrganizationTeams", isGuest);
+  const seesRoster = isMember && guestMayUse("organizations.listOrganizationMembers", isGuest);
   const { data: teams, isPending: isTeamsPending } = useOrganizationTeams(organizationId, {
-    enabled: isMember,
+    enabled: seesTeams,
   });
   const { data: roster, isPending: isMembersPending } = useOrganizationMembers(organizationId, {
-    enabled: isMember,
+    enabled: seesRoster,
   });
 
   const resources = data?.resources ?? [];
@@ -120,8 +125,8 @@ export function OrganizationOverview({ organizationId }: { organizationId: strin
             organization={organization}
             members={roster?.members}
             teams={teams}
-            isMembersPending={isMember && isMembersPending}
-            isTeamsPending={isMember && isTeamsPending}
+            isMembersPending={seesRoster && isMembersPending}
+            isTeamsPending={seesTeams && isTeamsPending}
           />
         ) : null}
 

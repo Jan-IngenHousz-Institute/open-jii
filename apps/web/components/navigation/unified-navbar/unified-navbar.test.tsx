@@ -172,6 +172,25 @@ describe("UnifiedNavbar", () => {
     expect(within(dropdown).getByRole("menuitem", { name: /auth\.signOut/i })).toBeInTheDocument();
   });
 
+  it("asks for no profile and offers no account to a guest, whom both refuse", async () => {
+    const profile = server.mount(contract.users.getUserProfile, { body: createUserProfile() });
+    vi.mocked(usePathname).mockReturnValue("/en-US/blog");
+    vi.mocked(useSession).mockReturnValue(
+      createUseSessionResult({
+        data: makeSession({ user: { id: "guest-1", name: "River", isAnonymous: true } }),
+      }),
+    );
+    render(<UnifiedNavbar locale="en-US" links={[]} />);
+
+    const [desktop, mobile] = screen.getAllByTestId("dropdown-content");
+    await waitFor(() => expect(within(desktop).getByText("River")).toBeInTheDocument());
+    for (const menu of [desktop, mobile]) {
+      expect(within(menu).queryByRole("link", { name: /auth\.account/i })).toBeNull();
+      expect(within(menu).getByRole("menuitem", { name: /auth\.signOut/i })).toBeInTheDocument();
+    }
+    expect(profile.called).toBe(false);
+  });
+
   it("calls signOut on Sign Out click", async () => {
     const user = userEvent.setup();
     const { router } = renderNavbar({ pathname: "/en-US/blog", session: makeSession() });

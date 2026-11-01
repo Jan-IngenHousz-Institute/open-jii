@@ -1,8 +1,9 @@
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import { COMMAND_PALETTE_OPEN_EVENT } from "@/components/shortcuts/shortcuts-root";
 import { render, screen, fireEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { SidebarProvider } from "@repo/ui/components/sidebar";
+import { SidebarProvider, useSidebar } from "@repo/ui/components/sidebar";
 
 import { AppSidebar } from "./navigation-sidebar";
 
@@ -57,16 +58,28 @@ const translations = {
   organizationsTitle: "Organizations",
 };
 
-function renderSidebar() {
+function MobileState() {
+  const { openMobile, setOpenMobile } = useSidebar();
+  return (
+    <>
+      <button onClick={() => setOpenMobile(true)}>Open mobile sidebar</button>
+      <output>{String(openMobile)}</output>
+    </>
+  );
+}
+function renderSidebar({ isGuest = false, withMobileState = false } = {}) {
   return render(
-    <SidebarProvider>
-      <AppSidebar
-        locale="en"
-        navigationData={navigationData}
-        translations={translations}
-        user={{ id: "user-1", email: "test@example.com" }}
-      />
-    </SidebarProvider>,
+    <PrincipalProvider userId="user-1" isGuest={isGuest}>
+      <SidebarProvider>
+        {withMobileState && <MobileState />}
+        <AppSidebar
+          locale="en"
+          navigationData={navigationData}
+          translations={translations}
+          user={{ id: "user-1", email: "test@example.com" }}
+        />
+      </SidebarProvider>
+    </PrincipalProvider>,
   );
 }
 
@@ -153,10 +166,30 @@ describe("AppSidebar", () => {
     expect(screen.getByText("test@example.com").closest("div.min-w-0.flex-1")).toBeInTheDocument();
   });
 
+  it("offers a guest neither notifications nor what's new, which the server refuses them", () => {
+    renderSidebar({ isGuest: true });
+
+    expect(screen.queryByRole("button", { name: "title" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "whatsNew.navLabel" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /navigation.documentation/i })).toBeInTheDocument();
+  });
+
   it("removes the redundant in-sidebar collapse control", () => {
     const { container } = renderSidebar();
 
     expect(container.querySelector('[data-sidebar="trigger"]')).toBeNull();
+  });
+
+  it("closes mobile navigation when What's new opens", () => {
+    const opened = vi.fn();
+    window.addEventListener("openjii:open-whats-new", opened);
+    renderSidebar({ withMobileState: true });
+    fireEvent.click(screen.getByRole("button", { name: "Open mobile sidebar" }));
+    expect(screen.getByRole("status")).toHaveTextContent("true");
+    fireEvent.click(screen.getByRole("button", { name: "whatsNew.navLabel" }));
+    expect(screen.getByRole("status")).toHaveTextContent("false");
+    expect(opened).toHaveBeenCalledTimes(1);
+    window.removeEventListener("openjii:open-whats-new", opened);
   });
 
   it("aligns every secondary utility as the same compact sidebar row", () => {

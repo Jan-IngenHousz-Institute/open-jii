@@ -98,6 +98,18 @@ describe("guest authorization HTTP boundary", () => {
   afterEach(() => app.afterEach());
   afterAll(() => app.teardown());
 
+  it("exposes only demo availability to anonymous, guest and researcher callers", async () => {
+    const path = "/api/v1/users/demo-availability";
+    const anonymous = await app.get(path).expect(200);
+    expect(z.object({ enabled: z.boolean() }).strict().safeParse(anonymous.body).success).toBe(
+      true,
+    );
+    for (const id of [visitor, researcher]) {
+      const response = await app.get(path).withAuth(id).expect(200);
+      expect(response.body).toEqual(anonymous.body);
+    }
+  });
+
   function registeredRoutes() {
     const nativeRoutes: {
       procedure: string;

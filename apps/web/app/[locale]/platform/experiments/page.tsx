@@ -1,3 +1,4 @@
+import { GuestGate } from "@/components/auth/guest-gate";
 import { ListExperiments } from "@/components/list-experiments";
 import { ResourceMetricsSummary } from "@/components/metrics/resource-metrics-summary";
 import { PageContainer } from "@/components/page-container";
@@ -30,7 +31,9 @@ export default async function ExperimentPage({ searchParams }: ExperimentPagePro
 
   return (
     <PageContainer width="fluid" className="space-y-6">
-      <ResourceMetricsSummary kind="experiment" />
+      <GuestGate procedure="metrics.getResourceMetrics">
+        <ResourceMetricsSummary kind="experiment" />
+      </GuestGate>
       <PrefetchedQueries
         queries={(utils) =>
           isDefaultView ? [experimentsListQuery(utils, { archived: false, page: 1 })] : []

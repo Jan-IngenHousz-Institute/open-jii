@@ -1,3 +1,4 @@
+import { createSession } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { createTestQueryClient, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -38,6 +39,20 @@ const MOCK_JOIN_REQUEST = {
 describe("ExperimentRequestToJoin", () => {
   afterEach(() => {
     mockSession(null);
+  });
+
+  it("hides the ordinary experiment join request and its email promise from guests", () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: createSession({ user: { isAnonymous: true } }),
+      isPending: false,
+      isRefetching: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    const read = server.mount(contract.experiments.getMyJoinRequest, { status: 404 });
+    const { container } = render(<ExperimentRequestToJoin experimentId={EXPERIMENT_ID} />);
+    expect(container).toBeEmptyDOMElement();
+    expect(read.called).toBe(false);
   });
 
   it("renders nothing while loading", () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { GuestGate } from "@/components/auth/guest-gate";
 import { ErrorDisplay } from "@/components/error-display";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentContributors } from "@/hooks/experiment/useExperimentContributors/useExperimentContributors";
@@ -96,7 +97,9 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           description={experiment.description ?? ""}
           hasAccess={hasAccess}
         />
-        <ExperimentActivityPulse experimentId={id} />
+        <GuestGate procedure="metrics.getScopedMetrics">
+          <ExperimentActivityPulse experimentId={id} />
+        </GuestGate>
         <ExperimentLinkedWorkbook
           workbookId={experiment.workbookId}
           workbookVersionId={experiment.workbookVersionId}

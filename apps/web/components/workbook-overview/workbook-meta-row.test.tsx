@@ -1,3 +1,4 @@
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import {
   createMarkdownCell,
   createWorkbook,
@@ -87,6 +88,18 @@ describe("WorkbookMetaRow", () => {
     // The version cell shows "-" rather than wrongly claiming the workbook is a draft.
     expect(await screen.findByText("-")).toBeInTheDocument();
     expect(screen.queryByText("workbooks.draftVersion")).not.toBeInTheDocument();
+  });
+
+  it("offers no fork to a guest, who cannot create workbooks", async () => {
+    render(
+      <PrincipalProvider userId="guest" isGuest>
+        <WorkbookMetaRow id="wb-1" workbook={workbook} />
+      </PrincipalProvider>,
+    );
+    expect(await screen.findByText("Test User")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "workbooks.actions.fork" }),
+    ).not.toBeInTheDocument();
   });
 
   it("forks the workbook and posts forkedFrom", async () => {

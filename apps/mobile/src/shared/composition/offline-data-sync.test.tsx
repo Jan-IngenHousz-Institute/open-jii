@@ -94,12 +94,20 @@ describe("useOfflineDataSync", () => {
       appStateHandler.current?.("active");
       await settleSyncWork();
     });
-    expect(prefetchOfflineData).toHaveBeenCalled();
+    expect(prefetchOfflineData).toHaveBeenCalledWith(client, "guest", { isGuest: true });
+    expect(prefetchOfflineData).toHaveBeenCalledWith(client, "guest", {
+      throttle: true,
+      isGuest: true,
+    });
     expect(ensureDeviceRegistered).not.toHaveBeenCalled();
   });
   it("re-prefetches (throttled) when connectivity returns", async () => {
     renderHook(() => useOfflineDataSync(), { wrapper });
 
+    expect(prefetchOfflineData).toHaveBeenCalledExactlyOnceWith(client, "user-1", {
+      isGuest: false,
+    });
+    prefetchOfflineData.mockClear();
     onlineManager.setOnline(false);
     expect(prefetchOfflineData).not.toHaveBeenCalled();
 
@@ -109,6 +117,7 @@ describe("useOfflineDataSync", () => {
     });
     expect(prefetchOfflineData).toHaveBeenCalledWith(expect.anything(), "user-1", {
       throttle: true,
+      isGuest: false,
     });
     expect(ensureDeviceRegistered).toHaveBeenCalledExactlyOnceWith({ throttle: true });
   });
@@ -122,6 +131,7 @@ describe("useOfflineDataSync", () => {
     });
     expect(prefetchOfflineData).toHaveBeenCalledWith(expect.anything(), "user-1", {
       throttle: true,
+      isGuest: false,
     });
     expect(ensureDeviceRegistered).toHaveBeenCalledExactlyOnceWith({ throttle: true });
   });
@@ -145,6 +155,10 @@ describe("useOfflineDataSync", () => {
   });
   it("unsubscribes connectivity work when unmounted", async () => {
     const { unmount } = renderHook(() => useOfflineDataSync(), { wrapper });
+    expect(prefetchOfflineData).toHaveBeenCalledExactlyOnceWith(client, "user-1", {
+      isGuest: false,
+    });
+    prefetchOfflineData.mockClear();
     unmount();
     await act(async () => {
       onlineManager.setOnline(false);
@@ -168,6 +182,7 @@ describe("OfflineDataSync", () => {
     });
     expect(prefetchOfflineData).toHaveBeenCalledWith(expect.anything(), "user-1", {
       throttle: true,
+      isGuest: false,
     });
     expect(ensureDeviceRegistered).toHaveBeenCalledExactlyOnceWith({ throttle: true });
   });

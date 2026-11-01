@@ -1,5 +1,6 @@
 "use client";
 
+import { guestMayUse } from "@/components/auth/guest-access";
 import { orpc } from "@/lib/orpc";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -8,6 +9,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -20,10 +22,18 @@ import {
 } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
 
+// The public pages carry no server principal, so the session says whether this is a guest,
+// whose cookie the subscribe endpoint refuses.
+export function NewsletterSubscribeForm() {
+  const { data: session } = useSession();
+  const isGuest = session?.user.isAnonymous === true;
+  return guestMayUse("newsletter.subscribe", isGuest) ? <SubscribeForm /> : null;
+}
+
 // Public footer subscribe form. The anonymous double-opt-in endpoint always
 // returns generic success, so the success state is "check your inbox to
 // confirm". Any error (incl. 429 rate limit) collapses to one generic message.
-export function NewsletterSubscribeForm() {
+function SubscribeForm() {
   const { t } = useTranslation("newsletter");
   const [isSuccess, setIsSuccess] = useState(false);
   const [hasError, setHasError] = useState(false);

@@ -3,6 +3,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { MeasurementItem } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useRecentMeasurementsActions } from "~/features/recent-measurements/hooks/use-recent-measurements-actions";
 
+vi.mock("~/features/auth/hooks/use-session", () => ({
+  useSession: () => ({ user: { id: "researcher", isAnonymous: false } }),
+}));
+
 const mockUploadAll = vi.fn().mockResolvedValue(undefined);
 const mockUploadOne = vi.fn().mockResolvedValue(undefined);
 const mockUploadMany = vi.fn().mockResolvedValue(undefined);
@@ -355,7 +359,10 @@ describe("useRecentMeasurementsActions", () => {
         await result.current.confirmSyncRun("run-1", "Run Exp");
       });
 
-      expect(mockGetMeasurementIdsByRunId).toHaveBeenCalledWith("run-1", ["pending", "failed"]);
+      expect(mockGetMeasurementIdsByRunId).toHaveBeenCalledWith("run-1", ["pending", "failed"], {
+        userId: "researcher",
+        isGuest: false,
+      });
       expect(mockShowAlert).toHaveBeenCalledWith(
         "Upload Workbook Run",
         'Upload 2 unsynced from "Run Exp" run?',

@@ -16,7 +16,8 @@ interface ExperimentMembersTrailProps {
   contributors: ExperimentContributor[];
   /** Every row the collaborators surface would list; the number this trail states. */
   collaboratorCount: number;
-  href: string;
+  /** Absent when the collaborators surface would refuse the viewer. */
+  href?: string;
   isLoading?: boolean;
   /** The read failed, so the count is unknown rather than zero. */
   isError?: boolean;
@@ -70,11 +71,8 @@ export function ExperimentMembersTrail({
   // Clamped: the two sets are computed apart, and a "+-1" bubble is worse than none.
   const remainder = Math.max(0, collaboratorCount - visible.length);
 
-  return (
-    <IntentLink
-      href={href}
-      className="hover:bg-muted/50 group -mx-2 -my-1 flex items-center gap-3 rounded-md px-2 py-1 transition-colors"
-    >
+  const trail = (
+    <>
       {/* No stack at all when nothing may be credited: a lone "+3" bubble beside no
           faces reads as three hidden people rather than as the total. */}
       {visible.length > 0 && (
@@ -100,6 +98,16 @@ export function ExperimentMembersTrail({
       <span className="text-muted-foreground group-hover:text-foreground text-sm transition-colors">
         {t("sharing.collaboratorCount", { count: collaboratorCount })}
       </span>
+    </>
+  );
+
+  if (!href) return <div className="flex items-center gap-3">{trail}</div>;
+  return (
+    <IntentLink
+      href={href}
+      className="hover:bg-muted/50 group -mx-2 -my-1 flex items-center gap-3 rounded-md px-2 py-1 transition-colors"
+    >
+      {trail}
     </IntentLink>
   );
 }

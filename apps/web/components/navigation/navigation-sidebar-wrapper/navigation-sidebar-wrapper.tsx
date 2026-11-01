@@ -1,4 +1,6 @@
+import { guestMayUse } from "@/components/auth/guest-access";
 import { mainNavigation } from "@/components/navigation/navigation-config";
+import type { NavLink } from "@/components/navigation/navigation-config";
 import * as React from "react";
 
 import initTranslations from "@repo/i18n/server";
@@ -29,10 +31,15 @@ export async function NavigationSidebarWrapper({
     namespaces: ["iot"],
   });
 
+  const isGuest = props.user.isAnonymous === true;
+  const allowed = (link: NavLink) => guestMayUse(link.procedure, isGuest);
+
   // With calibration flagged off, Devices has only its overview left, so it goes back to
   // being a plain link rather than a group of one.
   const deviceChildren = mainNavigation.devices.children.filter(
-    (child) => isCalibrationEnabled || child.url(locale) !== `/${locale}/platform/calibrations`,
+    (child) =>
+      allowed(child) &&
+      (isCalibrationEnabled || child.url(locale) !== `/${locale}/platform/calibrations`),
   );
   const hasDeviceGroup = deviceChildren.length > 1;
 
@@ -56,17 +63,17 @@ export async function NavigationSidebarWrapper({
         url: mainNavigation.experiments.url(locale),
         icon: mainNavigation.experiments.icon,
         isActive: true,
-        items: mainNavigation.experiments.items.map((item) => ({
+        items: mainNavigation.experiments.items.filter(allowed).map((item) => ({
           title: tNavigation(item.titleKey, { ns: item.namespace }),
           url: item.url(locale),
         })),
       },
     ],
-    navDevices: [
-      {
-        title: tIot(mainNavigation.devices.titleKey),
-        url: mainNavigation.devices.url(locale),
-        icon: mainNavigation.devices.icon,
+    navDevices: (allowed(mainNavigation.devices) ? [mainNavigation.devices] : []).map(
+      (devices) => ({
+        title: tIot(devices.titleKey),
+        url: devices.url(locale),
+        icon: devices.icon,
         isActive: true,
         navigable: !hasDeviceGroup,
         children: (hasDeviceGroup ? deviceChildren : []).map((child) => ({
@@ -74,8 +81,8 @@ export async function NavigationSidebarWrapper({
           url: child.url(locale),
         })),
         items: [],
-      },
-    ],
+      }),
+    ),
     navWorkbooks: [
       {
         title: tNavigation(mainNavigation.workbooks.titleKey),
@@ -94,7 +101,7 @@ export async function NavigationSidebarWrapper({
         url: mainNavigation.organizations.url(locale),
         icon: mainNavigation.organizations.icon,
         isActive: true,
-        items: mainNavigation.organizations.items.map((item) => ({
+        items: mainNavigation.organizations.items.filter(allowed).map((item) => ({
           title: tNavigation(item.titleKey, { ns: item.namespace }),
           url: item.url(locale),
         })),
@@ -110,7 +117,7 @@ export async function NavigationSidebarWrapper({
           title: tNavigation(child.titleKey, { ns: child.namespace }),
           url: child.url(locale),
           icon: child.icon,
-          items: child.items?.map((item) => ({
+          items: child.items?.filter(allowed).map((item) => ({
             title: tNavigation(item.titleKey, { ns: item.namespace }),
             url: item.url(locale),
           })),

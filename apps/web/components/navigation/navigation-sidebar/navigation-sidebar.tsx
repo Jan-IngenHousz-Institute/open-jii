@@ -1,5 +1,6 @@
 "use client";
 
+import { GuestGate } from "@/components/auth/guest-gate";
 import { CommandKHint } from "@/components/command/kbd";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { NotificationsPopover } from "@/components/notifications/notifications-popover";
@@ -186,15 +187,19 @@ export function AppSidebar({
         <SidebarGroup className="mt-auto p-0">
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <NotificationsPopover />
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <WhatsNewFooterItem
-                  releaseDates={releaseDates}
-                  onOpen={() => setOpenMobile(false)}
-                />
-              </SidebarMenuItem>
+              <GuestGate procedure="notifications.getUnreadNotificationCount">
+                <SidebarMenuItem>
+                  <NotificationsPopover />
+                </SidebarMenuItem>
+              </GuestGate>
+              <GuestGate procedure="users.getWhatsNewSeen">
+                <SidebarMenuItem>
+                  <WhatsNewFooterItem
+                    releaseDates={releaseDates}
+                    onOpen={() => setOpenMobile(false)}
+                  />
+                </SidebarMenuItem>
+              </GuestGate>
               <SidebarMenuItem>
                 <DocsNavLink />
               </SidebarMenuItem>

@@ -347,7 +347,8 @@
     "inviteCollaboratorsDescription": "Add an existing user or one of your organizations, or invite someone by email. Existing accounts get access right away; invitees are emailed and join once they accept.",
     "filterCollaboratorsPlaceholder": "Filter by name or email…",
     "invitedBy": "Invited by",
-    "unknownInviter": "Unknown inviter"
+    "unknownInviter": "Unknown inviter",
+    "requestToJoinSubmit_true": "$t(experimentSettings.requestToJoinSubmitting)"
   },
   "joinCode": {
     "title": "Join code",
@@ -1554,5 +1555,43 @@
   "provenance": {
     "simulated": "Simulated",
     "guest": "Guest"
+  },
+  "demo": {
+    "try": "Try the demo",
+    "title": "What should we call you?",
+    "name": "Name, optional",
+    "nameHint": "Use a nickname, not an email or web address. Do not use your real name unless you want it shown publicly.",
+    "permanent": "Measurements, including location when your phone shares it, stay public permanently. Your chosen name appears beside them until seven-day account cleanup, then they show “Former guest”.",
+    "continue": "Continue to the demo",
+    "cancel": "Cancel",
+    "terms": "Terms and conditions",
+    "invalidName": "Use a nickname of up to 60 characters without an email or web address.",
+    "entryError": "We could not open the demo. Please try again.",
+    "unavailable": "The demo is unavailable right now. Please try again later.",
+    "noContent": "The demo experiments could not be loaded. Try again without starting a new session.",
+    "retry": "Try again",
+    "banner": "You are trying the demo as {{name}}. This guest session lasts seven days.",
+    "bannerLabel": "Guest session",
+    "leave": "Leave demo",
+    "leaveTitle": "Leave the demo?",
+    "leaveDescription": "Your public measurements stay. You will need a new guest session to try the demo again.",
+    "leaveError": "You are still in the demo. Check your connection and try leaving again.",
+    "offline": "Connect to the internet to start the demo.",
+    "unsent_one": "You have {{count}} unsent measurement. Upload it before leaving, or leave it on this device until guest cleanup.",
+    "unsent_other": "You have {{count}} unsent measurements. Upload them before leaving, or leave them on this device until guest cleanup.",
+    "upload": "Upload now",
+    "leaveAnyway": "Leave anyway",
+    "uploadError": "Some measurements have not uploaded. Try again, or choose Leave anyway.",
+    "expired": "Your demo session has ended. Connect to the internet to start another.",
+    "leaveAction": "$t(demo.leave)",
+    "leaveAction_retry": "$t(demo.retry)",
+    "entryError_limited": "Too many attempts. Wait a minute, then try again.",
+    "entryError_disabled": "$t(demo.unavailable)"
+  },
+  "principalGate": {
+    "title": "We could not confirm who is signed in",
+    "description": "Your session changed or the connection dropped, so this page is hidden. Reload to try again, or sign in.",
+    "reload": "Reload",
+    "signIn": "Sign in"
   }
 }

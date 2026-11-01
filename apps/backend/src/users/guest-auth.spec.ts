@@ -305,7 +305,14 @@ describe("anonymous sessions on the production auth boundary", () => {
   it("uses Guest for an omitted name and refuses invalid names before creating rows", async () => {
     expect((await guest()).name).toBe("Guest");
     const before = await db.select().from(users);
-    for (const name of ["a".repeat(61), "https://example.org", "www.example.org", 4, {}]) {
+    for (const name of [
+      "a".repeat(61),
+      "https://example.org",
+      "www.example.org",
+      "river@lab",
+      4,
+      {},
+    ]) {
       expect((await post("/sign-in/anonymous", { name })).status).toBe(400);
     }
     expect(await db.select().from(users)).toEqual(before);

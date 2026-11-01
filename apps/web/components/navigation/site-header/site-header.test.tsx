@@ -1,3 +1,4 @@
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import { CalibrationFlagProvider } from "@/components/calibrations/calibration-flag-context";
 import { render, screen } from "@/test/test-utils";
 import { usePathname } from "next/navigation";
@@ -11,22 +12,47 @@ import { SiteHeader } from "./site-header";
 function renderHeader(
   pathname: string,
   detail?: { href: string; label: string },
-  { isCalibrationEnabled = false } = {},
+  { isCalibrationEnabled = false, isGuest = false } = {},
 ) {
   vi.mocked(usePathname).mockReturnValue(pathname);
   return render(
-    <CalibrationFlagProvider isEnabled={isCalibrationEnabled}>
-      <SidebarProvider>
-        <PlatformHeaderProvider>
-          <SiteHeader locale="en" />
-          {detail && <PlatformHeaderDetail {...detail} />}
-        </PlatformHeaderProvider>
-      </SidebarProvider>
-    </CalibrationFlagProvider>,
+    <PrincipalProvider userId="user-1" isGuest={isGuest}>
+      <CalibrationFlagProvider isEnabled={isCalibrationEnabled}>
+        <SidebarProvider>
+          <PlatformHeaderProvider>
+            <SiteHeader locale="en" />
+            {detail && <PlatformHeaderDetail {...detail} />}
+          </PlatformHeaderProvider>
+        </SidebarProvider>
+      </CalibrationFlagProvider>
+    </PrincipalProvider>,
   );
 }
 
 describe("SiteHeader", () => {
+  it.each([
+    ["/en/platform/experiments", "link", "experiments.create"],
+    ["/en/platform/experiments", "link", "transferRequest.title"],
+    ["/en/platform/protocols", "link", "protocols.create"],
+    ["/en/platform/macros", "link", "macros.create"],
+    ["/en/platform/workbooks", "button", "workbooks.create"],
+    ["/en/platform/calibrations", "button", "iot.calibration.library.create"],
+    ["/en/platform/organizations", "link", "organizations.createAction"],
+    ["/en/platform/devices", "button", "iot.devices.register"],
+    ["/en/platform/devices", "button", "iot.devices.bulkDialog.open"],
+  ] as const)("on %s offers the %s %s to researchers only", (pathname, role, name) => {
+    const guest = renderHeader(pathname, undefined, { isCalibrationEnabled: true, isGuest: true });
+    expect(screen.queryByRole(role, { name })).not.toBeInTheDocument();
+    guest.unmount();
+    renderHeader(pathname, undefined, { isCalibrationEnabled: true });
+    expect(screen.getByRole(role, { name })).toBeInTheDocument();
+  });
+
+  it("keeps the archive link for guests, which only lists", () => {
+    renderHeader("/en/platform/experiments", undefined, { isGuest: true });
+    expect(screen.getByRole("link", { name: "experiments.viewArchived" })).toBeInTheDocument();
+  });
+
   it("renders the sidebar trigger inside a compact 48px header", () => {
     renderHeader("/en/platform/experiments");
 

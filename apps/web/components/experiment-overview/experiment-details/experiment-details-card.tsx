@@ -1,5 +1,7 @@
 "use client";
 
+import { guestMayUse } from "@/components/auth/guest-access";
+import { useIsGuest } from "@/components/auth/principal-context";
 import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { useLocale } from "@/hooks/useLocale";
 import { ChevronDown, ChevronUp, PanelRightClose, PanelRightOpen } from "lucide-react";
@@ -105,6 +107,7 @@ export function ExperimentDetailsCard({
   const [transitionsReady, setTransitionsReady] = useState(false);
   const { data: session } = useSession();
   const currentUserId = session?.user.id;
+  const isGuest = useIsGuest();
   // Anyone who already contributes has nothing to request; `canContribute` is the
   // server's answer to "is this person already a collaborator".
   const canRequestToJoin =
@@ -209,7 +212,11 @@ export function ExperimentDetailsCard({
                     collaboratorCount={collaboratorCount}
                     isError={isContributorsError}
                     isLoading={isContributorsLoading}
-                    href={`/${locale}/platform/experiments${isArchived ? "-archive" : ""}/${experimentId}/collaborators`}
+                    href={
+                      guestMayUse("sharing.listGrants", isGuest)
+                        ? `/${locale}/platform/experiments${isArchived ? "-archive" : ""}/${experimentId}/collaborators`
+                        : undefined
+                    }
                   />
                 </div>
 

@@ -27,6 +27,16 @@ const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 export type { MeasurementStatus } from "./measurement-status";
 export { UNSYNCED_STATUSES, isUnsynced } from "./measurement-status";
 
+export type MeasurementViewer = { userId: string; isGuest: boolean } | null;
+
+function visibleTo(viewer: MeasurementViewer | undefined) {
+  if (viewer === undefined) return undefined; // Internal outbox and retention reads.
+  if (viewer === null) return isNull(measurements.id);
+  if (viewer.isGuest)
+    return and(eq(measurements.ownerIsGuest, true), eq(measurements.ownerUserId, viewer.userId));
+  return or(eq(measurements.ownerIsGuest, false), isNull(measurements.ownerIsGuest));
+}
+
 export interface Measurement {
   topic: string;
   measurementResult: Record<string, unknown>;
@@ -233,12 +243,15 @@ export interface StoredMeasurement {
 
 export type MeasurementCounts = Record<MeasurementStatus, number>;
 
-export async function countMeasurementsByStatus(): Promise<MeasurementCounts> {
+export async function countMeasurementsByStatus(
+  viewer?: MeasurementViewer,
+): Promise<MeasurementCounts> {
   await ensureMigrated();
   try {
     const rows = db
       .select({ status: measurements.status, total: count() })
       .from(measurements)
+      .where(visibleTo(viewer))
       .groupBy(measurements.status)
       .all();
     const out: MeasurementCounts = { pending: 0, failed: 0, successful: 0 };
@@ -248,6 +261,7 @@ export async function countMeasurementsByStatus(): Promise<MeasurementCounts> {
     return out;
   } catch (error) {
     log.error("Failed to count measurements", { err: (error as Error)?.message });
+    if (viewer !== undefined) throw error;
     return { pending: 0, failed: 0, successful: 0 };
   }
 }
@@ -260,13 +274,14 @@ export async function countMeasurementsByStatus(): Promise<MeasurementCounts> {
  */
 export async function countRecentMeasurementsByExperiment(
   sinceIso: string,
+  viewer?: MeasurementViewer,
 ): Promise<Record<string, number>> {
   await ensureMigrated();
   try {
     const rows = db
       .select({ name: measurements.experimentName, total: count() })
       .from(measurements)
-      .where(gte(measurements.timestamp, sinceIso))
+      .where(and(gte(measurements.timestamp, sinceIso), visibleTo(viewer)))
       .groupBy(measurements.experimentName)
       .all();
     const out: Record<string, number> = {};
@@ -310,7 +325,7 @@ export interface MeasurementListRow {
  */
 export async function getMeasurementsList(
   status: MeasurementStatus[],
-  opts: { limit: number; offset: number },
+  opts: { limit: number; offset: number; viewer?: MeasurementViewer },
 ): Promise<MeasurementListRow[]> {
   await ensureMigrated();
   if (status.length === 0) return [];
@@ -330,7 +345,7 @@ export async function getMeasurementsList(
         failureReason: measurements.failureReason,
       })
       .from(measurements)
-      .where(inArray(measurements.status, status))
+      .where(and(inArray(measurements.status, status), visibleTo(opts.viewer)))
       // `id` tiebreaker keeps pages stable when several rows share a timestamp;
       // otherwise OFFSET pagination can duplicate or skip rows between pages.
       .orderBy(desc(measurements.timestamp), desc(measurements.id))
@@ -372,6 +387,7 @@ export async function getMeasurementsList(
 export async function getMeasurementIdsByRunId(
   runId: string,
   statuses?: readonly MeasurementStatus[],
+  viewer?: MeasurementViewer,
 ): Promise<string[]> {
   // "" is the sentinel for "no run" (backfill and new saves both write it), so
   // querying with it would match every non-run measurement. Callers guard on a
@@ -383,7 +399,11 @@ export async function getMeasurementIdsByRunId(
       statuses && statuses.length > 0
         ? and(eq(measurements.workbookRunId, runId), inArray(measurements.status, [...statuses]))
         : eq(measurements.workbookRunId, runId);
-    const rows = db.select({ id: measurements.id }).from(measurements).where(where).all();
+    const rows = db
+      .select({ id: measurements.id })
+      .from(measurements)
+      .where(and(where, visibleTo(viewer)))
+      .all();
     return rows.map((r) => r.id);
   } catch (error) {
     log.error("Failed to fetch measurement ids for run", {
@@ -399,14 +419,17 @@ export async function getMeasurementIdsByRunId(
  * Enqueueing uploads needs only the ids, and decoding every unsynced payload
  * to get them runs on the JS thread.
  */
-export async function getMeasurementIds(statuses: readonly MeasurementStatus[]): Promise<string[]> {
+export async function getMeasurementIds(
+  statuses: readonly MeasurementStatus[],
+  viewer?: MeasurementViewer,
+): Promise<string[]> {
   await ensureMigrated();
   if (statuses.length === 0) return [];
   try {
     const rows = db
       .select({ id: measurements.id })
       .from(measurements)
-      .where(inArray(measurements.status, [...statuses]))
+      .where(and(inArray(measurements.status, [...statuses]), visibleTo(viewer)))
       .all();
     return rows.map((r) => r.id);
   } catch (error) {
@@ -420,10 +443,17 @@ export async function getMeasurementIds(statuses: readonly MeasurementStatus[]):
  * `measurementResult`. Used by the detail modal on open and by paths that
  * need the full payload (comment editing, MQTT publish).
  */
-export async function getMeasurement(id: string): Promise<StoredMeasurement | null> {
+export async function getMeasurement(
+  id: string,
+  viewer?: MeasurementViewer,
+): Promise<StoredMeasurement | null> {
   await ensureMigrated();
   try {
-    const row = db.select().from(measurements).where(eq(measurements.id, id)).get();
+    const row = db
+      .select()
+      .from(measurements)
+      .where(and(eq(measurements.id, id), visibleTo(viewer)))
+      .get();
     if (!row) return null;
     const measurementResult = decompressFromStorage<Record<string, unknown>>(row.measurementResult);
     const ownerId = row.ownerUserId ?? measurementResult.user_id;
@@ -451,6 +481,7 @@ export async function getMeasurement(id: string): Promise<StoredMeasurement | nu
 
 export async function getMeasurements(
   status: MeasurementStatus | MeasurementStatus[],
+  viewer?: MeasurementViewer,
 ): Promise<StoredMeasurement[]> {
   try {
     await ensureMigrated();
@@ -460,7 +491,11 @@ export async function getMeasurements(
       statusList.length === 1
         ? eq(measurements.status, statusList[0])
         : inArray(measurements.status, statusList);
-    const rows = db.select().from(measurements).where(whereClause).all();
+    const rows = db
+      .select()
+      .from(measurements)
+      .where(and(whereClause, visibleTo(viewer)))
+      .all();
 
     return rows
       .map((row): StoredMeasurement | null => {
@@ -496,7 +531,11 @@ export async function getMeasurementById(id: string): Promise<StoredMeasurement 
   return getMeasurement(id);
 }
 
-export async function updateMeasurement(key: string, data: Measurement): Promise<void> {
+export async function updateMeasurement(
+  key: string,
+  data: Measurement,
+  viewer?: MeasurementViewer,
+): Promise<void> {
   await ensureMigrated();
   try {
     const derived = deriveListColumns(data.measurementResult, data.metadata.timestamp);
@@ -513,7 +552,7 @@ export async function updateMeasurement(key: string, data: Measurement): Promise
         dayKey: derived.dayKey,
         workbookRunId: derived.workbookRunId,
       })
-      .where(eq(measurements.id, key))
+      .where(and(eq(measurements.id, key), visibleTo(viewer)))
       .run();
   } catch (error) {
     log.error("Failed to update measurement", { key, err: (error as Error)?.message });
@@ -555,10 +594,12 @@ export async function markAsSuccessful(key: string): Promise<void> {
   }
 }
 
-export async function removeMeasurement(key: string): Promise<void> {
+export async function removeMeasurement(key: string, viewer?: MeasurementViewer): Promise<void> {
   await ensureMigrated();
   try {
-    db.delete(measurements).where(eq(measurements.id, key)).run();
+    db.delete(measurements)
+      .where(and(eq(measurements.id, key), visibleTo(viewer)))
+      .run();
   } catch (error) {
     log.error("Failed to remove measurement", { key, err: (error as Error)?.message });
     throw error;
@@ -567,12 +608,15 @@ export async function removeMeasurement(key: string): Promise<void> {
 
 // One statement for a whole workbook run, so the list settles in a single
 // invalidation instead of one per row.
-export async function removeMeasurements(keys: readonly string[]): Promise<void> {
+export async function removeMeasurements(
+  keys: readonly string[],
+  viewer?: MeasurementViewer,
+): Promise<void> {
   await ensureMigrated();
   if (keys.length === 0) return;
   try {
     db.delete(measurements)
-      .where(inArray(measurements.id, [...keys]))
+      .where(and(inArray(measurements.id, [...keys]), visibleTo(viewer)))
       .run();
   } catch (error) {
     log.error("Failed to remove measurements", {

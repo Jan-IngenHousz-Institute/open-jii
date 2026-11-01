@@ -68,6 +68,8 @@ export default defineConfig({
           // the jsdom project below. Colocated next to the hook (no
           // __tests__/ dir), selected by the hooks/ path segment.
           exclude: ["**/node_modules/**", "src/**/hooks/**/*.test.{ts,tsx}"],
+          // Inlined so its expo imports meet the mocks: the session cache is tested against it.
+          server: { deps: { inline: [/@better-auth\/expo/] } },
         },
       },
       {

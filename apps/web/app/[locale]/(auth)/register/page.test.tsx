@@ -42,6 +42,14 @@ describe("RegisterPage", () => {
     expect(redirect).toHaveBeenCalledWith("/en-US/platform");
   });
 
+  it("sends a guest to the platform, since a guest cannot register a profile", async () => {
+    vi.mocked(auth).mockResolvedValue(
+      createSession({ user: { registered: false, isAnonymous: true } }),
+    );
+    await RegisterPage(props);
+    expect(redirect).toHaveBeenCalledWith("/en-US/platform");
+  });
+
   it("renders registration form for unregistered authenticated user", async () => {
     const ui = await RegisterPage(props);
     render(ui);

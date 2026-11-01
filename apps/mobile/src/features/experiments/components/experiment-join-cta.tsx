@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { Clock } from "lucide-react-native";
 import React, { useEffect, useRef } from "react";
 import { Pressable, Text, View } from "react-native";
+import { useSession } from "~/features/auth/hooks/use-session";
 import { ExperimentJoinRequestSheet } from "~/features/experiments/components/experiment-join-request-sheet";
 import { JoinCodeEntrySheet } from "~/features/experiments/components/join-code-entry-sheet";
 import { canStartMeasuring } from "~/features/experiments/domain/start-measuring";
@@ -42,6 +43,7 @@ export function ExperimentJoinCta({
   organizationType,
   onRefreshAccess,
 }: ExperimentJoinCtaProps) {
+  const { user } = useSession();
   const { t } = useTranslation(["common", "experiments"]);
   const { warningFg } = useThemeColors();
   const { data: online } = useIsOnline();
@@ -65,7 +67,7 @@ export function ExperimentJoinCta({
 
   // Archived is decided by the screen, which shows a banner in place of every
   // action. Guarding here too keeps the CTA honest wherever it is rendered.
-  if (status === "archived") return null;
+  if (status === "archived" || (user?.isAnonymous && organizationType !== "demo")) return null;
 
   if (membershipStatus === "member") {
     const verdict = canStartMeasuring({ status, workbookVersionId }, flowExperimentId);
@@ -107,6 +109,8 @@ export function ExperimentJoinCta({
       </View>
     );
   }
+
+  if (user?.isAnonymous) return null;
 
   if (isPending) {
     const confirmCancel = () => {

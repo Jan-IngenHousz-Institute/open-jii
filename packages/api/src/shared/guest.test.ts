@@ -13,10 +13,17 @@ describe("guest names", () => {
     expect(zGuestName.parse(input)).toBe(expected);
   });
 
-  it.each([null, 1, {}, "a".repeat(61), "https://example.org", "www.example.org", "example.org"])(
-    "rejects %s",
-    (name) => expect(zGuestName.safeParse(name).success).toBe(false),
-  );
+  it.each([
+    null,
+    1,
+    {},
+    "a".repeat(61),
+    "https://example.org",
+    "www.example.org",
+    "example.org",
+    "river@lab",
+    "@river",
+  ])("rejects %s", (name) => expect(zGuestName.safeParse(name).success).toBe(false));
 
   it("recognizes only the reserved guest email domain", () => {
     expect(isGuestEmail("TEMP@GUEST.OPENJII.INVALID")).toBe(true);

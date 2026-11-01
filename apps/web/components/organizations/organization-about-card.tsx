@@ -1,5 +1,7 @@
 "use client";
 
+import { guestMayUse } from "@/components/auth/guest-access";
+import { useIsGuest } from "@/components/auth/principal-context";
 import { useLocale } from "@/hooks/useLocale";
 import { ExternalLink } from "lucide-react";
 
@@ -52,7 +54,10 @@ export function OrganizationAboutCard({
     month: "long",
     year: "numeric",
   });
+  const isGuest = useIsGuest();
   const isMember = organization.role != null;
+  const seesRoster = isMember && guestMayUse("organizations.listOrganizationMembers", isGuest);
+  const seesTeams = isMember && guestMayUse("organizations.listOrganizationTeams", isGuest);
 
   return (
     <Card padding="none" className="p-5">
@@ -106,31 +111,31 @@ export function OrganizationAboutCard({
           {t("organizations.about.since", { date: since })}
         </Row>
 
-        {isMember ? (
-          <>
-            <Row label={t("organizations.tabs.members")}>
-              <OrganizationAvatarTrail
-                faces={(members ?? []).map((member) => ({
-                  id: member.userId,
-                  firstName: member.firstName,
-                  lastName: member.lastName,
-                  avatarUrl: member.avatarUrl,
-                }))}
-                // The profile's own count, so the caption does not wait on the roster.
-                label={t("organizations.memberCount", { count: organization.memberCount })}
-                href={organizationMembersPath(locale, organization.id)}
-                isPending={isMembersPending}
-              />
-            </Row>
-            <Row label={t("organizations.tabs.teams")}>
-              <OrganizationAvatarTrail
-                faces={(teams ?? []).map(teamAsTrailFace)}
-                label={t("organizations.about.teamCount", { count: teams?.length ?? 0 })}
-                href={organizationTeamsPath(locale, organization.id)}
-                isPending={isTeamsPending}
-              />
-            </Row>
-          </>
+        {seesRoster ? (
+          <Row label={t("organizations.tabs.members")}>
+            <OrganizationAvatarTrail
+              faces={(members ?? []).map((member) => ({
+                id: member.userId,
+                firstName: member.firstName,
+                lastName: member.lastName,
+                avatarUrl: member.avatarUrl,
+              }))}
+              // The profile's own count, so the caption does not wait on the roster.
+              label={t("organizations.memberCount", { count: organization.memberCount })}
+              href={organizationMembersPath(locale, organization.id)}
+              isPending={isMembersPending}
+            />
+          </Row>
+        ) : null}
+        {seesTeams ? (
+          <Row label={t("organizations.tabs.teams")}>
+            <OrganizationAvatarTrail
+              faces={(teams ?? []).map(teamAsTrailFace)}
+              label={t("organizations.about.teamCount", { count: teams?.length ?? 0 })}
+              href={organizationTeamsPath(locale, organization.id)}
+              isPending={isTeamsPending}
+            />
+          </Row>
         ) : null}
       </dl>
     </Card>

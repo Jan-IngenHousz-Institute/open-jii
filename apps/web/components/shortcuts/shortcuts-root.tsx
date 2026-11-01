@@ -1,5 +1,8 @@
 "use client";
 
+import { guestMayUse } from "@/components/auth/guest-access";
+import type { GuestGatedProcedure } from "@/components/auth/guest-access";
+import { useIsGuest } from "@/components/auth/principal-context";
 import { NOTIFICATION_BELL_OPEN_EVENT } from "@/components/notifications/notifications-popover";
 import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
 import { modifierLabel } from "@/lib/platform";
@@ -28,7 +31,7 @@ function blockedByFocus(event: KeyboardEvent): boolean {
 
 // `C` create — map the current section to its create route. Returns null where
 // there is nothing to create (no-op rather than a dead navigation).
-function createPathFor(pathname: string, locale: string): string | null {
+function createPathFor(pathname: string, locale: string, isGuest: boolean): string | null {
   // Match the section segment exactly so e.g. `experiments-archive` (read-only)
   // doesn't get treated as `experiments`.
   const segments = pathname.split("/").filter(Boolean);
@@ -36,9 +39,15 @@ function createPathFor(pathname: string, locale: string): string | null {
   const section = platformIdx >= 0 ? segments[platformIdx + 1] : undefined;
   if (!section || segments[segments.length - 1] === "new") return null;
   const base = `/${locale}/platform`;
-  if (section === "experiments") return `${base}/experiments/new`;
-  if (section === "protocols") return `${base}/protocols/new`;
-  if (section === "macros") return `${base}/macros/new`;
+  if (section === "experiments" && guestMayUse("experiments.createExperiment", isGuest)) {
+    return `${base}/experiments/new`;
+  }
+  if (section === "protocols" && guestMayUse("protocols.createProtocol", isGuest)) {
+    return `${base}/protocols/new`;
+  }
+  if (section === "macros" && guestMayUse("macros.createMacro", isGuest)) {
+    return `${base}/macros/new`;
+  }
   return null;
 }
 
@@ -57,6 +66,7 @@ interface GoToShortcut {
   label: string;
   path?: string;
   action?: () => void;
+  procedure?: GuestGatedProcedure;
 }
 
 // One G-then-<key> sequence, as a component so the hook count stays stable.
@@ -82,18 +92,29 @@ function GoToSequence({
 export function ShortcutsRoot({ locale }: { locale: string }) {
   const router = useRouter();
   const pathname = usePathname();
+  const isGuest = useIsGuest();
   const { toggleSidebar } = useSidebar();
 
-  const goToShortcuts = React.useMemo<GoToShortcut[]>(
-    () => [
+  const goToShortcuts = React.useMemo<GoToShortcut[]>(() => {
+    const shortcuts: GoToShortcut[] = [
       { key: "H", label: "Home", path: `/${locale}/platform` },
       { key: "E", label: "Experiments", path: `/${locale}/platform/experiments` },
       { key: "W", label: "Workbooks", path: `/${locale}/platform/workbooks` },
       { key: "P", label: "Protocols", path: `/${locale}/platform/protocols` },
       { key: "M", label: "Macros", path: `/${locale}/platform/macros` },
       { key: "O", label: "Organizations", path: `/${locale}/platform/organizations` },
-      { key: "T", label: "Transfer requests", path: `/${locale}/platform/transfer-request` },
-      { key: "S", label: "Settings", path: `/${locale}/platform/account` },
+      {
+        key: "T",
+        label: "Transfer requests",
+        path: `/${locale}/platform/transfer-request`,
+        procedure: "experiments.createTransferRequest",
+      },
+      {
+        key: "S",
+        label: "Settings",
+        path: `/${locale}/platform/account`,
+        procedure: "users.getUserProfile",
+      },
       {
         key: "N",
         label: "Notifications",
@@ -104,10 +125,15 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
         label: "What's new",
         action: () => window.dispatchEvent(new Event(WHATS_NEW_OPEN_EVENT)),
       },
-      { key: "A", label: "Account", path: `/${locale}/platform/account` },
-    ],
-    [locale],
-  );
+      {
+        key: "A",
+        label: "Account",
+        path: `/${locale}/platform/account`,
+        procedure: "users.getUserProfile",
+      },
+    ];
+    return shortcuts.filter((shortcut) => guestMayUse(shortcut.procedure, isGuest));
+  }, [locale, isGuest]);
 
   const navigate = React.useCallback(
     (shortcut: GoToShortcut) => {
@@ -163,7 +189,7 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
     "C",
     (event) => {
       if (blockedByFocus(event)) return;
-      const createPath = createPathFor(pathname, locale);
+      const createPath = createPathFor(pathname, locale, isGuest);
       if (!createPath) return;
       event.preventDefault();
       router.push(createPath);

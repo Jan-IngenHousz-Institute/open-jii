@@ -1,3 +1,4 @@
+import { GuestGate } from "@/components/auth/guest-gate";
 import { ListMacros } from "@/components/list-macros";
 import { ResourceMetricsSummary } from "@/components/metrics/resource-metrics-summary";
 import { PageContainer } from "@/components/page-container";
@@ -29,7 +30,9 @@ export default async function MacroPage({ searchParams }: MacroPageProps) {
 
   return (
     <PageContainer width="fluid" className="space-y-6">
-      <ResourceMetricsSummary kind="macro" />
+      <GuestGate procedure="metrics.getResourceMetrics">
+        <ResourceMetricsSummary kind="macro" />
+      </GuestGate>
       <PrefetchedQueries
         queries={(utils) => (isDefaultView ? [macrosListQuery(utils, { page: 1 })] : [])}
       >

@@ -1,5 +1,6 @@
 "use client";
 
+import { guestMayUse } from "@/components/auth/guest-access";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   User,
@@ -57,11 +58,13 @@ function UserMenu({
   session,
   displayName,
   avatarUrl,
+  showAccount,
 }: {
   locale: string;
   session: Session | null;
   displayName: string;
   avatarUrl?: string | null;
+  showAccount: boolean;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -119,19 +122,21 @@ function UserMenu({
         </div>
         <DropdownMenuSeparator />
         {/* Account link */}
-        <DropdownMenuItem asChild>
-          <Link
-            href={`/${locale}/platform/account`}
-            className="flex w-full cursor-default items-center"
-          >
-            <Avatar className="bg-muted mr-2 h-4 w-4">
-              <AvatarFallback className="rounded-lg">
-                <User className="h-4 w-4" />
-              </AvatarFallback>
-            </Avatar>
-            {t("auth.account")}
-          </Link>
-        </DropdownMenuItem>
+        {showAccount && (
+          <DropdownMenuItem asChild>
+            <Link
+              href={`/${locale}/platform/account`}
+              className="flex w-full cursor-default items-center"
+            >
+              <Avatar className="bg-muted mr-2 h-4 w-4">
+                <AvatarFallback className="rounded-lg">
+                  <User className="h-4 w-4" />
+                </AvatarFallback>
+              </Avatar>
+              {t("auth.account")}
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           onClick={handleSignOut}
           disabled={signOut.isPending}
@@ -155,10 +160,16 @@ export function UnifiedNavbar({ locale, isHomePage = false, links }: UnifiedNavb
   const [bannerOffset, setBannerOffset] = useState(0);
   const signOut = useSignOut();
 
-  const { data: userProfile } = useGetUserProfile(session?.user.id ?? "");
+  // Outside the platform there is no server principal, so the session says whether this is a guest.
+  const isGuest = session?.user.isAnonymous === true;
+  const mayOpenAccount = guestMayUse("users.getUserProfile", isGuest);
+  const { data: userProfile } = useGetUserProfile(session?.user.id ?? "", mayOpenAccount);
   const profile = userProfile;
-  const displayName =
-    profile?.firstName && profile.lastName ? `${profile.firstName} ${profile.lastName}` : "";
+  const displayName = isGuest
+    ? session.user.name
+    : profile?.firstName && profile.lastName
+      ? `${profile.firstName} ${profile.lastName}`
+      : "";
 
   const handleSignOut = async () => {
     await signOut.mutateAsync();
@@ -317,6 +328,7 @@ export function UnifiedNavbar({ locale, isHomePage = false, links }: UnifiedNavb
               session={session}
               displayName={displayName}
               avatarUrl={profile?.avatarUrl}
+              showAccount={mayOpenAccount}
             />
           </div>
           <LanguageSwitcher locale={locale} />
@@ -385,19 +397,21 @@ export function UnifiedNavbar({ locale, isHomePage = false, links }: UnifiedNavb
                       </div>
                     </div>
                     {/* Account link for mobile */}
-                    <DropdownMenuItem asChild>
-                      <Link
-                        href={`/${locale}/platform/account`}
-                        className="flex w-full cursor-default items-center"
-                      >
-                        <Avatar className="bg-muted mr-2 h-4 w-4">
-                          <AvatarFallback className="rounded-lg">
-                            <User className="h-4 w-4" />
-                          </AvatarFallback>
-                        </Avatar>
-                        {t("auth.account")}
-                      </Link>
-                    </DropdownMenuItem>
+                    {mayOpenAccount && (
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href={`/${locale}/platform/account`}
+                          className="flex w-full cursor-default items-center"
+                        >
+                          <Avatar className="bg-muted mr-2 h-4 w-4">
+                            <AvatarFallback className="rounded-lg">
+                              <User className="h-4 w-4" />
+                            </AvatarFallback>
+                          </Avatar>
+                          {t("auth.account")}
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       onClick={handleSignOut}
                       disabled={signOut.isPending}

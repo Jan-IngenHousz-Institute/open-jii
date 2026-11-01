@@ -347,7 +347,8 @@
     "inviteCollaboratorsDescription": "Fügen Sie eine bestehende Person oder eine Ihrer Organisationen hinzu oder laden Sie jemanden per E-Mail ein. Bestehende Konten erhalten sofort Zugriff; Eingeladene erhalten eine E-Mail und treten nach dem Annehmen bei.",
     "filterCollaboratorsPlaceholder": "Nach Name oder E-Mail filtern…",
     "invitedBy": "Eingeladen von",
-    "unknownInviter": "Unbekannter Einladender"
+    "unknownInviter": "Unbekannter Einladender",
+    "requestToJoinSubmit_true": "$t(experimentSettings.requestToJoinSubmitting)"
   },
   "joinCode": {
     "title": "Beitrittscode",
@@ -1549,5 +1550,43 @@
   "provenance": {
     "simulated": "Simuliert",
     "guest": "Gast"
+  },
+  "demo": {
+    "try": "Demo ausprobieren",
+    "title": "Wie sollen wir dich nennen?",
+    "name": "Name (optional)",
+    "nameHint": "Verwende einen Spitznamen, keine E-Mail- oder Webadresse. Gib deinen echten Namen nur an, wenn er öffentlich angezeigt werden soll.",
+    "permanent": "Messungen bleiben dauerhaft öffentlich, auch mit Standort, wenn dein Telefon ihn teilt. Dein gewählter Name steht daneben, bis das Konto nach sieben Tagen bereinigt wird. Danach steht dort „Ehemaliger Gast“.",
+    "continue": "Weiter zur Demo",
+    "cancel": "Abbrechen",
+    "terms": "Allgemeine Geschäftsbedingungen",
+    "invalidName": "Verwende einen Spitznamen mit höchstens 60 Zeichen, ohne E-Mail- oder Webadresse.",
+    "entryError": "Wir konnten die Demo nicht öffnen. Bitte versuche es erneut.",
+    "unavailable": "Die Demo ist gerade nicht verfügbar. Bitte versuche es später erneut.",
+    "noContent": "Die Demo-Experimente konnten nicht geladen werden. Versuche es erneut, ohne eine neue Sitzung zu starten.",
+    "retry": "Erneut versuchen",
+    "banner": "Du probierst die Demo als {{name}} aus. Diese Gastsitzung dauert sieben Tage.",
+    "bannerLabel": "Gastsitzung",
+    "leave": "Demo verlassen",
+    "leaveTitle": "Demo verlassen?",
+    "leaveDescription": "Deine öffentlichen Messungen bleiben erhalten. Um die Demo erneut auszuprobieren, brauchst du eine neue Gastsitzung.",
+    "leaveError": "Du bist noch in der Demo. Prüfe deine Verbindung und versuche erneut, sie zu verlassen.",
+    "offline": "Verbinde dich mit dem Internet, um die Demo zu starten.",
+    "unsent_one": "Du hast {{count}} nicht gesendete Messung. Lade sie vor dem Verlassen hoch oder lass sie bis zur Bereinigung der Gastdaten auf diesem Gerät.",
+    "unsent_other": "Du hast {{count}} nicht gesendete Messungen. Lade sie vor dem Verlassen hoch oder lass sie bis zur Bereinigung der Gastdaten auf diesem Gerät.",
+    "upload": "Jetzt hochladen",
+    "leaveAnyway": "Trotzdem verlassen",
+    "uploadError": "Einige Messungen wurden nicht hochgeladen. Versuche es erneut oder wähle Trotzdem verlassen.",
+    "expired": "Deine Demositzung ist abgelaufen. Verbinde dich mit dem Internet, um eine neue zu starten.",
+    "leaveAction": "$t(demo.leave)",
+    "leaveAction_retry": "$t(demo.retry)",
+    "entryError_limited": "Zu viele Versuche. Warte eine Minute und versuche es dann erneut.",
+    "entryError_disabled": "$t(demo.unavailable)"
+  },
+  "principalGate": {
+    "title": "Wir konnten nicht bestätigen, wer angemeldet ist",
+    "description": "Deine Sitzung hat sich geändert oder die Verbindung ist abgebrochen, deshalb ist diese Seite ausgeblendet. Lade sie neu, um es noch einmal zu versuchen, oder melde dich an.",
+    "reload": "Neu laden",
+    "signIn": "Anmelden"
   }
 }
