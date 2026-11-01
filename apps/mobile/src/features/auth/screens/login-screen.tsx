@@ -133,7 +133,7 @@ export default function LoginScreen() {
   const [countdown, setCountdown] = React.useState(0);
   const [lastSubmittedOtp, setLastSubmittedOtp] = React.useState<string | null>(null);
 
-  const formError = errors.email?.message ?? errors.otp?.message ?? "";
+  const formError = errors.root?.message;
 
   const handleOTPVerify = useCallback(
     async (otpValue: string) => {
@@ -165,14 +165,12 @@ export default function LoginScreen() {
     }
   }, [otp, verifyLoading, handleOTPVerify, online, lastSubmittedOtp]);
 
-  async function handleGitHubLogin() {
+  async function handleBrowserLogin(startLogin: () => Promise<boolean>) {
     clearErrors();
-    await startGitHubLogin();
-  }
-
-  async function handleOrcidLogin() {
-    clearErrors();
-    await startOrcidLogin();
+    const completed = await startLogin();
+    if (!completed) {
+      setError("root", { message: t("auth:errors.signInNotCompleted") });
+    }
   }
 
   const onEmailSubmit = handleSubmit(async ({ email: submittedEmail }) => {
@@ -293,8 +291,8 @@ export default function LoginScreen() {
                 </View>
 
                 <OAuthIcons
-                  onGitHubPress={() => void handleGitHubLogin()}
-                  onOrcidPress={() => void handleOrcidLogin()}
+                  onGitHubPress={() => void handleBrowserLogin(startGitHubLogin)}
+                  onOrcidPress={() => void handleBrowserLogin(startOrcidLogin)}
                   githubLoading={githubLoading}
                   orcidLoading={orcidLoading}
                   online={online}
@@ -373,9 +371,7 @@ export default function LoginScreen() {
               </>
             )}
 
-            {!!formError && !errors.email && !errors.otp && (
-              <Text className="text-destructive mb-2 mt-2 text-sm">{formError}</Text>
-            )}
+            {!!formError && <Text className="text-destructive mb-2 mt-2 text-sm">{formError}</Text>}
 
             {verifyLoading && (
               <View className="mt-4 items-center">

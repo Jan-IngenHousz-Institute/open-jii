@@ -7,7 +7,7 @@ import {
   verifyEmailLoginOtp,
 } from "~/features/auth/api/login.api";
 import { getAuthClient } from "~/features/auth/services/auth";
-import { hasSessionToken } from "~/shared/api/session-cookie";
+import { getSessionToken, hasSessionToken } from "~/shared/api/session-cookie";
 import { ensureDeviceRegistered } from "~/shared/composition/ensure-device-registered";
 import { prefetchOfflineData } from "~/shared/composition/prefetch-offline-data";
 import { useTranslation } from "~/shared/i18n";
@@ -43,6 +43,17 @@ async function lookUpSession(authClient: ReturnType<typeof getAuthClient>): Prom
   return Promise.race([lookup, timeout]).finally(() => clearTimeout(timeoutId));
 }
 
+// Expo resolves a dismissed browser like a finished sign-in. Only a finished
+// one stores a new session token; a leftover token stays as it was.
+async function signInThroughBrowser(signIn: () => Promise<void>): Promise<boolean> {
+  const authClient = getAuthClient();
+  const tokenBefore = getSessionToken(await authClient.getCookie());
+  await signIn();
+  const tokenAfter = getSessionToken(await authClient.getCookie());
+
+  return tokenAfter !== null && tokenAfter !== tokenBefore;
+}
+
 export function useLoginFlow() {
   const { t } = useTranslation("auth");
   const queryClient = useQueryClient();
@@ -64,7 +75,7 @@ export function useLoginFlow() {
   };
 
   const github = useMutation({
-    mutationFn: signInWithGitHub,
+    mutationFn: () => signInThroughBrowser(signInWithGitHub),
     onSuccess: prefetch,
     onError: (error) => {
       log.error("GitHub login error", { err: error?.message });
@@ -73,7 +84,7 @@ export function useLoginFlow() {
   });
 
   const orcid = useMutation({
-    mutationFn: signInWithOrcid,
+    mutationFn: () => signInThroughBrowser(signInWithOrcid),
     onSuccess: prefetch,
     onError: (error) => {
       log.error("ORCID login error", { err: error?.message });

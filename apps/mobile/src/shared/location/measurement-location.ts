@@ -12,9 +12,27 @@ const LAST_KNOWN_MAX_AGE_MS = 60_000;
 const FRESH_FIX_TIMEOUT_MS = 10_000;
 
 /**
+ * Asks for foreground location when a measurement flow starts, before any
+ * step runs, because the prompt flaps AppState on Android. Never throws; a
+ * refusal only means measurements upload without location.
+ */
+export async function requestMeasurementLocationPermission(): Promise<void> {
+  try {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      log.info("Location permission not granted, measurements upload without location");
+    }
+  } catch (err) {
+    log.warn("Could not request location permission", {
+      err: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/**
  * Best-effort GPS fix for a measurement: last-known fix if recent enough,
  * otherwise a fresh one bounded by a timeout. Only checks the permission
- * already requested by time-sync, never prompts (prompting mid-measurement
+ * asked for when the flow started, never prompts (prompting mid-measurement
  * flaps AppState on Android). Never throws; null means "no location".
  */
 export async function getMeasurementLocation(): Promise<MeasurementLocation | null> {

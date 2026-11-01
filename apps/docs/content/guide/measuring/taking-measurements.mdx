@@ -53,10 +53,14 @@ not represent a device protocol run or show final submission._
 - For several wired devices, the result review is per device. See
   [Multi-device measurements](/guide/devices-protocols/multi-device).
 
-The app records a synchronized timestamp and timezone. If foreground location
-permission is already granted, it also makes a best-effort attempt to add
-latitude and longitude to each upload, including questions-only submissions.
-The permission prompt explains that measurement location is stored.
+The app records a synchronized timestamp and timezone. When you select
+**Start measurement** to begin a flow, the app asks for foreground location
+permission before the first step; it does not ask earlier, such as when you
+open the app or sign in. If you allow it, the app makes a best-effort attempt to
+add latitude and longitude to each upload, including questions-only
+submissions, and works out the timezone from your position. If you refuse,
+measurements still save without coordinates and the timezone stays UTC. The
+permission prompt explains that measurement location is stored.
 
 The app uses one location fix for a multi-device round: a last-known fix no more
 than 60 seconds old, or a fresh balanced-accuracy fix with a 10-second limit. It

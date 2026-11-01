@@ -10,16 +10,18 @@ import { deferred } from "~/shared/testing/deferred";
 import { Button } from "~/shared/ui/Button";
 import { OTPInput } from "~/shared/ui/OTPInput";
 
-const { probe, verifyEmailOTP } = vi.hoisted(() => ({
+const { probe, verifyEmailOTP, startGitHubLogin, startOrcidLogin } = vi.hoisted(() => ({
   probe: vi.fn<() => Promise<boolean>>(),
   verifyEmailOTP: vi.fn(),
+  startGitHubLogin: vi.fn<() => Promise<boolean>>(),
+  startOrcidLogin: vi.fn<() => Promise<boolean>>(),
 }));
 
 vi.mock("~/shared/device/is-online", () => ({ isOnline: probe }));
 vi.mock("~/features/auth/hooks/use-login", () => ({
   useLoginFlow: () => ({
-    startGitHubLogin: vi.fn(),
-    startOrcidLogin: vi.fn(),
+    startGitHubLogin,
+    startOrcidLogin,
     sendEmailOTP: vi.fn(),
     verifyEmailOTP,
     githubLoading: false,
@@ -39,7 +41,7 @@ vi.mock("~/shared/i18n", () => ({
     t: (key: string) => {
       const authKey = key.startsWith("auth:") ? key.slice(5) : key;
       const labels: Record<string, unknown> =
-        key.startsWith("auth:") || namespace === "auth" ? auth : common;
+        key.startsWith("auth:") || namespace === "auth" ? authLabels : common;
       return labels[authKey] ?? key;
     },
   }),
@@ -47,12 +49,22 @@ vi.mock("~/shared/i18n", () => ({
 vi.mock("@expo/vector-icons/MaterialIcons", () => ({ default: () => null }));
 vi.mock("react-native-svg", () => ({ default: () => null, Path: () => null }));
 
+// i18next resolves "errors.x" as a path into the bundle.
+const authLabels: Record<string, unknown> = {
+  ...auth,
+  ...Object.fromEntries(
+    Object.entries(auth.errors).map(([key, value]) => [`errors.${key}`, value]),
+  ),
+};
+
 let client: QueryClient;
 
 beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   probe.mockReset();
   verifyEmailOTP.mockReset();
+  startGitHubLogin.mockReset();
+  startOrcidLogin.mockReset();
 });
 
 afterEach(() => {
@@ -182,5 +194,55 @@ describe("login connection polling", () => {
     probe.mockResolvedValue(true);
     await advance(2000);
     expect(verifyEmailOTP).toHaveBeenCalledExactlyOnceWith("field@example.test", "123456");
+  });
+});
+
+describe("browser sign-in", () => {
+  const notCompleted = auth.errors.signInNotCompleted;
+
+  beforeEach(() => {
+    probe.mockResolvedValue(true);
+  });
+
+  it.each([
+    [auth.github, startGitHubLogin],
+    [auth.orcid, startOrcidLogin],
+  ])(
+    "says %s sign-in was not completed when the browser returns without it",
+    async (title, start) => {
+      start.mockResolvedValue(false);
+      renderLogin();
+
+      fireEvent.press(screen.getByText(title));
+
+      await waitFor(() => expect(screen.getByText(notCompleted)).toBeTruthy());
+    },
+  );
+
+  it("clears the message on the next attempt and keeps it away when that one finishes", async () => {
+    startGitHubLogin.mockResolvedValue(false);
+    const orcid = deferred<boolean>();
+    startOrcidLogin.mockReturnValue(orcid.promise);
+    renderLogin();
+    fireEvent.press(screen.getByText(auth.github));
+    await waitFor(() => expect(screen.getByText(notCompleted)).toBeTruthy());
+
+    fireEvent.press(screen.getByText(auth.orcid));
+    expect(screen.queryByText(notCompleted)).toBeNull();
+
+    await act(() => Promise.resolve(orcid.resolve(true)));
+    expect(screen.queryByText(notCompleted)).toBeNull();
+  });
+
+  it("drops the message when the email form is submitted", async () => {
+    startGitHubLogin.mockResolvedValue(false);
+    renderLogin();
+    fireEvent.press(screen.getByText(auth.github));
+    await waitFor(() => expect(screen.getByText(notCompleted)).toBeTruthy());
+
+    fireEvent.changeText(screen.getByPlaceholderText(auth.emailPlaceholder), "field@example.test");
+    fireEvent.press(screen.getByText(auth.continueWithEmail));
+
+    await waitFor(() => expect(screen.queryByText(notCompleted)).toBeNull());
   });
 });
