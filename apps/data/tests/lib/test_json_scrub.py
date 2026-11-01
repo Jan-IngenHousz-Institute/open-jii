@@ -30,6 +30,11 @@ _PAYLOADS = [
     '{"a": 0.12345678901234567890123456789012345, "b": 123456789012345678901234567890, "t": NaN}',
     '{"long": "' + "x" * 200_000 + '", "t": NaN}',
     '{"open": "' + "y" * 200_000 + " NaN",
+    # Every escaped quote here once made the scan retry the literal to the end: quadratic time.
+    '{"t": NaN, "open": "' + '\\"' * 200_000,
+    '{"t": NaN, "trailing": "\\',
+    '{"t": NaN} "',
+    '{"t": NaN, "s": "line\\\nbreak"}',
 ]
 
 
