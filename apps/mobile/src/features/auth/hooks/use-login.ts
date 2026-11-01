@@ -51,13 +51,13 @@ export function useLoginFlow() {
     const authClient = getAuthClient();
     // Expo resolves cancelled OAuth as a redirect response; only a completed
     // sign-in writes a session token.
-    if (!hasSessionToken(authClient.getCookie())) return;
+    if (!hasSessionToken(await authClient.getCookie())) return;
 
     // A leftover token can belong to a revoked session, so the server decides.
     // Only an answer without a user skips the work; a failed lookup still
     // prefetches, as long as the token survived it.
     const session = await lookUpSession(authClient);
-    if (session.status === "none" || !hasSessionToken(authClient.getCookie())) return;
+    if (session.status === "none" || !hasSessionToken(await authClient.getCookie())) return;
 
     void prefetchOfflineData(queryClient, session.status === "valid" ? session.userId : undefined);
     void ensureDeviceRegistered();

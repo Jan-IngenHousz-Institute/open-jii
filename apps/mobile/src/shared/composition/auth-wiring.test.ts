@@ -14,7 +14,7 @@ const auth = vi.hoisted(() => ({
 
 vi.mock("~/features/auth/services/auth", () => ({
   getAuthClient: () => ({
-    getCookie: () => auth.cookie,
+    getCookie: () => Promise.resolve(auth.cookie),
     getSession: (...args: unknown[]) => {
       auth.getSessionCookies.push(auth.cookie);
       return auth.getSession(...args);

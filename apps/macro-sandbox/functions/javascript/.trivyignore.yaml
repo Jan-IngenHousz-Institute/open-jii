@@ -59,6 +59,11 @@ vulnerabilities:
       - "pkg:npm/follow-redirects@1.16.0"
     statement: "follow-redirects cross-origin credential stripping bypass. No outbound HTTP."
     expired_at: 2026-11-30
+  - id: CVE-2026-116689
+    purls:
+      - "pkg:npm/follow-redirects@1.16.0"
+    statement: "follow-redirects drops cross-realm sensitiveHeaders, so custom credentials follow redirects. No outbound HTTP."
+    expired_at: 2026-11-30
   - id: CVE-2026-102276
     purls:
       - "pkg:npm/brace-expansion@1.1.18"

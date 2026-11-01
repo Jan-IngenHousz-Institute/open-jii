@@ -1,8 +1,4 @@
 # Suppressions for the dependency-scan job (fs scan of pnpm-lock.yaml).
 # Docker image scans read .trivyignore.docker-images instead; keeping the files
 # separate scopes each suppression to the scan whose justification holds.
-
-# better-auth 1.6.23, fixed only in 1.7.7, whose breaking changes need their own
-# upgrade. Affects setups with the Magic Link plugin, which packages/auth does not
-# enable. Also in .trivyignore.docker-images.yaml for the backend image.
-CVE-2026-114607 exp:2026-11-30
+# Currently empty.

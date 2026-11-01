@@ -28,6 +28,28 @@ describe("local login", () => {
     expect(request).toHaveBeenCalledTimes(2);
   });
 
+  it("sends the web app's origin on every request", async () => {
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 200,
+          headers: [["set-cookie", "better-auth.session_token=signed; Path=/; HttpOnly"]],
+        }),
+      );
+    await loginLocal("seed@openjii.local", {
+      root: "/repo",
+      env: { DATABASE_URL: "postgres://localhost/openjii" },
+      request,
+      readOtp: () => Promise.resolve("123456"),
+    });
+
+    for (const [, init] of request.mock.calls) {
+      expect(new Headers(init?.headers).get("origin")).toBe("http://localhost:3000");
+    }
+  });
+
   it("aborts an authentication request that exceeds its deadline", async () => {
     const request = vi.fn<typeof fetch>().mockImplementation((_input, init) => {
       return new Promise<Response>((_resolve, reject) => {

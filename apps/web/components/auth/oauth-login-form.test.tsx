@@ -6,7 +6,6 @@ import { authClient } from "@repo/auth/client";
 import { OAuthLoginForm } from "./oauth-login-form";
 
 const mockSignInSocial = vi.mocked(authClient.signIn.social);
-const mockSignInOAuth2 = vi.mocked(authClient.signIn.oauth2);
 
 describe("OAuthLoginForm", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -45,7 +44,7 @@ describe("OAuthLoginForm", () => {
     });
   });
 
-  describe("ORCID (oauth2)", () => {
+  describe("ORCID (social)", () => {
     const orcid = { id: "orcid", name: "ORCID" };
 
     it("renders ORCID login button", () => {
@@ -53,12 +52,12 @@ describe("OAuthLoginForm", () => {
       expect(screen.getByText("auth.loginWith-orcid")).toBeInTheDocument();
     });
 
-    it("calls oauth2 signIn on click", async () => {
+    it("calls social signIn on click", async () => {
       const user = userEvent.setup();
       render(<OAuthLoginForm provider={orcid} callbackUrl="/dashboard" />);
       await user.click(screen.getByRole("button"));
-      expect(mockSignInOAuth2).toHaveBeenCalledWith({
-        providerId: "orcid",
+      expect(mockSignInSocial).toHaveBeenCalledWith({
+        provider: "orcid",
         callbackURL: "http://localhost:3000/dashboard",
         errorCallbackURL: "http://localhost:3000/login-error",
       });

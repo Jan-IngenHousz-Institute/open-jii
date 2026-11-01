@@ -29,6 +29,8 @@ const sdkOnlyEnv = new Set([
   "AWS_EC2_METADATA_DISABLED",
   // Set by Next.js per runtime; nobody configures it.
   "NEXT_RUNTIME",
+  // Set by the migrations workflow for the migration container; no app reads it.
+  "SKIP_CLICKHOUSE_MIGRATIONS",
 ]);
 
 async function sourceFiles(directory: string): Promise<string[]> {

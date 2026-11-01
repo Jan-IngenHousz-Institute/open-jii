@@ -171,16 +171,6 @@ describe("UserAuthHook", () => {
     });
   });
 
-  describe("handleGenericOAuthCallback", () => {
-    it("should call acceptInvitationsForNewUser", async () => {
-      const ctx = createMockContext();
-
-      await hook.handleGenericOAuthCallback(ctx);
-
-      expect(mockUseCase.execute).toHaveBeenCalledWith("user-123", "test@example.com");
-    });
-  });
-
   describe("acceptInvitationsForNewUser (via handlers)", () => {
     it("processes an already-registered user, so a failed acceptance heals later", async () => {
       const ctx = createMockContext({ registered: true });
@@ -255,7 +245,6 @@ describe("UserAuthHook", () => {
       ["handleEmailOtpSignIn"],
       ["handleSocialSignIn"],
       ["handleOAuthCallback"],
-      ["handleGenericOAuthCallback"],
       ["handleOtpVerify"],
     ] as const)("runs on %s, the same paths the acceptance runs on", async (handler) => {
       await hook[handler](createMockContext());
