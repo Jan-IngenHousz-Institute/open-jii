@@ -9,6 +9,7 @@
     "writing-protocols",
     "writing-macros",
     "commands",
-    "multi-device"
+    "multi-device",
+    "simulated-sensors"
   ]
 }

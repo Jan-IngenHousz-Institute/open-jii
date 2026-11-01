@@ -133,6 +133,8 @@ export function DataTable({
 }: DataTableProps) {
   const { t } = useTranslation();
   const locale = useLocale();
+  const simulatedLabel = t("common:provenance.simulated");
+  const guestLabel = t("common:provenance.guest");
   const [expandedCell, setExpandedCell] = useState<{ rowId: string; columnName: string } | null>(
     null,
   );
@@ -172,6 +174,10 @@ export function DataTable({
       onToggleCellExpansion: toggleCellExpansion,
       errorColumn,
       preserveOrder: preserveColumnOrder,
+      provenanceLabels: {
+        simulated: simulatedLabel,
+        guest: guestLabel,
+      },
     });
 
     return hasSelection ? [selectionColumn(), ...dataColumns] : dataColumns;
@@ -183,6 +189,8 @@ export function DataTable({
     errorColumn,
     hasSelection,
     preserveColumnOrder,
+    simulatedLabel,
+    guestLabel,
   ]);
 
   const isPaged = pagination !== undefined;

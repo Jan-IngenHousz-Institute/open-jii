@@ -2,7 +2,7 @@ import { Bluetooth, Usb } from "lucide-react-native";
 import React from "react";
 import { useBatteryLevel } from "~/features/connection/hooks/use-battery-level";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
-import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
+import { useReconnectDevice } from "~/features/connection/hooks/use-reconnect-device";
 import {
   mobileDevicePrimaryLabel,
   mobileDeviceSecondaryParts,
@@ -19,7 +19,7 @@ export function HomeDeviceCard() {
   const { t: tConnection } = useTranslation("connection");
   const { data: connectedDevice } = useConnectedDevice();
   const batteryLevel = useBatteryLevel();
-  const lastConnectedDevice = useDeviceConnectionStore((s) => s.lastConnectedDevice);
+  const lastConnectedDevice = useReconnectDevice();
   const identity = useScannerCommandExecutorStore((s) =>
     connectedDevice ? s.executors.get(connectedDevice.id)?.identity : undefined,
   );

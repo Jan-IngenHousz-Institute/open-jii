@@ -8,6 +8,7 @@ import dlt
 from pyspark.sql import functions as F
 
 from openjii.centrum import RAW_LARGE_DATA_TABLE, large_iot_schema
+from openjii.centrum.measurement_provenance import is_guest_upload, is_simulated
 from openjii.centrum.runtime import LARGE_IOT_S3_PATH
 
 # COMMAND ----------
@@ -35,6 +36,10 @@ def raw_large_data():
         .load(LARGE_IOT_S3_PATH)
     )
 
+    return extract_large_data(df)
+
+
+def extract_large_data(df):
     # experiment_id comes from the S3 key (large-iot/{experimentId}/{uuid}.json).
     # The key is server-issued (pre-signed URL scoped to a membership-checked
     # experiment), so it wins over the client-controlled payload field.
@@ -49,5 +54,7 @@ def raw_large_data():
                 F.col("experiment_id"),
             )
         )
+        .withColumn("is_simulated", is_simulated(F.col("simulated"), F.col("device_id")))
+        .withColumn("is_guest", is_guest_upload(F.col("_metadata.file_path")))
         .withColumn("ingestion_timestamp", F.current_timestamp())
     )

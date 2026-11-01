@@ -76,6 +76,12 @@ const defaultProps = {
 };
 
 describe("MeasurementsRunRow", () => {
+  it("shows the simulated label on a collapsed workbook run", () => {
+    const simulated = { ...item("simulated", "successful"), simulated: true };
+    render(<MeasurementsRunRow {...defaultProps} entry={entry(simulated)} />);
+    expect(screen.getByText("common:simulated")).toBeTruthy();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseIsOnline.mockReturnValue({ data: true });

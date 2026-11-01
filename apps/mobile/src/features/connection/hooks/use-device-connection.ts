@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
+import { useSimulatedExperiment } from "~/features/connection/hooks/use-simulated-experiment";
 import { connectionKeys } from "~/features/connection/services/connection-keys";
 import { listSerialPortDevices } from "~/features/connection/services/device-connection-manager/android-serial-port-connection/open-serial-port-connection";
 import { closeAllSerialPorts } from "~/features/connection/services/device-connection-manager/serial-port-connection";
@@ -9,7 +10,9 @@ import { listMockDevices } from "~/features/connection/services/multispeq/mock-d
 import { closeAllMockDevices } from "~/features/connection/services/multispeq/mock-device/mock-device-registry";
 import { mockDevicesEnabled } from "~/features/connection/services/multispeq/mock-device/mock-devices-enabled";
 import { hasBluetoothPermission } from "~/features/connection/services/request-bluetooth-permissions";
+import { closeSimulatedDevice } from "~/features/connection/services/simulated-device";
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
+import { useTranslation } from "~/shared/i18n";
 import type { Device } from "~/shared/types/device";
 
 import {
@@ -91,12 +94,16 @@ export function useConnectToDevice() {
           // Transport exclusivity: Bluetooth replaces all USB/mock devices.
           await closeAllSerialPorts();
           closeAllMockDevices();
+          closeSimulatedDevice();
           await connectToDevice(device);
           await setDevice(device);
         } else {
           // USB/mock: drop a lingering Bluetooth device (exclusivity), then
           // ADD to the registry so hub devices accumulate.
-          const connected = await getConnectedDevices();
+          const connected =
+            device.type === "simulated-device" && !(await hasBluetoothPermission())
+              ? []
+              : await getConnectedDevices();
           const bluetoothDevice = connected.find((d) => d.type === "bluetooth-classic");
           if (bluetoothDevice) {
             await disconnectFromDevice(bluetoothDevice);
@@ -145,6 +152,8 @@ export function useConnectToDevice() {
  * useQuery consumers.
  */
 export function useAllDevices() {
+  const simulatedExperiment = useSimulatedExperiment();
+  const { t } = useTranslation("connection");
   const [data, setData] = useState<Device[]>([]);
   const [isFetching, setIsFetching] = useState(false);
   const mountedRef = useRef(true);
@@ -201,5 +210,14 @@ export function useAllDevices() {
     }
   }, []);
 
-  return { data, refetch, isFetching };
+  const simulated: Device[] = simulatedExperiment
+    ? [
+        {
+          id: "simulated:multispeq",
+          type: "simulated-device",
+          name: t("deviceSheet.simulatedMultispeq"),
+        },
+      ]
+    : [];
+  return { data: [...simulated, ...data], refetch, isFetching };
 }

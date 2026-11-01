@@ -16,6 +16,7 @@ import { getLiveProtocolCode } from "~/lib/protocol-code-registry";
 import { parseApiError } from "~/util/apiError";
 import { getSensorFamilyLabel } from "~/util/sensor-family";
 
+import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type {
   BranchCell,
@@ -27,12 +28,13 @@ import type {
   QuestionCell,
   WorkbookCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { namespaceNameOf } from "@repo/api/domains/workbook/workbook-cells.schema";
 import {
   buildCellNamespace,
   isOutputDataNormalizationError,
 } from "@repo/api/transforms/build-cell-namespace";
 import { resolveInlineCommand } from "@repo/api/transforms/command-payload";
-import { toDeviceContext } from "@repo/api/transforms/device-context";
+import { DEVICE_CONTEXT_KEY, toDeviceContext } from "@repo/api/transforms/device-context";
 import { presentDevice } from "@repo/api/transforms/device-presentation";
 import {
   evaluateBranch,
@@ -51,6 +53,9 @@ interface CellExecutionState {
 }
 
 interface UseWorkbookExecutionOptions {
+  experiment?: Experiment;
+  // Set when running a published version: macros run its pinned snapshots.
+  workbookVersionId?: string;
   cells: WorkbookCell[];
   onCellsChange: (cells: WorkbookCell[]) => void;
   onPromptQuestion?: (cell: QuestionCell) => Promise<string | undefined>;
@@ -98,6 +103,54 @@ function findPrecedingOutput(cells: WorkbookCell[], beforeIndex: number): Output
     }
   }
   return null;
+}
+
+// A macro reads its nearest input as data and every named upstream output
+// through ctx, so a simulated one among them marks its result simulated. A
+// per-device run reads that device's own result where one exists.
+function readsSimulatedOutput(
+  cells: WorkbookCell[],
+  beforeIndex: number,
+  input: OutputCell | null,
+  deviceId?: string,
+): boolean {
+  const named = cells.slice(0, beforeIndex).filter((c) => namespaceNameOf(c));
+  const readable = new Set(named.map((c) => c.id));
+  if (input) readable.add(input.producedBy);
+  return readsSimulatedSources(cells, readable, deviceId);
+}
+
+function readsSimulatedSources(
+  cells: WorkbookCell[],
+  readable: Set<string>,
+  deviceId?: string,
+): boolean {
+  return cells.some((c) => {
+    if (c.type === "question") return readable.has(c.id) && c.simulated === true;
+    if (c.type !== "output" || !readable.has(c.producedBy)) return false;
+    if (c.simulated === true) return true;
+    const own =
+      deviceId === undefined
+        ? undefined
+        : c.deviceResults?.find((r) => r.deviceId === deviceId && r.data !== undefined);
+    return own
+      ? own.simulated === true
+      : c.deviceResults?.some((r) => r.simulated === true) === true;
+  });
+}
+
+function branchUsesSimulation(
+  cell: BranchCell,
+  cells: WorkbookCell[],
+  connection?: IotDeviceConnection,
+): boolean {
+  const sources = new Set(
+    cell.paths.flatMap((path) => path.conditions.map((condition) => condition.sourceCellId)),
+  );
+  return (
+    (sources.has(DEVICE_CONTEXT_KEY) && connection?.simulated === true) ||
+    readsSimulatedSources(cells, sources, connection?.id)
+  );
 }
 
 // Replaces any previous output produced by the same source cell.
@@ -167,6 +220,8 @@ function toOutputData(data: unknown): Record<string, unknown> {
 }
 
 export function useWorkbookExecution({
+  experiment,
+  workbookVersionId,
   cells,
   onCellsChange,
   onPromptQuestion,
@@ -190,8 +245,14 @@ export function useWorkbookExecution({
     setSensorFamilyState(family);
   }, []);
 
-  const { connections, isConnecting, connect, disconnectDevice, disconnectAll } =
-    useIotConnections(sensorFamily);
+  const {
+    connections,
+    simulationAvailable,
+    isConnecting,
+    connect,
+    disconnectDevice,
+    disconnectAll,
+  } = useIotConnections(sensorFamily, { experiment });
   const isConnected = connections.length > 0;
 
   const executeMacroMutation = useMutation(orpc.macros.executeMacro.mutationOptions());
@@ -231,11 +292,12 @@ export function useWorkbookExecution({
         deviceLabel: string;
         family: SensorFamily;
         deviceName?: string;
+        simulated?: boolean;
         data?: Record<string, unknown>;
         error?: string;
       }[] = devices.map((d, i) => {
         const outcome = settled[i];
-        const identity = { family: d.family, deviceName: d.identity.name };
+        const identity = { family: d.family, deviceName: d.identity.name, simulated: d.simulated };
         const deviceLabel = secondaryDeviceLabel(d);
         return outcome.status === "fulfilled"
           ? { deviceId: d.id, deviceLabel, ...identity, data: normalize(outcome.value) }
@@ -382,7 +444,12 @@ export function useWorkbookExecution({
     async (macroId: string, data: Record<string, unknown>, context?: Record<string, unknown>) => {
       let result;
       try {
-        result = await executeMacroMutationRef.current.mutateAsync({ id: macroId, data, context });
+        result = await executeMacroMutationRef.current.mutateAsync({
+          id: macroId,
+          data,
+          context,
+          workbookVersionId,
+        });
       } catch (err) {
         // oRPC throws an ORPCError on HTTP errors; surface the server's message.
         throw new Error(parseApiError(err)?.message ?? "Macro execution failed");
@@ -392,20 +459,34 @@ export function useWorkbookExecution({
       }
       return result.output;
     },
-    [],
+    [workbookVersionId],
   );
 
-  // The $device entry a macro run for this connection reads from ctx.
-  const deviceContextFor = useCallback((deviceId?: string) => {
-    const connections = connectionsRef.current;
-    const index = deviceId ? connections.findIndex((c) => c.id === deviceId) : 0;
-    const connection = connections.at(Math.max(index, 0));
-    return connection ? toDeviceContext(connection.identity, Math.max(index, 0)) : undefined;
-  }, []);
+  // Everything a macro run reads besides its data: the options its ctx is built
+  // from, including the connection behind $device, and whether any of it came
+  // from a simulator. An unmatched device falls back to the first connection.
+  const macroReads = useCallback(
+    (cells: WorkbookCell[], cellIndex: number, input: OutputCell | null, deviceId?: string) => {
+      const connections = connectionsRef.current;
+      const index = Math.max(deviceId ? connections.findIndex((c) => c.id === deviceId) : 0, 0);
+      const connection = connections.at(index);
+      return {
+        namespace: {
+          deviceId,
+          device: connection ? toDeviceContext(connection.identity, index) : undefined,
+        },
+        simulated:
+          connection?.simulated === true || readsSimulatedOutput(cells, cellIndex, input, deviceId),
+      };
+    },
+    [],
+  );
 
   const runMacroCell = useCallback(
     async (cell: MacroCell, cellIndex: number, currentCells: WorkbookCell[]) => {
       const input = findPrecedingOutput(currentCells, cellIndex);
+      const reads = macroReads(currentCells, cellIndex, input);
+      const simulated = reads.simulated;
       // A macro can run from ctx alone; error only when there is neither a
       // nearest measurement nor any upstream output to read.
       if (!input) {
@@ -430,18 +511,18 @@ export function useWorkbookExecution({
       // serialized; devices whose measurement failed carry their error through.
       const inputResults = input?.deviceResults;
       if (inputResults && inputResults.length > 1) {
+        // Each device's run reads a ctx scoped to ITS results, plus its own
+        // $device entry.
+        const deviceReads = inputResults.map((r) =>
+          macroReads(currentCells, cellIndex, input, r.deviceId),
+        );
         const settled: PromiseSettledResult<unknown>[] = [];
-        for (const r of inputResults) {
+        for (const [i, r] of inputResults.entries()) {
           try {
             if (r.data == null) {
               throw new Error("No measurement data from this device");
             }
-            // Each device's run reads a ctx scoped to ITS results, plus its
-            // own $device entry.
-            const ns = buildCellNamespace(currentCells, cellIndex, {
-              deviceId: r.deviceId,
-              device: deviceContextFor(r.deviceId),
-            });
+            const ns = buildCellNamespace(currentCells, cellIndex, deviceReads[i].namespace);
             settled.push({
               status: "fulfilled",
               value: await executeMacroOn(
@@ -458,7 +539,11 @@ export function useWorkbookExecution({
 
         const results: OutputDeviceResult[] = inputResults.map((r, i) => {
           const outcome = settled[i];
-          const identity = { family: r.family, deviceName: r.deviceName };
+          const identity = {
+            family: r.family,
+            deviceName: r.deviceName,
+            simulated: deviceReads[i].simulated || undefined,
+          };
           return outcome.status === "fulfilled"
             ? { deviceId: r.deviceId, deviceLabel: r.deviceLabel, ...identity, data: outcome.value }
             : {
@@ -499,9 +584,7 @@ export function useWorkbookExecution({
       }
 
       try {
-        const ns = buildCellNamespace(currentCells, cellIndex, {
-          device: deviceContextFor(),
-        });
+        const ns = buildCellNamespace(currentCells, cellIndex, reads.namespace);
         const output = await executeMacroOn(
           cell.payload.macroId,
           (input?.data ?? {}) as Record<string, unknown>,
@@ -512,6 +595,7 @@ export function useWorkbookExecution({
         const singleInputIdentity = inputResults?.length === 1 ? inputResults[0] : undefined;
         return insertOutputAfterCell(currentCells, cell.id, {
           ...makeOutputCell(cell.id, output, executionTime, []),
+          simulated,
           ...(singleInputIdentity
             ? {
                 deviceResults: [
@@ -520,6 +604,7 @@ export function useWorkbookExecution({
                     deviceLabel: singleInputIdentity.deviceLabel,
                     family: singleInputIdentity.family,
                     deviceName: singleInputIdentity.deviceName,
+                    simulated: simulated || undefined,
                     data: output,
                   },
                 ],
@@ -533,6 +618,7 @@ export function useWorkbookExecution({
         const singleInputIdentity = inputResults?.length === 1 ? inputResults[0] : undefined;
         return insertOutputAfterCell(currentCells, cell.id, {
           ...makeErrorOutputCell(cell.id, message, executionTime),
+          simulated,
           ...(singleInputIdentity
             ? {
                 deviceResults: [
@@ -541,6 +627,7 @@ export function useWorkbookExecution({
                     deviceLabel: singleInputIdentity.deviceLabel,
                     family: singleInputIdentity.family,
                     deviceName: singleInputIdentity.deviceName,
+                    simulated: simulated || undefined,
                     error: message,
                   },
                 ],
@@ -549,7 +636,7 @@ export function useWorkbookExecution({
         });
       }
     },
-    [setCellState, executeMacroOn, deviceContextFor],
+    [setCellState, executeMacroOn, macroReads],
   );
 
   const runQuestionCell = useCallback(
@@ -576,10 +663,19 @@ export function useWorkbookExecution({
         }
 
         setCellState(cell.id, { status: "completed" });
-        const updated = currentCells.map((c) =>
-          c.id === cell.id ? { ...cell, answer, isAnswered: true } : c,
+        const input = findPrecedingOutput(
+          currentCells,
+          currentCells.findIndex((c) => c.id === cell.id),
         );
-        return insertOutputAfterCell(updated, cell.id, makeOutputCell(cell.id, { answer }, 0, []));
+        const simulated =
+          input?.simulated === true || input?.deviceResults?.some((r) => r.simulated) === true;
+        const updated = currentCells.map((c) =>
+          c.id === cell.id ? { ...cell, answer, isAnswered: true, simulated } : c,
+        );
+        return insertOutputAfterCell(updated, cell.id, {
+          ...makeOutputCell(cell.id, { answer }, 0, []),
+          simulated,
+        });
       } catch {
         setCellState(cell.id, { status: "error", error: "Question prompt failed" });
         return currentCells;
@@ -653,11 +749,12 @@ export function useWorkbookExecution({
       }
 
       setCellState(cell.id, { status: "completed" });
-      updated = insertOutputAfterCell(
-        updated,
-        cell.id,
-        makeOutputCell(cell.id, undefined, 0, messages),
-      );
+      updated = insertOutputAfterCell(updated, cell.id, {
+        ...makeOutputCell(cell.id, undefined, 0, messages),
+        simulated: connections.some((connection) =>
+          branchUsesSimulation(cell, currentCells, connection),
+        ),
+      });
       // A dispatcher matches several paths at once; no single ACTIVE path.
       return updated.map((c) => (c.id === cell.id ? { ...cell, evaluatedPathId: undefined } : c));
     },
@@ -718,11 +815,10 @@ export function useWorkbookExecution({
         ? [`Matched: ${matchedPath.label || "Unnamed path"}${passLabel}`]
         : [`No path matched${passLabel}`];
 
-      const updated = insertOutputAfterCell(
-        currentCells,
-        cell.id,
-        makeOutputCell(cell.id, undefined, 0, messages),
-      );
+      const updated = insertOutputAfterCell(currentCells, cell.id, {
+        ...makeOutputCell(cell.id, undefined, 0, messages),
+        simulated: branchUsesSimulation(cell, currentCells),
+      });
       return updated.map((c) =>
         c.id === cell.id ? { ...cell, evaluatedPathId: matchedPath?.id } : c,
       );
@@ -882,6 +978,7 @@ export function useWorkbookExecution({
 
   return {
     isConnected,
+    simulationAvailable,
     isConnecting,
     connectedDevices: connections.map(({ id, label, ordinal, family, identity }) => ({
       id,

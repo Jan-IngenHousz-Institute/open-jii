@@ -37,6 +37,7 @@ export const MeasurementsRow = memo(function MeasurementsRow({
       onDelete={onDelete}
       onSync={canFlag ? onSync : undefined}
       hasComment={item.hasComment}
+      simulated={item.simulated}
       peekToken={peekToken}
       indented={indented}
     />

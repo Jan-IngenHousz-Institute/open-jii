@@ -28,6 +28,7 @@ import type {
 } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { resolveInlineCommand } from "@repo/api/transforms/command-payload";
 import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Card } from "@repo/ui/components/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
@@ -193,6 +194,7 @@ function DataTabs({
 
 function DeviceResultIdentity({ result }: { result: OutputDeviceResult }) {
   const { t } = useTranslation("iot");
+  const { t: workbookT } = useTranslation("workbook");
   const presentation = presentDevice({
     // Older saved results only carried `deviceLabel`; treat that as their
     // legacy display name when no structured family/name exists.
@@ -212,6 +214,7 @@ function DeviceResultIdentity({ result }: { result: OutputDeviceResult }) {
   return (
     <span className="text-foreground flex min-w-0 flex-col text-[12px] font-semibold">
       <span className="truncate">{primaryLabel}</span>
+      {result.simulated && <Badge variant="secondary">{workbookT("output.simulated")}</Badge>}
       {secondaryLabel.length > 0 && (
         <span className="text-muted-foreground truncate font-normal">{secondaryLabel}</span>
       )}
@@ -375,6 +378,9 @@ export function OutputCellComponent({
           <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
             {t("output.label")}
           </span>
+          {(cell.simulated === true || cell.deviceResults?.some((r) => r.simulated)) && (
+            <Badge variant="secondary">{t("output.simulated")}</Badge>
+          )}
           {cell.executionTime != null && (
             <span className="text-muted-foreground/60 inline-flex items-center gap-1 text-[11px] leading-none">
               <Clock className="size-3" />

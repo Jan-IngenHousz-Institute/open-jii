@@ -135,7 +135,8 @@
       "ambient_sun_vis": "Zichtbaar omgevingslicht",
       "ambient_leaf_ir": "Infraroodsignaal van het blad",
       "leaf_temp": "Bladtemperatuur"
-    }
+    },
+    "simulated": "Gesimuleerd"
   },
   "cells": {
     "command": "Opdracht",

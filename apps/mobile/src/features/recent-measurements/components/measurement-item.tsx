@@ -13,6 +13,7 @@ import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array
 import { formatTimeAgo } from "~/shared/time/format-time-ago";
 import { cn } from "~/shared/ui/cn";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { SimulatedLabel } from "~/shared/ui/simulated-label";
 
 interface MeasurementItemProps {
   id: string;
@@ -28,6 +29,7 @@ interface MeasurementItemProps {
   hideActions?: boolean;
   /** When true, shows a comment indicator icon */
   hasComment?: boolean;
+  simulated?: boolean;
   /** When true, indents the row: it sits under an expanded workbook-run row */
   indented?: boolean;
 }
@@ -44,6 +46,7 @@ export const MeasurementItem = memo(function MeasurementItem({
   onDelete,
   hideActions = false,
   hasComment = false,
+  simulated = false,
   indented = false,
 }: MeasurementItemProps) {
   const { colors } = useTheme();
@@ -122,6 +125,7 @@ export const MeasurementItem = memo(function MeasurementItem({
         </View>
       </View>
 
+      {simulated && <SimulatedLabel />}
       {status === "failed" && <UploadFailureNote reason={failureReason} />}
     </Pressable>
   );

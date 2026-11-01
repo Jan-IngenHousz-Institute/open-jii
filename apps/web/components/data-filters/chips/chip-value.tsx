@@ -45,6 +45,13 @@ export function ChipValue({
     );
   }
 
+  if (typeof filter.value === "boolean") {
+    return (
+      <span className={className}>
+        {t("dataFilters.booleanValue", { context: String(filter.value) })}
+      </span>
+    );
+  }
   const display = formatFilterDisplay(filter, (count) => t("dataFilters.selectedCount", { count }));
   return <span className={className}>{display}</span>;
 }

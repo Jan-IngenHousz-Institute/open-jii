@@ -89,6 +89,17 @@ describe("HomeDeviceCard reconnect identity", () => {
     state.open.mockClear();
   });
 
+  it("does not offer a remembered simulator outside an active demo", () => {
+    state.lastConnectedDevice = {
+      id: "simulated:multispeq",
+      name: "Simulated MultispeQ",
+      type: "simulated-device",
+    };
+    render(<HomeDeviceCard />);
+    expect(screen.getByText("No device connected")).toBeTruthy();
+    expect(screen.queryByText("Reconnect Simulated MultispeQ")).toBeNull();
+  });
+
   it("shows connected Bluetooth identity and opens the device sheet", () => {
     state.connectedDevice = {
       type: "bluetooth-classic",

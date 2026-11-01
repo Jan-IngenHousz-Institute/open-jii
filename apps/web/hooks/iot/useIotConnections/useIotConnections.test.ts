@@ -1,3 +1,4 @@
+import { createExperiment } from "@/test/factories";
 import { renderHook, act } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -60,6 +61,74 @@ function identifyAs(family: DeviceIdentity["family"], name?: string) {
 }
 
 describe("useIotConnections", () => {
+  it("disconnects a simulated device when navigation leaves its Demo", async () => {
+    const connector = identifyAs("multispeq", "Simulated MultispeQ");
+    const { result, rerender } = renderHook(
+      ({ experiment }) => useIotConnections("multispeq", { experiment }),
+      { initialProps: { experiment: createExperiment({ id: "demo", organizationType: "demo" }) } },
+    );
+    await act(() => result.current.connect("simulated-multispeq"));
+    expect(result.current.connections[0]).toMatchObject({
+      simulated: true,
+      simulationExperimentId: "demo",
+    });
+    rerender({ experiment: createExperiment({ id: "other", organizationType: "university" }) });
+    expect(result.current.connections).toEqual([]);
+    expect(connector.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("destroys a connected simulator when switching between eligible Demo experiments", async () => {
+    const connector = identifyAs("multispeq", "Simulated MultispeQ");
+    const { result, rerender } = renderHook(
+      ({ experiment }) => useIotConnections("multispeq", { experiment }),
+      {
+        initialProps: { experiment: createExperiment({ id: "demo-a", organizationType: "demo" }) },
+      },
+    );
+    await act(() => result.current.connect("simulated-multispeq"));
+    expect(result.current.connections).toHaveLength(1);
+    expect(result.current.connections[0].simulationExperimentId).toBe("demo-a");
+    rerender({ experiment: createExperiment({ id: "demo-b", organizationType: "demo" }) });
+    expect(connector.destroy).toHaveBeenCalledTimes(1);
+    expect(result.current.connections).toEqual([]);
+  });
+
+  it("discards a simulated handshake that finishes after switching experiments", async () => {
+    const connector = makeConnector();
+    let finish: () => void = () => undefined;
+    mockIdentifyDevice.mockImplementationOnce(
+      () =>
+        new Promise<unknown>((resolve) => {
+          finish = () =>
+            resolve({ family: "multispeq", info: { family: "multispeq", raw: {} }, connector });
+        }),
+    );
+    const { result, rerender } = renderHook(
+      ({ experiment }) => useIotConnections("multispeq", { experiment }),
+      { initialProps: { experiment: createExperiment({ id: "demo", organizationType: "demo" }) } },
+    );
+    let pending = Promise.resolve();
+    act(() => {
+      pending = result.current.connect("simulated-multispeq");
+    });
+    rerender({ experiment: createExperiment({ id: "another-demo", organizationType: "demo" }) });
+    await act(async () => {
+      finish();
+      await pending;
+    });
+    expect(result.current.connections).toEqual([]);
+    expect(connector.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a simulated connection outside a Demo before creating or identifying a device", async () => {
+    const { result } = renderHook(() => useIotConnections("multispeq"));
+    await act(() => result.current.connect("simulated-multispeq"));
+    expect(result.current.connections).toEqual([]);
+    expect(result.current.error).toMatch(/demo experiment/);
+    expect(mockCreateAdapter).not.toHaveBeenCalled();
+    expect(mockIdentifyDevice).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     mockCreateAdapter.mockReset();
     mockIdentifyDevice.mockReset();

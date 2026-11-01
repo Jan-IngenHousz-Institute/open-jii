@@ -121,6 +121,26 @@ const CONTENT: MeasurementContent = {
 };
 
 describe("useMeasurementCapture", () => {
+  it("keeps the simulator flag when persisting a completed scan", async () => {
+    const device: Device = {
+      id: "simulated:multispeq",
+      type: "simulated-device",
+      name: "Simulated",
+    };
+    mocks.devices = [device];
+    mocks.refetchConnectedDevices.mockResolvedValue({ data: [device] });
+    mocks.executeScanAll.mockResolvedValue({
+      successes: [{ device, result: { Phi2: 0.8 } }],
+      failures: [],
+    });
+    const { result } = renderHook(() => useMeasurementCapture(CONTENT, "measurement-cell"));
+    await act(() => result.current.startScan());
+    expect(mocks.flowState.setScanResults).toHaveBeenCalledWith(
+      [{ device: { id: device.id, name: device.name, simulated: true }, result: { Phi2: 0.8 } }],
+      "measurement-cell",
+    );
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.devices = [DEVICE_A, DEVICE_B];

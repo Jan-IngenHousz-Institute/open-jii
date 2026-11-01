@@ -11,6 +11,7 @@ from data_repair import apply_inline_repairs
 from openjii import scrub_non_finite_json
 from openjii.centrum import EXPERIMENT_RAW_DATA_TABLE
 from openjii.centrum.questions import sanitized_questions
+from openjii.centrum.measurement_provenance import with_provenance_defaults
 from openjii.centrum.runtime import SILVER_TABLE
 from openjii.timezones import usable_timezone
 
@@ -38,7 +39,7 @@ def experiment_raw_data():
     """Per-experiment raw sample data with VARIANT support."""
 
     return (
-        dlt.read_stream(SILVER_TABLE)
+        with_provenance_defaults(dlt.read_stream(SILVER_TABLE))
         .filter("experiment_id IS NOT NULL")
         # Firmware serializes floats permissively, so calibration samples can
         # carry bare NaN/Infinity tokens that strict parse_json rejects,
@@ -74,6 +75,8 @@ def experiment_raw_data():
             "id",
             "experiment_id",
             "device_id",
+            "is_simulated",
+            "is_guest",
             "client_id",
             "device_name",
             "device_family",

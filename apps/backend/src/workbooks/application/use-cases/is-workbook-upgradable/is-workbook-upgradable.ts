@@ -13,6 +13,7 @@ const RUNTIME_FIELDS = new Set([
   "isCollapsed",
   "isAnswered",
   "answer",
+  "simulated",
   "evaluatedPathId",
   "data",
   "executionTime",

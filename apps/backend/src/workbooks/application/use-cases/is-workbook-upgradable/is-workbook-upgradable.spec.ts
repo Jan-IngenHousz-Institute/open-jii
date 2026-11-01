@@ -176,32 +176,35 @@ describe("IsWorkbookUpgradableUseCase", () => {
     expect(result.value).toBe(false);
   });
 
-  it("is false when only per-run question state (isAnswered/answer) changes", async () => {
-    const original = {
-      id: "q1",
-      type: "question" as const,
-      isCollapsed: false,
-      isAnswered: false,
-      name: "soil_moisture",
-      question: { kind: "open_ended" as const, text: "How wet?", required: false },
-    };
-    const workbook = await testApp.createWorkbook({
-      name: "WB",
-      cells: [original],
-      createdBy: userId,
-    });
-    await publishV1(workbook);
+  it.each([undefined, false, true])(
+    "is false when only per-run question state (isAnswered/answer/simulated %s) changes",
+    async (simulated) => {
+      const original = {
+        id: "q1",
+        type: "question" as const,
+        isCollapsed: false,
+        isAnswered: false,
+        name: "soil_moisture",
+        question: { kind: "open_ended" as const, text: "How wet?", required: false },
+      };
+      const workbook = await testApp.createWorkbook({
+        name: "WB",
+        cells: [original],
+        createdBy: userId,
+      });
+      await publishV1(workbook);
 
-    await workbookRepo.update(workbook.id, {
-      cells: [{ ...original, isAnswered: true, answer: "very" }],
-    });
-    const fresh = await workbookRepo.findById(workbook.id);
-    assertSuccess(fresh);
+      await workbookRepo.update(workbook.id, {
+        cells: [{ ...original, isAnswered: true, answer: "very", simulated }],
+      });
+      const fresh = await workbookRepo.findById(workbook.id);
+      assertSuccess(fresh);
 
-    const result = await useCase.execute(expectValue(fresh.value));
-    assertSuccess(result);
-    expect(result.value).toBe(false);
-  });
+      const result = await useCase.execute(expectValue(fresh.value));
+      assertSuccess(result);
+      expect(result.value).toBe(false);
+    },
+  );
 
   it("is false when only output cells have been appended since the latest version", async () => {
     const source = { id: "md1", type: "markdown" as const, content: "hi", isCollapsed: false };

@@ -9,6 +9,11 @@ import {
 import { mockDevicesEnabled } from "~/features/connection/services/multispeq/mock-device/mock-devices-enabled";
 import { bluetoothClassicTransport } from "~/features/connection/services/multispeq/transports/bluetooth-classic-transport";
 import { serialPortTransport } from "~/features/connection/services/multispeq/transports/serial-port-transport";
+import {
+  openSimulatedDevice,
+  closeSimulatedDevice,
+  createSimulatedExecutor,
+} from "~/features/connection/services/simulated-device";
 import type { Device, DeviceType } from "~/shared/types/device";
 
 import { closeSerialPort, getSerialPortConnection, openSerialPort } from "./serial-port-connection";
@@ -99,6 +104,14 @@ const deviceOps: Record<DeviceType, DeviceTypeOps> = {
   "bluetooth-classic": bluetoothClassicOps,
   usb: usbOps,
   "mock-device": mockDeviceOps,
+  "simulated-device": {
+    connect: openSimulatedDevice,
+    disconnect() {
+      closeSimulatedDevice();
+      return Promise.resolve();
+    },
+    createExecutor: createSimulatedExecutor,
+  },
 };
 
 export async function connectToDevice(device: Device): Promise<void> {

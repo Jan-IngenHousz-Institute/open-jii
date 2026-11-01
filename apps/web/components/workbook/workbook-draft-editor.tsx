@@ -8,8 +8,10 @@ import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkboo
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
+import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
 import { zWorkbookCellArray } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -17,6 +19,9 @@ import { toast } from "@repo/ui/hooks/use-toast";
 const AUTO_SAVE_DELAY = 1500;
 
 interface WorkbookDraftEditorProps {
+  experiment?: Experiment;
+  entitySnapshots?: EntitySnapshots;
+  workbookVersionId?: string;
   id: string;
   initialCells: WorkbookCell[];
   /** `can(update)` from the detail response — a "Can edit" grantee edits too. */
@@ -33,6 +38,9 @@ interface WorkbookDraftEditorProps {
  * standalone workbook page and the experiment design page's edit mode.
  */
 export function WorkbookDraftEditor({
+  experiment,
+  entitySnapshots,
+  workbookVersionId,
   id,
   initialCells,
   canEdit,
@@ -120,6 +128,7 @@ export function WorkbookDraftEditor({
 
   const {
     isConnected,
+    simulationAvailable,
     isConnecting,
     connectedDevices,
     sensorFamily,
@@ -136,6 +145,8 @@ export function WorkbookDraftEditor({
     stopExecution,
     clearOutputs,
   } = useWorkbookExecution({
+    experiment,
+    workbookVersionId,
     cells,
     onCellsChange: handleCellsChange,
     onPromptQuestion: handlePromptQuestion,
@@ -167,6 +178,8 @@ export function WorkbookDraftEditor({
   return (
     <WorkbookEditor
       cells={cells}
+      entitySnapshots={entitySnapshots}
+      simulationAvailable={simulationAvailable}
       onCellsChange={handleCellsChange}
       readOnly={!canEdit}
       title={name}

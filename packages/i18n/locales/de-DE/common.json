@@ -1528,5 +1528,9 @@
     "userId": "Benutzer-ID",
     "loadFailed": "Plattformadmins konnten nicht geladen werden.",
     "retry": "Erneut versuchen"
+  },
+  "provenance": {
+    "simulated": "Simuliert",
+    "guest": "Gast"
   }
 }

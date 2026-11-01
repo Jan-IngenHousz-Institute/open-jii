@@ -14,6 +14,7 @@ export interface MacroInfo {
 
 export interface BuildUploadPayloadArgs {
   rawMeasurement: any;
+  simulated?: boolean;
   userId: string;
   /** Real protocol uuid. */
   protocolId: string;
@@ -49,6 +50,7 @@ export interface BuildUploadPayloadArgs {
 // macro the platform runs on it reads the same input as the run on the phone.
 export function buildUploadPayload({
   rawMeasurement,
+  simulated = false,
   userId,
   protocolId,
   macro,
@@ -80,6 +82,7 @@ export function buildUploadPayload({
     timezone,
     user_id: userId,
     ...rawMeasurement,
+    simulated,
     // After the spread: device-native output can carry its own protocol_id
     // (device-defined, not a platform id) and must not clobber the platform
     // attribution.
@@ -107,6 +110,9 @@ export function buildUploadPayload({
     // learned by the mobile connection handshake for this physical sensor.
     ...(rawMeasurement.device_firmware == null && fallbackDeviceFirmware
       ? { device_firmware: fallbackDeviceFirmware }
+      : {}),
+    ...(simulated
+      ? { device_id: "simulated:multispeq", device_family: "multispeq", device_address: undefined }
       : {}),
     workbook_run_id: workbookRunId,
     workbook_version_id: workbookVersionId,

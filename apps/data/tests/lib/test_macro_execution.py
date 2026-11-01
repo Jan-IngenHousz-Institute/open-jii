@@ -424,6 +424,9 @@ def test_macro_notebook_posts_only_eligible_rows_on_real_spark(spark, fake_dlt, 
         ],
         "id string, macro_id string, skip_macro_processing boolean, data string",
     )
+    source = source.withColumn("is_simulated", F.col("id") == "valid").withColumn(
+        "is_guest", F.col("id") == "legacy"
+    )
     source = source.withColumn(
         "macros",
         F.array(
@@ -522,6 +525,10 @@ def test_macro_notebook_posts_only_eligible_rows_on_real_spark(spark, fake_dlt, 
 
     assert sorted(item["id"] for item in posted) == ["legacy", "valid"]
     assert len(rows) == 6
+    assert rows["valid"].is_simulated is True
+    assert rows["valid"].is_guest is False
+    assert rows["legacy"].is_guest is True
+    assert rows["legacy"].is_simulated is False
     for row_id in ["valid", "legacy"]:
         assert json.loads(rows[row_id].macro_output.toJson()) == {"id": row_id}
         assert rows[row_id].macro_error is None
