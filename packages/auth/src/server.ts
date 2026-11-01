@@ -12,6 +12,7 @@ import * as schema from "@repo/database/schema";
 import { getApiKeyForSessionCheck } from "./api-key-session";
 import { sendOtpEmail } from "./email/otpEmail";
 import { openJiiOrganization } from "./organization/plugin";
+import { legacyOAuth2SignIn } from "./providers/legacy-oauth2-sign-in";
 import { orcidProvider } from "./providers/orcid";
 
 const environmentPrefix = process.env.ENVIRONMENT_PREFIX ?? "dev";
@@ -170,6 +171,7 @@ export const auth = betterAuth({
           genericOAuth({
             config: customOAuthProviders,
           }),
+          legacyOAuth2SignIn(),
         ]
       : []),
     // Personal API keys: a valid x-api-key header authenticates REST
@@ -198,7 +200,6 @@ export const auth = betterAuth({
     }),
     lastLoginMethod({
       customResolveMethod: (ctx) => {
-        if (ctx.path.startsWith("/oauth2/callback/")) return ctx.path.split("/oauth2/callback/")[1];
         if (ctx.path.startsWith("/callback/")) return ctx.path.split("/callback/")[1];
         if (ctx.path === "/sign-in/email-otp") return "email";
         if (ctx.path === "/passkey/verify-authentication") return "passkey";
@@ -242,8 +243,7 @@ export const auth = betterAuth({
         ctx.path,
       );
 
-      const isSignInCallback =
-        ctx.path.startsWith("/callback/") || ctx.path.startsWith("/oauth2/callback/");
+      const isSignInCallback = ctx.path.startsWith("/callback/");
 
       if (isSignIn || isSignInCallback) {
         try {

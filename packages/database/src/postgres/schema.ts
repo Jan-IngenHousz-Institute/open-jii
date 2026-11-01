@@ -308,6 +308,7 @@ export const teams = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     name: varchar("name", { length: 255 }).notNull(),
+    memberCount: integer("member_count").notNull().default(0),
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
@@ -327,10 +328,12 @@ export const teamMembers = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    membershipKey: text("membership_key"),
     ...timestamps,
   },
   (t) => [
     uniqueIndex("team_members_team_user_uniq").on(t.teamId, t.userId),
+    uniqueIndex("team_members_membership_key_uniq").on(t.membershipKey),
     index("team_members_user_idx").on(t.userId),
   ],
 );

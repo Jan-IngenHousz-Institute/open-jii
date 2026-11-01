@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { configureAuthRefresh, orpcFetch } from "~/shared/api/orpc-fetch";
+import { deferred } from "~/shared/testing/deferred";
 
 const mockFetch = vi.fn();
 const mockRefreshSession = vi.fn();
@@ -7,12 +8,21 @@ const mockSignOut = vi.fn();
 const mockHasCachedSession = vi.fn<() => boolean>();
 const SESSION = "better-auth.dev.session_token=cookie";
 const NEW_SESSION = "better-auth.dev.session_token=new-session";
-const mockGetCookie = vi.fn<() => string | null | undefined>(() => SESSION);
+const mockGetCookie = vi.fn<() => Promise<string | null | undefined>>(() =>
+  Promise.resolve(SESSION),
+);
 
 vi.stubGlobal("fetch", mockFetch);
 
 function makeRequest() {
   return new Request("https://api.test/v1/x", { method: "GET" });
+}
+
+// Like fetch, rejects a request whose signal is already aborted and never settles otherwise.
+function rejectIfAborted(_req: Request, init: { signal: AbortSignal }) {
+  return init.signal.aborted
+    ? Promise.reject(new DOMException("aborted", "AbortError"))
+    : new Promise(() => undefined);
 }
 
 describe("orpcFetch", () => {
@@ -21,7 +31,7 @@ describe("orpcFetch", () => {
     mockRefreshSession.mockReset();
     mockSignOut.mockReset();
     mockGetCookie.mockReset();
-    mockGetCookie.mockReturnValue(SESSION);
+    mockGetCookie.mockResolvedValue(SESSION);
     mockHasCachedSession.mockReset();
     mockHasCachedSession.mockReturnValue(false);
     // Inject the auth seam the way shared/composition/auth-wiring does at boot.
@@ -63,7 +73,7 @@ describe("orpcFetch", () => {
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
       .mockResolvedValueOnce(new Response(null, { status: 200 }));
     mockRefreshSession.mockImplementationOnce(() => {
-      mockGetCookie.mockReturnValue(refreshed);
+      mockGetCookie.mockResolvedValue(refreshed);
       return Promise.resolve(true);
     });
 
@@ -75,9 +85,29 @@ describe("orpcFetch", () => {
     expect(retryHeaders.get("Cookie")).toBe(refreshed);
   });
 
+  it("retries with the same cookie read it checked against the sent token", async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+    mockRefreshSession.mockResolvedValueOnce(true);
+    // The first send, the pre-refresh check and the post-refresh read see this session;
+    // any later read sees another user's.
+    mockGetCookie
+      .mockResolvedValueOnce(SESSION)
+      .mockResolvedValueOnce(SESSION)
+      .mockResolvedValueOnce(SESSION)
+      .mockResolvedValue(NEW_SESSION);
+
+    await orpcFetch(makeRequest(), undefined);
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    const retryHeaders: Headers = mockFetch.mock.calls[1][1].headers;
+    expect(retryHeaders.get("Cookie")).toBe(SESSION);
+  });
+
   it("leaves a newer session alone when a request sent with an older token returns 401", async () => {
     mockFetch.mockImplementationOnce(() => {
-      mockGetCookie.mockReturnValue(NEW_SESSION);
+      mockGetCookie.mockResolvedValue(NEW_SESSION);
       return Promise.resolve(new Response(null, { status: 401 }));
     });
 
@@ -94,7 +124,7 @@ describe("orpcFetch", () => {
     async (refreshed) => {
       mockFetch.mockResolvedValue(new Response(null, { status: 401 }));
       mockRefreshSession.mockImplementationOnce(() => {
-        mockGetCookie.mockReturnValue(NEW_SESSION);
+        mockGetCookie.mockResolvedValue(NEW_SESSION);
         return Promise.resolve(refreshed);
       });
 
@@ -131,7 +161,7 @@ describe("orpcFetch", () => {
   it.each([undefined, null, "", "better-auth.dev.oauth_state=pending"])(
     "does not refresh or sign out on 401 when the request had cookie %j",
     async (cookie) => {
-      mockGetCookie.mockReturnValue(cookie);
+      mockGetCookie.mockResolvedValue(cookie);
       mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
 
       const result = await orpcFetch(makeRequest(), undefined);
@@ -144,7 +174,7 @@ describe("orpcFetch", () => {
   );
 
   it("signs out a cached session whose cookie has expired, without refreshing", async () => {
-    mockGetCookie.mockReturnValue("");
+    mockGetCookie.mockResolvedValue("");
     mockHasCachedSession.mockReturnValue(true);
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
 
@@ -158,11 +188,11 @@ describe("orpcFetch", () => {
   it.each([200, 401])(
     "resends once under a session that appeared after an anonymous request, which returns %i",
     async (status) => {
-      mockGetCookie.mockReturnValue("");
+      mockGetCookie.mockResolvedValue("");
       mockHasCachedSession.mockReturnValue(true);
       mockFetch
         .mockImplementationOnce(() => {
-          mockGetCookie.mockReturnValue(NEW_SESSION);
+          mockGetCookie.mockResolvedValue(NEW_SESSION);
           return Promise.resolve(new Response(null, { status: 401 }));
         })
         .mockResolvedValueOnce(new Response(null, { status }));
@@ -183,10 +213,10 @@ describe("orpcFetch", () => {
   it.each(["POST", "PUT", "PATCH", "DELETE"])(
     "returns a %s 401 untouched when a session appeared after it was sent",
     async (method) => {
-      mockGetCookie.mockReturnValue("");
+      mockGetCookie.mockResolvedValue("");
       mockHasCachedSession.mockReturnValue(true);
       mockFetch.mockImplementationOnce(() => {
-        mockGetCookie.mockReturnValue(NEW_SESSION);
+        mockGetCookie.mockResolvedValue(NEW_SESSION);
         return Promise.resolve(new Response(null, { status: 401 }));
       });
       const request = new Request("https://api.test/v1/x", {
@@ -205,7 +235,7 @@ describe("orpcFetch", () => {
 
   it("attaches the Cookie header when a session cookie is present", async () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }));
-    mockGetCookie.mockReturnValue("better-auth.dev.session_token=abc");
+    mockGetCookie.mockResolvedValue("better-auth.dev.session_token=abc");
 
     await orpcFetch(makeRequest(), undefined);
 
@@ -215,7 +245,7 @@ describe("orpcFetch", () => {
 
   it("omits the Cookie header when getCookie returns empty", async () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }));
-    mockGetCookie.mockReturnValue("");
+    mockGetCookie.mockResolvedValue("");
 
     await orpcFetch(makeRequest(), undefined);
 
@@ -234,9 +264,40 @@ describe("orpcFetch", () => {
     });
 
     const p = orpcFetch(makeRequest(), { signal: upstream.signal });
+    await vi.waitFor(() => expect(mockFetch).toHaveBeenCalled());
     upstream.abort();
 
     await expect(p).rejects.toThrow();
+  });
+
+  it("rejects a cancelled request without waiting for the session cookie read", async () => {
+    const upstream = new AbortController();
+    const cookie = deferred<string>();
+    mockGetCookie.mockReturnValue(cookie.promise);
+    mockFetch.mockImplementation(rejectIfAborted);
+
+    const pending = orpcFetch(makeRequest(), { signal: upstream.signal });
+    upstream.abort();
+
+    await expect(pending).rejects.toThrow("aborted");
+    const sentHeaders: Headers = mockFetch.mock.calls[0][1].headers;
+    expect(sentHeaders.get("Cookie")).toBeNull();
+    cookie.resolve(SESSION);
+  });
+
+  it("times out a session cookie read that never settles", async () => {
+    vi.useFakeTimers();
+    try {
+      mockGetCookie.mockReturnValue(new Promise(() => undefined));
+      mockFetch.mockImplementation(rejectIfAborted);
+
+      const settled = orpcFetch(makeRequest(), undefined).catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      expect(await settled).toBeInstanceOf(DOMException);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("aborts a hung fetch via its internal timeout", async () => {

@@ -29,6 +29,7 @@ function storeCookies(jar: Map<string, string>, response: Response): void {
 async function postJson(
   request: typeof fetch,
   url: string,
+  origin: string,
   body: Record<string, string>,
   jar: Map<string, string>,
   timeoutMs: number,
@@ -39,7 +40,12 @@ async function postJson(
   try {
     const response = await request(url, {
       method: "POST",
-      headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) },
+      headers: {
+        "content-type": "application/json",
+        // Node's fetch sends Fetch Metadata, so Better Auth's sign-in CSRF check requires an Origin.
+        origin,
+        ...(cookie ? { cookie } : {}),
+      },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -76,11 +82,13 @@ export async function loginLocal(
   if (!databaseUrl) throw new Error("DATABASE_URL is missing; run pnpm db:setup");
   const baseUrl = deps.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3020";
   const authUrl = `${baseUrl.replace(/\/$/, "")}/api/v1/auth`;
+  const webOrigin = new URL(deps.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000").origin;
   const jar = new Map<string, string>();
 
   await postJson(
     deps.request,
     `${authUrl}/email-otp/send-verification-otp`,
+    webOrigin,
     { email, type: "sign-in" },
     jar,
     deps.requestTimeoutMs,
@@ -89,6 +97,7 @@ export async function loginLocal(
   await postJson(
     deps.request,
     `${authUrl}/sign-in/email-otp`,
+    webOrigin,
     { email, otp },
     jar,
     deps.requestTimeoutMs,
