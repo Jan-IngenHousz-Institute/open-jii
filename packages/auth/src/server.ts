@@ -4,12 +4,13 @@ import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
-import { emailOTP, genericOAuth, lastLoginMethod } from "better-auth/plugins";
+import { genericOAuth, lastLoginMethod } from "better-auth/plugins";
 
 import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
 import { getApiKeyForSessionCheck } from "./api-key-session";
+import { openJiiEmailOTP } from "./email-otp";
 import { sendOtpEmail } from "./email/otpEmail";
 import { openJiiOrganization } from "./organization/plugin";
 import { legacyOAuth2SignIn } from "./providers/legacy-oauth2-sign-in";
@@ -145,8 +146,12 @@ export const auth = betterAuth({
   },
   plugins: [
     expo(), // Add Expo plugin for mobile app support
-    emailOTP({
-      async sendVerificationOTP({ email, otp }) {
+    openJiiEmailOTP({
+      playReview: {
+        email: process.env.AUTH_PLAY_REVIEW_EMAIL,
+        otp: process.env.AUTH_PLAY_REVIEW_OTP,
+      },
+      async sendEmail({ email, otp }) {
         const emailServer = process.env.AUTH_EMAIL_SERVER;
         const emailFrom = process.env.AUTH_EMAIL_FROM;
 
