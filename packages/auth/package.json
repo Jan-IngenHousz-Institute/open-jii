@@ -6,6 +6,10 @@
       "types": "./src/server.ts",
       "default": "./dist/server.js"
     },
+    "./email-otp": {
+      "types": "./src/email-otp.ts",
+      "default": "./dist/email-otp.js"
+    },
     "./access": {
       "types": "./src/access.ts",
       "default": "./dist/access.js"
@@ -50,7 +54,8 @@
     "@repo/transactional": "workspace:*",
     "@simplewebauthn/browser": "13.3.0",
     "better-auth": "1.7.14",
-    "nodemailer": "catalog:"
+    "nodemailer": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

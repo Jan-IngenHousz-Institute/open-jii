@@ -1273,6 +1273,9 @@ importers:
       nodemailer:
         specifier: 'catalog:'
         version: 10.2.1
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*

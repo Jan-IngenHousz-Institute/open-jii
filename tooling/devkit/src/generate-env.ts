@@ -8,6 +8,10 @@ const root = fileURLToPath(new URL("../../..", import.meta.url));
 
 const localNotes = new Map([
   ["COOKIE_DOMAIN", "Leave unset for localhost sessions and passkey validation."],
+  [
+    "AUTH_PLAY_REVIEW_EMAIL",
+    "Google Play reviewer sign-in; set both or neither, with a 6-digit code.",
+  ],
   ["EMAIL_SERVER", "No local SMTP service listens on this address."],
   ["MAILCHIMP_API_KEY", "Mailchimp keys are all-or-none; leave all unset locally."],
   ["AWS_LAMBDA_FUNCTION_NAME", "Leave unset outside Lambda."],
