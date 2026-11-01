@@ -43,7 +43,7 @@ locals {
   }
 
   # A week's inputs, hidden. A figure that adds both producers' reads only where both have a point
-  # for the same window: Databricks' lands from midnight and AWS's from 00:30, and metric math
+  # for the same window: Databricks' lands from midnight and AWS's from 06:30, and metric math
   # counts a missing point as zero, which would add one producer's week to nothing.
   cost_week_inputs = {
     aws          = merge(local.cost_query, { refId = "aws", id = "aws", hide = true, expression = "SUM(${local.cost_aws_week.usage})" })
@@ -349,6 +349,51 @@ locals {
     })
   ]
 
+  # Yesterday as a share of each limit, biggest first: the same figure the spend rules alert on.
+  cost_limits = {
+    id          = 729
+    type        = "bargauge"
+    title       = "Yesterday, against each limit"
+    description = "Each AWS service's and Databricks pipeline's spend yesterday as a share of its limit: twice its usual day, and at least $10 above it. Past 100% its spend rule alerts. Grafana bills its licences monthly and is left out. Yesterday's figures land after 06:00 UTC for Databricks and 06:30 for AWS, so before then the bars show the day before."
+    datasource  = local.heartbeat_datasource
+    timeFrom    = "2d"
+    fieldConfig = {
+      defaults = {
+        unit       = "percent"
+        min        = 0
+        max        = 100
+        decimals   = 0
+        color      = { mode = "thresholds" }
+        thresholds = { mode = "absolute", steps = [{ color = "text", value = null }, { color = "orange", value = 75 }, { color = "red", value = 100 }] }
+      }
+      overrides = []
+    }
+    options = {
+      displayMode   = "basic"
+      orientation   = "horizontal"
+      valueMode     = "color"
+      namePlacement = "left"
+      showUnfilled  = true
+      sizing        = "manual"
+      minVizHeight  = 16
+      maxVizHeight  = 22
+      text          = { titleSize = 13, valueSize = 14 }
+      reduceOptions = { calcs = ["lastNotNull"], fields = "", values = true }
+    }
+    transformations = concat(
+      [for component, label in local.cost_services.databricksComponents : { id = "renameByRegex", options = { regex = "^${component}$", renamePattern = label } }],
+      [
+        { id = "reduce", options = { mode = "seriesToRows", reducers = ["lastNotNull"], includeTimeField = false } },
+        { id = "sortBy", options = { sort = [{ field = "Last *", desc = true }] } },
+        { id = "limit", options = { limitField = 10 } },
+      ],
+    )
+    targets = [
+      merge(local.cost_query, { refId = "aws", id = "aws", period = "86400", label = "$${PROP('Dim.Service')}", expression = local.heartbeat_facts["aws-spend-limit"].search }),
+      merge(local.cost_query, { refId = "databricks", id = "databricks", period = "86400", label = "$${PROP('Dim.Component')}", expression = local.heartbeat_facts["databricks-spend-limit"].search }),
+    ]
+  }
+
   cost_right_legend = merge(local.cost_chart.options, { legend = { displayMode = "list", placement = "right", showLegend = true } })
   cost_no_legend    = merge(local.cost_chart.options, { legend = { displayMode = "list", placement = "bottom", showLegend = false } })
 
@@ -369,6 +414,7 @@ locals {
     })],
     [merge(local.cost_table, { id = 712, gridPos = { h = 14, w = 24, x = 0, y = 17 } })],
     [merge(local.flow_row, { id = 720, title = "Is anything running away?", gridPos = { h = 1, w = 24, x = 0, y = 31 } })],
+    [merge(local.cost_limits, { gridPos = { h = 10, w = 24, x = 0, y = 32 } })],
     [
       for i, chart in local.cost_running : merge(chart, {
         id = 721 + i
@@ -376,25 +422,25 @@ locals {
           h = 7
           w = 24 / local.flow_grid[tostring(length(local.cost_running))][i].size
           x = local.flow_grid[tostring(length(local.cost_running))][i].column * 24 / local.flow_grid[tostring(length(local.cost_running))][i].size
-          y = 32 + local.flow_grid[tostring(length(local.cost_running))][i].line * 7
+          y = 42 + local.flow_grid[tostring(length(local.cost_running))][i].line * 7
         }
       })
     ],
-    [merge(local.flow_row, { id = 730, title = "What does Databricks really cost?", gridPos = { h = 1, w = 24, x = 0, y = 46 } })],
+    [merge(local.flow_row, { id = 730, title = "What does Databricks really cost?", gridPos = { h = 1, w = 24, x = 0, y = 56 } })],
     [merge(local.cost_stacks.databricks, {
       id          = 731
       title       = "Databricks per week: its charges and the VMs AWS bills for it"
       description = "Databricks bills its own charges; AWS bills the EC2 its clusters run on. Nothing else the platform deploys runs on EC2, so all of EC2 compute counts as its VMs."
-      gridPos     = { h = 8, w = 24, x = 0, y = 47 }
+      gridPos     = { h = 8, w = 24, x = 0, y = 57 }
       options     = local.cost_right_legend
     })],
-    [merge(local.flow_row, { id = 740, title = "What does a measurement cost?", gridPos = { h = 1, w = 24, x = 0, y = 55 } })],
+    [merge(local.flow_row, { id = 740, title = "What does a measurement cost?", gridPos = { h = 1, w = 24, x = 0, y = 65 } })],
     [
       merge(local.cost_chart, {
         id          = 741
         title       = "Measurements per week"
         description = "Measurements taken in each Monday-to-Sunday week, by measurement time."
-        gridPos     = { h = 8, w = 12, x = 0, y = 56 }
+        gridPos     = { h = 8, w = 12, x = 0, y = 66 }
         fieldConfig = {
           defaults  = { unit = "short", min = 0, color = { mode = "fixed", fixedColor = local.cost_measurement_colour }, custom = merge(local.cost_bars, { stacking = { mode = "none", group = "A" } }) }
           overrides = []
@@ -402,9 +448,9 @@ locals {
         options = local.cost_no_legend
         targets = [merge(local.cost_week_inputs.measurements, { hide = false, period = "86400", label = "Measurements" })]
       }),
-      merge(local.cost_per_1000_chart, { id = 742, gridPos = { h = 8, w = 12, x = 12, y = 56 } }),
+      merge(local.cost_per_1000_chart, { id = 742, gridPos = { h = 8, w = 12, x = 12, y = 66 } }),
     ],
-    [merge(local.flow_row, { id = 750, title = "Tax and fees", gridPos = { h = 1, w = 24, x = 0, y = 64 } })],
+    [merge(local.flow_row, { id = 750, title = "Tax and fees", gridPos = { h = 1, w = 24, x = 0, y = 74 } })],
     [
       for i, stat in [
         {
@@ -432,7 +478,7 @@ locals {
         datasource       = local.heartbeat_datasource
         timeFrom         = "3d"
         hideTimeOverride = true
-        gridPos          = { h = 4, w = 6, x = i * 6, y = 65 }
+        gridPos          = { h = 4, w = 6, x = i * 6, y = 75 }
         fieldConfig = {
           defaults  = { noValue = "No data", unit = stat.unit, decimals = stat.unit == "percent" ? 0 : null, color = { mode = "fixed", fixedColor = "text" } }
           overrides = []
@@ -453,7 +499,7 @@ locals {
     ],
     [merge(local.flow_caption, {
       id      = 753
-      gridPos = { h = 4, w = 12, x = 12, y = 65 }
+      gridPos = { h = 4, w = 12, x = 12, y = 75 }
       options = { mode = "markdown", content = "AWS dates a month's tax and fees on the 1st and adds to them as the month's usage grows, so no week carries its own share, and the weekly figures leave them out. The month tiles count them, last month's in proportion to its usage by the same day." }
     })],
   )

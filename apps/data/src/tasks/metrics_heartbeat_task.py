@@ -27,6 +27,7 @@ from openjii.heartbeat import (
     COLLECTOR_HEARTBEAT_METRIC,
     DATA_NAMESPACE,
     DATABRICKS_DAILY_COST_METRIC,
+    DATABRICKS_DAILY_COST_PERCENT_OF_LIMIT_METRIC,
     DATABRICKS_MONTH_PROJECTED_COST_METRIC,
     DATABRICKS_MONTH_TO_DATE_COST_METRIC,
     DATABRICKS_PREVIOUS_MONTH_COST_METRIC,
@@ -65,6 +66,7 @@ from openjii.heartbeat import (
     cost_components,
     cost_windows,
     cost_windows_sql,
+    daily_cost_sql,
     detail,
     failed_rows_by_cause_sql,
     heartbeat_key,
@@ -73,6 +75,8 @@ from openjii.heartbeat import (
     loggers_started_sql,
     minutes_since,
     observation,
+    spend_limit_due,
+    spend_limits,
     previous_bucket,
     protocol_failures_sql,
     researchers_started_sql,
@@ -578,6 +582,32 @@ def collect_databricks_cost(now: datetime) -> list[dict]:
     ]
 
 
+def collect_databricks_spend_limit(now: datetime) -> list[dict]:
+    """Yesterday's spend per component as a share of its limit, stamped when the day closed, once
+    the billing tables have most of it. Until then the spend rule keeps reading the day before."""
+    if not spend_limit_due(now):
+        return []
+
+    windows = cost_windows(now)
+    spend = {
+        (row["component"], row["usage_date"]): float(row["usd"])
+        for row in spark.sql(daily_cost_sql(COST_COMPONENTS, windows)).collect()
+    }
+
+    return [
+        observation(
+            DATABRICKS_DAILY_COST_PERCENT_OF_LIMIT_METRIC,
+            percent,
+            USAGE_NAMESPACE,
+            windows.day_closed_at,
+            ENVIRONMENT,
+            "None",
+            {"Component": component},
+        )
+        for component, percent in spend_limits(spend, cost_components(COST_COMPONENTS), windows).items()
+    ]
+
+
 def collect_weekly_measurements(now: datetime) -> list[dict]:
     """Measurements taken in the latest complete week, stamped when it closed, for its cost per
     measurement. Republished all week, since offline phones upload days late."""
@@ -612,6 +642,7 @@ collectors = [
     ("path_idle", collect_path_idle),
     ("driver_heap", collect_driver_heap),
     ("databricks_cost", collect_databricks_cost),
+    ("databricks_spend_limit", collect_databricks_spend_limit),
     ("weekly_measurements", collect_weekly_measurements),
 ]
 records.extend(run_collectors(collectors, now, ENVIRONMENT, log))

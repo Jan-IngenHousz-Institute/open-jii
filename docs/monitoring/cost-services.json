@@ -21,7 +21,11 @@
     "AWS Security Hub": { "label": "Security Hub", "category": "Monitoring and audit" },
     "Amazon Inspector": { "label": "Inspector", "category": "Monitoring and audit" },
     "Amazon GuardDuty": { "label": "GuardDuty", "category": "Monitoring and audit" },
-    "Amazon Managed Grafana": { "label": "Grafana", "category": "Monitoring and audit" },
+    "Amazon Managed Grafana": {
+      "label": "Grafana",
+      "category": "Monitoring and audit",
+      "billsMonthly": true
+    },
     "AWS WAF": { "label": "WAF", "category": "Other AWS" },
     "Amazon Simple Storage Service": { "label": "S3", "category": "Other AWS" },
     "Amazon Relational Database Service": { "label": "Aurora", "category": "Other AWS" },

@@ -3,10 +3,19 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
-from openjii.heartbeat import cost_components, cost_windows, cost_windows_sql, weekly_measurements_sql
+from openjii.heartbeat import (
+    cost_components,
+    cost_windows,
+    cost_windows_sql,
+    daily_cost_sql,
+    percent_of_spend_limit,
+    spend_limit_due,
+    spend_limits,
+    weekly_measurements_sql,
+)
 from pyspark.sql import SparkSession
 
 CENTRUM = "7462573d-253f-4231-bfde-e97cbf3b2c61"
@@ -112,6 +121,59 @@ def test_prices_this_workspaces_spend_per_component_in_every_window(
             "previous_month_usd": 4.0,
         },
     }
+
+
+@pytest.mark.spark
+def test_prices_each_day_its_limit_reads_per_component(spark: SparkSession, billing: tuple[str, str]):
+    usage, prices = billing
+
+    rows = spark.sql(daily_cost_sql(NAMED, cost_windows(RUN), usage, prices)).collect()
+
+    # Yesterday and the 14 days before it: the 12th to the 26th. Today, early October and the other
+    # workspace are outside.
+    assert {(row["component"], row["usage_date"], float(row["usd"])) for row in rows} == {
+        ("centrum", date(2026, 10, 26), 5.0),
+        ("centrum", date(2026, 10, 20), 2.0),
+    }
+
+
+def test_sets_each_limit_at_twice_the_usual_day():
+    windows = cost_windows(RUN)
+    spend = {("centrum", date(2026, 10, 12 + k)): 10.0 for k in range(14)}
+    spend[("centrum", date(2026, 10, 26))] = 30.0
+
+    # Usually 10, so the limit is 20 and 30 is 150% of it; a component that spent nothing reads 0.
+    assert spend_limits(spend, ["centrum", "jobs"], windows) == {"centrum": 150.0, "jobs": 0.0}
+
+
+def test_reads_the_14_days_before_yesterday_and_no_others():
+    windows = cost_windows(RUN)
+
+    def day(back: int) -> date:
+        return windows.yesterday - timedelta(days=back)
+
+    # Each day before yesterday costs ten times how far back it is, so a history shifted a day either
+    # way has a different median: with yesterday in it 65, a day further back 85.
+    spend = {("centrum", day(back)): 10.0 * back for back in range(1, 15)}
+    spend[("centrum", day(0))] = 1.0
+    spend[("centrum", day(15))] = 1000.0
+
+    # A median of 75 makes the limit 150, and 1 is 0.67% of it.
+    assert spend_limits(spend, ["centrum"], windows) == {"centrum": 0.67}
+
+
+def test_measures_a_day_only_once_the_billing_tables_have_most_of_it():
+    assert not spend_limit_due(datetime(2026, 10, 27, 5, 59, tzinfo=timezone.utc))
+    assert spend_limit_due(datetime(2026, 10, 27, 6, 0, tzinfo=timezone.utc))
+
+
+def test_raises_the_limit_to_the_floor_above_a_component_that_usually_costs_little():
+    # Twice 2 is 4, but the limit is at least 10 above the usual: 12.
+    assert percent_of_spend_limit(6.0, [2.0] * 14) == 50.0
+
+
+def test_reads_the_usual_day_as_the_median_so_one_spike_does_not_move_it():
+    assert percent_of_spend_limit(90.0, [30.0] * 13 + [300.0]) == 150.0
 
 
 @pytest.mark.spark
