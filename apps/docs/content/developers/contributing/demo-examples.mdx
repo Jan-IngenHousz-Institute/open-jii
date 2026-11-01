@@ -1,0 +1,73 @@
+---
+title: "Local sensor examples"
+description: "Seed and inspect public MultispeQ, Ambit and MiniPAR examples without real research data."
+---
+
+The local seed creates **openJII Demo**, a public organization with three synthetic
+examples. These fixtures let developers check public reads and workbook wiring
+before connecting a sensor or a lakehouse.
+
+## Seed the examples
+
+After setting up the local database, build the shared packages and seed the examples.
+`db:seed` needs the built `@repo/api` schemas.
+
+```bash
+pnpm build:packages
+pnpm --filter database db:seed
+pnpm dev:fb
+```
+
+Seeding replaces every resource in openJII Demo, including resources you created
+there and previous edits to these examples. It also deletes calibration runs that
+used a Demo calibration definition and the calibrations those runs applied, even
+on devices outside openJII Demo.
+Use the local database only. Running the seed twice leaves one Demo organization
+and one experiment per sensor. It also restores a renamed or retyped demo fixture.
+The organization and experiment IDs are named exports in
+`packages/database/scripts/seed/constants.ts` for integration tests and later demo
+features.
+
+## Find an example
+
+Sign in with the seeded development account, open **Organizations**, and choose
+**Demo** in the type filter. Open **openJII Demo** to find:
+
+| Experiment                    | What it contains                                                          |
+| ----------------------------- | ------------------------------------------------------------------------- |
+| [Seed] MultispeQ Demo Example | A synthetic fluorescence protocol, Python analysis and example dashboard. |
+| [Seed] Ambit Demo Example     | A synthetic 630 nm protocol, Python analysis and example dashboard.       |
+| [Seed] MiniPAR Demo Example   | A synthetic PAR protocol, Python analysis and example dashboard.          |
+
+Each experiment pins version 1 of its public workbook. The **Design** tab shows an
+introduction, a protocol cell and a Python macro cell in that order. The published
+version snapshots both referenced definitions, so changing a draft does not alter
+that pinned procedure.
+
+The seed user owns the organization and can edit its resources. The seeded
+**Newcomer** account is not a member. It can read the public examples and their
+dashboards, but cannot edit them or request to join the Demo organization.
+
+<DocsVideo>
+  <video
+    controls
+    width="100%"
+    preload="none"
+    src="/img/guide/web/demo-seed-experiments.webm"
+    poster="/img/guide/web/demo-seed-experiments-poster.webp"
+  >
+    Your browser does not support embedded video.
+  </video>
+</DocsVideo>
+
+## What is synthetic
+
+The protocol and macro definitions come from
+`packages/iot/src/demo-sensors/{multispeq,ambit,minipar}`. They are placeholders,
+not recordings from physical sensors or validated hardware procedures. The
+hardware team replaces them for the real demo rollout.
+
+This seed adds no measurements or device credentials. It does not enable simulated
+sensor transports. The local lakehouse is unreachable, so charts show their
+existing empty or error state. A populated dashboard layout does not mean that a
+measurement has been collected.

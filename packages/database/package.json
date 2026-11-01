@@ -10,7 +10,9 @@
     "./schema": {
       "types": "./src/postgres/schema.ts",
       "default": "./dist/postgres/schema.js"
-    }
+    },
+    "./seed/constants": "./scripts/seed/constants.ts",
+    "./seed/demo": "./scripts/seed/demo.seed.ts"
   },
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
