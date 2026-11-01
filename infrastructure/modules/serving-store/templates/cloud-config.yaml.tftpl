@@ -66,6 +66,9 @@ write_files:
       [Service]
       Type=oneshot
       DynamicUser=yes
+      # The AWS CLI needs a home directory, which a dynamic user does not have.
+      CacheDirectory=openjii-feed-metrics
+      Environment=HOME=/var/cache/openjii-feed-metrics
       ExecStart=/usr/local/bin/openjii-feed-metrics
 
   - path: /etc/systemd/system/openjii-feed-metrics.timer
