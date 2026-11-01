@@ -18,7 +18,6 @@ import { useExperimentJoinRequests } from "~/hooks/experiment/join-request/useEx
 import { useUserInvitations } from "~/hooks/user-invitation/useUserInvitations/useUserInvitations";
 import { matchesCollaborator } from "~/util/collaborator-filter";
 
-import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -237,9 +236,8 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
       <ExperimentInviteModal
         experimentId={id}
         invitations={invitations}
-        existingGranteeIds={grants.flatMap((grant) =>
-          isGranteeRow(grant) ? [grant.granteeId] : [],
-        )}
+        existingGrants={grants.filter((grant) => grant.kind === "grant")}
+        owningOrganizationId={experiment.organizationId}
         isArchived={isArchived}
         canShare={canShare}
         isPublic={experiment.visibility === "public"}

@@ -1,4 +1,4 @@
-import { renderWithForm, screen, userEvent } from "@/test/test-utils";
+import { renderWithForm, screen, userEvent, within } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import type { NewOrganizationFormValues } from "../form-step";
@@ -63,6 +63,7 @@ describe("<ReviewStep />", () => {
           kind: "user",
           userId: "u-1",
           displayName: "Lin Zhao",
+          person: { id: "u-1", displayName: "Lin Zhao" },
           email: "lin@uni.edu",
           role: "admin",
         },
@@ -70,11 +71,15 @@ describe("<ReviewStep />", () => {
       ],
     });
 
-    expect(screen.getByText("Lin Zhao")).toBeInTheDocument();
+    const [linRow, newcomerRow] = screen.getAllByRole("listitem");
     // The role is the half of a person's row that cannot be inferred from their name.
-    expect(screen.getByText("organizations.roles.admin")).toBeInTheDocument();
-    expect(screen.getByText("newcomer@example.org")).toBeInTheDocument();
-    expect(screen.getByText("organizations.create.people.emailRole")).toBeInTheDocument();
+    expect(within(linRow).getByText("Lin Zhao")).toBeInTheDocument();
+    expect(within(linRow).getByText("organizations.roles.admin")).toBeInTheDocument();
+    expect(within(newcomerRow).getByText("newcomer@example.org")).toBeInTheDocument();
+    expect(within(newcomerRow).getByText("organizations.roles.member")).toBeInTheDocument();
+    expect(
+      within(newcomerRow).getByText("organizations.create.people.invitedByEmail"),
+    ).toBeInTheDocument();
     expect(screen.getByText("organizations.create.people.count")).toBeInTheDocument();
   });
 

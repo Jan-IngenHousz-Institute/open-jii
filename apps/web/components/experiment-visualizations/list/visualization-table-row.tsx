@@ -1,11 +1,12 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { ownName, personName } from "@/components/people/person-name";
 import { StatusBadge } from "@/components/shared/status-badge";
 import type { StatusTone } from "@/components/shared/status-badge";
+import { UserAvatar } from "@/components/user-avatar";
 import { useExperimentVisualizationDelete } from "@/hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
 import { formatDate } from "@/util/date";
-import { initialsOf } from "@/util/initials";
 import { Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 
@@ -25,7 +26,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@repo/ui/components/alert-dialog";
-import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import {
   DropdownMenu,
@@ -77,7 +77,8 @@ export function VisualizationTableRow({
   });
 
   const viewHref = `/platform/${basePath}/${experimentId}/analysis/visualizations/${visualization.id}`;
-  const author = visualization.createdByName ?? `${visualization.createdBy.slice(0, 8)}…`;
+  const author = { displayName: visualization.createdByName };
+  const authorName = personName(author, tCommon);
   const def = getChartTypeDef(visualization.chartType);
   const typeLabel = t(def.labelKey);
   const typeBadgeTone = badgeToneFor(visualization.chartType);
@@ -111,12 +112,13 @@ export function VisualizationTableRow({
         </TableCell>
         <TableCell className="px-6 py-3">
           <div className="flex items-center gap-2">
-            <Avatar className="size-6">
-              <AvatarFallback className={cn("text-[10px] font-medium", LIST_TEXT_MUTED)}>
-                {initialsOf(author)}
-              </AvatarFallback>
-            </Avatar>
-            <span className={cn("text-[13px]", LIST_TEXT_MUTED)}>{author}</span>
+            <UserAvatar name={ownName(author) ?? ""} className="size-6 text-[10px]" />
+            <span
+              title={authorName}
+              className={cn("min-w-0 truncate text-[13px]", LIST_TEXT_MUTED)}
+            >
+              {authorName}
+            </span>
           </div>
         </TableCell>
         <TableCell className={cn("px-6 py-3 text-[13px] tabular-nums", LIST_TEXT_MUTED)}>

@@ -162,6 +162,19 @@ describe("UnifiedNavbar", () => {
     });
   });
 
+  it("shows the address once in each menu for an account with no name", async () => {
+    renderNavbar({ session: makeSession() });
+    const profile = server.mount(contract.users.getUserProfile, {
+      body: createUserProfile({ firstName: "", lastName: "" }),
+    });
+    await waitFor(() => expect(profile.callCount).toBeGreaterThan(0));
+
+    for (const menu of screen.getAllByTestId("dropdown-content")) {
+      await waitFor(() => expect(within(menu).getAllByText("ada@example.com")).toHaveLength(1));
+      expect(within(menu).queryByText("Ada Lovelace")).not.toBeInTheDocument();
+    }
+  });
+
   it("renders account and sign out in desktop dropdown", () => {
     renderNavbar({ session: makeSession() });
     const dropdown = screen.getAllByTestId("dropdown-content")[0];

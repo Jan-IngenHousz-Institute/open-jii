@@ -59,6 +59,22 @@ describe("ExperimentJoinRequestsPanel", () => {
     expect(screen.getByText("jane@example.com")).toBeInTheDocument();
   });
 
+  it("names a requester with no name by the fallback, with no address line", () => {
+    const { container } = render(
+      <ExperimentJoinRequestsPanel
+        experimentId={EXPERIMENT_ID}
+        joinRequests={[
+          {
+            ...MOCK_REQUEST,
+            user: { ...MOCK_REQUEST.user, firstName: "", lastName: "", email: null },
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText("common.unnamedAccount")).toBeInTheDocument();
+    expect(container.querySelector(".truncate.text-xs")).toBeNull();
+  });
+
   it("renders multiple request rows", () => {
     render(
       <ExperimentJoinRequestsPanel

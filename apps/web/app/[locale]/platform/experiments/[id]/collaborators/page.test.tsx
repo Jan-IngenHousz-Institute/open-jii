@@ -690,7 +690,7 @@ describe("ExperimentCollaboratorsPage", () => {
       server.mount(contract.users.listInvitations, {
         body: [createInvitation({ email: "pending@uni.edu" })],
       });
-      server.mount(contract.users.searchUsers, { body: [] });
+      server.mount(contract.sharing.searchGranteeUsers, { body: [] });
       server.mount(contract.experiments.getExperimentAccess, { body: accessPayload() });
 
       renderPage();

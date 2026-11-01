@@ -1,6 +1,7 @@
 "use client";
 
-import { UserAvatar } from "@/components/user-avatar";
+import { PersonIdentity } from "@/components/people/person-identity";
+import { personName } from "@/components/people/person-name";
 import { useDecideOrganizationJoinRequest } from "@/hooks/organization/join-request/useDecideOrganizationJoinRequest/useDecideOrganizationJoinRequest";
 import { useOrganizationJoinRequests } from "@/hooks/organization/join-request/useOrganizationJoinRequests/useOrganizationJoinRequests";
 import { formatDate } from "@/util/date";
@@ -42,8 +43,8 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
       toast({
         description:
           decision === "approve"
-            ? t("organizations.requests.approved", { name: requesterName(request) })
-            : t("organizations.requests.rejected", { name: requesterName(request) }),
+            ? t("organizations.requests.approved", { name: personName(request.user, t) })
+            : t("organizations.requests.rejected", { name: personName(request.user, t) }),
       });
     } catch (err) {
       toast({
@@ -100,18 +101,8 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
         className="flex flex-col gap-3"
       >
         {pending.map((request) => (
-          <Card role="listitem" key={request.id} className="flex items-start gap-3.5 p-5">
-            <UserAvatar
-              avatarUrl={request.user.avatarUrl}
-              firstName={request.user.firstName}
-              lastName={request.user.lastName}
-              className="h-9 w-9"
-            />
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-x-2">
-                <p className="truncate text-sm font-semibold">{requesterName(request)}</p>
-                <p className="text-muted-foreground truncate text-xs">{request.user.email}</p>
-              </div>
+          <Card role="listitem" key={request.id} className="gap-3.5 p-5">
+            <PersonIdentity person={request.user}>
               <p className="text-muted-foreground mt-0.5 text-xs">
                 {t("organizations.requests.requestedOn", { date: formatDate(request.createdAt) })}
               </p>
@@ -122,7 +113,7 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
                   {request.message}
                 </p>
               ) : null}
-            </div>
+            </PersonIdentity>
             <div className="flex shrink-0 gap-2">
               <Button
                 size="sm"
@@ -164,7 +155,7 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
           >
             {decided.map((request) => (
               <div role="listitem" key={request.id} className="flex items-center gap-3 px-5 py-2.5">
-                <p className="min-w-0 flex-1 truncate text-sm">{requesterName(request)}</p>
+                <p className="min-w-0 flex-1 truncate text-sm">{personName(request.user, t)}</p>
                 <p className="text-muted-foreground shrink-0 text-xs">
                   {request.decidedAt
                     ? t("organizations.requests.decidedOn", {
@@ -181,12 +172,5 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
         </div>
       ) : null}
     </div>
-  );
-}
-
-function requesterName(request: OrganizationJoinRequest): string {
-  return (
-    `${request.user.firstName} ${request.user.lastName}`.trim() ||
-    (request.user.email ?? request.user.id)
   );
 }

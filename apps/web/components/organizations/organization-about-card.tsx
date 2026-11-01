@@ -1,5 +1,6 @@
 "use client";
 
+import { ownName } from "@/components/people/person-name";
 import { useLocale } from "@/hooks/useLocale";
 import { ExternalLink } from "lucide-react";
 
@@ -12,7 +13,7 @@ import { useTranslation } from "@repo/i18n";
 import { Card } from "@repo/ui/components/card";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 
-import { OrganizationAvatarTrail, teamAsTrailFace } from "./organization-avatar-trail";
+import { OrganizationAvatarTrail } from "./organization-avatar-trail";
 import { organizationTypeLabelKey } from "./organization-labels";
 import { organizationMembersPath, organizationTeamsPath } from "./organization-routes";
 
@@ -112,8 +113,7 @@ export function OrganizationAboutCard({
               <OrganizationAvatarTrail
                 faces={(members ?? []).map((member) => ({
                   id: member.userId,
-                  firstName: member.firstName,
-                  lastName: member.lastName,
+                  name: ownName(member) ?? "",
                   avatarUrl: member.avatarUrl,
                 }))}
                 // The profile's own count, so the caption does not wait on the roster.
@@ -124,7 +124,7 @@ export function OrganizationAboutCard({
             </Row>
             <Row label={t("organizations.tabs.teams")}>
               <OrganizationAvatarTrail
-                faces={(teams ?? []).map(teamAsTrailFace)}
+                faces={(teams ?? []).map((team) => ({ id: team.id, name: team.name }))}
                 label={t("organizations.about.teamCount", { count: teams?.length ?? 0 })}
                 href={organizationTeamsPath(locale, organization.id)}
                 isPending={isTeamsPending}

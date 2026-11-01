@@ -220,7 +220,7 @@ describe("DataTableAnnotationsCell", () => {
     const commentBadge = screen.getByText("1");
     await user.click(commentBadge);
 
-    expect(screen.getByText("experimentDataAnnotations.unknownUser")).toBeInTheDocument();
+    expect(screen.getByText("common.unnamedAccount")).toBeInTheDocument();
     expect(screen.getByText("Anonymous comment")).toBeInTheDocument();
   });
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { usePrincipal } from "@/components/auth/principal-context";
+import { personName } from "@/components/people/person-name";
 import { useLeaveOrganization } from "@/hooks/organization/useLeaveOrganization/useLeaveOrganization";
 import { useOrganizationMemberRows } from "@/hooks/organization/useOrganizationMemberRows/useOrganizationMemberRows";
 import { useRemoveOrganizationMember } from "@/hooks/organization/useRemoveOrganizationMember/useRemoveOrganizationMember";
@@ -13,7 +15,6 @@ import type {
   OrganizationMember,
   OrganizationRole,
 } from "@repo/api/domains/organization/organization.schema";
-import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -58,8 +59,7 @@ export function OrganizationRoster({
   const { t } = useTranslation();
   const router = useRouter();
   const locale = useLocale();
-  const { data: session } = useSession();
-  const currentUserId = session?.user.id;
+  const { userId: currentUserId } = usePrincipal();
 
   const { data: memberRows } = useOrganizationMemberRows(organizationId);
   const { mutateAsync: updateRole } = useUpdateOrganizationMemberRole(organizationId);
@@ -174,19 +174,13 @@ export function OrganizationRoster({
         {normalized.map((member) => {
           const target = { userId: member.userId, role: member.orgRole };
           const isSelf = member.userId === currentUserId;
-          const displayName =
-            `${member.firstName} ${member.lastName}`.trim() || (member.email ?? member.userId);
           // No member row id means a role change would have nothing to address.
           const canAddressRow = memberIdByUserId.has(member.userId);
 
           return (
             <OrganizationMemberRow
               key={member.userId}
-              displayName={displayName}
-              email={member.email}
-              avatarUrl={member.avatarUrl}
-              firstName={member.firstName}
-              lastName={member.lastName}
+              person={{ id: member.userId, ...member }}
               role={member.orgRole}
               isSelf={isSelf}
               teamNames={teamNamesByUserId.get(member.userId) ?? []}
@@ -209,9 +203,7 @@ export function OrganizationRoster({
         }}
         title={t("organizations.members.removeTitle")}
         description={t("organizations.members.removeDescription", {
-          name:
-            `${pendingRemoval?.firstName ?? ""} ${pendingRemoval?.lastName ?? ""}`.trim() ||
-            (pendingRemoval?.email ?? ""),
+          name: pendingRemoval ? personName(pendingRemoval, t) : "",
         })}
         note={t("organizations.members.removeNote")}
         confirmLabel={t("common.remove")}

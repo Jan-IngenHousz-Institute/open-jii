@@ -1,7 +1,9 @@
 import { createGranteeUser } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
+import { FRESH_FOR_MS } from "~/providers/QueryProvider";
 
 import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -107,6 +109,83 @@ describe("<CollaboratorInviteDialog />", () => {
     await user.click(screen.getByLabelText("sharing.newShareRoleLabel"));
     await user.click(screen.getByRole("option", { name: "sharing.roleCanEdit" }));
     await pickUser("Lin Zhao");
+
+    await user.click(screen.getByLabelText("sharing.newShareRoleLabel"));
+    await user.click(screen.getByRole("option", { name: "sharing.roleCanView" }));
+
+    expect(screen.getByText("sharing.granteeTierAddsNothing")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "common.add" })).toBeDisabled();
+    expect(createSpy.called).toBe(false);
+  });
+
+  it("shows a person just shared with as already holding the tier when searched again", async () => {
+    // The app keeps answers fresh for a while, and the shared test client keeps none,
+    // which would hide a search answer that outlived the share made after it.
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { staleTime: FRESH_FOR_MS, retry: false } },
+    });
+    let shared = false;
+    server.mount(contract.sharing.searchGranteeUsers, {
+      body: () => [
+        createGranteeUser({
+          userId: "u-1",
+          firstName: "Lin",
+          lastName: "Zhao",
+          existingGrantRole: shared ? "viewer" : null,
+        }),
+      ],
+    });
+    server.mount(contract.sharing.createGrant, {
+      body: () => {
+        shared = true;
+        return [];
+      },
+    });
+    const onOpenChange = vi.fn();
+    const dialog = (open: boolean) => (
+      <CollaboratorInviteDialog
+        resourceType="experiment"
+        resourceId="exp-1"
+        open={open}
+        onOpenChange={onOpenChange}
+        title="Invite collaborators"
+        description="Add someone to this experiment"
+      />
+    );
+
+    const { rerender } = render(dialog(true), { queryClient });
+    const user = await pickUser("Lin Zhao");
+    await user.click(screen.getByRole("button", { name: "common.add" }));
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    rerender(dialog(false));
+    rerender(dialog(true));
+
+    await user.type(screen.getByLabelText("sharing.granteeSearchLabel"), "Lin");
+
+    await waitFor(() =>
+      expect(screen.getByText("sharing.granteeTierAddsNothing")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("Lin Zhao").closest("button")).toBeDisabled();
+  });
+
+  it("refuses a level lowered onto an organization's existing share", async () => {
+    server.mount(contract.sharing.searchGranteeOrganizations, {
+      body: [{ id: "org-1", name: "Greenhouse Lab", slug: "greenhouse-lab" }],
+    });
+    const createSpy = server.mount(contract.sharing.createGrant, { body: [] });
+
+    renderDialog({
+      existingGrants: [{ granteeType: "organization", granteeId: "org-1", role: "viewer" }],
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText("sharing.newShareRoleLabel"));
+    await user.click(screen.getByRole("option", { name: "sharing.roleCanEdit" }));
+    await user.click(screen.getByLabelText("sharing.granteeTypeLabel"));
+    await user.click(screen.getByRole("option", { name: "sharing.granteeTypeOrganization" }));
+    await user.click(screen.getByLabelText("sharing.granteeSearchLabel"));
+    await waitFor(() => expect(screen.getByText("Greenhouse Lab")).toBeInTheDocument());
+    await user.click(screen.getByText("Greenhouse Lab"));
 
     await user.click(screen.getByLabelText("sharing.newShareRoleLabel"));
     await user.click(screen.getByRole("option", { name: "sharing.roleCanView" }));

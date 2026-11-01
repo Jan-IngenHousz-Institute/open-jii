@@ -1,5 +1,6 @@
 "use client";
 
+import { personName } from "@/components/people/person-name";
 import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
 import { useDebounce } from "@/hooks/useDebounce";
 import { orpc } from "@/lib/orpc";
@@ -13,6 +14,7 @@ import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 import type { MacroCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { listItems } from "@repo/api/shared/listing";
 import { useSession } from "@repo/auth/client";
+import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
@@ -58,6 +60,17 @@ function getDefaultCode(language: MacroLanguage, username: string): string {
 }
 
 export function MacroPicker({ onSelect, children }: MacroPickerProps) {
+  const { t } = useTranslation();
+  const byline = (item: { createdBy: string; createdByName?: string }) => {
+    const name = personName({ displayName: item.createdByName }, t, {
+      placement: "byline",
+    });
+    return (
+      name && (
+        <p className="text-muted-foreground truncate text-xs">{t("common.byPerson", { name })}</p>
+      )
+    );
+  };
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
   const [search, setSearch] = useState("");
@@ -258,11 +271,7 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
                       <Code className="text-node-analysis h-3.5 w-3.5 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm">{m.name}</p>
-                        {m.createdByName && (
-                          <p className="text-muted-foreground truncate text-xs">
-                            by {m.createdByName}
-                          </p>
-                        )}
+                        {byline(m)}
                       </div>
                       <Badge variant="outline" className="shrink-0 text-[10px]">
                         {languageLabels[m.language]}

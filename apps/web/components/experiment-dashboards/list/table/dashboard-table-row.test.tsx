@@ -54,13 +54,14 @@ describe("DashboardTableRow", () => {
     expect(screen.getByText("Jane Doe")).toBeInTheDocument();
   });
 
-  it("falls back to a truncated user id when createdByName is missing", () => {
+  it("names an author without a name by the fallback, never by an id prefix", () => {
     const dashboard = createExperimentDashboard({
       createdBy: "abcd1234-ef56-7890-abcd-ef1234567890",
       createdByName: undefined,
     });
     renderRow({ dashboard });
-    expect(screen.getByText("abcd1234…")).toBeInTheDocument();
+    expect(screen.getByText("common.unnamedAccount")).toBeInTheDocument();
+    expect(screen.queryByText(/abcd1234/)).not.toBeInTheDocument();
   });
 
   it("uses the supplied basePath when building the edit link", async () => {

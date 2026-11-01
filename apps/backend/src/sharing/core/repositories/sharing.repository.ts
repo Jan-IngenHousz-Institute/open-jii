@@ -585,9 +585,15 @@ export class SharingRepository {
 
         // Re-established against the claimed resource, not the pre-flight read: a
         // transfer landing in between would otherwise leave a team holding a grant
-        // on a resource its organization no longer owns.
+        // on a resource its organization no longer owns, or an organization holding
+        // one on a resource it now owns.
         if (input.granteeType === "team" && granteeTeamOrganizationId !== claimed.organizationId) {
           throw AppError.badRequest("Grantee not found");
+        }
+        if (input.granteeType === "organization" && input.granteeId === claimed.organizationId) {
+          throw AppError.badRequest(
+            "A resource cannot be shared with the organization that owns it",
+          );
         }
 
         await assertResourceIsUnarchived(tx, input.resourceType, input.resourceId);
@@ -845,8 +851,9 @@ export class SharingRepository {
    * Team grants on the resource go with it. A team belongs to one organization, so
    * once the resource leaves, every team grant on it names a team from somewhere
    * else — dropping them is what keeps "a team grantee is never an outside
-   * collaborator" true. User and organization grants, visibility, embargo state
-   * and the resource's data are all untouched.
+   * collaborator" true. So does the target organization's own grant, which would
+   * otherwise share the resource with its owner. Every other user and organization
+   * grant, visibility, embargo state and the resource's data are untouched.
    */
   transferToOrganization(params: {
     resourceType: TransferableResourceType;
@@ -931,7 +938,13 @@ export class SharingRepository {
             and(
               eq(resourceGrants.resourceType, params.resourceType),
               eq(resourceGrants.resourceId, params.resourceId),
-              eq(resourceGrants.granteeType, "team"),
+              or(
+                eq(resourceGrants.granteeType, "team"),
+                and(
+                  eq(resourceGrants.granteeType, "organization"),
+                  eq(resourceGrants.granteeId, params.targetOrganizationId),
+                ),
+              ),
             ),
           );
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { ownName, personName } from "@/components/people/person-name";
+import { UserAvatar } from "@/components/user-avatar";
 import {
   ChevronDown,
   ChevronUp,
@@ -17,7 +19,7 @@ import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
 import { useTranslation } from "@repo/i18n";
-import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/avatar";
+import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import {
   DropdownMenu,
@@ -46,10 +48,16 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
 
   const { data: userProfile } = useGetUserProfile(user.id);
   const userProfileBody = userProfile;
-  const displayName =
-    userProfileBody?.firstName && userProfileBody.lastName
-      ? `${userProfileBody.firstName} ${userProfileBody.lastName}`
-      : "";
+  const person = { ...userProfileBody, email: user.email };
+  const displayName = personName(person, t);
+  const own = ownName(person);
+  const avatar = (className: string) => (
+    <UserAvatar
+      avatarUrl={userProfileBody?.avatarUrl}
+      name={own ?? ""}
+      className={`h-8 w-8 text-xs ${className}`}
+    />
+  );
 
   const handleSignOut = async () => {
     await signOut.mutateAsync();
@@ -63,12 +71,7 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="flex h-10 items-center gap-2 px-2">
-            <Avatar className="h-8 w-8 rounded-full">
-              <AvatarImage src={userProfileBody?.avatarUrl ?? ""} alt={displayName} />
-              <AvatarFallback className="rounded-full">
-                {displayName ? displayName.substring(0, 2).toUpperCase() : "JII"}
-              </AvatarFallback>
-            </Avatar>
+            {avatar("rounded-full")}
             {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
         </DropdownMenuTrigger>
@@ -80,21 +83,18 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
         >
           <DropdownMenuLabel className="p-0 font-normal">
             <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={userProfileBody?.avatarUrl ?? ""} alt={displayName} />
-                <AvatarFallback className="rounded-lg">
-                  {displayName ? displayName.substring(0, 2).toUpperCase() : "JII"}
-                </AvatarFallback>
-              </Avatar>
+              {avatar("rounded-lg")}
               <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium" title={displayName}>
                   {displayName}
                 </span>
                 {/* A long address still cannot fit the sidebar; the title makes
                     the truncated part reachable without opening the menu. */}
-                <span className="truncate text-xs" title={user.email}>
-                  {user.email}
-                </span>
+                {own && (
+                  <span className="truncate text-xs" title={user.email}>
+                    {user.email}
+                  </span>
+                )}
               </div>
             </div>
           </DropdownMenuLabel>
@@ -168,19 +168,18 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={userProfileBody?.avatarUrl ?? ""} alt={displayName} />
-                <AvatarFallback className="rounded-lg">JII</AvatarFallback>
-              </Avatar>
+              {avatar("rounded-lg")}
               <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium" title={displayName}>
                   {displayName}
                 </span>
                 {/* A long address still cannot fit the sidebar; the title makes
                     the truncated part reachable without opening the menu. */}
-                <span className="truncate text-xs" title={user.email}>
-                  {user.email}
-                </span>
+                {own && (
+                  <span className="truncate text-xs" title={user.email}>
+                    {user.email}
+                  </span>
+                )}
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -193,15 +192,10 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={userProfileBody?.avatarUrl ?? ""} alt={displayName} />
-                  <AvatarFallback className="rounded-lg">
-                    {displayName ? displayName.substring(0, 2).toUpperCase() : "JII"}
-                  </AvatarFallback>
-                </Avatar>
+                {avatar("rounded-lg")}
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{displayName}</span>
-                  <span className="truncate text-xs">{user.email}</span>
+                  {own && <span className="truncate text-xs">{user.email}</span>}
                 </div>
               </div>
             </DropdownMenuLabel>

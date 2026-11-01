@@ -354,11 +354,14 @@ describe("<MacroDetailsSidebar />", () => {
       expect(screen.getByText("John Doe")).toBeInTheDocument();
     });
 
-    it("displays dash when createdByName is null", () => {
+    it("names a creator without a name by the fallback, never by their id", () => {
       const macroNoCreator: MacroDetail = { ...baseMacro, createdByName: undefined };
       render(<MacroDetailsSidebar macroId="abc12345" macro={macroNoCreator} />);
 
-      expect(screen.getByText("-")).toBeInTheDocument();
+      expect(screen.getByText("common.unnamedAccount")).toBeInTheDocument();
+      expect(
+        screen.queryByText(new RegExp(baseMacro.createdBy.slice(0, 8))),
+      ).not.toBeInTheDocument();
     });
 
     it("renders a 'view original' link when the macro is a fork", () => {

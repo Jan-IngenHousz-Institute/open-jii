@@ -1,5 +1,6 @@
 "use client";
 
+import { personName } from "@/components/people/person-name";
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { workspaceBleed } from "@/components/workspace-band";
 import { formatDate } from "@/util/date";
@@ -99,7 +100,7 @@ export function VisualizationLayoutContent({
           />
           <VisualizationMetaField
             label={t("workspace.detailsSidebar.createdBy")}
-            value={visualization.createdByName ?? "—"}
+            value={personName({ displayName: visualization.createdByName }, t)}
           />
           <VisualizationMetaField
             label={t("workspace.detailsSidebar.dataSource")}

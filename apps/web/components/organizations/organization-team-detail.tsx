@@ -2,7 +2,8 @@
 
 import { DocsHelpLink } from "@/components/docs-help-link";
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
-import { UserAvatar } from "@/components/user-avatar";
+import { PersonIdentity } from "@/components/people/person-identity";
+import { personName } from "@/components/people/person-name";
 import { useDeleteOrganizationTeam } from "@/hooks/organization/useDeleteOrganizationTeam/useDeleteOrganizationTeam";
 import { useOrganization } from "@/hooks/organization/useOrganization/useOrganization";
 import { useOrganizationMembers } from "@/hooks/organization/useOrganizationMembers/useOrganizationMembers";
@@ -248,8 +249,7 @@ export function OrganizationTeamDetail({
               <SelectContent>
                 {candidates.map((member) => (
                   <SelectItem key={member.userId} value={member.userId}>
-                    {`${member.firstName} ${member.lastName}`.trim() ||
-                      (member.email ?? member.userId)}
+                    {personName(member, t)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -282,8 +282,7 @@ export function OrganizationTeamDetail({
           className="divide-border divide-y overflow-hidden"
         >
           {team.members.map((member) => {
-            const displayName =
-              `${member.firstName} ${member.lastName}`.trim() || (member.email ?? member.userId);
+            const person = { id: member.userId, ...member };
 
             return (
               <div
@@ -291,25 +290,16 @@ export function OrganizationTeamDetail({
                 key={member.userId}
                 className="flex items-center gap-3 px-5 py-3"
               >
-                <UserAvatar
-                  avatarUrl={member.avatarUrl}
-                  firstName={member.firstName}
-                  lastName={member.lastName}
-                  className="h-9 w-9"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{displayName}</p>
-                  {member.email && (
-                    <p className="text-muted-foreground truncate text-xs">{member.email}</p>
-                  )}
-                </div>
+                <PersonIdentity person={person} />
                 {canManage && (
                   <Button
                     type="button"
                     variant="ghost"
                     onClick={() => void submit(member.userId, "remove")}
                     disabled={isChanging}
-                    aria-label={t("organizations.teams.removeLabel", { name: displayName })}
+                    aria-label={t("organizations.teams.removeLabel", {
+                      name: personName(person, t),
+                    })}
                     className="text-muted-foreground hover:text-destructive shrink-0"
                   >
                     <X className="h-4 w-4" />

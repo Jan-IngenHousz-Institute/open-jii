@@ -44,9 +44,9 @@ describe("WorkbookMetaRow", () => {
     expect(screen.getByText("Test User")).toBeInTheDocument();
   });
 
-  it("shows a dash when createdByName is null", () => {
+  it("names a creator without a name by the fallback", () => {
     renderRow({ createdByName: undefined });
-    expect(screen.getByText("-")).toBeInTheDocument();
+    expect(screen.getByText("common.unnamedAccount")).toBeInTheDocument();
   });
 
   it("shows a link to the source workbook when it is a fork", () => {

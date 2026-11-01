@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, ChevronDown, ChevronUp, Mail, UserRoundPlus, X } from "lucide-react";
+import { PersonIdentity } from "@/components/people/person-identity";
+import { Check, ChevronDown, ChevronUp, UserRoundPlus, X } from "lucide-react";
 import { useState } from "react";
 
 import type { ExperimentJoinRequest } from "@repo/api/domains/experiment/join-requests/experiment-join-requests.schema";
@@ -21,7 +22,6 @@ import {
 import { useApproveJoinRequest } from "../../../hooks/experiment/join-request/useApproveJoinRequest/useApproveJoinRequest";
 import { useExperimentJoinRequests } from "../../../hooks/experiment/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
 import { useRejectJoinRequest } from "../../../hooks/experiment/join-request/useRejectJoinRequest/useRejectJoinRequest";
-import { UserAvatar } from "../../user-avatar";
 
 interface ExperimentJoinRequestsPanelProps {
   experimentId: string;
@@ -52,32 +52,13 @@ function JoinRequestRow({
   const { t } = useTranslation();
   const [isMessageOpen, setIsMessageOpen] = useState(false);
 
-  const displayName = `${request.user.firstName} ${request.user.lastName}`;
   const rejectLabel = t("experimentSettings.rejectJoinRequest");
   const approveLabel = t("experimentSettings.approveJoinRequest");
 
   return (
     <div className="p-3">
       <div className="flex items-center gap-3">
-        <UserAvatar
-          avatarUrl={request.user.avatarUrl}
-          firstName={request.user.firstName}
-          lastName={request.user.lastName}
-          className="h-9 w-9"
-        />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="text-foreground truncate text-sm font-medium" title={displayName}>
-            {displayName}
-          </span>
-          {request.user.email && (
-            <span className="flex min-w-0 items-center gap-x-1">
-              <Mail className="text-muted-foreground h-3 w-3 shrink-0" />
-              <span className="text-muted-foreground truncate text-xs" title={request.user.email}>
-                {request.user.email}
-              </span>
-            </span>
-          )}
-        </div>
+        <PersonIdentity person={request.user} />
         {isAdmin && !isArchived && (
           <TooltipProvider delayDuration={200}>
             <div className="flex shrink-0 gap-2">

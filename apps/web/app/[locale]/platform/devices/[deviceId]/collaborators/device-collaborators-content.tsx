@@ -18,6 +18,7 @@ export default function DeviceCollaboratorsPage({ params }: DeviceCollaboratorsP
       resourceType="device"
       resourceId={deviceId}
       capabilities={data?.capabilities}
+      owningOrganizationId={data?.organizationId}
     />
   );
 }

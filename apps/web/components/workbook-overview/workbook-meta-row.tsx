@@ -2,6 +2,7 @@
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { OwningOrganizationField } from "@/components/organizations/owning-organization-field";
+import { personName } from "@/components/people/person-name";
 import { PublishConfirmDialog } from "@/components/visibility/publish-confirm-dialog";
 import { WorkbookDeleteAction } from "@/components/workbook-overview/workbook-delete-action";
 import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
@@ -152,7 +153,7 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
             {tCommon("common.createdBy")}
           </span>
           <span className="text-muted-foreground text-sm leading-[21px]">
-            {workbook.createdByName ?? "-"}
+            {personName({ displayName: workbook.createdByName }, tCommon)}
           </span>
         </div>
         <OwningOrganizationField

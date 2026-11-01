@@ -82,6 +82,17 @@ describe("NotificationRow", () => {
     ).toBeInTheDocument();
   });
 
+  it("calls an actor with no name Someone rather than leaving a blank", async () => {
+    await renderRow({
+      ...moved("personal"),
+      actor: { id: "00000000-0000-4000-8000-0000000000aa", name: " " },
+    });
+
+    expect(
+      screen.getByText("Someone moved Leaf Spectra to their personal workspace"),
+    ).toBeInTheDocument();
+  });
+
   it("names the organization a resource moved into", async () => {
     await renderRow({
       ...moved("organization"),
