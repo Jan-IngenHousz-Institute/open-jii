@@ -95,6 +95,20 @@ variable "orcid_oauth_client_secret" {
   sensitive   = true
 }
 
+variable "play_review_email" {
+  description = "Email address Google Play reviewers sign in with; empty turns the review sign-in off"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "play_review_otp" {
+  description = "Fixed 6-digit sign-in code for play_review_email; set both or neither"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 # Backend x Databricks webhook secrets
 variable "backend_webhook_api_key_id" {
   description = "Databricks webhook API key ID"

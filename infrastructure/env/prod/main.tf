@@ -2122,11 +2122,13 @@ module "auth_secrets" {
 
   # Store secrets as JSON using variables
   secret_string = jsonencode({
-    AUTH_SECRET        = var.auth_secret
-    AUTH_GITHUB_ID     = var.github_oauth_client_id
-    AUTH_GITHUB_SECRET = var.github_oauth_client_secret
-    AUTH_ORCID_ID      = var.orcid_oauth_client_id
-    AUTH_ORCID_SECRET  = var.orcid_oauth_client_secret
+    AUTH_SECRET            = var.auth_secret
+    AUTH_GITHUB_ID         = var.github_oauth_client_id
+    AUTH_GITHUB_SECRET     = var.github_oauth_client_secret
+    AUTH_ORCID_ID          = var.orcid_oauth_client_id
+    AUTH_ORCID_SECRET      = var.orcid_oauth_client_secret
+    AUTH_PLAY_REVIEW_EMAIL = var.play_review_email
+    AUTH_PLAY_REVIEW_OTP   = var.play_review_otp
   })
 
   tags = {
@@ -2593,6 +2595,14 @@ module "backend_ecs" {
     {
       name      = "AUTH_SECRET"
       valueFrom = "${module.auth_secrets.secret_arn}:AUTH_SECRET::"
+    },
+    {
+      name      = "AUTH_PLAY_REVIEW_EMAIL"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_PLAY_REVIEW_EMAIL::"
+    },
+    {
+      name      = "AUTH_PLAY_REVIEW_OTP"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_PLAY_REVIEW_OTP::"
     },
     {
       name      = "AUTH_EMAIL_SERVER"
