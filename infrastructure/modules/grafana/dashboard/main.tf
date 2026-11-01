@@ -1457,12 +1457,17 @@ resource "grafana_rule_group" "serving_store_feed" {
         datasource_uid = "__expr__"
 
         # The newest reading already covers five minutes of rows; a max over the window would hold
-        # one late batch above the limit for longer than the rule waits.
+        # one late batch above the limit for longer than the rule waits. An idle window reduces to
+        # NaN, which Grafana counts as firing, so it becomes 0.
         model = jsonencode({
           expression = "A"
           type       = "reduce"
           reducer    = "last"
           refId      = "B"
+          settings = {
+            mode             = "replaceNN"
+            replaceWithValue = 0
+          }
         })
 
         relative_time_range {
