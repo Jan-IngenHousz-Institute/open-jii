@@ -14,6 +14,7 @@ import {
   createBaseLayout,
   createPlotlyConfig,
   extendLayoutForFacets,
+  facetSeriesOffsetGroups,
   getRenderer,
   getPlotType,
   readThemeColor,
@@ -21,6 +22,7 @@ import {
 } from "./utils";
 
 export interface BoxSeriesData extends BaseSeries {
+  /** Plot coordinates: numeric samples on Y for vertical traces, X for horizontal traces. */
   y?: (string | number)[];
   x?: (string | number | Date)[];
   /** Facet routing: pins this trace to a specific subplot cell. */
@@ -85,15 +87,20 @@ export function BoxPlot({
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("box", renderer);
 
+  const offsetGroups = useMemo(
+    () => (subplots ? facetSeriesOffsetGroups(data) : []),
+    [data, subplots],
+  );
   const plotData: PlotData[] = useMemo(
     () =>
       data.map(
-        (series) =>
+        (series, index) =>
           ({
-            y: (series.orientation || orientation) === "v" ? series.y : series.x,
-            x: (series.orientation || orientation) === "v" ? series.x : series.y,
+            y: series.y,
+            x: series.x,
             xaxis: series.xaxisId,
             yaxis: series.yaxisId,
+            offsetgroup: offsetGroups[index],
             name: series.name,
             type: plotType,
 
@@ -151,7 +158,7 @@ export function BoxPlot({
             customdata: series.customdata,
           }) as any as PlotData,
       ),
-    [data, orientation, plotType],
+    [data, orientation, plotType, offsetGroups],
   );
 
   const layout = useMemo(() => {
@@ -167,7 +174,7 @@ export function BoxPlot({
       (series) => series.y && series.y.some((val) => typeof val === "string"),
     );
 
-    if (hasStringX && orientation === "v") {
+    if (hasStringX) {
       next.xaxis = truncateCategoryTicks(
         { ...next.xaxis, type: "category" },
         data.flatMap((series) => series.x ?? []),
@@ -175,7 +182,7 @@ export function BoxPlot({
       );
     }
 
-    if (hasStringY && orientation === "h") {
+    if (hasStringY) {
       next.yaxis = truncateCategoryTicks(
         { ...next.yaxis, type: "category" },
         data.flatMap((series) => series.y ?? []),
@@ -207,7 +214,7 @@ export function BoxPlot({
 
     return next;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-  }, [config, sizing, data, subplots, boxmode, orientation, themeVersion]);
+  }, [config, sizing, data, subplots, boxmode, themeVersion]);
 
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   return (

@@ -18,6 +18,7 @@ export default function MacroCollaboratorsPage({ params }: MacroCollaboratorsPag
       resourceType="macro"
       resourceId={id}
       capabilities={data?.capabilities}
+      owningOrganizationId={data?.organizationId}
     />
   );
 }

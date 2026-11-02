@@ -6,7 +6,6 @@
   "common": {
     "logo": null,
     "protocolLabel": null,
-    "by": null,
     "homepage": "Startpagina",
     "language": "Taal",
     "currentValue": "Huidige waarde:",
@@ -61,6 +60,8 @@
     "name": "Naam",
     "none": "Geen",
     "unknown": "Onbekend",
+    "unnamedAccount": "Naamloos account",
+    "byPerson": "door {{name}}",
     "optional": "optioneel",
     "lines": "regels",
     "bytes": "B",
@@ -89,7 +90,9 @@
     "sortDescending": "aflopend",
     "sortSecondary": "tweede sortering",
     "searchMinCharacters": "Typ minimaal 2 tekens om te zoeken",
-    "emailMatched": "Komt overeen met het ingevoerde e-mailadres"
+    "searchFailed": "Zoekresultaten konden niet worden geladen.",
+    "emailMatched": "Komt overeen met het ingevoerde e-mailadres",
+    "ownEmail": "Dat is je eigen adres"
   },
   "navigation": {
     "experiments": "Experimenten",
@@ -141,8 +144,6 @@
     "searchUsersPlaceholder": null,
     "noUsersFound": null,
     "inviteByEmail": null,
-    "sendInviteByEmail": null,
-    "emailAlreadyInvited": "Dit e-mailadres is al uitgenodigd of is al lid",
     "searchExperiments": null,
     "startTypingToSearch": "Begin met typen om te zoeken",
     "searchProtocols": null,
@@ -185,7 +186,6 @@
     "embargo": null,
     "teamMembers": null,
     "noMembersAdded": null,
-    "unnamedMember": null,
     "researchLocations": null,
     "noLocationsAdded": null,
     "analysisPanelTitle": null,
@@ -266,7 +266,8 @@
     "locationsListTitle": "Geselecteerde locaties",
     "addCollaboratorsTitle": "Medewerkers toevoegen",
     "addCollaboratorsDescription": "Bepaal wie vanaf het begin toegang heeft tot dit experiment",
-    "initialCollaboratorsTierNote": "Iedereen die u hier toevoegt begint met „Kan bekijken”: ze kunnen het experiment openen en metingen en annotaties toevoegen. Verhoog iemand naar „Kan bewerken” via het tabblad Medewerkers zodra het experiment bestaat."
+    "initialCollaboratorsTierNote": "Iedereen die u hier toevoegt begint met „Kan bekijken”: ze kunnen het experiment openen en metingen en annotaties toevoegen. Verhoog iemand naar „Kan bewerken” via het tabblad Medewerkers zodra het experiment bestaat.",
+    "alreadyAdded": "Al toegevoegd"
   },
   "experimentSettings": {
     "loading": "Experiment instellingen laden...",
@@ -349,8 +350,7 @@
     "inviteCollaborators": "Medewerkers uitnodigen",
     "inviteCollaboratorsDescription": "Voeg een bestaande gebruiker of een van uw organisaties toe, of nodig iemand uit per e-mail. Bestaande accounts krijgen direct toegang; uitgenodigden ontvangen een e-mail en doen mee zodra ze accepteren.",
     "filterCollaboratorsPlaceholder": "Filter op naam of e-mail…",
-    "invitedBy": "Uitgenodigd door",
-    "unknownInviter": "Onbekende uitnodiger"
+    "invitedBy": "Uitgenodigd door"
   },
   "joinCode": {
     "title": "Deelnamecode",
@@ -451,9 +451,9 @@
     "revokeForLabel": "{{name}} verwijderen",
     "you": "(u)",
     "outsideCollaborator": "Externe medewerker",
-    "orgOwnerBadge": "Eigenaar · via organisatie",
-    "orgAdminBadge": "Beheerder · via organisatie",
-    "orgMemberBadge": "Lid · via organisatie",
+    "orgOwnerBadge": "Org-eigenaar",
+    "orgAdminBadge": "Org-beheerder",
+    "orgMemberBadge": "Org-lid",
     "redundantGrantBadge": "Overbodige toekenning",
     "removeRedundantGrantForLabel": "Overbodige toekenning van {{name}} verwijderen",
     "revokeKeepsAccess": "{{name}} houdt {{tier}} — {{source}}. Het verwijderen van deze toekenning verandert verder niets.",
@@ -461,10 +461,18 @@
     "accessSourceOrgOwner": "als eigenaar van {{organization}}",
     "accessSourceOrgAdmin": "als beheerder van {{organization}}",
     "accessSourceOrgMember": "als lid van {{organization}}",
-    "existingGrantBadge": "{{role}} · al gedeeld",
     "granteeHasFullAccess": "Heeft al volledige toegang via de organisatie",
     "granteeHasFullAccessViaGrant": "Heeft al volledige toegang via een bestaande deling",
     "granteeTierAddsNothing": "Dit toegangsniveau voegt niets toe aan de huidige toegang",
+    "ownsResource": {
+      "experiment": "Is eigenaar van dit experiment",
+      "macro": "Is eigenaar van deze macro",
+      "protocol": "Is eigenaar van dit protocol",
+      "workbook": "Is eigenaar van deze werkmap",
+      "device": "Is eigenaar van dit apparaat",
+      "deviceGroup": "Is eigenaar van deze apparaatgroep",
+      "calibrationDefinition": "Is eigenaar van deze kalibratiedefinitie"
+    },
     "orgAdminsName": "Beheerders van {{name}}",
     "orgAdminsCount_one": "{{count}} beheerder, via de organisatie",
     "orgAdminsCount_other": "{{count}} beheerders, via de organisatie",
@@ -600,7 +608,6 @@
         "empty": "Nog niemand. Je kunt de organisatie alleen aanmaken en later mensen uitnodigen via het tabblad Leden.",
         "alreadyAdded": "Deze persoon is al uitgenodigd",
         "invitedByEmail": "Nog geen account",
-        "emailRole": "{{role}} · nog geen account",
         "addTitle": "Iemand uitnodigen",
         "listTitle": "Uit te nodigen personen",
         "teamsNote": "Teams stel je in via het tabblad Teams van de organisatie, zodra die bestaat — een team is een groep van haar leden en kan er dus niet eerder zijn.",
@@ -718,7 +725,6 @@
       "searchLabel": "Zoek iemand om uit te nodigen",
       "clearSelection": "Selectie wissen",
       "noMatches": "Geen overeenkomende gebruikers",
-      "searchFailed": "Zoeken naar personen is mislukt.",
       "alreadyMember": "Deze persoon is al lid van deze organisatie",
       "alreadyInvited": "Voor dit adres is al een uitnodiging verstuurd",
       "enterExactEmail": "Voer het volledige e-mailadres in om deze persoon uit te nodigen",
@@ -860,7 +866,7 @@
       "targetLabel": "Doelorganisatie",
       "targetPlaceholder": "Kies een organisatie…",
       "noTargets": "Geen andere organisatie om aan over te dragen",
-      "note": "Zichtbaarheid, data en directe deelnames blijven ongewijzigd. Teams van de huidige organisatie verliezen hun toegang, omdat een team geen toegang buiten zijn organisatie kan hebben.",
+      "note": "Zichtbaarheid, data en directe deelnames blijven ongewijzigd. Teams van de huidige organisatie verliezen hun toegang, omdat een team geen toegang buiten zijn organisatie kan hebben. Is de resource al met de doelorganisatie gedeeld, dan wordt die deelname verwijderd, omdat haar leden er via de organisatie bij kunnen.",
       "confirm": "Overdragen",
       "transferring": "Overdragen…",
       "transferred": "Overgedragen",
@@ -1241,7 +1247,6 @@
     },
     "details": null,
     "you": "Jij",
-    "unknownUser": "Onbekende gebruiker",
     "preview": "Voorvertoning",
     "previewNote": "Dit is een voorvertoning. Uw annotatie wordt verwerkt en zal binnenkort permanent verschijnen. Verversen zal deze voorvertoning verbergen."
   },

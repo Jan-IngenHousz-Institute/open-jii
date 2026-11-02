@@ -1,14 +1,12 @@
 import { act, render, screen } from "@testing-library/react";
 import { Suspense } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PlotlyErrorBoundary } from "../../charts/plotly-error-boundary";
-import { pendingTraceTypes } from "../../charts/plotly-loader";
 import { PlotlyTraceGate } from "../../charts/plotly-trace-gate";
 
-vi.mock("../../charts/plotly-loader", () => ({ pendingTraceTypes: vi.fn() }));
-
-const pending = vi.mocked(pendingTraceTypes);
+const registerTraceTypes = vi.hoisted(() => vi.fn<(types: readonly string[]) => Promise<void>>());
+vi.mock("../../charts/plotly-runtime", () => ({ registerTraceTypes }));
 
 function deferred(): { promise: Promise<void>; resolve: () => void } {
   let resolve: () => void = () => undefined;
@@ -18,7 +16,7 @@ function deferred(): { promise: Promise<void>; resolve: () => void } {
   return { promise, resolve };
 }
 
-// A render that suspends on `use()` only resumes inside an awaited `act`.
+// Suspended renders resume inside an awaited act.
 async function renderGate(types: string[]) {
   await act(async () => {
     render(
@@ -32,15 +30,23 @@ async function renderGate(types: string[]) {
 }
 
 describe("PlotlyTraceGate", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    pending.mockReset();
+  beforeEach(() => {
+    registerTraceTypes.mockReset();
+    registerTraceTypes.mockResolvedValue(undefined);
   });
 
-  it("renders the chart straight away when Plotly has every type", async () => {
-    pending.mockReturnValue(null);
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
-    await renderGate(["bar"]);
+  it("renders the chart straight away when Plotly has every type", () => {
+    render(
+      <Suspense fallback={<p>loading</p>}>
+        <PlotlyTraceGate types={["bar"]}>
+          <p>chart</p>
+        </PlotlyTraceGate>
+      </Suspense>,
+    );
 
     expect(screen.getByText("chart")).toBeInTheDocument();
     expect(screen.queryByText("loading")).not.toBeInTheDocument();
@@ -49,8 +55,7 @@ describe("PlotlyTraceGate", () => {
   it("holds the chart on the fallback until its families are registered", async () => {
     const consoleError = vi.spyOn(console, "error");
     const load = deferred();
-    let registered = false;
-    pending.mockImplementation(() => (registered ? null : load.promise));
+    registerTraceTypes.mockReturnValue(load.promise);
 
     await renderGate(["box"]);
 
@@ -58,28 +63,52 @@ describe("PlotlyTraceGate", () => {
     expect(screen.queryByText("chart")).not.toBeInTheDocument();
 
     await act(async () => {
-      registered = true;
       load.resolve();
       await load.promise;
     });
 
     expect(screen.getByText("chart")).toBeInTheDocument();
-    const uncached = consoleError.mock.calls.filter((call) => String(call[0]).includes("uncached"));
-    expect(uncached).toEqual([]);
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it("waits for changed trace types and immediately reuses a previously registered type", async () => {
+    const gate = (types: string[]) => (
+      <Suspense fallback={<p>loading</p>}>
+        <PlotlyTraceGate types={types}>
+          <p>chart</p>
+        </PlotlyTraceGate>
+      </Suspense>
+    );
+    const view = render(gate(["pie"]));
+    await act(async () => undefined);
+    expect(screen.getByText("chart")).toBeInTheDocument();
+
+    const load = deferred();
+    registerTraceTypes.mockReturnValueOnce(load.promise);
+    view.rerender(gate(["violin"]));
+    expect(screen.getByText("loading")).toBeVisible();
+    await act(async () => {
+      load.resolve();
+      await load.promise;
+    });
+    expect(screen.getByText("chart")).toBeVisible();
+
+    const calls = registerTraceTypes.mock.calls.length;
+    view.rerender(gate(["pie"]));
+    expect(screen.queryByText("loading")).not.toBeInTheDocument();
+    expect(registerTraceTypes).toHaveBeenCalledTimes(calls);
   });
 
   it("hands a failed load to the nearest error boundary", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const failure = Promise.reject(new Error("chunk failed"));
-    failure.catch(() => undefined);
-    pending.mockReturnValue(failure);
+    registerTraceTypes.mockRejectedValueOnce(new Error("chunk failed"));
     const onError = vi.fn();
 
     await act(async () => {
       render(
         <PlotlyErrorBoundary onError={onError}>
           <Suspense fallback={<p>loading</p>}>
-            <PlotlyTraceGate types={["box"]}>
+            <PlotlyTraceGate types={["sankey"]}>
               <p>chart</p>
             </PlotlyTraceGate>
           </Suspense>

@@ -18,6 +18,7 @@ export function GroupCollaboratorsContent({ params }: GroupCollaboratorsContentP
       resourceType="device_group"
       resourceId={groupId}
       capabilities={data?.capabilities}
+      owningOrganizationId={data?.organizationId}
     />
   );
 }

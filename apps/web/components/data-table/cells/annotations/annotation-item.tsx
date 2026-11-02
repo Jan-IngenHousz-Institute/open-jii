@@ -1,5 +1,6 @@
 "use client";
 
+import { personName } from "@/components/people/person-name";
 import { Flag } from "lucide-react";
 import { formatDate } from "~/util/date";
 
@@ -66,7 +67,7 @@ export function AnnotationItem({
   const displayName =
     annotation.createdByName === "You"
       ? t("experimentDataAnnotations.you")
-      : (annotation.createdByName ?? t("experimentDataAnnotations.unknownUser"));
+      : personName({ displayName: annotation.createdByName }, t);
 
   return (
     <div

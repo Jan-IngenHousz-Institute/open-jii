@@ -14,12 +14,14 @@ import {
   createBaseLayout,
   createPlotlyConfig,
   extendLayoutForFacets,
+  facetSeriesOffsetGroups,
   getPlotType,
   getRenderer,
   readThemeColor,
 } from "./utils";
 
 export interface ViolinSeriesData extends BaseSeries {
+  /** Plot coordinates: numeric samples on Y for vertical traces, X for horizontal traces. */
   y?: (string | number)[];
   x?: (string | number | Date)[];
   /** Facet routing: pins this trace to a specific subplot cell. */
@@ -91,15 +93,20 @@ export function ViolinPlot({
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("violin", renderer);
 
+  const offsetGroups = useMemo(
+    () => (subplots ? facetSeriesOffsetGroups(data) : []),
+    [data, subplots],
+  );
   const plotData: PlotData[] = useMemo(
     () =>
       data.map(
-        (series) =>
+        (series, index) =>
           ({
-            y: (series.orientation || orientation) === "v" ? series.y : series.x,
-            x: (series.orientation || orientation) === "v" ? series.x : series.y,
+            y: series.y,
+            x: series.x,
             xaxis: series.xaxisId,
             yaxis: series.yaxisId,
+            offsetgroup: offsetGroups[index],
             name: series.name,
             type: plotType,
 
@@ -170,11 +177,23 @@ export function ViolinPlot({
             customdata: series.customdata,
           }) as any as PlotData,
       ),
-    [data, orientation, plotType],
+    [data, orientation, plotType, offsetGroups],
   );
 
   const layout = useMemo(() => {
     const next = createBaseLayout(config, sizing);
+    if (
+      config.xAxisType === undefined &&
+      data.some((series) => series.x?.some((value) => typeof value === "string"))
+    ) {
+      next.xaxis = { ...next.xaxis, type: "category" };
+    }
+    if (
+      config.yAxisType === undefined &&
+      data.some((series) => series.y?.some((value) => typeof value === "string"))
+    ) {
+      next.yaxis = { ...next.yaxis, type: "category" };
+    }
 
     if (subplots) {
       const { cellTitleFontSize } = facetTierStyles(sizing);
@@ -201,7 +220,7 @@ export function ViolinPlot({
 
     return next;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-  }, [config, sizing, subplots, violinmode, themeVersion]);
+  }, [config, sizing, data, subplots, violinmode, themeVersion]);
 
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   return (

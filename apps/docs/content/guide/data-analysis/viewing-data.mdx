@@ -64,7 +64,7 @@ same line, for the datasets their charts and tables use.
 {/* NEEDS-RECAPTURE: this frame predates the dataset picker and the live-update line, and still shows the tab strip the picker replaced. */}
 ![A populated Data tab with dataset tabs, filtering controls, and sortable columns](/img/guide/web/data-first-measurement.png)
 
-![A saved line visualization built from an experiment dataset](/img/guide/web/charts-filters.png)
+![A saved line visualization built from an experiment dataset](/img/guide/web/charts-filters.webp)
 
 ## Build a saved visualization
 
@@ -76,6 +76,12 @@ placed on experiment dashboards.
 The current interface supports many chart families, but a chart is only as sound
 as its data configuration. Check units, missing values, grouping, contributor
 anonymization, and the protocol version before interpreting a pattern.
+
+2D histograms, 2D density plots and contour charts accept timestamp columns on
+both **X** and **Y**. Choose a timestamp column to draw that axis as dates and
+times, alongside a numeric column or another timestamp column. A contour chart
+also needs a numeric **Z** column with varying values across the grid. Its
+**Fill** and **Lines** colouring modes both support time axes.
 
 Line and area charts draw a long series at screen resolution, keeping the
 lowest and highest value for every pixel column, so a peak or a gap never
@@ -102,6 +108,15 @@ shows, for example _Showing 100,000 of 553,000 rows. Add a filter to see all
 matching rows._ Add a filter to the visualization or to the dashboard until every
 matching row fits, or export the table to work with all of it.
 
+### Split a chart into panels
+
+In the visualization editor's **Data** tab, set **Facet (small multiples)**
+to the column whose values should become panels. With shared X scales, each
+column of panels shows X labels on its lowest populated panel, including a
+panel above an empty grid cell. Box and violin plots keep their categories
+aligned across panels; multiple series keep the same grouped positions in
+each panel.
+
 ### Colour a scatter chart by a column
 
 On a scatter chart, the **Group by** shelf colours the points by a column. When
@@ -117,6 +132,18 @@ says _Continuous gradient needs a numeric or temporal column._
   the palette.
 - **Continuous (gradient)** colours each point along a gradient, with a colour
   bar you can hide with **Show colorbar**.
+
+### Turn a box or violin plot sideways
+
+For a box or violin plot, choose a category column under **X axis** and a numeric
+column under **Y axis** (**Variables** for violin plots). In **Style**, set **Orientation** to **Horizontal**.
+The categories move to the vertical axis and the values to the horizontal axis;
+the distributions and their samples stay the same. Axis titles and scale types
+follow their columns. **Vertical** turns the chart upright again.
+
+Colour groups and facets work in either orientation. **Share X axis** and
+reference lines on X always refer to the horizontal axis; Y refers to the
+vertical axis.
 
 ## Filter a dashboard
 

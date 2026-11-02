@@ -2,7 +2,9 @@
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
+import { ownName, personName } from "@/components/people/person-name";
 import { LocalTime } from "@/components/shared/local-time";
+import { UserAvatar } from "@/components/user-avatar";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { WorkbookCellSummary } from "@/components/workbook/workbook-cell-summary";
 import { useLocale } from "@/hooks/useLocale";
@@ -15,7 +17,6 @@ import { useRouter } from "next/navigation";
 import type { WorkbookListEntry } from "@repo/api/domains/workbook/workbook.schema";
 import type { WorkbookListItem } from "@repo/api/domains/workbook/workbook.schema";
 import { useTranslation } from "@repo/i18n";
-import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import {
   DropdownMenu,
@@ -103,15 +104,6 @@ function WorkbookActionsCell({ workbook, href }: { workbook: WorkbookListItem; h
   );
 }
 
-function initialsOf(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0].toUpperCase())
-    .join("");
-}
-
 export function getWorkbookColumns(
   t: (key: string, options?: Record<string, unknown>) => string,
   locale: string,
@@ -163,19 +155,16 @@ export function getWorkbookColumns(
       sortId: "user",
       className: "hidden w-48 xl:table-cell",
       cell: (workbook) => {
-        const author = workbook.createdByName ?? `${workbook.createdBy.slice(0, 8)}…`;
+        const author = { displayName: workbook.createdByName };
+        const authorName = personName(author, t);
         return (
           <div className="flex items-center gap-2">
-            <Avatar className="size-6">
-              <AvatarFallback className={cn("text-[10px] font-medium", overviewTableText.muted)}>
-                {initialsOf(author)}
-              </AvatarFallback>
-            </Avatar>
+            <UserAvatar name={ownName(author) ?? ""} className="size-6 text-[10px]" />
             <span
-              title={author}
+              title={authorName}
               className={cn("min-w-0 truncate text-[13px]", overviewTableText.muted)}
             >
-              {author}
+              {authorName}
             </span>
           </div>
         );

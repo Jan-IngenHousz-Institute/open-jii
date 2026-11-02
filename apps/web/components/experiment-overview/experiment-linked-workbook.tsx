@@ -1,6 +1,7 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { personName } from "@/components/people/person-name";
 import {
   getWorkbookCellSummary,
   WorkbookCellSummary,
@@ -57,6 +58,9 @@ export function ExperimentLinkedWorkbook({
   const cellSummary = getWorkbookCellSummary(workbook.cells);
   const hasCells = cellSummary.length > 0;
   const plainDescription = workbook.description ? stripHtml(workbook.description) : "";
+  const author = personName({ displayName: workbook.createdByName }, t, {
+    placement: "byline",
+  });
 
   return (
     <div className="space-y-4">
@@ -80,7 +84,7 @@ export function ExperimentLinkedWorkbook({
               <div className="flex items-center gap-2">
                 <p className="text-muted-foreground text-xs">
                   {t("workbooks.lastUpdate")}: {formatDate(workbook.updatedAt)}
-                  {workbook.createdByName && <> · {workbook.createdByName}</>}
+                  {author && <> · {author}</>}
                 </p>
                 {pinnedVersion && (
                   <WorkbookVersionBadge

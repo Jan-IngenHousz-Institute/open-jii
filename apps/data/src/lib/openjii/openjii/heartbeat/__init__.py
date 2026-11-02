@@ -10,6 +10,7 @@ from .constants import (
     COLLECTOR_HEARTBEAT_METRIC,
     DATA_NAMESPACE,
     DATABRICKS_DAILY_COST_METRIC,
+    DATABRICKS_DAILY_COST_PERCENT_OF_LIMIT_METRIC,
     DATABRICKS_MONTH_PROJECTED_COST_METRIC,
     DATABRICKS_MONTH_TO_DATE_COST_METRIC,
     DATABRICKS_PREVIOUS_MONTH_COST_METRIC,
@@ -46,7 +47,17 @@ from .constants import (
     USAGE_NAMESPACE,
     WEEKLY_MEASUREMENTS_METRIC,
 )
-from .costs import CostWindows, cost_components, cost_windows, cost_windows_sql, weekly_measurements_sql
+from .costs import (
+    CostWindows,
+    cost_components,
+    cost_windows,
+    cost_windows_sql,
+    daily_cost_sql,
+    percent_of_spend_limit,
+    spend_limit_due,
+    spend_limits,
+    weekly_measurements_sql,
+)
 from .driver_heap import FullCollection, latest_full_collection
 from .first_measurements import loggers_started_sql, researchers_started_sql
 from .macro_failures import (
@@ -75,6 +86,7 @@ __all__ = [
     "COLLECTOR_FAILURES_METRIC",
     "COLLECTOR_HEARTBEAT_METRIC",
     "DATABRICKS_DAILY_COST_METRIC",
+    "DATABRICKS_DAILY_COST_PERCENT_OF_LIMIT_METRIC",
     "DATABRICKS_MONTH_PROJECTED_COST_METRIC",
     "DATABRICKS_MONTH_TO_DATE_COST_METRIC",
     "DATABRICKS_PREVIOUS_MONTH_COST_METRIC",
@@ -118,6 +130,7 @@ __all__ = [
     "cost_components",
     "cost_windows",
     "cost_windows_sql",
+    "daily_cost_sql",
     "detail",
     "failed_rows_by_cause_sql",
     "heartbeat_key",
@@ -126,10 +139,13 @@ __all__ = [
     "loggers_started_sql",
     "minutes_since",
     "observation",
+    "percent_of_spend_limit",
     "previous_bucket",
     "protocol_failures_sql",
     "researchers_started_sql",
     "run_collectors",
+    "spend_limit_due",
+    "spend_limits",
     "to_ndjson",
     "weekly_measurements_sql",
 ]

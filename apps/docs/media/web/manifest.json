@@ -23,6 +23,7 @@
       "The dashboard and shell frames include CMS blog cards, one of whose artwork is a screenshot of the pre-refresh dashboard. That is Contentful content and out of scope here.",
       "experiment-devices (captured 2026-09-03): the roster comes from a local experiment whose id mirrors a dev-lakehouse experiment with published Ambyte data, so the measurement counts are real dev data; device names are local labels and the client ids are dev gateway MAC addresses, not personal data. The iot-devices flag is pinned in the browser by the capture tool (see featureFlags in shots.ts); the backend evaluated the real flag.",
       "experiments-list, organizations-list and workbooks-list were recaptured on 2026-09-28 at 1920x1200 from the local stack with the seeded development identity; each shows Name sorted ascending. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp. The Experiments shot includes the current data-processing status banner.",
+      "collaborators, organization-members, organization-team, delete-account-blockers and workbooks-list were recaptured on 2026-10-29 at 1920x1200 from a copy of the branch running against a fresh capture database (migrations, db:seed, then db:seed:orgs with seed@openjii.local as the target account), so the seed account holds every organization relationship the shots need. Every frame was reviewed at full size: only seeded personas (@orgseed.local, seed@openjii.local) and seeded resource names are visible. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
       "protocols-list and macros-list were recaptured on 2026-09-28 at 1920x1200 from the local stack with the seeded development identity; each shows Name sorted ascending. Frames were reviewed at full size and show only seeded protocol/macro names. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp. Both captures include the current data-processing status banner.",
       "dashboard, dashboard-first-work, report-issue, command-palette and cheatsheet recaptured on 2026-10-06 at 1920x1200. The four seed captures show three recently opened seeded experiments; dashboard-first-work uses newcomer@openjii.local, an activated seeded identity with no experiment grants or shared organization memberships, and shows the three first-work cards. Reviewed all full frames: no credentials, precise locations or dev overlays. The dashboard and overlay shots include the community measurement banner and CMS blog cards; one blog image is the pre-refresh dashboard. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
       "notification-settings and notifications-bell were retaken on 2026-10-06 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only notification-settings,notifications-bell. notification-settings is the Notifications tab after its card dropped the header icon, so the account tabs read alike; it shows the seven switches at their registry defaults and names no experiment, organization or person. notifications-bell was retaken because the bell header gained a settings gear: the frame was reviewed at full size and every experiment in the recently-updated grid behind the popover belongs to a seeded persona (Sofie Janssen, Maya Rasmussen, Noah Visser, all @orgseed.local), with no developer-authored row in frame. The CMS blog artwork still carries a screenshot of the pre-refresh dashboard, as note 6 records. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
@@ -36,7 +37,8 @@
       "protocols-list retaken on 2026-10-27 at 1920x1200 from the local stack with the seeded development identity (seed@openjii.local), via pnpm --filter @repo/e2e capture-docs-media --only protocols-list. Name remains sorted ascending; Family and Visibility filters are visible with no values selected, and Clear filters is absent. Retaken because family badges now use the product names MultispeQ and Ambyte. Reviewed at full size; only [Seed] protocol names appear, with no real names, emails, credentials or dev overlays. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine lacks ffmpeg.",
       "protocol-picker retaken on 2026-10-27 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only protocol-picker. The Chamber QC Scratchpad workbook shows the Protocol picker open, filtered by “chloro”, with three [Seed] protocols and MultispeQ badges; retaken because the picker still showed “multispeq”. Reviewed at full size; no real names or emails, credentials or dev overlays appear. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine.",
       "macros-list retaken on 2026-10-27 at 1920x1200 from the local stack with the expanded sidebar, matching the other platform captures. The frame shows Name sorted ascending, Language and Visibility filters with none applied, only [Seed] macro names, and no data-processing status notice. Reviewed at full size; the account details in the sidebar are the seeded development identity. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine.",
-      "Retaken on 2026-11-02 at 1920x1200 from the local stack with the seeded development identity (seed@openjii.local), via pnpm --filter @repo/e2e capture-docs-media --only experiments-list,protocols-list,macros-list,workbooks-list,organizations-list. experiments-list shows Name ascending with Status is Active and Visibility is Public chips and Clear filters; protocols-list, macros-list and workbooks-list show Name ascending, while organizations-list shows Type ascending. Those four frames have the Filter menu closed and no chips. All five frames were reviewed at full size and approved before publishing; only [Seed] resource names and the seeded identity appear, with no real names, emails, credentials or dev overlays. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine."
+      "Retaken on 2026-11-02 at 1920x1200 from the local stack with the seeded development identity (seed@openjii.local), via pnpm --filter @repo/e2e capture-docs-media --only experiments-list,protocols-list,macros-list,workbooks-list,organizations-list. experiments-list shows Name ascending with Status is Active and Visibility is Public chips and Clear filters; protocols-list, macros-list and workbooks-list show Name ascending, while organizations-list shows Type ascending. Those four frames have the Filter menu closed and no chips. All five frames were reviewed at full size and approved before publishing; only [Seed] resource names and the seeded identity appear, with no real names, emails, credentials or dev overlays. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine.",
+      "charts-filters recaptured on 2026-11-02 at 1920x1200 with capture-docs-media and synthetic FixtureWarehouse measurements in an isolated local stack. The full frame shows only the seed identity and example experiment data, with no credentials or dev overlays. The user approved the staged frame in the OJD-2320 handoff before publication. The capture replaces the former PNG whose top-right panel had no X labels."
     ]
   },
   "assets": [
@@ -134,8 +136,8 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 59206,
-      "sha256": "5b47bf478e046fd55238c926f59af1f6e2e9346b4084195b580faa7b82d705c3",
+      "bytes": 60968,
+      "sha256": "2ce1ee0b6071afac4537731592f959c9efa836cfd1a35a4da94c528d3dfc512c",
       "disposition": "published",
       "scope": "Organization Members screen: Members/Invited/Requests segments and the role roster"
     },
@@ -145,8 +147,8 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 52156,
-      "sha256": "a1e3221520105bc2885c57f6d6fceb463b64f3118be02a02b4aca183ac9a5d46",
+      "bytes": 53488,
+      "sha256": "39a24d688ed9fed0b5b6bf3aaa90355c02b2c18e29f0bec0fad2a72cb773c7fc",
       "disposition": "published",
       "scope": "A team page with its members above what the team can reach"
     },
@@ -156,8 +158,8 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 61166,
-      "sha256": "247e3b380987dcbf23ef6d7c72eef4d3a24ad1c283ab234f45c2bd8d567c6d36",
+      "bytes": 61958,
+      "sha256": "d72ee38074d957f33912fbcbffaf93354b4e7c28c7a398f65607356f5ea57f68",
       "disposition": "published",
       "scope": "Collaborators tab showing every row kind the access model can produce"
     },
@@ -244,8 +246,8 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 84636,
-      "sha256": "ea1d467bde8f27b986fa068ed39b50c9110f6de8d7bf50dfa1ed4dd8d92c65f1",
+      "bytes": 88414,
+      "sha256": "a4714db110a386695e5cc46c3e67200b6dd50d4cfa403991cd136e58676901b2",
       "disposition": "published",
       "scope": "Delete Account dialog blocked by sole organization ownership and sole answerability for an experiment"
     },
@@ -468,6 +470,17 @@
       "sha256": "20ab60d5d7bcb2c03e82fb5d15069c99154e8edc34af396729b4fbb427a79287",
       "disposition": "published",
       "scope": "Experiment Devices tab with onboarded, observed and unregistered devices and its tiles"
+    },
+    {
+      "path": "/img/guide/web/charts-filters.webp",
+      "slug": "charts-filters",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 68262,
+      "sha256": "198269de953684509fb2fb9b14f4d1585c13eb1345ee3b07720ddbc53dcde410",
+      "disposition": "published",
+      "scope": "Three-panel line chart with X labels on both exposed panels; local seeded app and synthetic FixtureWarehouse measurements"
     }
   ],
   "unmetCaptures": [
@@ -477,7 +490,7 @@
     "TIER 2 - protocol-fork.png: 'Fork to edit' only renders on a protocol owned by another user, and every seeded protocol belongs to the seed account.",
     "TIER 3 - workbook-version-history.png: the seed fixture ships one version per workbook and the seeded workbook exposes no Publish control in its current state, so there is no history to show. Attempted and discarded unpublished.",
     "TIER 3 - workbook-demo.webm, versioning-demo.webm, multi-device-demo.webm: still pre-refresh, still off-frame (1366x900 and 1600x1000). versioning-demo depends on the version-history blocker above; multi-device-demo needs physical hardware.",
-    "TIER 5 - data-first-measurement.png, charts-filters.png, ambyte-data.png, export-dialog.png, metadata-import.png: every lakehouse-backed surface is deliberately unreachable on the local stack, and the two dialogs open from a populated Data tab.",
+    "TIER 5 - data-first-measurement.png, ambyte-data.png, export-dialog.png, metadata-import.png: every lakehouse-backed surface is deliberately unreachable on the local stack, and the two dialogs open from a populated Data tab.",
     "TIER 6 - quick-start-web.webm: its middle beat is the populated Data tab, so it inherits the tier 5 blocker.",
     "TIER 7 - /img/mobile/*: the phone UI is untouched by this redesign and re-recording needs a physical device."
   ]

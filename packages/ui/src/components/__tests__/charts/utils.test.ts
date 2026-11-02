@@ -997,6 +997,64 @@ describe("utils", () => {
       expect(getKey(out, "yaxis4").showticklabels).toBe(false);
     });
 
+    it.each([
+      { count: 3, columns: 2, expected: [false, true, true] },
+      { count: 5, columns: 3, expected: [false, false, true, true, true] },
+    ])(
+      "labels the lowest populated cell in each column ($count cells)",
+      ({ count, columns, expected }) => {
+        const cells = Array.from({ length: count }, (_, i) => ({
+          title: `Panel ${i + 1}`,
+          xaxisId: i === 0 ? "x" : `x${i + 1}`,
+          yaxisId: i === 0 ? "y" : `y${i + 1}`,
+        }));
+        const out = extendLayoutForFacets(baseLayout, cells, {
+          rows: Math.ceil(count / columns),
+          columns,
+        });
+        for (const [i, visible] of expected.entries()) {
+          const axis = getKey(out, i === 0 ? "xaxis" : `xaxis${i + 1}`);
+          expect(axis.showticklabels).toBe(visible);
+          expect(axis.title).toEqual(visible ? baseLayout.xaxis?.title : undefined);
+        }
+      },
+    );
+
+    it("uses the visual bottom row when rows run bottom to top", () => {
+      const cells = ["", "2", "3"].map((suffix) => ({
+        title: "Panel",
+        xaxisId: `x${suffix}`,
+        yaxisId: `y${suffix}`,
+      }));
+      const out = extendLayoutForFacets(baseLayout, cells, {
+        rows: 2,
+        columns: 2,
+        roworder: "bottom to top",
+      });
+      expect(getKey(out, "xaxis").showticklabels).toBe(true);
+      expect(getKey(out, "xaxis2").showticklabels).toBe(true);
+      expect(getKey(out, "xaxis3").showticklabels).toBe(false);
+      expect(getKey(out, "xaxis").title).toEqual(baseLayout.xaxis?.title);
+      expect(getKey(out, "xaxis3").title).toBeUndefined();
+    });
+
+    it("preserves independent X tick settings in an incomplete grid", () => {
+      const cells = ["", "2", "3"].map((suffix) => ({
+        title: "Panel",
+        xaxisId: `x${suffix}`,
+        yaxisId: `y${suffix}`,
+      }));
+      const out = extendLayoutForFacets({ ...baseLayout, xaxis: { showticklabels: true } }, cells, {
+        rows: 2,
+        columns: 2,
+        sharedX: false,
+      });
+      for (const key of ["xaxis", "xaxis2", "xaxis3"]) {
+        expect(getKey(out, key).showticklabels).toBe(true);
+        expect(getKey(out, key).matches).toBeUndefined();
+      }
+    });
+
     it("emits one annotation per cell with non-empty title and honours titleFontSize", () => {
       const cells = [
         { title: "Alpha", xaxisId: "x", yaxisId: "y" },

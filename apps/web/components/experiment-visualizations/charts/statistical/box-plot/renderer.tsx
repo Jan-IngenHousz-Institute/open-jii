@@ -27,6 +27,17 @@ export function BoxPlotRenderer({
   const dataSources = visualization.dataConfig.dataSources;
   const orientation = chartConfig.boxOrientation === "h" ? "h" : "v";
 
+  const plotConfig =
+    orientation === "h"
+      ? {
+          ...chartConfig,
+          xAxisTitle: chartConfig.yAxisTitle,
+          yAxisTitle: chartConfig.xAxisTitle,
+          xAxisType: chartConfig.yAxisType,
+          yAxisType: chartConfig.xAxisType,
+        }
+      : chartConfig;
+
   // KEEP IN SYNC with the field reads in `transformBoxPlotData`.
   const { chartSeries, subplots } = useMemo(() => {
     if (visualization.chartType !== "box-plot") {
@@ -70,7 +81,7 @@ export function BoxPlotRenderer({
       <div className="flex h-full w-full flex-col">
         <BoxPlot
           data={chartSeries}
-          config={chartConfig}
+          config={plotConfig}
           orientation={orientation}
           boxmode={chartConfig.boxmode ?? "group"}
           subplots={subplots}

@@ -1,6 +1,8 @@
 "use client";
 
-import { UserAvatar } from "@/components/user-avatar";
+import { PersonIdentity } from "@/components/people/person-identity";
+import type { PersonLike } from "@/components/people/person-name";
+import { personName } from "@/components/people/person-name";
 import { LogOut, Network, Trash2 } from "lucide-react";
 
 import type { OrganizationRole } from "@repo/api/domains/organization/organization.schema";
@@ -19,11 +21,7 @@ import { organizationRoleLabelKey } from "./organization-labels";
 import type { LeaveRejection, RemoveRejection } from "./organization-roster-rules";
 
 interface OrganizationMemberRowProps {
-  displayName: string;
-  email: string | null;
-  avatarUrl: string | null;
-  firstName: string;
-  lastName: string;
+  person: PersonLike;
   role: OrganizationRole;
   isSelf: boolean;
   /** Teams this member is on. Read-only here; a team's own page is where it changes. */
@@ -47,11 +45,7 @@ interface OrganizationMemberRowProps {
  * button" would read as a bug rather than as the invariant it is.
  */
 export function OrganizationMemberRow({
-  displayName,
-  email,
-  avatarUrl,
-  firstName,
-  lastName,
+  person,
   role,
   isSelf,
   teamNames,
@@ -64,6 +58,7 @@ export function OrganizationMemberRow({
   onLeave,
 }: OrganizationMemberRowProps) {
   const { t } = useTranslation();
+  const displayName = personName(person, t);
 
   const removeReason =
     removeRejection === "lastOwner" ? t("organizations.members.lastOwnerReason") : null;
@@ -72,24 +67,7 @@ export function OrganizationMemberRow({
 
   return (
     <div role="listitem" className="flex items-center gap-3 px-5 py-3">
-      <UserAvatar
-        avatarUrl={avatarUrl}
-        firstName={firstName}
-        lastName={lastName}
-        className="h-9 w-9"
-      />
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex min-w-0 items-center gap-2">
-          <h4 className="text-foreground truncate text-sm font-medium" title={displayName}>
-            {displayName}
-          </h4>
-          {isSelf && (
-            <span className="text-muted-foreground shrink-0 text-xs">{t("sharing.you")}</span>
-          )}
-        </div>
-        {email && <span className="text-muted-foreground truncate text-xs">{email}</span>}
-      </div>
+      <PersonIdentity person={person} />
 
       {/*
         Which teams this person is on, read-only: a team's membership is changed on the

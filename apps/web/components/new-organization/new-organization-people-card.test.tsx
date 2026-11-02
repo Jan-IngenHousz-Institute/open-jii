@@ -77,8 +77,15 @@ describe("<NewOrganizationPeopleCard />", () => {
 
     // The address is collected with them: every person here is invited on submit, and
     // an invitation needs somewhere to go.
-    expect(form.getValues("people")).toEqual([
-      { kind: "user", userId: "u-1", displayName: "Lin Zhao", email: "lin@uni.edu", role: "admin" },
+    expect(form.getValues("people")).toMatchObject([
+      {
+        kind: "user",
+        userId: "u-1",
+        displayName: "Lin Zhao",
+        person: { id: "u-1", firstName: "Lin", lastName: "Zhao" },
+        email: "lin@uni.edu",
+        role: "admin",
+      },
     ]);
     // No organization exists to invite them to yet: the wizard spends these on submit.
     expect(invite()).not.toHaveBeenCalled();
@@ -94,6 +101,7 @@ describe("<NewOrganizationPeopleCard />", () => {
         kind: "user",
         userId: "u-1",
         displayName: "Lin Zhao",
+        person: { id: "u-1", displayName: "Lin Zhao" },
         email: "lin@uni.edu",
         role: "member",
       },
@@ -110,6 +118,7 @@ describe("<NewOrganizationPeopleCard />", () => {
         kind: "user",
         userId: "u-1",
         displayName: "Lin Zhao",
+        person: { id: "u-1", displayName: "Lin Zhao" },
         email: "lin@uni.edu",
         role: "owner",
       },
@@ -125,6 +134,7 @@ describe("<NewOrganizationPeopleCard />", () => {
         kind: "user",
         userId: "u-1",
         displayName: "Lin Zhao",
+        person: { id: "u-1", displayName: "Lin Zhao" },
         email: "lin@uni.edu",
         role: "owner",
       },
@@ -181,7 +191,7 @@ describe("<NewOrganizationPeopleCard />", () => {
     expect(screen.getByText("organizations.create.people.invitedByEmail")).toBeInTheDocument();
   });
 
-  it("drops somebody already collected from the results, and explains their address", async () => {
+  it("greys out somebody already collected, in the wizard's own words", async () => {
     const user = userEvent.setup();
     server.mount(contract.users.searchUsers, {
       body: [
@@ -200,22 +210,23 @@ describe("<NewOrganizationPeopleCard />", () => {
         kind: "user",
         userId: "u-1",
         displayName: "Lin Zhao",
+        person: { id: "u-1", displayName: "Lin Zhao" },
         email: "lin@uni.edu",
         role: "member",
       },
     ]);
 
+    // Listed rather than hidden, in the wizard's own terms: "already a member" would be a
+    // lie about an organization that does not exist.
     await user.type(search(), "lin");
-    // Filtered out of the results, the same as the sharing picker.
     await waitFor(() =>
-      expect(screen.getByText("organizations.invite.noMatches")).toBeInTheDocument(),
+      expect(screen.getByText("organizations.create.people.alreadyAdded")).toBeInTheDocument(),
     );
+    expect(screen.getByRole("button", { name: /Lin Zhao/u })).toBeDisabled();
 
     await user.clear(search());
     await user.type(search(), "lin@uni.edu");
 
-    // Typing their full address is answered, in the wizard's own terms: "already a
-    // member" would be a lie about an organization that does not exist.
     await waitFor(() =>
       expect(screen.getByText("organizations.create.people.alreadyAdded")).toBeInTheDocument(),
     );
@@ -261,6 +272,7 @@ describe("<NewOrganizationPeopleCard />", () => {
         kind: "user",
         userId: "u-1",
         displayName: "Lin Zhao",
+        person: { id: "u-1", displayName: "Lin Zhao" },
         email: "lin@uni.edu",
         role: "admin",
       },
@@ -307,6 +319,7 @@ describe("<NewOrganizationPeopleCard />", () => {
         kind: "user",
         userId: "u-1",
         displayName: "Lin Zhao",
+        person: { id: "u-1", displayName: "Lin Zhao" },
         email: "lin@uni.edu",
         role: "member",
       },
