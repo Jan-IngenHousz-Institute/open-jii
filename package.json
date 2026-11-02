@@ -49,7 +49,9 @@
     "posthog:query": "pnpm --filter @repo/devkit posthog:query --",
     "grafana:auth": "pnpm --filter @repo/devkit grafana:auth --",
     "grafana:get": "pnpm --filter @repo/devkit grafana:get --",
-    "round:read": "pnpm --filter @repo/devkit round:read --"
+    "round:read": "pnpm --filter @repo/devkit round:read --",
+    "lint:boundaries": "node tooling/check-dependency-boundaries.mjs",
+    "test:boundaries": "node --test tooling/check-dependency-boundaries.test.mjs"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",

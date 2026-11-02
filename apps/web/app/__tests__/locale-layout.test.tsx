@@ -7,7 +7,7 @@ import initTranslations from "@repo/i18n/server";
 
 import Layout from "../[locale]/layout";
 
-vi.mock("@repo/cms/contentful", () => ({
+vi.mock("~/components/cms/contentful/ctf-preview-provider", () => ({
   ContentfulPreviewProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { cache } from "react";
+import { PoliciesContent } from "~/components/cms/policies";
 import { getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
 
-import { PoliciesContent } from "@repo/cms";
 import type { PagePoliciesFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 
 interface PoliciesPageProps {

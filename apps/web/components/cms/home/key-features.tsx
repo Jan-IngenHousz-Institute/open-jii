@@ -1,0 +1,150 @@
+"use client";
+
+import {
+  useContentfulInspectorMode,
+  useContentfulLiveUpdates,
+} from "@contentful/live-preview/react";
+import React from "react";
+
+import type { PageHomeFeaturesFieldsFragment } from "@repo/cms/lib/__generated/sdk";
+
+import { CtfImage } from "../contentful/ctf-image";
+
+interface HomeKeyFeaturesProps {
+  featuresData: PageHomeFeaturesFieldsFragment;
+  preview: boolean;
+  locale: string;
+}
+
+export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
+  featuresData,
+  preview,
+  locale,
+}) => {
+  const liveFeatures = useContentfulLiveUpdates<PageHomeFeaturesFieldsFragment>(featuresData, {
+    skip: !preview,
+    locale,
+  });
+
+  const currentFeatures = liveFeatures ?? featuresData;
+  if (!currentFeatures) return null;
+
+  const inspectorProps = useContentfulInspectorMode({
+    entryId: currentFeatures.sys.id,
+    locale,
+  });
+
+  // Extract features array once
+  const features = currentFeatures.featuresCollection?.items ?? [];
+
+  // Render list of features
+  const renderFeatures = () =>
+    features
+      .filter((f): f is NonNullable<typeof f> => !!f && f.__typename === "ComponentFeature")
+      .map((feature) => {
+        const featureInspectorProps = useContentfulInspectorMode({
+          entryId: feature.sys.id,
+          locale,
+        });
+
+        return (
+          <div key={feature.sys.id} className="flex items-start space-x-4">
+            {/* Icon */}
+            <div
+              className="flex h-20 w-20 shrink-0 items-center justify-center"
+              {...featureInspectorProps({ fieldId: "icon" })}
+            >
+              {feature.icon && <CtfImage {...feature.icon} nextImageProps={{ sizes: "80px" }} />}
+            </div>
+
+            {/* Text content */}
+            <div>
+              <h3
+                className="text-brand-chrome-foreground text-lg font-semibold"
+                {...featureInspectorProps({ fieldId: "title" })}
+              >
+                {feature.title}
+              </h3>
+
+              <p
+                className="text-brand-chrome-foreground/80 mt-1"
+                {...featureInspectorProps({ fieldId: "subtitle" })}
+              >
+                {feature.subtitle}
+              </p>
+            </div>
+          </div>
+        );
+      });
+
+  return (
+    <div className="py-24">
+      <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+        {/* A brand surface, like the navbar and footer: --primary inverts to a
+            light cyan in dark mode, which turned this panel into a bright slab
+            against the teal/gold palette. --brand-chrome-* does not invert. */}
+        <div className="bg-brand-chrome relative isolate overflow-hidden px-6 py-20 sm:rounded-3xl sm:px-10 sm:py-24 lg:py-24 xl:px-24">
+          {/* GRID: text left / image right */}
+          <div className="mx-auto grid max-w-2xl grid-cols-1 gap-x-8 gap-y-16 sm:gap-y-20 lg:mx-0 lg:max-w-none lg:grid-cols-2 lg:items-center lg:gap-y-0">
+            {/* LEFT COLUMN */}
+            <div className="lg:row-start-2 lg:max-w-md">
+              {/* Title */}
+              <h2
+                className="text-brand-chrome-foreground text-balance text-3xl font-semibold tracking-tight sm:text-4xl"
+                {...inspectorProps({ fieldId: "title" })}
+              >
+                {currentFeatures.title}
+              </h2>
+
+              {/* Subtitle */}
+              {currentFeatures.subtitle && (
+                <p
+                  className="text-brand-chrome-foreground/80 mt-6 text-lg"
+                  {...inspectorProps({ fieldId: "subtitle" })}
+                >
+                  {currentFeatures.subtitle}
+                </p>
+              )}
+            </div>
+
+            {/* RIGHT BIG IMAGE */}
+            {currentFeatures.image && (
+              <CtfImage
+                {...currentFeatures.image}
+                nextImageProps={{
+                  className:
+                    "relative -z-20 min-w-full max-w-xl rounded-xl shadow-xl ring-brand-chrome-foreground/15 lg:row-span-4 ring-1 lg:max-w-none",
+                  ...inspectorProps({ fieldId: "image" }),
+                }}
+              />
+            )}
+
+            {/* FEATURES LIST */}
+            <div
+              className="lg:border-brand-accent max-w-xl lg:row-start-3 lg:mt-10 lg:max-w-md lg:border-t lg:pt-10"
+              {...inspectorProps({ fieldId: "features" })}
+            >
+              <dl className="text-brand-chrome-foreground/80 max-w-xl space-y-8 text-base lg:max-w-none">
+                {renderFeatures()}
+              </dl>
+            </div>
+          </div>
+
+          {/* Template decorative blob */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute left-12 top-1/2 -z-10 -translate-y-1/2 transform-gpu blur-3xl lg:-bottom-48 lg:top-auto lg:translate-y-0"
+          >
+            <div
+              className="from-brand-chrome-accent to-brand-chrome aspect-[1155/678] w-[72rem] bg-gradient-to-tr opacity-60"
+              style={{
+                clipPath:
+                  "polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)",
+              }}
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

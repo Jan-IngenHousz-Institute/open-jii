@@ -45,7 +45,8 @@ The most important dependency boundaries are:
 - `packages/auth`: Better Auth configuration and clients.
 - `packages/database`: the Postgres schema, migrations and client (Drizzle), and the serving store's ClickHouse migrations.
 - `packages/iot`: device drivers and transport-independent command execution.
-- `packages/cms`: Contentful client, generated GraphQL SDK, alerts, and public-site components.
+- `packages/cms`: shared Contentful client, queries, generated GraphQL SDK and alert helpers.
+- `apps/web/components/cms`: CMS web components, rich-text rendering and live preview.
 - `packages/transactional`: React Email templates and Contentful-backed rendering.
 - `packages/ui`, `packages/i18n`, and `packages/analytics`: shared presentation, localization, and telemetry.
 - `tooling/*`: reusable TypeScript, ESLint, Tailwind, Vitest, and release configuration.
@@ -67,3 +68,14 @@ references.
 ## Deployment model
 
 OpenTofu under `infrastructure/` declares AWS and Databricks resources. GitHub Actions authenticates through OIDC; contributors should plan infrastructure changes but must not apply shared environments from a feature branch. The docs app is a static export to S3/CloudFront, while the web app uses the repository's OpenNext deployment path.
+
+## CMS dependency checks
+
+Backend, mobile and transactional email use `@repo/cms` for CMS data. Web rendering lives in
+`apps/web/components/cms`; web imports both CMS data and shared UI primitives directly. CMS has no
+dependency path back to UI, and shared UI has no dependency path to CMS.
+This keeps chart and CMS presentation changes from selecting backend and mobile as affected packages.
+
+Run `pnpm lint:boundaries` to check those dependency paths. The workspace dependency lint CI job runs
+it on every PR. Changes to the shared CMS client or generated SDK still select their consumers, while leaving shared
+UI unaffected.
