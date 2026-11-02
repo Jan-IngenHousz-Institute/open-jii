@@ -4,6 +4,7 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
+import { withOuterLabels } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -176,19 +177,28 @@ export function PolarPlot({
   const layout = useMemo(
     () =>
       ({
-        ...responsiveChrome(config, sizing),
+        ...withOuterLabels(
+          responsiveChrome(config, sizing),
+          config,
+          { left: 40, right: 40, top: 32, bottom: 32 },
+          data.map((series) => series.name ?? ""),
+          { text: radialAxis.title ?? "R", fontSize: fontSizes.axisTitle },
+        ),
 
         polar: {
           radialaxis: {
-            title: { text: radialAxis.title || "R", font: { size: fontSizes.axisTitle } },
+            title: { text: "" },
             tickfont: { size: fontSizes.tick },
             range: radialAxis.range,
-            tickmode: radialAxis.tickmode || "linear",
+            tickmode:
+              radialAxis.tickmode ??
+              (radialAxis.tickvals ? "array" : radialAxis.dtick !== undefined ? "linear" : "auto"),
+            nticks: sizing.snug ? 5 : 10,
             tick0: radialAxis.tick0 || 0,
             dtick: radialAxis.dtick,
             tickvals: radialAxis.tickvals,
             ticktext: radialAxis.ticktext,
-            angle: radialAxis.angle || 90,
+            angle: radialAxis.angle ?? 90,
             side: radialAxis.side || "clockwise",
             gridcolor: radialAxis.gridcolor || chartGridColor(),
             linecolor: radialAxis.linecolor || chartGridColor(),
@@ -240,6 +250,7 @@ export function PolarPlot({
       angularAxis.title,
       bgcolor,
       config,
+      data,
       fontSizes.axisTitle,
       fontSizes.tick,
       hole,

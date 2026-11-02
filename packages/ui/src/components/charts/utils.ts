@@ -441,7 +441,7 @@ type LegendPosition = NonNullable<PlotlyChartConfig["legendPosition"]>;
  *  coords so the legend doesn't overlap axis tick / title bands. */
 export function legendAnchorFor(position: LegendPosition) {
   const anchors = {
-    right: { x: 1.02, y: 1, xanchor: "left", yanchor: "top", orientation: "v" },
+    right: { x: 0.98, y: 1, xref: "container", xanchor: "right", yanchor: "top", orientation: "v" },
     left: {
       x: 0,
       y: 1,
@@ -522,8 +522,8 @@ export function createBaseLayout(
     /**
      * The chart has a continuous-color colorbar that lives in the right
      * gutter, so the right-anchored legend can't sit at the same x. The
-     * layout adjusts: at full size the legend nudges further right past
-     * the colorbar; in compact tiers it anchors at the bottom instead.
+     * legend reserves a container band; in compact tiers it anchors at
+     * the bottom instead.
      */
     hasColorbar?: boolean;
   } = {},
@@ -570,23 +570,12 @@ export function createBaseLayout(
   const forceBottomLegend =
     !isInsideLegend && (ultraCompact || (compact && hasColorbar && legendPosition === "right"));
   const effectiveLegendPosition = forceBottomLegend ? "bottom" : legendPosition;
-  // Anchor presets:
-  //  - "right"/"left": paper coords, vertical legend in the side margin.
-  //    Plotly's autoexpand reliably grows margin.r/margin.l to fit.
-  //  - "top"/"bottom": `yref: "container"`. Paper coords would land in
-  //    the axis-tick-label band because Plotly's `xaxis.automargin` and
-  //    legend autoexpand don't coordinate; container coords route through
-  //    `_reservedMargin` which composes additively.
-  //  - "inside-*": paper coords inside the plot area, anchored to a
-  //    corner. Slight inset (0.02 / 0.98) keeps the legend off the axis
-  //    spines.
-  const baseLegendAnchor = legendAnchorFor(effectiveLegendPosition);
-  // When a colorbar shares the right gutter, push the legend a little
-  // further out so it clears the colorbar bar and its rotated title.
-  const legendAnchor =
-    hasColorbar && effectiveLegendPosition === "right"
-      ? { ...baseLegendAnchor, x: 1.18 }
-      : baseLegendAnchor;
+  // Plotly places the scrollbar beyond its legend width. Inset container
+  // anchors so a scrolling legend and its handle stay inside the chart.
+  const legendAnchor = {
+    ...legendAnchorFor(effectiveLegendPosition),
+    ...(effectiveLegendPosition === "right" && compact ? { x: 0.96 } : {}),
+  };
 
   // Use provided dimensions or undefined for responsive behavior
   const { width, height } = config;
@@ -640,6 +629,9 @@ export function createBaseLayout(
     title: title
       ? {
           text: title,
+          ...(showLegend && effectiveLegendPosition === "top"
+            ? { yref: "paper", y: 1, yanchor: "bottom", pad: { b: 8 } }
+            : {}),
           font: {
             size: titleFontSize,
             family: "var(--font-sans)",
@@ -684,6 +676,7 @@ export function createBaseLayout(
     showlegend: showLegend,
     legend: {
       ...legendAnchor,
+      ...(effectiveLegendPosition === "top" && title ? { maxheight: 64 } : {}),
       bgcolor: plateBgColor,
       bordercolor: gridColor,
       borderwidth: 1,
@@ -734,7 +727,7 @@ export function createBaseLayout(
         return { ...base, b: Math.max(base.b, 64) };
       }
       if (effectiveLegendPosition === "top") {
-        return { ...base, t: Math.max(base.t, 56) };
+        return { ...base, t: Math.max(base.t, 56) + (title ? titleFontSize + 16 : 0) };
       }
       if (effectiveLegendPosition === "left") {
         return { ...base, l: Math.max(base.l, 80) };

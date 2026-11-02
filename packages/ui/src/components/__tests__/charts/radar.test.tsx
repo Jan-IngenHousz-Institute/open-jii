@@ -322,12 +322,22 @@ describe("RadarPlot", () => {
     expect(plotData[0]?.customdata).toEqual(["data1", "data2", "data3", "data4", "data5"]);
   });
 
+  it("wraps a long outer label without dropping any of its name", () => {
+    const categories = ["very_long_weather_measurement_column", ...sampleCategories.slice(1)];
+    const { getByTestId } = render(<RadarPlot data={sampleData} categories={categories} />);
+    const layout = JSON.parse(getByTestId("plot-layout").textContent || "{}");
+    expect(layout.polar.angularaxis.ticktext[0]).toContain("<br>");
+    expect(layout.polar.angularaxis.ticktext[0].replaceAll("<br>", "")).toBe(categories[0]);
+  });
+
   it("handles custom categories", () => {
     render(<RadarPlot data={sampleData} categories={sampleCategories} />);
 
     const plotLayout = JSON.parse(screen.getByTestId("plot-layout").textContent || "{}");
     expect(plotLayout.polar?.angularaxis?.tickmode).toBe("array");
-    expect(plotLayout.polar?.angularaxis?.ticktext).toEqual(sampleCategories);
+    expect(
+      plotLayout.polar?.angularaxis?.ticktext.map((label: string) => label.replaceAll("<br>", "")),
+    ).toEqual(sampleCategories);
     expect(plotLayout.polar?.angularaxis?.tickvals).toEqual([0, 72, 144, 216, 288]);
   });
 

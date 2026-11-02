@@ -75,7 +75,6 @@ export function WindRoseRenderer({
           config={chartConfig}
           directionTicks={directionTicks}
           directionLabels={directionLabels}
-          radialAxisTitle={yColumn}
         />
       </div>
     </ChartFrame>

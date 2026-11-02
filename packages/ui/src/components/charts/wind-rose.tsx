@@ -4,6 +4,7 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
+import { withOuterLabels } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -118,7 +119,13 @@ export function WindRose({
   const layout = useMemo(
     () =>
       ({
-        ...responsiveChrome(config, sizing),
+        ...withOuterLabels(
+          responsiveChrome(config, sizing),
+          config,
+          { left: 40, right: 40, top: 32, bottom: 32 },
+          data.map((series) => series.name ?? ""),
+          { text: radialAxisTitle, fontSize: fontSizes.axisTitle },
+        ),
         // Stack value-band segments within each direction slice (the
         // canonical wind-rose rendering). `barmode: "stack"` is read by
         // both cartesian bar traces and barpolar.
@@ -126,7 +133,7 @@ export function WindRose({
         polar: {
           bgcolor: "white",
           radialaxis: {
-            title: { text: radialAxisTitle, font: { size: fontSizes.axisTitle } },
+            title: { text: "" },
             tickfont: { size: fontSizes.tick },
             // East-pointing radial axis: avoids the north overlap with bars.
             angle: 0,
@@ -154,6 +161,7 @@ export function WindRose({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
     [
       config,
+      data,
       directionTicks,
       fontSizes.axisTitle,
       fontSizes.tick,

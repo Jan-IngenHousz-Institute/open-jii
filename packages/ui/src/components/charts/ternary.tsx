@@ -4,6 +4,7 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
+import { chartTextWidth, withOuterLabels } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig, SafeFont } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -239,7 +240,29 @@ export function TernaryPlot({
   const baseLayout = useMemo(
     () =>
       ({
-        ...responsiveChrome(config, sizing),
+        ...withOuterLabels(
+          responsiveChrome(config, sizing),
+          config,
+          {
+            left:
+              chartTextWidth(
+                ternaryAxisTitle(baxis.title, "B", fontSizes.axisTitle).text,
+                fontSizes.axisTitle,
+              ) /
+                2 +
+              36,
+            right:
+              chartTextWidth(
+                ternaryAxisTitle(caxis.title, "C", fontSizes.axisTitle).text,
+                fontSizes.axisTitle,
+              ) /
+                2 +
+              36,
+            top: 44,
+            bottom: 48,
+          },
+          allTraces.map((trace) => trace.name ?? ""),
+        ),
         plot_bgcolor: bgcolor,
 
         ternary: {
@@ -250,7 +273,8 @@ export function TernaryPlot({
             min: aaxis.min || 0,
             max: aaxis.max || sum,
             tick0: aaxis.tick0 || 0,
-            dtick: aaxis.dtick || sum / 10,
+            dtick: aaxis.dtick ?? (sizing.snug ? undefined : sum / 10),
+            nticks: 5,
             gridcolor: aaxis.gridcolor || chartGridColor(),
             linecolor: aaxis.linecolor || chartGridColor(),
             showgrid: aaxis.showgrid !== false,
@@ -258,12 +282,15 @@ export function TernaryPlot({
             showticklabels: aaxis.showticklabels !== false,
           },
           baxis: {
+            ticks: "outside",
+            ticklen: 8,
             title: ternaryAxisTitle(baxis.title, "B", fontSizes.axisTitle),
             tickfont: { size: fontSizes.tick },
             min: baxis.min || 0,
             max: baxis.max || sum,
             tick0: baxis.tick0 || 0,
-            dtick: baxis.dtick || sum / 10,
+            dtick: baxis.dtick ?? (sizing.snug ? undefined : sum / 10),
+            nticks: 5,
             gridcolor: baxis.gridcolor || chartGridColor(),
             linecolor: baxis.linecolor || chartGridColor(),
             showgrid: baxis.showgrid !== false,
@@ -271,12 +298,15 @@ export function TernaryPlot({
             showticklabels: baxis.showticklabels !== false,
           },
           caxis: {
+            ticks: "outside",
+            ticklen: 8,
             title: ternaryAxisTitle(caxis.title, "C", fontSizes.axisTitle),
             tickfont: { size: fontSizes.tick },
             min: caxis.min || 0,
             max: caxis.max || sum,
             tick0: caxis.tick0 || 0,
-            dtick: caxis.dtick || sum / 10,
+            dtick: caxis.dtick ?? (sizing.snug ? undefined : sum / 10),
+            nticks: 5,
             gridcolor: caxis.gridcolor || chartGridColor(),
             linecolor: caxis.linecolor || chartGridColor(),
             showgrid: caxis.showgrid !== false,
@@ -320,6 +350,7 @@ export function TernaryPlot({
       caxis.tick0,
       caxis.title,
       config,
+      allTraces,
       fontSizes.axisTitle,
       fontSizes.tick,
       sizing,

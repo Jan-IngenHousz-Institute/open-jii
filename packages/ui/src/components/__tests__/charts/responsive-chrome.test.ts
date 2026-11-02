@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { withOuterLabels } from "../../charts/outer-labels";
 import type { PlotlyChartConfig } from "../../charts/types";
 import {
   createBaseLayout,
@@ -45,6 +46,19 @@ describe("responsiveChrome", () => {
     const compactSize = (compact.title as { font?: { size?: number } }).font?.size ?? 0;
     expect(compactSize).toBeLessThan(fullSize);
   });
+});
+
+it("keeps a non-cartesian title between the top legend and outer labels", () => {
+  const config: PlotlyChartConfig = { title: "Chart title", legendPosition: "top" };
+  const layout = withOuterLabels(
+    responsiveChrome(config),
+    config,
+    { left: 32, right: 32, top: 32, bottom: 32 },
+    ["North"],
+  );
+  const legendHeight = Number(Reflect.get(layout.legend ?? {}, "maxheight"));
+  expect(layout.title?.pad?.t).toBeGreaterThanOrEqual(legendHeight);
+  expect((layout.margin?.t ?? 0) - (layout.title?.pad?.t ?? 0)).toBeGreaterThanOrEqual(32);
 });
 
 describe("tierAxisFontSizes", () => {

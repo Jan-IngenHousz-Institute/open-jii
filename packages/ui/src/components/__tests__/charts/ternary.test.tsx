@@ -497,7 +497,7 @@ describe("TernaryPlot", () => {
     render(<TernaryPlot data={mockData} config={config} />);
 
     const plotLayout = JSON.parse(screen.getByTestId("plot-layout").textContent || "{}");
-    expect(plotLayout.title).toEqual({ text: "Custom Ternary Plot" });
+    expect(plotLayout.title).toMatchObject({ text: "Custom Ternary Plot" });
     expect(plotLayout.paper_bgcolor).toBe("#f5f5f5");
     expect(plotLayout.showlegend).toBe(false);
     expect(plotLayout.autosize).toBe(true);

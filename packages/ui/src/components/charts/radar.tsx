@@ -4,6 +4,7 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
+import { chartTextWidth, withOuterLabels, wrapChartLabel } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -138,17 +139,42 @@ export function RadarPlot({
     [data, plotType],
   );
 
+  const displayCategories = useMemo(
+    () =>
+      categories?.map((label) => wrapChartLabel(label, fontSizes.tick, sizing.compact ? 72 : 96)),
+    [categories, fontSizes.tick, sizing.compact],
+  );
+  const outerLabels = useMemo(() => {
+    const side = Math.max(
+      32,
+      ...(displayCategories ?? []).map((label) => chartTextWidth(label, fontSizes.tick) + 12),
+    );
+    const height = Math.max(
+      32,
+      ...(displayCategories ?? []).map(
+        (label) => label.split("<br>").length * fontSizes.tick * 1.3 + 12,
+      ),
+    );
+    return { left: side, right: side, top: height, bottom: height };
+  }, [displayCategories, fontSizes.tick]);
+
   // Tier-aware chrome + the polar config createBaseLayout cannot provide.
   const layout = useMemo(
     () =>
       ({
-        ...responsiveChrome(config, sizing),
+        ...withOuterLabels(
+          responsiveChrome(config, sizing),
+          config,
+          outerLabels,
+          data.map((series) => series.name ?? ""),
+        ),
 
         polar: {
           radialaxis: {
             visible: radialAxisVisible,
             range: rangeMode === "tozero" ? [0, undefined] : undefined,
             rangemode: rangeMode,
+            nticks: sizing.compact ? 3 : 5,
             tickfont: { size: fontSizes.tick },
             gridcolor: chartGridColor(),
             linecolor: chartGridColor(),
@@ -161,7 +187,7 @@ export function RadarPlot({
             ...(categories
               ? {
                   tickvals: categories.map((_, i) => i * (360 / categories.length)),
-                  ticktext: categories,
+                  ticktext: displayCategories,
                 }
               : {}),
             tickangle: tickAngle,
@@ -179,7 +205,10 @@ export function RadarPlot({
     [
       angularAxisVisible,
       categories,
+      displayCategories,
+      outerLabels,
       config,
+      data,
       fontSizes.tick,
       gridShape,
       radialAxisVisible,
