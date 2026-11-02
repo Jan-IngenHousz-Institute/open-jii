@@ -3,7 +3,7 @@ import type { Histogram2DSeriesData } from "@repo/ui/components/charts/histogram
 
 import type { ChartFormConfig } from "../../chart-config";
 import { resolveColorscale } from "../../colors/colorscales";
-import { coerceCell } from "../../data/cell-coercion";
+import { continuousPairs } from "../../data/continuous-pairs";
 import { dataSourcesByRole } from "../../data/data-sources";
 
 /**
@@ -15,7 +15,7 @@ export function positiveOrAuto(n: number | undefined): number | undefined {
   return typeof n === "number" && n > 0 ? n : undefined;
 }
 
-/** Pure data transform for the 2D histogram: extracts paired numeric (x, y) tuples and drops rows where either fails to coerce. */
+/** Pure data transform for the 2D histogram: extracts paired numeric or timestamp cells. */
 export function transformHistogram2DData(
   rows: Record<string, unknown>[],
   dataSources: ExperimentDataSourceConfig[],
@@ -27,17 +27,7 @@ export function transformHistogram2DData(
     return [];
   }
 
-  const xVals: (string | number)[] = [];
-  const yVals: number[] = [];
-  for (const row of rows) {
-    const xCell = coerceCell(row[xColumn]);
-    const yCell = coerceCell(row[yColumn]);
-    if (typeof xCell !== "number" || typeof yCell !== "number") {
-      continue;
-    }
-    xVals.push(xCell);
-    yVals.push(yCell);
-  }
+  const { x: xVals, y: yVals } = continuousPairs(rows, xColumn, yColumn);
 
   if (xVals.length === 0) {
     return [];

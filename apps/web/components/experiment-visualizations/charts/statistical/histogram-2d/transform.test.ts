@@ -69,4 +69,22 @@ describe("transformHistogram2DData", () => {
     expect(result[0].nbinsx).toBe(20);
     expect(result[0].nbinsy).toBe(15);
   });
+  it.each(["x", "y", "both"])("keeps valid timestamp pairs on %s", (axis) => {
+    const timestamp = "2026-10-01T12:30:00Z";
+    const x = axis === "y" ? 1 : timestamp;
+    const y = axis === "x" ? 2 : timestamp;
+    const result = transformHistogram2DData(
+      [
+        { x, y },
+        { x: "not-a-date", y },
+        { x, y: null },
+        { x: "2026-99-99T12:00:00Z", y },
+        { x: Infinity, y },
+      ],
+      [ds("x", "x"), ds("y", "y")],
+      baseConfig,
+    );
+    expect(result[0]?.x).toEqual([x]);
+    expect(result[0]?.y).toEqual([y]);
+  });
 });
