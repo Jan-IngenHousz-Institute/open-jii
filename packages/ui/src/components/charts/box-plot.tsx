@@ -21,6 +21,7 @@ import {
 } from "./utils";
 
 export interface BoxSeriesData extends BaseSeries {
+  /** Plot coordinates: numeric samples on Y for vertical traces, X for horizontal traces. */
   y?: (string | number)[];
   x?: (string | number | Date)[];
   /** Facet routing: pins this trace to a specific subplot cell. */
@@ -90,8 +91,8 @@ export function BoxPlot({
       data.map(
         (series) =>
           ({
-            y: (series.orientation || orientation) === "v" ? series.y : series.x,
-            x: (series.orientation || orientation) === "v" ? series.x : series.y,
+            y: series.y,
+            x: series.x,
             xaxis: series.xaxisId,
             yaxis: series.yaxisId,
             name: series.name,
@@ -167,7 +168,7 @@ export function BoxPlot({
       (series) => series.y && series.y.some((val) => typeof val === "string"),
     );
 
-    if (hasStringX && orientation === "v") {
+    if (hasStringX) {
       next.xaxis = truncateCategoryTicks(
         { ...next.xaxis, type: "category" },
         data.flatMap((series) => series.x ?? []),
@@ -175,7 +176,7 @@ export function BoxPlot({
       );
     }
 
-    if (hasStringY && orientation === "h") {
+    if (hasStringY) {
       next.yaxis = truncateCategoryTicks(
         { ...next.yaxis, type: "category" },
         data.flatMap((series) => series.y ?? []),
@@ -207,7 +208,7 @@ export function BoxPlot({
 
     return next;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-  }, [config, sizing, data, subplots, boxmode, orientation, themeVersion]);
+  }, [config, sizing, data, subplots, boxmode, themeVersion]);
 
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   return (
