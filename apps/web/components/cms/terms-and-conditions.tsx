@@ -26,31 +26,29 @@ export const TermsAndConditionsContent: React.FC<TermsAndConditionsContentProps>
 }) => {
   const { t } = useTranslation();
 
-  if (!termsAndConditions) {
-    return (
-      <div className="text-muted-foreground space-y-2 text-sm">
-        <p>{t("errors.termsContentUnavailable")}</p>
-      </div>
-    );
-  }
-
   // Enable live updates only in preview mode
-  const liveTermsAndConditions = useContentfulLiveUpdates<PageTermsAndConditionsFieldsFragment>(
-    termsAndConditions,
-    {
+  const liveTermsAndConditions =
+    useContentfulLiveUpdates<PageTermsAndConditionsFieldsFragment | null>(termsAndConditions, {
       locale,
       skip: !preview,
-    },
-  );
+    });
 
   // Use fallback to original data
   const currentTermsAndConditions = liveTermsAndConditions ?? termsAndConditions;
 
   // Inspector mode tagging
   const inspectorProps = useContentfulInspectorMode({
-    entryId: currentTermsAndConditions.sys?.id,
+    entryId: currentTermsAndConditions?.sys?.id,
     locale,
   });
+
+  if (!termsAndConditions || !currentTermsAndConditions) {
+    return (
+      <div className="text-muted-foreground space-y-2 text-sm">
+        <p>{t("errors.termsContentUnavailable")}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="text-sm">
@@ -71,27 +69,25 @@ export const TermsAndConditionsTitle: React.FC<{
 }> = ({ termsAndConditions, locale, preview = false }) => {
   const { t } = useTranslation();
 
-  if (!termsAndConditions) {
-    return <span>{t("registration.termsAndConditions")}</span>;
-  }
-
   // Enable live updates for the title
-  const liveTermsAndConditions = useContentfulLiveUpdates<PageTermsAndConditionsFieldsFragment>(
-    termsAndConditions,
-    {
+  const liveTermsAndConditions =
+    useContentfulLiveUpdates<PageTermsAndConditionsFieldsFragment | null>(termsAndConditions, {
       locale,
       skip: !preview,
-    },
-  );
+    });
 
   // Use fallback to original data
   const currentTermsAndConditions = liveTermsAndConditions ?? termsAndConditions;
 
   // Inspector mode tagging for title
   const inspectorProps = useContentfulInspectorMode({
-    entryId: currentTermsAndConditions.sys?.id,
+    entryId: currentTermsAndConditions?.sys?.id,
     locale,
   });
+
+  if (!termsAndConditions || !currentTermsAndConditions) {
+    return <span>{t("registration.termsAndConditions")}</span>;
+  }
 
   return (
     <span {...inspectorProps({ fieldId: "title" })}>
@@ -105,17 +101,12 @@ export const TermsAndConditionsPage: React.FC<TermsAndConditionsContentProps> = 
   locale,
   preview,
 }) => {
-  // Return early if no data
-  if (!termsAndConditions) return <div>No content found.</div>;
-
   // Enable live updates only in preview mode
-  const liveTermsAndConditions = useContentfulLiveUpdates<PageTermsAndConditionsFieldsFragment>(
-    termsAndConditions,
-    {
+  const liveTermsAndConditions =
+    useContentfulLiveUpdates<PageTermsAndConditionsFieldsFragment | null>(termsAndConditions, {
       locale,
       skip: !preview,
-    },
-  );
+    });
 
   // Use fallback to original data
   const currentTermsAndConditions = liveTermsAndConditions ?? termsAndConditions;
@@ -125,6 +116,9 @@ export const TermsAndConditionsPage: React.FC<TermsAndConditionsContentProps> = 
     entryId: currentTermsAndConditions?.sys?.id,
     locale,
   });
+
+  // Return early if no data
+  if (!termsAndConditions || !currentTermsAndConditions) return <div>No content found.</div>;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-20">

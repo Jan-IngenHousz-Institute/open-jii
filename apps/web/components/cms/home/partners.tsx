@@ -27,12 +27,12 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
   });
 
   const currentPartners = livePartners ?? partnersData;
-  if (!currentPartners) return null;
-
   const inspectorProps = useContentfulInspectorMode({
-    entryId: currentPartners.sys.id,
+    entryId: currentPartners?.sys?.id,
     locale,
   });
+
+  if (!currentPartners) return null;
 
   const rawItems = currentPartners.partnersCollection?.items ?? [];
   const items = rawItems.filter(
@@ -49,11 +49,6 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
           {...inspectorProps({ fieldId: "partners" })}
         >
           {items.map((partner) => {
-            const partnerInspectorProps = useContentfulInspectorMode({
-              entryId: partner.sys.id,
-              locale,
-            });
-
             if (!partner.logo) return null;
 
             const content = (
@@ -62,7 +57,7 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
                 nextImageProps={{
                   sizes: "240px",
                   className: "h-20 w-auto object-contain dark:brightness-0 dark:invert",
-                  ...partnerInspectorProps({ fieldId: "logo" }),
+                  ...inspectorProps({ entryId: partner.sys.id, fieldId: "logo" }),
                 }}
               />
             );

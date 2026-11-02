@@ -32,13 +32,13 @@ export const CookiePolicyContent: React.FC<CookiePolicyContentProps> = ({
   // Use fallback to original data
   const currentCookiePolicy = liveCookiePolicy || cookiePolicy;
 
-  if (!currentCookiePolicy) return <div>No content found.</div>;
-
   // Inspector mode tagging
   const inspectorProps = useContentfulInspectorMode({
     entryId: currentCookiePolicy?.sys?.id,
     locale,
   });
+
+  if (!currentCookiePolicy) return <div>No content found.</div>;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-20">

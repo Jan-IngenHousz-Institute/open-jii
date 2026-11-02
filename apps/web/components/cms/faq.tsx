@@ -35,10 +35,8 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
   // Use fallback to original data
   const currentFaq = liveFaq || faq;
 
-  if (!currentFaq) return <div>No content found.</div>;
-
   // Extract questions array once
-  const questions = currentFaq.questionsCollection?.items ?? [];
+  const questions = currentFaq?.questionsCollection?.items ?? [];
 
   // Inspector mode tagging
   const inspectorProps = useContentfulInspectorMode({
@@ -48,6 +46,8 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
 
   // State to manage which FAQ is open
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  if (!currentFaq) return <div>No content found.</div>;
 
   const toggleQuestion = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -59,10 +59,6 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
       .filter((q): q is FaqQuestionFieldsFragment => q?.__typename === "ComponentFaqQuestion")
       .map((q, index) => {
         if (!q) return null;
-        const questionInspectorProps = useContentfulInspectorMode({
-          entryId: q.sys.id,
-          locale,
-        });
         const isOpen = openIndex === index;
 
         return (
@@ -77,7 +73,7 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
               >
                 <span
                   className="whitespace-normal break-words text-left text-base/7 font-semibold"
-                  {...questionInspectorProps({ fieldId: "question" })}
+                  {...inspectorProps({ entryId: q.sys.id, fieldId: "question" })}
                 >
                   {q.question}
                 </span>
@@ -118,7 +114,7 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
                 {q.answer?.json && (
                   <div
                     className="text-muted-foreground text-base/7"
-                    {...questionInspectorProps({ fieldId: "answer" })}
+                    {...inspectorProps({ entryId: q.sys.id, fieldId: "answer" })}
                   >
                     <CtfRichText json={q.answer.json as Document} />
                   </div>

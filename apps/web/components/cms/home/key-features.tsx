@@ -27,12 +27,12 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
   });
 
   const currentFeatures = liveFeatures ?? featuresData;
-  if (!currentFeatures) return null;
-
   const inspectorProps = useContentfulInspectorMode({
-    entryId: currentFeatures.sys.id,
+    entryId: currentFeatures?.sys?.id,
     locale,
   });
+
+  if (!currentFeatures) return null;
 
   // Extract features array once
   const features = currentFeatures.featuresCollection?.items ?? [];
@@ -42,17 +42,12 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
     features
       .filter((f): f is NonNullable<typeof f> => !!f && f.__typename === "ComponentFeature")
       .map((feature) => {
-        const featureInspectorProps = useContentfulInspectorMode({
-          entryId: feature.sys.id,
-          locale,
-        });
-
         return (
           <div key={feature.sys.id} className="flex items-start space-x-4">
             {/* Icon */}
             <div
               className="flex h-20 w-20 shrink-0 items-center justify-center"
-              {...featureInspectorProps({ fieldId: "icon" })}
+              {...inspectorProps({ entryId: feature.sys.id, fieldId: "icon" })}
             >
               {feature.icon && <CtfImage {...feature.icon} nextImageProps={{ sizes: "80px" }} />}
             </div>
@@ -61,14 +56,14 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
             <div>
               <h3
                 className="text-brand-chrome-foreground text-lg font-semibold"
-                {...featureInspectorProps({ fieldId: "title" })}
+                {...inspectorProps({ entryId: feature.sys.id, fieldId: "title" })}
               >
                 {feature.title}
               </h3>
 
               <p
                 className="text-brand-chrome-foreground/80 mt-1"
-                {...featureInspectorProps({ fieldId: "subtitle" })}
+                {...inspectorProps({ entryId: feature.sys.id, fieldId: "subtitle" })}
               >
                 {feature.subtitle}
               </p>

@@ -36,13 +36,12 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({
 
   const currentFooter = liveFooter || footerData;
 
-  // Early return if no footer data
-  if (!currentFooter) return null;
-
   const inspectorProps = useContentfulInspectorMode({
-    entryId: currentFooter.sys.id,
+    entryId: currentFooter?.sys?.id,
     locale,
   });
+
+  if (!currentFooter) return null;
 
   const menuButtons = currentFooter.menuButtonsCollection?.items ?? [];
   const supportButtons = currentFooter.supportButtonsCollection?.items ?? [];
@@ -58,13 +57,12 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({
     <ul className="space-y-3 text-center text-sm md:text-left">
       {buttons.map((button, idx) => {
         if (!button?.label || !button.url) return null;
-        const buttonInspectorProps = useContentfulInspectorMode({
-          entryId: button.sys?.id,
-          locale,
-        });
 
         return (
-          <li key={`${button.url}-${idx}`} {...buttonInspectorProps({ fieldId: "label" })}>
+          <li
+            key={`${button.url}-${idx}`}
+            {...inspectorProps({ entryId: button.sys?.id, fieldId: "label" })}
+          >
             <Link href={buildHref(button.url)} className={brandChromeLink}>
               {button.label}
             </Link>

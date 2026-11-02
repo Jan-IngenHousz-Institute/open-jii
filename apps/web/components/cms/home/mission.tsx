@@ -31,12 +31,12 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
   });
   const currentMission = liveMission ?? missionData;
 
-  if (!currentMission) return null;
-
   const inspectorProps = useContentfulInspectorMode({
     entryId: currentMission?.sys?.id,
     locale,
   });
+
+  if (!currentMission) return null;
 
   const images = currentMission.imagesCollection?.items?.filter((img) => !!img?.url) ?? [];
 

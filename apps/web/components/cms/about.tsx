@@ -27,12 +27,12 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
 
   const currentAbout = liveAbout || about;
 
-  if (!currentAbout) return <div>No content found.</div>;
-
   const inspectorProps = useContentfulInspectorMode({
     entryId: currentAbout?.sys?.id,
     locale,
   });
+
+  if (!currentAbout) return <div>No content found.</div>;
 
   return (
     <div className="from-primary/40 via-background to-background relative isolate min-h-screen overflow-hidden bg-gradient-to-br">

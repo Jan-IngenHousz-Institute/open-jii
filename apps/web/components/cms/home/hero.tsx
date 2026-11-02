@@ -29,13 +29,12 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
 
   const currentHero = liveHero || heroData;
 
-  // Early return if no hero data
-  if (!currentHero) return null;
-
   const inspectorProps = useContentfulInspectorMode({
-    entryId: currentHero.sys.id,
+    entryId: currentHero?.sys?.id,
     locale,
   });
+
+  if (!currentHero) return null;
 
   // Helper function to build href with locale
   const buildHref = (url: string): string => {
@@ -52,11 +51,6 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
     const href = buildHref(button.url);
     const isExternal = isExternalUrl(button.url);
 
-    const buttonInspectorProps = useContentfulInspectorMode({
-      entryId: button.sys.id,
-      locale,
-    });
-
     return (
       <Link
         key={button.sys.id}
@@ -66,7 +60,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
         <Button
           variant="secondary"
           className="shadow-xs hover:bg-card group px-5 py-6 font-semibold transition-all duration-300 ease-out hover:scale-[1.03]"
-          {...buttonInspectorProps({ fieldId: "label" })}
+          {...inspectorProps({ entryId: button.sys.id, fieldId: "label" })}
         >
           <div className="flex items-center space-x-2">
             <span>{button.label}</span>
