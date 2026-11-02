@@ -78,6 +78,36 @@ describe("updateGrant", () => {
     expect(untouched.role).toBe("viewer");
   });
 
+  it("refuses to change the role of a share held by the owning organization", async () => {
+    const orgId = await testApp.createOrganization("Greenhouse Lab");
+    await testApp.addOrganizationMember(orgId, owner, "admin");
+    const macro = await testApp.createMacro({ name: "M", createdBy: owner, organizationId: orgId });
+    // Create refuses this share now, so it can only be a row left from before.
+    const selfShare = await testApp.addResourceGrant({
+      resourceType: "macro",
+      resourceId: macro.id,
+      granteeType: "organization",
+      granteeId: orgId,
+      role: "viewer",
+      createdBy: owner,
+    });
+
+    const updated = await updateGrant.execute(owner, "macro", macro.id, selfShare.id, {
+      role: "admin",
+    });
+
+    assertFailure(updated);
+    expect(updated.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
+    expect(updated.error.message).toBe(
+      "A resource cannot be shared with the organization that owns it",
+    );
+    const [unchanged] = await testApp.database
+      .select()
+      .from(resourceGrants)
+      .where(eq(resourceGrants.id, selfShare.id));
+    expect(unchanged.role).toBe("viewer");
+  });
+
   // A level change is something the collaborator hears about in the bell. It sends
   // no email: the category's email is reserved for being given access in the first
   // place.

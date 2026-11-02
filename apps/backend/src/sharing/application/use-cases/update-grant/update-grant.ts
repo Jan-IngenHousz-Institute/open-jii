@@ -48,6 +48,19 @@ export class UpdateGrantUseCase {
       );
     }
 
+    // A share the owning organization still holds from before create refused them
+    // can be revoked, but takes no role change.
+    const grants = await this.repo.listRaw(resourceType, resourceId);
+    if (grants.isFailure()) {
+      return failure(grants.error);
+    }
+    const grant = grants.value.find((g) => g.id === grantId);
+    if (grant?.granteeType === "organization" && grant.granteeId === decision.organizationId) {
+      return failure(
+        AppError.badRequest("A resource cannot be shared with the organization that owns it"),
+      );
+    }
+
     // The last-admin invariant is enforced inside `repo.updateRole`, in the same
     // transaction as the update — see SharingRepository.guardedWrite.
     const updated = await this.repo.updateRole({
