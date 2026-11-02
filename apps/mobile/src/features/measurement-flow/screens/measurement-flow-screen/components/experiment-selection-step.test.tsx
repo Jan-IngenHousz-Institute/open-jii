@@ -261,4 +261,19 @@ describe("ExperimentSelectionStep start", () => {
 
     expect(state.setExperimentId).toHaveBeenCalledExactlyOnceWith("exp-1", "Canopy Phi2 Sweep");
   });
+
+  it("starts once when pressed again while the prompt is open", async () => {
+    state.flowReady = true;
+    const prompt = deferred<void>();
+    state.requestLocation.mockReturnValue(prompt.promise);
+    render(<ExperimentSelectionStep />);
+
+    const start = screen.getByText("experimentSelection.startNamedFlow");
+    fireEvent.press(start);
+    fireEvent.press(start);
+    await act(() => Promise.resolve(prompt.resolve()));
+
+    expect(state.requestLocation).toHaveBeenCalledTimes(1);
+    expect(state.setExperimentId).toHaveBeenCalledTimes(1);
+  });
 });

@@ -1,5 +1,6 @@
 import * as Location from "expo-location";
 import { createLogger } from "~/shared/observability/logger";
+import { refreshTimezone } from "~/shared/time/time-sync";
 
 const log = createLogger("measurement-location");
 
@@ -14,14 +15,18 @@ const FRESH_FIX_TIMEOUT_MS = 10_000;
 /**
  * Asks for foreground location when a measurement flow starts, before any
  * step runs, because the prompt flaps AppState on Android. Never throws; a
- * refusal only means measurements upload without location.
+ * refusal only means measurements upload without location. A grant also
+ * resolves the timezone, without holding up the flow.
  */
 export async function requestMeasurementLocationPermission(): Promise<void> {
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
       log.info("Location permission not granted, measurements upload without location");
+      return;
     }
+
+    void refreshTimezone();
   } catch (err) {
     log.warn("Could not request location permission", {
       err: err instanceof Error ? err.message : String(err),

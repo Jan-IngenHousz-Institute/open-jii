@@ -120,6 +120,21 @@ async function maybeResolveTimezone(): Promise<string> {
   return resolveTimezone();
 }
 
+/**
+ * Resolves the timezone right after a location grant. The next sync would too,
+ * but it skips the lookup while offline.
+ */
+export async function refreshTimezone(): Promise<void> {
+  const timezone = await maybeResolveTimezone();
+  const isNewTimezone = timezone !== "UTC" && timezone !== state.timezone;
+  if (!isNewTimezone) {
+    return;
+  }
+
+  state = { ...state, timezone };
+  await persistState();
+}
+
 async function fetchServerTime(): Promise<number> {
   const client = getApiClient();
   const result = await client.health.getTime();

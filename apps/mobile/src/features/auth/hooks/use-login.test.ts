@@ -58,12 +58,25 @@ afterEach(() => {
   queryClient.clear();
 });
 
+// Only a finished browser sign-in stores a new session cookie.
+function finishSignInWith(cookie: string) {
+  social.mockImplementation(() => {
+    getCookie.mockResolvedValue(cookie);
+    return Promise.resolve({ data: { redirect: true, url: "https://provider.test" }, error: null });
+  });
+}
+
 describe.each(["GitHub", "ORCID"] as const)("%s sign-in", (provider) => {
   function start(flow: ReturnType<typeof useLoginFlow>) {
     return provider === "GitHub" ? flow.startGitHubLogin() : flow.startOrcidLogin();
   }
 
-  it.each(["", "better-auth.dev.oauth_state=pending"])(
+  it.each([
+    "",
+    "better-auth.dev.oauth_state=pending",
+    "better-auth.dev.session_token=revoked",
+    "better-auth.dev.session_token=revoked; better-auth.dev.oauth_state=pending",
+  ])(
     "reports an unfinished sign-in after cancel with cookie %j and makes no follow-up requests",
     async (cookie) => {
       getCookie.mockResolvedValue(cookie);
@@ -88,7 +101,7 @@ describe.each(["GitHub", "ORCID"] as const)("%s sign-in", (provider) => {
     "better-auth.dev.session_token=valid",
     "__Secure-better-auth.prod.session_token=valid; better-auth.prod.oauth_state=pending",
   ])("prefetches and registers once after sign-in with cookie %j", async (cookie) => {
-    getCookie.mockResolvedValue(cookie);
+    finishSignInWith(cookie);
     getSession.mockResolvedValue({ data: { user: { id: "user-1" } } });
     const { result } = renderHook(() => useLoginFlow(), { wrapper });
 
@@ -112,50 +125,23 @@ describe.each(["GitHub", "ORCID"] as const)("%s sign-in", (provider) => {
   }
 
   it("reports a finished sign-in once the browser stores a new session token", async () => {
-    social.mockImplementation(() => {
-      getCookie.mockResolvedValue("better-auth.dev.session_token=valid");
-      return Promise.resolve({
-        data: { redirect: true, url: "https://provider.test" },
-        error: null,
-      });
-    });
+    finishSignInWith("better-auth.dev.session_token=valid");
     getSession.mockResolvedValue({ data: { user: { id: "user-1" } } });
 
     expect(await signIn()).toBe(true);
     expect(prefetchOfflineData).toHaveBeenCalledExactlyOnceWith(queryClient, "user-1");
   });
 
-  it("reports an unfinished sign-in when a cancel leaves an old session token in place", async () => {
-    getCookie.mockResolvedValue("better-auth.dev.session_token=revoked");
-    getSession.mockResolvedValue({ data: null, error: null });
-
-    expect(await signIn()).toBe(false);
-  });
-
   it("skips prefetch and registration when the server reports no session for the token", async () => {
-    getCookie.mockResolvedValue("better-auth.dev.session_token=revoked");
+    finishSignInWith("better-auth.dev.session_token=revoked");
     getSession.mockResolvedValue({ data: null, error: null });
 
     await signIn();
 
+    expect(getSession).toHaveBeenCalledTimes(1);
     expect(prefetchOfflineData).not.toHaveBeenCalled();
     expect(ensureDeviceRegistered).not.toHaveBeenCalled();
     expect(toastError).not.toHaveBeenCalled();
-  });
-
-  it("skips both after a cancel that left a revoked token beside the OAuth state", async () => {
-    getCookie.mockResolvedValue(
-      "better-auth.dev.session_token=revoked; better-auth.dev.oauth_state=pending",
-    );
-    getSession.mockImplementation(() => {
-      getCookie.mockResolvedValue("better-auth.dev.oauth_state=pending");
-      return Promise.resolve({ data: null, error: null });
-    });
-
-    await signIn();
-
-    expect(prefetchOfflineData).not.toHaveBeenCalled();
-    expect(ensureDeviceRegistered).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -167,7 +153,7 @@ describe.each(["GitHub", "ORCID"] as const)("%s sign-in", (provider) => {
   ])(
     "still prefetches and registers with no user id when the session lookup %s",
     async (_outcome, arrange) => {
-      getCookie.mockResolvedValue("better-auth.dev.session_token=valid");
+      finishSignInWith("better-auth.dev.session_token=valid");
       arrange();
 
       await signIn();
@@ -181,7 +167,7 @@ describe.each(["GitHub", "ORCID"] as const)("%s sign-in", (provider) => {
   it("still prefetches and registers when the session lookup times out", async () => {
     vi.useFakeTimers();
     try {
-      getCookie.mockResolvedValue("better-auth.dev.session_token=valid");
+      finishSignInWith("better-auth.dev.session_token=valid");
       getSession.mockReturnValue(new Promise(() => undefined));
       const { result } = renderHook(() => useLoginFlow(), { wrapper });
 
@@ -201,7 +187,7 @@ describe.each(["GitHub", "ORCID"] as const)("%s sign-in", (provider) => {
   });
 
   it("skips both when a failed lookup also removed the session token", async () => {
-    getCookie.mockResolvedValue("better-auth.dev.session_token=valid");
+    finishSignInWith("better-auth.dev.session_token=valid");
     getSession.mockImplementation(() => {
       getCookie.mockResolvedValue("");
       return Promise.reject(new Error("offline"));
@@ -219,7 +205,7 @@ describe.each(["GitHub", "ORCID"] as const)("%s sign-in", (provider) => {
       await start(result.current);
     });
 
-    getCookie.mockResolvedValue("better-auth.dev.session_token=valid");
+    finishSignInWith("better-auth.dev.session_token=valid");
     getSession.mockResolvedValue({ data: { user: { id: "user-1" } } });
     await act(async () => {
       await start(result.current);

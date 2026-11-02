@@ -22,6 +22,11 @@ vi.mock("~/shared/observability/logger", () => ({
   createLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }));
 
+const mockRefreshTimezone = vi.fn();
+vi.mock("~/shared/time/time-sync", () => ({
+  refreshTimezone: () => mockRefreshTimezone(),
+}));
+
 const COORDS = { coords: { latitude: 52.0907, longitude: 5.1214 } };
 
 beforeEach(() => {
@@ -31,6 +36,8 @@ beforeEach(() => {
   mockRequestForegroundPermissionsAsync.mockResolvedValue({ status: "granted" });
   mockGetLastKnownPositionAsync.mockResolvedValue(null);
   mockGetCurrentPositionAsync.mockResolvedValue(COORDS);
+  mockRefreshTimezone.mockReset();
+  mockRefreshTimezone.mockResolvedValue(undefined);
 });
 
 describe("getMeasurementLocation", () => {
@@ -78,6 +85,22 @@ describe("requestMeasurementLocationPermission", () => {
     await requestMeasurementLocationPermission();
 
     expect(mockRequestForegroundPermissionsAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("resolves the timezone after a grant without waiting for it", async () => {
+    mockRefreshTimezone.mockReturnValue(new Promise(() => undefined));
+
+    await requestMeasurementLocationPermission();
+
+    expect(mockRefreshTimezone).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the timezone alone after a refusal", async () => {
+    mockRequestForegroundPermissionsAsync.mockResolvedValue({ status: "denied" });
+
+    await requestMeasurementLocationPermission();
+
+    expect(mockRefreshTimezone).not.toHaveBeenCalled();
   });
 
   it.each([

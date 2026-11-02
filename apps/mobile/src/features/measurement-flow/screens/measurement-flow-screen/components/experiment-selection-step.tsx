@@ -48,6 +48,9 @@ export function ExperimentSelectionStep() {
   const recentActivity = useRecentExperimentActivity();
 
   const [search, setSearch] = React.useState("");
+  // Re-entry guard: a second tap while the location request is pending would
+  // start the flow twice.
+  const isStartingRef = React.useRef(false);
   const ids = useMemo(() => experiments.map((e) => e.value), [experiments]);
   const flowMeta = useExperimentsFlowMeta(ids);
 
@@ -81,13 +84,18 @@ export function ExperimentSelectionStep() {
   const showDeviceBanner = !!selectedExperimentId && requiresDevice && !isConnected;
 
   const handleStart = async () => {
-    if (!selectedExperimentId || !experimentFlowReady) {
+    if (!selectedExperimentId || !experimentFlowReady || isStartingRef.current) {
       return;
     }
 
-    await requestMeasurementLocationPermission();
-    clearHistory();
-    setExperimentId(selectedExperimentId, selectedExperiment?.label);
+    isStartingRef.current = true;
+    try {
+      await requestMeasurementLocationPermission();
+      clearHistory();
+      setExperimentId(selectedExperimentId, selectedExperiment?.label);
+    } finally {
+      isStartingRef.current = false;
+    }
   };
 
   return (

@@ -589,6 +589,37 @@ describe("time-sync", () => {
       expect(getTimeSyncState().timezone).toBe("America/Chicago");
       expect(mockRequestForegroundPermissionsAsync).not.toHaveBeenCalled();
     });
+
+    it("resolves and stores the timezone right after a grant, also while offline", async () => {
+      mockLocationStatus = "undetermined";
+      const { startTimeSync, refreshTimezone, getTimeSyncState } = await import(
+        "~/shared/time/time-sync"
+      );
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      mockIsInternetReachable = false;
+      mockLocationStatus = "granted";
+      await refreshTimezone();
+
+      expect(getTimeSyncState().timezone).toBe("America/Chicago");
+      expect(JSON.parse(mockAsyncStorage.TIME_SYNC_STATE ?? "{}").timezone).toBe("America/Chicago");
+      expect(getTimeCallCount).toBe(1);
+    });
+
+    it("reuses a recently resolved timezone without a new fix", async () => {
+      const { startTimeSync, refreshTimezone, getTimeSyncState } = await import(
+        "~/shared/time/time-sync"
+      );
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+      mockGetCurrentPositionAsync.mockClear();
+
+      await refreshTimezone();
+
+      expect(mockGetCurrentPositionAsync).not.toHaveBeenCalled();
+      expect(getTimeSyncState().timezone).toBe("America/Chicago");
+    });
   });
 
   describe("offline behavior", () => {

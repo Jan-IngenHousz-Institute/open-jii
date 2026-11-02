@@ -74,9 +74,17 @@ export function useLoginFlow() {
     void ensureDeviceRegistered();
   };
 
+  const prefetchAfterBrowserSignIn = async (completed: boolean) => {
+    if (!completed) {
+      return;
+    }
+
+    await prefetch();
+  };
+
   const github = useMutation({
     mutationFn: () => signInThroughBrowser(signInWithGitHub),
-    onSuccess: prefetch,
+    onSuccess: prefetchAfterBrowserSignIn,
     onError: (error) => {
       log.error("GitHub login error", { err: error?.message });
       toast.error(t("errors.loginFailed"));
@@ -85,7 +93,7 @@ export function useLoginFlow() {
 
   const orcid = useMutation({
     mutationFn: () => signInThroughBrowser(signInWithOrcid),
-    onSuccess: prefetch,
+    onSuccess: prefetchAfterBrowserSignIn,
     onError: (error) => {
       log.error("ORCID login error", { err: error?.message });
       toast.error(t("errors.loginFailed"));
