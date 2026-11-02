@@ -244,6 +244,19 @@ describe("useListUrlState", () => {
     expect(result.current.search).toBe("wheat");
   });
 
+  it("rewrites the URL when a late echo lands after the state moved back", () => {
+    const { result, rerender } = renderHook(() => useListUrlState(withSearch));
+
+    act(() => result.current.setSearch("w"));
+    act(() => result.current.setSearch(""));
+    replace.mockClear();
+    setSearchParams("q=w");
+    rerender();
+
+    expect(result.current.search).toBe("");
+    expect(replace).toHaveBeenCalledWith("/list", { scroll: false });
+  });
+
   it("ignores URL changes to params it does not own", () => {
     setSearchParams("status=active");
     const { result, rerender } = renderHook(() => useListUrlState(options));

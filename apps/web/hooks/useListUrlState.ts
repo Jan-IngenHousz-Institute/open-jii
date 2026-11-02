@@ -119,8 +119,8 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
   // Writes the URL has not echoed yet; one arriving late is not a back/forward step.
   const pendingWrites = useRef(new Set<string>());
 
-  // Each run reads this render's params; only a change of the list's own state should write.
-  useEffect(() => {
+  /** Writes this render's state over this render's params, keeping params the list does not own. */
+  const writeUrl = () => {
     const current = searchParams.toString();
     const next = new URLSearchParams(current);
     for (const [key, value] of toParams(options, values)) {
@@ -135,8 +135,11 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
     if (qs === current.replace(/%2C/g, ",")) return;
     pendingWrites.current.add(serialized);
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `serialized` stands for `values`.
-  }, [serialized, pathname, router]);
+  };
+
+  // Only a change of the list's own state should write.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `serialized` stands for `values`.
+  useEffect(writeUrl, [serialized, pathname, router]);
 
   // Back/forward replay.
   useEffect(() => {
@@ -144,7 +147,11 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
       pendingWrites.current.clear();
       return;
     }
-    if (pendingWrites.current.has(urlSerialized)) return;
+    // A late echo of an earlier write: the state has moved on, so write it again.
+    if (pendingWrites.current.has(urlSerialized)) {
+      writeUrl();
+      return;
+    }
     setValues(parse(options, searchParams));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally drives off URL change only.
   }, [urlSerialized]);
