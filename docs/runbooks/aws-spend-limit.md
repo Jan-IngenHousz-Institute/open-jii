@@ -6,7 +6,7 @@ day is the median of the 14 days before. The alert names the service; the Cost d
 "Is anything running away?" shows when it started.
 
 A step that lasts keeps the alert firing until the new level has become the median, about a week
-later, and it posts when it fires and when it clears.
+later. It posts when it fires and when it clears, with one reminder after five days.
 
 ## Find what changed
 
