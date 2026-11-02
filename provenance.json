@@ -1,0 +1,50 @@
+{
+  "method": "Reviewed authenticated local application screenshots. Synthetic warehouse fixtures, local Spark SQL and isolated backend evidence; no shared warehouse or Databricks Runtime verification.",
+  "files": [
+    {
+      "file": "numeric-question-answers/ojd1970-after-average.png",
+      "sha256": "667fb11fd38f7b409e72933db48dfb0dad67c32196cefe1338843248f98f1864"
+    },
+    {
+      "file": "numeric-question-answers/ojd1970-after-histogram.png",
+      "sha256": "169a7ddb6014e574846bad16f8f3ac3c4b693f948d878a04de0df3aad2861a7a"
+    },
+    {
+      "file": "numeric-question-answers/ojd1970-after-picker.png",
+      "sha256": "1b3b2e491ab061f599bdd83340a97a0a9878652849599a6f3003de3c3a792e28"
+    },
+    {
+      "file": "numeric-question-answers/ojd1970-before-picker.png",
+      "sha256": "caa5d5674065756e419c90172f6af65ad4a5f0bb15ac3b9ecf28cafb770a7994"
+    },
+    {
+      "file": "numeric-question-answers/ojd1970-new-name-allowed.png",
+      "sha256": "d2a48dfbce41fba8b63d9bc3245402bb32b251df4e45f589eb04445dffc0e48b"
+    },
+    {
+      "file": "numeric-question-answers/ojd1970-new-name-required.png",
+      "sha256": "ead58374a8851a152e3574032b7313221e1b5fba384d336457ac6cb2bd64b4a2"
+    },
+    {
+      "file": "numeric-question-answers/ojd1970-server-name-conflict.png",
+      "sha256": "ea49a0c11b736be6b385fecd64e022ab556567ef4c5dab95f2b2866411b53de1"
+    },
+    {
+      "file": "unregistered-device-names/before.png",
+      "sha256": "1e9888c73e594d040f64749e2e23c138fd8d589ac7d2359dbf112b959a8e310a"
+    },
+    {
+      "file": "unregistered-device-names/after.png",
+      "sha256": "3a53af0d5da3ada88930ccf537dfde528fe4ade406c908ff3b6e5471b8d4d984"
+    }
+  ],
+  "captions": {
+    "ojd1970-before-picker.png": "Baseline STRING schema; blank y source; no selected column or chart. Open numeric picker lists only id BIGINT.",
+    "ojd1970-after-picker.png": "Same blank-y chart/config, theme, viewport and synthetic input. Approved DOUBLE schema exposes height in open picker. No selection yet and no chart.",
+    "ojd1970-after-histogram.png": "After selecting height as histogram y variable. Config differs from picker pair by selected columnName=height and alias=Height. Fixture routes populated from local Spark cast output, not live warehouse. Live/No rows yet is unmocked freshness chrome.",
+    "ojd1970-after-average.png": "Separate bar chart with plot on x, height on y and Average aggregation. Means12.5/15. Fixture routes from local Spark cast output, not live warehouse. Live/No rows yet is unmocked freshness chrome.",
+    "ojd1970-new-name-required.png": "Actual local Postgres pinned-number/current-text workbook upgrade pre-check, not full ledger server rejection.",
+    "ojd1970-new-name-allowed.png": "Actual local Postgres upgrade pre-check with text question renamed Height note.",
+    "ojd1970-server-name-conflict.png": "Actual local backend ledger rejection 400 from version restore; production-safe code mapped to localized app toast. No warehouse fixture for this shot."
+  }
+}
