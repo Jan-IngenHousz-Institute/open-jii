@@ -195,6 +195,7 @@
       "disabledHint": "Eerder gebruikte opties zijn uitgeschakeld"
     },
     "number": {
+      "invalid": "Voer een geldig getal in.",
       "placeholder": "Voer een getal in...",
       "range": "Bereik: {{min}} - {{max}}",
       "minimum": "Minimum: {{min}}",

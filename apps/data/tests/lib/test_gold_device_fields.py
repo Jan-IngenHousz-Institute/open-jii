@@ -35,7 +35,7 @@ _SILVER_SCHEMA = """
     device_address STRING, client_model STRING, client_manufacturer STRING, client_os STRING,
     client_os_version STRING, client_app_version STRING, timestamp TIMESTAMP, timezone STRING,
     macros ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>,
-    questions ARRAY<STRUCT<question_label: STRING, question_text: STRING, question_answer: STRING>>,
+    questions ARRAY<STRUCT<question_label: STRING, question_text: STRING, question_answer: STRING, question_kind: STRING>>,
     annotations ARRAY<STRING>, user_id STRING, protocol_id STRING, workbook_run_id STRING,
     workbook_version_id STRING, macro_context STRING, latitude DOUBLE, longitude DOUBLE,
     sample STRING, output STRING, date DATE, processed_timestamp TIMESTAMP,

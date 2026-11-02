@@ -1,17 +1,23 @@
 import { z } from "zod";
 import { FlowNode } from "~/shared/measurements/flow-node";
 
-export const answerDataSchema = z.object({
-  question_label: z.string(),
-  question_text: z.string(),
-  question_answer: z.string(),
-});
+import {
+  zMeasurementQuestion,
+  zMeasurementQuestionKind,
+} from "@repo/api/domains/experiment/measurement-question.schema";
+import { isNumberAnswer } from "@repo/api/transforms/number-answer";
+
+export const answerDataSchema = zMeasurementQuestion;
 
 export const measurementResultSchema = z.object({
   questions: z.array(answerDataSchema).optional(),
 });
 
 export type AnswerData = z.infer<typeof answerDataSchema>;
+
+export function answeredQuestions(questions: readonly AnswerData[] = []): AnswerData[] {
+  return questions.filter((question) => question.question_answer?.trim());
+}
 
 export function parseQuestions(measurementResult: unknown): AnswerData[] {
   const parsed = measurementResultSchema.safeParse(measurementResult);
@@ -22,21 +28,22 @@ export function convertCycleAnswersToArray(
   cycleAnswers: Record<string, string> | undefined,
   flowNodes: FlowNode[],
 ): AnswerData[] {
-  if (!cycleAnswers) {
-    return [];
-  }
-
   const rows: AnswerData[] = [];
   for (const node of flowNodes) {
     if (node.type !== "question") continue;
-    const questionAnswer = cycleAnswers[node.id];
-    if (questionAnswer === undefined) continue;
+    const questionAnswer = cycleAnswers?.[node.id];
 
     const questionText = node.content?.text ?? "question text";
+    const kind = zMeasurementQuestionKind.safeParse(node.content?.kind);
     rows.push({
       question_label: node.name,
       question_text: questionText,
-      question_answer: questionAnswer,
+      ...(kind.success ? { question_kind: kind.data } : {}),
+      question_answer:
+        questionAnswer?.trim() &&
+        (node.content?.kind !== "number" || isNumberAnswer(questionAnswer))
+          ? questionAnswer
+          : null,
     });
   }
   return rows;

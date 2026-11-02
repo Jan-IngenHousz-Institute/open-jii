@@ -86,6 +86,7 @@ export class CreateExperimentUseCase {
         userId,
         targetOrganizationId,
         invitedCollaborators,
+        true,
       );
 
       return experimentResult.chain(async (experiments: ExperimentDto[]) => {

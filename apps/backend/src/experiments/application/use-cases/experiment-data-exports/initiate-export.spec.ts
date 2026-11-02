@@ -65,6 +65,7 @@ describe("InitiateExportUseCase", () => {
       createdBy: testUserId,
     });
     expect(trigger).toHaveBeenCalledWith({
+      numericQuestionKeys: [],
       exportId: result.value.exportId,
       experimentId: experiment.id,
       tableName: "raw_data",

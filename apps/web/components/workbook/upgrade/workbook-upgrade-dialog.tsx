@@ -7,6 +7,7 @@ import { AlertTriangle, ArrowUpCircle, CheckCircle2, Loader2, XCircle } from "lu
 import { useCallback, useMemo, useState } from "react";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { sanitizeQuestionLabel } from "@repo/api/transforms/label-sanitization";
 import type { WorkbookIssue } from "@repo/api/transforms/validate-workbook";
 import { validateWorkbook } from "@repo/api/transforms/validate-workbook";
 import { useTranslation } from "@repo/i18n";
@@ -45,6 +46,10 @@ function issueMessage(
 ): string {
   const label = issue.cellLabel ?? issue.ref ?? "";
   switch (issue.code) {
+    case "duplicate-question-name":
+      return t("flow.upgradeDiff.issue.duplicateQuestionName", { label });
+    case "question-type-change":
+      return t("flow.upgradeDiff.issue.questionTypeChange", { label });
     case "missing-protocol":
       return t("flow.upgradeDiff.issue.missingProtocol", { label });
     case "missing-macro":
@@ -116,9 +121,15 @@ export function WorkbookUpgradeDialog({
     if (!pinned || !live) return null;
     if (Object.keys(resolved).length < totalRefs) return null;
     const ctx = {
+      questionClasses: {} as Record<string, "number" | "text">,
       protocols: {} as Record<string, { family?: ResolvedEntity["family"] }>,
       macros: {} as Record<string, unknown>,
     };
+    for (const cell of pinned.cells) {
+      if (cell.type === "question")
+        ctx.questionClasses[sanitizeQuestionLabel(cell.name)] =
+          cell.question.kind === "number" ? "number" : "text";
+    }
     for (const r of Object.values(resolved)) {
       if (!r.exists) continue;
       if (r.kind === "protocol") ctx.protocols[r.id] = { family: r.family };

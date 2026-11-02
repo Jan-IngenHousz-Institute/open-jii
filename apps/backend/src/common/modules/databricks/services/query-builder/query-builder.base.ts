@@ -7,6 +7,7 @@ import {
   numericStringOrdering,
 } from "./expressions/numeric-string-order";
 import type { NumericStringKeys } from "./expressions/numeric-string-order";
+import { numberAnswerExpression } from "./expressions/number-answer";
 import { buildTimeBucketExpression } from "./expressions/time-bucket";
 import { buildWidthBucketExpression } from "./expressions/width-bucket";
 import type {
@@ -360,8 +361,8 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
-  parseVariant(column: string, schema: string, suffix = column): this {
-    this.variantColumns.push({ column, schema, suffix });
+  parseVariant(column: string, schema: string, suffix = column, numericFields?: string[]): this {
+    this.variantColumns.push({ column, schema, suffix, numericFields });
     return this;
   }
 
@@ -555,18 +556,23 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
    */
   private fieldExpression(column: string, field: VariantField): string {
     const source = this.escapeIdentifier(column);
-    const castType = this.variantCastType(field.type);
+    const numeric = this.variantColumns
+      .find((v) => v.column === column)
+      ?.numericFields?.includes(field.name);
+    const castType = numeric ? "STRING" : this.variantCastType(field.type);
+    const cast = (expression: string) =>
+      numeric ? numberAnswerExpression(expression) : expression;
 
     if (!field.name.includes('"')) {
       const path = this.escapeValue(`$["${field.name}"]`);
-      return `try_variant_get(${source}, ${path}, ${this.escapeValue(castType)})`;
+      return cast(`try_variant_get(${source}, ${path}, ${this.escapeValue(castType)})`);
     }
     if (!field.name.includes("'")) {
       const path = this.escapeValue(`$['${field.name}']`);
-      return `try_variant_get(${source}, ${path}, ${this.escapeValue(castType)})`;
+      return cast(`try_variant_get(${source}, ${path}, ${this.escapeValue(castType)})`);
     }
 
     const value = `element_at(try_cast(${source} AS MAP<STRING, VARIANT>), ${this.escapeValue(field.name)})`;
-    return `try_cast(${value} AS ${castType})`;
+    return cast(`try_cast(${value} AS ${castType})`);
   }
 }

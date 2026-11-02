@@ -1,13 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
-
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { PublishIfDriftedUseCase } from "../../../../workbooks/application/use-cases/publish-if-drifted/publish-if-drifted";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
+import { ExperimentQuestionTypesRepository } from "../../../core/repositories/experiment-question-types.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { FlowRepository } from "../../../core/repositories/flow.repository";
 
 export interface AttachWorkbookResult {
   workbookId: string;
@@ -22,7 +20,7 @@ export class AttachWorkbookUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly publishIfDriftedUseCase: PublishIfDriftedUseCase,
-    private readonly flowRepository: FlowRepository,
+    private readonly questionTypes: ExperimentQuestionTypesRepository,
     private readonly authz: AuthorizationService,
   ) {}
 
@@ -62,21 +60,8 @@ export class AttachWorkbookUseCase {
       if (versionResult.isFailure()) return versionResult;
       const version = versionResult.value;
 
-      const updateResult = await this.experimentRepository.update(experimentId, {
-        workbookId,
-        workbookVersionId: version.id,
-      });
-
-      if (updateResult.isFailure()) {
-        return updateResult;
-      }
-
-      // Materialise a flow row from the version's cells; mobile still reads from `flows`.
-      const flowGraph = cellsToFlowGraph(version.cells);
-      const flowResult = await this.flowRepository.upsert(experimentId, flowGraph);
-      if (flowResult.isFailure()) {
-        return flowResult;
-      }
+      const pinned = await this.questionTypes.pinVersion(experimentId, version);
+      if (pinned.isFailure()) return pinned;
 
       this.logger.log({
         msg: "Workbook attached to experiment",

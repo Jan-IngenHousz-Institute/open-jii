@@ -2,8 +2,8 @@ import { assertFailure, assertSuccess, failure, AppError } from "../../../../com
 import { TestHarness } from "../../../../test/test-harness";
 import { PublishVersionUseCase } from "../../../../workbooks/application/use-cases/publish-version/publish-version";
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
+import { ExperimentQuestionTypesRepository } from "../../../core/repositories/experiment-question-types.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { FlowRepository } from "../../../core/repositories/flow.repository";
 import { AttachWorkbookUseCase } from "../attach-workbook/attach-workbook";
 import { UpgradeWorkbookVersionUseCase } from "../upgrade-workbook-version/upgrade-workbook-version";
 import { SetWorkbookVersionUseCase } from "./set-workbook-version";
@@ -16,7 +16,6 @@ describe("SetWorkbookVersionUseCase", () => {
   let publishUseCase: PublishVersionUseCase;
   let workbookRepo: WorkbookRepository;
   let experimentRepo: ExperimentRepository;
-  let flowRepo: FlowRepository;
 
   let adminUserId: string;
   let experimentId: string;
@@ -38,7 +37,6 @@ describe("SetWorkbookVersionUseCase", () => {
     publishUseCase = testApp.module.get(PublishVersionUseCase);
     workbookRepo = testApp.module.get(WorkbookRepository);
     experimentRepo = testApp.module.get(ExperimentRepository);
-    flowRepo = testApp.module.get(FlowRepository);
 
     const { experiment } = await testApp.createExperiment({
       name: "Test Experiment",
@@ -99,7 +97,9 @@ describe("SetWorkbookVersionUseCase", () => {
   });
 
   it("leaves the experiment on its current version when the flow refresh fails", async () => {
-    vi.spyOn(flowRepo, "upsert").mockResolvedValue(failure(AppError.internal("flow upsert boom")));
+    vi.spyOn(testApp.module.get(ExperimentQuestionTypesRepository), "pinVersion").mockResolvedValue(
+      failure(AppError.internal("flow upsert boom")),
+    );
 
     const result = await setUseCase.execute(experimentId, v1Id, adminUserId);
     assertFailure(result);

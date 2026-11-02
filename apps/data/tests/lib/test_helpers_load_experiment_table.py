@@ -169,3 +169,42 @@ def test_different_captures_that_share_an_old_id_both_export(schema: str) -> Non
 def test_static_identifier_without_a_source_is_refused(schema: str) -> None:
     with pytest.raises(ValueError, match="Unknown table type"):
         _load("mystery", schema)
+
+
+@pytest.mark.spark
+@pytest.mark.parametrize("table_type", ["static", "macro"])
+def test_approved_question_numbers_survive_export_with_lexical_keys_and_clashes(
+    spark, monkeypatch, tmp_path, table_type
+):
+    import openjii.helpers as helpers
+    from pyspark.sql import functions as F
+
+    metadata = {
+        "table_type": table_type,
+        "questions_schema": "OBJECT<height: STRING, plot: STRING>",
+        "macro_schema": "OBJECT<height: DOUBLE>" if table_type == "macro" else None,
+        "upload_schema": None,
+    }
+    monkeypatch.setattr(helpers, "get_table_metadata", lambda *args, **kwargs: metadata)
+    source = spark.sql("""
+      SELECT id, 'e1' AS experiment_id, 'macro-1' AS macro_id, TIMESTAMP'2026-11-02 10:00:00' AS timestamp,
+        parse_json(answer) AS questions_data, parse_json('{"height": 99}') AS macro_output
+      FROM VALUES
+        (1L, '{"height":"12.5","plot":"007"}'),
+        (2L, '{"height":"7.5","plot":"007"}'),
+        (3L, '{"height":null,"plot":"007"}'),
+        (4L, '{"height":"NaN","plot":"007"}') AS t(id, answer)
+    """)
+    monkeypatch.setattr(SparkSession, "table", lambda self, name: source)
+    table = load_experiment_table(
+        "e1", "macro-1" if table_type == "macro" else "raw_data", "local", numeric_question_keys=["height"]
+    )
+    height = "height_answer" if table_type == "macro" else "height"
+    assert table.schema[height].dataType.simpleString() == "double"
+    assert [row[height] for row in table.collect()] == [12.5, 7.5, None, None]
+    assert [row.plot for row in table.collect()] == ["007"] * 4
+    assert table.agg(F.avg(height)).first()[0] == 10.0
+    # Use only exported scalar fields here; real exports serialize complex columns separately.
+    path = str(tmp_path / "export.parquet")
+    table.select("id", height, "plot").write.parquet(path)
+    assert spark.read.parquet(path).schema[height].dataType.simpleString() == "double"

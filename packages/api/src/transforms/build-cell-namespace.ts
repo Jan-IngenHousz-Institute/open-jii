@@ -2,7 +2,6 @@ import { namespaceNameOf } from "../domains/workbook/workbook-cells.schema";
 import type { WorkbookCell } from "../domains/workbook/workbook-cells.schema";
 import type { DeviceContext } from "./device-context";
 import { DEVICE_CONTEXT_KEY } from "./device-context";
-import { sanitizeQuestionLabel } from "./label-sanitization";
 import type { MacroInputErrorCode, MacroInputSource } from "./normalize-macro-input";
 import { normalizeMacroInput } from "./normalize-macro-input";
 
@@ -15,6 +14,17 @@ export interface CellNamespace {
   ctx: Record<string, unknown>;
   // Canonical name to cell id, for diagnostics and name-to-id resolution.
   names: Record<string, string>;
+}
+
+// Published macros already address names with repeated underscores. Column keys
+// follow Spark's stricter sanitization, but changing ctx keys would break those macros.
+function namespaceKey(label: string): string {
+  if (!label) return "question_empty";
+  const key = label
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return !key || /^\d/.test(key) ? `question_${key}` : key;
 }
 
 export interface BuildCellNamespaceOptions {
@@ -106,7 +116,7 @@ export function buildCellNamespace(
     byId[cell.id] = value;
     const name = namespaceNameOf(cell);
     if (name != null && name !== "") {
-      const canonical = sanitizeQuestionLabel(name);
+      const canonical = namespaceKey(name);
       ctx[canonical] = value;
       names[canonical] = cell.id;
     }

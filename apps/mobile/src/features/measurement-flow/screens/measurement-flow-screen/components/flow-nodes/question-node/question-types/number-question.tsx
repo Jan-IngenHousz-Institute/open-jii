@@ -6,6 +6,8 @@ import { QuestionContent } from "~/shared/measurements/flow-node";
 import { Input } from "~/shared/ui/Input";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
+import { isNumberAnswer } from "@repo/api/transforms/number-answer";
+
 interface NumberQuestionProps {
   content: QuestionContent;
   value: string;
@@ -17,7 +19,7 @@ export function NumberQuestion({ content, value, onChange }: NumberQuestionProps
   const { t } = useTranslation("measurementFlow");
 
   const handleTextChange = (text: string) => {
-    const numericValue = text.replace(/[^0-9.-]/g, "");
+    const numericValue = text.replace(",", ".");
     onChange(numericValue);
   };
 
@@ -66,7 +68,12 @@ export function NumberQuestion({ content, value, onChange }: NumberQuestionProps
             {t("measurementFlow:questionTypes.number.maximum", { max: content.max })}
           </Text>
         )}
-        {content.required && isNaN(parseFloat(value)) && (
+        {value.trim() && !isNumberAnswer(value) && (
+          <Text className="text-destructive text-sm">
+            {t("measurementFlow:questionTypes.number.invalid")}
+          </Text>
+        )}
+        {content.required && !value.trim() && (
           <Text className="text-destructive text-sm">
             {t("measurementFlow:questionTypes.number.required")}
           </Text>

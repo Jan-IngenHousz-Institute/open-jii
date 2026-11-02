@@ -76,6 +76,7 @@ def raw_data():
             "_client_id",
             F.coalesce(F.get_json_object(F.col("data").cast("string"), "$._client_id"), F.lit("")),
         )
+        .withColumn("questions_json", F.get_json_object(F.col("data").cast("string"), "$.questions"))
         # Workbook execution metadata is also extracted top-level. Adding fields
         # to parsed_data would evolve the nested struct of this non-resettable
         # bronze table. macro_context stays JSON because its keys are dynamic.
@@ -122,6 +123,7 @@ def raw_data():
             "experiment_id",
             "client_id",
             "_client_id",
+            "questions_json",
             "workbook_version_id",
             "macro_context",
             "device_family",

@@ -18,6 +18,7 @@
       "types": "./dist/transforms/*.d.ts",
       "default": "./dist/transforms/*.js"
     },
+    "./fixtures/number-answers.json": "./fixtures/number-answers.json",
     "./fixtures/macro-input-normalization.json": "./fixtures/macro-input-normalization.json",
     "./shared/*": {
       "types": "./dist/shared/*.d.ts",

@@ -4,6 +4,7 @@ import {
   createMacroCell,
   createProtocol,
   createProtocolCell,
+  createQuestionCell,
   createWorkbook,
 } from "@/test/factories";
 import { API_URL } from "@/test/msw/mount";
@@ -26,12 +27,12 @@ const protocolCell = createProtocolCell({
   payload: { protocolId: PROTOCOL_ID, version: 1, name: "My Protocol" },
 });
 
-function mountPinned(entityCode: unknown) {
+function mountPinned(entityCode: unknown, cells: WorkbookVersion["cells"] = [protocolCell]) {
   const version: WorkbookVersion = {
     id: PINNED_VERSION_ID,
     workbookId: WORKBOOK_ID,
     version: 1,
-    cells: [protocolCell],
+    cells,
     metadata: {},
     entitySnapshots: {
       protocols: { [PROTOCOL_ID]: { code: entityCode, family: "multispeq" } },
@@ -59,6 +60,25 @@ function renderDialog(overrides: Partial<Parameters<typeof WorkbookUpgradeDialog
 }
 
 describe("WorkbookUpgradeDialog", () => {
+  it("blocks a Number to text upgrade until the question is renamed", async () => {
+    const original = createQuestionCell({
+      name: "Height",
+      question: { kind: "number", text: "Height?", required: false },
+    });
+    mountPinned([], [original]);
+    server.mount(contract.workbooks.getWorkbook, {
+      body: createWorkbook({
+        id: WORKBOOK_ID,
+        cells: [
+          { ...original, question: { kind: "open_ended", text: "Height?", required: false } },
+        ],
+      }),
+    });
+    const { props } = renderDialog();
+    expect(await screen.findByText("flow.upgradeDiff.issue.questionTypeChange")).toBeVisible();
+    expect(screen.getByRole("button", { name: "flow.confirmUpgrade" })).toBeDisabled();
+    expect(props.onConfirm).not.toHaveBeenCalled();
+  });
   it("shows a changed protocol and a clean verdict, and confirms the upgrade", async () => {
     mountPinned([{ a: 1 }]);
     server.mount(contract.workbooks.getWorkbook, {

@@ -62,6 +62,9 @@ uv build --all-packages
 
 ## Tests
 
+Question answer classification and its reviewed historical rollout are described in
+[Numeric question answers](QUESTION_ANSWERS.md).
+
 The test suite covers the pure-logic surface of each library: compression, HMAC signing, batching and chunked-error paths in the backend client, question-label sanitization and Spark-side column expansion, the repair-manifest registry (severity + predicate filtering), the RIDES re-interleave algorithm, and the upload-directory parser.
 
 Tests that require a SparkSession are scoped to a single session-level fixture in `tests/conftest.py` and gated behind the `spark` marker. There is also a `fake_dlt` fixture that injects a stub `dlt` module so DLT pipeline files can be imported in tests without crashing.

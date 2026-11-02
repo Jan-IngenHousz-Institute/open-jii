@@ -1,4 +1,5 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
+import { createHash } from "node:crypto";
 
 import {
   DATA_QUERY_MAX_LIMIT,
@@ -20,6 +21,7 @@ import type {
 } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
 import type { FlattenedField } from "../../../common/modules/databricks/services/query-builder/schema/flattened-fields";
 import { FlattenedFields } from "../../../common/modules/databricks/services/query-builder/schema/flattened-fields";
+import { VariantSchema } from "../../../common/modules/databricks/services/query-builder/schema/variant-schema";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { ErrorCodes } from "../../../common/utils/error-codes";
 import { Result, success, failure, AppError, tryCatch } from "../../../common/utils/fp-utils";
@@ -49,6 +51,7 @@ import type { CachePort } from "../ports/cache.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 import type { ExperimentTableReads, TableQuery } from "../ports/experiment-table-reads.port";
+import { ExperimentQuestionTypesRepository } from "./experiment-question-types.repository";
 
 type ReadMode =
   | "aggregation"
@@ -102,7 +105,12 @@ interface TableShape {
   columns?: SchemaDataDto["columns"];
   join?: ExperimentAsOfJoin;
   metadata: ExperimentTableMetadata;
-  variants: { columnName: VariantColumn; schema: string; suffix: string }[];
+  variants: {
+    columnName: VariantColumn;
+    schema: string;
+    suffix: string;
+    numericFields?: string[];
+  }[];
   exceptColumns: string[];
   reservedColumns: string[];
   baseColumns?: string[];
@@ -127,6 +135,7 @@ export class ExperimentDataRepository {
     private readonly contributorAnonymizer: ContributorAnonymizerService,
     private readonly warehouseReads: ExperimentWarehouseReadsService,
     private readonly storeReads: ExperimentStoreReadsService,
+    private readonly questionTypes: ExperimentQuestionTypesRepository,
   ) {}
 
   /**
@@ -525,7 +534,30 @@ export class ExperimentDataRepository {
           return result.value;
         },
       );
-      return rows ?? [];
+      if (!rows?.length) return [];
+      const active = await this.questionTypes.activeNumericKeys(experimentId);
+      if (active.isFailure()) throw active.error;
+      if (active.value.length === 0) return rows;
+      const approved = new Set(active.value);
+      return rows.map((row) => {
+        if (!row.questionsSchema) return row;
+        const fields = VariantSchema.topLevelFields(row.questionsSchema);
+        const numericQuestionKeys = fields
+          .filter((field) => approved.has(field.name))
+          .map((field) => field.name)
+          .sort();
+        if (numericQuestionKeys.length === 0) return row;
+        const questionsSchema = `OBJECT<${fields.map((field) => `\`${field.name.replaceAll("`", "``")}\`: ${approved.has(field.name) ? "DOUBLE" : field.type}`).join(", ")}>`;
+        const revision = createHash("sha256")
+          .update(JSON.stringify(numericQuestionKeys))
+          .digest("hex");
+        return {
+          ...row,
+          questionsSchema,
+          numericQuestionKeys,
+          schemaRevision: `${row.schemaRevision ?? ""}:questions:${revision}`,
+        };
+      });
     });
   }
 
@@ -739,6 +771,9 @@ export class ExperimentDataRepository {
           columnName: "questions_data",
           schema: questionsSchema,
           suffix: VARIANT_COLUMN_SUFFIX.questions_data,
+          ...(metadata.numericQuestionKeys?.length
+            ? { numericFields: metadata.numericQuestionKeys }
+            : {}),
         });
       } else {
         exceptColumns.push("questions_data");

@@ -35,6 +35,8 @@ describe("sanitizeQuestionLabel", () => {
   it("collapses runs of disallowed characters to a single underscore", () => {
     expect(sanitizeQuestionLabel("Plant Height (cm)")).toBe("plant_height_cm");
     expect(sanitizeQuestionLabel("a---b   c")).toBe("a_b_c");
+    expect(sanitizeQuestionLabel("a__b")).toBe("a_b");
+    expect(sanitizeQuestionLabel("__A___B__")).toBe("a_b");
   });
 
   it("trims leading and trailing underscores", () => {

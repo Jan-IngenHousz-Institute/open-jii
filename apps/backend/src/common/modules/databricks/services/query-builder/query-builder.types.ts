@@ -107,7 +107,7 @@ export interface QueryParams {
   join?: AsOfJoin;
   table: string;
   columns?: string[];
-  variants?: { columnName: string; schema: string; suffix?: string }[];
+  variants?: { columnName: string; schema: string; suffix?: string; numericFields?: string[] }[];
   // Names the base columns hold. A flattened field that clashes reads as
   // `<name>_<suffix>` instead of shadowing one.
   reservedColumns?: string[];

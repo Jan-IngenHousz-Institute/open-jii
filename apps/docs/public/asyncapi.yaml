@@ -236,8 +236,13 @@ components:
                   type: string
                 question_text:
                   type: string
-                question_answer:
+                question_kind:
                   type: string
+                  enum: ["yes_no", "open_ended", "multi_choice", "number", "text", "single_choice"]
+                  description: Optional for older clients. Number classification is scoped to the experiment column.
+                question_answer:
+                  type: [string, "null"]
+                  description: Original answer text, or null when unanswered or cleared.
           annotations:
             type: array
             description: Annotations attached at capture time.

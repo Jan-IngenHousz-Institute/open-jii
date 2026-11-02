@@ -4,6 +4,7 @@ import { DateTime } from "luxon";
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { useTranslation } from "~/shared/i18n";
+import { answeredQuestions } from "~/shared/measurements/convert-cycle-answers-to-array";
 import type { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
@@ -33,6 +34,7 @@ export function AnalysisSummaryCard({
 }: AnalysisSummaryCardProps) {
   const { classes } = useTheme();
   const { t } = useTranslation("measurementFlow");
+  const answered = answeredQuestions(questions);
 
   return (
     <TouchableOpacity activeOpacity={0.75} onPress={onPress}>
@@ -71,13 +73,13 @@ export function AnalysisSummaryCard({
             numberOfLines={1}
             ellipsizeMode="tail"
             className={clsx(
-              answersValueStyle({ hasAnswers: questions.length > 0 }),
+              answersValueStyle({ hasAnswers: answered.length > 0 }),
               classes.textMuted,
             )}
           >
-            {questions.length === 0
+            {answered.length === 0
               ? t("measurementFlow:analysis.summary.noQuestionsAnswered")
-              : questions.map((q) => q.question_answer).join(" | ")}
+              : answered.map((q) => q.question_answer).join(" | ")}
           </Text>
         </View>
         <View className="flex-row items-center">

@@ -1,13 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
-
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { WorkbookVersionRepository } from "../../../../workbooks/core/repositories/workbook-version.repository";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
+import { ExperimentQuestionTypesRepository } from "../../../core/repositories/experiment-question-types.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { FlowRepository } from "../../../core/repositories/flow.repository";
 
 export interface SetWorkbookVersionResult {
   workbookId: string;
@@ -27,7 +25,7 @@ export class SetWorkbookVersionUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly workbookVersionRepository: WorkbookVersionRepository,
-    private readonly flowRepository: FlowRepository,
+    private readonly questionTypes: ExperimentQuestionTypesRepository,
     private readonly authz: AuthorizationService,
   ) {}
 
@@ -85,19 +83,8 @@ export class SetWorkbookVersionUseCase {
         );
       }
 
-      // Refresh the materialised flow row first, then re-pin. If the flow
-      // upsert fails, the experiment stays on the old (consistent) version
-      // rather than pointing at a version whose flow never updated.
-      const flowResult = await this.flowRepository.upsert(
-        experimentId,
-        cellsToFlowGraph(target.cells),
-      );
-      if (flowResult.isFailure()) return flowResult;
-
-      const updateResult = await this.experimentRepository.update(experimentId, {
-        workbookVersionId: target.id,
-      });
-      if (updateResult.isFailure()) return updateResult;
+      const pinned = await this.questionTypes.pinVersion(experimentId, target);
+      if (pinned.isFailure()) return pinned;
 
       this.logger.log({
         msg: "Experiment pinned to a specific workbook version",

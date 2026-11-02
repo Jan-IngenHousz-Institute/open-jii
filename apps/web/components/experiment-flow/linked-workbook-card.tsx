@@ -10,6 +10,7 @@ import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import { orpc } from "@/lib/orpc";
+import { workbookPinError } from "@/lib/workbook-pin-error";
 import { formatDate } from "@/util/date";
 import { stripHtml } from "@/util/strip-html";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
@@ -158,8 +159,15 @@ export function LinkedWorkbookCard({
           setSelectedWorkbookId("");
           setIsChanging(false);
         },
-        onError: () => {
-          toast({ description: t("flow.attachFailed"), variant: "destructive" });
+        onError: (error) => {
+          toast({
+            description: workbookPinError(
+              error,
+              t("flow.attachFailed"),
+              t("flow.upgradeDiff.issue.questionTypeChangeGeneric"),
+            ),
+            variant: "destructive",
+          });
         },
       },
     );
@@ -202,9 +210,16 @@ export function LinkedWorkbookCard({
           setReviewOpen(false);
           setUpgradeState("success");
         },
-        onError: () => {
+        onError: (error) => {
           setUpgradeState("idle");
-          toast({ description: t("flow.upgradeFailed"), variant: "destructive" });
+          toast({
+            description: workbookPinError(
+              error,
+              t("flow.upgradeFailed"),
+              t("flow.upgradeDiff.issue.questionTypeChangeGeneric"),
+            ),
+            variant: "destructive",
+          });
         },
       },
     );

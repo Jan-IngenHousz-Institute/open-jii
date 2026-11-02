@@ -195,6 +195,7 @@
       "disabledHint": "Previously used options are disabled"
     },
     "number": {
+      "invalid": "Enter a valid number.",
       "placeholder": "Enter a number...",
       "range": "Range: {{min}} - {{max}}",
       "minimum": "Minimum: {{min}}",

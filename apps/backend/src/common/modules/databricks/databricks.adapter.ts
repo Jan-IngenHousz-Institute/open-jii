@@ -145,6 +145,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
    */
   async triggerDataExportJob(input: DataExportJobInput): Promise<Result<DatabricksJobRunResponse>> {
     const jobParams = {
+      NUMERIC_QUESTION_KEYS: JSON.stringify(input.numericQuestionKeys ?? []),
       EXPORT_ID: input.exportId,
       EXPERIMENT_ID: input.experimentId,
       TABLE_NAME: input.tableName,

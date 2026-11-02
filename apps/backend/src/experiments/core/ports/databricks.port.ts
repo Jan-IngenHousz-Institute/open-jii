@@ -19,6 +19,7 @@ import type {
 // `anonymizeContributors` is the resolved setting, the experiment's default or the export's
 // override; when true the job rewrites contributor cells to deterministic pseudonyms.
 export interface DataExportJobInput {
+  numericQuestionKeys?: string[];
   exportId: string;
   experimentId: string;
   tableName: string;

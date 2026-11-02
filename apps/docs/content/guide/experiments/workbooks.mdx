@@ -123,6 +123,12 @@ array in the table uses sample index, which is not necessarily elapsed time.
 Ordinary arrays and scalar readings do not acquire a Timeseries tab merely
 because they contain numbers.
 
+A question name identifies its column within an experiment. To change a
+question between **Number** and a text question type, give it a new name.
+The upgrade preview explains this when the pinned version and draft differ;
+the platform also checks earlier names when applying a version. Removing a
+question and adding it again does not reset its column type.
+
 ## Edit and publish changes
 
 The workbook's owner, anyone with **Can edit** on the workbook, and owners and

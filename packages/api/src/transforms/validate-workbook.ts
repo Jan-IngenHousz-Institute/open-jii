@@ -1,5 +1,6 @@
 import type { SensorFamily } from "../domains/protocol/protocol.schema";
 import type { WorkbookCell } from "../domains/workbook/workbook-cells.schema";
+import { sanitizeQuestionLabel } from "./label-sanitization";
 
 export type WorkbookIssueLevel = "error" | "warning";
 
@@ -9,6 +10,8 @@ export type WorkbookIssueCode =
   | "dangling-branch-source"
   | "dangling-branch-goto"
   | "mixed-sensor-families"
+  | "duplicate-question-name"
+  | "question-type-change"
   | "macro-without-input";
 
 export interface WorkbookIssue {
@@ -25,6 +28,7 @@ export interface WorkbookIssue {
 }
 
 export interface WorkbookValidationContext {
+  questionClasses?: Record<string, "number" | "text">;
   /** Referenced protocols by id with sensor family. A missing id means the protocol no longer exists. */
   protocols: Record<string, { family?: SensorFamily } | undefined>;
   /** Referenced macros by id. A missing id means the macro no longer exists. */
@@ -66,12 +70,33 @@ export function validateWorkbook(
   const cellIds = new Set(cells.map((c) => c.id));
   const families = new Set<SensorFamily>();
   const seenBranchRefs = new Set<string>();
+  const questionKeys = new Set<string>();
   // A macro ultimately consumes the output of an upstream measurement. Approximate
   // that as "some protocol cell precedes it in document order" so a protocol-less
   // macro chain flags every macro, not just the first. Tracked in one pass (O(n)).
   let sawProtocol = false;
 
   for (const cell of cells) {
+    if (cell.type === "question") {
+      const key = sanitizeQuestionLabel(cell.name);
+      if (questionKeys.has(key))
+        issues.push({
+          level: "error",
+          code: "duplicate-question-name",
+          cellId: cell.id,
+          cellLabel: cell.name,
+        });
+      questionKeys.add(key);
+      const previous = ctx.questionClasses?.[key];
+      if (previous && previous !== (cell.question.kind === "number" ? "number" : "text")) {
+        issues.push({
+          level: "error",
+          code: "question-type-change",
+          cellId: cell.id,
+          cellLabel: cell.name,
+        });
+      }
+    }
     if (cell.type === "protocol") {
       sawProtocol = true;
       const protocol = ctx.protocols[cell.payload.protocolId];
