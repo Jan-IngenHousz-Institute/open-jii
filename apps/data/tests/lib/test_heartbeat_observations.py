@@ -64,6 +64,7 @@ def test_metric_names_are_the_literals_the_catalog_binds():
     assert heartbeat.DATABRICKS_PREVIOUS_MONTH_TO_DATE_COST_METRIC == "DatabricksPreviousMonthToDateCostUsd"
     assert heartbeat.DATABRICKS_PREVIOUS_MONTH_COST_METRIC == "DatabricksPreviousMonthCostUsd"
     assert heartbeat.DATABRICKS_MONTH_PROJECTED_COST_METRIC == "DatabricksMonthProjectedCostUsd"
+    assert heartbeat.DATABRICKS_DAILY_COST_PERCENT_OF_LIMIT_METRIC == "DatabricksDailyCostPercentOfLimit"
     assert heartbeat.WEEKLY_MEASUREMENTS_METRIC == "WeeklyMeasurements"
 
 
@@ -117,6 +118,7 @@ def test_every_metric_and_detail_name_is_exported():
         "DATABRICKS_PREVIOUS_MONTH_TO_DATE_COST_METRIC",
         "DATABRICKS_PREVIOUS_MONTH_COST_METRIC",
         "DATABRICKS_MONTH_PROJECTED_COST_METRIC",
+        "DATABRICKS_DAILY_COST_PERCENT_OF_LIMIT_METRIC",
         "WEEKLY_MEASUREMENTS_METRIC",
         "STALE_EXPERIMENTS_DETAIL",
         "SILENT_DEVICES_DETAIL",
