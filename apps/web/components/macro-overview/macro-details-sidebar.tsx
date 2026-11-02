@@ -1,6 +1,7 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { personName } from "@/components/people/person-name";
 import { useMacroDelete } from "@/hooks/macro/useMacroDelete/useMacroDelete";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
 import { useLocale } from "@/hooks/useLocale";
@@ -125,7 +126,9 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
 
       <div className="space-y-1">
         <h4 className="text-sm font-medium">{tCommon("common.createdBy")}</h4>
-        <p className="text-muted-foreground text-sm">{macro.createdByName ?? "-"}</p>
+        <p className="text-muted-foreground text-sm">
+          {personName({ displayName: macro.createdByName }, tCommon)}
+        </p>
       </div>
 
       <OwningOrganizationField

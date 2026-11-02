@@ -51,6 +51,13 @@ export class CreateGrantUseCase {
       );
     }
 
+    // Its members already reach the resource through their roles there.
+    if (body.granteeType === "organization" && body.granteeId === decision.organizationId) {
+      return failure(
+        AppError.badRequest("A resource cannot be shared with the organization that owns it"),
+      );
+    }
+
     // Validated against the grantee pickers' visibility rules, not mere existence:
     // a grantee the sharer could not have discovered would otherwise have their
     // details disclosed back through the collaborators list.

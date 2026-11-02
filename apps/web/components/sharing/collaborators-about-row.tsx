@@ -2,6 +2,7 @@
 
 import type { AvatarTrailFace } from "@/components/organizations/organization-avatar-trail";
 import { OrganizationAvatarTrail } from "@/components/organizations/organization-avatar-trail";
+import { ownName } from "@/components/people/person-name";
 import { useResourceCollaborators } from "@/hooks/sharing/useResourceCollaborators/useResourceCollaborators";
 
 import type {
@@ -62,16 +63,12 @@ export function CollaboratorsAboutRow({
   );
 }
 
-/** A grantee as a trail face; the display name splits like a person's name. */
 function granteeAsFace(
   row: Extract<ResourceCollaboratorDto, { kind: "owner" | "grant" }>,
 ): AvatarTrailFace {
-  const name = row.grantee.displayName ?? row.grantee.email ?? row.granteeId;
-  const [firstWord = "", ...rest] = name.trim().split(/\s+/u);
   return {
     id: row.granteeId,
-    firstName: firstWord,
-    lastName: rest.join(" "),
+    name: ownName(row.grantee) ?? "",
     avatarUrl: row.grantee.avatarUrl,
   };
 }

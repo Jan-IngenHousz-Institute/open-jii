@@ -1,30 +1,18 @@
 import { ExperimentStatusIndicator } from "@/components/experiment/experiment-status-indicator";
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
+import { ownName, personName } from "@/components/people/person-name";
 import { LocalTime } from "@/components/shared/local-time";
+import { UserAvatar } from "@/components/user-avatar";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { Users } from "lucide-react";
 
 import type { ExperimentListItem } from "@repo/api/domains/experiment/experiment.schema";
-import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
-import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { cn } from "@repo/ui/lib/utils";
 
 import type { OverviewTableColumn } from "./overview-table";
 import { overviewTableText } from "./overview-table";
-
-function ownerName(experiment: Experiment): string | null {
-  const name = [experiment.ownerFirstName, experiment.ownerLastName].filter(Boolean).join(" ");
-  return name || null;
-}
-
-function ownerInitials(experiment: Experiment): string {
-  return (
-    `${experiment.ownerFirstName?.[0] ?? ""}${experiment.ownerLastName?.[0] ?? ""}`.toUpperCase() ||
-    "?"
-  );
-}
 
 export function getExperimentColumns(
   t: (key: string) => string,
@@ -78,14 +66,14 @@ export function getExperimentColumns(
       sortId: "owner",
       className: "hidden w-48 lg:table-cell",
       cell: (experiment) => {
-        const name = ownerName(experiment);
-        return name ? (
+        const owner = {
+          firstName: experiment.ownerFirstName,
+          lastName: experiment.ownerLastName,
+        };
+        const name = personName(owner, t);
+        return (
           <span className="flex items-center gap-2">
-            <Avatar className="size-6">
-              <AvatarFallback className={cn("text-[10px] font-medium", overviewTableText.muted)}>
-                {ownerInitials(experiment)}
-              </AvatarFallback>
-            </Avatar>
+            <UserAvatar name={ownName(owner) ?? ""} className="size-6 text-[10px]" />
             <span
               title={name}
               className={cn("min-w-0 truncate text-[13px]", overviewTableText.muted)}
@@ -93,8 +81,6 @@ export function getExperimentColumns(
               {name}
             </span>
           </span>
-        ) : (
-          <span className={cn("text-[13px]", overviewTableText.muted)}>{"\u2014"}</span>
         );
       },
     },
