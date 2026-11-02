@@ -8,7 +8,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: "node",
-      include: ["ticket-screens/**/*.test.ts"],
+      include: ["ticket-screens/**/*.test.ts", "docs-media/**/*.test.ts"],
       coverage: { enabled: false },
     },
   }),

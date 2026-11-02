@@ -13,7 +13,7 @@ try {
       "numeric-question-sorting-ascending,numeric-question-sorting",
       ...process.argv.slice(2),
     ],
-    { stdio: "inherit" },
+    { stdio: "inherit", env: { ...process.env, E2E_NUMERIC_SORT_CAPTURE: "1" } },
   );
   if (result.error) throw result.error;
   process.exitCode = result.status ?? 1;

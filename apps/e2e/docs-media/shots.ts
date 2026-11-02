@@ -160,7 +160,7 @@ const privacyShots: readonly Shot[] = privacyCaptureEmail
 
 export const SHOTS: readonly Shot[] = [
   ...privacyShots,
-  ...NUMERIC_QUESTION_SORTING_SHOTS,
+  ...(process.env.E2E_NUMERIC_SORT_CAPTURE === "1" ? NUMERIC_QUESTION_SORTING_SHOTS : []),
   // ------------------------------------------- tier 1: shell, overviews, access
   {
     slug: "dashboard",
