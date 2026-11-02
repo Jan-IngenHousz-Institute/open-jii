@@ -121,22 +121,22 @@ export interface FacetGridConfig {
   /** Number of columns. */
   columns: number;
   /**
-   * Cells in row-major order, length = rows × columns. Empty trailing
-   * cells (when N facets < rows × columns) are still listed with empty
-   * titles so axis IDs stay stable.
+   * One cell per facet in row-major order; omit unused trailing grid positions.
+   * A listed cell remains occupied even when its title or plotted data is empty.
+   * An empty title suppresses the heading; it does not mark a padding cell.
    */
   cells: FacetCell[];
   /**
    * Share X-axis range / ticks across cells. When true, every xaxisN
-   * is `matches: "x"` and tick labels are hidden on cells that aren't
-   * in the bottom row.
+   * is `matches: "x"` and tick labels appear on the visually lowest
+   * listed cell in each column.
    */
   sharedX?: boolean;
   /** Share Y-axis range / ticks across cells. */
   sharedY?: boolean;
   /**
    * Render a single shared X-axis title centred below the whole grid
-   * instead of repeating it on every bottom-row cell. Independent of
+   * instead of repeating it on each column's lowest cell. Independent of
    * `sharedX`: the title can be shared even when each cell has its
    * own range.
    */

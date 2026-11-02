@@ -14,6 +14,7 @@ import {
   createBaseLayout,
   createPlotlyConfig,
   extendLayoutForFacets,
+  facetSeriesOffsetGroups,
   getRenderer,
   getPlotType,
   readThemeColor,
@@ -86,15 +87,20 @@ export function BoxPlot({
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("box", renderer);
 
+  const offsetGroups = useMemo(
+    () => (subplots ? facetSeriesOffsetGroups(data) : []),
+    [data, subplots],
+  );
   const plotData: PlotData[] = useMemo(
     () =>
       data.map(
-        (series) =>
+        (series, index) =>
           ({
             y: series.y,
             x: series.x,
             xaxis: series.xaxisId,
             yaxis: series.yaxisId,
+            offsetgroup: offsetGroups[index],
             name: series.name,
             type: plotType,
 
@@ -152,7 +158,7 @@ export function BoxPlot({
             customdata: series.customdata,
           }) as any as PlotData,
       ),
-    [data, orientation, plotType],
+    [data, orientation, plotType, offsetGroups],
   );
 
   const layout = useMemo(() => {
