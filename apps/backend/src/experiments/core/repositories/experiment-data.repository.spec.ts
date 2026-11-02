@@ -1802,6 +1802,72 @@ describe("ExperimentDataRepository", () => {
       );
     });
 
+    it("projects device names before distinct, sorting and paging", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success(mockRows(["Bench (d1)", "Bench (d2)"])),
+      );
+
+      const result = await repository.getDistinctColumnValues({
+        ...baseParams,
+        column: "device",
+        offset: 200,
+      });
+
+      assertSuccess(result);
+      expect(result.value.values).toEqual(["Bench (d1)", "Bench (d2)"]);
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          columns: ["device.serial_number"],
+          distinct: undefined,
+          limit: undefined,
+          offset: undefined,
+        }),
+      );
+      expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
+        expect.any(String),
+        "SELECT DISTINCT `serial_number` FROM (SELECT ...) AS device_names WHERE `serial_number` IS NOT NULL AND trim(`serial_number`) <> '' ORDER BY lower(`serial_number`) ASC, `serial_number` ASC LIMIT 4 OFFSET 200",
+      );
+    });
+
+    it.each(["static", "macro"] as const)(
+      "builds executable device-name projection for a %s table",
+      async (tableType) => {
+        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+          success([
+            {
+              ...metadata[0],
+              tableType,
+              macroSchema: tableType === "macro" ? "OBJECT<device: STRING>" : null,
+            },
+          ]),
+        );
+        const execute = vi
+          .spyOn(databricksPort, "executeSqlQuery")
+          .mockResolvedValue(success(mockRows(["Ambit (d2)", "Ambit (d3)"])));
+        const result = await repository.getDistinctColumnValues({
+          ...baseParams,
+          column: "device",
+          offset: 200,
+        });
+        assertSuccess(result);
+        expect(execute.mock.calls[0][1]).toContain("SELECT `device`.`serial_number`");
+        expect(execute.mock.calls[0][1]).toContain("SELECT DISTINCT `serial_number`");
+        expect(execute.mock.calls[0][1]).toContain("WHERE `experiment_id` =");
+        expect(execute.mock.calls[0][1]).toContain(
+          "ORDER BY lower(`serial_number`) ASC, `serial_number` ASC LIMIT 4 OFFSET 200",
+        );
+      },
+    );
+
+    it("rejects nonzero offsets for non-device columns", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+      const result = await repository.getDistinctColumnValues({ ...baseParams, offset: 200 });
+      assertFailure(result);
+      expect(result.error.message).toContain("only for device columns");
+    });
+
     it("coerces values to numbers only for a numeric column", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
       vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));

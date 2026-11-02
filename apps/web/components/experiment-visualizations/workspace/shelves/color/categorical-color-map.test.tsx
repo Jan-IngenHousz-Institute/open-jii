@@ -89,6 +89,34 @@ describe("CategoricalColorMap", () => {
     });
   });
 
+  it("keeps same-name devices separate and keys overrides by the chart label", async () => {
+    server.mount(contract.experiments.getDistinctColumnValues, {
+      body: { values: ["Ambit (d2)", "Ambit (d3)", "SN1"], truncated: false },
+    });
+    const deviceDefaults = defaults();
+    deviceDefaults.dataConfig.dataSources[1].columnName = "device";
+    const { form, container } = renderWithForm<ChartFormValues>(
+      (form) => (
+        <CategoricalColorMap
+          form={form}
+          columns={[
+            ...columns,
+            { name: "device", type_name: "STRUCT", type_text: WellKnownColumnTypes.DEVICE },
+          ]}
+        />
+      ),
+      { useFormProps: { defaultValues: deviceDefaults } },
+    );
+    expect(await screen.findByTitle("Ambit (d2)")).toBeInTheDocument();
+    expect(screen.getByTitle("Ambit (d3)")).toBeInTheDocument();
+    const swatches = container.querySelectorAll<HTMLInputElement>('input[type="color"]');
+    expect(swatches).toHaveLength(3);
+    fireEvent.change(swatches[0], { target: { value: "#00ff00" } });
+    await waitFor(() =>
+      expect(form.getValues("config.colorMap")).toEqual({ "Ambit (d2)": "#00ff00" }),
+    );
+  });
+
   it("keys a contributor column by display name, not the raw STRUCT JSON", async () => {
     server.mount(contract.experiments.getDistinctColumnValues, {
       body: {

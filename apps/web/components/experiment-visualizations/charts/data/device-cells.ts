@@ -1,18 +1,20 @@
-// DEVICE columns come back as STRUCT<id, serial_number, owner, status, device_type>
-// JSON strings. Charts group and colour by the serial number, so both the data hook
-// and the colour-map picker flatten each cell through this one converter to stay aligned.
-
 const UNKNOWN_DEVICE = "Unknown device";
 
+// Rows carry DEVICE structs; the distinct-values endpoint projects their labels.
 export function deviceDisplayName(value: unknown): string {
-  if (typeof value !== "string") {
+  if (typeof value !== "string" || value.trim().length === 0) {
     return UNKNOWN_DEVICE;
   }
   try {
-    const parsed = JSON.parse(value) as { serial_number?: unknown };
-    const serial = typeof parsed.serial_number === "string" ? parsed.serial_number.trim() : "";
-    return serial.length > 0 ? serial : UNKNOWN_DEVICE;
+    const parsed: unknown = JSON.parse(value);
+    if (parsed !== null && typeof parsed === "object") {
+      const serial = "serial_number" in parsed ? parsed.serial_number : undefined;
+      return typeof serial === "string" && serial.trim().length > 0
+        ? serial.trim()
+        : UNKNOWN_DEVICE;
+    }
+    return value.trim();
   } catch {
-    return UNKNOWN_DEVICE;
+    return value.trim();
   }
 }

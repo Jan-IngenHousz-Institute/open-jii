@@ -6,6 +6,7 @@ import {
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isDecimalType, isNumericType } from "@repo/api/transforms/column-type-utils";
 
+import { SqlQueryBuilder } from "../../../common/modules/databricks/services/query-builder/query-builder.base";
 import type {
   AggregationSpec,
   FilterCondition,
@@ -332,28 +333,47 @@ export class ExperimentDataRepository {
     tableName: string;
     column: string;
     limit: number;
+    offset?: number;
   }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
-    const { experimentId, experiment, tableName, column, limit } = params;
+    const { experimentId, experiment, tableName, column, limit, offset } = params;
 
     const shapeResult = await this.tableShape(experimentId, tableName);
     if (shapeResult.isFailure()) {
       return shapeResult;
     }
 
+    // Built-in tables own the DEVICE column; upload fields named device are user data.
+    const deviceColumn = column === "device" && shapeResult.value.metadata.tableType !== "upload";
+    if (!deviceColumn && (offset ?? 0) > 0) {
+      return failure(AppError.badRequest("Offset paging is supported only for device columns"));
+    }
+    const projectedColumn = deviceColumn ? `${column}.serial_number` : column;
     const queryResult = this.buildQuery(experimentId, shapeResult.value, {
-      columns: [column],
-      distinct: true,
-      orderBy: column,
+      columns: [projectedColumn],
+      distinct: deviceColumn ? undefined : true,
+      orderBy: deviceColumn ? undefined : projectedColumn,
       orderDirection: "ASC",
       // +1 so we can detect truncation: if the SQL returned exactly limit+1
       // rows, the column has more values than we returned.
-      limit: limit + 1,
+      limit: deviceColumn ? undefined : limit + 1,
+      offset: deviceColumn ? undefined : offset,
     });
     if (queryResult.isFailure()) {
       return queryResult;
     }
 
-    const dataResult = await this.executeQuery(queryResult.value);
+    const sql = deviceColumn
+      ? new SqlQueryBuilder()
+          .select(["serial_number"])
+          .distinct()
+          .from(`(${queryResult.value}) AS device_names`)
+          .where("`serial_number` IS NOT NULL AND trim(`serial_number`) <> ''")
+          .orderByRaw("lower(`serial_number`) ASC, `serial_number` ASC")
+          .limit(limit + 1)
+          .offset(offset ?? 0)
+          .build()
+      : queryResult.value;
+    const dataResult = await this.executeQuery(sql);
     if (dataResult.isFailure()) {
       return dataResult;
     }

@@ -81,14 +81,30 @@ measurements AS (
     raw.questions_data,
     raw.annotations AS payload_annotations,
     contributors.user AS contributor,
-    devices.device AS device,
+    named_struct(
+      'id', devices.device.id,
+      'serial_number', CASE
+        WHEN nullif(trim(devices.device.serial_number), '') IS NOT NULL THEN devices.device.serial_number
+        WHEN raw.fallback_device_name = raw.fallback_device_id THEN raw.fallback_device_name
+        WHEN raw.fallback_device_id IS NOT NULL THEN concat(raw.fallback_device_name, ' (', raw.fallback_device_id, ')')
+        ELSE coalesce(raw.fallback_device_name, 'Unknown device')
+      END,
+      'owner', devices.device.owner,
+      'status', devices.device.status,
+      'device_type', devices.device.device_type
+    ) AS device,
     raw.protocol_id,
     raw.workbook_run_id,
     raw.latitude,
     raw.longitude,
     raw.data,
     raw.processed_timestamp
-  FROM ${catalog}.centrum.experiment_raw_data AS raw
+  FROM (
+    SELECT *,
+      coalesce(nullif(trim(device_name), ''), nullif(trim(client_id), ''), nullif(trim(device_id), '')) AS fallback_device_name,
+      coalesce(nullif(trim(device_id), ''), nullif(trim(client_id), '')) AS fallback_device_id
+    FROM ${catalog}.centrum.experiment_raw_data
+  ) AS raw
   LEFT JOIN ${catalog}.centrum.experiment_contributors AS contributors
     ON raw.experiment_id = contributors.experiment_id AND raw.user_id = contributors.user_id
   LEFT JOIN ${catalog}.centrum.experiment_devices AS devices
