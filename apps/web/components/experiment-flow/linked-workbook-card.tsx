@@ -1,6 +1,7 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { personName } from "@/components/people/person-name";
 import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
 import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttachWorkbook";
 import { useDetachWorkbook } from "@/hooks/experiment/useDetachWorkbook/useDetachWorkbook";
@@ -103,6 +104,11 @@ export function LinkedWorkbookCard({
     fetchingWorkbook + fetchingVersions + savingWorkbook + upgradingWorkbook + settingVersion > 0;
 
   const liveHasUpgrade = hasNewerPublished || workbook?.isUpgradable === true;
+  const author =
+    workbook &&
+    personName({ displayName: workbook.createdByName }, t, {
+      placement: "byline",
+    });
   const settledHasUpgradeRef = useRef(liveHasUpgrade);
   if (!isSyncing) settledHasUpgradeRef.current = liveHasUpgrade;
   const hasUpgrade = settledHasUpgradeRef.current;
@@ -284,7 +290,7 @@ export function LinkedWorkbookCard({
                     {workbook && (
                       <p className="text-muted-foreground text-xs">
                         {tWorkbook("workbooks.lastUpdate")}: {formatDate(workbook.updatedAt)}
-                        {workbook.createdByName && <> · {workbook.createdByName}</>}
+                        {author && <> · {author}</>}
                       </p>
                     )}
                     {pinnedVersion && (

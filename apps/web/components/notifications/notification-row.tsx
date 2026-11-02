@@ -1,6 +1,7 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { personName } from "@/components/people/person-name";
 import { LocalTime } from "@/components/shared/local-time";
 import { useLocale } from "@/hooks/useLocale";
 import {
@@ -152,7 +153,10 @@ export function NotificationRow({ notification, onOpen, layout = "feed" }: Notif
   // named `count` or `context` interpolates instead of changing how `t` behaves. The
   // one option set on purpose is `context`, which picks a type's variant copy.
   const message = t(`types.${notification.type}`, {
-    replace: { ...notification.params, actor: notification.actor?.name ?? t("someone") },
+    replace: {
+      ...notification.params,
+      actor: personName({ displayName: notification.actor?.name }, t, { placement: "text" }),
+    },
     context: copyContext(notification),
   });
 

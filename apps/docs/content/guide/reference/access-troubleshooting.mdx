@@ -77,11 +77,22 @@ organization's Members screen.
 
 ## This person can't be selected, or the level is greyed out
 
-**Why** — the share would add nothing to what they already have. Someone who is already
-an Admin of the owning organization holds full control, so no share can raise them.
+**What you see** — a row in the search is greyed out, with the reason under it.
 
-**What to change** — nothing, usually. If you want them to have _less_, that is a change
-to their organization role, not a share.
+**Why** — selecting it would change nothing.
+
+- When sharing, the level you chose adds nothing to what they already have. Someone who
+  is already an Admin of the owning organization holds full control, so no share can
+  raise them. A team or organization that already holds a share at that level is greyed
+  out the same way. The organization that owns the resource is always greyed out as
+  **Owns this …**: its members already reach the resource through their roles.
+- When inviting to an organization, the person is already a member, or their address
+  already has a pending invitation.
+
+**What to change** — nothing, usually. To raise an existing share, choose a higher level
+and the row becomes selectable. If you want someone to have _less_, that is a change to
+their organization role, not a share. A pending invitation can be withdrawn from the
+organization's **Invited** tab and sent again.
 
 ## Why can Can view add measurements?
 
@@ -116,7 +127,9 @@ all**, whoever you are.
 ## Access changed after I moved the resource
 
 **Why** — moving withdraws every team share on the resource, and swaps which
-organization's roles apply. Shares held by a person or by an organization survive.
+organization's roles apply. It also withdraws the destination organization's own share,
+because its members now reach the resource through their roles. Shares held by a person
+or by any other organization survive.
 
 **What to change** — re-share with a team in the destination organization if a group lost
 access.

@@ -1,6 +1,8 @@
 "use client";
 
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ownName, personName } from "@/components/people/person-name";
+import { UserAvatar } from "@/components/user-avatar";
 import {
   User,
   Home,
@@ -22,7 +24,7 @@ import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserP
 import { useSession } from "@repo/auth/client";
 import type { Session } from "@repo/auth/types";
 import { useTranslation } from "@repo/i18n";
-import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/avatar";
+import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import {
   DropdownMenu,
@@ -56,11 +58,13 @@ function UserMenu({
   locale,
   session,
   displayName,
+  avatarName,
   avatarUrl,
 }: {
   locale: string;
   session: Session | null;
   displayName: string;
+  avatarName: string;
   avatarUrl?: string | null;
 }) {
   const { t } = useTranslation();
@@ -87,12 +91,11 @@ function UserMenu({
           aria-label={t("auth.userMenu", "User menu")}
         >
           {avatarUrl ? (
-            <Avatar className="group-hover:bg-brand-chrome-accent h-6 w-6 rounded-full transition-all duration-200 group-hover:shadow-[0_0_10px_var(--brand-accent)]">
-              <AvatarImage src={avatarUrl} alt={displayName} />
-              <AvatarFallback>
-                <User className="h-4 w-4" />
-              </AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              avatarUrl={avatarUrl}
+              name={avatarName}
+              className="group-hover:bg-brand-chrome-accent h-6 w-6 text-xs transition-all duration-200 group-hover:shadow-[0_0_10px_var(--brand-accent)]"
+            />
           ) : (
             <User className="group-hover:text-brand-accent h-4 w-4 transition-all duration-200 group-hover:drop-shadow-[0_0_10px_var(--brand-accent)]" />
           )}
@@ -103,18 +106,13 @@ function UserMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
-          {avatarUrl && (
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={avatarUrl} alt={displayName} />
-              <AvatarFallback>
-                <User className="h-4 w-4" />
-              </AvatarFallback>
-            </Avatar>
-          )}
+          <UserAvatar avatarUrl={avatarUrl} name={avatarName} className="h-8 w-8 text-xs" />
 
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate font-medium">{displayName}</span>
-            <span className="text-muted-foreground truncate text-xs">{session.user.email}</span>
+            {avatarName && (
+              <span className="text-muted-foreground truncate text-xs">{session.user.email}</span>
+            )}
           </div>
         </div>
         <DropdownMenuSeparator />
@@ -157,8 +155,9 @@ export function UnifiedNavbar({ locale, isHomePage = false, links }: UnifiedNavb
 
   const { data: userProfile } = useGetUserProfile(session?.user.id ?? "");
   const profile = userProfile;
-  const displayName =
-    profile?.firstName && profile.lastName ? `${profile.firstName} ${profile.lastName}` : "";
+  const person = { ...profile, email: session?.user.email };
+  const displayName = personName(person, t);
+  const avatarName = ownName(person) ?? "";
 
   const handleSignOut = async () => {
     await signOut.mutateAsync();
@@ -316,6 +315,7 @@ export function UnifiedNavbar({ locale, isHomePage = false, links }: UnifiedNavb
               locale={locale}
               session={session}
               displayName={displayName}
+              avatarName={avatarName}
               avatarUrl={profile?.avatarUrl}
             />
           </div>
@@ -369,19 +369,18 @@ export function UnifiedNavbar({ locale, isHomePage = false, links }: UnifiedNavb
                   <>
                     <DropdownMenuSeparator />
                     <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
-                      {profile?.avatarUrl && (
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={profile.avatarUrl} alt={displayName} />
-                          <AvatarFallback>
-                            <User className="h-3 w-3" />
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
+                      <UserAvatar
+                        avatarUrl={profile?.avatarUrl}
+                        name={avatarName}
+                        className="h-6 w-6 text-xs"
+                      />
                       <div className="flex min-w-0 flex-1 flex-col">
                         <span className="truncate text-sm font-medium">{displayName}</span>
-                        <span className="text-muted-foreground truncate text-xs">
-                          {session.user.email}
-                        </span>
+                        {avatarName && (
+                          <span className="text-muted-foreground truncate text-xs">
+                            {session.user.email}
+                          </span>
+                        )}
                       </div>
                     </div>
                     {/* Account link for mobile */}

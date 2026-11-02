@@ -20,6 +20,7 @@ export default function CalibrationCollaboratorsPage({
       resourceType="calibration_definition"
       resourceId={definitionId}
       capabilities={data?.capabilities}
+      owningOrganizationId={data?.organizationId}
     />
   );
 }

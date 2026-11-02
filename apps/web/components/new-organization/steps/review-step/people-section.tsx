@@ -1,13 +1,14 @@
 "use client";
 
 import { SettingsCard } from "@/components/shared/settings-card";
-import { Mail, User } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 
+import { organizationRoleLabelKey } from "../../../organizations/organization-labels";
+import { PendingPersonIdentity } from "../../pending-person-identity";
 import type { NewOrganizationFormValues } from "../form-step";
-import { pendingPersonRoleText } from "../form-step";
 
 interface PeopleSectionProps {
   formData: NewOrganizationFormValues;
@@ -38,25 +39,16 @@ export function PeopleSection({ formData, onEdit, className }: PeopleSectionProp
           <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
             {t("organizations.create.people.count", { count: people.length })}
           </div>
-          <ul className="space-y-2">
+          <ul className="divide-border divide-y rounded-md border">
             {people.map((person) => (
               <li
                 key={person.kind === "user" ? person.userId : person.email}
-                className="flex items-center gap-2 text-sm"
+                className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5"
               >
-                {person.kind === "user" ? (
-                  <User className="text-muted-foreground h-3.5 w-3.5 shrink-0" aria-hidden />
-                ) : (
-                  <Mail className="text-muted-foreground h-3.5 w-3.5 shrink-0" aria-hidden />
-                )}
-                {/* `truncate` does nothing on a flex child without `min-w-0`. */}
-                <span className="min-w-0 truncate font-medium">
-                  {person.kind === "user" ? person.displayName : person.email}
-                </span>
-                {/* The role is the half of this a reviewer cannot infer from the name. */}
-                <span className="text-muted-foreground min-w-0 truncate text-xs">
-                  {pendingPersonRoleText(person, t)}
-                </span>
+                <PendingPersonIdentity person={person} />
+                <Badge variant="secondary" className="ml-auto shrink-0 text-xs font-normal">
+                  {t(organizationRoleLabelKey(person.role))}
+                </Badge>
               </li>
             ))}
           </ul>

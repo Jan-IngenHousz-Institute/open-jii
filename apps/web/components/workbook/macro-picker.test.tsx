@@ -160,6 +160,23 @@ describe("MacroPicker", () => {
     await waitFor(() => expect(spy.callCount).toBeGreaterThan(1));
   });
 
+  it("credits each macro's author through the translated line, and only when named", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.macros.listMacros, {
+      body: [
+        createMacro({ id: "a1", name: "Named", createdByName: "Ada Lovelace" }),
+        createMacro({ id: "a2", name: "Nameless", createdByName: undefined }),
+      ],
+    });
+
+    renderPicker();
+    await user.click(screen.getByRole("button", { name: /add macro/i }));
+
+    await waitFor(() => expect(screen.getByText("Nameless")).toBeInTheDocument());
+    expect(screen.getAllByText("common.byPerson")).toHaveLength(1);
+    expect(screen.queryByText(/^by /u)).not.toBeInTheDocument();
+  });
+
   it("trims surrounding whitespace from the search query", async () => {
     const user = userEvent.setup();
     const spy = server.mount(contract.macros.listMacros, { body: [] });

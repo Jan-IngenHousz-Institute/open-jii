@@ -78,6 +78,26 @@ describe("<MacroSearchWithDropdown />", () => {
     expect(screen.getByText("experiments.searchMacros")).toBeInTheDocument();
   });
 
+  it("credits the selected macro's author, and leaves out the credit when there is no name", () => {
+    // The selection is snapshotted after the first render, so it shows on the next one.
+    const named = renderWidget({
+      value: "x1",
+      availableMacros: [createMacro({ id: "x1", createdByName: "Ada Lovelace" })],
+    });
+    named.rerender(<MacroSearchWithDropdown {...named.props} />);
+    expect(screen.getByText(/common\.byPerson/u)).toBeInTheDocument();
+    named.unmount();
+
+    const nameless = renderWidget({
+      value: "x1",
+      availableMacros: [createMacro({ id: "x1", name: "Nameless", createdByName: undefined })],
+    });
+    nameless.rerender(<MacroSearchWithDropdown {...nameless.props} />);
+    expect(screen.getByText("Nameless")).toBeInTheDocument();
+    expect(screen.queryByText(/common\.byPerson/u)).not.toBeInTheDocument();
+    expect(screen.queryByText(/•/u)).not.toBeInTheDocument();
+  });
+
   it("filters dropdown list to exclude currently selected macro", () => {
     renderWidget({ value: "m2" });
     expect(lastPopoverProps).not.toBeNull();
