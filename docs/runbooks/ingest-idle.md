@@ -40,6 +40,39 @@ as no data; this rule is what notices that case.
 - **Bronze rejects what it reads.** A schema change or a bad batch fails the `raw_data` flow while
   the others run. The event log shows the failing flow and its error.
 
+## Drill
+
+Run on dev to show the alert still fires. Stopping and starting the pipeline is done by a person in
+the workspace, and publishing needs the infrastructure maintainer profile, the one role allowed to
+publish to the ingest topic.
+
+1. Stop `Centrum-DLT-Pipeline-DEV`.
+2. Publish a few measurements to a test experiment, five minutes apart. Dev's devices are often
+   quiet, and the rule fires only on records waiting.
+
+   ```bash
+   aws iot-data publish --profile openjii-dev \
+     --endpoint-url "https://$(aws iot describe-endpoint --endpoint-type iot:Data-ATS --profile openjii-dev --output text)" \
+     --topic experiment/data_ingest/v1/<experiment id>/multispeq/1.0/drill \
+     --cli-binary-format raw-in-base64-out \
+     --payload "{\"device_id\":\"drill\",\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"sample\":\"[]\"}"
+   ```
+
+3. Expect the alert about 55 minutes after the first record: 45 for it to enter the rule's window,
+   then 10 pending. Bronze's idle reading must also be past 60 minutes by then, which it is when
+   bronze last wrote over 30 minutes before the stop.
+4. Start the pipeline without a full refresh. Bronze takes the waiting records once its cluster is
+   up.
+
+The alert clears when the last waiting record leaves its window, an hour after that record arrived,
+whether or not bronze is writing by then. Bronze's own recovery shows at the next export, as the
+idle time drops to minutes.
+
+On 2 November 2026 the first record arrived at 15:59:26 UTC, the rule went pending at 16:44:40,
+fired at 16:54:40, and its Slack message arrived at 16:55, with bronze idle for 85.9 minutes and
+three records in the window. The pipeline was started at about 16:56, bronze took the records at
+17:05:54, and the alert cleared at 17:09:40, as the last record, from 16:09:32, left the window.
+
 ## Closing
 
 Do not close until bronze writes again: the idle time on the daily report drops to minutes at the
