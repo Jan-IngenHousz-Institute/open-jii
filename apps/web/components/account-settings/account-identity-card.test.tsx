@@ -48,6 +48,14 @@ describe("AccountIdentityCard", () => {
     expect(screen.getByText("settings.status.active")).toBeInTheDocument();
   });
 
+  it("names an account with no name by its address, shown once, with no raw key or initials", () => {
+    renderCard({ firstName: "", lastName: "", avatarUrl: null });
+
+    expect(screen.getAllByText("ada@example.com")).toHaveLength(1);
+    expect(screen.queryByText(/emptyName/u)).not.toBeInTheDocument();
+    expect(document.querySelector(".h-24.w-24")).toHaveTextContent(/^$/u);
+  });
+
   it("saves name edits with the shared inline title interaction", async () => {
     const user = userEvent.setup();
     const { onSaveName } = renderCard();
