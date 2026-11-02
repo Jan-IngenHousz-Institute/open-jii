@@ -20,6 +20,7 @@ import {
 } from "./utils";
 
 export interface ViolinSeriesData extends BaseSeries {
+  /** Plot coordinates: numeric samples on Y for vertical traces, X for horizontal traces. */
   y?: (string | number)[];
   x?: (string | number | Date)[];
   /** Facet routing: pins this trace to a specific subplot cell. */
@@ -96,8 +97,8 @@ export function ViolinPlot({
       data.map(
         (series) =>
           ({
-            y: (series.orientation || orientation) === "v" ? series.y : series.x,
-            x: (series.orientation || orientation) === "v" ? series.x : series.y,
+            y: series.y,
+            x: series.x,
             xaxis: series.xaxisId,
             yaxis: series.yaxisId,
             name: series.name,
