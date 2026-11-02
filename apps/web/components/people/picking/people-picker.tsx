@@ -120,12 +120,12 @@ export function PeoplePicker<V>({
       );
     }
     if (rows.length === 0) {
-      // No row left for a registered address means it is the viewer's own.
-      const emptyNote = emailInvite?.reason === "registered" ? emailInvite.messages.member : note;
       return inviteRow ? (
         <div className="py-1">{inviteRow}</div>
       ) : (
-        <ListMessage>{emptyNote ?? emptyMessage}</ListMessage>
+        <ListMessage>
+          {status.isOwnAddress ? t("common.ownEmail") : (note ?? emptyMessage)}
+        </ListMessage>
       );
     }
     return (
@@ -204,7 +204,9 @@ export function PeoplePicker<V>({
         onOpenAutoFocus={(e) => e.preventDefault()}
         // The opening focus reaches the outside listener, and an anchor has no trigger exemption.
         onInteractOutside={(event) => {
-          if (searchRef.current?.contains(event.target as Node)) event.preventDefault();
+          if (event.target instanceof Node && searchRef.current?.contains(event.target)) {
+            event.preventDefault();
+          }
         }}
       >
         {list()}

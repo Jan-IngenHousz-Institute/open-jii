@@ -170,18 +170,32 @@ describe("<PeoplePicker />", () => {
     expect(screen.getByText("Already a member")).toBeVisible();
   });
 
-  it("leaves a registered address to its own row, and calls it a member once no row is left", async () => {
-    const { rerender } = render(
+  it("leaves a registered address to its own row", async () => {
+    render(
       <Harness emailInvite={invite({ reason: "registered" })} rows={[person("u-1", "Lin Zhao")]} />,
     );
 
     await userEvent.type(box(), "lin@uni.edu");
+    expect(screen.getByText("Lin Zhao")).toBeVisible();
     expect(screen.queryByText("Already a member")).not.toBeInTheDocument();
+  });
 
-    rerender(<Harness emailInvite={invite({ reason: "registered" })} />);
-    await userEvent.clear(box());
-    await userEvent.type(box(), "lin@uni.edu");
-    expect(screen.getByText("Already a member")).toBeVisible();
+  it.each([
+    ["with", invite({ reason: "registered" })],
+    ["without", undefined],
+  ])("says the address is the viewer's own %s email invitations", async (_, emailInvite) => {
+    render(
+      <Harness
+        emailInvite={emailInvite}
+        status={{ isLoading: false, isError: false, onRetry: vi.fn(), isOwnAddress: true }}
+      />,
+    );
+
+    await userEvent.type(box(), "me@uni.edu");
+
+    expect(screen.getByText("common.ownEmail")).toBeVisible();
+    expect(screen.queryByText("Nobody found")).not.toBeInTheDocument();
+    expect(screen.queryByText("Already a member")).not.toBeInTheDocument();
   });
 
   it("opens a browsable list on focus, and keeps it open when focus lands in the box", async () => {

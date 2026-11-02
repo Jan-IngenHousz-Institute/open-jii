@@ -88,7 +88,8 @@
     "sortSecondary": "zweite Sortierung",
     "searchMinCharacters": "Gib mindestens 2 Zeichen ein, um zu suchen",
     "searchFailed": "Suchergebnisse konnten nicht geladen werden.",
-    "emailMatched": "Entspricht der eingegebenen E-Mail-Adresse"
+    "emailMatched": "Entspricht der eingegebenen E-Mail-Adresse",
+    "ownEmail": "Das ist Ihre eigene Adresse"
   },
   "navigation": {
     "experiments": "Experimente",
@@ -862,7 +863,7 @@
       "targetLabel": "Zielorganisation",
       "targetPlaceholder": "Organisation auswählen…",
       "noTargets": "Keine andere Organisation zum Übertragen",
-      "note": "Sichtbarkeit, Daten und direkte Freigaben bleiben unverändert. Teams der aktuellen Organisation verlieren ihren Zugriff, weil ein Team keinen Zugriff außerhalb seiner Organisation halten kann.",
+      "note": "Sichtbarkeit, Daten und direkte Freigaben bleiben unverändert. Teams der aktuellen Organisation verlieren ihren Zugriff, weil ein Team keinen Zugriff außerhalb seiner Organisation halten kann. Ist die Ressource bereits für die Zielorganisation freigegeben, wird diese Freigabe entfernt, weil deren Mitglieder über die Organisation Zugriff haben.",
       "confirm": "Übertragen",
       "transferring": "Wird übertragen…",
       "transferred": "Übertragen",

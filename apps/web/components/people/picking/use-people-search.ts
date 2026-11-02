@@ -1,3 +1,4 @@
+import { usePrincipal } from "@/components/auth/principal-context";
 import { useGranteeUserSearch } from "@/hooks/sharing/useGranteeUserSearch/useGranteeUserSearch";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useUserSearch } from "@/hooks/useUserSearch";
@@ -18,6 +19,8 @@ export interface SearchStatus {
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
+  /** A complete address was typed, and the only account it matches is the viewer's. */
+  isOwnAddress?: boolean;
 }
 
 export interface PeopleSearch<P> {
@@ -45,6 +48,7 @@ export function usePeopleSearch(
   source: { kind: "global" } | ShareSource,
   { enabled = true }: { enabled?: boolean } = {},
 ): PeopleSearch<UserSearchResult | GranteeUserDto> {
+  const { userId: viewerId } = usePrincipal();
   const [term, setTerm] = useState("");
   const [debouncedTerm, isDebounced] = useDebounce(term);
 
@@ -59,18 +63,25 @@ export function usePeopleSearch(
   const query = isShare ? share : global;
 
   const isSettled = isDebounced && debouncedTerm.trim().toLowerCase() === term.trim().toLowerCase();
+  const typedEmail = isSettled && isEmailAddress(term) ? term.trim() : null;
+  const people = (enabled ? query.data : undefined) ?? [];
 
   return {
     term,
     setTerm,
     debouncedTerm,
     isSettled,
-    typedEmail: isSettled && isEmailAddress(term) ? term.trim() : null,
-    people: (enabled ? query.data : undefined) ?? [],
+    typedEmail,
+    people,
     status: {
       isLoading: enabled && (query.isFetching || (!isDebounced && term.length > 0)),
       isError: enabled && query.isError,
       onRetry: () => void query.refetch(),
+      isOwnAddress:
+        typedEmail !== null &&
+        viewerId !== undefined &&
+        people.length > 0 &&
+        people.every((person) => person.userId === viewerId),
     },
   };
 }

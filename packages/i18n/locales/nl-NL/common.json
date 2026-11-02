@@ -88,7 +88,8 @@
     "sortSecondary": "tweede sortering",
     "searchMinCharacters": "Typ minimaal 2 tekens om te zoeken",
     "searchFailed": "Zoekresultaten konden niet worden geladen.",
-    "emailMatched": "Komt overeen met het ingevoerde e-mailadres"
+    "emailMatched": "Komt overeen met het ingevoerde e-mailadres",
+    "ownEmail": "Dat is je eigen adres"
   },
   "navigation": {
     "experiments": "Experimenten",
@@ -862,7 +863,7 @@
       "targetLabel": "Doelorganisatie",
       "targetPlaceholder": "Kies een organisatie…",
       "noTargets": "Geen andere organisatie om aan over te dragen",
-      "note": "Zichtbaarheid, data en directe deelnames blijven ongewijzigd. Teams van de huidige organisatie verliezen hun toegang, omdat een team geen toegang buiten zijn organisatie kan hebben.",
+      "note": "Zichtbaarheid, data en directe deelnames blijven ongewijzigd. Teams van de huidige organisatie verliezen hun toegang, omdat een team geen toegang buiten zijn organisatie kan hebben. Is de resource al met de doelorganisatie gedeeld, dan wordt die deelname verwijderd, omdat haar leden er via de organisatie bij kunnen.",
       "confirm": "Overdragen",
       "transferring": "Overdragen…",
       "transferred": "Overgedragen",

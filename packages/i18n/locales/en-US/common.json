@@ -88,7 +88,8 @@
     "sortSecondary": "secondary sort",
     "searchMinCharacters": "Type at least 2 characters to search",
     "searchFailed": "Could not load search results.",
-    "emailMatched": "Matches the email you entered"
+    "emailMatched": "Matches the email you entered",
+    "ownEmail": "That's your own address"
   },
   "navigation": {
     "experiments": "Experiments",
@@ -862,7 +863,7 @@
       "targetLabel": "Destination organization",
       "targetPlaceholder": "Choose an organization…",
       "noTargets": "No other organization to transfer to",
-      "note": "Visibility, data and the people it is shared with directly all stay as they are. Teams of the current organization lose their access, because a team cannot hold access outside it.",
+      "note": "Visibility, data and the people it is shared with directly all stay as they are. Teams of the current organization lose their access, because a team cannot hold access outside it. If the destination organization already has a share on it, that share is removed, because its members reach it through the organization.",
       "confirm": "Transfer",
       "transferring": "Transferring…",
       "transferred": "Transferred",
