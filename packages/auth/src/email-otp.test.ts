@@ -23,13 +23,14 @@ const NON_SIGN_IN_TYPES: RequestableOTPType[] = ["email-verification", "forget-p
 function createAuth(playReview: PlayReviewSettings) {
   const sendEmail = vi.fn((_message: { email: string; otp: string }) => Promise.resolve());
   const log = vi.fn();
+  const tables = { user: [], session: [], account: [], verification: [] };
 
   const auth = betterAuth({
     baseURL: "http://localhost:3020",
     basePath: "/api/v1/auth",
     secret: "email-otp-test-secret-0123456789abcdef",
     logger: { level: "info", log },
-    database: memoryAdapter({ user: [], session: [], account: [], verification: [] }),
+    database: memoryAdapter(tables),
     plugins: [openJiiEmailOTP({ playReview, sendEmail })],
   });
 
@@ -43,7 +44,7 @@ function createAuth(playReview: PlayReviewSettings) {
     return auth.api.signInEmailOTP({ body: { email, otp } });
   }
 
-  return { requestCode, signIn, sendEmail, log };
+  return { requestCode, signIn, sendEmail, log, tables };
 }
 
 describe("openJiiEmailOTP", () => {
@@ -111,6 +112,15 @@ describe("openJiiEmailOTP", () => {
 
     expect(second.user.id).toBe(first.user.id);
     expect(second.token).not.toBe(first.token);
+  });
+
+  it("stores the review code encrypted", async () => {
+    const { requestCode, tables } = createAuth(configured);
+
+    await requestCode(REVIEW_EMAIL, "sign-in");
+
+    expect(tables.verification).toHaveLength(1);
+    expect(JSON.stringify(tables.verification)).not.toContain(REVIEW_OTP);
   });
 
   it("keeps the attempt limit on the review code", async () => {

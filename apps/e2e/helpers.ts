@@ -10,6 +10,11 @@ export const databaseUrl =
   process.env.E2E_DATABASE_URL ??
   process.env.DATABASE_URL ??
   "postgresql://postgres:postgres@127.0.0.1:5432/openjii_local";
+// The backend's AUTH_SECRET, which the stored sign-in codes are encrypted with.
+export const authSecret =
+  process.env.E2E_AUTH_SECRET ??
+  process.env.AUTH_SECRET ??
+  "local-dev-secret-change-me-000000000000";
 
 export function assertSafeFixtureDatabase(url = databaseUrl): void {
   const database = new URL(url);
@@ -34,7 +39,7 @@ export async function waitForFreshOtp(
 ): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const otp = await readLatestSignInOtp(url, email).catch(() => null);
+    const otp = await readLatestSignInOtp(url, email, authSecret).catch(() => null);
     if (otp && otp !== previousOtp) return otp;
     await new Promise((resolve) => setTimeout(resolve, 500));
   }

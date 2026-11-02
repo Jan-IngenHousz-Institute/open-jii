@@ -27,6 +27,8 @@ export function openJiiEmailOTP({ playReview, sendEmail }: OpenJiiEmailOTPOption
 
   return emailOTP({
     otpLength: OTP_LENGTH,
+    // Not hashed: a six-digit code is recovered from its hash by trying all of them.
+    storeOTP: "encrypted",
     generateOTP: (request) => playReviewAccount?.generateOTP(request),
     async sendVerificationOTP(request, ctx) {
       if (playReviewAccount?.isReviewSignIn(request)) {

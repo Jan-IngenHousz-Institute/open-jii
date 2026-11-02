@@ -1,7 +1,7 @@
 import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import { repositoryRoot, resolveDatabaseUrl } from "../lib/config.js";
+import { repositoryRoot, resolveAuthSecret, resolveDatabaseUrl } from "../lib/config.js";
 import { readLatestSignInOtp } from "../lib/otp.js";
 
 interface LoginDependencies {
@@ -80,6 +80,8 @@ export async function loginLocal(
   };
   const databaseUrl = await resolveDatabaseUrl(deps.root, deps.env);
   if (!databaseUrl) throw new Error("DATABASE_URL is missing; run pnpm db:setup");
+  const authSecret = await resolveAuthSecret(deps.root, deps.env);
+  if (!authSecret) throw new Error("AUTH_SECRET is missing from the shell and apps/backend/.env");
   const baseUrl = deps.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3020";
   const authUrl = `${baseUrl.replace(/\/$/, "")}/api/v1/auth`;
   const webOrigin = new URL(deps.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000").origin;
@@ -93,7 +95,7 @@ export async function loginLocal(
     jar,
     deps.requestTimeoutMs,
   );
-  const otp = await deps.readOtp(databaseUrl, email);
+  const otp = await deps.readOtp(databaseUrl, email, authSecret);
   await postJson(
     deps.request,
     `${authUrl}/sign-in/email-otp`,

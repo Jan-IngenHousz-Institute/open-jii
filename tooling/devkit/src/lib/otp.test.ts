@@ -39,7 +39,7 @@ describe("assertLocalDatabase", () => {
 describe("readLatestSignInOtp", () => {
   it("rejects a remote database before opening a connection", async () => {
     await expect(
-      readLatestSignInOtp("postgresql://u:p@db.example.internal:5432/app", "a@b.test"),
+      readLatestSignInOtp("postgresql://u:p@db.example.internal:5432/app", "a@b.test", "secret"),
     ).rejects.toThrow("only a local database is allowed");
   });
 });

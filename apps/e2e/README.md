@@ -21,9 +21,10 @@ pnpm --filter @repo/e2e exec playwright install chromium
 pnpm e2e
 ```
 
-The default web URL is `http://localhost:3000`, the seed identity is `seed@openjii.local`, and the
-database is `postgresql://postgres:postgres@127.0.0.1:5432/openjii_local`. Override them with
-`E2E_BASE_URL`, `E2E_EMAIL`, and `E2E_DATABASE_URL` when needed. Authentication state is recreated
+The default web URL is `http://localhost:3000`, the seed identity is `seed@openjii.local`, the
+database is `postgresql://postgres:postgres@127.0.0.1:5432/openjii_local`, and the auth secret that
+decrypts stored sign-in codes is the one in `apps/backend/.env.example`. Override them with
+`E2E_BASE_URL`, `E2E_EMAIL`, `E2E_DATABASE_URL`, and `E2E_AUTH_SECRET` when needed. Authentication state is recreated
 under `.auth` for every run. Fixture cleanup only accepts the `openjii_local` database on a loopback
 host unless `E2E_ALLOW_UNSAFE_DATABASE=1` is set.
 
