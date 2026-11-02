@@ -1,26 +1,32 @@
 # flow-restarts
 
-**A flow that streamed measurements wait on started again more than twice in an hour.** A flow that
-fails is retried, so data can keep moving and nothing looks broken from outside. Each restart replays
-work, though, and a flow that fails on every batch never gets through. A gold pipeline once failed about 760 times in eight
-days, four an hour, with no one told.
+**A flow that streamed measurements wait on started more than two runs in an hour.** A flow that fails
+is retried, so data can keep moving and nothing looks broken from outside. Each retry replays work,
+though, and a flow that fails on every batch never gets through. A gold pipeline once failed about 760
+times in eight days, four an hour, with no one told.
 
 The heartbeat export reads each pipeline driver's log every half hour. An hour reaches the log volume
 about an hour after it closes, so the reading is two to three hours old. The alert's `Pipeline` and
 `Flow` labels name the pipeline and the table its flow writes, as in [flow-busy](flow-busy.md). A
-planned restart of the pipeline starts every flow again once, so a single restart is never an alert.
+planned restart of the pipeline starts every flow once, so a single start is never an alert. A pipeline
+that keeps failing on new clusters shows in [pipeline-cluster-starts](pipeline-cluster-starts.md)
+instead, since a cluster that stops within the hour leaves no hourly log.
 
 ## Confirm it
 
 In the Databricks workspace, open the pipeline and its update's event list, and filter for errors.
 A flow that is retried logs the exception that stopped it each time. The same error over and over is
-a flow failing on the data. Different errors across flows, or a new cluster each time, point at the
-cluster, such as a driver short of memory ([driver-heap](driver-heap.md)).
+a flow failing on the data. Different errors across flows point at the cluster, such as a driver
+short of memory ([driver-heap](driver-heap.md)).
 
 The driver's log shows the same thing without the workspace. In
 `/Volumes/<catalog>/centrum/pipeline-logs/<pipeline>/<cluster id>/driver/log4j-<YYYY-MM-DD-HH>.log.gz`,
-each run of a flow has its own `runId` in its `Streaming query made progress:` records, so the
-lines around a change of `runId` show when and why it restarted.
+each run of a flow begins with a line the heartbeat counts, even for a run that fails before its first
+batch:
+
+```text
+MicroBatchExecution: Starting __materialization_mat_clean_data_1 [id = e6fe32b4-..., runId = 73b3bd21-...]
+```
 
 ## Act
 
@@ -32,5 +38,5 @@ lines around a change of `runId` show when and why it restarted.
 
 ## Closing
 
-Close once the flow has gone a day without more than one restart in an hour. Note the error here, so
+Close once the flow has gone a day without more than one start in an hour. Note the error here, so
 the next occurrence starts from it.

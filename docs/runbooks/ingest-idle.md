@@ -47,8 +47,8 @@ the workspace, and publishing needs the infrastructure maintainer profile, the o
 publish to the ingest topic.
 
 1. Stop `Centrum-DLT-Pipeline-DEV`.
-2. Publish a few measurements to a test experiment, five minutes apart. Dev's devices are often
-   quiet, and the rule fires only on records waiting.
+2. Publish a measurement to a test experiment every five minutes until the alert fires. Dev's
+   devices are often quiet, and the rule fires only on records waiting.
 
    ```bash
    aws iot-data publish --profile openjii-dev \
@@ -58,15 +58,15 @@ publish to the ingest topic.
      --payload "{\"device_id\":\"drill\",\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"sample\":\"[]\"}"
    ```
 
-3. Expect the alert about 55 minutes after the first record: 45 for it to enter the rule's window,
-   then 10 pending. Bronze's idle reading must also be past 60 minutes by then, which it is when
-   bronze last wrote over 30 minutes before the stop.
+3. Expect the alert 55 minutes after the first record, 45 for it to enter the rule's window and
+   10 pending, when bronze had already been idle for an hour. Otherwise the idle reading passes 60
+   minutes only at an export, every half hour, so allow up to 100 minutes from the stop.
 4. Start the pipeline without a full refresh. Bronze takes the waiting records once its cluster is
    up.
 
-The alert clears when the last waiting record leaves its window, an hour after that record arrived,
-whether or not bronze is writing by then. Bronze's own recovery shows at the next export, as the
-idle time drops to minutes.
+The alert clears at the next export that reads bronze idle for an hour or less, or earlier, when the
+last waiting record leaves its window an hour after it arrived, whether or not bronze is writing by
+then.
 
 On 2 November 2026 the first record arrived at 15:59:26 UTC, the rule went pending at 16:44:40,
 fired at 16:54:40, and its Slack message arrived at 16:55, with bronze idle for 85.9 minutes and

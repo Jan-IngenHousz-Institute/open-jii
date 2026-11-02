@@ -59,6 +59,7 @@ from openjii.heartbeat import (
     MEASUREMENTS_24H_METRIC,
     METRICS_AGE_METRIC,
     PATH_BUCKET_MINUTES,
+    PIPELINE_CLUSTER_STARTS_METRIC,
     PROTOCOL_WINDOW_HOURS,
     RESEARCHERS_STARTED_7D_METRIC,
     SILENT_DEVICES_DETAIL,
@@ -68,6 +69,7 @@ from openjii.heartbeat import (
     USAGE_NAMESPACE,
     WATCHED_FLOWS,
     WEEKLY_MEASUREMENTS_METRIC,
+    cluster_starts,
     cost_components,
     cost_windows,
     cost_windows_sql,
@@ -156,7 +158,8 @@ MACRO_IN_FLIGHT_MINUTES = 15
 DRIVER_GC_MAX_AGE = timedelta(hours=1)
 
 # A driver's hour reaches the volume about an hour after it closes, so the latest is two to three hours
-# old when read. One older than this belongs to a pipeline that has stopped.
+# old when read. One older than this belongs to a pipeline that has stopped, and so does a driver that
+# has written nothing for as long.
 FLOW_HOUR_MAX_AGE = timedelta(hours=4)
 
 
@@ -551,15 +554,16 @@ def collect_driver_heap(now: datetime) -> list[dict]:
 
 
 def collect_flow_batches(now: datetime) -> list[dict]:
-    """How much of its latest logged hour each watched flow spent in batches and how often it
-    restarted, stamped at the hour's start, with each flow's batch count and p95 in the roster."""
+    """How much of its latest logged hour each watched flow spent in batches and how many of its runs
+    started, stamped at the hour's start, with each flow's batch count and p95 in the roster."""
+    since = (now - FLOW_HOUR_MAX_AGE).timestamp()
     records = []
     roster = []
     for pipeline in sorted(os.listdir(PIPELINE_LOGS_PATH)):
         flows = WATCHED_FLOWS.get(pipeline)
         if flows is None:
             continue
-        logged = latest_pipeline_hour(os.path.join(PIPELINE_LOGS_PATH, pipeline), flows)
+        logged = latest_pipeline_hour(os.path.join(PIPELINE_LOGS_PATH, pipeline), flows, since)
         if logged is None or now - logged.hour > FLOW_HOUR_MAX_AGE:
             continue
 
@@ -579,6 +583,24 @@ def collect_flow_batches(now: datetime) -> list[dict]:
 
     records.append(detail(FLOW_BATCHES_DETAIL, roster))
     return records
+
+
+def collect_cluster_starts(now: datetime) -> list[dict]:
+    """Clusters each pipeline created in the last closed hour, stamped at its start. Read from the
+    cluster ids, so a pipeline that keeps replacing its cluster shows within the half hour."""
+    hour = (now - timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+    return [
+        observation(
+            PIPELINE_CLUSTER_STARTS_METRIC,
+            cluster_starts(os.listdir(os.path.join(PIPELINE_LOGS_PATH, pipeline)), hour),
+            DATA_NAMESPACE,
+            hour,
+            ENVIRONMENT,
+            "Count",
+            {"Pipeline": pipeline},
+        )
+        for pipeline in sorted(os.listdir(PIPELINE_LOGS_PATH))
+    ]
 
 
 def collect_databricks_cost(now: datetime) -> list[dict]:
@@ -685,6 +707,7 @@ collectors = [
     ("path_idle", collect_path_idle),
     ("driver_heap", collect_driver_heap),
     ("flow_batches", collect_flow_batches),
+    ("cluster_starts", collect_cluster_starts),
     ("databricks_cost", collect_databricks_cost),
     ("databricks_spend_limit", collect_databricks_spend_limit),
     ("weekly_measurements", collect_weekly_measurements),

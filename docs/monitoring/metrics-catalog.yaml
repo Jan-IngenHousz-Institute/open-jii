@@ -108,10 +108,11 @@ passes:
       a day's spend past its limit, for AWS and for Databricks, and the metrics publisher's errors,
       so the weekly report's database counts going quiet reaches someone
   - date: 2026-11-02
-    range: [126, 127]
+    range: [126, 128]
     note: >-
-      how much of each hour the flows a measurement waits on spend in batches, and how often they
-      restart, so a pipeline falling behind its trigger interval or failing in a loop reaches someone
+      how much of each hour the flows a measurement waits on spend in batches, and how often they and
+      their pipelines' clusters restart, so a pipeline falling behind its trigger interval or failing in
+      a loop reaches someone
 
 metrics:
   # Ingest path
@@ -2254,6 +2255,31 @@ metrics:
     baseline: { method: threshold, max: 2 }
     runbook: docs/runbooks/flow-restarts.md
     notes: >-
-      How many times each watched flow started again within an hour, by a retry inside its cluster or
-      on a new cluster, per Pipeline and Flow. A planned restart counts one. A gold pipeline once
-      failed about 760 times in eight days, four an hour, with no one told.
+      How many runs of each watched flow started within an hour, per Pipeline and Flow, counted from
+      the start line its driver logs for every run, so a retry that fails before its first batch still
+      counts. A planned restart counts one. A gold pipeline once failed about 760 times in eight days,
+      four an hour, with no one told. A pipeline that keeps replacing its cluster rotates no hourly log,
+      which entry 128 covers.
+
+  - num: 128
+    id: pipeline-cluster-starts
+    name: Pipeline clusters started in an hour
+    family: observability
+    area: lakehouse
+    source: dbx
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: OpenJII/Data
+      search: SEARCH('{OpenJII/Data,Environment,Pipeline} MetricName="PipelineClusterStarts" AND Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
+      cadence: 3600
+    baseline: { method: threshold, max: 2 }
+    runbook: docs/runbooks/pipeline-cluster-starts.md
+    notes: >-
+      How many clusters each pipeline created in the last closed hour, per Pipeline, read from the
+      cluster ids in the pipeline-logs volume, so it reads within the half hour. A cluster that stops
+      within an hour never rotates its log, so this is the one signal of a pipeline that keeps failing
+      and starting again on a new cluster. A planned restart counts one.

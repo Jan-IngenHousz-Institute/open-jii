@@ -3960,7 +3960,8 @@ resource "grafana_rule_group" "lakehouse_freshness" {
 
   # Catalog entry 126. Published per pipeline and flow, once per hour the driver logged, and an
   # hour reaches the volume about an hour after it closes, so the window reaches back five hours.
-  # Each reading stays the latest for about an hour, so 60 minutes asks for two hours in a row.
+  # Each reading stays the latest for about an hour, so 60 minutes asks for about two hours in a row;
+  # a reading that stays latest longer, while the next hour is late, fires on its own.
   rule {
     name      = "Pipeline Flow Busy"
     condition = "C"
@@ -4110,7 +4111,7 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     for            = "0m"
 
     annotations = {
-      description      = "A flow that streamed measurements wait on started again more than twice in an hour, so it is failing and being retried, or its pipeline keeps restarting."
+      description      = "A flow that streamed measurements wait on started more than two runs in an hour, so it is failing and being retried, or its pipeline keeps restarting."
       summary          = "A pipeline flow keeps restarting"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/flow-restarts.md"
       __dashboardUid__ = local.heartbeat_daily_uid
@@ -4120,6 +4121,88 @@ resource "grafana_rule_group" "lakehouse_freshness" {
       severity  = "warning"
       service   = "lakehouse"
       metric_id = "flow-restarts"
+    }
+  }
+
+  # Catalog entry 128. Published per pipeline for the last closed hour within half an hour of it
+  # closing, so two hours back always holds the latest reading.
+  rule {
+    name      = "Pipeline Restarting"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Data"
+        metricName = "PipelineClusterStarts"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+        matchExact = false
+      })
+
+      relative_time_range {
+        from = 7200
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 2"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "0m"
+
+    annotations = {
+      description      = "A pipeline started more than two clusters in an hour. A planned restart starts one, so more usually means its updates keep failing and starting again."
+      summary          = "A pipeline keeps restarting"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/pipeline-cluster-starts.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["pipeline-cluster-starts"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "lakehouse"
+      metric_id = "pipeline-cluster-starts"
     }
   }
 }

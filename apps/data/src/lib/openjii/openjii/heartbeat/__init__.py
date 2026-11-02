@@ -42,6 +42,7 @@ from .constants import (
     MEASUREMENTS_24H_METRIC,
     METRICS_AGE_METRIC,
     PATH_BUCKET_MINUTES,
+    PIPELINE_CLUSTER_STARTS_METRIC,
     RESEARCHERS_STARTED_7D_METRIC,
     SILENT_DEVICES_DETAIL,
     SILENT_DEVICES_METRIC,
@@ -64,7 +65,7 @@ from .costs import (
 )
 from .driver_heap import FullCollection, latest_full_collection
 from .first_measurements import loggers_started_sql, researchers_started_sql
-from .flow_batches import FlowHour, PipelineHour, latest_pipeline_hour
+from .flow_batches import FlowHour, PipelineHour, cluster_starts, latest_pipeline_hour
 from .macro_failures import (
     MACRO_CAUSES,
     PROTOCOL_WINDOW_HOURS,
@@ -125,6 +126,7 @@ __all__ = [
     "MEASUREMENTS_24H_METRIC",
     "METRICS_AGE_METRIC",
     "PATH_BUCKET_MINUTES",
+    "PIPELINE_CLUSTER_STARTS_METRIC",
     "PROTOCOL_WINDOW_HOURS",
     "RESEARCHERS_STARTED_7D_METRIC",
     "SILENT_DEVICES_DETAIL",
@@ -138,6 +140,7 @@ __all__ = [
     "FlowHour",
     "FullCollection",
     "PipelineHour",
+    "cluster_starts",
     "cost_components",
     "cost_windows",
     "cost_windows_sql",

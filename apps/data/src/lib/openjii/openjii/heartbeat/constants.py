@@ -79,10 +79,13 @@ PATH_BUCKET_MINUTES = 30
 # pipeline. What a full collection cannot free is memory the driver still holds.
 DRIVER_OLD_GEN_METRIC = "DriverOldGenAfterFullGcPercent"
 
-# How much of its latest logged hour a flow spent in batches, in percent, and how many times it
-# restarted, per Pipeline and Flow. Near 100 a flow runs its batches back to back.
+# How much of its latest logged hour a flow spent in batches, in percent, and how many of its runs
+# started in it, per Pipeline and Flow. Near 100 a flow runs its batches back to back.
 FLOW_BUSY_METRIC = "FlowBusyPercent"
 FLOW_RESTARTS_METRIC = "FlowRestarts"
+# Clusters a pipeline created in the last closed hour, per Pipeline. A pipeline that keeps replacing
+# its cluster rotates no hourly log to read, so its cluster ids are all that show it.
+PIPELINE_CLUSTER_STARTS_METRIC = "PipelineClusterStarts"
 
 # The flows a streamed measurement waits on, under each pipeline's pipeline-logs folder.
 WATCHED_FLOWS = {
