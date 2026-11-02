@@ -12,6 +12,7 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
 import { PersonIdentity } from "../people/person-identity";
+import type { Translate } from "../people/person-name";
 import { personName } from "../people/person-name";
 import { PeoplePicker } from "../people/picking/people-picker";
 import { describeSearchedUser, usePickerRows } from "../people/picking/picking-rule";
@@ -23,7 +24,7 @@ export function describeNewExperimentCandidate(
     addedUserIds,
     typedEmail,
     t,
-  }: { addedUserIds: readonly string[]; typedEmail: string | null; t: (key: string) => string },
+  }: { addedUserIds: readonly string[]; typedEmail: string | null; t: Translate },
 ) {
   const reason = addedUserIds.includes(user.userId) ? t("newExperiment.alreadyAdded") : null;
   return describeSearchedUser(user, { typedEmail, t, reason });

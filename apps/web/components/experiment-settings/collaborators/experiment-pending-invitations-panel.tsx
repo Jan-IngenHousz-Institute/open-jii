@@ -26,7 +26,7 @@ export function ExperimentPendingInvitationsPanel({
   isArchived = false,
   canRevoke,
 }: ExperimentPendingInvitationsPanelProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { mutate: revokeInvitation } = useUserInvitationRevoke();
 
   const handleRevoke = (invitation: Invitation) => {
@@ -61,56 +61,75 @@ export function ExperimentPendingInvitationsPanel({
       role="list"
       className="border-border divide-border divide-y overflow-hidden rounded-lg border"
     >
-      {invitations.map((invitation) => {
-        const inviter = personName({ displayName: invitation.invitedByName }, t, {
-          placement: "byline",
-        });
-        return (
-          <div key={invitation.id} role="listitem" className="flex items-center gap-3 px-3 py-2.5">
-            <div className="bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
-              <Mail className="text-muted-foreground h-4 w-4" />
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <span
-                className="text-foreground truncate text-sm font-medium"
-                title={invitation.email ?? undefined}
-              >
-                {invitation.email ?? t("experimentSettings.addressHidden")}
-              </span>
-              <span className="text-muted-foreground flex flex-wrap items-center gap-x-1 text-xs">
-                {inviter && (
-                  <>
-                    {t("experimentSettings.invitedBy")} <span>{inviter}</span>
-                    <span aria-hidden="true">·</span>
-                  </>
-                )}
-                <time dateTime={invitation.createdAt}>
-                  {formatShortDate(invitation.createdAt, i18n.language)}
-                </time>
-                {invitation.email === null && (
-                  <span title={invitation.id}>· {invitation.id.slice(0, 8)}</span>
-                )}
-              </span>
-              <StatusBadge tone="published">{t("experimentSettings.pendingInvite")}</StatusBadge>
-            </div>
-            <span className="text-muted-foreground shrink-0 text-sm">
-              {t(roleLabelKey(invitation.tier))}
-            </span>
-            <div className="flex shrink-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                disabled={isArchived || !canRevoke}
-                onClick={() => handleRevoke(invitation)}
-              >
-                <X className="h-4 w-4" />
-                {t("experimentSettings.revoke")}
-              </Button>
-            </div>
-          </div>
-        );
-      })}
+      {invitations.map((invitation) => (
+        <InvitationRow
+          key={invitation.id}
+          invitation={invitation}
+          canRevoke={!isArchived && canRevoke}
+          onRevoke={() => handleRevoke(invitation)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function InvitationRow({
+  invitation,
+  canRevoke,
+  onRevoke,
+}: {
+  invitation: Invitation;
+  canRevoke: boolean;
+  onRevoke: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const inviter = personName({ displayName: invitation.invitedByName }, t, {
+    placement: "byline",
+  });
+
+  return (
+    <div role="listitem" className="flex items-center gap-3 px-3 py-2.5">
+      <div className="bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+        <Mail className="text-muted-foreground h-4 w-4" />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <span
+          className="text-foreground truncate text-sm font-medium"
+          title={invitation.email ?? undefined}
+        >
+          {invitation.email ?? t("experimentSettings.addressHidden")}
+        </span>
+        <span className="text-muted-foreground flex flex-wrap items-center gap-x-1 text-xs">
+          {inviter && (
+            <>
+              {t("experimentSettings.invitedBy")} <span>{inviter}</span>
+              <span aria-hidden="true">·</span>
+            </>
+          )}
+          <time dateTime={invitation.createdAt}>
+            {formatShortDate(invitation.createdAt, i18n.language)}
+          </time>
+          {invitation.email === null && (
+            <span title={invitation.id}>· {invitation.id.slice(0, 8)}</span>
+          )}
+        </span>
+        <StatusBadge tone="published">{t("experimentSettings.pendingInvite")}</StatusBadge>
+      </div>
+      <span className="text-muted-foreground shrink-0 text-sm">
+        {t(roleLabelKey(invitation.tier))}
+      </span>
+      <div className="flex shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-destructive hover:text-destructive"
+          disabled={!canRevoke}
+          onClick={onRevoke}
+        >
+          <X className="h-4 w-4" />
+          {t("experimentSettings.revoke")}
+        </Button>
+      </div>
     </div>
   );
 }

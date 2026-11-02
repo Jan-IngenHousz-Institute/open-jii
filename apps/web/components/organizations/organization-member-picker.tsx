@@ -3,7 +3,7 @@
 import type { UserSearchResult } from "@repo/api/domains/user/user.schema";
 import { useTranslation } from "@repo/i18n";
 
-import type { PersonLike } from "../people/person-name";
+import type { PersonLike, Translate } from "../people/person-name";
 import { PeoplePicker } from "../people/picking/people-picker";
 import type { PickerRow } from "../people/picking/picking-rule";
 import {
@@ -32,7 +32,7 @@ export interface OrganizationInviteContext {
   typedEmail: string | null;
   /** Replaces the member and pending reasons where neither is true yet, as in the wizard. */
   excludedLabel?: string;
-  t: (key: string) => string;
+  t: Translate;
 }
 
 export function describeOrganizationInviteCandidate(
