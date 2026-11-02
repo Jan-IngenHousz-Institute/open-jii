@@ -1,22 +1,15 @@
 "use client";
 
 import { OPEN_WORKBOOK_CREATE_EVENT } from "@/components/navigation/site-header/platform-header-events";
-import { OverviewToolbar } from "@/components/overview-toolbar";
-import { useListFilterLabels } from "@/hooks/useListFilterLabels";
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
-import { Plus } from "lucide-react";
+import { Eye, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import { ListPagination } from "~/components/list-pagination";
 import { OrganizationPicker } from "~/components/organizations/organization-picker";
-import {
-  createOverviewTableSorting,
-  OverviewTable,
-} from "~/components/overview-table/overview-table";
-import { ResetSortingButton } from "~/components/overview-table/reset-sorting-button";
-import { visibilityFilter } from "~/components/overview-table/visibility-filter";
 import { getWorkbookColumns } from "~/components/overview-table/workbook-columns";
+import { ResourceList } from "~/components/resource-list/resource-list";
+import { resourceListFilter } from "~/components/resource-list/resource-list-filter";
 import { useWorkbooks } from "~/hooks/workbook/useWorkbooks/useWorkbooks";
 
 import { useTranslation } from "@repo/i18n";
@@ -31,9 +24,6 @@ import {
 } from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";
 import { Label } from "@repo/ui/components/label";
-import type { ListFilter } from "@repo/ui/components/list-filter-menu";
-import { ListFilterChips, ListFilterMenu } from "@repo/ui/components/list-filter-menu";
-import { SearchInput } from "@repo/ui/components/search-input";
 import {
   Select,
   SelectContent,
@@ -43,30 +33,10 @@ import {
 } from "@repo/ui/components/select";
 
 export function ListWorkbooks() {
-  const {
-    data: workbooks,
-    isLoading,
-    isPlaceholderData,
-    isSearchPending,
-    error,
-    refetch,
-    search,
-    debouncedSearch,
-    setSearch,
-    page,
-    setPage,
-    sort,
-    setSort,
-    toggleSort,
-    visibilities,
-    setVisibilities,
-    clearFilters,
-    hasActiveFilters,
-  } = useWorkbooks({});
+  const list = useWorkbooks();
   const { t } = useTranslation(["workbook", "common"]);
   const router = useRouter();
   const locale = useLocale();
-  const hasSearch = debouncedSearch.trim() !== "";
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newVisibility, setNewVisibility] = useState<"public" | "private">("public");
@@ -91,83 +61,34 @@ export function ListWorkbooks() {
     createWorkbook({ name, visibility: newVisibility, organizationId: newOrganizationId });
   };
 
-  const filterLabels = useListFilterLabels();
-  const filters: ListFilter[] = [
-    visibilityFilter({
-      label: t("workbooks.visibility"),
-      optionLabel: (value) => t(`workbooks.${value}`),
-      selected: visibilities,
-      onChange: setVisibilities,
-    }),
-  ];
-
   return (
-    <div className="space-y-4">
-      <OverviewToolbar
-        search={
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            isLoading={isSearchPending}
-            placeholder={t("workbooks.searchPlaceholder")}
-            clearLabel={t("workbooks.clearSearch")}
-            loadingLabel={t("common.loading")}
-            className="w-full md:w-[220px]"
-          />
-        }
-        filters={
-          <>
-            <ListFilterMenu filters={filters} labels={filterLabels} />
-            <ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />
-          </>
-        }
+    <>
+      <ResourceList
+        list={list}
+        filters={[
+          resourceListFilter(list, "visibility", {
+            label: t("workbooks.visibility"),
+            icon: Eye,
+            optionLabel: (value) => t(`workbooks.${value}`),
+          }),
+        ]}
+        searchInput={{
+          placeholder: t("workbooks.searchPlaceholder"),
+          clearLabel: t("workbooks.clearSearch"),
+          loadingLabel: t("common.loading"),
+          className: "w-full md:w-[220px]",
+        }}
+        columns={getWorkbookColumns(t, locale)}
+        getRowKey={(workbook) => workbook.id}
+        getRowHref={(workbook) => `/${locale}/platform/workbooks/${workbook.id}`}
+        errorMessage={t("workbooks.errorLoading")}
+        emptyMessages={{
+          filtered: t("workbooks.noFilterMatches"),
+          searched: t("workbooks.noMatches"),
+          empty: t("workbooks.noWorkbooks"),
+        }}
+        emptyHelpPath="/guide/experiments/workbooks"
       />
-      <ListFilterChips filters={filters} labels={filterLabels} onClear={clearFilters} />
-
-      <div
-        aria-busy={isPlaceholderData}
-        inert={isPlaceholderData}
-        className={`space-y-4 transition-opacity ${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
-      >
-        <OverviewTable
-          columns={getWorkbookColumns(t, locale)}
-          sorting={createOverviewTableSorting(sort, toggleSort, {
-            unsorted: t("common.sortUnsorted"),
-            asc: t("common.sortAscending"),
-            desc: t("common.sortDescending"),
-            secondary: t("common.sortSecondary"),
-          })}
-          items={workbooks?.items}
-          isLoading={isLoading}
-          error={error}
-          onRetry={() => void refetch()}
-          errorMessage={t("workbooks.errorLoading")}
-          retryLabel={t("common.errors.tryAgain")}
-          getRowKey={(workbook) => workbook.id}
-          getRowHref={(workbook) => `/${locale}/platform/workbooks/${workbook.id}`}
-          emptyMessage={t(
-            hasActiveFilters
-              ? "workbooks.noFilterMatches"
-              : hasSearch
-                ? "workbooks.noMatches"
-                : "workbooks.noWorkbooks",
-          )}
-          emptyHelpPath={
-            !hasSearch && !hasActiveFilters ? "/guide/experiments/workbooks" : undefined
-          }
-          emptyAction={
-            hasActiveFilters && (
-              <Button variant="outline" size="sm" onClick={clearFilters}>
-                {t("common.clearFilters")}
-              </Button>
-            )
-          }
-        />
-
-        {workbooks && workbooks.items.length > 0 && (
-          <ListPagination page={page} totalPages={workbooks.totalPages} onPageChange={setPage} />
-        )}
-      </div>
 
       <Dialog
         open={createOpen}
@@ -232,6 +153,6 @@ export function ListWorkbooks() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

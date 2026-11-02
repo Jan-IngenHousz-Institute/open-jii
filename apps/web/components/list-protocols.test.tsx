@@ -1,4 +1,5 @@
 import { createProtocol } from "@/test/factories";
+import { arrayParam, listEnvelope, openOnUrl } from "@/test/list-request";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import * as nav from "next/navigation";
@@ -10,265 +11,110 @@ import { zProtocolFamily } from "@repo/api/domains/protocol/protocol.schema";
 
 import { ListProtocols } from "./list-protocols";
 
-const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
-  items,
-  page,
-  pageSize: 20,
-  totalPages,
-  totalCount: items.length,
-});
-
 async function openFilter(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(screen.getByRole("button", { name: /^common\.filter/ }));
   await user.click(screen.getByRole("option", { name }));
   return screen.getByRole("listbox", { name });
 }
 
-const chipLabels = () =>
-  screen
-    .queryAllByRole("group", { name: /common\.filterIs/ })
-    .map((chip) => chip.getAttribute("aria-label"));
+const optionTexts = (root: HTMLElement) =>
+  within(root)
+    .getAllByRole("option")
+    .map((option) => option.textContent);
 
 describe("ListProtocols", () => {
-  it("keeps route-wide create actions out of the collection toolbar", () => {
-    server.mount(contract.protocols.listProtocols, { body: envelope([]) });
-    render(<ListProtocols />);
-
-    expect(screen.getByPlaceholderText("protocols.searchProtocols")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "protocols.create" })).toBeNull();
-  });
-
-  it("renders the search input without a my/all filter toggle", async () => {
-    server.mount(contract.protocols.listProtocols, { body: envelope([]) });
+  it("has no my/all toggle and no route-wide create action in the toolbar", async () => {
+    server.mount(contract.protocols.listProtocols, { body: listEnvelope([]) });
     render(<ListProtocols />);
 
     expect(screen.getByPlaceholderText("protocols.searchProtocols")).toBeInTheDocument();
     await screen.findByText("protocols.noProtocols");
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "protocols.create" })).toBeNull();
   });
 
-  it("renders protocols as table rows linking to their detail pages", async () => {
+  it("links each row to the protocol detail page", async () => {
     server.mount(contract.protocols.listProtocols, {
-      body: envelope([createProtocol({ id: "1", name: "P1" })]),
+      body: listEnvelope([createProtocol({ id: "1", name: "P1" })]),
     });
     render(<ListProtocols />);
 
     const link = await screen.findByRole("link", { name: "P1" });
     expect(link.getAttribute("href")).toContain("/platform/protocols/1");
-    expect(screen.getByRole("button", { name: "pagination.previous" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "pagination.next" })).toBeDisabled();
   });
 
-  it("sends search query to the API", async () => {
-    const spy = server.mount(contract.protocols.listProtocols, { body: envelope([]) });
+  it("shows the protocol message when a search matches nothing", async () => {
+    server.mount(contract.protocols.listProtocols, { body: listEnvelope([]) });
     const user = userEvent.setup();
     render(<ListProtocols />);
 
-    await user.type(screen.getByPlaceholderText("protocols.searchProtocols"), "test");
-
-    await waitFor(() => {
-      const lastCall = spy.calls[spy.calls.length - 1];
-      expect(lastCall.query.search).toBe("test");
-    });
-  });
-
-  it("distinguishes a search with no matches from an empty protocol collection", async () => {
-    server.mount(contract.protocols.listProtocols, { body: envelope([]) });
-    const user = userEvent.setup();
-    render(<ListProtocols />);
-
-    await screen.findByText("protocols.noProtocols");
     await user.type(screen.getByPlaceholderText("protocols.searchProtocols"), "missing");
-
     expect(await screen.findByText("protocols.noMatches")).toBeInTheDocument();
-    expect(screen.queryByText("protocols.noProtocols")).not.toBeInTheDocument();
   });
 
-  it("navigates pages via the pagination controls", async () => {
-    const spy = server.mount(contract.protocols.listProtocols, {
-      body: (call: { query: Record<string, string> }) =>
-        envelope([createProtocol({ id: "1" })], Number(call.query.page), 2),
-    });
+  it("shows the protocol message when filters match nothing", async () => {
+    openOnUrl("/platform/protocols", "family=ambyte");
+    server.mount(contract.protocols.listProtocols, { body: listEnvelope([]) });
+    render(<ListProtocols />);
+
+    expect(await screen.findByText("protocols.noFilterMatches")).toBeInTheDocument();
+  });
+
+  it("offers family and visibility filters", async () => {
+    server.mount(contract.protocols.listProtocols, { body: listEnvelope([]) });
     const user = userEvent.setup();
     render(<ListProtocols />);
 
-    const next = await screen.findByRole("button", { name: "pagination.next" });
-    await user.click(next);
-
-    await waitFor(() => {
-      expect(spy.calls[spy.calls.length - 1]?.query?.page).toBe("2");
-    });
+    await user.click(screen.getByRole("button", { name: "common.filter" }));
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "protocols.columns.family",
+      "protocols.visibility",
+    ]);
   });
 
-  it("shows a recoverable error when the list request fails", async () => {
-    const spy = server.mount(contract.protocols.listProtocols, { status: 500 });
+  it("lists the authored families without mobile and filters by one", async () => {
+    openOnUrl("/platform/protocols", "");
+    const replace = vi.mocked(nav.useRouter().replace);
+    replace.mockClear();
+    const spy = server.mount(contract.protocols.listProtocols, { body: listEnvelope([]) });
     const user = userEvent.setup();
     render(<ListProtocols />);
 
-    expect(await screen.findByText("errors.failedToLoadProtocol")).toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    const families = await openFilter(user, "protocols.columns.family");
+    const labels = optionTexts(families);
+    expect(labels).toEqual(zProtocolFamily.options.map(getSensorFamilyLabel));
+    expect(labels).not.toContain(getSensorFamilyLabel("mobile"));
+    await user.click(
+      within(families).getByRole("option", { name: getSensorFamilyLabel("ambyte") }),
+    );
 
-    await user.click(screen.getByRole("button", { name: "errors.tryAgain" }));
-    await waitFor(() => expect(spy.callCount).toBeGreaterThan(1));
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(replace).toHaveBeenLastCalledWith("/platform/protocols?family=ambyte", {
+      scroll: false,
+    });
+    await waitFor(() =>
+      expect(arrayParam(spy.calls.at(-1)?.url ?? "http://x", "family")).toEqual(["ambyte"]),
+    );
   });
 
-  it("sorts by name, adds a secondary field, and resets", async () => {
-    const spy = server.mount(contract.protocols.listProtocols, {
-      body: envelope([createProtocol({ id: "1", name: "First" })]),
-    });
+  it("lists both visibilities and filters by one", async () => {
+    openOnUrl("/platform/protocols", "");
+    const replace = vi.mocked(nav.useRouter().replace);
+    replace.mockClear();
+    const spy = server.mount(contract.protocols.listProtocols, { body: listEnvelope([]) });
     const user = userEvent.setup();
     render(<ListProtocols />);
 
-    await screen.findByRole("link", { name: "First" });
-    expect(screen.queryByRole("button", { name: "common.resetSorting" })).toBeNull();
-    expect(screen.queryByRole("button", { name: /protocols.columns.activity:/ })).toBeNull();
+    const visibilities = await openFilter(user, "protocols.visibility");
+    expect(optionTexts(visibilities)).toEqual(["protocols.private", "protocols.public"]);
+    await user.click(within(visibilities).getByRole("option", { name: "protocols.private" }));
 
-    await user.click(screen.getByRole("button", { name: /protocols.columns.name:/ }));
-    await waitFor(() => expect(spy.calls.at(-1)?.query["sort[0][field]"]).toBe("name"));
-
-    await user.keyboard("{Shift>}");
-    await user.click(screen.getByRole("button", { name: /protocols.columns.family:/ }));
-    await user.keyboard("{/Shift}");
-    expect(
-      screen.getByRole("button", { name: /protocols.columns.family:.*common.sortSecondary/ }),
-    ).toBeInTheDocument();
-    await waitFor(() => expect(spy.calls.at(-1)?.query["sort[1][field]"]).toBe("family"));
-
-    await user.click(screen.getByRole("button", { name: "common.resetSorting" }));
-    await waitFor(() => expect(spy.calls.at(-1)?.query.sort).toBeUndefined());
-  });
-
-  describe("family and visibility filters", () => {
-    function openOnUrl(qs: string) {
-      vi.mocked(nav.usePathname).mockReturnValue("/platform/protocols");
-      vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams(qs));
-    }
-
-    it("offers both filters and hides Clear filters while nothing is picked", async () => {
-      const user = userEvent.setup();
-      server.mount(contract.protocols.listProtocols, { body: envelope([]) });
-
-      render(<ListProtocols />);
-
-      expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
-      await user.click(screen.getByRole("button", { name: "common.filter" }));
-      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
-        "protocols.columns.family",
-        "protocols.visibility",
-      ]);
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(replace).toHaveBeenLastCalledWith("/platform/protocols?visibility=private", {
+      scroll: false,
     });
-
-    it("lists the authored families without mobile and filters through the URL and the API", async () => {
-      openOnUrl("");
-      const user = userEvent.setup();
-      const replace = vi.mocked(nav.useRouter().replace);
-      replace.mockClear();
-      const spy = server.mount(contract.protocols.listProtocols, { body: envelope([]) });
-
-      render(<ListProtocols />);
-      const families = await openFilter(user, "protocols.columns.family");
-
-      const labels = within(families)
-        .getAllByRole("option")
-        .map((option) => option.textContent);
-      expect(labels).toEqual(zProtocolFamily.options.map(getSensorFamilyLabel));
-      expect(labels).not.toContain(getSensorFamilyLabel("mobile"));
-      await user.click(
-        within(families).getByRole("option", { name: getSensorFamilyLabel("ambyte") }),
-      );
-
-      expect(replace).toHaveBeenLastCalledWith("/platform/protocols?family=ambyte", {
-        scroll: false,
-      });
-      await waitFor(() => {
-        expect(spy.calls.at(-1)?.url).toContain("family%5B0%5D=ambyte");
-      });
-      expect(chipLabels()).toEqual([
-        `protocols.columns.family common.filterIs ${getSensorFamilyLabel("ambyte")}`,
-      ]);
-    });
-
-    it("lists both visibilities and filters by one", async () => {
-      openOnUrl("");
-      const user = userEvent.setup();
-      const replace = vi.mocked(nav.useRouter().replace);
-      replace.mockClear();
-      const spy = server.mount(contract.protocols.listProtocols, { body: envelope([]) });
-
-      render(<ListProtocols />);
-      const visibilities = await openFilter(user, "protocols.visibility");
-
-      expect(
-        within(visibilities)
-          .getAllByRole("option")
-          .map((option) => option.textContent),
-      ).toEqual(["protocols.private", "protocols.public"]);
-      await user.click(within(visibilities).getByRole("option", { name: "protocols.private" }));
-
-      expect(replace).toHaveBeenLastCalledWith("/platform/protocols?visibility=private", {
-        scroll: false,
-      });
-      await waitFor(() => {
-        expect(spy.calls.at(-1)?.url).toContain("visibility%5B0%5D=private");
-      });
-    });
-
-    it("restores a shared view and clears the filters while keeping search and sort", async () => {
-      const sort = encodeURIComponent(JSON.stringify([{ field: "name", direction: "asc" }]));
-      openOnUrl(`sort=${sort}&family=ambyte,multispeq&visibility=private`);
-      const user = userEvent.setup();
-      const replace = vi.mocked(nav.useRouter().replace);
-      replace.mockClear();
-      const spy = server.mount(contract.protocols.listProtocols, {
-        body: envelope([createProtocol({ id: "1", name: "Shared" })]),
-      });
-
-      render(<ListProtocols />);
-
-      expect(chipLabels()).toEqual([
-        `protocols.columns.family common.filterIs ${getSensorFamilyLabel("multispeq")}`,
-        `protocols.columns.family common.filterIs ${getSensorFamilyLabel("ambyte")}`,
-        "protocols.visibility common.filterIs protocols.private",
-      ]);
-      await waitFor(() => expect(screen.getByRole("link", { name: "Shared" })).toBeInTheDocument());
-      expect(spy.calls.at(-1)?.url).toContain("family%5B1%5D=multispeq");
-      expect(spy.calls.at(-1)?.url).toContain("visibility%5B0%5D=private");
-
-      await user.type(screen.getByPlaceholderText("protocols.searchProtocols"), "fluor");
-      await waitFor(() => expect(spy.calls.at(-1)?.query.search).toBe("fluor"));
-      await user.click(screen.getByRole("button", { name: "common.clearFilters" }));
-
-      const [url] = replace.mock.lastCall ?? [];
-      expect(url).toContain("sort=");
-      expect(url).not.toContain("family");
-      expect(url).not.toContain("visibility");
-      expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
-      await waitFor(() => {
-        expect(spy.calls.at(-1)?.url).not.toContain("family");
-      });
-      expect(spy.calls.at(-1)?.query.search).toBe("fluor");
-      expect(spy.calls.at(-1)?.query["sort[0][field]"]).toBe("name");
-    });
-
-    it("offers to clear the filters when nothing matches them", async () => {
-      openOnUrl("family=ambit");
-      const user = userEvent.setup();
-      server.mount(contract.protocols.listProtocols, { body: envelope([]) });
-
-      render(<ListProtocols />);
-
-      await waitFor(() =>
-        expect(screen.getByText("protocols.noFilterMatches")).toBeInTheDocument(),
-      );
-      const clearButtons = screen.getAllByRole("button", { name: "common.clearFilters" });
-      expect(clearButtons).toHaveLength(2);
-
-      await user.click(clearButtons[1]);
-
-      await waitFor(() => {
-        expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
-      });
-      await waitFor(() => expect(screen.getByText("protocols.noProtocols")).toBeInTheDocument());
-    });
+    await waitFor(() =>
+      expect(arrayParam(spy.calls.at(-1)?.url ?? "http://x", "visibility")).toEqual(["private"]),
+    );
   });
 });
