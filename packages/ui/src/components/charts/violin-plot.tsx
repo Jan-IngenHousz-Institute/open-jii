@@ -176,6 +176,18 @@ export function ViolinPlot({
 
   const layout = useMemo(() => {
     const next = createBaseLayout(config, sizing);
+    if (
+      config.xAxisType === undefined &&
+      data.some((series) => series.x?.some((value) => typeof value === "string"))
+    ) {
+      next.xaxis = { ...next.xaxis, type: "category" };
+    }
+    if (
+      config.yAxisType === undefined &&
+      data.some((series) => series.y?.some((value) => typeof value === "string"))
+    ) {
+      next.yaxis = { ...next.yaxis, type: "category" };
+    }
 
     if (subplots) {
       const { cellTitleFontSize } = facetTierStyles(sizing);
@@ -202,7 +214,7 @@ export function ViolinPlot({
 
     return next;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-  }, [config, sizing, subplots, violinmode, themeVersion]);
+  }, [config, sizing, data, subplots, violinmode, themeVersion]);
 
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   return (
