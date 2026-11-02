@@ -31,12 +31,13 @@ export function loadedPlotlyRuntime(): PlotlyRuntime | undefined {
 const registered = new Set<LazyTraceType>();
 // A failed load stays cached: retrying it on every render would suspend forever.
 const loading = new Map<string, Promise<void>>();
+const failures = new WeakMap<Promise<void>, unknown>();
 const reported = new Set<string>();
 
 /**
  * The registration still owed before `types` can be drawn, or null when Plotly
- * already has them. A suspended render asks again on every retry, and `use()`
- * needs the same promise back, so it is cached by the set of missing types.
+ * already has them. A suspended render asks again on every retry, so the
+ * promise is cached by the set of missing types.
  */
 export function pendingTraceTypes(types: Iterable<string>): Promise<void> | null {
   const missing = new Set<LazyTraceType>();
@@ -64,14 +65,28 @@ export function pendingTraceTypes(types: Iterable<string>): Promise<void> | null
 
   const registration = loadPlotlyRuntime()
     .then((runtime) => runtime.registerTraceTypes(batch))
-    .then(() => {
-      for (const type of batch) {
-        registered.add(type);
-      }
-      loading.delete(key);
-    });
+    .then(
+      () => {
+        for (const type of batch) {
+          registered.add(type);
+        }
+        loading.delete(key);
+      },
+      (error: unknown) => {
+        failures.set(registration, error);
+        throw error;
+      },
+    );
   loading.set(key, registration);
   return registration;
+}
+
+/** Read trace readiness for Suspense without losing a registration's failure on retry. */
+export function readTraceTypes(types: Iterable<string>): void {
+  const pending = pendingTraceTypes(types);
+  if (pending === null) return;
+  if (failures.has(pending)) throw failures.get(pending);
+  throw pending;
 }
 
 function reportUnknown(type: string): void {

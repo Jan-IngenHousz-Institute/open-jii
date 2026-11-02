@@ -8,7 +8,14 @@ import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
-import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
+import {
+  createBaseLayout,
+  createPlotlyConfig,
+  getRenderer,
+  getPlotType,
+  detectAxisType,
+  applyAxisType,
+} from "./utils";
 
 export interface ContourSeriesData extends BaseSeries {
   x?: (string | number | Date)[];
@@ -158,11 +165,21 @@ export function ContourPlot({
     [data, plotType],
   );
 
-  const layout = useMemo(
-    () => createBaseLayout(config, sizing),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-    [config, sizing, themeVersion],
+  const axisTypes = useMemo(
+    () => ({
+      x: detectAxisType(data.flatMap((series) => series.x ?? [])),
+      y: detectAxisType(data.flatMap((series) => series.y ?? [])),
+    }),
+    [data],
   );
+
+  const layout = useMemo(() => {
+    const next = createBaseLayout(config, sizing);
+    next.xaxis = applyAxisType(next.xaxis, axisTypes.x);
+    next.yaxis = applyAxisType(next.yaxis, axisTypes.y);
+    return next;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+  }, [axisTypes, config, sizing, themeVersion]);
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   // When the configuration genuinely changes, `config` identity flips

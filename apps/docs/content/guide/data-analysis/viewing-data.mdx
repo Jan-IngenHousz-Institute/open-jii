@@ -77,6 +77,12 @@ The current interface supports many chart families, but a chart is only as sound
 as its data configuration. Check units, missing values, grouping, contributor
 anonymization, and the protocol version before interpreting a pattern.
 
+2D histograms, 2D density plots and contour charts accept timestamp columns on
+both **X** and **Y**. Choose a timestamp column to draw that axis as dates and
+times, alongside a numeric column or another timestamp column. A contour chart
+also needs a numeric **Z** column with varying values across the grid. Its
+**Fill** and **Lines** colouring modes both support time axes.
+
 Line and area charts draw a long series at screen resolution, keeping the
 lowest and highest value for every pixel column, so a peak or a gap never
 disappears from view. When the table holds more than 4,000 rows and the chart
