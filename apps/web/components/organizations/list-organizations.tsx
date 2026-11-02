@@ -1,7 +1,6 @@
 "use client";
 
 import { ListPagination } from "@/components/list-pagination";
-import { ClearFiltersButton } from "@/components/overview-table/clear-filters-button";
 import { getOrganizationColumns } from "@/components/overview-table/organization-columns";
 import {
   createOverviewTableSorting,
@@ -10,12 +9,15 @@ import {
 import { ResetSortingButton } from "@/components/overview-table/reset-sorting-button";
 import { OverviewToolbar } from "@/components/overview-toolbar";
 import { useOrganizationsList } from "@/hooks/organization/useOrganizationsList/useOrganizationsList";
+import { useListFilterLabels } from "@/hooks/useListFilterLabels";
 import { useLocale } from "@/hooks/useLocale";
+import { Building2 } from "lucide-react";
 
 import { zOrganizationType } from "@repo/api/domains/organization/organization.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { MultiSelectFilter } from "@repo/ui/components/multi-select-filter";
+import type { ListFilter } from "@repo/ui/components/list-filter-menu";
+import { ListFilterChips, ListFilterMenu } from "@repo/ui/components/list-filter-menu";
 import { SearchInput } from "@repo/ui/components/search-input";
 
 import { organizationTypeLabelKey } from "./organization-labels";
@@ -59,6 +61,21 @@ export function ListOrganizations() {
   } = useOrganizationsList();
   const hasSearch = debouncedSearch.trim() !== "";
 
+  const filterLabels = useListFilterLabels();
+  const filters: ListFilter[] = [
+    {
+      key: "type",
+      label: t("organizations.fields.type"),
+      icon: Building2,
+      options: zOrganizationType.options.map((value) => ({
+        value,
+        label: t(organizationTypeLabelKey(value)),
+      })),
+      selected: types,
+      onChange: setTypes,
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <OverviewToolbar
@@ -77,22 +94,12 @@ export function ListOrganizations() {
         }
         filters={
           <>
-            <MultiSelectFilter
-              title={t("organizations.fields.type")}
-              options={zOrganizationType.options.map((value) => ({
-                value,
-                label: t(organizationTypeLabelKey(value)),
-              }))}
-              selected={types}
-              onChange={setTypes}
-              emptyLabel={t("common.filterNoResults")}
-              selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
-            />
-            <ClearFiltersButton active={hasActiveFilters} onClear={clearFilters} />
+            <ListFilterMenu filters={filters} labels={filterLabels} />
             <ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />
           </>
         }
       />
+      <ListFilterChips filters={filters} labels={filterLabels} onClear={clearFilters} />
 
       <div
         aria-busy={isPlaceholderData}

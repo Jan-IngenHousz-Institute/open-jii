@@ -1,7 +1,7 @@
 import { OPEN_WORKBOOK_CREATE_EVENT } from "@/components/navigation/site-header/platform-header-events";
 import { createWorkbook } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { act, render, screen, waitFor, userEvent } from "@/test/test-utils";
+import { act, render, screen, waitFor, userEvent, within } from "@/test/test-utils";
 import * as nav from "next/navigation";
 import { describe, it, expect, vi } from "vitest";
 
@@ -22,6 +22,17 @@ function openCreateDialog() {
     window.dispatchEvent(new Event(OPEN_WORKBOOK_CREATE_EVENT));
   });
 }
+
+async function openFilter(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(screen.getByRole("button", { name: /^common\.filter/ }));
+  await user.click(screen.getByRole("option", { name }));
+  return screen.getByRole("listbox", { name });
+}
+
+const chipLabels = () =>
+  screen
+    .queryAllByRole("group", { name: /common\.filterIs/ })
+    .map((chip) => chip.getAttribute("aria-label"));
 
 describe("ListWorkbooks", () => {
   it("opens create from the contextual header event instead of a collection-toolbar button", async () => {
@@ -266,13 +277,17 @@ describe("ListWorkbooks", () => {
       vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams(qs));
     }
 
-    it("offers the filter and hides Clear filters while nothing is picked", () => {
+    it("offers the filter and hides Clear filters while nothing is picked", async () => {
+      const user = userEvent.setup();
       server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
       render(<ListWorkbooks />);
 
-      expect(screen.getByRole("button", { name: "workbooks.visibility" })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
+      await user.click(screen.getByRole("button", { name: "common.filter" }));
+      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+        "workbooks.visibility",
+      ]);
     });
 
     it("lists both visibilities and filters through the URL and the API", async () => {
@@ -283,13 +298,14 @@ describe("ListWorkbooks", () => {
       const spy = server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
       render(<ListWorkbooks />);
-      await user.click(screen.getByRole("button", { name: "workbooks.visibility" }));
+      const visibilities = await openFilter(user, "workbooks.visibility");
 
-      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
-        "workbooks.private",
-        "workbooks.public",
-      ]);
-      await user.click(screen.getByRole("option", { name: "workbooks.private" }));
+      expect(
+        within(visibilities)
+          .getAllByRole("option")
+          .map((option) => option.textContent),
+      ).toEqual(["workbooks.private", "workbooks.public"]);
+      await user.click(within(visibilities).getByRole("option", { name: "workbooks.private" }));
 
       expect(replace).toHaveBeenLastCalledWith("/platform/workbooks?visibility=private", {
         scroll: false,
@@ -297,10 +313,10 @@ describe("ListWorkbooks", () => {
       await waitFor(() => {
         expect(spy.calls.at(-1)?.url).toContain("visibility%5B0%5D=private");
       });
-      expect(screen.getByRole("button", { name: /workbooks\.visibility/ })).toHaveTextContent("1");
+      expect(chipLabels()).toEqual(["workbooks.visibility common.filterIs workbooks.private"]);
     });
 
-    it("restores a shared filter and clears it from the toolbar", async () => {
+    it("restores a shared filter as chips and clears it from the chip row", async () => {
       openOnUrl("visibility=private,public");
       const user = userEvent.setup();
       const replace = vi.mocked(nav.useRouter().replace);
@@ -311,7 +327,10 @@ describe("ListWorkbooks", () => {
 
       render(<ListWorkbooks />);
 
-      expect(screen.getByRole("button", { name: /workbooks\.visibility/ })).toHaveTextContent("2");
+      expect(chipLabels()).toEqual([
+        "workbooks.visibility common.filterIs workbooks.private",
+        "workbooks.visibility common.filterIs workbooks.public",
+      ]);
       await waitFor(() =>
         expect(screen.getByRole("link", { name: "Test WB" })).toBeInTheDocument(),
       );

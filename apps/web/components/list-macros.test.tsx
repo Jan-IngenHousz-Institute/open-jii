@@ -1,6 +1,6 @@
 import { createMacro } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import * as nav from "next/navigation";
 import { describe, expect, it, vi } from "vitest";
 import { getMacroLanguageLabel } from "~/util/macro-language";
@@ -18,19 +18,34 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
   totalCount: items.length,
 });
 
+async function openFilter(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(screen.getByRole("button", { name: /^common\.filter/ }));
+  await user.click(screen.getByRole("option", { name }));
+  return screen.getByRole("listbox", { name });
+}
+
+const chipLabels = () =>
+  screen
+    .queryAllByRole("group", { name: /common\.filterIs/ })
+    .map((chip) => chip.getAttribute("aria-label"));
+
 describe("ListMacros", () => {
-  it("keeps the filters with search and route-wide create out of the toolbar", () => {
+  it("keeps the filters with search and route-wide create out of the toolbar", async () => {
+    const user = userEvent.setup();
     server.mount(contract.macros.listMacros, { body: envelope([]) });
     render(<ListMacros />);
 
     const toolbar = screen
       .getByPlaceholderText("macros.searchPlaceholder")
       .closest("div.flex.flex-col");
-    expect(toolbar).toContainElement(
-      screen.getByRole("button", { name: "macros.columns.language" }),
-    );
-    expect(toolbar).toContainElement(screen.getByRole("button", { name: "macros.visibility" }));
+    expect(toolbar).toContainElement(screen.getByRole("button", { name: "common.filter" }));
     expect(screen.queryByRole("link", { name: "macros.create" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "common.filter" }));
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "macros.columns.language",
+      "macros.visibility",
+    ]);
   });
 
   it("renders search input and both filters, but no language dropdown or my/all toggle", async () => {
@@ -138,12 +153,14 @@ describe("ListMacros", () => {
       const spy = server.mount(contract.macros.listMacros, { body: envelope([]) });
 
       render(<ListMacros />);
-      await user.click(screen.getByRole("button", { name: "macros.columns.language" }));
+      const languages = await openFilter(user, "macros.columns.language");
 
-      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual(
-        zMacroLanguage.options.map(getMacroLanguageLabel),
-      );
-      await user.click(screen.getByRole("option", { name: "Python" }));
+      expect(
+        within(languages)
+          .getAllByRole("option")
+          .map((option) => option.textContent),
+      ).toEqual(zMacroLanguage.options.map(getMacroLanguageLabel));
+      await user.click(within(languages).getByRole("option", { name: "Python" }));
 
       expect(replace).toHaveBeenLastCalledWith("/platform/macros?language=python", {
         scroll: false,
@@ -151,9 +168,7 @@ describe("ListMacros", () => {
       await waitFor(() => {
         expect(spy.calls.at(-1)?.url).toContain("language%5B0%5D=python");
       });
-      expect(
-        screen.getByRole("button", { name: /^macros\.columns\.language(?!:)/ }),
-      ).toHaveTextContent("1");
+      expect(chipLabels()).toEqual(["macros.columns.language common.filterIs Python"]);
     });
 
     it("lists both visibilities and filters by one", async () => {
@@ -164,13 +179,14 @@ describe("ListMacros", () => {
       const spy = server.mount(contract.macros.listMacros, { body: envelope([]) });
 
       render(<ListMacros />);
-      await user.click(screen.getByRole("button", { name: "macros.visibility" }));
+      const visibilities = await openFilter(user, "macros.visibility");
 
-      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
-        "macros.private",
-        "macros.public",
-      ]);
-      await user.click(screen.getByRole("option", { name: "macros.private" }));
+      expect(
+        within(visibilities)
+          .getAllByRole("option")
+          .map((option) => option.textContent),
+      ).toEqual(["macros.private", "macros.public"]);
+      await user.click(within(visibilities).getByRole("option", { name: "macros.private" }));
 
       expect(replace).toHaveBeenLastCalledWith("/platform/macros?visibility=private", {
         scroll: false,
@@ -192,10 +208,11 @@ describe("ListMacros", () => {
 
       render(<ListMacros />);
 
-      expect(
-        screen.getByRole("button", { name: /^macros\.columns\.language(?!:)/ }),
-      ).toHaveTextContent("2");
-      expect(screen.getByRole("button", { name: /macros\.visibility/ })).toHaveTextContent("1");
+      expect(chipLabels()).toEqual([
+        "macros.columns.language common.filterIs Python",
+        "macros.columns.language common.filterIs R",
+        "macros.visibility common.filterIs macros.public",
+      ]);
       await waitFor(() => expect(screen.getByRole("link", { name: "Shared" })).toBeInTheDocument());
       expect(spy.calls.at(-1)?.url).toContain("language%5B1%5D=r");
       expect(spy.calls.at(-1)?.url).toContain("visibility%5B0%5D=public");

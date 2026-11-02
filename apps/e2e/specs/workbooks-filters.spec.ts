@@ -21,7 +21,7 @@ test("a shared filtered link opens the filtered list and clears back to all", as
   await dismissCookieBanner(page);
   await filtered;
 
-  await expect(page.getByRole("button", { name: "Visibility 1 selected" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Visibility is Public" })).toBeVisible();
   await expect(
     page.getByRole("link", { name: "[Seed] Wheat Phenotyping Workbook" }).first(),
   ).toBeVisible();
@@ -34,6 +34,6 @@ test("a shared filtered link opens the filtered list and clears back to all", as
   await cleared;
 
   await expect(page).toHaveURL((url) => !url.search.includes("visibility"));
-  await expect(page.getByRole("button", { name: "Visibility", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Filter", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Clear filters" })).toHaveCount(0);
 });

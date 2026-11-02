@@ -1,6 +1,6 @@
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import * as nav from "next/navigation";
 import { describe, it, expect, vi } from "vitest";
 
@@ -15,6 +15,8 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
   totalPages,
   totalCount: items.length,
 });
+
+const chips = () => screen.queryAllByRole("group", { name: /common\.filterIs/ });
 
 describe("ListExperiments", () => {
   it("keeps only collection-local controls beside the experiment list", () => {
@@ -319,23 +321,30 @@ describe("ListExperiments", () => {
     });
   });
 
-  it("offers status and visibility filters on the main list", () => {
+  it("offers status and visibility filters on the main list", async () => {
+    const user = userEvent.setup();
     server.mount(contract.experiments.listExperiments, { body: envelope([]) });
 
     render(<ListExperiments />);
+    await user.click(screen.getByRole("button", { name: "common.filter" }));
 
-    expect(screen.getByRole("button", { name: "filters.status" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "filters.visibility" })).toBeInTheDocument();
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "filters.status",
+      "filters.visibility",
+    ]);
     expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
   });
 
-  it("offers only the visibility filter in the archive", () => {
+  it("offers only the visibility filter in the archive", async () => {
+    const user = userEvent.setup();
     server.mount(contract.experiments.listExperiments, { body: envelope([]) });
 
     render(<ListExperiments archived />);
+    await user.click(screen.getByRole("button", { name: "common.filter" }));
 
-    expect(screen.queryByRole("button", { name: /filters\.status/ })).toBeNull();
-    expect(screen.getByRole("button", { name: /filters\.visibility/ })).toBeInTheDocument();
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "filters.visibility",
+    ]);
   });
 
   it("lists the statuses without archived and filters through the API", async () => {
@@ -345,14 +354,16 @@ describe("ListExperiments", () => {
     const spy = server.mount(contract.experiments.listExperiments, { body: envelope([]) });
 
     render(<ListExperiments />);
-    await user.click(screen.getByRole("button", { name: "filters.status" }));
+    await user.click(screen.getByRole("button", { name: "common.filter" }));
+    await user.click(screen.getByRole("option", { name: "filters.status" }));
 
-    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
-      "status.active",
-      "status.stale",
-      "status.published",
-    ]);
-    await user.click(screen.getByRole("option", { name: "status.stale" }));
+    const statuses = screen.getByRole("listbox", { name: "filters.status" });
+    expect(
+      within(statuses)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["status.active", "status.stale", "status.published"]);
+    await user.click(within(statuses).getByRole("option", { name: "status.stale" }));
 
     expect(replace).toHaveBeenLastCalledWith("/platform/experiments?status=stale", {
       scroll: false,
@@ -360,10 +371,13 @@ describe("ListExperiments", () => {
     await waitFor(() => {
       expect(spy.calls[spy.calls.length - 1].url).toContain("status%5B0%5D=stale");
     });
-    expect(screen.getByRole("button", { name: /filters\.status/ })).toHaveTextContent("1");
+    expect(screen.getByRole("button", { name: /common\.filter/ })).toHaveTextContent("1");
+    expect(
+      screen.getByRole("group", { name: "filters.status common.filterIs status.stale" }),
+    ).toBeInTheDocument();
   });
 
-  it("restores shared filters and clears them from the toolbar", async () => {
+  it("restores shared filters as chips and clears them from the chip row", async () => {
     const user = userEvent.setup();
     vi.mocked(nav.useSearchParams).mockReturnValue(
       new nav.ReadonlyURLSearchParams("status=active,stale&visibility=public"),
@@ -376,14 +390,39 @@ describe("ListExperiments", () => {
 
     render(<ListExperiments />);
 
-    expect(screen.getByRole("button", { name: /filters\.status/ })).toHaveTextContent("2");
-    expect(screen.getByRole("button", { name: /filters\.visibility/ })).toHaveTextContent("1");
+    expect(screen.getByRole("button", { name: /common\.filter/ })).toHaveTextContent("3");
+    expect(chips().map((chip) => chip.getAttribute("aria-label"))).toEqual([
+      "filters.status common.filterIs status.active",
+      "filters.status common.filterIs status.stale",
+      "filters.visibility common.filterIs visibility.public",
+    ]);
     await screen.findByRole("link", { name: "Exp 1" });
 
     await user.click(screen.getByRole("button", { name: "common.clearFilters" }));
 
     expect(replace).toHaveBeenLastCalledWith("/platform/experiments", { scroll: false });
+    expect(chips()).toHaveLength(0);
     expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
+  });
+
+  it("removes one value from its chip", async () => {
+    const user = userEvent.setup();
+    vi.mocked(nav.useSearchParams).mockReturnValue(
+      new nav.ReadonlyURLSearchParams("status=active,stale"),
+    );
+    const replace = vi.mocked(nav.useRouter().replace);
+    replace.mockClear();
+    server.mount(contract.experiments.listExperiments, { body: envelope([]) });
+
+    render(<ListExperiments />);
+    const chip = screen.getByRole("group", {
+      name: "filters.status common.filterIs status.active",
+    });
+    await user.click(within(chip).getByRole("button", { name: "common.removeFilterValue" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/platform/experiments?status=stale", {
+      scroll: false,
+    });
   });
 
   it("offers to clear the filters when nothing matches them", async () => {

@@ -1,23 +1,25 @@
 "use client";
 
 import { OverviewToolbar } from "@/components/overview-toolbar";
+import { CircleDashed } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { ListPagination } from "~/components/list-pagination";
-import { ClearFiltersButton } from "~/components/overview-table/clear-filters-button";
 import { getExperimentColumns } from "~/components/overview-table/experiment-columns";
 import {
   createOverviewTableSorting,
   OverviewTable,
 } from "~/components/overview-table/overview-table";
 import { ResetSortingButton } from "~/components/overview-table/reset-sorting-button";
+import { visibilityFilter } from "~/components/overview-table/visibility-filter";
 import { EXPERIMENT_STATUS_FILTER_VALUES } from "~/hooks/experiment/useExperiments/useExperimentListFilters";
 import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
+import { useListFilterLabels } from "~/hooks/useListFilterLabels";
 import { useLocale } from "~/hooks/useLocale";
 
-import { zExperimentVisibility } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { MultiSelectFilter } from "@repo/ui/components/multi-select-filter";
+import type { ListFilter } from "@repo/ui/components/list-filter-menu";
+import { ListFilterChips, ListFilterMenu } from "@repo/ui/components/list-filter-menu";
 import { SearchInput } from "@repo/ui/components/search-input";
 
 interface ListExperimentsProps {
@@ -27,7 +29,7 @@ interface ListExperimentsProps {
 /**
  * Render the searchable, sortable experiment list with pagination and URL filters.
  * `archived` shows related archived experiments with a visibility filter only.
- * Active filters can be cleared from the toolbar or an empty result without clearing search or sort.
+ * Active filters can be cleared from the chip row or an empty result without clearing search or sort.
  */
 export function ListExperiments({ archived = false }: ListExperimentsProps) {
   const {
@@ -57,6 +59,30 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
   const hasSearch = debouncedSearch.trim() !== "";
   // Only links that ask for it take focus; the sidebar and "See all" land here too.
   const focusSearch = useSearchParams().get("focus") === "search";
+  const filterLabels = useListFilterLabels();
+  const filters: ListFilter[] = [
+    ...(archived
+      ? []
+      : [
+          {
+            key: "status",
+            label: t("filters.status"),
+            icon: CircleDashed,
+            options: EXPERIMENT_STATUS_FILTER_VALUES.options.map((value) => ({
+              value,
+              label: t(`status.${value}`),
+            })),
+            selected: statuses,
+            onChange: setStatuses,
+          },
+        ]),
+    visibilityFilter({
+      label: t("filters.visibility"),
+      optionLabel: (value) => t(`visibility.${value}`),
+      selected: visibilities,
+      onChange: setVisibilities,
+    }),
+  ];
 
   return (
     <div className="space-y-4">
@@ -75,35 +101,12 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
         }
         filters={
           <>
-            {!archived && (
-              <MultiSelectFilter
-                title={t("filters.status")}
-                options={EXPERIMENT_STATUS_FILTER_VALUES.options.map((value) => ({
-                  value,
-                  label: t(`status.${value}`),
-                }))}
-                selected={statuses}
-                onChange={setStatuses}
-                emptyLabel={t("common.filterNoResults")}
-                selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
-              />
-            )}
-            <MultiSelectFilter
-              title={t("filters.visibility")}
-              options={zExperimentVisibility.options.map((value) => ({
-                value,
-                label: t(`visibility.${value}`),
-              }))}
-              selected={visibilities}
-              onChange={setVisibilities}
-              emptyLabel={t("common.filterNoResults")}
-              selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
-            />
-            <ClearFiltersButton active={hasActiveFilters} onClear={clearFilters} />
+            <ListFilterMenu filters={filters} labels={filterLabels} />
             <ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />
           </>
         }
       />
+      <ListFilterChips filters={filters} labels={filterLabels} onClear={clearFilters} />
 
       <div
         aria-busy={isPlaceholderData}

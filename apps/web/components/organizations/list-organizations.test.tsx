@@ -28,6 +28,17 @@ function rowFor(name: string): HTMLElement {
   return row;
 }
 
+async function openFilter(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(screen.getByRole("button", { name: /^common\.filter/ }));
+  await user.click(screen.getByRole("option", { name }));
+  return screen.getByRole("listbox", { name });
+}
+
+const chipLabels = () =>
+  screen
+    .queryAllByRole("group", { name: /common\.filterIs/ })
+    .map((chip) => chip.getAttribute("aria-label"));
+
 describe("<ListOrganizations />", () => {
   afterEach(() => mockSession(null));
 
@@ -242,8 +253,12 @@ describe("<ListOrganizations />", () => {
       render(<ListOrganizations />);
 
       expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
-      await user.click(screen.getByRole("button", { name: "organizations.fields.type" }));
-      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      const types = await openFilter(user, "organizations.fields.type");
+      expect(
+        within(types)
+          .getAllByRole("option")
+          .map((option) => option.textContent),
+      ).toEqual([
         "organizations.types.research_institute",
         "organizations.types.non_profit",
         "organizations.types.private_company",
@@ -261,8 +276,10 @@ describe("<ListOrganizations />", () => {
       const spy = mountDirectory([]);
 
       render(<ListOrganizations />);
-      await user.click(screen.getByRole("button", { name: "organizations.fields.type" }));
-      await user.click(screen.getByRole("option", { name: "organizations.types.university" }));
+      const types = await openFilter(user, "organizations.fields.type");
+      await user.click(
+        within(types).getByRole("option", { name: "organizations.types.university" }),
+      );
 
       expect(replace).toHaveBeenLastCalledWith("/platform/organizations?type=university", {
         scroll: false,
@@ -270,9 +287,9 @@ describe("<ListOrganizations />", () => {
       await waitFor(() => {
         expect(spy.calls.at(-1)?.url).toContain("type%5B0%5D=university");
       });
-      expect(
-        screen.getByRole("button", { name: /^organizations\.fields\.type(?!:)/ }),
-      ).toHaveTextContent("1");
+      expect(chipLabels()).toEqual([
+        "organizations.fields.type common.filterIs organizations.types.university",
+      ]);
     });
 
     it("restores a shared filter and clears it without dropping the search", async () => {
@@ -285,9 +302,10 @@ describe("<ListOrganizations />", () => {
 
       render(<ListOrganizations />);
 
-      expect(
-        screen.getByRole("button", { name: /^organizations\.fields\.type(?!:)/ }),
-      ).toHaveTextContent("2");
+      expect(chipLabels()).toEqual([
+        "organizations.fields.type common.filterIs organizations.types.non_profit",
+        "organizations.fields.type common.filterIs organizations.types.university",
+      ]);
       expect(screen.getByLabelText("organizations.searchLabel")).toHaveValue("lab");
       await waitFor(() =>
         expect(screen.getByRole("link", { name: "Northfield Lab" })).toBeInTheDocument(),

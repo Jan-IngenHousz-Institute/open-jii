@@ -1,24 +1,26 @@
 "use client";
 
 import { OverviewToolbar } from "@/components/overview-toolbar";
+import { Cpu } from "lucide-react";
 import React from "react";
 import { ListPagination } from "~/components/list-pagination";
-import { ClearFiltersButton } from "~/components/overview-table/clear-filters-button";
 import {
   createOverviewTableSorting,
   OverviewTable,
 } from "~/components/overview-table/overview-table";
 import { getProtocolColumns } from "~/components/overview-table/protocol-columns";
 import { ResetSortingButton } from "~/components/overview-table/reset-sorting-button";
+import { visibilityFilter } from "~/components/overview-table/visibility-filter";
 import { useProtocols } from "~/hooks/protocol/useProtocols/useProtocols";
+import { useListFilterLabels } from "~/hooks/useListFilterLabels";
 import { useLocale } from "~/hooks/useLocale";
 import { getSensorFamilyLabel } from "~/util/sensor-family";
 
 import { zProtocolFamily } from "@repo/api/domains/protocol/protocol.schema";
-import { zVisibility } from "@repo/api/domains/visibility/visibility.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { MultiSelectFilter } from "@repo/ui/components/multi-select-filter";
+import type { ListFilter } from "@repo/ui/components/list-filter-menu";
+import { ListFilterChips, ListFilterMenu } from "@repo/ui/components/list-filter-menu";
 import { SearchInput } from "@repo/ui/components/search-input";
 
 export function ListProtocols() {
@@ -48,6 +50,27 @@ export function ListProtocols() {
   const locale = useLocale();
   const hasSearch = debouncedSearch.trim() !== "";
 
+  const filterLabels = useListFilterLabels();
+  const filters: ListFilter[] = [
+    {
+      key: "family",
+      label: t("protocols.columns.family"),
+      icon: Cpu,
+      options: zProtocolFamily.options.map((value) => ({
+        value,
+        label: getSensorFamilyLabel(value),
+      })),
+      selected: families,
+      onChange: setFamilies,
+    },
+    visibilityFilter({
+      label: t("protocols.visibility"),
+      optionLabel: (value) => t(`protocols.${value}`),
+      selected: visibilities,
+      onChange: setVisibilities,
+    }),
+  ];
+
   return (
     <div className="space-y-4">
       <OverviewToolbar
@@ -64,33 +87,12 @@ export function ListProtocols() {
         }
         filters={
           <>
-            <MultiSelectFilter
-              title={t("protocols.columns.family")}
-              options={zProtocolFamily.options.map((value) => ({
-                value,
-                label: getSensorFamilyLabel(value),
-              }))}
-              selected={families}
-              onChange={setFamilies}
-              emptyLabel={t("common.filterNoResults")}
-              selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
-            />
-            <MultiSelectFilter
-              title={t("protocols.visibility")}
-              options={zVisibility.options.map((value) => ({
-                value,
-                label: t(`protocols.${value}`),
-              }))}
-              selected={visibilities}
-              onChange={setVisibilities}
-              emptyLabel={t("common.filterNoResults")}
-              selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
-            />
-            <ClearFiltersButton active={hasActiveFilters} onClear={clearFilters} />
+            <ListFilterMenu filters={filters} labels={filterLabels} />
             <ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />
           </>
         }
       />
+      <ListFilterChips filters={filters} labels={filterLabels} onClear={clearFilters} />
 
       <div
         aria-busy={isPlaceholderData}

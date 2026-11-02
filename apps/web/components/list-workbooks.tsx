@@ -2,6 +2,7 @@
 
 import { OPEN_WORKBOOK_CREATE_EVENT } from "@/components/navigation/site-header/platform-header-events";
 import { OverviewToolbar } from "@/components/overview-toolbar";
+import { useListFilterLabels } from "@/hooks/useListFilterLabels";
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
 import { Plus } from "lucide-react";
@@ -9,16 +10,15 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { ListPagination } from "~/components/list-pagination";
 import { OrganizationPicker } from "~/components/organizations/organization-picker";
-import { ClearFiltersButton } from "~/components/overview-table/clear-filters-button";
 import {
   createOverviewTableSorting,
   OverviewTable,
 } from "~/components/overview-table/overview-table";
 import { ResetSortingButton } from "~/components/overview-table/reset-sorting-button";
+import { visibilityFilter } from "~/components/overview-table/visibility-filter";
 import { getWorkbookColumns } from "~/components/overview-table/workbook-columns";
 import { useWorkbooks } from "~/hooks/workbook/useWorkbooks/useWorkbooks";
 
-import { zVisibility } from "@repo/api/domains/visibility/visibility.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -31,7 +31,8 @@ import {
 } from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";
 import { Label } from "@repo/ui/components/label";
-import { MultiSelectFilter } from "@repo/ui/components/multi-select-filter";
+import type { ListFilter } from "@repo/ui/components/list-filter-menu";
+import { ListFilterChips, ListFilterMenu } from "@repo/ui/components/list-filter-menu";
 import { SearchInput } from "@repo/ui/components/search-input";
 import {
   Select,
@@ -90,6 +91,16 @@ export function ListWorkbooks() {
     createWorkbook({ name, visibility: newVisibility, organizationId: newOrganizationId });
   };
 
+  const filterLabels = useListFilterLabels();
+  const filters: ListFilter[] = [
+    visibilityFilter({
+      label: t("workbooks.visibility"),
+      optionLabel: (value) => t(`workbooks.${value}`),
+      selected: visibilities,
+      onChange: setVisibilities,
+    }),
+  ];
+
   return (
     <div className="space-y-4">
       <OverviewToolbar
@@ -106,22 +117,12 @@ export function ListWorkbooks() {
         }
         filters={
           <>
-            <MultiSelectFilter
-              title={t("workbooks.visibility")}
-              options={zVisibility.options.map((value) => ({
-                value,
-                label: t(`workbooks.${value}`),
-              }))}
-              selected={visibilities}
-              onChange={setVisibilities}
-              emptyLabel={t("common.filterNoResults")}
-              selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
-            />
-            <ClearFiltersButton active={hasActiveFilters} onClear={clearFilters} />
+            <ListFilterMenu filters={filters} labels={filterLabels} />
             <ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />
           </>
         }
       />
+      <ListFilterChips filters={filters} labels={filterLabels} onClear={clearFilters} />
 
       <div
         aria-busy={isPlaceholderData}

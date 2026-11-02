@@ -1,24 +1,26 @@
 "use client";
 
 import { OverviewToolbar } from "@/components/overview-toolbar";
+import { Code } from "lucide-react";
 import React from "react";
 import { ListPagination } from "~/components/list-pagination";
-import { ClearFiltersButton } from "~/components/overview-table/clear-filters-button";
 import { getMacroColumns } from "~/components/overview-table/macro-columns";
 import {
   createOverviewTableSorting,
   OverviewTable,
 } from "~/components/overview-table/overview-table";
 import { ResetSortingButton } from "~/components/overview-table/reset-sorting-button";
+import { visibilityFilter } from "~/components/overview-table/visibility-filter";
 import { useMacros } from "~/hooks/macro/useMacros/useMacros";
+import { useListFilterLabels } from "~/hooks/useListFilterLabels";
 import { useLocale } from "~/hooks/useLocale";
 import { getMacroLanguageLabel } from "~/util/macro-language";
 
 import { zMacroLanguage } from "@repo/api/domains/macro/macro.schema";
-import { zVisibility } from "@repo/api/domains/visibility/visibility.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { MultiSelectFilter } from "@repo/ui/components/multi-select-filter";
+import type { ListFilter } from "@repo/ui/components/list-filter-menu";
+import { ListFilterChips, ListFilterMenu } from "@repo/ui/components/list-filter-menu";
 import { SearchInput } from "@repo/ui/components/search-input";
 
 export function ListMacros() {
@@ -48,6 +50,27 @@ export function ListMacros() {
   const locale = useLocale();
   const hasSearch = debouncedSearch.trim() !== "";
 
+  const filterLabels = useListFilterLabels();
+  const filters: ListFilter[] = [
+    {
+      key: "language",
+      label: t("macros.columns.language"),
+      icon: Code,
+      options: zMacroLanguage.options.map((value) => ({
+        value,
+        label: getMacroLanguageLabel(value),
+      })),
+      selected: languages,
+      onChange: setLanguages,
+    },
+    visibilityFilter({
+      label: t("macros.visibility"),
+      optionLabel: (value) => t(`macros.${value}`),
+      selected: visibilities,
+      onChange: setVisibilities,
+    }),
+  ];
+
   return (
     <div className="space-y-4">
       <OverviewToolbar
@@ -64,33 +87,12 @@ export function ListMacros() {
         }
         filters={
           <>
-            <MultiSelectFilter
-              title={t("macros.columns.language")}
-              options={zMacroLanguage.options.map((value) => ({
-                value,
-                label: getMacroLanguageLabel(value),
-              }))}
-              selected={languages}
-              onChange={setLanguages}
-              emptyLabel={t("common.filterNoResults")}
-              selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
-            />
-            <MultiSelectFilter
-              title={t("macros.visibility")}
-              options={zVisibility.options.map((value) => ({
-                value,
-                label: t(`macros.${value}`),
-              }))}
-              selected={visibilities}
-              onChange={setVisibilities}
-              emptyLabel={t("common.filterNoResults")}
-              selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
-            />
-            <ClearFiltersButton active={hasActiveFilters} onClear={clearFilters} />
+            <ListFilterMenu filters={filters} labels={filterLabels} />
             <ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />
           </>
         }
       />
+      <ListFilterChips filters={filters} labels={filterLabels} onClear={clearFilters} />
 
       <div
         aria-busy={isPlaceholderData}

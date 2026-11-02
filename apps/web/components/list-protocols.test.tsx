@@ -1,6 +1,6 @@
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import * as nav from "next/navigation";
 import { describe, expect, it, vi } from "vitest";
 import { getSensorFamilyLabel } from "~/util/sensor-family";
@@ -17,6 +17,17 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
   totalPages,
   totalCount: items.length,
 });
+
+async function openFilter(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(screen.getByRole("button", { name: /^common\.filter/ }));
+  await user.click(screen.getByRole("option", { name }));
+  return screen.getByRole("listbox", { name });
+}
+
+const chipLabels = () =>
+  screen
+    .queryAllByRole("group", { name: /common\.filterIs/ })
+    .map((chip) => chip.getAttribute("aria-label"));
 
 describe("ListProtocols", () => {
   it("keeps route-wide create actions out of the collection toolbar", () => {
@@ -133,14 +144,18 @@ describe("ListProtocols", () => {
       vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams(qs));
     }
 
-    it("offers both filters and hides Clear filters while nothing is picked", () => {
+    it("offers both filters and hides Clear filters while nothing is picked", async () => {
+      const user = userEvent.setup();
       server.mount(contract.protocols.listProtocols, { body: envelope([]) });
 
       render(<ListProtocols />);
 
-      expect(screen.getByRole("button", { name: "protocols.columns.family" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "protocols.visibility" })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
+      await user.click(screen.getByRole("button", { name: "common.filter" }));
+      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+        "protocols.columns.family",
+        "protocols.visibility",
+      ]);
     });
 
     it("lists the authored families without mobile and filters through the URL and the API", async () => {
@@ -151,12 +166,16 @@ describe("ListProtocols", () => {
       const spy = server.mount(contract.protocols.listProtocols, { body: envelope([]) });
 
       render(<ListProtocols />);
-      await user.click(screen.getByRole("button", { name: "protocols.columns.family" }));
+      const families = await openFilter(user, "protocols.columns.family");
 
-      const labels = screen.getAllByRole("option").map((option) => option.textContent);
+      const labels = within(families)
+        .getAllByRole("option")
+        .map((option) => option.textContent);
       expect(labels).toEqual(zProtocolFamily.options.map(getSensorFamilyLabel));
       expect(labels).not.toContain(getSensorFamilyLabel("mobile"));
-      await user.click(screen.getByRole("option", { name: getSensorFamilyLabel("ambyte") }));
+      await user.click(
+        within(families).getByRole("option", { name: getSensorFamilyLabel("ambyte") }),
+      );
 
       expect(replace).toHaveBeenLastCalledWith("/platform/protocols?family=ambyte", {
         scroll: false,
@@ -164,9 +183,9 @@ describe("ListProtocols", () => {
       await waitFor(() => {
         expect(spy.calls.at(-1)?.url).toContain("family%5B0%5D=ambyte");
       });
-      expect(
-        screen.getByRole("button", { name: /^protocols\.columns\.family(?!:)/ }),
-      ).toHaveTextContent("1");
+      expect(chipLabels()).toEqual([
+        `protocols.columns.family common.filterIs ${getSensorFamilyLabel("ambyte")}`,
+      ]);
     });
 
     it("lists both visibilities and filters by one", async () => {
@@ -177,13 +196,14 @@ describe("ListProtocols", () => {
       const spy = server.mount(contract.protocols.listProtocols, { body: envelope([]) });
 
       render(<ListProtocols />);
-      await user.click(screen.getByRole("button", { name: "protocols.visibility" }));
+      const visibilities = await openFilter(user, "protocols.visibility");
 
-      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
-        "protocols.private",
-        "protocols.public",
-      ]);
-      await user.click(screen.getByRole("option", { name: "protocols.private" }));
+      expect(
+        within(visibilities)
+          .getAllByRole("option")
+          .map((option) => option.textContent),
+      ).toEqual(["protocols.private", "protocols.public"]);
+      await user.click(within(visibilities).getByRole("option", { name: "protocols.private" }));
 
       expect(replace).toHaveBeenLastCalledWith("/platform/protocols?visibility=private", {
         scroll: false,
@@ -205,10 +225,11 @@ describe("ListProtocols", () => {
 
       render(<ListProtocols />);
 
-      expect(
-        screen.getByRole("button", { name: /^protocols\.columns\.family(?!:)/ }),
-      ).toHaveTextContent("2");
-      expect(screen.getByRole("button", { name: /protocols\.visibility/ })).toHaveTextContent("1");
+      expect(chipLabels()).toEqual([
+        `protocols.columns.family common.filterIs ${getSensorFamilyLabel("multispeq")}`,
+        `protocols.columns.family common.filterIs ${getSensorFamilyLabel("ambyte")}`,
+        "protocols.visibility common.filterIs protocols.private",
+      ]);
       await waitFor(() => expect(screen.getByRole("link", { name: "Shared" })).toBeInTheDocument());
       expect(spy.calls.at(-1)?.url).toContain("family%5B1%5D=multispeq");
       expect(spy.calls.at(-1)?.url).toContain("visibility%5B0%5D=private");
