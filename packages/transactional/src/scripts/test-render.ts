@@ -6,6 +6,9 @@ import { join } from "path";
 
 import { renderAccessGrantedNotification } from "../render/access-granted-notification";
 import { renderApiKeyCreatedNotification } from "../render/api-key-created-notification";
+import { renderCalibrationRunApprovedNotification } from "../render/calibration-run-approved-notification";
+import { renderCalibrationRunAwaitingApprovalNotification } from "../render/calibration-run-awaiting-approval-notification";
+import { renderCalibrationRunRejectedNotification } from "../render/calibration-run-rejected-notification";
 import { renderExperimentMadePublicNotification } from "../render/experiment-made-public-notification";
 import { renderOrganizationMembershipRemoved } from "../render/organization-membership-removed";
 import { renderOrganizationRoleChanged } from "../render/organization-role-changed";
@@ -106,6 +109,18 @@ async function main(): Promise<void> {
   );
 
   write(
+    "calibration-run-awaiting-approval",
+    await renderCalibrationRunAwaitingApprovalNotification({
+      host,
+      baseUrl,
+      deviceName: "Greenhouse 3 MiniPAR",
+      definitionName: "PAR sweep",
+      actor: "Jane Doe",
+      calibrationUrl: `${baseUrl}/en-US/platform/devices/123/calibration`,
+    }),
+  );
+
+  write(
     "passkey-added",
     await renderPasskeyAddedNotification({
       host,
@@ -116,11 +131,35 @@ async function main(): Promise<void> {
   );
 
   write(
+    "calibration-run-approved",
+    await renderCalibrationRunApprovedNotification({
+      host,
+      baseUrl,
+      deviceName: "Greenhouse 3 MiniPAR",
+      definitionName: "PAR sweep",
+      actor: "Jane Doe",
+      calibrationUrl: `${baseUrl}/en-US/platform/devices/123/calibration`,
+    }),
+  );
+
+  write(
     "passkey-added-unnamed",
     await renderPasskeyAddedNotification({
       host,
       baseUrl,
       securityUrl: `${baseUrl}/en-US/platform/account/security`,
+    }),
+  );
+
+  write(
+    "calibration-run-rejected",
+    await renderCalibrationRunRejectedNotification({
+      host,
+      baseUrl,
+      deviceName: "Greenhouse 3 MiniPAR",
+      definitionName: "PAR sweep",
+      actor: "Jane Doe",
+      calibrationUrl: `${baseUrl}/en-US/platform/devices/123/calibration`,
     }),
   );
 
