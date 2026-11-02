@@ -26,9 +26,8 @@ export const zTransferResourceBody = z.object({
 });
 
 /**
- * The resource's new home. Nothing else changes — visibility, embargo, data and
- * user/organization grants all survive the move — so there is nothing else to
- * report back.
+ * The resource's new home. Team grants and the target organization's own grant are
+ * dropped; everything else survives the move, so there is nothing else to report back.
  */
 export const zTransferResourceResponse = z.object({
   resourceType: zTransferableResourceType,

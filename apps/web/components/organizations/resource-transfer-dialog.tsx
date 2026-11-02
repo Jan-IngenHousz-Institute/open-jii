@@ -44,8 +44,8 @@ interface ResourceTransferDialogProps {
  * organization whose owners are all gone.
  *
  * Team grants of the source organization are dropped by the transfer: a team
- * cannot hold access outside the organization it belongs to. User and organization
- * grants, visibility and data all survive, which is what the confirmation says.
+ * cannot hold access outside the organization it belongs to. So is the receiving
+ * organization's own grant. User grants, visibility and data survive, as the note says.
  *
  * The flow only; its trigger belongs to whatever displays the owning organization,
  * so that value is both the answer and the way to change it.

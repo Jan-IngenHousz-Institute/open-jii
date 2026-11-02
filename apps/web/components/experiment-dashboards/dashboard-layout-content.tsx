@@ -1,5 +1,6 @@
 "use client";
 
+import { personName } from "@/components/people/person-name";
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useLocale } from "@/hooks/useLocale";
@@ -57,7 +58,7 @@ export function DashboardLayoutContent({
   };
 
   const backHref = `/${locale}/platform/experiments/${experimentId}/dashboards`;
-  const createdByDisplay = dashboard.createdByName ?? "-";
+  const createdByDisplay = personName({ displayName: dashboard.createdByName }, tCommon);
 
   const ToggleModeIcon = isEditing ? Eye : Pencil;
   const toggleModeLabel = isEditing ? t("ui.actions.done") : t("ui.actions.edit");

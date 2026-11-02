@@ -1,5 +1,6 @@
 "use client";
 
+import { PersonByline } from "@/components/people/person-byline";
 import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
 import { useDebounce } from "@/hooks/useDebounce";
 import { orpc } from "@/lib/orpc";
@@ -258,11 +259,7 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
                       <Code className="text-node-analysis h-3.5 w-3.5 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm">{m.name}</p>
-                        {m.createdByName && (
-                          <p className="text-muted-foreground truncate text-xs">
-                            by {m.createdByName}
-                          </p>
-                        )}
+                        <PersonByline displayName={m.createdByName} />
                       </div>
                       <Badge variant="outline" className="shrink-0 text-[10px]">
                         {languageLabels[m.language]}

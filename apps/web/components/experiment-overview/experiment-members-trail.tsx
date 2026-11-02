@@ -5,6 +5,7 @@ import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import { useTranslation } from "@repo/i18n";
 
+import { ownName } from "../people/person-name";
 import { UserAvatar } from "../user-avatar";
 
 interface ExperimentMembersTrailProps {
@@ -83,8 +84,7 @@ export function ExperimentMembersTrail({
             <UserAvatar
               key={contributor.userId}
               avatarUrl={contributor.avatarUrl}
-              firstName={contributor.firstName}
-              lastName={contributor.lastName}
+              name={ownName(contributor) ?? ""}
               className="ring-background bg-muted h-6 w-6 text-[10px] ring-2"
             />
           ))}

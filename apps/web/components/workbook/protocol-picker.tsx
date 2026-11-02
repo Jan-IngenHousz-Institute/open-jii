@@ -1,5 +1,6 @@
 "use client";
 
+import { PersonByline } from "@/components/people/person-byline";
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
 import { useDebounce } from "@/hooks/useDebounce";
 import { orpc } from "@/lib/orpc";
@@ -223,11 +224,7 @@ export function ProtocolPicker({
                       <Microscope className="text-node-measurement h-3.5 w-3.5 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm">{p.name}</p>
-                        {p.createdByName && (
-                          <p className="text-muted-foreground truncate text-xs">
-                            by {p.createdByName}
-                          </p>
-                        )}
+                        <PersonByline displayName={p.createdByName} />
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
                         {p.sortOrder !== null && (

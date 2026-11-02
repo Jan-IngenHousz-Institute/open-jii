@@ -3,7 +3,7 @@ title: "Moving a resource to another workspace"
 description: "Transfer an experiment, macro, protocol or workbook between your personal workspace and an organization — and what changes about access when you do."
 ---
 
-{/* verified: code@2a0698c44 2026-08-17 */}
+{/* verified: code@f814dca2b 2026-10-29 */}
 
 Work created in your personal workspace can be moved into a lab, and work owned by one
 organization can be moved to another. This is the fix for "I built this on my own and
@@ -55,15 +55,16 @@ This matters when you are trying to empty an organization before
 
 ## What changes, and what doesn't
 
-|                                    | After the move                                                                                   |
-| :--------------------------------- | :----------------------------------------------------------------------------------------------- |
-| The destination's roles            | Start applying immediately — its Owners and Admins can edit, its Members can read and contribute |
-| The old organization's roles       | Stop applying. People who only had access through it lose it                                     |
-| Shares held by a **person**        | Survive                                                                                          |
-| Shares held by an **organization** | Survive                                                                                          |
-| Shares held by a **team**          | **Removed.** Every team share on the resource is withdrawn by the move                           |
-| Visibility and embargo             | Unchanged. Moving does not publish or unpublish anything                                         |
-| The data itself                    | Unchanged — measurements, annotations and versions all move with it                              |
+|                                                   | After the move                                                                                   |
+| :------------------------------------------------ | :----------------------------------------------------------------------------------------------- |
+| The destination's roles                           | Start applying immediately — its Owners and Admins can edit, its Members can read and contribute |
+| The old organization's roles                      | Stop applying. People who only had access through it lose it                                     |
+| Shares held by a **person**                       | Survive                                                                                          |
+| Shares held by the **organization it moves into** | **Removed.** Its members reach it through membership instead                                     |
+| Shares held by any **other organization**         | Survive                                                                                          |
+| Shares held by a **team**                         | **Removed.** Every team share on the resource is withdrawn by the move                           |
+| Visibility and embargo                            | Unchanged. Moving does not publish or unpublish anything                                         |
+| The data itself                                   | Unchanged — measurements, annotations and versions all move with it                              |
 
 <Callout type="warn">
   The team share removal is the one that surprises people. If a field crew reached the experiment

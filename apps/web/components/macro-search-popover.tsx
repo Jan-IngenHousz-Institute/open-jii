@@ -1,6 +1,7 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { personName } from "@/components/people/person-name";
 import { useLocale } from "@/hooks/useLocale";
 import { SearchX, ExternalLink } from "lucide-react";
 import React, { useCallback } from "react";
@@ -70,6 +71,9 @@ function MacroList({
     <>
       {macros.map((macro) => {
         const isPreferred = macro.sortOrder !== null;
+        const author = personName({ displayName: macro.createdByName }, t, {
+          placement: "byline",
+        });
         const isRecommended = recommendedMacroIds?.has(macro.id) ?? false;
         const hasRecommendedMacros = recommendedMacroIds && recommendedMacroIds.size > 0;
         const isFeatured = isRecommended || (!hasRecommendedMacros && isPreferred);
@@ -115,10 +119,10 @@ function MacroList({
               </div>
 
               {/* Created by */}
-              {macro.createdByName && (
+              {author && (
                 <div className="text-muted-foreground truncate text-xs">
                   <span className="opacity-75">{t("experiments.createdBy")}</span>{" "}
-                  <span className="font-medium">{macro.createdByName}</span>
+                  <span className="font-medium">{author}</span>
                 </div>
               )}
             </div>

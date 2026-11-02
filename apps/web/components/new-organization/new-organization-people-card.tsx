@@ -1,12 +1,11 @@
 "use client";
 
 import { SettingsCard } from "@/components/shared/settings-card";
-import { Mail, Network, User, X } from "lucide-react";
+import { Network, X } from "lucide-react";
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
 import type { OrganizationRole } from "@repo/api/domains/organization/organization.schema";
-import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Label } from "@repo/ui/components/label";
@@ -22,6 +21,7 @@ import { organizationRoleLabelKey } from "../organizations/organization-labels";
 import type { OrganizationInviteSelection } from "../organizations/organization-member-picker";
 import { OrganizationMemberPicker } from "../organizations/organization-member-picker";
 import { invitableRoles } from "../organizations/organization-roster-rules";
+import { PendingPersonIdentity } from "./pending-person-identity";
 import type { NewOrganizationFormValues, PendingOrganizationPerson } from "./steps/form-step";
 
 interface NewOrganizationPeopleCardProps {
@@ -33,10 +33,8 @@ interface NewOrganizationPeopleCardProps {
  * membership or an invitation until the organization exists, so the picker's selections
  * are held on the form and spent on submit.
  *
- * The picker is the organization's own, unchanged — it never wrote anything itself, it
- * reports a selection. Its exclusion lists carry the people already collected here plus
- * whoever is creating the organization, so nobody can be collected twice and nobody can
- * be invited to an organization they already own.
+ * The picker never writes anything itself; it reports a selection. The people already
+ * collected here are greyed out in it, so nobody can be collected twice.
  *
  * Three regions, each owning the text about it: the composer for adding somebody, the
  * list of who has been collected, and the aside about teams. Prose that belongs to a
@@ -45,7 +43,6 @@ interface NewOrganizationPeopleCardProps {
  */
 export function NewOrganizationPeopleCard({ form }: NewOrganizationPeopleCardProps) {
   const { t } = useTranslation();
-  const { data: session } = useSession();
 
   const people = form.watch("people");
   const [selection, setSelection] = useState<OrganizationInviteSelection | null>(null);
@@ -75,13 +72,9 @@ export function NewOrganizationPeopleCard({ form }: NewOrganizationPeopleCardPro
         <OrganizationMemberPicker
           selection={selection}
           onSelectionChange={setSelection}
-          // Whoever is creating the organization is excluded alongside the people
-          // already collected: they are its owner the moment it exists, so offering
-          // them would send an invitation to their own organization.
-          memberUserIds={[
-            ...people.flatMap((person) => (person.kind === "user" ? [person.userId] : [])),
-            ...(session ? [session.user.id] : []),
-          ]}
+          memberUserIds={people.flatMap((person) =>
+            person.kind === "user" ? [person.userId] : [],
+          )}
           memberEmails={[]}
           pendingInvitationEmails={people.flatMap((person) =>
             person.kind === "email" ? [person.email] : [],
@@ -157,23 +150,7 @@ export function NewOrganizationPeopleCard({ form }: NewOrganizationPeopleCardPro
                   // truncating the name to nothing.
                   className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5"
                 >
-                  <span className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-full border">
-                    {person.kind === "user" ? (
-                      <User className="text-muted-foreground h-4 w-4" aria-hidden />
-                    ) : (
-                      <Mail className="text-muted-foreground h-4 w-4" aria-hidden />
-                    )}
-                  </span>
-                  <div className="min-w-0 flex-1 basis-40">
-                    <p className="truncate text-sm font-medium">{label}</p>
-                    {/* How they arrive, in words: the icon that says it is aria-hidden,
-                          so on its own it says nothing to anybody listening. */}
-                    {person.kind === "email" ? (
-                      <p className="text-muted-foreground truncate text-xs">
-                        {t("organizations.create.people.invitedByEmail")}
-                      </p>
-                    ) : null}
-                  </div>
+                  <PendingPersonIdentity person={person} />
                   {/* The roster's own control, doing the roster's job: a mistyped role is
                         fixed where it is read rather than by removing the person and
                         picking them again. */}

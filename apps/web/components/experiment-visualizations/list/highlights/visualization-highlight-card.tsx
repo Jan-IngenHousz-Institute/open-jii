@@ -1,6 +1,7 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { personName } from "@/components/people/person-name";
 import { formatDate } from "@/util/date";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
@@ -30,9 +31,10 @@ export function VisualizationHighlightCard({
   const [inViewRef, mounted] = useInView<HTMLDivElement>({ rootMargin: "200px" });
 
   const updatedLabel = t("ui.labels.updatedAgo", { date: formatDate(visualization.updatedAt) });
-  const subtitle = visualization.createdByName
-    ? `${updatedLabel} · ${visualization.createdByName}`
-    : updatedLabel;
+  const author = personName({ displayName: visualization.createdByName }, t, {
+    placement: "byline",
+  });
+  const subtitle = author ? `${updatedLabel} · ${author}` : updatedLabel;
 
   return (
     <Card className="hover:border-foreground/20 group relative overflow-hidden shadow-none transition-colors">
