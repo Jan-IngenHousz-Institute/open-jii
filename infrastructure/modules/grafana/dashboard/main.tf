@@ -3960,8 +3960,7 @@ resource "grafana_rule_group" "lakehouse_freshness" {
 
   # Catalog entry 126. Published per pipeline and flow, once per hour the driver logged, and an
   # hour reaches the volume about an hour after it closes, so the window reaches back five hours.
-  # Each reading stays the latest for about an hour, so 60 minutes asks for about two hours in a row;
-  # a reading that stays latest longer, while the next hour is late, fires on its own.
+  # A reading stays the latest for about an hour, so one busy hour fires it once.
   rule {
     name      = "Pipeline Flow Busy"
     condition = "C"
@@ -4026,7 +4025,7 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     }
     no_data_state  = "OK"
     exec_err_state = "OK"
-    for            = "60m"
+    for            = "0m"
 
     annotations = {
       description      = "A flow that streamed measurements wait on spent over 80% of an hour in batches, so it runs them back to back and any more load makes measurements wait longer."

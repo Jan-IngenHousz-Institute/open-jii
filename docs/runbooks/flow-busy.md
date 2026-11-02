@@ -2,8 +2,8 @@
 
 **A flow that streamed measurements wait on spent most of an hour in batches.** Its batches now run
 back to back rather than once per trigger interval, so every extra row adds to how long the next
-measurement waits. Nothing is lost yet. The rule fires after two such hours in a row. In prod's
-busiest hour of 28 October 2026, the busiest flow spent 18.5% of it in batches.
+measurement waits. Nothing is lost yet. The rule fires on one such hour, over 80%. In prod's busiest
+hour of 28 October 2026, the busiest flow spent 18.5% of it in batches.
 
 The heartbeat export reads each pipeline driver's log every half hour. An hour reaches the log volume
 about an hour after it closes, so the reading is two to three hours old. The alert's `Pipeline` label
