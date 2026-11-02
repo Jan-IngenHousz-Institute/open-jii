@@ -27,6 +27,17 @@ export function ViolinPlotRenderer({
   const dataSources = visualization.dataConfig.dataSources;
   const orientation = chartConfig.violinOrientation === "h" ? "h" : "v";
 
+  const plotConfig =
+    orientation === "h"
+      ? {
+          ...chartConfig,
+          xAxisTitle: chartConfig.yAxisTitle,
+          yAxisTitle: chartConfig.xAxisTitle,
+          xAxisType: chartConfig.yAxisType,
+          yAxisType: chartConfig.xAxisType,
+        }
+      : chartConfig;
+
   // KEEP IN SYNC with the field reads in `transformViolinPlotData`.
   const { chartSeries, subplots } = useMemo(() => {
     if (visualization.chartType !== "violin-plot") {
@@ -74,7 +85,7 @@ export function ViolinPlotRenderer({
       <div className="flex h-full w-full flex-col">
         <ViolinPlot
           data={chartSeries}
-          config={chartConfig}
+          config={plotConfig}
           orientation={orientation}
           violinmode={chartConfig.violinmode ?? "group"}
           subplots={subplots}

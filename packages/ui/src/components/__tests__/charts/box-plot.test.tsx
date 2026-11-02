@@ -5,6 +5,7 @@ import { vi, expect, beforeEach, afterEach } from "vitest";
 
 import { BoxPlot, GroupedBoxPlot, ViolinPlot } from "../../charts/box-plot";
 import type { BoxSeriesData, ViolinSeriesData } from "../../charts/box-plot";
+import { PlotlyChart } from "../../charts/plotly-chart";
 
 // Mock common utilities
 vi.mock("../../charts/plotly-chart", () => ({
@@ -454,17 +455,12 @@ describe("BoxPlot", () => {
     });
 
     it("handles series-level orientation override", () => {
-      const orientationData: BoxSeriesData[] = [
-        {
-          ...mockData[0],
-          orientation: "h",
-        },
-      ];
-
-      render(<BoxPlot data={orientationData} orientation="v" />);
-
-      const chart = screen.getByTestId("plotly-chart");
-      expect(chart).toBeInTheDocument();
+      render(<BoxPlot orientation="v" data={[{ orientation: "h", x: [10, 12], y: ["A", "A"] }]} />);
+      expect(vi.mocked(PlotlyChart).mock.calls.at(-1)?.[0].data[0]).toMatchObject({
+        orientation: "h",
+        x: [10, 12],
+        y: ["A", "A"],
+      });
     });
   });
 
@@ -795,10 +791,18 @@ describe("GroupedBoxPlot", () => {
     });
 
     it("renders horizontal grouped box plot", () => {
-      render(<GroupedBoxPlot groups={groupedData} orientation="h" />);
-
-      const chart = screen.getByTestId("plotly-chart");
-      expect(chart).toBeInTheDocument();
+      render(
+        <GroupedBoxPlot
+          orientation="h"
+          groupBy={["North", "South"]}
+          groups={[{ name: "Signal", values: [10, 12, 20, 22] }]}
+        />,
+      );
+      expect(vi.mocked(PlotlyChart).mock.calls.at(-1)?.[0].data[0]).toMatchObject({
+        orientation: "h",
+        x: [10, 12, 20, 22],
+        y: ["North", "North", "South", "South"],
+      });
     });
 
     it("handles empty groups", () => {

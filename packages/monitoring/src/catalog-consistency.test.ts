@@ -339,6 +339,14 @@ describe("signals", () => {
     expect(offenders.map((m) => m.id)).toEqual([]);
   });
 
+  it("declare a cadence only in whole minutes, the shortest period CloudWatch keeps", () => {
+    const offenders = metrics.filter(
+      (m) =>
+        m.signal?.cadence !== undefined && (m.signal.cadence <= 0 || m.signal.cadence % 60 !== 0),
+    );
+    expect(offenders.map((m) => m.id)).toEqual([]);
+  });
+
   it("give every weekly count a period, since a count's latest reading is not a week", () => {
     const offenders = metrics.filter(
       (m) => m.active && m.slots.includes("weekly") && m.signal?.stat === "Sum" && !m.signal.period,
