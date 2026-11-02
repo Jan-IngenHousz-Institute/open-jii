@@ -6,6 +6,7 @@ import {
   and,
   createSecondaryDatabase,
   eq,
+  macros,
   notifications,
   organizationMembers,
   organizations,
@@ -183,6 +184,34 @@ describe("createGrant", () => {
     assertFailure(result);
     expect(result.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
     expect(await directGrantCount(macro.id, grantee)).toBe(0);
+  });
+
+  it("refuses an organization the resource is moved into after authorization", async () => {
+    const macro = await testApp.createMacro({ name: "Moved Mid-share", createdBy: owner });
+    const receiving = await testApp.createOrganization("Receiving Lab");
+    await testApp.addOrganizationMember(receiving, owner, "member");
+    const { checkFinished, release, spy } = pauseAfterSelectabilityCheck();
+
+    const creating = createGrant.execute(owner, "macro", macro.id, {
+      granteeType: "organization",
+      granteeId: receiving,
+      role: "admin",
+    });
+    await checkFinished;
+    await secondary.database
+      .update(macros)
+      .set({ organizationId: receiving })
+      .where(eq(macros.id, macro.id));
+    release();
+
+    const result = await creating;
+    spy.mockRestore();
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
+    expect(result.error.message).toBe(
+      "A resource cannot be shared with the organization that owns it",
+    );
+    expect(await directGrantCount(macro.id, receiving)).toBe(0);
   });
 
   it("makes resource deletion wait for an in-flight grant, then sweeps that grant", async () => {
@@ -638,6 +667,31 @@ describe("createGrant", () => {
       assertFailure(result);
       expect(result.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
     });
+
+    it.each(["viewer", "admin"] as const)(
+      "refuses the organization that owns the resource at %s, writing nothing",
+      async (role) => {
+        const orgId = await testApp.createOrganization("Greenhouse Lab");
+        await testApp.addOrganizationMember(orgId, owner, "admin");
+        const macro = await testApp.createMacro({
+          name: "M",
+          createdBy: owner,
+          organizationId: orgId,
+        });
+
+        const result = await createGrant.execute(owner, "macro", macro.id, {
+          granteeType: "organization",
+          granteeId: orgId,
+          role,
+        });
+        assertFailure(result);
+        expect(result.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
+        expect(result.error.message).toBe(
+          "A resource cannot be shared with the organization that owns it",
+        );
+        expect(await directGrantCount(macro.id, orgId)).toBe(0);
+      },
+    );
 
     it("accepts an organization the sharer belongs to", async () => {
       const macro = await testApp.createMacro({ name: "M", createdBy: owner });

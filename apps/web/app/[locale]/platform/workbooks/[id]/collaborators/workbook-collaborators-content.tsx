@@ -18,6 +18,7 @@ export default function WorkbookCollaboratorsPage({ params }: WorkbookCollaborat
       resourceType="workbook"
       resourceId={id}
       capabilities={data?.capabilities}
+      owningOrganizationId={data?.organizationId}
     />
   );
 }

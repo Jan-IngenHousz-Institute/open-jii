@@ -53,6 +53,22 @@ describe("NavUser", () => {
     });
   });
 
+  it("names someone with only a first name, with initials from that name", async () => {
+    useProfileOverride({ firstName: "Ada" });
+    renderNav();
+
+    expect(await screen.findByText("Ada")).toBeInTheDocument();
+    expect(screen.getByText("A")).toBeInTheDocument();
+    expect(screen.queryByText("JII")).not.toBeInTheDocument();
+  });
+
+  it("shows the address once for an account with no name", async () => {
+    useProfileOverride({ firstName: "", lastName: "" });
+    renderNav();
+
+    await waitFor(() => expect(screen.getAllByText("ada@example.com")).toHaveLength(1));
+  });
+
   it("renders dropdown with account, support, faq, logout", async () => {
     useProfileOverride({ firstName: "Ada", lastName: "Lovelace" });
     const user = userEvent.setup();

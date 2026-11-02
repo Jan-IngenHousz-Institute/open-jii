@@ -31,6 +31,24 @@ describe("<OrganizationJoinRequests />", () => {
     mockSession(null);
   });
 
+  it("names a requester with no name and a hidden address by the fallback, with no address line", async () => {
+    mockSession({ id: "user-1" });
+    mountRequests([
+      createOrganizationJoinRequest({
+        user: { id: "user-nameless", firstName: "", lastName: "", email: null, avatarUrl: null },
+      }),
+    ]);
+
+    render(<OrganizationJoinRequests organizationId="org-1" />);
+
+    await screen.findByText("common.unnamedAccount");
+    expect(screen.queryByText(/user-nameless/u)).not.toBeInTheDocument();
+    const emptyLines = Array.from(
+      rowFor("common.unnamedAccount").querySelectorAll(".text-xs"),
+    ).filter((line) => line.textContent === "");
+    expect(emptyLines).toHaveLength(0);
+  });
+
   it("distinguishes no requests at all from none waiting on a decision", async () => {
     mockSession({ id: "user-1" });
     mountRequests([]);

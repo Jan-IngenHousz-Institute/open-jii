@@ -57,9 +57,10 @@ describe("VisualizationTableRow", () => {
     expect(screen.getByText("Alice")).toBeInTheDocument();
   });
 
-  it("falls back to a truncated user id when createdByName is missing", () => {
+  it("names an author without a name by the fallback, never by an id prefix", () => {
     renderRow({ visualization: viz({ createdByName: undefined, createdBy: "user-9876543210" }) });
-    expect(screen.getByText("user-987…")).toBeInTheDocument();
+    expect(screen.getByText("common.unnamedAccount")).toBeInTheDocument();
+    expect(screen.queryByText(/user-987/)).not.toBeInTheDocument();
   });
 
   it("shows the registered chart type label and family-keyed badge class", () => {

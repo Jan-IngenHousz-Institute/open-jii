@@ -345,6 +345,83 @@ describe("TransferResourceOrgUseCase", () => {
     ]);
   });
 
+  it("drops the receiving organization's own grant and keeps every other grant", async () => {
+    const { organizationId, macro } = await labWithMacro();
+    const target = await testApp.createOrganization();
+    const targetOwner = await testApp.createTestUser({ name: "Target owner" });
+    await testApp.addOrganizationMember(target, targetOwner, "owner");
+    await testApp.addOrganizationMember(target, owner, "member");
+    const plainMember = await testApp.createTestUser({ name: "Plain member" });
+    await testApp.addOrganizationMember(target, plainMember, "member");
+    await testApp.addResourceGrant({
+      resourceType: "macro",
+      resourceId: macro.id,
+      granteeType: "organization",
+      granteeId: target,
+      role: "admin",
+    });
+    const partnerOrg = await testApp.createOrganization();
+    await testApp.addResourceGrant({
+      resourceType: "macro",
+      resourceId: macro.id,
+      granteeType: "organization",
+      granteeId: partnerOrg,
+      role: "viewer",
+    });
+    const collaborator = await testApp.createTestUser({ name: "Collaborator" });
+    await testApp.addResourceGrant({
+      resourceType: "macro",
+      resourceId: macro.id,
+      granteeType: "user",
+      granteeId: collaborator,
+      role: "viewer",
+    });
+    const teamId = await testApp.createTeam(organizationId);
+    await testApp.addResourceGrant({
+      resourceType: "macro",
+      resourceId: macro.id,
+      granteeType: "team",
+      granteeId: teamId,
+      role: "admin",
+    });
+
+    expect(
+      (
+        await authz.can(plainMember, {
+          resourceType: "macro",
+          resourceId: macro.id,
+          action: "update",
+        })
+      ).allow,
+    ).toBe(true);
+
+    assertSuccess(await useCase.execute(owner, "macro", macro.id, target));
+
+    // An organization holding a share on its own resource would make every plain
+    // member an editor through the grant rather than a reader through membership.
+    expect(await grantsOn(macro.id, "organization")).toEqual([
+      { granteeId: partnerOrg, role: "viewer" },
+    ]);
+    expect(
+      (
+        await authz.can(plainMember, {
+          resourceType: "macro",
+          resourceId: macro.id,
+          action: "update",
+        })
+      ).allow,
+    ).toBe(false);
+    expect(await grantsOn(macro.id, "team")).toEqual([]);
+    const userGrants = await grantsOn(macro.id, "user");
+    expect(userGrants).toHaveLength(2);
+    expect(userGrants).toEqual(
+      expect.arrayContaining([
+        { granteeId: collaborator, role: "viewer" },
+        { granteeId: owner, role: "admin" },
+      ]),
+    );
+  });
+
   it("moves the resource's updated_at forward", async () => {
     const { macro } = await labWithMacro();
     const personal = await testApp.personalOrganizationId(owner);

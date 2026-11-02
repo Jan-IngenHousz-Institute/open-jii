@@ -81,6 +81,25 @@ describe("<ProtocolSearchWithDropdown />", () => {
     expect(screen.getByText(/MiniPAR/)).toBeInTheDocument();
   });
 
+  it("credits the selected protocol's author, and leaves out the credit when there is no name", () => {
+    const named = renderWidget({
+      value: "x1",
+      availableProtocols: [createProtocol({ id: "x1", createdByName: "Ada Lovelace" })],
+    });
+    expect(screen.getByText(/common\.byPerson/u)).toBeInTheDocument();
+    named.unmount();
+
+    renderWidget({
+      value: "x1",
+      availableProtocols: [
+        createProtocol({ id: "x1", name: "Nameless", createdByName: undefined }),
+      ],
+    });
+    expect(screen.getByText("Nameless")).toBeInTheDocument();
+    expect(screen.queryByText(/common\.byPerson/u)).not.toBeInTheDocument();
+    expect(screen.queryByText(/•/u)).not.toBeInTheDocument();
+  });
+
   it("filters dropdown list to exclude currently selected protocol", () => {
     renderWidget({ value: "p2" });
     expect(lastPopoverProps).not.toBeNull();

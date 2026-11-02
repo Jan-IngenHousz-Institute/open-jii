@@ -27,6 +27,9 @@ export const useGranteeUserSearch = (
     orpc.sharing.searchGranteeUsers.queryOptions({
       input,
       queryKey: granteeUsersQueryKey(userId, resourceType, resourceId, query),
+      // Read again on every search: the annotations decide who can be picked, and a
+      // share, a role change or a transfer can change them at any moment.
+      staleTime: 0,
       retry: shouldRetryQuery,
       enabled: (options?.enabled ?? true) && query.length >= 2 && !!resourceId && !isSessionPending,
     }),
