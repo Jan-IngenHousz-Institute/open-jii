@@ -50,5 +50,4 @@ The app is built with [OpenNext](https://opennext.js.org) (`pnpm --filter web bu
 
 CMS-specific rendering and live preview live in `components/cms`. Web fetches through `@repo/cms`
 and passes the results to these modules. Shared `@repo/ui` owns reusable presentation primitives and
-has no dependency on CMS. Run `pnpm lint:boundaries` from the repository root to check the package
-dependency rules.
+has no dependency on CMS.

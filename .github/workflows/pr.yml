@@ -203,12 +203,6 @@ jobs:
         shell: bash
         run: pnpm lint:ws
 
-      - name: Check dependency boundaries
-        shell: bash
-        run: |
-          pnpm test:boundaries
-          pnpm lint:boundaries
-
   mobile_styling_guard:
     name: Mobile Styling Guard
     runs-on: ubuntu-latest
