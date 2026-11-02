@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc --noEmit",
     "capture-docs-media": "tsx scripts/capture-docs-media.ts",
+    "capture:numeric-question-sorting": "tsx scripts/capture-numeric-question-sorting.ts",
     "capture-ticket-screens": "tsx scripts/capture-ticket-screens.ts",
     "check-types": "tsc --noEmit",
     "clean": "git clean -xdf .auth .cache .turbo node_modules playwright-report test-results",
