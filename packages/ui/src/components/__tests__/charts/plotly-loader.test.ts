@@ -51,13 +51,33 @@ describe("pendingTraceTypes", () => {
   });
 
   it("keeps a failed load, so a render that retries sees the failure", async () => {
-    const { pendingTraceTypes } = await freshLoader();
+    const { pendingTraceTypes, readTraceTypes } = await freshLoader();
     registerTraceTypes.mockRejectedValueOnce(new Error("chunk failed"));
 
     const first = pendingTraceTypes(["sankey"]);
 
     await expect(first).rejects.toThrow("chunk failed");
     expect(pendingTraceTypes(["sankey"])).toBe(first);
+    expect(registerTraceTypes).toHaveBeenCalledTimes(1);
+    expect(() => readTraceTypes(["sankey"])).toThrow("chunk failed");
+  });
+
+  it("suspends on the same registration promise, then reads ready types synchronously", async () => {
+    const { pendingTraceTypes, readTraceTypes } = await freshLoader();
+    const registration = pendingTraceTypes(["histogram2d"]);
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      let suspended: unknown;
+      try {
+        readTraceTypes(["histogram2d"]);
+      } catch (value) {
+        suspended = value;
+      }
+      expect(suspended).toBe(registration);
+    }
+    await registration;
+
+    expect(() => readTraceTypes(["histogram2d", "bar"])).not.toThrow();
     expect(registerTraceTypes).toHaveBeenCalledTimes(1);
   });
 
