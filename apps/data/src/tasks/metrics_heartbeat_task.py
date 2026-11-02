@@ -16,6 +16,7 @@
 # DBTITLE 1,Imports and configuration
 import json
 import os
+from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 
 from openjii.heartbeat import (
@@ -36,6 +37,9 @@ from openjii.heartbeat import (
     DRIVER_OLD_GEN_METRIC,
     EXPERIMENT_LATENCY_METRIC,
     EXPERIMENT_ROWS_METRIC,
+    FLOW_BATCHES_DETAIL,
+    FLOW_BUSY_METRIC,
+    FLOW_RESTARTS_METRIC,
     GOLD_AGE_METRIC,
     INGEST_BAD_PAYLOAD_RATE_METRIC,
     INGEST_IDLE_METRIC,
@@ -62,6 +66,7 @@ from openjii.heartbeat import (
     STALE_EXPERIMENTS_DETAIL,
     STALE_EXPERIMENTS_METRIC,
     USAGE_NAMESPACE,
+    WATCHED_FLOWS,
     WEEKLY_MEASUREMENTS_METRIC,
     cost_components,
     cost_windows,
@@ -72,6 +77,7 @@ from openjii.heartbeat import (
     heartbeat_key,
     hop,
     latest_full_collection,
+    latest_pipeline_hour,
     loggers_started_sql,
     minutes_since,
     observation,
@@ -148,6 +154,10 @@ MACRO_IN_FLIGHT_MINUTES = 15
 # A driver with no full collection this recent is under no memory pressure, or has stopped.
 # CloudWatch also refuses datapoints older than two weeks, which a stopped pipeline's log would be.
 DRIVER_GC_MAX_AGE = timedelta(hours=1)
+
+# A driver's hour reaches the volume about an hour after it closes, so the latest is two to three hours
+# old when read. One older than this belongs to a pipeline that has stopped.
+FLOW_HOUR_MAX_AGE = timedelta(hours=4)
 
 
 # Databricks captures driver stdout; the logging module is often swallowed in jobs
@@ -540,6 +550,37 @@ def collect_driver_heap(now: datetime) -> list[dict]:
     return records
 
 
+def collect_flow_batches(now: datetime) -> list[dict]:
+    """How much of its latest logged hour each watched flow spent in batches and how often it
+    restarted, stamped at the hour's start, with each flow's batch count and p95 in the roster."""
+    records = []
+    roster = []
+    for pipeline in sorted(os.listdir(PIPELINE_LOGS_PATH)):
+        flows = WATCHED_FLOWS.get(pipeline)
+        if flows is None:
+            continue
+        logged = latest_pipeline_hour(os.path.join(PIPELINE_LOGS_PATH, pipeline), flows)
+        if logged is None or now - logged.hour > FLOW_HOUR_MAX_AGE:
+            continue
+
+        for flow in logged.flows:
+            dimensions = {"Pipeline": pipeline, "Flow": flow.flow}
+            records.append(
+                observation(
+                    FLOW_BUSY_METRIC, flow.busy_percent, DATA_NAMESPACE, logged.hour, ENVIRONMENT, "Percent", dimensions
+                )
+            )
+            records.append(
+                observation(
+                    FLOW_RESTARTS_METRIC, flow.restarts, DATA_NAMESPACE, logged.hour, ENVIRONMENT, "Count", dimensions
+                )
+            )
+            roster.append({"pipeline": pipeline, "hour": logged.hour.isoformat(), **asdict(flow)})
+
+    records.append(detail(FLOW_BATCHES_DETAIL, roster))
+    return records
+
+
 def collect_databricks_cost(now: datetime) -> list[dict]:
     """Databricks spend at list price per component for yesterday and the latest complete
     week, and in total for the month, each stamped when its window closed. A component that
@@ -643,6 +684,7 @@ collectors = [
     ("macro_protocol_failures", collect_macro_protocol_failures),
     ("path_idle", collect_path_idle),
     ("driver_heap", collect_driver_heap),
+    ("flow_batches", collect_flow_batches),
     ("databricks_cost", collect_databricks_cost),
     ("databricks_spend_limit", collect_databricks_spend_limit),
     ("weekly_measurements", collect_weekly_measurements),

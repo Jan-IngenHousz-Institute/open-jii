@@ -3957,6 +3957,171 @@ resource "grafana_rule_group" "lakehouse_freshness" {
       metric_id = "driver-heap"
     }
   }
+
+  # Catalog entry 126. Published per pipeline and flow, once per hour the driver logged, and an
+  # hour reaches the volume about an hour after it closes, so the window reaches back five hours.
+  # Each reading stays the latest for about an hour, so 60 minutes asks for two hours in a row.
+  rule {
+    name      = "Pipeline Flow Busy"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Data"
+        metricName = "FlowBusyPercent"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+        matchExact = false
+      })
+
+      relative_time_range {
+        from = 18000
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 80"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "60m"
+
+    annotations = {
+      description      = "A flow that streamed measurements wait on spent over 80% of an hour in batches, so it runs them back to back and any more load makes measurements wait longer."
+      summary          = "A pipeline flow is close to falling behind"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/flow-busy.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["flow-busy"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "lakehouse"
+      metric_id = "flow-busy"
+    }
+  }
+
+  # Catalog entry 127. One hour with more than two restarts fires it, since a planned restart
+  # starts every flow again once. The window matches entry 126's.
+  rule {
+    name      = "Pipeline Flow Restarting"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Data"
+        metricName = "FlowRestarts"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+        matchExact = false
+      })
+
+      relative_time_range {
+        from = 18000
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 2"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "0m"
+
+    annotations = {
+      description      = "A flow that streamed measurements wait on started again more than twice in an hour, so it is failing and being retried, or its pipeline keeps restarting."
+      summary          = "A pipeline flow keeps restarting"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/flow-restarts.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["flow-restarts"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "lakehouse"
+      metric_id = "flow-restarts"
+    }
+  }
 }
 
 resource "grafana_notification_policy" "policy" {

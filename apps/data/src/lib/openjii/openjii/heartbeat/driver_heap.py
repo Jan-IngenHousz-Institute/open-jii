@@ -52,15 +52,23 @@ def last_full_collection(lines: Iterable[str]) -> FullCollection | None:
     return last
 
 
-def driver_logs(pipeline_dir: str) -> list[str]:
-    """The newest driver's stdout files under a pipeline's log folder, newest first."""
+def newest_driver(pipeline_dir: str) -> str | None:
+    """The log folder of the driver that wrote to its stdout last, under a pipeline's log folder."""
     drivers = [os.path.join(pipeline_dir, cluster, "driver") for cluster in os.listdir(pipeline_dir)]
     # A cluster that never started has no driver log.
     started = [driver for driver in drivers if os.path.isfile(os.path.join(driver, "stdout"))]
     if not started:
+        return None
+
+    return max(started, key=lambda driver: os.path.getmtime(os.path.join(driver, "stdout")))
+
+
+def driver_logs(pipeline_dir: str) -> list[str]:
+    """The newest driver's stdout files under a pipeline's log folder, newest first."""
+    newest = newest_driver(pipeline_dir)
+    if newest is None:
         return []
 
-    newest = max(started, key=lambda driver: os.path.getmtime(os.path.join(driver, "stdout")))
     rotated = sorted((name for name in os.listdir(newest) if name.startswith("stdout--")), reverse=True)
     return [os.path.join(newest, name) for name in ["stdout", *rotated]]
 

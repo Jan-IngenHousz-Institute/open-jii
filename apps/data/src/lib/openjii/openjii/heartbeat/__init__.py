@@ -20,6 +20,9 @@ from .constants import (
     EXPERIMENT_LATENCY_METRIC,
     EXPERIMENT_ROWS_METRIC,
     FAILED_COLLECTORS_DETAIL,
+    FLOW_BATCHES_DETAIL,
+    FLOW_BUSY_METRIC,
+    FLOW_RESTARTS_METRIC,
     GOLD_AGE_METRIC,
     HEARTBEAT_KEY_PREFIX,
     INGEST_BAD_PAYLOAD_RATE_METRIC,
@@ -45,6 +48,7 @@ from .constants import (
     STALE_EXPERIMENTS_DETAIL,
     STALE_EXPERIMENTS_METRIC,
     USAGE_NAMESPACE,
+    WATCHED_FLOWS,
     WEEKLY_MEASUREMENTS_METRIC,
 )
 from .costs import (
@@ -60,6 +64,7 @@ from .costs import (
 )
 from .driver_heap import FullCollection, latest_full_collection
 from .first_measurements import loggers_started_sql, researchers_started_sql
+from .flow_batches import FlowHour, PipelineHour, latest_pipeline_hour
 from .macro_failures import (
     MACRO_CAUSES,
     PROTOCOL_WINDOW_HOURS,
@@ -97,6 +102,9 @@ __all__ = [
     "EXPERIMENT_LATENCY_METRIC",
     "EXPERIMENT_ROWS_METRIC",
     "FAILED_COLLECTORS_DETAIL",
+    "FLOW_BATCHES_DETAIL",
+    "FLOW_BUSY_METRIC",
+    "FLOW_RESTARTS_METRIC",
     "GOLD_AGE_METRIC",
     "HEARTBEAT_KEY_PREFIX",
     "INGESTED_ROWS_METRIC",
@@ -124,9 +132,12 @@ __all__ = [
     "STALE_EXPERIMENTS_DETAIL",
     "STALE_EXPERIMENTS_METRIC",
     "USAGE_NAMESPACE",
+    "WATCHED_FLOWS",
     "WEEKLY_MEASUREMENTS_METRIC",
     "CostWindows",
+    "FlowHour",
     "FullCollection",
+    "PipelineHour",
     "cost_components",
     "cost_windows",
     "cost_windows_sql",
@@ -136,6 +147,7 @@ __all__ = [
     "heartbeat_key",
     "hop",
     "latest_full_collection",
+    "latest_pipeline_hour",
     "loggers_started_sql",
     "minutes_since",
     "observation",

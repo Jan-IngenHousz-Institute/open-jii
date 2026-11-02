@@ -79,9 +79,21 @@ PATH_BUCKET_MINUTES = 30
 # pipeline. What a full collection cannot free is memory the driver still holds.
 DRIVER_OLD_GEN_METRIC = "DriverOldGenAfterFullGcPercent"
 
+# How much of its latest logged hour a flow spent in batches, in percent, and how many times it
+# restarted, per Pipeline and Flow. Near 100 a flow runs its batches back to back.
+FLOW_BUSY_METRIC = "FlowBusyPercent"
+FLOW_RESTARTS_METRIC = "FlowRestarts"
+
+# The flows a streamed measurement waits on, under each pipeline's pipeline-logs folder.
+WATCHED_FLOWS = {
+    "centrum": ("raw_data", "clean_data", "experiment_raw_data"),
+    "macro": ("experiment_macro_data",),
+}
+
 STALE_EXPERIMENTS_DETAIL = "stale_experiments"
 SILENT_DEVICES_DETAIL = "silent_devices"
 MACRO_PROTOCOL_FAILURES_DETAIL = "macro_protocol_failures"
+FLOW_BATCHES_DETAIL = "flow_batches"
 
 # Key prefix the metrics-forwarder Lambda subscribes to
 HEARTBEAT_KEY_PREFIX = "heartbeat"

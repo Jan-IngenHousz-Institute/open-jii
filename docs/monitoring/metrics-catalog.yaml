@@ -107,6 +107,11 @@ passes:
     note: >-
       a day's spend past its limit, for AWS and for Databricks, and the metrics publisher's errors,
       so the weekly report's database counts going quiet reaches someone
+  - date: 2026-11-02
+    range: [126, 127]
+    note: >-
+      how much of each hour the flows a measurement waits on spend in batches, and how often they
+      restart, so a pipeline falling behind its trigger interval or failing in a loop reaches someone
 
 metrics:
   # Ingest path
@@ -2205,3 +2210,50 @@ metrics:
       The metrics publisher counts researchers and experiments from the database each Monday at 06:00
       UTC. A run that throws leaves three weekly tiles without that week: New researchers (#30),
       Researchers (#80) and Experiments created (#32).
+
+  - num: 126
+    id: flow-busy
+    name: Share of the hour a flow spends in batches
+    family: observability
+    area: lakehouse
+    source: dbx
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: OpenJII/Data
+      search: SEARCH('{OpenJII/Data,Environment,Flow,Pipeline} MetricName="FlowBusyPercent" AND Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
+      unit: percent
+      cadence: 3600
+    baseline: { method: threshold, max: 80 }
+    runbook: docs/runbooks/flow-busy.md
+    notes: >-
+      How much of an hour each flow a streamed measurement waits on spent in batches, per Pipeline and
+      Flow, read from its driver's streaming progress records in the pipeline-logs volume. Near 100%
+      the flow runs batches back to back, having caught up with its trigger interval, and more load
+      means longer waits. An hour reaches the volume about an hour after it closes. In prod's busiest
+      hour of 28 October 2026 the experiment table's flow spent 18.5% of it in batches, cleaning 16.7%.
+
+  - num: 127
+    id: flow-restarts
+    name: Flow restarts in an hour
+    family: observability
+    area: lakehouse
+    source: dbx
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: OpenJII/Data
+      search: SEARCH('{OpenJII/Data,Environment,Flow,Pipeline} MetricName="FlowRestarts" AND Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
+      cadence: 3600
+    baseline: { method: threshold, max: 2 }
+    runbook: docs/runbooks/flow-restarts.md
+    notes: >-
+      How many times each watched flow started again within an hour, by a retry inside its cluster or
+      on a new cluster, per Pipeline and Flow. A planned restart counts one. A gold pipeline once
+      failed about 760 times in eight days, four an hour, with no one told.
