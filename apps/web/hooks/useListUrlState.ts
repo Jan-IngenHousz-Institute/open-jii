@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { z } from "zod";
 
 export type ListFilterShape = Record<string, z.ZodEnum<Readonly<Record<string, string>>>>;
@@ -116,6 +116,8 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
 
   const serialized = serialize(toParams(options, values));
   const urlSerialized = serialize(toParams(options, parse(options, searchParams)));
+  // Writes the URL has not echoed yet; one arriving late is not a back/forward step.
+  const pendingWrites = useRef(new Set<string>());
 
   // Each run reads this render's params; only a change of the list's own state should write.
   useEffect(() => {
@@ -131,13 +133,18 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
     // URLSearchParams encodes the commas; the raw form is the one people share.
     const qs = next.toString().replace(/%2C/g, ",");
     if (qs === current.replace(/%2C/g, ",")) return;
+    pendingWrites.current.add(serialized);
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `serialized` stands for `values`.
   }, [serialized, pathname, router]);
 
   // Back/forward replay.
   useEffect(() => {
-    if (urlSerialized === serialized) return;
+    if (urlSerialized === serialized) {
+      pendingWrites.current.clear();
+      return;
+    }
+    if (pendingWrites.current.has(urlSerialized)) return;
     setValues(parse(options, searchParams));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally drives off URL change only.
   }, [urlSerialized]);

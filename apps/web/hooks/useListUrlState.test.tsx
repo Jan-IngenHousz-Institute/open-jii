@@ -226,6 +226,24 @@ describe("useListUrlState", () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
+  it("keeps a newer change when the URL echoes an earlier write late", () => {
+    const { result, rerender } = renderHook(() => useListUrlState(withSearch));
+
+    act(() => result.current.setSearch("w"));
+    act(() => result.current.setSearch("wh"));
+    setSearchParams("q=w");
+    rerender();
+
+    expect(result.current.search).toBe("wh");
+
+    setSearchParams("q=wh");
+    rerender();
+    setSearchParams("q=wheat");
+    rerender();
+
+    expect(result.current.search).toBe("wheat");
+  });
+
   it("ignores URL changes to params it does not own", () => {
     setSearchParams("status=active");
     const { result, rerender } = renderHook(() => useListUrlState(options));
