@@ -1175,6 +1175,7 @@ module "metrics_heartbeat_export" {
         "HEARTBEAT_LOCATION" = "s3://${module.heartbeat_metrics_s3.bucket_id}"
         "PIPELINE_LOGS_PATH" = module.pipeline_logs_volume.volume_path
         "COST_COMPONENTS"    = jsonencode(local.databricks_cost_components)
+        "WORKSPACE_ID"       = tostring(module.databricks_workspace.workspace_id)
       }
     }
   ]
@@ -3238,6 +3239,7 @@ module "grafana_dashboard" {
   # forever, which is either permanently firing or permanently silent.
   metrics_forwarder_function_name = module.metrics_forwarder.function_name
   cost_publisher_function_name    = module.cost_publisher.function_name
+  metrics_publisher_function_name = module.grafana_metrics_publisher.function_name
   db_cluster_identifier           = "open-jii-${var.environment}-db-cluster"
 
   # IoT and Kinesis monitoring

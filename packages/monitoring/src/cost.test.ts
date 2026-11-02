@@ -2,7 +2,13 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { costDatums, costRequests, costWindows, parseCostServices } from "./cost.js";
+import {
+  costDatums,
+  costRequests,
+  costWindows,
+  parseCostServices,
+  percentOfSpendLimit,
+} from "./cost.js";
 import type { CostResultByTime, CostServices, ForwarderDatum } from "./types.js";
 
 const SERVICES: CostServices = {
@@ -13,6 +19,7 @@ const SERVICES: CostServices = {
   services: {
     "Amazon Elastic Compute Cloud - Compute": { label: "EC2 compute", category: "Databricks VMs" },
     "Amazon Simple Storage Service": { label: "S3", category: "Other AWS" },
+    "Amazon Managed Grafana": { label: "Grafana", category: "Other AWS", billsMonthly: true },
   },
   otherServices: { label: "Other AWS services", category: "Other AWS" },
   databricksComponents: {},
@@ -184,12 +191,52 @@ describe("costDatums", () => {
     expect(week.datum.Timestamp.toISOString()).toBe("2026-10-26T00:00:00.000Z");
   });
 
+  it("publishes yesterday as a share of its limit, stamped when the day closed", () => {
+    const [limit] = find(costDatums(readings), "DailyCostPercentOfLimit", "EC2 compute");
+
+    // 20 yesterday against a usual 10: twice the usual, which the floor also allows, is 20.
+    expect(limit.datum.Value).toBe(100);
+    expect(limit.datum.Timestamp.toISOString()).toBe("2026-10-27T00:00:00.000Z");
+  });
+
+  it("reads the 14 days before yesterday as the usual day, and no others", () => {
+    // Each day before yesterday costs ten times how far back it is, so a history shifted a day either
+    // way has a different median: with yesterday in it 65, a day further back 85.
+    const yesterday = new Date("2026-10-26T00:00:00Z").getTime();
+    const daysBack = (back: number) =>
+      new Date(yesterday - back * 86_400_000).toISOString().slice(0, 10);
+    const usage = [
+      ...Array.from({ length: 14 }, (_, i) =>
+        day(daysBack(i + 1), { "Amazon Elastic Compute Cloud - Compute": 10 * (i + 1) }),
+      ),
+      day(daysBack(0), { "Amazon Elastic Compute Cloud - Compute": 1 }),
+      day(daysBack(15), { "Amazon Elastic Compute Cloud - Compute": 1000 }),
+    ];
+
+    // A median of 75 makes the limit 150, and 1 is 0.67% of it.
+    expect(
+      value(
+        costDatums({ ...readings, usageByService: usage }),
+        "DailyCostPercentOfLimit",
+        "EC2 compute",
+      ),
+    ).toBe(0.67);
+  });
+
+  it("leaves a service billed monthly out of the spend limit, but not out of its costs", () => {
+    const datums = costDatums(readings);
+
+    expect(find(datums, "DailyCostPercentOfLimit", "Grafana")).toEqual([]);
+    expect(find(datums, "DailyCostUsd", "Grafana")).toHaveLength(2);
+  });
+
   it("keeps tax and fees out of the week, since AWS dates a month's on its 1st", () => {
     const weekly = costDatums(readings).filter(({ datum }) => datum.MetricName === "WeeklyCostUsd");
 
     expect(weekly.map(({ datum }) => datum.Dimensions[2].Value)).toEqual([
       "EC2 compute",
       "S3",
+      "Grafana",
       "Other AWS services",
     ]);
   });
@@ -258,6 +305,28 @@ describe("costDatums", () => {
 
     // September in full: 30 days of 11.5, with 5 of tax on the 1st.
     expect(value(datums, "MonthForecastCostUsd")).toBe(350);
+  });
+});
+
+describe("percentOfSpendLimit", () => {
+  it("sets the limit at twice the usual day, the usual being the median", () => {
+    // One spike in the history moves a mean but not the median.
+    const history = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 300];
+
+    expect(percentOfSpendLimit(90, history)).toBe(150);
+  });
+
+  it("raises the limit to the floor above a service that usually costs little", () => {
+    // Twice 2 is 4, but the limit is at least 10 above the usual: 12.
+    expect(percentOfSpendLimit(6, Array<number>(14).fill(2))).toBe(50);
+  });
+
+  it("takes the middle two's mean for an even count", () => {
+    expect(percentOfSpendLimit(40, [10, 10, 30, 30])).toBe(100);
+  });
+
+  it("counts a service with no history against the floor alone", () => {
+    expect(percentOfSpendLimit(15, Array<number>(14).fill(0))).toBe(150);
   });
 });
 
