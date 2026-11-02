@@ -6,7 +6,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { isUnsynced as isUnsyncedStatus } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
-import { parseQuestions } from "~/shared/measurements/convert-cycle-answers-to-array";
+import {
+  answeredQuestions,
+  parseQuestions,
+} from "~/shared/measurements/convert-cycle-answers-to-array";
 import {
   getCommentFromMeasurementResult,
   getFlagTypeFromMeasurementResult,
@@ -39,7 +42,7 @@ export function MeasurementQuestionsModal({
   const { sheetRef, renderBackdrop } = useBottomSheetController({ visible });
 
   const measurementResult = measurement.data.measurementResult;
-  const questions = parseQuestions(measurement.data.measurementResult);
+  const questions = answeredQuestions(parseQuestions(measurement.data.measurementResult));
   const experimentName = measurement.data.metadata.experimentName;
   const protocolName = measurement.data.metadata.protocolName;
   const timestamp = new Date(measurement.data.metadata.timestamp).toLocaleString();

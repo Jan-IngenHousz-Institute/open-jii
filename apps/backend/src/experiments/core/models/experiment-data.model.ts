@@ -71,6 +71,7 @@ export interface ExperimentTableMetadata {
   schemaRevision: string | null;
   macroSchema?: string | null;
   questionsSchema?: string | null;
+  numericQuestionKeys?: string[];
   customMetadataSchema?: string | null;
   uploadSchema?: string | null;
 }

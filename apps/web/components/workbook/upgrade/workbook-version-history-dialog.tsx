@@ -2,6 +2,7 @@
 
 import { useSetWorkbookVersion } from "@/hooks/experiment/useSetWorkbookVersion/useSetWorkbookVersion";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
+import { workbookPinError } from "@/lib/workbook-pin-error";
 import { formatDate } from "@/util/date";
 import { History, Loader2, RotateCcw, XCircle } from "lucide-react";
 import { useState } from "react";
@@ -74,8 +75,15 @@ export function WorkbookVersionHistoryDialog({
           setPending(null);
           onOpenChange(false);
         },
-        onError: () => {
-          toast({ description: t("flow.versionHistory.restoreFailed"), variant: "destructive" });
+        onError: (error) => {
+          toast({
+            description: workbookPinError(
+              error,
+              t("flow.versionHistory.restoreFailed"),
+              t("flow.upgradeDiff.issue.questionTypeChangeGeneric"),
+            ),
+            variant: "destructive",
+          });
           setPending(null);
         },
       },

@@ -81,6 +81,14 @@ describe("buildCellNamespace", () => {
     expect(ns.ctx.soil_moisture).toEqual({ answer: "wet" });
   });
 
+  it("keeps numeric answers and existing repeated-underscore ctx names lexical", () => {
+    const cell = {
+      ...question("q1", "plant__height", "007"),
+      question: { kind: "number" as const, text: "Height?", required: false },
+    };
+    expect(buildCellNamespace([cell]).ctx.plant__height).toEqual({ answer: "007" });
+  });
+
   it("omits unanswered questions and producers without output", () => {
     const cells = [question("q1", "Unanswered"), protocol("p1", "NoRun")];
     const ns = buildCellNamespace(cells);

@@ -9,6 +9,7 @@ import { UploadFailureNote } from "~/features/recent-measurements/components/upl
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useIsProcessing } from "~/features/recent-measurements/hooks/use-outbox-state";
 import { useTranslation } from "~/shared/i18n";
+import { answeredQuestions } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { formatTimeAgo } from "~/shared/time/format-time-ago";
 import { cn } from "~/shared/ui/cn";
@@ -50,8 +51,9 @@ export const MeasurementItem = memo(function MeasurementItem({
   const { t } = useTranslation(["common", "recentMeasurements"]);
   const isSynced = status === "successful";
   const isSyncing = useIsProcessing(id);
-  const hasAnswers = questions && questions.length > 0;
-  const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
+  const answered = answeredQuestions(questions);
+  const hasAnswers = answered.length > 0;
+  const answersText = hasAnswers ? answered.map((q) => q.question_answer).join(" | ") : null;
 
   return (
     <Pressable

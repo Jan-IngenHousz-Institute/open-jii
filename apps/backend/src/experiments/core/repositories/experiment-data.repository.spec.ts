@@ -8,6 +8,7 @@ import {
   DATA_QUERY_MAX_LIMIT,
   WellKnownColumnTypes,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { experimentQuestionTypes, eq } from "@repo/database";
 
 import type { AggregationSpec } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
 import {
@@ -69,6 +70,61 @@ describe("ExperimentDataRepository", () => {
 
   afterAll(async () => {
     await testApp.teardown();
+  });
+
+  it("overlays raw and macro questions after the metadata cache and revises cached column types", async () => {
+    const userId = await testApp.createTestUser({});
+    const { experiment } = await testApp.createExperiment({ userId, name: "Typed questions" });
+    const metadata: ExperimentTableMetadata[] = ["raw_data", "macro-1"].map((identifier) => ({
+      identifier,
+      tableType: identifier === "raw_data" ? "static" : "macro",
+      displayName: null,
+      rowCount: 2,
+      latestRowAt: null,
+      schemaRevision: "before",
+      questionsSchema: "OBJECT<height: STRING, plot: STRING>",
+    }));
+    vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+    const cache = vi.spyOn(testApp.module.get<CachePort>(CACHE_PORT), "tryCache");
+    vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+      success({ columns: [], rows: [], totalRows: 0, truncated: false }),
+    );
+    assertSuccess(
+      await repository.getTableColumns({ experimentId: experiment.id, tableName: "raw_data" }),
+    );
+    await testApp.database.insert(experimentQuestionTypes).values({
+      experimentId: experiment.id,
+      key: "height",
+      declaredClass: "number",
+      active: true,
+      evidence: "Local fixture",
+    });
+    const active = await repository.tablesMetadata(experiment.id);
+    assertSuccess(active);
+    expect(active.value.every((table) => table.questionsSchema?.includes("`height`: DOUBLE"))).toBe(
+      true,
+    );
+    expect(metadata[0].questionsSchema).toBe("OBJECT<height: STRING, plot: STRING>");
+    const build = vi.spyOn(databricksPort, "buildExperimentQuery");
+    assertSuccess(
+      await repository.getTableColumns({ experimentId: experiment.id, tableName: "raw_data" }),
+    );
+    expect(build).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        variants: [expect.objectContaining({ numericFields: ["height"] })],
+      }),
+    );
+    const keys = cache.mock.calls
+      .map(([key]) => key)
+      .filter((key) => key.startsWith("table-columns:"));
+    expect(new Set(keys).size).toBe(2);
+    await testApp.database
+      .update(experimentQuestionTypes)
+      .set({ active: false })
+      .where(eq(experimentQuestionTypes.experimentId, experiment.id));
+    const reverted = await repository.tablesMetadata(experiment.id);
+    assertSuccess(reverted);
+    expect(reverted.value[0].schemaRevision).toBe("before");
   });
 
   describe("getTableData", () => {

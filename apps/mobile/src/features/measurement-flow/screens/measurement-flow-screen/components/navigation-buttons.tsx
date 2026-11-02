@@ -8,6 +8,8 @@ import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 
+import { isNumberAnswer } from "@repo/api/transforms/number-answer";
+
 import { BackButton } from "./back-button";
 import { NextButton } from "./next-button";
 
@@ -69,6 +71,7 @@ export function NavigationButtons() {
   };
 
   const handleNextPress = () => {
+    if (isNextDisabled) return;
     Keyboard.dismiss();
     // For questions, use shared utility to handle answer logic and advance
     if (currentNode?.type === "question") {
@@ -81,7 +84,11 @@ export function NavigationButtons() {
 
   // For questions, check if answer is valid
   const isNextDisabled =
-    currentNode?.type === "question" && currentNode.content.required && !currentAnswer;
+    currentNode?.type === "question" &&
+    ((currentNode.content.required === true && !currentAnswer?.trim()) ||
+      (currentNode.content.kind === "number" &&
+        !!currentAnswer?.trim() &&
+        !isNumberAnswer(currentAnswer)));
 
   return (
     <Animated.View className="bg-card w-full" style={navStyle}>

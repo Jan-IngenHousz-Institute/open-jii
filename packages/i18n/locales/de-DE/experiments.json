@@ -150,6 +150,9 @@
         "missingMacro": "Makro \"{{label}}\" existiert nicht mehr",
         "danglingSource": "Eine Verzweigungsbedingung verweist auf eine nicht mehr vorhandene Zelle ({{ref}})",
         "danglingGoto": "Eine Verzweigung springt zu einer nicht mehr vorhandenen Zelle ({{ref}})",
+        "duplicateQuestionName": "Frage \"{{label}}\" benötigt einen eindeutigen Spaltennamen.",
+        "questionTypeChangeGeneric": "Dieser Fragename hat in diesem Experiment bereits einen anderen Spaltentyp. Geben Sie der Frage einen neuen Namen, um zwischen Zahl und Text zu wechseln.",
+        "questionTypeChange": "Geben Sie Frage \"{{label}}\" einen neuen Namen, um zwischen Zahl und Text zu wechseln.",
         "macroWithoutInput": "Makro \"{{label}}\" hat keine vorangehende Messung zum Ausführen",
         "mixedFamilies": "Dieses Arbeitsbuch mischt Sensorfamilien ({{detail}}); ein Durchlauf zielt auf ein einzelnes Gerät"
       }

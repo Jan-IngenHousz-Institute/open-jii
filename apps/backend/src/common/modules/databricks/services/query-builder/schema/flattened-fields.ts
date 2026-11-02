@@ -6,6 +6,7 @@ export interface FlattenedSource<Column extends string = string> {
   column: Column;
   schema: string;
   suffix: string;
+  numericFields?: string[];
 }
 
 /** One field of a flattened VARIANT column and the name it reads as. */

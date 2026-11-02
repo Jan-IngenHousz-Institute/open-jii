@@ -16,12 +16,16 @@ from pyspark.sql.types import (
 )
 
 # Schema for a single sanitized question/answer entry inside a payload.
-question_schema = StructType(
+legacy_question_schema = StructType(
     [
         StructField("question_label", StringType(), True),
         StructField("question_text", StringType(), True),
         StructField("question_answer", StringType(), True),
     ]
+)
+
+question_schema = StructType(
+    [*legacy_question_schema.fields, StructField("question_kind", StringType(), True)]
 )
 
 # Macro reference attached to a measurement (id + display info).
@@ -68,7 +72,8 @@ sensor_schema = StructType(
         StructField("_sample_encoding", StringType(), True),
         StructField("timestamp", TimestampType(), False),
         StructField("output", StringType(), True),
-        StructField("questions", ArrayType(question_schema), True),
+        # Bronze parsed_data is non-resettable. Kind travels in questions_json.
+        StructField("questions", ArrayType(legacy_question_schema), True),
         StructField("user_id", StringType(), True),
         StructField("timezone", StringType(), True),
         StructField("macros", ArrayType(macro_schema), True),

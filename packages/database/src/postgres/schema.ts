@@ -363,6 +363,7 @@ export const experiments = pgTable(
       .default(sql`((now() AT TIME ZONE 'UTC') + interval '90 days')`)
       .notNull(),
     anonymizeContributors: boolean("anonymize_contributors").default(false).notNull(),
+    questionTypesTracked: boolean("question_types_tracked").default(false).notNull(),
     workbookId: uuid("workbook_id").references(() => workbooks.id, { onDelete: "set null" }),
     workbookVersionId: uuid("workbook_version_id").references(() => workbookVersions.id, {
       onDelete: "set null",
@@ -1008,6 +1009,28 @@ export const workbookVersions = pgTable(
   (table) => [
     unique("workbook_versions_workbook_version_uniq").on(table.workbookId, table.version),
     index("workbook_versions_workbook_id_idx").on(table.workbookId),
+  ],
+);
+
+export const experimentQuestionTypes = pgTable(
+  "experiment_question_types",
+  {
+    experimentId: uuid("experiment_id")
+      .notNull()
+      .references(() => experiments.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    declaredClass: text("declared_class", { enum: ["number", "text"] }).notNull(),
+    active: boolean("active").default(false).notNull(),
+    evidence: text("evidence"),
+    ...timestamps,
+  },
+  (table) => [
+    primaryKey({ columns: [table.experimentId, table.key] }),
+    check("experiment_question_types_class", sql`${table.declaredClass} IN ('number', 'text')`),
+    check(
+      "experiment_question_types_active_number",
+      sql`NOT ${table.active} OR ${table.declaredClass} = 'number'`,
+    ),
   ],
 );
 

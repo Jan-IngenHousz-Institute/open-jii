@@ -10,6 +10,7 @@ import type { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { ExperimentDataExportsRepository } from "../../../core/repositories/experiment-data-exports.repository";
+import { ExperimentQuestionTypesRepository } from "../../../core/repositories/experiment-question-types.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 /**
@@ -21,6 +22,7 @@ export class InitiateExportUseCase {
   private readonly logger = new Logger(InitiateExportUseCase.name);
 
   constructor(
+    private readonly questionTypes: ExperimentQuestionTypesRepository,
     private readonly experimentRepository: ExperimentRepository,
     private readonly exportsRepository: ExperimentDataExportsRepository,
     @Inject(DATABRICKS_PORT)
@@ -83,7 +85,10 @@ export class InitiateExportUseCase {
         return success(toExportRecord(record));
       }
 
+      const numericKeys = await this.questionTypes.activeNumericKeys(experimentId);
+      if (numericKeys.isFailure()) return failure(numericKeys.error);
       const triggered = await this.databricksPort.triggerDataExportJob({
+        numericQuestionKeys: numericKeys.value,
         exportId: record.id,
         experimentId,
         tableName: query.tableName,

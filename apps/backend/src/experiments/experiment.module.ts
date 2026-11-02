@@ -103,6 +103,7 @@ import { ExperimentJoinCodeRepository } from "./core/repositories/experiment-joi
 import { ExperimentJoinRequestRepository } from "./core/repositories/experiment-join-request.repository";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
 import { ExperimentMetadataRepository } from "./core/repositories/experiment-metadata.repository";
+import { ExperimentQuestionTypesRepository } from "./core/repositories/experiment-question-types.repository";
 import { ExperimentVisualizationRepository } from "./core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
 import { FlowRepository } from "./core/repositories/flow.repository";
@@ -205,6 +206,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentVisualizationRepository,
     ExperimentDashboardRepository,
     ExperimentDataRepository,
+    ExperimentQuestionTypesRepository,
     ExperimentDataExportsRepository,
     ExperimentDataUploadsRepository,
     FlowRepository,

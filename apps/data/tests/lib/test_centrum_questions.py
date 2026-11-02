@@ -63,7 +63,15 @@ def _reference_questions(questions_array: list[_Question | None] | None) -> list
                 n += 1
             key = f"{candidate}_{n}"
             used.add(key)
-        result.append({"question_label": key, "question_answer": q.get("question_answer")})
+        result.append(
+            {
+                "question_label": key,
+                "question_answer": q.get("question_answer")
+                if (q.get("question_answer") or "").strip()
+                else None,
+                "question_kind": q.get("question_kind"),
+            }
+        )
     return result
 
 
@@ -93,7 +101,15 @@ def _unchecked_questions(questions_array: list[_Question | None] | None) -> list
             count = key_counts.get(candidate, 0) + 1
             key_counts[candidate] = count
             key = candidate if count == 1 else f"{candidate}_{count}"
-        result.append({"question_label": key, "question_answer": q.get("question_answer")})
+        result.append(
+            {
+                "question_label": key,
+                "question_answer": q.get("question_answer")
+                if (q.get("question_answer") or "").strip()
+                else None,
+                "question_kind": q.get("question_kind"),
+            }
+        )
     return result
 
 
@@ -211,3 +227,52 @@ def test_a_null_list_stays_null(spark: SparkSession) -> None:
     [row] = rows.select(sanitized_questions(F.col("questions")).alias("keyed")).collect()
 
     assert row["keyed"] is None
+
+
+def test_kind_survives_additive_parsing_and_gold_keeps_lexical_values_and_json_null(spark):
+    import json
+
+    payload = json.dumps(
+        {
+            "questions": [
+                {
+                    "question_label": "Height",
+                    "question_text": "Height?",
+                    "question_kind": "number",
+                    "question_answer": "12.50",
+                },
+                {
+                    "question_label": "Note",
+                    "question_text": "Note?",
+                    "question_kind": "open_ended",
+                    "question_answer": "",
+                },
+                {
+                    "question_label": "Healthy",
+                    "question_text": "Healthy?",
+                    "question_kind": "yes_no",
+                    "question_answer": "No",
+                },
+            ]
+        }
+    )
+    rows = (
+        spark.createDataFrame([(payload,)], "payload STRING")
+        .select(
+            F.from_json(F.get_json_object("payload", "$.questions"), ArrayType(question_schema)).alias(
+                "questions"
+            )
+        )
+        .select(sanitized_questions(F.col("questions")).alias("questions"))
+    )
+    assert rows.first().questions[0].question_kind == "number"
+    gold = rows.select(
+        F.expr("""parse_json(to_json(map_from_arrays(
+      transform(questions, q -> q.question_label), transform(questions, q -> q.question_answer)
+    )))""").alias("questions_data")
+    )
+    assert json.loads(gold.select(F.to_json("questions_data")).first()[0]) == {
+        "height": "12.50",
+        "note": None,
+        "healthy": "No",
+    }

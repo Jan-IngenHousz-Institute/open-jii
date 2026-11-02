@@ -88,7 +88,11 @@ def _numbered(items: Column) -> Column:
             # would ask for if an engine ever evaluated both branches.
             label = F.when(item["repeat"], numbered_key(F.get(free, item["seen"] - 2))).otherwise(candidate)
             return F.struct(
-                label.alias("question_label"), item["q"]["question_answer"].alias("question_answer")
+                label.alias("question_label"),
+                F.when(F.trim(item["q"]["question_answer"]) != "", item["q"]["question_answer"]).alias(
+                    "question_answer"
+                ),
+                item["q"]["question_kind"].alias("question_kind"),
             )
 
         return F.transform(items, key)

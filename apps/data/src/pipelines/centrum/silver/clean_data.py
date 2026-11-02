@@ -174,7 +174,10 @@ def clean_data():
 
     df = df.withColumn(
         "questions",
-        F.col("parsed_data.questions")
+        F.coalesce(
+            F.from_json(F.col("questions_json"), ArrayType(question_schema)),
+            F.from_json(F.to_json(F.col("parsed_data.questions")), ArrayType(question_schema)),
+        )
     )
 
     df = df.withColumn(

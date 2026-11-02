@@ -78,6 +78,29 @@ const defaultProps = {
 };
 
 describe("CommentModal", () => {
+  it("treats null answer rows as unanswered in its summary", () => {
+    render(
+      <CommentModal
+        {...defaultProps}
+        questions={[{ question_label: "Height", question_text: "Height?", question_answer: null }]}
+      />,
+    );
+    expect(screen.getByText("No questions answered")).toBeTruthy();
+  });
+
+  it("omits unanswered separators from a partial summary", () => {
+    render(
+      <CommentModal
+        {...defaultProps}
+        questions={[
+          { question_label: "Empty", question_text: "Empty?", question_answer: null },
+          { question_label: "Height", question_text: "Height?", question_answer: "7" },
+        ]}
+      />,
+    );
+    expect(screen.getByText("7")).toBeTruthy();
+    expect(screen.queryByText(/\|/)).toBeNull();
+  });
   let backPressHandler: (() => boolean) | undefined;
 
   beforeEach(() => {

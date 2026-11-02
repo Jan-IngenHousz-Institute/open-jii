@@ -62,6 +62,7 @@ def raw_data():
         # clientid() from the IoT rule is the broker-authenticated Thing name (X.509 devices);
         # extracted top-level to avoid evolving the non-resettable bronze parsed_data struct.
         .withColumn("client_id", F.get_json_object(F.col("data").cast("string"), "$.client_id"))
+        .withColumn("questions_json", F.get_json_object(F.col("data").cast("string"), "$.questions"))
         # Workbook execution metadata is also extracted top-level. Adding fields
         # to parsed_data would evolve the nested struct of this non-resettable
         # bronze table. macro_context stays JSON because its keys are dynamic.
@@ -107,6 +108,7 @@ def raw_data():
         .select(
             "experiment_id",
             "client_id",
+            "questions_json",
             "workbook_version_id",
             "macro_context",
             "device_family",

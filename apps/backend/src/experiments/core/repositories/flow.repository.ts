@@ -5,12 +5,14 @@ import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import type { FlowDto, FlowGraphDto } from "../models/flow.model";
+import { ExperimentQuestionTypesRepository } from "./experiment-question-types.repository";
 
 @Injectable()
 export class FlowRepository {
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
+    private readonly questionTypes: ExperimentQuestionTypesRepository,
   ) {}
 
   async getByExperimentId(experimentId: string): Promise<Result<FlowDto | null>> {
@@ -27,41 +29,19 @@ export class FlowRepository {
   }
 
   async create(experimentId: string, graph: FlowGraphDto): Promise<Result<FlowDto>> {
-    return tryCatch(async () => {
-      const inserted = await this.database
-        .insert(flows)
-        .values({ experimentId, graph })
-        .returning();
-      const row = inserted[0];
-      return row as FlowDto;
-    });
+    return this.questionTypes.saveFlow(experimentId, graph, "create");
   }
 
   async update(experimentId: string, graph: FlowGraphDto): Promise<Result<FlowDto>> {
-    return tryCatch(async () => {
-      const updated = await this.database
-        .update(flows)
-        .set({ graph })
-        .where(eq(flows.experimentId, experimentId))
-        .returning();
-      const row = updated[0];
-      return row as FlowDto;
-    });
+    return this.questionTypes.saveFlow(experimentId, graph, "update");
   }
 
-  // Race-free via ON CONFLICT against the unique experiment_id constraint.
   async upsert(experimentId: string, graph: FlowGraphDto): Promise<Result<FlowDto>> {
-    return tryCatch(async () => {
-      const rows = await this.database
-        .insert(flows)
-        .values({ experimentId, graph })
-        .onConflictDoUpdate({
-          target: flows.experimentId,
-          set: { graph },
-        })
-        .returning();
-      return rows[0] as FlowDto;
-    });
+    return this.questionTypes.saveFlow(experimentId, graph, "upsert");
+  }
+
+  async importLegacy(experimentId: string, graph: FlowGraphDto): Promise<Result<FlowDto>> {
+    return this.questionTypes.saveFlow(experimentId, graph, "upsert", true);
   }
 
   async deleteByExperimentId(experimentId: string): Promise<Result<void>> {

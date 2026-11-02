@@ -12,6 +12,54 @@ const makeInstruction = (id: string): FlowNode =>
   ({ id, type: "instruction", name: id, content: {} }) as FlowNode;
 
 describe("convertCycleAnswersToArray", () => {
+  it("saves measurements when a hydrated question has a missing or future kind", () => {
+    for (const kind of [undefined, "future_kind"]) {
+      const node = { ...makeQuestion("q", "Question"), content: { kind, text: "Question?" } };
+      expect(convertCycleAnswersToArray({ q: "answer" }, [node])).toEqual([
+        { question_label: "Question", question_text: "Question?", question_answer: "answer" },
+      ]);
+    }
+  });
+  it.each(["number", "text", "single_choice", "multi_choice", "open_ended", "yes_no"])(
+    "emits null for unanswered or cleared %s questions",
+    (kind) => {
+      const node = { ...makeQuestion("q", "Question"), content: { kind, text: "Question?" } };
+      const cases: (Record<string, string> | undefined)[] = [undefined, {}, { q: "" }, { q: "  " }];
+      for (const answers of cases) {
+        expect(convertCycleAnswersToArray(answers, [node])[0]).toMatchObject({
+          question_kind: kind,
+          question_answer: null,
+        });
+      }
+    },
+  );
+
+  it("keeps Yes/No English text and rejects malformed number answers defensively", () => {
+    const yesNo = {
+      ...makeQuestion("q", "Healthy"),
+      content: { kind: "yes_no", text: "Healthy?" },
+    };
+    expect(convertCycleAnswersToArray({ q: "Yes" }, [yesNo])[0].question_answer).toBe("Yes");
+    expect(convertCycleAnswersToArray({ q: "No" }, [yesNo])[0].question_answer).toBe("No");
+    const number = { ...yesNo, content: { kind: "number", text: "Height?" } };
+    expect(convertCycleAnswersToArray({ q: "1.2.3" }, [number])[0].question_answer).toBeNull();
+  });
+  it("carries the number kind and serializes cleared answers as JSON null", () => {
+    const height = {
+      ...makeQuestion("height", "Height"),
+      content: { kind: "number", text: "Height?" },
+    };
+    expect(convertCycleAnswersToArray({ height: "12.5" }, [height])).toEqual([
+      {
+        question_label: "Height",
+        question_text: "Height?",
+        question_kind: "number",
+        question_answer: "12.5",
+      },
+    ]);
+    expect(convertCycleAnswersToArray({ height: "" }, [height])[0].question_answer).toBeNull();
+  });
+
   it("returns empty array when cycleAnswers is undefined", () => {
     expect(convertCycleAnswersToArray(undefined, [])).toEqual([]);
   });
@@ -32,9 +80,24 @@ describe("convertCycleAnswersToArray", () => {
     const result = convertCycleAnswersToArray(cycleAnswers, flowNodes);
 
     expect(result).toEqual([
-      { question_label: "Plot", question_text: "Which plot?", question_answer: "Plot-7" },
-      { question_label: "Genotype", question_text: "Which genotype?", question_answer: "Solanum" },
-      { question_label: "Health", question_text: "Plant health?", question_answer: "Healthy" },
+      {
+        question_label: "Plot",
+        question_text: "Which plot?",
+        question_kind: "text",
+        question_answer: "Plot-7",
+      },
+      {
+        question_label: "Genotype",
+        question_text: "Which genotype?",
+        question_kind: "text",
+        question_answer: "Solanum",
+      },
+      {
+        question_label: "Health",
+        question_text: "Plant health?",
+        question_kind: "text",
+        question_answer: "Healthy",
+      },
     ]);
   });
 
@@ -54,7 +117,7 @@ describe("convertCycleAnswersToArray", () => {
     expect(result[1].question_label).toBe("Health");
   });
 
-  it("skips questions that have no answer in cycleAnswers", () => {
+  it("includes null for unanswered questions", () => {
     const flowNodes = [
       makeQuestion("q1", "Plot"),
       makeQuestion("q2", "Genotype"),
@@ -64,9 +127,9 @@ describe("convertCycleAnswersToArray", () => {
 
     const result = convertCycleAnswersToArray(cycleAnswers, flowNodes);
 
-    expect(result).toHaveLength(2);
-    expect(result[0].question_label).toBe("Plot");
-    expect(result[1].question_label).toBe("Health");
+    expect(result).toHaveLength(3);
+    expect(result[1]).toMatchObject({ question_label: "Genotype", question_answer: null });
+    expect(result[2].question_label).toBe("Health");
   });
 
   it("uses default text when node content has no text", () => {
