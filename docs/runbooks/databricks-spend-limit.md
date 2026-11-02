@@ -23,7 +23,22 @@ ORDER BY usage_date
 
 Run it on the Investigations warehouse. `databricks_cost_components` in
 `infrastructure/env/<env>/main.tf` lists the id each component bills under, which the heartbeat job
-receives as `COST_COMPONENTS`; `jobs` is every job run, and `other` is the rest of the workspace.
+receives as `COST_COMPONENTS`.
+
+`jobs` and `other` have no single id: `jobs` is every job run, and `other` is the rest of the
+workspace. Split the workspace by product and job instead, with the heartbeat job's `WORKSPACE_ID`:
+
+```sql
+SELECT usage_date, billing_origin_product, usage_metadata.job_id, round(sum(usage_quantity), 1) AS dbus
+FROM system.billing.usage
+WHERE usage_date >= date_sub(current_date(), 15)
+  AND workspace_id = '<workspace id>'
+GROUP BY usage_date, billing_origin_product, usage_metadata.job_id
+ORDER BY usage_date, dbus DESC
+```
+
+`JOBS` rows are the `jobs` component, one per job. Every other row is `other`, except the usage of
+the named pipelines and warehouses.
 
 ## What it usually is
 
