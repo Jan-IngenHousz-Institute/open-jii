@@ -1,0 +1,1 @@
+Review evidence for OJD-2318. Genuine authenticated local application captures using synthetic data. Matching before and after frames use identical chart configuration, data response and viewport. Application source is kept on its separate fix branch.
