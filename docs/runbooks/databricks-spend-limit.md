@@ -26,15 +26,22 @@ Run it on the Investigations warehouse. `databricks_cost_components` in
 receives as `COST_COMPONENTS`.
 
 `jobs` and `other` have no single id: `jobs` is every job run, and `other` is the rest of the
-workspace. Split the workspace by product and job instead, with the heartbeat job's `WORKSPACE_ID`:
+workspace. Split the workspace's spend at list price by product and job instead, with the heartbeat
+job's `WORKSPACE_ID`. Products bill in different units, so this prices each row the way the export
+does rather than adding up quantities:
 
 ```sql
-SELECT usage_date, billing_origin_product, usage_metadata.job_id, round(sum(usage_quantity), 1) AS dbus
-FROM system.billing.usage
-WHERE usage_date >= date_sub(current_date(), 15)
-  AND workspace_id = '<workspace id>'
-GROUP BY usage_date, billing_origin_product, usage_metadata.job_id
-ORDER BY usage_date, dbus DESC
+SELECT u.usage_date, u.billing_origin_product, u.usage_metadata.job_id,
+       round(sum(u.usage_quantity * p.pricing.effective_list.default), 2) AS usd
+FROM system.billing.usage u
+JOIN system.billing.list_prices p
+  ON p.sku_name = u.sku_name AND p.cloud = u.cloud AND p.usage_unit = u.usage_unit
+ AND u.usage_end_time >= p.price_start_time
+ AND (p.price_end_time IS NULL OR u.usage_end_time < p.price_end_time)
+WHERE u.usage_date >= date_sub(current_date(), 15)
+  AND u.workspace_id = '<workspace id>'
+GROUP BY u.usage_date, u.billing_origin_product, u.usage_metadata.job_id
+ORDER BY u.usage_date, usd DESC
 ```
 
 `JOBS` rows are the `jobs` component, one per job. Every other row is `other`, except the usage of
