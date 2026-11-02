@@ -70,9 +70,7 @@
       "reviewer": "ticket-06-media-pass",
       "review_notes": "Blank Details step shows the observed four-step wizard, name, description, and workbook picker; no account or experiment data entered.",
       "redactions": [],
-      "live_checks_observed": [
-        "Four-step create wizard Details screen observed on dev."
-      ]
+      "live_checks_observed": ["Four-step create wizard Details screen observed on dev."]
     },
     {
       "asset": "create-experiment-entry.png",
@@ -118,9 +116,7 @@
         "visible email addresses replaced with [email hidden]",
         "testing-account avatar hidden"
       ],
-      "live_checks_observed": [
-        "Authenticated dashboard and experiment cards observed on dev."
-      ]
+      "live_checks_observed": ["Authenticated dashboard and experiment cards observed on dev."]
     },
     {
       "asset": "data-first-measurement.png",
@@ -144,9 +140,7 @@
         "testing-account avatar hidden",
         "visible UUID identifiers replaced with [id hidden]"
       ],
-      "live_checks_observed": [
-        "Representative populated measurement table observed on dev."
-      ]
+      "live_checks_observed": ["Representative populated measurement table observed on dev."]
     },
     {
       "asset": "experiments-list.webp",
@@ -215,9 +209,7 @@
       "reviewer": "ticket-06-media-pass",
       "review_notes": "Public dev auth screen only; email and OTP fields are empty, no account data is visible, cookie banner dismissed, stable background selected, and GitHub/ORCID/email methods match the verified Guide copy.",
       "redactions": [],
-      "live_checks_observed": [
-        "Dev login offers email, GitHub, and ORCID."
-      ]
+      "live_checks_observed": ["Dev login offers email, GitHub, and ORCID."]
     },
     {
       "asset": "metadata-import.png",
@@ -241,9 +233,7 @@
         "testing-account avatar hidden",
         "visible UUID identifiers replaced with [id hidden]"
       ],
-      "live_checks_observed": [
-        "Metadata CSV preview and identifier mapping UI observed on dev."
-      ]
+      "live_checks_observed": ["Metadata CSV preview and identifier mapping UI observed on dev."]
     },
     {
       "asset": "project-transfer-history.png",
@@ -262,9 +252,7 @@
       "reviewed_at": "2026-07-19T22:17:36.001541+00:00",
       "reviewer": "ticket-06-media-pass",
       "review_notes": "Previous Requests view shows observed Completed statuses and dates; project identifiers and URLs hidden.",
-      "redactions": [
-        "project identifiers and URLs hidden"
-      ],
+      "redactions": ["project identifiers and URLs hidden"],
       "live_checks_observed": [
         "Previous Requests view and its current status labels/empty state observed on dev."
       ]
@@ -394,9 +382,7 @@
         "visible email addresses replaced with [email hidden]",
         "testing-account avatar hidden"
       ],
-      "live_checks_observed": [
-        "In-product Report bug link observed on dev."
-      ]
+      "live_checks_observed": ["In-product Report bug link observed on dev."]
     },
     {
       "asset": "visibility-embargo.png",
@@ -444,9 +430,7 @@
         "visible email addresses replaced with [email hidden]",
         "testing-account avatar hidden"
       ],
-      "live_checks_observed": [
-        "Linked workbook and pinned version badge observed on dev."
-      ]
+      "live_checks_observed": ["Linked workbook and pinned version badge observed on dev."]
     },
     {
       "asset": "workbook-version-history.png",
