@@ -8,7 +8,7 @@ import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
-import { createBaseLayout, createPlotlyConfig } from "./utils";
+import { createBaseLayout, createPlotlyConfig, detectAxisType, applyAxisType } from "./utils";
 
 export interface DensityPlot2DProps extends BaseChartProps {
   /** Raw (x, y) pairs that show as the underlying scatter trace. */
@@ -42,7 +42,7 @@ export interface DensityPlot2DProps extends BaseChartProps {
 /**
  * Composite 2D density plot: scatter for raw points + `histogram2dcontour`
  * for density iso-lines. The caller is responsible for filtering rows
- * where either axis fails to coerce to a number.
+ * where either axis is neither a finite number nor a timestamp.
  */
 export function DensityPlot2D({
   x,
@@ -138,11 +138,21 @@ export function DensityPlot2D({
     ],
   );
 
-  const layout = useMemo(
-    () => createBaseLayout(config, sizing),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-    [config, sizing, themeVersion],
+  const axisTypes = useMemo(
+    () => ({
+      x: detectAxisType(x),
+      y: detectAxisType(y),
+    }),
+    [x, y],
   );
+
+  const layout = useMemo(() => {
+    const next = createBaseLayout(config, sizing);
+    next.xaxis = applyAxisType(next.xaxis, axisTypes.x);
+    next.yaxis = applyAxisType(next.yaxis, axisTypes.y);
+    return next;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+  }, [axisTypes, config, sizing, themeVersion]);
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (

@@ -54,4 +54,49 @@ describe("transformDensityPlot2DData", () => {
     expect(result.x).toEqual([]);
     expect(result.y).toEqual([]);
   });
+  it.each(["x", "y", "both"])("keeps valid timestamp pairs on %s", (axis) => {
+    const timestamp = "2026-10-01T12:30:00Z";
+    const x = axis === "y" ? 1 : timestamp;
+    const y = axis === "x" ? 2 : timestamp;
+    const result = transformDensityPlot2DData(
+      [
+        { x, y },
+        { x: "not-a-date", y },
+        { x, y: null },
+        { x: "2026-99-99T12:00:00Z", y },
+        { x: Infinity, y },
+      ],
+      [ds("x", "x"), ds("y", "y")],
+    );
+    expect(result.x).toEqual([x]);
+    expect(result.y).toEqual([y]);
+  });
+
+  it("keeps numeric strings numeric and preserves timestamp offsets and precision", () => {
+    const time = "2026-10-01T14:30:00.123+02:00";
+    const zoneless = "2026-10-01 12:30:00.456";
+    const result = transformDensityPlot2DData(
+      [
+        { x: time, y: "2026" },
+        { x: zoneless, y: "2.5" },
+      ],
+      [ds("x", "x"), ds("y", "y")],
+    );
+    expect(result.x).toEqual([time, zoneless]);
+    expect(result.y).toEqual([2026, 2.5]);
+  });
+
+  it("keeps mixed axes numeric and drops the other pairs without misalignment", () => {
+    const result = transformDensityPlot2DData(
+      [
+        { x: "2026-10-01T12:30:00Z", y: 10 },
+        { x: "2026", y: "20" },
+        { x: 3, y: "2026-10-01T12:30:00Z" },
+        { x: 4, y: 40 },
+      ],
+      [ds("x", "x"), ds("y", "y")],
+    );
+    expect(result.x).toEqual([2026, 4]);
+    expect(result.y).toEqual([20, 40]);
+  });
 });
