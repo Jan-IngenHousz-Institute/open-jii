@@ -14,6 +14,8 @@ devices AS (
     max_by(
       named_struct('device_name', device_name, 'device_version', device_version,
         'device_battery', device_battery, 'client_id', client_id,
+        'fallback_device_name', coalesce(nullif(trim(device_name), ''), nullif(trim(client_id), ''), nullif(trim(device_id), '')),
+        'fallback_device_id', coalesce(nullif(trim(device_id), ''), nullif(trim(client_id), '')),
         'processed_timestamp', processed_timestamp),
       named_struct('processed_timestamp', processed_timestamp, 'timestamp', `timestamp`, 'id', id)
     ) AS newest,
@@ -33,7 +35,18 @@ SELECT
   devices.newest.device_battery,
   devices.total_measurements,
   devices.newest.processed_timestamp,
-  registry.device
+  named_struct(
+      'id', registry.device.id,
+      'serial_number', CASE
+        WHEN nullif(trim(registry.device.serial_number), '') IS NOT NULL THEN registry.device.serial_number
+        WHEN devices.newest.fallback_device_name = devices.newest.fallback_device_id THEN devices.newest.fallback_device_name
+        WHEN devices.newest.fallback_device_id IS NOT NULL THEN concat(devices.newest.fallback_device_name, ' (', devices.newest.fallback_device_id, ')')
+        ELSE coalesce(devices.newest.fallback_device_name, 'Unknown device')
+      END,
+      'owner', registry.device.owner,
+      'status', registry.device.status,
+      'device_type', registry.device.device_type
+    ) AS device
 FROM devices
 LEFT JOIN ${catalog}.centrum.experiment_devices AS registry
   ON devices.experiment_id = registry.experiment_id

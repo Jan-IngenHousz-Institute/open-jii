@@ -10,13 +10,14 @@ export function useDistinctOptions(
   experimentId: string,
   tableName: string,
 ) {
+  const isDevice = column.type_text === WellKnownColumnTypes.DEVICE;
   const { values, truncated, isLoading, isSuccess, error } = useExperimentDistinctValues({
     experimentId,
     tableName: column.sourceTable?.tableName ?? tableName,
     column: column.sourceTable?.columnName ?? column.name,
+    allPages: isDevice,
   });
   const isContributor = column.type_text === WellKnownColumnTypes.CONTRIBUTOR;
-  const isDevice = column.type_text === WellKnownColumnTypes.DEVICE;
   const contributorMap = useContributorIdMap(values, isContributor);
   return {
     values,

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  WellKnownColumnTypes,
   zExperimentDataResponse,
   zExperimentDistinctValuesResponse,
   zExperimentTableColumnsResponse,
@@ -488,4 +489,36 @@ it("evaluates a relative fixture read at the same UTC minute reported to the UI"
   } finally {
     clock.mockRestore();
   }
+});
+
+it("selects one same-name sensor by the device label's struct path", () => {
+  const devices: FixtureTable = {
+    identifier: "raw_data",
+    displayName: "Sensor measurements",
+    columns: [
+      { name: "device", type_name: "STRUCT", type_text: WellKnownColumnTypes.DEVICE },
+      { name: "signal", type_name: "DOUBLE", type_text: "DOUBLE" },
+    ],
+    rows: ["Ambit (d2)", "Ambit (d3)"].flatMap((serial) =>
+      Array.from({ length: 8 }, (_, signal) => ({
+        device: JSON.stringify({ serial_number: serial }),
+        signal,
+      })),
+    ),
+  };
+  const deviceQuery = new FixtureQuery([devices]);
+  const answer = deviceQuery.answer(
+    "/data",
+    new URLSearchParams({
+      tableName: "raw_data",
+      columns: "device,signal",
+      filters: JSON.stringify([
+        { column: "device.serial_number", operator: "equals", value: "Ambit (d2)" },
+      ]),
+    }),
+  );
+  if (answer?.status !== 200) throw new Error("Expected fixture data");
+  const table = zExperimentDataResponse.parse(answer.body).at(0);
+  expect(table?.data?.rows).toHaveLength(8);
+  expect(table?.data?.rows.every((row) => String(row.device).includes("Ambit (d2)"))).toBe(true);
 });

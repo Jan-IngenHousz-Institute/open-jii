@@ -12,6 +12,7 @@ import {
 } from "@repo/api/transforms/column-type-utils";
 import { isJoinMatchColumn, joinedColumns } from "@repo/api/transforms/joined-columns";
 
+import { SqlQueryBuilder } from "../../../common/modules/databricks/services/query-builder/query-builder.base";
 import type {
   AggregationSpec,
   FilterCondition,
@@ -373,8 +374,9 @@ export class ExperimentDataRepository {
     column: string;
     limit: number;
     source: ExperimentDataSource;
+    offset?: number;
   }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
-    const { experimentId, experiment, tableName, column, limit, source } = params;
+    const { experimentId, experiment, tableName, column, limit, offset, source } = params;
 
     const shapeResult = await this.tableShape(experimentId, tableName, source);
     if (shapeResult.isFailure()) {
@@ -389,20 +391,36 @@ export class ExperimentDataRepository {
     if (anonymizedResult.isFailure()) {
       return anonymizedResult;
     }
-
+    const deviceColumn = column === "device" && shape.metadata.tableType !== "upload";
+    if (!deviceColumn && (offset ?? 0) > 0) {
+      return failure(AppError.badRequest("Offset paging is supported only for device columns"));
+    }
+    const projectedColumn = deviceColumn ? `${column}.serial_number` : column;
     const queryResult = await this.buildQuery(experimentId, shape, {
-      columns: [column],
-      distinct: true,
-      ordering: { column, direction: "ASC" },
+      columns: [projectedColumn],
+      distinct: deviceColumn ? undefined : true,
+      ordering: deviceColumn ? undefined : { column: projectedColumn, direction: "ASC" },
       // +1 so we can detect truncation: if the SQL returned exactly limit+1
       // rows, the column has more values than we returned.
-      limit: limit + 1,
+      limit: deviceColumn ? undefined : limit + 1,
+      offset: deviceColumn ? undefined : offset,
     });
     if (queryResult.isFailure()) {
       return queryResult;
     }
 
-    const dataResult = await this.executeQuery(shape, queryResult.value);
+    const query = deviceColumn
+      ? { ...queryResult.value, sql: new SqlQueryBuilder()
+          .select(["serial_number"])
+          .distinct()
+          .from(`(${queryResult.value.sql}) AS device_names`)
+          .where("`serial_number` IS NOT NULL AND trim(`serial_number`) <> ''")
+          .orderByRaw("lower(`serial_number`) ASC, `serial_number` ASC")
+          .limit(limit + 1)
+          .offset(offset ?? 0)
+          .build() }
+      : queryResult.value;
+    const dataResult = await this.executeQuery(shape, query);
     if (dataResult.isFailure()) {
       return dataResult;
     }

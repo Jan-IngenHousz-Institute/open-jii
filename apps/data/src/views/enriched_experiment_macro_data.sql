@@ -79,7 +79,18 @@ results AS (
     macro.timezone,
     macro.date,
     contributors.user AS contributor,
-    devices.device AS device,
+    named_struct(
+      'id', devices.device.id,
+      'serial_number', CASE
+        WHEN nullif(trim(devices.device.serial_number), '') IS NOT NULL THEN devices.device.serial_number
+        WHEN macro.fallback_device_name = macro.fallback_device_id THEN macro.fallback_device_name
+        WHEN macro.fallback_device_id IS NOT NULL THEN concat(macro.fallback_device_name, ' (', macro.fallback_device_id, ')')
+        ELSE coalesce(macro.fallback_device_name, 'Unknown device')
+      END,
+      'owner', devices.device.owner,
+      'status', devices.device.status,
+      'device_type', devices.device.device_type
+    ) AS device,
     macro.latitude,
     macro.longitude,
     macro.macro_id,
@@ -91,7 +102,12 @@ results AS (
     macro.processed_timestamp,
     macro.questions_data,
     macro.annotations AS payload_annotations
-  FROM ${catalog}.centrum.experiment_macro_data AS macro
+  FROM (
+    SELECT *,
+      coalesce(nullif(trim(device_name), ''), nullif(trim(client_id), ''), nullif(trim(device_id), '')) AS fallback_device_name,
+      coalesce(nullif(trim(device_id), ''), nullif(trim(client_id), '')) AS fallback_device_id
+    FROM ${catalog}.centrum.experiment_macro_data
+  ) AS macro
   LEFT JOIN ${catalog}.centrum.experiment_contributors AS contributors
     ON macro.experiment_id = contributors.experiment_id AND macro.user_id = contributors.user_id
   LEFT JOIN ${catalog}.centrum.experiment_devices AS devices
