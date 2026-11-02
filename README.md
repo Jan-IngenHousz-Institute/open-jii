@@ -1,0 +1,1 @@
+OJD-2319 review evidence. Authentic authenticated local application captures with synthetic fixture data. Each before/after pair uses the same viewport and saved configuration. Application source is on its separate fix branch.
