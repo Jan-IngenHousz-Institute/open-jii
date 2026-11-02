@@ -2,6 +2,7 @@ import { createOrganizationDirectoryEntry } from "@/test/factories";
 import { arrayParam, openOnUrl } from "@/test/list-request";
 import { server } from "@/test/msw/server";
 import { act, renderHook, waitFor } from "@/test/test-utils";
+import { QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -99,10 +100,18 @@ describe("useOrganizationsList", () => {
       body: { organizations: [] },
     });
 
-    const { result } = renderHook(() => useOrganizationsList());
+    const queryClient = new QueryClient();
+    const { result } = renderHook(() => useOrganizationsList(), { queryClient });
 
     expect(result.current.isLoading).toBe(true);
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await waitFor(() =>
+      expect(
+        queryClient
+          .getQueryCache()
+          .getAll()
+          .map((query) => query.state.fetchStatus),
+      ).toEqual(["idle"]),
+    );
     expect(spy.called).toBe(false);
   });
 });

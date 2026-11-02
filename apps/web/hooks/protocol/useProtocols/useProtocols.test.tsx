@@ -43,11 +43,12 @@ describe("useProtocols", () => {
     const { result } = renderHook(() => useProtocols());
     act(() => result.current.setSearch("   "));
 
-    await waitFor(() => expect(spy.called).toBe(true));
+    await waitFor(() => expect(result.current.debouncedSearch).toBe("   "));
+    expect(spy.called).toBe(true);
     const url = spy.calls.at(-1)?.url ?? "";
     expect(arrayParam(url, "family")).toEqual([]);
     expect(arrayParam(url, "visibility")).toEqual([]);
     expect(url).not.toContain("sort");
-    expect(spy.calls.at(-1)?.query.search).toBeUndefined();
+    expect(spy.calls.some((call) => "search" in call.query)).toBe(false);
   });
 });
