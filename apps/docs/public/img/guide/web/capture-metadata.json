@@ -70,7 +70,9 @@
       "reviewer": "ticket-06-media-pass",
       "review_notes": "Blank Details step shows the observed four-step wizard, name, description, and workbook picker; no account or experiment data entered.",
       "redactions": [],
-      "live_checks_observed": ["Four-step create wizard Details screen observed on dev."]
+      "live_checks_observed": [
+        "Four-step create wizard Details screen observed on dev."
+      ]
     },
     {
       "asset": "create-experiment-entry.png",
@@ -116,7 +118,9 @@
         "visible email addresses replaced with [email hidden]",
         "testing-account avatar hidden"
       ],
-      "live_checks_observed": ["Authenticated dashboard and experiment cards observed on dev."]
+      "live_checks_observed": [
+        "Authenticated dashboard and experiment cards observed on dev."
+      ]
     },
     {
       "asset": "data-first-measurement.png",
@@ -140,30 +144,32 @@
         "testing-account avatar hidden",
         "visible UUID identifiers replaced with [id hidden]"
       ],
-      "live_checks_observed": ["Representative populated measurement table observed on dev."]
+      "live_checks_observed": [
+        "Representative populated measurement table observed on dev."
+      ]
     },
     {
-      "asset": "experiments-list.png",
-      "sha256": "de671a0e4e80b16797f233d60a8100dbc7e16207eafbc410e197baf7a8597917",
-      "script": "apps/web/e2e/docs_media/capture_experiments_list.py",
-      "environment": "dev.openjii.org",
-      "route": "/en-US/platform/experiments",
-      "captured_at": "2026-07-19T22:06:55.018141+00:00",
+      "asset": "experiments-list.webp",
+      "sha256": "8d2f3277f3dd3859400d9cb56b57269b072ee4c36d19cf92fce8ca222d9e5c30",
+      "script": "apps/e2e/docs-media/shots.ts",
+      "environment": "localhost (seeded local stack)",
+      "route": "/platform/experiments?status=active&visibility=public",
+      "captured_at": "2026-11-02T17:40:36+01:00",
       "viewport": {
-        "width": 1440,
-        "height": 1024
+        "width": 1920,
+        "height": 1200
       },
       "color_scheme": "light",
       "locale": "en-US",
       "review_status": "approved",
-      "reviewed_at": "2026-07-19T22:17:35.524430+00:00",
-      "reviewer": "ticket-06-media-pass",
-      "review_notes": "Search and member-filter controls with three curated demo experiment cards; account avatar hidden and scratch cards excluded from the focused capture.",
-      "redactions": [
-        "visible email addresses replaced with [email hidden]",
-        "testing-account avatar hidden"
-      ],
-      "live_checks_observed": ["Search/filter controls and experiment cards observed on dev."]
+      "reviewed_at": "2026-11-02T17:40:36+01:00",
+      "reviewer": "User",
+      "review_notes": "Experiments overview with Name sorted ascending and Status is Active and Visibility is Public chips. Full-size review confirmed only seeded content and no real names, emails, credentials or dev overlays. Encoded as WebP at quality 90 with metadata omitted using cwebp.",
+      "redactions": [],
+      "live_checks_observed": [
+        "Name sorted ascending; Status is Active and Visibility is Public chips appear beneath the toolbar; Clear filters is visible at right.",
+        "Only seeded experiment names and the seeded account are visible."
+      ]
     },
     {
       "asset": "export-dialog.png",
@@ -209,7 +215,9 @@
       "reviewer": "ticket-06-media-pass",
       "review_notes": "Public dev auth screen only; email and OTP fields are empty, no account data is visible, cookie banner dismissed, stable background selected, and GitHub/ORCID/email methods match the verified Guide copy.",
       "redactions": [],
-      "live_checks_observed": ["Dev login offers email, GitHub, and ORCID."]
+      "live_checks_observed": [
+        "Dev login offers email, GitHub, and ORCID."
+      ]
     },
     {
       "asset": "metadata-import.png",
@@ -233,7 +241,9 @@
         "testing-account avatar hidden",
         "visible UUID identifiers replaced with [id hidden]"
       ],
-      "live_checks_observed": ["Metadata CSV preview and identifier mapping UI observed on dev."]
+      "live_checks_observed": [
+        "Metadata CSV preview and identifier mapping UI observed on dev."
+      ]
     },
     {
       "asset": "project-transfer-history.png",
@@ -252,7 +262,9 @@
       "reviewed_at": "2026-07-19T22:17:36.001541+00:00",
       "reviewer": "ticket-06-media-pass",
       "review_notes": "Previous Requests view shows observed Completed statuses and dates; project identifiers and URLs hidden.",
-      "redactions": ["project identifiers and URLs hidden"],
+      "redactions": [
+        "project identifiers and URLs hidden"
+      ],
       "live_checks_observed": [
         "Previous Requests view and its current status labels/empty state observed on dev."
       ]
@@ -382,7 +394,9 @@
         "visible email addresses replaced with [email hidden]",
         "testing-account avatar hidden"
       ],
-      "live_checks_observed": ["In-product Report bug link observed on dev."]
+      "live_checks_observed": [
+        "In-product Report bug link observed on dev."
+      ]
     },
     {
       "asset": "visibility-embargo.png",
@@ -430,7 +444,9 @@
         "visible email addresses replaced with [email hidden]",
         "testing-account avatar hidden"
       ],
-      "live_checks_observed": ["Linked workbook and pinned version badge observed on dev."]
+      "live_checks_observed": [
+        "Linked workbook and pinned version badge observed on dev."
+      ]
     },
     {
       "asset": "workbook-version-history.png",
@@ -551,26 +567,26 @@
       ]
     },
     {
-      "asset": "organizations-list.png",
-      "sha256": "b9ac8c595db81cafa50810b0b719f36581ca5cb4da8b9bd18c2b34716b178728",
-      "script": "openjii-e2e (separate repo, ~/Projects/openjii-e2e): capture/docs-media.spec.ts, run with playwright.capture.config.ts",
-      "environment": "local e2e harness (seeded Phase 4 fixtures, backend :3120 / web :3100)",
-      "route": "/en-US/platform/organizations",
-      "captured_at": "2026-08-17T00:00:00+00:00",
+      "asset": "organizations-list.webp",
+      "sha256": "647e82b5dc423160f0c506f10998bc61a44c24825246bba563fa371ed9c122a5",
+      "script": "apps/e2e/docs-media/shots.ts",
+      "environment": "localhost (seeded local stack)",
+      "route": "/platform/organizations",
+      "captured_at": "2026-11-02T17:40:36+01:00",
       "viewport": {
-        "width": 1440,
-        "height": 1024
+        "width": 1920,
+        "height": 1200
       },
       "color_scheme": "light",
       "locale": "en-US",
       "review_status": "approved",
-      "reviewed_at": "2026-08-17T00:00:00+00:00",
-      "reviewer": "p4-5-b-iam-docs",
-      "review_notes": "Re-captured to remove internal jargon: the previous frame was twelve cards of which ten were named 'P4 <something>', and eleven read 'No description provided'. Now nine plausibly-named research groups, each with a description, its member and resource counts, and its Private badge where it is private, plus the search box, the filter and the Create organization action. Filter is on 'My organizations'; the '?filter=all' directory reading is deliberately not published - this persona belongs to every organization seeded here, so that frame renders the same grid with a different label and would teach the opposite of what the directory page is about.",
-      "redactions": ["none required - every organization in frame is created by the capture run"],
+      "reviewed_at": "2026-11-02T17:40:36+01:00",
+      "reviewer": "User",
+      "review_notes": "Organizations overview with Type sorted ascending and the unified Filter menu idle. Full-size review confirmed only seeded content and no real names, emails, credentials or dev overlays. Encoded as WebP at quality 90 with metadata omitted using cwebp.",
+      "redactions": [],
       "live_checks_observed": [
-        "Member and resource counts rendered per card; a mix of public and private, which is correct for a listing that shows the caller's own organizations whatever their visibility.",
-        "Reviewed against both bars; no phase numbers and no 'No description provided' placeholders remain."
+        "Type sorted ascending; Filter menu closed with no chips.",
+        "Only [Seed] names and the seeded account are visible."
       ]
     },
     {
@@ -648,11 +664,11 @@
     },
     {
       "asset": "protocols-list.webp",
-      "sha256": "035908a07c32289c03c6891c784892f5bdc4282049cfc1a1db57a42f5e1e8478",
+      "sha256": "8f8dafcb4c915228e3f03f58fae7467959b24b646840fb5c542ff9b7d2370efd",
       "script": "apps/e2e/docs-media/shots.ts",
       "environment": "localhost (seeded local stack)",
       "route": "/platform/protocols",
-      "captured_at": "2026-10-27T17:55:00+01:00",
+      "captured_at": "2026-11-02T17:40:36+01:00",
       "viewport": {
         "width": 1920,
         "height": 1200
@@ -660,12 +676,59 @@
       "color_scheme": "light",
       "locale": "en-US",
       "review_status": "approved",
-      "reviewed_at": "2026-10-27T17:55:00+01:00",
-      "reviewer": "Codex capture review",
-      "review_notes": "Name sorted ascending; Family and Visibility filters visible with no selection; Clear filters absent. Family badges read MultispeQ and Ambyte. Full-size review confirmed only [Seed] protocol names and no real names, emails, credentials or dev overlays. Encoded from the capture tool frame at WebP quality 90 with metadata omitted using cwebp.",
+      "reviewed_at": "2026-11-02T17:40:36+01:00",
+      "reviewer": "User",
+      "review_notes": "Protocols overview with Name sorted ascending and the unified Filter menu idle. Full-size review confirmed only seeded content and no real names, emails, credentials or dev overlays. Encoded as WebP at quality 90 with metadata omitted using cwebp.",
       "redactions": [],
       "live_checks_observed": [
-        "Local protocols list rendered all seeded protocol rows and updated product family labels."
+        "Name sorted ascending; Filter menu closed with no chips.",
+        "Only [Seed] names and the seeded account are visible."
+      ]
+    },
+    {
+      "asset": "macros-list.webp",
+      "sha256": "57c5a061aad5fde298cb6d4f4dab4bde953826378bb184631e50042bc1182a13",
+      "script": "apps/e2e/docs-media/shots.ts",
+      "environment": "localhost (seeded local stack)",
+      "route": "/platform/macros",
+      "captured_at": "2026-11-02T17:40:36+01:00",
+      "viewport": {
+        "width": 1920,
+        "height": 1200
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-11-02T17:40:36+01:00",
+      "reviewer": "User",
+      "review_notes": "Macros overview with Name sorted ascending and the unified Filter menu idle. Full-size review confirmed only seeded content and no real names, emails, credentials or dev overlays. Encoded as WebP at quality 90 with metadata omitted using cwebp.",
+      "redactions": [],
+      "live_checks_observed": [
+        "Name sorted ascending; Filter menu closed with no chips.",
+        "Only [Seed] names and the seeded account are visible."
+      ]
+    },
+    {
+      "asset": "workbooks-list.webp",
+      "sha256": "36e62d31696d3cbf6b680b6472e683b92114aa588d172ca36d34971958881bf8",
+      "script": "apps/e2e/docs-media/shots.ts",
+      "environment": "localhost (seeded local stack)",
+      "route": "/platform/workbooks",
+      "captured_at": "2026-11-02T17:40:36+01:00",
+      "viewport": {
+        "width": 1920,
+        "height": 1200
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-11-02T17:40:36+01:00",
+      "reviewer": "User",
+      "review_notes": "Workbooks overview with Name sorted ascending and the unified Filter menu idle. Full-size review confirmed only seeded content and no real names, emails, credentials or dev overlays. Encoded as WebP at quality 90 with metadata omitted using cwebp.",
+      "redactions": [],
+      "live_checks_observed": [
+        "Name sorted ascending; Filter menu closed with no chips.",
+        "Only [Seed] names and the seeded account are visible."
       ]
     }
   ]

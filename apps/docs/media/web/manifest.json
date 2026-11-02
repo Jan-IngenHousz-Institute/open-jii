@@ -35,7 +35,8 @@
       "organizations-list retaken on 2026-10-14 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only organizations-list. The directory gained the Type filter and a sortable Type column; the shot now sorts by Type ascending. Reviewed at full size and approved before publishing: all six organization names are [Seed] fixtures, the Type filter is unselected, the untyped [Seed] Community Seed Library sorts last with an empty Type cell, and no real users, credentials, precise locations or dev overlays appear. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
       "protocols-list retaken on 2026-10-27 at 1920x1200 from the local stack with the seeded development identity (seed@openjii.local), via pnpm --filter @repo/e2e capture-docs-media --only protocols-list. Name remains sorted ascending; Family and Visibility filters are visible with no values selected, and Clear filters is absent. Retaken because family badges now use the product names MultispeQ and Ambyte. Reviewed at full size; only [Seed] protocol names appear, with no real names, emails, credentials or dev overlays. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine lacks ffmpeg.",
       "protocol-picker retaken on 2026-10-27 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only protocol-picker. The Chamber QC Scratchpad workbook shows the Protocol picker open, filtered by “chloro”, with three [Seed] protocols and MultispeQ badges; retaken because the picker still showed “multispeq”. Reviewed at full size; no real names or emails, credentials or dev overlays appear. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine.",
-      "macros-list retaken on 2026-10-27 at 1920x1200 from the local stack with the expanded sidebar, matching the other platform captures. The frame shows Name sorted ascending, Language and Visibility filters with none applied, only [Seed] macro names, and no data-processing status notice. Reviewed at full size; the account details in the sidebar are the seeded development identity. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine."
+      "macros-list retaken on 2026-10-27 at 1920x1200 from the local stack with the expanded sidebar, matching the other platform captures. The frame shows Name sorted ascending, Language and Visibility filters with none applied, only [Seed] macro names, and no data-processing status notice. Reviewed at full size; the account details in the sidebar are the seeded development identity. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine.",
+      "Retaken on 2026-11-02 at 1920x1200 from the local stack with the seeded development identity (seed@openjii.local), via pnpm --filter @repo/e2e capture-docs-media --only experiments-list,protocols-list,macros-list,workbooks-list,organizations-list. experiments-list shows Name ascending with Status is Active and Visibility is Public chips and Clear filters; protocols-list, macros-list and workbooks-list show Name ascending, while organizations-list shows Type ascending. Those four frames have the Filter menu closed and no chips. All five frames were reviewed at full size and approved before publishing; only [Seed] resource names and the seeded identity appear, with no real names, emails, credentials or dev overlays. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine."
     ]
   },
   "assets": [
@@ -67,10 +68,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 60826,
-      "sha256": "0a00be83a2cb8e7fad4b77e4c6bfcbe90b74b6cf5c703eb098baa1d3e2723e2b",
+      "bytes": 55228,
+      "sha256": "8d2f3277f3dd3859400d9cb56b57269b072ee4c36d19cf92fce8ca222d9e5c30",
       "disposition": "published",
-      "scope": "Experiments overview with the Name column sorted ascending"
+      "scope": "Experiments overview with Name sorted ascending and Status is Active and Visibility is Public chips"
     },
     {
       "path": "/img/guide/web/create-experiment-entry.webp",
@@ -100,10 +101,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 33164,
-      "sha256": "139dba97cb19c393d1916e5167296e35275903031d8dd59c46257b33bf388aed",
+      "bytes": 32210,
+      "sha256": "36e62d31696d3cbf6b680b6472e683b92114aa588d172ca36d34971958881bf8",
       "disposition": "published",
-      "scope": "Workbooks overview with the Name column sorted ascending"
+      "scope": "Workbooks overview with Name sorted ascending and the unified Filter menu idle"
     },
     {
       "path": "/img/guide/web/organizations-list.webp",
@@ -111,10 +112,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 60860,
-      "sha256": "79b7614b6ccb18a8194f9766fe3aef9148c42f516ada9a66c84f96ce1efc9852",
+      "bytes": 60226,
+      "sha256": "647e82b5dc423160f0c506f10998bc61a44c24825246bba563fa371ed9c122a5",
       "disposition": "published",
-      "scope": "Organizations overview with the Type column sorted ascending"
+      "scope": "Organizations overview with Type sorted ascending and the unified Filter menu idle"
     },
     {
       "path": "/img/guide/web/organization-create-visibility.webp",
@@ -265,10 +266,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 99000,
-      "sha256": "035908a07c32289c03c6891c784892f5bdc4282049cfc1a1db57a42f5e1e8478",
+      "bytes": 97460,
+      "sha256": "8f8dafcb4c915228e3f03f58fae7467959b24b646840fb5c542ff9b7d2370efd",
       "disposition": "published",
-      "scope": "Protocols overview with the Name column sorted ascending"
+      "scope": "Protocols overview with Name sorted ascending and the unified Filter menu idle"
     },
     {
       "path": "/img/guide/web/macros-list.webp",
@@ -276,10 +277,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 86718,
-      "sha256": "ca40ecec1086c56a7cb0d57a14e0c16ff249104c6297fba2d77f8e27c3f941fb",
+      "bytes": 84942,
+      "sha256": "57c5a061aad5fde298cb6d4f4dab4bde953826378bb184631e50042bc1182a13",
       "disposition": "published",
-      "scope": "Macros overview with Name sorted ascending, Language and Visibility filters unapplied, and only seeded macro names visible"
+      "scope": "Macros overview with Name sorted ascending and the unified Filter menu idle"
     },
     {
       "path": "/img/chrome-refresh/sidebar-peek.webp",
