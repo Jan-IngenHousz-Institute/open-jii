@@ -4,7 +4,40 @@ from __future__ import annotations
 
 import json
 
-from openjii.json_scrub import scrub_non_finite_json_value
+import pytest
+from openjii.json_scrub import scrub_non_finite_json, scrub_non_finite_json_value
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+
+_PAYLOADS = [
+    None,
+    "",
+    '{"a": 1.5, "b": [1, 2]}',
+    '{"a": NaN}',
+    '{"cal": [1.0, NaN, -Infinity, Infinity, 2]}',
+    "[NaN,NaN,-Infinity]",
+    '{"detail": "NaN", "name": "Infinity Ward", "temp": NaN}',
+    '{"only": "NaN in a string"}',
+    '{"note": "🌱 öß", "temp": NaN}',
+    '{"detail": "NaN", "cal": [1.0,',
+    '{"detail": "say \\"NaN\\" now", "t": NaN}',
+    '{"path": "C:\\\\temp\\\\", "t": NaN}',
+    '{"a": "unterminated NaN, "b": NaN}',
+    '"lone quote then NaN',
+    'outside \\ a backslash NaN "and a string"',
+    '{"x": -NaN, "y": NaNx}',
+    '{"a":\n NaN\n}',
+    '{"a": 0.12345678901234567890123456789012345, "b": 123456789012345678901234567890, "t": NaN}',
+    '{"long": "' + "x" * 200_000 + '", "t": NaN}',
+    '{"open": "' + "y" * 200_000 + " NaN",
+    # Every escaped quote here once made the scan retry the literal to the end: quadratic time.
+    '{"t": NaN, "open": "' + '\\"' * 200_000,
+    '{"t": NaN, "trailing": "\\',
+    # The shape a backslash with an optional next character could match two ways.
+    '{"t": NaN, "s": "\\' + "!\\" * 100_000,
+    '{"t": NaN} "',
+    '{"t": NaN, "s": "line\\\nbreak"}',
+]
 
 
 def _strict_loads(payload: str | None):
@@ -70,3 +103,24 @@ class TestScrubNonFiniteJsonValue:
     def test_escaped_quotes_keep_string_state(self) -> None:
         payload = '{"detail": "say \\"NaN\\" now", "t": NaN}'
         assert scrub_non_finite_json_value(payload) == '{"detail": "say \\"NaN\\" now", "t": null}'
+
+
+@pytest.mark.spark
+def test_the_spark_scrub_gives_what_the_python_one_does(spark: SparkSession) -> None:
+    frame = spark.createDataFrame([(payload,) for payload in _PAYLOADS], "payload string")
+
+    scrubbed = [
+        row.scrubbed
+        for row in frame.select(scrub_non_finite_json(F.col("payload")).alias("scrubbed")).collect()
+    ]
+
+    assert scrubbed == [scrub_non_finite_json_value(payload) for payload in _PAYLOADS]
+
+
+@pytest.mark.spark
+def test_the_spark_scrub_runs_no_python(spark: SparkSession, capsys: pytest.CaptureFixture[str]) -> None:
+    frame = spark.createDataFrame([('{"a": NaN}',)], "payload string")
+
+    frame.select(scrub_non_finite_json(F.col("payload"))).explain()
+
+    assert "Python" not in capsys.readouterr().out
