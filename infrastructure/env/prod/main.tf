@@ -1175,6 +1175,7 @@ module "metrics_heartbeat_export" {
         "HEARTBEAT_LOCATION" = "s3://${module.heartbeat_metrics_s3.bucket_id}"
         "PIPELINE_LOGS_PATH" = module.pipeline_logs_volume.volume_path
         "COST_COMPONENTS"    = jsonencode(local.databricks_cost_components)
+        "WORKSPACE_ID"       = tostring(module.databricks_workspace.workspace_id)
       }
     }
   ]

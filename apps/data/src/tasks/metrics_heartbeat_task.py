@@ -106,6 +106,7 @@ WIDGETS = (
     "HEARTBEAT_LOCATION",
     "PIPELINE_LOGS_PATH",
     "COST_COMPONENTS",
+    "WORKSPACE_ID",
 )
 for name in WIDGETS:
     dbutils.widgets.text(name, "")
@@ -125,6 +126,7 @@ ENVIRONMENT = required_widget("ENVIRONMENT")
 HEARTBEAT_LOCATION = required_widget("HEARTBEAT_LOCATION")
 PIPELINE_LOGS_PATH = required_widget("PIPELINE_LOGS_PATH")
 COST_COMPONENTS = json.loads(required_widget("COST_COMPONENTS"))
+WORKSPACE_ID = required_widget("WORKSPACE_ID")
 
 EXPERIMENT_STATUS = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.experiment_status"
 ACTIVITY_WINDOWS = f"{CATALOG_NAME}.{METRICS_SCHEMA}.{ACTIVITY_WINDOWS_TABLE}"
@@ -543,7 +545,7 @@ def collect_databricks_cost(now: datetime) -> list[dict]:
     week, and in total for the month, each stamped when its window closed. A component that
     spent nothing reads zero, so its series never goes quiet."""
     windows = cost_windows(now)
-    spend = {row["component"]: row for row in spark.sql(cost_windows_sql(COST_COMPONENTS, windows)).collect()}
+    spend = {row["component"]: row for row in spark.sql(cost_windows_sql(COST_COMPONENTS, WORKSPACE_ID, windows)).collect()}
     components = cost_components(COST_COMPONENTS)
 
     def usd(component: str, window: str) -> float:
@@ -591,7 +593,7 @@ def collect_databricks_spend_limit(now: datetime) -> list[dict]:
     windows = cost_windows(now)
     spend = {
         (row["component"], row["usage_date"]): float(row["usd"])
-        for row in spark.sql(daily_cost_sql(COST_COMPONENTS, windows)).collect()
+        for row in spark.sql(daily_cost_sql(COST_COMPONENTS, WORKSPACE_ID, windows)).collect()
     }
 
     return [

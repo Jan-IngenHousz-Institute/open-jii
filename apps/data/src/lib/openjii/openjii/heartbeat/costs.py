@@ -114,15 +114,15 @@ def _priced(named: dict[str, dict[str, str]], start: date, end: date, usage: str
         )"""
 
 
-# The billing tables cover the whole account, so only the workspace the named components bill in.
-_THIS_WORKSPACE = f"""
-        WHERE workspace_id IN (
-          SELECT workspace_id FROM priced WHERE component NOT IN ('{JOBS_COMPONENT}', '{OTHER_COMPONENT}')
-        )"""
+# The billing tables cover the whole account, so only the workspace the export runs in.
+def _in_workspace(workspace_id: str) -> str:
+    return f"""
+        WHERE workspace_id = '{workspace_id}'"""
 
 
 def cost_windows_sql(
     named: dict[str, dict[str, str]],
+    workspace_id: str,
     windows: CostWindows,
     usage: str = USAGE_TABLE,
     prices: str = LIST_PRICES_TABLE,
@@ -139,13 +139,14 @@ def cost_windows_sql(
                {_in_window(windows.month_start, windows.today)} AS month_to_date_usd,
                {_in_window(windows.previous_month_start, windows.previous_month_to_date_end)} AS previous_month_to_date_usd,
                {_in_window(windows.previous_month_start, windows.month_start)} AS previous_month_usd
-        FROM priced{_THIS_WORKSPACE}
+        FROM priced{_in_workspace(workspace_id)}
         GROUP BY component
     """
 
 
 def daily_cost_sql(
     named: dict[str, dict[str, str]],
+    workspace_id: str,
     windows: CostWindows,
     usage: str = USAGE_TABLE,
     prices: str = LIST_PRICES_TABLE,
@@ -157,7 +158,7 @@ def daily_cost_sql(
     start = windows.yesterday - timedelta(days=SPEND_BASELINE_DAYS)
     return f"""{_priced(named, start, windows.today, usage, prices)}
         SELECT component, usage_date, round(sum(usd), 2) AS usd
-        FROM priced{_THIS_WORKSPACE}
+        FROM priced{_in_workspace(workspace_id)}
         GROUP BY component, usage_date
     """
 

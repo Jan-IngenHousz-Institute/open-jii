@@ -21,9 +21,9 @@ GROUP BY usage_date, sku_name
 ORDER BY usage_date
 ```
 
-Run it on the Investigations warehouse. `apps/data/src/lib/openjii/openjii/heartbeat/costs.py` says
-which id each component bills under; `jobs` is every job run, and `other` is the rest of the
-workspace.
+Run it on the Investigations warehouse. `databricks_cost_components` in
+`infrastructure/env/<env>/main.tf` lists the id each component bills under, which the heartbeat job
+receives as `COST_COMPONENTS`; `jobs` is every job run, and `other` is the rest of the workspace.
 
 ## What it usually is
 
