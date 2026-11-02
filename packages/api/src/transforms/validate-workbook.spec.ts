@@ -18,7 +18,7 @@ const macroCell = (id: string, macroId: string): WorkbookCell => ({
   payload: { macroId, language: "python", name: "Macro" },
 });
 
-const questionCell = (id: string): WorkbookCell => ({
+const questionCell = (id: string): Extract<WorkbookCell, { type: "question" }> => ({
   id,
   type: "question",
   isCollapsed: false,
