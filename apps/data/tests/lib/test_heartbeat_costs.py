@@ -83,7 +83,7 @@ def test_prices_this_workspaces_spend_per_component_in_every_window(
 ):
     usage, prices = billing
 
-    rows = spark.sql(cost_windows_sql(NAMED, cost_windows(RUN), usage, prices)).collect()
+    rows = spark.sql(cost_windows_sql(NAMED, "w1", cost_windows(RUN), usage, prices)).collect()
 
     # Today and August are outside every window; w2 is another workspace's spend.
     assert {row["component"]: row.asDict() for row in rows} == {
@@ -127,13 +127,29 @@ def test_prices_this_workspaces_spend_per_component_in_every_window(
 def test_prices_each_day_its_limit_reads_per_component(spark: SparkSession, billing: tuple[str, str]):
     usage, prices = billing
 
-    rows = spark.sql(daily_cost_sql(NAMED, cost_windows(RUN), usage, prices)).collect()
+    rows = spark.sql(daily_cost_sql(NAMED, "w1", cost_windows(RUN), usage, prices)).collect()
 
     # Yesterday and the 14 days before it: the 12th to the 26th. Today, early October and the other
     # workspace are outside.
     assert {(row["component"], row["usage_date"], float(row["usd"])) for row in rows} == {
         ("centrum", date(2026, 10, 26), 5.0),
         ("centrum", date(2026, 10, 20), 2.0),
+    }
+
+
+@pytest.mark.spark
+def test_keeps_job_spend_when_no_named_component_billed_in_the_window(
+    spark: SparkSession, billing: tuple[str, str]
+):
+    usage, prices = billing
+    windows = cost_windows(datetime(2026, 9, 29, 6, 0, tzinfo=timezone.utc))
+
+    rows = spark.sql(daily_cost_sql(NAMED, "w1", windows, usage, prices)).collect()
+
+    # From the 14th to the 28th of September only a job run and other usage billed here.
+    assert {(row["component"], row["usage_date"], float(row["usd"])) for row in rows} == {
+        ("jobs", date(2026, 9, 15), 3.0),
+        ("other", date(2026, 9, 28), 4.0),
     }
 
 

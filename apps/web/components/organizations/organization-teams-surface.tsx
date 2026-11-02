@@ -2,6 +2,7 @@
 
 import { DocsHelpLink } from "@/components/docs-help-link";
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { ownName } from "@/components/people/person-name";
 import { UserAvatar } from "@/components/user-avatar";
 import { useCreateOrganizationTeam } from "@/hooks/organization/useCreateOrganizationTeam/useCreateOrganizationTeam";
 import { useOrganization } from "@/hooks/organization/useOrganization/useOrganization";
@@ -230,8 +231,7 @@ function AvatarStack({ members }: { members: OrganizationTeamMember[] }) {
         <UserAvatar
           key={member.userId}
           avatarUrl={member.avatarUrl}
-          firstName={member.firstName}
-          lastName={member.lastName}
+          name={ownName(member) ?? ""}
           className="ring-card -mr-1.5 h-7 w-7 ring-2"
         />
       ))}

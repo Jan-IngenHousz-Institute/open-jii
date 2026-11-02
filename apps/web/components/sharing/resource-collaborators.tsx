@@ -6,7 +6,6 @@ import { Search, UserPlus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { matchesCollaborator } from "~/util/collaborator-filter";
 
-import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -25,6 +24,7 @@ interface ResourceCollaboratorsProps {
    * signal exists and let the share-gated list endpoint act as the probe.
    */
   canShare?: boolean;
+  owningOrganizationId?: string | null;
 }
 
 /**
@@ -37,6 +37,7 @@ export function ResourceCollaborators({
   resourceId,
   readOnly = false,
   canShare,
+  owningOrganizationId,
 }: ResourceCollaboratorsProps) {
   const { t } = useTranslation();
 
@@ -105,10 +106,9 @@ export function ResourceCollaborators({
         title={t("sharing.addCollaboratorTitle")}
         description={t("sharing.addCollaboratorDescription")}
         disabled={readOnly}
-        // Deduplicate against the unfiltered list.
-        existingGranteeIds={collaborators.flatMap((row) =>
-          isGranteeRow(row) ? [row.granteeId] : [],
-        )}
+        // From the unfiltered list.
+        existingGrants={collaborators.filter((row) => row.kind === "grant")}
+        owningOrganizationId={owningOrganizationId}
       />
     </section>
   );

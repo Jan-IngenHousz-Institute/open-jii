@@ -33,6 +33,17 @@ describe("ExperimentPendingInvitationsPanel", () => {
     expect(rows.every((row) => !row.textContent.includes("@"))).toBe(true);
   });
 
+  it("leaves out the inviter credit when the inviter has no name", () => {
+    render(
+      <ExperimentPendingInvitationsPanel
+        invitations={[createInvitation({ id: "only", invitedByName: undefined })]}
+        canRevoke
+      />,
+    );
+    expect(screen.queryByText("experimentSettings.invitedBy")).not.toBeInTheDocument();
+    expect(screen.getByRole("listitem").querySelector("time")).toBeInTheDocument();
+  });
+
   it("keeps a safe reference when the same inviter sends several hidden invitations on one day", () => {
     render(
       <ExperimentPendingInvitationsPanel

@@ -1,12 +1,19 @@
 import { createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import { useSession } from "@repo/auth/client";
 
-import type { OrganizationInviteSelection } from "./organization-member-picker";
-import { OrganizationMemberPicker } from "./organization-member-picker";
+import type {
+  OrganizationInviteContext,
+  OrganizationInviteSelection,
+} from "./organization-member-picker";
+import {
+  describeOrganizationInviteCandidate,
+  OrganizationMemberPicker,
+} from "./organization-member-picker";
 
 function renderPicker(
   overrides: Partial<React.ComponentProps<typeof OrganizationMemberPicker>> = {},
@@ -28,6 +35,12 @@ function renderPicker(
 const search = () => screen.getByLabelText("organizations.invite.searchLabel");
 
 describe("<OrganizationMemberPicker />", () => {
+  afterEach(() => {
+    vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+      typeof useSession
+    >);
+  });
+
   it("reports a registered user as a user selection", async () => {
     const user = userEvent.setup();
     server.mount(contract.users.searchUsers, {
@@ -52,12 +65,14 @@ describe("<OrganizationMemberPicker />", () => {
 
     // The address rides along with the pick, because a picked account is invited at it
     // rather than added — so the invitation has somewhere to go.
-    expect(onSelectionChange).toHaveBeenCalledWith({
-      kind: "user",
-      userId: "u-1",
-      displayName: "Lin Zhao",
-      email: "lin@uni.edu",
-    });
+    expect(onSelectionChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "user",
+        userId: "u-1",
+        displayName: "Lin Zhao",
+        email: "lin@uni.edu",
+      }),
+    );
   });
 
   it("invites the hidden exact match using only the typed address", async () => {
@@ -79,12 +94,14 @@ describe("<OrganizationMemberPicker />", () => {
     expect(screen.getByText("common.emailMatched")).toBeInTheDocument();
     expect(screen.queryByText("LIN@uni.edu")).not.toBeInTheDocument();
     await user.click(screen.getByText("Lin Zhao"));
-    expect(onSelectionChange).toHaveBeenCalledWith({
-      kind: "user",
-      userId: "u-1",
-      displayName: "Lin Zhao",
-      email: "LIN@uni.edu",
-    });
+    expect(onSelectionChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "user",
+        userId: "u-1",
+        displayName: "Lin Zhao",
+        email: "LIN@uni.edu",
+      }),
+    );
   });
 
   it("does not reuse exact-match evidence after the typed address changes", async () => {
@@ -130,7 +147,27 @@ describe("<OrganizationMemberPicker />", () => {
     expect(userSpy.called).toBe(false);
   });
 
-  it("drops an existing member from the results, keeping the rest pickable", async () => {
+  it("never offers the person inviting", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "u-me" } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+    server.mount(contract.users.searchUsers, {
+      body: [
+        createUserProfile({ userId: "u-me", firstName: "Ada", lastName: "Byron" }),
+        createUserProfile({ userId: "u-2", firstName: "Ada", lastName: "Sun" }),
+      ],
+    });
+
+    renderPicker();
+    await user.type(search(), "ada");
+
+    await waitFor(() => expect(screen.getByText("Ada Sun")).toBeInTheDocument());
+    expect(screen.queryByText("Ada Byron")).not.toBeInTheDocument();
+  });
+
+  it("greys out an existing member with the reason, keeping the rest pickable", async () => {
     const user = userEvent.setup();
     server.mount(contract.users.searchUsers, {
       body: [
@@ -143,18 +180,21 @@ describe("<OrganizationMemberPicker />", () => {
 
     await user.type(search(), "ne");
 
-    // Filtered out rather than listed unpickably, matching the sharing picker: a row
-    // that cannot be picked is noise in a list whose only purpose is picking.
+    // Listed where the search put them: a member missing from a search for their name
+    // reads as a broken search.
     await waitFor(() => expect(screen.getByText("New Person")).toBeInTheDocument());
-    expect(screen.queryByText("Mel Member")).not.toBeInTheDocument();
+    expect(screen.getByText("Mel Member").closest("button")).toBeDisabled();
+    expect(screen.getByText("organizations.invite.alreadyMember")).toBeInTheDocument();
 
+    await user.click(screen.getByText("Mel Member"));
+    expect(onSelectionChange).not.toHaveBeenCalled();
     await user.click(screen.getByText("New Person"));
     expect(onSelectionChange).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "user", userId: "u-2" }),
     );
   });
 
-  it("drops a registered user who already has a pending invitation", async () => {
+  it("greys out a registered user who already has a pending invitation", async () => {
     const user = userEvent.setup();
     server.mount(contract.users.searchUsers, {
       body: [
@@ -172,13 +212,12 @@ describe("<OrganizationMemberPicker />", () => {
     await user.type(search(), "ada");
 
     // Case-insensitively: an address is the same address whatever its casing.
-    await waitFor(() =>
-      expect(screen.getByText("organizations.invite.noMatches")).toBeInTheDocument(),
-    );
-    expect(screen.queryByText("Ada Waiting")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Ada Waiting")).toBeInTheDocument());
+    expect(screen.getByText("Ada Waiting").closest("button")).toBeDisabled();
+    expect(screen.getByText("organizations.invite.alreadyInvited")).toBeInTheDocument();
   });
 
-  it("explains a typed address whose owner the results dropped, rather than saying nothing was found", async () => {
+  it("explains a typed address that belongs to a member, rather than saying nothing was found", async () => {
     const user = userEvent.setup();
     server.mount(contract.users.searchUsers, {
       body: [
@@ -196,11 +235,11 @@ describe("<OrganizationMemberPicker />", () => {
 
     await user.type(search(), "mel@uni.edu");
 
-    // The exclusion check reads the unfiltered answer, so this address is neither
-    // reported as unknown nor offered as an invitation to somebody already inside.
+    // Neither reported as unknown nor offered as an invitation to somebody already inside.
     await waitFor(() =>
       expect(screen.getByText("organizations.invite.alreadyMember")).toBeInTheDocument(),
     );
+    expect(screen.getByText("Mel Member").closest("button")).toBeDisabled();
     expect(screen.queryByText("organizations.invite.sendByEmail")).not.toBeInTheDocument();
     expect(screen.queryByText("organizations.invite.noMatches")).not.toBeInTheDocument();
   });
@@ -327,8 +366,8 @@ describe("<OrganizationMemberPicker />", () => {
     await waitFor(() =>
       expect(screen.getByText("organizations.invite.alreadyInvited")).toBeInTheDocument(),
     );
-    // Not offered as a pick either, so there is no way to reach the duplicate.
-    expect(screen.queryByText("Lin Zhao")).not.toBeInTheDocument();
+    // Not pickable either, so there is no way to reach the duplicate.
+    expect(screen.getByText("Lin Zhao").closest("button")).toBeDisabled();
     expect(screen.queryByText("organizations.invite.sendByEmail")).not.toBeInTheDocument();
   });
 
@@ -405,12 +444,14 @@ describe("<OrganizationMemberPicker />", () => {
     expect(screen.getByText("No Address").closest("button")).toBeDisabled();
 
     await user.click(screen.getByText("Has Address"));
-    expect(onSelectionChange).toHaveBeenCalledWith({
-      kind: "user",
-      userId: "u-2",
-      displayName: "Has Address",
-      email: "has@uni.edu",
-    });
+    expect(onSelectionChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "user",
+        userId: "u-2",
+        displayName: "Has Address",
+        email: "has@uni.edu",
+      }),
+    );
   });
 
   it("treats a failed search as unknown rather than as an address nobody holds", async () => {
@@ -423,9 +464,7 @@ describe("<OrganizationMemberPicker />", () => {
 
     // An account may well answer to this address — the search just could not say so.
     // Offering the bare address would sideline the account it belongs to.
-    await waitFor(() =>
-      expect(screen.getByText("organizations.invite.searchFailed")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("common.searchFailed")).toBeInTheDocument());
     expect(screen.queryByText("organizations.invite.sendByEmail")).not.toBeInTheDocument();
     expect(screen.queryByText("organizations.invite.noMatches")).not.toBeInTheDocument();
     expect(onSelectionChange).not.toHaveBeenCalled();
@@ -441,6 +480,7 @@ describe("<OrganizationMemberPicker />", () => {
       kind: "user",
       userId: "u-1",
       displayName: "Lin Zhao",
+      person: { id: "u-1", displayName: "Lin Zhao" },
       email: "lin@uni.edu",
     };
 
@@ -456,5 +496,96 @@ describe("<OrganizationMemberPicker />", () => {
     renderPicker({ disabled: true });
 
     expect(search()).toBeDisabled();
+  });
+});
+
+describe("describeOrganizationInviteCandidate", () => {
+  const t = (key: string) => key;
+  function context(overrides: Partial<OrganizationInviteContext> = {}): OrganizationInviteContext {
+    return {
+      memberUserIds: [],
+      memberEmails: [],
+      pendingInvitationEmails: [],
+      typedEmail: null,
+      t,
+      ...overrides,
+    };
+  }
+
+  it("leaves somebody with a visible address pickable, invited at that address", () => {
+    const row = describeOrganizationInviteCandidate(
+      createUserProfile({ userId: "u-1", firstName: "Lin", lastName: "Zhao", email: "l@uni.edu" }),
+      context(),
+    );
+
+    expect(row.unavailableReason).toBeNull();
+    expect(row.value).toMatchObject({
+      userId: "u-1",
+      displayName: "Lin Zhao",
+      person: { id: "u-1", firstName: "Lin", lastName: "Zhao" },
+      email: "l@uni.edu",
+    });
+  });
+
+  it("greys out a member", () => {
+    const row = describeOrganizationInviteCandidate(
+      createUserProfile({ userId: "u-1" }),
+      context({ memberUserIds: ["u-1"] }),
+    );
+
+    expect(row.unavailableReason).toBe("organizations.invite.alreadyMember");
+  });
+
+  it("greys out a pending invitee, ignoring case", () => {
+    const row = describeOrganizationInviteCandidate(
+      createUserProfile({ email: "lin@uni.edu" }),
+      context({ pendingInvitationEmails: ["LIN@uni.edu"] }),
+    );
+
+    expect(row.unavailableReason).toBe("organizations.invite.alreadyInvited");
+  });
+
+  it("greys out a hidden address until it is typed in full", () => {
+    const hidden = createUserProfile({ email: null, matchedEmail: false });
+    const matched = createUserProfile({ email: null, matchedEmail: true });
+
+    expect(describeOrganizationInviteCandidate(hidden, context()).unavailableReason).toBe(
+      "organizations.invite.enterExactEmail",
+    );
+    const row = describeOrganizationInviteCandidate(
+      matched,
+      context({ typedEmail: "Lin@uni.edu" }),
+    );
+    expect(row.unavailableReason).toBeNull();
+    expect(row.identityLine).toBe("common.emailMatched");
+    expect(row.value.email).toBe("Lin@uni.edu");
+  });
+
+  it("greys out a pending invitee reached through the typed address", () => {
+    const row = describeOrganizationInviteCandidate(
+      createUserProfile({ email: null, matchedEmail: true }),
+      context({ typedEmail: "lin@uni.edu", pendingInvitationEmails: ["lin@uni.edu"] }),
+    );
+
+    expect(row.unavailableReason).toBe("organizations.invite.alreadyInvited");
+  });
+
+  it("gives somebody already collected the wizard's own reason", () => {
+    const collected = context({
+      memberUserIds: ["u-1"],
+      pendingInvitationEmails: ["ada@uni.edu"],
+      excludedLabel: "organizations.create.people.alreadyAdded",
+    });
+
+    expect(
+      describeOrganizationInviteCandidate(createUserProfile({ userId: "u-1" }), collected)
+        .unavailableReason,
+    ).toBe("organizations.create.people.alreadyAdded");
+    expect(
+      describeOrganizationInviteCandidate(
+        createUserProfile({ userId: "u-2", email: "ada@uni.edu" }),
+        collected,
+      ).unavailableReason,
+    ).toBe("organizations.create.people.alreadyAdded");
   });
 });

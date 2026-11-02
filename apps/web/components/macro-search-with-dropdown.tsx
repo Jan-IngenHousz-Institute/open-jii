@@ -1,6 +1,7 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { personName } from "@/components/people/person-name";
 import { useLocale } from "@/hooks/useLocale";
 import { ChevronsUpDown, ExternalLink } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
@@ -60,6 +61,11 @@ export function MacroSearchWithDropdown({
   }, [value, currentMatch]);
 
   const selectedMacro = selectedSnapshotRef.current;
+  const author =
+    selectedMacro &&
+    personName({ displayName: selectedMacro.createdByName }, t, {
+      placement: "byline",
+    });
 
   const dropdownMacros = availableMacros.filter((macro) => macro.id !== value);
 
@@ -91,7 +97,8 @@ export function MacroSearchWithDropdown({
                   </IntentLink>
                 </div>
                 <span className="text-muted-foreground truncate text-xs">
-                  {selectedMacro.language} • {t("common.by")} {selectedMacro.createdByName}
+                  {selectedMacro.language}
+                  {author && <> • {t("common.byPerson", { name: author })}</>}
                 </span>
               </div>
             ) : (

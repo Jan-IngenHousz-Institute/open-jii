@@ -20,7 +20,6 @@ import { WizardStepButtons } from "@repo/ui/components/wizard-form";
 import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 import { cva } from "@repo/ui/lib/utils";
 
-import { organizationRoleLabelKey } from "../../organizations/organization-labels";
 import type { OrganizationInviteSelection } from "../../organizations/organization-member-picker";
 
 /** Sentinel for "no type chosen": a Radix select item cannot carry an empty value. */
@@ -32,25 +31,6 @@ export const NO_TYPE = "none";
  * organization exists, and they join when they accept it.
  */
 export type PendingOrganizationPerson = OrganizationInviteSelection & { role: OrganizationRole };
-
-/**
- * A collected person in one line: the role they arrive on, and — for an address the user
- * search did not resolve — that nobody holds it yet. Everybody here is invited, so the
- * marker distinguishes "no account behind this address" rather than how they arrive.
- *
- * Review's reading of a person. The People step renders the same role through the same
- * `organizationRoleLabelKey`, but as the roster's editable select rather than as text,
- * so a role mistyped there is corrected where it is read.
- */
-export function pendingPersonRoleText(
-  person: PendingOrganizationPerson,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string {
-  const roleLabel = t(organizationRoleLabelKey(person.role));
-  return person.kind === "user"
-    ? roleLabel
-    : t("organizations.create.people.emailRole", { role: roleLabel });
-}
 
 /** What the wizard collects. */
 export interface NewOrganizationFormValues {
