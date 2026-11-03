@@ -673,6 +673,7 @@
       "searchLabel": "Search this organization's resources",
       "typeFilter": "Type",
       "sortLabel": "Sort resources",
+      "sortPrefix": "Sort:",
       "sortRecent": "Recently updated",
       "sortName": "Name",
       "sortType": "Type",

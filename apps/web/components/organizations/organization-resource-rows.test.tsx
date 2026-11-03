@@ -104,6 +104,9 @@ describe("<OrganizationResourceRows />", () => {
 
     // One select, the sort, and one filter in the menu, the type.
     expect(within(container).getAllByRole("combobox")).toHaveLength(1);
+    expect(within(container).getByRole("combobox")).toHaveTextContent(
+      "organizations.resources.sortPrefix",
+    );
     await user.click(screen.getByRole("button", { name: "common.filter" }));
     expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
       "organizations.resources.typeFilter",
@@ -161,6 +164,19 @@ describe("<OrganizationResourceRows />", () => {
       expect(rowsIn(container)).toHaveLength(0);
       expect(within(container).getByText("organizations.resources.noMatchesTitle")).toBeVisible();
       expect(within(container).queryByRole("button", { name: "common.clearFilters" })).toBeNull();
+    });
+
+    it("keeps a screen of room under the toolbar only while the list is narrowed", () => {
+      openOnUrl(ORG_PATH, "");
+      const first = render(<OrganizationResourceRows resources={mixedEstate()} />);
+      const list = within(first.container).getByRole("list");
+      expect(list.parentElement).not.toHaveClass("min-h-dvh");
+      first.unmount();
+
+      // A shorter page would scroll the browser up and move the toolbar under the cursor.
+      openOnUrl(ORG_PATH, "type=device");
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+      expect(within(container).getByRole("list").parentElement).toHaveClass("min-h-dvh");
     });
 
     it("clears the type filter and keeps the search", async () => {

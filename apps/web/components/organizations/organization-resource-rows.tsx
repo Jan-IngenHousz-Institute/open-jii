@@ -8,7 +8,7 @@ import { useOrganizationResourceListState } from "@/hooks/organization/useOrgani
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime, formatShortDate } from "@/util/date";
 import { stripHtml } from "@/util/strip-html";
-import { Layers, Lock } from "lucide-react";
+import { ArrowUpDown, Layers, Lock } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { OrganizationResource } from "@repo/api/domains/organization/organization.schema";
@@ -50,9 +50,7 @@ const SORT_OPTIONS: readonly { value: ResourceSort; labelKey: string }[] = [
 ];
 
 /** Read off the schema rather than excluding `device` by hand, so a sixth type stays honest. */
-function transferableType(
-  type: OrganizationResource["type"],
-): TransferableResourceType | null {
+function transferableType(type: OrganizationResource["type"]): TransferableResourceType | null {
   const parsed = zTransferableResourceType.safeParse(type);
   return parsed.success ? parsed.data : null;
 }
@@ -84,16 +82,9 @@ export function OrganizationResourceRows({
   const list = useOrganizationResourceListState();
   const [target, setTarget] = useState<TransferTarget | null>(null);
 
-  const {
-    query,
-    setQuery,
-    sort,
-    setSort,
-    setFilter,
-    clearFilters,
-    hasActiveFilters,
-  } = list;
+  const { query, setQuery, sort, setSort, setFilter, clearFilters, hasActiveFilters } = list;
   const types = list.filters.type;
+  const isNarrowed = hasActiveFilters || query.trim() !== "";
 
   // The read is uncapped, so without this it re-runs over everything on every keystroke.
   const visible = useMemo(
@@ -132,14 +123,16 @@ export function OrganizationResourceRows({
           filters={filters}
           onClearFilters={clearFilters}
           actions={
-            <Select
-              value={sort}
-              onValueChange={(next) => setSort(next as ResourceSort)}
-            >
+            <Select value={sort} onValueChange={(next) => setSort(next as ResourceSort)}>
               <SelectTrigger
-                className="w-44"
+                className="w-auto gap-2"
                 aria-label={t("organizations.resources.sortLabel")}
               >
+                <ArrowUpDown aria-hidden className="size-4 opacity-60" />
+                {/* Says "Sort:" so it cannot read as a second filter beside the Filter menu. */}
+                <span className="text-muted-foreground">
+                  {t("organizations.resources.sortPrefix")}
+                </span>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -153,41 +146,39 @@ export function OrganizationResourceRows({
           }
         />
 
-        {visible.length === 0 ? (
-          <div className="border-border border-t py-10 text-center">
-            <p className="text-foreground text-sm font-semibold">
-              {t("organizations.resources.noMatchesTitle")}
-            </p>
-            <p className="text-muted-foreground mx-auto mt-1 max-w-[320px] text-xs leading-relaxed">
-              {t("organizations.resources.noMatchesHint")}
-            </p>
-            {/* A reset that resets nothing is a dead control. */}
-            {hasActiveFilters ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3.5"
-                onClick={clearFilters}
-              >
-                {t("common.clearFilters")}
-              </Button>
-            ) : null}
-          </div>
-        ) : (
-          <ul
-            role="list"
-            aria-label={t("organizations.resources.title")}
-            className="border-border border-t"
-          >
-            {visible.map((resource) => (
-              <ResourceRow
-                key={`${resource.type}-${resource.id}`}
-                resource={resource}
-                onTransfer={transfer ? setTarget : null}
-              />
-            ))}
-          </ul>
-        )}
+        {/* Narrowing shortens the page; one screen of room keeps the toolbar where it was. */}
+        <div className={isNarrowed ? "min-h-dvh" : undefined}>
+          {visible.length === 0 ? (
+            <div className="border-border border-t py-10 text-center">
+              <p className="text-foreground text-sm font-semibold">
+                {t("organizations.resources.noMatchesTitle")}
+              </p>
+              <p className="text-muted-foreground mx-auto mt-1 max-w-[320px] text-xs leading-relaxed">
+                {t("organizations.resources.noMatchesHint")}
+              </p>
+              {/* A reset that resets nothing is a dead control. */}
+              {hasActiveFilters ? (
+                <Button variant="outline" size="sm" className="mt-3.5" onClick={clearFilters}>
+                  {t("common.clearFilters")}
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <ul
+              role="list"
+              aria-label={t("organizations.resources.title")}
+              className="border-border border-t"
+            >
+              {visible.map((resource) => (
+                <ResourceRow
+                  key={`${resource.type}-${resource.id}`}
+                  resource={resource}
+                  onTransfer={transfer ? setTarget : null}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
 
         {/* One dialog, not one per row: it reads the caller's memberships when it opens. */}
         {transfer && target ? (
@@ -241,9 +232,7 @@ function ResourceRow({
                 <Lock className="h-3 w-3" />
               </span>
             </TooltipTrigger>
-            <TooltipContent>
-              {t("organizations.resources.privateTooltip")}
-            </TooltipContent>
+            <TooltipContent>{t("organizations.resources.privateTooltip")}</TooltipContent>
           </Tooltip>
         ) : null}
 
@@ -252,12 +241,8 @@ function ResourceRow({
             variant="link"
             className="ml-auto h-auto shrink-0 p-0"
             // Named for its row: every one of these reads "Transfer" otherwise.
-            aria-label={t("organizations.transfer.actionFor", {
-              name: resource.name,
-            })}
-            onClick={() =>
-              onTransfer({ type: transferableAs, id: resource.id })
-            }
+            aria-label={t("organizations.transfer.actionFor", { name: resource.name })}
+            onClick={() => onTransfer({ type: transferableAs, id: resource.id })}
           >
             {t("organizations.transfer.action")}
           </Button>
@@ -283,17 +268,12 @@ function ResourceRow({
 
         {resource.type === "device_group" ? (
           <span className="shrink-0 tabular-nums">
-            {t("organizations.resources.groupMemberCount", {
-              count: resource.memberCount,
-            })}
+            {t("organizations.resources.groupMemberCount", { count: resource.memberCount })}
           </span>
         ) : null}
 
         {meta ? (
-          <StatusBadge
-            tone={meta.tone}
-            className="shrink-0 rounded px-1.5 py-0"
-          >
+          <StatusBadge tone={meta.tone} className="shrink-0 rounded px-1.5 py-0">
             {meta.label}
           </StatusBadge>
         ) : null}

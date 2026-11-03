@@ -673,6 +673,7 @@
       "searchLabel": "Zoek in de resources van deze organisatie",
       "typeFilter": "Type",
       "sortLabel": "Resources sorteren",
+      "sortPrefix": "Sortering:",
       "sortRecent": "Recent bijgewerkt",
       "sortName": "Naam",
       "sortType": "Type",

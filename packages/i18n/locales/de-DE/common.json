@@ -673,6 +673,7 @@
       "searchLabel": "Ressourcen dieser Organisation durchsuchen",
       "typeFilter": "Typ",
       "sortLabel": "Ressourcen sortieren",
+      "sortPrefix": "Sortierung:",
       "sortRecent": "Zuletzt aktualisiert",
       "sortName": "Name",
       "sortType": "Typ",
