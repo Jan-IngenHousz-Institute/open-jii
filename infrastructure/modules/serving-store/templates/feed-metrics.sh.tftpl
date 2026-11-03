@@ -38,14 +38,18 @@ while IFS=$'\t' read -r table inserted p95 rejected; do
   fi
 done <<<"$rows"
 
-# The backend's reads, from the query log: how many finished or failed in the last minute, and over
-# the last five, how many failed and the p95 of those that finished. Without reads there is no p95.
-# A query log the timer cannot read costs these metrics alone, never the feed's above.
+# The backend's reads, from the query log: how many ended, and how many failed, in a minute, and the
+# p95 of their durations over five, with a failed read taken as the 30 s a read may last, so failing
+# reads raise it. The windows end ten seconds back, past the log's 7.5 s flush, so each run counts a
+# read once. Without reads there is no p95. A query log the timer cannot read costs these metrics
+# alone, never the feed's above.
 if read_stats=$(clickhouse-client --user openjii_monitor --format TSV --query "
-  SELECT countIf(event_time > now() - INTERVAL 1 MINUTE), countIf(type != 'QueryFinish'),
-    quantileIf(0.95)(query_duration_ms, type = 'QueryFinish') / 1000
+  SELECT countIf(event_time > now() - INTERVAL 70 SECOND),
+    countIf(event_time > now() - INTERVAL 70 SECOND AND type != 'QueryFinish'),
+    quantile(0.95)(if(type = 'QueryFinish', query_duration_ms, 30000)) / 1000
   FROM system.query_log
-  WHERE user = 'openjii_reader' AND type != 'QueryStart' AND event_time > now() - INTERVAL 5 MINUTE
+  WHERE user = 'openjii_reader' AND type != 'QueryStart'
+    AND event_time > now() - INTERVAL 310 SECOND AND event_time <= now() - INTERVAL 10 SECOND
 "); then
   IFS=$'\t' read -r reads failed p95 <<<"$read_stats"
   dimensions="[{\"Name\":\"Environment\",\"Value\":\"${environment}\"}]"

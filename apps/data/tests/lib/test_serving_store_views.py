@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Iterator
+from pathlib import Path
+from xml.etree import ElementTree
 
 import pytest
 import requests
@@ -18,6 +20,9 @@ pytestmark = pytest.mark.clickhouse
 
 _DATABASE = "views_test"
 _READER = "views_test_reader"
+_READER_PROFILE = "views_test_reader_profile"
+
+_USERS_XML = Path(__file__).parents[4] / "infrastructure/modules/serving-store/templates/users.xml.tftpl"
 
 # The reader's grants in infrastructure/modules/serving-store/main.tf.
 _READER_VIEWS = (
@@ -30,6 +35,26 @@ _READER_VIEWS = (
 )
 
 _COMMIT = "_commit_version, _commit_timestamp"
+
+
+def _reader_profile() -> str:
+    """The reader's profile as the store's users.xml sets it, its fixed settings fixed, as a
+    statement a test server can run."""
+    template = _USERS_XML.read_text()
+    profiles = ElementTree.fromstring(
+        template[template.index("<profiles>") : template.index("</profiles>") + 11]
+    )
+    default, reader = profiles.find("default"), profiles.find("reader")
+    assert default is not None and reader is not None
+    fixed = {setting.tag for setting in reader.findall("constraints/*")}
+    values = {
+        setting.tag: setting.text
+        for setting in [*default, *reader]
+        if setting.tag not in ("profile", "constraints")
+    }
+    settings = [f"{name} = {value}{' CONST' if name in fixed else ''}" for name, value in values.items()]
+    settings += [f"{name} CONST" for name in sorted(fixed - values.keys())]
+    return f"CREATE SETTINGS PROFILE {_READER_PROFILE} SETTINGS {', '.join(settings)}"
 
 
 class _User:
@@ -62,10 +87,12 @@ def admin(store_migrations: list[str]) -> Iterator[_User]:
     admin = _User(url, os.environ["CLICKHOUSE_TEST_USER"], os.environ["CLICKHOUSE_TEST_PASSWORD"])
     admin.ok(f"DROP DATABASE IF EXISTS {_DATABASE} SYNC")
     admin.ok(f"DROP USER IF EXISTS {_READER}")
+    admin.ok(f"DROP SETTINGS PROFILE IF EXISTS {_READER_PROFILE}")
     admin.ok(f"CREATE DATABASE {_DATABASE}")
     for statement in store_migrations:
         admin.ok(statement, database=_DATABASE)
-    admin.ok(f"CREATE USER {_READER} IDENTIFIED BY 'views-test'")
+    admin.ok(_reader_profile())
+    admin.ok(f"CREATE USER {_READER} IDENTIFIED BY 'views-test' SETTINGS PROFILE '{_READER_PROFILE}'")
     for view in _READER_VIEWS:
         admin.ok(f"GRANT SELECT ON {_DATABASE}.{view} TO {_READER}")
 
@@ -87,6 +114,7 @@ def admin(store_migrations: list[str]) -> Iterator[_User]:
     yield admin
 
     admin.ok(f"DROP USER {_READER}")
+    admin.ok(f"DROP SETTINGS PROFILE {_READER_PROFILE}")
     admin.ok(f"DROP DATABASE {_DATABASE} SYNC")
 
 
@@ -123,7 +151,28 @@ def test_the_reader_cannot_read_a_table_without_naming_an_experiment(reader: _Us
 
 
 def test_a_view_refuses_a_read_that_names_no_experiment(reader: _User) -> None:
-    assert not reader.run(f"SELECT count() FROM {_DATABASE}.experiment_measurements").ok
+    response = reader.run(f"SELECT count() FROM {_DATABASE}.experiment_measurements")
+
+    assert not response.ok
+    assert "experiment" in response.text
+
+
+@pytest.mark.parametrize(
+    "setting",
+    [
+        "max_memory_usage = 0",
+        "max_execution_time = 0",
+        "max_memory_usage_for_user = 0",
+        "timeout_overflow_mode = 'break'",
+        "apply_deleted_mask = 0",
+    ],
+)
+def test_the_reader_cannot_lift_its_limits_or_see_deleted_rows(reader: _User, setting: str) -> None:
+    response = reader.run(
+        f"SELECT count() FROM {_DATABASE}.experiment_measurements(experiment = 'e1') SETTINGS {setting}"
+    )
+
+    assert response.headers.get("X-ClickHouse-Exception-Code") == "452"
 
 
 def test_an_experiments_ids_come_from_every_table_that_names_them(reader: _User) -> None:
@@ -142,11 +191,12 @@ def test_rows_sent_again_add_no_ids(admin: _User, reader: _User) -> None:
         "VALUES ('e1', 1, '2026-10-19 10:00:00', 'u1', 'c1', 3, '2026-10-19 10:00:01')"
     )
 
-    contributors = reader.rows(
-        f"SELECT user_id FROM {_DATABASE}.experiment_contributor_ids(experiment = 'e1')"
+    # The view reads distinct ids, so the table itself shows whether it folded the repeat.
+    [stored] = admin.rows(
+        f"SELECT count() AS ids FROM {_DATABASE}.contributor_ids FINAL WHERE experiment_id = 'e1'"
     )
 
-    assert sorted(row["user_id"] for row in contributors) == ["u1", "u2", "u4", "u5"]
+    assert int(stored["ids"]) == 4
 
 
 def test_a_row_without_a_contributor_or_a_client_adds_no_id(admin: _User, reader: _User) -> None:
@@ -199,6 +249,11 @@ def test_a_tables_schemas_read_once_each_at_their_newest_commit(admin: _User, re
             "schema": "OBJECT<plot: STRING>",
         },
     ]
+    # The view leaves the version out, so the table shows which commit each schema kept.
+    stored = admin.rows(
+        f"SELECT DISTINCT _commit_version FROM {_DATABASE}.payload_schemas FINAL WHERE experiment_id = 'e1'"
+    )
+    assert [int(row["_commit_version"]) for row in stored] == [4]
 
 
 def test_a_row_sent_again_reads_once_at_its_newest_commit_before_any_merge(

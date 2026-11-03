@@ -1,10 +1,24 @@
 # store-read-latency
 
 **For ten minutes, the slowest twentieth of the backend's reads of the serving store took over a
-second.** A timer on the store's instance measures it once a minute, from the query log, over the
-reads the backend's user (`openjii_reader`) made in the last five minutes. That user may not use
-more than 4 GiB or 30 seconds on one query, so a read past either fails instead and counts in
-`StoreReadFailures`.
+second, or failed.** A timer on the store's instance measures it once a minute, from the query log,
+over the reads the backend's user (`openjii_reader`) made in the last five minutes. That user may not
+use more than 4 GiB or 30 seconds on one query, or 6 GiB across its queries, so a read past any of
+them fails instead. A failed read counts as 30 seconds, so failures alone can fire this, and
+`StoreReadFailures` says how many there were.
+
+If they are failures, the query log names them:
+
+```sql
+SELECT exception_code, count() AS reads, any(exception) AS example
+FROM system.query_log
+WHERE user = 'openjii_reader' AND type != 'QueryFinish' AND type != 'QueryStart'
+  AND event_time > now() - INTERVAL 1 HOUR
+GROUP BY exception_code
+ORDER BY reads DESC;
+```
+
+Code 159 is the 30-second limit and 241 a memory cap; both point at a slow read shape below.
 
 ## Find the slow reads
 

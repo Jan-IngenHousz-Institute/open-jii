@@ -17,9 +17,16 @@
         <reader>
             <profile>default</profile>
             <max_execution_time>30</max_execution_time>
+            <!-- Its reads together, so a few heavy ones at once leave the server's cap to the feed. -->
+            <max_memory_usage_for_user>6442450944</max_memory_usage_for_user>
+            <!-- Fixed too: a read stopped at the limit fails rather than answers part, and rows a
+                 reload deleted stay hidden until a merge drops them. -->
             <constraints>
                 <max_memory_usage><const/></max_memory_usage>
                 <max_execution_time><const/></max_execution_time>
+                <max_memory_usage_for_user><const/></max_memory_usage_for_user>
+                <timeout_overflow_mode><const/></timeout_overflow_mode>
+                <apply_deleted_mask><const/></apply_deleted_mask>
             </constraints>
         </reader>
         <!-- The users that insert, under the server's cap alone: an insert the per-query cap refused

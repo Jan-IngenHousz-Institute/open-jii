@@ -2376,6 +2376,8 @@ metrics:
     baseline: { method: threshold, max: 1 }
     runbook: docs/runbooks/store-read-latency.md
     notes: >-
-      The p95 duration of the backend's reads of the serving store over the last five minutes, from
-      the store's query log, sent once a minute by the timer on its instance while reads arrive. The
-      project's target is a second. StoreReads and StoreReadFailures go out beside it.
+      The p95 duration of the backend's reads of the serving store over five minutes, from the
+      store's query log, sent once a minute by the timer on its instance while reads arrive. A read
+      that failed counts as the 30 s a read may last, so reads that time out or hit the memory cap
+      raise it. The project's target is a second. StoreReads and StoreReadFailures go out beside it,
+      over one minute; every window ends ten seconds back, past the log's flush.
