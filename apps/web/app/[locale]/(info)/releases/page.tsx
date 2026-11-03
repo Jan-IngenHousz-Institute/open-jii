@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
+import { Container } from "~/components/cms/shared/container";
 import { getAllReleaseNotes } from "~/components/releases/fetch-public-release-notes";
 import { ReleasesChangelog } from "~/components/releases/releases-changelog";
 import { safeMetadata } from "~/lib/safe-metadata";
 
-import { Container } from "@repo/cms/container";
 import { defaultLocale } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
 

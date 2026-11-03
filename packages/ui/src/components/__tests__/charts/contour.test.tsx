@@ -18,13 +18,14 @@ vi.mock("../../charts/plotly-chart", () => ({
   ),
 }));
 
-vi.mock("../../charts/utils", () => ({
+vi.mock("../../charts/utils", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../charts/utils")>()),
   chartGridColor: vi.fn(() => "#E6E6E6"),
   readThemeColor: vi.fn(() => undefined),
   createBaseLayout: vi.fn((config: any) => ({
     title: config.title || "Chart",
-    xaxis: { title: config.xLabel || "X Axis" },
-    yaxis: { title: config.yLabel || "Y Axis" },
+    xaxis: { title: config.xLabel || "X Axis", type: config.xAxisType ?? "linear" },
+    yaxis: { title: config.yLabel || "Y Axis", type: config.yAxisType ?? "linear" },
   })),
   createPlotlyConfig: vi.fn((config: any) => ({
     displayModeBar: config.displayModeBar !== false,
@@ -54,10 +55,31 @@ describe("ContourPlot", () => {
     vi.clearAllMocks();
   });
 
-  it("renders without errors", () => {
-    const { getByTestId } = render(<ContourPlot data={mockContourData} />);
-
-    expect(getByTestId("plotly-chart")).toBeInTheDocument();
+  it("keeps numeric axes and infers date axes when the data changes", () => {
+    const { getByTestId, rerender } = render(<ContourPlot data={mockContourData} />);
+    expect(JSON.parse(getByTestId("chart-layout").textContent ?? "{}")).toMatchObject({
+      xaxis: { type: "linear" },
+      yaxis: { type: "linear" },
+    });
+    const dates = ["2026-10-01T00:00:00Z", "2026-10-02T00:00:00Z"];
+    rerender(
+      <ContourPlot
+        data={[
+          {
+            x: dates,
+            y: dates,
+            z: [
+              [1, 2],
+              [3, 4],
+            ],
+          },
+        ]}
+      />,
+    );
+    expect(JSON.parse(getByTestId("chart-layout").textContent ?? "{}")).toMatchObject({
+      xaxis: { type: "date" },
+      yaxis: { type: "date" },
+    });
   });
 
   it("passes correct data to PlotlyChart", () => {

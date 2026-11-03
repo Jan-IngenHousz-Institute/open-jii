@@ -1001,9 +1001,7 @@ export function createPlotlyConfig(
 
 /**
  * Compute the row index of a cell in a row-major facet grid. Used to
- * decide which cells should hide their X-axis tick labels (only the
- * bottom row keeps them when X is shared) and which should hide their
- * Y-axis title (only the leftmost column keeps it).
+ * locate cells in the grid independently of whether the grid is full.
  */
 export function cellPosition(
   cellIndex: number,
@@ -1028,13 +1026,30 @@ export function cellPosition(
 }
 
 /**
+ * Reuse logical series slots across facets instead of letting Plotly reserve
+ * slots for traces in other panels. Each cell must keep the same series order,
+ * including empty series. Names need not be unique.
+ */
+export function facetSeriesOffsetGroups(
+  series: ReadonlyArray<{ xaxisId?: string; yaxisId?: string }>,
+): string[] {
+  const slotsByCell = new Map<string, number>();
+  return series.map(({ xaxisId = "x", yaxisId = "y" }) => {
+    const cell = `${xaxisId}/${yaxisId}`;
+    const slot = slotsByCell.get(cell) ?? 0;
+    slotsByCell.set(cell, slot + 1);
+    return `facet-series-${slot}`;
+  });
+}
+
+/**
  * Per-cell axis config in a facet grid. Built from the base layout's
  * single-axis template, then overridden with cell-specific concerns:
  *  - `matches` to share scales with cell 0 (when `sharedX`/`sharedY`)
- *  - `showticklabels: false` for cells not on the bottom row / leftmost
+ *  - `showticklabels: false` for cells above another cell / outside the leftmost
  *    column (avoids redundant tick clutter when scales are shared)
  *  - `title: undefined` for non-edge cells (the axis title only renders
- *    on the leftmost column / bottom row to dedupe labelling)
+ *    on the leftmost column / lowest populated cell of each column)
  */
 interface FacetAxisOverrides {
   matches?: string;
@@ -1117,19 +1132,22 @@ export function extendLayoutForFacets(
   const sharedYTitleOn = options.sharedYTitle === true;
   const ultraCompactCells = options.ultraCompactCells === true;
   for (const [i, cell] of cells.entries()) {
-    const { isLastRow, isFirstColumn } = cellPosition(i, options.rows, options.columns);
+    const { isFirstColumn } = cellPosition(i, options.rows, options.columns);
+    const isBottomCell =
+      options.roworder === "bottom to top"
+        ? i < options.columns
+        : i + options.columns >= cells.length;
     const isFirstCell = i === 0;
     // X axis: cell 0 is the master; subsequent cells match it when
-    // sharedX is true. Tick labels stay only on the bottom row of the
-    // grid (when shared); otherwise every cell keeps its own labels.
+    // sharedX is true. Only the lowest populated cell of each column
+    // keeps tick labels when scales are shared.
     const xOverrides: FacetAxisOverrides = {
       matches: !isFirstCell && options.sharedX !== false ? "x" : undefined,
-      showticklabels: options.sharedX !== false ? isLastRow : undefined,
-      // X-axis title only on the bottom row when shared; otherwise on
-      // every cell that's in the bottom row of its own column. When
+      showticklabels: options.sharedX !== false ? isBottomCell : undefined,
+      // X-axis title stays on the lowest populated cell of its column. When
       // `sharedXTitle` is on, suppress entirely (the grid emits a
       // single annotation below the whole canvas instead).
-      title: sharedXTitleOn || ultraCompactCells ? undefined : isLastRow ? xTitle : undefined,
+      title: sharedXTitleOn || ultraCompactCells ? undefined : isBottomCell ? xTitle : undefined,
     };
     // Y axis: same pattern, leftmost column carries the labels and title.
     const yOverrides: FacetAxisOverrides = {

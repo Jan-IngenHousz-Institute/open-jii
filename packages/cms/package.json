@@ -9,29 +9,9 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./article": {
-      "types": "./dist/features/article/index.d.ts",
-      "default": "./dist/features/article/index.js"
-    },
-    "./container": {
-      "types": "./dist/shared/container.d.ts",
-      "default": "./dist/shared/container.js"
-    },
-    "./contentful": {
-      "types": "./dist/features/contentful/ctf-preview-provider.d.ts",
-      "default": "./dist/features/contentful/ctf-preview-provider.js"
-    },
     "./lib/__generated/sdk": {
       "types": "./dist/lib/__generated/sdk.d.ts",
       "default": "./dist/lib/__generated/sdk.js"
-    },
-    "./alerts-container": {
-      "types": "./dist/features/alert/alerts-container.d.ts",
-      "default": "./dist/features/alert/alerts-container.js"
-    },
-    "./release-notes-feed": {
-      "types": "./dist/features/release-notes/release-notes-feed.d.ts",
-      "default": "./dist/features/release-notes/release-notes-feed.js"
     },
     "./alert": {
       "types": "./dist/features/alert/severity.d.ts",
@@ -53,23 +33,10 @@
     "codegen:watch": "graphql-codegen --watch -r dotenv/config --config src/codegen.ts"
   },
   "dependencies": {
-    "@contentful/live-preview": "^4.9.12",
-    "@contentful/rich-text-react-renderer": "16.0.2",
-    "@contentful/rich-text-types": "17.0.1",
-    "@repo/i18n": "workspace:*",
-    "@repo/ui": "workspace:*",
-    "class-variance-authority": "^0.7.1",
-    "contentful": "^11.12.0",
     "graphql-request": "^7.4.0",
-    "graphql-tag": "^2.12.6",
-    "lucide-react": "^0.507.0",
-    "next": "catalog:",
-    "react": "catalog:react19",
-    "react-dom": "catalog:react19"
+    "graphql-tag": "^2.12.6"
   },
   "devDependencies": {
-    "@contentful/f36-icons": "4.29.1",
-    "@contentful/f36-tokens": "4.2.0",
     "@graphql-codegen/cli": "^6.2.1",
     "@graphql-codegen/introspection": "^5.0.1",
     "@graphql-codegen/typescript": "^5.0.9",
@@ -77,8 +44,7 @@
     "@graphql-codegen/typescript-operations": "^5.0.9",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/react": "catalog:react19",
-    "@types/react-dom": "catalog:react19",
+    "@types/node": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:"
   }

@@ -5,16 +5,14 @@ import { TranslationBundles } from "@/components/translation-bundles";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { Suspense, cache } from "react";
+import { HomeFooter } from "~/components/cms/footer";
+import { HomeHero as HomeHeroComponent } from "~/components/cms/home/hero";
+import { HomeKeyFeatures } from "~/components/cms/home/key-features";
+import { HomeAboutMission } from "~/components/cms/home/mission";
+import { HomePartners } from "~/components/cms/home/partners";
 import { buildTimeLocaleParams, getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
 
-import {
-  HomeHero as HomeHeroComponent,
-  HomeAboutMission,
-  HomeKeyFeatures,
-  HomePartners,
-  HomeFooter,
-} from "@repo/cms";
 import type {
   PageHomeMissionFieldsFragment,
   PageHomeHeroFieldsFragment,
