@@ -48,6 +48,37 @@ const columns: ExperimentDataColumn[] = [
 ];
 
 describe("YAxisShelf", () => {
+  it.each(["Count", "Distinct count"])(
+    "restores a text axis when %s returns to raw values",
+    async (label) => {
+      const user = userEvent.setup();
+      const { form } = renderShelf((form) => <YAxisShelf form={form} columns={columns} />, {
+        useFormProps: {
+          defaultValues: defaults({
+            config: { yAxisType: "category" },
+            dataConfig: {
+              tableName: "readings",
+              dataSources: [
+                { tableName: "readings", columnName: "time", role: "x" },
+                { tableName: "readings", columnName: "label", role: "y" },
+              ],
+            },
+          }),
+        },
+      });
+      const aggregate = screen.getByRole("combobox", { name: "workspace.shelves.aggregate" });
+      await user.click(aggregate);
+      await user.click(await screen.findByRole("option", { name: label }));
+      expect(form.getValues("config.yAxisType")).toBe("linear");
+      await user.click(aggregate);
+      await user.click(
+        await screen.findByRole("option", { name: "workspace.shelves.aggregateNone" }),
+      );
+      expect(form.getValues("dataConfig.dataSources.1.columnName")).toBe("label");
+      expect(form.getValues("config.yAxisType")).toBe("category");
+    },
+  );
+
   it("renders one series block per Y data source", () => {
     renderShelf((form) => <YAxisShelf form={form} columns={columns} />, {
       useFormProps: {
