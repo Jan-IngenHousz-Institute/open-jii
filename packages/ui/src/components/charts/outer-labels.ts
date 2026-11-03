@@ -1,6 +1,7 @@
-import type { Layout } from "plotly.js";
+import type { Layout, PlotData } from "plotly.js";
 
 import type { PlotlyChartConfig } from "./types";
+import { legendAnchorFor } from "./utils";
 
 let textContext: CanvasRenderingContext2D | null | undefined;
 let fontFamily = "sans-serif";
@@ -15,7 +16,10 @@ export function chartTextWidth(text: string, fontSize: number): number {
     0,
     ...text
       .split(/<br\s*\/?\s*>|\n/i)
-      .map((line) => textContext?.measureText(line).width ?? line.length * fontSize * 0.65),
+      .map(
+        (line) =>
+          textContext?.measureText(line.trim()).width ?? line.trim().length * fontSize * 0.65,
+      ),
   );
 }
 
@@ -24,7 +28,7 @@ export function wrapChartLabel(text: string, fontSize: number, maxWidth: number)
     .split(/<br\s*\/?\s*>|\n/i)
     .flatMap((paragraph) => {
       const lines: string[] = [];
-      let remaining = paragraph;
+      let remaining = paragraph.trim();
       while (chartTextWidth(remaining, fontSize) > maxWidth) {
         let end = 1;
         while (
@@ -34,10 +38,11 @@ export function wrapChartLabel(text: string, fontSize: number, maxWidth: number)
           end++;
         const breakAt = remaining.slice(0, end).search(/[\s_-][^\s_-]*$/);
         const split = breakAt >= 0 ? breakAt + 1 : end;
-        lines.push(remaining.slice(0, split));
-        remaining = remaining.slice(split);
+        const line = remaining.slice(0, split).trim();
+        if (line) lines.push(line);
+        remaining = remaining.slice(split).trimStart();
       }
-      lines.push(remaining);
+      if (remaining) lines.push(remaining);
       return lines;
     })
     .join("<br>");
@@ -48,21 +53,62 @@ export function withOuterLabels(
   layout: Partial<Layout>,
   config: PlotlyChartConfig,
   labels: { left: number; right: number; top: number; bottom: number },
-  legendNames: readonly string[],
+  traces: PlotData[],
   radialTitle?: { text: string; fontSize: number },
-): Partial<Layout> {
-  const legend = layout.legend ?? {};
+  measuredWidth?: number,
+): { layout: Partial<Layout>; data: PlotData[] } {
+  let legend = layout.legend ?? {};
+  const legendNames = traces
+    .filter((trace) => trace.showlegend !== false && trace.visible !== false)
+    .map((trace) => trace.name ?? "");
   const outside = !config.legendPosition?.startsWith("inside-");
   const hasLegend = layout.showlegend !== false && outside && legendNames.length > 0;
-  const position =
+  let position =
     legend.orientation === "h"
       ? legend.y === 0
         ? "bottom"
         : "top"
       : (config.legendPosition ?? "right");
   const legendFont = legend.font?.size ?? 12;
-  const sideBand =
-    Math.ceil(Math.max(0, ...legendNames.map((name) => chartTextWidth(name, legendFont)))) + 56;
+  const width = config.width ?? (measuredWidth && measuredWidth > 0 ? measuredWidth : 720);
+  const plotFloor = Math.min(160, width * 0.35);
+  const availableSide = Math.max(0, width - labels.left - labels.right - plotFloor);
+  const sideBudget = Math.min(width * 0.4, availableSide);
+  const sideInset =
+    position === "right" && legend.xref === "container" ? width * (1 - (legend.x ?? 1)) : 0;
+  const longestName = Math.max(0, ...legendNames.map((name) => chartTextWidth(name, legendFont)));
+  let nameWidth = Infinity;
+  if (
+    hasLegend &&
+    (position === "left" || position === "right") &&
+    longestName + 56 + sideInset > availableSide
+  ) {
+    if (sideBudget - 56 - sideInset < 96) {
+      position = "bottom";
+      legend = { ...legend, ...legendAnchorFor("bottom") };
+      nameWidth = Math.max(32, width - labels.left - labels.right - 64);
+    } else {
+      nameWidth = Math.max(24, sideBudget - 56 - sideInset);
+    }
+  }
+  const data = Number.isFinite(nameWidth)
+    ? traces.map((trace) =>
+        trace.name ? { ...trace, name: wrapChartLabel(trace.name, legendFont, nameWidth) } : trace,
+      )
+    : traces;
+  const sideBand = Math.min(
+    availableSide,
+    Math.ceil(
+      Math.max(
+        0,
+        ...data
+          .filter((trace) => trace.showlegend !== false && trace.visible !== false)
+          .map((trace) => chartTextWidth(trace.name ?? "", legendFont)),
+      ),
+    ) +
+      56 +
+      sideInset,
+  );
   // Long horizontal legends scroll within their own band, as vertical legends do.
   const horizontalBand = 64;
   const legendBand = hasLegend
@@ -82,42 +128,45 @@ export function withOuterLabels(
     ),
   };
   return {
-    ...layout,
-    margin,
-    ...(config.title
-      ? {
-          title: {
-            ...layout.title,
-            yref: "container",
-            y: 1,
-            yanchor: "top",
-            pad: { t: (hasLegend && position === "top" ? legendBand : 0) + 8 },
-          },
-        }
-      : {}),
-    legend: {
-      ...legend,
-      ...(hasLegend && (position === "top" || position === "bottom")
-        ? { maxheight: horizontalBand }
+    data,
+    layout: {
+      ...layout,
+      margin,
+      ...(config.title
+        ? {
+            title: {
+              ...layout.title,
+              yref: "container",
+              y: 1,
+              yanchor: "top",
+              pad: { t: (hasLegend && position === "top" ? legendBand : 0) + 8 },
+            },
+          }
+        : {}),
+      legend: {
+        ...legend,
+        ...(hasLegend && (position === "top" || position === "bottom")
+          ? { maxheight: horizontalBand }
+          : {}),
+      },
+      ...(radialTitle?.text
+        ? {
+            annotations: [
+              ...(layout.annotations ?? []),
+              {
+                text: radialTitle.text,
+                xref: "paper",
+                yref: "paper",
+                x: 0.5,
+                y: 0,
+                yshift: -labels.bottom,
+                yanchor: "top",
+                showarrow: false,
+                font: { size: radialTitle.fontSize },
+              },
+            ],
+          }
         : {}),
     },
-    ...(radialTitle?.text
-      ? {
-          annotations: [
-            ...(layout.annotations ?? []),
-            {
-              text: radialTitle.text,
-              xref: "paper",
-              yref: "paper",
-              x: 0.5,
-              y: 0,
-              yshift: -labels.bottom,
-              yanchor: "top",
-              showarrow: false,
-              font: { size: radialTitle.fontSize },
-            },
-          ],
-        }
-      : {}),
   };
 }

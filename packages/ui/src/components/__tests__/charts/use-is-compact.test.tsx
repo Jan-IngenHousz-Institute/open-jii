@@ -52,8 +52,14 @@ beforeEach(() => {
   });
 });
 
-function SizingProbe({ grid }: { grid?: { rows: number; columns: number } }) {
-  const [ref, sizing] = useChartSizing<HTMLDivElement>(grid ? { grid } : {});
+function SizingProbe({
+  grid,
+  trackWidth,
+}: {
+  grid?: { rows: number; columns: number };
+  trackWidth?: boolean;
+}) {
+  const [ref, sizing] = useChartSizing<HTMLDivElement>({ grid, trackWidth });
   return (
     <div ref={ref} data-testid="probe">
       {JSON.stringify(sizing)}
@@ -71,6 +77,16 @@ function IsCompactProbe() {
 }
 
 describe("useChartSizing", () => {
+  it("tracks width changes within a tier only when text wrapping needs them", () => {
+    const { getByTestId } = render(<SizingProbe trackWidth />);
+    act(() => observers[0]?.fire(380, 560));
+    expect(JSON.parse(getByTestId("probe").textContent ?? "{}").width).toBe(368);
+    act(() => observers[0]?.fire(382, 560));
+    expect(JSON.parse(getByTestId("probe").textContent ?? "{}").width).toBe(368);
+    act(() => observers[0]?.fire(420, 560));
+    expect(JSON.parse(getByTestId("probe").textContent ?? "{}").width).toBe(416);
+  });
+
   it("settles outer tiers when the observer fires a wide container", () => {
     const { getByTestId } = render(<SizingProbe />);
     act(() => observers[0]?.fire(1200, 800));

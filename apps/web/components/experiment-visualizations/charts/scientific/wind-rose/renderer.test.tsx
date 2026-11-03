@@ -1,3 +1,4 @@
+import type * as WindRoseModule from "@/components/charts/wind-rose";
 import { WindRose } from "@/components/charts/wind-rose";
 import { createVisualization } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
@@ -6,7 +7,8 @@ import { describe, expect, it, vi } from "vitest";
 import { windRoseDefaultConfig } from "./defaults";
 import { WindRoseRenderer } from "./renderer";
 
-vi.mock("@/components/charts/wind-rose", () => ({
+vi.mock("@/components/charts/wind-rose", async (importOriginal) => ({
+  ...(await importOriginal<typeof WindRoseModule>()),
   WindRose: vi.fn(() => <div data-testid="wind-rose" />),
 }));
 

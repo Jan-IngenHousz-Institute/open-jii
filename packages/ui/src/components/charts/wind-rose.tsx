@@ -70,7 +70,7 @@ export function WindRose({
   directionTicks = DEFAULT_DIRECTION_TICKS,
   radialAxisTitle = "Frequency",
 }: WindRoseProps) {
-  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({ trackWidth: true });
   const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const plotData: PlotData[] = useMemo(
@@ -116,52 +116,58 @@ export function WindRose({
     directionLabels.length > 0 ? directionLabels : directionTicks.map((deg) => `${deg}°`);
 
   // Tier-aware chrome + the polar config createBaseLayout cannot provide.
-  const layout = useMemo(
-    () =>
-      ({
-        ...withOuterLabels(
-          responsiveChrome(config, sizing),
-          config,
-          { left: 40, right: 40, top: 32, bottom: 32 },
-          data.map((series) => series.name ?? ""),
-          { text: radialAxisTitle, fontSize: fontSizes.axisTitle },
-        ),
-        // Stack value-band segments within each direction slice (the
-        // canonical wind-rose rendering). `barmode: "stack"` is read by
-        // both cartesian bar traces and barpolar.
-        barmode: "stack",
-        polar: {
-          bgcolor: "white",
-          radialaxis: {
-            title: { text: "" },
-            tickfont: { size: fontSizes.tick },
-            // East-pointing radial axis: avoids the north overlap with bars.
-            angle: 0,
-            tickangle: 0,
-            // Cap ticks so labels don't collide on small charts.
-            nticks: 5,
-            gridcolor: chartGridColor(),
-            showgrid: config.showGrid !== false,
+  const figure = useMemo(
+    () => {
+      const outer = withOuterLabels(
+        responsiveChrome(config, sizing),
+        config,
+        { left: 40, right: 40, top: 32, bottom: 32 },
+        plotData,
+        { text: radialAxisTitle, fontSize: fontSizes.axisTitle },
+        sizing.width,
+      );
+      return {
+        data: outer.data,
+        layout: {
+          ...outer.layout,
+          // Stack value-band segments within each direction slice (the
+          // canonical wind-rose rendering). `barmode: "stack"` is read by
+          // both cartesian bar traces and barpolar.
+          barmode: "stack",
+          polar: {
+            bgcolor: "white",
+            radialaxis: {
+              title: { text: "" },
+              tickfont: { size: fontSizes.tick },
+              // East-pointing radial axis: avoids the north overlap with bars.
+              angle: 0,
+              tickangle: 0,
+              // Cap ticks so labels don't collide on small charts.
+              nticks: 5,
+              gridcolor: chartGridColor(),
+              showgrid: config.showGrid !== false,
+            },
+            angularaxis: {
+              // Compass convention: 0° at top, sweep clockwise. Hard-coded
+              // because that's the chart's defining layout.
+              direction: "clockwise",
+              rotation: 90,
+              period: 360,
+              tickmode: "array",
+              tickvals: directionTicks,
+              ticktext: tickText,
+              tickfont: { size: fontSizes.tick },
+              gridcolor: chartGridColor(),
+              showgrid: config.showGrid !== false,
+            },
           },
-          angularaxis: {
-            // Compass convention: 0° at top, sweep clockwise. Hard-coded
-            // because that's the chart's defining layout.
-            direction: "clockwise",
-            rotation: 90,
-            period: 360,
-            tickmode: "array",
-            tickvals: directionTicks,
-            ticktext: tickText,
-            tickfont: { size: fontSizes.tick },
-            gridcolor: chartGridColor(),
-            showgrid: config.showGrid !== false,
-          },
-        },
-      }) as unknown as Partial<import("plotly.js").Layout>,
+        } as unknown as Partial<import("plotly.js").Layout>,
+      };
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
     [
       config,
-      data,
+      plotData,
       directionTicks,
       fontSizes.axisTitle,
       fontSizes.tick,
@@ -177,8 +183,8 @@ export function WindRose({
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
-        data={plotData}
-        layout={layout}
+        data={figure.data}
+        layout={figure.layout}
         config={plotConfig}
         loading={loading}
         error={error}
