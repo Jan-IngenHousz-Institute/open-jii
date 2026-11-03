@@ -32,7 +32,7 @@
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:testing",
     "@vitest/ui": "catalog:testing",
-    "glob": "^11.1.0",
+    "glob": "^14.0.2",
     "jsdom": "catalog:testing",
     "nyc": "^17.1.0",
     "typescript": "catalog:"
