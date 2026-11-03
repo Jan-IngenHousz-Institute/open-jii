@@ -83,6 +83,8 @@
     "filter": "Filter",
     "addFilter": "Filter toevoegen",
     "filterIs": "is",
+    "filterChip": "{{filter}} is {{value}}",
+    "filterBack": "Terug",
     "removeFilterValue": "{{filter}} is {{value}} verwijderen",
     "filterSelectedCount": "{{count}} geselecteerd",
     "sortUnsorted": "ongesorteerd",
