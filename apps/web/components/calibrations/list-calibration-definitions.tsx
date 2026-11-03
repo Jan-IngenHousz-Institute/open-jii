@@ -99,7 +99,6 @@ export function ListCalibrationDefinitions() {
             onChange={setSearch}
             placeholder={t("iot.calibration.library.searchPlaceholder")}
             clearLabel={t("iot.calibration.library.clearSearch")}
-            className="md:w-55 w-full"
           />
         }
         filters={

@@ -50,7 +50,9 @@ const SORT_OPTIONS: readonly { value: ResourceSort; labelKey: string }[] = [
 ];
 
 /** Read off the schema rather than excluding `device` by hand, so a sixth type stays honest. */
-function transferableType(type: OrganizationResource["type"]): TransferableResourceType | null {
+function transferableType(
+  type: OrganizationResource["type"],
+): TransferableResourceType | null {
   const parsed = zTransferableResourceType.safeParse(type);
   return parsed.success ? parsed.data : null;
 }
@@ -82,7 +84,15 @@ export function OrganizationResourceRows({
   const list = useOrganizationResourceListState();
   const [target, setTarget] = useState<TransferTarget | null>(null);
 
-  const { query, setQuery, sort, setSort, setFilter, clearFilters, hasActiveFilters } = list;
+  const {
+    query,
+    setQuery,
+    sort,
+    setSort,
+    setFilter,
+    clearFilters,
+    hasActiveFilters,
+  } = list;
   const types = list.filters.type;
 
   // The read is uncapped, so without this it re-runs over everything on every keystroke.
@@ -117,14 +127,19 @@ export function OrganizationResourceRows({
               onChange={setQuery}
               placeholder={t("organizations.resources.searchPlaceholder")}
               aria-label={t("organizations.resources.searchLabel")}
-              className="w-full md:w-56"
             />
           }
           filters={filters}
           onClearFilters={clearFilters}
           actions={
-            <Select value={sort} onValueChange={(next) => setSort(next as ResourceSort)}>
-              <SelectTrigger className="w-44" aria-label={t("organizations.resources.sortLabel")}>
+            <Select
+              value={sort}
+              onValueChange={(next) => setSort(next as ResourceSort)}
+            >
+              <SelectTrigger
+                className="w-44"
+                aria-label={t("organizations.resources.sortLabel")}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -148,7 +163,12 @@ export function OrganizationResourceRows({
             </p>
             {/* A reset that resets nothing is a dead control. */}
             {hasActiveFilters ? (
-              <Button variant="outline" size="sm" className="mt-3.5" onClick={clearFilters}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3.5"
+                onClick={clearFilters}
+              >
                 {t("common.clearFilters")}
               </Button>
             ) : null}
@@ -221,7 +241,9 @@ function ResourceRow({
                 <Lock className="h-3 w-3" />
               </span>
             </TooltipTrigger>
-            <TooltipContent>{t("organizations.resources.privateTooltip")}</TooltipContent>
+            <TooltipContent>
+              {t("organizations.resources.privateTooltip")}
+            </TooltipContent>
           </Tooltip>
         ) : null}
 
@@ -230,8 +252,12 @@ function ResourceRow({
             variant="link"
             className="ml-auto h-auto shrink-0 p-0"
             // Named for its row: every one of these reads "Transfer" otherwise.
-            aria-label={t("organizations.transfer.actionFor", { name: resource.name })}
-            onClick={() => onTransfer({ type: transferableAs, id: resource.id })}
+            aria-label={t("organizations.transfer.actionFor", {
+              name: resource.name,
+            })}
+            onClick={() =>
+              onTransfer({ type: transferableAs, id: resource.id })
+            }
           >
             {t("organizations.transfer.action")}
           </Button>
@@ -257,12 +283,17 @@ function ResourceRow({
 
         {resource.type === "device_group" ? (
           <span className="shrink-0 tabular-nums">
-            {t("organizations.resources.groupMemberCount", { count: resource.memberCount })}
+            {t("organizations.resources.groupMemberCount", {
+              count: resource.memberCount,
+            })}
           </span>
         ) : null}
 
         {meta ? (
-          <StatusBadge tone={meta.tone} className="shrink-0 rounded px-1.5 py-0">
+          <StatusBadge
+            tone={meta.tone}
+            className="shrink-0 rounded px-1.5 py-0"
+          >
             {meta.label}
           </StatusBadge>
         ) : null}
