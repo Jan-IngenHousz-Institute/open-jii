@@ -251,8 +251,11 @@ def store(store_migrations: list[str]) -> Iterator[_Store]:
     store.run(f"CREATE DATABASE {_DATABASE}")
     for statement in store_migrations:
         store.run(statement, database=_DATABASE)
-    # The store's default profile sets this for every user; a test server has its own profile.
-    store.run(f"CREATE USER {_WRITER} IDENTIFIED BY 'feed-test' SETTINGS json_type_escape_dots_in_keys = 1")
+    # The store's default profile sets these for every user; a test server has its own profile.
+    store.run(
+        f"CREATE USER {_WRITER} IDENTIFIED BY 'feed-test' SETTINGS json_type_escape_dots_in_keys = 1, "
+        "input_format_try_infer_dates = 0, input_format_try_infer_datetimes = 0"
+    )
     store.run(f"GRANT SELECT, INSERT ON {_DATABASE}.* TO {_WRITER}")
 
     yield store
@@ -347,3 +350,21 @@ def test_a_field_the_table_lacks_holds_the_rows_back_for_a_migration(
     assert writer.insert(MEASUREMENTS.name, [line, renamed]) == Written(unfinished=2)
     assert store.rows(f"SELECT id FROM {_DATABASE}.measurements WHERE id = 99") == []
     assert store.rows(f"SELECT code FROM {_DATABASE}.feed_rejects WHERE source_table = 'measurements'") == []
+
+
+@pytest.mark.clickhouse
+def test_text_that_reads_as_a_date_lands_as_text(
+    spark: SparkSession, store: _Store, writer: StoreWriter
+) -> None:
+    changes = _UPLOADED_DATA_CHANGES.replace(
+        """parse_json('[{"ph": 6.5}]')""",
+        """parse_json('{"day": "2026-05-01", "at": "2026-05-01T12:30:00.123"}')""",
+    )
+
+    assert writer.write(UPLOADS.lines(spark.sql(changes)), UPLOADS.name) == Written(inserted=1)
+
+    [row] = store.rows(
+        f"SELECT dynamicType(uploaded_data.day) AS day_type, toString(uploaded_data.at) AS at "
+        f"FROM {_DATABASE}.uploads FINAL WHERE id = 21"
+    )
+    assert row == {"day_type": "String", "at": "2026-05-01T12:30:00.123"}

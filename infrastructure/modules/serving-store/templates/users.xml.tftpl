@@ -5,6 +5,10 @@
     <profiles>
         <default>
             <json_type_escape_dots_in_keys>1</json_type_escape_dots_in_keys>
+            <!-- A payload's text that reads as a date stays text, as gold keeps it; inferred, it would
+                 come back rewritten, 2026-05-01T12:30:00.123 as 2026-05-01 12:30:00.123000000. -->
+            <input_format_try_infer_dates>0</input_format_try_infer_dates>
+            <input_format_try_infer_datetimes>0</input_format_try_infer_datetimes>
             <!-- One query may hold 4 GiB, so a runaway read cannot take the memory the feed's inserts need. -->
             <max_memory_usage>4294967296</max_memory_usage>
         </default>
