@@ -1,7 +1,7 @@
 import Link from "next/link";
 import React from "react";
+import { Container } from "~/components/cms/shared/container";
 
-import { Container } from "@repo/cms/container";
 import initTranslations from "@repo/i18n/server";
 
 export default async function NotFound() {

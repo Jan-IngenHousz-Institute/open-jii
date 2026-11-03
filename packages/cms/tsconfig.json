@@ -5,6 +5,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "target": "ES2022",
+    "types": ["node"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowJs": true,
@@ -22,9 +23,6 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitReturns": true,
-
-    /** React */
-    "jsx": "react-jsx",
 
     /** Output */
     "outDir": "dist",

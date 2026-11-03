@@ -9,7 +9,7 @@ import type { ComponentReleaseNoteFieldsFragment } from "@repo/cms";
 import { WHATS_NEW_OPEN_EVENT } from "./whats-new-shared";
 import { WhatsNewSheet } from "./whats-new-sheet";
 
-vi.mock("@repo/cms/release-notes-feed", () => ({
+vi.mock("~/components/cms/release-notes/release-notes-feed", () => ({
   ReleaseNotesFeed: ({ entries }: { entries: ComponentReleaseNoteFieldsFragment[] }) => (
     <ul>
       {entries.map((entry) => (
