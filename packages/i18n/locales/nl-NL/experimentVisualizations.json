@@ -29,7 +29,9 @@
         "user": "Gebruiker",
         "updated": "Bijgewerkt"
       },
-      "updatedAgo": "Bijgewerkt {{date}}"
+      "updatedAgo": "Bijgewerkt {{date}}",
+      "listCount_one": "{{count}} visualisatie",
+      "listCount_other": "{{count}} visualisaties"
     }
   },
   "form": {

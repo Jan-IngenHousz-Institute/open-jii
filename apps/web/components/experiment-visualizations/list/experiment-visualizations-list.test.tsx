@@ -48,9 +48,15 @@ describe("ExperimentVisualizationsList", () => {
     vi.mocked(nav.useRouter().replace).mockClear();
   });
 
-  it("renders skeleton rows when loading", () => {
+  it("renders skeleton rows and no count when loading", () => {
     render(<ExperimentVisualizationsList visualizations={[]} experimentId={expId} isLoading />);
     expect(document.querySelectorAll('[class*="animate-pulse"]').length).toBeGreaterThan(0);
+    expect(screen.queryByText("ui.labels.listCount")).toBeNull();
+  });
+
+  it("counts the charts above the table", () => {
+    render(<ExperimentVisualizationsList visualizations={[]} experimentId={expId} />);
+    expect(screen.getByText("ui.labels.listCount")).toBeInTheDocument();
   });
 
   it("renders the empty state with a docs link, and no link on an archived experiment", () => {

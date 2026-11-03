@@ -33,7 +33,9 @@
         "widgets": "Widgets",
         "user": "Benutzer",
         "updated": "Aktualisiert"
-      }
+      },
+      "listCount_one": "{{count}} Dashboard",
+      "listCount_other": "{{count}} Dashboards"
     }
   },
   "form": {

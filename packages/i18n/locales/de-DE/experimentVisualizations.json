@@ -29,7 +29,9 @@
         "user": "Benutzer",
         "updated": "Aktualisiert"
       },
-      "updatedAgo": "Aktualisiert {{date}}"
+      "updatedAgo": "Aktualisiert {{date}}",
+      "listCount_one": "{{count}} Visualisierung",
+      "listCount_other": "{{count}} Visualisierungen"
     }
   },
   "form": {

@@ -19,6 +19,7 @@ interface NameUpdatedListProps<T extends NamedAndUpdated> {
   items: T[];
   columns: OverviewTableColumn<T>[];
   getRowHref: (item: T) => string;
+  countLabel: (count: number) => string;
   isLoading?: boolean;
   emptyMessage: string;
   emptyHelpPath?: string;
@@ -32,6 +33,7 @@ export function NameUpdatedList<T extends NamedAndUpdated>({
   items,
   columns,
   getRowHref,
+  countLabel,
   isLoading,
   emptyMessage,
   emptyHelpPath,
@@ -42,11 +44,13 @@ export function NameUpdatedList<T extends NamedAndUpdated>({
 
   return (
     <div className="space-y-3">
-      {sort.length > 0 && (
-        <div className="flex justify-end">
-          <ResetSortingButton active onReset={() => setSort([])} />
-        </div>
-      )}
+      {/* Always rendered at the button's height, so Reset sorting appearing never moves the table. */}
+      <div className="flex h-8 items-center justify-between gap-3">
+        <p className="text-muted-foreground text-sm">
+          {isLoading ? null : countLabel(items.length)}
+        </p>
+        <ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />
+      </div>
       <OverviewTable
         columns={columns}
         sorting={createOverviewTableSorting(sort, toggleSort, sortLabels)}

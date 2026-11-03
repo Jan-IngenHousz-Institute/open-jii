@@ -28,6 +28,7 @@ export default function ExperimentDashboardsList({
       items={dashboards}
       columns={getDashboardColumns(t, experimentId, basePath)}
       getRowHref={(dashboard) => `/platform/${basePath}/${experimentId}/dashboards/${dashboard.id}`}
+      countLabel={(count) => t("ui.labels.listCount", { count })}
       isLoading={isLoading}
       emptyMessage={t("ui.messages.emptyDashboard")}
     />

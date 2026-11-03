@@ -33,7 +33,9 @@
         "widgets": "Widgets",
         "user": "Gebruiker",
         "updated": "Bijgewerkt"
-      }
+      },
+      "listCount_one": "{{count}} dashboard",
+      "listCount_other": "{{count}} dashboards"
     }
   },
   "form": {

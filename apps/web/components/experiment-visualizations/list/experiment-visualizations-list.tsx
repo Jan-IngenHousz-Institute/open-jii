@@ -30,6 +30,7 @@ export default function ExperimentVisualizationsList({
       getRowHref={(visualization) =>
         `/platform/${basePath}/${experimentId}/analysis/visualizations/${visualization.id}`
       }
+      countLabel={(count) => t("ui.labels.listCount", { count })}
       isLoading={isLoading}
       emptyMessage={t("ui.messages.noVisualizations")}
       emptyHelpPath={isArchived ? undefined : "/guide/data-analysis/viewing-data"}

@@ -40,6 +40,16 @@ describe("ExperimentDashboardsList", () => {
     expect(screen.getByText("ui.labels.columns.updated")).toBeInTheDocument();
   });
 
+  it("counts the dashboards above the table, and not while loading", () => {
+    const { rerender } = render(
+      <ExperimentDashboardsList dashboards={items()} experimentId="exp-1" />,
+    );
+    expect(screen.getByText("ui.labels.listCount")).toBeInTheDocument();
+
+    rerender(<ExperimentDashboardsList dashboards={[]} experimentId="exp-1" isLoading />);
+    expect(screen.queryByText("ui.labels.listCount")).toBeNull();
+  });
+
   it("shows the empty-state copy when not loading and the list is empty", () => {
     render(<ExperimentDashboardsList dashboards={[]} experimentId="exp-1" />);
     expect(screen.getByText("ui.messages.emptyDashboard")).toBeInTheDocument();
