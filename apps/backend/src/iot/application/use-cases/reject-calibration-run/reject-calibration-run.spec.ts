@@ -166,6 +166,14 @@ describe("RejectCalibrationRunUseCase", () => {
 
     beforeEach(async () => {
       audience = await seedCalibrationAudience(testApp);
+      // Only someone who can work on the device starts a run, so the requester holds Can edit.
+      await testApp.addResourceGrant({
+        resourceType: "device",
+        resourceId: audience.deviceId,
+        granteeType: "user",
+        granteeId: audience.requester,
+        role: "admin",
+      });
       const definition = await testApp.module
         .get(IotCalibrationDefinitionRepository)
         .findById(definitionId);

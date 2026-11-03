@@ -1,10 +1,14 @@
 import { Logger } from "@nestjs/common";
 import type { MockInstance } from "vitest";
 
+import { eq, iotDevices } from "@repo/database";
+
+import { AuthorizationService } from "../../../authorization/authorization.service";
 import { AppError, assertSuccess, failure } from "../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../notifications/application/services/notification-dispatch.service";
 import { SharingRepository } from "../../../sharing/core/repositories/sharing.repository";
 import {
+  calibrationDeliveries,
   calibrationNotifications,
   heardBy,
   seedCalibrationAudience,
@@ -22,6 +26,7 @@ describe("CalibrationRunNotifier", () => {
   let audience: CalibrationAudience;
   let run: { id: string; deviceId: string; definitionId: string; requestedBy: string };
   let error: MockInstance;
+  let requesterGrantId: string;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -32,6 +37,15 @@ describe("CalibrationRunNotifier", () => {
     notifier = testApp.module.get(CalibrationRunNotifier);
     runRepository = testApp.module.get(IotCalibrationRunRepository);
     audience = await seedCalibrationAudience(testApp);
+    // Only someone who can work on the device starts a run, so the requester holds Can edit.
+    const grant = await testApp.addResourceGrant({
+      resourceType: "device",
+      resourceId: audience.deviceId,
+      granteeType: "user",
+      granteeId: audience.requester,
+      role: "admin",
+    });
+    requesterGrantId = grant.id;
 
     const definition = await testApp.module.get(IotCalibrationDefinitionRepository).create(
       {
@@ -206,4 +220,72 @@ describe("CalibrationRunNotifier", () => {
       );
     },
   );
+
+  describe("a requester who can no longer read the device", () => {
+    let info: MockInstance;
+
+    beforeEach(() => {
+      info = vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+    });
+
+    const nobodyTold = async (dispatch: MockInstance) => {
+      await nobodyHeard(dispatch);
+      expect(await calibrationDeliveries(testApp, audience)).toEqual(
+        heardBy(audience, [], () => null),
+      );
+      expect(info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: "The requester can no longer read the device, the decision was not sent",
+          operation: "testOperation",
+          runId: run.id,
+          deviceId: audience.deviceId,
+          requesterId: audience.requester,
+        }),
+      );
+      expect(error).not.toHaveBeenCalled();
+    };
+
+    it("is not told of an approval once their grant is removed", async () => {
+      await testApp.removeResourceGrant(requesterGrantId);
+      const dispatch = spyOnDispatch();
+
+      await notifier.runReviewed("testOperation", "approved", run, audience.manager);
+
+      await nobodyTold(dispatch);
+    });
+
+    it("is not told of a rejection once the device moved to an organization they are not in", async () => {
+      await testApp.removeResourceGrant(requesterGrantId);
+      await testApp.addOrganizationMember(audience.organizationId, audience.requester, "member");
+      await testApp.database
+        .update(iotDevices)
+        .set({ organizationId: await testApp.createOrganization() })
+        .where(eq(iotDevices.id, audience.deviceId));
+      const dispatch = spyOnDispatch();
+
+      await notifier.runReviewed("testOperation", "rejected", run, audience.manager);
+
+      await nobodyTold(dispatch);
+    });
+
+    it("is not told, and the failure is logged, when the check cannot be made", async () => {
+      vi.spyOn(testApp.module.get(AuthorizationService), "can").mockRejectedValue(
+        new Error("connection terminated"),
+      );
+      const dispatch = spyOnDispatch();
+
+      await notifier.runReviewed("testOperation", "approved", run, audience.manager);
+
+      await nobodyHeard(dispatch);
+      expect(error).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          msg: "Could not check the requester can still read the device, the decision was not sent",
+          operation: "testOperation",
+          runId: run.id,
+          deviceId: audience.deviceId,
+          requesterId: audience.requester,
+        }),
+      );
+    });
+  });
 });

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { AuthorizationService } from "../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../common/utils/error-codes";
 import { NotificationDispatchService } from "../../../notifications/application/services/notification-dispatch.service";
 import { SharingRepository } from "../../../sharing/core/repositories/sharing.repository";
@@ -32,6 +33,7 @@ export class CalibrationRunNotifier {
     private readonly runRepository: IotCalibrationRunRepository,
     private readonly sharingRepository: SharingRepository,
     private readonly notifications: NotificationDispatchService,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async runAwaitingApproval(operation: string, run: NotifiedRun): Promise<void> {
@@ -78,6 +80,32 @@ export class CalibrationRunNotifier {
 
     const labels = await this.labels(run.id, context);
     if (!labels) {
+      return;
+    }
+
+    // A requester who lost the device would get an email naming it and a link they cannot open.
+    const access = await this.authz
+      .can(run.requestedBy, { resourceType: "device", resourceId: run.deviceId, action: "read" })
+      .catch((error: unknown) => {
+        this.logger.error({
+          msg: "Could not check the requester can still read the device, the decision was not sent",
+          ...context,
+          requesterId: run.requestedBy,
+          error,
+        });
+        return null;
+      });
+    if (!access) {
+      return;
+    }
+    if (!access.allow) {
+      this.logger.log({
+        msg: "The requester can no longer read the device, the decision was not sent",
+        operation,
+        runId: run.id,
+        deviceId: run.deviceId,
+        requesterId: run.requestedBy,
+      });
       return;
     }
 
