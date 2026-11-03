@@ -191,6 +191,38 @@ describe("FixtureQuery, reads", () => {
 });
 
 describe("FixtureQuery, aggregation", () => {
+  it("counts distinct non-null scalar values including empty strings", () => {
+    const fixture = new FixtureQuery([
+      {
+        identifier: "reports",
+        displayName: "Reports",
+        columns: [{ name: "sensor_id", type_name: "STRING", type_text: "STRING" }],
+        rows: [
+          { sensor_id: "A" },
+          { sensor_id: "A" },
+          { sensor_id: "a" },
+          { sensor_id: "" },
+          { sensor_id: null },
+        ],
+      },
+    ]);
+    const answer = fixture.answer(
+      "/data",
+      new URLSearchParams({
+        tableName: "reports",
+        aggregation: JSON.stringify({
+          functions: [{ column: "sensor_id", function: "count_distinct" }],
+        }),
+      }),
+    );
+    expect(answer?.status).toBe(200);
+    const table = zExperimentDataResponse.parse(answer?.body)[0];
+    expect(table.data?.rows).toEqual([{ sensor_id_count_distinct: 3 }]);
+    expect(table.data?.columns).toEqual([
+      { name: "sensor_id_count_distinct", type_name: "BIGINT", type_text: "BIGINT" },
+    ]);
+  });
+
   it("groups and names aggregates the way the backend aliases them", () => {
     const table = read({
       aggregation: {

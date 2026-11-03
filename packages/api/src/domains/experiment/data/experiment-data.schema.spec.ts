@@ -190,9 +190,23 @@ describe("Data filter primitives & distinct values", () => {
 });
 
 describe("aggregation primitives", () => {
+  it("accepts a distinct column count in grouped queries and ungrouped summaries", () => {
+    for (const groupBy of [undefined, [{ column: "recorded_at", timeBucket: "hour" }]]) {
+      expect(
+        zExperimentDataAggregation.parse({
+          groupBy,
+          functions: [{ column: "sensor_id", function: "count_distinct" }],
+        }).functions?.[0].function,
+      ).toBe("count_distinct");
+    }
+    expect(
+      zExperimentAggregationItem.safeParse({ column: "*", function: "count_distinct" }).success,
+    ).toBe(false);
+  });
+
   it("zExperimentAggregationFunction accepts known functions and rejects others", () => {
-    ["sum", "avg", "count", "min", "max", "std", "var", "cumsum", "corr"].forEach((f) =>
-      expect(zExperimentAggregationFunction.parse(f)).toBe(f),
+    ["sum", "avg", "count", "count_distinct", "min", "max", "std", "var", "cumsum", "corr"].forEach(
+      (f) => expect(zExperimentAggregationFunction.parse(f)).toBe(f),
     );
     expect(zExperimentAggregationFunction.safeParse("median").success).toBe(false);
   });

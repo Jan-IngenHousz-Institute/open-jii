@@ -471,7 +471,11 @@ export class FixtureQuery {
     const source = table.columns.find((column) => column.name === item.column);
     const keepsType = item.function === "min" || item.function === "max";
     const type =
-      item.function === "count" ? "BIGINT" : keepsType ? (source?.type_name ?? "DOUBLE") : "DOUBLE";
+      item.function === "count" || item.function === "count_distinct"
+        ? "BIGINT"
+        : keepsType
+          ? (source?.type_name ?? "DOUBLE")
+          : "DOUBLE";
     return { name: this.alias(item), type_name: type, type_text: type };
   }
 
@@ -487,6 +491,10 @@ export class FixtureQuery {
 
   // STDDEV and VARIANCE are the sample forms, NULL below two values.
   private reduce(rows: FixtureRow[], item: ExperimentAggregationItem): FixtureValue {
+    if (item.function === "count_distinct") {
+      return new Set(rows.map((row) => row[item.column] ?? null).filter((value) => value !== null))
+        .size;
+    }
     if (item.function === "count") {
       return item.column === "*"
         ? rows.length
