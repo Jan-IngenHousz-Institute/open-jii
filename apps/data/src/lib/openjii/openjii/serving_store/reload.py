@@ -10,7 +10,7 @@ from datetime import datetime
 from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql import functions as F
 
-from .tables import StoreTable
+from .tables import PAYLOAD_SCHEMAS, StoreTable
 from .writer import StoreUnavailable, StoreWriter, Written
 
 # Waits between writes of the whole load while the store cannot take some of it; the dedup tokens
@@ -102,10 +102,14 @@ class StoreReload:
         )
 
         written = self._write(table, changes)
+        self._write_schemas(table, changes)
         if not written.rejected:
             if not allow_removal:
                 self._check_removal(table, version, experiment_id)
-            self._delete_older(table, version, experiment_id)
+            self._delete_older(table.name, version, experiment_id)
+            # A table type's schemas carry its gold table's versions, so the older ones are those
+            # only rows from before the load had.
+            self._delete_older(PAYLOAD_SCHEMAS, version, experiment_id, table_type=table.table_type)
 
         gold = rows.select(*table.key()).dropDuplicates().groupBy("experiment_id").count().collect()
         stored = self._stored_rows(table, version, experiment_id)
@@ -166,6 +170,13 @@ class StoreReload:
             )
             time.sleep(delay)
 
+    def _write_schemas(self, table: StoreTable, changes: DataFrame) -> None:
+        """Sends the load's payload schemas, rebuilt from gold's rows as the rows are."""
+        lines = [row.line for row in table.schema_lines(changes).collect()]
+        written = self.writer.insert(PAYLOAD_SCHEMAS, lines)
+        if written.unfinished:
+            raise StoreUnavailable(f"{written.unfinished} schemas of {table.name} not sent")
+
     def _newest_stored_version(self, table: StoreTable) -> int:
         [row] = self.writer.query(
             f"SELECT max(_commit_version) AS newest FROM {self.writer.database}.{table.name} FORMAT JSONEachRow"
@@ -194,14 +205,19 @@ class StoreReload:
             "run again with ALLOW_REMOVAL set to true (docs/runbooks/procedures/serving-store-reload.md)"
         )
 
-    def _delete_older(self, table: StoreTable, version: int, experiment_id: str | None) -> None:
-        """Deletes the store's rows from before ``version``. The delete returns once every part is
-        marked, so the count after it sees the result."""
+    def _delete_older(
+        self, store_table: str, version: int, experiment_id: str | None, **matches: str
+    ) -> None:
+        """Deletes a store table's rows from before ``version``, of the experiment and with the
+        column values in ``matches``. The delete returns once every part is marked, so the count
+        after it sees the result."""
         scope, parameters = self._scope(experiment_id)
+        scope += "".join(f" AND {column} = {{{column}:String}}" for column in matches)
         self.writer.query(
-            f"DELETE FROM {self.writer.database}.{table.name} WHERE _commit_version < {{version:Int64}}{scope}",
+            f"DELETE FROM {self.writer.database}.{store_table} WHERE _commit_version < {{version:Int64}}{scope}",
             version=version,
             **parameters,
+            **matches,
         )
 
     def _stored_rows(self, table: StoreTable, version: int, experiment_id: str | None) -> list[dict]:

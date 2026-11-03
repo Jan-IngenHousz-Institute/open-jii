@@ -15,7 +15,6 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Iterator
-from pathlib import Path
 
 import pytest
 import requests
@@ -25,7 +24,6 @@ from pyspark.sql import DataFrame, SparkSession
 
 pytestmark = pytest.mark.spark
 
-_MIGRATIONS = Path(__file__).parents[4] / "packages/database/clickhouse/migrations"
 _DATABASE = "feed_test"
 _WRITER = "feed_test_writer"
 
@@ -154,6 +152,58 @@ def test_an_upload_row_wraps_its_data(spark: SparkSession) -> None:
     assert row["uploaded_at"] == "2026-10-19 09:00:00.000000"
 
 
+def _schemas(table: StoreTable, changes: DataFrame) -> list[dict]:
+    lines = [json.loads(row.line) for row in table.schema_lines(changes).collect()]
+    return sorted(lines, key=lambda line: (line["identifier"], line["payload"]))
+
+
+def test_a_measurement_tables_questions_schema_is_merged_from_the_rows_gold_holds(
+    spark: SparkSession,
+) -> None:
+    assert _schemas(MEASUREMENTS, spark.sql(_RAW_DATA_CHANGES)) == [
+        {
+            "experiment_id": "e1",
+            "table_type": "static",
+            "identifier": "raw_data",
+            "payload": "questions_data",
+            "schema": "OBJECT<note: VOID, plot: STRING>",
+            "_commit_version": 7,
+        }
+    ]
+
+
+def test_each_macro_gets_its_own_schemas_and_a_payload_without_a_type_gets_none(spark: SparkSession) -> None:
+    schemas = _schemas(MACRO_RESULTS, spark.sql(_MACRO_DATA_CHANGES))
+
+    # The result without a macro belongs to no table, and no result carries answers.
+    assert [(s["identifier"], s["payload"]) for s in schemas] == [
+        ("m1", "macro_output"),
+        ("m2", "macro_output"),
+    ]
+    assert {s["table_type"] for s in schemas} == {"macro"}
+    # An object, an array and a number in one table merge to VARIANT, as gold's listing has it.
+    assert schemas[0]["schema"] == "VARIANT"
+    assert schemas[1]["schema"].startswith("OBJECT<n: ARRAY<")
+
+
+def test_an_upload_tables_schema_is_keyed_by_its_table(spark: SparkSession) -> None:
+    changes = spark.sql(
+        _UPLOADED_DATA_CHANGES.replace("CAST(NULL AS STRING) AS upload_table_id", "'t1' AS upload_table_id")
+    )
+
+    assert _schemas(UPLOADS, changes) == [
+        {
+            "experiment_id": "e1",
+            "table_type": "upload",
+            "identifier": "t1",
+            "payload": "uploaded_data",
+            "schema": "ARRAY<OBJECT<ph: DOUBLE>>",
+            "_commit_version": 3,
+        }
+    ]
+    assert _schemas(UPLOADS, spark.sql(_UPLOADED_DATA_CHANGES)) == []
+
+
 @pytest.mark.parametrize(
     ("table", "changes", "column"),
     [
@@ -191,7 +241,7 @@ class _Store:
 
 
 @pytest.fixture(scope="module")
-def store() -> Iterator[_Store]:
+def store(store_migrations: list[str]) -> Iterator[_Store]:
     url = os.environ.get("CLICKHOUSE_TEST_URL")
     if not url:
         pytest.skip("CLICKHOUSE_TEST_URL is not set")
@@ -199,8 +249,8 @@ def store() -> Iterator[_Store]:
     store.run(f"DROP DATABASE IF EXISTS {_DATABASE} SYNC")
     store.run(f"DROP USER IF EXISTS {_WRITER}")
     store.run(f"CREATE DATABASE {_DATABASE}")
-    for migration in sorted(_MIGRATIONS.glob("*.sql")):
-        store.run(migration.read_text(), database=_DATABASE)
+    for statement in store_migrations:
+        store.run(statement, database=_DATABASE)
     # The store's default profile sets this for every user; a test server has its own profile.
     store.run(f"CREATE USER {_WRITER} IDENTIFIED BY 'feed-test' SETTINGS json_type_escape_dots_in_keys = 1")
     store.run(f"GRANT SELECT, INSERT ON {_DATABASE}.* TO {_WRITER}")

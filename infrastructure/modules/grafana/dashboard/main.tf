@@ -1397,6 +1397,94 @@ resource "grafana_rule_group" "serving_store_health" {
       service   = "serving-store"
     }
   }
+
+  # Catalog entry 131. The store's timer reports a p95 only while the backend reads, so silence is
+  # idle, as with the feed's entry 120.
+  rule {
+    name      = "Serving Store Reads Slow"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/ServingStore"
+        metricName = "StoreReadP95Seconds"
+        statistic  = "Maximum"
+        period     = "60"
+        dimensions = {
+          Environment = var.environment
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      # The newest reading covers five minutes of reads. An idle window reduces to NaN, which
+      # Grafana counts as firing, so it becomes 0.
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 1"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "10m"
+
+    annotations = {
+      description      = "For ten minutes, the slowest twentieth of the backend's reads of the serving store took over a second."
+      summary          = "Serving store reads slow"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-read-latency.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["store-read-latency"]
+    }
+    labels = {
+      metric_id = "store-read-latency"
+      severity  = "warning"
+      service   = "serving-store"
+    }
+  }
 }
 
 # Serving store feed alerts, only where the pipelines feed the store

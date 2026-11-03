@@ -9,7 +9,7 @@ from typing import Any
 
 from pyspark.sql import DataFrame, SparkSession
 
-from .tables import StoreTable
+from .tables import PAYLOAD_SCHEMAS, StoreTable
 from .writer import StoreUnavailable, StoreWriter
 
 # Bounds a catch-up batch, so the feed cannot hold the cores ingestion needs for long. Delta reads a
@@ -57,21 +57,30 @@ class StoreFeed:
     def write(self, table: StoreTable, changes: DataFrame, batch_id: int) -> None:
         """Writes one batch, again and again until every row has gone; the dedup tokens drop what
         already landed. The credentials are read on every attempt, so a changed password takes
-        effect without a restart."""
-        lines = table.lines(changes)
-        for attempt in itertools.count():
-            failure = self._write_once(table, lines, batch_id)
-            if failure is None:
-                return
+        effect without a restart. The batch's schemas go after its rows, gathered once, so a retry
+        sends the same ones."""
+        # Read once for the rows and once for the schemas.
+        changes = changes.persist()
+        try:
+            lines = table.lines(changes)
+            schemas = [row.line for row in table.schema_lines(changes).collect()]
+            for attempt in itertools.count():
+                failure = self._write_once(table, lines, schemas, batch_id)
+                if failure is None:
+                    return
 
-            delay = DRIVER_RETRY_DELAYS[min(attempt, len(DRIVER_RETRY_DELAYS) - 1)]
-            print(
-                f"[serving store] {table.name} batch {batch_id}: {failure}, writing the batch again in {delay} s",
-                flush=True,
-            )
-            time.sleep(delay)
+                delay = DRIVER_RETRY_DELAYS[min(attempt, len(DRIVER_RETRY_DELAYS) - 1)]
+                print(
+                    f"[serving store] {table.name} batch {batch_id}: {failure}, writing the batch again in {delay} s",
+                    flush=True,
+                )
+                time.sleep(delay)
+        finally:
+            changes.unpersist()
 
-    def _write_once(self, table: StoreTable, lines: DataFrame, batch_id: int) -> str | None:
+    def _write_once(
+        self, table: StoreTable, lines: DataFrame, schemas: list[str], batch_id: int
+    ) -> str | None:
         """Writes the batch once, returning why some of it did not go, or None when all of it did."""
         try:
             writer = self.writer()
@@ -87,10 +96,13 @@ class StoreFeed:
         written = writer.write(lines, table.name)
         if written.unfinished:
             return f"{written.unfinished} rows not sent"
+        schemas_written = writer.insert(PAYLOAD_SCHEMAS, schemas)
+        if schemas_written.unfinished:
+            return f"{schemas_written.unfinished} schemas not sent"
 
         print(
             f"[serving store] {table.name} batch {batch_id}: {written.inserted} inserted, "
-            f"{written.rejected} rejected",
+            f"{written.rejected} rejected, {len(schemas)} schemas",
             flush=True,
         )
         return None

@@ -7,7 +7,7 @@ import importlib.util
 import json
 import sys
 import types
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 
 import pytest
@@ -85,6 +85,20 @@ def store_answers(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(StoreWriter, "check", lambda self: None)
 
 
+@pytest.fixture(autouse=True)
+def schemas_sent(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, list[str]]]:
+    """The driver's inserts, which carry a batch's schemas."""
+    sent: list[tuple[str, list[str]]] = []
+
+    def insert(self: StoreWriter, table: str, lines: Iterable[str]) -> Written:
+        batch = list(lines)
+        sent.append((table, batch))
+        return Written(inserted=len(batch))
+
+    monkeypatch.setattr(StoreWriter, "insert", insert)
+    return sent
+
+
 @pytest.fixture
 def start_versions(spark: SparkSession) -> Iterator[None]:
     for key, value in _START_VERSIONS.items():
@@ -159,6 +173,34 @@ def test_a_batch_goes_to_the_store_as_its_tables_lines_with_fresh_credentials(
     assert (key, table) == ("writer-password-value", "uploads")
     assert [json.loads(line)["id"] for line in lines] == [21]
     assert {scope for scope, _ in secrets.read} == {"serving-store-dev"}
+
+
+def test_a_batch_sends_its_payload_schemas_once_all_its_rows_have_gone(
+    spark: SparkSession,
+    fake_dp: types.ModuleType,
+    start_versions: None,
+    monkeypatch: pytest.MonkeyPatch,
+    schemas_sent: list[tuple[str, list[str]]],
+) -> None:
+    results = iter([Written(inserted=1, unfinished=1), Written(inserted=1)])
+    monkeypatch.setattr(StoreWriter, "write", lambda self, lines, table: next(results))
+    _load("centrum/serving_store_feed.py", spark, _Secrets())
+
+    fake_dp.sinks["serving_store_uploads"](spark.sql(_UPLOAD_CHANGES), 0)
+
+    # The first attempt stops at its unfinished rows, before the schemas.
+    [(table, lines)] = schemas_sent
+    assert table == "payload_schemas"
+    assert [json.loads(line) for line in lines] == [
+        {
+            "experiment_id": "e1",
+            "table_type": "upload",
+            "identifier": "t1",
+            "payload": "uploaded_data",
+            "schema": "OBJECT<ph: DOUBLE>",
+            "_commit_version": 3,
+        }
+    ]
 
 
 def test_a_batch_the_store_could_not_take_is_written_again_from_the_driver(

@@ -9,9 +9,8 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from datetime import datetime, timezone
-from pathlib import Path
 
 import pytest
 import requests
@@ -23,7 +22,6 @@ from pyspark.sql import DataFrame, SparkSession
 
 pytestmark = pytest.mark.spark
 
-_MIGRATIONS = Path(__file__).parents[4] / "packages/database/clickhouse/migrations"
 _DATABASE = "reload_test"
 _RELOADER = "reload_test_reloader"
 
@@ -77,6 +75,7 @@ class _Writer(StoreWriter):
         self.newest = newest
         self.results = list(written or [])
         self.lines: list[list[dict]] = []
+        self.inserts: list[tuple[str, list[dict]]] = []
         self.statements: list[tuple[str, dict]] = []
 
     def query(self, statement: str, **parameters: str | int) -> list[dict]:
@@ -89,6 +88,11 @@ class _Writer(StoreWriter):
         sent = [json.loads(row.line) for row in lines.collect()]
         self.lines.append(sent)
         return self.results.pop(0) if self.results else Written(inserted=len(sent))
+
+    def insert(self, table: str, lines: Iterable[str]) -> Written:
+        sent = [json.loads(line) for line in lines]
+        self.inserts.append((table, sent))
+        return Written(inserted=len(sent))
 
 
 @pytest.fixture(autouse=True)
@@ -134,11 +138,40 @@ def test_the_delete_takes_the_experiments_rows_from_before_the_version_after_the
 
     _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
-    [delete] = [(sql, params) for sql, params in writer.statements if sql.startswith("DELETE")]
-    assert delete == (
-        "DELETE FROM store.uploads WHERE _commit_version < {version:Int64} AND experiment_id = {experiment:String}",
-        {"version": 7, "experiment": "e1"},
-    )
+    deletes = [(sql, params) for sql, params in writer.statements if sql.startswith("DELETE")]
+    assert deletes == [
+        (
+            "DELETE FROM store.uploads WHERE _commit_version < {version:Int64} AND experiment_id = {experiment:String}",
+            {"version": 7, "experiment": "e1"},
+        ),
+        (
+            "DELETE FROM store.payload_schemas WHERE _commit_version < {version:Int64} "
+            "AND experiment_id = {experiment:String} AND table_type = {table_type:String}",
+            {"version": 7, "experiment": "e1", "table_type": "upload"},
+        ),
+    ]
+
+
+def test_the_loads_payload_schemas_go_in_at_the_version(spark: SparkSession) -> None:
+    writer = _Writer()
+
+    _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
+
+    assert writer.inserts == [
+        (
+            "payload_schemas",
+            [
+                {
+                    "experiment_id": "e1",
+                    "table_type": "upload",
+                    "identifier": "t1",
+                    "payload": "uploaded_data",
+                    "schema": "OBJECT<ph: DOUBLE>",
+                    "_commit_version": 7,
+                }
+            ],
+        )
+    ]
 
 
 def test_a_reload_of_every_experiment_deletes_across_the_table(spark: SparkSession) -> None:
@@ -146,8 +179,14 @@ def test_a_reload_of_every_experiment_deletes_across_the_table(spark: SparkSessi
 
     _GoldAt(spark, writer, _GOLD).reload(UPLOADS)
 
-    [delete] = [(sql, params) for sql, params in writer.statements if sql.startswith("DELETE")]
-    assert delete == ("DELETE FROM store.uploads WHERE _commit_version < {version:Int64}", {"version": 7})
+    deletes = [(sql, params) for sql, params in writer.statements if sql.startswith("DELETE")]
+    assert deletes == [
+        ("DELETE FROM store.uploads WHERE _commit_version < {version:Int64}", {"version": 7}),
+        (
+            "DELETE FROM store.payload_schemas WHERE _commit_version < {version:Int64} AND table_type = {table_type:String}",
+            {"version": 7, "table_type": "upload"},
+        ),
+    ]
     assert len(writer.lines[0]) == 4
 
 
@@ -221,7 +260,7 @@ class _Admin:
 
 
 @pytest.fixture
-def store() -> Iterator[_Admin]:
+def store(store_migrations: list[str]) -> Iterator[_Admin]:
     url = os.environ.get("CLICKHOUSE_TEST_URL")
     if not url:
         pytest.skip("CLICKHOUSE_TEST_URL is not set")
@@ -229,8 +268,8 @@ def store() -> Iterator[_Admin]:
     store.run(f"DROP DATABASE IF EXISTS {_DATABASE} SYNC")
     store.run(f"DROP USER IF EXISTS {_RELOADER}")
     store.run(f"CREATE DATABASE {_DATABASE}")
-    for migration in sorted(_MIGRATIONS.glob("*.sql")):
-        store.run(migration.read_text(), database=_DATABASE)
+    for statement in store_migrations:
+        store.run(statement, database=_DATABASE)
     # The migration runner's ledger, in no particular shape.
     store.run(f"CREATE TABLE {_DATABASE}._migrations (version String) ENGINE = MergeTree ORDER BY version")
     # The reloader's grants in infrastructure/modules/serving-store/main.tf.
@@ -238,7 +277,7 @@ def store() -> Iterator[_Admin]:
         f"CREATE USER {_RELOADER} IDENTIFIED BY 'reload-test' SETTINGS json_type_escape_dots_in_keys = 1"
     )
     store.run(f"GRANT SELECT, INSERT ON {_DATABASE}.* TO {_RELOADER}")
-    for table in ("measurements", "macro_results", "uploads"):
+    for table in ("measurements", "macro_results", "uploads", "payload_schemas"):
         store.run(f"GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON {_DATABASE}.{table} TO {_RELOADER}")
     store.run(f"REVOKE INSERT ON {_DATABASE}._migrations FROM {_RELOADER}")
 
@@ -292,9 +331,12 @@ class _FeedCatchingUp(_GoldAt):
         super().__init__(spark, writer, gold)
         self.late = late
 
-    def _delete_older(self, table: StoreTable, version: int, experiment_id: str | None) -> None:
-        super()._delete_older(table, version, experiment_id)
-        self.writer.write(table.lines(self.spark.sql(self.late)), table.name)
+    def _delete_older(
+        self, store_table: str, version: int, experiment_id: str | None, **matches: str
+    ) -> None:
+        super()._delete_older(store_table, version, experiment_id, **matches)
+        if store_table == UPLOADS.name:
+            self.writer.write(UPLOADS.lines(self.spark.sql(self.late)), UPLOADS.name)
 
 
 @pytest.mark.clickhouse

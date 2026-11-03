@@ -44,6 +44,14 @@ locals {
     system_log_retention_days = var.system_log_retention_days
   })
 
+  # The views that name an experiment (packages/database/clickhouse/migrations), the reader's only
+  # way to experiment data, and the tables a reload replaces rows of.
+  reader_views = [
+    "experiment_measurements", "experiment_macro_results", "experiment_uploads",
+    "experiment_contributor_ids", "experiment_client_ids", "experiment_payload_schemas",
+  ]
+  reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas"]
+
   # No grants means the admin, which manages access and applies the schema. The writer only inserts,
   # and keeps out of the migration ledger, which records what the schema already holds. The reloader
   # also deletes from the tables it reloads; a lightweight delete updates their rows' mask column,
@@ -62,15 +70,17 @@ locals {
     reloader = {
       name    = "openjii_reloader"
       profile = "ingest"
-      grants = [
-        "GRANT SELECT, INSERT ON store.*",
-        "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.measurements",
-        "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.macro_results",
-        "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.uploads",
-        "REVOKE INSERT ON store._migrations",
-      ]
+      grants = concat(
+        ["GRANT SELECT, INSERT ON store.*"],
+        [for table in local.reloaded_tables : "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.${table}"],
+        ["REVOKE INSERT ON store._migrations"],
+      )
     }
-    reader = { name = "openjii_reader", profile = "reader", grants = ["GRANT SELECT ON store.*"] }
+    reader = {
+      name    = "openjii_reader"
+      profile = "reader"
+      grants  = [for view in local.reader_views : "GRANT SELECT ON store.${view}"]
+    }
   }
 
   # The hashes of 32 random characters, shown in plans so a replacement says what changed.

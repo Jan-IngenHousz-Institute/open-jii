@@ -8,11 +8,14 @@
             <!-- One query may hold 4 GiB, so a runaway read cannot take the memory the feed's inserts need. -->
             <max_memory_usage>4294967296</max_memory_usage>
         </default>
-        <!-- The users that only read, which may not lift the cap; the admin can, for a migration. -->
+        <!-- The users that only read, which may not lift the cap or the time limit; the admin can,
+             for a migration. A page that takes 30 s has failed its reader anyway. -->
         <reader>
             <profile>default</profile>
+            <max_execution_time>30</max_execution_time>
             <constraints>
                 <max_memory_usage><const/></max_memory_usage>
+                <max_execution_time><const/></max_execution_time>
             </constraints>
         </reader>
         <!-- The users that insert, under the server's cap alone: an insert the per-query cap refused
@@ -49,6 +52,8 @@
             <quota>default</quota>
             <grants>
                 <query>GRANT SELECT ON store.*</query>
+                <!-- The reads' timings and outcomes, never their text, which holds their parameters. -->
+                <query>GRANT SELECT(event_time, type, user, query_duration_ms) ON system.query_log</query>
             </grants>
         </openjii_monitor>
     </users>

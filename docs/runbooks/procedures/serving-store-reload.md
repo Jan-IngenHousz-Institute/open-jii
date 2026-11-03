@@ -12,11 +12,13 @@ holds now.** The feed only sends rows gold inserts or updates, so the store need
 ## What it does
 
 The job `Serving-Store-Reload-<ENV>` reads each gold table's latest version, V, and inserts every
-row gold holds at V as a commit at V. Gold only appends, so a recomputed row stands beside the one it
-replaced; of each store key the load sends the copy gold added last. Then it deletes the store's rows from versions before V. The
-store keeps each row's newest commit, so an experiment reads whole throughout. Rows the live feed
-writes meanwhile carry later versions and stay. Sending a row twice does no harm, because each chunk
-carries a dedup token and the store folds rows that share a key into one.
+row gold holds at V as a commit at V, with the payload schemas of those rows. Gold only appends,
+so a recomputed row stands beside the one it replaced; of each store key the load sends the copy
+gold added last. Then it deletes the store's rows and schemas from versions before V, so a field
+only removed rows had leaves the page. The store keeps each row's newest commit, so an experiment
+reads whole throughout. Rows the live feed writes meanwhile carry later versions and stay. Sending a
+row twice does no harm, because each chunk carries a dedup token and the store folds rows that share
+a key into one.
 
 It then counts the rows per experiment, once per store key, since gold can hold a capture more than
 once and the store folds the copies. The run fails in three cases, and its error names the
@@ -35,10 +37,11 @@ and alerts, which read the last five minutes of arrivals, see only the rows the 
 committed V less than five minutes before the load, its rows count in those metrics until then, at a
 delivery time near zero.
 
-It connects as `openjii_reloader`, which may read and insert in `store` and delete from the three
-tables it reloads, but cannot update their values, delete from `feed_rejects`, or write to the
-migration ledger. Its right to delete also lets it drop or detach those tables' partitions, which
-empties a table as `TRUNCATE` would; ClickHouse has no narrower grant for a delete.
+It connects as `openjii_reloader`, which may read and insert in `store` and delete from the tables it
+reloads (the three row tables and `payload_schemas`), but cannot update their values, delete from
+`feed_rejects`, or write to the migration ledger. Its right to delete also lets it drop or detach
+those tables' partitions, which empties a table as `TRUNCATE` would; ClickHouse has no narrower grant
+for a delete.
 
 ## Running it
 
