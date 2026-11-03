@@ -18,13 +18,13 @@ function LollipopXShelf({ form, columns }: ChartPanelProps) {
 }
 
 function LollipopYShelf({ form, columns }: ChartPanelProps) {
-  const yColumns = useMemo(() => filterColumnsForRole(columns, "lollipop", "y"), [columns]);
   // LollipopChart wrapper is single-series only; `maxSeries={1}` keeps the
   // shelf in sync with the role contract.
   return (
     <YAxisShelf
       form={form}
-      columns={yColumns}
+      columns={columns}
+      chartType="lollipop"
       maxSeries={1}
       showSeriesColor={false}
       showErrorColumn

@@ -9,14 +9,17 @@ import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import { zExperimentChartDataConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 
+import { BarRenderer } from "../basic/bar/renderer";
 import { lineDefaultConfig } from "../basic/line/defaults";
+import { sanitizeDataConfigForSave } from "../data/aggregation";
 import { CartesianRenderer } from "./cartesian-renderer";
 
 interface CartesianChartProps {
   config: PlotlyChartConfig;
-  data: { x: unknown[]; mode?: string; name?: string }[];
+  data: { x: unknown[]; y?: unknown[]; mode?: string; name?: string }[];
   onRelayout?: (event: Record<string, unknown>) => void;
 }
 
@@ -58,6 +61,64 @@ function buildViz(overrides: Parameters<typeof createVisualization>[0] = {}) {
 describe("CartesianRenderer", () => {
   beforeEach(() => {
     cartesianChart.mockClear();
+  });
+
+  it("reads a saved hourly distinct sensor count and renders its aggregate alias as numeric bars", async () => {
+    const dataConfig = sanitizeDataConfigForSave({
+      tableName: "readings",
+      dataSources: [
+        { tableName: "readings", columnName: "time", role: "x" },
+        { tableName: "readings", columnName: "sensor_id", role: "y", aggregate: "count_distinct" },
+      ],
+      aggregation: { groupBy: [{ column: "time", timeBucket: "hour" }] },
+    });
+    expect(dataConfig.aggregation?.functions).toEqual([
+      { column: "sensor_id", function: "count_distinct", alias: "sensor_id_count_distinct_s1" },
+    ]);
+    server.mount(contract.experiments.getExperimentTables, {
+      body: [createExperimentTable({ identifier: "readings", totalRows: 6 })],
+    });
+    server.mount(contract.experiments.getExperimentTableColumns, {
+      body: {
+        columns: [
+          { name: "time", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+          { name: "sensor_id", type_name: "STRING", type_text: "STRING" },
+        ],
+      },
+    });
+    const reads = server.mount(contract.experiments.getExperimentData, {
+      body: [
+        createExperimentDataTable({
+          data: {
+            columns: [],
+            rows: [
+              { time_hour: "2026-06-01T08:00:00.000Z", sensor_id_count_distinct_s1: "2" },
+              { time_hour: "2026-06-01T09:00:00.000Z", sensor_id_count_distinct_s1: "1" },
+            ],
+            totalRows: 2,
+            truncated: false,
+          },
+        }),
+      ],
+    });
+    render(
+      <BarRenderer
+        experimentId="exp-1"
+        visualization={buildViz({
+          chartType: "bar",
+          config: { xAxisType: "date", yAxisType: "linear" },
+          dataConfig: zExperimentChartDataConfig.parse(JSON.parse(JSON.stringify(dataConfig))),
+        })}
+      />,
+    );
+    await waitFor(() => expect(renderedProps().data[0]?.y).toEqual([2, 1]));
+    expect(renderedProps().data[0].x).toEqual([
+      "2026-06-01T08:00:00.000Z",
+      "2026-06-01T09:00:00.000Z",
+    ]);
+    expect(renderedConfig().yAxisType).toBe("linear");
+    expect(reads.calls.length).toBeGreaterThan(0);
+    expect(JSON.parse(reads.calls[0].query.aggregation || "{}")).toEqual(dataConfig.aggregation);
   });
 
   // The stored config carries `useWebGL: false` from the chart-type defaults,

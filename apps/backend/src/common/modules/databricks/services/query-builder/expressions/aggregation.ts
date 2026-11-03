@@ -24,6 +24,12 @@ export function buildAggregateExpression(
       "buildAggregateExpression: cumsum is a window function, route through buildCumsumExpression",
     );
   }
+  if (agg.function === "count_distinct") {
+    return {
+      sql: `COUNT(DISTINCT ${builder.escapeIdentifier(agg.column)})`,
+      alias: agg.alias ?? `${agg.column}_count_distinct`,
+    };
+  }
   if (agg.function === "corr") {
     if (!agg.secondColumn || agg.secondColumn.length === 0) {
       throw new QueryBuilderInputError("buildAggregateExpression: 'corr' requires a secondColumn");
@@ -34,10 +40,10 @@ export function buildAggregateExpression(
     };
   }
   // Exhaustive Record: adding an AggregateFunction without also handling it
-  // in the cumsum/corr branches above is a TS error here. Databricks needs
+  // in the dedicated branches above is a TS error here. Databricks needs
   // the spelled-out names (STDDEV/VARIANCE, not STD/VAR).
   const ROW_AGGREGATE_SQL: Record<
-    Exclude<AggregateExpression["function"], "cumsum" | "corr">,
+    Exclude<AggregateExpression["function"], "cumsum" | "corr" | "count_distinct">,
     string
   > = {
     sum: "SUM",
@@ -143,7 +149,8 @@ export function wrapWithAggregation(
       }
 
       const expr = builder.buildAggregateExpression(item);
-      selectClauses.push(`${expr.sql} AS ${builder.escapeIdentifier(expr.alias)}`);
+      const alias = `\`${expr.alias.replaceAll("`", "``")}\``;
+      selectClauses.push(`${expr.sql} AS ${alias}`);
     }
   }
 

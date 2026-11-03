@@ -6,7 +6,11 @@ import { useWatch } from "react-hook-form";
 
 import type { ExperimentAggregationFunction } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import type { ExperimentSeriesTraceType } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import { filterColumnsForRole } from "@repo/api/domains/experiment/visualizations/experiment-visualization-role-rules";
+import type {
+  ExperimentChartType,
+  ExperimentSeriesTraceType,
+} from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { getColumnKind } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -44,6 +48,7 @@ const AGG_FUNCTIONS: AggregateOption[] = [
   { value: "sum", label: "Sum" },
   { value: "avg", label: "Average" },
   { value: "count", label: "Count" },
+  { value: "count_distinct", label: "Distinct count" },
   { value: "min", label: "Min" },
   { value: "max", label: "Max" },
   { value: "std", label: "Std dev" },
@@ -54,6 +59,7 @@ const AGG_FUNCTIONS: AggregateOption[] = [
 export interface YAxisShelfProps {
   form: UseFormReturn<ChartFormValues>;
   columns: ExperimentDataColumn[];
+  chartType?: ExperimentChartType;
   showSeriesColor?: boolean;
   maxSeries?: number;
   hideAxisType?: boolean;
@@ -67,6 +73,7 @@ export interface YAxisShelfProps {
 export function YAxisShelf({
   form,
   columns,
+  chartType,
   showSeriesColor = true,
   maxSeries,
   hideAxisType = false,
@@ -107,9 +114,16 @@ export function YAxisShelf({
       form.setValue("config.yAxisTitle", value);
       // Only the first Y series defines the axis; others just add traces.
       const picked = columns.find((c) => c.name === value);
-      form.setValue("config.yAxisType", defaultAxisTypeFor(picked?.type_text), {
-        shouldDirty: true,
-      });
+      form.setValue(
+        "config.yAxisType",
+        ySources[seriesIndex].source.aggregate === "count" ||
+          ySources[seriesIndex].source.aggregate === "count_distinct"
+          ? "linear"
+          : defaultAxisTypeFor(picked?.type_text),
+        {
+          shouldDirty: true,
+        },
+      );
     }
     const yEntry = ySources[seriesIndex];
     form.setValue(`dataConfig.dataSources.${yEntry.index}.alias` as const, value);
@@ -118,7 +132,9 @@ export function YAxisShelf({
     // silently drop from SQL projection — default to AVG to keep it visible.
     const yEntryDsIndex = yEntry.index;
     const existingAggregate = form.getValues("dataConfig.dataSources")[yEntryDsIndex]?.aggregate;
-    if (value && existingAggregate === undefined) {
+    if (existingAggregate !== undefined) {
+      setDataSourceAggregate(form, yEntryDsIndex, existingAggregate, xColumnName);
+    } else if (value) {
       const currentAggregation = form.getValues("dataConfig.aggregation");
       const xBucket = currentAggregation?.groupBy?.find(
         (g) => g.column === xColumnName,
@@ -135,6 +151,31 @@ export function YAxisShelf({
 
   const handleAggregateChange = (raw: string, dsIndex: number) => {
     const fn = raw === AGG_NONE ? undefined : pickAggregate(raw);
+    const source = form.getValues("dataConfig.dataSources")[dsIndex];
+    if (
+      chartType &&
+      source.columnName &&
+      !filterColumnsForRole(columns, chartType, "y", fn).some((c) => c.name === source.columnName)
+    ) {
+      form.setValue(`dataConfig.dataSources.${dsIndex}.columnName`, "", { shouldDirty: true });
+      form.setValue(`dataConfig.dataSources.${dsIndex}.alias`, "", { shouldDirty: true });
+      if (ySources[0]?.index === dsIndex)
+        form.setValue("config.yAxisTitle", "", { shouldDirty: true });
+    }
+    if (ySources[0]?.index === dsIndex) {
+      if (fn === "count" || fn === "count_distinct") {
+        form.setValue("config.yAxisType", "linear", { shouldDirty: true });
+      } else if (
+        fn === undefined &&
+        (source.aggregate === "count" || source.aggregate === "count_distinct")
+      ) {
+        const columnName = form.getValues(`dataConfig.dataSources.${dsIndex}.columnName`);
+        const picked = columns.find((column) => column.name === columnName);
+        form.setValue("config.yAxisType", defaultAxisTypeFor(picked?.type_text), {
+          shouldDirty: true,
+        });
+      }
+    }
     setDataSourceAggregate(form, dsIndex, fn, xColumnName);
   };
 
@@ -207,7 +248,12 @@ export function YAxisShelf({
               canRemove={ySources.length > 1}
               willBeSilentlyDropped={willBeSilentlyDropped}
               aggregateValue={aggregateValue}
-              columns={columns}
+              columns={
+                chartType
+                  ? filterColumnsForRole(columns, chartType, "y", entry.source.aggregate)
+                  : columns
+              }
+              allowAggregateWithoutColumn={chartType !== undefined}
               effectiveErrorColumns={effectiveErrorColumns}
               xColumnName={xColumnName}
               aggregateOptions={AGG_FUNCTIONS}
