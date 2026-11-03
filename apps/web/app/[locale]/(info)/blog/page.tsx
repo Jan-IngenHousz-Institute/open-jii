@@ -3,11 +3,12 @@ import { draftMode } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
+import { ArticleHero } from "~/components/cms/article/article-hero";
+import { ArticleTileGrid } from "~/components/cms/article/article-title-grid";
+import { Container } from "~/components/cms/shared/container";
 import { getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
 
-import { ArticleHero, ArticleTileGrid } from "@repo/cms/article";
-import { Container } from "@repo/cms/container";
 import { PageBlogPostOrder } from "@repo/cms/lib/__generated/sdk";
 import { defaultLocale } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";

@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
+import type { ReleaseCategory } from "~/components/cms/release-notes/category";
+import { RELEASE_CATEGORIES, normalizeCategory } from "~/components/cms/release-notes/category";
+import { ReleaseHero } from "~/components/cms/release-notes/release-hero";
+import { ReleaseNotesFeed } from "~/components/cms/release-notes/release-notes-feed";
 
-import type {
-  ComponentReleaseNoteFieldsFragment as ReleaseNoteFields,
-  ReleaseCategory,
-} from "@repo/cms";
-import { RELEASE_CATEGORIES, ReleaseHero, ReleaseNotesFeed, normalizeCategory } from "@repo/cms";
+import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
 import { useTranslation } from "@repo/i18n";
 import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 

@@ -3,8 +3,8 @@ import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
 import React from "react";
 import type { ReactNode } from "react";
+import { ContentfulPreviewProvider } from "~/components/cms/contentful/ctf-preview-provider";
 
-import { ContentfulPreviewProvider } from "@repo/cms/contentful";
 import { isKnownLocale } from "@repo/i18n";
 import type { Namespace } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";

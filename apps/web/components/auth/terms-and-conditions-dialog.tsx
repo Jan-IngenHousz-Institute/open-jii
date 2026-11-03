@@ -1,7 +1,10 @@
 import { draftMode } from "next/headers";
+import {
+  TermsAndConditionsContent,
+  TermsAndConditionsTitle,
+} from "~/components/cms/terms-and-conditions";
 import { getContentfulClients } from "~/lib/contentful";
 
-import { TermsAndConditionsContent, TermsAndConditionsTitle } from "@repo/cms";
 import type { PageTermsAndConditionsFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 import initTranslations from "@repo/i18n/server";
 

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { cache } from "react";
+import { FaqContent } from "~/components/cms/faq";
 import { getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
 
-import { FaqContent } from "@repo/cms";
 import type { PageFaqFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 
 interface FaqPageProps {

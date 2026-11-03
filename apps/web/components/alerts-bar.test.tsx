@@ -14,7 +14,7 @@ vi.mock("next/cache", () => ({
 
 const mockActiveAlerts = vi.fn();
 
-vi.mock("@repo/cms/alerts-container", () => ({
+vi.mock("~/components/cms/alert/alerts-container", () => ({
   AlertsContainer: ({ alerts }: { alerts: ComponentAlertFieldsFragment[] }) => (
     <div role="region" aria-label="alerts">
       {alerts.map((a) => (
