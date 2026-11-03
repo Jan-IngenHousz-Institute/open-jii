@@ -57,17 +57,6 @@ pnpm --filter @repo/e2e capture-docs-media --theme dark
 Captures are staged in `apps/docs/.capture/web` and are never published automatically. `ffmpeg` is
 required for the scale, metadata strip and encode.
 
-For numeric question sorting, with the local stack and authenticated seed session ready, run:
-
-```sh
-pnpm --filter @repo/e2e capture:numeric-question-sorting
-```
-
-This stages an ascending-order still and a recording of sorting on the Data tab, including page
-and selection reset, using the real UI with synthetic lakehouse responses. It creates and cleans
-its own test experiment and opts its shots into the capture runner. The default documentation
-capture excludes these temporary-fixture shots. The Spark verifier checks backend SQL separately.
-
 ## Ticket screens
 
 A Linear ticket that changes a screen carries a picture of the change, taken from the real app with

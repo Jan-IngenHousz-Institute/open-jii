@@ -39,7 +39,7 @@ const rows = answers.map((answer, i) => ({
   sample_answer: answer,
 }));
 export const numericSortRowCount = rows.length;
-// These are explicit server orders for browser wiring checks. Spark proves the actual parser.
+// Fixed server responses test the UI requests and rendering.
 const numericAscending = Array.from({ length: numericSortRowCount }, (_, i) => i + 1);
 const numericDescending = [19, ...Array.from({ length: 18 }, (_, i) => 18 - i), 21, 20, 23, 22, 24];
 

@@ -1,7 +1,6 @@
 import type { CDPSession, Locator, Page } from "@playwright/test";
 
 import type { FrameName } from "./frames.js";
-import { NUMERIC_QUESTION_SORTING_SHOTS } from "./numeric-question-sorting.js";
 import { experimentId, organizationId, protocolWorkbookId, workbookId } from "./seed-entities.js";
 
 export interface Shot {
@@ -160,7 +159,6 @@ const privacyShots: readonly Shot[] = privacyCaptureEmail
 
 export const SHOTS: readonly Shot[] = [
   ...privacyShots,
-  ...(process.env.E2E_NUMERIC_SORT_CAPTURE === "1" ? NUMERIC_QUESTION_SORTING_SHOTS : []),
   // ------------------------------------------- tier 1: shell, overviews, access
   {
     slug: "dashboard",
