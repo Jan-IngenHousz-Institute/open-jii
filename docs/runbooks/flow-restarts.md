@@ -8,8 +8,8 @@ times in eight days, four an hour, with no one told.
 The heartbeat export reads each pipeline driver's log every half hour. An hour reaches the log volume
 about an hour after it closes, so the reading is two to three hours old. The alert's `Pipeline` and
 `Flow` labels name the pipeline and the table its flow writes, as in [flow-busy](flow-busy.md). A
-planned restart of the pipeline starts every flow once, so a single start is never an alert. A pipeline
-that keeps failing on new clusters shows in [pipeline-cluster-starts](pipeline-cluster-starts.md)
+planned change to the pipeline starts every flow once or twice, so two starts are never an alert. A
+pipeline that keeps failing on new clusters shows in [pipeline-cluster-starts](pipeline-cluster-starts.md)
 instead, since a cluster that stops within the hour leaves no hourly log.
 
 ## Confirm it

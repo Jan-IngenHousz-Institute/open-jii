@@ -4045,8 +4045,8 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     }
   }
 
-  # Catalog entry 128. One hour with more than two restarts fires it, since a planned restart
-  # starts every flow again once. The window matches entry 127's.
+  # Catalog entry 128. One hour with more than two restarts fires it, since a planned change can
+  # start every flow twice in an hour, as on dev on 30 October 2026. The window matches entry 127's.
   rule {
     name      = "Pipeline Flow Restarting"
     condition = "C"
@@ -4130,8 +4130,9 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     }
   }
 
-  # Catalog entry 129. Published per pipeline for the last closed hour within half an hour of it
-  # closing, so two hours back always holds the latest reading.
+  # Catalog entry 129. Stamped at the start of the last closed hour and published within half an
+  # hour of its close, so the latest reading is up to two and a half hours old, which three hours
+  # back holds. One hour with more than two clusters fires it, as entry 128's restarts do.
   rule {
     name      = "Pipeline Restarting"
     condition = "C"
@@ -4156,7 +4157,7 @@ resource "grafana_rule_group" "lakehouse_freshness" {
       })
 
       relative_time_range {
-        from = 7200
+        from = 10800
         to   = 0
       }
     }
@@ -4201,7 +4202,7 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     for            = "0m"
 
     annotations = {
-      description      = "A pipeline started more than two clusters in an hour. A planned restart starts one, so more usually means its updates keep failing and starting again."
+      description      = "A pipeline started more than two clusters in an hour. A planned change starts one or two, so more usually means its updates keep failing and starting again."
       summary          = "A pipeline keeps restarting"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/pipeline-cluster-starts.md"
       __dashboardUid__ = local.heartbeat_daily_uid
