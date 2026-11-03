@@ -21,7 +21,11 @@ export function resourceListFilter<S extends ListFilterShape, K extends keyof S 
   key: K,
   { label, icon, optionLabel }: ResourceListFilterOptions<z.infer<S[K]>>,
 ): ListFilter<z.infer<S[K]>> {
-  const values = list.filterShape[key].options as z.infer<S[K]>[];
+  const schema = list.filterShape[key];
+  // `.options` widens to string[] on a generic shape; the schema narrows each value back.
+  const values = schema.options.filter(
+    (value): value is z.infer<S[K]> => schema.safeParse(value).success,
+  );
   return {
     key,
     label,

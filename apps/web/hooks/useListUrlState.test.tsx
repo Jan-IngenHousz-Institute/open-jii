@@ -257,6 +257,36 @@ describe("useListUrlState", () => {
     expect(replace).toHaveBeenCalledWith("/list", { scroll: false });
   });
 
+  it("keeps a repeated state when an older echo lands after a newer one", () => {
+    const { result, rerender } = renderHook(() => useListUrlState(withSearch));
+
+    act(() => result.current.setSearch("a"));
+    act(() => result.current.setSearch("ab"));
+    act(() => result.current.setSearch("a"));
+    setSearchParams("q=a");
+    rerender();
+    replace.mockClear();
+    setSearchParams("q=ab");
+    rerender();
+
+    expect(result.current.search).toBe("a");
+    expect(replace).toHaveBeenLastCalledWith("/list?q=a", { scroll: false });
+  });
+
+  it("follows back and forward to a value it is still waiting to see", () => {
+    const { result, rerender } = renderHook(() => useListUrlState(withSearch));
+
+    act(() => result.current.setSearch("a"));
+    act(() => result.current.setSearch("ab"));
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    setSearchParams("q=a");
+    rerender();
+
+    expect(result.current.search).toBe("a");
+  });
+
   it("ignores URL changes to params it does not own", () => {
     setSearchParams("status=active");
     const { result, rerender } = renderHook(() => useListUrlState(options));

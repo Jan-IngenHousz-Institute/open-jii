@@ -1,4 +1,4 @@
-import { renderWithForm, screen, userEvent } from "@/test/test-utils";
+import { renderWithForm, screen, userEvent, within, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -38,6 +38,117 @@ function renderPanel(formDefaults?: ChartFormValues) {
 }
 
 describe("BarDataPanel", () => {
+  it.each(["Count", "Distinct count"])(
+    "lets a researcher pick %s before a text Y column and clears it for a numeric aggregate",
+    async (label) => {
+      const user = userEvent.setup();
+      const { form } = renderPanel(
+        defaults({
+          dataConfig: {
+            tableName: "sales",
+            dataSources: [
+              { tableName: "sales", columnName: "country", role: "x" },
+              { tableName: "sales", columnName: "", role: "y" },
+              { tableName: "sales", columnName: "sales", role: "y", aggregate: "sum" },
+            ],
+          },
+        }),
+      );
+      const shelf = screen
+        .getByRole("heading", { name: "workspace.shelves.yAxis" })
+        .closest("section");
+      if (!shelf) throw new Error("Y shelf is missing");
+      const aggregates = within(shelf).getAllByRole("combobox", {
+        name: "workspace.shelves.aggregate",
+      });
+      await user.click(aggregates[0]);
+      await user.click(await screen.findByRole("option", { name: label }));
+      const columnPickers = within(shelf).getAllByRole("combobox", {
+        name: "workspace.shelves.column",
+      });
+      await user.click(columnPickers[0]);
+      await user.click(await screen.findByRole("option", { name: /region/ }));
+      expect(form.getValues("dataConfig.dataSources.1.columnName")).toBe("region");
+      expect(form.getValues("dataConfig.dataSources.1.aggregate")).toBe(
+        label === "Count" ? "count" : "count_distinct",
+      );
+      expect(form.getValues("config.yAxisType")).toBe("linear");
+      expect(form.getValues("dataConfig.aggregation")?.functions).toContainEqual({
+        column: "region",
+        function: label === "Count" ? "count" : "count_distinct",
+        alias: label === "Count" ? "region_count_s1" : "region_count_distinct_s1",
+      });
+      await user.click(columnPickers[1]);
+      await screen.findByRole("option", { name: /sales/ });
+      expect(screen.queryByRole("option", { name: /region/ })).not.toBeInTheDocument();
+      await user.keyboard("{Escape}");
+      await user.click(aggregates[0]);
+      await user.click(await screen.findByRole("option", { name: "Sum" }));
+      await waitFor(() => expect(form.getValues("dataConfig.dataSources.1.columnName")).toBe(""));
+      expect(form.getValues("dataConfig.aggregation")?.functions).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ column: "region" })]),
+      );
+      await user.click(columnPickers[0]);
+      await screen.findByRole("option", { name: /sales/ });
+      expect(screen.queryByRole("option", { name: /region/ })).not.toBeInTheDocument();
+    },
+  );
+
+  it.each(["count", "count_distinct"] as const)(
+    "replaces a populated Y column and its live %s alias",
+    async (aggregate) => {
+      const user = userEvent.setup();
+      const oldAlias = aggregate === "count" ? "country_count_s1" : "country_count_distinct_s1";
+      const newAlias = aggregate === "count" ? "region_count_s1" : "region_count_distinct_s1";
+      const { form } = renderPanel(
+        defaults({
+          dataConfig: {
+            tableName: "sales",
+            dataSources: [
+              { tableName: "sales", columnName: "sales", role: "x" },
+              { tableName: "sales", columnName: "country", role: "y", aggregate, alias: "country" },
+            ],
+            aggregation: {
+              groupBy: [{ column: "sales" }],
+              functions: [{ column: "country", function: aggregate, alias: oldAlias }],
+            },
+          },
+        }),
+      );
+      const shelf = screen
+        .getByRole("heading", { name: "workspace.shelves.yAxis" })
+        .closest("section");
+      if (!shelf) throw new Error("Y shelf is missing");
+      const picker = within(shelf).getByRole("combobox", { name: "workspace.shelves.column" });
+      expect(picker).toHaveTextContent("country");
+      expect(form.getValues("dataConfig.aggregation")?.functions).toEqual([
+        { column: "country", function: aggregate, alias: oldAlias },
+      ]);
+
+      await user.click(picker);
+      await user.click(await screen.findByRole("option", { name: /region/ }));
+
+      await waitFor(
+        () =>
+          expect(form.getValues("dataConfig.aggregation")?.functions).toEqual([
+            { column: "region", function: aggregate, alias: newAlias },
+          ]),
+        { timeout: 1000 },
+      );
+      expect(form.getValues("dataConfig.dataSources.1")).toMatchObject({
+        columnName: "region",
+        aggregate,
+        alias: "region",
+      });
+      expect(form.getValues("dataConfig.aggregation")?.functions).not.toContainEqual(
+        expect.objectContaining({ column: "country" }),
+      );
+      expect(form.getValues("dataConfig.aggregation")?.functions).not.toContainEqual(
+        expect.objectContaining({ alias: oldAlias }),
+      );
+    },
+  );
+
   it("renders X, Y, group-by, and facet shelves", () => {
     renderPanel();
     expect(screen.getByRole("heading", { name: "workspace.shelves.xAxis" })).toBeInTheDocument();

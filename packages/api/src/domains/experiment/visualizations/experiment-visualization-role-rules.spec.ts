@@ -311,6 +311,22 @@ describe("filterColumnsForRole", () => {
     expect(result).not.toContain("ts");
   });
 
+  it.each(["count", "count_distinct"] as const)(
+    "accepts scalar Y columns for %s while keeping other roles restricted",
+    (aggregate) => {
+      expect(filterColumnsForRole(cols, "bar", "y", aggregate).map((c) => c.name)).toEqual([
+        "ch1",
+        "tag",
+        "ts",
+        "creator",
+      ]);
+      expect(filterColumnsForRole(cols, "bar", "y", "sum").map((c) => c.name)).toEqual(["ch1"]);
+      expect(filterColumnsForRole(cols, "bubble", "size", aggregate).map((c) => c.name)).toEqual([
+        "ch1",
+      ]);
+    },
+  );
+
   it("falls back to ANY_PLOTTABLE when the role has no acceptedKinds set", () => {
     // Heatmap X / Y are permissive; only complex types get dropped.
     const result = filterColumnsForRole(cols, "heatmap", "x").map((c) => c.name);

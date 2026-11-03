@@ -115,12 +115,12 @@ describe("ResourceList", () => {
   it("shows the chip row only while a filter is active", async () => {
     const user = userEvent.setup();
     renderList();
-    expect(screen.queryByRole("group", { name: /common\.filterIs/ })).toBeNull();
+    expect(screen.queryByRole("group", { name: /common\.filterChip/ })).toBeNull();
 
     const filtered = makeList({ hasActiveFilters: true });
     renderList(filtered, [visibilityFilter(["public"])]);
     expect(
-      screen.getByRole("group", { name: "Visibility common.filterIs Public" }),
+      screen.getByRole("group", { name: "common.filterChip:Visibility:Public" }),
     ).toBeInTheDocument();
     await user.click(screen.getAllByRole("button", { name: "common.clearFilters" })[0]);
 

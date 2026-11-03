@@ -28,6 +28,10 @@ export interface ListFilterLabels {
   addFilter: string;
   /** Joins a chip's filter and value, as in "Status is Draft". */
   is: string;
+  /** A chip's accessible name, as in "Status is Draft", in the language's own word order. */
+  chip: (filter: string, value: string) => string;
+  /** The row that returns from a filter's values to the list of filters on a phone. */
+  back: string;
   clearFilters: string;
   selectedCount: (count: number) => string;
   removeValue: (filter: string, value: string) => string;

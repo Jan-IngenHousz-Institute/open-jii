@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ListFilterMenu } from "../list-filter-menu";
 import { labels, makeFilters } from "./list-filter-fixtures";
@@ -97,6 +97,33 @@ describe("ListFilterMenu", () => {
     expect(screen.getByRole("listbox", { name: "Visibility" })).toBeInTheDocument();
   });
 
+  it("marks the filter rows as opening a list without aria-expanded on an option", async () => {
+    const user = userEvent.setup();
+    render(<ListFilterMenu filters={makeFilters().filters} labels={labels} />);
+
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.click(screen.getByRole("option", { name: "Status" }));
+
+    const row = within(screen.getByRole("listbox", { name: "Filter" })).getByRole("option", {
+      name: "Status",
+    });
+    expect(row).toHaveAttribute("aria-haspopup", "listbox");
+    expect(row).not.toHaveAttribute("aria-expanded");
+  });
+
+  it("opens a filter's values with ArrowRight and closes them with ArrowLeft", async () => {
+    const user = userEvent.setup();
+    render(<ListFilterMenu filters={makeFilters().filters} labels={labels} />);
+
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("listbox", { name: "Status" })).toBeInTheDocument();
+
+    await user.keyboard("{ArrowLeft}");
+    expect(screen.queryByRole("listbox", { name: "Status" })).not.toBeInTheDocument();
+    expect(screen.getByRole("listbox", { name: "Filter" })).toBeInTheDocument();
+  });
+
   it("picks values from the keyboard", async () => {
     const user = userEvent.setup();
     const { filters, onStatuses } = makeFilters();
@@ -107,5 +134,58 @@ describe("ListFilterMenu", () => {
     await user.keyboard("{ArrowDown}{Enter}");
 
     expect(onStatuses).toHaveBeenCalledWith(["active"]);
+  });
+});
+
+describe("ListFilterMenu on a phone", () => {
+  const desktop = window.matchMedia;
+
+  beforeEach(() => {
+    window.matchMedia = (query: string) =>
+      ({
+        matches: query.includes("max-width"),
+        media: query,
+        onchange: null,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as MediaQueryList;
+  });
+
+  afterEach(() => {
+    window.matchMedia = desktop;
+  });
+
+  it("replaces the list of filters with the chosen filter's values and a back row", async () => {
+    const user = userEvent.setup();
+    const { filters, onStatuses } = makeFilters();
+    render(<ListFilterMenu filters={filters} labels={labels} />);
+
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.click(screen.getByRole("option", { name: "Status" }));
+
+    expect(screen.queryByRole("listbox", { name: "Filter" })).not.toBeInTheDocument();
+    const values = screen.getByRole("listbox", { name: "Status" });
+    await user.click(within(values).getByRole("option", { name: "Active" }));
+    expect(onStatuses).toHaveBeenCalledWith(["active"]);
+
+    await user.click(screen.getByRole("button", { name: "Back" }));
+
+    expect(screen.queryByRole("listbox", { name: "Status" })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Visibility" })).toBeInTheDocument();
+  });
+
+  it("goes back to the list of filters with ArrowLeft", async () => {
+    const user = userEvent.setup();
+    render(<ListFilterMenu filters={makeFilters().filters} labels={labels} />);
+
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("listbox", { name: "Status" })).toBeInTheDocument();
+
+    await user.keyboard("{ArrowLeft}");
+    expect(screen.getByRole("listbox", { name: "Filter" })).toBeInTheDocument();
   });
 });

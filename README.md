@@ -66,7 +66,7 @@ A pnpm + Turborepo workspace.
 | `packages/auth`          | [Better Auth](https://better-auth.com) configuration (web + mobile)                  |
 | `packages/database`      | Postgres and ClickHouse schemas and migrations, Postgres seeding and compose scripts |
 | `packages/ui`            | Shared React component library (shadcn/Radix, charts, maps, forms)                   |
-| `packages/cms`           | Contentful integration for the public site (GraphQL codegen, live preview)           |
+| `packages/cms`           | Shared Contentful client, GraphQL codegen and generated types                        |
 | `packages/i18n`          | i18next internationalization (en-US, de-DE)                                          |
 | `packages/iot`           | Shared IoT device types and connector logic                                          |
 | `packages/transactional` | Transactional email templates (React Email)                                          |

@@ -76,10 +76,31 @@ exports.handler = async () => {
         AND created_at <  date_trunc('week', now())
     `;
 
+    // People, not exports, so a researcher who exports one table twenty times counts once. An
+    // export's watchers asked for it while it ran and received it too. A completed export turns
+    // expired later and a failed one carries completed_at as well, so the status decides.
+    const [{ exported }] = await sql`
+      SELECT COUNT(DISTINCT researcher)::int AS exported
+      FROM experiment_exports, unnest(array_append(watcher_ids, created_by)) AS researcher
+      WHERE status IN ('completed', 'expired')
+        AND completed_at >= date_trunc('week', now() - INTERVAL '7 days')
+        AND completed_at <  date_trunc('week', now())
+    `;
+
+    const [{ uploaded }] = await sql`
+      SELECT COUNT(DISTINCT created_by)::int AS uploaded
+      FROM experiment_uploads
+      WHERE status = 'completed'
+        AND completed_at >= date_trunc('week', now() - INTERVAL '7 days')
+        AND completed_at <  date_trunc('week', now())
+    `;
+
     const metricData = [
       { MetricName: "WeeklyNewUsers", Value: signups },
       { MetricName: "TotalUsers", Value: total },
       { MetricName: "WeeklyNewExperiments", Value: created },
+      { MetricName: "WeeklyResearchersExported", Value: exported },
+      { MetricName: "WeeklyResearchersUploaded", Value: uploaded },
     ].map((point) => ({
       ...point,
       Unit: StandardUnit.Count,
@@ -94,6 +115,8 @@ exports.handler = async () => {
         signups,
         totalUsers: total,
         experimentsCreated: created,
+        researchersExported: exported,
+        researchersUploaded: uploaded,
       }),
     );
   } finally {

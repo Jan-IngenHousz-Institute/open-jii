@@ -1,11 +1,12 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import * as React from "react";
 
 import { Button } from "./button";
 import type { ListFilter, ListFilterLabels } from "./list-filter-menu";
+import { FilterChipGroup } from "./list-filter/filter-chip-group";
 import { FilterPickerContent } from "./list-filter/filter-picker-content";
-import { ValueChip } from "./list-filter/value-chip";
 import { Popover, PopoverTrigger } from "./popover";
 
 interface ListFilterChipsProps {
@@ -14,41 +15,45 @@ interface ListFilterChipsProps {
   onClear: () => void;
 }
 
-/** One chip per picked value, a button back to any filter not yet used, and "Clear filters". */
+/** One chip per picked value, a button back to the list of filters, and "Clear filters". */
 export function ListFilterChips({ filters, labels, onClear }: ListFilterChipsProps) {
-  const chips = filters.flatMap((filter) =>
-    filter.options
-      .filter((option) => filter.selected.includes(option.value))
-      .map((option) => ({ filter, option })),
-  );
+  const [openKey, setOpenKey] = React.useState<string | null>(null);
+  const [isAdding, setIsAdding] = React.useState(false);
+  const addRef = React.useRef<HTMLButtonElement>(null);
 
-  if (chips.length === 0) {
+  // A filter whose list is open stays, even once its last value is unticked, until it closes.
+  const shown = filters.filter((filter) => filter.selected.length > 0 || filter.key === openKey);
+
+  if (shown.length === 0 && !isAdding) {
     return null;
   }
 
-  // Once every filter has a chip, each one's values open from its chips.
-  const hasUnusedFilter = filters.some((filter) => filter.selected.length === 0);
-
   return (
     <div className="bg-muted/50 flex flex-wrap items-center gap-2 rounded-md border p-2">
-      {chips.map(({ filter, option }) => (
-        <ValueChip
-          key={`${filter.key}:${option.value}`}
+      {shown.map((filter) => (
+        <FilterChipGroup
+          key={filter.key}
           filter={filter}
-          option={option}
           labels={labels}
+          open={openKey === filter.key}
+          onOpenChange={(open) => setOpenKey(open ? filter.key : null)}
+          fallbackFocusRef={addRef}
         />
       ))}
-      {hasUnusedFilter && (
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="size-7" aria-label={labels.addFilter}>
-              <Plus aria-hidden="true" />
-            </Button>
-          </PopoverTrigger>
-          <FilterPickerContent filters={filters} labels={labels} />
-        </Popover>
-      )}
+      <Popover open={isAdding} onOpenChange={setIsAdding}>
+        <PopoverTrigger asChild>
+          <Button
+            ref={addRef}
+            variant="ghost"
+            size="icon-sm"
+            className="size-7"
+            aria-label={labels.addFilter}
+          >
+            <Plus aria-hidden="true" />
+          </Button>
+        </PopoverTrigger>
+        <FilterPickerContent filters={filters} labels={labels} />
+      </Popover>
       <Button variant="ghost" size="sm" className="ml-auto h-7" onClick={onClear}>
         {labels.clearFilters}
       </Button>

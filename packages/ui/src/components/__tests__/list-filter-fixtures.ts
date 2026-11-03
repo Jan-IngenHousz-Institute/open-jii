@@ -7,6 +7,8 @@ export const labels: ListFilterLabels = {
   filter: "Filter",
   addFilter: "Add filter",
   is: "is",
+  chip: (filter, value) => `${filter} is ${value}`,
+  back: "Back",
   clearFilters: "Clear filters",
   selectedCount: (count) => `${count} selected`,
   removeValue: (filter, value) => `Remove ${filter} is ${value}`,

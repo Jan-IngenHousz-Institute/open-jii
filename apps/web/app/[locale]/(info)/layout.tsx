@@ -3,9 +3,9 @@ import { NewsletterSubscribeForm } from "@/components/newsletter/newsletter-subs
 import { TranslationBundles } from "@/components/translation-bundles";
 import { draftMode } from "next/headers";
 import React from "react";
+import { HomeFooter } from "~/components/cms/footer";
 import { buildTimeLocaleParams, getContentfulClients } from "~/lib/contentful";
 
-import { HomeFooter } from "@repo/cms";
 import type { FooterFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 import type { Namespace } from "@repo/i18n";
 import { loadNamespaceBundles } from "@repo/i18n/server";

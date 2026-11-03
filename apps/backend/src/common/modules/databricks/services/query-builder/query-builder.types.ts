@@ -32,6 +32,7 @@ export type AggregateFunction =
   | "sum"
   | "avg"
   | "count"
+  | "count_distinct"
   | "min"
   | "max"
   | "std"

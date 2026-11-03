@@ -117,6 +117,22 @@ shows, for example _Showing 100,000 of 553,000 rows. Add a filter to see all
 matching rows._ Add a filter to the visualization or to the dashboard until every
 matching row fits, or export the table to work with all of it.
 
+### Count sensors reporting per hour
+
+Create a **Bar** chart and choose your timestamp column under **X axis**. Set its
+**Bucket** to **Hour**. Under **Y axis**, choose **Distinct count** in
+**Aggregate**, then choose the text column that identifies each sensor. You can
+choose the aggregate before selecting a Y column.
+
+Each bar counts the different sensor IDs within that hour. Repeated
+reports from one sensor count once, and missing values do not count. An empty
+string is a value and counts once. **Count** counts all non-missing values in the
+selected column, including repeated sensor IDs. Both count aggregates accept
+text, numeric and date columns. Their results use a numeric Y axis.
+
+In a bar chart, if you change a text Y series to a numeric aggregate such as **Sum**, the column
+selection clears. Choose a numeric column to continue.
+
 ### Split a chart into panels
 
 In the visualization editor's **Data** tab, set **Facet (small multiples)**

@@ -37,6 +37,7 @@ Allow up to five minutes for a published change to reach platform pages and mobi
 
 ## Implementation map
 
-- shared query and rendering: `packages/cms/src/features/alert/` and `packages/cms/src/lib/graphql/componentAlerts.graphql`
+- shared query and severity helpers: `packages/cms/src/lib/graphql/componentAlerts.graphql` and `packages/cms/src/features/alert/severity.ts`
+- web rendering: `apps/web/components/cms/alert/`
 - web fetch/cache: `apps/web/components/alerts-bar.tsx`
 - mobile fetch/cache: `apps/mobile/src/features/alerts/`
