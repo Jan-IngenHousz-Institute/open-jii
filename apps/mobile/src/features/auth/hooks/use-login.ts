@@ -7,7 +7,7 @@ import {
   verifyEmailLoginOtp,
 } from "~/features/auth/api/login.api";
 import { getAuthClient } from "~/features/auth/services/auth";
-import { getSessionToken, hasSessionToken } from "~/shared/api/session-cookie";
+import { getSessionTokens, hasSessionToken } from "~/shared/api/session-cookie";
 import { ensureDeviceRegistered } from "~/shared/composition/ensure-device-registered";
 import { prefetchOfflineData } from "~/shared/composition/prefetch-offline-data";
 import { useTranslation } from "~/shared/i18n";
@@ -44,14 +44,15 @@ async function lookUpSession(authClient: ReturnType<typeof getAuthClient>): Prom
 }
 
 // Expo resolves a dismissed browser like a finished sign-in. Only a finished
-// one stores a new session token; a leftover token stays as it was.
+// one stores a new session token; leftover tokens, from this environment or
+// another, stay as they were.
 async function signInThroughBrowser(signIn: () => Promise<void>): Promise<boolean> {
   const authClient = getAuthClient();
-  const tokenBefore = getSessionToken(await authClient.getCookie());
+  const tokensBefore = getSessionTokens(await authClient.getCookie());
   await signIn();
-  const tokenAfter = getSessionToken(await authClient.getCookie());
+  const tokensAfter = getSessionTokens(await authClient.getCookie());
 
-  return tokenAfter !== null && tokenAfter !== tokenBefore;
+  return tokensAfter.some((token) => !tokensBefore.includes(token));
 }
 
 export function useLoginFlow() {
@@ -60,8 +61,6 @@ export function useLoginFlow() {
 
   const prefetch = async () => {
     const authClient = getAuthClient();
-    // Expo resolves cancelled OAuth as a redirect response; only a completed
-    // sign-in writes a session token.
     if (!hasSessionToken(await authClient.getCookie())) return;
 
     // A leftover token can belong to a revoked session, so the server decides.

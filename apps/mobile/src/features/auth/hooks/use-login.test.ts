@@ -76,6 +76,7 @@ describe.each(["GitHub", "ORCID"] as const)("%s sign-in", (provider) => {
     "better-auth.dev.oauth_state=pending",
     "better-auth.dev.session_token=revoked",
     "better-auth.dev.session_token=revoked; better-auth.dev.oauth_state=pending",
+    "better-auth.prod.session_token=stale; better-auth.dev.session_token=revoked",
   ])(
     "reports an unfinished sign-in after cancel with cookie %j and makes no follow-up requests",
     async (cookie) => {
@@ -126,6 +127,15 @@ describe.each(["GitHub", "ORCID"] as const)("%s sign-in", (provider) => {
 
   it("reports a finished sign-in once the browser stores a new session token", async () => {
     finishSignInWith("better-auth.dev.session_token=valid");
+    getSession.mockResolvedValue({ data: { user: { id: "user-1" } } });
+
+    expect(await signIn()).toBe(true);
+    expect(prefetchOfflineData).toHaveBeenCalledExactlyOnceWith(queryClient, "user-1");
+  });
+
+  it("reports a finished sign-in when another environment's token is still stored", async () => {
+    getCookie.mockResolvedValue("better-auth.prod.session_token=stale");
+    finishSignInWith("better-auth.prod.session_token=stale; better-auth.dev.session_token=valid");
     getSession.mockResolvedValue({ data: { user: { id: "user-1" } } });
 
     expect(await signIn()).toBe(true);

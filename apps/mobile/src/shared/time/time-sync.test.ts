@@ -1,4 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
+import { deferred } from "~/shared/testing/deferred";
 
 // --- Mocks ---
 
@@ -46,15 +47,20 @@ vi.mock("~/shared/i18n", () => ({
 
 let mockServerUtcMs = Date.now();
 let getTimeCallCount = 0;
+// Holds the server time response back until it settles.
+let pendingServerTime: Promise<void> | null = null;
 vi.mock("~/shared/api/client", () => ({
   getApiClient: () => ({
     health: {
       getTime: () => {
         getTimeCallCount++;
-        return Promise.resolve({
+        const response = {
           utcTimestampMs: mockServerUtcMs,
           utcTimestampSec: Math.floor(mockServerUtcMs / 1000),
-        });
+        };
+        return pendingServerTime
+          ? pendingServerTime.then(() => response)
+          : Promise.resolve(response);
       },
     },
   }),
@@ -92,6 +98,7 @@ describe("time-sync", () => {
     mockUnsubscribe.mockClear();
     mockServerUtcMs = Date.now();
     getTimeCallCount = 0;
+    pendingServerTime = null;
     mockIsInternetReachable = true;
     mockLocationStatus = "granted";
     mockRequestForegroundPermissionsAsync.mockClear();
@@ -619,6 +626,47 @@ describe("time-sync", () => {
 
       expect(mockGetCurrentPositionAsync).not.toHaveBeenCalled();
       expect(getTimeSyncState().timezone).toBe("America/Chicago");
+    });
+
+    it("keeps a resolved timezone when a refresh can only fall back to UTC", async () => {
+      mockIsInternetReachable = false;
+      mockAsyncStorage.TIME_SYNC_STATE = JSON.stringify({
+        offsetMs: 0,
+        timezone: "Europe/Amsterdam",
+        isSynced: true,
+        missedPings: 0,
+        lastSyncedAt: Date.now() - 2 * 24 * 60 * 60 * 1000,
+      });
+      const { startTimeSync, refreshTimezone, getTimeSyncState } = await import(
+        "~/shared/time/time-sync"
+      );
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+      mockGetCurrentPositionAsync.mockRejectedValueOnce(new Error("no fix"));
+
+      await refreshTimezone();
+
+      expect(mockGetCurrentPositionAsync).toHaveBeenCalledTimes(1);
+      expect(getTimeSyncState().timezone).toBe("Europe/Amsterdam");
+    });
+
+    it("keeps a timezone refreshed while a sync waits for the server", async () => {
+      mockLocationStatus = "undetermined";
+      const serverTime = deferred<void>();
+      pendingServerTime = serverTime.promise;
+      const { startTimeSync, refreshTimezone, getTimeSyncState } = await import(
+        "~/shared/time/time-sync"
+      );
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      mockLocationStatus = "granted";
+      await refreshTimezone();
+      serverTime.resolve();
+      await vi.advanceTimersByTimeAsync(50);
+
+      expect(getTimeSyncState()).toMatchObject({ isSynced: true, timezone: "America/Chicago" });
+      expect(JSON.parse(mockAsyncStorage.TIME_SYNC_STATE ?? "{}").timezone).toBe("America/Chicago");
     });
   });
 

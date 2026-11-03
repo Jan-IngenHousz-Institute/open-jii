@@ -144,6 +144,7 @@ async function fetchServerTime(): Promise<number> {
 
 async function performSync(isInitial = false): Promise<void> {
   const t0 = Date.now();
+  const timezoneAtStart = state.timezone;
   const networkState = await Network.getNetworkStateAsync();
   if (!networkState.isInternetReachable) {
     log.info("skipping sync — device is offline", { is_initial: isInitial });
@@ -151,7 +152,7 @@ async function performSync(isInitial = false): Promise<void> {
   }
 
   try {
-    const timezone = await maybeResolveTimezone();
+    const resolvedTimezone = await maybeResolveTimezone();
     const beforeFetch = Date.now();
     const serverUtcMs = await fetchServerTime();
     const afterFetch = Date.now();
@@ -159,6 +160,10 @@ async function performSync(isInitial = false): Promise<void> {
     const roundTripMs = afterFetch - beforeFetch;
     const estimatedServerNow = serverUtcMs + roundTripMs / 2;
     const offsetMs = estimatedServerNow - afterFetch;
+
+    // refreshTimezone() can store a newer timezone while this sync is out.
+    const isTimezoneRefreshed = state.timezone !== timezoneAtStart;
+    const timezone = isTimezoneRefreshed ? state.timezone : resolvedTimezone;
 
     state = {
       offsetMs,
