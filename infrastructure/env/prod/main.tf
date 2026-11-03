@@ -823,6 +823,7 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_uploaded_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_large_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_device_lifecycle_events",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/ingest_healthchecks",
     # silver
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/silver/clean_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/silver/clean_device_lifecycle_events",
@@ -3377,10 +3378,12 @@ module "grafana_dashboard" {
 
   # Passed in rather than interpolated: a rule watching a misspelled function is NoData
   # forever, which is either permanently firing or permanently silent.
-  metrics_forwarder_function_name = module.metrics_forwarder.function_name
-  cost_publisher_function_name    = module.cost_publisher.function_name
-  metrics_publisher_function_name = module.grafana_metrics_publisher.function_name
-  db_cluster_identifier           = "open-jii-${var.environment}-db-cluster"
+  metrics_forwarder_function_name  = module.metrics_forwarder.function_name
+  cost_publisher_function_name     = module.cost_publisher.function_name
+  metrics_publisher_function_name  = module.grafana_metrics_publisher.function_name
+  ingest_healthcheck_function_name = local.ingest_healthcheck_publishing ? module.ingest_healthcheck.function_name : ""
+  ingest_healthcheck_alerting      = local.ingest_healthcheck_alerting
+  db_cluster_identifier            = "open-jii-${var.environment}-db-cluster"
 
   # IoT and Kinesis monitoring
   kinesis_stream_name = module.kinesis.kinesis_stream_name
@@ -3425,6 +3428,22 @@ module "cost_publisher" {
   source = "../../modules/grafana/cost-publisher"
 
   environment = var.environment
+}
+
+locals {
+  # Flip once the centrum pipeline that drops health checks from raw_data is running here.
+  ingest_healthcheck_publishing = false
+
+  # Flip after the first HealthcheckAgeMinutes datapoint appears, and not with the publisher: the
+  # stalled rule fires on no data, so switching it on earlier pages before any message is read.
+  ingest_healthcheck_alerting = false
+}
+
+module "ingest_healthcheck" {
+  source = "../../modules/monitoring/ingest-healthcheck"
+
+  environment        = var.environment
+  publishing_enabled = local.ingest_healthcheck_publishing
 }
 
 module "heartbeat_metrics_s3" {

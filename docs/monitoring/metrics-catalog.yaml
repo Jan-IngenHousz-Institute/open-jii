@@ -122,6 +122,11 @@ passes:
   - date: 2026-11-03
     range: [131, 131]
     note: how long the backend's reads of the serving store take, against the project's one-second target
+  - date: 2026-11-04
+    range: [132, 134]
+    note: >-
+      a synthetic message sent through the real ingest rule every minute, so a stopped ingest path
+      reaches someone at a quiet hour, how long it takes, and the publisher's own errors
 
 metrics:
   # Ingest path
@@ -210,10 +215,11 @@ metrics:
       dimensions: { StreamName: "${KINESIS_STREAM_NAME}" }
     baseline: { method: same-weekday-4w, anomaly_pct: 50 }
     notes: >
-      Top-line ingest volume on the Data pipeline dashboard; the reports count device publishes (81) instead. The anomaly_pct is
-      inert until an ingest-collapse rule lands in P2b, which is where "producers
-      stopped publishing" should alarm (iterator age only catches a stalled
-      consumer).
+      Top-line ingest volume on the Data pipeline dashboard; the reports count device publishes (81)
+      instead. The stream also carries one ingest health check record a minute (132), so it counts
+      about 60 an hour with every device quiet. The anomaly_pct is inert until an ingest-collapse
+      rule lands in P2b, which is where "producers stopped publishing" should alarm (iterator age
+      only catches a stalled consumer).
 
   - num: 8
     id: ingest-lag
@@ -1574,10 +1580,13 @@ metrics:
     slots: [exception, weekly]
     signal:
       namespace: AWS/IoT
-      search: SEARCH('{AWS/IoT,Protocol} MetricName="PublishIn.Success"', 'Sum')
+      search: SEARCH('{AWS/IoT,Protocol} MetricName="PublishIn.Success" AND Protocol="MQTT"', 'Sum')
       stat: Sum
       period: 604800
-    notes: Every MQTT publish IoT Core accepted, measurements and device events alike. The start of the path.
+    notes: >-
+      Every MQTT publish IoT Core accepted, measurements and device events alike. The start of the
+      path. HTTP publishes are left out: devices use MQTT, and the ingest health check publishes
+      over HTTP.
 
   - num: 82
     id: ingested-rows
@@ -1750,7 +1759,7 @@ metrics:
       unit: minutes
       dimensions: { Environment: "${ENVIRONMENT}" }
     # Dev's devices publish in bursts, so an idle hour there is usually just quiet: its board
-    # turns red after a day. The rule also needs records waiting, so it fires at an hour in both.
+    # turns red after a day. The rule also needs device publishes waiting, so it fires at an hour in both.
     baseline:
       method: threshold
       max: 60
@@ -1758,9 +1767,11 @@ metrics:
         dev: { method: threshold, max: 1440 }
     runbook: docs/runbooks/ingest-idle.md
     notes: >-
-      Minutes since bronze last wrote. Bronze only writes when data arrives, so it is a stall only
-      beside records still waiting, which is what its rule checks against the stream's incoming
-      records.
+      Minutes since bronze last wrote rows. A commit that wrote none does not count: the pipeline
+      commits empty micro-batches, and the ingest health check (132), one record a minute on the same
+      stream that bronze drops from `raw_data`, would otherwise keep this fresh. It is a stall only
+      beside records still waiting, which is what its rule checks against IoT Core's MQTT publishes,
+      the devices' own, since the health check publishes over HTTP.
 
   - num: 90
     id: macro-idle
@@ -2381,3 +2392,75 @@ metrics:
       that failed counts as the 30 s a read may last, so reads that time out or hit the memory cap
       raise it. The project's target is a second. StoreReads and StoreReadFailures go out beside it,
       over one minute; every window ends ten seconds back, past the log's flush.
+
+  - num: 132
+    id: ingest-healthcheck-age
+    name: Since last ingest health check
+    family: observability
+    area: path
+    source: dbx
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: critical
+    signal:
+      namespace: OpenJII/Data
+      metric: HealthcheckAgeMinutes
+      stat: Maximum
+      unit: minutes
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: threshold, max: 45, nodata: alert }
+    runbook: docs/runbooks/ingest-healthcheck-age.md
+    notes: >-
+      Minutes since the newest synthetic message the ingest health check sent arrived at Kinesis,
+      among those bronze has written. It runs on Kinesis's arrival time and not the sender's clock,
+      because the topic takes any payload from any publisher. A Lambda publishes one through the
+      real ingest rule every minute, and bronze keeps it in its own table apart from measurements.
+      Unlike 89, which is a stall only beside records still waiting, this reads a quiet night as
+      healthy and a stopped path as stopped, from the broker to the lakehouse. The heartbeat export
+      reads it every half hour, so the alert follows a stop by 60 to 100 minutes. No message in the
+      table, or an export that reports none, reads No data and fires the same way.
+
+  - num: 133
+    id: ingest-healthcheck-latency
+    name: Ingest health check, send to lakehouse
+    family: observability
+    area: latency
+    source: dbx
+    phase: P3
+    active: true
+    slots: [exception]
+    signal:
+      namespace: OpenJII/Data
+      metric: HealthcheckLatencyP95Seconds
+      stat: Maximum
+      unit: seconds
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      The slowest twentieth of the health check messages written to bronze in the last hour, from the
+      publisher sending each to its write, read every half hour. A message whose send time is after
+      its write, or over an hour before it, is left out, since the topic takes any payload. It covers
+      the broker, the stream and bronze's trigger together, where 85 starts at the stream. Nothing
+      alerts on it.
+
+  - num: 134
+    id: ingest-healthcheck-errors
+    name: Ingest health check publisher errors
+    family: observability
+    area: ingest
+    source: aws
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: AWS/Lambda
+      metric: Errors
+      stat: Sum
+      dimensions: { FunctionName: "${INGEST_HEALTHCHECK_FUNCTION_NAME}" }
+    baseline: { method: threshold, max: 2 }
+    runbook: docs/runbooks/ingest-healthcheck-errors.md
+    notes: >-
+      The publisher runs every minute and is not retried, so one failed run costs one minute of the
+      check and the rule waits for more than two in five minutes. While it fires, a stalled health
+      check (132) may be the publisher and not the path.

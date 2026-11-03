@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 import openjii.centrum as centrum
+
+_HEALTHCHECK_MODULE = (
+    Path(__file__).parents[4] / "infrastructure/modules/monitoring/ingest-healthcheck/main.tf"
+)
 
 
 def test_upload_constants_exported() -> None:
@@ -38,3 +45,29 @@ def test_runtime_not_reexported() -> None:
     # runtime.py reads spark.conf eagerly; keeping it out of the package __init__
     # is what makes `import openjii.centrum` safe without an active Spark session.
     assert "runtime" not in centrum.__all__
+
+
+def test_healthcheck_constants_exported() -> None:
+    assert centrum.INGEST_HEALTHCHECKS_TABLE == "ingest_healthchecks"
+    for name in (
+        "INGEST_HEALTHCHECKS_TABLE",
+        "INGEST_HEALTHCHECK_EXPERIMENT_ID",
+        "INGEST_TOPIC_EXPERIMENT_PATTERN",
+    ):
+        assert name in centrum.__all__
+
+
+def test_healthcheck_topic_carries_the_id_bronze_splits_on() -> None:
+    # A mismatch is silent: the publisher's messages would reach raw_data as measurements, which
+    # is non-resettable, while the health check table read nothing.
+    declared = re.search(r'^\s*topic\s*=\s*"([^"]+)"', _HEALTHCHECK_MODULE.read_text(), re.MULTILINE)
+    assert declared is not None
+    topic = declared.group(1).replace("${var.environment}", "dev")
+
+    extracted = re.search(centrum.INGEST_TOPIC_EXPERIMENT_PATTERN, topic)
+    assert extracted is not None
+    assert extracted.group(1) == centrum.INGEST_HEALTHCHECK_EXPERIMENT_ID
+
+    # The lean ingest rule selects four segments after the version, and only a topic it selects
+    # takes the real path to Kinesis.
+    assert len(topic.removeprefix("experiment/data_ingest/v1/").split("/")) == 4

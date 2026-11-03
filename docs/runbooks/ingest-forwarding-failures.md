@@ -74,6 +74,12 @@ prefix, so replay is a manual job of re-publishing those payloads into the strea
 flip. Establish which action failed before telling anyone the data is gone, because half the time it
 is not.
 
+The ingest health check publishes a synthetic message every minute to
+`experiment/data_ingest/v1/healthcheck/healthcheck/1/<env>`, so those messages are in the raw
+archive and in these objects too. Skip every one whose topic starts with
+`experiment/data_ingest/v1/healthcheck/`: they carry no measurement, and replayed into the stream
+they would reach `ingest_healthchecks` hours late and lift its latency.
+
 ## Closing
 
 Do not close on "the metric returned to zero". Confirm the rule is executing successfully for the

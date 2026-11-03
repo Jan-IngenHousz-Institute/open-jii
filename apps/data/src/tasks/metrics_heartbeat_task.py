@@ -19,6 +19,7 @@ import os
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 
+from openjii.centrum.constants import INGEST_HEALTHCHECKS_TABLE
 from openjii.heartbeat import (
     ACTIVE_CONTRIBUTORS_7D_METRIC,
     ACTIVE_DEVICES_7D_METRIC,
@@ -41,6 +42,8 @@ from openjii.heartbeat import (
     FLOW_BUSY_METRIC,
     FLOW_RESTARTS_METRIC,
     GOLD_AGE_METRIC,
+    HEALTHCHECK_AGE_METRIC,
+    HEALTHCHECK_LATENCY_METRIC,
     INGEST_BAD_PAYLOAD_RATE_METRIC,
     INGEST_IDLE_METRIC,
     INGEST_LATENCY_METRIC,
@@ -79,6 +82,7 @@ from openjii.heartbeat import (
     failed_rows_by_cause_sql,
     heartbeat_key,
     hop,
+    ingest_healthcheck_sql,
     latest_full_collection,
     latest_pipeline_hour,
     loggers_started_sql,
@@ -142,6 +146,7 @@ ACTIVITY_WINDOWS = f"{CATALOG_NAME}.{METRICS_SCHEMA}.{ACTIVITY_WINDOWS_TABLE}"
 DEVICE_SILENCE = f"{CATALOG_NAME}.{METRICS_SCHEMA}.{OPS_DEVICE_SILENCE_TABLE}"
 INGEST_QUALITY = f"{CATALOG_NAME}.{METRICS_SCHEMA}.{OPS_INGEST_QUALITY_TABLE}"
 RAW_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.raw_data"
+INGEST_HEALTHCHECKS = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{INGEST_HEALTHCHECKS_TABLE}"
 CLEAN_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.clean_data"
 EXPERIMENT_RAW_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.experiment_raw_data"
 EXPERIMENT_MACRO_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.experiment_macro_data"
@@ -310,15 +315,17 @@ def commit_versions(table: str, start: datetime, end: datetime) -> tuple[int, in
     return row["lo"], row["hi"]
 
 
-def idle_minutes(table: str) -> float | None:
-    """Minutes since the stage last committed rows, measured at query time: the
+def idle_minutes(table: str, wrote_rows: bool = False) -> float | None:
+    """Minutes since the stage last committed, measured at query time: the
     pipelines commit every few seconds, so against the run's start this would
-    read negative. A streaming table only commits when rows arrive, so this
-    reads as a stall only beside data still arriving."""
+    read negative. An empty micro-batch commits too, so `wrote_rows` counts only
+    the commits that wrote rows, for a stage that drops some of what it reads.
+    Either way it reads as a stall only beside data still arriving."""
+    wrote_rows_filter = "AND CAST(operationMetrics['numOutputRows'] AS BIGINT) > 0" if wrote_rows else ""
     row = spark.sql(f"""
         SELECT round((unix_millis(current_timestamp()) - unix_millis(max(timestamp))) / 60000, 1) AS idle
         FROM (DESCRIBE HISTORY {table} LIMIT {HISTORY_DEPTH})
-        WHERE operation = 'STREAMING UPDATE'
+        WHERE operation = 'STREAMING UPDATE' {wrote_rows_filter}
     """).first()
     return row["idle"]
 
@@ -347,6 +354,25 @@ def collect_ingest(now: datetime) -> list[dict]:
         DATA_NAMESPACE,
         ENVIRONMENT,
     )
+
+
+def collect_ingest_healthcheck(now: datetime) -> list[dict]:
+    """The whole ingest path as one probe: minutes since the newest health check message reached
+    Kinesis, and p95 from a message's sending to bronze's write over the last hour. A table with no
+    message, or not created yet, emits neither, which reads as No data and trips the age's dead-man."""
+    if not spark.catalog.tableExists(INGEST_HEALTHCHECKS):
+        log("ingest_healthchecks does not exist yet; emitting no health check signal", "WARN")
+        return []
+
+    row = spark.sql(ingest_healthcheck_sql(INGEST_HEALTHCHECKS)).first()
+
+    records = []
+    if row["age_minutes"] is not None:
+        records.append(data_point(HEALTHCHECK_AGE_METRIC, row["age_minutes"], now, "None"))
+    if row["p95_seconds"] is not None:
+        records.append(data_point(HEALTHCHECK_LATENCY_METRIC, round(row["p95_seconds"], 1), now, "Seconds"))
+
+    return records
 
 
 def collect_experiment_rows(now: datetime) -> list[dict]:
@@ -557,10 +583,13 @@ def collect_macro_protocol_failures(now: datetime) -> list[dict]:
 
 
 def collect_path_idle(now: datetime) -> list[dict]:
-    """Minutes since bronze and the macro results last wrote."""
+    """Minutes since bronze last wrote rows and the macro results last committed."""
     records = []
-    for metric, table in ((INGEST_IDLE_METRIC, RAW_DATA), (MACRO_IDLE_METRIC, EXPERIMENT_MACRO_DATA)):
-        idle = idle_minutes(table)
+    for metric, table, wrote_rows in (
+        (INGEST_IDLE_METRIC, RAW_DATA, True),
+        (MACRO_IDLE_METRIC, EXPERIMENT_MACRO_DATA, False),
+    ):
+        idle = idle_minutes(table, wrote_rows)
         if idle is not None:
             records.append(data_point(metric, idle, now, "None"))
 
@@ -735,6 +764,7 @@ collectors = [
     ("device_silence", collect_device_silence),
     ("ingest_quality", collect_ingest_quality),
     ("ingest", collect_ingest),
+    ("ingest_healthcheck", collect_ingest_healthcheck),
     ("experiment_rows", collect_experiment_rows),
     ("measurement_copies", collect_measurement_copies),
     ("broker_to_api", collect_broker_to_api),

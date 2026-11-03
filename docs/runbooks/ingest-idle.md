@@ -1,15 +1,18 @@
 # ingest-idle
 
-**Records are waiting on the ingest stream, but bronze has written nothing for over an hour.** The
-consumer, the `Centrum-DLT-Pipeline-<ENV>` pipeline reading Kinesis into `raw_data`, has stopped or
-is running without writing. Nothing is lost yet: Kinesis keeps records for 24 hours, and bronze
+**Devices are publishing, but bronze has written no rows for over an hour.** The consumer, the
+`Centrum-DLT-Pipeline-<ENV>` pipeline reading Kinesis into `raw_data`, has stopped or is running
+without writing. Nothing is lost yet: Kinesis keeps records for 24 hours, and bronze
 catches up once it writes again. Everything downstream (experiments, macros, the API) is behind by
 the idle time on the daily report.
 
 The heartbeat export measures the idle time every half hour, so the reading can be up to 35 minutes
-old. The rule counts only records that arrived 45 to 60 minutes ago, after bronze's last write and
-before the reading, so a quiet stream never fires it and neither does a burst after a quiet spell.
-In dev, where devices publish in bursts, the board row turns red only after a day idle.
+old. It counts only commits that wrote rows, because the pipeline commits empty micro-batches too.
+The rule counts only MQTT publishes IoT Core accepted 45 to 60 minutes ago, after bronze's last
+write and before the reading, so a quiet night never fires it and neither does a burst after a quiet
+spell. The stream also carries one ingest health check record a minute, which bronze drops from
+`raw_data` and which publishes over HTTP, so neither the idle time nor the rule counts it. In dev,
+where devices publish in bursts, the board row turns red only after a day idle.
 
 ## Stopped, or running without writing
 
@@ -43,22 +46,25 @@ as no data; this rule is what notices that case.
 ## Drill
 
 Run on dev to show the alert still fires. Stopping and starting the pipeline is done by a person in
-the workspace, and publishing needs the infrastructure maintainer profile, the one role allowed to
-publish to the ingest topic.
+the workspace.
 
 1. Stop `Centrum-DLT-Pipeline-DEV`.
-2. Publish a measurement to a test experiment every five minutes until the alert fires. Dev's
-   devices are often quiet, and the rule fires only on records waiting.
+2. Publish a measurement to a test experiment over MQTT every five minutes until the alert fires,
+   from a dev phone running the mobile app or an MQTT client the dev thing policy lets publish to
+   the ingest topic. Dev's devices are often quiet, and the rule fires only on MQTT publishes.
+   `aws iot-data publish` goes over HTTP, which the rule leaves out, as it does the health check.
+   Confirm the publishes are counted:
 
    ```bash
-   aws iot-data publish --profile openjii-dev \
-     --endpoint-url "https://$(aws iot describe-endpoint --endpoint-type iot:Data-ATS --profile openjii-dev --output text)" \
-     --topic experiment/data_ingest/v1/<experiment id>/multispeq/1.0/drill \
-     --cli-binary-format raw-in-base64-out \
-     --payload "{\"device_id\":\"drill\",\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"sample\":\"[]\"}"
+   # On Linux, GNU date wants -d '30 minutes ago' where BSD date wants -v-30M
+   aws cloudwatch get-metric-statistics --profile openjii-dev --namespace AWS/IoT \
+     --metric-name PublishIn.Success --dimensions Name=Protocol,Value=MQTT \
+     --start-time "$(date -u -v-30M +%Y-%m-%dT%H:%M:%SZ)" \
+     --end-time "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+     --period 300 --statistics Sum
    ```
 
-3. Expect the alert 55 minutes after the first record, 45 for it to enter the rule's window and
+3. Expect the alert 55 minutes after the first publish, 45 for it to enter the rule's window and
    10 pending, when bronze had already been idle for an hour. Otherwise the idle reading passes 60
    minutes only at an export, every half hour, so allow up to 100 minutes from the stop.
 4. Start the pipeline without a full refresh. Bronze takes the waiting records once its cluster is
@@ -68,7 +74,7 @@ The alert clears at the next export that reads bronze idle for an hour or less, 
 last waiting record leaves its window an hour after it arrived, whether or not bronze is writing by
 then.
 
-On 2 November 2026 the first record arrived at 15:59:26 UTC, the rule went pending at 16:44:40,
+On 2 November 2026, when the rule still counted the stream's records, the first record arrived at 15:59:26 UTC, the rule went pending at 16:44:40,
 fired at 16:54:40, and its Slack message arrived at 16:55, with bronze idle for 85.9 minutes and
 three records in the window. The pipeline was started at about 16:56, bronze took the records at
 17:05:54, and the alert cleared at 17:09:40, as the last record, from 16:09:32, left the window.
