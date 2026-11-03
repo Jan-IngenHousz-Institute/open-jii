@@ -23,9 +23,22 @@ variable "databricks_client_id" {
 }
 
 variable "databricks_client_secret" {
-  description = "The service principal's client secret for Databricks authentication"
+  description = "The service principal's client secret for Databricks authentication; unset under github-oidc"
   type        = string
+  default     = null
   sensitive   = true
+  ephemeral   = true
+}
+
+variable "databricks_auth_type" {
+  description = "How the Databricks providers authenticate: oauth-m2m with the client secret, or github-oidc from a GitHub Actions job"
+  type        = string
+  default     = "oauth-m2m"
+
+  validation {
+    condition     = contains(["oauth-m2m", "github-oidc"], var.databricks_auth_type)
+    error_message = "databricks_auth_type must be oauth-m2m or github-oidc."
+  }
 }
 
 variable "databricks_host" {
@@ -216,12 +229,14 @@ variable "grafana_auth_service_token" {
   description = "Grafana AMG service account token for API access"
   type        = string
   sensitive   = true
+  ephemeral   = true
 }
 
 variable "posthog_tofu_api_key" {
   description = "PostHog personal API key OpenTofu manages the openJII project with"
   type        = string
   sensitive   = true
+  ephemeral   = true
 }
 
 variable "posthog_grafana_api_key" {

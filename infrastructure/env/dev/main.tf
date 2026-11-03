@@ -2,6 +2,17 @@ module "terraform_state_s3" {
   source      = "../../modules/s3"
   bucket_name = "open-jii-terraform-state-${var.environment}"
 
+  lifecycle_rules = [
+    {
+      id                                 = "expire-saved-plans"
+      status                             = "Enabled"
+      prefix                             = "plans/"
+      transitions                        = []
+      expiration_days                    = 7
+      noncurrent_version_expiration_days = 1
+    }
+  ]
+
   providers = {
     aws    = aws
     aws.dr = aws.dr

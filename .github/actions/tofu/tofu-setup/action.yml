@@ -4,7 +4,7 @@ inputs:
   tofu_version:
     description: "OpenTofu version to use"
     required: false
-    default: "1.6.0"
+    default: "1.12.11"
   aws_role_arn:
     description: "AWS Role ARN"
     required: true

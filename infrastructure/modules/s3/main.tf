@@ -252,7 +252,25 @@ resource "aws_s3_bucket_lifecycle_configuration" "lifecycle" {
         }
       }
 
-      filter {}
+      dynamic "noncurrent_version_expiration" {
+        for_each = rule.value.noncurrent_version_expiration_days != null ? [rule.value.noncurrent_version_expiration_days] : []
+        content {
+          noncurrent_days = noncurrent_version_expiration.value
+        }
+      }
+
+      # An empty filter keeps the rules without a prefix exactly as they were.
+      dynamic "filter" {
+        for_each = rule.value.prefix == null ? [1] : []
+        content {}
+      }
+
+      dynamic "filter" {
+        for_each = rule.value.prefix != null ? [rule.value.prefix] : []
+        content {
+          prefix = filter.value
+        }
+      }
     }
   }
 }

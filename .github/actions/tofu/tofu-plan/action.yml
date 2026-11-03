@@ -9,6 +9,10 @@ inputs:
     description: "Read every resource before planning; false compares the configuration with the state"
     required: false
     default: "true"
+  out:
+    description: "Absolute path to save the plan to, for an apply to use; empty saves nothing"
+    required: false
+    default: ""
 runs:
   using: "composite"
   steps:
@@ -26,6 +30,7 @@ runs:
       env:
         LOCK: ${{ inputs.lock }}
         REFRESH: ${{ inputs.refresh }}
+        OUT: ${{ inputs.out }}
       run: |
         exec 2>&1
-        tofu plan -input=false -lock="$LOCK" -refresh="$REFRESH"
+        tofu plan -input=false -lock="$LOCK" -refresh="$REFRESH" ${OUT:+-out="$OUT"}
