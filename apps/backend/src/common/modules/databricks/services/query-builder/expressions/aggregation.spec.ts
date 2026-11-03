@@ -116,6 +116,21 @@ describe("wrapWithAggregation", () => {
     );
   });
 
+  it.each([
+    [undefined, "sensor.id_count_distinct"],
+    ["unique_sensors", "unique_sensors"],
+    ["sensor.total`count", "sensor.total``count"],
+  ])("quotes the distinct-count result alias as one identifier: %s", (alias, escapedAlias) => {
+    const sql = wrapWithAggregation("SELECT * FROM readings", {
+      aggregation: {
+        functions: [{ column: "sensor.id", function: "count_distinct", alias }],
+      },
+    });
+    expect(sql).toBe(
+      `SELECT COUNT(DISTINCT \`sensor\`.\`id\`) AS \`${escapedAlias}\` FROM (SELECT * FROM readings)`,
+    );
+  });
+
   it("explode expands an array column before grouping", () => {
     const sql = wrapWithAggregation("SELECT * FROM t", {
       aggregation: {

@@ -149,7 +149,8 @@ export function wrapWithAggregation(
       }
 
       const expr = builder.buildAggregateExpression(item);
-      selectClauses.push(`${expr.sql} AS ${builder.escapeIdentifier(expr.alias)}`);
+      const alias = `\`${expr.alias.replaceAll("`", "``")}\``;
+      selectClauses.push(`${expr.sql} AS ${alias}`);
     }
   }
 

@@ -94,6 +94,61 @@ describe("BarDataPanel", () => {
     },
   );
 
+  it.each(["count", "count_distinct"] as const)(
+    "replaces a populated Y column and its live %s alias",
+    async (aggregate) => {
+      const user = userEvent.setup();
+      const oldAlias = aggregate === "count" ? "country_count_s1" : "country_count_distinct_s1";
+      const newAlias = aggregate === "count" ? "region_count_s1" : "region_count_distinct_s1";
+      const { form } = renderPanel(
+        defaults({
+          dataConfig: {
+            tableName: "sales",
+            dataSources: [
+              { tableName: "sales", columnName: "sales", role: "x" },
+              { tableName: "sales", columnName: "country", role: "y", aggregate, alias: "country" },
+            ],
+            aggregation: {
+              groupBy: [{ column: "sales" }],
+              functions: [{ column: "country", function: aggregate, alias: oldAlias }],
+            },
+          },
+        }),
+      );
+      const shelf = screen
+        .getByRole("heading", { name: "workspace.shelves.yAxis" })
+        .closest("section");
+      if (!shelf) throw new Error("Y shelf is missing");
+      const picker = within(shelf).getByRole("combobox", { name: "workspace.shelves.column" });
+      expect(picker).toHaveTextContent("country");
+      expect(form.getValues("dataConfig.aggregation")?.functions).toEqual([
+        { column: "country", function: aggregate, alias: oldAlias },
+      ]);
+
+      await user.click(picker);
+      await user.click(await screen.findByRole("option", { name: /region/ }));
+
+      await waitFor(
+        () =>
+          expect(form.getValues("dataConfig.aggregation")?.functions).toEqual([
+            { column: "region", function: aggregate, alias: newAlias },
+          ]),
+        { timeout: 1000 },
+      );
+      expect(form.getValues("dataConfig.dataSources.1")).toMatchObject({
+        columnName: "region",
+        aggregate,
+        alias: "region",
+      });
+      expect(form.getValues("dataConfig.aggregation")?.functions).not.toContainEqual(
+        expect.objectContaining({ column: "country" }),
+      );
+      expect(form.getValues("dataConfig.aggregation")?.functions).not.toContainEqual(
+        expect.objectContaining({ alias: oldAlias }),
+      );
+    },
+  );
+
   it("renders X, Y, group-by, and facet shelves", () => {
     renderPanel();
     expect(screen.getByRole("heading", { name: "workspace.shelves.xAxis" })).toBeInTheDocument();
