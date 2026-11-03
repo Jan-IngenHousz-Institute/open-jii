@@ -188,13 +188,18 @@ describe("costDatums", () => {
       usageByService: [
         day("2026-10-26", {
           "Amazon Elastic Compute Cloud - Compute@r6id.large": 10,
+          "Amazon Elastic Compute Cloud - Compute@r7i.xlarge": 5,
           "Amazon Elastic Compute Cloud - Compute@r7g.large": 3,
           "Amazon Simple Storage Service@r7g.large": 1,
         }),
       ],
     });
 
-    expect(value(split, "DailyCostUsd", "EC2 compute")).toBe(10);
+    // The clusters' instance types add up to one point for the day, not one each.
+    const yesterday = find(split, "DailyCostUsd", "EC2 compute").filter(
+      ({ datum }) => datum.Timestamp.toISOString() === "2026-10-27T00:00:00.000Z",
+    );
+    expect(yesterday.map(({ datum }) => datum.Value)).toEqual([15]);
     expect(value(split, "DailyCostUsd", "Serving store")).toBe(3);
     expect(find(split, "DailyCostUsd", "Serving store")[0].datum.Dimensions).toContainEqual({
       Name: "Category",
