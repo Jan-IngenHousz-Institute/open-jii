@@ -4,10 +4,12 @@
 machine's (`max_server_memory_usage_to_ram_ratio` in the store's `config.xml`). Past the cap it fails
 a query with `MEMORY_LIMIT_EXCEEDED` (code 241) instead of letting the kernel kill the server, and
 the query it fails is the one using the most memory beyond its share, not always the one that
-crossed the cap. Reads are also capped at 4 GiB each (`max_memory_usage` in its `users.xml`), which
-fails such a read at any memory level, so this alert does not cover that cap. The feed's inserts
-are under the server's cap alone, since an insert refused for its own size would be refused again on
-every retry.
+crossed the cap. Its message reads `(total) memory limit exceeded`. Reads are also capped at 4 GiB
+each (`max_memory_usage` in its `users.xml`), and the reader cannot lift that cap; past it a read
+fails at any memory level with `Query memory limit exceeded ... maximum: 4.00 GiB`, which this alert
+does not cover. The admin can lift it for one query with `SETTINGS max_memory_usage = 0`. The feed's
+inserts are under the server's cap alone, since an insert refused for its own size would be refused
+again on every retry.
 
 ## Find what holds the memory
 

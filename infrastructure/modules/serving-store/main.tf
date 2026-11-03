@@ -57,7 +57,7 @@ locals {
         "REVOKE INSERT ON store._migrations",
       ]
     }
-    reader = { name = "openjii_reader", profile = "default", grants = ["GRANT SELECT ON store.*"] }
+    reader = { name = "openjii_reader", profile = "reader", grants = ["GRANT SELECT ON store.*"] }
   }
 
   # The hashes of 32 random characters, shown in plans so a replacement says what changed.
