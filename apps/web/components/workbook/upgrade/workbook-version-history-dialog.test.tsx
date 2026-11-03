@@ -85,6 +85,31 @@ describe("WorkbookVersionHistoryDialog", () => {
     );
   });
 
+  it("localizes a duplicate-key rejection from the restore endpoint", async () => {
+    server.mount(contract.experiments.setWorkbookVersion, {
+      status: 400,
+      body: {
+        defined: false,
+        code: "BAD_REQUEST",
+        status: 400,
+        message: "English server detail",
+        data: { code: "DUPLICATE_QUESTION_KEY" },
+      },
+    });
+    const user = userEvent.setup();
+    render(<WorkbookVersionHistoryDialog {...baseProps} />);
+    await screen.findByText("v1");
+    await user.click(screen.getByRole("button", { name: "flow.versionHistory.restore" }));
+    const confirm = await screen.findByRole("alertdialog");
+    await user.click(within(confirm).getByRole("button", { name: "flow.versionHistory.restore" }));
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith({
+        description: "flow.upgradeDiff.issue.duplicateQuestionNameGeneric",
+        variant: "destructive",
+      }),
+    );
+  });
+
   it("dismisses the restore confirmation via cancel without restoring", async () => {
     const spy = server.mount(contract.experiments.setWorkbookVersion, {
       status: 200,

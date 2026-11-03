@@ -165,6 +165,7 @@ export function LinkedWorkbookCard({
               error,
               t("flow.attachFailed"),
               t("flow.upgradeDiff.issue.questionTypeChangeGeneric"),
+              t("flow.upgradeDiff.issue.duplicateQuestionNameGeneric"),
             ),
             variant: "destructive",
           });
@@ -217,6 +218,7 @@ export function LinkedWorkbookCard({
               error,
               t("flow.upgradeFailed"),
               t("flow.upgradeDiff.issue.questionTypeChangeGeneric"),
+              t("flow.upgradeDiff.issue.duplicateQuestionNameGeneric"),
             ),
             variant: "destructive",
           });

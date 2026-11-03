@@ -238,6 +238,61 @@ describe("LinkedWorkbookCard", () => {
     );
   });
 
+  it("localizes a duplicate-key rejection from the attach endpoint", async () => {
+    mountDefaults();
+    server.mount(contract.experiments.attachWorkbook, {
+      status: 400,
+      body: {
+        defined: false,
+        code: "BAD_REQUEST",
+        status: 400,
+        message: "English server detail",
+        data: { code: "DUPLICATE_QUESTION_KEY" },
+      },
+    });
+    const user = userEvent.setup();
+    render(<LinkedWorkbookCard {...defaultProps} />);
+    await screen.findByText("Test Workbook");
+    await user.click(screen.getByRole("button", { name: "flow.changeWorkbook" }));
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: "Other Workbook" }));
+    await user.click(screen.getByRole("button", { name: "flow.attach" }));
+    await user.click(await screen.findByRole("button", { name: "flow.confirmChange" }));
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith({
+        description: "flow.upgradeDiff.issue.duplicateQuestionNameGeneric",
+        variant: "destructive",
+      }),
+    );
+  });
+
+  it("localizes a duplicate-key rejection from the upgrade endpoint", async () => {
+    mountDefaults();
+    server.mount(contract.experiments.upgradeWorkbookVersion, {
+      status: 400,
+      body: {
+        defined: false,
+        code: "BAD_REQUEST",
+        status: 400,
+        message: "English server detail",
+        data: { code: "DUPLICATE_QUESTION_KEY" },
+      },
+    });
+    const user = userEvent.setup();
+    render(<LinkedWorkbookCard {...defaultProps} />);
+    await screen.findByText(/v2 is available/);
+    await user.click(screen.getByRole("button", { name: /flow\.reviewAndUpgrade/ }));
+    const confirm = await screen.findByRole("button", { name: /flow\.confirmUpgrade/ });
+    await waitFor(() => expect(confirm).not.toBeDisabled());
+    await user.click(confirm);
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith({
+        description: "flow.upgradeDiff.issue.duplicateQuestionNameGeneric",
+        variant: "destructive",
+      }),
+    );
+  });
+
   it("hides the rename affordance without update capability on the workbook", async () => {
     mountDefaults();
     render(<LinkedWorkbookCard {...defaultProps} />);

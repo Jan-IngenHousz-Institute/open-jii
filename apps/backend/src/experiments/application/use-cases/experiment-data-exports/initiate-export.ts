@@ -86,7 +86,16 @@ export class InitiateExportUseCase {
       }
 
       const numericKeys = await this.questionTypes.activeNumericKeys(experimentId);
-      if (numericKeys.isFailure()) return failure(numericKeys.error);
+      if (numericKeys.isFailure()) {
+        this.logger.warn({
+          msg: "Could not read numeric question keys; the reconciler will try again",
+          operation: "initiateExport",
+          experimentId,
+          exportId: record.id,
+          error: numericKeys.error.message,
+        });
+        return success(toExportRecord(record));
+      }
       const triggered = await this.databricksPort.triggerDataExportJob({
         numericQuestionKeys: numericKeys.value,
         exportId: record.id,

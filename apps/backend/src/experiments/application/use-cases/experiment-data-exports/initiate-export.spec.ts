@@ -12,6 +12,8 @@ import {
 import { TestHarness } from "../../../../test/test-harness";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import { ExperimentQuestionTypesRepository } from "../../../core/repositories/experiment-question-types.repository";
+import { ExportRunReconcilerService } from "../../services/export-run-reconciler.service";
 import { InitiateExportUseCase } from "./initiate-export";
 
 describe("InitiateExportUseCase", () => {
@@ -146,6 +148,35 @@ describe("InitiateExportUseCase", () => {
     expect(result.value.status).toBe("queued");
     const [stored] = await storedExports();
     expect(stored).toMatchObject({ status: "queued", jobRunId: null, errorCode: null });
+  });
+
+  it("returns the queued export when numeric keys cannot be read and lets the reconciler retry", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Retry keys",
+      userId: testUserId,
+    });
+    const keys = vi
+      .spyOn(testApp.module.get(ExperimentQuestionTypesRepository), "activeNumericKeys")
+      .mockResolvedValueOnce(failure(AppError.internal("Lookup unavailable")));
+    const trigger = vi
+      .spyOn(databricksPort, "triggerDataExportJob")
+      .mockResolvedValue(success({ run_id: 4242, number_in_job: 1 }));
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "raw_data",
+      format: "csv",
+    });
+    assertSuccess(result);
+    expect(result.value.status).toBe("queued");
+    expect(trigger).not.toHaveBeenCalled();
+    expect(await storedExports()).toMatchObject([{ id: result.value.exportId, jobRunId: null }]);
+
+    await testApp.module.get(ExportRunReconcilerService).reconcile();
+
+    expect(keys).toHaveBeenCalledTimes(2);
+    expect(trigger).toHaveBeenCalledWith(
+      expect.objectContaining({ exportId: result.value.exportId, numericQuestionKeys: [] }),
+    );
+    expect(await storedExports()).toMatchObject([{ id: result.value.exportId, jobRunId: 4242 }]);
   });
 
   it("adds whoever asks for an export already in flight to the people told how it ends", async () => {

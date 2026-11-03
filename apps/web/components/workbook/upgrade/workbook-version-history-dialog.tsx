@@ -81,6 +81,7 @@ export function WorkbookVersionHistoryDialog({
               error,
               t("flow.versionHistory.restoreFailed"),
               t("flow.upgradeDiff.issue.questionTypeChangeGeneric"),
+              t("flow.upgradeDiff.issue.duplicateQuestionNameGeneric"),
             ),
             variant: "destructive",
           });
