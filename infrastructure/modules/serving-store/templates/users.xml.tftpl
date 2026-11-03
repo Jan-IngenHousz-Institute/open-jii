@@ -1,5 +1,5 @@
 <clickhouse>
-    <!-- Every user shares this profile, so a key such as "Plot no." stays one key, never a path into
+    <!-- Every user's profile is or inherits this one, so a key such as "Plot no." stays one key, never a path into
          a nested object. Its stored path is escaped, so a reader names the subcolumn the same way,
          as uploaded_data.`Plot no%2E`. -->
     <profiles>
@@ -8,6 +8,12 @@
             <!-- One query may hold 4 GiB, so a runaway read cannot take the memory the feed's inserts need. -->
             <max_memory_usage>4294967296</max_memory_usage>
         </default>
+        <!-- The users that insert, under the server's cap alone: an insert the per-query cap refused
+             would be refused again on every retry and hold its sink back for good. -->
+        <ingest>
+            <profile>default</profile>
+            <max_memory_usage>0</max_memory_usage>
+        </ingest>
     </profiles>
     <users>
         <default remove="remove"/>
@@ -15,7 +21,7 @@
         <${user.name}>
             <password_sha256_hex>${user.password_sha256}</password_sha256_hex>
             <networks><ip>::/0</ip></networks>
-            <profile>default</profile>
+            <profile>${user.profile}</profile>
             <quota>default</quota>
 %{ if length(user.grants) == 0 ~}
             <access_management>1</access_management>

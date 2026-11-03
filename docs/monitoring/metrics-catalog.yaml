@@ -596,8 +596,8 @@ metrics:
     runbook: docs/runbooks/store-memory.md
     notes: >-
       The instance's memory in use, from the CloudWatch agent. The store caps ClickHouse at 80% of
-      RAM and each query at 4 GiB, and refuses queries past either, so 75% warns before queries start
-      failing.
+      RAM and refuses queries past it, so 75% warns before the server's cap fails them. Each read is
+      also capped at 4 GiB, which fails that read at any memory level, so this does not warn of it.
 
   - num: 119
     id: store-disk
