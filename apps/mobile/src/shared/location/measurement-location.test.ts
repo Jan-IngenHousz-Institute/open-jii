@@ -1,12 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getMeasurementLocation } from "~/shared/location/measurement-location";
+import {
+  getMeasurementLocation,
+  requestMeasurementLocationPermission,
+} from "~/shared/location/measurement-location";
 
 const mockGetForegroundPermissionsAsync = vi.fn();
+const mockRequestForegroundPermissionsAsync = vi.fn();
 const mockGetLastKnownPositionAsync = vi.fn();
 const mockGetCurrentPositionAsync = vi.fn();
 
 vi.mock("expo-location", () => ({
   getForegroundPermissionsAsync: (...args: unknown[]) => mockGetForegroundPermissionsAsync(...args),
+  requestForegroundPermissionsAsync: (...args: unknown[]) =>
+    mockRequestForegroundPermissionsAsync(...args),
   getLastKnownPositionAsync: (...args: unknown[]) => mockGetLastKnownPositionAsync(...args),
   getCurrentPositionAsync: (...args: unknown[]) => mockGetCurrentPositionAsync(...args),
   Accuracy: { Balanced: 3 },
@@ -16,13 +22,22 @@ vi.mock("~/shared/observability/logger", () => ({
   createLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }));
 
+const mockRefreshTimezone = vi.fn();
+vi.mock("~/shared/time/time-sync", () => ({
+  refreshTimezone: () => mockRefreshTimezone(),
+}));
+
 const COORDS = { coords: { latitude: 52.0907, longitude: 5.1214 } };
 
 beforeEach(() => {
   vi.restoreAllMocks();
   mockGetForegroundPermissionsAsync.mockResolvedValue({ status: "granted" });
+  mockRequestForegroundPermissionsAsync.mockReset();
+  mockRequestForegroundPermissionsAsync.mockResolvedValue({ status: "granted" });
   mockGetLastKnownPositionAsync.mockResolvedValue(null);
   mockGetCurrentPositionAsync.mockResolvedValue(COORDS);
+  mockRefreshTimezone.mockReset();
+  mockRefreshTimezone.mockResolvedValue(undefined);
 });
 
 describe("getMeasurementLocation", () => {
@@ -30,6 +45,7 @@ describe("getMeasurementLocation", () => {
     mockGetForegroundPermissionsAsync.mockResolvedValue({ status: "denied" });
 
     expect(await getMeasurementLocation()).toBeNull();
+    expect(mockRequestForegroundPermissionsAsync).not.toHaveBeenCalled();
     expect(mockGetLastKnownPositionAsync).not.toHaveBeenCalled();
     expect(mockGetCurrentPositionAsync).not.toHaveBeenCalled();
   });
@@ -61,5 +77,44 @@ describe("getMeasurementLocation", () => {
     mockGetLastKnownPositionAsync.mockRejectedValue(new Error("gps unavailable"));
 
     expect(await getMeasurementLocation()).toBeNull();
+  });
+});
+
+describe("requestMeasurementLocationPermission", () => {
+  it("asks for foreground location once", async () => {
+    await requestMeasurementLocationPermission();
+
+    expect(mockRequestForegroundPermissionsAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("resolves the timezone after a grant without waiting for it", async () => {
+    mockRefreshTimezone.mockReturnValue(new Promise(() => undefined));
+
+    await requestMeasurementLocationPermission();
+
+    expect(mockRefreshTimezone).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the timezone alone after a refusal", async () => {
+    mockRequestForegroundPermissionsAsync.mockResolvedValue({ status: "denied" });
+
+    await requestMeasurementLocationPermission();
+
+    expect(mockRefreshTimezone).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      "is refused",
+      () => mockRequestForegroundPermissionsAsync.mockResolvedValue({ status: "denied" }),
+    ],
+    [
+      "fails",
+      () => mockRequestForegroundPermissionsAsync.mockRejectedValue(new Error("no activity")),
+    ],
+  ])("resolves when the request %s, so the flow still starts", async (_outcome, arrange) => {
+    arrange();
+
+    await expect(requestMeasurementLocationPermission()).resolves.toBeUndefined();
   });
 });
