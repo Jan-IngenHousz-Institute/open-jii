@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
 
 import { Button } from "./button";
 
-export { ThemeProvider } from "next-themes";
+export { ThemeProvider, useTheme } from "next-themes";
 
 const subscribeToNothing = () => () => undefined;
 

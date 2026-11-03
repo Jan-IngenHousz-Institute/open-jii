@@ -56,6 +56,7 @@ A pnpm + Turborepo workspace.
 | `apps/data`          | Databricks workspace — Lakeflow pipelines, notebooks, and Python packages (managed with [uv](https://docs.astral.sh/uv/))                  |
 | `apps/macro-sandbox` | Sandboxed AWS Lambda environment that executes user-written analysis macros in Python, JavaScript, and R                                   |
 | `apps/docs`          | Documentation site ([docs.openjii.org](https://docs.openjii.org)) built with Fumadocs; API reference generated from OpenAPI/AsyncAPI specs |
+| `apps/status`        | Public status page ([status.openjii.org](https://status.openjii.org)), a static export that reads `data/status.json`                       |
 | `apps/tools`         | Developer tools, e.g. the MultispeQ MQTT interface (`apps/tools/multispeq_mqtt_interface`) for bridging devices to AWS IoT                 |
 
 ### Packages

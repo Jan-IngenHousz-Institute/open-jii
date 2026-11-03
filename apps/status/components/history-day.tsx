@@ -1,0 +1,123 @@
+"use client";
+
+import { memo, useCallback, useRef } from "react";
+import type { PointerEvent } from "react";
+import { useDayLabel } from "~/hooks/use-day-label";
+import { useFormat } from "~/hooks/use-format";
+import { summarizeDay } from "~/lib/day-summary";
+import { CELL } from "~/lib/history-cells";
+
+import { useTranslation } from "@repo/i18n/client";
+import type { DayRecord, Incident } from "@repo/monitoring/status-document";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardPortal,
+  HoverCardTrigger,
+} from "@repo/ui/components/hover-card";
+import { cn } from "@repo/ui/lib/utils";
+
+import { DayDetails } from "./day-details";
+import { dominoAnimation, useDominoes } from "./dominoes";
+
+interface HistoryDayProps {
+  index: number;
+  dayCount: number;
+  day: DayRecord;
+  incidents: Incident[];
+  checksBegan: string;
+  isToday: boolean;
+  isStop: boolean;
+  isOpen: boolean;
+  onKeepBar: (index: number, element: HTMLSpanElement | null) => void;
+  onFocusBar: (index: number) => void;
+  onOpenChange: (index: number, isOpen: boolean) => void;
+}
+
+// Only the strip's current stop is exposed to assistive tech; the card repeats the bar's label.
+export const HistoryDay = memo(function HistoryDay({
+  index,
+  dayCount,
+  day,
+  incidents,
+  checksBegan,
+  isToday,
+  isStop,
+  isOpen,
+  onKeepBar,
+  onFocusBar,
+  onOpenChange,
+}: HistoryDayProps) {
+  const { t } = useTranslation("status");
+  const format = useFormat();
+  const dominoes = useDominoes();
+  const summary = summarizeDay(day, incidents);
+  const domino = dominoAnimation(dominoes.run, index, dayCount);
+  const label = useDayLabel(day.date, summary, checksBegan, isToday);
+  const wasOpenOnPress = useRef(false);
+
+  const keepBar = useCallback(
+    (element: HTMLSpanElement | null) => {
+      onKeepBar(index, element);
+    },
+    [index, onKeepBar],
+  );
+
+  function focusBar() {
+    onFocusBar(index);
+  }
+
+  function changeOpen(isNowOpen: boolean) {
+    onOpenChange(index, isNowOpen);
+  }
+
+  // The card's own outside-press handling has closed it by the time the press ends.
+  function press() {
+    wasOpenOnPress.current = isOpen;
+  }
+
+  function release(event: PointerEvent) {
+    const isTapOnOpenBar = event.pointerType === "touch" && wasOpenOnPress.current;
+    onOpenChange(index, !isTapOnOpenBar);
+  }
+
+  return (
+    <HoverCard open={isOpen} onOpenChange={changeOpen} openDelay={0} closeDelay={0}>
+      <HoverCardTrigger asChild>
+        <span
+          ref={keepBar}
+          role="img"
+          tabIndex={isStop ? 0 : -1}
+          aria-hidden={isStop ? undefined : true}
+          aria-label={label}
+          onFocus={focusBar}
+          onPointerDown={press}
+          onPointerUp={release}
+          className={cn(
+            "focus-visible:outline-ring origin-bottom-right rounded-[2px] focus-visible:outline-2 focus-visible:outline-offset-2",
+            CELL[day.state],
+            // A layer before any run starts, so starting one does not change how the bar renders.
+            dominoes.isEnabled && "will-change-transform",
+            domino.className,
+          )}
+          style={{ animationDelay: domino.delay }}
+        />
+      </HoverCardTrigger>
+      <HoverCardPortal>
+        {/* No fade, so sweeping along the bars swaps one card for the next. */}
+        <HoverCardContent
+          side="bottom"
+          collisionPadding={8}
+          aria-hidden
+          className="data-[state=closed]:animate-none! data-[state=open]:animate-none! w-72 p-0 text-sm"
+        >
+          <p className="px-4 pt-3 font-semibold">{format.date(day.date)}</p>
+          {isToday ? (
+            <p className="text-muted-foreground px-4 text-xs">{t("day.partial")}</p>
+          ) : null}
+          <DayDetails summary={summary} checksBegan={checksBegan} />
+        </HoverCardContent>
+      </HoverCardPortal>
+    </HoverCard>
+  );
+});

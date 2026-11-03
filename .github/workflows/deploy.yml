@@ -58,6 +58,7 @@ jobs:
       backend_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'backend') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'backend')) }}
       frontend_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'web') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'web')) }}
       docs_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'docs') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'docs')) }}
+      status_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'status') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'status')) }}
       databricks_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'databricks') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'data')) }}
       macro_sandbox_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'macro-sandbox') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'macro-sandbox') && steps.apps.outputs.macro_sandbox_languages != '[]') }}
       calibration_sandbox_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'calibration-sandbox') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'calibration-sandbox')) }}
@@ -150,6 +151,7 @@ jobs:
       contains(fromJSON(needs.detect.outputs.affected_apps), 'backend') ||
       contains(fromJSON(needs.detect.outputs.affected_apps), '@repo/database') ||
       contains(fromJSON(needs.detect.outputs.affected_apps), 'docs') ||
+      contains(fromJSON(needs.detect.outputs.affected_apps), 'status') ||
       contains(fromJSON(needs.detect.outputs.affected_apps), 'data') ||
       contains(fromJSON(needs.detect.outputs.affected_apps), 'macro-sandbox') ||
       contains(fromJSON(needs.detect.outputs.affected_apps), 'calibration-sandbox')
@@ -248,6 +250,24 @@ jobs:
       id-token: write
       contents: read
     uses: ./.github/workflows/deploy-docs.yml
+    with:
+      environment: ${{ inputs.environment }}
+      ref: ${{ needs.detect.outputs.deploy_sha }}
+    secrets: inherit
+
+  deploy-status:
+    name: Deploy Status Page
+    needs: [deploy-infrastructure, detect, approval-gate]
+    if: >-
+      always() &&
+      needs.detect.result == 'success' &&
+      needs.approval-gate.result == 'success' &&
+      (needs.deploy-infrastructure.result == 'success' || (needs.deploy-infrastructure.result == 'skipped' && needs.detect.outputs.infrastructure_needed == 'false')) &&
+      needs.detect.outputs.status_needed == 'true'
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/deploy-status.yml
     with:
       environment: ${{ inputs.environment }}
       ref: ${{ needs.detect.outputs.deploy_sha }}

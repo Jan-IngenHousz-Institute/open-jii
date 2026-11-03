@@ -1,0 +1,6 @@
+/.next/
+/out/
+/.turbo/
+/.cache/
+next-env.d.ts
+/public/data/
