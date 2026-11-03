@@ -1,4 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
+import { deferred } from "~/shared/testing/deferred";
 
 // --- Mocks ---
 
@@ -20,16 +21,27 @@ vi.mock("expo-network", () => ({
   ),
 }));
 
+interface MockPosition {
+  coords: { latitude: number; longitude: number };
+}
+
+const CHICAGO: MockPosition = { coords: { latitude: 41.8781, longitude: -87.6298 } };
+const AMSTERDAM: MockPosition = { coords: { latitude: 52.3676, longitude: 4.9041 } };
+
+let mockLocationStatus = "granted";
+const mockRequestForegroundPermissionsAsync = vi.fn();
+const mockGetLastKnownPositionAsync = vi.fn<(options?: unknown) => Promise<MockPosition | null>>();
+const mockGetCurrentPositionAsync = vi.fn((_options?: unknown) => Promise.resolve(CHICAGO));
 vi.mock("expo-location", () => ({
-  requestForegroundPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
-  getCurrentPositionAsync: vi.fn(() =>
-    Promise.resolve({ coords: { latitude: 41.8781, longitude: -87.6298 } }),
-  ),
+  getForegroundPermissionsAsync: vi.fn(() => Promise.resolve({ status: mockLocationStatus })),
+  requestForegroundPermissionsAsync: () => mockRequestForegroundPermissionsAsync(),
+  getLastKnownPositionAsync: (options?: unknown) => mockGetLastKnownPositionAsync(options),
+  getCurrentPositionAsync: (options?: unknown) => mockGetCurrentPositionAsync(options),
   Accuracy: { Low: 1 },
 }));
 
 vi.mock("@photostructure/tz-lookup", () => ({
-  default: vi.fn(() => "America/Chicago"),
+  default: vi.fn((latitude: number) => (latitude > 50 ? "Europe/Amsterdam" : "America/Chicago")),
 }));
 
 vi.mock("sonner-native", () => ({
@@ -42,15 +54,20 @@ vi.mock("~/shared/i18n", () => ({
 
 let mockServerUtcMs = Date.now();
 let getTimeCallCount = 0;
+// Holds the server time response back until it settles.
+let pendingServerTime: Promise<void> | null = null;
 vi.mock("~/shared/api/client", () => ({
   getApiClient: () => ({
     health: {
       getTime: () => {
         getTimeCallCount++;
-        return Promise.resolve({
+        const response = {
           utcTimestampMs: mockServerUtcMs,
           utcTimestampSec: Math.floor(mockServerUtcMs / 1000),
-        });
+        };
+        return pendingServerTime
+          ? pendingServerTime.then(() => response)
+          : Promise.resolve(response);
       },
     },
   }),
@@ -88,7 +105,14 @@ describe("time-sync", () => {
     mockUnsubscribe.mockClear();
     mockServerUtcMs = Date.now();
     getTimeCallCount = 0;
+    pendingServerTime = null;
     mockIsInternetReachable = true;
+    mockLocationStatus = "granted";
+    mockRequestForegroundPermissionsAsync.mockClear();
+    mockGetLastKnownPositionAsync.mockReset();
+    mockGetLastKnownPositionAsync.mockResolvedValue(null);
+    mockGetCurrentPositionAsync.mockReset();
+    mockGetCurrentPositionAsync.mockResolvedValue(CHICAGO);
 
     // Clean up any leftover state from previous tests
     for (const key of Object.keys(mockAsyncStorage)) {
@@ -547,6 +571,154 @@ describe("time-sync", () => {
       await Promise.all([p1, p2, p3]);
       expect(resolvedCount).toBe(3);
       expect(getTimeSyncState().isSynced).toBe(true);
+    });
+  });
+
+  describe("location permission", () => {
+    it("never asks for location, also when a foreground follows the first sync", async () => {
+      mockLocationStatus = "undetermined";
+      const { startTimeSync, getTimeSyncState } = await import("~/shared/time/time-sync");
+
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+      await advancePastDebounce();
+      capturedForegroundListener?.();
+      await vi.advanceTimersByTimeAsync(50);
+
+      expect(mockRequestForegroundPermissionsAsync).not.toHaveBeenCalled();
+      expect(mockGetCurrentPositionAsync).not.toHaveBeenCalled();
+      expect(getTimeSyncState()).toMatchObject({ isSynced: true, timezone: "UTC" });
+    });
+
+    it("resolves the timezone on the first sync after location is granted", async () => {
+      mockLocationStatus = "undetermined";
+      const { startTimeSync, getTimeSyncState } = await import("~/shared/time/time-sync");
+
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+      expect(getTimeSyncState().timezone).toBe("UTC");
+
+      mockLocationStatus = "granted";
+      await advancePastDebounce();
+      capturedForegroundListener?.();
+      await vi.advanceTimersByTimeAsync(50);
+
+      expect(getTimeSyncState().timezone).toBe("America/Chicago");
+      expect(mockRequestForegroundPermissionsAsync).not.toHaveBeenCalled();
+    });
+
+    it("resolves and stores the timezone right after a grant, also while offline", async () => {
+      mockLocationStatus = "undetermined";
+      const { startTimeSync, refreshTimezone, getTimeSyncState } = await import(
+        "~/shared/time/time-sync"
+      );
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      mockIsInternetReachable = false;
+      mockLocationStatus = "granted";
+      mockGetLastKnownPositionAsync.mockResolvedValue(CHICAGO);
+      mockGetCurrentPositionAsync.mockRejectedValueOnce(
+        new Error("Current location is unavailable"),
+      );
+      await refreshTimezone();
+
+      expect(mockGetLastKnownPositionAsync).toHaveBeenCalledWith({ maxAge: 24 * 60 * 60 * 1000 });
+      expect(getTimeSyncState().timezone).toBe("America/Chicago");
+      expect(JSON.parse(mockAsyncStorage.TIME_SYNC_STATE ?? "{}").timezone).toBe("America/Chicago");
+      expect(getTimeCallCount).toBe(1);
+    });
+
+    it("prefers a current fix over a last known position from another timezone", async () => {
+      mockLocationStatus = "undetermined";
+      const { startTimeSync, refreshTimezone, getTimeSyncState } = await import(
+        "~/shared/time/time-sync"
+      );
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      mockLocationStatus = "granted";
+      mockGetLastKnownPositionAsync.mockResolvedValue(CHICAGO);
+      mockGetCurrentPositionAsync.mockResolvedValue(AMSTERDAM);
+      await refreshTimezone();
+
+      expect(mockGetCurrentPositionAsync).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ mayShowUserSettingsDialog: false }),
+      );
+      expect(getTimeSyncState().timezone).toBe("Europe/Amsterdam");
+    });
+
+    it("falls back to the last known position when no current fix arrives in time", async () => {
+      mockLocationStatus = "undetermined";
+      const { startTimeSync, refreshTimezone, getTimeSyncState } = await import(
+        "~/shared/time/time-sync"
+      );
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      mockLocationStatus = "granted";
+      mockGetLastKnownPositionAsync.mockResolvedValue(AMSTERDAM);
+      mockGetCurrentPositionAsync.mockReturnValue(new Promise(() => undefined));
+      const refresh = refreshTimezone();
+      await vi.advanceTimersByTimeAsync(10_000);
+      await refresh;
+
+      expect(getTimeSyncState().timezone).toBe("Europe/Amsterdam");
+    });
+
+    it("reuses a recently resolved timezone without a new fix", async () => {
+      const { startTimeSync, refreshTimezone, getTimeSyncState } = await import(
+        "~/shared/time/time-sync"
+      );
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+      mockGetCurrentPositionAsync.mockClear();
+
+      await refreshTimezone();
+
+      expect(mockGetCurrentPositionAsync).not.toHaveBeenCalled();
+      expect(getTimeSyncState().timezone).toBe("America/Chicago");
+    });
+
+    it("keeps a resolved timezone when a refresh can only fall back to UTC", async () => {
+      mockIsInternetReachable = false;
+      mockAsyncStorage.TIME_SYNC_STATE = JSON.stringify({
+        offsetMs: 0,
+        timezone: "Europe/Amsterdam",
+        isSynced: true,
+        missedPings: 0,
+        lastSyncedAt: Date.now() - 2 * 24 * 60 * 60 * 1000,
+      });
+      const { startTimeSync, refreshTimezone, getTimeSyncState } = await import(
+        "~/shared/time/time-sync"
+      );
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+      mockGetCurrentPositionAsync.mockRejectedValueOnce(new Error("no fix"));
+
+      await refreshTimezone();
+
+      expect(mockGetCurrentPositionAsync).toHaveBeenCalledTimes(1);
+      expect(getTimeSyncState().timezone).toBe("Europe/Amsterdam");
+    });
+
+    it("keeps a timezone refreshed while a sync waits for the server", async () => {
+      mockLocationStatus = "undetermined";
+      const serverTime = deferred<void>();
+      pendingServerTime = serverTime.promise;
+      const { startTimeSync, refreshTimezone, getTimeSyncState } = await import(
+        "~/shared/time/time-sync"
+      );
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      mockLocationStatus = "granted";
+      await refreshTimezone();
+      serverTime.resolve();
+      await vi.advanceTimersByTimeAsync(50);
+
+      expect(getTimeSyncState()).toMatchObject({ isSynced: true, timezone: "America/Chicago" });
+      expect(JSON.parse(mockAsyncStorage.TIME_SYNC_STATE ?? "{}").timezone).toBe("America/Chicago");
     });
   });
 

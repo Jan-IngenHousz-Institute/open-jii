@@ -9,7 +9,7 @@ AWS signing and scientific timestamps both depend on reliable time. A phone cloc
 
 ## Synchronization sequence
 
-1. `expo-location` supplies coordinates when location permission is available.
+1. `expo-location` supplies coordinates when location permission is available: a current low-accuracy fix, waited for at most 10 seconds and never through Android's location settings dialog, or else the last known position if it is at most a day old, which also works offline.
 2. `@photostructure/tz-lookup` resolves an IANA timezone locally from those coordinates. If permission or location lookup fails, the implementation falls back to `UTC`.
 3. The app calls the unauthenticated backend `GET /health/time` endpoint and measures request round-trip time.
 4. It estimates server time at the response midpoint and stores `offsetMs = estimatedServerTime - deviceReceiveTime` with the timezone.
@@ -48,10 +48,19 @@ const { timezone } = getTimeSyncState();
 ## Measurement coordinates
 
 Timezone resolution and measurement coordinates share the foreground location
-permission but use separate code paths. `getMeasurementLocation()` never requests
-permission. It checks the existing grant, prefers a last-known position at most
-60 seconds old, and otherwise races a balanced-accuracy position request against
-a 10-second timeout. It catches every failure and returns `null`, so location
+permission but use separate code paths. Neither requests it. Time sync starts
+before sign-in, so it only checks the grant and falls back to `UTC` without one.
+The exception is a timezone it already holds from a sync less than 24 hours old,
+which it keeps without checking the grant, also after the permission is revoked.
+The measurement flow asks through `requestMeasurementLocationPermission()` each
+time the user starts a flow, before the first step, and Android decides whether
+to show the dialog. A grant resolves the timezone straight away through
+`refreshTimezone()` rather than at the next sync, which skips the lookup while
+offline. A sync that was already waiting for the server keeps that timezone.
+
+`getMeasurementLocation()` checks the existing grant, prefers a last-known
+position at most 60 seconds old, and otherwise races a balanced-accuracy position
+request against a 10-second timeout. It catches every failure and returns `null`, so location
 lookup cannot block an upload.
 
 The measurement uploader requests one fix per multi-device round and spreads

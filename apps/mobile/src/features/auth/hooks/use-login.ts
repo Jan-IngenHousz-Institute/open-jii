@@ -7,7 +7,7 @@ import {
   verifyEmailLoginOtp,
 } from "~/features/auth/api/login.api";
 import { getAuthClient } from "~/features/auth/services/auth";
-import { hasSessionToken } from "~/shared/api/session-cookie";
+import { getSessionTokens, hasSessionToken } from "~/shared/api/session-cookie";
 import { ensureDeviceRegistered } from "~/shared/composition/ensure-device-registered";
 import { prefetchOfflineData } from "~/shared/composition/prefetch-offline-data";
 import { useTranslation } from "~/shared/i18n";
@@ -43,14 +43,24 @@ async function lookUpSession(authClient: ReturnType<typeof getAuthClient>): Prom
   return Promise.race([lookup, timeout]).finally(() => clearTimeout(timeoutId));
 }
 
+// Expo resolves a dismissed browser like a finished sign-in. Only a finished
+// one stores a new session token; leftover tokens, from this environment or
+// another, stay as they were.
+async function signInThroughBrowser(signIn: () => Promise<void>): Promise<boolean> {
+  const authClient = getAuthClient();
+  const tokensBefore = getSessionTokens(await authClient.getCookie());
+  await signIn();
+  const tokensAfter = getSessionTokens(await authClient.getCookie());
+
+  return tokensAfter.some((token) => !tokensBefore.includes(token));
+}
+
 export function useLoginFlow() {
   const { t } = useTranslation("auth");
   const queryClient = useQueryClient();
 
   const prefetch = async () => {
     const authClient = getAuthClient();
-    // Expo resolves cancelled OAuth as a redirect response; only a completed
-    // sign-in writes a session token.
     if (!hasSessionToken(await authClient.getCookie())) return;
 
     // A leftover token can belong to a revoked session, so the server decides.
@@ -63,9 +73,17 @@ export function useLoginFlow() {
     void ensureDeviceRegistered();
   };
 
+  const prefetchAfterBrowserSignIn = async (completed: boolean) => {
+    if (!completed) {
+      return;
+    }
+
+    await prefetch();
+  };
+
   const github = useMutation({
-    mutationFn: signInWithGitHub,
-    onSuccess: prefetch,
+    mutationFn: () => signInThroughBrowser(signInWithGitHub),
+    onSuccess: prefetchAfterBrowserSignIn,
     onError: (error) => {
       log.error("GitHub login error", { err: error?.message });
       toast.error(t("errors.loginFailed"));
@@ -73,8 +91,8 @@ export function useLoginFlow() {
   });
 
   const orcid = useMutation({
-    mutationFn: signInWithOrcid,
-    onSuccess: prefetch,
+    mutationFn: () => signInThroughBrowser(signInWithOrcid),
+    onSuccess: prefetchAfterBrowserSignIn,
     onError: (error) => {
       log.error("ORCID login error", { err: error?.message });
       toast.error(t("errors.loginFailed"));
