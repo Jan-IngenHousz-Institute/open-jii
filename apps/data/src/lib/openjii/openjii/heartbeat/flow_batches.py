@@ -15,24 +15,20 @@ import gzip
 import json
 import math
 import os
-import re
 from collections.abc import Collection, Iterable, Iterator
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+# 26/10/31 15:00:18 INFO ProgressReporter: [queryId = 405ab] [batchId = 2533] Streaming query made progress: {
 _PROGRESS = "Streaming query made progress: "
-# 26/10/30 17:42:31 INFO MicroBatchExecution: Starting __materialization_mat_clean_data_1 [id = e6fe32b4-..., runId = ...]
-_RUN_START = re.compile(r"MicroBatchExecution: Starting (\S+) \[id = ")
-# Every log4j line opens with its time, so a progress record's JSON runs until the next one.
-_LOG_LINE = re.compile(r"^\d{2}/\d{2}/\d{2} \d{2}:\d{2}:\d{2} ")
-# Centrum's flows are named like __materialization_mat_raw_data_1. The macro pipeline's carry the
-# catalog, schema and pipeline id: open_jii_dev.centrum.__materialization_mat_46fe9925_6954_48bd_8e88_c9ca10f6b164_experiment_macro_data_1
-_FLOW = re.compile(
-    r"(?:^|\.)__materialization_mat_(?:[0-9a-f]{8}(?:_[0-9a-f]{4}){3}_[0-9a-f]{12}_)?(.+)_\d+$"
-)
-_HOURLY_LOG = re.compile(r"^log4j-(\d{4}-\d{2}-\d{2}-\d{2})\.log\.gz$")
-# 1030-173330-96v7f5e4 was created at 17:33:30 UTC on 30 October.
-_CLUSTER = re.compile(r"^(\d{2})(\d{2})-(\d{2})\d{4}-")
+# 26/10/30 17:42:31 INFO MicroBatchExecution: Starting __materialization_mat_clean_data_1 [id = e6fe32b4-...
+_RUN_START = "MicroBatchExecution: Starting "
+# A flow's name is the table it writes and a version, after this: __materialization_mat_raw_data_1. The
+# macro pipeline's also carry the catalog and schema before it and the pipeline's id after it:
+# open_jii_dev.centrum.__materialization_mat_46fe9925_6954_48bd_8e88_c9ca10f6b164_experiment_macro_data_1
+_MATERIALIZATION = "__materialization_mat_"
+_HOURLY_LOG_PREFIX = "log4j-"
+_HOURLY_LOG_SUFFIX = ".log.gz"
 
 _HOUR_MS = 3_600_000
 
@@ -53,34 +49,40 @@ class PipelineHour:
 
 
 def _entries(lines: Iterable[str]) -> Iterator[str | dict]:
-    """A driver log's flow run starts, as the starting query's name, and its progress records, parsed."""
+    """A driver log's flow run starts, as the starting query's name, and its progress records, parsed. A
+    record is pretty-printed, so its closing brace stands alone on its last line."""
     block: list[str] | None = None
 
     for line in lines:
         if block is not None:
-            if not _LOG_LINE.match(line):
-                block.append(line)
-                continue
-            with contextlib.suppress(json.JSONDecodeError):
-                yield json.loads("".join(block))
-            block = None
-
-        started = _RUN_START.search(line)
-        if started is not None:
-            yield started[1]
+            block.append(line)
+            if line.rstrip() == "}":
+                with contextlib.suppress(json.JSONDecodeError):
+                    yield json.loads("".join(block))
+                block = None
             continue
-        at = line.find(_PROGRESS)
-        if at >= 0:
-            block = [line[at + len(_PROGRESS) :]]
 
-    if block is not None:
-        with contextlib.suppress(json.JSONDecodeError):
-            yield json.loads("".join(block))
+        _, started, name = line.partition(_RUN_START)
+        if started:
+            yield name.partition(" ")[0]
+            continue
+
+        _, progress, record = line.partition(_PROGRESS)
+        if progress:
+            block = [record]
 
 
-def _watched(name: str | None, flows: Collection[str]) -> str | None:
-    named = _FLOW.search(name or "")
-    return named[1] if named is not None and named[1] in flows else None
+def _watched_table(name: str | None, flows: Collection[str]) -> str | None:
+    """The watched table a flow writes, or None. Where a pipeline id comes first, the longest watched
+    table the name ends with is the one, so raw_data never claims experiment_raw_data's flow."""
+    _, found, rest = (name or "").partition(_MATERIALIZATION)
+    table = rest.rpartition("_")[0]
+    if not found or not table:
+        return None
+    if table in flows:
+        return table
+
+    return max((flow for flow in flows if table.endswith(f"_{flow}")), key=len, default=None)
 
 
 def _p95_seconds(durations: list[int]) -> float | None:
@@ -99,11 +101,11 @@ def flow_hours(lines: Iterable[str], flows: Collection[str]) -> list[FlowHour]:
 
     for entry in _entries(lines):
         if isinstance(entry, str):
-            flow = _watched(entry, flows)
+            flow = _watched_table(entry, flows)
             if flow is not None:
                 starts[flow] += 1
         else:
-            flow = _watched(entry.get("name"), flows)
+            flow = _watched_table(entry.get("name"), flows)
             if flow is not None:
                 durations[flow].append(entry["batchDuration"])
 
@@ -131,6 +133,13 @@ def recent_drivers(pipeline_dir: str, since: float) -> list[str]:
     ]
 
 
+def _logged_hour(name: str) -> str | None:
+    """The hour a rotated log4j file holds, as YYYY-MM-DD-HH, or None for any other file."""
+    if name.startswith(_HOURLY_LOG_PREFIX) and name.endswith(_HOURLY_LOG_SUFFIX):
+        return name.removeprefix(_HOURLY_LOG_PREFIX).removesuffix(_HOURLY_LOG_SUFFIX)
+    return None
+
+
 def _lines(paths: list[str]) -> Iterator[str]:
     for path in paths:
         with gzip.open(path, "rt", encoding="utf-8", errors="replace") as log:
@@ -143,9 +152,9 @@ def latest_pipeline_hour(pipeline_dir: str, flows: Collection[str], since: float
     logs: dict[str, list[str]] = {}
     for driver in recent_drivers(pipeline_dir, since):
         for name in os.listdir(driver):
-            logged = _HOURLY_LOG.match(name)
+            logged = _logged_hour(name)
             if logged is not None:
-                logs.setdefault(logged[1], []).append(os.path.join(driver, name))
+                logs.setdefault(logged, []).append(os.path.join(driver, name))
     if not logs:
         return None
 
@@ -155,10 +164,7 @@ def latest_pipeline_hour(pipeline_dir: str, flows: Collection[str], since: float
 
 
 def cluster_starts(clusters: Iterable[str], hour: datetime) -> int:
-    """How many of a pipeline's clusters were created within the hour, read from their ids."""
-    return sum(
-        1
-        for created in map(_CLUSTER.match, clusters)
-        if created is not None
-        and tuple(int(part) for part in created.groups()) == (hour.month, hour.day, hour.hour)
-    )
+    """How many of a pipeline's clusters were created within the hour. A cluster id opens with the month,
+    day and time it was created: 1030-173330-96v7f5e4 at 17:33:30 UTC on 30 October."""
+    created = f"{hour:%m%d-%H}"
+    return sum(1 for cluster in clusters if cluster[: len(created)] == created)

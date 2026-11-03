@@ -78,6 +78,18 @@ def test_reads_the_macro_pipelines_flow_names_with_their_catalog_and_pipeline_id
     assert summary == [FlowHour("experiment_macro_data", 1, 2.0, 0.1, 1)]
 
 
+def test_gives_a_pipeline_id_prefixed_flow_to_the_longest_watched_table_it_ends_with():
+    prefixed = "open_jii_dev.centrum.__materialization_mat_46fe9925_6954_48bd_8e88_c9ca10f6b164_experiment_raw_data_1"
+
+    summary = flow_hours(lines(progress(prefixed, 1000)), CENTRUM)
+
+    assert [(flow.flow, flow.batches) for flow in summary] == [
+        ("raw_data", 0),
+        ("clean_data", 0),
+        ("experiment_raw_data", 1),
+    ]
+
+
 def test_leaves_out_flows_whose_names_only_start_like_a_watched_one():
     others = lines(
         start("__materialization_mat_raw_uploaded_data_1"),
