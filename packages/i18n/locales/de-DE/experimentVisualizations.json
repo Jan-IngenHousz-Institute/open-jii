@@ -865,6 +865,19 @@
       },
       "topN": "Top N anzeigen",
       "topNPlaceholder": "Alle"
+    },
+    "secondTable": {
+      "title": "Zweite Tabelle",
+      "table": "Datensatz der zweiten Tabelle",
+      "none": "Keine",
+      "matchColumn": "Abgleichsspalte",
+      "primaryTimeColumn": "Zeitspalte der ersten Tabelle",
+      "secondaryTimeColumn": "Zeitspalte der zweiten Tabelle",
+      "tolerance": "Toleranz in Minuten",
+      "chooseColumn": "Spalte auswählen",
+      "help": "Verwendet den letzten früheren Messwert mit gleichem Abgleichswert. Beide Zeitgrenzen sind eingeschlossen. Null bedeutet exakt gleiche Zeit. Datumswerte und Zeitstempel ohne Zeitzone gelten als UTC. Spalten der zweiten Tabelle beginnen mit second__.",
+      "incompleteTitle": "Zeitabgleich vervollständigen",
+      "incompleteHelp": "Wählen Sie eine gemeinsame Abgleichsspalte, beide Zeitspalten und eine ganzzahlige Toleranz für Vorschau und Speichern."
     }
   }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { SecondTableSection } from "@/components/experiment-visualizations/workspace/tabs/second-table-section";
 import { AlertCircle, Columns3, Database, Filter as FilterIcon, Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import type { ReactNode } from "react";
@@ -143,6 +144,24 @@ export function VisualizationDataStrip({
     unsupported: false,
     tViz,
     tDash: t,
+  });
+
+  fieldItems.unshift({
+    key: "second-table",
+    node: (
+      <StripPopoverControl
+        label={tViz("workspace.secondTable.title")}
+        icon={Database}
+        contentClassName="w-96"
+      >
+        <SecondTableSection
+          form={form}
+          experimentId={experimentId}
+          tables={tables}
+          tableName={selectedTableName}
+        />
+      </StripPopoverControl>
+    ),
   });
 
   const filtersItem: StripOverflowItem | null =

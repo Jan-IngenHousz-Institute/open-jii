@@ -92,12 +92,21 @@ export const useExperimentDataFreshness = (experimentId: string, tableNames?: st
         }),
       });
 
+      void queryClient.invalidateQueries({
+        queryKey: orpc.experiments.getExperimentData.key({ input: { id: experimentId } }),
+        predicate: (query) => query.meta?.secondaryTableName === table.identifier,
+      });
+
       const hasNewSchema = before?.schemaRevision !== table.schemaRevision;
       if (hasNewSchema) {
         void queryClient.invalidateQueries({
           queryKey: orpc.experiments.getExperimentTableColumns.key({
             input: { id: experimentId, tableName: table.identifier },
           }),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: orpc.experiments.getExperimentTableColumns.key({ input: { id: experimentId } }),
+          predicate: (query) => query.meta?.secondaryTableName === table.identifier,
         });
       }
     }

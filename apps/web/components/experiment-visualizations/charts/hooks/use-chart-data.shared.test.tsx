@@ -26,7 +26,7 @@ const EXPERIMENT_ID = "exp-1";
 function viz(
   id: string,
   sources: [ExperimentRole, string][],
-  rest: Partial<Pick<ExperimentChartDataConfig, "aggregation">> = {},
+  rest: Partial<Pick<ExperimentChartDataConfig, "aggregation" | "join">> = {},
 ): ExperimentVisualization {
   return createVisualization({
     id,
@@ -95,6 +95,40 @@ function mountRows() {
 }
 
 describe("useChartData on a dashboard", () => {
+  it("keeps a joined chart out of an otherwise compatible shared read", async () => {
+    const join = {
+      tableName: "weather",
+      matchColumn: "station",
+      primaryTimeColumn: "timestamp",
+      secondaryTimeColumn: "timestamp",
+      toleranceMinutes: 5,
+    };
+    const joined = viz(
+      "a",
+      [
+        ["x", "timestamp"],
+        ["y", "f0"],
+      ],
+      { join },
+    );
+    const plain = viz("b", [
+      ["x", "timestamp"],
+      ["y", "f0"],
+    ]);
+    const spy = mountRows();
+    const { result } = renderHook(
+      () => ({
+        joined: useChartData(joined, EXPERIMENT_ID, undefined),
+        plain: useChartData(plain, EXPERIMENT_ID, undefined),
+      }),
+      { wrapper: dashboardWrapper([joined, plain]) },
+    );
+    await waitFor(() => expect(result.current.joined.rows).toHaveLength(3));
+    await waitFor(() => expect(result.current.plain.rows).toHaveLength(3));
+    expect(spy.calls).toHaveLength(2);
+    expect(spy.calls.filter((call) => call.query.join === JSON.stringify(join))).toHaveLength(1);
+  });
+
   it("holds its read while its group waits to learn whether a line in it reads buckets", async () => {
     const line = viz("a", [
       ["x", "timestamp"],

@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import type { Control } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
+import { zExperimentDataJoin } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card } from "@repo/ui/components/card";
@@ -48,7 +49,9 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
   const def = getChartTypeDef(chartType);
   // Draw on first configured column; renderers synthesize the missing axis.
   const hasAnyColumn = configuredSources.length > 0;
-  const isReady = Boolean(def) && Boolean(tableName) && hasAnyColumn;
+  const joinReady =
+    dataConfig.join === undefined || zExperimentDataJoin.safeParse(dataConfig.join).success;
+  const isReady = joinReady && Boolean(def) && Boolean(tableName) && hasAnyColumn;
 
   const aggregation = dataConfig.aggregation;
   const filters = dataConfig.filters;
@@ -69,6 +72,7 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
     tableName
       ? {
           tableName,
+          join: dataConfig.join,
           columns: configuredSources.map((ds) => ds.columnName),
           filters,
           aggregation,
@@ -114,6 +118,15 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
       <CanvasPlaceholder
         title={t("workspace.canvas.noTable")}
         body={t("workspace.canvas.selectTable")}
+      />
+    );
+  }
+
+  if (!joinReady) {
+    return (
+      <CanvasPlaceholder
+        title={t("workspace.secondTable.incompleteTitle")}
+        body={t("workspace.secondTable.incompleteHelp")}
       />
     );
   }

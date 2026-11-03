@@ -666,3 +666,131 @@ describe("numeric string ordering", () => {
     expect(withMode).not.toContain("__numeric_order");
   });
 });
+
+describe("as-of joins", () => {
+  const service = new QueryBuilderService();
+  const join = {
+    secondary: {
+      table: "weather",
+      whereConditions: [
+        ["experiment_id", "e1"],
+        ["upload_table_id", "weather-id"],
+      ] as [string, string][],
+    },
+    primaryColumns: ["id", "station", "timestamp", "temperature"],
+    secondaryColumns: [{ name: "temperature", alias: "second__temperature" }],
+    matchColumn: "station",
+    primaryTimeColumn: "timestamp",
+    secondaryTimeColumn: "timestamp",
+    primaryTimeType: "TIMESTAMP",
+    secondaryTimeType: "TIMESTAMP",
+    toleranceMinutes: 5,
+  };
+  it("ranks independently per primary occurrence before filtering, grouping and limiting", () => {
+    const sql = unwrap(
+      service.buildQuery({
+        table: "leaf",
+        whereConditions: [["experiment_id", "e1"]],
+        join,
+        filters: [
+          { column: "station", operator: "equals", value: "A" },
+          { column: "second__temperature", operator: "greater_than", value: 20 },
+        ],
+        aggregation: {
+          functions: [{ column: "second__temperature", function: "avg", alias: "air" }],
+        },
+        limit: 10,
+      }),
+    );
+    expect(sql).toContain(
+      "FROM (SELECT * FROM leaf WHERE `experiment_id` = 'e1' AND `station` = 'A') primary_input",
+    );
+    expect(sql).toContain(
+      "PARTITION BY p.`id`, p.`__asof_row` ORDER BY s.`timestamp` DESC, s.`id` ASC",
+    );
+    expect(sql).toContain(
+      "LEFT JOIN (SELECT * FROM weather WHERE `experiment_id` = 'e1' AND `upload_table_id` = 'weather-id')",
+    );
+    expect(sql).toContain("s.`timestamp` <= p.`timestamp`");
+    expect(sql).toContain("s.`timestamp` >= p.`timestamp` - INTERVAL '5' MINUTE");
+    expect(sql.indexOf("WHERE `second__temperature` > 20")).toBeGreaterThan(
+      sql.indexOf("WHERE `__asof_rank` = 1"),
+    );
+    expect(sql).toContain("AVG(`second__temperature`) AS `air`");
+    expect(sql).toMatch(/LIMIT 10$/);
+  });
+
+  it("keeps literal dotted names ahead of struct paths in projection, primary filters and order", () => {
+    const sql = unwrap(
+      service.buildQuery({
+        table: "leaf",
+        columns: ["Plant.ID", "second__Air_Temp"],
+        filters: [
+          { column: "Plant.ID", operator: "equals", value: "x" },
+          { column: "second__Air_Temp", operator: "greater_than", value: 19 },
+        ],
+        ordering: { column: "Plant.ID" },
+        join: {
+          ...join,
+          primaryColumns: [...join.primaryColumns, "Plant.ID", "Plant"],
+          secondaryColumns: [{ name: "Air.Temp", alias: "second__Air_Temp" }],
+        },
+      }),
+    );
+    expect(sql).toMatch(/^SELECT `Plant.ID`, `second__Air_Temp` FROM/);
+    expect(sql).toContain("FROM leaf WHERE `Plant.ID` = 'x'");
+    expect(sql).toContain("s.`Air.Temp` AS `second__Air_Temp`");
+    expect(sql).toMatch(/WHERE `second__Air_Temp` > 19 ORDER BY `Plant.ID` ASC$/);
+    expect(sql).not.toContain("`Plant`.`ID`");
+  });
+
+  it("quotes dotted grouped columns and aggregate aliases as whole output names", () => {
+    const sql = unwrap(
+      service.buildQuery({
+        table: "leaf",
+        join: { ...join, primaryColumns: [...join.primaryColumns, "Plant.ID"] },
+        aggregation: {
+          groupBy: [{ column: "Plant.ID" }],
+          functions: [{ column: "second__temperature", function: "avg", alias: "Air.mean" }],
+        },
+        ordering: { column: "Air.mean" },
+      }),
+    );
+    expect(sql).toMatch(
+      /^SELECT `Plant.ID` AS `Plant.ID`, AVG\(`second__temperature`\) AS `Air.mean`/,
+    );
+    expect(sql).toMatch(/GROUP BY `Plant.ID` ORDER BY `Air.mean` ASC$/);
+  });
+
+  it("interprets date and timezone-free timestamps explicitly as UTC", () => {
+    const sql = unwrap(
+      service.buildQuery({
+        table: "leaf",
+        join: {
+          ...join,
+          primaryTimeType: "DATE",
+          secondaryTimeType: "TIMESTAMP_NTZ",
+          toleranceMinutes: 0,
+        },
+      }),
+    );
+    expect(sql).toContain("day(p.`timestamp`), 0, 0, 0, 'UTC')");
+    expect(sql).toContain("date_part('SECOND', s.`timestamp`), 'UTC')");
+    expect(sql).toContain("INTERVAL '0' MINUTE");
+  });
+  it.each([-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER])(
+    "rejects unsafe tolerance %s",
+    (toleranceMinutes) => {
+      expect(
+        service.buildQuery({ table: "leaf", join: { ...join, toleranceMinutes } }).isFailure(),
+      ).toBe(true);
+    },
+  );
+  it("rejects string timestamps instead of coercing them", () => {
+    expect(
+      service
+        .buildQuery({ table: "leaf", join: { ...join, secondaryTimeType: "STRING" } })
+        .isFailure(),
+    ).toBe(true);
+  });
+});

@@ -21,6 +21,7 @@ import { Separator } from "@repo/ui/components/separator";
 import type { ChartFormValues } from "../../charts/chart-config";
 import { getChartTypeDef } from "../../charts/chart-registry";
 import { FiltersShelf } from "../shelves/filters-shelf";
+import { SecondTableSection } from "./second-table-section";
 
 export interface DataTabContentProps {
   form: UseFormReturn<ChartFormValues>;
@@ -109,6 +110,13 @@ export function DataTabContent({
         />
       </section>
 
+      <Separator />
+      <SecondTableSection
+        form={form}
+        experimentId={experimentId}
+        tables={tables}
+        tableName={selectedTableName}
+      />
       <Separator />
 
       <ColumnsState

@@ -56,12 +56,61 @@ function Inner({
       <button type="button" onClick={rename}>
         rename
       </button>
+      <button
+        type="button"
+        onClick={() =>
+          form.setValue("dataConfig.join", {
+            tableName: "weather",
+            matchColumn: "",
+            primaryTimeColumn: "",
+            secondaryTimeColumn: "",
+            toleranceMinutes: 5,
+          })
+        }
+      >
+        draft join
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          form.setValue("dataConfig.join", {
+            tableName: "weather",
+            matchColumn: "station",
+            primaryTimeColumn: "timestamp",
+            secondaryTimeColumn: "timestamp",
+            toleranceMinutes: 5,
+          })
+        }
+      >
+        complete join
+      </button>
       {children}
     </>
   );
 }
 
 describe("useVisualizationAutosave", () => {
+  it("holds incomplete join edits and saves once every matching field is complete", async () => {
+    const spy = server.mount(contract.experiments.updateExperimentVisualization, {
+      status: 200,
+      body: createVisualization({ id: "viz-1" }),
+    });
+    render(
+      <Wrapper>
+        <div />
+      </Wrapper>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "draft join" }));
+    await act(() => vi.advanceTimersByTimeAsync(1500));
+    expect(spy.called).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "complete join" }));
+    await act(() => vi.advanceTimersByTimeAsync(1500));
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.body).toMatchObject({
+      dataConfig: { join: { tableName: "weather", matchColumn: "station", toleranceMinutes: 5 } },
+    });
+  });
+
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
   });

@@ -100,6 +100,7 @@ function bucketColumnsOf(
   chartConfig: RenderedChartConfig,
   defaultTraceType: ExperimentSeriesTraceType,
 ): Omit<ZoomReadPlan, "scale"> | undefined {
+  if (dataConfig.join) return undefined;
   const sources = dataConfig.dataSources;
   const xColumn = firstDataSourceByRole(sources, "x")?.source.columnName;
   const ySources = dataSourcesByRole(sources, "y").map(({ source }) => source);

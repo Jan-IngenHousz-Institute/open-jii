@@ -55,11 +55,13 @@ export function BuilderBody({ experimentId, renderWidgetTab }: BuilderBodyProps)
   const tableName = useWatch({ control: form.control, name: "dataConfig.tableName" });
   const watchedChartType = useWatch({ control: form.control, name: "chartType" });
 
+  const join = useWatch({ control: form.control, name: "dataConfig.join" });
+
   const {
     columns: tableColumns,
     isLoading: isColumnsLoading,
     error: columnsError,
-  } = useColumnMetadata(experimentId, tableName);
+  } = useColumnMetadata(experimentId, tableName, join);
 
   const columns = useMemo(
     () => tableColumns.filter((col) => isPlottableColumn(col.type_text)),
@@ -77,6 +79,7 @@ export function BuilderBody({ experimentId, renderWidgetTab }: BuilderBodyProps)
       aggregate: undefined,
     }));
     form.setValue("dataConfig.dataSources", reset, { shouldDirty: true });
+    form.setValue("dataConfig.join", undefined, { shouldDirty: true });
     form.setValue("dataConfig.aggregation", undefined, { shouldDirty: true });
     form.setValue("dataConfig.filters", undefined, { shouldDirty: true });
     form.setValue("config.xAxisTitle", "", { shouldDirty: true });

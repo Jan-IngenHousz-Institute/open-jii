@@ -304,6 +304,21 @@
                               "type_text": {
                                 "type": "string"
                               },
+                              "sourceTable": {
+                                "type": "object",
+                                "properties": {
+                                  "tableName": {
+                                    "type": "string"
+                                  },
+                                  "columnName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "tableName",
+                                  "columnName"
+                                ]
+                              },
                               "renamedFrom": {
                                 "type": "object",
                                 "properties": {
@@ -764,6 +779,21 @@
                                     "type_text": {
                                       "type": "string"
                                     },
+                                    "sourceTable": {
+                                      "type": "object",
+                                      "properties": {
+                                        "tableName": {
+                                          "type": "string"
+                                        },
+                                        "columnName": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "tableName",
+                                        "columnName"
+                                      ]
+                                    },
                                     "renamedFrom": {
                                       "type": "object",
                                       "properties": {
@@ -1093,6 +1123,21 @@
                                         },
                                         "type_text": {
                                           "type": "string"
+                                        },
+                                        "sourceTable": {
+                                          "type": "object",
+                                          "properties": {
+                                            "tableName": {
+                                              "type": "string"
+                                            },
+                                            "columnName": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "tableName",
+                                            "columnName"
+                                          ]
                                         },
                                         "renamedFrom": {
                                           "type": "object",
@@ -1483,6 +1528,21 @@
                                     "type_text": {
                                       "type": "string"
                                     },
+                                    "sourceTable": {
+                                      "type": "object",
+                                      "properties": {
+                                        "tableName": {
+                                          "type": "string"
+                                        },
+                                        "columnName": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "tableName",
+                                        "columnName"
+                                      ]
+                                    },
                                     "renamedFrom": {
                                       "type": "object",
                                       "properties": {
@@ -1855,6 +1915,21 @@
                               },
                               "type_text": {
                                 "type": "string"
+                              },
+                              "sourceTable": {
+                                "type": "object",
+                                "properties": {
+                                  "tableName": {
+                                    "type": "string"
+                                  },
+                                  "columnName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "tableName",
+                                  "columnName"
+                                ]
                               },
                               "renamedFrom": {
                                 "type": "object",
@@ -2243,6 +2318,21 @@
                               "type_text": {
                                 "type": "string"
                               },
+                              "sourceTable": {
+                                "type": "object",
+                                "properties": {
+                                  "tableName": {
+                                    "type": "string"
+                                  },
+                                  "columnName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "tableName",
+                                  "columnName"
+                                ]
+                              },
                               "renamedFrom": {
                                 "type": "object",
                                 "properties": {
@@ -2583,6 +2673,21 @@
                                   },
                                   "type_text": {
                                     "type": "string"
+                                  },
+                                  "sourceTable": {
+                                    "type": "object",
+                                    "properties": {
+                                      "tableName": {
+                                        "type": "string"
+                                      },
+                                      "columnName": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "tableName",
+                                      "columnName"
+                                    ]
                                   },
                                   "renamedFrom": {
                                     "type": "object",
@@ -3059,6 +3164,16 @@
             "allowReserved": true
           },
           {
+            "name": "join",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
             "name": "aggregation",
             "in": "query",
             "required": false,
@@ -3122,6 +3237,21 @@
                                 },
                                 "type_text": {
                                   "type": "string"
+                                },
+                                "sourceTable": {
+                                  "type": "object",
+                                  "properties": {
+                                    "tableName": {
+                                      "type": "string"
+                                    },
+                                    "columnName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "tableName",
+                                    "columnName"
+                                  ]
                                 },
                                 "renamedFrom": {
                                   "type": "object",
@@ -3342,6 +3472,16 @@
             }
           },
           {
+            "name": "join",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
             "name": "tableName",
             "in": "query",
             "required": true,
@@ -3387,6 +3527,21 @@
                           },
                           "type_text": {
                             "type": "string"
+                          },
+                          "sourceTable": {
+                            "type": "object",
+                            "properties": {
+                              "tableName": {
+                                "type": "string"
+                              },
+                              "columnName": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tableName",
+                              "columnName"
+                            ]
                           },
                           "renamedFrom": {
                             "type": "object",
@@ -8108,6 +8263,21 @@
                               "type_text": {
                                 "type": "string"
                               },
+                              "sourceTable": {
+                                "type": "object",
+                                "properties": {
+                                  "tableName": {
+                                    "type": "string"
+                                  },
+                                  "columnName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "tableName",
+                                  "columnName"
+                                ]
+                              },
                               "renamedFrom": {
                                 "type": "object",
                                 "properties": {
@@ -11556,6 +11726,51 @@
                           "tableName": {
                             "type": "string"
                           },
+                          "join": {
+                            "type": "object",
+                            "properties": {
+                              "tableName": {
+                                "anyOf": [
+                                  {
+                                    "enum": [
+                                      "raw_data",
+                                      "device"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256
+                                  }
+                                ]
+                              },
+                              "matchColumn": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "primaryTimeColumn": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "secondaryTimeColumn": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "toleranceMinutes": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 150119987
+                              }
+                            },
+                            "required": [
+                              "tableName",
+                              "matchColumn",
+                              "primaryTimeColumn",
+                              "secondaryTimeColumn",
+                              "toleranceMinutes"
+                            ]
+                          },
                           "dataSources": {
                             "type": "array",
                             "minItems": 1,
@@ -11914,6 +12129,51 @@
                       "tableName": {
                         "type": "string"
                       },
+                      "join": {
+                        "type": "object",
+                        "properties": {
+                          "tableName": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "raw_data",
+                                  "device"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256
+                              }
+                            ]
+                          },
+                          "matchColumn": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "primaryTimeColumn": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "secondaryTimeColumn": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "toleranceMinutes": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 150119987
+                          }
+                        },
+                        "required": [
+                          "tableName",
+                          "matchColumn",
+                          "primaryTimeColumn",
+                          "secondaryTimeColumn",
+                          "toleranceMinutes"
+                        ]
+                      },
                       "dataSources": {
                         "type": "array",
                         "minItems": 1,
@@ -12249,6 +12509,51 @@
                       "properties": {
                         "tableName": {
                           "type": "string"
+                        },
+                        "join": {
+                          "type": "object",
+                          "properties": {
+                            "tableName": {
+                              "anyOf": [
+                                {
+                                  "enum": [
+                                    "raw_data",
+                                    "device"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256
+                                }
+                              ]
+                            },
+                            "matchColumn": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "primaryTimeColumn": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "secondaryTimeColumn": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "toleranceMinutes": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 150119987
+                            }
+                          },
+                          "required": [
+                            "tableName",
+                            "matchColumn",
+                            "primaryTimeColumn",
+                            "secondaryTimeColumn",
+                            "toleranceMinutes"
+                          ]
                         },
                         "dataSources": {
                           "type": "array",
@@ -12635,6 +12940,51 @@
                         "tableName": {
                           "type": "string"
                         },
+                        "join": {
+                          "type": "object",
+                          "properties": {
+                            "tableName": {
+                              "anyOf": [
+                                {
+                                  "enum": [
+                                    "raw_data",
+                                    "device"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256
+                                }
+                              ]
+                            },
+                            "matchColumn": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "primaryTimeColumn": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "secondaryTimeColumn": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "toleranceMinutes": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 150119987
+                            }
+                          },
+                          "required": [
+                            "tableName",
+                            "matchColumn",
+                            "primaryTimeColumn",
+                            "secondaryTimeColumn",
+                            "toleranceMinutes"
+                          ]
+                        },
                         "dataSources": {
                           "type": "array",
                           "minItems": 1,
@@ -13002,6 +13352,51 @@
                       "tableName": {
                         "type": "string"
                       },
+                      "join": {
+                        "type": "object",
+                        "properties": {
+                          "tableName": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "raw_data",
+                                  "device"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256
+                              }
+                            ]
+                          },
+                          "matchColumn": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "primaryTimeColumn": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "secondaryTimeColumn": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "toleranceMinutes": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 150119987
+                          }
+                        },
+                        "required": [
+                          "tableName",
+                          "matchColumn",
+                          "primaryTimeColumn",
+                          "secondaryTimeColumn",
+                          "toleranceMinutes"
+                        ]
+                      },
                       "dataSources": {
                         "type": "array",
                         "minItems": 1,
@@ -13337,6 +13732,51 @@
                       "properties": {
                         "tableName": {
                           "type": "string"
+                        },
+                        "join": {
+                          "type": "object",
+                          "properties": {
+                            "tableName": {
+                              "anyOf": [
+                                {
+                                  "enum": [
+                                    "raw_data",
+                                    "device"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256
+                                }
+                              ]
+                            },
+                            "matchColumn": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "primaryTimeColumn": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "secondaryTimeColumn": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "toleranceMinutes": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 150119987
+                            }
+                          },
+                          "required": [
+                            "tableName",
+                            "matchColumn",
+                            "primaryTimeColumn",
+                            "secondaryTimeColumn",
+                            "toleranceMinutes"
+                          ]
                         },
                         "dataSources": {
                           "type": "array",

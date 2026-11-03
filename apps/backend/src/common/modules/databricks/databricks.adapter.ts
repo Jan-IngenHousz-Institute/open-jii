@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
+import type { ExperimentAsOfJoin } from "../../../experiments/core/ports/databricks.port";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type {
   DataExportJobInput,
@@ -870,6 +871,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
    * Build a SQL query for experiment data, dispatching to static vs macro table.
    */
   buildExperimentQuery(params: {
+    join?: ExperimentAsOfJoin;
     tableName: string;
     tableType: "static" | "macro" | "upload";
     experimentId: string;
@@ -884,7 +886,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     limit?: number;
     offset?: number;
   }): Result<string> {
-    const { tableName, tableType, experimentId, ...query } = params;
+    const { tableName, tableType, experimentId, join, ...query } = params;
 
     const tableResult = this.experimentTable(tableType, tableName);
     if (tableResult.isFailure()) {
@@ -901,7 +903,33 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       whereConditions.push(["upload_table_id", tableName]);
     }
 
-    return this.queryBuilder.buildQuery({ ...query, table: tableResult.value, whereConditions });
+    let resolvedJoin: QueryParams["join"];
+    if (join) {
+      const secondaryTable = this.experimentTable(
+        join.secondary.tableType,
+        join.secondary.tableName,
+      );
+      if (secondaryTable.isFailure()) return secondaryTable;
+      const secondaryConditions: [string, string][] = [["experiment_id", experimentId]];
+      if (join.secondary.tableType === "macro")
+        secondaryConditions.push(["macro_id", join.secondary.tableName]);
+      if (join.secondary.tableType === "upload")
+        secondaryConditions.push(["upload_table_id", join.secondary.tableName]);
+      resolvedJoin = {
+        ...join,
+        secondary: {
+          ...join.secondary,
+          table: secondaryTable.value,
+          whereConditions: secondaryConditions,
+        },
+      };
+    }
+    return this.queryBuilder.buildQuery({
+      ...query,
+      join: resolvedJoin,
+      table: tableResult.value,
+      whereConditions,
+    });
   }
 
   /** Column names of the view an experiment table reads from, in its own order. */

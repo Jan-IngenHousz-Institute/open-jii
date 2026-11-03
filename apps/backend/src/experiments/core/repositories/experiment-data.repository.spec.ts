@@ -2263,4 +2263,215 @@ describe("ExperimentDataRepository", () => {
       expect(execute.mock.calls[0][1]).toMatch(/^SELECT \* EXCEPT \(`__numeric_order_group`, /);
     });
   });
+  describe("time-matched second table", () => {
+    const experimentId = mockExperiment.id;
+    const join = {
+      tableName: "weather",
+      matchColumn: "station",
+      primaryTimeColumn: "timestamp",
+      secondaryTimeColumn: "timestamp",
+      toleranceMinutes: 5,
+    };
+    const column = (name: string, type_text: string) => ({
+      name,
+      type_name: type_text,
+      type_text,
+      position: 0,
+    });
+    const baseColumns = [
+      column("id", "STRING"),
+      column("timestamp", "TIMESTAMP"),
+      column("station", "STRING"),
+      column("contributor", WellKnownColumnTypes.CONTRIBUTOR),
+    ];
+    const metadata = ["raw_data", "weather"].map((identifier) => ({
+      identifier,
+      tableType: identifier === "raw_data" ? "static" : "upload",
+      rowCount: 2,
+      displayName: null,
+      latestRowAt: null,
+      schemaRevision: "r1",
+      macroSchema: null,
+      questionsSchema: null,
+      customMetadataSchema: null,
+      uploadSchema: null,
+    })) as ExperimentTableMetadata[];
+
+    beforeEach(() => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockImplementation((input) =>
+        success(input.join ? "joined" : `columns ${input.tableName}`),
+      );
+      vi.spyOn(databricksPort, "executeSqlQuery").mockImplementation((_schema, query) =>
+        Promise.resolve(
+          success({
+            columns:
+              query === "joined"
+                ? [
+                    column("id", "STRING"),
+                    column("second__contributor", WellKnownColumnTypes.CONTRIBUTOR),
+                  ]
+                : baseColumns,
+            rows:
+              query === "joined"
+                ? [
+                    [
+                      "p1",
+                      JSON.stringify({ id: "person", name: "Private Name", avatar: "private" }),
+                    ],
+                    ["p2", null],
+                  ]
+                : [],
+            totalRows: query === "joined" ? 2 : 0,
+            truncated: false,
+          }),
+        ),
+      );
+    });
+
+    it("resolves both shapes in the same experiment and describes secondary aliases", async () => {
+      const result = await repository.getTableColumns({
+        experimentId,
+        tableName: "raw_data",
+        join,
+      });
+      assertSuccess(result);
+      expect(result.value.find((c) => c.name === "second__station")?.sourceTable).toEqual({
+        tableName: "weather",
+        columnName: "station",
+      });
+      expect(databricksPort.getExperimentTableMetadata).toHaveBeenCalledWith(experimentId, {
+        includeSchemas: true,
+      });
+    });
+
+    it("passes a scoped semantic secondary source and anonymizes joined contributor cells", async () => {
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: { ...mockExperiment, anonymizeContributors: true },
+        tableName: "raw_data",
+        columns: ["id", "second__contributor"],
+        join,
+      });
+      assertSuccess(result);
+      const data = result.value[0].data;
+      if (!data) throw new Error("Expected joined data");
+      const rows = data.rows;
+      const contributor = rows[0].second__contributor;
+      if (typeof contributor !== "string") throw new Error("Expected contributor struct");
+      const parsed: unknown = JSON.parse(contributor);
+      expect(parsed).toMatchObject({ avatar: null });
+      expect(contributor).toMatch(/Contributor-[A-F0-9]{6}/);
+      expect(rows[1]).toEqual({ id: "p2", second__contributor: null });
+      expect(JSON.stringify(result.value)).not.toContain("Private Name");
+      const query = vi
+        .mocked(databricksPort.buildExperimentQuery)
+        .mock.calls.find(([input]) => input.join)?.[0];
+      expect(query?.experimentId).toBe(experimentId);
+      expect(query?.join?.secondary.tableName).toBe("weather");
+      expect(query?.join?.secondary.tableType).toBe("upload");
+      expect(query?.join?.primaryColumns).toEqual(baseColumns.map((c) => c.name));
+    });
+
+    it("pseudonymizes secondary contributor filters and ordering", async () => {
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: { ...mockExperiment, anonymizeContributors: true },
+        tableName: "raw_data",
+        columns: ["second__contributor"],
+        join,
+        filters: [
+          { column: "second__contributor.id", operator: "equals", value: "Contributor-ABC123" },
+        ],
+        orderBy: "second__contributor.name",
+      });
+      assertSuccess(result);
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: [
+            {
+              column: "second__contributor.id",
+              operator: "equals",
+              value: "Contributor-ABC123",
+              contributorPseudonymSalt: experimentId,
+            },
+          ],
+          ordering: {
+            column: "second__contributor.id",
+            direction: "ASC",
+            mode: { kind: "pseudonym", salt: experimentId },
+          },
+        }),
+      );
+    });
+
+    it("prefers literal dotted names over contributor paths when anonymizing a joined read", async () => {
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [
+            ...baseColumns,
+            column("Plant.id", "STRING"),
+            column("Plant.name", "STRING"),
+            column("Plant", WellKnownColumnTypes.CONTRIBUTOR),
+          ],
+          rows: [],
+          totalRows: 0,
+          truncated: false,
+        }),
+      );
+      const filters = [{ column: "Plant.id", operator: "equals" as const, value: "literal" }];
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: { ...mockExperiment, anonymizeContributors: true },
+        tableName: "raw_data",
+        columns: ["Plant.id"],
+        join,
+        filters,
+        orderBy: "Plant.name",
+      });
+      assertSuccess(result);
+      const query = vi
+        .mocked(databricksPort.buildExperimentQuery)
+        .mock.calls.find(([input]) => input.join)?.[0];
+      expect(query?.filters).toEqual(filters);
+      expect(query?.ordering).toEqual({ column: "Plant.name", direction: "ASC" });
+    });
+
+    it("rejects a secondary table absent from the experiment before querying it", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(metadata.slice(0, 1)),
+      );
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        join,
+      });
+      assertFailure(result);
+      expect(databricksPort.executeSqlQuery).not.toHaveBeenCalled();
+    });
+
+    it("rejects unsupported timestamp columns", async () => {
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [
+            column("id", "STRING"),
+            column("timestamp", "STRING"),
+            column("station", "STRING"),
+          ],
+          rows: [],
+          totalRows: 0,
+          truncated: false,
+        }),
+      );
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        join,
+      });
+      assertFailure(result);
+      expect(result.error.message).toContain("timestamp or date");
+    });
+  });
 });

@@ -547,6 +547,50 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("buildExperimentQuery", () => {
+    it("scopes a macro secondary independently", () => {
+      const result = databricksAdapter.buildExperimentQuery({
+        tableName: "raw_data",
+        tableType: "static",
+        experimentId: "e1",
+        join: {
+          secondary: { tableName: "macro-id", tableType: "macro" },
+          primaryColumns: ["id", "station", "timestamp"],
+          secondaryColumns: [{ name: "temperature", alias: "second__temperature" }],
+          matchColumn: "station",
+          primaryTimeColumn: "timestamp",
+          secondaryTimeColumn: "timestamp",
+          primaryTimeType: "TIMESTAMP",
+          secondaryTimeType: "TIMESTAMP",
+          toleranceMinutes: 5,
+        },
+      });
+      assertSuccess(result);
+      expect(result.value.match(/`experiment_id` = 'e1'/g)).toHaveLength(2);
+      expect(result.value).toContain("`macro_id` = 'macro-id'");
+    });
+
+    it("scopes both sides of a time join to the experiment and logical upload table", () => {
+      const result = databricksAdapter.buildExperimentQuery({
+        tableName: "raw_data",
+        tableType: "static",
+        experimentId: "e1",
+        join: {
+          secondary: { tableName: "weather-id", tableType: "upload" },
+          primaryColumns: ["id", "station", "timestamp"],
+          secondaryColumns: [{ name: "temperature", alias: "second__temperature" }],
+          matchColumn: "station",
+          primaryTimeColumn: "timestamp",
+          secondaryTimeColumn: "timestamp",
+          primaryTimeType: "TIMESTAMP",
+          secondaryTimeType: "TIMESTAMP",
+          toleranceMinutes: 5,
+        },
+      });
+      assertSuccess(result);
+      expect(result.value.match(/`experiment_id` = 'e1'/g)).toHaveLength(2);
+      expect(result.value).toContain("`upload_table_id` = 'weather-id'");
+    });
+
     it("builds an upload table's query on the uploads table, filtered by its upload table id", () => {
       const result = databricksAdapter.buildExperimentQuery({
         tableName: "upload_1",

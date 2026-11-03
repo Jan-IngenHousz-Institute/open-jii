@@ -89,7 +89,22 @@ export interface QueryOrdering {
   mode?: { kind: "pseudonym"; salt: string } | { kind: "numericString"; rowId?: string };
 }
 
+export interface AsOfJoin {
+  secondary: QueryParams;
+  primaryColumns: string[];
+  secondaryColumns: { name: string; alias: string }[];
+  matchColumn: string;
+  primaryTimeColumn: string;
+  primaryTimeType: string;
+  secondaryTimeColumn: string;
+  secondaryTimeType: string;
+  toleranceMinutes: number;
+}
+
 export interface QueryParams {
+  /** Exact projected names take precedence over struct paths, including names containing dots. */
+  columnNames?: string[];
+  join?: AsOfJoin;
   table: string;
   columns?: string[];
   variants?: { columnName: string; schema: string; suffix?: string }[];

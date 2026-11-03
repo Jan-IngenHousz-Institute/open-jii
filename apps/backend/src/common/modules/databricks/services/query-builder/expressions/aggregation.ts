@@ -101,13 +101,17 @@ function sortTarget(
 export function wrapWithAggregation(
   innerSql: string,
   opts: {
+    columnNames?: string[];
     aggregation?: AggregationSpec;
     ordering?: QueryOrdering;
     limit?: number;
     offset?: number;
   },
 ): string {
-  const builder = new SqlQueryBuilder();
+  const builder = new SqlQueryBuilder(opts.columnNames);
+  const outputNames = new Set<string>();
+  const quoteAlias = (name: string) =>
+    opts.columnNames === undefined ? builder.escapeIdentifier(name) : builder.quoteName(name);
   const selectClauses: string[] = [];
   const groupByClauses: string[] = [];
   const windowProjections: string[] = [];
@@ -123,7 +127,8 @@ export function wrapWithAggregation(
           ? builder.buildWidthBucketExpression(item.column, item.widthBucket, item.alias)
           : { sql: builder.escapeIdentifier(item.column), alias: item.alias ?? item.column };
 
-      selectClauses.push(`${expr.sql} AS ${builder.escapeIdentifier(expr.alias)}`);
+      selectClauses.push(`${expr.sql} AS ${quoteAlias(expr.alias)}`);
+      outputNames.add(expr.alias);
       groupByClauses.push(expr.sql);
 
       firstGroupBySql ??= expr.sql;
@@ -144,13 +149,14 @@ export function wrapWithAggregation(
           grouped: groupByClauses.length > 0,
         });
 
-        windowProjections.push(`${expr.sql} AS ${builder.escapeIdentifier(expr.alias)}`);
+        outputNames.add(expr.alias);
+        windowProjections.push(`${expr.sql} AS ${quoteAlias(expr.alias)}`);
         continue;
       }
 
       const expr = builder.buildAggregateExpression(item);
-      const alias = `\`${expr.alias.replaceAll("`", "``")}\``;
-      selectClauses.push(`${expr.sql} AS ${alias}`);
+      outputNames.add(expr.alias);
+      selectClauses.push(`${expr.sql} AS ${builder.quoteName(expr.alias)}`);
     }
   }
 
@@ -164,7 +170,7 @@ export function wrapWithAggregation(
   const from =
     explode === undefined
       ? `(${innerSql})`
-      : `(${innerSql}) LATERAL VIEW EXPLODE(${builder.escapeIdentifier(explode.column)}) AS ${builder.escapeIdentifier(explode.alias)}`;
+      : `(${innerSql}) LATERAL VIEW EXPLODE(${builder.escapeIdentifier(explode.column)}) AS ${quoteAlias(explode.alias)}`;
 
   let sql: string;
   if (groupByClauses.length === 0 && selectClauses.length === 0) {
@@ -182,7 +188,11 @@ export function wrapWithAggregation(
 
   if (orderSql !== undefined) {
     const direction = opts.ordering?.direction ?? "ASC";
-    sql += ` ORDER BY ${orderSql} ${direction}`;
+    const outputOrder =
+      opts.columnNames !== undefined && opts.ordering?.column !== undefined && outputNames.has(opts.ordering?.column)
+        ? builder.quoteName(opts.ordering?.column)
+        : orderSql;
+    sql += ` ORDER BY ${outputOrder} ${direction}`;
   }
 
   if (opts.limit !== undefined) {

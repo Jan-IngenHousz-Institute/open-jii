@@ -64,6 +64,7 @@ export class GetExperimentDataUseCase {
         orderDirection = "ASC",
         filters,
         aggregation,
+        join,
         limit,
       } = query;
 
@@ -85,6 +86,7 @@ export class GetExperimentDataUseCase {
         columns: parsedColumns,
         filters,
         aggregation,
+        join,
         orderBy,
         orderDirection,
         page,

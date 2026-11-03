@@ -8,13 +8,18 @@ import { orpc } from "~/lib/orpc";
 import type {
   ExperimentDataAggregation,
   ExperimentDataFilter,
+  ExperimentDataJoin,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import {
+  zExperimentDataJoin,
+  WellKnownColumnTypes,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 const STALE_TIME = 2 * 60 * 1000;
 
 export interface VisualizationDataConfig {
   tableName: string;
+  join?: ExperimentDataJoin;
   columns?: string[];
   filters?: ExperimentDataFilter[];
   aggregation?: ExperimentDataAggregation;
@@ -153,7 +158,9 @@ export const useExperimentVisualizationData = (
   );
   const aggregationActive = baseAggregationActive;
 
-  const canQuery = aggregationActive || (cleanedColumns?.length ?? 0) > 0;
+  const joinValid =
+    dataConfig.join === undefined || zExperimentDataJoin.safeParse(dataConfig.join).success;
+  const canQuery = joinValid && (aggregationActive || (cleanedColumns?.length ?? 0) > 0);
 
   // Share JSON between cache key and request so identical sets hit the cache.
   const filtersJson = useMemo(
@@ -179,7 +186,14 @@ export const useExperimentVisualizationData = (
   const effectiveOrderDirection = effectiveOrderBy ? dataConfig.orderDirection : undefined;
 
   // Which columns a read returns, as opposed to which rows: a new filter or order keeps it.
-  const readShape = [experimentId, dataConfig.tableName, columnsCsv, aggregationJson].join("|");
+  const joinJson = dataConfig.join ? JSON.stringify(dataConfig.join) : undefined;
+  const readShape = [
+    experimentId,
+    dataConfig.tableName,
+    columnsCsv,
+    aggregationJson,
+    joinJson,
+  ].join("|");
 
   const { data, isLoading, isPlaceholderData, error } = useQuery(
     orpc.experiments.getExperimentData.queryOptions({
@@ -187,12 +201,13 @@ export const useExperimentVisualizationData = (
         id: experimentId,
         tableName: dataConfig.tableName,
         columns: columnsCsv,
+        join: joinJson,
         filters: filtersJson,
         aggregation: aggregationJson,
         orderBy: effectiveOrderBy,
         orderDirection: effectiveOrderDirection,
       },
-      meta: { readShape },
+      meta: { readShape, secondaryTableName: dataConfig.join?.tableName },
       // A new filter is a new cache key. Without this the chart drops to its loading state and
       // Plotly rebuilds it from scratch when the rows land; the previous rows stay drawn instead.
       // Held only while the read's columns are unchanged, so a chart never draws columns it did
