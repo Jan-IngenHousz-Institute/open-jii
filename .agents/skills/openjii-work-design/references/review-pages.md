@@ -21,7 +21,7 @@ inlined and the diagrams rendered to SVG. Upload that copy once with `pnpm linea
 link the printed URL from the artifact index and the project's `## Design` section, and add it to
 the project's Resources with `pnpm linear:resources`.
 
-Take the colours, type and spacing from `apps/web/app/globals.css`, so the page reads as the
+Take the colours, type and spacing from `packages/ui/src/styles/theme.css`, so the page reads as the
 product, and make it work in light and dark and at phone width. Captures go on the page as the same
 PNGs the tickets carry. A drawn sketch goes on as inline HTML, which follows the theme, while its
 ticket gets the rendered PNG.

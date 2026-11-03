@@ -28,7 +28,7 @@ export interface NodeTypeConfig {
 // than concrete values: every consumer feeds them to a CSS property (an inline
 // `style`, or React Flow's edge/minimap `stroke`/`fill`, which are also CSS
 // properties), so the browser resolves them and a theme swap moves them live.
-// Values live in the --node-* block of app/globals.css.
+// Values live in the --node-* block of packages/ui/src/styles/theme.css.
 //
 // Kept in sync with the workbook cell accent colors (Protocol, Macro, Question,
 // Markdown), which read the same tokens.

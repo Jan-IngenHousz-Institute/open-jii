@@ -3,7 +3,7 @@ import * as tseslint from "typescript-eslint";
 
 /**
  * Guard for the token-only theme contract: colour lives in the `:root`/`.dark`
- * blocks of `apps/web/app/globals.css`, and a class string that names one
+ * blocks of `packages/ui/src/styles/theme.css`, and a class string that names one
  * directly escapes it.
  *
  * Matched against string literals and template chunks rather than parsed class
@@ -42,7 +42,7 @@ export const themeClassPatterns = [
     id: "arbitrary-color",
     source: `${BEFORE}${UTILITY}\\[(?:#[0-9a-fA-F]{3,8}|(?:ok)?lch\\(|(?:ok)?lab\\(|hsla?\\(|rgba?\\(|color-mix\\()`,
     message:
-      "Arbitrary colour value in a class string. Use a theme token (bg-card, text-muted-foreground, …) so the theme stays swappable from globals.css.",
+      "Arbitrary colour value in a class string. Use a theme token (bg-card, text-muted-foreground, …) so the theme stays swappable from theme.css.",
   },
   {
     id: "palette-literal",
@@ -54,7 +54,7 @@ export const themeClassPatterns = [
     id: "dissolved-family",
     source: `${BEFORE}${UTILITY}(?:jii-[a-z-]+|surface(?:-(?:light|dark|foreground))?|quaternary(?:-(?:light|dark))?|highlight(?:-(?:light|dark|foreground))?|tertiary(?:-foreground)?|badge(?:-[a-z]+)?)${AFTER}`,
     message:
-      "This colour family no longer exists — it was declared in tailwind.config.ts and has been dissolved into globals.css. Map it onto a contract token, or onto a --status-* token for status badges.",
+      "This colour family no longer exists. It was declared in tailwind.config.ts and has been dissolved into theme.css. Map it onto a contract token, or onto a --status-* token for status badges.",
   },
 ];
 

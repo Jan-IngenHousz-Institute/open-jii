@@ -2,7 +2,7 @@ import type { Config } from "tailwindcss";
 
 import baseConfig from "@repo/tailwind-config/web";
 
-// Colors, fonts and radii are defined in `app/globals.css` (`:root`/`.dark` +
+// Colors, fonts and radii are defined in `@repo/ui/styles/theme.css` (`:root`/`.dark` +
 // `@theme inline`). Anything defined here would override those variables, so
 // this file carries only the content globs and non-token utilities.
 export default {
