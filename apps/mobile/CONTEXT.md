@@ -79,7 +79,7 @@ Reactive surface (all subscribe APIs return an unsubscribe fn):
 - `subscribeSettled(cb: (items: ReadonlyArray<{ id, status }>) => void)` — batched. A burst of PUBACKs inside one JS turn collapses to a single dispatch via an internal `@tanstack/pacer` `Batcher` (`wait: 0`). The event carries the terminal status, so downstream consumers don't re-read the DB.
 - `getSnapshot(): { isUploading, count }` + `subscribeSnapshot(cb)` — for toolbars / tab badges.
 
-Pattern reference: transactional Outbox (Chris Richardson). The `_client_id` field embedded in the wire payload is meant as the dedup key for a re-publish after a crash between PUBACK and `markAsSuccessful`, but nothing deduplicates on it yet: the IoT rule is a plain select and bronze drops the field, so such a re-publish lands as a second row.
+Pattern reference: transactional Outbox (Chris Richardson). The `_client_id` field embedded in the wire payload is the dedup key for a re-publish after a crash between PUBACK and `markAsSuccessful`. Bronze keeps it and silver derives the measurement's row id from it, so a re-publish lands as a second row with the same id, which exports and the serving store keep once.
 
 ### Measurement list cache
 
@@ -178,7 +178,7 @@ No hardcoded user-visible English. Toasts/alerts resolve through i18n (`useTrans
 
 ### AWS IoT Core
 
-Managed MQTT broker that ingests measurements. Reached via a Cognito-signed WebSocket URL. Receives QoS 1 publishes, dedupes on a downstream rule using the embedded row UUID.
+Managed MQTT broker that ingests measurements. Reached via a Cognito-signed WebSocket URL. Receives QoS 1 publishes. It does not deduplicate; the pipeline gives a re-published record the same row id from its embedded row UUID.
 
 ### Cognito Identity Pool
 

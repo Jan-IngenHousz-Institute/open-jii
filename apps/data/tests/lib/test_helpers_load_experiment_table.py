@@ -57,9 +57,21 @@ _TABLES = {
     # returns this row instead of the uploaded ones.
     "enriched_experiment_macro_data": """
         SELECT * FROM VALUES
-          (1L, 'e1', 'macro-1', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.7}')),
-          (2L, 'e1', 'upload-1', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.1}'))
-        AS t(id, experiment_id, macro_id, timestamp, macro_output)
+          (1L, 'e1', 'macro-1', 10L, 'device-a', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.7}')),
+          (2L, 'e1', 'upload-1', 10L, 'device-a', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.1}')),
+          (1L, 'e1', 'macro-1', 10L, 'device-a', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.7}'))
+        AS t(id, experiment_id, macro_id, raw_id, device_id, timestamp, macro_output)
+    """,
+    # Capture 10 arrived twice, so it is stored twice under one id. Id 12 is an old 32-bit id two
+    # different captures share.
+    "enriched_experiment_raw_data": """
+        SELECT * FROM VALUES
+          (10L, 'e1', TIMESTAMP'2026-10-01 10:00:00', 'device-a'),
+          (11L, 'e1', TIMESTAMP'2026-10-01 11:00:00', 'device-a'),
+          (10L, 'e1', TIMESTAMP'2026-10-01 10:00:00', 'device-a'),
+          (12L, 'e1', TIMESTAMP'2026-10-01 12:00:00', 'device-a'),
+          (12L, 'e1', TIMESTAMP'2026-10-01 12:00:00', 'device-b')
+        AS t(id, experiment_id, timestamp, device_id)
     """,
 }
 
@@ -130,6 +142,18 @@ def test_macro_table_still_reads_its_macro_rows(schema: str) -> None:
     rows = _load("macro-1", schema).collect()
 
     assert [row.phi2 for row in rows] == [0.7]
+
+
+def test_a_capture_stored_twice_exports_once(schema: str) -> None:
+    rows = _load("raw_data", schema).collect()
+
+    assert [row.id for row in rows][:2] == [10, 11]
+
+
+def test_different_captures_that_share_an_old_id_both_export(schema: str) -> None:
+    rows = _load("raw_data", schema).collect()
+
+    assert sorted(row.device_id for row in rows if row.id == 12) == ["device-a", "device-b"]
 
 
 def test_static_identifier_without_a_source_is_refused(schema: str) -> None:

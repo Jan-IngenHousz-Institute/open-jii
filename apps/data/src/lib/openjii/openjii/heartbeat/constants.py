@@ -58,6 +58,8 @@ WEEKLY_MEASUREMENTS_METRIC = "WeeklyMeasurements"
 # stage last wrote. Rows are counted per half hour, so they add up over a day.
 INGESTED_ROWS_METRIC = "IngestedRows"
 EXPERIMENT_ROWS_METRIC = "ExperimentRows"
+# Rows into the experiment table that repeat a capture it already held, such as a phone re-publish.
+MEASUREMENT_COPIES_METRIC = "MeasurementCopies"
 MACRO_RESULT_ROWS_METRIC = "MacroResultRows"
 INGEST_LATENCY_METRIC = "IngestLatencyP95Seconds"
 EXPERIMENT_LATENCY_METRIC = "ExperimentLatencyP95Seconds"

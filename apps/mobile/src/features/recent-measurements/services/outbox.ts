@@ -343,9 +343,9 @@ class OutboxImpl implements Outbox {
 
     const payload = {
       ...row.data.measurementResult,
-      // Embed the row UUID so an AWS IoT rule can deduplicate on the
-      // downstream side if a crash between PUBACK and markAsSuccessful
-      // leaves the row "pending" and we re-publish on next boot.
+      // Embed the row UUID, which the pipeline derives the measurement's id
+      // from, so a re-publish on next boot after a crash between PUBACK and
+      // markAsSuccessful lands with the same id.
       _client_id: id,
     };
 

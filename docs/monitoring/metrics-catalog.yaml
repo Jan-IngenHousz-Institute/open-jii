@@ -110,6 +110,9 @@ passes:
   - date: 2026-11-01
     range: [126, 126]
     note: who uploaded in the week, beside the exports that entry 35 now counts
+  - date: 2026-11-03
+    range: [130, 130]
+    note: measurements that arrived again, which keep one row id however often they come
 
 metrics:
   # Ingest path
@@ -1596,6 +1599,30 @@ metrics:
       period: 604800
       dimensions: { Environment: "${ENVIRONMENT}" }
     notes: Rows committed to the experiment tables (gold), counted per closed half hour.
+
+  - num: 130
+    id: measurement-copies
+    name: Measurements that arrived again
+    family: observability
+    area: path
+    source: dbx
+    phase: P2
+    active: true
+    slots: [exception, weekly]
+    signal:
+      namespace: OpenJII/Data
+      metric: MeasurementCopies
+      stat: Sum
+      period: 604800
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      Rows committed to the experiment table that repeat a capture, every row of an experiment, id,
+      timestamp and device after its first, counted per closed half hour in the one that committed
+      them.
+      A phone re-publishing a record after a crash, or a device sending a capture again, makes one.
+      The serving store and exports keep each capture once, so this counts what they fold away. Rows
+      that came over MQTT before bronze kept `_client_id` have ids that include their arrival, so
+      their copies never match.
 
   - num: 84
     id: macro-result-rows

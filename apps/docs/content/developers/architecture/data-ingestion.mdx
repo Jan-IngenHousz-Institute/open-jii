@@ -105,7 +105,11 @@ The mobile app uses a transactional outbox:
 3. A QoS 1 PUBACK marks the row `successful`.
 4. Retryable failures use the configured backoff and eventually become `failed`; pending and failed rows are rehydrated after restart, foregrounding, or reconnect.
 
-The `sample` field is gzip-compressed and base64-encoded before upload, with `_sample_encoding: "gzip+base64"`. The outer JSON envelope remains readable to the AWS IoT rule. The outbox adds `_client_id`, a local row UUID that downstream processing can use when diagnosing repeat delivery after a crash between PUBACK and the local status update.
+The `sample` field is gzip-compressed and base64-encoded before upload, with `_sample_encoding: "gzip+base64"`. The outer JSON envelope remains readable to the AWS IoT rule. The outbox adds `_client_id`, a local row UUID that it sends again if it re-publishes the row, for example after a crash between PUBACK and the local status update.
+
+Silver gives a measurement that comes through the broker or as a large upload a 63-bit id from `xxhash64` of the experiment and `_client_id`, or, when a publisher sends none, of the experiment, device, timestamp, sample, user and questions. Copies of one capture therefore share an id. Silver and the experiment tables keep every copy. The serving store keeps one row per experiment, timestamp, id and device, exports keep one, and the heartbeat counts copies per half hour (catalog entry `measurement-copies`). A macro result's id comes from the experiment, its measurement's id and the macro's file, so a macro that runs on a measurement again gives the same id. Results of measurements from before keep the ids they were given.
+
+Bronze writes `_client_id` empty when a payload has none, so only rows it wrote before it kept the field read null there. Those keep the 32-bit ids they were given, from the arrival for broker rows and from the content for large uploads, so refreshing silver gives them back the same ids. Such ids can collide between captures, and do in dev's larger experiments, so a row counts as a copy only when it also shares the timestamp and device. Imports keep the id their source gives them.
 
 ## AWS routing
 

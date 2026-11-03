@@ -210,6 +210,14 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
     if table_type == "upload":
         df = df.filter(col("upload_table_id") == table_name)
 
+    # A capture that arrived more than once is stored once per arrival under one id, so an export
+    # keeps one of them. Rows from before the 64-bit ids can share an id with a different capture,
+    # so a copy must also share its timestamp and device, as in the serving store's key.
+    if table_type == "raw_data":
+        df = df.dropDuplicates(["id", "timestamp", "device_id"])
+    if table_type == "macro":
+        df = df.dropDuplicates(["id", "raw_id", "timestamp", "device_id"])
+
     parsed = []
     exclude_cols = ["experiment_id"]
 

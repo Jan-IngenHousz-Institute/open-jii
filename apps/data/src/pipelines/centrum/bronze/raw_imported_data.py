@@ -14,6 +14,7 @@ from pyspark.sql.types import (
 )
 
 from openjii.centrum import RAW_IMPORTED_DATA_TABLE
+from openjii.centrum.row_ids import positive_hash
 from openjii.centrum.runtime import CATALOG_NAME
 
 # COMMAND ----------
@@ -70,7 +71,8 @@ def raw_imported_data():
             "id",
             F.coalesce(
                 F.col("id"),
-                F.abs(F.hash(*[F.col(c) for c in df.columns])).cast("string")
+                # 64 bits rather than 32-bit hash(), whose ids collide within a large import.
+                positive_hash(*[F.col(c) for c in df.columns]).cast("string")
             )
         )
         .withColumn("ingestion_timestamp", F.current_timestamp())

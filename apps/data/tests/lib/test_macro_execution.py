@@ -413,16 +413,18 @@ def test_macro_notebook_posts_only_eligible_rows_on_real_spark(spark, fake_dlt, 
     from pyspark.sql import functions as F
 
     macro_id = "11111111-1111-4111-8111-111111111111"
+    # Gold's measurement ids are BIGINT.
+    ids = {"valid": 1, "legacy": 2, "imported": 3, "invalid": 4, "null-id": 5, "null-data": 6}
     source = spark.createDataFrame(
         [
-            ("valid", macro_id, False, '{"value":1}'),
-            ("legacy", macro_id, None, '{"value":2}'),
-            ("imported", macro_id, True, '{"value":3}'),
-            ("invalid", "not-a-uuid", False, '{"value":4}'),
-            ("null-id", None, False, '{"value":5}'),
-            ("null-data", macro_id, False, None),
+            (ids["valid"], macro_id, False, '{"value":1}'),
+            (ids["legacy"], macro_id, None, '{"value":2}'),
+            (ids["imported"], macro_id, True, '{"value":3}'),
+            (ids["invalid"], "not-a-uuid", False, '{"value":4}'),
+            (ids["null-id"], None, False, '{"value":5}'),
+            (ids["null-data"], macro_id, False, None),
         ],
-        "id string, macro_id string, skip_macro_processing boolean, data string",
+        "id bigint, macro_id string, skip_macro_processing boolean, data string",
     )
     source = source.withColumn(
         "macros",
@@ -520,14 +522,14 @@ def test_macro_notebook_posts_only_eligible_rows_on_real_spark(spark, fake_dlt, 
         server.server_close()
         worker.join(timeout=5)
 
-    assert sorted(item["id"] for item in posted) == ["legacy", "valid"]
+    assert sorted(item["id"] for item in posted) == sorted([str(ids["valid"]), str(ids["legacy"])])
     assert len(rows) == 6
-    for row_id in ["valid", "legacy"]:
-        assert json.loads(rows[row_id].macro_output.toJson()) == {"id": row_id}
-        assert rows[row_id].macro_error is None
-    assert json.loads(rows["imported"].macro_output.toJson()) == {"imported": True}
-    assert rows["imported"].macro_error is None
-    assert rows["invalid"].macro_error == "Invalid macro_id (not UUID): not-a-uuid"
-    assert rows["null-id"].macro_error == "Invalid macro_id (null)"
-    assert rows["null-data"].macro_error == "NULL macro_id or data for row null-data"
-    assert all(rows[row_id].macro_output is None for row_id in ["invalid", "null-id", "null-data"])
+    for name in ["valid", "legacy"]:
+        assert json.loads(rows[ids[name]].macro_output.toJson()) == {"id": str(ids[name])}
+        assert rows[ids[name]].macro_error is None
+    assert json.loads(rows[ids["imported"]].macro_output.toJson()) == {"imported": True}
+    assert rows[ids["imported"]].macro_error is None
+    assert rows[ids["invalid"]].macro_error == "Invalid macro_id (not UUID): not-a-uuid"
+    assert rows[ids["null-id"]].macro_error == "Invalid macro_id (null)"
+    assert rows[ids["null-data"]].macro_error == f"NULL macro_id or data for row {ids['null-data']}"
+    assert all(rows[ids[name]].macro_output is None for name in ["invalid", "null-id", "null-data"])
