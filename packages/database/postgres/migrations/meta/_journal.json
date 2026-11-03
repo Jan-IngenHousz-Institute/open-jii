@@ -442,6 +442,13 @@
       "when": 1793614587989,
       "tag": "0062_drop_owning_organization_shares",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1793628515687,
+      "tag": "0063_metrics_publisher_counts_exports_and_uploads",
+      "breakpoints": true
     }
   ]
 }

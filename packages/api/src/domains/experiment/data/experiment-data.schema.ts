@@ -71,6 +71,7 @@ export const zExperimentAggregationFunction = z.enum([
   "sum",
   "avg",
   "count",
+  "count_distinct",
   "min",
   "max",
   "std",

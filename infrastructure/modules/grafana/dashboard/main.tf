@@ -3084,7 +3084,7 @@ resource "grafana_rule_group" "metrics_publisher_health" {
     for            = "5m"
 
     annotations = {
-      description      = "The metrics publisher threw, so this week's researcher and experiment counts did not reach CloudWatch, and the weekly report's New researchers, Researchers and Experiments created tiles read no data for the week."
+      description      = "The metrics publisher threw, so this week's database counts did not reach CloudWatch, and the weekly report's New researchers, Researchers, Experiments created, Researchers who exported and Researchers who uploaded tiles read no data for the week."
       summary          = "Metrics publisher is failing to publish"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/metrics-publisher-errors.md"
       __dashboardUid__ = local.heartbeat_daily_uid
@@ -3958,7 +3958,7 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     }
   }
 
-  # Catalog entry 126. Published per pipeline and flow, once per hour the driver logged, and an
+  # Catalog entry 127. Published per pipeline and flow, once per hour the driver logged, and an
   # hour reaches the volume about an hour after it closes, so the window reaches back five hours.
   # A reading stays the latest for about an hour, so one busy hour fires it once.
   rule {
@@ -4041,8 +4041,8 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     }
   }
 
-  # Catalog entry 127. One hour with more than two restarts fires it, since a planned restart
-  # starts every flow again once. The window matches entry 126's.
+  # Catalog entry 128. One hour with more than two restarts fires it, since a planned restart
+  # starts every flow again once. The window matches entry 127's.
   rule {
     name      = "Pipeline Flow Restarting"
     condition = "C"
@@ -4123,7 +4123,7 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     }
   }
 
-  # Catalog entry 128. Published per pipeline for the last closed hour within half an hour of it
+  # Catalog entry 129. Published per pipeline for the last closed hour within half an hour of it
   # closing, so two hours back always holds the latest reading.
   rule {
     name      = "Pipeline Restarting"
