@@ -851,6 +851,30 @@ describe("the cost dashboards", () => {
     ).toEqual([]);
   });
 
+  it("split EC2 compute only by the instance type the serving store runs on", () => {
+    // Everything else on EC2 is counted as the VMs Databricks clusters run on, so a store that
+    // changes size, or a cluster that shares its type, would move cost to the wrong label.
+    const envs = ["dev", "prod"].map((env) =>
+      readFileSync(join(repoRoot, `infrastructure/env/${env}/main.tf`), "utf8"),
+    );
+    const storeTypes = envs.flatMap((source) =>
+      [...source.matchAll(/module "serving_store" \{[^}]*?instance_type\s*=\s*"([^"]+)"/gs)].map(
+        ([, type]) => type,
+      ),
+    );
+    const clusterTypes = envs.flatMap((source) =>
+      [...source.matchAll(/node_type_id\s*=\s*(?:\{[^}]*?value\s*=\s*)?"([^"]+)"/gs)].map(
+        ([, type]) => type,
+      ),
+    );
+    const split = Object.keys(services.ec2InstanceTypes);
+
+    expect(storeTypes).toHaveLength(2);
+    expect(clusterTypes.length).toBeGreaterThan(3);
+    expect([...new Set(storeTypes)].sort()).toEqual([...split].sort());
+    expect(split.filter((type) => clusterTypes.includes(type))).toEqual([]);
+  });
+
   it("name only categories the category file lists", () => {
     const named = [...cost.matchAll(/cost_(?:databricks|vms|tax)\s*=\s*"([^"]+)"/g)].map(
       ([, name]) => name,

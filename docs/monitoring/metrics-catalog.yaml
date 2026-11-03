@@ -1235,9 +1235,11 @@ metrics:
       What AWS billed for usage in the latest complete Monday-to-Sunday week, per Service and its
       Category from docs/monitoring/cost-services.json, stamped the Monday it closed. Tax and fees are
       left out: AWS dates a month's on the 1st and adds to them as its usage grows, so no week carries
-      its own share; 115 has them by month. EC2 compute counts as Databricks VMs:
-      nothing in infrastructure/ runs on EC2, and on dev all but $1.46 of $950 over the 90 days to 26
-      October 2026 was on the instance types Databricks clusters use; the rest was t4g.
+      its own share; 115 has them by month. EC2 compute counts as Databricks VMs, except on the
+      instance type the serving store runs on, which counts as Serving store under Other AWS; a
+      consistency test keeps that type equal to the store's and apart from the clusters'. On dev all but
+      $1.46 of $950 over the 90 days to 26 October 2026 was on the instance types Databricks clusters
+      use, before the store moved onto its own instance on 28 October.
 
   - num: 40
     id: digest-self-check

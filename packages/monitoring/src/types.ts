@@ -159,6 +159,11 @@ export interface CostServices {
   services: Record<string, CostLabel>;
   /** Where a service the file does not list is counted. */
   otherServices: CostLabel;
+  /**
+   * EC2 compute on these instance types, by the type Cost Explorer bills it under. The rest of EC2
+   * compute is the VMs Databricks clusters run on.
+   */
+  ec2InstanceTypes: Record<string, CostLabel>;
   databricksComponents: Record<string, string>;
 }
 

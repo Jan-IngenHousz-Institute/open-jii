@@ -40,6 +40,9 @@
     "Amazon Route 53": { "label": "Route 53", "category": "Other AWS" }
   },
   "otherServices": { "label": "Other AWS services", "category": "Other AWS" },
+  "ec2InstanceTypes": {
+    "r7g.large": { "label": "Serving store", "category": "Other AWS" }
+  },
   "databricksComponents": {
     "centrum": "Centrum pipeline",
     "macro": "Macro pipeline",
