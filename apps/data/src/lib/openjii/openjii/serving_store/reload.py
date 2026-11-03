@@ -47,8 +47,8 @@ class Reloaded:
 
     @property
     def missing(self) -> int:
-        """Rows gold holds that the store lacks, beyond those it refused."""
-        return max(sum(self.short.values()) - self.written.rejected, 0)
+        """Rows gold holds that the store lacks."""
+        return sum(self.short.values())
 
 
 class StoreReload:
@@ -67,7 +67,8 @@ class StoreReload:
 
     def reload(self, table: StoreTable, experiment_id: str | None = None) -> Reloaded:
         """Reloads one experiment, or every experiment when ``experiment_id`` is None. An
-        experiment gold no longer holds leaves the store with it."""
+        experiment gold no longer holds leaves the store with it. When the store refuses any row,
+        nothing is deleted, since a refused row's older copy is the only one the store has."""
         # Read first, so a commit the feed sends meanwhile cannot look newer than gold's latest.
         newest = self._newest_stored_version(table)
         version, committed_at = self.latest_version(table)
@@ -89,7 +90,8 @@ class StoreReload:
         )
 
         written = self._write(table, changes)
-        self._delete_older(table, version, experiment_id)
+        if not written.rejected:
+            self._delete_older(table, version, experiment_id)
 
         gold = rows.select(*table.key()).dropDuplicates().groupBy("experiment_id").count().collect()
         stored = self._stored_rows(table, version, experiment_id)

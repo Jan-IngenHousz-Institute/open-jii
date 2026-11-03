@@ -6,6 +6,8 @@
 # COMMAND ----------
 
 # DBTITLE 1,Imports and configuration
+import traceback
+
 from openjii.serving_store.reload import StoreReload
 from openjii.serving_store.tables import MACRO_RESULTS, MEASUREMENTS, UPLOADS
 from openjii.serving_store.writer import StoreWriter
@@ -56,7 +58,14 @@ def named(rows: dict[str, int]) -> str:
 
 
 for table in tables:
-    reloaded = reload.reload(table, experiment_id)
+    # One table's failure is reported with the others' results rather than in their place.
+    try:
+        reloaded = reload.reload(table, experiment_id)
+    except Exception as error:
+        traceback.print_exc()
+        mismatches.append(f"{table.name} failed: {type(error).__name__}: {error}")
+        continue
+
     print(
         f"[serving store] Reloaded {table.name} at gold version {reloaded.version}: "
         f"{reloaded.written.inserted} rows sent, {reloaded.written.rejected} refused (in feed_rejects); "
@@ -64,6 +73,19 @@ for table in tables:
         f"over {len(reloaded.gold)} experiments, {sum(reloaded.newer.values())} of them written by the feed since",
         flush=True,
     )
+    found_nothing = experiment_id is not None and not (reloaded.gold or reloaded.store or reloaded.older)
+    if found_nothing:
+        print(
+            f"[serving store] Neither gold nor store.{table.name} holds experiment {experiment_id} now; "
+            "unless it was deleted, check the id"
+        )
+
+    if reloaded.written.rejected:
+        mismatches.append(
+            f"{table.name}: the store refused {reloaded.written.rejected} rows, so nothing was deleted and their "
+            "older copies stay; fix them as store-feed-rejects describes, then run the reload again"
+        )
+        continue
     if reloaded.missing:
         mismatches.append(f"{table.name} lacks {reloaded.missing} of gold's rows, in {named(reloaded.short)}")
     if reloaded.older:

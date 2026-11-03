@@ -167,21 +167,27 @@ def test_a_load_still_unfinished_after_the_last_attempt_fails_before_deleting(sp
     assert [sql for sql, _ in writer.statements if sql.startswith("DELETE")] == []
 
 
-def test_refused_rows_do_not_count_as_missing() -> None:
-    def reloaded(rejected: int) -> Reloaded:
-        return Reloaded(
-            "uploads",
-            7,
-            Written(inserted=9, rejected=rejected),
-            gold={"e1": 5, "e2": 4},
-            store={"e1": 3, "e2": 6},
-            newer={"e2": 2},
-            older={},
-        )
+def test_a_load_the_store_refused_rows_of_deletes_nothing(spark: SparkSession) -> None:
+    writer = _Writer(written=[Written(inserted=3, rejected=1)])
 
-    assert reloaded(rejected=0).short == {"e1": 2}
-    assert reloaded(rejected=0).missing == 2
-    assert reloaded(rejected=2).missing == 0
+    reloaded = _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
+
+    assert reloaded.written.rejected == 1
+    assert [sql for sql, _ in writer.statements if sql.startswith("DELETE")] == []
+
+
+def test_missing_counts_the_experiments_short_of_gold() -> None:
+    reloaded = Reloaded(
+        "uploads",
+        7,
+        Written(inserted=9),
+        gold={"e1": 5, "e2": 4},
+        store={"e1": 3, "e2": 6},
+        newer={"e2": 2},
+        older={},
+    )
+
+    assert (reloaded.short, reloaded.missing) == ({"e1": 2}, 2)
 
 
 class _Admin:
@@ -219,10 +225,10 @@ def store() -> Iterator[_Admin]:
     store.run(
         f"CREATE USER {_RELOADER} IDENTIFIED BY 'reload-test' SETTINGS json_type_escape_dots_in_keys = 1"
     )
-    store.run(f"GRANT SELECT, INSERT, ALTER DELETE ON {_DATABASE}.* TO {_RELOADER}")
+    store.run(f"GRANT SELECT, INSERT ON {_DATABASE}.* TO {_RELOADER}")
     for table in ("measurements", "macro_results", "uploads"):
-        store.run(f"GRANT ALTER UPDATE(_row_exists) ON {_DATABASE}.{table} TO {_RELOADER}")
-    store.run(f"REVOKE INSERT, ALTER DELETE ON {_DATABASE}._migrations FROM {_RELOADER}")
+        store.run(f"GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON {_DATABASE}.{table} TO {_RELOADER}")
+    store.run(f"REVOKE INSERT ON {_DATABASE}._migrations FROM {_RELOADER}")
 
     yield store
 
@@ -347,12 +353,14 @@ def test_reloaded_rows_stay_out_of_the_feeds_delivery_window(
 
 
 @pytest.mark.clickhouse
-def test_the_reloader_cannot_empty_a_table_rewrite_values_or_touch_the_migration_ledger(
+def test_the_reloader_deletes_only_from_the_tables_it_reloads_and_rewrites_no_values(
     reloader: StoreWriter,
 ) -> None:
     for statement in (
         f"TRUNCATE TABLE {_DATABASE}.uploads",
         f"ALTER TABLE {_DATABASE}.uploads UPDATE upload_table_name = 'x' WHERE 1",
+        f"ALTER TABLE {_DATABASE}.feed_rejects DELETE WHERE 1",
+        f"DELETE FROM {_DATABASE}.feed_rejects WHERE 1",
         f"DELETE FROM {_DATABASE}._migrations WHERE 1",
         f"INSERT INTO {_DATABASE}._migrations VALUES ('9999')",
     ):
