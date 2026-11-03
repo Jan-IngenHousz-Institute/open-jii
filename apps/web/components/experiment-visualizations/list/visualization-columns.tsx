@@ -5,6 +5,7 @@ import {
 } from "@/components/overview-table/name-updated-columns";
 import type { OverviewTableColumn } from "@/components/overview-table/overview-table";
 import { StatusBadge } from "@/components/shared/status-badge";
+import type { NameUpdatedSortField } from "@/util/name-updated-sort";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
@@ -15,7 +16,7 @@ import { visualizationTypeBadgeTone } from "./visualization-type-badge-tone";
 export function getVisualizationColumns(
   t: (key: string) => string,
   experimentId: string,
-): OverviewTableColumn<ExperimentVisualization>[] {
+): OverviewTableColumn<ExperimentVisualization, NameUpdatedSortField>[] {
   return [
     nameColumn(t("ui.labels.columns.name")),
     {

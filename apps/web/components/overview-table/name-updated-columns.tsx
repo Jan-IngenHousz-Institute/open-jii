@@ -1,5 +1,6 @@
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { formatDate } from "@/util/date";
+import type { NameUpdatedSortField } from "@/util/name-updated-sort";
 
 import { cn } from "@repo/ui/lib/utils";
 
@@ -13,7 +14,9 @@ interface ListRow {
   createdByName?: string;
 }
 
-export function nameColumn<T extends ListRow>(header: string): OverviewTableColumn<T> {
+export function nameColumn<T extends ListRow>(
+  header: string,
+): OverviewTableColumn<T, NameUpdatedSortField> {
   return {
     header,
     sortId: "name",
@@ -33,7 +36,9 @@ export function nameColumn<T extends ListRow>(header: string): OverviewTableColu
   };
 }
 
-export function authorColumn<T extends ListRow>(header: string): OverviewTableColumn<T> {
+export function authorColumn<T extends ListRow>(
+  header: string,
+): OverviewTableColumn<T, NameUpdatedSortField> {
   return {
     header,
     className: "w-56",
@@ -41,7 +46,9 @@ export function authorColumn<T extends ListRow>(header: string): OverviewTableCo
   };
 }
 
-export function updatedColumn<T extends ListRow>(header: string): OverviewTableColumn<T> {
+export function updatedColumn<T extends ListRow>(
+  header: string,
+): OverviewTableColumn<T, NameUpdatedSortField> {
   return {
     header,
     sortId: "updatedAt",

@@ -5,6 +5,7 @@ import {
 } from "@/components/overview-table/name-updated-columns";
 import type { OverviewTableColumn } from "@/components/overview-table/overview-table";
 import { overviewTableText } from "@/components/overview-table/overview-table";
+import type { NameUpdatedSortField } from "@/util/name-updated-sort";
 
 import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { cn } from "@repo/ui/lib/utils";
@@ -14,8 +15,7 @@ import { DashboardRowActions } from "./dashboard-row-actions";
 export function getDashboardColumns(
   t: (key: string) => string,
   experimentId: string,
-  basePath: string,
-): OverviewTableColumn<ExperimentDashboard>[] {
+): OverviewTableColumn<ExperimentDashboard, NameUpdatedSortField>[] {
   return [
     nameColumn(t("ui.labels.columns.name")),
     {
@@ -32,12 +32,8 @@ export function getDashboardColumns(
     {
       header: null,
       className: "w-14 px-3",
-      cell: (dashboard) => (
-        <DashboardRowActions
-          dashboard={dashboard}
-          experimentId={experimentId}
-          basePath={basePath}
-        />
+      cell: (dashboard, href) => (
+        <DashboardRowActions dashboard={dashboard} experimentId={experimentId} href={href} />
       ),
     },
   ];

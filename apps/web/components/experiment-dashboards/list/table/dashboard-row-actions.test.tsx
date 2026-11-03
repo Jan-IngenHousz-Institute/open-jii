@@ -8,13 +8,13 @@ import { contract } from "@repo/api/contract";
 import { DashboardRowActions } from "./dashboard-row-actions";
 
 describe("DashboardRowActions", () => {
-  it("links Edit to the dashboard's edit mode under the given basePath", async () => {
+  it("links Edit to the dashboard's page in edit mode", async () => {
     const user = userEvent.setup();
     render(
       <DashboardRowActions
         dashboard={createExperimentDashboard({ id: "dash-9" })}
         experimentId="exp-1"
-        basePath="experiments-archive"
+        href="/platform/experiments-archive/exp-1/dashboards/dash-9"
       />,
     );
 
@@ -32,7 +32,7 @@ describe("DashboardRowActions", () => {
       <DashboardRowActions
         dashboard={createExperimentDashboard({ id: "dash-del" })}
         experimentId="exp-1"
-        basePath="experiments"
+        href="/platform/experiments/exp-1/dashboards/dash-del"
       />,
     );
 

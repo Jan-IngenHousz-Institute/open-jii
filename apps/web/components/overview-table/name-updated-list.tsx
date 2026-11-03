@@ -1,13 +1,15 @@
 "use client";
 
-import { useNameUpdatedListSort } from "@/hooks/useNameUpdatedListSort";
-import { useOverviewSortLabels } from "@/hooks/useOverviewSortLabels";
-import { sortByNameAndUpdated } from "@/util/name-updated-sort";
+import { useListUrlState } from "@/hooks/useListUrlState";
+import type { NameUpdatedSortField } from "@/util/name-updated-sort";
+import { sortByNameAndUpdated, zNameUpdatedSort } from "@/util/name-updated-sort";
 import { useMemo } from "react";
 
 import type { OverviewTableColumn } from "./overview-table";
-import { createOverviewTableSorting, OverviewTable } from "./overview-table";
+import { OverviewTable } from "./overview-table";
 import { ResetSortingButton } from "./reset-sorting-button";
+
+const NO_FILTERS = {};
 
 interface NamedAndUpdated {
   id: string;
@@ -17,7 +19,7 @@ interface NamedAndUpdated {
 
 interface NameUpdatedListProps<T extends NamedAndUpdated> {
   items: T[];
-  columns: OverviewTableColumn<T>[];
+  columns: OverviewTableColumn<T, NameUpdatedSortField>[];
   getRowHref: (item: T) => string;
   countLabel: (count: number) => string;
   isLoading?: boolean;
@@ -38,8 +40,10 @@ export function NameUpdatedList<T extends NamedAndUpdated>({
   emptyMessage,
   emptyHelpPath,
 }: NameUpdatedListProps<T>) {
-  const { sort, setSort, toggleSort } = useNameUpdatedListSort();
-  const sortLabels = useOverviewSortLabels();
+  const { sort, setSort, toggleSort } = useListUrlState({
+    filters: NO_FILTERS,
+    sort: zNameUpdatedSort,
+  });
   const sorted = useMemo(() => sortByNameAndUpdated(items, sort), [items, sort]);
 
   return (
@@ -53,7 +57,7 @@ export function NameUpdatedList<T extends NamedAndUpdated>({
       </div>
       <OverviewTable
         columns={columns}
-        sorting={createOverviewTableSorting(sort, toggleSort, sortLabels)}
+        sorting={{ sort, onToggle: toggleSort }}
         items={sorted}
         isLoading={isLoading}
         getRowKey={(item) => item.id}

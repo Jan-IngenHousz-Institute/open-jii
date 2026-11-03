@@ -1,6 +1,5 @@
 "use client";
 
-import type { ResourceSort } from "@/components/organizations/organization-resource-filter";
 import { z } from "zod";
 
 import { zSharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
@@ -8,6 +7,9 @@ import { zSharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { useListUrlState } from "../../useListUrlState";
 
 const ORGANIZATION_RESOURCE_FILTERS = { type: zSharingResourceType };
+
+/** How the list is ordered. `recent` is the default: the last thing touched, first. */
+export type ResourceSort = "recent" | "name" | "type";
 
 /** The sort control only ever orders ascending, so a URL asking for more falls back to recent. */
 const zOrganizationResourceSort = z

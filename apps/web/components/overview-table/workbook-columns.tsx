@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 
 import type { WorkbookListEntry } from "@repo/api/domains/workbook/workbook.schema";
 import type { WorkbookListItem } from "@repo/api/domains/workbook/workbook.schema";
+import type { WorkbookSort } from "@repo/api/domains/workbook/workbook.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -107,7 +108,7 @@ function WorkbookActionsCell({ workbook, href }: { workbook: WorkbookListItem; h
 export function getWorkbookColumns(
   t: (key: string, options?: Record<string, unknown>) => string,
   locale: string,
-): OverviewTableColumn<WorkbookListEntry>[] {
+): OverviewTableColumn<WorkbookListEntry, WorkbookSort[number]["field"]>[] {
   return [
     {
       header: t("workbooks.columns.name"),

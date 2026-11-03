@@ -2,11 +2,9 @@
 
 import { RowActionsMenu } from "@/components/overview-table/row-actions-menu";
 import { useExperimentVisualizationDelete } from "@/hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
-import { useState } from "react";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
-import { toast } from "@repo/ui/hooks/use-toast";
 
 export interface VisualizationRowActionsProps {
   visualization: ExperimentVisualization;
@@ -22,15 +20,7 @@ export function VisualizationRowActions({
 }: VisualizationRowActionsProps) {
   const { t } = useTranslation("experimentVisualizations");
   const { t: tCommon } = useTranslation("common");
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-
-  const { mutate: deleteVisualization, isPending: isDeleting } = useExperimentVisualizationDelete({
-    experimentId,
-    onSuccess: () => {
-      toast({ title: t("ui.messages.deleteSuccess") });
-      setConfirmingDelete(false);
-    },
-  });
+  const { mutateAsync: deleteVisualization } = useExperimentVisualizationDelete({ experimentId });
 
   return (
     <RowActionsMenu
@@ -41,10 +31,8 @@ export function VisualizationRowActions({
         delete: t("ui.actions.delete"),
         deleteDescription: t("ui.messages.deleteConfirm", { name: visualization.name }),
         cancel: tCommon("common.cancel"),
+        deleted: t("ui.messages.deleteSuccess"),
       }}
-      confirmingDelete={confirmingDelete}
-      onConfirmingDeleteChange={setConfirmingDelete}
-      isDeleting={isDeleting}
       onDelete={() => deleteVisualization({ id: experimentId, visualizationId: visualization.id })}
     />
   );

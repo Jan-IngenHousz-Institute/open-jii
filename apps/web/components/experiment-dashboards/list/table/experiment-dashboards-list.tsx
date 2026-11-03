@@ -26,7 +26,7 @@ export default function ExperimentDashboardsList({
   return (
     <NameUpdatedList
       items={dashboards}
-      columns={getDashboardColumns(t, experimentId, basePath)}
+      columns={getDashboardColumns(t, experimentId)}
       getRowHref={(dashboard) => `/platform/${basePath}/${experimentId}/dashboards/${dashboard.id}`}
       countLabel={(count) => t("ui.labels.listCount", { count })}
       isLoading={isLoading}

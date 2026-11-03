@@ -1,9 +1,10 @@
 "use client";
 
+import { ListFilterBar } from "@/components/list-filter-bar";
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { StatusBadge } from "@/components/shared/status-badge";
+import type { ResourceSort } from "@/hooks/organization/useOrganizationResourceListState/useOrganizationResourceListState";
 import { useOrganizationResourceListState } from "@/hooks/organization/useOrganizationResourceListState/useOrganizationResourceListState";
-import { useListFilterLabels } from "@/hooks/useListFilterLabels";
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime, formatShortDate } from "@/util/date";
 import { stripHtml } from "@/util/strip-html";
@@ -16,9 +17,7 @@ import type { TransferableResourceType } from "@repo/api/domains/sharing/transfe
 import { zTransferableResourceType } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { ListFilterChips } from "@repo/ui/components/list-filter-chips";
 import type { ListFilter } from "@repo/ui/components/list-filter-menu";
-import { ListFilterMenu } from "@repo/ui/components/list-filter-menu";
 import { SearchInput } from "@repo/ui/components/search-input";
 import {
   Select,
@@ -34,7 +33,6 @@ import {
   TooltipTrigger,
 } from "@repo/ui/components/tooltip";
 
-import type { ResourceSort } from "./organization-resource-filter";
 import { filterAndSortResources } from "./organization-resource-filter";
 import {
   GROUP_ORDER,
@@ -82,7 +80,6 @@ export function OrganizationResourceRows({
   const { t } = useTranslation();
 
   const list = useOrganizationResourceListState();
-  const filterLabels = useListFilterLabels();
   const [target, setTarget] = useState<TransferTarget | null>(null);
 
   const { query, setQuery, sort, setSort, setFilter, clearFilters, hasActiveFilters } = list;
@@ -113,35 +110,33 @@ export function OrganizationResourceRows({
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <SearchInput
-            value={query}
-            onChange={setQuery}
-            placeholder={t("organizations.resources.searchPlaceholder")}
-            aria-label={t("organizations.resources.searchLabel")}
-            className="sm:flex-1"
-          />
-
-          <ListFilterMenu filters={filters} labels={filterLabels} />
-
-          <Select value={sort} onValueChange={(next) => setSort(next as ResourceSort)}>
-            <SelectTrigger
-              className="w-full sm:w-44"
-              aria-label={t("organizations.resources.sortLabel")}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {t(option.labelKey)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <ListFilterChips filters={filters} labels={filterLabels} onClear={clearFilters} />
+        <ListFilterBar
+          search={
+            <SearchInput
+              value={query}
+              onChange={setQuery}
+              placeholder={t("organizations.resources.searchPlaceholder")}
+              aria-label={t("organizations.resources.searchLabel")}
+              className="w-full md:w-56"
+            />
+          }
+          filters={filters}
+          onClearFilters={clearFilters}
+          actions={
+            <Select value={sort} onValueChange={(next) => setSort(next as ResourceSort)}>
+              <SelectTrigger className="w-44" aria-label={t("organizations.resources.sortLabel")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {t(option.labelKey)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+        />
 
         {visible.length === 0 ? (
           <div className="border-border border-t py-10 text-center">

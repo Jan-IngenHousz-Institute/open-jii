@@ -9,13 +9,18 @@ export const zNameUpdatedSort = z
   .max(2);
 
 export type NameUpdatedSort = z.infer<typeof zNameUpdatedSort>;
+export type NameUpdatedSortField = NameUpdatedSort[number]["field"];
 
 interface NamedAndUpdated {
   name: string;
   updatedAt: string;
 }
 
-const compareField = (a: NamedAndUpdated, b: NamedAndUpdated, field: "name" | "updatedAt") =>
+/** The default order of every in-browser list: the last thing touched, first. */
+export const newestUpdateFirst = (a: { updatedAt: string }, b: { updatedAt: string }) =>
+  Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
+
+const compareField = (a: NamedAndUpdated, b: NamedAndUpdated, field: NameUpdatedSortField) =>
   field === "name"
     ? a.name.localeCompare(b.name)
     : Date.parse(a.updatedAt) - Date.parse(b.updatedAt);
@@ -33,6 +38,6 @@ export function sortByNameAndUpdated<T extends NamedAndUpdated>(
       const order = compareField(a, b, field);
       if (order !== 0) return direction === "asc" ? order : -order;
     }
-    return -compareField(a, b, "updatedAt");
+    return newestUpdateFirst(a, b);
   });
 }

@@ -1,10 +1,10 @@
+import type { ResourceSort } from "@/hooks/organization/useOrganizationResourceListState/useOrganizationResourceListState";
+import { newestUpdateFirst } from "@/util/name-updated-sort";
+
 import type { OrganizationResource } from "@repo/api/domains/organization/organization.schema";
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
 import { GROUP_ORDER } from "./organization-resource-meta";
-
-/** How the list is ordered. `recent` is the default: the last thing touched, first. */
-export type ResourceSort = "recent" | "name" | "type";
 
 export interface ResourceFilterState {
   query: string;
@@ -32,9 +32,6 @@ export function filterAndSortResources(
       (needle === "" || resource.name.toLowerCase().includes(needle)),
   );
 
-  const byRecency = (a: OrganizationResource, b: OrganizationResource) =>
-    Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
-
   // `filter` already returned a fresh array, so sorting in place cannot touch the
   // caller's — the featured card renders from the same one.
   if (sort === "name") {
@@ -42,8 +39,9 @@ export function filterAndSortResources(
   }
   if (sort === "type") {
     return matched.sort(
-      (a, b) => GROUP_ORDER.indexOf(a.type) - GROUP_ORDER.indexOf(b.type) || byRecency(a, b),
+      (a, b) =>
+        GROUP_ORDER.indexOf(a.type) - GROUP_ORDER.indexOf(b.type) || newestUpdateFirst(a, b),
     );
   }
-  return matched.sort(byRecency);
+  return matched.sort(newestUpdateFirst);
 }

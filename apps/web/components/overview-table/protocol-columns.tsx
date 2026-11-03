@@ -7,6 +7,7 @@ import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { getSensorFamilyBadgeTone, getSensorFamilyLabel } from "@/util/sensor-family";
 
 import type { ProtocolListItem } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolSort } from "@repo/api/domains/protocol/protocol.schema";
 import { Badge } from "@repo/ui/components/badge";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { cn } from "@repo/ui/lib/utils";
@@ -17,7 +18,7 @@ import { overviewTableText } from "./overview-table";
 export function getProtocolColumns(
   t: (key: string) => string,
   locale: string,
-): OverviewTableColumn<ProtocolListItem>[] {
+): OverviewTableColumn<ProtocolListItem, ProtocolSort[number]["field"]>[] {
   return [
     {
       header: t("protocols.columns.name"),
