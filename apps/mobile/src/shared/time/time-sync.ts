@@ -82,8 +82,11 @@ async function restoreState(): Promise<void> {
   }
 }
 
-// Never prompts: time sync starts before sign-in, and the measurement flow asks
-// for location when it starts.
+// A day-old position still names the timezone, and reading it needs no network.
+const LAST_KNOWN_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+// Never prompts, for the permission or for Android's location settings: time
+// sync starts before sign-in, and the measurement flow asks when it starts.
 async function resolveTimezone(): Promise<string> {
   try {
     const { status } = await Location.getForegroundPermissionsAsync();
@@ -92,9 +95,12 @@ async function resolveTimezone(): Promise<string> {
       return "UTC";
     }
 
-    const location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Low,
-    });
+    const location =
+      (await Location.getLastKnownPositionAsync({ maxAge: LAST_KNOWN_MAX_AGE_MS })) ??
+      (await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Low,
+        mayShowUserSettingsDialog: false,
+      }));
 
     return tzLookup(location.coords.latitude, location.coords.longitude);
   } catch (err) {
