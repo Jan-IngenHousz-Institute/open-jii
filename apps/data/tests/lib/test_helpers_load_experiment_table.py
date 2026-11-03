@@ -54,24 +54,28 @@ _TABLES = {
         FROM range(300)
     """,
     # A macro whose id equals an upload table's, so a loader that reads upload tables as macros
-    # returns this row instead of the uploaded ones.
+    # returns this row instead of the uploaded ones. Result 1 was computed again on a copy of its
+    # measurement.
     "enriched_experiment_macro_data": """
         SELECT * FROM VALUES
-          (1L, 'e1', 'macro-1', 10L, 'device-a', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.7}')),
-          (2L, 'e1', 'upload-1', 10L, 'device-a', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.1}')),
-          (1L, 'e1', 'macro-1', 10L, 'device-a', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.7}'))
-        AS t(id, experiment_id, macro_id, raw_id, device_id, timestamp, macro_output)
+          (1L, 'e1', 'macro-1', 10L, 'device-a', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.7}'),
+           TIMESTAMP'2026-10-01 10:01:00'),
+          (2L, 'e1', 'upload-1', 10L, 'device-a', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.1}'),
+           TIMESTAMP'2026-10-01 10:01:00'),
+          (1L, 'e1', 'macro-1', 10L, 'device-a', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.7}'),
+           TIMESTAMP'2026-10-01 10:31:00')
+        AS t(id, experiment_id, macro_id, raw_id, device_id, timestamp, macro_output, processed_timestamp)
     """,
-    # Capture 10 arrived twice, so it is stored twice under one id. Id 12 is an old 32-bit id two
-    # different captures share.
+    # Capture 10 arrived twice, so it is stored twice under one id; the later copy carries a comment
+    # added before the phone sent it again. Id 12 is an old 32-bit id two different captures share.
     "enriched_experiment_raw_data": """
         SELECT * FROM VALUES
-          (10L, 'e1', TIMESTAMP'2026-10-01 10:00:00', 'device-a'),
-          (11L, 'e1', TIMESTAMP'2026-10-01 11:00:00', 'device-a'),
-          (10L, 'e1', TIMESTAMP'2026-10-01 10:00:00', 'device-a'),
-          (12L, 'e1', TIMESTAMP'2026-10-01 12:00:00', 'device-a'),
-          (12L, 'e1', TIMESTAMP'2026-10-01 12:00:00', 'device-b')
-        AS t(id, experiment_id, timestamp, device_id)
+          (10L, 'e1', TIMESTAMP'2026-10-01 10:00:00', 'device-a', TIMESTAMP'2026-10-01 10:01:00', 0),
+          (11L, 'e1', TIMESTAMP'2026-10-01 11:00:00', 'device-a', TIMESTAMP'2026-10-01 11:01:00', 0),
+          (10L, 'e1', TIMESTAMP'2026-10-01 10:00:00', 'device-a', TIMESTAMP'2026-10-01 10:31:00', 1),
+          (12L, 'e1', TIMESTAMP'2026-10-01 12:00:00', 'device-a', TIMESTAMP'2026-10-01 12:01:00', 0),
+          (12L, 'e1', TIMESTAMP'2026-10-01 12:00:00', 'device-b', TIMESTAMP'2026-10-01 12:01:00', 0)
+        AS t(id, experiment_id, timestamp, device_id, processed_timestamp, comments)
     """,
 }
 
@@ -148,6 +152,12 @@ def test_a_capture_stored_twice_exports_once(schema: str) -> None:
     rows = _load("raw_data", schema).collect()
 
     assert [row.id for row in rows][:2] == [10, 11]
+
+
+def test_a_capture_stored_twice_exports_the_copy_processed_last(schema: str) -> None:
+    [capture] = [row for row in _load("raw_data", schema).collect() if row.id == 10]
+
+    assert capture.comments == 1
 
 
 def test_different_captures_that_share_an_old_id_both_export(schema: str) -> None:

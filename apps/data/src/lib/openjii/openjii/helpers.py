@@ -158,6 +158,11 @@ _TABLE_CONFIG = {
     "upload": ("enriched_experiment_uploaded_data", "uploaded_at"),
 }
 
+_COPY_KEYS = {
+    "raw_data": ["id", "timestamp", "device_id"],
+    "macro": ["id", "raw_id", "timestamp", "device_id"],
+}
+
 _MACRO_EXCLUDE_COLS = ["raw_id", "macro_id", "macro_name", "macro_filename", "date"]
 _UPLOAD_EXCLUDE_COLS = ["upload_table_id", "upload_table_name", "upload_id"]
 
@@ -176,8 +181,8 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
     partitions, each sorted, so writing them gives that many files whose order is
     the rows' order. Without it the rows are sorted as one.
     """
-    from pyspark.sql import SparkSession
-    from pyspark.sql.functions import col, from_json
+    from pyspark.sql import SparkSession, Window
+    from pyspark.sql.functions import col, from_json, row_number
 
     spark = SparkSession.builder.getOrCreate()
     metadata = get_table_metadata(experiment_id, table_name, catalog_name, schema_name=schema_name)
@@ -211,12 +216,13 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
         df = df.filter(col("upload_table_id") == table_name)
 
     # A capture that arrived more than once is stored once per arrival under one id, so an export
-    # keeps one of them. Rows from before the 64-bit ids can share an id with a different capture,
-    # so a copy must also share its timestamp and device, as in the serving store's key.
-    if table_type == "raw_data":
-        df = df.dropDuplicates(["id", "timestamp", "device_id"])
-    if table_type == "macro":
-        df = df.dropDuplicates(["id", "raw_id", "timestamp", "device_id"])
+    # keeps the copy processed last, as the serving store keeps the newest, and with it an edit the
+    # phone sent again. Rows from before the 64-bit ids can share an id with a different capture, so a
+    # copy must also share its timestamp and device, as in the serving store's key.
+    copy_key = _COPY_KEYS.get(table_type)
+    if copy_key is not None:
+        newest_first = Window.partitionBy(*copy_key).orderBy(col("processed_timestamp").desc())
+        df = df.withColumn("_copy", row_number().over(newest_first)).filter(col("_copy") == 1).drop("_copy")
 
     parsed = []
     exclude_cols = ["experiment_id"]
