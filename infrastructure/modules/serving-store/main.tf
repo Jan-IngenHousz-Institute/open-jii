@@ -294,7 +294,8 @@ resource "aws_instance" "store" {
     tags        = merge(var.tags, { Name = "${local.name}-root" })
   }
 
-  user_data = templatefile("${path.module}/templates/cloud-config.yaml.tftpl", {
+  # Gzipped, which cloud-init unpacks: rendered, the config is past EC2's 16 KB limit for user data.
+  user_data_base64 = base64gzip(templatefile("${path.module}/templates/cloud-config.yaml.tftpl", {
     clickhouse_version           = var.clickhouse_version
     clickhouse_id                = local.clickhouse_id
     data_device                  = local.data_device
@@ -305,7 +306,7 @@ resource "aws_instance" "store" {
     cloudwatch_agent_config_path = local.cloudwatch_agent_config_path
     cloudwatch_agent_config      = local.cloudwatch_agent_config
     feed_metrics_script          = local.feed_metrics_script
-  })
+  }))
   user_data_replace_on_change = true
 
   tags = merge(var.tags, { Name = local.name })
