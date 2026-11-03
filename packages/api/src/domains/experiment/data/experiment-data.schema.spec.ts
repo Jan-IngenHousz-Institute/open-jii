@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { ExperimentDataFilter } from "./experiment-data.schema";
 import {
   DISTINCT_VALUES_MAX_LIMIT,
   isBivariateAggregate,
@@ -19,9 +20,63 @@ import {
   zExperimentGroupByItem,
   zExperimentTimeBucketUnit,
 } from "./experiment-data.schema";
-import { resolveRelativeTimeFilters, resolveRelativeTimeWindow } from "./relative-time-filter";
+import {
+  hasRelativeTimeFilters,
+  isRelativeTimeWindow,
+  relativeTimeFilterIdentities,
+  relativeTimeFilterIdentity,
+  resolveRelativeTimeFilters,
+  resolveRelativeTimeWindow,
+} from "./relative-time-filter";
 
 describe("Data filter primitives & distinct values", () => {
+  it("distinguishes rolling windows from absent, scalar and fixed-range values", () => {
+    for (const value of [undefined, "2026-06-08", 0, false, ["2026-06-01", "2026-06-08"]]) {
+      expect(isRelativeTimeWindow(value)).toBe(false);
+    }
+    expect(isRelativeTimeWindow({ last: 24, unit: "hours" })).toBe(true);
+    expect(isRelativeTimeWindow({ last: 7, unit: "days" })).toBe(true);
+  });
+
+  it("finds rolling filters in a mixed read without treating saved fixed ranges as relative", () => {
+    const fixed: ExperimentDataFilter[] = [
+      { column: "timestamp", operator: "between", value: ["2026-06-01", "2026-06-08"] },
+      { column: "site", operator: "equals", value: "Amsterdam" },
+    ];
+    expect(hasRelativeTimeFilters(undefined)).toBe(false);
+    expect(hasRelativeTimeFilters([])).toBe(false);
+    expect(hasRelativeTimeFilters(fixed)).toBe(false);
+    expect(
+      hasRelativeTimeFilters([
+        ...fixed,
+        { column: "recorded_at", operator: "between", value: { last: 7, unit: "days" } },
+      ]),
+    ).toBe(true);
+  });
+
+  it("keeps a rolling filter identity stable across serialization and distinct by column and window", () => {
+    const first = relativeTimeFilterIdentity("timestamp", { last: 24, unit: "hours" });
+    const reordered = zExperimentDataFilterValue.parse({ unit: "hours", last: 24 });
+    if (!isRelativeTimeWindow(reordered)) throw new Error("Expected a rolling window");
+    expect(relativeTimeFilterIdentity("timestamp", reordered)).toBe(first);
+    expect(relativeTimeFilterIdentity("recorded_at", reordered)).not.toBe(first);
+    expect(relativeTimeFilterIdentity("timestamp", { last: 1, unit: "hours" })).not.toBe(first);
+    expect(relativeTimeFilterIdentity("timestamp", { last: 7, unit: "days" })).not.toBe(first);
+  });
+
+  it("extracts only the rolling identities used to match read responses to filter labels", () => {
+    expect(relativeTimeFilterIdentities(undefined)).toEqual([]);
+    expect(relativeTimeFilterIdentities([])).toEqual([]);
+    expect(
+      relativeTimeFilterIdentities([
+        { column: "timestamp", operator: "between", value: ["2026-06-01", "2026-06-08"] },
+        { column: "site", operator: "equals", value: "Amsterdam" },
+        { column: "recorded_at", operator: "between", value: { last: 24, unit: "hours" } },
+        { column: "uploaded_at", operator: "between", value: { last: 7, unit: "days" } },
+      ]),
+    ).toEqual(['["recorded_at",24,"hours"]', '["uploaded_at",7,"days"]']);
+  });
+
   it.each([
     { last: 1, unit: "hours" },
     { last: 24, unit: "hours" },

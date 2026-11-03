@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DATE_RANGE_PRESETS, computeDateRangePreset } from "./date-range-presets";
+import {
+  DATE_RANGE_PRESETS,
+  computeDateRangePreset,
+  relativeTimePresetLabelKey,
+} from "./date-range-presets";
 import type { DateRangePresetId } from "./date-range-presets";
 
 describe("DATE_RANGE_PRESETS", () => {
@@ -9,6 +13,18 @@ describe("DATE_RANGE_PRESETS", () => {
     for (const preset of DATE_RANGE_PRESETS) {
       expect(preset.labelKey).toMatch(/^dataFilters\./);
     }
+  });
+
+  it.each([
+    ["last1h", "dataFilters.presetLastHour"],
+    ["last24h", "dataFilters.presetLast24h"],
+    ["last7d", "dataFilters.presetLast7d"],
+    ["last30d", "dataFilters.presetLast30d"],
+    ["last90d", "dataFilters.presetLast90d"],
+  ] as const)("recovers the %s label from a persisted rolling window", (id, label) => {
+    const window = DATE_RANGE_PRESETS.find((preset) => preset.id === id)?.relativeWindow;
+    if (!window) throw new Error(`Missing rolling preset ${id}`);
+    expect(relativeTimePresetLabelKey({ ...window })).toBe(label);
   });
 
   it("contains no duplicate ids", () => {
@@ -44,6 +60,15 @@ describe("computeDateRangePreset", () => {
   it("last7d starts seven days before now", () => {
     const [start] = computeDateRangePreset("last7d");
     expect(NOW.getTime() - start.getTime()).toBe(7 * 24 * 60 * 60 * 1000);
+  });
+
+  it.each([
+    ["last30d", "2026-02-27T01:15:00.000Z"],
+    ["last90d", "2025-12-29T01:15:00.000Z"],
+  ] as const)("%s uses elapsed UTC days and drops seconds across the DST boundary", (id, start) => {
+    vi.setSystemTime(new Date("2026-03-29T01:15:59.999Z"));
+    const bounds = computeDateRangePreset(id);
+    expect(bounds.map((date) => date.toISOString())).toEqual([start, "2026-03-29T01:15:00.000Z"]);
   });
 
   it("thisMonth starts at the first of the current month", () => {
