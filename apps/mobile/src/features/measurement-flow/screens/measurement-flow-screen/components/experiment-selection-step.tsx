@@ -22,6 +22,7 @@ import { useLoadExperimentFlow } from "~/features/measurement-flow/hooks/use-loa
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
+import { requestMeasurementLocationPermission } from "~/shared/location/measurement-location";
 import { Banner } from "~/shared/ui/Banner";
 import { Button } from "~/shared/ui/Button";
 import { Input } from "~/shared/ui/Input";
@@ -47,6 +48,9 @@ export function ExperimentSelectionStep() {
   const recentActivity = useRecentExperimentActivity();
 
   const [search, setSearch] = React.useState("");
+  // Re-entry guard: a second tap while the location request is pending would
+  // start the flow twice.
+  const isStartingRef = React.useRef(false);
   const ids = useMemo(() => experiments.map((e) => e.value), [experiments]);
   const flowMeta = useExperimentsFlowMeta(ids);
 
@@ -79,10 +83,19 @@ export function ExperimentSelectionStep() {
   const isConnected = !!connectedDevice;
   const showDeviceBanner = !!selectedExperimentId && requiresDevice && !isConnected;
 
-  const handleStart = () => {
-    if (!selectedExperimentId || !experimentFlowReady) return;
-    clearHistory();
-    setExperimentId(selectedExperimentId, selectedExperiment?.label);
+  const handleStart = async () => {
+    if (!selectedExperimentId || !experimentFlowReady || isStartingRef.current) {
+      return;
+    }
+
+    isStartingRef.current = true;
+    try {
+      await requestMeasurementLocationPermission();
+      clearHistory();
+      setExperimentId(selectedExperimentId, selectedExperiment?.label);
+    } finally {
+      isStartingRef.current = false;
+    }
   };
 
   return (
@@ -219,7 +232,7 @@ export function ExperimentSelectionStep() {
                 })
               : t("experimentSelection.startFlow")
           }
-          onPress={handleStart}
+          onPress={() => void handleStart()}
           isDisabled={!selectedExperimentId || !experimentFlowReady}
           size="lg"
         />
