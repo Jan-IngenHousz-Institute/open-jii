@@ -1,21 +1,14 @@
 import { OPEN_WORKBOOK_CREATE_EVENT } from "@/components/navigation/site-header/platform-header-events";
 import { createWorkbook } from "@/test/factories";
+import { arrayParam, listEnvelope as envelope, openOnUrl } from "@/test/list-request";
 import { server } from "@/test/msw/server";
-import { act, render, screen, waitFor, userEvent } from "@/test/test-utils";
+import { act, render, screen, waitFor, userEvent, within } from "@/test/test-utils";
 import * as nav from "next/navigation";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
 import { ListWorkbooks } from "./list-workbooks";
-
-const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
-  items,
-  page,
-  pageSize: 20,
-  totalPages,
-  totalCount: items.length,
-});
 
 function openCreateDialog() {
   return act(() => {
@@ -35,38 +28,6 @@ describe("ListWorkbooks", () => {
     expect(await screen.findByText("workbooks.createDescription")).toBeInTheDocument();
   });
 
-  it("renders the search input without a my/all filter toggle", () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
-
-    render(<ListWorkbooks />);
-
-    expect(screen.getByPlaceholderText("workbooks.searchPlaceholder")).toBeInTheDocument();
-    expect(screen.queryByText("workbooks.filterWorkbooks")).not.toBeInTheDocument();
-  });
-
-  it("renders the collection empty state and docs help link without a search", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
-
-    render(<ListWorkbooks />);
-
-    expect(await screen.findByText("workbooks.noWorkbooks")).toBeInTheDocument();
-    expect(screen.getByRole("link").getAttribute("href")).toContain("/guide/experiments/workbooks");
-  });
-
-  it("distinguishes a search with no matches from an empty workbook collection", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
-
-    const user = userEvent.setup();
-    render(<ListWorkbooks />);
-
-    await screen.findByText("workbooks.noWorkbooks");
-    await user.type(screen.getByPlaceholderText("workbooks.searchPlaceholder"), "missing");
-
-    expect(await screen.findByText("workbooks.noMatches")).toBeInTheDocument();
-    expect(screen.queryByText("workbooks.noWorkbooks")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
-  });
-
   it("renders workbooks as table rows linking to their detail pages", async () => {
     const workbooks = [createWorkbook({ id: "wb-1", name: "Test WB" })];
     server.mount(contract.workbooks.listWorkbooks, { body: envelope(workbooks) });
@@ -75,78 +36,6 @@ describe("ListWorkbooks", () => {
 
     const link = await screen.findByRole("link", { name: "Test WB" });
     expect(link.getAttribute("href")).toContain("/platform/workbooks/wb-1");
-  });
-
-  it("sorts by name, adds a secondary field, and resets", async () => {
-    const spy = server.mount(contract.workbooks.listWorkbooks, {
-      body: envelope([createWorkbook({ id: "wb-1", name: "Test WB" })]),
-    });
-    const user = userEvent.setup();
-    render(<ListWorkbooks />);
-
-    await screen.findByRole("link", { name: "Test WB" });
-    await user.click(screen.getByRole("button", { name: /workbooks.columns.name:/ }));
-    await waitFor(() => expect(spy.calls.at(-1)?.query["sort[0][field]"]).toBe("name"));
-
-    await user.keyboard("{Shift>}");
-    await user.click(screen.getByRole("button", { name: /workbooks.columns.usedBy:/ }));
-    await user.keyboard("{/Shift}");
-    expect(
-      screen.getByRole("button", { name: /workbooks.columns.usedBy:.*common.sortSecondary/ }),
-    ).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "common.resetSorting" }));
-    await waitFor(() => expect(spy.calls.at(-1)?.query.sort).toBeUndefined());
-  });
-
-  it("navigates pages when the server reports more than one page", async () => {
-    const spy = server.mount(contract.workbooks.listWorkbooks, {
-      body: (call: { query: Record<string, string> }) =>
-        envelope([createWorkbook({ id: "wb-1", name: "Test WB" })], Number(call.query.page), 2),
-    });
-    const user = userEvent.setup();
-
-    render(<ListWorkbooks />);
-
-    await user.click(await screen.findByRole("button", { name: "pagination.next" }));
-    await waitFor(() => expect(spy.calls.at(-1)?.query.page).toBe("2"));
-  });
-
-  it("keeps pagination visible and disabled when the server reports one page", async () => {
-    server.mount(contract.workbooks.listWorkbooks, {
-      body: envelope([createWorkbook({ id: "wb-1", name: "Test WB" })]),
-    });
-
-    render(<ListWorkbooks />);
-
-    expect(await screen.findByRole("link", { name: "Test WB" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "pagination.previous" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "pagination.next" })).toBeDisabled();
-  });
-
-  it("shows clear button when search has value", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
-
-    const user = userEvent.setup();
-    render(<ListWorkbooks />);
-
-    const searchInput = screen.getByPlaceholderText("workbooks.searchPlaceholder");
-    await user.type(searchInput, "test");
-
-    expect(await screen.findByLabelText("workbooks.clearSearch")).toBeInTheDocument();
-  });
-
-  it("clears the search via the clear button", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
-
-    const user = userEvent.setup();
-    render(<ListWorkbooks />);
-
-    const searchInput = screen.getByPlaceholderText("workbooks.searchPlaceholder");
-    await user.type(searchInput, "wheat");
-    await user.click(await screen.findByLabelText("workbooks.clearSearch"));
-
-    expect(searchInput).toHaveValue("");
   });
 
   it("closes the create dialog via the Cancel button", async () => {
@@ -248,100 +137,61 @@ describe("ListWorkbooks", () => {
     expect(spy.called).toBe(false);
   });
 
-  it("shows a recoverable error when the list request fails", async () => {
-    const spy = server.mount(contract.workbooks.listWorkbooks, { status: 500 });
-    const user = userEvent.setup();
+  it("shows the collection empty state with the workbooks help link", async () => {
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
     render(<ListWorkbooks />);
 
-    expect(await screen.findByText("workbooks.errorLoading")).toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "common.errors.tryAgain" }));
-    await waitFor(() => expect(spy.callCount).toBeGreaterThan(1));
+    expect(await screen.findByText("workbooks.noWorkbooks")).toBeInTheDocument();
+    expect(screen.getByRole("link").getAttribute("href")).toContain("/guide/experiments/workbooks");
   });
 
-  describe("visibility filter", () => {
-    function openOnUrl(qs: string) {
-      vi.mocked(nav.usePathname).mockReturnValue("/platform/workbooks");
-      vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams(qs));
-    }
+  it("uses the workbook message for a search with no matches", async () => {
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
+    const user = userEvent.setup();
+    render(<ListWorkbooks />);
+    await user.type(screen.getByPlaceholderText("workbooks.searchPlaceholder"), "missing");
 
-    it("offers the filter and hides Clear filters while nothing is picked", () => {
-      server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
+    expect(await screen.findByText("workbooks.noMatches")).toBeInTheDocument();
+  });
 
-      render(<ListWorkbooks />);
+  it("uses the workbook message for a filter with no matches", async () => {
+    openOnUrl("/platform/workbooks", "visibility=private");
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
+    render(<ListWorkbooks />);
 
-      expect(screen.getByRole("button", { name: "workbooks.visibility" })).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
+    expect(await screen.findByText("workbooks.noFilterMatches")).toBeInTheDocument();
+  });
+
+  it("filters by visibility through the URL and the API", async () => {
+    openOnUrl("/platform/workbooks", "");
+    const user = userEvent.setup();
+    const replace = vi.mocked(nav.useRouter().replace);
+    replace.mockClear();
+    const spy = server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
+    render(<ListWorkbooks />);
+
+    await user.click(screen.getByRole("button", { name: /^common\.filter/ }));
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "workbooks.visibility",
+    ]);
+    await user.click(screen.getByRole("option", { name: "workbooks.visibility" }));
+    const values = screen.getByRole("listbox", { name: "workbooks.visibility" });
+    expect(
+      within(values)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["workbooks.private", "workbooks.public"]);
+    await user.click(within(values).getByRole("option", { name: "workbooks.private" }));
+
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(replace).toHaveBeenLastCalledWith("/platform/workbooks?visibility=private", {
+      scroll: false,
     });
-
-    it("lists both visibilities and filters through the URL and the API", async () => {
-      openOnUrl("");
-      const user = userEvent.setup();
-      const replace = vi.mocked(nav.useRouter().replace);
-      replace.mockClear();
-      const spy = server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
-
-      render(<ListWorkbooks />);
-      await user.click(screen.getByRole("button", { name: "workbooks.visibility" }));
-
-      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
-        "workbooks.private",
-        "workbooks.public",
-      ]);
-      await user.click(screen.getByRole("option", { name: "workbooks.private" }));
-
-      expect(replace).toHaveBeenLastCalledWith("/platform/workbooks?visibility=private", {
-        scroll: false,
-      });
-      await waitFor(() => {
-        expect(spy.calls.at(-1)?.url).toContain("visibility%5B0%5D=private");
-      });
-      expect(screen.getByRole("button", { name: /workbooks\.visibility/ })).toHaveTextContent("1");
-    });
-
-    it("restores a shared filter and clears it from the toolbar", async () => {
-      openOnUrl("visibility=private,public");
-      const user = userEvent.setup();
-      const replace = vi.mocked(nav.useRouter().replace);
-      replace.mockClear();
-      server.mount(contract.workbooks.listWorkbooks, {
-        body: envelope([createWorkbook({ id: "wb-1", name: "Test WB" })]),
-      });
-
-      render(<ListWorkbooks />);
-
-      expect(screen.getByRole("button", { name: /workbooks\.visibility/ })).toHaveTextContent("2");
-      await waitFor(() =>
-        expect(screen.getByRole("link", { name: "Test WB" })).toBeInTheDocument(),
-      );
-
-      await user.click(screen.getByRole("button", { name: "common.clearFilters" }));
-
-      expect(replace).toHaveBeenLastCalledWith("/platform/workbooks", { scroll: false });
-      expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
-    });
-
-    it("offers to clear the filter when nothing matches it", async () => {
-      openOnUrl("visibility=private");
-      const user = userEvent.setup();
-      server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
-
-      render(<ListWorkbooks />);
-
-      await waitFor(() =>
-        expect(screen.getByText("workbooks.noFilterMatches")).toBeInTheDocument(),
-      );
-      expect(document.querySelector('a[href*="/guide/experiments/workbooks"]')).toBeNull();
-      const clearButtons = screen.getAllByRole("button", { name: "common.clearFilters" });
-      expect(clearButtons).toHaveLength(2);
-
-      await user.click(clearButtons[1]);
-
-      await waitFor(() => {
-        expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
-      });
-      await waitFor(() => expect(screen.getByText("workbooks.noWorkbooks")).toBeInTheDocument());
-    });
+    await waitFor(() =>
+      expect(arrayParam(spy.calls.at(-1)?.url ?? "", "visibility")).toEqual(["private"]),
+    );
+    expect(
+      screen.getByRole("group", { name: "workbooks.visibility common.filterIs workbooks.private" }),
+    ).toBeInTheDocument();
   });
 });
