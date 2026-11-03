@@ -1,9 +1,11 @@
 # store-memory
 
-**The serving store's instance is above 85% memory.** ClickHouse caps its own memory at 90% of the
-machine's by default (`max_server_memory_usage_to_ram_ratio`). Past the cap it fails a query with
-`MEMORY_LIMIT_EXCEEDED` (code 241) instead of letting the kernel kill the server, and the query it
-fails is the one using the most memory beyond its share, not always the one that crossed the cap.
+**The serving store's instance is above 75% memory.** ClickHouse caps its own memory at 80% of the
+machine's (`max_server_memory_usage_to_ram_ratio` in the store's `config.xml`) and each query at
+4 GiB (`max_memory_usage` in its `users.xml`). Past either cap it fails a query with
+`MEMORY_LIMIT_EXCEEDED` (code 241) instead of letting the kernel kill the server. At the server's cap
+the query it fails is the one using the most memory beyond its share, not always the one that
+crossed the cap.
 
 ## Find what holds the memory
 

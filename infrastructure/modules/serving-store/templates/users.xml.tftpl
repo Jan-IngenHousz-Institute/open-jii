@@ -5,6 +5,8 @@
     <profiles>
         <default>
             <json_type_escape_dots_in_keys>1</json_type_escape_dots_in_keys>
+            <!-- One query may hold 4 GiB, so a runaway read cannot take the memory the feed's inserts need. -->
+            <max_memory_usage>4294967296</max_memory_usage>
         </default>
     </profiles>
     <users>
