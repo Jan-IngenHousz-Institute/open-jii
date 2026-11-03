@@ -39,7 +39,9 @@ prerequisite for existing data, especially names removed before this change.
    the same report and input hash. The report counts answers, recovered version kinds,
    missing versions, unknown kinds, conflicts, blanks and invalid numbers per column.
    It matches exact name and question text within one version. Duplicate/colliding names,
-   missing/deleted versions and conflicting kinds require review. It never infers Number
+   missing/deleted versions and conflicting kinds require review. A missing version or
+   unmatched question increments `no_version` and prevents numeric eligibility even
+   when the payload declares Number. It never infers Number
    from a numeric-looking string. Workbook snapshots are insert-only by app convention,
    not protected from manual SQL updates, and disappear when their workbook is deleted.
 

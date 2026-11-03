@@ -38,8 +38,6 @@ def classify_history(rows: list[dict], versions: list[dict]) -> dict:
             key = question_key(q.get("question_label") or "")
             counts = columns.setdefault((row["experiment_id"], key), Counter())
             counts["answers"] += 1
-            if not row.get("workbook_version_id"):
-                counts["no_version"] += 1
             candidates = by_version.get(row.get("workbook_version_id"), [])
             matching = [
                 cell
@@ -49,6 +47,8 @@ def classify_history(rows: list[dict], versions: list[dict]) -> dict:
                 and cell.get("name") == q.get("question_label")
                 and cell.get("question", {}).get("text") == q.get("question_text")
             ]
+            if not row.get("workbook_version_id") or not candidates or not matching:
+                counts["no_version"] += 1
             snapshot_kind = (
                 matching[0]["question"].get("kind") if len(candidates) == 1 and len(matching) == 1 else None
             )
@@ -76,7 +76,11 @@ def classify_history(rows: list[dict], versions: list[dict]) -> dict:
                 counts["invalid_number"] += 1
     output = []
     for (experiment, key), counts in sorted(columns.items()):
-        eligible = counts["number"] == counts["answers"] and not counts["invalid_number"]
+        eligible = (
+            counts["number"] == counts["answers"]
+            and not counts["invalid_number"]
+            and not counts["no_version"]
+        )
         output.append(
             {
                 "experiment_id": experiment,

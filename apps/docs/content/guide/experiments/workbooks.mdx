@@ -115,7 +115,10 @@ array in the table uses sample index, which is not necessarily elapsed time.
 Ordinary arrays and scalar readings do not acquire a Timeseries tab merely
 because they contain numbers.
 
-A question name identifies its column within an experiment. To change a
+A question name identifies its column within an experiment. Names must produce
+distinct data columns after spaces, punctuation and repeated underscores are
+normalized. If two names map to the same column, rename one before applying the
+workbook. To change a
 question between **Number** and a text question type, give it a new name.
 The upgrade preview explains this when the pinned version and draft differ;
 the platform also checks earlier names when applying a version. Removing a

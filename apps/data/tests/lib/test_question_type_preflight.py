@@ -1,3 +1,4 @@
+import pytest
 from openjii.question_type_preflight import classify_history
 
 
@@ -47,3 +48,62 @@ def test_missing_deleted_or_ambiguous_snapshots_and_mixed_kinds_stay_inactive():
     assert columns["height"]["number"] == 1 and columns["height"]["text"] == 1
     assert columns["invalid"]["invalid_number"] == 1
     assert columns["deleted"]["unknown"] == 1
+
+
+@pytest.mark.parametrize(
+    "version_id, versions",
+    [
+        (None, []),
+        ("deleted", []),
+        ("v1", [{"id": "v1", "cells": []}]),
+        (
+            "v1",
+            [
+                {
+                    "id": "v1",
+                    "cells": [
+                        {
+                            "type": "question",
+                            "name": "Other",
+                            "question": {"kind": "number", "text": "Height?"},
+                        }
+                    ],
+                }
+            ],
+        ),
+        (
+            "v1",
+            [
+                {
+                    "id": "v1",
+                    "cells": [
+                        {
+                            "type": "question",
+                            "name": "Height",
+                            "question": {"kind": "number", "text": "Other?"},
+                        }
+                    ],
+                }
+            ],
+        ),
+    ],
+)
+def test_valid_number_payload_without_matching_snapshot_needs_review(version_id, versions):
+    rows = [
+        {
+            "experiment_id": "e1",
+            "workbook_version_id": version_id,
+            "questions": [
+                {
+                    "question_label": "Height",
+                    "question_text": "Height?",
+                    "question_kind": "number",
+                    "question_answer": "12.5",
+                }
+            ],
+        }
+    ]
+    column = classify_history(rows, versions)["columns"][0]
+    assert column["number"] == 1
+    assert column["no_version"] == 1
+    assert column["eligible_numeric"] is False

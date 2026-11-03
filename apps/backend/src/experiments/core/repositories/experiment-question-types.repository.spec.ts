@@ -1,5 +1,5 @@
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
-import { eq, experiments } from "@repo/database";
+import { eq, experiments, experimentQuestionTypes } from "@repo/database";
 
 import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -128,11 +128,41 @@ describe("experiment question types", () => {
     expect(active.value).toEqual([]);
   });
 
+  it("returns not found and rolls back declarations when an updated flow does not exist", async () => {
+    const result = await registry.saveFlow(
+      experimentId,
+      {
+        nodes: [
+          {
+            id: "height",
+            type: "question",
+            name: "Height",
+            content: { kind: "number", text: "Height?", required: false },
+            isStart: true,
+          },
+        ],
+        edges: [],
+      },
+      "update",
+    );
+    assertFailure(result);
+    expect(result.error.code).toBe("NOT_FOUND");
+    expect(result.error.message).toBe("Flow not found");
+    expect(
+      await app.database
+        .select()
+        .from(experimentQuestionTypes)
+        .where(eq(experimentQuestionTypes.experimentId, experimentId)),
+    ).toEqual([]);
+  });
+
   it("rejects canonical collisions and checks direct flow edits too", async () => {
     await workbooks.update(workbookId, {
       cells: [question("number", "a__b"), { ...question("open_ended", "a b"), id: "second" }],
     });
-    assertFailure(await attach());
+    const collision = await attach();
+    assertFailure(collision);
+    expect(collision.error.code).toBe("DUPLICATE_QUESTION_KEY");
     await workbooks.update(workbookId, { cells: [question("number")] });
     assertSuccess(await attach());
     const result = await app.module.get(FlowRepository).update(experimentId, {

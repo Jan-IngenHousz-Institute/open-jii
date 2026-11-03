@@ -1,9 +1,18 @@
 import { ORPCError } from "@orpc/client";
 import { z } from "zod";
 
-const questionTypeConflict = z.object({ code: z.literal("QUESTION_TYPE_CHANGE") });
+const questionConflict = z.object({
+  code: z.enum(["QUESTION_TYPE_CHANGE", "DUPLICATE_QUESTION_KEY"]),
+});
 
-export function workbookPinError(error: unknown, fallback: string, conflict: string): string {
+export function workbookPinError(
+  error: unknown,
+  fallback: string,
+  conflict: string,
+  duplicate: string,
+): string {
   if (!(error instanceof ORPCError) || error.status !== 400) return fallback;
-  return questionTypeConflict.safeParse(error.data).success ? conflict : error.message;
+  const parsed = questionConflict.safeParse(error.data);
+  if (!parsed.success) return error.message;
+  return parsed.data.code === "QUESTION_TYPE_CHANGE" ? conflict : duplicate;
 }

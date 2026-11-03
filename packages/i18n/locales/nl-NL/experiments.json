@@ -151,7 +151,8 @@
         "questionTypeChangeGeneric": "Deze vraagnaam heeft al een ander kolomtype in dit experiment. Geef de vraag een nieuwe naam om tussen Getal en tekst te wisselen.",
         "questionTypeChange": "Geef vraag \"{{label}}\" een nieuwe naam om tussen Getal en tekst te wisselen.",
         "macroWithoutInput": "Macro \"{{label}}\" heeft geen voorafgaande meting om op te draaien",
-        "mixedFamilies": "Dit werkboek mengt sensorfamilies ({{detail}}); een run richt zich op één apparaat"
+        "mixedFamilies": "Dit werkboek mengt sensorfamilies ({{detail}}); een run richt zich op één apparaat",
+        "duplicateQuestionNameGeneric": "Vraagnamen moeten verschillende gegevenskolommen opleveren. Hernoem de vragen met dezelfde kolomnaam."
       }
     }
   },

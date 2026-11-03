@@ -154,7 +154,9 @@ export class ExperimentQuestionTypesRepository {
                   .values({ experimentId, graph })
                   .onConflictDoUpdate({ target: flows.experimentId, set: { graph } })
                   .returning();
-        return rows[0] as FlowDto;
+        const saved = rows.at(0);
+        if (!saved) throw AppError.notFound("Flow not found");
+        return saved as FlowDto;
       }),
     );
   }
@@ -170,7 +172,10 @@ export class ExperimentQuestionTypesRepository {
     for (const item of items) {
       const key = sanitizeQuestionLabel(item.name);
       if (seen.has(key) && !historical)
-        throw AppError.badRequest(`Question names must have distinct column keys: "${key}".`);
+        throw AppError.badRequest(
+          `Question names must have distinct column keys: "${key}".`,
+          "DUPLICATE_QUESTION_KEY",
+        );
       const duplicate = seen.has(key);
       seen.add(key);
       const declaredClass = item.kind === "number" ? "number" : "text";
