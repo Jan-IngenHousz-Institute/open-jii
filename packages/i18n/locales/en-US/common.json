@@ -669,15 +669,13 @@
       },
       "searchPlaceholder": "Find a resource…",
       "searchLabel": "Search this organization's resources",
-      "typeFilterLabel": "Filter by type",
-      "allTypes": "All types",
+      "typeFilter": "Type",
       "sortLabel": "Sort resources",
       "sortRecent": "Recently updated",
       "sortName": "Name",
       "sortType": "Type",
       "noMatchesTitle": "No resource matches those filters",
       "noMatchesHint": "Try a shorter search, or widen the type filter.",
-      "clearFilters": "Clear filters",
       "noDescription": "No description provided"
     },
     "members": {

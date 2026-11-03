@@ -2,17 +2,23 @@
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { useOrganizationResourceListState } from "@/hooks/organization/useOrganizationResourceListState/useOrganizationResourceListState";
+import { useListFilterLabels } from "@/hooks/useListFilterLabels";
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime, formatShortDate } from "@/util/date";
 import { stripHtml } from "@/util/strip-html";
-import { Lock } from "lucide-react";
+import { Layers, Lock } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { OrganizationResource } from "@repo/api/domains/organization/organization.schema";
+import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import type { TransferableResourceType } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.schema";
 import { zTransferableResourceType } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
+import { ListFilterChips } from "@repo/ui/components/list-filter-chips";
+import type { ListFilter } from "@repo/ui/components/list-filter-menu";
+import { ListFilterMenu } from "@repo/ui/components/list-filter-menu";
 import { SearchInput } from "@repo/ui/components/search-input";
 import {
   Select,
@@ -28,12 +34,8 @@ import {
   TooltipTrigger,
 } from "@repo/ui/components/tooltip";
 
-import type { ResourceSort, ResourceTypeFilter } from "./organization-resource-filter";
-import {
-  DEFAULT_RESOURCE_FILTER,
-  filterAndSortResources,
-  hasActiveFilters,
-} from "./organization-resource-filter";
+import type { ResourceSort } from "./organization-resource-filter";
+import { filterAndSortResources } from "./organization-resource-filter";
 import {
   GROUP_ORDER,
   RESOURCE_SEGMENT,
@@ -63,6 +65,7 @@ interface TransferTarget {
 
 /**
  * Everything the organization owns that the caller can open, as one filtered list. The
+ * type filter and the sort live in the URL, so a reload or a shared link keeps them. The
  * type options and the type sort come off {@link GROUP_ORDER}, so neither can drift from
  * the featured card or the estate bar.
  *
@@ -78,22 +81,34 @@ export function OrganizationResourceRows({
 }) {
   const { t } = useTranslation();
 
-  const [query, setQuery] = useState(DEFAULT_RESOURCE_FILTER.query);
-  const [type, setType] = useState<ResourceTypeFilter>(DEFAULT_RESOURCE_FILTER.type);
-  const [sort, setSort] = useState<ResourceSort>(DEFAULT_RESOURCE_FILTER.sort);
+  const list = useOrganizationResourceListState();
+  const filterLabels = useListFilterLabels();
   const [target, setTarget] = useState<TransferTarget | null>(null);
+
+  const { query, setQuery, sort, setSort } = list;
+  const types = list.filters.type;
 
   // The read is uncapped, so without this it re-runs over everything on every keystroke.
   const visible = useMemo(
-    () => filterAndSortResources(resources, { query, type, sort }),
-    [resources, query, type, sort],
+    () => filterAndSortResources(resources, { query, types, sort }),
+    [resources, query, types, sort],
   );
 
-  // Sort is not reset: it arranges rather than narrows.
-  const clearFilters = () => {
-    setQuery(DEFAULT_RESOURCE_FILTER.query);
-    setType(DEFAULT_RESOURCE_FILTER.type);
-  };
+  // Options come off GROUP_ORDER rather than the schema, so the menu reads in the same
+  // order as the featured card and the estate bar.
+  const filters: ListFilter<SharingResourceType>[] = [
+    {
+      key: "type",
+      label: t("organizations.resources.typeFilter"),
+      icon: Layers,
+      options: GROUP_ORDER.map((value) => ({
+        value,
+        label: t(`organizations.resources.types.${value}`, { count: 2 }),
+      })),
+      selected: types,
+      onChange: (picked) => list.setFilter("type", picked),
+    },
+  ];
 
   return (
     <TooltipProvider>
@@ -107,22 +122,7 @@ export function OrganizationResourceRows({
             className="sm:flex-1"
           />
 
-          <Select value={type} onValueChange={(next) => setType(next as ResourceTypeFilter)}>
-            <SelectTrigger
-              className="w-full sm:w-40"
-              aria-label={t("organizations.resources.typeFilterLabel")}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("organizations.resources.allTypes")}</SelectItem>
-              {GROUP_ORDER.map((resourceType) => (
-                <SelectItem key={resourceType} value={resourceType}>
-                  {t(`organizations.resources.types.${resourceType}`, { count: 2 })}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ListFilterMenu filters={filters} labels={filterLabels} />
 
           <Select value={sort} onValueChange={(next) => setSort(next as ResourceSort)}>
             <SelectTrigger
@@ -141,6 +141,8 @@ export function OrganizationResourceRows({
           </Select>
         </div>
 
+        <ListFilterChips filters={filters} labels={filterLabels} onClear={list.clearFilters} />
+
         {visible.length === 0 ? (
           <div className="border-border border-t py-10 text-center">
             <p className="text-foreground text-sm font-semibold">
@@ -150,9 +152,9 @@ export function OrganizationResourceRows({
               {t("organizations.resources.noMatchesHint")}
             </p>
             {/* A reset that resets nothing is a dead control. */}
-            {hasActiveFilters({ query, type, sort }) ? (
-              <Button variant="outline" size="sm" className="mt-3.5" onClick={clearFilters}>
-                {t("organizations.resources.clearFilters")}
+            {list.hasActiveFilters ? (
+              <Button variant="outline" size="sm" className="mt-3.5" onClick={list.clearFilters}>
+                {t("common.clearFilters")}
               </Button>
             ) : null}
           </div>

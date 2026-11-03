@@ -1,7 +1,9 @@
 import { createMyOrganization, createOrganizationResource } from "@/test/factories";
+import { openOnUrl } from "@/test/list-request";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import * as nav from "next/navigation";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import { zTransferableResourceType } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.schema";
@@ -11,6 +13,15 @@ import enCommon from "@repo/i18n/locales/en-US/common.json";
 import nlCommon from "@repo/i18n/locales/nl-NL/common.json";
 
 import { OrganizationResourceRows } from "./organization-resource-rows";
+
+const ORG_PATH = "/en-US/platform/organizations/org-1";
+
+/** Opens the Filter menu and the type filter's values inside it. */
+async function openTypeFilter(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: /^common\.filter/u }));
+  await user.click(screen.getByRole("option", { name: "organizations.resources.typeFilter" }));
+  return screen.getByRole("listbox", { name: "organizations.resources.typeFilter" });
+}
 
 /** The rows, scoped to the render — the suite shares one jsdom document. */
 function rowsIn(container: HTMLElement): HTMLElement[] {
@@ -87,11 +98,16 @@ describe("<OrganizationResourceRows />", () => {
     ]);
   });
 
-  it("has no status filter — it would only ever apply to experiments", () => {
+  it("has no status filter — it would only ever apply to experiments", async () => {
+    const user = userEvent.setup();
     const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
 
-    // Two selects: type and sort. A third would be the status filter.
-    expect(within(container).getAllByRole("combobox")).toHaveLength(2);
+    // One select, the sort, and one filter in the menu, the type.
+    expect(within(container).getAllByRole("combobox")).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "common.filter" }));
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "organizations.resources.typeFilter",
+    ]);
   });
 
   describe("search", () => {
@@ -131,24 +147,39 @@ describe("<OrganizationResourceRows />", () => {
   });
 
   describe("the empty state", () => {
-    it("appears when nothing matches, and Clear filters restores the list", async () => {
+    it("offers no Clear filters for a search alone, which the search box clears", async () => {
+      const user = userEvent.setup();
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      await user.type(
+        within(container).getByRole("textbox", {
+          name: "organizations.resources.searchLabel",
+        }),
+        "nothing here is called this",
+      );
+
+      expect(rowsIn(container)).toHaveLength(0);
+      expect(within(container).getByText("organizations.resources.noMatchesTitle")).toBeVisible();
+      expect(within(container).queryByRole("button", { name: "common.clearFilters" })).toBeNull();
+    });
+
+    it("clears the type filter and keeps the search", async () => {
+      openOnUrl(ORG_PATH, "type=device");
       const user = userEvent.setup();
       const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
 
       const search = within(container).getByRole("textbox", {
         name: "organizations.resources.searchLabel",
       });
-      await user.type(search, "nothing here is called this");
-
+      await user.type(search, "canopy");
       expect(rowsIn(container)).toHaveLength(0);
-      const clear = within(container).getByRole("button", {
-        name: "organizations.resources.clearFilters",
-      });
 
-      await user.click(clear);
+      // The chip row carries one too; this is the empty state's.
+      const clears = within(container).getAllByRole("button", { name: "common.clearFilters" });
+      await user.click(clears[clears.length - 1]);
 
-      expect(rowsIn(container)).toHaveLength(6);
-      expect(search).toHaveValue("");
+      expect(rowNames(container)).toEqual(["Canopy synthesis"]);
+      expect(search).toHaveValue("canopy");
     });
 
     it("says nothing about status, which this list does not filter on", async () => {
@@ -172,27 +203,83 @@ describe("<OrganizationResourceRows />", () => {
     /**
      * The ordering and narrowing logic is covered exhaustively in
      * `organization-resource-filter.test.ts`. What can only be checked here is that the
-     * controls are actually wired to that logic — a select that renders its options and
-     * changes nothing would pass every pure test.
+     * controls are wired to that logic and to the URL.
      */
-    it("narrows the list when a type is chosen", async () => {
+    beforeEach(() => {
+      openOnUrl(ORG_PATH, "");
+      vi.mocked(nav.useRouter().replace).mockClear();
+    });
+
+    it("has no type dropdown of its own, only the Filter menu", () => {
+      render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      expect(screen.queryByRole("combobox", { name: /type/iu })).toBeNull();
+      expect(screen.getByRole("button", { name: "common.filter" })).toBeInTheDocument();
+    });
+
+    it("offers one option per owned type, from the shared order", async () => {
+      const user = userEvent.setup();
+      render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      const types = await openTypeFilter(user);
+
+      // Seven types and no eighth, in GROUP_ORDER; a hand-written list could drift.
+      expect(
+        within(types)
+          .getAllByRole("option")
+          .map((o) => o.textContent),
+      ).toEqual([
+        "organizations.resources.types.experiment",
+        "organizations.resources.types.protocol",
+        "organizations.resources.types.macro",
+        "organizations.resources.types.workbook",
+        "organizations.resources.types.device",
+        "organizations.resources.types.device_group",
+        "organizations.resources.types.calibration_definition",
+      ]);
+    });
+
+    it("narrows the list to the picked types and writes them to the URL", async () => {
+      const user = userEvent.setup();
+      const replace = vi.mocked(nav.useRouter().replace);
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      const types = await openTypeFilter(user);
+      await user.click(
+        within(types).getByRole("option", { name: "organizations.resources.types.protocol" }),
+      );
+      await user.click(
+        within(types).getByRole("option", { name: "organizations.resources.types.macro" }),
+      );
+
+      expect(rowNames(container)).toEqual(["Dark adaptation", "Batch fit"]);
+      expect(replace).toHaveBeenLastCalledWith(`${ORG_PATH}?type=protocol,macro`, {
+        scroll: false,
+      });
+    });
+
+    it("shows a removable chip for each picked type and Clear filters only then", async () => {
+      openOnUrl(ORG_PATH, "type=protocol");
       const user = userEvent.setup();
       const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
 
-      await user.click(
-        within(container).getByRole("combobox", {
-          name: "organizations.resources.typeFilterLabel",
-        }),
-      );
-      await user.click(
-        await screen.findByRole("option", { name: "organizations.resources.types.protocol" }),
-      );
-
       expect(rowNames(container)).toEqual(["Dark adaptation"]);
+      await user.click(screen.getByRole("button", { name: "common.clearFilters" }));
+
+      expect(rowsIn(container)).toHaveLength(6);
+      expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
     });
 
-    it("reorders the list when a sort is chosen", async () => {
+    it("opens on the type filter a shared link carries, dropping unknown types", () => {
+      openOnUrl(ORG_PATH, "type=device,spaceship");
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      expect(rowNames(container)).toEqual(["Ambyte 04"]);
+    });
+
+    it("reorders the list when a sort is chosen and writes it to the URL", async () => {
       const user = userEvent.setup();
+      const replace = vi.mocked(nav.useRouter().replace);
       const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
 
       await user.click(
@@ -210,29 +297,31 @@ describe("<OrganizationResourceRows />", () => {
         "Drought stress",
         "Rooftop array",
       ]);
+      // Commas stay raw in the written URL, the form people share.
+      const sort = encodeURIComponent(
+        JSON.stringify([{ field: "name", direction: "asc" }]),
+      ).replace(/%2C/gu, ",");
+      expect(replace).toHaveBeenLastCalledWith(`${ORG_PATH}?sort=${sort}`, { scroll: false });
     });
 
-    it("offers one option per owned type plus All types, from the shared order", async () => {
-      const user = userEvent.setup();
-      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+    it("opens on the sort a shared link carries, and on recent for one it cannot honour", () => {
+      const sort = (value: unknown) => `sort=${encodeURIComponent(JSON.stringify(value))}`;
 
-      await user.click(
-        within(container).getByRole("combobox", {
-          name: "organizations.resources.typeFilterLabel",
+      openOnUrl(ORG_PATH, sort([{ field: "type", direction: "asc" }]));
+      const { container, unmount } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+      expect(rowNames(container)[0]).toBe("Drought stress");
+      expect(
+        within(container).getByRole("combobox", { name: "organizations.resources.sortLabel" }),
+      ).toHaveTextContent("organizations.resources.sortType");
+      unmount();
+
+      openOnUrl(ORG_PATH, sort([{ field: "name", direction: "desc" }]));
+      const second = render(<OrganizationResourceRows resources={mixedEstate()} />);
+      expect(
+        within(second.container).getByRole("combobox", {
+          name: "organizations.resources.sortLabel",
         }),
-      );
-
-      // Seven types and no eighth, in GROUP_ORDER; a hand-written list could drift.
-      expect((await screen.findAllByRole("option")).map((o) => o.textContent)).toEqual([
-        "organizations.resources.allTypes",
-        "organizations.resources.types.experiment",
-        "organizations.resources.types.protocol",
-        "organizations.resources.types.macro",
-        "organizations.resources.types.workbook",
-        "organizations.resources.types.device",
-        "organizations.resources.types.device_group",
-        "organizations.resources.types.calibration_definition",
-      ]);
+      ).toHaveTextContent("organizations.resources.sortRecent");
     });
   });
 

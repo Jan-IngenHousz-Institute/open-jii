@@ -79,17 +79,36 @@ describe("filterAndSortResources", () => {
       ];
 
       expect(
-        namesOf(filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, type: "protocol" })),
+        namesOf(filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, types: ["protocol"] })),
       ).toEqual(["Dark adaptation"]);
       expect(
-        namesOf(filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, type: "device" })),
+        namesOf(filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, types: ["device"] })),
       ).toEqual(["Ambyte 04"]);
       // A group is its own type, not a kind of device: filtering to devices must not
       // pick it up, and it has a chip of its own.
       expect(
-        namesOf(filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, type: "device_group" })),
+        namesOf(
+          filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, types: ["device_group"] }),
+        ),
       ).toEqual(["Rooftop array"]);
       expect(filterAndSortResources(rows, DEFAULT_RESOURCE_FILTER)).toHaveLength(4);
+    });
+
+    it("shows every picked type at once", () => {
+      const rows = [
+        resource("Campaign", { type: "experiment" }),
+        resource("Dark adaptation", { type: "protocol" }),
+        resource("Batch fit", { type: "macro" }),
+      ];
+
+      expect(
+        namesOf(
+          filterAndSortResources(rows, {
+            ...DEFAULT_RESOURCE_FILTER,
+            types: ["experiment", "macro"],
+          }),
+        ),
+      ).toEqual(["Campaign", "Batch fit"]);
     });
 
     it("combines with the search rather than replacing it", () => {
@@ -103,7 +122,7 @@ describe("filterAndSortResources", () => {
           filterAndSortResources(rows, {
             ...DEFAULT_RESOURCE_FILTER,
             query: "canopy",
-            type: "protocol",
+            types: ["protocol"],
           }),
         ),
       ).toEqual(["Canopy protocol"]);
@@ -176,15 +195,15 @@ describe("filterAndSortResources", () => {
 });
 
 describe("hasActiveFilters", () => {
-  it("is false for the default state and true once something narrows", () => {
+  it("is false for the default state and true once a type is picked", () => {
     expect(hasActiveFilters(DEFAULT_RESOURCE_FILTER)).toBe(false);
-    expect(hasActiveFilters({ ...DEFAULT_RESOURCE_FILTER, query: "x" })).toBe(true);
-    expect(hasActiveFilters({ ...DEFAULT_RESOURCE_FILTER, type: "macro" })).toBe(true);
+    expect(hasActiveFilters({ ...DEFAULT_RESOURCE_FILTER, types: ["macro"] })).toBe(true);
   });
 
-  it("ignores a whitespace-only query and the sort", () => {
-    expect(hasActiveFilters({ ...DEFAULT_RESOURCE_FILTER, query: "   " })).toBe(false);
-    // Sort arranges, it does not narrow — so it must not make "Clear filters" appear.
+  it("ignores the search and the sort", () => {
+    // As on the resource lists, "Clear filters" clears filters and leaves the search alone,
+    // and sort arranges rather than narrows.
+    expect(hasActiveFilters({ ...DEFAULT_RESOURCE_FILTER, query: "x" })).toBe(false);
     expect(hasActiveFilters({ ...DEFAULT_RESOURCE_FILTER, sort: "name" })).toBe(false);
   });
 });

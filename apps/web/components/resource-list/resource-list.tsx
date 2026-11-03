@@ -8,13 +8,14 @@ import {
 } from "@/components/overview-table/overview-table";
 import { ResetSortingButton } from "@/components/overview-table/reset-sorting-button";
 import { OverviewToolbar } from "@/components/overview-toolbar";
+import { useListFilterLabels } from "@/hooks/useListFilterLabels";
 import type { RowData } from "@tanstack/react-table";
 
 import type { PaginatedList } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { ListFilterChips } from "@repo/ui/components/list-filter-chips";
-import type { ListFilter, ListFilterLabels } from "@repo/ui/components/list-filter-menu";
+import type { ListFilter } from "@repo/ui/components/list-filter-menu";
 import { ListFilterMenu } from "@repo/ui/components/list-filter-menu";
 import type { SearchInputProps } from "@repo/ui/components/search-input";
 import { SearchInput } from "@repo/ui/components/search-input";
@@ -74,14 +75,7 @@ export function ResourceList<Item extends RowData, F extends string>({
   emptyHelpPath,
 }: ResourceListProps<Item, F>) {
   const { t } = useTranslation("common");
-  const filterLabels: ListFilterLabels = {
-    filter: t("common.filter"),
-    addFilter: t("common.addFilter"),
-    is: t("common.filterIs"),
-    clearFilters: t("common.clearFilters"),
-    selectedCount: (count) => t("common.filterSelectedCount", { count }),
-    removeValue: (filter, value) => t("common.removeFilterValue", { filter, value }),
-  };
+  const filterLabels = useListFilterLabels();
   const hasSearch = list.debouncedSearch.trim() !== "";
   const emptyMessage = list.hasActiveFilters
     ? emptyMessages.filtered

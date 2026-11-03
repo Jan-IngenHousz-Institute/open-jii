@@ -6,18 +6,16 @@ import { GROUP_ORDER } from "./organization-resource-meta";
 /** How the list is ordered. `recent` is the default: the last thing touched, first. */
 export type ResourceSort = "recent" | "name" | "type";
 
-/** The type filter's value — one of the owned types, or every one of them. */
-export type ResourceTypeFilter = SharingResourceType | "all";
-
 export interface ResourceFilterState {
   query: string;
-  type: ResourceTypeFilter;
+  /** The owned types to show; empty shows every type. */
+  types: readonly SharingResourceType[];
   sort: ResourceSort;
 }
 
 export const DEFAULT_RESOURCE_FILTER: ResourceFilterState = {
   query: "",
-  type: "all",
+  types: [],
   sort: "recent",
 };
 
@@ -30,13 +28,13 @@ export const DEFAULT_RESOURCE_FILTER: ResourceFilterState = {
  */
 export function filterAndSortResources(
   resources: readonly OrganizationResource[],
-  { query, type, sort }: ResourceFilterState,
+  { query, types, sort }: ResourceFilterState,
 ): OrganizationResource[] {
   const needle = query.trim().toLowerCase();
 
   const matched = resources.filter(
     (resource) =>
-      (type === "all" || resource.type === type) &&
+      (types.length === 0 || types.includes(resource.type)) &&
       (needle === "" || resource.name.toLowerCase().includes(needle)),
   );
 
@@ -56,7 +54,10 @@ export function filterAndSortResources(
   return matched.sort(byRecency);
 }
 
-/** Whether anything is narrowing the list — what the empty state and the reset key off. */
-export function hasActiveFilters({ query, type }: ResourceFilterState): boolean {
-  return query.trim() !== "" || type !== "all";
+/**
+ * Whether a filter is narrowing the list — what "Clear filters" keys off. Search is not a
+ * filter, as on the resource lists, and sort arranges rather than narrows.
+ */
+export function hasActiveFilters({ types }: ResourceFilterState): boolean {
+  return types.length > 0;
 }
