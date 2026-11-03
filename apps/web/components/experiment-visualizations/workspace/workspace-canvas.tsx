@@ -6,8 +6,8 @@ import { useMemo } from "react";
 import type { Control } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import { zExperimentDataJoin } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import { isDataJoinValid } from "@repo/api/transforms/joined-columns";
 import { useTranslation } from "@repo/i18n";
 import { Card } from "@repo/ui/components/card";
 
@@ -49,8 +49,7 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
   const def = getChartTypeDef(chartType);
   // Draw on first configured column; renderers synthesize the missing axis.
   const hasAnyColumn = configuredSources.length > 0;
-  const joinReady =
-    dataConfig.join === undefined || zExperimentDataJoin.safeParse(dataConfig.join).success;
+  const joinReady = isDataJoinValid(dataConfig.join);
   const isReady = joinReady && Boolean(def) && Boolean(tableName) && hasAnyColumn;
 
   const aggregation = dataConfig.aggregation;

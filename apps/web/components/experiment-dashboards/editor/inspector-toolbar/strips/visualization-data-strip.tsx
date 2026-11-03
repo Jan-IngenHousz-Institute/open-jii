@@ -57,6 +57,7 @@ export function VisualizationDataStrip({
   const { t } = useTranslation("experimentDashboards");
   const { t: tViz } = useTranslation("experimentVisualizations");
 
+  const join = useWatch({ control: form.control, name: "dataConfig.join" });
   const chartType = useWatch({ control: form.control, name: "chartType" });
   const def = getChartTypeDef(chartType);
 
@@ -146,23 +147,25 @@ export function VisualizationDataStrip({
     tDash: t,
   });
 
-  fieldItems.unshift({
-    key: "second-table",
-    node: (
-      <StripPopoverControl
-        label={tViz("workspace.secondTable.title")}
-        icon={Database}
-        contentClassName="w-96"
-      >
-        <SecondTableSection
-          form={form}
-          experimentId={experimentId}
-          tables={tables}
-          tableName={selectedTableName}
-        />
-      </StripPopoverControl>
-    ),
-  });
+  if (hasTable && (hasColumns || join !== undefined)) {
+    fieldItems.unshift({
+      key: "second-table",
+      node: (
+        <StripPopoverControl
+          label={tViz("workspace.secondTable.title")}
+          icon={Database}
+          contentClassName="w-96"
+        >
+          <SecondTableSection
+            form={form}
+            experimentId={experimentId}
+            tables={tables}
+            tableName={selectedTableName}
+          />
+        </StripPopoverControl>
+      ),
+    });
+  }
 
   const filtersItem: StripOverflowItem | null =
     hasTable && hasColumns

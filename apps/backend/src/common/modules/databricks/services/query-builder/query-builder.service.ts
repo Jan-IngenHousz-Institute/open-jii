@@ -101,9 +101,10 @@ export class QueryBuilderService {
     });
     if (base.isFailure()) throw new QueryBuilderInputError(base.error.message);
     if (second.isFailure()) throw new QueryBuilderInputError(second.error.message);
-    const q = (name: string) => `\`${name.replace(/`/g, "``")}\``;
-    const p = (name: string) => `p.${q(name)}`;
-    const s = (name: string) => `s.${q(name)}`;
+    const builder = this.query();
+    const quoteName = (name: string) => builder.quoteName(name);
+    const p = (name: string) => `p.${quoteName(name)}`;
+    const s = (name: string) => `s.${quoteName(name)}`;
     const time = (expression: string, rawType: string) => {
       const type = rawType.toUpperCase();
       if (type === "TIMESTAMP") return expression;
@@ -131,20 +132,20 @@ export class QueryBuilderService {
     const outputs = [...join.primaryColumns, ...join.secondaryColumns.map((c) => c.alias)];
     const projection = [
       ...join.primaryColumns.map(p),
-      ...join.secondaryColumns.map((c) => `${s(c.name)} AS ${q(c.alias)}`),
+      ...join.secondaryColumns.map((c) => `${s(c.name)} AS ${quoteName(c.alias)}`),
     ];
     // Row ids can repeat. This query-local identity preserves even identical primary occurrences.
-    const sql = `SELECT ${outputs.map(q).join(", ")}
+    const sql = `SELECT ${outputs.map(quoteName).join(", ")}
 FROM (
   SELECT ${projection.join(", ")},
-    ROW_NUMBER() OVER (PARTITION BY ${p("id")}, ${p(occurrence)} ORDER BY ${secondaryTime} DESC, ${s("id")} ASC) AS ${q(rank)}
-  FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY ${q("id")} ORDER BY ${q("id")}) AS ${q(occurrence)} FROM (${base.value}) primary_input) p
+    ROW_NUMBER() OVER (PARTITION BY ${p("id")}, ${p(occurrence)} ORDER BY ${secondaryTime} DESC, ${s("id")} ASC) AS ${quoteName(rank)}
+  FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY ${quoteName("id")} ORDER BY ${quoteName("id")}) AS ${quoteName(occurrence)} FROM (${base.value}) primary_input) p
   LEFT JOIN (${second.value}) s
     ON ${p(join.matchColumn)} = ${s(join.matchColumn)}
     AND ${secondaryTime} <= ${primaryTime}
     AND ${secondaryTime} >= ${primaryTime} - INTERVAL '${join.toleranceMinutes}' MINUTE
 ) matched
-WHERE ${q(rank)} = 1`;
+WHERE ${quoteName(rank)} = 1`;
     return {
       table: `(${sql}) joined_data`,
       columnNames: outputs,

@@ -10,10 +10,8 @@ import type {
   ExperimentDataFilter,
   ExperimentDataJoin,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import {
-  zExperimentDataJoin,
-  WellKnownColumnTypes,
-} from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { isDataJoinValid } from "@repo/api/transforms/joined-columns";
 
 const STALE_TIME = 2 * 60 * 1000;
 
@@ -158,8 +156,7 @@ export const useExperimentVisualizationData = (
   );
   const aggregationActive = baseAggregationActive;
 
-  const joinValid =
-    dataConfig.join === undefined || zExperimentDataJoin.safeParse(dataConfig.join).success;
+  const joinValid = isDataJoinValid(dataConfig.join);
   const canQuery = joinValid && (aggregationActive || (cleanedColumns?.length ?? 0) > 0);
 
   // Share JSON between cache key and request so identical sets hit the cache.

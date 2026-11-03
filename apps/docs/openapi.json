@@ -3168,7 +3168,8 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "JSON-encoded second-table settings for latest earlier readings matched by key and time"
             },
             "allowEmptyValue": true,
             "allowReserved": true
@@ -3476,7 +3477,8 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "JSON-encoded second-table settings for latest earlier readings matched by key and time"
             },
             "allowEmptyValue": true,
             "allowReserved": true

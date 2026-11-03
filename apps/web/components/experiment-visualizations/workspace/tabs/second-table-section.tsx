@@ -32,7 +32,6 @@ export function SecondTableSection({ form, experimentId, tables, tableName }: Pr
   const join = useWatch({ control: form.control, name: "dataConfig.join" });
   const primary = useColumnMetadata(experimentId, tableName);
   const secondary = useColumnMetadata(experimentId, join?.tableName);
-  const merged = useColumnMetadata(experimentId, tableName, join);
   const temporal = (columns: typeof primary.columns) =>
     columns.filter((c) => getColumnKind(c.type_text) === "temporal");
   const shared = primary.columns.filter(
@@ -44,19 +43,44 @@ export function SecondTableSection({ form, experimentId, tables, tableName }: Pr
   );
 
   const changeTable = (value: string) => {
-    const oldColumns = new Set(merged.columns.filter((c) => c.sourceTable).map((c) => c.name));
+    const isSecondaryColumn = (column: string) =>
+      join !== undefined &&
+      column.startsWith("second__") &&
+      !primary.columns.some((c) => column === c.name || column.startsWith(`${c.name}.`));
     form.setValue(
       "dataConfig.dataSources",
       form.getValues("dataConfig.dataSources").map((source) => ({
         ...source,
-        columnName: oldColumns.has(source.columnName) ? "" : source.columnName,
+        columnName: isSecondaryColumn(source.columnName) ? "" : source.columnName,
+        aggregate: isSecondaryColumn(source.columnName) ? undefined : source.aggregate,
         errorColumn:
-          source.errorColumn && oldColumns.has(source.errorColumn) ? undefined : source.errorColumn,
+          source.errorColumn && isSecondaryColumn(source.errorColumn)
+            ? undefined
+            : source.errorColumn,
       })),
       { shouldDirty: true },
     );
-    form.setValue("dataConfig.filters", undefined, { shouldDirty: true });
-    form.setValue("dataConfig.aggregation", undefined, { shouldDirty: true });
+    const filters = form
+      .getValues("dataConfig.filters")
+      ?.filter((f) => !isSecondaryColumn(f.column));
+    form.setValue("dataConfig.filters", filters?.length ? filters : undefined, {
+      shouldDirty: true,
+    });
+    const aggregation = form.getValues("dataConfig.aggregation");
+    const groupBy = aggregation?.groupBy?.filter((g) => !isSecondaryColumn(g.column));
+    const functions = aggregation?.functions?.filter(
+      (f) => !isSecondaryColumn(f.column) && !(f.secondColumn && isSecondaryColumn(f.secondColumn)),
+    );
+    form.setValue(
+      "dataConfig.aggregation",
+      groupBy?.length || functions?.length
+        ? {
+            groupBy: groupBy?.length ? groupBy : undefined,
+            functions: functions?.length ? functions : undefined,
+          }
+        : undefined,
+      { shouldDirty: true },
+    );
     form.setValue(
       "dataConfig.join",
       value === "none"
@@ -108,7 +132,11 @@ export function SecondTableSection({ form, experimentId, tables, tableName }: Pr
       <h3 className="text-sm font-semibold">{t("workspace.secondTable.title")}</h3>
       <FormItem>
         <FormLabel>{t("workspace.secondTable.table")}</FormLabel>
-        <Select value={join?.tableName ?? "none"} onValueChange={changeTable}>
+        <Select
+          value={join?.tableName ?? "none"}
+          onValueChange={changeTable}
+          disabled={primary.isLoading || Boolean(primary.error)}
+        >
           <SelectTrigger aria-label={t("workspace.secondTable.table")}>
             <SelectValue />
           </SelectTrigger>

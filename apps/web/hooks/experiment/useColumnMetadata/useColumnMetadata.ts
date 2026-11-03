@@ -2,11 +2,11 @@ import { shouldRetryQuery } from "@/util/query-retry";
 import { useQuery } from "@tanstack/react-query";
 import { orpc } from "~/lib/orpc";
 
-import { zExperimentDataJoin } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type {
   ExperimentDataJoin,
   ExperimentDataColumn,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { isDataJoinValid } from "@repo/api/transforms/joined-columns";
 
 export interface ColumnMetadata {
   columns: ExperimentDataColumn[];
@@ -26,15 +26,15 @@ export function useColumnMetadata(
   tableName: string | undefined,
   join?: ExperimentDataJoin,
 ): ColumnMetadata {
-  const validJoin = zExperimentDataJoin.safeParse(join);
+  const validJoin = isDataJoinValid(join);
   const { data, isLoading, error } = useQuery(
     orpc.experiments.getExperimentTableColumns.queryOptions({
       input: {
         id: experimentId,
         tableName: tableName ?? "",
-        join: validJoin.success ? JSON.stringify(validJoin.data) : undefined,
+        join: validJoin && join ? JSON.stringify(join) : undefined,
       },
-      meta: { secondaryTableName: validJoin.success ? validJoin.data.tableName : undefined },
+      meta: { secondaryTableName: validJoin ? join?.tableName : undefined },
       staleTime: Infinity,
       enabled: Boolean(tableName),
       refetchOnWindowFocus: false,

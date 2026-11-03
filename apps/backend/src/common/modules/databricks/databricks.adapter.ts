@@ -893,15 +893,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       return tableResult;
     }
 
-    // Macro and upload tables each share one physical table; `tableName` is then the macro_id or
-    // the stable upload_table_id passed by the caller.
-    const whereConditions: [string, string][] = [["experiment_id", experimentId]];
-    if (tableType === "macro") {
-      whereConditions.push(["macro_id", tableName]);
-    }
-    if (tableType === "upload") {
-      whereConditions.push(["upload_table_id", tableName]);
-    }
+    const whereConditions = this.experimentScope(tableType, tableName, experimentId);
 
     let resolvedJoin: QueryParams["join"];
     if (join) {
@@ -910,17 +902,16 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         join.secondary.tableName,
       );
       if (secondaryTable.isFailure()) return secondaryTable;
-      const secondaryConditions: [string, string][] = [["experiment_id", experimentId]];
-      if (join.secondary.tableType === "macro")
-        secondaryConditions.push(["macro_id", join.secondary.tableName]);
-      if (join.secondary.tableType === "upload")
-        secondaryConditions.push(["upload_table_id", join.secondary.tableName]);
       resolvedJoin = {
         ...join,
         secondary: {
           ...join.secondary,
           table: secondaryTable.value,
-          whereConditions: secondaryConditions,
+          whereConditions: this.experimentScope(
+            join.secondary.tableType,
+            join.secondary.tableName,
+            experimentId,
+          ),
         },
       };
     }
@@ -954,6 +945,17 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     const names = described.value.rows.map(([name]) => name ?? "");
     const sectionEnd = names.findIndex((name) => name === "" || name.startsWith("#"));
     return success(sectionEnd === -1 ? names : names.slice(0, sectionEnd));
+  }
+
+  private experimentScope(
+    tableType: "static" | "macro" | "upload",
+    tableName: string,
+    experimentId: string,
+  ): [string, string][] {
+    const conditions: [string, string][] = [["experiment_id", experimentId]];
+    if (tableType === "macro") conditions.push(["macro_id", tableName]);
+    if (tableType === "upload") conditions.push(["upload_table_id", tableName]);
+    return conditions;
   }
 
   private experimentTable(

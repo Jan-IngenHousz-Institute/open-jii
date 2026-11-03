@@ -725,19 +725,15 @@ export class ExperimentDataRepository {
     if (!primaryTime || !secondaryTime) {
       return failure(AppError.badRequest("Choose a timestamp or date column on each table"));
     }
-    for (const [columns, timeColumn] of [
-      [left, join.primaryTimeColumn],
-      [right, join.secondaryTimeColumn],
-    ] as const) {
-      if (
-        !columns.some(
-          (c) => c.name === timeColumn && getColumnKind(c.type_text.toUpperCase()) === "temporal",
-        )
-      ) {
-        return failure(AppError.badRequest("Choose a timestamp or date column on each table"));
-      }
-      if (!columns.some((c) => c.name === "id"))
-        return failure(AppError.badRequest("Time matching requires row ids"));
+    if (
+      [primaryTime, secondaryTime].some(
+        (c) => getColumnKind(c.type_text.toUpperCase()) !== "temporal",
+      )
+    ) {
+      return failure(AppError.badRequest("Choose a timestamp or date column on each table"));
+    }
+    if ([left, right].some((columns) => !columns.some((c) => c.name === "id"))) {
+      return failure(AppError.badRequest("Time matching requires row ids"));
     }
     const resolved = joinedColumns(left, right, join.tableName);
     const { metadata, variants, exceptColumns, reservedColumns } = secondary.value;

@@ -70,9 +70,9 @@ export const FilterChipFace = forwardRef<HTMLDivElement, FilterChipFaceProps>(
             filter={filter}
             isContributor={isContributor}
             fullWidth={fullWidth}
-            parentColumn={displayColumn}
+            parentColumn={column?.sourceTable?.columnName ?? displayColumn}
             experimentId={experimentId}
-            tableName={tableName}
+            tableName={column?.sourceTable?.tableName ?? tableName}
           />
         </Button>
         <Button

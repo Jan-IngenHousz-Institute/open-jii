@@ -1,4 +1,8 @@
-import type { ExperimentDataColumn } from "../domains/experiment/data/experiment-data.schema";
+import { zExperimentDataJoin } from "../domains/experiment/data/experiment-data.schema";
+import type {
+  ExperimentDataJoin,
+  ExperimentDataColumn,
+} from "../domains/experiment/data/experiment-data.schema";
 import { getColumnKind } from "./column-type-utils";
 
 /** Stable keys shared by the SQL projection and every chart column picker. */
@@ -22,4 +26,8 @@ export function isJoinMatchColumn(column: ExperimentDataColumn): boolean {
   const type = column.type_text.toUpperCase();
   const kind = getColumnKind(type);
   return kind !== undefined && kind !== "complex" && !type.startsWith("STRUCT");
+}
+
+export function isDataJoinValid(join: ExperimentDataJoin | undefined): boolean {
+  return join === undefined || zExperimentDataJoin.safeParse(join).success;
 }

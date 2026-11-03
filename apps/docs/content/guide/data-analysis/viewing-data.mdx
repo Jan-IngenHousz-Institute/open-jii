@@ -117,7 +117,7 @@ also needs a numeric **Z** column with varying values across the grid. Its
 
 ### Add a second table
 
-In the **Data** tab, open **Second table** and choose another table from the
+In the **Data** tab, choose the primary dataset, then open **Second table** and choose another table from the
 same experiment. Choose a **Match column** that exists in both tables with the
 same scalar type, then choose the time column on each table. Use measurement
 time when you want readings matched by when they were taken, rather than by
@@ -137,8 +137,9 @@ for axes, series, grouping, filters or style options that accept their type.
 Rows without a match stay in the data, with empty second-table values. Filters
 on second-table columns apply after the latest match is chosen, so they cannot
 substitute an older reading. Grouping follows matching and filtering.
-Choose **None** to remove the second table. Changing either table clears the
-column settings that depend on it.
+Choose **None** to remove the second table. Changing or removing the second
+table clears its series, filters and aggregation settings. Filters, grouping,
+time buckets and aggregates on primary-table columns stay in place.
 
 Line and area charts draw a long series at screen resolution, keeping the
 lowest and highest value for every pixel column, so a peak or a gap never

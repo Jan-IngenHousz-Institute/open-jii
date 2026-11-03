@@ -1,7 +1,9 @@
 import { createExperimentTable } from "@/test/factories";
+import { API_URL } from "@/test/msw/mount";
 import type { SpyCall } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { renderWithForm, screen, userEvent, waitFor } from "@/test/test-utils";
+import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -24,6 +26,7 @@ const primary = [
   column("date", "DATE"),
   column("reading", "DOUBLE"),
   column("payload", "VARIANT"),
+  column("second__primary", "STRUCT<id: STRING, name: STRING, avatar: STRING>"),
 ];
 const secondary = [
   column("id", "STRING"),
@@ -34,9 +37,10 @@ const secondary = [
   column("reading", "STRING"),
   column("payload", "VARIANT"),
   column("air", "DOUBLE"),
+  column("contributor", "STRUCT<id: STRING, name: STRING, avatar: STRING>"),
 ];
 
-function setup() {
+function setup(overrides: Partial<ChartFormValues["dataConfig"]> = {}) {
   const spy = server.mount(contract.experiments.getExperimentTableColumns, {
     body: ({ query }: SpyCall) => ({
       columns: query.join
@@ -78,9 +82,23 @@ function setup() {
                 columnName: "second__air",
                 errorColumn: "second__reading",
                 role: "y",
+                aggregate: "avg",
               },
             ],
-            filters: [{ column: "second__air", operator: "greater_than", value: 10 }],
+            filters: [
+              { column: "reading", operator: "greater_than", value: 0 },
+              { column: "second__air", operator: "greater_than", value: 10 },
+              { column: "second__contributor.id", operator: "equals", value: "u-1" },
+            ],
+            aggregation: {
+              groupBy: [{ column: "timestamp", timeBucket: "hour" }, { column: "second__air" }],
+              functions: [
+                { column: "reading", function: "avg", alias: "leaf_mean" },
+                { column: "second__air", function: "avg" },
+                { column: "reading", function: "corr", secondColumn: "second__air" },
+              ],
+            },
+            ...overrides,
           },
         },
       },
@@ -93,7 +111,9 @@ describe("SecondTableSection", () => {
   it("excludes the primary table and limits match/time choices to compatible metadata", async () => {
     const user = userEvent.setup();
     const { spy } = setup();
-    await waitFor(() => expect(spy.calls.some((call) => call.query.join)).toBe(true));
+    await waitFor(() =>
+      expect(spy.calls.some((call) => call.query.tableName === "weather")).toBe(true),
+    );
     await user.click(screen.getByRole("combobox", { name: "workspace.secondTable.table" }));
     expect(screen.queryByRole("option", { name: "Leaf" })).not.toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Weather" })).toBeInTheDocument();
@@ -124,7 +144,9 @@ describe("SecondTableSection", () => {
   it("clears dependent secondary selections when changing tables and removes the join with None", async () => {
     const user = userEvent.setup();
     const { form, spy } = setup();
-    await waitFor(() => expect(spy.calls.some((call) => call.query.join)).toBe(true));
+    await waitFor(() =>
+      expect(spy.calls.some((call) => call.query.tableName === "weather")).toBe(true),
+    );
     await user.click(screen.getByRole("combobox", { name: "workspace.secondTable.table" }));
     await user.click(screen.getByRole("option", { name: "Alternate" }));
     expect(form.getValues("dataConfig.dataSources").map((source) => source.columnName)).toEqual([
@@ -132,10 +154,103 @@ describe("SecondTableSection", () => {
       "",
     ]);
     expect(form.getValues("dataConfig.dataSources")[1].errorColumn).toBeUndefined();
-    expect(form.getValues("dataConfig.filters")).toBeUndefined();
+    expect(form.getValues("dataConfig.filters")).toEqual([
+      { column: "reading", operator: "greater_than", value: 0 },
+    ]);
+    expect(form.getValues("dataConfig.dataSources")[1].aggregate).toBeUndefined();
+    expect(form.getValues("dataConfig.aggregation")).toEqual({
+      groupBy: [{ column: "timestamp", timeBucket: "hour" }],
+      functions: [{ column: "reading", function: "avg", alias: "leaf_mean" }],
+    });
     expect(form.getValues("dataConfig.join.tableName")).toBe("alternate");
     await user.click(screen.getByRole("combobox", { name: "workspace.secondTable.table" }));
     await user.click(screen.getByRole("option", { name: "workspace.secondTable.none" }));
     expect(form.getValues("dataConfig.join")).toBeUndefined();
+  });
+  it.each(["Alternate", "workspace.secondTable.none"])(
+    "preserves primary configuration when selecting %s from a complete join",
+    async (option) => {
+      const user = userEvent.setup();
+      const { form, spy } = setup({
+        dataSources: [{ tableName: "leaf", columnName: "reading", role: "y", aggregate: "avg" }],
+      });
+      await waitFor(() =>
+        expect(spy.calls.some((call) => call.query.tableName === "weather")).toBe(true),
+      );
+      await user.click(screen.getByRole("combobox", { name: "workspace.secondTable.table" }));
+      await user.click(screen.getByRole("option", { name: option }));
+      expect(form.getValues("dataConfig.dataSources")[0]).toMatchObject({
+        columnName: "reading",
+        aggregate: "avg",
+      });
+      expect(form.getValues("dataConfig.filters")).toEqual([
+        { column: "reading", operator: "greater_than", value: 0 },
+      ]);
+      expect(form.getValues("dataConfig.aggregation")).toEqual({
+        groupBy: [{ column: "timestamp", timeBucket: "hour" }],
+        functions: [{ column: "reading", function: "avg", alias: "leaf_mean" }],
+      });
+    },
+  );
+
+  it("preserves primary settings when adding the first second table", async () => {
+    const user = userEvent.setup();
+    const filters = [{ column: "reading", operator: "greater_than" as const, value: 0 }];
+    const aggregation = { groupBy: [{ column: "timestamp", timeBucket: "hour" as const }] };
+    const { form, spy } = setup({ join: undefined, filters, aggregation });
+    await waitFor(() =>
+      expect(spy.calls.some((call) => call.query.tableName === "leaf")).toBe(true),
+    );
+    await user.click(screen.getByRole("combobox", { name: "workspace.secondTable.table" }));
+    await user.click(screen.getByRole("option", { name: "Weather" }));
+    expect(form.getValues("dataConfig.filters")).toEqual(filters);
+    expect(form.getValues("dataConfig.aggregation")).toEqual(aggregation);
+  });
+
+  it("drops an aggregation when every entry depends on the second table", async () => {
+    const user = userEvent.setup();
+    const { form, spy } = setup({
+      aggregation: { functions: [{ column: "second__air", function: "avg" }] },
+      filters: [{ column: "second__air", operator: "greater_than", value: 10 }],
+    });
+    await waitFor(() =>
+      expect(spy.calls.some((call) => call.query.tableName === "weather")).toBe(true),
+    );
+    await user.click(screen.getByRole("combobox", { name: "workspace.secondTable.table" }));
+    await user.click(screen.getByRole("option", { name: "workspace.secondTable.none" }));
+    expect(form.getValues("dataConfig.aggregation")).toBeUndefined();
+    expect(form.getValues("dataConfig.filters")).toBeUndefined();
+  });
+  it("clears secondary references after a failed metadata read while preserving primary prefixed columns", async () => {
+    const user = userEvent.setup();
+    const { form } = setup({
+      filters: [
+        { column: "second__primary.id", operator: "equals", value: "u-1" },
+        { column: "second__contributor.id", operator: "equals", value: "u-2" },
+      ],
+    });
+    server.use(
+      http.get(`${API_URL}/api/v1/experiments/:id/data/columns`, ({ request }) => {
+        if (new URL(request.url).searchParams.get("tableName") === "weather") {
+          return HttpResponse.json({ message: "Table not found" }, { status: 404 });
+        }
+      }),
+    );
+    await screen.findByRole("alert");
+    await user.click(screen.getByRole("combobox", { name: "workspace.secondTable.table" }));
+    await user.click(screen.getByRole("option", { name: "workspace.secondTable.none" }));
+    expect(form.getValues("dataConfig.join")).toBeUndefined();
+    expect(form.getValues("dataConfig.dataSources")[1]).toMatchObject({
+      columnName: "",
+      aggregate: undefined,
+      errorColumn: undefined,
+    });
+    expect(form.getValues("dataConfig.filters")).toEqual([
+      { column: "second__primary.id", operator: "equals", value: "u-1" },
+    ]);
+    expect(form.getValues("dataConfig.aggregation")).toEqual({
+      groupBy: [{ column: "timestamp", timeBucket: "hour" }],
+      functions: [{ column: "reading", function: "avg", alias: "leaf_mean" }],
+    });
   });
 });

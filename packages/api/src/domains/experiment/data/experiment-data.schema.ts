@@ -333,7 +333,11 @@ export const zExperimentDataQuery = z.object({
   filters: jsonQuerySchema(z.array(zExperimentDataFilter))
     .optional()
     .describe("JSON-encoded array of filter conditions applied as a WHERE clause"),
-  join: jsonQuerySchema(zExperimentDataJoin).optional(),
+  join: jsonQuerySchema(zExperimentDataJoin)
+    .optional()
+    .describe(
+      "JSON-encoded second-table settings for latest earlier readings matched by key and time",
+    ),
   aggregation: jsonQuerySchema(zExperimentDataAggregation)
     .optional()
     .describe("JSON-encoded GROUP BY + aggregate functions"),
@@ -379,7 +383,11 @@ export const zExperimentDistinctValuesResponse = z.object({
 });
 
 export const zExperimentTableColumnsQuery = z.object({
-  join: jsonQuerySchema(zExperimentDataJoin).optional(),
+  join: jsonQuerySchema(zExperimentDataJoin)
+    .optional()
+    .describe(
+      "JSON-encoded second-table settings for latest earlier readings matched by key and time",
+    ),
   tableName: zExperimentTableNameInput.describe("Table whose columns to return"),
 });
 
