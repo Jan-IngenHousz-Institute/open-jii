@@ -3336,6 +3336,11 @@
                         "type": "integer",
                         "minimum": -9007199254740991,
                         "maximum": 9007199254740991
+                      },
+                      "filterEvaluatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "UTC minute used to resolve rolling time filters for this read"
                       }
                     },
                     "required": [
@@ -8908,6 +8913,26 @@
                                                     }
                                                   ]
                                                 }
+                                              },
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "object",
+                                                    "properties": {
+                                                      "last": {},
+                                                      "unit": {}
+                                                    },
+                                                    "additionalProperties": false
+                                                  },
+                                                  {
+                                                    "type": "object",
+                                                    "properties": {
+                                                      "last": {},
+                                                      "unit": {}
+                                                    },
+                                                    "additionalProperties": false
+                                                  }
+                                                ]
                                               }
                                             ]
                                           }
@@ -9019,6 +9044,59 @@
                                               }
                                             ]
                                           }
+                                        },
+                                        {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "last": {
+                                                  "anyOf": [
+                                                    {
+                                                      "const": 1
+                                                    },
+                                                    {
+                                                      "const": 24
+                                                    }
+                                                  ]
+                                                },
+                                                "unit": {
+                                                  "const": "hours"
+                                                }
+                                              },
+                                              "required": [
+                                                "last",
+                                                "unit"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "last": {
+                                                  "anyOf": [
+                                                    {
+                                                      "const": 7
+                                                    },
+                                                    {
+                                                      "const": 30
+                                                    },
+                                                    {
+                                                      "const": 90
+                                                    }
+                                                  ]
+                                                },
+                                                "unit": {
+                                                  "const": "days"
+                                                }
+                                              },
+                                              "required": [
+                                                "last",
+                                                "unit"
+                                              ],
+                                              "additionalProperties": false
+                                            }
+                                          ]
                                         }
                                       ]
                                     },
@@ -9403,6 +9481,47 @@
                                                 }
                                               ]
                                             }
+                                          },
+                                          {
+                                            "anyOf": [
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "last": {
+                                                    "anyOf": [
+                                                      {},
+                                                      {}
+                                                    ]
+                                                  },
+                                                  "unit": {
+                                                    "const": "hours"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "unit"
+                                                ],
+                                                "additionalProperties": false
+                                              },
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "last": {
+                                                    "anyOf": [
+                                                      {},
+                                                      {},
+                                                      {}
+                                                    ]
+                                                  },
+                                                  "unit": {
+                                                    "const": "days"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "unit"
+                                                ],
+                                                "additionalProperties": false
+                                              }
+                                            ]
                                           }
                                         ]
                                       }
@@ -9514,6 +9633,59 @@
                                           }
                                         ]
                                       }
+                                    },
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "last": {
+                                              "anyOf": [
+                                                {
+                                                  "const": 1
+                                                },
+                                                {
+                                                  "const": 24
+                                                }
+                                              ]
+                                            },
+                                            "unit": {
+                                              "const": "hours"
+                                            }
+                                          },
+                                          "required": [
+                                            "last",
+                                            "unit"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "last": {
+                                              "anyOf": [
+                                                {
+                                                  "const": 7
+                                                },
+                                                {
+                                                  "const": 30
+                                                },
+                                                {
+                                                  "const": 90
+                                                }
+                                              ]
+                                            },
+                                            "unit": {
+                                              "const": "days"
+                                            }
+                                          },
+                                          "required": [
+                                            "last",
+                                            "unit"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
                                     }
                                   ]
                                 },
@@ -9874,6 +10046,47 @@
                                                   }
                                                 ]
                                               }
+                                            },
+                                            {
+                                              "anyOf": [
+                                                {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "last": {
+                                                      "anyOf": [
+                                                        {},
+                                                        {}
+                                                      ]
+                                                    },
+                                                    "unit": {
+                                                      "const": "hours"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "unit"
+                                                  ],
+                                                  "additionalProperties": false
+                                                },
+                                                {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "last": {
+                                                      "anyOf": [
+                                                        {},
+                                                        {},
+                                                        {}
+                                                      ]
+                                                    },
+                                                    "unit": {
+                                                      "const": "days"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "unit"
+                                                  ],
+                                                  "additionalProperties": false
+                                                }
+                                              ]
                                             }
                                           ]
                                         }
@@ -9985,6 +10198,59 @@
                                             }
                                           ]
                                         }
+                                      },
+                                      {
+                                        "anyOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "last": {
+                                                "anyOf": [
+                                                  {
+                                                    "const": 1
+                                                  },
+                                                  {
+                                                    "const": 24
+                                                  }
+                                                ]
+                                              },
+                                              "unit": {
+                                                "const": "hours"
+                                              }
+                                            },
+                                            "required": [
+                                              "last",
+                                              "unit"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "last": {
+                                                "anyOf": [
+                                                  {
+                                                    "const": 7
+                                                  },
+                                                  {
+                                                    "const": 30
+                                                  },
+                                                  {
+                                                    "const": 90
+                                                  }
+                                                ]
+                                              },
+                                              "unit": {
+                                                "const": "days"
+                                              }
+                                            },
+                                            "required": [
+                                              "last",
+                                              "unit"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        ]
                                       }
                                     ]
                                   },
@@ -10396,6 +10662,47 @@
                                                   }
                                                 ]
                                               }
+                                            },
+                                            {
+                                              "anyOf": [
+                                                {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "last": {
+                                                      "anyOf": [
+                                                        {},
+                                                        {}
+                                                      ]
+                                                    },
+                                                    "unit": {
+                                                      "const": "hours"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "unit"
+                                                  ],
+                                                  "additionalProperties": false
+                                                },
+                                                {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "last": {
+                                                      "anyOf": [
+                                                        {},
+                                                        {},
+                                                        {}
+                                                      ]
+                                                    },
+                                                    "unit": {
+                                                      "const": "days"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "unit"
+                                                  ],
+                                                  "additionalProperties": false
+                                                }
+                                              ]
                                             }
                                           ]
                                         }
@@ -10507,6 +10814,59 @@
                                             }
                                           ]
                                         }
+                                      },
+                                      {
+                                        "anyOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "last": {
+                                                "anyOf": [
+                                                  {
+                                                    "const": 1
+                                                  },
+                                                  {
+                                                    "const": 24
+                                                  }
+                                                ]
+                                              },
+                                              "unit": {
+                                                "const": "hours"
+                                              }
+                                            },
+                                            "required": [
+                                              "last",
+                                              "unit"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "last": {
+                                                "anyOf": [
+                                                  {
+                                                    "const": 7
+                                                  },
+                                                  {
+                                                    "const": 30
+                                                  },
+                                                  {
+                                                    "const": 90
+                                                  }
+                                                ]
+                                              },
+                                              "unit": {
+                                                "const": "days"
+                                              }
+                                            },
+                                            "required": [
+                                              "last",
+                                              "unit"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        ]
                                       }
                                     ]
                                   },
@@ -10900,6 +11260,47 @@
                                                 }
                                               ]
                                             }
+                                          },
+                                          {
+                                            "anyOf": [
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "last": {
+                                                    "anyOf": [
+                                                      {},
+                                                      {}
+                                                    ]
+                                                  },
+                                                  "unit": {
+                                                    "const": "hours"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "unit"
+                                                ],
+                                                "additionalProperties": false
+                                              },
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "last": {
+                                                    "anyOf": [
+                                                      {},
+                                                      {},
+                                                      {}
+                                                    ]
+                                                  },
+                                                  "unit": {
+                                                    "const": "days"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "unit"
+                                                ],
+                                                "additionalProperties": false
+                                              }
+                                            ]
                                           }
                                         ]
                                       }
@@ -11011,6 +11412,59 @@
                                           }
                                         ]
                                       }
+                                    },
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "last": {
+                                              "anyOf": [
+                                                {
+                                                  "const": 1
+                                                },
+                                                {
+                                                  "const": 24
+                                                }
+                                              ]
+                                            },
+                                            "unit": {
+                                              "const": "hours"
+                                            }
+                                          },
+                                          "required": [
+                                            "last",
+                                            "unit"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "last": {
+                                              "anyOf": [
+                                                {
+                                                  "const": 7
+                                                },
+                                                {
+                                                  "const": 30
+                                                },
+                                                {
+                                                  "const": 90
+                                                }
+                                              ]
+                                            },
+                                            "unit": {
+                                              "const": "days"
+                                            }
+                                          },
+                                          "required": [
+                                            "last",
+                                            "unit"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
                                     }
                                   ]
                                 },
@@ -11368,6 +11822,47 @@
                                                   }
                                                 ]
                                               }
+                                            },
+                                            {
+                                              "anyOf": [
+                                                {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "last": {
+                                                      "anyOf": [
+                                                        {},
+                                                        {}
+                                                      ]
+                                                    },
+                                                    "unit": {
+                                                      "const": "hours"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "unit"
+                                                  ],
+                                                  "additionalProperties": false
+                                                },
+                                                {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "last": {
+                                                      "anyOf": [
+                                                        {},
+                                                        {},
+                                                        {}
+                                                      ]
+                                                    },
+                                                    "unit": {
+                                                      "const": "days"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "unit"
+                                                  ],
+                                                  "additionalProperties": false
+                                                }
+                                              ]
                                             }
                                           ]
                                         }
@@ -11479,6 +11974,59 @@
                                             }
                                           ]
                                         }
+                                      },
+                                      {
+                                        "anyOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "last": {
+                                                "anyOf": [
+                                                  {
+                                                    "const": 1
+                                                  },
+                                                  {
+                                                    "const": 24
+                                                  }
+                                                ]
+                                              },
+                                              "unit": {
+                                                "const": "hours"
+                                              }
+                                            },
+                                            "required": [
+                                              "last",
+                                              "unit"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "last": {
+                                                "anyOf": [
+                                                  {
+                                                    "const": 7
+                                                  },
+                                                  {
+                                                    "const": 30
+                                                  },
+                                                  {
+                                                    "const": 90
+                                                  }
+                                                ]
+                                              },
+                                              "unit": {
+                                                "const": "days"
+                                              }
+                                            },
+                                            "required": [
+                                              "last",
+                                              "unit"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        ]
                                       }
                                     ]
                                   },
@@ -11901,6 +12449,59 @@
                                           }
                                         ]
                                       }
+                                    },
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "last": {
+                                              "anyOf": [
+                                                {
+                                                  "const": 1
+                                                },
+                                                {
+                                                  "const": 24
+                                                }
+                                              ]
+                                            },
+                                            "unit": {
+                                              "const": "hours"
+                                            }
+                                          },
+                                          "required": [
+                                            "last",
+                                            "unit"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "last": {
+                                              "anyOf": [
+                                                {
+                                                  "const": 7
+                                                },
+                                                {
+                                                  "const": 30
+                                                },
+                                                {
+                                                  "const": 90
+                                                }
+                                              ]
+                                            },
+                                            "unit": {
+                                              "const": "days"
+                                            }
+                                          },
+                                          "required": [
+                                            "last",
+                                            "unit"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
                                     }
                                   ]
                                 }
@@ -12304,6 +12905,59 @@
                                       }
                                     ]
                                   }
+                                },
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "last": {
+                                          "anyOf": [
+                                            {
+                                              "const": 1
+                                            },
+                                            {
+                                              "const": 24
+                                            }
+                                          ]
+                                        },
+                                        "unit": {
+                                          "const": "hours"
+                                        }
+                                      },
+                                      "required": [
+                                        "last",
+                                        "unit"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "last": {
+                                          "anyOf": [
+                                            {
+                                              "const": 7
+                                            },
+                                            {
+                                              "const": 30
+                                            },
+                                            {
+                                              "const": 90
+                                            }
+                                          ]
+                                        },
+                                        "unit": {
+                                          "const": "days"
+                                        }
+                                      },
+                                      "required": [
+                                        "last",
+                                        "unit"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
                                 }
                               ]
                             }
@@ -12685,6 +13339,59 @@
                                         }
                                       ]
                                     }
+                                  },
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "last": {
+                                            "anyOf": [
+                                              {
+                                                "const": 1
+                                              },
+                                              {
+                                                "const": 24
+                                              }
+                                            ]
+                                          },
+                                          "unit": {
+                                            "const": "hours"
+                                          }
+                                        },
+                                        "required": [
+                                          "last",
+                                          "unit"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "last": {
+                                            "anyOf": [
+                                              {
+                                                "const": 7
+                                              },
+                                              {
+                                                "const": 30
+                                              },
+                                              {
+                                                "const": 90
+                                              }
+                                            ]
+                                          },
+                                          "unit": {
+                                            "const": "days"
+                                          }
+                                        },
+                                        "required": [
+                                          "last",
+                                          "unit"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
                                   }
                                 ]
                               }
@@ -13115,6 +13822,59 @@
                                         }
                                       ]
                                     }
+                                  },
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "last": {
+                                            "anyOf": [
+                                              {
+                                                "const": 1
+                                              },
+                                              {
+                                                "const": 24
+                                              }
+                                            ]
+                                          },
+                                          "unit": {
+                                            "const": "hours"
+                                          }
+                                        },
+                                        "required": [
+                                          "last",
+                                          "unit"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "last": {
+                                            "anyOf": [
+                                              {
+                                                "const": 7
+                                              },
+                                              {
+                                                "const": 30
+                                              },
+                                              {
+                                                "const": 90
+                                              }
+                                            ]
+                                          },
+                                          "unit": {
+                                            "const": "days"
+                                          }
+                                        },
+                                        "required": [
+                                          "last",
+                                          "unit"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
                                   }
                                 ]
                               }
@@ -13527,6 +14287,59 @@
                                       }
                                     ]
                                   }
+                                },
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "last": {
+                                          "anyOf": [
+                                            {
+                                              "const": 1
+                                            },
+                                            {
+                                              "const": 24
+                                            }
+                                          ]
+                                        },
+                                        "unit": {
+                                          "const": "hours"
+                                        }
+                                      },
+                                      "required": [
+                                        "last",
+                                        "unit"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "last": {
+                                          "anyOf": [
+                                            {
+                                              "const": 7
+                                            },
+                                            {
+                                              "const": 30
+                                            },
+                                            {
+                                              "const": 90
+                                            }
+                                          ]
+                                        },
+                                        "unit": {
+                                          "const": "days"
+                                        }
+                                      },
+                                      "required": [
+                                        "last",
+                                        "unit"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
                                 }
                               ]
                             }
@@ -13908,6 +14721,59 @@
                                         }
                                       ]
                                     }
+                                  },
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "last": {
+                                            "anyOf": [
+                                              {
+                                                "const": 1
+                                              },
+                                              {
+                                                "const": 24
+                                              }
+                                            ]
+                                          },
+                                          "unit": {
+                                            "const": "hours"
+                                          }
+                                        },
+                                        "required": [
+                                          "last",
+                                          "unit"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "last": {
+                                            "anyOf": [
+                                              {
+                                                "const": 7
+                                              },
+                                              {
+                                                "const": 30
+                                              },
+                                              {
+                                                "const": 90
+                                              }
+                                            ]
+                                          },
+                                          "unit": {
+                                            "const": "days"
+                                          }
+                                        },
+                                        "required": [
+                                          "last",
+                                          "unit"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
                                   }
                                 ]
                               }

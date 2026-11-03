@@ -1,6 +1,7 @@
 import { contributorDisplayName } from "@/components/experiment-visualizations/charts/data/contributor-cells";
 import { deviceDisplayName } from "@/components/experiment-visualizations/charts/data/device-cells";
 import { shouldRetryQuery } from "@/util/query-retry";
+import { relativeFilterStaleTime } from "@/util/relative-filter-stale-time";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { orpc } from "~/lib/orpc";
@@ -12,6 +13,10 @@ import type {
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isDataJoinValid } from "@repo/api/transforms/joined-columns";
+import {
+  hasRelativeTimeFilters,
+  relativeTimeFilterIdentities,
+} from "@repo/api/domains/experiment/data/relative-time-filter";
 
 const STALE_TIME = 2 * 60 * 1000;
 
@@ -204,14 +209,18 @@ export const useExperimentVisualizationData = (
         orderBy: effectiveOrderBy,
         orderDirection: effectiveOrderDirection,
       },
-      meta: { readShape, secondaryTableName: dataConfig.join?.tableName },
+      meta: {
+        readShape,
+        secondaryTableName: dataConfig.join?.tableName,
+        relativeTimeFilters: relativeTimeFilterIdentities(cleanedFilters),
+      },
       // A new filter is a new cache key. Without this the chart drops to its loading state and
       // Plotly rebuilds it from scratch when the rows land; the previous rows stay drawn instead.
       // Held only while the read's columns are unchanged, so a chart never draws columns it did
       // not ask for.
       placeholderData: (previous, previousQuery) =>
         previousQuery?.meta?.readShape === readShape ? previous : undefined,
-      staleTime: STALE_TIME,
+      staleTime: hasRelativeTimeFilters(cleanedFilters) ? relativeFilterStaleTime : STALE_TIME,
       enabled: enabled && Boolean(dataConfig.tableName) && canQuery,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,

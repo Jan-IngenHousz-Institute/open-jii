@@ -4,6 +4,10 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import {
+  isRelativeTimeWindow,
+  resolveRelativeTimeWindow,
+} from "@repo/api/domains/experiment/data/relative-time-filter";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Calendar } from "@repo/ui/components/calendar";
@@ -13,8 +17,13 @@ import { Separator } from "@repo/ui/components/separator";
 import { cn } from "@repo/ui/lib/utils";
 
 import { applyTimeOfDay, formatHm, formatYmdHm, parseIsoDate } from "../../../util/date";
+import { useFilterEvaluationTime } from "../use-filter-evaluation-time";
 import type { DateRangePresetDef, DateRangePresetId } from "./date-range-presets";
-import { DATE_RANGE_PRESETS, computeDateRangePreset } from "./date-range-presets";
+import {
+  DATE_RANGE_PRESETS,
+  computeDateRangePreset,
+  relativeTimePresetLabelKey,
+} from "./date-range-presets";
 
 const DAY_END_TIME = "23:59";
 const DAY_START_TIME = "00:00";
@@ -25,6 +34,9 @@ interface DateRangeInputProps {
   onChange: (value: ExperimentDataFilterValue) => void;
   /** Marks the range invalid and describes it by this element. */
   errorMessageId?: string;
+  experimentId?: string;
+  tableName?: string;
+  columnName?: string;
 }
 
 interface ParsedRange {
@@ -32,9 +44,20 @@ interface ParsedRange {
   end: Date | undefined;
 }
 
-export function DateRangeInput({ value, onChange, errorMessageId }: DateRangeInputProps) {
+export function DateRangeInput({
+  value,
+  onChange,
+  errorMessageId,
+  experimentId,
+  tableName,
+  columnName,
+}: DateRangeInputProps) {
   const { t } = useTranslation("common");
-  const { start, end } = parseRange(value);
+  const relative = isRelativeTimeWindow(value) ? value : undefined;
+  const evaluation = useFilterEvaluationTime(experimentId, tableName, columnName, relative);
+  const { start, end } = parseRange(
+    relative ? resolveRelativeTimeWindow(relative, evaluation.at) : value,
+  );
   const [open, setOpen] = useState(false);
 
   const startTime = start ? formatHm(start) : DAY_START_TIME;
@@ -76,8 +99,13 @@ export function DateRangeInput({ value, onChange, errorMessageId }: DateRangeInp
   };
 
   const applyPreset = (id: DateRangePresetId) => {
-    const [s, e] = computeDateRangePreset(id);
-    emitBounds(s, e);
+    const window = DATE_RANGE_PRESETS.find((preset) => preset.id === id)?.relativeWindow;
+    if (window) {
+      onChange(window);
+    } else {
+      const [s, e] = computeDateRangePreset(id);
+      emitBounds(s, e);
+    }
     setOpen(false);
   };
 
@@ -96,12 +124,28 @@ export function DateRangeInput({ value, onChange, errorMessageId }: DateRangeInp
         <Button
           type="button"
           variant="outline"
-          className={cn("h-9 w-full justify-start font-normal", isUnset && "text-muted-foreground")}
+          className={cn(
+            "min-h-9 w-full justify-start font-normal",
+            relative ? "h-auto py-1.5" : "h-9",
+            isUnset && "text-muted-foreground",
+          )}
           aria-invalid={errorMessageId ? true : undefined}
           aria-describedby={errorMessageId}
         >
           <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">{triggerLabel}</span>
+          <span className="min-w-0 text-left">
+            {relative && (
+              <span className="block truncate">{t(relativeTimePresetLabelKey(relative))}</span>
+            )}
+            <span className={cn("block truncate", relative && "text-muted-foreground text-xs")}>
+              {triggerLabel}
+            </span>
+            {relative && !evaluation.server && (
+              <span className="text-muted-foreground block text-xs">
+                {t("dataFilters.rangePreview")}
+              </span>
+            )}
+          </span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">

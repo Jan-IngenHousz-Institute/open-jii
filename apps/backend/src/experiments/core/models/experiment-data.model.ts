@@ -103,4 +103,5 @@ export interface TableDataDto {
   pageSize: number;
   totalPages: number;
   totalRows: number;
+  filterEvaluatedAt?: string;
 }

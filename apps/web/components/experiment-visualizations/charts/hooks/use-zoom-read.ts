@@ -1,6 +1,7 @@
 "use client";
 
 import { shouldRetryQuery } from "@/util/query-retry";
+import { relativeFilterStaleTime } from "@/util/relative-filter-stale-time";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { orpc } from "~/lib/orpc";
@@ -9,6 +10,10 @@ import type {
   ExperimentDataAggregation,
   ExperimentDataFilter,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import {
+  hasRelativeTimeFilters,
+  relativeTimeFilterIdentities,
+} from "@repo/api/domains/experiment/data/relative-time-filter";
 
 import { useExperimentVisualizationData } from "../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { axisPosition } from "../cartesian/series-reduction";
@@ -63,7 +68,8 @@ export function useZoomRead(input: ZoomReadInput): ZoomRead {
         } satisfies ExperimentDataAggregation),
       },
       enabled,
-      staleTime: STALE_TIME,
+      meta: { relativeTimeFilters: relativeTimeFilterIdentities(filters) },
+      staleTime: hasRelativeTimeFilters(filters) ? relativeFilterStaleTime : STALE_TIME,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       retry: shouldRetryQuery,
@@ -87,7 +93,8 @@ export function useZoomRead(input: ZoomReadInput): ZoomRead {
       },
       enabled: enabled && window !== undefined,
       placeholderData: keepPreviousData,
-      staleTime: STALE_TIME,
+      meta: { relativeTimeFilters: relativeTimeFilterIdentities(windowFilters) },
+      staleTime: hasRelativeTimeFilters(windowFilters) ? relativeFilterStaleTime : STALE_TIME,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       retry: shouldRetryQuery,

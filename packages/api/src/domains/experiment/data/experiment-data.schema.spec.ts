@@ -19,8 +19,77 @@ import {
   zExperimentGroupByItem,
   zExperimentTimeBucketUnit,
 } from "./experiment-data.schema";
+import { resolveRelativeTimeFilters, resolveRelativeTimeWindow } from "./relative-time-filter";
 
 describe("Data filter primitives & distinct values", () => {
+  it.each([
+    { last: 1, unit: "hours" },
+    { last: 24, unit: "hours" },
+    { last: 7, unit: "days" },
+    { last: 30, unit: "days" },
+    { last: 90, unit: "days" },
+  ])("accepts the rolling window %j only with between", (value) => {
+    expect(
+      zExperimentDataFilter.parse({ column: "timestamp", operator: "between", value }).value,
+    ).toEqual(value);
+    for (const operator of zExperimentDataFilterOperator.options.filter((op) => op !== "between")) {
+      expect(
+        zExperimentDataFilter.safeParse({ column: "timestamp", operator, value }).success,
+      ).toBe(false);
+    }
+    expect(
+      zExperimentDataQuery.parse({
+        tableName: "raw_data",
+        filters: JSON.stringify([{ column: "timestamp", operator: "between", value }]),
+      }).filters?.[0]?.value,
+    ).toEqual(value);
+  });
+
+  it.each([
+    { last: 0, unit: "hours" },
+    { last: -1, unit: "days" },
+    { last: 1.5, unit: "hours" },
+    { last: 24, unit: "weeks" },
+    { last: 100000000000, unit: "days" },
+    { last: 24 },
+    { last: "24", unit: "hours" },
+    { last: 24, unit: "hours", extra: true },
+  ])("rejects malformed rolling windows %j", (value) => {
+    expect(zExperimentDataFilterValue.safeParse(value).success).toBe(false);
+  });
+
+  it.each(["2026-03-29T01:15:59.999Z", "2026-10-25T01:15:59.999Z"])(
+    "resolves elapsed days across DST at %s with a UTC minute anchor",
+    (at) => {
+      const bounds = resolveRelativeTimeWindow({ last: 7, unit: "days" }, Date.parse(at));
+      expect(Date.parse(bounds[1]) - Date.parse(bounds[0])).toBe(168 * 3600000);
+      expect(bounds[1]).toBe(at.replace("59.999Z", "00.000Z"));
+      expect(Date.parse(at) - Date.parse(bounds[1])).toBe(59999);
+    },
+  );
+
+  it("resolves all windows at one instant and preserves old absolute bounds", () => {
+    const absolute = {
+      column: "timestamp",
+      operator: "between" as const,
+      value: ["2025-01-01T00:00:00.000Z", "2025-01-02T00:00:00.000Z"],
+    };
+    const filters = [
+      absolute,
+      {
+        column: "recorded_at",
+        operator: "between" as const,
+        value: { last: 24 as const, unit: "hours" as const },
+      },
+    ];
+    const first = resolveRelativeTimeFilters(filters, Date.parse("2026-11-01T12:30:59.000Z"));
+    const later = resolveRelativeTimeFilters(filters, Date.parse("2026-11-02T12:31:00.000Z"));
+    expect(first[0]).toEqual(absolute);
+    expect(later[0]).toEqual(absolute);
+    expect(first[1]?.value).toEqual(["2026-10-31T12:30:00.000Z", "2026-11-01T12:30:00.000Z"]);
+    expect(later[1]?.value).toEqual(["2026-11-01T12:31:00.000Z", "2026-11-02T12:31:00.000Z"]);
+    expect(filters[1]?.value).toEqual({ last: 24, unit: "hours" });
+  });
   describe("zExperimentDataFilterOperator", () => {
     it("accepts every supported operator", () => {
       for (const op of [

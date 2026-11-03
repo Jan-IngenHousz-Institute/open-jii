@@ -42,7 +42,16 @@ export function FilterValueInput({
 
   if (operator === "between") {
     if (kind === "temporal") {
-      return <DateRangeInput value={value} onChange={onChange} errorMessageId={errorMessageId} />;
+      return (
+        <DateRangeInput
+          value={value}
+          onChange={onChange}
+          errorMessageId={errorMessageId}
+          experimentId={experimentId}
+          tableName={tableName}
+          columnName={column?.name}
+        />
+      );
     }
     return <NumericRangeInput value={value} onChange={onChange} errorMessageId={errorMessageId} />;
   }

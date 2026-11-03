@@ -1,4 +1,5 @@
 import { shouldRetryQuery } from "@/util/query-retry";
+import { relativeFilterStaleTime } from "@/util/relative-filter-stale-time";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import {
@@ -15,6 +16,10 @@ import { orpc } from "~/lib/orpc";
 import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { zExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import {
+  hasRelativeTimeFilters,
+  relativeTimeFilterIdentities,
+} from "@repo/api/domains/experiment/data/relative-time-filter";
 
 // Time in ms before data is removed from the cache
 const STALE_TIME = 2 * 60 * 1000;
@@ -119,8 +124,8 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
   const { data, isLoading, isPlaceholderData, error } = useQuery(
     orpc.experiments.getExperimentData.queryOptions({
       input,
-      meta: { dataView },
-      staleTime: STALE_TIME,
+      meta: { dataView, relativeTimeFilters: relativeTimeFilterIdentities(cleanedFilters) },
+      staleTime: hasRelativeTimeFilters(cleanedFilters) ? relativeFilterStaleTime : STALE_TIME,
       enabled,
       placeholderData: keepPreviousPage
         ? (previous, previousQuery) =>

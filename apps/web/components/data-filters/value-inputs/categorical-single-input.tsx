@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronsUpDown, Loader2 } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useId, useState } from "react";
 
 import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/pop
 import { cn } from "@repo/ui/lib/utils";
 
 import { ContributorIdentity } from "../../contributor/contributor-identity";
+import { scalarFilterDisplay } from "../scalar-filter-display";
 import { chipValueForOption, useDistinctOptions } from "../use-distinct-options";
 import { CategoricalOption } from "./categorical-option";
 
@@ -42,10 +43,7 @@ export function CategoricalSingleInput({
     useDistinctOptions(column, experimentId, tableName);
   const triggerId = useId();
 
-  const display = useMemo(() => {
-    if (Array.isArray(value)) return value.join(", ");
-    return value === "" ? "" : String(value);
-  }, [value]);
+  const display = scalarFilterDisplay(value);
 
   // CONTRIBUTOR persists as id; look up the JSON struct for rendering.
   const contributorJsonForValue =

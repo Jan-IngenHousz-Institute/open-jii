@@ -1486,6 +1486,7 @@
     "kindCategorical": "Categorical",
     "kindComplex": "Other",
     "pickRange": "Pick a range",
+    "rangePreview": "Current preview",
     "presetLastHour": "Last hour",
     "presetLast24h": "Last 24 hours",
     "presetLast7d": "Last 7 days",

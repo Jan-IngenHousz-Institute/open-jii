@@ -7,6 +7,7 @@ import { ColumnName } from "~/components/experiment-data/column-name";
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { isRelativeTimeWindow } from "@repo/api/domains/experiment/data/relative-time-filter";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
@@ -49,6 +50,7 @@ export const FilterChipFace = forwardRef<HTMLDivElement, FilterChipFaceProps>(
         ref={ref}
         className={cn(
           "bg-background shadow-xs inline-flex h-7 items-center rounded-md border text-xs",
+          isRelativeTimeWindow(filter.value) && "h-auto min-h-7",
           fullWidth && "flex w-full",
           className,
         )}
@@ -59,6 +61,7 @@ export const FilterChipFace = forwardRef<HTMLDivElement, FilterChipFaceProps>(
           onClick={onClick}
           className={cn(
             "hover:bg-muted/50 h-full gap-1.5 rounded-r-none px-2 font-normal",
+            isRelativeTimeWindow(filter.value) && "h-auto py-1",
             fullWidth ? "min-w-0 flex-1 justify-start" : "min-w-0",
           )}
         >

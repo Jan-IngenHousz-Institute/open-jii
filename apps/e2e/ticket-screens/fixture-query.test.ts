@@ -453,3 +453,19 @@ describe("FixtureQuery, time matching", () => {
     ).toEqual({ tableName: "weather_readings", columnName: "air_temperature" });
   });
 });
+
+it("evaluates a relative fixture read at the same UTC minute reported to the UI", () => {
+  const clock = vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-06-08T11:00:59.999Z"));
+  try {
+    const answer = ask("/data", {
+      tableName: "plots",
+      filters: [{ column: "timestamp", operator: "between", value: { last: 24, unit: "hours" } }],
+    });
+    if (answer?.status !== 200) throw new Error("Fixture read failed");
+    const result = zExperimentDataResponse.parse(answer.body)[0];
+    expect(result.filterEvaluatedAt).toBe("2026-06-08T11:00:00.000Z");
+    expect(result.data?.rows).toHaveLength(2);
+  } finally {
+    clock.mockRestore();
+  }
+});

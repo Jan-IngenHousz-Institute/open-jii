@@ -1,9 +1,14 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import type { ExperimentDataQuery } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import {
+  hasRelativeTimeFilters,
+  relativeTimeMinute,
+  resolveRelativeTimeFilters,
+} from "@repo/api/domains/experiment/data/relative-time-filter";
 
 import { ErrorCodes } from "../../../../../common/utils/error-codes";
-import { Result, failure, AppError } from "../../../../../common/utils/fp-utils";
+import { Result, failure, success, AppError } from "../../../../../common/utils/fp-utils";
 import type { TableDataDto } from "../../../../core/models/experiment-data.model";
 import { ExperimentDto } from "../../../../core/models/experiment.model";
 import { ExperimentDataRepository } from "../../../../core/repositories/experiment-data.repository";
@@ -79,12 +84,15 @@ export class GetExperimentDataUseCase {
 
       const parsedColumns = columns?.split(",").map((c) => c.trim());
 
-      return this.experimentDataRepository.getTableData({
+      const evaluatedAt = hasRelativeTimeFilters(filters)
+        ? relativeTimeMinute(Date.now())
+        : undefined;
+      const result = await this.experimentDataRepository.getTableData({
         experimentId,
         experiment,
         tableName,
         columns: parsedColumns,
-        filters,
+        filters: filters ? resolveRelativeTimeFilters(filters, evaluatedAt ?? 0) : undefined,
         aggregation,
         join,
         orderBy,
@@ -93,6 +101,16 @@ export class GetExperimentDataUseCase {
         pageSize,
         limit,
       });
+      if (result.isFailure()) return result;
+      const tables = result.value;
+      return success(
+        evaluatedAt === undefined
+          ? tables
+          : tables.map((table) => ({
+              ...table,
+              filterEvaluatedAt: new Date(evaluatedAt).toISOString(),
+            })),
+      );
     });
   }
 }

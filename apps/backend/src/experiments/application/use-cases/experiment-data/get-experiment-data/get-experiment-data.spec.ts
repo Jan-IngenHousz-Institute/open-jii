@@ -37,6 +37,76 @@ describe("GetExperimentDataUseCase", () => {
     await testApp.teardown();
   });
 
+  it("evaluates a saved rolling window once per read and returns the same anchor for display", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Rolling test",
+      userId: testUserId,
+    });
+    const mockData = {
+      name: "raw_data",
+      catalog_name: "test",
+      schema_name: "test",
+      page: 1,
+      pageSize: 0,
+      totalPages: 1,
+      totalRows: 0,
+    };
+    const read = vi
+      .spyOn(experimentDataRepository, "getTableData")
+      .mockResolvedValue(success([mockData]));
+    const clock = vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-03-29T01:59:59.999Z"));
+    const filters = [
+      {
+        column: "timestamp",
+        operator: "between" as const,
+        value: { last: 7 as const, unit: "days" as const },
+      },
+    ];
+    const first = await useCase.execute(experiment.id, testUserId, {
+      tableName: "raw_data",
+      filters,
+    });
+    assertSuccess(first);
+    expect(read.mock.calls[0]?.[0].filters).toEqual([
+      {
+        column: "timestamp",
+        operator: "between",
+        value: ["2026-03-22T01:59:00.000Z", "2026-03-29T01:59:00.000Z"],
+      },
+    ]);
+    expect(first.value[0]?.filterEvaluatedAt).toBe("2026-03-29T01:59:00.000Z");
+    clock.mockReturnValue(Date.parse("2026-03-30T02:00:00.000Z"));
+    const second = await useCase.execute(experiment.id, testUserId, {
+      tableName: "raw_data",
+      filters,
+    });
+    assertSuccess(second);
+    expect(read.mock.calls[1]?.[0].filters).toEqual([
+      {
+        column: "timestamp",
+        operator: "between",
+        value: ["2026-03-23T02:00:00.000Z", "2026-03-30T02:00:00.000Z"],
+      },
+    ]);
+    expect(second.value[0]?.filterEvaluatedAt).toBe("2026-03-30T02:00:00.000Z");
+    expect(filters[0]?.value).toEqual({ last: 7, unit: "days" });
+    clock.mockRestore();
+    const absolute = [
+      {
+        column: "timestamp",
+        operator: "between" as const,
+        value: ["2025-01-01T00:00:00.000Z", "2025-01-02T00:00:00.000Z"],
+      },
+    ];
+    const fixed = await useCase.execute(experiment.id, testUserId, {
+      tableName: "raw_data",
+      filters: absolute,
+    });
+    assertSuccess(fixed);
+    expect(read.mock.calls[2]?.[0].filters).toEqual(absolute);
+    expect(fixed.value[0]).not.toHaveProperty("filterEvaluatedAt");
+  });
+
   it("should return table data when tableName is specified", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Test Experiment",

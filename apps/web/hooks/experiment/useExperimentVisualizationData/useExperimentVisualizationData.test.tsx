@@ -1,7 +1,8 @@
 import { createExperimentDataTable } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { act, createTestQueryClient, renderHook, waitFor } from "@/test/test-utils";
-import { describe, it, expect } from "vitest";
+import { relativeFilterStaleTime } from "@/util/relative-filter-stale-time";
+import { afterEach, describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -9,6 +10,75 @@ import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/exp
 import { useExperimentVisualizationData } from "./useExperimentVisualizationData";
 
 describe("useExperimentVisualizationData", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it.each([true, false])(
+    "reuses fresh fixed reads but refreshes relative reads on revisit, relative=%s",
+    async (relative) => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-11-02T12:00:59.000Z"));
+      let serverAt = "2026-11-02T12:00:00.000Z";
+      const spy = server.mount(contract.experiments.getExperimentData, {
+        body: () => [createExperimentDataTable(relative ? { filterEvaluatedAt: serverAt } : {})],
+      });
+      const client = createTestQueryClient();
+      client.setDefaultOptions({ queries: { gcTime: Infinity, retry: false } });
+      const filters: ExperimentDataFilter[] = [
+        {
+          column: "timestamp",
+          operator: "between",
+          value: relative
+            ? { last: 24, unit: "hours" }
+            : ["2025-01-01T00:00:00.000Z", "2025-01-02T00:00:00.000Z"],
+        },
+      ];
+      const useRead = () =>
+        useExperimentVisualizationData("exp-1", {
+          tableName: "raw_data",
+          columns: ["timestamp"],
+          filters,
+        });
+      const first = renderHook(useRead, { queryClient: client });
+      await waitFor(() => expect(first.result.current.data).toBeDefined());
+      expect(spy.callCount).toBe(1);
+      const joined = renderHook(useRead, { queryClient: client });
+      await waitFor(() => expect(joined.result.current.data).toBeDefined());
+      expect(spy.callCount).toBe(1);
+      joined.unmount();
+      first.unmount();
+      serverAt = "2026-11-02T12:01:00.000Z";
+      vi.setSystemTime(new Date("2026-11-02T12:01:00.000Z"));
+      const second = renderHook(useRead, { queryClient: client });
+      await waitFor(() => expect(second.result.current.data).toBeDefined());
+      if (relative) await waitFor(() => expect(spy.callCount).toBe(2));
+      else expect(spy.callCount).toBe(1);
+      expect(client.getQueryCache().getAll()).toHaveLength(1);
+      expect(JSON.parse(spy.calls.at(-1)?.query.filters ?? "[]")).toEqual(filters);
+      second.unmount();
+      client.clear();
+    },
+  );
+  it.each([
+    [undefined, "2026-11-02T12:00:30.000Z", 0],
+    ["invalid", "2026-11-02T12:00:30.000Z", 0],
+    ["2026-11-02T12:00:00.000Z", "2026-11-02T12:00:59.999Z", 1],
+    ["2026-11-02T12:00:00.000Z", "2026-11-02T12:01:00.000Z", 0],
+    ["2026-11-02T12:00:00.000Z", "2026-11-02T12:02:00.000Z", 0],
+    ["2026-11-02T13:00:00.000Z", "2026-11-02T12:00:30.000Z", 60_000],
+  ])(
+    "bounds relative cache freshness for anchor %s received at %s",
+    (filterEvaluatedAt, receivedAt, expected) => {
+      expect(
+        relativeFilterStaleTime({
+          state: {
+            data: [createExperimentDataTable({ filterEvaluatedAt })],
+            dataUpdatedAt: Date.parse(receivedAt),
+          },
+        }),
+      ).toBe(expected);
+    },
+  );
+
   it("should return successful data and table info", async () => {
     server.mount(contract.experiments.getExperimentData, {
       body: [

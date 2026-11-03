@@ -1,7 +1,7 @@
 import { createExperimentDataTable } from "@/test/factories";
 import type { SpyCall } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
-import { renderHook, waitFor } from "@/test/test-utils";
+import { createTestQueryClient, renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -65,6 +65,28 @@ function answer(bucketCounts: number[]) {
 }
 
 describe("useZoomRead", () => {
+  it("keeps relative filters on extent, bucket and row reads and refreshes them on revisit", async () => {
+    const spy = server.mount(contract.experiments.getExperimentData, { body: answer([300, 200]) });
+    const client = createTestQueryClient();
+    client.setDefaultOptions({ queries: { gcTime: Infinity, retry: false } });
+    const relative = {
+      column: "timestamp",
+      operator: "between" as const,
+      value: { last: 24 as const, unit: "hours" as const },
+    };
+    const useRead = () => useZoomRead({ ...INPUT, filters: [relative] });
+    const first = renderHook(useRead, { queryClient: client });
+    await waitFor(() => expect(first.result.current.isBucketed).toBe(false));
+    await waitFor(() => expect(spy.calls.some((call) => !aggregationOf(call))).toBe(true));
+    const initialCount = spy.callCount;
+    first.unmount();
+    const second = renderHook(useRead, { queryClient: client });
+    await waitFor(() => expect(spy.callCount).toBeGreaterThan(initialCount));
+    await waitFor(() => expect(second.result.current.rows).toBeDefined());
+    for (const call of spy.calls) expect(JSON.parse(call.query.filters)).toContainEqual(relative);
+    second.unmount();
+    client.clear();
+  });
   it("draws the whole series from buckets when it is longer than one read", async () => {
     const spy = server.mount(contract.experiments.getExperimentData, {
       body: answer([150_000, 100_000]),

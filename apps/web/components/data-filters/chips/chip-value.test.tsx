@@ -1,6 +1,9 @@
+import { useExperimentVisualizationData } from "@/hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
+import { createExperimentDataTable } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import { act, createTestQueryClient, render, screen, waitFor } from "@/test/test-utils";
+import { formatYmdHm } from "@/util/date";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -19,6 +22,73 @@ function renderValue(filter: ExperimentDataFilter, isContributor = false) {
 }
 
 describe("ChipValue", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("shows a rolling preset and preview, adopts server bounds, and ignores a late older success", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-25T01:59:59.999Z"));
+    let serverAt = "2026-10-25T01:59:00.000Z";
+    let unblock!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      unblock = resolve;
+    });
+    server.mount(contract.experiments.getExperimentData, {
+      unblock: pending,
+      body: () => [createExperimentDataTable({ filterEvaluatedAt: serverAt })],
+    });
+    const client = createTestQueryClient();
+    const filter: ExperimentDataFilter = {
+      column: "timestamp",
+      operator: "between",
+      value: { last: 24, unit: "hours" },
+    };
+    function Probe() {
+      useExperimentVisualizationData("exp-1", {
+        tableName: "raw_data",
+        columns: ["timestamp"],
+        filters: [filter],
+      });
+      return (
+        <ChipValue
+          filter={filter}
+          isContributor={false}
+          fullWidth={false}
+          parentColumn="timestamp"
+          experimentId="exp-1"
+          tableName="raw_data"
+        />
+      );
+    }
+    render(<Probe />, { queryClient: client });
+    expect(screen.getByText("dataFilters.presetLast24h")).toBeInTheDocument();
+    expect(screen.getByText("dataFilters.rangePreview")).toBeInTheDocument();
+    unblock();
+    await waitFor(() =>
+      expect(screen.queryByText("dataFilters.rangePreview")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText(/→/)).toHaveTextContent(formatYmdHm(new Date(serverAt)));
+    serverAt = "2026-10-25T02:00:00.000Z";
+    await act(() => client.refetchQueries());
+    await waitFor(() =>
+      expect(screen.getByText(/→/)).toHaveTextContent(formatYmdHm(new Date(serverAt))),
+    );
+    const query = client
+      .getQueryCache()
+      .getAll()
+      .find((entry) => entry.meta !== undefined);
+    if (!query) throw new Error("No matching data query");
+    const key = query.queryKey;
+    await act(() =>
+      client.setQueryData(key, [
+        createExperimentDataTable({ filterEvaluatedAt: "2026-10-25T01:59:00.000Z" }),
+      ]),
+    );
+    expect(screen.getByText(/→/)).toHaveTextContent(formatYmdHm(new Date(serverAt)));
+    await act(() =>
+      client.setQueryData(key, [createExperimentDataTable({ filterEvaluatedAt: "invalid" })]),
+    );
+    expect(screen.getByText(/→/)).toHaveTextContent(formatYmdHm(new Date(serverAt)));
+  });
   it("renders a scalar string value as-is", () => {
     renderValue({ column: "name", operator: "equals", value: "Alice" });
     expect(screen.getByText("Alice")).toBeInTheDocument();

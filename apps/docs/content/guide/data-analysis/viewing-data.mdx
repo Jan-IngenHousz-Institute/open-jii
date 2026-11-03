@@ -86,6 +86,7 @@ same line, for the datasets their charts and tables use.
 {/* NEEDS-RECAPTURE: this frame predates the dataset picker and the live-update line, and still shows the tab strip the picker replaced. */}
 ![A populated Data tab with dataset tabs, filtering controls, and sortable columns](/img/guide/web/data-first-measurement.png)
 
+{/* NEEDS-RECAPTURE-REVIEW: the rolling-filter capture is staged as charts-filters.webp; publish after human frame review. */}
 ![A saved line visualization built from an experiment dataset](/img/guide/web/charts-filters.webp)
 
 ## Build a saved visualization
@@ -245,7 +246,26 @@ vertical axis.
 ## Filter a dashboard
 
 A filter widget narrows every chart and table on the dashboard that reads the
-same data table. A _between_ filter needs both _From_ and _To_, with _From_ as
+same data table. For a date column, choose **Last hour**, **Last 24 hours** or
+**Last 7, 30 or 90 days** to save a rolling window. Each visit works out the
+dates again, and the control shows them below the preset's name. The chart
+editor's own filters and dashboard table filters use the same presets.
+
+Rolling windows end at the current minute, so they can trail the clock by up
+to 59 seconds. A day means 24 elapsed hours, including across daylight-saving
+changes. The dates appear in your browser's local time. **Current preview**
+means the range has not yet been confirmed by a successful data read.
+
+Reopening the page or refreshing its data evaluates a new window. The existing
+live-update checks also evaluate it when they fetch changed data. A dashboard
+left open without a data refresh keeps the last range it read.
+
+Choosing dates or editing either time saves a fixed custom range. Calendar
+presets such as **This month** also stay fixed. Ranges saved before rolling
+windows were available keep their original dates; choose the preset again to
+make one roll.
+
+A custom _between_ filter needs both _From_ and _To_, with _From_ as
 the start of the range and _To_ as the end. When a filter's value can't be
 used, the widget says what to fix under its fields: _Add a To value, or clear
 From._, _Add a From value, or clear To._, _Swap From and To, or change one of

@@ -5,13 +5,15 @@ import type { ChangeEvent } from "react";
 import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { Input } from "@repo/ui/components/input";
 
+import { scalarFilterDisplay } from "../scalar-filter-display";
+
 export interface NumericInputProps {
   value: ExperimentDataFilterValue;
   onChange: (value: ExperimentDataFilterValue) => void;
 }
 
 export function NumericInput({ value, onChange }: NumericInputProps) {
-  const display = Array.isArray(value) ? value.join(", ") : String(value);
+  const display = scalarFilterDisplay(value);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;

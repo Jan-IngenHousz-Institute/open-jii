@@ -109,6 +109,32 @@ describe("Dashboard schemas", () => {
   });
 
   describe("zExperimentFilterWidget", () => {
+    it("keeps relative defaults and table filters on save and requires between", () => {
+      const value = { last: 24, unit: "hours" };
+      const widget = {
+        id: uuidA,
+        layout,
+        type: "filter",
+        config: { column: "timestamp", operator: "between", defaultValue: value },
+      };
+      expect(
+        zCreateExperimentDashboardBody.parse({ name: "Rolling", widgets: [widget] }).widgets?.[0]
+          ?.config,
+      ).toMatchObject({ defaultValue: value });
+      expect(
+        zExperimentFilterWidget.safeParse({
+          ...widget,
+          config: { ...widget.config, operator: "equals" },
+        }).success,
+      ).toBe(false);
+      const table = {
+        id: uuidB,
+        layout,
+        type: "table",
+        config: { filters: [{ column: "timestamp", operator: "between", value }] },
+      };
+      expect(zExperimentTableWidget.parse(table).config.filters?.[0]?.value).toEqual(value);
+    });
     it("allows all selection fields to be unset (draft state)", () => {
       const w = { id: uuidA, layout, type: "filter" as const, config: {} };
       const parsed = zExperimentFilterWidget.parse(w);

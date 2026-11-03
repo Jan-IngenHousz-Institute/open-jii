@@ -9,7 +9,6 @@ import type {
   ExperimentAggregationItem,
   ExperimentDataAggregation,
   ExperimentDataColumn,
-  ExperimentDataFilter,
   ExperimentDataQuery,
   ExperimentDataResponse,
   ExperimentDataTable,
@@ -22,6 +21,11 @@ import type {
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataJoin } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { joinedColumns } from "@repo/api/transforms/joined-columns";
+import {
+  hasRelativeTimeFilters,
+  relativeTimeMinute,
+  resolveRelativeTimeFilters,
+} from "@repo/api/domains/experiment/data/relative-time-filter";
 
 import type { FixtureRow, FixtureTable, FixtureValue } from "./fixture-tables.js";
 
@@ -96,10 +100,23 @@ export class FixtureQuery {
       const table = this.find(query.data.tableName);
       if (table === undefined) return this.notFound(query.data.tableName);
       try {
+        const evaluatedAt = hasRelativeTimeFilters(query.data.filters)
+          ? relativeTimeMinute(Date.now())
+          : undefined;
+        const read = this.read(
+          query.data.join ? this.join(table, query.data.join) : table,
+          query.data,
+          evaluatedAt ?? 0,
+        );
         return {
           status: 200,
           body: [
-            this.read(query.data.join ? this.join(table, query.data.join) : table, query.data),
+            {
+              ...read,
+              ...(evaluatedAt === undefined
+                ? {}
+                : { filterEvaluatedAt: new Date(evaluatedAt).toISOString() }),
+            },
           ],
         };
       } catch (error) {
@@ -189,8 +206,12 @@ export class FixtureQuery {
   }
 
   // Mirrors the repository's three branches: aggregated, filtered or projected, and plain pages.
-  private read(table: FixtureTable, query: ExperimentDataQuery): ExperimentDataTable {
-    const filters = query.filters ?? [];
+  private read(
+    table: FixtureTable,
+    query: ExperimentDataQuery,
+    evaluatedAt: number,
+  ): ExperimentDataTable {
+    const filters = resolveRelativeTimeFilters(query.filters ?? [], evaluatedAt);
     const filtered = table.rows.filter((row) =>
       filters.every((filter) => this.matches(row, filter)),
     );
@@ -274,7 +295,10 @@ export class FixtureQuery {
     return { columns: shaped.columns, rows };
   }
 
-  private matches(row: FixtureRow, filter: ExperimentDataFilter): boolean {
+  private matches(
+    row: FixtureRow,
+    filter: ReturnType<typeof resolveRelativeTimeFilters>[number],
+  ): boolean {
     const cell = row[filter.column] ?? null;
     if (cell === null) return false;
 
