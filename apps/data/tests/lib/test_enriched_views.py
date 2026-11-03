@@ -271,12 +271,16 @@ def test_unregistered_device_falls_back_to_reported_name_then_client_id(
             "device_name", F.when(F.col("client_id") == "c9", F.lit(name)).otherwise(F.col("device_name"))
         ).createOrReplaceTempView("device_fallback_source")
         rows = spark.sql(query.replace(f"{centrum}.{source}", "device_fallback_source"))
-        device = rows.where("experiment_id = 'e1'").where("device_id = 'd2'").select("device").first()[0]
+        row = rows.where("experiment_id = 'e1'").where("device_id = 'd2'").select("device").first()
+        assert row is not None
+        device = row[0]
         assert device["id"] is None
         assert device["serial_number"] == expected
-    registered = (
-        spark.sql(query).where("experiment_id = 'e1'").where("device_id = 'd1'").select("device").first()[0]
+    registered_row = (
+        spark.sql(query).where("experiment_id = 'e1'").where("device_id = 'd1'").select("device").first()
     )
+    assert registered_row is not None
+    registered = registered_row[0]
     assert registered["id"] == "dev-1"
     assert registered["serial_number"] == "SN1"
 
@@ -295,7 +299,9 @@ def test_sensors_sharing_a_name_and_phone_keep_distinct_labels(
     devices = rows.where("experiment_id = 'e1' AND device_id IN ('d2', 'd3')").select("device").collect()
     assert {row.device.serial_number for row in devices} == {"Ambit (d2)", "Ambit (d3)"}
     assert all(row.device.id is None for row in devices)
-    assert rows.where("device.serial_number = 'Ambit (d2)'").select("device_id").first()[0] == "d2"
+    selected = rows.where("device.serial_number = 'Ambit (d2)'").select("device_id").first()
+    assert selected is not None
+    assert selected[0] == "d2"
 
 
 @pytest.mark.parametrize("view", ["enriched_experiment_raw_data", "enriched_experiment_macro_data"])
@@ -323,9 +329,9 @@ def test_missing_identifiers_have_an_explicit_fallback(
         original = original.withColumn(column, F.lit(value).cast("string"))
     original.createOrReplaceTempView("missing_identifiers")
     query = (_VIEWS / f"{view}.sql").read_text().replace("${catalog}", _CATALOG)
-    device = (
-        spark.sql(query.replace(f"{centrum}.{source}", "missing_identifiers")).select("device").first()[0]
-    )
+    row = spark.sql(query.replace(f"{centrum}.{source}", "missing_identifiers")).select("device").first()
+    assert row is not None
+    device = row[0]
     assert device.serial_number == expected
     assert device.id is None
     assert device.owner is None
@@ -342,12 +348,14 @@ def test_registry_without_a_serial_keeps_its_other_fields(
         "device", F.col("device").withField("serial_number", F.lit(" "))
     ).createOrReplaceTempView("blank_serial_registry")
     query = (_VIEWS / f"{view}.sql").read_text().replace("${catalog}", _CATALOG)
-    device = (
+    row = (
         spark.sql(query.replace(f"{centrum}.experiment_devices", "blank_serial_registry"))
         .where("experiment_id = 'e1' AND device_id = 'd1'")
         .select("device")
-        .first()[0]
+        .first()
     )
+    assert row is not None
+    device = row[0]
     assert device.serial_number == "MultispeQ (d1)"
     assert device.id == "dev-1"
     assert device.owner == "org-1"
