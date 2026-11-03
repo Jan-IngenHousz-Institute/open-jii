@@ -203,7 +203,9 @@ def test_approved_question_numbers_survive_export_with_lexical_keys_and_clashes(
     assert table.schema[height].dataType.simpleString() == "double"
     assert [row[height] for row in table.collect()] == [12.5, 7.5, None, None]
     assert [row.plot for row in table.collect()] == ["007"] * 4
-    assert table.agg(F.avg(height)).first()[0] == 10.0
+    average = table.agg(F.avg(height)).first()
+    assert average is not None
+    assert average[0] == 10.0
     # Use only exported scalar fields here; real exports serialize complex columns separately.
     path = str(tmp_path / "export.parquet")
     table.select("id", height, "plot").write.parquet(path)
