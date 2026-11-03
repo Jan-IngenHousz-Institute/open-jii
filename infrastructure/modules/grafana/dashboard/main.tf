@@ -3976,8 +3976,12 @@ resource "grafana_rule_group" "lakehouse_freshness" {
         namespace  = "OpenJII/Data"
         metricName = "FlowBusyPercent"
         statistic  = "Maximum"
+        # Named with a wildcard so each series keeps its own label; left out, every alert carries
+        # only the environment and cannot say which pipeline or flow it is.
         dimensions = {
           Environment = var.environment
+          Flow        = "*"
+          Pipeline    = "*"
         }
         matchExact = false
       })
@@ -4058,8 +4062,11 @@ resource "grafana_rule_group" "lakehouse_freshness" {
         namespace  = "OpenJII/Data"
         metricName = "FlowRestarts"
         statistic  = "Maximum"
+        # Named with a wildcard, as in entry 127's rule, so each flow alerts under its own label.
         dimensions = {
           Environment = var.environment
+          Flow        = "*"
+          Pipeline    = "*"
         }
         matchExact = false
       })
@@ -4140,8 +4147,10 @@ resource "grafana_rule_group" "lakehouse_freshness" {
         namespace  = "OpenJII/Data"
         metricName = "PipelineClusterStarts"
         statistic  = "Maximum"
+        # Named with a wildcard, as in entry 127's rule, so each pipeline alerts under its own label.
         dimensions = {
           Environment = var.environment
+          Pipeline    = "*"
         }
         matchExact = false
       })

@@ -124,7 +124,8 @@ def send_slack_notifications(event):
             print(f"Failed to send Slack notification: {type(e).__name__}")
             return
 
-        if response.ok:
+        # Slack confirms delivery with 200 only; requests' `ok` would also pass a redirect.
+        if response.status_code == requests.codes.ok:
             print(f"Slack notification sent: {event_type} - {state}")
         else:
             print(f"Slack refused the notification with status {response.status_code}")
