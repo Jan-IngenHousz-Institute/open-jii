@@ -93,10 +93,11 @@ The cluster takes a few minutes to start. Each table's result is one line of the
 - **The store holds rows from before the version.** Wait until the feed has caught up, then run it
   again for the same experiments; the new delete takes them.
 - **The store holds a version newer than gold's.** Gold's table was recreated and its versions
-  restarted, so the load's rows would lose to the old ones. As the admin, empty the store table with
-  `TRUNCATE TABLE store.<table>` (never `DELETE`; `store-feed-stalled` says why). Then set the feed's
-  start version to gold's latest and reset its checkpoint as `store-feed-stalled` describes, and once
-  the feed has caught up, reload that table for `all`.
+  restarted, so the load's rows and schemas would lose to the old ones. As the admin, empty the store
+  table and `store.payload_schemas` with `TRUNCATE TABLE` (never `DELETE`; `store-feed-stalled` says
+  why). Then set the feed's start version to gold's latest and reset its checkpoint as
+  `store-feed-stalled` describes, and once the feed has caught up, reload every table for `all`, since
+  `payload_schemas` held every table's schemas.
 - **Neither gold nor the store holds the experiment.** The run succeeds and says so. Unless the
   experiment was deleted, check its id.
 - **Rows not sent after six attempts.** The store could not take the load; `store-answers` and

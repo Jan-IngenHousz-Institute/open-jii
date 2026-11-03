@@ -176,3 +176,19 @@ def test_a_tables_schemas_read_once_each_at_their_newest_commit(admin: _User, re
             "schema": "OBJECT<plot: STRING>",
         },
     ]
+
+
+def test_a_row_sent_again_reads_once_at_its_newest_commit_before_any_merge(
+    admin: _User, reader: _User
+) -> None:
+    admin.ok(f"SYSTEM STOP MERGES {_DATABASE}.measurements")
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.measurements (experiment_id, id, timestamp, user_id, client_id, {_COMMIT}) "
+        "VALUES ('e1', 1, '2026-10-19 10:00:00', 'u1', 'c1', 4, '2026-10-19 10:00:09')"
+    )
+
+    rows = reader.rows(
+        f"SELECT id, _commit_version FROM {_DATABASE}.experiment_measurements(experiment = 'e1') ORDER BY id"
+    )
+
+    assert [(int(row["id"]), int(row["_commit_version"])) for row in rows] == [(1, 4), (2, 3)]

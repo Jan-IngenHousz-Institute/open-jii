@@ -85,8 +85,8 @@ class StoreReload:
         version, committed_at = self.latest_version(table)
         if newest > version:
             raise StoreAheadOfGold(
-                f"store.{table.name} holds version {newest} and gold's {table.gold_table} only "
-                f"{version}: empty the store table first (docs/runbooks/procedures/serving-store-reload.md)"
+                f"store.{table.name} or its payload schemas hold version {newest} and gold's {table.gold_table} "
+                f"only {version}: empty both first (docs/runbooks/procedures/serving-store-reload.md)"
             )
 
         rows = self.gold_rows(table, version)
@@ -178,8 +178,13 @@ class StoreReload:
             raise StoreUnavailable(f"{written.unfinished} schemas of {table.name} not sent")
 
     def _newest_stored_version(self, table: StoreTable) -> int:
+        """The newest commit the store holds of the table, its rows or its payload schemas."""
+        database = self.writer.database
         [row] = self.writer.query(
-            f"SELECT max(_commit_version) AS newest FROM {self.writer.database}.{table.name} FORMAT JSONEachRow"
+            f"SELECT greatest((SELECT max(_commit_version) FROM {database}.{table.name}), "
+            f"(SELECT max(_commit_version) FROM {database}.{PAYLOAD_SCHEMAS} WHERE table_type = {{table_type:String}})) "
+            "AS newest FORMAT JSONEachRow",
+            table_type=table.table_type,
         )
         return int(row["newest"])
 

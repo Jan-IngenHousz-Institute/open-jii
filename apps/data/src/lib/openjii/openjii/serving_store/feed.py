@@ -59,24 +59,32 @@ class StoreFeed:
         already landed. The credentials are read on every attempt, so a changed password takes
         effect without a restart. The batch's schemas go after its rows, gathered once, so a retry
         sends the same ones."""
-        # Read once for the rows and once for the schemas.
-        changes = changes.persist()
-        try:
-            lines = table.lines(changes)
-            schemas = [row.line for row in table.schema_lines(changes).collect()]
-            for attempt in itertools.count():
-                failure = self._write_once(table, lines, schemas, batch_id)
-                if failure is None:
-                    return
+        lines = table.lines(changes)
+        schemas = self._schemas(table, changes, batch_id)
+        for attempt in itertools.count():
+            failure = self._write_once(table, lines, schemas, batch_id)
+            if failure is None:
+                return
 
-                delay = DRIVER_RETRY_DELAYS[min(attempt, len(DRIVER_RETRY_DELAYS) - 1)]
-                print(
-                    f"[serving store] {table.name} batch {batch_id}: {failure}, writing the batch again in {delay} s",
-                    flush=True,
-                )
-                time.sleep(delay)
-        finally:
-            changes.unpersist()
+            delay = DRIVER_RETRY_DELAYS[min(attempt, len(DRIVER_RETRY_DELAYS) - 1)]
+            print(
+                f"[serving store] {table.name} batch {batch_id}: {failure}, writing the batch again in {delay} s",
+                flush=True,
+            )
+            time.sleep(delay)
+
+    def _schemas(self, table: StoreTable, changes: DataFrame, batch_id: int) -> list[str]:
+        """The batch's payload schemas, or none when Spark cannot work them out: the rows still go,
+        and a later batch carrying the same fields sends their schemas."""
+        try:
+            return [row.line for row in table.schema_lines(changes).collect()]
+        except Exception as error:
+            print(
+                f"[serving store] {table.name} batch {batch_id}: sending rows without schemas, "
+                f"{type(error).__name__}: {error}",
+                flush=True,
+            )
+            return []
 
     def _write_once(
         self, table: StoreTable, lines: DataFrame, schemas: list[str], batch_id: int
@@ -102,7 +110,7 @@ class StoreFeed:
 
         print(
             f"[serving store] {table.name} batch {batch_id}: {written.inserted} inserted, "
-            f"{written.rejected} rejected, {len(schemas)} schemas",
+            f"{written.rejected} rejected, {schemas_written.inserted} schemas, {schemas_written.rejected} refused",
             flush=True,
         )
         return None

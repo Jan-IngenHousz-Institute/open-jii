@@ -80,7 +80,7 @@ class _Writer(StoreWriter):
 
     def query(self, statement: str, **parameters: str | int) -> list[dict]:
         self.statements.append((statement, parameters))
-        if statement.startswith("SELECT max"):
+        if "AS newest" in statement:
             return [{"newest": str(self.newest)}]
         return []
 
@@ -193,11 +193,11 @@ def test_a_reload_of_every_experiment_deletes_across_the_table(spark: SparkSessi
 def test_a_store_ahead_of_gold_is_refused_before_anything_is_written(spark: SparkSession) -> None:
     writer = _Writer(newest=9)
 
-    with pytest.raises(StoreAheadOfGold, match="holds version 9"):
+    with pytest.raises(StoreAheadOfGold, match="hold version 9"):
         _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
     assert writer.lines == []
-    assert [sql for sql, _ in writer.statements if not sql.startswith("SELECT max")] == []
+    assert [sql for sql, _ in writer.statements if "AS newest" not in sql] == []
 
 
 def test_a_load_the_store_could_not_take_is_written_again(spark: SparkSession) -> None:
@@ -461,3 +461,16 @@ def test_the_reloader_deletes_only_from_the_tables_it_reloads_and_rewrites_no_va
     ):
         with pytest.raises(StoreUnavailable, match="code 497"):
             reloader.query(statement)
+
+
+@pytest.mark.clickhouse
+def test_schemas_from_a_recreated_gold_table_stop_the_reload(
+    spark: SparkSession, store: _Admin, reloader: StoreWriter
+) -> None:
+    store.run(
+        f"INSERT INTO {_DATABASE}.payload_schemas "
+        "VALUES ('e1', 'upload', 't1', 'uploaded_data', 'OBJECT<ph: DOUBLE>', 99)"
+    )
+
+    with pytest.raises(StoreAheadOfGold, match="hold version 99"):
+        _GoldAt(spark, reloader, _GOLD).reload(UPLOADS, "e1")
