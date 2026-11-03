@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { describe, expect, it, vi } from "vitest";
 
-import { openJiiEmailOTP } from "./email-otp";
+import { DISABLED_EMAIL_OTP_PATHS, openJiiEmailOTP } from "./email-otp";
 
 const REVIEW_EMAIL = "reviewer@example.com";
 const REVIEW_OTP = "482913";
@@ -31,6 +31,7 @@ function createAuth(playReview: PlayReviewSettings) {
     secret: "email-otp-test-secret-0123456789abcdef",
     logger: { level: "info", log },
     database: memoryAdapter(tables),
+    disabledPaths: DISABLED_EMAIL_OTP_PATHS,
     plugins: [openJiiEmailOTP({ playReview, sendEmail })],
   });
 
@@ -44,7 +45,17 @@ function createAuth(playReview: PlayReviewSettings) {
     return auth.api.signInEmailOTP({ body: { email, otp } });
   }
 
-  return { requestCode, signIn, sendEmail, log, tables };
+  function checkCode(email: string, otp: string) {
+    return auth.handler(
+      new Request("http://localhost:3020/api/v1/auth/email-otp/check-verification-otp", {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "http://localhost:3020" },
+        body: JSON.stringify({ email, type: "sign-in", otp }),
+      }),
+    );
+  }
+
+  return { requestCode, signIn, checkCode, sendEmail, log, tables };
 }
 
 describe("openJiiEmailOTP", () => {
@@ -121,6 +132,15 @@ describe("openJiiEmailOTP", () => {
 
     expect(tables.verification).toHaveLength(1);
     expect(JSON.stringify(tables.verification)).not.toContain(REVIEW_OTP);
+  });
+
+  it("offers no way to check a code without signing in", async () => {
+    const { requestCode, checkCode } = createAuth(configured);
+    await requestCode(REVIEW_EMAIL, "sign-in");
+
+    const response = await checkCode(REVIEW_EMAIL, REVIEW_OTP);
+
+    expect(response.status).toBe(404);
   });
 
   it("keeps the attempt limit on the review code", async () => {

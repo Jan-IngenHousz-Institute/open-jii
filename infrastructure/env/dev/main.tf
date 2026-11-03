@@ -2238,6 +2238,32 @@ module "cloud_trail" {
 
 }
 
+# The Play review address and code are generated so neither can be guessed. The app caps the code
+# at six digits, so the address carries the entropy. Bumping play_review_otp_generation rotates the
+# code and keeps the address, and with it the review account.
+resource "random_password" "play_review_email_local_part" {
+  length  = 16
+  upper   = false
+  special = false
+}
+
+resource "random_password" "play_review_otp" {
+  length  = 6
+  lower   = false
+  upper   = false
+  special = false
+
+  keepers = {
+    generation = var.play_review_otp_generation
+  }
+}
+
+locals {
+  play_review_address = "play-review-${random_password.play_review_email_local_part.result}@${var.domain_name}"
+  play_review_email   = var.play_review_sign_in ? local.play_review_address : ""
+  play_review_otp     = var.play_review_sign_in ? random_password.play_review_otp.result : ""
+}
+
 # Authentication secrets
 module "auth_secrets" {
   source = "../../modules/secrets-manager"
@@ -2252,8 +2278,8 @@ module "auth_secrets" {
     AUTH_GITHUB_SECRET     = var.github_oauth_client_secret
     AUTH_ORCID_ID          = var.orcid_oauth_client_id
     AUTH_ORCID_SECRET      = var.orcid_oauth_client_secret
-    AUTH_PLAY_REVIEW_EMAIL = var.play_review_email
-    AUTH_PLAY_REVIEW_OTP   = var.play_review_otp
+    AUTH_PLAY_REVIEW_EMAIL = local.play_review_email
+    AUTH_PLAY_REVIEW_OTP   = local.play_review_otp
   })
 
   tags = {

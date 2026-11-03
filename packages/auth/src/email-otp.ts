@@ -4,6 +4,10 @@ import { PlayReviewAccount } from "./play-review-account";
 
 const OTP_LENGTH = 6;
 
+// Checks a code without using it up. Neither app calls it, so it would only be a second way to
+// guess the review code.
+export const DISABLED_EMAIL_OTP_PATHS = ["/email-otp/check-verification-otp"];
+
 interface OTPMessage {
   email: string;
   otp: string;

@@ -10,7 +10,7 @@ import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/databas
 import * as schema from "@repo/database/schema";
 
 import { getApiKeyForSessionCheck } from "./api-key-session";
-import { openJiiEmailOTP } from "./email-otp";
+import { DISABLED_EMAIL_OTP_PATHS, openJiiEmailOTP } from "./email-otp";
 import { sendOtpEmail } from "./email/otpEmail";
 import { openJiiOrganization } from "./organization/plugin";
 import { legacyOAuth2SignIn } from "./providers/legacy-oauth2-sign-in";
@@ -115,6 +115,7 @@ export const auth = betterAuth({
       "/get-session": false, // Disable rate limiting for session checks
     },
   },
+  disabledPaths: DISABLED_EMAIL_OTP_PATHS,
   user: {
     changeEmail: {
       enabled: true,
