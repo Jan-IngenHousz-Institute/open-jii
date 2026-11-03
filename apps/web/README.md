@@ -47,3 +47,7 @@ The app is built with [OpenNext](https://opennext.js.org) (`pnpm --filter web bu
 - [Maintenance Page](./docs/MAINTENANCE_PAGE.md) — how public pages degrade when Contentful is unavailable
 - [Analytics & feature flags](../../packages/analytics/README.md) — PostHog setup via `@repo/analytics`
 - [Platform docs](https://docs.openjii.org) — researcher and developer documentation
+
+CMS-specific rendering and live preview live in `components/cms`. Web fetches through `@repo/cms`
+and passes the results to these modules. Shared `@repo/ui` owns reusable presentation primitives and
+has no dependency on CMS.
