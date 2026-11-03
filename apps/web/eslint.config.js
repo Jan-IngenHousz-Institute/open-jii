@@ -13,4 +13,10 @@ export default [
   ...nextjsConfig,
   ...restrictEnvAccess,
   ...themeTokenGuard,
+  {
+    files: ["components/cms/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-unnecessary-condition": "off",
+    },
+  },
 ];

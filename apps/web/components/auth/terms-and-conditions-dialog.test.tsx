@@ -16,7 +16,7 @@ vi.mock("~/lib/contentful", () => ({
   }),
 }));
 
-vi.mock("@repo/cms", () => ({
+vi.mock("~/components/cms/terms-and-conditions", () => ({
   TermsAndConditionsTitle: (props: { termsAndConditions?: { title?: string } }) => (
     <div data-testid="cms-title">{props.termsAndConditions?.title ?? "No title"}</div>
   ),

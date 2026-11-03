@@ -3,8 +3,8 @@
 import { ErrorDisplay } from "@/components/error-display";
 import { PageLoading } from "@/components/shared/page-loading";
 import { useReleaseNotes } from "@/hooks/whats-new/useReleaseNotes/useReleaseNotes";
+import { ReleaseNotesFeed } from "~/components/cms/release-notes/release-notes-feed";
 
-import { ReleaseNotesFeed } from "@repo/cms/release-notes-feed";
 import { useTranslation } from "@repo/i18n";
 
 /** The sheet's list of notes, loaded with its rich-text renderer only once the sheet opens. */

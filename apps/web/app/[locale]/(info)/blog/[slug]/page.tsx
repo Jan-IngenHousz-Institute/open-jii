@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
 import { cache } from "react";
+import { ArticleContent } from "~/components/cms/article/article-content";
+import { ArticleHero } from "~/components/cms/article/article-hero";
+import { ArticleTileGrid } from "~/components/cms/article/article-title-grid";
+import { Container } from "~/components/cms/shared/container";
 import { getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
 
-import { ArticleContent, ArticleHero, ArticleTileGrid } from "@repo/cms/article";
-import { Container } from "@repo/cms/container";
 import { defaultLocale } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
 

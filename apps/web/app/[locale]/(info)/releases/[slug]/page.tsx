@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ReleaseNoteArticle } from "~/components/cms/release-notes/release-note-article";
+import { Container } from "~/components/cms/shared/container";
 import {
   getAllReleaseNotes,
   getReleaseNoteBySlug,
@@ -10,8 +12,6 @@ import {
 import { ReleaseNav } from "~/components/releases/release-nav";
 import { safeMetadata } from "~/lib/safe-metadata";
 
-import { ReleaseNoteArticle } from "@repo/cms";
-import { Container } from "@repo/cms/container";
 import { defaultLocale } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
 

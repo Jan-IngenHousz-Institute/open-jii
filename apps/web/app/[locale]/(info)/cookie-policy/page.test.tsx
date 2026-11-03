@@ -7,7 +7,7 @@ import Page, { generateMetadata } from "./page";
 
 const mockPageCookiePolicy = vi.fn();
 
-vi.mock("@repo/cms", () => ({
+vi.mock("~/components/cms/cookie-policy", () => ({
   CookiePolicyContent: ({ locale, preview }: { locale: string; preview: boolean }) => (
     <section aria-label="cookie policy">
       {locale}

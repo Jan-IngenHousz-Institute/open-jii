@@ -20,11 +20,19 @@ vi.mock("@/components/navigation/public-navbar", () => ({
   PublicNavbar: () => <nav aria-label="main navigation">navbar</nav>,
 }));
 
-vi.mock("@repo/cms", () => ({
+vi.mock("~/components/cms/home/hero", () => ({
   HomeHero: () => <section aria-label="hero" />,
+}));
+vi.mock("~/components/cms/home/mission", () => ({
   HomeAboutMission: () => <section aria-label="mission" />,
+}));
+vi.mock("~/components/cms/home/key-features", () => ({
   HomeKeyFeatures: () => <section aria-label="features" />,
+}));
+vi.mock("~/components/cms/home/partners", () => ({
   HomePartners: () => <section aria-label="partners" />,
+}));
+vi.mock("~/components/cms/footer", () => ({
   HomeFooter: () => <footer aria-label="footer" />,
 }));
 

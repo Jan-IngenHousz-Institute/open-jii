@@ -19,7 +19,7 @@ vi.mock("~/lib/contentful", () => ({
   ),
 }));
 
-vi.mock("@repo/cms", () => ({
+vi.mock("~/components/cms/policies", () => ({
   PoliciesContent: ({
     locale,
     preview,

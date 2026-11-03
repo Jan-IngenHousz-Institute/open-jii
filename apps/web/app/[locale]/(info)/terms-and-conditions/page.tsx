@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { cache } from "react";
+import { TermsAndConditionsPage } from "~/components/cms/terms-and-conditions";
 import { getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
 
-import { TermsAndConditionsPage } from "@repo/cms";
 import type { PageTermsAndConditionsFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 
 interface TermsAndConditionsPageProps {
