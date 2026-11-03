@@ -31,6 +31,19 @@ type QueryData<Q> = Q extends { select: (data: never) => infer Selected }
       : never
     : never;
 
+/** What a query's `queryFn` resolves to, before any `select`. */
+type QueryFnData<Q> = Q extends { queryFn?: infer Fn }
+  ? Fn extends (...args: never[]) => infer Result
+    ? Awaited<Result>
+    : never
+  : never;
+
+/** Rejects query options whose result, after any `select`, is not a list response. */
+type MustAnswerWithAList<Q> =
+  QueryData<Q> extends ListResponse<unknown>
+    ? unknown
+    : { "the query must answer with a list response": never };
+
 /** The row type of a list response, paged or not. */
 type ListItem<TData> = TData extends (infer Item)[]
   ? Item
@@ -52,7 +65,7 @@ interface ResourceListOptions<
    * as it comes; an unpaged one is paged here, 20 rows at a time. Its options override the
    * default of keeping the previous rows on screen while the next ones load.
    */
-  query: (view: ResourceListView<S, T>) => Q;
+  query: (view: ResourceListView<S, T>) => Q & MustAnswerWithAList<Q>;
 }
 
 const CLIENT_PAGE_SIZE = 20;
@@ -89,11 +102,13 @@ export function useResourceList<
   const [page, setPage] = useState(1);
   const [debouncedSearch] = useDebounce(url.search, 300);
 
-  // The options come from different procedures; only the response shape matters here.
-  const query = useQuery({
-    placeholderData: keepPreviousData,
-    ...options.query({ search: debouncedSearch, page, sort: url.sort, filters: url.filters }),
-  } as UseQueryOptions<unknown, Error, ListResponse<Item>>);
+  const queryOptions: UseQueryOptions<
+    QueryFnData<Q>,
+    Error,
+    ListResponse<Item>,
+    QueryKey
+  > = options.query({ search: debouncedSearch, page, sort: url.sort, filters: url.filters });
+  const query = useQuery({ placeholderData: keepPreviousData, ...queryOptions });
 
   const data: PaginatedList<Item> | undefined =
     query.data === undefined
