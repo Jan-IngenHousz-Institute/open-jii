@@ -4,6 +4,7 @@ now: the first load, and the repair for what the feed cannot send, such as rows 
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -152,30 +153,32 @@ class StoreReload:
     def _write(self, table: StoreTable, changes: DataFrame) -> Written:
         """Writes the load, again until every row has gone."""
         lines = table.lines(changes, reloaded=True)
+        return self._until_sent(f"rows of {table.name}", lambda: self.writer.write(lines, table.name))
+
+    def _write_schemas(self, table: StoreTable, changes: DataFrame) -> None:
+        """Sends the load's payload schemas, rebuilt from gold's rows as the rows are."""
+        lines = [row.line for row in table.schema_lines(changes).collect()]
+        self._until_sent(f"schemas of {table.name}", lambda: self.writer.insert(PAYLOAD_SCHEMAS, lines))
+
+    def _until_sent(self, what: str, send: Callable[[], Written]) -> Written:
+        """Sends again until nothing is left unsent, waiting longer each time; the dedup tokens
+        drop what already landed."""
         delays = iter(WRITE_RETRY_DELAYS)
         while True:
-            written = self.writer.write(lines, table.name)
+            written = send()
             if not written.unfinished:
                 return written
 
             delay = next(delays, None)
             if delay is None:
                 raise StoreUnavailable(
-                    f"{written.unfinished} rows of {table.name} not sent after {len(WRITE_RETRY_DELAYS) + 1} attempts"
+                    f"{written.unfinished} {what} not sent after {len(WRITE_RETRY_DELAYS) + 1} attempts"
                 )
             print(
-                f"[serving store] Reload of {table.name}: {written.unfinished} rows not sent, "
-                f"writing the load again in {delay} s",
+                f"[serving store] Reload: {written.unfinished} {what} not sent, sending them again in {delay} s",
                 flush=True,
             )
             time.sleep(delay)
-
-    def _write_schemas(self, table: StoreTable, changes: DataFrame) -> None:
-        """Sends the load's payload schemas, rebuilt from gold's rows as the rows are."""
-        lines = [row.line for row in table.schema_lines(changes).collect()]
-        written = self.writer.insert(PAYLOAD_SCHEMAS, lines)
-        if written.unfinished:
-            raise StoreUnavailable(f"{written.unfinished} schemas of {table.name} not sent")
 
     def _newest_stored_version(self, table: StoreTable) -> int:
         """The newest commit the store holds of the table, its rows or its payload schemas."""

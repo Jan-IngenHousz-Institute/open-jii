@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 from openjii.serving_store import feed
+from openjii.serving_store.tables import StoreTable
 from openjii.serving_store.writer import StoreUnavailable, StoreWriter, Written
 from pyspark.sql import DataFrame, SparkSession
 
@@ -201,6 +202,40 @@ def test_a_batch_sends_its_payload_schemas_once_all_its_rows_have_gone(
             "_commit_version": 3,
         }
     ]
+
+
+def test_a_batch_whose_schemas_cannot_be_worked_out_sends_its_rows_and_records_a_reject(
+    spark: SparkSession,
+    fake_dp: types.ModuleType,
+    start_versions: None,
+    monkeypatch: pytest.MonkeyPatch,
+    schemas_sent: list[tuple[str, list[str]]],
+) -> None:
+    def no_schemas(self: StoreTable, changes: DataFrame) -> DataFrame:
+        raise RuntimeError("schema_of_variant_agg failed")
+
+    written: list[str] = []
+    rejects: list[tuple[str, list[str]]] = []
+    monkeypatch.setattr(StoreTable, "schema_lines", no_schemas)
+    monkeypatch.setattr(
+        StoreWriter, "write", lambda self, lines, table: written.append(table) or Written(inserted=1)
+    )
+    monkeypatch.setattr(StoreWriter, "_insert", lambda self, table, lines: rejects.append((table, lines)))
+    _load("centrum/serving_store_feed.py", spark, _Secrets())
+
+    fake_dp.sinks["serving_store_uploads"](spark.sql(_UPLOAD_CHANGES), 4)
+
+    assert written == ["uploads"]
+    assert schemas_sent == [("payload_schemas", [])]
+    [(table, [line])] = rejects
+    assert table == "feed_rejects"
+    assert json.loads(line) == {
+        "source_table": "uploads",
+        "commit_version": None,
+        "code": 0,
+        "message": "batch 4 went without its payload schemas: RuntimeError: schema_of_variant_agg failed",
+        "row": "",
+    }
 
 
 def test_a_batch_the_store_could_not_take_is_written_again_from_the_driver(

@@ -218,6 +218,29 @@ def test_a_load_still_unfinished_after_the_last_attempt_fails_before_deleting(sp
     assert [sql for sql, _ in writer.statements if sql.startswith("DELETE")] == []
 
 
+class _SchemasOnSecondTry(_Writer):
+    """A store that cannot take the first schema insert."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.schema_attempts = 0
+
+    def insert(self, table: str, lines: Iterable[str]) -> Written:
+        self.schema_attempts += 1
+        sent = list(lines)
+        return Written(unfinished=len(sent)) if self.schema_attempts == 1 else super().insert(table, sent)
+
+
+def test_schemas_the_store_could_not_take_are_sent_again_before_the_delete(spark: SparkSession) -> None:
+    writer = _SchemasOnSecondTry()
+
+    _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
+
+    assert writer.schema_attempts == 2
+    assert [table for table, _ in writer.inserts] == ["payload_schemas"]
+    assert len([sql for sql, _ in writer.statements if sql.startswith("DELETE")]) == 2
+
+
 def test_a_load_the_store_refused_rows_of_deletes_nothing(spark: SparkSession) -> None:
     writer = _Writer(written=[Written(inserted=3, rejected=1)])
 

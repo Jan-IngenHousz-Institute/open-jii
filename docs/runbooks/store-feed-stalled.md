@@ -84,8 +84,11 @@ newest half hour gained rows before the start versions; it clears as soon as new
 
 ## Resetting a sink's checkpoint
 
-Needed when the feed was off for more than seven days, or when a gold table was recreated (its
-versions restart, so empty the store table first with `TRUNCATE TABLE store.<table>` as the admin).
+Needed when the feed was off for more than seven days, or when a gold table was recreated. Its
+versions then restart, so first empty the store table with `TRUNCATE TABLE store.<table>` as the
+admin, and its payload schemas, which carry the same versions, with
+`DELETE FROM store.payload_schemas WHERE table_type = '<static, macro or upload>'` (measurements are
+`static`, macro results `macro`, uploads `upload`). Left behind, either keeps a reload from running.
 Empty a store table only with `TRUNCATE`: after a `DELETE` the store still holds the dedup tokens of
 the deleted rows' inserts, and drops those rows when the feed sends them again. Rows gold gained
 before the new start version stay missing until a [reload](procedures/serving-store-reload.md).
