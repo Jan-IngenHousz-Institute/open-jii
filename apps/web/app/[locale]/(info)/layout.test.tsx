@@ -12,7 +12,7 @@ vi.mock("@/components/navigation/public-navbar", () => ({
   PublicNavbar: () => <nav aria-label="main">navbar</nav>,
 }));
 
-vi.mock("@repo/cms", () => ({
+vi.mock("~/components/cms/footer", () => ({
   HomeFooter: () => <footer>Footer</footer>,
 }));
 

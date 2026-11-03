@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { cache } from "react";
+import { CookiePolicyContent } from "~/components/cms/cookie-policy";
 import { getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
 
-import { CookiePolicyContent } from "@repo/cms";
 import type { PageCookiePolicyFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 
 interface CookiePolicyPageProps {

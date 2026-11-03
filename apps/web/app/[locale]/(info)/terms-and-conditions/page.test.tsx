@@ -12,7 +12,7 @@ vi.mock("~/lib/contentful", () => ({
     }),
 }));
 
-vi.mock("@repo/cms", () => ({
+vi.mock("~/components/cms/terms-and-conditions", () => ({
   TermsAndConditionsPage: ({ locale }: { locale: string }) => (
     <div data-testid="terms-content">Terms - {locale}</div>
   ),

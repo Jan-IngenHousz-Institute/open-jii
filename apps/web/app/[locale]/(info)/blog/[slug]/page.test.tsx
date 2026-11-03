@@ -8,19 +8,23 @@ import Page, { generateMetadata, generateStaticParams } from "./page";
 const mockBlogDetail = vi.fn();
 const mockSitemapPages = vi.fn();
 
-vi.mock("@repo/cms/article", () => ({
+vi.mock("~/components/cms/article/article-hero", () => ({
   ArticleHero: ({ article }: { article?: { title?: string } }) => (
     <section aria-label="article hero">{article?.title}</section>
   ),
+}));
+vi.mock("~/components/cms/article/article-content", () => ({
   ArticleContent: ({ article }: { article?: { title?: string } }) => (
     <article>{article?.title} content</article>
   ),
+}));
+vi.mock("~/components/cms/article/article-title-grid", () => ({
   ArticleTileGrid: ({ articles }: { articles: unknown[] }) => (
     <section aria-label="related posts">{articles.length} posts</section>
   ),
 }));
 
-vi.mock("@repo/cms/container", () => ({
+vi.mock("~/components/cms/shared/container", () => ({
   Container: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
