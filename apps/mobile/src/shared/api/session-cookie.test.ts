@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getSessionToken, hasSessionToken } from "~/shared/api/session-cookie";
+import { getSessionToken, getSessionTokens, hasSessionToken } from "~/shared/api/session-cookie";
 
 describe("hasSessionToken", () => {
   it.each([
@@ -28,4 +28,21 @@ describe("hasSessionToken", () => {
       ),
     ).toBe("t.sig");
   });
+});
+
+describe("getSessionTokens", () => {
+  it("returns every environment's token in jar order", () => {
+    expect(
+      getSessionTokens(
+        "__Secure-better-auth.prod.session_token=p.sig; better-auth.dev.oauth_state=x; better-auth.dev.session_token=d.sig",
+      ),
+    ).toEqual(["p.sig", "d.sig"]);
+  });
+
+  it.each([undefined, "", "better-auth.dev.oauth_state=x", "better-auth.dev.session_token="])(
+    "returns none for %j",
+    (cookie) => {
+      expect(getSessionTokens(cookie)).toEqual([]);
+    },
+  );
 });
