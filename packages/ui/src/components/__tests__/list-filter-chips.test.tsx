@@ -66,11 +66,92 @@ describe("ListFilterChips", () => {
     expect(screen.getByRole("option", { name: "Status" })).toBeInTheDocument();
   });
 
-  it("hides the plus button once every filter has a chip", () => {
+  it("keeps the plus button once every filter has a chip", async () => {
+    const user = userEvent.setup();
     const { filters } = makeFilters({ statuses: ["draft"], visibilities: ["public"] });
     render(<ListFilterChips filters={filters} labels={labels} onClear={vi.fn()} />);
 
-    expect(screen.queryByRole("button", { name: "Add filter" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add filter" }));
+
+    expect(screen.getByRole("listbox", { name: "Filter" })).toBeInTheDocument();
+  });
+
+  it("keeps the list open when the value its chip showed is unticked", async () => {
+    const user = userEvent.setup();
+    const { filters, onStatuses } = makeFilters({ statuses: ["draft", "active"] });
+    const { rerender } = render(
+      <ListFilterChips filters={filters} labels={labels} onClear={vi.fn()} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Draft" }));
+    await user.click(screen.getByRole("option", { name: "Draft" }));
+    expect(onStatuses).toHaveBeenCalledWith(["active"]);
+    rerender(
+      <ListFilterChips
+        filters={makeFilters({ statuses: ["active"] }).filters}
+        labels={labels}
+        onClear={vi.fn()}
+      />,
+    );
+
+    const values = screen.getByRole("listbox", { name: "Status" });
+    expect(within(values).getByRole("option", { name: "Draft" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    expect(screen.queryByRole("group", { name: "Status is Draft" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the row and the list open when the only value is unticked", async () => {
+    const user = userEvent.setup();
+    const { filters } = makeFilters({ statuses: ["draft"] });
+    const { rerender } = render(
+      <ListFilterChips filters={filters} labels={labels} onClear={vi.fn()} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Draft" }));
+    rerender(<ListFilterChips filters={makeFilters().filters} labels={labels} onClear={vi.fn()} />);
+
+    const values = screen.getByRole("listbox", { name: "Status" });
+    await user.click(within(values).getByRole("option", { name: "Active" }));
+    expect(screen.getByRole("button", { name: "Clear filters" })).toBeInTheDocument();
+  });
+
+  it("closes the list from the same chip value", async () => {
+    const user = userEvent.setup();
+    const { filters } = makeFilters({ statuses: ["draft"] });
+    render(<ListFilterChips filters={filters} labels={labels} onClear={vi.fn()} />);
+
+    const value = screen.getByRole("button", { name: "Draft" });
+    await user.click(value);
+    expect(value).toHaveAttribute("aria-expanded", "true");
+    await user.click(value);
+
+    expect(screen.queryByRole("listbox", { name: "Status" })).not.toBeInTheDocument();
+    expect(value).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("keeps the plus menu open when it gives the last unused filter a value", async () => {
+    const user = userEvent.setup();
+    const { filters, onStatuses } = makeFilters({ visibilities: ["public"] });
+    const { rerender } = render(
+      <ListFilterChips filters={filters} labels={labels} onClear={vi.fn()} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Add filter" }));
+    await user.click(screen.getByRole("option", { name: "Status" }));
+    await user.click(screen.getByRole("option", { name: "Draft" }));
+    expect(onStatuses).toHaveBeenCalledWith(["draft"]);
+    rerender(
+      <ListFilterChips
+        filters={makeFilters({ statuses: ["draft"], visibilities: ["public"] }).filters}
+        labels={labels}
+        onClear={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("listbox", { name: "Filter" })).toBeInTheDocument();
+    expect(screen.getByRole("listbox", { name: "Status" })).toBeInTheDocument();
   });
 
   it("ends the row with Clear filters", async () => {

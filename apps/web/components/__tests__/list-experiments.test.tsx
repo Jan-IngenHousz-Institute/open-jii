@@ -98,7 +98,7 @@ describe("ListExperiments", () => {
       expect(arrayParam(spy.calls.at(-1)?.url ?? "", "status")).toEqual(["stale"]),
     );
     expect(
-      screen.getByRole("group", { name: "filters.status common.filterIs status.stale" }),
+      screen.getByRole("group", { name: "common.filterChip:filters.status:status.stale" }),
     ).toBeInTheDocument();
   });
 

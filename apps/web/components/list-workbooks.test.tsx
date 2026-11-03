@@ -191,7 +191,9 @@ describe("ListWorkbooks", () => {
       expect(arrayParam(spy.calls.at(-1)?.url ?? "", "visibility")).toEqual(["private"]),
     );
     expect(
-      screen.getByRole("group", { name: "workbooks.visibility common.filterIs workbooks.private" }),
+      screen.getByRole("group", {
+        name: "common.filterChip:workbooks.visibility:workbooks.private",
+      }),
     ).toBeInTheDocument();
   });
 });

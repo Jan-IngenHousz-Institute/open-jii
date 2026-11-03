@@ -120,7 +120,7 @@ describe("<ListOrganizations />", () => {
     );
     expect(
       screen.getByRole("group", {
-        name: "organizations.fields.type common.filterIs organizations.types.university",
+        name: "common.filterChip:organizations.fields.type:organizations.types.university",
       }),
     ).toBeInTheDocument();
   });
