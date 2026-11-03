@@ -149,6 +149,29 @@ def test_rows_sent_again_add_no_ids(admin: _User, reader: _User) -> None:
     assert sorted(row["user_id"] for row in contributors) == ["u1", "u2", "u4", "u5"]
 
 
+def test_a_row_without_a_contributor_or_a_client_adds_no_id(admin: _User, reader: _User) -> None:
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.measurements (experiment_id, id, timestamp, user_id, client_id, {_COMMIT}) "
+        "VALUES ('e1', 4, '2026-10-19 13:00:00', NULL, NULL, 3, '2026-10-19 13:00:01')"
+    )
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.macro_results (experiment_id, id, raw_id, timestamp, user_id, client_id, {_COMMIT}) "
+        "VALUES ('e1', 12, 4, '2026-10-19 13:00:00', NULL, NULL, 4, '2026-10-19 13:00:05')"
+    )
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.uploads (experiment_id, id, uploaded_at, created_by, {_COMMIT}) "
+        "VALUES ('e1', 22, '2026-10-19 13:00:00', NULL, 5, '2026-10-19 13:00:01')"
+    )
+
+    contributors = reader.rows(
+        f"SELECT user_id FROM {_DATABASE}.experiment_contributor_ids(experiment = 'e1')"
+    )
+    clients = reader.rows(f"SELECT client_id FROM {_DATABASE}.experiment_client_ids(experiment = 'e1')")
+
+    assert sorted(row["user_id"] for row in contributors) == ["u1", "u2", "u4", "u5"]
+    assert sorted(row["client_id"] for row in clients) == ["c1", "c4"]
+
+
 def test_a_tables_schemas_read_once_each_at_their_newest_commit(admin: _User, reader: _User) -> None:
     for version in (3, 4):
         admin.ok(

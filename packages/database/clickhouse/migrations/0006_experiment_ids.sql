@@ -18,20 +18,27 @@ CREATE TABLE IF NOT EXISTS client_ids
 ENGINE = ReplacingMergeTree
 ORDER BY (experiment_id, client_id);
 
+-- A view's WHERE names the table's column in full: bare, it would name the alias, which is never
+-- null, and a row without an id would add an empty one.
 CREATE MATERIALIZED VIEW IF NOT EXISTS measurement_contributor_ids TO contributor_ids AS
-SELECT experiment_id, assumeNotNull(user_id) AS user_id FROM measurements WHERE user_id IS NOT NULL;
+SELECT experiment_id, assumeNotNull(user_id) AS user_id FROM measurements
+WHERE measurements.user_id IS NOT NULL;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS macro_result_contributor_ids TO contributor_ids AS
-SELECT experiment_id, assumeNotNull(user_id) AS user_id FROM macro_results WHERE user_id IS NOT NULL;
+SELECT experiment_id, assumeNotNull(user_id) AS user_id FROM macro_results
+WHERE macro_results.user_id IS NOT NULL;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS upload_contributor_ids TO contributor_ids AS
-SELECT experiment_id, assumeNotNull(created_by) AS user_id FROM uploads WHERE created_by IS NOT NULL;
+SELECT experiment_id, assumeNotNull(created_by) AS user_id FROM uploads
+WHERE uploads.created_by IS NOT NULL;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS measurement_client_ids TO client_ids AS
-SELECT experiment_id, assumeNotNull(client_id) AS client_id FROM measurements WHERE client_id IS NOT NULL;
+SELECT experiment_id, assumeNotNull(client_id) AS client_id FROM measurements
+WHERE measurements.client_id IS NOT NULL;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS macro_result_client_ids TO client_ids AS
-SELECT experiment_id, assumeNotNull(client_id) AS client_id FROM macro_results WHERE client_id IS NOT NULL;
+SELECT experiment_id, assumeNotNull(client_id) AS client_id FROM macro_results
+WHERE macro_results.client_id IS NOT NULL;
 
 -- The rows already stored, after the views, so nothing inserted meanwhile is missed.
 INSERT INTO contributor_ids
