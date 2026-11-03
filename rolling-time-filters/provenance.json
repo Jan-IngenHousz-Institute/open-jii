@@ -1,0 +1,17 @@
+{
+  "issue": "OJD-1871",
+  "base": "2e889fb60",
+  "viewport": [
+    1920,
+    1200
+  ],
+  "caption": "Same49 absolute fixture rows and initial chart/dashboard config; captures13.97hours apart after host interruption. Each independently leaves for65real seconds. Before fixed dates remain; after11:09 advances11:10 with Last24hours label. Later window contains10rows vs baseline24 as unchanged fixture ages. Short videos concatenate first10+last4seconds at original speed. No product pixels altered. Warehouse responses are synthetic. Capture runtime source identity reconstructed after3nonvisual cleanups; no archived build digest.",
+  "files": {
+    "before-selected.png": "6894300d7e8917ef70531d92351af4ff4097e66e3600556227717e60acbfbaa5",
+    "before-reopened.png": "77d18dcc9b8857ac06efb7f1d96379bf0583fbfafe5b2aef3f29e33bbac0f0eb",
+    "after-selected.png": "3764210c343e478e56fc4ceccfc77f8b775bf6dff6ac6cc439286086823ba9c3",
+    "after-reopened.png": "b8b2178af1acb93f3b4b506fba7ac721405d7360a231d659c6813ac5ac269663",
+    "before-reopen-short.webm": "1443054c9157f6de051d3f3b8e60f75c17a36ec3d5203f841ff9ac08def981b8",
+    "after-reopen-short.webm": "5257908b14f40b434900fc1e9dfcc59cef4622161eee33ae7a522b42e884d02f"
+  }
+}

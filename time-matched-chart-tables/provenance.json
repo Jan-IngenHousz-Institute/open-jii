@@ -1,0 +1,16 @@
+{
+  "issue": "OJD-1776",
+  "base": "2e889fb60",
+  "viewport": [
+    1920,
+    1200
+  ],
+  "configSHA256": "1a4e9063f801c24ed07183cd83e71b5aa3cfc00c9317150a5510c5307f62ca06",
+  "caption": "Exact same saved config, synthetic tables and viewport. Config includes new join/secondary series in both runs. Original archived UI ignores join; updated UI forwards it and plots matched weather. UI evidence uses warehouse route fixtures; actual generated SQL separately executed in local Spark4.0.1 ANSI, not Databricks.",
+  "files": {
+    "baseline-same-config.png": "55281eea19ee6fa7dfe11b7cd5596a6b2ec9546e0e4ea1568865441b65f6344f",
+    "fixed-same-config.png": "20a021cd3141b2ee8877bd25bfeb2a48337000ef337492644b412527624ba020",
+    "fixed-picker.png": "7ee271c6c102b6f2eea73ecf53beff0a113df33da6045086814463e1a355ee4e",
+    "time-matched-chart.webm": "6458a19ec2785d816aec2136cd5ee1177204346ac94fab88c0f414e9add2fe4b"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "issue": "OJD-1874",
+  "base": "2e889fb60",
+  "viewport": [
+    1920,
+    1200
+  ],
+  "caption": "Menu pair uses identical Count(report) config and six synthetic reports, bars3/3. Separate final sensor selection changes to Distinct count(sensor_id), bars2/1. Authenticated local UI/auth/save and Plotly; warehouse routes are fixtures. SQL separately executed in PostgreSQL15 with dialect adaptation; no Databricks claim.",
+  "files": {
+    "before-menu.png": "072d1e20f86d205ac1b705d2a7ae1c34081063aab8cd06f5e860bfd34e998753",
+    "after-menu.png": "de97b5295e3ea03966f18e77cbc31616ae046a7f9fc37e37500f884500f53785",
+    "after-sensors.png": "fba5b578c70cebf7634fa64315ce6b8328387f9f0a72d82e98eda04dfd29ab59",
+    "before-flow.gif": "a231d4893e8fc277c0fc2222630c61cf9e5a45b65406e511d3aca5b78e351ac1",
+    "after-flow.gif": "cd62aec31cc0b43e387010f5f7a36c2f9512e4d324aaa0d434e16bd8d50d39ec"
+  }
+}
