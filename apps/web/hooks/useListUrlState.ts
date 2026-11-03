@@ -116,8 +116,10 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
 
   const serialized = serialize(toParams(options, values));
   const urlSerialized = serialize(toParams(options, parse(options, searchParams)));
-  // Writes the URL has not echoed yet; one arriving late is not a back/forward step.
-  const pendingWrites = useRef(new Set<string>());
+  // Writes the URL has not echoed yet, oldest first; one arriving late is not a back/forward step.
+  const pendingWrites = useRef<string[]>([]);
+  // Set by the browser's back or forward, which the URL must win over any pending write.
+  const isHistoryStep = useRef(false);
 
   /** Writes this render's state over this render's params, keeping params the list does not own. */
   const writeUrl = () => {
@@ -133,7 +135,7 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
     // URLSearchParams encodes the commas; the raw form is the one people share.
     const qs = next.toString().replace(/%2C/g, ",");
     if (qs === current.replace(/%2C/g, ",")) return;
-    pendingWrites.current.add(serialized);
+    pendingWrites.current.push(serialized);
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
 
@@ -141,14 +143,32 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
   // eslint-disable-next-line react-hooks/exhaustive-deps -- `serialized` stands for `values`.
   useEffect(writeUrl, [serialized, pathname, router]);
 
+  useEffect(() => {
+    const onHistoryStep = () => {
+      isHistoryStep.current = true;
+    };
+    window.addEventListener("popstate", onHistoryStep);
+    return () => window.removeEventListener("popstate", onHistoryStep);
+  }, []);
+
   // Back/forward replay.
   useEffect(() => {
+    if (isHistoryStep.current) {
+      isHistoryStep.current = false;
+      pendingWrites.current = [];
+      if (urlSerialized !== serialized) setValues(parse(options, searchParams));
+      return;
+    }
+    // Navigations commit in the order they were sent, so an echo settles every older write too.
+    const echoed = pendingWrites.current.indexOf(urlSerialized);
+    if (echoed >= 0) pendingWrites.current = pendingWrites.current.slice(echoed + 1);
     if (urlSerialized === serialized) {
-      pendingWrites.current.clear();
+      // A write of the state the URL already shows changes nothing, so it never echoes.
+      pendingWrites.current = pendingWrites.current.filter((write) => write !== serialized);
       return;
     }
     // A late echo of an earlier write: the state has moved on, so write it again.
-    if (pendingWrites.current.has(urlSerialized)) {
+    if (echoed >= 0) {
       writeUrl();
       return;
     }
