@@ -46,6 +46,7 @@ export interface YSeriesItemProps {
   canRemove: boolean;
   willBeSilentlyDropped: boolean;
   aggregateValue: string;
+  allowAggregateWithoutColumn?: boolean;
   columns: ExperimentDataColumn[];
   effectiveErrorColumns: ExperimentDataColumn[];
   xColumnName: string;
@@ -69,6 +70,7 @@ export function YSeriesItem({
   canRemove,
   willBeSilentlyDropped,
   aggregateValue,
+  allowAggregateWithoutColumn = false,
   columns,
   effectiveErrorColumns,
   xColumnName,
@@ -182,7 +184,7 @@ export function YSeriesItem({
             <Select
               value={aggregateValue}
               onValueChange={(v) => onAggregateChange(v, dsIndex)}
-              disabled={!seriesColumn}
+              disabled={!seriesColumn && !allowAggregateWithoutColumn}
             >
               <FormControl>
                 <SelectTrigger>

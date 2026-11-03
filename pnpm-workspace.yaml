@@ -57,7 +57,7 @@ catalog:
   nodemailer: 10.2.1
   posthog-js: 1.422.5
   posthog-node: 5.51.4
-  next: 16.4.2
+  next: 16.4.3
 
 catalogs:
   orpc:
