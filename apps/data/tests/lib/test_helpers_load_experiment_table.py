@@ -7,6 +7,7 @@ from collections.abc import Iterator
 import pytest
 from openjii.helpers import load_experiment_table
 from pyspark.sql import SparkSession
+from pyspark.sql.types import StringType
 
 _CATALOG = "spark_catalog"
 _SCHEMA = "export_loader"
@@ -21,7 +22,7 @@ _TABLES = {
           ('e1', 'upload-1', 'upload', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING),
            'OBJECT<plot: STRING, yield: DOUBLE>'),
           ('e2', 'upload-1', 'upload', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING),
-           'OBJECT<plot: STRING, yield: DOUBLE>'),
+           'OBJECT<plot: STRING, yield: DOUBLE, block: STRING>'),
           ('e1', 'upload-big', 'upload', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING),
            'OBJECT<plot: STRING, yield: DOUBLE>'),
           ('e1', 'upload-nested', 'upload', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING),
@@ -40,9 +41,9 @@ _TABLES = {
           (3L, 'e1', 'upload-1', 'Field trial', 'up-a', TIMESTAMP'2026-10-01 09:00:00',
            parse_json('{"plot": "C1", "yield": 3.0}')),
           (4L, 'e2', 'upload-1', 'Other experiment', 'up-d', TIMESTAMP'2026-10-01 08:00:00',
-           parse_json('{"plot": "D1", "yield": 99.0}')),
+           parse_json('{"plot": "D1", "yield": 99.0, "block": "north"}')),
           (5L, 'e1', 'upload-nested', 'Nested trial', 'up-e', TIMESTAMP'2026-10-03 08:00:00',
-           parse_json('{"id": 200, "counts": [2.0], "note": null}')),
+           parse_json('{"id": 200, "counts": null, "note": null}')),
           (6L, 'e1', 'upload-nested', 'Nested trial', 'up-e', TIMESTAMP'2026-10-02 08:00:00',
            parse_json('{"id": 100, "counts": [1.0, 2.0], "note": null}'))
         AS t(id, experiment_id, upload_table_id, upload_table_name, upload_id, uploaded_at, uploaded_data)
@@ -85,19 +86,21 @@ def test_upload_table_reads_its_own_uploaded_rows_ordered_by_upload_time(schema:
     assert [(row.plot, row["yield"]) for row in rows] == [("C1", 3.0), ("A1", 2.5)]
 
 
-def test_upload_table_does_not_include_rows_from_another_experiment(schema: str) -> None:
-    rows = load_experiment_table("e2", "upload-1", _CATALOG, schema_name=schema).collect()
+def test_upload_table_reads_only_its_experiments_rows_and_schema(schema: str) -> None:
+    table = load_experiment_table("e2", "upload-1", _CATALOG, schema_name=schema)
 
-    assert [row.plot for row in rows] == ["D1"]
+    assert table.columns == ["id", "uploaded_at", "plot", "yield", "block"]
+    assert [(row.plot, row.block) for row in table.collect()] == [("D1", "north")]
 
 
 def test_upload_payload_preserves_arrays_and_nulls_without_shadowing_row_ids(schema: str) -> None:
     table = _load("upload-nested", schema)
 
     assert table.columns == ["id", "uploaded_at", "id_upload", "counts", "note"]
+    assert table.schema["note"].dataType == StringType()
     assert [(row.id, row.id_upload, row.counts, row.note) for row in table.collect()] == [
         (6, 100, [1.0, 2.0], None),
-        (5, 200, [2.0], None),
+        (5, 200, None, None),
     ]
 
 
