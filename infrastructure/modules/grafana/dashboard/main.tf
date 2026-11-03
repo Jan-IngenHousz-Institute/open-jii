@@ -4045,8 +4045,8 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     }
   }
 
-  # Catalog entry 128. One hour with more than two restarts fires it, since a planned change can
-  # start every flow twice in an hour, as on dev on 30 October 2026. The window matches entry 127's.
+  # Catalog entry 128. A planned restart counts one, and one hour with more than two fires it, as
+  # entry 129's rule does, so a restart and a retry stay quiet. The window matches entry 127's.
   rule {
     name      = "Pipeline Flow Restarting"
     condition = "C"
