@@ -12,7 +12,8 @@ holds now.** The feed only sends rows gold inserts or updates, so the store need
 ## What it does
 
 The job `Serving-Store-Reload-<ENV>` reads each gold table's latest version, V, and inserts every
-row gold holds at V as a commit at V. Then it deletes the store's rows from versions before V. The
+row gold holds at V as a commit at V. Gold only appends, so a recomputed row stands beside the one it
+replaced; of each store key the load sends the copy gold added last. Then it deletes the store's rows from versions before V. The
 store keeps each row's newest commit, so an experiment reads whole throughout. Rows the live feed
 writes meanwhile carry later versions and stay. Sending a row twice does no harm, because each chunk
 carries a dedup token and the store folds rows that share a key into one.
@@ -40,11 +41,18 @@ write to the migration ledger.
 
 ## Running it
 
-Run it once the feed is on and has caught up: `store-feed-latency` is quiet, and no sink is working
-through old commits after being switched on or reset (`store-feed-stalled`). In that order no gold
-commit falls between the two: the feed sends everything from its start version on, and the reload
-everything gold holds at a version at least as late. For a new store, as on prod's first rollout,
-switch the feed on first and reload `all` once it has caught up.
+Run it once the feed is on and has caught up. A quiet `store-feed-latency` does not show that, since
+a stopped feed sends nothing to measure. Check it instead: the store's newest version must be at
+least gold's newest commit that added rows. As the admin, `SELECT max(_commit_version) FROM
+store.<table>`; in the Databricks SQL editor, `DESCRIBE HISTORY <catalog>.centrum.<gold table>`
+(`experiment_raw_data`, `experiment_macro_data` or `experiment_uploaded_data`) and the newest version whose `operationMetrics` show `numOutputRows` above 0. Then the feed has sent
+every commit before the reload's, and a feed that stopped cannot later send rows from before it,
+such as an experiment the reload removes. For a new store, as on prod's first rollout, switch the
+feed on first and reload `all` once it has caught up.
+
+Never run it while gold's table is being refreshed. A full refresh rewrites the table over many
+commits, so at any one of them gold holds part of it, and a reload then deletes the rest from the
+store. Wait for the pipeline's update to finish.
 
 Reloading every experiment rewrites and recounts whole tables, which loads the store far more than
 the feed does, so run that when the app's reads can wait. The rows it deletes stay on disk until
@@ -67,7 +75,8 @@ The cluster takes a few minutes to start. Each table's result is one line of the
 
 ## When it fails
 
-- **The store refused rows.** Follow `store-feed-rejects` to find and fix them, then run it again.
+- **The store refused rows.** They also fire `store-feed-rejects`, which counts every refused row
+  however it was sent. Follow it to find and fix them, then run it again.
 - **The store lacks gold's rows.** Run it again for the experiments the error names.
 - **The store holds rows from before the version.** Wait until the feed has caught up, then run it
   again for the same experiments; the new delete takes them.

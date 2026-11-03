@@ -30,13 +30,15 @@ _RELOADER = "reload_test_reloader"
 _COMMITTED_AT = datetime(2026, 11, 3, 9, 0, 1, tzinfo=timezone.utc)
 
 # Gold's uploads at version 7: e1's row 21 changed, 22 held twice, 23 gone and 24 new; e2 unchanged.
+# Each row carries the commit that added it.
 _GOLD = """
     SELECT experiment_id, id, 't1' AS upload_table_id, 'Soil' AS upload_table_name, 'up1' AS upload_id,
-      'u1' AS created_by, TIMESTAMP'2026-10-19 09:00:00' AS uploaded_at, parse_json(data) AS uploaded_data
+      'u1' AS created_by, TIMESTAMP'2026-10-19 09:00:00' AS uploaded_at, parse_json(data) AS uploaded_data,
+      added AS _row_commit_version
     FROM VALUES
-      ('e1', 21L, '{"ph": 7.0}'), ('e1', 22L, '{"ph": 6.1}'), ('e1', 22L, '{"ph": 6.1}'),
-      ('e1', 24L, '{"ph": 5.9}'), ('e2', 31L, '{"ph": 6.8}')
-      AS t(experiment_id, id, data)
+      ('e1', 21L, '{"ph": 7.0}', 6L), ('e1', 22L, '{"ph": 6.1}', 2L), ('e1', 22L, '{"ph": 6.1}', 5L),
+      ('e1', 24L, '{"ph": 5.9}', 7L), ('e2', 31L, '{"ph": 6.8}', 1L)
+      AS t(experiment_id, id, data, added)
 """
 
 # What the feed sent before, at version 3.
@@ -108,11 +110,21 @@ def test_gold_rows_go_in_as_inserts_at_golds_latest_version(spark: SparkSession)
     _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
     [sent] = writer.lines
-    assert sorted(line["id"] for line in sent) == [21, 22, 22, 24]
+    assert sorted(line["id"] for line in sent) == [21, 22, 24]
     assert {line["_commit_version"] for line in sent} == {7}
     assert {(line["_commit_timestamp"], line["inserted_at"]) for line in sent} == {
         ("2026-11-03 09:00:01.000000", "2026-11-03 09:00:01.000000")
     }
+
+
+def test_a_key_gold_holds_twice_goes_in_as_its_newest_copy(spark: SparkSession) -> None:
+    writer = _Writer()
+    recomputed = _GOLD.replace("""('e1', 22L, '{"ph": 6.1}', 5L)""", """('e1', 22L, '{"ph": 6.4}', 5L)""")
+
+    _GoldAt(spark, writer, recomputed).reload(UPLOADS, "e1")
+
+    [sent] = writer.lines
+    assert [line["uploaded_data"] for line in sent if line["id"] == 22] == [{"ph": 6.4}]
 
 
 def test_the_delete_takes_the_experiments_rows_from_before_the_version_after_the_insert(
@@ -136,7 +148,7 @@ def test_a_reload_of_every_experiment_deletes_across_the_table(spark: SparkSessi
 
     [delete] = [(sql, params) for sql, params in writer.statements if sql.startswith("DELETE")]
     assert delete == ("DELETE FROM store.uploads WHERE _commit_version < {version:Int64}", {"version": 7})
-    assert len(writer.lines[0]) == 5
+    assert len(writer.lines[0]) == 4
 
 
 def test_a_store_ahead_of_gold_is_refused_before_anything_is_written(spark: SparkSession) -> None:

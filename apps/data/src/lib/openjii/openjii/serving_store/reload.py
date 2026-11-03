@@ -7,7 +7,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql import functions as F
 
 from .tables import StoreTable
@@ -81,6 +81,7 @@ class StoreReload:
         rows = self.gold_rows(table, version)
         if experiment_id is not None:
             rows = rows.filter(F.col("experiment_id") == experiment_id)
+        rows = self._newest_copies(table, rows)
         changes = rows.withColumns(
             {
                 "_change_type": F.lit("insert"),
@@ -111,7 +112,22 @@ class StoreReload:
         return commit["version"], commit["timestamp"]
 
     def gold_rows(self, table: StoreTable, version: int) -> DataFrame:
-        return self.spark.sql(f"SELECT * FROM {self._gold_name(table)} VERSION AS OF {version}")
+        """Gold's rows at ``version``, each with the commit that added it."""
+        return self.spark.sql(
+            f"SELECT *, _metadata.row_commit_version AS _row_commit_version "
+            f"FROM {self._gold_name(table)} VERSION AS OF {version}"
+        )
+
+    def _newest_copies(self, table: StoreTable, rows: DataFrame) -> DataFrame:
+        """Gold's newest copy of each store key, the one the store keeps from the feed. Gold's tables
+        only append, so a recomputed row stands beside the one it replaces, and a load sends every
+        row at one version, which would leave the store to keep either."""
+        newest = Window.partitionBy(*table.key()).orderBy(F.col("_row_commit_version").desc())
+        return (
+            rows.withColumn("_copy", F.row_number().over(newest))
+            .filter(F.col("_copy") == 1)
+            .drop("_copy", "_row_commit_version")
+        )
 
     def _gold_name(self, table: StoreTable) -> str:
         return f"{self.gold_schema}.{table.gold_table}"
@@ -162,7 +178,9 @@ class StoreReload:
             "SELECT experiment_id, countIf(_commit_version >= {version:Int64}) AS current, "
             "countIf(_commit_version > {version:Int64}) AS newer, "
             "countIf(_commit_version < {version:Int64}) AS older "
-            f"FROM {self.writer.database}.{table.name} FINAL WHERE 1{scope} GROUP BY experiment_id FORMAT JSONEachRow",
+            f"FROM {self.writer.database}.{table.name} FINAL WHERE 1{scope} GROUP BY experiment_id "
+            # A count is a read, under the cap every read has; the reloader's profile lifts it for inserts.
+            "SETTINGS max_memory_usage = 4294967296 FORMAT JSONEachRow",
             version=version,
             **parameters,
         )
