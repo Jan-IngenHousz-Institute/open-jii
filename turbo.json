@@ -23,6 +23,8 @@
         "DB_NAME",
         "DB_CREDENTIALS",
         "DOCS_INDEXABLE",
+        "STATUS_INDEXABLE",
+        "STATUS_BASE_URL",
         "DOCS_BASE_URL",
         "PLATFORM_BASE_URL",
         "CONTENTFUL_SPACE_ID",

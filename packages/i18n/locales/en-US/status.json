@@ -1,0 +1,187 @@
+{
+  "title": "Platform status",
+  "metadata": {
+    "title": "openJII status",
+    "description": "Current status of the openJII platform and its services."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "There is no page at this address.",
+    "home": "Go to the current status"
+  },
+  "theme": {
+    "toggle": "Toggle theme",
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode"
+  },
+  "header": {
+    "home": "openJII home page"
+  },
+  "duration": {
+    "minutes": "{{minutes}} min",
+    "hours": "{{hours}} h",
+    "hoursMinutes": "{{hours}} h {{minutes}} min",
+    "days": "{{days}} d",
+    "daysHours": "{{days}} d {{hours}} h"
+  },
+  "freshness": {
+    "lastChecked": "Last checked at {{time}} UTC, {{ago}}.",
+    "justNow": "just now",
+    "ago": "{{duration}} ago",
+    "delayed": "Our checks last reported at {{time}} UTC, {{ago}}.",
+    "refreshFailed": "We could not refresh this page and will keep trying every minute. Until then it shows the status from {{time}} UTC."
+  },
+  "skeleton": {
+    "label": "Loading the current status",
+    "slow": "This is taking longer than usual, which often means a slow or dropped connection."
+  },
+  "noscript": "This page needs JavaScript to show the current status.",
+  "unavailable": {
+    "title": "Status unavailable",
+    "body": "We could not load the latest status, so we cannot tell whether anything is wrong. The page tries again every minute, so there is no need to reload it.",
+    "help": "If other sites load and this page still does not, <help>report the problem</help>."
+  },
+  "headline": {
+    "operational": {
+      "title": "All systems operational",
+      "description": "No component is degraded or down right now.",
+      "help": "If something still does not work for you, check your connection first and then <help>report the problem</help>."
+    },
+    "stale": {
+      "title": "Status may be out of date",
+      "description": "The components below show the last status our checks reported."
+    },
+    "maintenance_one": "{{names}} is under planned maintenance.",
+    "maintenance_other": "{{names}} are under planned maintenance.",
+    "maintenanceUntil_one": "{{names}} is under planned maintenance until {{time}} UTC.",
+    "maintenanceUntil_other": "{{names}} are under planned maintenance until {{time}} UTC.",
+    "outage_one": "{{names}} is down.",
+    "outage_other": "{{names}} are down.",
+    "degraded_one": "{{names}} is degraded.",
+    "degraded_other": "{{names}} are degraded.",
+    "othersOperational_one": "{{names}} is working normally.",
+    "othersOperational_other": "{{names}} are working normally."
+  },
+  "badge": {
+    "operational": "Operational",
+    "degraded": "Degraded",
+    "outage": "Outage",
+    "maintenance": "Maintenance",
+    "resolved": "Resolved",
+    "scheduled": "Scheduled",
+    "in-progress": "In progress",
+    "completed": "Completed"
+  },
+  "legend": {
+    "operational": "Operational",
+    "degraded": "Degraded",
+    "outage": "Outage",
+    "maintenance": "Maintenance",
+    "none": "No record"
+  },
+  "incident": {
+    "affects": "Affects {{components}}.",
+    "started": "Started {{date}}, {{time}} UTC.",
+    "postedAt": "{{date}}, {{time}} UTC",
+    "nextUpdateBy": "Next update by {{time}} UTC.",
+    "stage": {
+      "investigating": "Investigating",
+      "identified": "Identified",
+      "monitoring": "Monitoring",
+      "resolved": "Resolved",
+      "scheduled": "Scheduled",
+      "in-progress": "In progress",
+      "completed": "Completed"
+    }
+  },
+  "maintenance": {
+    "windowSameDay": "{{date}}, {{from}} to {{to}} UTC",
+    "windowSpansDays": "{{from}} to {{to}} UTC",
+    "windowOpenEnded": "From {{from}} UTC"
+  },
+  "components": {
+    "title": "Components"
+  },
+  "history": {
+    "legend": "Color key for the history bars",
+    "group": "{{name}}, last {{days}} days",
+    "daysAgo": "{{days}} days ago",
+    "uptime": "{{uptime}} available in the last 90 days",
+    "degraded": "{{degraded}} degraded",
+    "today": "Today",
+    "problemDays": "Days that were not fully operational",
+    "noProblemDays": "No outage or degraded time in the last 90 days."
+  },
+  "component": {
+    "delayNow": "The slowest recent measurements took about {{minutes}} minutes.",
+    "website": {
+      "name": "Website",
+      "description": "The openJII website you open in a browser.",
+      "details": "Every minute we load the openJII home page from outside our network and check that it answers and contains the product name. The website is degraded after two slow or failed checks in a row. A check is slow if it takes more than 3 seconds. The website is down after three failed checks in a row, or when, in the last 15 minutes, at least 20 requests came in and more than half of them failed."
+    },
+    "sign-in": {
+      "name": "Sign-in",
+      "description": "Signing in to your openJII account.",
+      "details": "Signing in with an email code needs our email service. Every five minutes the platform tests its connection to that service. Sign-in is degraded when the test fails."
+    },
+    "platform": {
+      "name": "Platform",
+      "description": "The openJII service behind the website and the field app.",
+      "details": "Every minute we send a test request to the platform and time the answer. Every five minutes the platform also checks its own connections to the database and to Databricks, our data processing provider. The platform is degraded after two slow or failed test requests in a row, or when the connection to Databricks fails. A test request is slow if it takes more than 2 seconds. The platform is down after three failed test requests in a row, when the connection to the database fails, or when, in the last 15 minutes, at least 10 requests ended in a server error and those were more than half of all requests."
+    },
+    "data-intake": {
+      "name": "Data intake",
+      "description": "Measurements from devices and the field app arriving at openJII.",
+      "details": "Data intake is degraded when, in the last 15 minutes, the step that stores incoming measurements failed to store one, the device network refused an upload, or too many measurements arrived at once and some were held back. A failed check of the platform's link to the device network also makes it degraded. It is down when more than five measurements could not be stored in the last 15 minutes."
+    },
+    "data-delivery": {
+      "name": "Data delivery",
+      "description": "New measurements appearing in your experiments.",
+      "details": "Every half hour the data pipeline reports how long it took to add the slowest few new measurements to experiments. Data delivery is degraded when that took more than 15 minutes, when the pipeline is more than 10 minutes behind in reading new measurements, or when the connection to Databricks, our data processing provider, fails. It is down when it took more than an hour, or when the pipeline has not reported for 75 minutes."
+    },
+    "macro-processing": {
+      "name": "Macro processing",
+      "description": "Macros running on your measurements.",
+      "details": "Macro processing is degraded when a macro failed in the last hour because of a problem on our side, when a backlog of measurements is still waiting for macro results, or when the slowest few results arrived more than 5 minutes after their measurements. It is down when the slowest few arrived more than 30 minutes after their measurements. Errors in a researcher's own macro code do not count."
+    },
+    "exports": {
+      "name": "Exports",
+      "description": "Downloading experiment data.",
+      "details": "This counts exports that fail because of a problem on our side, not because of the data or the request. Exports are degraded when any export failed that way in the last hour."
+    }
+  },
+  "day": {
+    "noRecord": "No record, because checks began on {{date}}.",
+    "noDowntime": "No downtime recorded on this day.",
+    "related": "Related",
+    "partial": "Today, so far",
+    "row": {
+      "outage": "Outage",
+      "degraded": "Degraded",
+      "maintenance": "Maintenance",
+      "unknown": "Checks could not run"
+    },
+    "aria": {
+      "noRecord": "{{date}}: no record, checks began on {{began}}",
+      "noDowntime": "{{date}}: no downtime recorded",
+      "summary": "{{date}}: {{summary}}",
+      "outage": "Outage for {{duration}}",
+      "degraded": "Degraded for {{duration}}",
+      "maintenance": "Maintenance for {{duration}}",
+      "unknown": "checks could not run for {{duration}}",
+      "related": "related incidents: {{titles}}",
+      "todayDate": "{{date}}, today so far"
+    }
+  },
+  "howWeMeasure": {
+    "title": "How we measure",
+    "states": "Degraded means a component is slow or only partly working. Outage, also called down, means it is not working.",
+    "checks": "We test the website and the platform from outside every minute. For the rest we use the platform's own numbers. The platform checks its connections every five minutes, and the data pipeline reports every half hour. Open a component to see exactly what counts as degraded and as down.",
+    "uptime": "Availability is the share of minutes in the last 90 UTC days in which a component was not down. Minutes when our own checks could not run count as down. Degraded time is shown beside it. Planned maintenance appears on the bars but is left out of the figure. A day is marked Degraded from five degraded minutes, and shorter blips stay visible in that day's details."
+  },
+  "past": {
+    "title": "Past incidents",
+    "empty": "No incidents in the last 90 days."
+  },
+  "footer": "This page runs separately from openJII, so it should stay reachable when the platform is down."
+}
