@@ -82,8 +82,25 @@ async function restoreState(): Promise<void> {
   }
 }
 
-// A day-old position still names the timezone, and reading it needs no network.
+// Time sync waits for the timezone before it asks the server for the time.
+const FRESH_FIX_TIMEOUT_MS = 10_000;
+// When no current fix arrives, as offline, a day-old position still names the timezone.
 const LAST_KNOWN_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+async function getFreshPosition(): Promise<Location.LocationObject | null> {
+  try {
+    return await Promise.race([
+      Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Low,
+        mayShowUserSettingsDialog: false,
+      }),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), FRESH_FIX_TIMEOUT_MS)),
+    ]);
+  } catch (err) {
+    log.warn("No current position for the timezone", { err: (err as Error)?.message });
+    return null;
+  }
+}
 
 // Never prompts, for the permission or for Android's location settings: time
 // sync starts before sign-in, and the measurement flow asks when it starts.
@@ -96,11 +113,12 @@ async function resolveTimezone(): Promise<string> {
     }
 
     const location =
-      (await Location.getLastKnownPositionAsync({ maxAge: LAST_KNOWN_MAX_AGE_MS })) ??
-      (await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Low,
-        mayShowUserSettingsDialog: false,
-      }));
+      (await getFreshPosition()) ??
+      (await Location.getLastKnownPositionAsync({ maxAge: LAST_KNOWN_MAX_AGE_MS }));
+    if (!location) {
+      log.warn("No position for the timezone, falling back to UTC");
+      return "UTC";
+    }
 
     return tzLookup(location.coords.latitude, location.coords.longitude);
   } catch (err) {

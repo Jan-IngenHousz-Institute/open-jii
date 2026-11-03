@@ -9,7 +9,7 @@ AWS signing and scientific timestamps both depend on reliable time. A phone cloc
 
 ## Synchronization sequence
 
-1. `expo-location` supplies coordinates when location permission is available: the last known position if it is at most a day old, which works offline, or else a fresh low-accuracy fix that never opens Android's location settings dialog.
+1. `expo-location` supplies coordinates when location permission is available: a current low-accuracy fix, waited for at most 10 seconds and never through Android's location settings dialog, or else the last known position if it is at most a day old, which also works offline.
 2. `@photostructure/tz-lookup` resolves an IANA timezone locally from those coordinates. If permission or location lookup fails, the implementation falls back to `UTC`.
 3. The app calls the unauthenticated backend `GET /health/time` endpoint and measures request round-trip time.
 4. It estimates server time at the response midpoint and stores `offsetMs = estimatedServerTime - deviceReceiveTime` with the timezone.
