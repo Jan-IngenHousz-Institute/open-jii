@@ -57,7 +57,8 @@ unset ADMIN_PASSWORD
 ```
 
 A row that only the feed's normalisation can fix cannot be sent as it is, and neither can one whose
-message says it was cut; both stay missing until a reload from gold exists.
+message says it was cut. Once the feed's code can send them, a
+[reload](procedures/serving-store-reload.md) of their experiments does.
 
 ## Closing
 

@@ -2043,15 +2043,17 @@ locals {
   } : {}
 }
 
-# Where the pipelines' feed sends gold's changes, and the credentials it inserts with
+# Where the pipelines' feed sends gold's changes, and the credentials the feed and the reload use
 module "serving_store_secret_scope" {
   source = "../../modules/databricks/secret_scope"
 
   scope_name = "serving-store-${var.environment}"
   secrets = {
-    "url"             = module.serving_store.url
-    "writer-username" = module.serving_store.writer_credentials.username
-    "writer-password" = module.serving_store.writer_credentials.password
+    "url"               = module.serving_store.url
+    "writer-username"   = module.serving_store.writer_credentials.username
+    "writer-password"   = module.serving_store.writer_credentials.password
+    "reloader-username" = module.serving_store.reloader_credentials.username
+    "reloader-password" = module.serving_store.reloader_credentials.password
   }
 
   acl_principals  = [module.node_service_principal.service_principal_application_id]
@@ -2060,6 +2062,136 @@ module "serving_store_secret_scope" {
   providers = {
     databricks.workspace = databricks.workspace
   }
+}
+
+# Two write partitions at a time on one worker, so a reload leaves the store's second core to its
+# merges and reads, behind a driver that only collects counts.
+module "serving_store_reload_cluster_policy" {
+  source = "../../modules/databricks/cluster-policy"
+
+  name        = "serving-store-reload-cluster-policy-${var.environment}"
+  description = "Cluster policy for the serving store reload job with pre-installed libraries"
+
+  definition = jsonencode({
+    cluster_type = {
+      type  = "fixed"
+      value = "job"
+    }
+    node_type_id = {
+      type  = "fixed"
+      value = "r6id.large"
+    }
+    driver_node_type_id = {
+      type  = "fixed"
+      value = "m7i.large"
+    }
+    num_workers = {
+      type  = "fixed"
+      value = 1
+    }
+    data_security_mode = {
+      type  = "fixed"
+      value = "SINGLE_USER"
+    }
+    "aws_attributes.availability" = {
+      type  = "fixed"
+      value = "SPOT_WITH_FALLBACK"
+    }
+    "aws_attributes.first_on_demand" = {
+      type  = "fixed"
+      value = 1
+    }
+    "aws_attributes.zone_id" = {
+      type  = "fixed"
+      value = "auto"
+    }
+    "aws_attributes.spot_bid_price_percent" = {
+      type  = "fixed"
+      value = 100
+    }
+  })
+
+  libraries = local.pipeline_libraries
+
+  permissions = [
+    {
+      service_principal_name = module.node_service_principal.service_principal_application_id
+      permission_level       = "CAN_USE"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_workspace]
+}
+
+# Run by an operator, never on a schedule (docs/runbooks/procedures/serving-store-reload.md).
+# Classic compute, since only the VPC reaches the store.
+module "serving_store_reload_job" {
+  source = "../../modules/databricks/job"
+
+  name        = "Serving-Store-Reload-PROD"
+  description = "Replaces the serving store's rows for one experiment, or every experiment, with gold's"
+
+  max_concurrent_runs = 1
+  use_serverless      = false
+  continuous          = false
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Whoever started the run reads why it failed before running it again.
+  task_retry_config = {
+    retries          = 0
+    retry_on_timeout = false
+  }
+
+  tasks = [
+    {
+      key           = "reload_serving_store"
+      task_type     = "notebook"
+      compute_type  = "new_cluster"
+      notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/serving_store_reload_task"
+
+      node_type_id        = "r6id.large"
+      driver_node_type_id = "m7i.large"
+      num_workers         = 1
+      data_security_mode  = "SINGLE_USER"
+      single_user_name    = module.node_service_principal.service_principal_application_id
+      policy_id           = module.serving_store_reload_cluster_policy.policy_id
+
+      parameters = {
+        "CATALOG_NAME"   = module.databricks_catalog.catalog_name
+        "CENTRAL_SCHEMA" = "centrum"
+        "ENVIRONMENT"    = var.environment
+        # Given per run: an experiment's id or all, and one store table or all.
+        "EXPERIMENT_ID" = ""
+        "TABLE"         = "all"
+      }
+    }
+  ]
+
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.serving_store_secret_scope]
 }
 
 module "secrets_rotation_trigger" {

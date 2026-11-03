@@ -81,9 +81,15 @@ resource "databricks_job" "this" {
       dynamic "new_cluster" {
         for_each = (!var.use_serverless && task.value.task_type == "notebook" && task.value.compute_type == "new_cluster") ? [1] : []
         content {
-          num_workers   = task.value.single_node ? 0 : task.value.num_workers
-          spark_version = data.databricks_spark_version.latest_lts.id
-          node_type_id  = task.value.node_type_id != null ? task.value.node_type_id : data.databricks_node_type.smallest.id
+          num_workers         = task.value.single_node ? 0 : task.value.num_workers
+          spark_version       = data.databricks_spark_version.latest_lts[0].id
+          node_type_id        = task.value.node_type_id != null ? task.value.node_type_id : data.databricks_node_type.smallest[0].id
+          driver_node_type_id = task.value.driver_node_type_id
+          data_security_mode  = task.value.data_security_mode
+          single_user_name    = task.value.single_user_name
+
+          policy_id                   = task.value.policy_id
+          apply_policy_default_values = task.value.policy_id != null ? true : null
 
           # Merge global spark configs with task-specific configs, with task configs taking precedence
           spark_conf = merge(

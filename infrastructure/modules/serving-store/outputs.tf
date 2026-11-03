@@ -14,8 +14,14 @@ output "writer_credentials" {
   sensitive   = true
 }
 
+output "reloader_credentials" {
+  description = "Username and password the reload job inserts and deletes with"
+  value       = { username = local.users.reloader.name, password = random_password.user["reloader"].result }
+  sensitive   = true
+}
+
 output "credentials_secret_arns" {
-  description = "Secrets Manager secret per role (admin, writer, reader), each holding username and password"
+  description = "Secrets Manager secret per role (admin, writer, reloader, reader), each holding username and password"
   value       = { for role, credentials in module.credentials : role => credentials.secret_arn }
   sensitive   = true
 }
