@@ -38,6 +38,32 @@ describe("buildAggregateExpression", () => {
     expect(alias).toBe(`value_${fn}`);
   });
 
+  it("counts unique sensor IDs in each hour", () => {
+    expect(
+      wrapWithAggregation("SELECT * FROM readings", {
+        aggregation: {
+          groupBy: [{ column: "recorded_at", timeBucket: "hour" }],
+          functions: [{ column: "sensor_id", function: "count_distinct", alias: "sensors" }],
+        },
+      }),
+    ).toBe(
+      "SELECT date_trunc('HOUR', `recorded_at`) AS `recorded_at_hour`, COUNT(DISTINCT `sensor_id`) AS `sensors` FROM (SELECT * FROM readings) GROUP BY date_trunc('HOUR', `recorded_at`)",
+    );
+    expect(
+      buildAggregateExpression({ column: "sensor.id", function: "count_distinct" }, builder),
+    ).toEqual({
+      sql: "COUNT(DISTINCT `sensor`.`id`)",
+      alias: "sensor.id_count_distinct",
+    });
+    expect(
+      wrapWithAggregation("SELECT * FROM readings", {
+        aggregation: { functions: [{ column: "sensor_id", function: "count_distinct" }] },
+      }),
+    ).toBe(
+      "SELECT COUNT(DISTINCT `sensor_id`) AS `sensor_id_count_distinct` FROM (SELECT * FROM readings)",
+    );
+  });
+
   it("compiles count(*) without escaping the wildcard", () => {
     const { sql, alias } = buildAggregateExpression({ column: "*", function: "count" }, builder);
     expect(sql).toBe("COUNT(*)");

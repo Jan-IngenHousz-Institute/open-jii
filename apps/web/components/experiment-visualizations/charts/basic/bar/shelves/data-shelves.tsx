@@ -24,11 +24,11 @@ function BarXShelf({ form, columns }: ChartPanelProps) {
 }
 
 function BarYShelf({ form, columns }: ChartPanelProps) {
-  const yColumns = useMemo(() => filterColumnsForRole(columns, "bar", "y"), [columns]);
   return (
     <YAxisShelf
       form={form}
-      columns={yColumns}
+      columns={columns}
+      chartType="bar"
       showCartesianControls
       defaultTraceType="bar"
       showErrorColumn

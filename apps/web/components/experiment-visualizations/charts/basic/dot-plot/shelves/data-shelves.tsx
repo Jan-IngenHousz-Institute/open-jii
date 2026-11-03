@@ -20,8 +20,7 @@ function DotPlotXShelf({ form, columns }: ChartPanelProps) {
 }
 
 function DotPlotYShelf({ form, columns }: ChartPanelProps) {
-  const yColumns = useMemo(() => filterColumnsForRole(columns, "dot-plot", "y"), [columns]);
-  return <YAxisShelf form={form} columns={yColumns} showErrorColumn />;
+  return <YAxisShelf form={form} columns={columns} chartType="dot-plot" showErrorColumn />;
 }
 
 function DotPlotGroupShelf({ form, columns, flat }: ChartPanelProps) {
