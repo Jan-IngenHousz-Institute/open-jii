@@ -1,6 +1,9 @@
 import type { ColumnKind } from "../../../transforms/column-type-utils";
 import { getColumnKind } from "../../../transforms/column-type-utils";
-import type { ExperimentDataColumn } from "../data/experiment-data.schema";
+import type {
+  ExperimentAggregationFunction,
+  ExperimentDataColumn,
+} from "../data/experiment-data.schema";
 import type {
   ExperimentChartDataConfig,
   ExperimentChartType,
@@ -258,9 +261,11 @@ export function filterColumnsForRole(
   columns: ExperimentDataColumn[],
   chartType: ExperimentChartType,
   role: ExperimentRole,
+  aggregate?: ExperimentAggregationFunction,
 ): ExperimentDataColumn[] {
   const entry = getRoleContract(chartType)?.[role];
-  const accepted = entry?.acceptedKinds ?? ANY_PLOTTABLE;
+  const countsValues = role === "y" && (aggregate === "count" || aggregate === "count_distinct");
+  const accepted = countsValues ? ANY_PLOTTABLE : (entry?.acceptedKinds ?? ANY_PLOTTABLE);
   return columns.filter((col) => {
     const kind = getColumnKind(col.type_text);
     if (!kind || kind === "complex") return false;
