@@ -17,7 +17,7 @@ on:
         description: "OpenTofu version to use"
         required: false
         type: string
-        default: "1.12.11"
+        default: "1.12.9"
       ref:
         description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
         required: false
@@ -39,7 +39,7 @@ on:
         description: "OpenTofu version to use"
         required: false
         type: string
-        default: "1.12.11"
+        default: "1.12.9"
 
 concurrency:
   group: opentofu-${{ inputs.environment }}

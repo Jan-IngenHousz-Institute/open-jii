@@ -588,7 +588,7 @@ jobs:
         with:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region: ${{ secrets.AWS_REGION }}
-          tofu_version: "1.12.11"
+          tofu_version: "1.12.9"
 
       - name: OpenTofu Format Check
         uses: ./.github/actions/tofu/tofu-fmt-check
