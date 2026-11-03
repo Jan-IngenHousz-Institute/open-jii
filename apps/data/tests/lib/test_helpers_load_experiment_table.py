@@ -20,8 +20,12 @@ _TABLES = {
            CAST(NULL AS STRING)),
           ('e1', 'upload-1', 'upload', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING),
            'OBJECT<plot: STRING, yield: DOUBLE>'),
+          ('e2', 'upload-1', 'upload', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING),
+           'OBJECT<plot: STRING, yield: DOUBLE>'),
           ('e1', 'upload-big', 'upload', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING),
            'OBJECT<plot: STRING, yield: DOUBLE>'),
+          ('e1', 'upload-nested', 'upload', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING),
+           'OBJECT<id: BIGINT, counts: ARRAY<DOUBLE>, note: VOID>'),
           ('e1', 'mystery', 'static', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING),
            CAST(NULL AS STRING))
         AS t(experiment_id, identifier, table_type, macro_schema, questions_schema, custom_metadata_schema,
@@ -34,7 +38,13 @@ _TABLES = {
           (2L, 'e1', 'upload-2', 'Greenhouse', 'up-b', TIMESTAMP'2026-10-01 11:00:00',
            parse_json('{"plot": "B1", "yield": 1.0}')),
           (3L, 'e1', 'upload-1', 'Field trial', 'up-a', TIMESTAMP'2026-10-01 09:00:00',
-           parse_json('{"plot": "C1", "yield": 3.0}'))
+           parse_json('{"plot": "C1", "yield": 3.0}')),
+          (4L, 'e2', 'upload-1', 'Other experiment', 'up-d', TIMESTAMP'2026-10-01 08:00:00',
+           parse_json('{"plot": "D1", "yield": 99.0}')),
+          (5L, 'e1', 'upload-nested', 'Nested trial', 'up-e', TIMESTAMP'2026-10-03 08:00:00',
+           parse_json('{"id": 200, "counts": [2.0], "note": null}')),
+          (6L, 'e1', 'upload-nested', 'Nested trial', 'up-e', TIMESTAMP'2026-10-02 08:00:00',
+           parse_json('{"id": 100, "counts": [1.0, 2.0], "note": null}'))
         AS t(id, experiment_id, upload_table_id, upload_table_name, upload_id, uploaded_at, uploaded_data)
         UNION ALL
         -- One upload of 300 rows, which all share its upload time.
@@ -73,6 +83,22 @@ def test_upload_table_reads_its_own_uploaded_rows_ordered_by_upload_time(schema:
     rows = _load("upload-1", schema).collect()
 
     assert [(row.plot, row["yield"]) for row in rows] == [("C1", 3.0), ("A1", 2.5)]
+
+
+def test_upload_table_does_not_include_rows_from_another_experiment(schema: str) -> None:
+    rows = load_experiment_table("e2", "upload-1", _CATALOG, schema_name=schema).collect()
+
+    assert [row.plot for row in rows] == ["D1"]
+
+
+def test_upload_payload_preserves_arrays_and_nulls_without_shadowing_row_ids(schema: str) -> None:
+    table = _load("upload-nested", schema)
+
+    assert table.columns == ["id", "uploaded_at", "id_upload", "counts", "note"]
+    assert [(row.id, row.id_upload, row.counts, row.note) for row in table.collect()] == [
+        (6, 100, [1.0, 2.0], None),
+        (5, 200, [2.0], None),
+    ]
 
 
 def test_parts_split_the_rows_into_that_many_partitions_in_row_order(schema: str) -> None:
