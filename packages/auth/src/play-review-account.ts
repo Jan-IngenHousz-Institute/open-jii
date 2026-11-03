@@ -9,12 +9,20 @@ interface PlayReviewSettings {
   otpLength: number;
 }
 
+// Reviewers sign in a handful of times a day. With at most three backend tasks counting on their
+// own, a guesser gets a few dozen tries a day, which puts six digits decades away on average.
+const DAILY_SIGN_IN_ATTEMPTS_PER_TASK = 10;
+
 /**
  * The address Google Play's reviewers sign in with. Play requires reusable credentials that bypass
  * one-time codes, so every sign-in code issued to this address is the configured code and no email
- * goes out. Verification still runs through Better Auth, attempt limits included.
+ * goes out. Verification still runs through Better Auth, attempt limits included, and the address
+ * gets a daily cap on sign-in attempts that a new code does not reset.
  */
 export class PlayReviewAccount {
+  private attemptsDay = "";
+  private attempts = 0;
+
   private constructor(
     private readonly email: string,
     private readonly otp: string,
@@ -59,5 +67,20 @@ export class PlayReviewAccount {
     }
 
     return undefined;
+  }
+
+  /**
+   * Counts one sign-in attempt for the review address and says whether it is within today's cap,
+   * in UTC days. The count lives in this process, so each backend task has its own.
+   */
+  recordSignInAttempt(now = new Date()): boolean {
+    const today = now.toISOString().slice(0, 10);
+    if (today !== this.attemptsDay) {
+      this.attemptsDay = today;
+      this.attempts = 0;
+    }
+
+    this.attempts += 1;
+    return this.attempts <= DAILY_SIGN_IN_ATTEMPTS_PER_TASK;
   }
 }

@@ -158,4 +158,49 @@ describe("openJiiEmailOTP", () => {
 
     expect(user.email).toBe(REVIEW_EMAIL);
   });
+
+  it("refuses the review sign-in once the day's attempts are used up, even with the right code", async () => {
+    const { requestCode, signIn, log } = createAuth(configured);
+    for (let attempt = 0; attempt < 10; attempt++) {
+      await requestCode(REVIEW_EMAIL, "sign-in");
+      await signIn(REVIEW_EMAIL, REVIEW_OTP);
+    }
+
+    await requestCode(REVIEW_EMAIL, "sign-in");
+
+    await expect(signIn(REVIEW_EMAIL, REVIEW_OTP)).rejects.toThrow("Too many sign-in attempts");
+    expect(log).toHaveBeenCalledWith(
+      "warn",
+      "Play review sign-in refused: today's attempts are used up",
+    );
+  });
+
+  it("does not count other addresses' sign-ins against the review cap", async () => {
+    const { requestCode, signIn } = createAuth(configured);
+    for (let attempt = 0; attempt < 11; attempt++) {
+      const otp = await requestCode(OTHER_EMAIL, "sign-in");
+      if (!otp) {
+        throw new Error("Expected a sign-in code for the other address");
+      }
+
+      await signIn(OTHER_EMAIL, otp);
+    }
+
+    await requestCode(REVIEW_EMAIL, "sign-in");
+    const { user } = await signIn(REVIEW_EMAIL, REVIEW_OTP);
+
+    expect(user.email).toBe(REVIEW_EMAIL);
+  });
+
+  it("logs a failed review sign-in with its reason and without the address", async () => {
+    const { requestCode, signIn, log } = createAuth(configured);
+    await requestCode(REVIEW_EMAIL, "sign-in");
+
+    await expect(signIn(REVIEW_EMAIL, "000000")).rejects.toThrow("Invalid OTP");
+
+    expect(log).toHaveBeenCalledWith("warn", "Play review sign-in failed", {
+      reason: "INVALID_OTP",
+    });
+    expect(JSON.stringify(log.mock.calls)).not.toContain(REVIEW_EMAIL);
+  });
 });

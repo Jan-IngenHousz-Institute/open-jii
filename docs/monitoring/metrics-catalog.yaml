@@ -127,6 +127,9 @@ passes:
     note: >-
       a synthetic message sent through the real ingest rule every minute, so a stopped ingest path
       reaches someone at a quiet hour, how long it takes, and the publisher's own errors
+  - date: 2026-11-03
+    range: [138, 138]
+    note: failed and refused sign-ins for the Google Play review address, since nothing else shows someone trying its fixed code
 
 metrics:
   # Ingest path
@@ -2465,3 +2468,25 @@ metrics:
       The publisher runs every minute and is not retried, so one failed run costs one minute of the
       check and the rule waits for more than two in five minutes. While it fires, a stalled health
       check (132) may be the publisher and not the path.
+
+  - num: 138
+    id: play-review-sign-in-failures
+    name: Play review sign-in failures
+    family: observability
+    area: api
+    source: aws
+    phase: P3
+    active: true
+    slots: [alert, exception]
+    severity: warning
+    signal:
+      namespace: OpenJII/Backend
+      metric: PlayReviewSignInFailures
+      stat: Sum
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/play-review-sign-in-failures.md
+    notes: >-
+      Failed and refused sign-ins for the Google Play review address, from a metric filter on the
+      backend's log group (infrastructure/modules/play-review-sign-in). Reviewers paste the code from
+      Play Console, so any count is most likely someone else trying it. The auth server refuses the
+      address after ten attempts a day per backend task.

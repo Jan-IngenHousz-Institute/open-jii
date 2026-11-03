@@ -106,18 +106,6 @@ variable "orcid_oauth_client_secret" {
   sensitive   = true
 }
 
-variable "play_review_sign_in" {
-  description = "Whether the generated Play review address signs in with its fixed code"
-  type        = bool
-  default     = false
-}
-
-variable "play_review_otp_generation" {
-  description = "Bump to rotate the Play review sign-in code"
-  type        = number
-  default     = 1
-}
-
 # Backend x Databricks webhook secrets
 variable "backend_webhook_api_key_id" {
   description = "Databricks webhook API key ID"

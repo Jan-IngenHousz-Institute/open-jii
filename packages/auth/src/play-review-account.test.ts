@@ -90,3 +90,27 @@ describe("PlayReviewAccount", () => {
     expect(account.isReviewSignIn({ email: "someone@example.com", type: "sign-in" })).toBe(false);
   });
 });
+
+describe("PlayReviewAccount.recordSignInAttempt", () => {
+  const MORNING = new Date("2026-11-03T08:00:00Z");
+  const LATE_EVENING = new Date("2026-11-03T23:59:59Z");
+  const NEXT_DAY = new Date("2026-11-04T00:00:00Z");
+
+  it("allows ten sign-in attempts a UTC day and refuses the eleventh", () => {
+    const account = configuredAccount();
+
+    const allowed = Array.from({ length: 10 }, () => account.recordSignInAttempt(MORNING));
+
+    expect(allowed.every(Boolean)).toBe(true);
+    expect(account.recordSignInAttempt(LATE_EVENING)).toBe(false);
+  });
+
+  it("starts counting again on the next UTC day", () => {
+    const account = configuredAccount();
+    for (let attempt = 0; attempt < 11; attempt++) {
+      account.recordSignInAttempt(MORNING);
+    }
+
+    expect(account.recordSignInAttempt(NEXT_DAY)).toBe(true);
+  });
+});

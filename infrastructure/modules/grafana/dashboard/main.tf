@@ -582,6 +582,91 @@ EOT
       service   = "backend"
     }
   }
+
+  # Catalog entry 138. Reviewers paste the code from Play Console, so a failed or refused sign-in
+  # for the review address is almost certainly someone else trying it.
+  rule {
+    name      = "Play Review Sign-In Failures"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Backend"
+        metricName = "PlayReviewSignInFailures"
+        statistic  = "Sum"
+        period     = "300"
+        dimensions = {}
+        matchExact = true
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "max"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "A sign-in for the Google Play review address failed or was refused. Reviewers have the code, so someone else may be guessing it."
+      summary          = "Someone is trying the Play review sign-in"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/play-review-sign-in-failures.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["play-review-sign-in-failures"]
+    }
+    labels = {
+      metric_id = "play-review-sign-in-failures"
+      severity  = "warning"
+      service   = "backend"
+    }
+  }
 }
 
 # CloudFront Alerts
