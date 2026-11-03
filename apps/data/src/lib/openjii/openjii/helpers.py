@@ -217,8 +217,9 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
 
     # A capture that arrived more than once is stored once per arrival under one id, so an export
     # keeps the copy processed last, as the serving store keeps the newest, and with it an edit the
-    # phone sent again. Rows from before the 64-bit ids can share an id with a different capture, so a
-    # copy must also share its timestamp and device, as in the serving store's key.
+    # phone sent again. Copies silver processed in one micro-batch share a processing time, and which
+    # of those an export keeps is arbitrary. Rows from before the 64-bit ids can share an id with a
+    # different capture, so a copy must also share its timestamp and device, as in the serving store's key.
     copy_key = _COPY_KEYS.get(table_type)
     if copy_key is not None:
         newest_first = Window.partitionBy(*copy_key).orderBy(col("processed_timestamp").desc())

@@ -409,8 +409,8 @@ class OutboxImpl implements Outbox {
 
     // Phase 2 - record. PUBACK is in (message delivered), so a DB-write failure
     // must NOT mark the row failed. Emit the successful settle regardless; if the
-    // write throws the row stays "pending" and re-publishes next drain (deduped
-    // downstream via _client_id).
+    // write throws the row stays "pending" and re-publishes next drain. The copy
+    // carries the same _client_id, so it gets the same row id downstream.
     try {
       await markAsSuccessful(id);
       trace?.event("marked_successful");
