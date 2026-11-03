@@ -1,0 +1,16 @@
+{
+  "name": "status-publisher",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Checks the platform every minute and publishes the public status page's data",
+  "main": "index.js",
+  "scripts": {
+    "sync": "rm -rf ./lib && cp -R ../../../../../packages/monitoring/dist ./lib",
+    "build": "npm run sync && npm ci --omit=dev && rm -f function.zip && zip -Xr function.zip index.js package.json lib node_modules > /dev/null"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.0.0",
+    "@aws-sdk/client-s3": "^3.0.0",
+    "zod": "^4.0.0"
+  }
+}

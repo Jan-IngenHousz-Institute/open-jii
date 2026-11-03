@@ -1482,6 +1482,9 @@ importers:
       js-yaml:
         specifier: ^4.3.2
         version: 4.3.2
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*

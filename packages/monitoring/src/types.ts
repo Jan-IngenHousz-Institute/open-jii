@@ -41,6 +41,8 @@ export interface MetricSignal {
   stat?: string;
   region?: string;
   dimensions?: Record<string, string>;
+  /** A request count read beside the signal, for a rule that weighs a rate by traffic. */
+  request_count?: { metric: string; stat: string; period?: number };
   /**
    * CloudWatch period in seconds, for a signal counted per period rather than read as its
    * latest value. The weekly report compares its last two periods.

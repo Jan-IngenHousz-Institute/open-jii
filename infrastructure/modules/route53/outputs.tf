@@ -35,10 +35,15 @@ output "docs_domain" {
   value       = "docs.${local.base_domain}"
 }
 
+output "status_domain" {
+  description = "Public status page domain name for environment"
+  value       = "status.${local.base_domain}"
+}
+
 output "cloudfront_certificate_arns" {
   description = "A map of CloudFront domain logical names to their ACM certificate ARNs in us-east-1."
   value = var.existing_cloudfront_certificate_arns != null ? var.existing_cloudfront_certificate_arns : {
-    for key, cert in aws_acm_certificate.cloudfront_certs : key => cert.arn
+    for key, validation in aws_acm_certificate_validation.cloudfront_certs_validation : key => validation.certificate_arn
   }
 }
 
