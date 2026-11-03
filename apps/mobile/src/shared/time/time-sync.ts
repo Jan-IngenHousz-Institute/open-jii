@@ -82,17 +82,43 @@ async function restoreState(): Promise<void> {
   }
 }
 
+// Time sync waits for the timezone before it asks the server for the time.
+const FRESH_FIX_TIMEOUT_MS = 10_000;
+// When no current fix arrives, as offline, a day-old position still names the timezone.
+const LAST_KNOWN_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+async function getFreshPosition(): Promise<Location.LocationObject | null> {
+  try {
+    return await Promise.race([
+      Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Low,
+        mayShowUserSettingsDialog: false,
+      }),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), FRESH_FIX_TIMEOUT_MS)),
+    ]);
+  } catch (err) {
+    log.warn("No current position for the timezone", { err: (err as Error)?.message });
+    return null;
+  }
+}
+
+// Never prompts, for the permission or for Android's location settings: time
+// sync starts before sign-in, and the measurement flow asks when it starts.
 async function resolveTimezone(): Promise<string> {
   try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
+    const { status } = await Location.getForegroundPermissionsAsync();
     if (status !== "granted") {
-      log.warn("Location permission not granted, falling back to UTC");
+      log.info("Location permission not granted, falling back to UTC");
       return "UTC";
     }
 
-    const location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Low,
-    });
+    const location =
+      (await getFreshPosition()) ??
+      (await Location.getLastKnownPositionAsync({ maxAge: LAST_KNOWN_MAX_AGE_MS }));
+    if (!location) {
+      log.warn("No position for the timezone, falling back to UTC");
+      return "UTC";
+    }
 
     return tzLookup(location.coords.latitude, location.coords.longitude);
   } catch (err) {
@@ -118,6 +144,21 @@ async function maybeResolveTimezone(): Promise<string> {
   return resolveTimezone();
 }
 
+/**
+ * Resolves the timezone right after a location grant. The next sync would too,
+ * but it skips the lookup while offline.
+ */
+export async function refreshTimezone(): Promise<void> {
+  const timezone = await maybeResolveTimezone();
+  const isNewTimezone = timezone !== "UTC" && timezone !== state.timezone;
+  if (!isNewTimezone) {
+    return;
+  }
+
+  state = { ...state, timezone };
+  await persistState();
+}
+
 async function fetchServerTime(): Promise<number> {
   const client = getApiClient();
   const result = await client.health.getTime();
@@ -127,6 +168,7 @@ async function fetchServerTime(): Promise<number> {
 
 async function performSync(isInitial = false): Promise<void> {
   const t0 = Date.now();
+  const timezoneAtStart = state.timezone;
   const networkState = await Network.getNetworkStateAsync();
   if (!networkState.isInternetReachable) {
     log.info("skipping sync — device is offline", { is_initial: isInitial });
@@ -134,7 +176,7 @@ async function performSync(isInitial = false): Promise<void> {
   }
 
   try {
-    const timezone = await maybeResolveTimezone();
+    const resolvedTimezone = await maybeResolveTimezone();
     const beforeFetch = Date.now();
     const serverUtcMs = await fetchServerTime();
     const afterFetch = Date.now();
@@ -142,6 +184,10 @@ async function performSync(isInitial = false): Promise<void> {
     const roundTripMs = afterFetch - beforeFetch;
     const estimatedServerNow = serverUtcMs + roundTripMs / 2;
     const offsetMs = estimatedServerNow - afterFetch;
+
+    // refreshTimezone() can store a newer timezone while this sync is out.
+    const isTimezoneRefreshed = state.timezone !== timezoneAtStart;
+    const timezone = isTimezoneRefreshed ? state.timezone : resolvedTimezone;
 
     state = {
       offsetMs,

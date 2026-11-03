@@ -111,6 +111,8 @@ def send_slack_notifications(event):
             ]
         }
 
+        # The webhook's URL is the secret, and a request error's text or the response may carry it, so
+        # only the error's type and the response's status are printed.
         try:
             response = requests.post(
                 url=SLACK_WEBHOOK_URL,
@@ -118,6 +120,12 @@ def send_slack_notifications(event):
                 json=payload,
                 timeout=10,
             )
+        except requests.RequestException as e:
+            print(f"Failed to send Slack notification: {type(e).__name__}")
+            return
+
+        # Slack confirms delivery with 200 only; requests' `ok` would also pass a redirect.
+        if response.status_code == requests.codes.ok:
             print(f"Slack notification sent: {event_type} - {state}")
-        except Exception as e:
-            print(f"Failed to send Slack notification: {e}")
+        else:
+            print(f"Slack refused the notification with status {response.status_code}")
