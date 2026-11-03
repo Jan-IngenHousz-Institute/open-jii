@@ -9,6 +9,7 @@ import {
 import { ResetSortingButton } from "@/components/overview-table/reset-sorting-button";
 import { OverviewToolbar } from "@/components/overview-toolbar";
 import { useListFilterLabels } from "@/hooks/useListFilterLabels";
+import { useOverviewSortLabels } from "@/hooks/useOverviewSortLabels";
 import type { RowData } from "@tanstack/react-table";
 
 import type { PaginatedList } from "@repo/api/shared/listing";
@@ -76,6 +77,7 @@ export function ResourceList<Item extends RowData, F extends string>({
 }: ResourceListProps<Item, F>) {
   const { t } = useTranslation("common");
   const filterLabels = useListFilterLabels();
+  const sortLabels = useOverviewSortLabels();
   const hasSearch = list.debouncedSearch.trim() !== "";
   const emptyMessage = list.hasActiveFilters
     ? emptyMessages.filtered
@@ -110,12 +112,7 @@ export function ResourceList<Item extends RowData, F extends string>({
       >
         <OverviewTable
           columns={columns}
-          sorting={createOverviewTableSorting(list.sort, list.toggleSort, {
-            unsorted: t("common.sortUnsorted"),
-            asc: t("common.sortAscending"),
-            desc: t("common.sortDescending"),
-            secondary: t("common.sortSecondary"),
-          })}
+          sorting={createOverviewTableSorting(list.sort, list.toggleSort, sortLabels)}
           items={list.data?.items}
           isLoading={list.isLoading}
           error={list.error}

@@ -3,11 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
-import {
-  DEFAULT_RESOURCE_FILTER,
-  filterAndSortResources,
-  hasActiveFilters,
-} from "./organization-resource-filter";
+import type { ResourceFilterState } from "./organization-resource-filter";
+import { filterAndSortResources } from "./organization-resource-filter";
+
+const DEFAULT_RESOURCE_FILTER: ResourceFilterState = { query: "", types: [], sort: "recent" };
 
 function resource(
   name: string,
@@ -137,7 +136,6 @@ describe("filterAndSortResources", () => {
         resource("Middle", { updatedAt: "2026-02-01T00:00:00.000Z" }),
       ];
 
-      expect(DEFAULT_RESOURCE_FILTER.sort).toBe("recent");
       expect(namesOf(filterAndSortResources(rows, DEFAULT_RESOURCE_FILTER))).toEqual([
         "Newest",
         "Middle",
@@ -191,19 +189,5 @@ describe("filterAndSortResources", () => {
     filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, sort: "name" });
 
     expect(namesOf(rows)).toEqual(["Older", "Newest"]);
-  });
-});
-
-describe("hasActiveFilters", () => {
-  it("is false for the default state and true once a type is picked", () => {
-    expect(hasActiveFilters(DEFAULT_RESOURCE_FILTER)).toBe(false);
-    expect(hasActiveFilters({ ...DEFAULT_RESOURCE_FILTER, types: ["macro"] })).toBe(true);
-  });
-
-  it("ignores the search and the sort", () => {
-    // As on the resource lists, "Clear filters" clears filters and leaves the search alone,
-    // and sort arranges rather than narrows.
-    expect(hasActiveFilters({ ...DEFAULT_RESOURCE_FILTER, query: "x" })).toBe(false);
-    expect(hasActiveFilters({ ...DEFAULT_RESOURCE_FILTER, sort: "name" })).toBe(false);
   });
 });

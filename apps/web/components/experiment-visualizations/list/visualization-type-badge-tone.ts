@@ -16,7 +16,6 @@ const FAMILY_BADGE_TONE: Record<ExperimentChartFamily, StatusTone> = {
   "3d": "archived",
 };
 
-/** The tone of a chart's type pill in the charts list. */
 export function visualizationTypeBadgeTone(chartType: ExperimentChartType): StatusTone {
   return FAMILY_BADGE_TONE[getChartTypeDef(chartType).family];
 }

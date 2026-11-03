@@ -13,12 +13,6 @@ export interface ResourceFilterState {
   sort: ResourceSort;
 }
 
-export const DEFAULT_RESOURCE_FILTER: ResourceFilterState = {
-  query: "",
-  types: [],
-  sort: "recent",
-};
-
 /**
  * The rows to show, in order. Search matches the name only — descriptions carry rich-text
  * markup, so matching them would have a search for `p` hit nearly every row.
@@ -52,12 +46,4 @@ export function filterAndSortResources(
     );
   }
   return matched.sort(byRecency);
-}
-
-/**
- * Whether a filter is narrowing the list — what "Clear filters" keys off. Search is not a
- * filter, as on the resource lists, and sort arranges rather than narrows.
- */
-export function hasActiveFilters({ types }: ResourceFilterState): boolean {
-  return types.length > 0;
 }

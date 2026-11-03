@@ -6,7 +6,8 @@
       "delete": "Verwijderen",
       "deleting": "Verwijderen...",
       "create": "Nieuwe maken",
-      "back": "Terug"
+      "back": "Terug",
+      "moreActions": "Meer acties"
     },
     "messages": {
       "noVisualizations": "Nog geen visualisaties",

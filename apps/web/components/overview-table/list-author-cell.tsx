@@ -1,19 +1,17 @@
-import { overviewTableText } from "@/components/overview-table/overview-table";
+"use client";
+
 import { ownName, personName } from "@/components/people/person-name";
 import { UserAvatar } from "@/components/user-avatar";
 
+import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
-interface ListAuthorCellProps {
-  displayName: string | undefined;
-  /** Resolves the `common` fallback for an account without a name. */
-  tCommon: (key: string) => string;
-}
+import { overviewTableText } from "./overview-table";
 
-/** The avatar and name of whoever created a dashboard or chart. */
-export function ListAuthorCell({ displayName, tCommon }: ListAuthorCellProps) {
+export function ListAuthorCell({ displayName }: { displayName: string | undefined }) {
+  const { t } = useTranslation("common");
   const author = { displayName };
-  const authorName = personName(author, tCommon);
+  const authorName = personName(author, t);
   return (
     <div className="flex items-center gap-2">
       <UserAvatar name={ownName(author) ?? ""} className="size-6 text-[10px]" />

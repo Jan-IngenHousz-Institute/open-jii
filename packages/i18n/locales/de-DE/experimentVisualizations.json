@@ -6,7 +6,8 @@
       "delete": "Löschen",
       "deleting": "Löschen...",
       "create": "Neue erstellen",
-      "back": "Zurück"
+      "back": "Zurück",
+      "moreActions": "Weitere Aktionen"
     },
     "messages": {
       "noVisualizations": "Noch keine Visualisierungen",

@@ -85,7 +85,7 @@ export function OrganizationResourceRows({
   const filterLabels = useListFilterLabels();
   const [target, setTarget] = useState<TransferTarget | null>(null);
 
-  const { query, setQuery, sort, setSort } = list;
+  const { query, setQuery, sort, setSort, setFilter, clearFilters, hasActiveFilters } = list;
   const types = list.filters.type;
 
   // The read is uncapped, so without this it re-runs over everything on every keystroke.
@@ -106,7 +106,7 @@ export function OrganizationResourceRows({
         label: t(`organizations.resources.types.${value}`, { count: 2 }),
       })),
       selected: types,
-      onChange: (picked) => list.setFilter("type", picked),
+      onChange: (picked) => setFilter("type", picked),
     },
   ];
 
@@ -141,7 +141,7 @@ export function OrganizationResourceRows({
           </Select>
         </div>
 
-        <ListFilterChips filters={filters} labels={filterLabels} onClear={list.clearFilters} />
+        <ListFilterChips filters={filters} labels={filterLabels} onClear={clearFilters} />
 
         {visible.length === 0 ? (
           <div className="border-border border-t py-10 text-center">
@@ -152,8 +152,8 @@ export function OrganizationResourceRows({
               {t("organizations.resources.noMatchesHint")}
             </p>
             {/* A reset that resets nothing is a dead control. */}
-            {list.hasActiveFilters ? (
-              <Button variant="outline" size="sm" className="mt-3.5" onClick={list.clearFilters}>
+            {hasActiveFilters ? (
+              <Button variant="outline" size="sm" className="mt-3.5" onClick={clearFilters}>
                 {t("common.clearFilters")}
               </Button>
             ) : null}

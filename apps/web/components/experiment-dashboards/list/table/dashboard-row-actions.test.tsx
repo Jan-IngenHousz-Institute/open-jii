@@ -18,7 +18,7 @@ describe("DashboardRowActions", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "ui.actions.edit" }));
+    await user.click(screen.getByRole("button", { name: "ui.actions.moreActions" }));
     expect(await screen.findByRole("menuitem", { name: /ui\.actions\.edit/u })).toHaveAttribute(
       "href",
       "/platform/experiments-archive/exp-1/dashboards/dash-9?edit=1",
@@ -36,7 +36,7 @@ describe("DashboardRowActions", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "ui.actions.edit" }));
+    await user.click(screen.getByRole("button", { name: "ui.actions.moreActions" }));
     await user.click(await screen.findByRole("menuitem", { name: /ui\.actions\.delete/u }));
     expect(await screen.findByText("ui.messages.deleteConfirm")).toBeInTheDocument();
 
