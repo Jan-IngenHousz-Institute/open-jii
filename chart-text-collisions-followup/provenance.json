@@ -1,0 +1,37 @@
+{
+  "baselineCommit": "3584db05bf57f09e4d65b5f6f2453f00c06eaad9",
+  "method": "Real packages/ui wrappers and sizing hook bundled twice: before sources from git3584db05b, after from working tree. PlotlyChart boundary adapter schedules drawing after the sizing effect settles, calls real Plotly3.7 react, and exposes emitted figure. Component API evidence, not authenticated app capture. Identical synthetic inputs, full-frame unedited1440x1000 PNGs.",
+  "viewport": {
+    "width": 1440,
+    "height": 1000,
+    "deviceScaleFactor": 1
+  },
+  "matchingCases": 24,
+  "fixedCasesWithoutDrawErrorClippingOrLegendOverlap": 24,
+  "minimumLongNameFixedPlotWidth": 171,
+  "ordinaryShortNamesStayUnwrapped": true,
+  "numericThetaGeometryUnchanged": true,
+  "explicitCategoryNumericAnglesPreserved": true,
+  "limitations": [
+    "Numeric theta without explicit categories retains preexisting crowded default ticks.",
+    "Text bounding boxes are conservative; scroll-hidden legend entries are excluded from outer-label clipping checks.",
+    "Original44matching authenticated app captures remain separate and unchanged."
+  ],
+  "sourceDigest": "c5701d65388932d74d8a1a53a43301af34c9fd710a807f2795f3ea4ec0e54e5e",
+  "patchSha256": "78b0d538e5da795cc5f7d8ca95b81787c8d2e1d02d399be589b51b7c3eb92c88",
+  "reviewedRemoteParent": "14b750bc163ccf5672cf8049edcbfad3c56cbbbf",
+  "replayedCommit": "a2b78597e3021901e0fec28089ce9566af6ea650",
+  "chartSourcesIdenticalBetweenParents": true,
+  "all11FollowupFileHashesUnchangedAfterReplay": true,
+  "postReplayChecks": {
+    "uiChartTests": 1032,
+    "windRoseTests": 26,
+    "uiAndWebTypes": "passed"
+  },
+  "publishedFrames": {
+    "before-polar-right-373x560.png": "472557c82adaf6d761e1067e348c002d29ce3304cb9dd7e508ced2a50ccde58e",
+    "after-polar-right-373x560.png": "741dcd844ac81e056b3037c4485679c0866f59fa7063a21951be93c6c2b5de19",
+    "before-radar-implicit-373x560.png": "0995f8bbca867769e3e568a3a39461e2cc71c72cc6537a6cb7e3c09c910216e9",
+    "after-radar-implicit-373x560.png": "51db95662c2f3caae2f0a56e9e285291428e5152f9af2b8f7154346658701c23"
+  }
+}
