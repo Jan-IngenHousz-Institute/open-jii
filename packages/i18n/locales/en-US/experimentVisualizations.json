@@ -31,7 +31,9 @@
         "user": "User",
         "updated": "Updated"
       },
-      "updatedAgo": "Updated {{date}}"
+      "updatedAgo": "Updated {{date}}",
+      "listCount_one": "{{count}} visualization",
+      "listCount_other": "{{count}} visualizations"
     }
   },
   "form": {

@@ -22,8 +22,8 @@ test("a shared filtered link opens the filtered list and clears back to all", as
   await dismissCookieBanner(page);
   await filtered;
 
-  await expect(page.getByRole("button", { name: "Family 1 selected" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Visibility 1 selected" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Family is Ambyte" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Visibility is Public" })).toBeVisible();
   await expect(page.getByRole("link", { name: "[Seed] Soil Moisture Probe" })).toBeVisible();
   await expect(page.getByRole("link", { name: "[Seed] Chlorophyll Fluorescence v1" })).toHaveCount(
     0,
@@ -41,7 +41,7 @@ test("a shared filtered link opens the filtered list and clears back to all", as
   await expect(page).toHaveURL(
     (url) => !url.search.includes("family") && !url.search.includes("visibility"),
   );
-  await expect(page.getByRole("button", { name: "Family", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Filter", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Clear filters" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "[Seed] Soil Moisture Probe" })).toBeVisible();
   await expect(

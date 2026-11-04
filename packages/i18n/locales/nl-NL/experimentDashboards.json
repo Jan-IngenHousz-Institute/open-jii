@@ -7,7 +7,8 @@
       "delete": "Dashboard verwijderen",
       "edit": "Dashboard bewerken",
       "done": "Klaar",
-      "back": "Terug naar dashboards"
+      "back": "Terug naar dashboards",
+      "moreActions": "Meer acties"
     },
     "messages": {
       "noDashboards": "Nog geen dashboards",
@@ -32,7 +33,9 @@
         "widgets": "Widgets",
         "user": "Gebruiker",
         "updated": "Bijgewerkt"
-      }
+      },
+      "listCount_one": "{{count}} dashboard",
+      "listCount_other": "{{count}} dashboards"
     }
   },
   "form": {

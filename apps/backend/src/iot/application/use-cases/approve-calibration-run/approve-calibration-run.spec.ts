@@ -1,7 +1,17 @@
+import { Logger } from "@nestjs/common";
+
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 import type { CalibrationBlocks } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import {
+  calibrationDeliveries,
+  calibrationNotifications,
+  heardBy,
+  seedCalibrationAudience,
+} from "../../../../test/calibration-audience";
+import type { CalibrationAudience } from "../../../../test/calibration-audience";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotCalibrationDefinitionRepository } from "../../../core/repositories/iot-calibration-definition.repository";
 import { IotCalibrationRunRepository } from "../../../core/repositories/iot-calibration-run.repository";
@@ -182,5 +192,106 @@ describe("ApproveCalibrationRunUseCase", () => {
     const result = await useCase.execute(crypto.randomUUID(), userId);
     assertFailure(result);
     expect(result.error.statusCode).toBe(404);
+  });
+
+  describe("notifications", () => {
+    let audience: CalibrationAudience;
+    let definitionName: string;
+
+    beforeEach(async () => {
+      audience = await seedCalibrationAudience(testApp);
+      // Only someone who can work on the device starts a run, so the requester holds Can edit.
+      await testApp.addResourceGrant({
+        resourceType: "device",
+        resourceId: audience.deviceId,
+        granteeType: "user",
+        granteeId: audience.requester,
+        role: "admin",
+      });
+      const definition = await testApp.module
+        .get(IotCalibrationDefinitionRepository)
+        .findById(definitionId);
+      assertSuccess(definition);
+      definitionName = definition.value?.name ?? "";
+    });
+
+    const seedRunBy = async (requestedBy: string, status: "computed" | "running" = "computed") => {
+      const created = await runRepository.create({
+        definitionId,
+        deviceId: audience.deviceId,
+        requestedBy,
+        inputSource: "bench_wizard",
+        status: "running",
+      });
+      assertSuccess(created);
+      if (status === "computed") {
+        assertSuccess(
+          await runRepository.saveResult(created.value.id, { status, blocks: PARTIAL }),
+        );
+      }
+      return created.value.id;
+    };
+
+    it("tells the requester who approved it, and nobody else", async () => {
+      const runId = await seedRunBy(audience.requester);
+
+      assertSuccess(await useCase.execute(runId, audience.manager));
+
+      expect(await calibrationNotifications(testApp, audience)).toEqual(
+        heardBy(audience, ["requester"], (recipientId) => ({
+          type: "calibration_run_approved",
+          recipientId,
+          actorId: audience.manager,
+          resourceType: "device",
+          resourceId: audience.deviceId,
+          params: { deviceName: "Test device", definitionName },
+        })),
+      );
+      expect(await calibrationDeliveries(testApp, audience)).toEqual(
+        heardBy(audience, ["requester"], () => ({
+          type: "calibration_run_approved",
+          status: "pending",
+        })),
+      );
+    });
+
+    it("tells nobody when the reviewer approves a run they requested", async () => {
+      assertSuccess(await useCase.execute(await seedRunBy(audience.manager), audience.manager));
+
+      expect(await calibrationNotifications(testApp, audience)).toEqual(
+        heardBy(audience, [], () => null),
+      );
+    });
+
+    it("tells nobody when the approval is refused", async () => {
+      const runId = await seedRunBy(audience.requester, "running");
+
+      assertFailure(await useCase.execute(runId, audience.manager));
+
+      expect(await calibrationNotifications(testApp, audience)).toEqual(
+        heardBy(audience, [], () => null),
+      );
+    });
+
+    it("still returns the calibration and logs when the notification fails", async () => {
+      vi.spyOn(testApp.module.get(NotificationDispatchService), "dispatch").mockResolvedValue(
+        failure(AppError.internal("Database unavailable")),
+      );
+      const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+      const runId = await seedRunBy(audience.requester);
+
+      const result = await useCase.execute(runId, audience.manager);
+
+      assertSuccess(result);
+      expect(result.value.runId).toBe(runId);
+      expect(result.value.supersededAt).toBeNull();
+      expect(error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: "approveCalibrationRun",
+          runId,
+          deviceId: audience.deviceId,
+        }),
+      );
+    });
   });
 });

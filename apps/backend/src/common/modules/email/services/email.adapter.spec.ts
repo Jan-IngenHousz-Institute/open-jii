@@ -432,4 +432,28 @@ describe("EmailAdapter", () => {
       expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
     });
   });
+
+  describe("the calibration run notifications", () => {
+    it.each([
+      "sendCalibrationRunAwaitingApprovalNotification",
+      "sendCalibrationRunApprovedNotification",
+      "sendCalibrationRunRejectedNotification",
+    ] as const)("%s delegates to NotificationsService with the input unchanged", async (method) => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, method)
+        .mockResolvedValue(success(undefined));
+      const input = {
+        deviceId: "device-123",
+        deviceName: "Greenhouse 3 MiniPAR",
+        definitionName: "PAR sweep",
+        actor: "Ada Lovelace",
+        email: "requester@example.com",
+      };
+
+      const result = await adapter[method](input);
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
+    });
+  });
 });

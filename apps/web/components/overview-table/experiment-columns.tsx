@@ -8,6 +8,7 @@ import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { Users } from "lucide-react";
 
 import type { ExperimentListItem } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentSort } from "@repo/api/domains/experiment/experiment.schema";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -17,7 +18,7 @@ import { overviewTableText } from "./overview-table";
 export function getExperimentColumns(
   t: (key: string) => string,
   locale: string,
-): OverviewTableColumn<ExperimentListItem>[] {
+): OverviewTableColumn<ExperimentListItem, ExperimentSort[number]["field"]>[] {
   return [
     {
       header: t("columns.name"),

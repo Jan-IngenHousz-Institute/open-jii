@@ -4,6 +4,7 @@ import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import type { OrganizationListItem } from "@/hooks/organization/useOrganizationsList/useOrganizationsList";
 import { FolderOpen, Users } from "lucide-react";
 
+import type { OrganizationSort } from "@repo/api/domains/organization/organization.schema";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -13,7 +14,7 @@ import { overviewTableText } from "./overview-table";
 /** Build localized directory columns, leaving the type cell empty for untyped organizations. */
 export function getOrganizationColumns(
   t: (key: string, options?: Record<string, unknown>) => string,
-): OverviewTableColumn<OrganizationListItem>[] {
+): OverviewTableColumn<OrganizationListItem, OrganizationSort[number]["field"]>[] {
   return [
     {
       header: t("organizations.fields.name"),

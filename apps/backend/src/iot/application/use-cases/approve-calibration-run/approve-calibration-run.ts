@@ -11,6 +11,7 @@ import { Result, failure, success, AppError } from "../../../../common/utils/fp-
 import type { DeviceCalibrationDto } from "../../../core/models/iot-calibration.model";
 import { IotCalibrationDefinitionRepository } from "../../../core/repositories/iot-calibration-definition.repository";
 import { IotCalibrationRunRepository } from "../../../core/repositories/iot-calibration-run.repository";
+import { CalibrationRunNotifier } from "../../services/calibration-run-notifier";
 
 /**
  * Nothing a script produced takes effect until someone with device manage rights
@@ -24,6 +25,7 @@ export class ApproveCalibrationRunUseCase {
     private readonly runRepository: IotCalibrationRunRepository,
     private readonly definitionRepository: IotCalibrationDefinitionRepository,
     private readonly authz: AuthorizationService,
+    private readonly notifier: CalibrationRunNotifier,
   ) {}
 
   async execute(runId: string, userId: string): Promise<Result<DeviceCalibrationDto>> {
@@ -82,6 +84,7 @@ export class ApproveCalibrationRunUseCase {
     if (approved.isFailure()) {
       return failure(approved.error);
     }
+    await this.notifier.runReviewed("approveCalibrationRun", "approved", run.value, userId);
     return success(approved.value);
   }
 }

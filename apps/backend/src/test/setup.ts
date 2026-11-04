@@ -68,6 +68,18 @@ vi.mock("@repo/transactional/render/passkey-added-notification", () => ({
   renderPasskeyAddedNotification: vi.fn(),
 }));
 
+vi.mock("@repo/transactional/render/calibration-run-awaiting-approval-notification", () => ({
+  renderCalibrationRunAwaitingApprovalNotification: vi.fn(),
+}));
+
+vi.mock("@repo/transactional/render/calibration-run-approved-notification", () => ({
+  renderCalibrationRunApprovedNotification: vi.fn(),
+}));
+
+vi.mock("@repo/transactional/render/calibration-run-rejected-notification", () => ({
+  renderCalibrationRunRejectedNotification: vi.fn(),
+}));
+
 // Mock analytics server
 vi.mock("@repo/analytics/server", async (importOriginal) => ({
   ...(await importOriginal<typeof AnalyticsServer>()),

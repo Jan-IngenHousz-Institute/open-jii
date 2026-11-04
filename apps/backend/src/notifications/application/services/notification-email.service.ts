@@ -163,6 +163,36 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
   experiment_made_public: aboutResource((experimentId, email, { params, recipientEmail }) =>
     email.sendExperimentMadePublicNotification(experimentId, params.experimentName, recipientEmail),
   ),
+  calibration_run_awaiting_approval: aboutResource(
+    (deviceId, email, { params, actorName, recipientEmail }) =>
+      email.sendCalibrationRunAwaitingApprovalNotification({
+        deviceId,
+        deviceName: params.deviceName,
+        definitionName: params.definitionName,
+        actor: actorName ?? "Someone",
+        email: recipientEmail,
+      }),
+  ),
+  calibration_run_approved: aboutResource(
+    (deviceId, email, { params, actorName, recipientEmail }) =>
+      email.sendCalibrationRunApprovedNotification({
+        deviceId,
+        deviceName: params.deviceName,
+        definitionName: params.definitionName,
+        actor: actorName ?? "Someone",
+        email: recipientEmail,
+      }),
+  ),
+  calibration_run_rejected: aboutResource(
+    (deviceId, email, { params, actorName, recipientEmail }) =>
+      email.sendCalibrationRunRejectedNotification({
+        deviceId,
+        deviceName: params.deviceName,
+        definitionName: params.definitionName,
+        actor: actorName ?? "Someone",
+        email: recipientEmail,
+      }),
+  ),
   // No `aboutResource`: a deleted resource has no page to link back to.
   resource_deleted: (email, { params, actorName, recipientEmail, resource }) =>
     resource && isSharingResourceType(resource.type)
