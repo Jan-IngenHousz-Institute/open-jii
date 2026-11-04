@@ -927,6 +927,77 @@ describe("NotificationDispatchService", () => {
     });
   });
 
+  describe("the project transfer email entries", () => {
+    it("sends the request confirmation with the project and the footer", async () => {
+      const send = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendTransferRequestConfirmation")
+        .mockResolvedValue(success(undefined));
+
+      const result = await notificationEmail.send("project_transfer_requested", {
+        recipientId,
+        recipientEmail,
+        actorName: null,
+        resource: null,
+        params: { projectId: "12345", projectUrl: "https://photosynq.org/projects/12345" },
+      });
+
+      assertSuccess(result);
+      expect(send).toHaveBeenCalledExactlyOnceWith(
+        recipientEmail,
+        "12345",
+        "https://photosynq.org/projects/12345",
+        send.mock.calls[0]?.[3],
+      );
+      expectUnsubscribeFooter(testApp, send.mock.calls[0]?.[3], {
+        recipientId,
+        category: "project_transfers",
+        categoryLabel: "Project transfers",
+      });
+    });
+
+    it("sends the completion with the experiment and the footer", async () => {
+      const send = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendProjectTransferComplete")
+        .mockResolvedValue(success(undefined));
+
+      const result = await notificationEmail.send("project_transfer_completed", {
+        recipientId,
+        recipientEmail,
+        actorName: null,
+        resource: experiment,
+        params: { experimentName: "Leaf Area Index" },
+      });
+
+      assertSuccess(result);
+      expect(send).toHaveBeenCalledExactlyOnceWith(
+        recipientEmail,
+        experiment.id,
+        "Leaf Area Index",
+        send.mock.calls[0]?.[3],
+      );
+      expectUnsubscribeFooter(testApp, send.mock.calls[0]?.[3], {
+        recipientId,
+        category: "project_transfers",
+        categoryLabel: "Project transfers",
+      });
+    });
+  });
+
+  it("sends nothing and builds no footer for a type with no email", async () => {
+    const footerFor = vi.spyOn(testApp.module.get(NotificationUnsubscribeService), "footerFor");
+
+    const result = await notificationEmail.send("experiment_invitation_accepted", {
+      recipientId,
+      recipientEmail,
+      actorName: "Ada Lovelace",
+      resource: experiment,
+      params: { experimentName: "Leaf Area Index" },
+    });
+
+    assertSuccess(result);
+    expect(footerFor).not.toHaveBeenCalled();
+  });
+
   describe("the account security email entries", () => {
     const accountContext = <T>(params: T) => ({
       recipientId,

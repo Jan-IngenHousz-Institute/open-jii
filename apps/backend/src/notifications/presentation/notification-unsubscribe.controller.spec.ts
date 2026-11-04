@@ -8,9 +8,11 @@ import type {
 import { and, eq, notificationPreferences, profiles, users } from "@repo/database";
 
 import { ErrorCodes } from "../../common/utils/error-codes";
+import { AppError, failure } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { NotificationUnsubscribeService } from "../application/services/notification-unsubscribe.service";
+import { NotificationRepository } from "../core/repositories/notification.repository";
 
 describe("NotificationUnsubscribeController", () => {
   const testApp = TestHarness.App;
@@ -163,6 +165,36 @@ describe("NotificationUnsubscribeController", () => {
       .expect(StatusCodes.BAD_REQUEST);
 
     expectInvalidLink(response);
+  });
+
+  it("refuses an altered token on the resubscribe route", async () => {
+    const token = unsubscribe.sign(userId, "requests_and_invitations");
+    const altered = `${token.slice(0, -1)}${token.endsWith("A") ? "B" : "A"}`;
+
+    const response = await testApp
+      .post(resubscribePath(altered))
+      .withoutAuth()
+      .set("X-Forwarded-For", nextClientIp())
+      .expect(StatusCodes.BAD_REQUEST);
+
+    expectInvalidLink(response);
+    expect(await emailRowsFor(userId, "requests_and_invitations")).toEqual([]);
+  });
+
+  it("answers a server error, not a refused link, when the preference cannot be saved", async () => {
+    vi.spyOn(testApp.module.get(NotificationRepository), "upsertPreference").mockResolvedValueOnce(
+      failure(AppError.internal("Database unavailable")),
+    );
+
+    const response = await testApp
+      .post(unsubscribePath(unsubscribe.sign(userId, "requests_and_invitations")))
+      .withoutAuth()
+      .set("X-Forwarded-For", nextClientIp())
+      .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+
+    expect(response.body).not.toMatchObject({
+      data: { code: ErrorCodes.NOTIFICATION_UNSUBSCRIBE_LINK_INVALID },
+    });
   });
 
   it("allows ten requests per client per minute, then answers 429", async () => {
