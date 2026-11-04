@@ -86,17 +86,30 @@ that guarantee. Missing source history remains a stated deployment limitation.
 
 ## Deployment and rollback
 
-Deploy the additive Postgres migration and the updated export task before the backend
-starts sending `NUMERIC_QUESTION_KEYS`. Deploy the API/mobile and additive bronze/silver
-kind plumbing. The nested non-resettable MQTT `parsed_data` schema stays unchanged;
+A rollout maintainer must apply the additive Postgres migration, inventory the complete
+history and seed the inactive guard declarations before the updated backend serves any
+version-pin or flow-edit requests for existing experiments. Keep configuration writes
+paused until the maintainer verifies every historical key and tracking flag. Deploying
+the guard first and seeding later leaves removed historical names unprotected. Numeric
+reads stay inactive throughout this step.
+
+Deploy the updated export task before the backend starts sending `NUMERIC_QUESTION_KEYS`.
+Then deploy the API/mobile and additive bronze/silver kind plumbing. The nested non-resettable MQTT `parsed_data` schema stays unchanged;
 `questions_json` captures the kind alongside it. Old queued payloads remain valid. Gold
 still holds lexical values and normalizes cleared answers to JSON null. This also
 changes historical blank or whitespace-only text answers to null when those rows are
 processed, following the unanswered/cleared rule for every question kind.
 
-Review and apply historical guard seeds before allowing version changes on existing
-experiments. Enable numeric reads after the coverage and quality checks above. There is
-no authorization here to deploy or seed a shared environment.
+Enable numeric reads only after the coverage and quality checks above. The requested
+in-place stored-value backfill is still being designed; these read-time casts are not
+its implementation. Do not treat this PR as ready for the historical rollout until that
+backfill, downstream handling and reconciliation are included. There is no authorization
+here to deploy, seed or rewrite a shared environment.
+
+The migration is now 0064, after main's metrics-publisher grants in 0063. A disposable
+test database that already ran this branch's former 0063 needs a reset before using the
+new migration chain. A shared database in that state needs its migration history and
+schema reconciled by the rollout maintainer; do not blindly apply 0064 over it.
 
 To undo an incorrect numeric activation, set its `active` value back to false under the
 experiment lock. The next table/schema read uses the original text and a different
