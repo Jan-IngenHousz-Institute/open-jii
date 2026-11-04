@@ -39,6 +39,8 @@ _UNKNOWN_FIELD = "Unknown field found"
 # been silent for a minute is not about to answer.
 INSERT_TIMEOUT = (5, 60)
 CHECK_TIMEOUT = (5, 10)
+# A reload's delete waits until every part holding the table's older rows is marked.
+QUERY_TIMEOUT = (5, 3600)
 
 # The store could not read the body. Anything else (memory, too many parts, a timeout, a wrong
 # password) is the store's state or configuration, and waiting it out is right.
@@ -97,7 +99,8 @@ class Written:
 
 
 class StoreWriter:
-    """Writes JSON lines to one database of the store, from Spark executors or in process."""
+    """Writes JSON lines to one database of the store, from Spark executors or in process, and runs
+    the statements a reload needs."""
 
     def __init__(self, url: str, user: str, key: str, database: str = "store"):
         self.url = url
@@ -135,6 +138,24 @@ class StoreWriter:
             raise StoreUnavailable(
                 f"the store answered HTTP {response.status_code}, code {code}: {response.text[:300]}"
             )
+
+    def query(self, statement: str, **parameters: str | int) -> list[dict]:
+        """Runs one statement as this user, with each ``{name:Type}`` in it bound to the parameter of
+        that name, and returns the rows it answers with."""
+        params = {"query": statement, **{f"param_{name}": str(value) for name, value in parameters.items()}}
+        try:
+            response = self.session.post(
+                self.url, params=params, headers=self._headers, timeout=QUERY_TIMEOUT
+            )
+        except requests.RequestException as error:
+            raise StoreUnavailable(f"the store did not answer: {type(error).__name__}: {error}") from error
+
+        if not response.ok:
+            code = response.headers.get("X-ClickHouse-Exception-Code", "0")
+            raise StoreUnavailable(
+                f"the store answered HTTP {response.status_code}, code {code}: {response.text[:300]}"
+            )
+        return [json.loads(line) for line in response.text.splitlines()]
 
     def write(self, lines: DataFrame, table: str) -> Written:
         """Inserts ``lines`` (one JSON line per row in column ``line``, with the time the store

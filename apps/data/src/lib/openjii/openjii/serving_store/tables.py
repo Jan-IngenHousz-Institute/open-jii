@@ -23,7 +23,8 @@ _EARLIEST = datetime(1900, 1, 1, tzinfo=timezone.utc)
 _LATEST = datetime(2299, 12, 31, 23, 59, 59, 999999, tzinfo=timezone.utc)
 
 # Only rows gold holds are sent. A refresh of gold sends every old row as a delete, which the feed
-# drops, so a row gold removes stays in the store until a reload.
+# drops, so a row gold removes stays in the store until a reload
+# (docs/runbooks/procedures/serving-store-reload.md).
 _KEPT_CHANGES = ("insert", "update_postimage")
 
 
@@ -47,6 +48,11 @@ def json_object(column: str) -> Column:
     ).alias(column)
 
 
+def or_empty(column: str) -> Column:
+    """A nullable key column as the store keys it, where null and empty are one value."""
+    return F.coalesce(F.col(column), F.lit("")).alias(column)
+
+
 class StoreTable:
     """A store table fed from one gold table."""
 
@@ -55,11 +61,18 @@ class StoreTable:
     # The time the store table's month partitions follow.
     partitioned_by = "timestamp"
 
-    def lines(self, changes: DataFrame) -> DataFrame:
+    def lines(self, changes: DataFrame, reloaded: bool = False) -> DataFrame:
         """One JSON line, in column ``line``, per row gold inserted or updated in ``changes``, with
-        the time the store partitions it by in ``partition_time``."""
+        the time the store partitions it by in ``partition_time``.
+
+        A reloaded line says it arrived when gold committed it, so the store's delivery metrics,
+        which read ``inserted_at``, count only the rows the feed sends.
+        """
         rows = changes.filter(F.col("_change_type").isin(*_KEPT_CHANGES))
-        row = F.struct(*self.columns(), "_commit_version", "_commit_timestamp")
+        fields = [*self.columns(), "_commit_version", "_commit_timestamp"]
+        if reloaded:
+            fields.append(F.col("_commit_timestamp").alias("inserted_at"))
+        row = F.struct(*fields)
         return rows.select(
             F.to_json(row, JSON_OPTIONS).alias("line"), F.col(self.partitioned_by).alias("partition_time")
         )
@@ -67,10 +80,17 @@ class StoreTable:
     def columns(self) -> list[str | Column]:
         raise NotImplementedError
 
+    def key(self) -> list[Column]:
+        """The store table's sorting key, on which it folds rows into one, from gold's columns."""
+        raise NotImplementedError
+
 
 class Measurements(StoreTable):
     name = "measurements"
     gold_table = EXPERIMENT_RAW_DATA_TABLE
+
+    def key(self) -> list[Column]:
+        return [F.col("experiment_id"), clamped("timestamp"), F.col("id"), or_empty("device_id")]
 
     def columns(self) -> list[str | Column]:
         return [
@@ -113,6 +133,16 @@ class MacroResults(StoreTable):
     name = "macro_results"
     gold_table = EXPERIMENT_MACRO_DATA_TABLE
 
+    def key(self) -> list[Column]:
+        return [
+            F.col("experiment_id"),
+            or_empty("macro_id"),
+            clamped("timestamp"),
+            F.col("raw_id"),
+            or_empty("macro_filename"),
+            or_empty("device_id"),
+        ]
+
     def columns(self) -> list[str | Column]:
         return [
             "experiment_id",
@@ -143,6 +173,9 @@ class Uploads(StoreTable):
     name = "uploads"
     gold_table = EXPERIMENT_UPLOADED_DATA_TABLE
     partitioned_by = "uploaded_at"
+
+    def key(self) -> list[Column]:
+        return [F.col("experiment_id"), or_empty("upload_table_id"), clamped("uploaded_at"), F.col("id")]
 
     def columns(self) -> list[str | Column]:
         return [

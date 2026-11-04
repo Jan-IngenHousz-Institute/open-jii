@@ -78,9 +78,9 @@ Repeat for `experiment_uploaded_data` and `experiment_macro_data`, and set `meas
 `uploads` and `macro_results` in the map to those versions. After switching on, watch the first
 batches in each pipeline's driver log (`[serving store] measurements batch 0: ... inserted`). A
 first batch numbered 0 means the sink started at its start version, and rows gold gained while the
-feed was off stay missing until a reload from gold exists; a higher number means it resumed from its
-checkpoint. In the first two hours the stall alert can fire once if gold's newest half hour gained
-rows before the start versions; it clears as soon as new rows arrive.
+feed was off stay missing until a [reload](procedures/serving-store-reload.md); a higher number
+means it resumed from its checkpoint. In the first two hours the stall alert can fire once if gold's
+newest half hour gained rows before the start versions; it clears as soon as new rows arrive.
 
 ## Resetting a sink's checkpoint
 
@@ -88,7 +88,7 @@ Needed when the feed was off for more than seven days, or when a gold table was 
 versions restart, so empty the store table first with `TRUNCATE TABLE store.<table>` as the admin).
 Empty a store table only with `TRUNCATE`: after a `DELETE` the store still holds the dedup tokens of
 the deleted rows' inserts, and drops those rows when the feed sends them again. Rows gold gained
-before the new start version stay missing until a reload from gold exists.
+before the new start version stay missing until a [reload](procedures/serving-store-reload.md).
 
 1. Put the new start version in the map and apply. The pipelines restart; the old checkpoint still
    wins.
@@ -112,8 +112,8 @@ old row, which the feed drops, and an insert for every row again, which the stor
 it holds. That is a catch-up through the pipeline, which `store-feed-latency` may report while it
 lasts. A refresh whose repair changes a column in a store table's key (its `ORDER BY` in
 `packages/database/clickhouse/migrations`) leaves the old row in the store beside the new one until
-a reload exists, so note such repairs. Before a full refresh of a whole pipeline, which also resets
-the sinks' checkpoints, update the start versions as above.
+a [reload](procedures/serving-store-reload.md) of the experiments it touched. Before a full refresh
+of a whole pipeline, which also resets the sinks' checkpoints, update the start versions as above.
 
 A change feed cannot be read across a commit that renames, drops or retypes a column
 ([Databricks](https://docs.databricks.com/aws/en/delta/delta-change-data-feed)), so a refresh that
@@ -121,7 +121,7 @@ does that to a gold table fails its sink, and the pipeline with it (step 2). Swi
 before such a refresh and migrate the store table to match. Once gold has committed again after the
 refresh, set the start versions to its latest versions and reset the sinks' checkpoints as above.
 The rows the refresh rewrote are not sent again, so a value it repaired reaches the store only
-through a reload.
+through a [reload](procedures/serving-store-reload.md).
 
 ## Closing
 

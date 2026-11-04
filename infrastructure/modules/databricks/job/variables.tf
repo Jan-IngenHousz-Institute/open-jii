@@ -39,9 +39,14 @@ variable "tasks" {
     cluster_id = optional(string)
 
     # For new cluster
-    node_type_id = optional(string)
-    num_workers  = optional(number, 1)
-    single_node  = optional(bool, false)
+    node_type_id        = optional(string)
+    driver_node_type_id = optional(string)
+    num_workers         = optional(number, 1)
+    single_node         = optional(bool, false)
+    # Unity Catalog needs an access mode, such as SINGLE_USER with the identity the cluster is for
+    data_security_mode = optional(string)
+    single_user_name   = optional(string)
+    policy_id          = optional(string)
 
     # Spark configurations for this task
     spark_conf = optional(map(string), {})
