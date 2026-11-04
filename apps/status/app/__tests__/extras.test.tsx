@@ -1,18 +1,13 @@
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  NOW,
-  renderWithTranslations,
-  stubReducedMotion,
-  stubStatusFetch,
-} from "~/test/render-status";
+import { NOW, renderWithProviders, stubReducedMotion, stubStatusFetch } from "~/test/test-utils";
+
+import type { StatusDocument } from "@repo/monitoring/status-document";
 import {
   incidentStatusDocument,
   operationalStatusDocument,
   staleStatusDocument,
-} from "~/test/status-fixtures";
-
-import type { StatusDocument } from "@repo/monitoring/status-document";
+} from "@repo/monitoring/status-fixtures";
 
 import Page from "../page";
 
@@ -31,7 +26,7 @@ const KONAMI = [
 
 async function renderPage(document: StatusDocument) {
   stubStatusFetch(document);
-  renderWithTranslations(<Page />);
+  renderWithProviders(<Page />);
   await act(async () => {
     await vi.advanceTimersByTimeAsync(0);
   });

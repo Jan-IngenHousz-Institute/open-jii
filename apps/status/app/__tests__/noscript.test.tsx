@@ -1,8 +1,8 @@
 import { screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { TranslationsProvider } from "~/components/translations-provider";
-import { renderWithTranslations, stubStatusFetch } from "~/test/render-status";
+import { TranslationsProvider } from "~/providers/translations-provider";
+import { QueryWrapper, renderWithProviders, stubStatusFetch } from "~/test/test-utils";
 
 import { defaultLocale } from "@repo/i18n/config";
 import { loadNamespaceBundles } from "@repo/i18n/server";
@@ -15,9 +15,11 @@ async function prerender() {
   const resources = await loadNamespaceBundles(defaultLocale, ["status"]);
 
   return renderToStaticMarkup(
-    <TranslationsProvider locale={defaultLocale} namespaces={["status"]} resources={resources}>
-      <Page />
-    </TranslationsProvider>,
+    <QueryWrapper>
+      <TranslationsProvider locale={defaultLocale} namespaces={["status"]} resources={resources}>
+        <Page />
+      </TranslationsProvider>
+    </QueryWrapper>,
   );
 }
 
@@ -39,7 +41,7 @@ describe("the page without scripts", () => {
 
   it("does not show the line once scripts run", () => {
     stubStatusFetch("pending");
-    renderWithTranslations(<Page />);
+    renderWithProviders(<Page />);
 
     expect(screen.queryByText(NOSCRIPT_TEXT)).not.toBeInTheDocument();
   });

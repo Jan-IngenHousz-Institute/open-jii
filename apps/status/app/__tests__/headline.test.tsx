@@ -1,13 +1,6 @@
 import { screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NOW, renderWithTranslations, stubStatusFetch } from "~/test/render-status";
-import {
-  incidentStatusDocument,
-  maintenanceInProgress,
-  maintenanceStatusDocument,
-  operationalStatusDocument,
-  staleStatusDocument,
-} from "~/test/status-fixtures";
+import { NOW, renderWithProviders, stubStatusFetch } from "~/test/test-utils";
 
 import type {
   ComponentState,
@@ -15,6 +8,13 @@ import type {
   StatusComponentId,
   StatusDocument,
 } from "@repo/monitoring/status-document";
+import {
+  incidentStatusDocument,
+  maintenanceInProgress,
+  maintenanceStatusDocument,
+  operationalStatusDocument,
+  staleStatusDocument,
+} from "@repo/monitoring/status-fixtures";
 
 import Page from "../page";
 
@@ -32,7 +32,7 @@ function withStates(document: StatusDocument, states: States): StatusDocument {
 
 async function renderPage(document: StatusDocument) {
   stubStatusFetch(document);
-  renderWithTranslations(<Page />);
+  renderWithProviders(<Page />);
   await screen.findByRole("heading", { level: 1, name: "Platform status" });
   await screen.findByText(/Last checked|Our checks last reported|We could not refresh/);
 }

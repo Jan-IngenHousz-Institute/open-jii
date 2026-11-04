@@ -1,13 +1,14 @@
 import { act, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NOW, renderWithTranslations, stubStatusFetch } from "~/test/render-status";
-import { operationalStatusDocument } from "~/test/status-fixtures";
+import { NOW, renderWithProviders, stubStatusFetch } from "~/test/test-utils";
+
+import { operationalStatusDocument } from "@repo/monitoring/status-fixtures";
 
 import Page from "../page";
 
 const sectionRenders = vi.hoisted(() => ({ count: 0 }));
 
-vi.mock("~/components/components-section", async () => {
+vi.mock("~/components/component-list/components-section", async () => {
   const { memo } = await import("react");
 
   return {
@@ -27,7 +28,7 @@ async function advance(ms: number) {
 
 async function renderPage(generatedAt = operationalStatusDocument.generatedAt) {
   const stub = stubStatusFetch({ ...operationalStatusDocument, generatedAt });
-  renderWithTranslations(<Page />);
+  renderWithProviders(<Page />);
   await advance(0);
 
   return stub;
@@ -50,13 +51,21 @@ describe("the page's clock ticks", () => {
     expect(sectionRenders.count).toBe(rendersAfterLoad);
   });
 
-  it("render the components again only when a new document arrives", async () => {
+  it("render the components again only when a new document changes them", async () => {
     const { respondWith } = await renderPage();
     const rendersAfterLoad = sectionRenders.count;
+    const [website, ...others] = operationalStatusDocument.components;
 
     respondWith({ ...operationalStatusDocument, generatedAt: "2026-11-03T12:03:00.000Z" });
     await advance(60_000);
+    expect(sectionRenders.count).toBe(rendersAfterLoad);
 
+    respondWith({
+      ...operationalStatusDocument,
+      generatedAt: "2026-11-03T12:04:00.000Z",
+      components: [{ ...website, state: "degraded" }, ...others],
+    });
+    await advance(60_000);
     expect(sectionRenders.count).toBe(rendersAfterLoad + 1);
   });
 

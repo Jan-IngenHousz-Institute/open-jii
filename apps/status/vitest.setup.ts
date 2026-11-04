@@ -1,3 +1,4 @@
+import { notifyManager } from "@tanstack/react-query";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, vi } from "vitest";
 
@@ -22,6 +23,10 @@ Object.defineProperty(Element.prototype, "animate", {
   writable: true,
   value: () => ({ onfinish: null, cancel: () => undefined }),
 });
+
+// TanStack Query hands results to components on a zero-delay timer, which fake timers hold back
+// past the end of an advance. A microtask hands them over inside the act() each test awaits.
+notifyManager.setScheduler(queueMicrotask);
 
 afterEach(() => {
   vi.restoreAllMocks();
