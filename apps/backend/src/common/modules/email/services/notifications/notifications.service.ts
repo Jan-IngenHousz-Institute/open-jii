@@ -5,6 +5,9 @@ import Mail from "nodemailer/lib/mailer";
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { renderAccessGrantedNotification } from "@repo/transactional/render/access-granted-notification";
 import { renderApiKeyCreatedNotification } from "@repo/transactional/render/api-key-created-notification";
+import { renderCalibrationRunApprovedNotification } from "@repo/transactional/render/calibration-run-approved-notification";
+import { renderCalibrationRunAwaitingApprovalNotification } from "@repo/transactional/render/calibration-run-awaiting-approval-notification";
+import { renderCalibrationRunRejectedNotification } from "@repo/transactional/render/calibration-run-rejected-notification";
 import { renderExperimentMadePublicNotification } from "@repo/transactional/render/experiment-made-public-notification";
 import { renderJoinRequestRejected } from "@repo/transactional/render/join-request-rejected";
 import { renderJoinRequestSubmitted } from "@repo/transactional/render/join-request-submitted";
@@ -116,6 +119,27 @@ export class NotificationsService {
     ...args: Parameters<typeof renderExperimentMadePublicNotification>
   ) {
     return renderExperimentMadePublicNotification(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderCalibrationRunAwaitingApprovalNotificationEmail(
+    ...args: Parameters<typeof renderCalibrationRunAwaitingApprovalNotification>
+  ) {
+    return renderCalibrationRunAwaitingApprovalNotification(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderCalibrationRunApprovedNotificationEmail(
+    ...args: Parameters<typeof renderCalibrationRunApprovedNotification>
+  ) {
+    return renderCalibrationRunApprovedNotification(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderCalibrationRunRejectedNotificationEmail(
+    ...args: Parameters<typeof renderCalibrationRunRejectedNotification>
+  ) {
+    return renderCalibrationRunRejectedNotification(...args);
   }
 
   /* v8 ignore next 5 */
@@ -799,6 +823,186 @@ export class NotificationsService {
           msg: "Failed to send passkey added notification",
           operation: "sendPasskeyAddedNotification",
           email,
+          error,
+        }),
+    );
+  }
+
+  async sendCalibrationRunAwaitingApprovalNotification(input: {
+    deviceId: string;
+    deviceName: string;
+    definitionName: string;
+    actor: string;
+    email: string;
+  }) {
+    const { deviceId, deviceName, definitionName, actor, email } = input;
+
+    return await tryCatch(
+      async () => {
+        this.logger.log({
+          msg: "Sending calibration run awaiting approval notification email",
+          operation: "sendCalibrationRunAwaitingApprovalNotification",
+          email,
+          deviceId,
+        });
+
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { href: calibrationUrl } = new URL(
+          `/platform/devices/${deviceId}/calibration`,
+          baseUrl,
+        );
+
+        const { html, text } = await this.renderCalibrationRunAwaitingApprovalNotificationEmail({
+          host,
+          baseUrl,
+          deviceName,
+          definitionName,
+          actor,
+          calibrationUrl,
+        });
+
+        await this.dispatch({
+          to: email,
+          subject: `A ${definitionName} calibration of ${deviceName} is waiting for approval`,
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Calibration run awaiting approval notification email sent successfully",
+          operation: "sendCalibrationRunAwaitingApprovalNotification",
+          email,
+          deviceId,
+          status: "success",
+        });
+      },
+      (error) =>
+        this.sendFailure(error, {
+          msg: "Failed to send calibration run awaiting approval notification email",
+          operation: "sendCalibrationRunAwaitingApprovalNotification",
+          email,
+          deviceId,
+          error,
+        }),
+    );
+  }
+
+  async sendCalibrationRunApprovedNotification(input: {
+    deviceId: string;
+    deviceName: string;
+    definitionName: string;
+    actor: string;
+    email: string;
+  }) {
+    const { deviceId, deviceName, definitionName, actor, email } = input;
+
+    return await tryCatch(
+      async () => {
+        this.logger.log({
+          msg: "Sending calibration run approved notification email",
+          operation: "sendCalibrationRunApprovedNotification",
+          email,
+          deviceId,
+        });
+
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { href: calibrationUrl } = new URL(
+          `/platform/devices/${deviceId}/calibration`,
+          baseUrl,
+        );
+
+        const { html, text } = await this.renderCalibrationRunApprovedNotificationEmail({
+          host,
+          baseUrl,
+          deviceName,
+          definitionName,
+          actor,
+          calibrationUrl,
+        });
+
+        await this.dispatch({
+          to: email,
+          subject: `Your ${definitionName} calibration of ${deviceName} was approved`,
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Calibration run approved notification email sent successfully",
+          operation: "sendCalibrationRunApprovedNotification",
+          email,
+          deviceId,
+          status: "success",
+        });
+      },
+      (error) =>
+        this.sendFailure(error, {
+          msg: "Failed to send calibration run approved notification email",
+          operation: "sendCalibrationRunApprovedNotification",
+          email,
+          deviceId,
+          error,
+        }),
+    );
+  }
+
+  async sendCalibrationRunRejectedNotification(input: {
+    deviceId: string;
+    deviceName: string;
+    definitionName: string;
+    actor: string;
+    email: string;
+  }) {
+    const { deviceId, deviceName, definitionName, actor, email } = input;
+
+    return await tryCatch(
+      async () => {
+        this.logger.log({
+          msg: "Sending calibration run rejected notification email",
+          operation: "sendCalibrationRunRejectedNotification",
+          email,
+          deviceId,
+        });
+
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { href: calibrationUrl } = new URL(
+          `/platform/devices/${deviceId}/calibration`,
+          baseUrl,
+        );
+
+        const { html, text } = await this.renderCalibrationRunRejectedNotificationEmail({
+          host,
+          baseUrl,
+          deviceName,
+          definitionName,
+          actor,
+          calibrationUrl,
+        });
+
+        await this.dispatch({
+          to: email,
+          subject: `Your ${definitionName} calibration of ${deviceName} was rejected`,
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Calibration run rejected notification email sent successfully",
+          operation: "sendCalibrationRunRejectedNotification",
+          email,
+          deviceId,
+          status: "success",
+        });
+      },
+      (error) =>
+        this.sendFailure(error, {
+          msg: "Failed to send calibration run rejected notification email",
+          operation: "sendCalibrationRunRejectedNotification",
+          email,
+          deviceId,
           error,
         }),
     );

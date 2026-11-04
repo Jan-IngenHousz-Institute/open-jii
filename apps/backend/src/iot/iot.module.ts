@@ -12,6 +12,7 @@ import { ExperimentModule } from "../experiments/experiment.module";
 import { NotificationModule } from "../notifications/notification.module";
 import { SharingModule } from "../sharing/sharing.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
+import { CalibrationRunNotifier } from "./application/services/calibration-run-notifier";
 import { AddIotDeviceGroupMembersUseCase } from "./application/use-cases/add-iot-device-group-members/add-iot-device-group-members";
 import { ApproveCalibrationRunUseCase } from "./application/use-cases/approve-calibration-run/approve-calibration-run";
 import { BulkRegisterIotDevicesUseCase } from "./application/use-cases/bulk-register-iot-devices/bulk-register-iot-devices";
@@ -172,6 +173,7 @@ import { IotController } from "./presentation/iot.controller";
     GetActiveDeviceCalibrationUseCase,
     ListDeviceCalibrationsUseCase,
     ReportDeviceCalibrationWriteUseCase,
+    CalibrationRunNotifier,
     IotDeviceRepository,
     IotDeviceGroupRepository,
     ExperimentDeviceRepository,

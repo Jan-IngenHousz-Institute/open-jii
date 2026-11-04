@@ -1,7 +1,15 @@
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
+import type { CalibrationBlocks } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { calibrationDefinitions, eq } from "@repo/database";
 
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import {
+  calibrationDeliveries,
+  calibrationNotifications,
+  heardBy,
+  seedCalibrationAudience,
+} from "../../../../test/calibration-audience";
+import type { CalibrationAudience } from "../../../../test/calibration-audience";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotCalibrationDefinitionRepository } from "../../../core/repositories/iot-calibration-definition.repository";
 import { CreateExternalCalibrationRunUseCase } from "./create-external-calibration-run";
@@ -150,5 +158,67 @@ describe("CreateExternalCalibrationRunUseCase", () => {
     const result = await submit({ firmwareVersion: "1.0.0" });
     assertSuccess(result);
     expect(result.value.firmwareVersion).toBe("1.0.0");
+  });
+
+  describe("notifications", () => {
+    let audience: CalibrationAudience;
+    let parSweepId: string;
+
+    beforeEach(async () => {
+      audience = await seedCalibrationAudience(testApp);
+      const definition = await testApp.module.get(IotCalibrationDefinitionRepository).create(
+        {
+          family: "minipar",
+          name: "PAR sweep",
+          description: null,
+          captureProcedure: PROCEDURE,
+          script: "submit({})",
+          outputSchema: OUTPUT_SCHEMA,
+          minFirmwareVersion: null,
+        },
+        userId,
+      );
+      assertSuccess(definition);
+      parSweepId = definition.value[0].id;
+    });
+
+    const submitAsRequester = (blocks: CalibrationBlocks) =>
+      useCase.execute(
+        { deviceId: audience.deviceId, definitionId: parSweepId, blocks },
+        audience.requester,
+      );
+
+    it("tells the owner and the device's managers, not the requester, and queues their emails", async () => {
+      assertSuccess(
+        await submitAsRequester({ par: { status: "computed", coefficients: { spec: 1.19 } } }),
+      );
+
+      expect(await calibrationNotifications(testApp, audience)).toEqual(
+        heardBy(audience, ["owner", "manager"], (recipientId) => ({
+          type: "calibration_run_awaiting_approval",
+          recipientId,
+          actorId: audience.requester,
+          resourceType: "device",
+          resourceId: audience.deviceId,
+          params: { deviceName: "Test device", definitionName: "PAR sweep" },
+        })),
+      );
+      expect(await calibrationDeliveries(testApp, audience)).toEqual(
+        heardBy(audience, ["owner", "manager"], () => ({
+          type: "calibration_run_awaiting_approval",
+          status: "pending",
+        })),
+      );
+    });
+
+    it("tells nobody about a submission it refused", async () => {
+      assertFailure(
+        await submitAsRequester({ par: { status: "skipped", reason: "no reference connected" } }),
+      );
+
+      expect(await calibrationNotifications(testApp, audience)).toEqual(
+        heardBy(audience, [], () => null),
+      );
+    });
   });
 });

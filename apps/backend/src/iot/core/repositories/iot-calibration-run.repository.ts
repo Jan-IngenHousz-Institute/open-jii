@@ -26,6 +26,7 @@ import {
   eq,
   getTableColumns,
   inArray,
+  iotDevices,
   isNull,
   sql,
 } from "@repo/database";
@@ -101,6 +102,28 @@ export class IotCalibrationRunRepository {
     return tryCatch(async () => {
       const rows = await this.selectWithVersion().where(eq(calibrationRuns.id, runId));
       return rows.length > 0 ? this.parseRun(rows[0]) : null;
+    });
+  }
+
+  /** The names a notification about the run shows; a nameless device goes by its serial number. */
+  async findRunLabels(
+    runId: string,
+  ): Promise<Result<{ deviceName: string; definitionName: string } | null>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select({
+          deviceName: sql<string>`COALESCE(${iotDevices.name}, ${iotDevices.serialNumber})`,
+          definitionName: calibrationDefinitions.name,
+        })
+        .from(calibrationRuns)
+        .innerJoin(iotDevices, eq(calibrationRuns.deviceId, iotDevices.id))
+        .innerJoin(
+          calibrationDefinitions,
+          eq(calibrationRuns.definitionId, calibrationDefinitions.id),
+        )
+        .where(eq(calibrationRuns.id, runId))
+        .limit(1);
+      return rows.at(0) ?? null;
     });
   }
 
