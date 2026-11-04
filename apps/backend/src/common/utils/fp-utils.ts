@@ -52,6 +52,8 @@ export function assertSuccess<T, E>(result: Result<T, E>): asserts result is Suc
 enum CauseCode {
   // Postgres error code 23505 = unique_violation
   UNIQUE_VIOLATION = "23505",
+  // Postgres error code 23503 = foreign_key_violation
+  FOREIGN_KEY_VIOLATION = "23503",
 }
 
 enum CauseMessageCheck {
@@ -73,6 +75,10 @@ function getCauseCode(error: unknown): CauseCode | undefined {
       ? String((cause as Record<string, unknown>).code)
       : undefined;
   return causeCode as CauseCode | undefined;
+}
+
+export function isForeignKeyViolation(error: unknown): boolean {
+  return getCauseCode(error) === CauseCode.FOREIGN_KEY_VIOLATION;
 }
 
 function getCauseMessage(error: unknown): string {

@@ -31296,6 +31296,98 @@
         }
       }
     },
+    "/api/v1/notifications/email/unsubscribe/{token}": {
+      "post": {
+        "operationId": "notifications.unsubscribeEmailByToken",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "category": {
+                      "enum": [
+                        "requests_and_invitations",
+                        "membership_and_access",
+                        "experiments_and_resources",
+                        "devices_and_calibration",
+                        "project_transfers",
+                        "data_jobs",
+                        "account_security"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "category"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/email/resubscribe/{token}": {
+      "post": {
+        "operationId": "notifications.resubscribeEmailByToken",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "category": {
+                      "enum": [
+                        "requests_and_invitations",
+                        "membership_and_access",
+                        "experiments_and_resources",
+                        "devices_and_calibration",
+                        "project_transfers",
+                        "data_jobs",
+                        "account_security"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "category"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/organizations": {
       "get": {
         "operationId": "organizations.listOrganizations",

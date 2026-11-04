@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 
+import type { EmailUnsubscribe } from "../components/email-layout";
 import { Email } from "../emails/email";
 import { OrganizationMembershipRemoved } from "../emails/fallbacks/organization-membership-removed";
 import { getCmsEmail } from "../lib/contentful";
@@ -9,6 +10,7 @@ export interface RenderOrganizationMembershipRemovedParams {
   baseUrl: string;
   organizationName: string;
   actor: string;
+  unsubscribe?: EmailUnsubscribe;
 }
 
 export interface RenderedEmail {
@@ -20,7 +22,7 @@ export interface RenderedEmail {
 export async function renderOrganizationMembershipRemoved(
   params: RenderOrganizationMembershipRemovedParams,
 ): Promise<RenderedEmail> {
-  const { host, baseUrl, organizationName, actor } = params;
+  const { host, baseUrl, organizationName, actor, unsubscribe } = params;
 
   const emailData = await getCmsEmail("organization-membership-removed", {
     host,
@@ -30,7 +32,7 @@ export async function renderOrganizationMembershipRemoved(
   });
 
   if (!emailData) {
-    const props = { host, baseUrl, organizationName, actor };
+    const props = { host, baseUrl, organizationName, actor, unsubscribe };
     const html = await render(OrganizationMembershipRemoved(props), {});
     const text = await render(OrganizationMembershipRemoved(props), { plainText: true });
     return { html, text, preview: `You were removed from ${organizationName}` };
@@ -42,6 +44,7 @@ export async function renderOrganizationMembershipRemoved(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     {},
   );
@@ -52,6 +55,7 @@ export async function renderOrganizationMembershipRemoved(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     { plainText: true },
   );

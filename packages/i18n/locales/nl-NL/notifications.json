@@ -105,5 +105,28 @@
     "newsletterNote": "De nieuwsbrief heeft een eigen instelling onder Algemeen.",
     "locked": "Altijd aan",
     "unavailable": "Nog niet beschikbaar"
+  },
+  "unsubscribe": {
+    "title": "Afmelden",
+    "working": "Je e-mailinstellingen worden bijgewerkt…",
+    "done": {
+      "heading": "Je bent afgemeld",
+      "body": "Je krijgt geen e-mails meer over {{category}}. Je ziet ze nog wel bij je meldingen in openJII."
+    },
+    "undone": {
+      "heading": "E-mails staan weer aan",
+      "body": "Je krijgt weer e-mails over {{category}}."
+    },
+    "invalid": {
+      "heading": "Deze link werkt niet meer",
+      "body": "Hij is misschien verlopen of gewijzigd, dus er is niets veranderd. Log in om je meldingsinstellingen te beheren."
+    },
+    "error": {
+      "body": "Je e-mailinstellingen konden niet worden bijgewerkt."
+    },
+    "undo": "Ongedaan maken",
+    "settings": "Alle instellingen beheren",
+    "signIn": "Inloggen",
+    "retry": "Opnieuw proberen"
   }
 }

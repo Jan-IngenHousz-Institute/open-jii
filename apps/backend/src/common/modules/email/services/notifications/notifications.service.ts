@@ -3,6 +3,7 @@ import { createTransport } from "nodemailer";
 import Mail from "nodemailer/lib/mailer";
 
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
+import type { EmailUnsubscribe } from "@repo/transactional/components/email-layout";
 import { renderAccessGrantedNotification } from "@repo/transactional/render/access-granted-notification";
 import { renderApiKeyCreatedNotification } from "@repo/transactional/render/api-key-created-notification";
 import { renderCalibrationRunApprovedNotification } from "@repo/transactional/render/calibration-run-approved-notification";
@@ -88,6 +89,24 @@ const RELAY_UNREACHABLE_CODES: ReadonlySet<string> = new Set([
  * and leave the connection on nodemailer's own ten-minute socket default.
  */
 export const mailTransportOptions = (url: string) => ({ url, ...MAIL_TRANSPORT_TIMEOUTS_MS });
+
+export type NotificationEmailUnsubscribe = EmailUnsubscribe & { oneClickUrl: string };
+
+/** RFC 8058: the mail client's own unsubscribe button posts once to the URL, with no page in between. */
+export const listUnsubscribeHeaders = (
+  unsubscribe?: NotificationEmailUnsubscribe,
+): Record<string, string> | undefined =>
+  unsubscribe && {
+    "List-Unsubscribe": `<${unsubscribe.oneClickUrl}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+
+const footerLinks = (unsubscribe?: NotificationEmailUnsubscribe): EmailUnsubscribe | undefined =>
+  unsubscribe && {
+    categoryLabel: unsubscribe.categoryLabel,
+    settingsUrl: unsubscribe.settingsUrl,
+    unsubscribeUrl: unsubscribe.unsubscribeUrl,
+  };
 
 @Injectable()
 export class NotificationsService {
@@ -247,6 +266,7 @@ export class NotificationsService {
     subject: string;
     html: string;
     text: string;
+    headers?: Record<string, string>;
   }): Promise<void> {
     const transport = this.createMailTransport(this.emailConfigService.getServer());
 
@@ -256,6 +276,7 @@ export class NotificationsService {
       subject: params.subject,
       html: params.html,
       text: params.text,
+      headers: params.headers,
     });
 
     const rejected: (string | Mail.Address)[] = result.rejected;
@@ -311,6 +332,7 @@ export class NotificationsService {
     inviterName: string,
     role: string,
     recipientEmail: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ) {
     return await tryCatch(
       async () => {
@@ -325,6 +347,7 @@ export class NotificationsService {
           inviterName,
           role,
           baseUrl,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
         await this.dispatch({
@@ -332,6 +355,7 @@ export class NotificationsService {
           subject: `You've been invited to join ${organizationName}`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
 
         this.logger.log({
@@ -357,6 +381,7 @@ export class NotificationsService {
     requesterName: string,
     recipientEmail: string,
     message?: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ) {
     return await tryCatch(
       async () => {
@@ -368,6 +393,7 @@ export class NotificationsService {
           requesterName,
           message,
           baseUrl,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
         await this.dispatch({
@@ -375,6 +401,7 @@ export class NotificationsService {
           subject: `New request to join ${organizationName} on openJII`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
 
         this.logger.log({
@@ -398,6 +425,7 @@ export class NotificationsService {
     organizationId: string,
     organizationName: string,
     requesterEmail: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ) {
     return await tryCatch(
       async () => {
@@ -407,6 +435,7 @@ export class NotificationsService {
           organizationName,
           organizationUrl: url,
           baseUrl,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
         await this.dispatch({
@@ -414,6 +443,7 @@ export class NotificationsService {
           subject: `You have joined ${organizationName} on openJII`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
 
         this.logger.log({
@@ -437,6 +467,7 @@ export class NotificationsService {
     organizationId: string,
     organizationName: string,
     requesterEmail: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ) {
     return await tryCatch(
       async () => {
@@ -445,6 +476,7 @@ export class NotificationsService {
           host,
           organizationName,
           baseUrl,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
         await this.dispatch({
@@ -452,6 +484,7 @@ export class NotificationsService {
           subject: `Update on your request to join ${organizationName}`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
 
         this.logger.log({
@@ -477,8 +510,9 @@ export class NotificationsService {
     actor: string;
     role: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }) {
-    const { organizationId, organizationName, actor, role, email } = input;
+    const { organizationId, organizationName, actor, role, email, unsubscribe } = input;
 
     return await tryCatch(
       async () => {
@@ -490,6 +524,7 @@ export class NotificationsService {
           organizationUrl: url,
           actor,
           role,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
         await this.dispatch({
@@ -497,6 +532,7 @@ export class NotificationsService {
           subject: `Your role in ${organizationName} changed on the openJII Platform`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
 
         this.logger.log({
@@ -520,8 +556,9 @@ export class NotificationsService {
     organizationName: string;
     actor: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }) {
-    const { organizationName, actor, email } = input;
+    const { organizationName, actor, email, unsubscribe } = input;
 
     return await tryCatch(
       async () => {
@@ -532,6 +569,7 @@ export class NotificationsService {
           baseUrl,
           organizationName,
           actor,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
         await this.dispatch({
@@ -539,6 +577,7 @@ export class NotificationsService {
           subject: `You were removed from ${organizationName} on the openJII Platform`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
 
         this.logger.log({
@@ -567,8 +606,9 @@ export class NotificationsService {
     actor: string;
     role: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }) {
-    const { resourceType, resourceId, resourceName, actor, role, email } = input;
+    const { resourceType, resourceId, resourceName, actor, role, email, unsubscribe } = input;
 
     return await tryCatch(
       async () => {
@@ -596,6 +636,7 @@ export class NotificationsService {
           resourceUrl,
           actor,
           role,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
         await this.dispatch({
@@ -603,6 +644,7 @@ export class NotificationsService {
           subject: `Access to ${resourceName} on the openJII Platform`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
 
         this.logger.log({
@@ -629,8 +671,9 @@ export class NotificationsService {
     resourceName: string;
     actor: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }) {
-    const { resourceType, resourceName, actor, email } = input;
+    const { resourceType, resourceName, actor, email, unsubscribe } = input;
 
     return await tryCatch(
       async () => {
@@ -650,6 +693,7 @@ export class NotificationsService {
           resourceKind: RESOURCE_KIND_LABEL[resourceType],
           resourceName,
           actor,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
         await this.dispatch({
@@ -657,6 +701,7 @@ export class NotificationsService {
           subject: `${resourceName} was deleted on the openJII Platform`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
 
         this.logger.log({
@@ -680,6 +725,7 @@ export class NotificationsService {
     experimentId: string,
     experimentName: string,
     email: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ) {
     return await tryCatch(
       async () => {
@@ -698,6 +744,7 @@ export class NotificationsService {
           baseUrl,
           experimentName,
           experimentUrl,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
         await this.dispatch({
@@ -705,6 +752,7 @@ export class NotificationsService {
           subject: `${experimentName} is now public on the openJII Platform`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
 
         this.logger.log({
@@ -975,6 +1023,7 @@ export class NotificationsService {
     email: string,
     projectIdOld: string,
     projectUrlOld: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ) {
     return await tryCatch(
       async () => {
@@ -986,7 +1035,6 @@ export class NotificationsService {
 
         const baseUrl = this.emailConfigService.getBaseUrl();
         const { host } = new URL(baseUrl);
-        const transport = this.createMailTransport(this.emailConfigService.getServer());
 
         const { html, text } = await this.renderTransferRequestConfirmationEmail({
           host,
@@ -994,27 +1042,16 @@ export class NotificationsService {
           projectUrlOld,
           userEmail: email,
           baseUrl,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
-        const result = await transport.sendMail({
+        await this.dispatch({
           to: email,
-          from: {
-            name: "openJII",
-            address: this.emailConfigService.getFrom(),
-          },
           subject: `Project Transfer Request Received - openJII`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
-
-        // Handle rejected and pending addresses
-        const rejected: (string | Mail.Address)[] = result.rejected;
-        const pending: (string | Mail.Address)[] = result.pending ?? [];
-        const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
-
-        if (failed.length > 0) {
-          throw new Error("Email could not be sent");
-        }
 
         this.logger.log({
           msg: "Transfer request confirmation email sent successfully",
@@ -1033,7 +1070,12 @@ export class NotificationsService {
     );
   }
 
-  async sendProjectTransferComplete(email: string, experimentId: string, experimentName: string) {
+  async sendProjectTransferComplete(
+    email: string,
+    experimentId: string,
+    experimentName: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
+  ) {
     return await tryCatch(
       async () => {
         this.logger.log({
@@ -1045,34 +1087,22 @@ export class NotificationsService {
         const baseUrl = this.emailConfigService.getBaseUrl();
         const { host } = new URL(baseUrl);
         const { href: experimentUrl } = new URL(`/platform/experiments/${experimentId}`, baseUrl);
-        const transport = this.createMailTransport(this.emailConfigService.getServer());
 
         const { html, text } = await this.renderProjectTransferCompleteEmail({
           host,
           experimentName,
           experimentUrl,
           baseUrl,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
-        const result = await transport.sendMail({
+        await this.dispatch({
           to: email,
-          from: {
-            name: "openJII",
-            address: this.emailConfigService.getFrom(),
-          },
           subject: `Project Transfer Complete - openJII`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
-
-        // Handle rejected and pending addresses
-        const rejected: (string | Mail.Address)[] = result.rejected;
-        const pending: (string | Mail.Address)[] = result.pending ?? [];
-        const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
-
-        if (failed.length > 0) {
-          throw new Error("Email could not be sent");
-        }
 
         this.logger.log({
           msg: "Project transfer complete email sent successfully",
@@ -1097,6 +1127,7 @@ export class NotificationsService {
     requesterName: string,
     adminEmail: string,
     message?: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ) {
     return await tryCatch(
       async () => {
@@ -1109,7 +1140,6 @@ export class NotificationsService {
         const baseUrl = this.emailConfigService.getBaseUrl();
         const { host } = new URL(baseUrl);
         const { href: experimentUrl } = new URL(`/platform/experiments/${experimentId}`, baseUrl);
-        const transport = this.createMailTransport(this.emailConfigService.getServer());
 
         const { html, text } = await this.renderJoinRequestSubmittedEmail({
           host,
@@ -1118,26 +1148,16 @@ export class NotificationsService {
           requesterName,
           message,
           baseUrl,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
-        const result = await transport.sendMail({
+        await this.dispatch({
           to: adminEmail,
-          from: {
-            name: "openJII",
-            address: this.emailConfigService.getFrom(),
-          },
           subject: `New request to join ${experimentName} on openJII`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
-
-        const rejected: (string | Mail.Address)[] = result.rejected;
-        const pending: (string | Mail.Address)[] = result.pending ?? [];
-        const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
-
-        if (failed.length > 0) {
-          throw new Error("Email could not be sent");
-        }
 
         this.logger.log({
           msg: "Join request submitted notification sent",
@@ -1160,6 +1180,7 @@ export class NotificationsService {
     experimentId: string,
     experimentName: string,
     requesterEmail: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ) {
     return await tryCatch(
       async () => {
@@ -1171,32 +1192,21 @@ export class NotificationsService {
 
         const baseUrl = this.emailConfigService.getBaseUrl();
         const { host } = new URL(baseUrl);
-        const transport = this.createMailTransport(this.emailConfigService.getServer());
 
         const { html, text } = await this.renderJoinRequestRejectedEmail({
           host,
           experimentName,
           baseUrl,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
-        const result = await transport.sendMail({
+        await this.dispatch({
           to: requesterEmail,
-          from: {
-            name: "openJII",
-            address: this.emailConfigService.getFrom(),
-          },
           subject: `Update on your request to join ${experimentName}`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
-
-        const rejected: (string | Mail.Address)[] = result.rejected;
-        const pending: (string | Mail.Address)[] = result.pending ?? [];
-        const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
-
-        if (failed.length > 0) {
-          throw new Error("Email could not be sent");
-        }
 
         this.logger.log({
           msg: "Join request rejected notification sent",
