@@ -37,7 +37,7 @@ const configWith = (values: Record<string, string>) =>
   }) as unknown as ConfigService;
 
 const CONFIG = {
-  "auth.secret": "test-auth-secret",
+  "notification.unsubscribeSecret": "test-unsubscribe-secret",
   "auth.url": "https://api.example.org",
   "email.baseUrl": "https://openjii.example.org",
 };
@@ -93,7 +93,7 @@ describe("NotificationUnsubscribeService", () => {
 
   it("refuses a token signed with another secret", () => {
     const other = new NotificationUnsubscribeService(
-      configWith({ ...CONFIG, "auth.secret": "another-secret" }),
+      configWith({ ...CONFIG, "notification.unsubscribeSecret": "another-secret" }),
     );
 
     expectInvalid(other.sign(userId, "requests_and_invitations"));

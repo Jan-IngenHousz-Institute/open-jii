@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { createHmac, hkdfSync, timingSafeEqual } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import { z } from "zod";
 
 import {
@@ -17,7 +17,6 @@ import { ErrorCodes } from "../../../common/utils/error-codes";
 import { AppError, failure, success } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
 
-const KEY_INFO = "openjii-notification-unsubscribe";
 const TOKEN_LIFETIME_MS = 365 * 24 * 60 * 60 * 1000;
 
 export const NOTIFICATION_CATEGORY_LABEL: Record<NotificationCategory, string> = {
@@ -56,9 +55,7 @@ export class NotificationUnsubscribeService {
   private readonly key: Buffer;
 
   constructor(private readonly configService: ConfigService) {
-    this.key = Buffer.from(
-      hkdfSync("sha256", this.configService.getOrThrow<string>("auth.secret"), "", KEY_INFO, 32),
-    );
+    this.key = Buffer.from(this.configService.getOrThrow<string>("notification.unsubscribeSecret"));
   }
 
   sign(userId: string, category: NotificationCategory, expiresAt?: Date): string {
