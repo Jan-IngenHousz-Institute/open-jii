@@ -45,12 +45,12 @@ locals {
   })
 
   # The views that name an experiment (packages/database/clickhouse/migrations), the reader's only
-  # way to experiment data, and the tables a reload replaces rows of.
+  # way to experiment data, and the tables a reload replaces rows of or removes ids from.
   reader_views = [
     "experiment_measurements", "experiment_macro_results", "experiment_uploads",
     "experiment_contributor_ids", "experiment_client_ids", "experiment_payload_schemas",
   ]
-  reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas"]
+  reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas", "contributor_ids", "client_ids"]
 
   # No grants means the admin, which manages access and applies the schema. The writer only inserts,
   # and keeps out of the migration ledger, which records what the schema already holds. The reloader

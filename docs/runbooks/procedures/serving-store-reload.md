@@ -38,11 +38,14 @@ and alerts, which read the last five minutes of arrivals, see only the rows the 
 committed V less than five minutes before the load, its rows count in those metrics until then, at a
 delivery time near zero.
 
+After its delete it removes the contributor and client ids that no row names any longer, such as an
+erased contributor's, from the id tables the page sorts use.
+
 It connects as `openjii_reloader`, which may read and insert in `store` and delete from the tables it
-reloads (the three row tables and `payload_schemas`), but cannot update their values, delete from
-`feed_rejects`, or write to the migration ledger. Its right to delete also lets it drop or detach
-those tables' partitions, which empties a table as `TRUNCATE` would; ClickHouse has no narrower grant
-for a delete.
+reloads (the three row tables, `payload_schemas` and the two id tables), but cannot update their
+values, delete from `feed_rejects`, or write to the migration ledger. Its right to delete also lets
+it drop or detach those tables' partitions, which empties a table as `TRUNCATE` would; ClickHouse has
+no narrower grant for a delete.
 
 ## Running it
 

@@ -1,7 +1,7 @@
 -- The contributors and clients each experiment's rows name, as ids, so the backend can order a page
 -- by a contributor's or device's name from Postgres without reading the experiment's rows for them.
 -- Views add an insert's ids as it lands, and the tables fold repeats, so a replayed insert changes
--- nothing. A reload's deletes leave ids behind, which an order does not mind.
+-- nothing. Views never remove an id, so a reload removes the ones its deletes leave without rows.
 CREATE TABLE IF NOT EXISTS contributor_ids
 (
     experiment_id String,

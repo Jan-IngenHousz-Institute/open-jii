@@ -18,6 +18,16 @@ from .writer import StoreUnavailable, StoreWriter, Written
 # drop what already landed. A reload is run by hand, so after the last it fails instead of waiting.
 WRITE_RETRY_DELAYS = (10, 30, 60, 120, 300)
 
+# Each id table, the column it lists, and the column that holds the id in each table whose rows it
+# lists, as packages/database/clickhouse/migrations/0006_experiment_ids.sql fills them.
+ID_SOURCES = {
+    "contributor_ids": (
+        "user_id",
+        {"measurements": "user_id", "macro_results": "user_id", "uploads": "created_by"},
+    ),
+    "client_ids": ("client_id", {"measurements": "client_id", "macro_results": "client_id"}),
+}
+
 # More rows than this that gold no longer holds stop a reload before its delete, unless asked for.
 # A repair removes a few; a gold table part way through a refresh looks as if it lost most of them.
 REMOVAL_LIMIT = 1000
@@ -111,6 +121,7 @@ class StoreReload:
             # A table type's schemas carry its gold table's versions, so the older ones are those
             # only rows from before the load had.
             self._delete_older(PAYLOAD_SCHEMAS, version, experiment_id, table_type=table.table_type)
+            self._prune_ids(experiment_id)
 
         gold = rows.select(*table.key()).dropDuplicates().groupBy("experiment_id").count().collect()
         stored = self._stored_rows(table, version, experiment_id)
@@ -227,6 +238,21 @@ class StoreReload:
             **parameters,
             **matches,
         )
+
+    def _prune_ids(self, experiment_id: str | None) -> None:
+        """Removes the contributor and client ids no row names any longer. The views that fill the
+        id tables add an id as a row lands and never take one away, so after a delete an id whose
+        rows are gone, such as an erased contributor's, would still be listed."""
+        scope, parameters = self._scope(experiment_id)
+        database = self.writer.database
+        for id_table, (column, sources) in ID_SOURCES.items():
+            # One NOT IN per table: a mutation refuses a UNION.
+            still_named = "".join(
+                f" AND (experiment_id, {column}) NOT IN (SELECT experiment_id, assumeNotNull({source_column}) "
+                f"FROM {database}.{source} WHERE {source_column} IS NOT NULL{scope})"
+                for source, source_column in sources.items()
+            )
+            self.writer.query(f"DELETE FROM {database}.{id_table} WHERE 1{scope}{still_named}", **parameters)
 
     def _stored_rows(self, table: StoreTable, version: int, experiment_id: str | None) -> list[dict]:
         """The store's rows per experiment, one per key, counted by where each one's newest commit

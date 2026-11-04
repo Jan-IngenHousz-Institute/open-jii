@@ -131,6 +131,10 @@ def test_a_key_gold_holds_twice_goes_in_as_its_newest_copy(spark: SparkSession) 
     assert [line["uploaded_data"] for line in sent if line["id"] == 22] == [{"ph": 6.4}]
 
 
+# The deletes of a reloaded table's rows and schemas, apart from the ids pruned after them.
+_ROW_DELETES = ("DELETE FROM store.uploads", "DELETE FROM store.payload_schemas")
+
+
 def test_the_delete_takes_the_experiments_rows_from_before_the_version_after_the_insert(
     spark: SparkSession,
 ) -> None:
@@ -138,7 +142,7 @@ def test_the_delete_takes_the_experiments_rows_from_before_the_version_after_the
 
     _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
-    deletes = [(sql, params) for sql, params in writer.statements if sql.startswith("DELETE")]
+    deletes = [(sql, params) for sql, params in writer.statements if sql.startswith(_ROW_DELETES)]
     assert deletes == [
         (
             "DELETE FROM store.uploads WHERE _commit_version < {version:Int64} AND experiment_id = {experiment:String}",
@@ -148,6 +152,35 @@ def test_the_delete_takes_the_experiments_rows_from_before_the_version_after_the
             "DELETE FROM store.payload_schemas WHERE _commit_version < {version:Int64} "
             "AND experiment_id = {experiment:String} AND table_type = {table_type:String}",
             {"version": 7, "experiment": "e1", "table_type": "upload"},
+        ),
+    ]
+
+
+def test_after_the_delete_ids_no_table_names_are_pruned_for_the_experiment(spark: SparkSession) -> None:
+    writer = _Writer()
+
+    _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
+
+    prunes = [(sql, params) for sql, params in writer.statements if sql.startswith("DELETE FROM store.c")]
+    scope = " AND experiment_id = {experiment:String}"
+    assert prunes == [
+        (
+            f"DELETE FROM store.contributor_ids WHERE 1{scope}"
+            " AND (experiment_id, user_id) NOT IN (SELECT experiment_id, assumeNotNull(user_id)"
+            f" FROM store.measurements WHERE user_id IS NOT NULL{scope})"
+            " AND (experiment_id, user_id) NOT IN (SELECT experiment_id, assumeNotNull(user_id)"
+            f" FROM store.macro_results WHERE user_id IS NOT NULL{scope})"
+            " AND (experiment_id, user_id) NOT IN (SELECT experiment_id, assumeNotNull(created_by)"
+            f" FROM store.uploads WHERE created_by IS NOT NULL{scope})",
+            {"experiment": "e1"},
+        ),
+        (
+            f"DELETE FROM store.client_ids WHERE 1{scope}"
+            " AND (experiment_id, client_id) NOT IN (SELECT experiment_id, assumeNotNull(client_id)"
+            f" FROM store.measurements WHERE client_id IS NOT NULL{scope})"
+            " AND (experiment_id, client_id) NOT IN (SELECT experiment_id, assumeNotNull(client_id)"
+            f" FROM store.macro_results WHERE client_id IS NOT NULL{scope})",
+            {"experiment": "e1"},
         ),
     ]
 
@@ -179,7 +212,7 @@ def test_a_reload_of_every_experiment_deletes_across_the_table(spark: SparkSessi
 
     _GoldAt(spark, writer, _GOLD).reload(UPLOADS)
 
-    deletes = [(sql, params) for sql, params in writer.statements if sql.startswith("DELETE")]
+    deletes = [(sql, params) for sql, params in writer.statements if sql.startswith(_ROW_DELETES)]
     assert deletes == [
         ("DELETE FROM store.uploads WHERE _commit_version < {version:Int64}", {"version": 7}),
         (
@@ -238,7 +271,7 @@ def test_schemas_the_store_could_not_take_are_sent_again_before_the_delete(spark
 
     assert writer.schema_attempts == 2
     assert [table for table, _ in writer.inserts] == ["payload_schemas"]
-    assert len([sql for sql, _ in writer.statements if sql.startswith("DELETE")]) == 2
+    assert len([sql for sql, _ in writer.statements if sql.startswith(_ROW_DELETES)]) == 2
 
 
 def test_a_load_the_store_refused_rows_of_deletes_nothing(spark: SparkSession) -> None:
@@ -300,7 +333,14 @@ def store(store_migrations: list[str]) -> Iterator[_Admin]:
         f"CREATE USER {_RELOADER} IDENTIFIED BY 'reload-test' SETTINGS json_type_escape_dots_in_keys = 1"
     )
     store.run(f"GRANT SELECT, INSERT ON {_DATABASE}.* TO {_RELOADER}")
-    for table in ("measurements", "macro_results", "uploads", "payload_schemas"):
+    for table in (
+        "measurements",
+        "macro_results",
+        "uploads",
+        "payload_schemas",
+        "contributor_ids",
+        "client_ids",
+    ):
         store.run(f"GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON {_DATABASE}.{table} TO {_RELOADER}")
     store.run(f"REVOKE INSERT ON {_DATABASE}._migrations FROM {_RELOADER}")
 
@@ -444,6 +484,22 @@ def test_rows_gold_sends_again_do_not_count_against_the_removal_limit(
     reloaded = _GoldAt(spark, reloader, _GOLD).reload(UPLOADS, "e2")
 
     assert reloaded.store == reloaded.gold
+
+
+@pytest.mark.clickhouse
+def test_a_reload_removes_the_ids_no_row_names_any_longer(
+    spark: SparkSession, store: _Admin, reloader: StoreWriter
+) -> None:
+    reloader.write(UPLOADS.lines(spark.sql(_FED)), "uploads")
+    contributors = (
+        f"SELECT experiment_id, user_id FROM {_DATABASE}.contributor_ids FINAL ORDER BY experiment_id"
+    )
+    assert [row["experiment_id"] for row in store.rows(contributors)] == ["e1", "e2"]
+    gold_without_e2 = f"SELECT * FROM ({_GOLD}) WHERE experiment_id != 'e2'"
+
+    _GoldAt(spark, reloader, gold_without_e2).reload(UPLOADS, "e2")
+
+    assert store.rows(contributors) == [{"experiment_id": "e1", "user_id": "u1"}]
 
 
 @pytest.mark.clickhouse
