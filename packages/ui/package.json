@@ -18,6 +18,7 @@
     "./hooks/use-prefers-reduced-motion": "./src/hooks/use-prefers-reduced-motion.ts",
     "./hooks/use-rotation": "./src/hooks/use-rotation.ts",
     "./lib/utils": "./src/lib/utils.ts",
+    "./styles/*": "./src/styles/*",
     "./components/charts/colorway": "./src/components/charts/colorway.ts"
   },
   "license": "MIT",

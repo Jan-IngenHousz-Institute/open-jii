@@ -11,7 +11,7 @@ import { PostHogProvider } from "../providers/PostHogProvider";
 import "./globals.css";
 
 // The font variables have to sit on <html> so the `--font-sans`/`--font-mono`
-// declarations in globals.css `:root` can resolve them.
+// declarations in theme.css `:root` can resolve them.
 const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],

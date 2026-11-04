@@ -5,8 +5,8 @@ import { cn, cva } from "@repo/ui/lib/utils";
 
 /**
  * The distinct hues a status or category pill can wear. These are the only
- * colours in the app that live outside the shadcn contract — see the
- * `--status-*` block in `app/globals.css` — so they swap with the theme like
+ * colours in the app that live outside the shadcn contract (see the
+ * `--status-*` block in `@repo/ui/styles/theme.css`), so they swap with the theme like
  * everything else, and there are deliberately five of them rather than one per
  * domain value. Callers map their own vocabulary onto a tone.
  */

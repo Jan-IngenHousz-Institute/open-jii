@@ -72,7 +72,7 @@ The privacy rules in `openjii-docs-update` apply to anything a ticket shows.
 Draw a sketch only where the app cannot show the change honestly even with fixtures: a language
 model's answer, a flow that needs a physical device, or a screen whose layout is itself the open
 question. Draw it in the platform's tokens, type and component chrome, starting at
-`apps/web/app/globals.css`, so a reader sees the product and not a wireframe. Linear needs a PNG, so
+`packages/ui/src/styles/theme.css`, so a reader sees the product and not a wireframe. Linear needs a PNG, so
 render one, and caption it `Sketch:`.
 
 Do not make a screen for work with no visible surface. A rate limit, a durable write and a removal

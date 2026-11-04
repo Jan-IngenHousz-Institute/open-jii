@@ -13,7 +13,7 @@
 }
 
 /* Fumadocs theme values mirror the platform workspace tokens in
-   apps/web/app/globals.css. The public navbar/footer use a separate invariant
+   packages/ui/src/styles/theme.css. The public navbar/footer use a separate invariant
    teal-and-gold brand chrome; docs follows the application surfaces and controls
    instead, while the logo artwork retains its gold identity. */
 :root {
