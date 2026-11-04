@@ -3,6 +3,8 @@ WITH
 -- and custom metadata as they are now. A plain view stores nothing, so an edit
 -- to an annotation or to custom metadata shows on the next read and nothing is
 -- recomputed on a pipeline trigger. ${catalog} is filled in by terraform.
+-- Restart backend instances after redefining or rolling back this view to refresh
+-- their cached source columns. See apps/data/README.md.
 -- Inside the WITH because Unity Catalog drops comments above a view's first keyword.
 db_annotations AS (
   SELECT
@@ -71,6 +73,7 @@ measurements AS (
   SELECT
     raw.experiment_id,
     raw.id,
+    raw.client_id,
     raw.device_id,
     raw.device_name,
     raw.timestamp,
@@ -81,25 +84,14 @@ measurements AS (
     raw.questions_data,
     raw.annotations AS payload_annotations,
     contributors.user AS contributor,
-    devices.device,
-    CASE
-      WHEN nullif(trim(devices.device.serial_number), '') IS NOT NULL THEN devices.device.serial_number
-      WHEN raw.fallback_device_name = raw.fallback_device_id THEN raw.fallback_device_name
-      WHEN raw.fallback_device_id IS NOT NULL THEN concat(raw.fallback_device_name, ' (', raw.fallback_device_id, ')')
-      ELSE coalesce(raw.fallback_device_name, 'Unknown device')
-    END AS device_label,
+    devices.device AS device,
     raw.protocol_id,
     raw.workbook_run_id,
     raw.latitude,
     raw.longitude,
     raw.data,
     raw.processed_timestamp
-  FROM (
-    SELECT *,
-      coalesce(nullif(trim(device_name), ''), nullif(trim(client_id), ''), nullif(trim(device_id), '')) AS fallback_device_name,
-      coalesce(nullif(trim(device_id), ''), nullif(trim(client_id), '')) AS fallback_device_id
-    FROM ${catalog}.centrum.experiment_raw_data
-  ) AS raw
+  FROM ${catalog}.centrum.experiment_raw_data AS raw
   LEFT JOIN ${catalog}.centrum.experiment_contributors AS contributors
     ON raw.experiment_id = contributors.experiment_id AND raw.user_id = contributors.user_id
   LEFT JOIN ${catalog}.centrum.experiment_devices AS devices
@@ -108,6 +100,7 @@ measurements AS (
 SELECT
   m.experiment_id,
   m.id,
+  m.client_id,
   m.device_id,
   m.device_name,
   m.timestamp,
@@ -118,7 +111,6 @@ SELECT
   m.questions_data,
   m.contributor,
   m.device,
-  m.device_label,
   m.protocol_id,
   m.workbook_run_id,
   m.latitude,

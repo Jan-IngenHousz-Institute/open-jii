@@ -2,7 +2,6 @@ import { Injectable, Inject, Logger } from "@nestjs/common";
 
 import {
   DATA_QUERY_MAX_LIMIT,
-  DEVICE_LABEL_COLUMN,
   WellKnownColumnTypes,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isDecimalType, isNumericType } from "@repo/api/transforms/column-type-utils";
@@ -82,6 +81,7 @@ interface TableShape {
   variants: { columnName: VariantColumn; schema: string; suffix: string }[];
   exceptColumns: string[];
   reservedColumns: string[];
+  baseColumns?: string[];
 }
 
 type RenamedColumns = Map<string, { name: string; source: VariantColumn }>;
@@ -344,32 +344,20 @@ export class ExperimentDataRepository {
     }
 
     const shape = shapeResult.value;
-    // Bare device reads supply chart labels; serial-number filters keep registry values.
-    const deviceLabels =
-      column === DEVICE_LABEL_COLUMN ||
-      (column === "device" && shape.metadata.tableType !== "upload");
-    if (!deviceLabels && (offset ?? 0) > 0) {
+    const deviceColumn = column === "device" && shape.metadata.tableType !== "upload";
+    if (!deviceColumn && (offset ?? 0) > 0) {
       return failure(AppError.badRequest("Offset paging is supported only for device columns"));
     }
-    const registrySerial =
-      column === "device.serial_number" && shape.metadata.tableType !== "upload";
-    const queryResult =
-      deviceLabels || registrySerial
-        ? this.deviceValuesSql(
-            experimentId,
-            shape,
-            registrySerial ? "device.serial_number" : DEVICE_LABEL_COLUMN,
-            limit,
-            offset,
-          )
-        : this.buildQuery(experimentId, shape, {
-            columns: [column],
-            distinct: true,
-            orderBy: column,
-            orderDirection: "ASC",
-            limit: limit + 1,
-            offset,
-          });
+    const queryResult = deviceColumn
+      ? this.deviceValuesSql(experimentId, shape, limit, offset)
+      : this.buildQuery(experimentId, shape, {
+          columns: [column],
+          distinct: true,
+          orderBy: column,
+          orderDirection: "ASC",
+          limit: limit + 1,
+          offset,
+        });
     if (queryResult.isFailure()) {
       return queryResult;
     }
@@ -540,8 +528,8 @@ export class ExperimentDataRepository {
 
   /**
    * The table's metadata, what a read of it flattens and hides, and the names its base columns
-   * hold. The view's columns are looked up only when a payload is flattened, since only then can
-   * a field's name clash with one of them.
+   * hold. The view's columns also tell platform reads whether client_id is available
+   * for device labels. Flattened payload fields reserve only visible base names.
    */
   private async tableShape(experimentId: string, tableName: string): Promise<Result<TableShape>> {
     const metadataResult = await this.tableMetadata(experimentId, tableName);
@@ -632,7 +620,7 @@ export class ExperimentDataRepository {
       }
     }
 
-    if (variants.length === 0) {
+    if (variants.length === 0 && tableType === "upload") {
       return success({ metadata, variants, exceptColumns, reservedColumns: [] });
     }
 
@@ -641,9 +629,20 @@ export class ExperimentDataRepository {
       return viewColumnsResult;
     }
 
+    const deviceClientIdAvailable = viewColumnsResult.value.includes("client_id");
+    if (!deviceClientIdAvailable && exceptColumns.includes("client_id")) {
+      exceptColumns.splice(exceptColumns.indexOf("client_id"), 1);
+    }
     const hidden = new Set<string>([...config.variantColumns, ...exceptColumns]);
-    const reservedColumns = viewColumnsResult.value.filter((column) => !hidden.has(column));
-    return success({ metadata, variants, exceptColumns, reservedColumns });
+    const reservedColumns =
+      variants.length > 0 ? viewColumnsResult.value.filter((column) => !hidden.has(column)) : [];
+    return success({
+      metadata,
+      variants,
+      exceptColumns,
+      reservedColumns,
+      baseColumns: viewColumnsResult.value,
+    });
   }
 
   /** A view's columns change only when it is redefined, so they come from the long-lived cache. */
@@ -700,6 +699,7 @@ export class ExperimentDataRepository {
       columns,
       variants: variants.length > 0 ? variants : undefined,
       reservedColumns: reservedColumns.length > 0 ? reservedColumns : undefined,
+      baseColumns: shape.baseColumns,
       exceptColumns: exceptColumns.length > 0 ? exceptColumns : undefined,
       filters,
       aggregation,
@@ -807,27 +807,20 @@ export class ExperimentDataRepository {
   private deviceValuesSql(
     experimentId: string,
     shape: TableShape,
-    column: "device.serial_number" | typeof DEVICE_LABEL_COLUMN,
     limit: number,
     offset = 0,
   ): Result<string> {
-    const projected = this.buildQuery(experimentId, shape, { columns: [column] });
+    const projected = this.buildQuery(experimentId, shape, { columns: ["device.serial_number"] });
     if (projected.isFailure()) {
       return projected;
     }
-    const valueColumn = column === DEVICE_LABEL_COLUMN ? DEVICE_LABEL_COLUMN : "serial_number";
-    const query = new SqlQueryBuilder()
-      .select([valueColumn])
-      .distinct()
-      .from(`(${projected.value}) AS device_names`)
-      .where(`\`${valueColumn}\` IS NOT NULL AND trim(\`${valueColumn}\`) <> ''`);
-    if (column === DEVICE_LABEL_COLUMN) {
-      query.orderByRaw("lower(`device_label`) ASC, `device_label` ASC");
-    } else {
-      query.orderBy(valueColumn, "ASC");
-    }
     return success(
-      query
+      new SqlQueryBuilder()
+        .select(["serial_number"])
+        .distinct()
+        .from(`(${projected.value}) AS device_names`)
+        .where("`serial_number` IS NOT NULL AND trim(`serial_number`) <> ''")
+        .orderByRaw("lower(`serial_number`) ASC, `serial_number` ASC")
         .limit(limit + 1)
         .offset(offset)
         .build(),

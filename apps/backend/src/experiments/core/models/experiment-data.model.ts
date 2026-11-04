@@ -25,7 +25,7 @@ export const STATIC_TABLE_CONFIG: Partial<Record<string, TableConfig>> = {
   [ExperimentTableName.RAW_DATA]: {
     displayName: "Raw Data",
     defaultSortColumn: "timestamp",
-    exceptColumns: ["experiment_id"],
+    exceptColumns: ["experiment_id", "client_id"],
     variantColumns: ["questions_data", "custom_metadata"],
   },
   [ExperimentTableName.DEVICE]: {
@@ -41,7 +41,15 @@ export const MACRO_TABLE_CONFIG: TableConfig = {
   displayName: "Processed Data",
   defaultSortColumn: "timestamp",
   errorColumn: "macro_error",
-  exceptColumns: ["experiment_id", "raw_id", "macro_id", "macro_name", "macro_filename", "date"],
+  exceptColumns: [
+    "experiment_id",
+    "client_id",
+    "raw_id",
+    "macro_id",
+    "macro_name",
+    "macro_filename",
+    "date",
+  ],
   variantColumns: ["macro_output", "questions_data", "custom_metadata"],
 };
 

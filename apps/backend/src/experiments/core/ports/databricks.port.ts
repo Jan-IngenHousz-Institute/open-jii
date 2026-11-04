@@ -77,6 +77,7 @@ export interface DatabricksPort {
     columns?: string[];
     variants?: { columnName: string; schema: string; suffix?: string }[];
     reservedColumns?: string[];
+    baseColumns?: string[];
     exceptColumns?: string[];
     filters?: FilterCondition[];
     aggregation?: AggregationSpec;
