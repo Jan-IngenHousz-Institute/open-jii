@@ -263,10 +263,7 @@ export class NotificationsService {
     const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
 
     if (failed.length > 0) {
-      const failedAddresses = failed.map((address) =>
-        typeof address === "object" ? address.address : address,
-      );
-      throw new Error(`Email (${failedAddresses.join(", ")}) could not be sent`);
+      throw new Error("Email could not be sent");
     }
   }
 
@@ -340,7 +337,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Organization invitation notification sent",
           operation: "sendOrganizationInvitationNotification",
-          email: recipientEmail,
           organizationId,
           status: "success",
         });
@@ -349,7 +345,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send organization invitation notification",
           operation: "sendOrganizationInvitationNotification",
-          email: recipientEmail,
           organizationId,
           error,
         }),
@@ -385,7 +380,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Organization join request submitted notification sent",
           operation: "sendOrganizationJoinRequestSubmittedNotification",
-          email: recipientEmail,
           organizationId,
           status: "success",
         });
@@ -394,7 +388,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send organization join request submitted notification",
           operation: "sendOrganizationJoinRequestSubmittedNotification",
-          email: recipientEmail,
           organizationId,
           error,
         }),
@@ -426,7 +419,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Organization join request approved notification sent",
           operation: "sendOrganizationJoinRequestApprovedNotification",
-          email: requesterEmail,
           organizationId,
           status: "success",
         });
@@ -435,7 +427,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send organization join request approved notification",
           operation: "sendOrganizationJoinRequestApprovedNotification",
-          email: requesterEmail,
           organizationId,
           error,
         }),
@@ -466,7 +457,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Organization join request rejected notification sent",
           operation: "sendOrganizationJoinRequestRejectedNotification",
-          email: requesterEmail,
           organizationId,
           status: "success",
         });
@@ -475,7 +465,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send organization join request rejected notification",
           operation: "sendOrganizationJoinRequestRejectedNotification",
-          email: requesterEmail,
           organizationId,
           error,
         }),
@@ -513,7 +502,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Organization role changed notification sent",
           operation: "sendOrganizationRoleChangedNotification",
-          email,
           organizationId,
           status: "success",
         });
@@ -522,7 +510,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send organization role changed notification",
           operation: "sendOrganizationRoleChangedNotification",
-          email,
           organizationId,
           error,
         }),
@@ -557,7 +544,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Organization membership removed notification sent",
           operation: "sendOrganizationMembershipRemovedNotification",
-          email,
           status: "success",
         });
       },
@@ -565,7 +551,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send organization membership removed notification",
           operation: "sendOrganizationMembershipRemovedNotification",
-          email,
           error,
         }),
     );
@@ -590,7 +575,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Sending access granted notification email",
           operation: "sendAccessGrantedNotification",
-          email,
           role,
           resourceType,
           resourceId,
@@ -624,7 +608,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Access granted notification email sent successfully",
           operation: "sendAccessGrantedNotification",
-          email,
           resourceType,
           resourceId,
           status: "success",
@@ -634,7 +617,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send access granted notification email",
           operation: "sendAccessGrantedNotification",
-          email,
           resourceType,
           resourceId,
           error,
@@ -655,7 +637,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Sending resource deleted notification email",
           operation: "sendResourceDeletedNotification",
-          email,
           resourceType,
           actor,
         });
@@ -681,7 +662,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Resource deleted notification email sent successfully",
           operation: "sendResourceDeletedNotification",
-          email,
           resourceType,
           status: "success",
         });
@@ -690,7 +670,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send resource deleted notification email",
           operation: "sendResourceDeletedNotification",
-          email,
           resourceType,
           error,
         }),
@@ -707,7 +686,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Sending experiment made public notification email",
           operation: "sendExperimentMadePublicNotification",
-          email,
           experimentId,
         });
 
@@ -732,7 +710,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Experiment made public notification email sent successfully",
           operation: "sendExperimentMadePublicNotification",
-          email,
           experimentId,
           status: "success",
         });
@@ -741,7 +718,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send experiment made public notification email",
           operation: "sendExperimentMadePublicNotification",
-          email,
           experimentId,
           error,
         }),
@@ -774,7 +750,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "API key created notification sent",
           operation: "sendApiKeyCreatedNotification",
-          email,
           status: "success",
         });
       },
@@ -782,7 +757,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send API key created notification",
           operation: "sendApiKeyCreatedNotification",
-          email,
           error,
         }),
     );
@@ -814,7 +788,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Passkey added notification sent",
           operation: "sendPasskeyAddedNotification",
-          email,
           status: "success",
         });
       },
@@ -822,7 +795,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send passkey added notification",
           operation: "sendPasskeyAddedNotification",
-          email,
           error,
         }),
     );
@@ -842,7 +814,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Sending calibration run awaiting approval notification email",
           operation: "sendCalibrationRunAwaitingApprovalNotification",
-          email,
           deviceId,
         });
 
@@ -872,7 +843,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Calibration run awaiting approval notification email sent successfully",
           operation: "sendCalibrationRunAwaitingApprovalNotification",
-          email,
           deviceId,
           status: "success",
         });
@@ -881,7 +851,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send calibration run awaiting approval notification email",
           operation: "sendCalibrationRunAwaitingApprovalNotification",
-          email,
           deviceId,
           error,
         }),
@@ -902,7 +871,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Sending calibration run approved notification email",
           operation: "sendCalibrationRunApprovedNotification",
-          email,
           deviceId,
         });
 
@@ -932,7 +900,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Calibration run approved notification email sent successfully",
           operation: "sendCalibrationRunApprovedNotification",
-          email,
           deviceId,
           status: "success",
         });
@@ -941,7 +908,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send calibration run approved notification email",
           operation: "sendCalibrationRunApprovedNotification",
-          email,
           deviceId,
           error,
         }),
@@ -962,7 +928,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Sending calibration run rejected notification email",
           operation: "sendCalibrationRunRejectedNotification",
-          email,
           deviceId,
         });
 
@@ -992,7 +957,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Calibration run rejected notification email sent successfully",
           operation: "sendCalibrationRunRejectedNotification",
-          email,
           deviceId,
           status: "success",
         });
@@ -1001,7 +965,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send calibration run rejected notification email",
           operation: "sendCalibrationRunRejectedNotification",
-          email,
           deviceId,
           error,
         }),
@@ -1018,7 +981,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Sending transfer request confirmation email",
           operation: "sendTransferRequestConfirmation",
-          email,
           projectId: projectIdOld,
         });
 
@@ -1050,21 +1012,13 @@ export class NotificationsService {
         const pending: (string | Mail.Address)[] = result.pending ?? [];
         const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
 
-        const isAddress = (addr: string | Mail.Address): addr is Mail.Address => {
-          return typeof addr === "object" && "address" in addr;
-        };
-
         if (failed.length > 0) {
-          const failedAddresses = failed.map((failedAddress) =>
-            isAddress(failedAddress) ? failedAddress.address : failedAddress,
-          );
-          throw new Error(`Email (${failedAddresses.join(", ")}) could not be sent`);
+          throw new Error("Email could not be sent");
         }
 
         this.logger.log({
           msg: "Transfer request confirmation email sent successfully",
           operation: "sendTransferRequestConfirmation",
-          email,
           projectId: projectIdOld,
           status: "success",
         });
@@ -1073,7 +1027,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send transfer request confirmation email",
           operation: "sendTransferRequestConfirmation",
-          email,
           projectId: projectIdOld,
           error,
         }),
@@ -1086,7 +1039,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Sending project transfer complete email",
           operation: "sendProjectTransferComplete",
-          email,
           experimentId,
         });
 
@@ -1118,21 +1070,13 @@ export class NotificationsService {
         const pending: (string | Mail.Address)[] = result.pending ?? [];
         const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
 
-        const isAddress = (addr: string | Mail.Address): addr is Mail.Address => {
-          return typeof addr === "object" && "address" in addr;
-        };
-
         if (failed.length > 0) {
-          const failedAddresses = failed.map((failedAddress) =>
-            isAddress(failedAddress) ? failedAddress.address : failedAddress,
-          );
-          throw new Error(`Email (${failedAddresses.join(", ")}) could not be sent`);
+          throw new Error("Email could not be sent");
         }
 
         this.logger.log({
           msg: "Project transfer complete email sent successfully",
           operation: "sendProjectTransferComplete",
-          email,
           experimentId,
           status: "success",
         });
@@ -1141,7 +1085,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send project transfer complete email",
           operation: "sendProjectTransferComplete",
-          email,
           experimentId,
           error,
         }),
@@ -1160,7 +1103,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Sending join request submitted notification",
           operation: "sendJoinRequestSubmittedNotification",
-          email: adminEmail,
           experimentId,
         });
 
@@ -1193,21 +1135,13 @@ export class NotificationsService {
         const pending: (string | Mail.Address)[] = result.pending ?? [];
         const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
 
-        const isAddress = (addr: string | Mail.Address): addr is Mail.Address => {
-          return typeof addr === "object" && "address" in addr;
-        };
-
         if (failed.length > 0) {
-          const failedAddresses = failed.map((failedAddress) =>
-            isAddress(failedAddress) ? failedAddress.address : failedAddress,
-          );
-          throw new Error(`Email (${failedAddresses.join(", ")}) could not be sent`);
+          throw new Error("Email could not be sent");
         }
 
         this.logger.log({
           msg: "Join request submitted notification sent",
           operation: "sendJoinRequestSubmittedNotification",
-          email: adminEmail,
           experimentId,
           status: "success",
         });
@@ -1216,7 +1150,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send join request submitted notification",
           operation: "sendJoinRequestSubmittedNotification",
-          email: adminEmail,
           experimentId,
           error,
         }),
@@ -1233,7 +1166,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Sending join request rejected notification",
           operation: "sendJoinRequestRejectedNotification",
-          email: requesterEmail,
           experimentId,
         });
 
@@ -1262,21 +1194,13 @@ export class NotificationsService {
         const pending: (string | Mail.Address)[] = result.pending ?? [];
         const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
 
-        const isAddress = (addr: string | Mail.Address): addr is Mail.Address => {
-          return typeof addr === "object" && "address" in addr;
-        };
-
         if (failed.length > 0) {
-          const failedAddresses = failed.map((failedAddress) =>
-            isAddress(failedAddress) ? failedAddress.address : failedAddress,
-          );
-          throw new Error(`Email (${failedAddresses.join(", ")}) could not be sent`);
+          throw new Error("Email could not be sent");
         }
 
         this.logger.log({
           msg: "Join request rejected notification sent",
           operation: "sendJoinRequestRejectedNotification",
-          email: requesterEmail,
           experimentId,
           status: "success",
         });
@@ -1285,7 +1209,6 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send join request rejected notification",
           operation: "sendJoinRequestRejectedNotification",
-          email: requesterEmail,
           experimentId,
           error,
         }),
