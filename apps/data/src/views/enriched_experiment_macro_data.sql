@@ -78,18 +78,13 @@ results AS (
     macro.timezone,
     macro.date,
     contributors.user AS contributor,
-    named_struct(
-      'id', devices.device.id,
-      'serial_number', CASE
-        WHEN nullif(trim(devices.device.serial_number), '') IS NOT NULL THEN devices.device.serial_number
-        WHEN macro.fallback_device_name = macro.fallback_device_id THEN macro.fallback_device_name
-        WHEN macro.fallback_device_id IS NOT NULL THEN concat(macro.fallback_device_name, ' (', macro.fallback_device_id, ')')
-        ELSE coalesce(macro.fallback_device_name, 'Unknown device')
-      END,
-      'owner', devices.device.owner,
-      'status', devices.device.status,
-      'device_type', devices.device.device_type
-    ) AS device,
+    devices.device,
+    CASE
+      WHEN nullif(trim(devices.device.serial_number), '') IS NOT NULL THEN devices.device.serial_number
+      WHEN macro.fallback_device_name = macro.fallback_device_id THEN macro.fallback_device_name
+      WHEN macro.fallback_device_id IS NOT NULL THEN concat(macro.fallback_device_name, ' (', macro.fallback_device_id, ')')
+      ELSE coalesce(macro.fallback_device_name, 'Unknown device')
+    END AS device_label,
     macro.latitude,
     macro.longitude,
     macro.macro_id,
@@ -124,6 +119,7 @@ SELECT
   r.date,
   r.contributor,
   r.device,
+  r.device_label,
   r.latitude,
   r.longitude,
   r.macro_id,

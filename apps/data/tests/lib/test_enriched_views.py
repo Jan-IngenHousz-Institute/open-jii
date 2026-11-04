@@ -181,9 +181,11 @@ def test_each_measurement_gets_its_contributor_and_device_in_its_own_experiment(
     assert rows[1]["device"]["id"] == "dev-1"
     # u1 has another profile row in e2, and c1 is registered in e1 only.
     assert rows[3]["contributor"]["avatar"] == "ann.png"
-    assert rows[3]["device"]["serial_number"] == "MultispeQ (d1)"
+    assert rows[3]["device"] is None
+    assert rows[3]["device_label"] == "MultispeQ (d1)"
     assert rows[2]["contributor"] is None
-    assert rows[2]["device"]["serial_number"] == "Ambit (d2)"
+    assert rows[2]["device"] is None
+    assert rows[2]["device_label"] == "Ambit (d2)"
 
 
 def test_annotations_from_the_device_come_before_those_added_in_the_app(
@@ -271,11 +273,15 @@ def test_unregistered_device_falls_back_to_reported_name_then_client_id(
             "device_name", F.when(F.col("client_id") == "c9", F.lit(name)).otherwise(F.col("device_name"))
         ).createOrReplaceTempView("device_fallback_source")
         rows = spark.sql(query.replace(f"{centrum}.{source}", "device_fallback_source"))
-        row = rows.where("experiment_id = 'e1'").where("device_id = 'd2'").select("device").first()
+        row = (
+            rows.where("experiment_id = 'e1'")
+            .where("device_id = 'd2'")
+            .select("device", "device_label")
+            .first()
+        )
         assert row is not None
-        device = row[0]
-        assert device["id"] is None
-        assert device["serial_number"] == expected
+        assert row.device is None
+        assert row.device_label == expected
     registered_row = (
         spark.sql(query).where("experiment_id = 'e1'").where("device_id = 'd1'").select("device").first()
     )
@@ -296,10 +302,15 @@ def test_sensors_sharing_a_name_and_phone_keep_distinct_labels(
     original.unionByName(second).createOrReplaceTempView("distinct_sensors")
     query = (_VIEWS / f"{view}.sql").read_text().replace("${catalog}", _CATALOG)
     rows = spark.sql(query.replace(f"{centrum}.{source}", "distinct_sensors"))
-    devices = rows.where("experiment_id = 'e1' AND device_id IN ('d2', 'd3')").select("device").collect()
-    assert {row.device.serial_number for row in devices} == {"Ambit (d2)", "Ambit (d3)"}
-    assert all(row.device.id is None for row in devices)
-    selected = rows.where("device.serial_number = 'Ambit (d2)'").select("device_id").first()
+    devices = (
+        rows.where("experiment_id = 'e1' AND device_id IN ('d2', 'd3')")
+        .select("device", "device_label")
+        .collect()
+    )
+    assert {row.device_label for row in devices} == {"Ambit (d2)", "Ambit (d3)"}
+    assert all(row.device is None for row in devices)
+    assert rows.where("device IS NULL AND experiment_id = 'e1'").count() == 2
+    selected = rows.where("device_label = 'Ambit (d2)'").select("device_id").first()
     assert selected is not None
     assert selected[0] == "d2"
 
@@ -329,14 +340,14 @@ def test_missing_identifiers_have_an_explicit_fallback(
         original = original.withColumn(column, F.lit(value).cast("string"))
     original.createOrReplaceTempView("missing_identifiers")
     query = (_VIEWS / f"{view}.sql").read_text().replace("${catalog}", _CATALOG)
-    row = spark.sql(query.replace(f"{centrum}.{source}", "missing_identifiers")).select("device").first()
+    row = (
+        spark.sql(query.replace(f"{centrum}.{source}", "missing_identifiers"))
+        .select("device", "device_label")
+        .first()
+    )
     assert row is not None
-    device = row[0]
-    assert device.serial_number == expected
-    assert device.id is None
-    assert device.owner is None
-    assert device.status is None
-    assert device.device_type is None
+    assert row.device_label == expected
+    assert row.device is None
 
 
 @pytest.mark.parametrize("view", ["enriched_experiment_raw_data", "enriched_experiment_macro_data"])
@@ -351,12 +362,13 @@ def test_registry_without_a_serial_keeps_its_other_fields(
     row = (
         spark.sql(query.replace(f"{centrum}.experiment_devices", "blank_serial_registry"))
         .where("experiment_id = 'e1' AND device_id = 'd1'")
-        .select("device")
+        .select("device", "device_label")
         .first()
     )
     assert row is not None
-    device = row[0]
-    assert device.serial_number == "MultispeQ (d1)"
+    device = row.device
+    assert row.device_label == "MultispeQ (d1)"
+    assert device.serial_number == " "
     assert device.id == "dev-1"
     assert device.owner == "org-1"
     assert device.status == "onboarded"
@@ -365,9 +377,27 @@ def test_registry_without_a_serial_keeps_its_other_fields(
 
 def test_device_options_sort_without_case_sensitivity_with_a_stable_tie_break(spark: SparkSession) -> None:
     rows = spark.sql("""
-        SELECT DISTINCT serial_number
-        FROM VALUES ('Zed'), ('ambit'), ('Ambit'), ('SN1'), (NULL), ('') AS device_names(serial_number)
-        WHERE serial_number IS NOT NULL AND trim(serial_number) <> ''
-        ORDER BY lower(serial_number) ASC, serial_number ASC
+        SELECT DISTINCT device_label
+        FROM VALUES ('Zed'), ('ambit'), ('Ambit'), ('SN1'), (NULL), ('') AS device_names(device_label)
+        WHERE device_label IS NOT NULL AND trim(device_label) <> ''
+        ORDER BY lower(device_label) ASC, device_label ASC
     """).collect()
-    assert [row.serial_number for row in rows] == ["Ambit", "ambit", "SN1", "Zed"]
+    assert [row.device_label for row in rows] == ["Ambit", "ambit", "SN1", "Zed"]
+
+
+def test_registry_serial_options_sort_by_the_projected_alias(spark: SparkSession) -> None:
+    rows = spark.sql("""
+        SELECT DISTINCT serial_number
+        FROM (
+          SELECT device.serial_number
+          FROM VALUES (named_struct('serial_number', 'SN2')),
+                      (named_struct('serial_number', 'SN1')),
+                      (named_struct('serial_number', 'SN1')),
+                      (named_struct('serial_number', ' ')),
+                      (named_struct('serial_number', CAST(NULL AS STRING))) AS registry(device)
+        ) AS device_names
+        WHERE serial_number IS NOT NULL AND trim(serial_number) <> ''
+        ORDER BY serial_number ASC
+        LIMIT 4
+    """).collect()
+    assert [row.serial_number for row in rows] == ["SN1", "SN2"]

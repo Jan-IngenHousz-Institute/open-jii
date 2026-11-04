@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const DEVICE_LABEL_COLUMN = "device_label";
+
 /**
  * Core table names that are always present in the centrum schema
  */
@@ -348,7 +350,9 @@ export const zExperimentDistinctValuesQuery = z.object({
     .int()
     .nonnegative()
     .optional()
-    .describe("Number of sorted DEVICE labels to skip. Other columns support only zero."),
+    .describe(
+      "Number of sorted device labels to skip, for device or device_label. Other columns support only zero.",
+    ),
   limit: z.coerce
     .number()
     .int()

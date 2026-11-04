@@ -2,6 +2,7 @@ import { Injectable, Inject, Logger } from "@nestjs/common";
 
 import {
   DATA_QUERY_MAX_LIMIT,
+  DEVICE_LABEL_COLUMN,
   WellKnownColumnTypes,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isDecimalType, isNumericType } from "@repo/api/transforms/column-type-utils";
@@ -342,38 +343,37 @@ export class ExperimentDataRepository {
       return shapeResult;
     }
 
-    // Built-in tables own the DEVICE column; upload fields named device are user data.
-    const deviceColumn = column === "device" && shapeResult.value.metadata.tableType !== "upload";
-    if (!deviceColumn && (offset ?? 0) > 0) {
+    const shape = shapeResult.value;
+    // Bare device reads supply chart labels; serial-number filters keep registry values.
+    const deviceLabels =
+      column === DEVICE_LABEL_COLUMN ||
+      (column === "device" && shape.metadata.tableType !== "upload");
+    if (!deviceLabels && (offset ?? 0) > 0) {
       return failure(AppError.badRequest("Offset paging is supported only for device columns"));
     }
-    const projectedColumn = deviceColumn ? `${column}.serial_number` : column;
-    const queryResult = this.buildQuery(experimentId, shapeResult.value, {
-      columns: [projectedColumn],
-      distinct: deviceColumn ? undefined : true,
-      orderBy: deviceColumn ? undefined : projectedColumn,
-      orderDirection: "ASC",
-      // +1 so we can detect truncation: if the SQL returned exactly limit+1
-      // rows, the column has more values than we returned.
-      limit: deviceColumn ? undefined : limit + 1,
-      offset: deviceColumn ? undefined : offset,
-    });
+    const registrySerial =
+      column === "device.serial_number" && shape.metadata.tableType !== "upload";
+    const queryResult =
+      deviceLabels || registrySerial
+        ? this.deviceValuesSql(
+            experimentId,
+            shape,
+            registrySerial ? "device.serial_number" : DEVICE_LABEL_COLUMN,
+            limit,
+            offset,
+          )
+        : this.buildQuery(experimentId, shape, {
+            columns: [column],
+            distinct: true,
+            orderBy: column,
+            orderDirection: "ASC",
+            limit: limit + 1,
+            offset,
+          });
     if (queryResult.isFailure()) {
       return queryResult;
     }
-
-    const sql = deviceColumn
-      ? new SqlQueryBuilder()
-          .select(["serial_number"])
-          .distinct()
-          .from(`(${queryResult.value}) AS device_names`)
-          .where("`serial_number` IS NOT NULL AND trim(`serial_number`) <> ''")
-          .orderByRaw("lower(`serial_number`) ASC, `serial_number` ASC")
-          .limit(limit + 1)
-          .offset(offset ?? 0)
-          .build()
-      : queryResult.value;
-    const dataResult = await this.executeQuery(sql);
+    const dataResult = await this.executeQuery(queryResult.value);
     if (dataResult.isFailure()) {
       return dataResult;
     }
@@ -802,6 +802,36 @@ export class ExperimentDataRepository {
         totalPages: 1,
       },
     ]);
+  }
+
+  private deviceValuesSql(
+    experimentId: string,
+    shape: TableShape,
+    column: "device.serial_number" | typeof DEVICE_LABEL_COLUMN,
+    limit: number,
+    offset = 0,
+  ): Result<string> {
+    const projected = this.buildQuery(experimentId, shape, { columns: [column] });
+    if (projected.isFailure()) {
+      return projected;
+    }
+    const valueColumn = column === DEVICE_LABEL_COLUMN ? DEVICE_LABEL_COLUMN : "serial_number";
+    const query = new SqlQueryBuilder()
+      .select([valueColumn])
+      .distinct()
+      .from(`(${projected.value}) AS device_names`)
+      .where(`\`${valueColumn}\` IS NOT NULL AND trim(\`${valueColumn}\`) <> ''`);
+    if (column === DEVICE_LABEL_COLUMN) {
+      query.orderByRaw("lower(`device_label`) ASC, `device_label` ASC");
+    } else {
+      query.orderBy(valueColumn, "ASC");
+    }
+    return success(
+      query
+        .limit(limit + 1)
+        .offset(offset)
+        .build(),
+    );
   }
 
   private countSql(subquery: string): string {

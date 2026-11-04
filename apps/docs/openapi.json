@@ -3282,7 +3282,7 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 9007199254740991,
-              "description": "Number of sorted DEVICE labels to skip. Other columns support only zero."
+              "description": "Number of sorted device labels to skip, for device or device_label. Other columns support only zero."
             },
             "allowEmptyValue": true,
             "allowReserved": true

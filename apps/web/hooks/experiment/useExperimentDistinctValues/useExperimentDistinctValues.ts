@@ -57,7 +57,7 @@ export const useExperimentDistinctValues = ({
   return {
     values: data?.pages.flatMap((page) => page.values) ?? [],
     truncated: Boolean(data?.pages.at(-1)?.truncated && (!hasNextPage || error)),
-    isLoading,
+    isLoading: isLoading || Boolean(hasNextPage && !error),
     isSuccess,
     error,
   };

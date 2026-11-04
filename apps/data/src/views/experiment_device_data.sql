@@ -35,18 +35,13 @@ SELECT
   devices.newest.device_battery,
   devices.total_measurements,
   devices.newest.processed_timestamp,
-  named_struct(
-      'id', registry.device.id,
-      'serial_number', CASE
-        WHEN nullif(trim(registry.device.serial_number), '') IS NOT NULL THEN registry.device.serial_number
-        WHEN devices.newest.fallback_device_name = devices.newest.fallback_device_id THEN devices.newest.fallback_device_name
-        WHEN devices.newest.fallback_device_id IS NOT NULL THEN concat(devices.newest.fallback_device_name, ' (', devices.newest.fallback_device_id, ')')
-        ELSE coalesce(devices.newest.fallback_device_name, 'Unknown device')
-      END,
-      'owner', registry.device.owner,
-      'status', registry.device.status,
-      'device_type', registry.device.device_type
-    ) AS device
+  registry.device,
+  CASE
+    WHEN nullif(trim(registry.device.serial_number), '') IS NOT NULL THEN registry.device.serial_number
+    WHEN devices.newest.fallback_device_name = devices.newest.fallback_device_id THEN devices.newest.fallback_device_name
+    WHEN devices.newest.fallback_device_id IS NOT NULL THEN concat(devices.newest.fallback_device_name, ' (', devices.newest.fallback_device_id, ')')
+    ELSE coalesce(devices.newest.fallback_device_name, 'Unknown device')
+  END AS device_label
 FROM devices
 LEFT JOIN ${catalog}.centrum.experiment_devices AS registry
   ON devices.experiment_id = registry.experiment_id

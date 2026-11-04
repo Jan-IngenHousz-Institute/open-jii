@@ -1,7 +1,10 @@
 import { useMemo } from "react";
 
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import {
+  DEVICE_LABEL_COLUMN,
+  WellKnownColumnTypes,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useExperimentDistinctValues } from "../../hooks/experiment/useExperimentDistinctValues/useExperimentDistinctValues";
 
@@ -14,8 +17,8 @@ export function useDistinctOptions(
   const { values, truncated, isLoading, isSuccess, error } = useExperimentDistinctValues({
     experimentId,
     tableName,
-    column: column.name,
-    allPages: isDevice,
+    column: isDevice ? `${column.name}.serial_number` : column.name,
+    allPages: column.name === DEVICE_LABEL_COLUMN,
   });
   const isContributor = column.type_text === WellKnownColumnTypes.CONTRIBUTOR;
   const contributorMap = useContributorIdMap(values, isContributor);

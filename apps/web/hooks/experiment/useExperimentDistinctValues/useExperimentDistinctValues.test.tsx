@@ -65,7 +65,7 @@ describe("useExperimentDistinctValues", () => {
     expect(spy.calls.map((call) => call.query.offset)).toEqual(["0", "2"]);
   });
 
-  it("shows the first page while the remaining device options load", async () => {
+  it("keeps the loading hint while the remaining device options load", async () => {
     let release: (() => void) | undefined;
     let nextRequested = false;
     const nextPage = new Promise<void>((resolve) => {
@@ -91,12 +91,13 @@ describe("useExperimentDistinctValues", () => {
     try {
       await waitFor(() => expect(nextRequested).toBe(true));
       expect(result.current.values).toEqual(["A"]);
-      expect(result.current.isLoading).toBe(false);
+      expect(result.current.isLoading).toBe(true);
       expect(result.current.truncated).toBe(false);
     } finally {
       release?.();
     }
     await waitFor(() => expect(result.current.values).toEqual(["A", "B"]));
+    expect(result.current.isLoading).toBe(false);
   });
 
   it("falls back to an empty array and not truncated when data is undefined", () => {
