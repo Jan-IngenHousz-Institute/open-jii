@@ -1,21 +1,16 @@
 "use client";
 
+import { ListFilterBar } from "@/components/list-filter-bar";
 import { ListPagination } from "@/components/list-pagination";
 import type { OverviewTableColumn } from "@/components/overview-table/overview-table";
-import {
-  createOverviewTableSorting,
-  OverviewTable,
-} from "@/components/overview-table/overview-table";
+import { OverviewTable } from "@/components/overview-table/overview-table";
 import { ResetSortingButton } from "@/components/overview-table/reset-sorting-button";
-import { OverviewToolbar } from "@/components/overview-toolbar";
 import type { RowData } from "@tanstack/react-table";
 
 import type { PaginatedList } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { ListFilterChips } from "@repo/ui/components/list-filter-chips";
-import type { ListFilter, ListFilterLabels } from "@repo/ui/components/list-filter-menu";
-import { ListFilterMenu } from "@repo/ui/components/list-filter-menu";
+import type { ListFilter } from "@repo/ui/components/list-filter-menu";
 import type { SearchInputProps } from "@repo/ui/components/search-input";
 import { SearchInput } from "@repo/ui/components/search-input";
 
@@ -48,7 +43,7 @@ interface ResourceListProps<Item extends RowData, F extends string> {
   list: ResourceListModel<Item, F>;
   filters: readonly ListFilter[];
   searchInput: Omit<SearchInputProps, "value" | "onChange" | "isLoading">;
-  columns: OverviewTableColumn<Item>[];
+  columns: OverviewTableColumn<Item, F>[];
   getRowKey: (item: Item) => string;
   getRowHref: (item: Item) => string;
   errorMessage: string;
@@ -74,16 +69,6 @@ export function ResourceList<Item extends RowData, F extends string>({
   emptyHelpPath,
 }: ResourceListProps<Item, F>) {
   const { t } = useTranslation("common");
-  const filterLabels: ListFilterLabels = {
-    filter: t("common.filter"),
-    addFilter: t("common.addFilter"),
-    is: t("common.filterIs"),
-    chip: (filter, value) => t("common.filterChip", { filter, value }),
-    back: t("common.filterBack"),
-    clearFilters: t("common.clearFilters"),
-    selectedCount: (count) => t("common.filterSelectedCount", { count }),
-    removeValue: (filter, value) => t("common.removeFilterValue", { filter, value }),
-  };
   const hasSearch = list.debouncedSearch.trim() !== "";
   const emptyMessage = list.hasActiveFilters
     ? emptyMessages.filtered
@@ -93,7 +78,7 @@ export function ResourceList<Item extends RowData, F extends string>({
 
   return (
     <div className="space-y-4">
-      <OverviewToolbar
+      <ListFilterBar
         search={
           <SearchInput
             {...searchInput}
@@ -102,14 +87,12 @@ export function ResourceList<Item extends RowData, F extends string>({
             isLoading={list.isSearchPending}
           />
         }
-        filters={
-          <>
-            <ListFilterMenu filters={filters} labels={filterLabels} />
-            <ResetSortingButton active={list.sort.length > 0} onReset={() => list.setSort([])} />
-          </>
+        filters={filters}
+        onClearFilters={list.clearFilters}
+        actions={
+          <ResetSortingButton active={list.sort.length > 0} onReset={() => list.setSort([])} />
         }
       />
-      <ListFilterChips filters={filters} labels={filterLabels} onClear={list.clearFilters} />
 
       <div
         aria-busy={list.isPlaceholderData}
@@ -118,12 +101,7 @@ export function ResourceList<Item extends RowData, F extends string>({
       >
         <OverviewTable
           columns={columns}
-          sorting={createOverviewTableSorting(list.sort, list.toggleSort, {
-            unsorted: t("common.sortUnsorted"),
-            asc: t("common.sortAscending"),
-            desc: t("common.sortDescending"),
-            secondary: t("common.sortSecondary"),
-          })}
+          sorting={{ sort: list.sort, onToggle: list.toggleSort }}
           items={list.data?.items}
           isLoading={list.isLoading}
           error={list.error}

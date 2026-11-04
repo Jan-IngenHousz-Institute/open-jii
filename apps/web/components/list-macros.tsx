@@ -34,7 +34,6 @@ export function ListMacros() {
         placeholder: t("macros.searchPlaceholder"),
         clearLabel: t("macros.clearSearch"),
         loadingLabel: t("macros.loadingMacros"),
-        className: "w-full md:w-[220px]",
       }}
       columns={getMacroColumns(t, locale)}
       getRowKey={(macro) => macro.id}

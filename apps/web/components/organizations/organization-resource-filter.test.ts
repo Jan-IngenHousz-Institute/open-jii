@@ -3,11 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
-import {
-  DEFAULT_RESOURCE_FILTER,
-  filterAndSortResources,
-  hasActiveFilters,
-} from "./organization-resource-filter";
+import type { ResourceFilterState } from "./organization-resource-filter";
+import { filterAndSortResources } from "./organization-resource-filter";
+
+const DEFAULT_RESOURCE_FILTER: ResourceFilterState = { query: "", types: [], sort: "recent" };
 
 function resource(
   name: string,
@@ -79,17 +78,36 @@ describe("filterAndSortResources", () => {
       ];
 
       expect(
-        namesOf(filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, type: "protocol" })),
+        namesOf(filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, types: ["protocol"] })),
       ).toEqual(["Dark adaptation"]);
       expect(
-        namesOf(filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, type: "device" })),
+        namesOf(filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, types: ["device"] })),
       ).toEqual(["Ambyte 04"]);
       // A group is its own type, not a kind of device: filtering to devices must not
       // pick it up, and it has a chip of its own.
       expect(
-        namesOf(filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, type: "device_group" })),
+        namesOf(
+          filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, types: ["device_group"] }),
+        ),
       ).toEqual(["Rooftop array"]);
       expect(filterAndSortResources(rows, DEFAULT_RESOURCE_FILTER)).toHaveLength(4);
+    });
+
+    it("shows every picked type at once", () => {
+      const rows = [
+        resource("Campaign", { type: "experiment" }),
+        resource("Dark adaptation", { type: "protocol" }),
+        resource("Batch fit", { type: "macro" }),
+      ];
+
+      expect(
+        namesOf(
+          filterAndSortResources(rows, {
+            ...DEFAULT_RESOURCE_FILTER,
+            types: ["experiment", "macro"],
+          }),
+        ),
+      ).toEqual(["Campaign", "Batch fit"]);
     });
 
     it("combines with the search rather than replacing it", () => {
@@ -103,7 +121,7 @@ describe("filterAndSortResources", () => {
           filterAndSortResources(rows, {
             ...DEFAULT_RESOURCE_FILTER,
             query: "canopy",
-            type: "protocol",
+            types: ["protocol"],
           }),
         ),
       ).toEqual(["Canopy protocol"]);
@@ -118,7 +136,6 @@ describe("filterAndSortResources", () => {
         resource("Middle", { updatedAt: "2026-02-01T00:00:00.000Z" }),
       ];
 
-      expect(DEFAULT_RESOURCE_FILTER.sort).toBe("recent");
       expect(namesOf(filterAndSortResources(rows, DEFAULT_RESOURCE_FILTER))).toEqual([
         "Newest",
         "Middle",
@@ -172,19 +189,5 @@ describe("filterAndSortResources", () => {
     filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, sort: "name" });
 
     expect(namesOf(rows)).toEqual(["Older", "Newest"]);
-  });
-});
-
-describe("hasActiveFilters", () => {
-  it("is false for the default state and true once something narrows", () => {
-    expect(hasActiveFilters(DEFAULT_RESOURCE_FILTER)).toBe(false);
-    expect(hasActiveFilters({ ...DEFAULT_RESOURCE_FILTER, query: "x" })).toBe(true);
-    expect(hasActiveFilters({ ...DEFAULT_RESOURCE_FILTER, type: "macro" })).toBe(true);
-  });
-
-  it("ignores a whitespace-only query and the sort", () => {
-    expect(hasActiveFilters({ ...DEFAULT_RESOURCE_FILTER, query: "   " })).toBe(false);
-    // Sort arranges, it does not narrow — so it must not make "Clear filters" appear.
-    expect(hasActiveFilters({ ...DEFAULT_RESOURCE_FILTER, sort: "name" })).toBe(false);
   });
 });

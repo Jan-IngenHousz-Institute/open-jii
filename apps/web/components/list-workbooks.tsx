@@ -76,7 +76,6 @@ export function ListWorkbooks() {
           placeholder: t("workbooks.searchPlaceholder"),
           clearLabel: t("workbooks.clearSearch"),
           loadingLabel: t("common.loading"),
-          className: "w-full md:w-[220px]",
         }}
         columns={getWorkbookColumns(t, locale)}
         getRowKey={(workbook) => workbook.id}
