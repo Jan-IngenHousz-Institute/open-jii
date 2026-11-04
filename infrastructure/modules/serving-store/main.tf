@@ -47,7 +47,8 @@ locals {
   # No grants means the admin, which manages access and applies the schema. The writer only inserts,
   # and keeps out of the migration ledger, which records what the schema already holds. The reloader
   # also deletes from the tables it reloads; a lightweight delete updates their rows' mask column,
-  # which a grant can name only table by table. The profiles are in templates/users.xml.tftpl.
+  # which a grant can name only table by table. ALTER DELETE also allows dropping a partition, and
+  # there is no narrower grant. The profiles are in templates/users.xml.tftpl.
   users = {
     admin = { name = "openjii_admin", profile = "default", grants = [] }
     writer = {

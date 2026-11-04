@@ -36,8 +36,9 @@ committed V less than five minutes before the load, its rows count in those metr
 delivery time near zero.
 
 It connects as `openjii_reloader`, which may read and insert in `store` and delete from the three
-tables it reloads, but cannot update their values, truncate a table, delete from `feed_rejects`, or
-write to the migration ledger.
+tables it reloads, but cannot update their values, delete from `feed_rejects`, or write to the
+migration ledger. Its right to delete also lets it drop or detach those tables' partitions, which
+empties a table as `TRUNCATE` would; ClickHouse has no narrower grant for a delete.
 
 ## Running it
 
