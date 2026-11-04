@@ -250,6 +250,6 @@ describe("IotDevicesTableView", () => {
   it("gives the search box room for its own placeholder", () => {
     render(<IotDevicesTableView />);
     const form = screen.getByPlaceholderText("iot.devices.searchPlaceholder").closest("form");
-    expect(form).toHaveClass("md:w-[320px]");
+    expect(form?.parentElement).toHaveClass("md:w-80");
   });
 });

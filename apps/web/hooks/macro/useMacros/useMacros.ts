@@ -1,89 +1,25 @@
 import { orpc } from "@/lib/orpc";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 
-import { zMacroSort } from "@repo/api/domains/macro/macro.schema";
-import { isPaginatedList } from "@repo/api/shared/listing";
+import { zMacroLanguage, zMacroSort } from "@repo/api/domains/macro/macro.schema";
+import { zVisibility } from "@repo/api/domains/visibility/visibility.schema";
 
-import { useDebounce } from "../../useDebounce";
-import { useListSorting } from "../../useListSorting";
-import { useSearchPending } from "../../useSearchPending";
+import { useResourceList } from "../../useResourceList";
 import { macrosListQuery } from "./macros-list-query";
-import { useMacroListFilters } from "./useMacroListFilters";
 
-export function useMacros({ initialSearch = "" }: { initialSearch?: string } = {}) {
-  const [search, setSearchState] = useState<string>(initialSearch);
-  const [debouncedSearch] = useDebounce(search, 300);
-  const [page, setPage] = useState(1);
-  const { sort, setSort, toggleSort } = useListSorting(zMacroSort);
-  const { languages, visibilities, setLanguages, setVisibilities, clearFilters, hasActiveFilters } =
-    useMacroListFilters();
+const MACRO_LIST_FILTERS = { language: zMacroLanguage, visibility: zVisibility };
 
-  const setSearch = (value: string) => {
-    setSearchState(value);
-    setPage(1);
-  };
-
-  const query = useQuery({
-    ...macrosListQuery(orpc, {
-      search: debouncedSearch,
-      page,
-      sort,
-      languages,
-      visibilities,
-    }),
-    placeholderData: (prev) => prev,
+/** The macros list: language and visibility filters and sort in the URL, server-paged. */
+export function useMacros() {
+  return useResourceList({
+    filters: MACRO_LIST_FILTERS,
+    sort: zMacroSort,
+    query: (view) =>
+      macrosListQuery(orpc, {
+        search: view.search,
+        page: view.page,
+        sort: view.sort,
+        languages: view.filters.language,
+        visibilities: view.filters.visibility,
+      }),
   });
-
-  // `page` is always sent, so the response is the envelope; narrow the union.
-  const data = query.data && isPaginatedList(query.data) ? query.data : undefined;
-  const isSearchPending = useSearchPending({
-    search,
-    debouncedSearch,
-    isFetching: query.isFetching,
-  });
-
-  // A mutation or background update can shrink the result set under the current
-  // page; snap back into range once a real (non-placeholder) response says so.
-  if (data && !query.isPlaceholderData && page > Math.max(1, data.totalPages)) {
-    setPage(Math.max(1, data.totalPages));
-  }
-
-  return {
-    data,
-    isLoading: query.isLoading,
-    isPlaceholderData: query.isPlaceholderData,
-    isSearchPending,
-    error: query.error,
-    refetch: query.refetch,
-    search,
-    debouncedSearch,
-    setSearch,
-    page,
-    setPage,
-    sort,
-    setSort: (next: typeof sort) => {
-      setSort(next);
-      setPage(1);
-    },
-    toggleSort: (field: (typeof sort)[number]["field"], multi: boolean) => {
-      toggleSort(field, multi);
-      setPage(1);
-    },
-    languages,
-    setLanguages: (values: typeof languages) => {
-      setLanguages(values);
-      setPage(1);
-    },
-    visibilities,
-    setVisibilities: (values: typeof visibilities) => {
-      setVisibilities(values);
-      setPage(1);
-    },
-    clearFilters: () => {
-      clearFilters();
-      setPage(1);
-    },
-    hasActiveFilters,
-  };
 }

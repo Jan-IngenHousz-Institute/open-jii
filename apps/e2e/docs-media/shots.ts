@@ -180,9 +180,10 @@ export const SHOTS: readonly Shot[] = [
     slug: "experiments-list",
     publish: "img/guide/web/experiments-list.webp",
     frame: "desktop",
-    route: "/platform/experiments",
+    route: "/platform/experiments?status=active&visibility=public",
     prepare: sortNameAscending,
-    scope: "Experiments overview with the Name column sorted ascending",
+    scope:
+      "Experiments overview with the Name column sorted ascending and the Status is Active and Visibility is Public filter chips",
   },
   {
     slug: "create-experiment-entry",

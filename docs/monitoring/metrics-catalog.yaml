@@ -595,11 +595,12 @@ metrics:
       stat: Maximum
       unit: percent
       dimensions: { Environment: "${ENVIRONMENT}" }
-    baseline: { method: threshold, max: 85 }
+    baseline: { method: threshold, max: 75 }
     runbook: docs/runbooks/store-memory.md
     notes: >-
-      The instance's memory in use, from the CloudWatch agent. ClickHouse caps itself at 90% of
-      RAM by default and refuses queries past the cap, so 85% warns before queries start failing.
+      The instance's memory in use, from the CloudWatch agent. The store caps ClickHouse at 80% of
+      RAM and refuses queries past it, so 75% warns before the server's cap fails them. Each read is
+      also capped at 4 GiB, which fails that read at any memory level, so this does not warn of it.
 
   - num: 119
     id: store-disk
@@ -1244,9 +1245,11 @@ metrics:
       What AWS billed for usage in the latest complete Monday-to-Sunday week, per Service and its
       Category from docs/monitoring/cost-services.json, stamped the Monday it closed. Tax and fees are
       left out: AWS dates a month's on the 1st and adds to them as its usage grows, so no week carries
-      its own share; 115 has them by month. EC2 compute counts as Databricks VMs:
-      nothing in infrastructure/ runs on EC2, and on dev all but $1.46 of $950 over the 90 days to 26
-      October 2026 was on the instance types Databricks clusters use; the rest was t4g.
+      its own share; 115 has them by month. EC2 compute counts as Databricks VMs, except on the
+      instance type the serving store runs on, which counts as Serving store under Other AWS; a
+      consistency test keeps that type equal to the store's and apart from the clusters'. On dev all but
+      $1.46 of $950 over the 90 days to 26 October 2026 was on the instance types Databricks clusters
+      use, before the store moved onto its own instance on 28 October.
 
   - num: 40
     id: digest-self-check

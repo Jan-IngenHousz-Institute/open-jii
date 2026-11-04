@@ -919,6 +919,68 @@ describe("NotificationDispatchService", () => {
     );
   });
 
+  describe("the calibration email entries", () => {
+    const device = { type: "device" as const, id: crypto.randomUUID() };
+    const calibrationContext = (
+      resource: typeof device | null,
+      actorName: string | null = "Ada Lovelace",
+    ) => ({
+      recipientEmail,
+      actorName,
+      resource,
+      params: { deviceName: "Greenhouse 3 MiniPAR", definitionName: "PAR sweep" },
+    });
+
+    const entries = [
+      ["calibration_run_awaiting_approval", "sendCalibrationRunAwaitingApprovalNotification"],
+      ["calibration_run_approved", "sendCalibrationRunApprovedNotification"],
+      ["calibration_run_rejected", "sendCalibrationRunRejectedNotification"],
+    ] as const;
+
+    it.each(entries)(
+      "%s sends the device's id, both names, the actor and the address",
+      async (type, method) => {
+        const send = vi
+          .spyOn(testApp.module.get(EmailAdapter), method)
+          .mockResolvedValue(success(undefined));
+
+        const result = await notificationEmail.send(type, calibrationContext(device));
+
+        assertSuccess(result);
+        expect(send).toHaveBeenCalledExactlyOnceWith({
+          deviceId: device.id,
+          deviceName: "Greenhouse 3 MiniPAR",
+          definitionName: "PAR sweep",
+          actor: "Ada Lovelace",
+          email: recipientEmail,
+        });
+      },
+    );
+
+    it.each(entries)("%s falls back for a missing actor", async (type, method) => {
+      const send = vi
+        .spyOn(testApp.module.get(EmailAdapter), method)
+        .mockResolvedValue(success(undefined));
+
+      const result = await notificationEmail.send(type, calibrationContext(device, null));
+
+      assertSuccess(result);
+      expect(send).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ actor: "Someone" }));
+    });
+
+    it.each(entries)("%s refuses a notification stored with no resource", async (type, method) => {
+      const send = vi
+        .spyOn(testApp.module.get(EmailAdapter), method)
+        .mockResolvedValue(success(undefined));
+
+      const result = await notificationEmail.send(type, calibrationContext(null));
+
+      assertFailure(result);
+      expect(result.error.message).toContain("no resource to email about");
+      expect(send).not.toHaveBeenCalled();
+    });
+  });
+
   it("writes both rows on a replay after a first attempt rolled back", async () => {
     const send = {
       type: "experiment_join_request_received" as const,
