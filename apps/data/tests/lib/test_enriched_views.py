@@ -288,5 +288,6 @@ def test_numeric_question_metadata_uses_lexical_identifier_without_exposing_reco
         .selectExpr("to_json(questions_data) questions", "to_json(custom_metadata) metadata")
         .first()
     )
+    assert row is not None
     assert json.loads(row.questions) == {"plot": 12.5}
     assert json.loads(row.metadata) == {"soil": "clay", "color": "blue"}
