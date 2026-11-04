@@ -1,0 +1,146 @@
+# Foundation Workflow
+# Plans and applies infrastructure/foundation: CI's roles, the GitHub trust and the state backend.
+# The plan runs with the environment's deploy role, which can read all of it. The apply runs with
+# the foundation role, which only the foundation-<env> environment can assume, so it waits for
+# that environment's reviewers and runs only when the plan changes something.
+
+name: Foundation Workflow
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Target environment (dev, prod)"
+        required: true
+        type: string
+      ref:
+        description: "Git ref (commit SHA, branch, or tag) to deploy"
+        required: false
+        type: string
+        default: ""
+      tofu_version:
+        description: "OpenTofu version to use"
+        required: false
+        type: string
+        default: "1.12.9"
+
+concurrency:
+  group: opentofu-foundation-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Foundation Plan
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    outputs:
+      plan_key: ${{ steps.save-plan.outputs.key }}
+      has_changes: ${{ steps.save-plan.outputs.has_changes }}
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      environment: ${{ inputs.environment }}
+    steps:
+      - name: Validate environment
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+        run: |
+          case "$TARGET_ENV" in
+            dev | prod) ;;
+            *) echo "::error::Unknown environment '$TARGET_ENV'"; exit 1 ;;
+          esac
+
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Setup OpenTofu and AWS Credentials
+        uses: ./.github/actions/tofu/tofu-setup
+        with:
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region: ${{ secrets.AWS_REGION }}
+          tofu_version: ${{ inputs.tofu_version }}
+
+      - name: OpenTofu Format Check
+        uses: ./.github/actions/tofu/tofu-fmt-check
+        with:
+          root: foundation
+          continue-on-error: "false"
+
+      - name: OpenTofu Init and Validate
+        uses: ./.github/actions/tofu/tofu-init-validate
+        with:
+          root: foundation
+
+      - name: OpenTofu Plan
+        uses: ./.github/actions/tofu/tofu-plan
+        with:
+          root: foundation
+          out: ${{ runner.temp }}/tfplan
+
+      - name: Save the plan for the apply
+        id: save-plan
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+        working-directory: infrastructure/foundation/${{ inputs.environment }}
+        run: |
+          if ! tofu show -no-color "$RUNNER_TEMP/tfplan" | grep -q "^No changes\."; then
+            KEY="plans/foundation-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            BUCKET="s3://open-jii-terraform-state-${TARGET_ENV}"
+            aws s3 cp "$RUNNER_TEMP/tfplan" "${BUCKET}/${KEY}.tfplan" --only-show-errors
+            aws s3 cp .terraform.lock.hcl "${BUCKET}/${KEY}.lock.hcl" --only-show-errors
+            echo "key=$KEY" >> "$GITHUB_OUTPUT"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No foundation changes, so nothing to apply."
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  apply:
+    name: Foundation Apply
+    needs: plan
+    if: needs.plan.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    environment: foundation-${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Setup OpenTofu and AWS Credentials
+        uses: ./.github/actions/tofu/tofu-setup
+        with:
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region: ${{ secrets.AWS_REGION }}
+          tofu_version: ${{ inputs.tofu_version }}
+
+      # Before init, so init installs the providers the plan was made with.
+      - name: Fetch the approved plan
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          PLAN_KEY: ${{ needs.plan.outputs.plan_key }}
+        run: |
+          BUCKET="s3://open-jii-terraform-state-${TARGET_ENV}"
+          aws s3 cp "${BUCKET}/${PLAN_KEY}.tfplan" "$RUNNER_TEMP/tfplan" --only-show-errors
+          aws s3 cp "${BUCKET}/${PLAN_KEY}.lock.hcl" "infrastructure/foundation/${TARGET_ENV}/.terraform.lock.hcl" --only-show-errors
+
+      - name: OpenTofu Init and Validate
+        uses: ./.github/actions/tofu/tofu-init-validate
+        with:
+          root: foundation
+
+      - name: OpenTofu Apply
+        uses: ./.github/actions/tofu/tofu-apply
+        with:
+          root: foundation
+          plan_file: ${{ runner.temp }}/tfplan

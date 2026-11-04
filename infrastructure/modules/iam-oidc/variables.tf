@@ -60,6 +60,24 @@ variable "plan_role_name" {
   default     = "GithubActionsPlanAccess"
 }
 
+variable "foundation_role_github_environment" {
+  description = "GitHub environment allowed to assume the role that applies the foundation root. Null skips the role."
+  type        = string
+  default     = null
+}
+
+variable "foundation_role_name" {
+  description = "Name of the role that applies the foundation root."
+  type        = string
+  default     = "GithubActionsFoundationAccess"
+}
+
+variable "foundation_role_boundary_name" {
+  description = "Name of the permissions boundary on the foundation role. An admin creates it outside every root CI applies."
+  type        = string
+  default     = "CiFoundationBoundary"
+}
+
 variable "enabled_services" {
   description = "Subset of service policy keys to enable. Null (default) enables all services. Use to restrict permissions in environments that don't need every service."
   type        = list(string)
