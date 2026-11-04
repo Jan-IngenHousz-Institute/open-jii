@@ -9,7 +9,8 @@ import { AppError, failure, Result, success } from "../../../../../common/utils/
 import { UpdateAnnotationDto } from "../../../../core/models/experiment-data-annotation.model";
 import { DATABRICKS_PORT } from "../../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../../core/ports/databricks.port";
-import { ExperimentDataAnnotationsRepository } from "../../../../core/repositories/experiment-data-annotations.repository";
+import { ExperimentAnnotationsWarehouseRepository } from "../../../../core/repositories/experiment-annotations-warehouse.repository";
+import { ExperimentAnnotationsRepository } from "../../../../core/repositories/experiment-annotations.repository";
 import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
 
 @Injectable()
@@ -18,7 +19,8 @@ export class UpdateAnnotationUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly experimentDataAnnotationsRepository: ExperimentDataAnnotationsRepository,
+    private readonly annotationsWarehouseRepository: ExperimentAnnotationsWarehouseRepository,
+    private readonly annotationsRepository: ExperimentAnnotationsRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
 
@@ -72,14 +74,34 @@ export class UpdateAnnotationUseCase {
       updateAnnotation.contentText = data.content.text ?? null;
     }
 
-    const result = await this.experimentDataAnnotationsRepository.updateAnnotation(
+    const now = new Date();
+    const result = await this.annotationsWarehouseRepository.updateAnnotation(
       experimentId,
       annotationId,
       updateAnnotation,
+      now,
     );
 
     if (result.isFailure()) {
       return failure(AppError.internal(result.error.message));
+    }
+
+    // Postgres follows the lakehouse until pages read it, and the annotations-move runbook fills in
+    // what a failed copy missed.
+    const copied = await this.annotationsRepository.update(
+      experimentId,
+      annotationId,
+      updateAnnotation,
+      now,
+    );
+    if (copied.isFailure()) {
+      this.logger.warn({
+        msg: "Annotation update not copied to Postgres",
+        operation: "updateAnnotation",
+        experimentId,
+        annotationId,
+        error: copied.error.message,
+      });
     }
 
     return success(result.value);

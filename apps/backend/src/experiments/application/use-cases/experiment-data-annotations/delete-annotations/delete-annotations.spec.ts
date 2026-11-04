@@ -1,4 +1,7 @@
+import { experimentAnnotations } from "@repo/database";
+
 import {
+  AppError,
   assertFailure,
   assertSuccess,
   success,
@@ -6,7 +9,9 @@ import {
 } from "../../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../../test/test-harness";
 import type { DeleteAnnotationsRequest } from "../../../../core/models/experiment-data-annotation.model";
-import { ExperimentDataAnnotationsRepository } from "../../../../core/repositories/experiment-data-annotations.repository";
+import type { AnnotationRecord } from "../../../../core/models/experiment-data-annotation.model";
+import { ExperimentAnnotationsWarehouseRepository } from "../../../../core/repositories/experiment-annotations-warehouse.repository";
+import { ExperimentAnnotationsRepository } from "../../../../core/repositories/experiment-annotations.repository";
 import { DeleteAnnotationsUseCase } from "./delete-annotations";
 
 describe("DeleteAnnotations", () => {
@@ -44,7 +49,7 @@ describe("DeleteAnnotations", () => {
     });
 
     // Mock the repository to succeed
-    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     vi.spyOn(repository, "deleteAnnotation").mockResolvedValue(success({ rowsAffected: 1 }));
 
     const request: DeleteAnnotationsRequest = {
@@ -75,7 +80,7 @@ describe("DeleteAnnotations", () => {
     });
 
     // Mock the repository to succeed
-    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     vi.spyOn(repository, "deleteAnnotationsBulk").mockResolvedValue(success({ rowsAffected: 3 }));
 
     const request: DeleteAnnotationsRequest = {
@@ -150,7 +155,7 @@ describe("DeleteAnnotations", () => {
     });
 
     // Mock the repository to return failure
-    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     vi.spyOn(repository, "deleteAnnotation").mockResolvedValue(
       failure({
         message: "Failed to delete annotation from database",
@@ -185,7 +190,7 @@ describe("DeleteAnnotations", () => {
     });
 
     // Mock the repository to return failure
-    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     vi.spyOn(repository, "deleteAnnotationsBulk").mockResolvedValue(
       failure({
         message: "Failed to delete annotations from database",
@@ -220,7 +225,7 @@ describe("DeleteAnnotations", () => {
     });
 
     // Mock the repository to succeed
-    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     vi.spyOn(repository, "deleteAnnotationsBulk").mockResolvedValue(success({ rowsAffected: 2 }));
 
     const request: DeleteAnnotationsRequest = {
@@ -245,5 +250,117 @@ describe("DeleteAnnotations", () => {
       request.rowIds,
       "flag",
     );
+  });
+
+  /** An annotation already in Postgres, as an earlier write left it. */
+  async function inPostgres(
+    experimentId: string,
+    overrides: Partial<AnnotationRecord> = {},
+  ): Promise<AnnotationRecord> {
+    const created = new Date("2026-09-01T08:00:00.000Z");
+    const record: AnnotationRecord = {
+      id: "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b",
+      experimentId,
+      tableName: "raw_data",
+      rowId: "1",
+      type: "comment",
+      contentText: "Leaf was wet",
+      flagType: null,
+      createdBy: testUserId,
+      createdAt: created,
+      updatedAt: created,
+      ...overrides,
+    };
+    assertSuccess(await testApp.module.get(ExperimentAnnotationsRepository).insert([record]));
+    return record;
+  }
+
+  function postgres(): Promise<AnnotationRecord[]> {
+    return testApp.database.select().from(experimentAnnotations);
+  }
+
+  describe("the copy in Postgres", () => {
+    it("loses an annotation deleted by its id", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Drought trial",
+        userId: testUserId,
+      });
+      const record = await inPostgres(experiment.id);
+      vi.spyOn(
+        testApp.module.get(ExperimentAnnotationsWarehouseRepository),
+        "deleteAnnotation",
+      ).mockResolvedValue(success({ rowsAffected: 1 }));
+
+      assertSuccess(await useCase.execute(experiment.id, { annotationId: record.id }, testUserId));
+
+      expect(await postgres()).toEqual([]);
+    });
+
+    it("loses the annotations of one type deleted from rows", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Drought trial",
+        userId: testUserId,
+      });
+      await inPostgres(experiment.id);
+      const flag = await inPostgres(experiment.id, {
+        id: "7a2d3c4b-5e6f-4a70-9b8c-0d1e2f3a4b5c",
+        type: "flag",
+        flagType: "outlier",
+      });
+      vi.spyOn(
+        testApp.module.get(ExperimentAnnotationsWarehouseRepository),
+        "deleteAnnotationsBulk",
+      ).mockResolvedValue(success({ rowsAffected: 1 }));
+
+      assertSuccess(
+        await useCase.execute(
+          experiment.id,
+          { tableName: "raw_data", rowIds: ["1"], type: "comment" },
+          testUserId,
+        ),
+      );
+
+      expect(await postgres()).toEqual([flag]);
+    });
+
+    it("keeps an annotation the lakehouse would not delete", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Drought trial",
+        userId: testUserId,
+      });
+      const record = await inPostgres(experiment.id);
+      vi.spyOn(
+        testApp.module.get(ExperimentAnnotationsWarehouseRepository),
+        "deleteAnnotation",
+      ).mockResolvedValue(failure(AppError.internal("Warehouse down")));
+
+      assertFailure(await useCase.execute(experiment.id, { annotationId: record.id }, testUserId));
+
+      expect(await postgres()).toEqual([record]);
+    });
+  });
+
+  it("still deletes the annotations when the copy in Postgres fails", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
+    vi.spyOn(
+      testApp.module.get(ExperimentAnnotationsWarehouseRepository),
+      "deleteAnnotationsBulk",
+    ).mockResolvedValue(success({ rowsAffected: 2 }));
+    vi.spyOn(
+      testApp.module.get(ExperimentAnnotationsRepository),
+      "deleteFromRows",
+    ).mockResolvedValue(failure(AppError.internal("Postgres down")));
+
+    const result = await useCase.execute(
+      experiment.id,
+      { tableName: "raw_data", rowIds: ["1", "2"], type: "comment" },
+      testUserId,
+    );
+
+    assertSuccess(result);
+    expect(result.value.rowsAffected).toBe(2);
   });
 });

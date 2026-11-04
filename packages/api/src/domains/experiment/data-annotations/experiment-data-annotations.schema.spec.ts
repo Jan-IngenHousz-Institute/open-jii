@@ -8,6 +8,7 @@ import {
   zExperimentAnnotationContent,
   zExperimentAnnotationDeleteBulkBody,
   zExperimentAnnotationDeleteBulkPathParam,
+  zExperimentAnnotationExperimentPathParam,
   zExperimentAnnotationFlagContent,
   zExperimentAnnotationFlagType,
   zExperimentAnnotationList,
@@ -237,5 +238,55 @@ describe("Annotations", () => {
 
   it("zExperimentAnnotationRowsAffected rejects non-integer", () => {
     expect(() => zExperimentAnnotationRowsAffected.parse({ rowsAffected: 3.14 })).toThrow();
+  });
+
+  it("lowercases every id an annotation route takes, as Postgres prints a uuid", () => {
+    const upper = "AAAAAAAA-1111-1111-1111-111111111111";
+    const lower = "aaaaaaaa-1111-1111-1111-111111111111";
+
+    expect(zExperimentAnnotationPathParam.parse({ id: upper, annotationId: upper })).toEqual({
+      id: lower,
+      annotationId: lower,
+    });
+    expect(zExperimentAnnotationDeleteBulkPathParam.parse({ id: upper })).toEqual({ id: lower });
+    expect(zExperimentAnnotationExperimentPathParam.parse({ id: upper })).toEqual({ id: lower });
+  });
+
+  it("refuses a row id or table name longer than Postgres keeps", () => {
+    const comment = {
+      type: "comment" as const,
+      content: { type: "comment" as const, text: "Wet" },
+    };
+
+    expect(() =>
+      zExperimentAddAnnotationBody.parse({
+        tableName: "raw_data",
+        rowId: "1".repeat(65),
+        annotation: comment,
+      }),
+    ).toThrow();
+    expect(() =>
+      zExperimentAddAnnotationsBulkBody.parse({
+        tableName: "t".repeat(65),
+        rowIds: ["1"],
+        annotation: comment,
+      }),
+    ).toThrow();
+    expect(() =>
+      zExperimentAnnotationDeleteBulkBody.parse({
+        tableName: "raw_data",
+        rowIds: ["1".repeat(65)],
+        type: "comment",
+      }),
+    ).toThrow();
+  });
+
+  it("refuses text with a NUL character, which Postgres cannot keep", () => {
+    expect(() =>
+      zExperimentAnnotationCommentContent.parse({ type: "comment", text: "Leaf\u0000wet" }),
+    ).toThrow();
+    expect(() =>
+      zExperimentAnnotationFlagContent.parse({ type: "flag", flagType: "outlier", text: "\u0000" }),
+    ).toThrow();
   });
 });

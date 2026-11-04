@@ -1,11 +1,11 @@
 import { oc } from "@orpc/contract";
 
-import { zExperimentIdPathParam } from "../experiment.schema";
 import {
   zExperimentAddAnnotationBody,
   zExperimentAddAnnotationsBulkBody,
   zExperimentAnnotationDeleteBulkBody,
   zExperimentAnnotationDeleteBulkPathParam,
+  zExperimentAnnotationExperimentPathParam,
   zExperimentAnnotationPathParam,
   zExperimentAnnotationRowsAffected,
   zExperimentUpdateAnnotationBody,
@@ -18,7 +18,7 @@ export const experimentDataAnnotationsContract = {
       path: "/api/v1/experiments/{id}/data/annotations",
       successStatus: 201,
     })
-    .input(zExperimentIdPathParam.and(zExperimentAddAnnotationBody))
+    .input(zExperimentAnnotationExperimentPathParam.and(zExperimentAddAnnotationBody))
     .output(zExperimentAnnotationRowsAffected),
   addAnnotationsBulk: oc
     .route({
@@ -26,7 +26,7 @@ export const experimentDataAnnotationsContract = {
       path: "/api/v1/experiments/{id}/data/annotations/bulk",
       successStatus: 201,
     })
-    .input(zExperimentIdPathParam.and(zExperimentAddAnnotationsBulkBody))
+    .input(zExperimentAnnotationExperimentPathParam.and(zExperimentAddAnnotationsBulkBody))
     .output(zExperimentAnnotationRowsAffected),
   updateAnnotation: oc
     .route({
