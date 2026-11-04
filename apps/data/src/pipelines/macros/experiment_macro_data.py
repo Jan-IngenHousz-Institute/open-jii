@@ -20,6 +20,7 @@ from openjii.centrum import (
     EXPERIMENT_RAW_DATA_TABLE,
     MACRO_ID_UUID_PATTERN,
 )
+from openjii.centrum.row_ids import macro_result_id
 from openjii.macros.runtime import (
     ENVIRONMENT,
     MACRO_EXECUTION_PARTITIONS,
@@ -169,16 +170,8 @@ def experiment_macro_data():
                 F.concat(F.lit("Invalid macro_id (not UUID): "), F.col("macro_id"))
             ).otherwise(F.col("sandbox_result.error"))
         )
-        .withColumn(
-            "macro_row_id",
-            F.abs(
-                F.hash(
-                    F.col("id"),
-                    F.col("macro_filename"),
-                    F.col("processed_timestamp"),
-                )
-            ),
-        )
+        # BIGINT where this was INT: the pipeline enables type widening so the column widens in place.
+        .withColumn("macro_row_id", macro_result_id())
         .select(
             "experiment_id",
             F.col("macro_row_id").alias("id"),

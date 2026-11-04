@@ -55,6 +55,7 @@ from openjii.heartbeat import (
     MACRO_PROTOCOL_FAILURES_METRIC,
     MACRO_RESULT_ROWS_METRIC,
     MAX_DETAIL_ROWS,
+    MEASUREMENT_COPIES_METRIC,
     MEASUREMENTS_7D_METRIC,
     MEASUREMENTS_24H_METRIC,
     METRICS_AGE_METRIC,
@@ -375,6 +376,42 @@ def collect_experiment_rows(now: datetime) -> list[dict]:
         DATA_NAMESPACE,
         ENVIRONMENT,
     )
+
+
+def collect_measurement_copies(now: datetime) -> list[dict]:
+    """Rows committed to the experiment table in the last closed half hour that repeat a capture:
+    every row of an experiment, id, timestamp and device after its first. Such a copy is a phone
+    re-publishing a record, or a device sending a capture again.
+
+    Row tracking keeps the version that wrote each row, through compaction too, so two copies one
+    batch wrote are told apart and a copy counts in the half hour that committed it."""
+    start, end = previous_bucket(now, PATH_BUCKET_MINUTES)
+
+    versions = commit_versions(EXPERIMENT_RAW_DATA, start, end)
+    if versions is None:
+        return [data_point(MEASUREMENT_COPIES_METRIC, 0, start)]
+    lo, hi = versions
+
+    row = spark.sql(f"""
+        WITH arrived AS (
+          SELECT DISTINCT experiment_id, id, timestamp, device_id
+          FROM table_changes('{EXPERIMENT_RAW_DATA}', {lo}, {hi})
+          WHERE _change_type = 'insert'
+        ),
+        captures AS (
+          SELECT count_if(held._metadata.row_commit_version BETWEEN {lo} AND {hi}) AS in_bucket,
+                 min(held._metadata.row_commit_version) AS first_version
+          FROM {EXPERIMENT_RAW_DATA} AS held
+          JOIN arrived
+            ON held.experiment_id = arrived.experiment_id AND held.id = arrived.id
+           AND held.timestamp = arrived.timestamp AND held.device_id <=> arrived.device_id
+          GROUP BY held.experiment_id, held.id, held.timestamp, held.device_id
+        )
+        SELECT coalesce(sum(in_bucket - CASE WHEN first_version >= {lo} THEN 1 ELSE 0 END), 0) AS copies
+        FROM captures
+    """).first()
+
+    return [data_point(MEASUREMENT_COPIES_METRIC, row["copies"], start)]
 
 
 def collect_broker_to_api(now: datetime) -> list[dict]:
@@ -699,6 +736,7 @@ collectors = [
     ("ingest_quality", collect_ingest_quality),
     ("ingest", collect_ingest),
     ("experiment_rows", collect_experiment_rows),
+    ("measurement_copies", collect_measurement_copies),
     ("broker_to_api", collect_broker_to_api),
     ("macro_results", collect_macro_results),
     ("macro_backlog", collect_macro_backlog),

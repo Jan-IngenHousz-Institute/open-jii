@@ -165,6 +165,34 @@ describe("DataTable", () => {
     expect(screen.getAllByLabelText("Select row")).toHaveLength(2);
   });
 
+  it("renders both copies of a capture that share its id", () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const copies: DataRow[] = [
+      {
+        id: "row-1",
+        measured_at: "2026-08-14T09:30:00.000Z",
+        phi2: 0.71,
+        notes: "first copy",
+        envelope: "{}",
+      },
+      {
+        id: "row-1",
+        measured_at: "2026-08-14T09:30:00.000Z",
+        phi2: 0.71,
+        notes: "second copy",
+        envelope: "{}",
+      },
+    ];
+
+    render(<DataTable columns={COLUMNS} rows={copies} />);
+    const loggedErrors = errors.mock.calls.length;
+    errors.mockRestore();
+
+    expect(screen.getByText("first copy")).toBeInTheDocument();
+    expect(screen.getByText("second copy")).toBeInTheDocument();
+    expect(loggedErrors).toBe(0);
+  });
+
   it("renders every row it is given when the caller does not page", () => {
     const many: DataRow[] = Array.from({ length: 11 }, (_, index) => ({
       id: `row-${String(index)}`,

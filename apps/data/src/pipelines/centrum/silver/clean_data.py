@@ -16,6 +16,7 @@ from openjii.centrum import (
     question_schema,
 )
 from openjii.centrum.constants import MEASUREMENT_PATH_TRIGGER_INTERVAL
+from openjii.centrum.row_ids import measurement_id
 from openjii.centrum.runtime import (
     BRONZE_TABLE,
     LEGACY_MACRO_ID_MAP,
@@ -184,16 +185,18 @@ def clean_data():
 
     df = df.withColumn(
         "id",
-        F.abs(
-            F.hash(
-                F.col("experiment_id"),
-                F.col("device_id"),
-                F.col("timestamp"),
-                F.col("sample"),
-                F.col("ingestion_timestamp"),
-                F.col("kinesis_sequence_number")
+        measurement_id(
+            earlier=F.abs(
+                F.hash(
+                    F.col("experiment_id"),
+                    F.col("device_id"),
+                    F.col("timestamp"),
+                    F.col("sample"),
+                    F.col("ingestion_timestamp"),
+                    F.col("kinesis_sequence_number"),
+                )
             )
-        )
+        ),
     )
 
     # Populate missing annotation IDs and rowIds
@@ -394,14 +397,16 @@ def clean_data_large_iot():
         )
         .withColumn(
             "id",
-            F.abs(
-                F.hash(
-                    F.col("experiment_id"),
-                    F.col("device_id"),
-                    F.col("timestamp"),
-                    F.col("sample"),
+            measurement_id(
+                earlier=F.abs(
+                    F.hash(
+                        F.col("experiment_id"),
+                        F.col("device_id"),
+                        F.col("timestamp"),
+                        F.col("sample"),
+                    )
                 )
-            )
+            ),
         )
         # Same annotation ID/timestamp population as the bronze path: mobile
         # payloads carry only type/content.
