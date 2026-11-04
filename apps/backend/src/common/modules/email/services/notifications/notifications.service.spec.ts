@@ -452,6 +452,96 @@ describe("NotificationsService", () => {
     });
   });
 
+  describe("the calibration run notifications", () => {
+    const MOCK_DEVICE_ID = "device-123";
+    const input = {
+      deviceId: MOCK_DEVICE_ID,
+      deviceName: "Greenhouse 3 MiniPAR",
+      definitionName: "PAR sweep",
+      actor: MOCK_ACTOR,
+      email: MOCK_EMAIL,
+    };
+
+    it.each([
+      [
+        "sendCalibrationRunAwaitingApprovalNotification",
+        "renderCalibrationRunAwaitingApprovalNotificationEmail",
+        "A PAR sweep calibration of Greenhouse 3 MiniPAR is waiting for approval",
+      ],
+      [
+        "sendCalibrationRunApprovedNotification",
+        "renderCalibrationRunApprovedNotificationEmail",
+        "Your PAR sweep calibration of Greenhouse 3 MiniPAR was approved",
+      ],
+      [
+        "sendCalibrationRunRejectedNotification",
+        "renderCalibrationRunRejectedNotificationEmail",
+        "Your PAR sweep calibration of Greenhouse 3 MiniPAR was rejected",
+      ],
+    ] as const)(
+      "%s renders its template with the calibration link and sends it to the address",
+      async (method, seam, subject) => {
+        const mockRender = spyOnProtected(service, seam).mockResolvedValue({
+          html: MOCK_HTML_CONTENT,
+          text: MOCK_TEXT_CONTENT,
+        });
+        const mockSendMail = vi.fn().mockReturnValue({
+          messageId: "test-message-id",
+          accepted: [MOCK_EMAIL],
+          rejected: [],
+          pending: [],
+        });
+        mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+        const result = await service[method](input);
+
+        assertSuccess(result);
+        expect(mockRender).toHaveBeenCalledWith({
+          host: "localhost:3000",
+          baseUrl: "http://localhost:3000",
+          deviceName: "Greenhouse 3 MiniPAR",
+          definitionName: "PAR sweep",
+          actor: MOCK_ACTOR,
+          calibrationUrl: `http://localhost:3000/platform/devices/${MOCK_DEVICE_ID}/calibration`,
+        });
+        expect(mockSendMail).toHaveBeenCalledWith({
+          to: MOCK_EMAIL,
+          from: { name: "openJII", address: "noreply@localhost" },
+          subject,
+          html: MOCK_HTML_CONTENT,
+          text: MOCK_TEXT_CONTENT,
+        });
+      },
+    );
+
+    it.each([
+      [
+        "sendCalibrationRunAwaitingApprovalNotification",
+        "renderCalibrationRunAwaitingApprovalNotificationEmail",
+      ],
+      ["sendCalibrationRunApprovedNotification", "renderCalibrationRunApprovedNotificationEmail"],
+      ["sendCalibrationRunRejectedNotification", "renderCalibrationRunRejectedNotificationEmail"],
+    ] as const)("%s treats a rejected address as a failure", async (method, seam) => {
+      spyOnProtected(service, seam).mockResolvedValue({
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+      mockCreateTransport.mockReturnValue({
+        sendMail: vi.fn().mockReturnValue({
+          messageId: "test-message-id",
+          accepted: [],
+          rejected: [MOCK_EMAIL],
+          pending: [],
+        }),
+      });
+
+      const result = await service[method](input);
+
+      assertFailure(result);
+      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+    });
+  });
+
   describe("sendTransferRequestConfirmation", () => {
     const MOCK_EMAIL = "test@example.com";
     const MOCK_PROJECT_ID_OLD = "project-123";

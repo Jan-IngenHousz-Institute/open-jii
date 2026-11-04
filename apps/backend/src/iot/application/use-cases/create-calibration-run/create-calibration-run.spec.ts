@@ -1,3 +1,5 @@
+import { Logger } from "@nestjs/common";
+
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 import { calibrationDefinitions, eq } from "@repo/database";
 
@@ -8,6 +10,15 @@ import {
   failure,
   success,
 } from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { NotificationRepository } from "../../../../notifications/core/repositories/notification.repository";
+import {
+  calibrationDeliveries,
+  calibrationNotifications,
+  heardBy,
+  seedCalibrationAudience,
+} from "../../../../test/calibration-audience";
+import type { CalibrationAudience } from "../../../../test/calibration-audience";
 import { TestHarness } from "../../../../test/test-harness";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort } from "../../../core/ports/aws.port";
@@ -354,6 +365,115 @@ describe("CreateCalibrationRunUseCase", () => {
       const gated = await createDefinition({ minFirmwareVersion: "1.1.3" });
       const result = await run({ definitionId: gated, firmwareVersion: "1.2.0-rc1" });
       assertSuccess(result);
+    });
+  });
+
+  describe("notifications", () => {
+    let audience: CalibrationAudience;
+    let parSweepId: string;
+
+    beforeEach(async () => {
+      audience = await seedCalibrationAudience(testApp);
+      parSweepId = await createDefinition({ name: "PAR sweep" });
+    });
+
+    const runAsRequester = () =>
+      useCase.execute(
+        { deviceId: audience.deviceId, definitionId: parSweepId, payload: PAYLOAD },
+        audience.requester,
+      );
+
+    const awaiting = (recipientId: string, deviceName = "Test device") => ({
+      type: "calibration_run_awaiting_approval",
+      recipientId,
+      actorId: audience.requester,
+      resourceType: "device",
+      resourceId: audience.deviceId,
+      params: { deviceName, definitionName: "PAR sweep" },
+    });
+
+    it("tells the owner and the device's managers, not the requester, and queues their emails", async () => {
+      assertSuccess(await runAsRequester());
+
+      expect(await calibrationNotifications(testApp, audience)).toEqual(
+        heardBy(audience, ["owner", "manager"], (recipientId) => awaiting(recipientId)),
+      );
+      expect(await calibrationDeliveries(testApp, audience)).toEqual(
+        heardBy(audience, ["owner", "manager"], () => ({
+          type: "calibration_run_awaiting_approval",
+          status: "pending",
+        })),
+      );
+    });
+
+    it("tells nobody about a run the script failed", async () => {
+      sandboxResult = success({
+        statusCode: 200,
+        payload: { status: "compute_failed", error: "Submitted blocks failed validation" },
+      });
+
+      const result = await runAsRequester();
+
+      assertSuccess(result);
+      expect(result.value.status).toBe("compute_failed");
+      expect(await calibrationNotifications(testApp, audience)).toEqual(
+        heardBy(audience, [], awaiting),
+      );
+    });
+
+    it("names a nameless device by its serial number", async () => {
+      audience = await seedCalibrationAudience(testApp, {
+        name: null,
+        serialNumber: "MINIPAR-0042",
+      });
+
+      assertSuccess(await runAsRequester());
+
+      expect(await calibrationNotifications(testApp, audience)).toEqual(
+        heardBy(audience, ["owner", "manager"], (recipientId) =>
+          awaiting(recipientId, "MINIPAR-0042"),
+        ),
+      );
+    });
+
+    it("stores the row but queues no email for a manager who switched the category off", async () => {
+      assertSuccess(
+        await testApp.module
+          .get(NotificationRepository)
+          .upsertPreference(audience.manager, "devices_and_calibration", "email", false),
+      );
+
+      assertSuccess(await runAsRequester());
+
+      expect(await calibrationNotifications(testApp, audience)).toEqual(
+        heardBy(audience, ["owner", "manager"], (recipientId) => awaiting(recipientId)),
+      );
+      expect(await calibrationDeliveries(testApp, audience)).toEqual(
+        heardBy(audience, ["owner"], () => ({
+          type: "calibration_run_awaiting_approval",
+          status: "pending",
+        })),
+      );
+    });
+
+    it("still returns the computed run and logs when the notification fails", async () => {
+      vi.spyOn(testApp.module.get(NotificationDispatchService), "dispatch").mockResolvedValue(
+        failure(AppError.internal("Database unavailable")),
+      );
+      const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+
+      const result = await runAsRequester();
+
+      assertSuccess(result);
+      expect(result.value.status).toBe("computed");
+      expect(result.value.requestedBy).toBe(audience.requester);
+      expect(error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: "createCalibrationRun",
+          runId: result.value.id,
+          deviceId: audience.deviceId,
+        }),
+      );
     });
   });
 });

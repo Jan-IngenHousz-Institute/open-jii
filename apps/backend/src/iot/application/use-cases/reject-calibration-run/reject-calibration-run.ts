@@ -7,6 +7,7 @@ import {
   IotCalibrationRunRepository,
   REJECTABLE_STATUSES,
 } from "../../../core/repositories/iot-calibration-run.repository";
+import { CalibrationRunNotifier } from "../../services/calibration-run-notifier";
 
 const rejectable: ReadonlySet<string> = new Set(REJECTABLE_STATUSES);
 
@@ -17,6 +18,7 @@ export class RejectCalibrationRunUseCase {
   constructor(
     private readonly runRepository: IotCalibrationRunRepository,
     private readonly authz: AuthorizationService,
+    private readonly notifier: CalibrationRunNotifier,
   ) {}
 
   async execute(runId: string, userId: string): Promise<Result<CalibrationRunWithVersionDto>> {
@@ -54,6 +56,7 @@ export class RejectCalibrationRunUseCase {
     if (rejected.isFailure()) {
       return failure(rejected.error);
     }
+    await this.notifier.runReviewed("rejectCalibrationRun", "rejected", run.value, userId);
     return success(rejected.value);
   }
 }

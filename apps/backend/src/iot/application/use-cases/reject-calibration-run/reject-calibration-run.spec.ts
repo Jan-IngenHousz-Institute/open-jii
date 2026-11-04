@@ -1,6 +1,13 @@
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import {
+  calibrationDeliveries,
+  calibrationNotifications,
+  heardBy,
+  seedCalibrationAudience,
+} from "../../../../test/calibration-audience";
+import type { CalibrationAudience } from "../../../../test/calibration-audience";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotCalibrationDefinitionRepository } from "../../../core/repositories/iot-calibration-definition.repository";
 import { IotCalibrationRunRepository } from "../../../core/repositories/iot-calibration-run.repository";
@@ -151,5 +158,102 @@ describe("RejectCalibrationRunUseCase", () => {
     const result = await useCase.execute(await seedComputedRun(), outsider);
     assertFailure(result);
     expect(result.error.statusCode).toBe(403);
+  });
+
+  describe("notifications", () => {
+    let audience: CalibrationAudience;
+    let definitionName: string;
+
+    beforeEach(async () => {
+      audience = await seedCalibrationAudience(testApp);
+      // Only someone who can work on the device starts a run, so the requester holds Can edit.
+      await testApp.addResourceGrant({
+        resourceType: "device",
+        resourceId: audience.deviceId,
+        granteeType: "user",
+        granteeId: audience.requester,
+        role: "admin",
+      });
+      const definition = await testApp.module
+        .get(IotCalibrationDefinitionRepository)
+        .findById(definitionId);
+      assertSuccess(definition);
+      definitionName = definition.value?.name ?? "";
+    });
+
+    const seedRunBy = async (
+      requestedBy: string,
+      status: "computed" | "compute_failed" | "running" = "computed",
+    ) => {
+      const created = await runRepository.create({
+        definitionId,
+        deviceId: audience.deviceId,
+        requestedBy,
+        inputSource: "bench_wizard",
+        status: "running",
+      });
+      assertSuccess(created);
+      if (status === "computed") {
+        assertSuccess(
+          await runRepository.saveResult(created.value.id, {
+            status,
+            blocks: { par: { status: "computed", coefficients: { spec: 1.19 } } },
+          }),
+        );
+      }
+      if (status === "compute_failed") {
+        assertSuccess(
+          await runRepository.saveResult(created.value.id, {
+            status,
+            errorMessage: "No block produced coefficients",
+          }),
+        );
+      }
+      return created.value.id;
+    };
+
+    it.each(["computed", "compute_failed"] as const)(
+      "tells the requester who rejected a %s run, and nobody else",
+      async (status) => {
+        const runId = await seedRunBy(audience.requester, status);
+
+        assertSuccess(await useCase.execute(runId, audience.manager));
+
+        expect(await calibrationNotifications(testApp, audience)).toEqual(
+          heardBy(audience, ["requester"], (recipientId) => ({
+            type: "calibration_run_rejected",
+            recipientId,
+            actorId: audience.manager,
+            resourceType: "device",
+            resourceId: audience.deviceId,
+            params: { deviceName: "Test device", definitionName },
+          })),
+        );
+        expect(await calibrationDeliveries(testApp, audience)).toEqual(
+          heardBy(audience, ["requester"], () => ({
+            type: "calibration_run_rejected",
+            status: "pending",
+          })),
+        );
+      },
+    );
+
+    it("tells nobody when the reviewer rejects a run they requested", async () => {
+      assertSuccess(await useCase.execute(await seedRunBy(audience.manager), audience.manager));
+
+      expect(await calibrationNotifications(testApp, audience)).toEqual(
+        heardBy(audience, [], () => null),
+      );
+    });
+
+    it("tells nobody when the rejection is refused", async () => {
+      assertFailure(
+        await useCase.execute(await seedRunBy(audience.requester, "running"), audience.manager),
+      );
+
+      expect(await calibrationNotifications(testApp, audience)).toEqual(
+        heardBy(audience, [], () => null),
+      );
+    });
   });
 });

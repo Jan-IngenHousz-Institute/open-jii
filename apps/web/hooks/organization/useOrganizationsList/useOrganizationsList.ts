@@ -1,19 +1,20 @@
 "use client";
 
-import { useOrganizations } from "@/hooks/organization/useOrganizations/useOrganizations";
-import { useDebounce } from "@/hooks/useDebounce";
-import { useSearchPending } from "@/hooks/useSearchPending";
-import { useUrlState } from "@/hooks/useUrlState";
-import { useState } from "react";
+import { usePrincipal } from "@/components/auth/principal-context";
+import { organizationsListQuery } from "@/hooks/organization/useOrganizations/organizations-list-query";
+import { ANONYMOUS_PRINCIPAL } from "@/hooks/principal-query-key";
+import { useResourceList } from "@/hooks/useResourceList";
+import { orpc } from "@/lib/orpc";
 
-import { zOrganizationSort } from "@repo/api/domains/organization/organization.schema";
+import {
+  zOrganizationSort,
+  zOrganizationType,
+} from "@repo/api/domains/organization/organization.schema";
 import type {
+  OrganizationDirectory,
   OrganizationType,
   OrganizationVisibility,
 } from "@repo/api/domains/organization/organization.schema";
-
-import { useListSorting } from "../../useListSorting";
-import { useOrganizationListFilters } from "./useOrganizationListFilters";
 
 /** One organization row, whichever slice of the listing produced it. */
 export interface OrganizationListItem {
@@ -28,102 +29,57 @@ export interface OrganizationListItem {
   isMember: boolean;
 }
 
-const PAGE_SIZE = 20;
+const ORGANIZATION_LIST_FILTERS = { type: zOrganizationType };
 
 /**
- * Search, filter, and sort the directory on the server, then paginate it in groups
- * of 20 in the browser. Without search or explicit sorting, the server ranks the
- * caller's owned organizations first, then joined ones, then the public directory.
- * Personal workspaces are excluded server-side.
+ * The organization directory: public organizations plus the caller's own private ones,
+ * searched, filtered and sorted on the server and paged 20 at a time in the browser.
+ * Without search or explicit sorting, the server ranks the caller's owned organizations
+ * first, then joined ones, then the public directory. Search (`q`), sort and types live
+ * in the URL.
  *
- * Search, sort, and types live in the URL; their setters reset the page to 1.
- * Clearing filters resets the page and types while preserving search and sort.
+ * Both the row set and each row's membership depend on the caller, so the cache is
+ * principal-scoped: a module-level QueryClient survives sign-out, and the next user must
+ * not inherit the previous one's directory or join state.
  */
 export function useOrganizationsList() {
-  const [search, setSearchState] = useUrlState<string>({
-    key: "q",
-    serialize: (value) => (value === "" ? null : value),
-    parse: (raw) => raw ?? "",
-  });
-  const [page, setPage] = useState(1);
-  const [debouncedSearch] = useDebounce(search);
-  const { sort, setSort, toggleSort } = useListSorting(zOrganizationSort);
-  const { types, setTypes, clearFilters, hasActiveFilters } = useOrganizationListFilters();
+  const { userId, isPending: isSessionPending } = usePrincipal();
+  const principal = userId ?? ANONYMOUS_PRINCIPAL;
 
-  const setSearch = (value: string) => {
-    setSearchState(value);
-    setPage(1);
-  };
-
-  const directory = useOrganizations({
-    search: debouncedSearch,
-    scope: "all",
-    sort,
-    types,
-  });
-  const isSearchPending = useSearchPending({
-    search,
-    debouncedSearch,
-    isFetching: directory.isFetching,
-  });
-
-  const allOrganizations: OrganizationListItem[] = (directory.data?.organizations ?? []).map(
-    (organization) => ({
-      id: organization.id,
-      name: organization.name,
-      description: organization.description,
-      type: organization.type,
-      memberCount: organization.memberCount,
-      resourceCount: organization.resourceCount,
-      // Read from the row, not assumed: the directory carries the caller's own private
-      // organizations, so hardcoding "public" here would strip their badge.
-      visibility: organization.visibility,
-      // `pending_request` is not membership.
-      isMember: organization.membershipStatus === "member",
+  return useResourceList({
+    filters: ORGANIZATION_LIST_FILTERS,
+    sort: zOrganizationSort,
+    searchKey: "q",
+    query: (view) => ({
+      ...organizationsListQuery(orpc, userId, {
+        search: view.search,
+        scope: "all",
+        sort: view.sort,
+        types: view.filters.type,
+      }),
+      meta: { principal },
+      // A new search term is a new cache key, and without this the list would fall back
+      // to its pending state, unmounting every row, including a join dialog the reader
+      // had open. Rows from another person's session are never shown.
+      placeholderData: (
+        previous: OrganizationDirectory | undefined,
+        previousQuery?: { meta?: Record<string, unknown> },
+      ) => (previousQuery?.meta?.principal === principal ? previous : undefined),
+      enabled: !isSessionPending,
+      select: (data: OrganizationDirectory): OrganizationListItem[] =>
+        data.organizations.map((organization) => ({
+          id: organization.id,
+          name: organization.name,
+          description: organization.description,
+          type: organization.type,
+          memberCount: organization.memberCount,
+          resourceCount: organization.resourceCount,
+          // Read from the row, not assumed: the directory carries the caller's own private
+          // organizations, so hardcoding "public" here would strip their badge.
+          visibility: organization.visibility,
+          // `pending_request` is not membership.
+          isMember: organization.membershipStatus === "member",
+        })),
     }),
-  );
-  const totalPages = Math.max(1, Math.ceil(allOrganizations.length / PAGE_SIZE));
-  if (page > totalPages) setPage(totalPages);
-  const currentPage = Math.min(page, totalPages);
-  const organizations = allOrganizations.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
-  );
-
-  return {
-    search,
-    setSearch,
-    /** The search box's own spinner: a pending term, or the request it triggered. */
-    isSearching: isSearchPending,
-    debouncedSearch,
-    organizations,
-    isPending: directory.isPending,
-    isPlaceholderData: directory.isPlaceholderData,
-    isError: directory.isError,
-    error: directory.error,
-    refetch: directory.refetch,
-    isFetching: directory.isFetching,
-    page: currentPage,
-    totalPages,
-    setPage,
-    sort,
-    setSort: (next: typeof sort) => {
-      setSort(next);
-      setPage(1);
-    },
-    toggleSort: (field: (typeof sort)[number]["field"], multi: boolean) => {
-      toggleSort(field, multi);
-      setPage(1);
-    },
-    types,
-    setTypes: (values: typeof types) => {
-      setTypes(values);
-      setPage(1);
-    },
-    clearFilters: () => {
-      clearFilters();
-      setPage(1);
-    },
-    hasActiveFilters,
-  };
+  });
 }

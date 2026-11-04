@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 
+import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -21,19 +22,19 @@ import {
 } from "@repo/ui/components/table";
 import { cn } from "@repo/ui/lib/utils";
 
-export interface OverviewTableColumn<T extends RowData> {
+export interface OverviewTableColumn<T extends RowData, F extends string = string> {
   /** Translated header label; null renders an aria-hidden spacer head (actions column). */
   header: ReactNode;
-  /** Stable server sort field. Omit for columns that are not sortable. */
-  sortId?: string;
+  /** The sort field this column toggles, one the list's sort accepts. Omit when not sortable. */
+  sortId?: F;
   /** Extra classes for both the head and every cell of the column. */
   className?: string;
   /** Row cell content; `href` is the row's navigation target (for name links). */
   cell: (item: T, href: string) => ReactNode;
 }
 
-interface OverviewTableProps<T extends RowData> {
-  columns: OverviewTableColumn<T>[];
+interface OverviewTableProps<T extends RowData, F extends string> {
+  columns: OverviewTableColumn<T, F>[];
   items: T[] | undefined;
   isLoading?: boolean;
   error?: unknown;
@@ -46,37 +47,12 @@ interface OverviewTableProps<T extends RowData> {
   emptyHelpPath?: string;
   /** A way out of the empty state, such as clearing the filters that caused it. */
   emptyAction?: ReactNode;
-  sorting?: OverviewTableSorting;
+  sorting?: OverviewTableSorting<F>;
 }
 
-export interface OverviewTableSortItem {
-  field: string;
-  direction: "asc" | "desc";
-}
-
-export interface OverviewTableSortLabels {
-  unsorted: string;
-  asc: string;
-  desc: string;
-  secondary: string;
-}
-
-export interface OverviewTableSorting {
-  state: SortingState;
-  onToggle: (field: string, multi: boolean) => void;
-  labels: OverviewTableSortLabels;
-}
-
-export function createOverviewTableSorting<T extends OverviewTableSortItem>(
-  sort: readonly T[],
-  toggleSort: (field: T["field"], multi: boolean) => void,
-  labels: OverviewTableSortLabels,
-): OverviewTableSorting {
-  return {
-    state: sort.map(({ field, direction }) => ({ id: field, desc: direction === "desc" })),
-    onToggle: (field, multi) => toggleSort(field, multi),
-    labels,
-  };
+export interface OverviewTableSorting<F extends string> {
+  sort: readonly { field: F; direction: "asc" | "desc" }[];
+  onToggle: (field: F, multi: boolean) => void;
 }
 
 const HEADER_BG = "bg-muted/50";
@@ -100,7 +76,7 @@ interface OverviewColumnMeta {
  * Show skeletons while loading, an error state for undefined items, or the empty message,
  * help link and optional action for an empty array.
  */
-export function OverviewTable<T extends RowData>({
+export function OverviewTable<T extends RowData, F extends string = string>({
   columns,
   items,
   isLoading,
@@ -114,8 +90,23 @@ export function OverviewTable<T extends RowData>({
   emptyHelpPath,
   emptyAction,
   sorting,
-}: OverviewTableProps<T>) {
+}: OverviewTableProps<T, F>) {
   const router = useRouter();
+  const { t } = useTranslation("common");
+  const sortLabels = {
+    unsorted: t("common.sortUnsorted"),
+    asc: t("common.sortAscending"),
+    desc: t("common.sortDescending"),
+    secondary: t("common.sortSecondary"),
+  };
+  const sortingState = useMemo<SortingState>(
+    () =>
+      (sorting?.sort ?? []).map(({ field, direction }) => ({
+        id: field,
+        desc: direction === "desc",
+      })),
+    [sorting?.sort],
+  );
   const loading = isLoading === true;
   const tableColumns = useMemo<ColumnDef<typeof overviewTableFeatures, T>[]>(
     () =>
@@ -139,7 +130,7 @@ export function OverviewTable<T extends RowData>({
     columns: tableColumns,
     getRowId: (item) => getRowKey(item),
     manualSorting: true,
-    state: { sorting: sorting?.state ?? [] },
+    state: { sorting: sortingState },
   });
 
   if (!loading && items === undefined) {
@@ -212,8 +203,9 @@ export function OverviewTable<T extends RowData>({
                       <button
                         type="button"
                         className="hover:text-foreground inline-flex items-center gap-1 text-left uppercase focus-visible:outline-2 focus-visible:outline-offset-2"
-                        aria-label={`${meta.label ?? header.column.id}: ${sorting.labels[header.column.getIsSorted() || "unsorted"]}${header.column.getSortIndex() > 0 ? `, ${sorting.labels.secondary}` : ""}`}
-                        onClick={(event) => sorting.onToggle(header.column.id, event.shiftKey)}
+                        aria-label={`${meta.label ?? header.column.id}: ${sortLabels[header.column.getIsSorted() || "unsorted"]}${header.column.getSortIndex() > 0 ? `, ${sortLabels.secondary}` : ""}`}
+                        // Sortable column ids are their `sortId`, so the id is one of the fields.
+                        onClick={(event) => sorting.onToggle(header.column.id as F, event.shiftKey)}
                       >
                         <table.FlexRender header={header} />
                         {header.column.getIsSorted() === "asc" ? (

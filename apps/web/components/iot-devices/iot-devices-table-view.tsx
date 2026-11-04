@@ -143,6 +143,9 @@ export function IotDevicesTableView() {
   return (
     <div className="space-y-4">
       <OverviewToolbar
+        // "Search by name or serial number" measures ~223px, and the icon and clear button
+        // take 78px, so the default width cuts it mid-word.
+        searchWidth="wide"
         search={
           <SearchInput
             value={search}
@@ -151,9 +154,6 @@ export function IotDevicesTableView() {
             placeholder={t("iot.devices.searchPlaceholder")}
             clearLabel={t("common.clear")}
             loadingLabel={t("common.loading")}
-            // "Search by name or serial number" measures ~223px, and the icon
-            // and clear button take 78px, so 280px cut it mid-word.
-            className="w-full md:w-[320px]"
           />
         }
         filters={<>{CHIP_STATUSES.map(renderStatusChip)}</>}

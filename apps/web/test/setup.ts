@@ -141,9 +141,13 @@ vi.mock("@repo/i18n", () => ({
           ? `${key}:${options.version}`
           : key === "joinCode.redeemed" && typeof options?.joined === "number"
             ? `${key}:${options.joined}`
-            : key === "workbooks.duplicateName" && typeof options?.name === "string"
-              ? `Fork of ${options.name}`
-              : key,
+            : key === "common.filterChip" &&
+                typeof options?.filter === "string" &&
+                typeof options.value === "string"
+              ? `${key}:${options.filter}:${options.value}`
+              : key === "workbooks.duplicateName" && typeof options?.name === "string"
+                ? `Fork of ${options.name}`
+                : key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
   useCurrentLocale: () => "en-US",

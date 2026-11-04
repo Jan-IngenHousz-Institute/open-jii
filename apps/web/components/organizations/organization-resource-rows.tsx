@@ -1,18 +1,23 @@
 "use client";
 
+import { ListFilterBar } from "@/components/list-filter-bar";
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { StatusBadge } from "@/components/shared/status-badge";
+import type { ResourceSort } from "@/hooks/organization/useOrganizationResourceListState/useOrganizationResourceListState";
+import { useOrganizationResourceListState } from "@/hooks/organization/useOrganizationResourceListState/useOrganizationResourceListState";
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime, formatShortDate } from "@/util/date";
 import { stripHtml } from "@/util/strip-html";
-import { Lock } from "lucide-react";
+import { ArrowUpDown, Layers, Lock } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { OrganizationResource } from "@repo/api/domains/organization/organization.schema";
+import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import type { TransferableResourceType } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.schema";
 import { zTransferableResourceType } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
+import type { ListFilter } from "@repo/ui/components/list-filter-menu";
 import { SearchInput } from "@repo/ui/components/search-input";
 import {
   Select,
@@ -28,12 +33,7 @@ import {
   TooltipTrigger,
 } from "@repo/ui/components/tooltip";
 
-import type { ResourceSort, ResourceTypeFilter } from "./organization-resource-filter";
-import {
-  DEFAULT_RESOURCE_FILTER,
-  filterAndSortResources,
-  hasActiveFilters,
-} from "./organization-resource-filter";
+import { filterAndSortResources } from "./organization-resource-filter";
 import {
   GROUP_ORDER,
   RESOURCE_SEGMENT,
@@ -63,6 +63,7 @@ interface TransferTarget {
 
 /**
  * Everything the organization owns that the caller can open, as one filtered list. The
+ * type filter and the sort live in the URL, so a reload or a shared link keeps them. The
  * type options and the type sort come off {@link GROUP_ORDER}, so neither can drift from
  * the featured card or the estate bar.
  *
@@ -78,99 +79,105 @@ export function OrganizationResourceRows({
 }) {
   const { t } = useTranslation();
 
-  const [query, setQuery] = useState(DEFAULT_RESOURCE_FILTER.query);
-  const [type, setType] = useState<ResourceTypeFilter>(DEFAULT_RESOURCE_FILTER.type);
-  const [sort, setSort] = useState<ResourceSort>(DEFAULT_RESOURCE_FILTER.sort);
+  const list = useOrganizationResourceListState();
   const [target, setTarget] = useState<TransferTarget | null>(null);
+
+  const { query, setQuery, sort, setSort, setFilter, clearFilters, hasActiveFilters } = list;
+  const types = list.filters.type;
+  const isNarrowed = hasActiveFilters || query.trim() !== "";
 
   // The read is uncapped, so without this it re-runs over everything on every keystroke.
   const visible = useMemo(
-    () => filterAndSortResources(resources, { query, type, sort }),
-    [resources, query, type, sort],
+    () => filterAndSortResources(resources, { query, types, sort }),
+    [resources, query, types, sort],
   );
 
-  // Sort is not reset: it arranges rather than narrows.
-  const clearFilters = () => {
-    setQuery(DEFAULT_RESOURCE_FILTER.query);
-    setType(DEFAULT_RESOURCE_FILTER.type);
-  };
+  // Options come off GROUP_ORDER rather than the schema, so the menu reads in the same
+  // order as the featured card and the estate bar.
+  const filters: ListFilter<SharingResourceType>[] = [
+    {
+      key: "type",
+      label: t("organizations.resources.typeFilter"),
+      icon: Layers,
+      options: GROUP_ORDER.map((value) => ({
+        value,
+        label: t(`organizations.resources.types.${value}`, { count: 2 }),
+      })),
+      selected: types,
+      onChange: (picked) => setFilter("type", picked),
+    },
+  ];
 
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <SearchInput
-            value={query}
-            onChange={setQuery}
-            placeholder={t("organizations.resources.searchPlaceholder")}
-            aria-label={t("organizations.resources.searchLabel")}
-            className="sm:flex-1"
-          />
+        <ListFilterBar
+          search={
+            <SearchInput
+              value={query}
+              onChange={setQuery}
+              placeholder={t("organizations.resources.searchPlaceholder")}
+              aria-label={t("organizations.resources.searchLabel")}
+            />
+          }
+          filters={filters}
+          onClearFilters={clearFilters}
+          actions={
+            <Select value={sort} onValueChange={(next) => setSort(next as ResourceSort)}>
+              <SelectTrigger
+                className="w-auto gap-2"
+                aria-label={t("organizations.resources.sortLabel")}
+              >
+                <ArrowUpDown aria-hidden className="size-4 opacity-60" />
+                <span className="text-muted-foreground">
+                  {t("organizations.resources.sortPrefix")}
+                </span>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {t(option.labelKey)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+        />
 
-          <Select value={type} onValueChange={(next) => setType(next as ResourceTypeFilter)}>
-            <SelectTrigger
-              className="w-full sm:w-40"
-              aria-label={t("organizations.resources.typeFilterLabel")}
+        {/* Narrowing shortens the page; one screen of room keeps the toolbar where it was. */}
+        <div className={isNarrowed ? "min-h-dvh" : undefined}>
+          {visible.length === 0 ? (
+            <div className="border-border border-t py-10 text-center">
+              <p className="text-foreground text-sm font-semibold">
+                {t("organizations.resources.noMatchesTitle")}
+              </p>
+              <p className="text-muted-foreground mx-auto mt-1 max-w-[320px] text-xs leading-relaxed">
+                {t("organizations.resources.noMatchesHint")}
+              </p>
+              {/* A reset that resets nothing is a dead control. */}
+              {hasActiveFilters ? (
+                <Button variant="outline" size="sm" className="mt-3.5" onClick={clearFilters}>
+                  {t("common.clearFilters")}
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <ul
+              role="list"
+              aria-label={t("organizations.resources.title")}
+              className="border-border border-t"
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("organizations.resources.allTypes")}</SelectItem>
-              {GROUP_ORDER.map((resourceType) => (
-                <SelectItem key={resourceType} value={resourceType}>
-                  {t(`organizations.resources.types.${resourceType}`, { count: 2 })}
-                </SelectItem>
+              {visible.map((resource) => (
+                <ResourceRow
+                  key={`${resource.type}-${resource.id}`}
+                  resource={resource}
+                  onTransfer={transfer ? setTarget : null}
+                />
               ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={sort} onValueChange={(next) => setSort(next as ResourceSort)}>
-            <SelectTrigger
-              className="w-full sm:w-44"
-              aria-label={t("organizations.resources.sortLabel")}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {t(option.labelKey)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            </ul>
+          )}
         </div>
-
-        {visible.length === 0 ? (
-          <div className="border-border border-t py-10 text-center">
-            <p className="text-foreground text-sm font-semibold">
-              {t("organizations.resources.noMatchesTitle")}
-            </p>
-            <p className="text-muted-foreground mx-auto mt-1 max-w-[320px] text-xs leading-relaxed">
-              {t("organizations.resources.noMatchesHint")}
-            </p>
-            {/* A reset that resets nothing is a dead control. */}
-            {hasActiveFilters({ query, type, sort }) ? (
-              <Button variant="outline" size="sm" className="mt-3.5" onClick={clearFilters}>
-                {t("organizations.resources.clearFilters")}
-              </Button>
-            ) : null}
-          </div>
-        ) : (
-          <ul
-            role="list"
-            aria-label={t("organizations.resources.title")}
-            className="border-border border-t"
-          >
-            {visible.map((resource) => (
-              <ResourceRow
-                key={`${resource.type}-${resource.id}`}
-                resource={resource}
-                onTransfer={transfer ? setTarget : null}
-              />
-            ))}
-          </ul>
-        )}
 
         {/* One dialog, not one per row: it reads the caller's memberships when it opens. */}
         {transfer && target ? (

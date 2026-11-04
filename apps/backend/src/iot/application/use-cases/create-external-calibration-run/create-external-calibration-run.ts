@@ -12,6 +12,7 @@ import type { CalibrationRunWithVersionDto } from "../../../core/models/iot-cali
 import { IotCalibrationDefinitionRepository } from "../../../core/repositories/iot-calibration-definition.repository";
 import { IotCalibrationRunRepository } from "../../../core/repositories/iot-calibration-run.repository";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
+import { CalibrationRunNotifier } from "../../services/calibration-run-notifier";
 
 /**
  * A bench tool submits blocks it computed itself; they are re-validated against the
@@ -32,6 +33,7 @@ export class CreateExternalCalibrationRunUseCase {
     private readonly runRepository: IotCalibrationRunRepository,
     private readonly deviceRepository: IotDeviceRepository,
     private readonly authz: AuthorizationService,
+    private readonly notifier: CalibrationRunNotifier,
   ) {}
 
   async execute(
@@ -108,6 +110,7 @@ export class CreateExternalCalibrationRunUseCase {
       return failure(run.error);
     }
 
+    await this.notifier.runAwaitingApproval("createExternalCalibrationRun", run.value);
     return success(run.value);
   }
 }

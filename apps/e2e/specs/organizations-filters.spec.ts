@@ -23,7 +23,7 @@ test("a shared filtered link opens the filtered directory and clears back to all
   await dismissCookieBanner(page);
   await filtered;
 
-  await expect(page.getByRole("button", { name: "Type 1 selected" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Type is University" })).toBeVisible();
   await expect(page.getByRole("link", { name: "[Seed] Northfield University" })).toBeVisible();
   await expect(page.getByRole("link", { name: "[Seed] Leaf Physiology Institute" })).toHaveCount(0);
 
@@ -35,7 +35,7 @@ test("a shared filtered link opens the filtered directory and clears back to all
   await cleared;
 
   await expect(page).toHaveURL((url) => !url.search.includes("type"));
-  await expect(page.getByRole("button", { name: "Type", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Filter", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Clear filters" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "[Seed] Northfield University" })).toBeVisible();
   await expect(page.getByRole("link", { name: "[Seed] Leaf Physiology Institute" })).toBeVisible();
