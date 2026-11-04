@@ -31,7 +31,7 @@ describe("QueryBuilderService", () => {
         ...params,
         columns: ["height", "plot"],
         filters: [{ column: "height", operator: "greater_than", value: 10 }],
-        orderBy: "height",
+        ordering: { column: "height" },
       }),
     );
     expect(query).toContain("try_variant_get(`questions_data`, '$[\"height\"]', 'STRING') RLIKE");

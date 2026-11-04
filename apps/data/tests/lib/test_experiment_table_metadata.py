@@ -86,7 +86,14 @@ def _notebook(notebook: str, function: str, spark: SparkSession) -> DataFrame:
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    module.spark = spark  # type: ignore[attr-defined]
+    reader = types.SimpleNamespace(table=lambda name: spark.table(f"{_SCHEMA}.{name.removeprefix('LIVE.')}"))
+
+    def option(key: str, value: str) -> types.SimpleNamespace:
+        assert (key, value) == ("skipChangeCommits", "true")
+        return reader
+
+    reader.option = option
+    module.spark = types.SimpleNamespace(readStream=reader, read=spark.read)  # type: ignore[attr-defined]
     return getattr(module, function)()
 
 

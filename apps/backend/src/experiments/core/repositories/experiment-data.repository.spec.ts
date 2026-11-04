@@ -146,7 +146,11 @@ describe("ExperimentDataRepository", () => {
       success({ columns: [], rows: [], totalRows: 0, truncated: false }),
     );
     assertSuccess(
-      await repository.getTableColumns({ experimentId: experiment.id, tableName: "raw_data" }),
+      await repository.getTableColumns({
+        experimentId: experiment.id,
+        tableName: "raw_data",
+        source: WAREHOUSE,
+      }),
     );
     await testApp.database.insert(experimentQuestionTypes).values({
       experimentId: experiment.id,
@@ -155,7 +159,7 @@ describe("ExperimentDataRepository", () => {
       active: true,
       evidence: "Local fixture",
     });
-    const active = await repository.tablesMetadata(experiment.id);
+    const active = await repository.tablesMetadata(experiment.id, WAREHOUSE);
     assertSuccess(active);
     expect(active.value.every((table) => table.questionsSchema?.includes("`height`: DOUBLE"))).toBe(
       true,
@@ -163,7 +167,11 @@ describe("ExperimentDataRepository", () => {
     expect(metadata[0].questionsSchema).toBe("OBJECT<height: STRING, plot: STRING>");
     const build = vi.spyOn(databricksPort, "buildExperimentQuery");
     assertSuccess(
-      await repository.getTableColumns({ experimentId: experiment.id, tableName: "raw_data" }),
+      await repository.getTableColumns({
+        experimentId: experiment.id,
+        tableName: "raw_data",
+        source: WAREHOUSE,
+      }),
     );
     expect(build).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -178,7 +186,7 @@ describe("ExperimentDataRepository", () => {
       .update(experimentQuestionTypes)
       .set({ active: false })
       .where(eq(experimentQuestionTypes.experimentId, experiment.id));
-    const reverted = await repository.tablesMetadata(experiment.id);
+    const reverted = await repository.tablesMetadata(experiment.id, WAREHOUSE);
     assertSuccess(reverted);
     expect(reverted.value[0].schemaRevision).toBe("before");
   });

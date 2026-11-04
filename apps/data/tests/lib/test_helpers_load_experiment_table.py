@@ -187,7 +187,9 @@ def test_approved_question_numbers_survive_export_with_lexical_keys_and_clashes(
     }
     monkeypatch.setattr(helpers, "get_table_metadata", lambda *args, **kwargs: metadata)
     source = spark.sql("""
-      SELECT id, 'e1' AS experiment_id, 'macro-1' AS macro_id, TIMESTAMP'2026-11-02 10:00:00' AS timestamp,
+      SELECT id, id AS raw_id, 'e1' AS experiment_id, 'macro-1' AS macro_id, 'd1' AS device_id,
+        TIMESTAMP'2026-11-02 10:00:00' AS timestamp,
+        TIMESTAMP'2026-11-02 10:01:00' AS processed_timestamp,
         parse_json(answer) AS questions_data, parse_json('{"height": 99}') AS macro_output
       FROM VALUES
         (1L, '{"height":"12.5","plot":"007"}'),

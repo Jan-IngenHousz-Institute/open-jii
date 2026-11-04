@@ -100,7 +100,7 @@ export interface ExperimentQuerySource {
   baseColumns?: string[];
   tableName: string;
   tableType: ExperimentTableType;
-  variants?: { columnName: string; schema: string; suffix?: string }[];
+  variants?: { columnName: string; schema: string; suffix?: string; numericFields?: string[] }[];
   reservedColumns?: string[];
   exceptColumns?: string[];
 }
@@ -124,7 +124,7 @@ export interface ExperimentQueryParams {
   tableType: ExperimentTableType;
   experimentId: string;
   columns?: string[];
-  variants?: { columnName: string; schema: string; suffix?: string }[];
+  variants?: { columnName: string; schema: string; suffix?: string; numericFields?: string[] }[];
   reservedColumns?: string[];
   exceptColumns?: string[];
   filters?: FilterCondition[];
