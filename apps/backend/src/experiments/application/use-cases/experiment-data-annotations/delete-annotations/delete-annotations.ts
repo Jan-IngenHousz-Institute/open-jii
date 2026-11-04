@@ -6,7 +6,8 @@ import { AppError, failure, Result, success } from "../../../../../common/utils/
 import { DeleteAnnotationsRequest } from "../../../../core/models/experiment-data-annotation.model";
 import { DATABRICKS_PORT } from "../../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../../core/ports/databricks.port";
-import { ExperimentDataAnnotationsRepository } from "../../../../core/repositories/experiment-data-annotations.repository";
+import { ExperimentAnnotationsWarehouseRepository } from "../../../../core/repositories/experiment-annotations-warehouse.repository";
+import { ExperimentAnnotationsRepository } from "../../../../core/repositories/experiment-annotations.repository";
 import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
 
 @Injectable()
@@ -15,7 +16,8 @@ export class DeleteAnnotationsUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly experimentDataAnnotationsRepository: ExperimentDataAnnotationsRepository,
+    private readonly annotationsWarehouseRepository: ExperimentAnnotationsWarehouseRepository,
+    private readonly annotationsRepository: ExperimentAnnotationsRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
 
@@ -58,7 +60,7 @@ export class DeleteAnnotationsUseCase {
 
     // The right to contribute here is enforced by @CanAccess.
     if ("annotationId" in request) {
-      const result = await this.experimentDataAnnotationsRepository.deleteAnnotation(
+      const result = await this.annotationsWarehouseRepository.deleteAnnotation(
         experimentId,
         request.annotationId,
       );
@@ -67,10 +69,14 @@ export class DeleteAnnotationsUseCase {
         return failure(AppError.internal(result.error.message));
       }
 
+      this.warnIfNotCopied(
+        experimentId,
+        await this.annotationsRepository.delete(experimentId, request.annotationId),
+      );
       return success(result.value);
     }
 
-    const result = await this.experimentDataAnnotationsRepository.deleteAnnotationsBulk(
+    const result = await this.annotationsWarehouseRepository.deleteAnnotationsBulk(
       experimentId,
       request.tableName,
       request.rowIds,
@@ -81,6 +87,30 @@ export class DeleteAnnotationsUseCase {
       return failure(AppError.internal(result.error.message));
     }
 
+    this.warnIfNotCopied(
+      experimentId,
+      await this.annotationsRepository.deleteFromRows(
+        experimentId,
+        request.tableName,
+        request.rowIds,
+        request.type,
+      ),
+    );
     return success(result.value);
+  }
+
+  /**
+   * Postgres follows the lakehouse until pages read it, and the annotations-move runbook fills in
+   * what a failed copy missed.
+   */
+  private warnIfNotCopied(experimentId: string, copied: Result<void>): void {
+    if (copied.isFailure()) {
+      this.logger.warn({
+        msg: "Annotation delete not copied to Postgres",
+        operation: "deleteAnnotations",
+        experimentId,
+        error: copied.error.message,
+      });
+    }
   }
 }

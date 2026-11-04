@@ -1,5 +1,4 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
-import { randomUUID } from "crypto";
 import { z } from "zod";
 
 import { ExperimentAnnotationRowsAffected } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
@@ -18,8 +17,8 @@ import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 
 @Injectable()
-export class ExperimentDataAnnotationsRepository {
-  private readonly logger = new Logger(ExperimentDataAnnotationsRepository.name);
+export class ExperimentAnnotationsWarehouseRepository {
+  private readonly logger = new Logger(ExperimentAnnotationsWarehouseRepository.name);
 
   constructor(
     @Inject(DATABRICKS_PORT)
@@ -101,12 +100,11 @@ export class ExperimentDataAnnotationsRepository {
     };
   }
 
-  /**
-   * Store multiple annotations in the experiment annotations table
-   */
+  /** Stores annotations with the ids and the time their caller gave them. */
   async storeAnnotations(
     experimentId: string,
-    annotations: CreateAnnotationDto[],
+    annotations: Omit<BaseAnnotation, "createdAt" | "updatedAt">[],
+    now: Date,
   ): Promise<Result<ExperimentAnnotationRowsAffected>> {
     this.logger.log({
       msg: "Storing annotations",
@@ -119,27 +117,11 @@ export class ExperimentDataAnnotationsRepository {
       return success({ rowsAffected: 0 });
     }
 
-    const now = new Date();
-
-    // Validate and add IDs to all annotations
-    const annotationsWithIds: Omit<BaseAnnotation, "createdAt" | "updatedAt">[] = [];
-
-    for (const annotation of annotations) {
-      const annotationId = randomUUID().toString();
-      const annotationWithId: Omit<BaseAnnotation, "createdAt" | "updatedAt"> = {
-        ...annotation,
-        id: annotationId,
-      };
-
-      if (!this.validate.annotation(annotationWithId)) {
-        return failure(
-          AppError.validationError(
-            `Validation failed for annotation: ${JSON.stringify(annotation)}`,
-          ),
-        );
-      }
-
-      annotationsWithIds.push(annotationWithId);
+    const invalid = annotations.find((annotation) => !this.validate.annotation(annotation));
+    if (invalid !== undefined) {
+      return failure(
+        AppError.validationError(`Validation failed for annotation: ${JSON.stringify(invalid)}`),
+      );
     }
 
     const parameters: StatementParameter[] = [
@@ -147,7 +129,7 @@ export class ExperimentDataAnnotationsRepository {
       { name: "now", value: now.toISOString(), type: "TIMESTAMP" },
     ];
 
-    const valuesClauses = annotationsWithIds.map((annotation, i) => {
+    const valuesClauses = annotations.map((annotation, i) => {
       parameters.push(
         { name: `id_${i}`, value: annotation.id },
         { name: `user_id_${i}`, value: annotation.userId },
@@ -197,6 +179,7 @@ export class ExperimentDataAnnotationsRepository {
     experimentId: string,
     annotationId: string,
     updateData: UpdateAnnotationDto,
+    now: Date,
   ): Promise<Result<ExperimentAnnotationRowsAffected>> {
     this.logger.log({
       msg: "Updating annotation",
@@ -213,8 +196,6 @@ export class ExperimentDataAnnotationsRepository {
     if (!annotationIdValidation.success) {
       return failure(AppError.validationError("Invalid annotation ID"));
     }
-
-    const now = new Date();
 
     const setClauses: string[] = [];
     const parameters: StatementParameter[] = [

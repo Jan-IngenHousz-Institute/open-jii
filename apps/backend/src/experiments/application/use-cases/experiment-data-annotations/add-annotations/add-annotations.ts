@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
+import { randomUUID } from "crypto";
 
 import {
   ExperimentAddAnnotationsBulkBody,
@@ -13,10 +14,14 @@ import {
   isCommentContent,
   isFlagContent,
 } from "../../../../core/models/experiment-data-annotation.model";
-import type { CreateAnnotationDto } from "../../../../core/models/experiment-data-annotation.model";
+import type {
+  AnnotationRecord,
+  CreateAnnotationDto,
+} from "../../../../core/models/experiment-data-annotation.model";
 import { DATABRICKS_PORT } from "../../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../../core/ports/databricks.port";
-import { ExperimentDataAnnotationsRepository } from "../../../../core/repositories/experiment-data-annotations.repository";
+import { ExperimentAnnotationsWarehouseRepository } from "../../../../core/repositories/experiment-annotations-warehouse.repository";
+import { ExperimentAnnotationsRepository } from "../../../../core/repositories/experiment-annotations.repository";
 import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
 
 @Injectable()
@@ -25,7 +30,8 @@ export class AddAnnotationsUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly experimentDataAnnotationsRepository: ExperimentDataAnnotationsRepository,
+    private readonly annotationsWarehouseRepository: ExperimentAnnotationsWarehouseRepository,
+    private readonly annotationsRepository: ExperimentAnnotationsRepository,
     private readonly userRepository: UserRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
@@ -82,8 +88,10 @@ export class AddAnnotationsUseCase {
       ? `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() || null
       : null;
 
+    const now = new Date();
     const newAnnotations = data.rowIds.map((rowId) => {
-      const base: CreateAnnotationDto = {
+      const base: CreateAnnotationDto & { id: string } = {
+        id: randomUUID(),
         userId,
         userName,
         tableName: data.tableName,
@@ -106,13 +114,40 @@ export class AddAnnotationsUseCase {
       return base;
     });
 
-    const result = await this.experimentDataAnnotationsRepository.storeAnnotations(
+    const result = await this.annotationsWarehouseRepository.storeAnnotations(
       experimentId,
       newAnnotations,
+      now,
     );
 
     if (result.isFailure()) {
       return failure(AppError.internal(result.error.message));
+    }
+
+    const records = newAnnotations.map(
+      (annotation): AnnotationRecord => ({
+        id: annotation.id,
+        experimentId,
+        tableName: annotation.tableName,
+        rowId: annotation.rowId,
+        type: data.annotation.type,
+        contentText: annotation.contentText ?? null,
+        flagType: annotation.flagType ?? null,
+        createdBy: userId,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    );
+    // Postgres follows the lakehouse until pages read it, and the annotations-move runbook fills in
+    // what a failed copy missed.
+    const copied = await this.annotationsRepository.insert(records);
+    if (copied.isFailure()) {
+      this.logger.warn({
+        msg: "Annotations not copied to Postgres",
+        operation: "addAnnotations",
+        experimentId,
+        error: copied.error.message,
+      });
     }
 
     return success(result.value);

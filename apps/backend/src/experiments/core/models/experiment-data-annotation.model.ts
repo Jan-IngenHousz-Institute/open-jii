@@ -4,6 +4,7 @@
 import type {
   ExperimentAnnotationCommentContent,
   ExperimentAnnotationFlagContent,
+  ExperimentAnnotationType,
 } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 // Type guards
@@ -44,6 +45,20 @@ export interface BaseAnnotation {
 // Input type for creating annotations
 export type CreateAnnotationDto = Omit<BaseAnnotation, "id" | "createdAt" | "updatedAt">;
 
+/** An annotation with the id and times it gets in every place that keeps it. */
+export interface AnnotationRecord {
+  id: string;
+  experimentId: string;
+  tableName: string;
+  rowId: string;
+  type: ExperimentAnnotationType;
+  contentText: string | null;
+  flagType: string | null;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Input type for updating annotations
 export type UpdateAnnotationDto = Partial<Pick<BaseAnnotation, "contentText" | "flagType">>;
 
@@ -58,7 +73,7 @@ export interface DeleteAnnotation {
 export interface DeleteBulkAnnotations {
   tableName: string;
   rowIds: string[];
-  type: string;
+  type: ExperimentAnnotationType;
 }
 
 export type DeleteAnnotationsRequest = DeleteAnnotation | DeleteBulkAnnotations;
