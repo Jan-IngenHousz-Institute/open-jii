@@ -13,7 +13,7 @@ Publishes what AWS charges into CloudWatch three times a day, at 06:30, 12:30 an
 | `MonthForecastCostUsd`       |                       | Cost Explorer's forecast for the month, actuals included              |
 | `DailyCostPercentOfLimit`    | `Category`, `Service` | Yesterday as a share of its spend limit, in percent                   |
 
-A service's label and category come from `docs/monitoring/cost-services.json`, which the dashboards read too. A service the file does not list is counted as `Other AWS services`.
+A service's label and category come from `docs/monitoring/cost-services.json`, which the dashboards read too. A service the file does not list is counted as `Other AWS services`. EC2 compute is split by instance type: on a type `ec2InstanceTypes` lists, it takes that label instead, so the serving store's instance is counted apart from the VMs Databricks clusters run on. A consistency test keeps that list equal to the store's `instance_type` in each environment and apart from the clusters' node types.
 
 ## Why each point is stamped at its window's close
 
