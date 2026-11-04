@@ -27,11 +27,10 @@ describe("OpenAPI rolling-window schema", () => {
     expect(JSON.stringify(document.components?.schemas?.ExperimentDataFilterValue)).not.toContain(
       "{}",
     );
-    expect(document.components?.schemas?.ExperimentDataFilterValue).toMatchObject({
-      anyOf: expect.arrayContaining([
-        { $ref: "#/components/schemas/ExperimentRelativeTimeWindow" },
-      ]),
-    });
+    expect(document.components?.schemas?.ExperimentDataFilterValue).toHaveProperty(
+      "anyOf",
+      expect.arrayContaining([{ $ref: "#/components/schemas/ExperimentRelativeTimeWindow" }]),
+    );
     for (const path of [
       "/api/v1/experiments/{id}/dashboards",
       "/api/v1/experiments/{id}/dashboards/{dashboardId}",
