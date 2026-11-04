@@ -211,7 +211,7 @@ describe("NotificationsService", () => {
       });
 
       assertFailure(result);
-      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
     });
 
     /** A transport that fails the way nodemailer does: an `Error` carrying its `code`. */
@@ -383,7 +383,7 @@ describe("NotificationsService", () => {
       });
 
       assertFailure(result);
-      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
     });
   });
 
@@ -448,7 +448,7 @@ describe("NotificationsService", () => {
       );
 
       assertFailure(result);
-      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
     });
   });
 
@@ -538,7 +538,7 @@ describe("NotificationsService", () => {
       const result = await service[method](input);
 
       assertFailure(result);
-      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
     });
   });
 
@@ -623,7 +623,7 @@ describe("NotificationsService", () => {
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
     });
 
     it("should handle email with pending addresses", async () => {
@@ -651,7 +651,7 @@ describe("NotificationsService", () => {
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
     });
 
     it("should handle multiple failed addresses", async () => {
@@ -683,9 +683,7 @@ describe("NotificationsService", () => {
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toContain(
-        `Email (${rejectedEmail1}, ${rejectedEmail2}, ${pendingEmail}) could not be sent`,
-      );
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
     });
 
     it("should handle failed addresses with object format", async () => {
@@ -715,7 +713,7 @@ describe("NotificationsService", () => {
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toContain("Email (failed@example.com) could not be sent");
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
     });
 
     it("should handle nodemailer transport creation errors", async () => {
@@ -920,7 +918,7 @@ describe("NotificationsService", () => {
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
     });
 
     it("should handle nodemailer transport creation errors", async () => {
@@ -1078,7 +1076,7 @@ describe("NotificationsService", () => {
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toContain(`Email (${MOCK_ADMIN_EMAIL}) could not be sent`);
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
     });
 
     it("should handle email with pending addresses", async () => {
@@ -1099,7 +1097,7 @@ describe("NotificationsService", () => {
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toContain(`Email (${MOCK_ADMIN_EMAIL}) could not be sent`);
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
     });
 
     it("should handle transport creation errors", async () => {
@@ -1210,7 +1208,7 @@ describe("NotificationsService", () => {
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toContain(`Email (${MOCK_REQUESTER_EMAIL}) could not be sent`);
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
     });
 
     it("should handle email with pending addresses", async () => {
@@ -1230,7 +1228,7 @@ describe("NotificationsService", () => {
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toContain(`Email (${MOCK_REQUESTER_EMAIL}) could not be sent`);
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
     });
 
     it("should handle transport creation errors", async () => {
@@ -1417,7 +1415,7 @@ describe("NotificationsService", () => {
       });
 
       assertFailure(result);
-      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
     });
   });
 
@@ -1483,7 +1481,7 @@ describe("NotificationsService", () => {
       });
 
       assertFailure(result);
-      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
     });
   });
 
