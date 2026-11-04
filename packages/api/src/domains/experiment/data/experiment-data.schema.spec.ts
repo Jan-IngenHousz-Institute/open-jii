@@ -147,6 +147,14 @@ describe("Data filter primitives & distinct values", () => {
       expect(parsed.limit).toBeUndefined();
     });
 
+    it("supports an optional nonnegative integer offset for fleet paging", () => {
+      const base = { tableName: "raw_data", column: "device" };
+      expect(zExperimentDistinctValuesQuery.parse({ ...base, offset: "1200" }).offset).toBe(1200);
+      for (const offset of [-1, 1.5, "bad"]) {
+        expect(zExperimentDistinctValuesQuery.safeParse({ ...base, offset }).success).toBe(false);
+      }
+    });
+
     it("coerces a numeric-string limit", () => {
       expect(
         zExperimentDistinctValuesQuery.parse({

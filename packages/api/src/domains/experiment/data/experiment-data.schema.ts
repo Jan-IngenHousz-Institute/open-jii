@@ -343,6 +343,12 @@ export const DISTINCT_VALUES_MAX_LIMIT = 1_000;
 export const zExperimentDistinctValuesQuery = z.object({
   tableName: zExperimentTableNameInput.describe("Table to scan"),
   column: z.string().min(1).describe("Column whose distinct values to return"),
+  offset: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .optional()
+    .describe("Number of sorted DEVICE labels to skip. Other columns support only zero."),
   limit: z.coerce
     .number()
     .int()
@@ -357,7 +363,7 @@ export const zExperimentDistinctValuesQuery = z.object({
 export const zExperimentDistinctValuesResponse = z.object({
   values: z
     .array(z.union([z.string(), z.number()]))
-    .describe("Distinct non-null values, sorted ascending"),
+    .describe("Distinct non-null values, sorted ascending. Device columns return display names."),
   truncated: z.boolean().describe("True when the column has more values than `limit` returned"),
 });
 

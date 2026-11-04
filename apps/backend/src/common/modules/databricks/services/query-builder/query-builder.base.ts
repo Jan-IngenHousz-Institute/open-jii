@@ -211,6 +211,12 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
+  /** Trusted server-side ordering expression, like selectRaw. */
+  orderByRaw(expression: string): this {
+    this.orderByClause = expression;
+    return this;
+  }
+
   limit(value: number): this {
     this.limitValue = value;
     return this;

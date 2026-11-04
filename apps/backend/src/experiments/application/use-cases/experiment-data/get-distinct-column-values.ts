@@ -60,6 +60,7 @@ export class GetDistinctColumnValuesUseCase {
         experiment,
         tableName: query.tableName,
         column: query.column,
+        offset: query.offset,
         limit: query.limit ?? DISTINCT_VALUES_DEFAULT_LIMIT,
       });
     });

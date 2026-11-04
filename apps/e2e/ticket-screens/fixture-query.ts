@@ -227,7 +227,7 @@ export class FixtureQuery {
   }
 
   private matches(row: FixtureRow, filter: ExperimentDataFilter): boolean {
-    const cell = row[filter.column] ?? null;
+    const cell = this.cell(row, filter.column);
     if (cell === null) return false;
 
     const { value } = filter;
@@ -257,6 +257,24 @@ export class FixtureQuery {
         return typeof scalar === "string" && this.like(String(cell), `%${scalar}%`);
       case "in":
         return list.some((item) => this.equal(cell, item));
+    }
+  }
+
+  private cell(row: FixtureRow, column: string): FixtureValue {
+    if (column in row) return row[column];
+    const [parent, ...fields] = column.split(".");
+    if (fields.length === 0 || typeof row[parent] !== "string") return null;
+    try {
+      let value: unknown = JSON.parse(row[parent]);
+      for (const field of fields) {
+        if (value === null || typeof value !== "object" || !(field in value)) return null;
+        value = Reflect.get(value, field);
+      }
+      return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+        ? value
+        : null;
+    } catch {
+      return null;
     }
   }
 

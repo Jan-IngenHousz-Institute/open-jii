@@ -1,3 +1,4 @@
+import type { SpyCall } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
@@ -67,6 +68,28 @@ describe("useDistinctOptions", () => {
     expect(result.current.isDevice).toBe(true);
     expect(result.current.isContributor).toBe(false);
     expect(result.current.contributorMap).toBeUndefined();
+  });
+
+  it("fetches the entire sorted fleet beyond both the default and maximum page size", async () => {
+    const fleet = Array.from({ length: 1205 }, (_, i) => `Sensor ${String(i).padStart(4, "0")}`);
+    const spy = server.mount(contract.experiments.getDistinctColumnValues, {
+      body: ({ query }: SpyCall) => {
+        const offset = Number(query.offset);
+        const limit = Number(query.limit);
+        return {
+          values: fleet.slice(offset, offset + limit),
+          truncated: offset + limit < fleet.length,
+        };
+      },
+    });
+    const { result } = renderHook(() => useDistinctOptions(deviceColumn, "exp-1", "raw_data"));
+    await waitFor(() => expect(result.current.values).toHaveLength(1205));
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.values).toEqual(fleet);
+    expect(result.current.truncated).toBe(false);
+    expect(spy.calls.map((call) => call.query.offset)).toEqual(["0", "1000"]);
+    expect(spy.calls.map((call) => call.query.limit)).toEqual(["1000", "1000"]);
+    expect(chipValueForOption(fleet[1204], false, true)).toBe("Sensor 1204");
   });
 
   it("returns empty defaults while loading or when the request errors", async () => {

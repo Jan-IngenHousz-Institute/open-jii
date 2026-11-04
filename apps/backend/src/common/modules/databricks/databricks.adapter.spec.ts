@@ -559,6 +559,7 @@ describe("DatabricksAdapter", () => {
       expect(result.value).toContain(databricksAdapter.UPLOADED_DATA_TABLE_NAME);
       expect(result.value).toContain("`experiment_id` = 'exp-123'");
       expect(result.value).toContain("`upload_table_id` = 'upload_1'");
+      expect(result.value).not.toContain("AS device_data");
     });
 
     it("fails for a static table it has no table for", () => {
@@ -585,6 +586,19 @@ describe("DatabricksAdapter", () => {
       expect(query).toContain("SELECT `id`, `timestamp`");
       expect(query).toContain("WHERE `experiment_id` = 'exp-123'");
       expect(query).toContain(databricksAdapter.RAW_DATA_TABLE_NAME);
+      expect(query).toContain("AS device_data");
+      expect(query).not.toContain("trim(`client_id`)");
+    });
+
+    it("uses client ids only when the deployed view exposes them", () => {
+      const result = databricksAdapter.buildExperimentQuery({
+        tableName: "raw_data",
+        tableType: "static",
+        experimentId: "exp-123",
+        baseColumns: ["device", "device_name", "device_id", "client_id"],
+      });
+      assertSuccess(result);
+      expect(result.value).toContain("nullif(trim(`client_id`), '')");
     });
 
     it("should build query for macro tables with macro_id filter", () => {
@@ -601,6 +615,7 @@ describe("DatabricksAdapter", () => {
       expect(query).toContain("WHERE `experiment_id` = 'exp-123'");
       expect(query).toContain("`macro_id` = 'some_macro_id'");
       expect(query).toContain(databricksAdapter.MACRO_DATA_TABLE_NAME);
+      expect(query).toContain("AS device_data");
     });
 
     it("should handle VARIANT columns parsing", () => {

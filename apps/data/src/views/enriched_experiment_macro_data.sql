@@ -2,6 +2,8 @@ WITH
 -- Macro results joined at read time with their contributor, device, annotations
 -- and custom metadata as they are now. See enriched_experiment_raw_data.sql for
 -- why this is a plain view. ${catalog} is filled in by terraform.
+-- Restart backend instances after redefining or rolling back this view to refresh
+-- their cached source columns. See apps/data/README.md.
 -- Inside the WITH because Unity Catalog drops comments above a view's first keyword.
 db_annotations AS (
   SELECT
@@ -71,6 +73,7 @@ results AS (
     macro.experiment_id,
     macro.id,
     macro.raw_id,
+    macro.client_id,
     macro.device_id,
     macro.device_name,
     macro.timestamp,
@@ -100,6 +103,7 @@ SELECT
   r.experiment_id,
   r.id,
   r.raw_id,
+  r.client_id,
   r.device_id,
   r.device_name,
   r.timestamp,

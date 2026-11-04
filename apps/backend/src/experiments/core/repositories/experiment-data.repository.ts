@@ -6,6 +6,7 @@ import {
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isDecimalType, isNumericType } from "@repo/api/transforms/column-type-utils";
 
+import { SqlQueryBuilder } from "../../../common/modules/databricks/services/query-builder/query-builder.base";
 import type {
   AggregationSpec,
   FilterCondition,
@@ -80,6 +81,7 @@ interface TableShape {
   variants: { columnName: VariantColumn; schema: string; suffix: string }[];
   exceptColumns: string[];
   reservedColumns: string[];
+  baseColumns?: string[];
 }
 
 type RenamedColumns = Map<string, { name: string; source: VariantColumn }>;
@@ -332,27 +334,33 @@ export class ExperimentDataRepository {
     tableName: string;
     column: string;
     limit: number;
+    offset?: number;
   }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
-    const { experimentId, experiment, tableName, column, limit } = params;
+    const { experimentId, experiment, tableName, column, limit, offset } = params;
 
     const shapeResult = await this.tableShape(experimentId, tableName);
     if (shapeResult.isFailure()) {
       return shapeResult;
     }
 
-    const queryResult = this.buildQuery(experimentId, shapeResult.value, {
-      columns: [column],
-      distinct: true,
-      orderBy: column,
-      orderDirection: "ASC",
-      // +1 so we can detect truncation: if the SQL returned exactly limit+1
-      // rows, the column has more values than we returned.
-      limit: limit + 1,
-    });
+    const shape = shapeResult.value;
+    const deviceColumn = column === "device" && shape.metadata.tableType !== "upload";
+    if (!deviceColumn && (offset ?? 0) > 0) {
+      return failure(AppError.badRequest("Offset paging is supported only for device columns"));
+    }
+    const queryResult = deviceColumn
+      ? this.deviceValuesSql(experimentId, shape, limit, offset)
+      : this.buildQuery(experimentId, shape, {
+          columns: [column],
+          distinct: true,
+          orderBy: column,
+          orderDirection: "ASC",
+          limit: limit + 1,
+          offset,
+        });
     if (queryResult.isFailure()) {
       return queryResult;
     }
-
     const dataResult = await this.executeQuery(queryResult.value);
     if (dataResult.isFailure()) {
       return dataResult;
@@ -520,8 +528,8 @@ export class ExperimentDataRepository {
 
   /**
    * The table's metadata, what a read of it flattens and hides, and the names its base columns
-   * hold. The view's columns are looked up only when a payload is flattened, since only then can
-   * a field's name clash with one of them.
+   * hold. The view's columns also tell platform reads whether client_id is available
+   * for device labels. Flattened payload fields reserve only visible base names.
    */
   private async tableShape(experimentId: string, tableName: string): Promise<Result<TableShape>> {
     const metadataResult = await this.tableMetadata(experimentId, tableName);
@@ -612,7 +620,7 @@ export class ExperimentDataRepository {
       }
     }
 
-    if (variants.length === 0) {
+    if (variants.length === 0 && tableType === "upload") {
       return success({ metadata, variants, exceptColumns, reservedColumns: [] });
     }
 
@@ -621,9 +629,20 @@ export class ExperimentDataRepository {
       return viewColumnsResult;
     }
 
+    const deviceClientIdAvailable = viewColumnsResult.value.includes("client_id");
+    if (!deviceClientIdAvailable && exceptColumns.includes("client_id")) {
+      exceptColumns.splice(exceptColumns.indexOf("client_id"), 1);
+    }
     const hidden = new Set<string>([...config.variantColumns, ...exceptColumns]);
-    const reservedColumns = viewColumnsResult.value.filter((column) => !hidden.has(column));
-    return success({ metadata, variants, exceptColumns, reservedColumns });
+    const reservedColumns =
+      variants.length > 0 ? viewColumnsResult.value.filter((column) => !hidden.has(column)) : [];
+    return success({
+      metadata,
+      variants,
+      exceptColumns,
+      reservedColumns,
+      baseColumns: viewColumnsResult.value,
+    });
   }
 
   /** A view's columns change only when it is redefined, so they come from the long-lived cache. */
@@ -680,6 +699,7 @@ export class ExperimentDataRepository {
       columns,
       variants: variants.length > 0 ? variants : undefined,
       reservedColumns: reservedColumns.length > 0 ? reservedColumns : undefined,
+      baseColumns: shape.baseColumns,
       exceptColumns: exceptColumns.length > 0 ? exceptColumns : undefined,
       filters,
       aggregation,
@@ -782,6 +802,29 @@ export class ExperimentDataRepository {
         totalPages: 1,
       },
     ]);
+  }
+
+  private deviceValuesSql(
+    experimentId: string,
+    shape: TableShape,
+    limit: number,
+    offset = 0,
+  ): Result<string> {
+    const projected = this.buildQuery(experimentId, shape, { columns: ["device.serial_number"] });
+    if (projected.isFailure()) {
+      return projected;
+    }
+    return success(
+      new SqlQueryBuilder()
+        .select(["serial_number"])
+        .distinct()
+        .from(`(${projected.value}) AS device_names`)
+        .where("`serial_number` IS NOT NULL AND trim(`serial_number`) <> ''")
+        .orderByRaw("lower(`serial_number`) ASC, `serial_number` ASC")
+        .limit(limit + 1)
+        .offset(offset)
+        .build(),
+    );
   }
 
   private countSql(subquery: string): string {

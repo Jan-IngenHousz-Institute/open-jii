@@ -46,6 +46,7 @@ import type { UploadFileResponse } from "./services/files/files.types";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
 import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
 import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
+import { deviceDisplaySource } from "./services/query-builder/expressions/device-label";
 import { QueryBuilderService } from "./services/query-builder/query-builder.service";
 import type {
   AggregationSpec,
@@ -887,6 +888,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     columns?: string[];
     variants?: { columnName: string; schema: string; suffix?: string }[];
     reservedColumns?: string[];
+    baseColumns?: string[];
     exceptColumns?: string[];
     filters?: FilterCondition[];
     aggregation?: AggregationSpec;
@@ -897,7 +899,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     limit?: number;
     offset?: number;
   }): Result<string> {
-    const { tableName, tableType, experimentId, ...query } = params;
+    const { tableName, tableType, experimentId, baseColumns, ...query } = params;
 
     const tableResult = this.experimentTable(tableType, tableName);
     if (tableResult.isFailure()) {
@@ -914,7 +916,11 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       whereConditions.push(["upload_table_id", tableName]);
     }
 
-    return this.queryBuilder.buildQuery({ ...query, table: tableResult.value, whereConditions });
+    const table =
+      tableType === "upload"
+        ? tableResult.value
+        : deviceDisplaySource(tableResult.value, this.queryBuilder.query(), baseColumns);
+    return this.queryBuilder.buildQuery({ ...query, table, whereConditions });
   }
 
   /** Column names of the view an experiment table reads from, in its own order. */

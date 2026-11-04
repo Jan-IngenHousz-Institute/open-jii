@@ -256,3 +256,15 @@ def test_uploaded_rows_credit_their_uploader_and_carry_their_annotations(
     # u3 is not a contributor of e1.
     assert rows[1002]["contributor"] is None
     assert rows[1002]["annotations"] == []
+
+
+@pytest.mark.parametrize(
+    ("view", "row_id"),
+    [("enriched_experiment_raw_data", 2), ("enriched_experiment_macro_data", 102)],
+)
+def test_views_expose_the_client_id_without_synthesizing_registry_data(
+    spark: SparkSession, centrum: str, view: str, row_id: int
+) -> None:
+    row = _rows(spark, view)[row_id]
+    assert row["client_id"] == "c9"
+    assert row["device"] is None
