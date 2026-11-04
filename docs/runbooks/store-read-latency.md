@@ -35,8 +35,16 @@ ORDER BY p95_ms DESC
 LIMIT 10;
 ```
 
-The example names an experiment and, for a sort by a name, the ids in that order. The backend never
-sends names to the store, so its log holds none.
+The store masks every string value in its logs, so the example shows the read's shape with `'***'`
+for the experiment and the values it filters or sorts by. The backend logs which experiment and
+table each page read was for. In CloudWatch Logs Insights, on `/aws/ecs/backend-service-<env>`:
+
+```text
+fields @timestamp, experimentId, tableName, mode, totalMs
+| filter msg = "Experiment data read" and source = "store"
+| sort totalMs desc
+| limit 20
+```
 
 ## Likely causes, most common first
 
