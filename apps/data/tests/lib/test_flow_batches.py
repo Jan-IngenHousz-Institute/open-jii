@@ -5,7 +5,7 @@ from __future__ import annotations
 import gzip
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from openjii.heartbeat.flow_batches import (
@@ -130,16 +130,25 @@ def test_a_brace_inside_a_string_costs_no_other_record():
     assert flow_hours(lines(stray, after), ["clean_data"])[0].batches == 2
 
 
-def test_counts_the_clusters_whose_ids_say_they_were_created_within_the_hour():
-    clusters = [
+def test_counts_the_clusters_whose_ids_say_they_were_created_within_the_hour(tmp_path: Path):
+    for cluster in (
         "1031-142959-aaaaaaaa",
         "1031-150000-bbbbbbbb",
         "1031-155959-cccccccc",
         "1031-160000-dddddddd",
         "logs",
-    ]
+    ):
+        (tmp_path / cluster).mkdir()
 
-    assert cluster_starts(clusters, HOUR) == 2
+    assert cluster_starts(str(tmp_path), HOUR) == 2
+
+
+def test_leaves_out_a_cluster_from_the_same_hour_of_an_earlier_year(tmp_path: Path):
+    write_driver(tmp_path, "1031-150000-thisyear", written=HOUR.timestamp() + 600, hours={})
+    write_driver(tmp_path, "1031-151500-lastyear", written=(HOUR - timedelta(days=365)).timestamp(), hours={})
+    (tmp_path / "1031-153000-neverran").mkdir()
+
+    assert cluster_starts(str(tmp_path), HOUR) == 2
 
 
 def write_driver(pipeline_dir: Path, cluster: str, written: float, hours: dict[str, str]) -> Path:
@@ -187,6 +196,21 @@ def test_falls_back_to_an_older_driver_while_the_newest_has_no_hour_yet(tmp_path
         hours={"2026-10-31-15": start("__materialization_mat_raw_data_1")},
     )
     write_driver(tmp_path, "1031-160500-bbbbbbbb", written=3_000, hours={})
+
+    assert latest_pipeline_hour(str(tmp_path), ["raw_data"], since=1_000) == PipelineHour(
+        HOUR, [FlowHour("raw_data", 0, None, 0.0, 1)]
+    )
+
+
+def test_ignores_a_log_file_whose_name_is_not_an_hour(tmp_path: Path):
+    driver = write_driver(
+        tmp_path,
+        "1031-142000-aaaaaaaa",
+        written=2_000,
+        hours={"2026-10-31-15": start("__materialization_mat_raw_data_1")},
+    )
+    with gzip.open(driver / "log4j-custom.log.gz", "wt", encoding="utf-8") as log:
+        log.write("")
 
     assert latest_pipeline_hour(str(tmp_path), ["raw_data"], since=1_000) == PipelineHour(
         HOUR, [FlowHour("raw_data", 0, None, 0.0, 1)]
