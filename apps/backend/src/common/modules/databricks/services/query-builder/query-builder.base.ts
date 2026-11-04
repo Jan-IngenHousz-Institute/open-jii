@@ -95,15 +95,17 @@ export abstract class BaseQueryBuilder {
   protected buildOrdering(ordering: QueryOrdering, target: string): string {
     const { direction = "ASC", mode } = ordering;
     if (mode?.kind === "numericString") {
-      return numericStringOrder(
-        target,
-        direction,
-        !this.isDistinct && mode.rowId ? this.escapeIdentifier(mode.rowId) : undefined,
-      );
+      return numericStringOrder(target, direction, this.rowIdFor(mode));
     }
     const value =
       mode?.kind === "pseudonym" ? contributorPseudonym(target, mode.salt, this) : target;
     return `${value} ${direction}`;
+  }
+
+  protected rowIdFor(mode: QueryOrdering["mode"]): string | undefined {
+    return !this.isDistinct && mode?.kind === "numericString" && mode.rowId
+      ? this.escapeIdentifier(mode.rowId)
+      : undefined;
   }
 
   buildFilterCondition(filter: FilterCondition): string {
@@ -366,49 +368,53 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
       this.whereConditions.length > 0 ? `WHERE ${this.whereConditions.join(" AND ")}` : "";
     const limitClause = this.limitValue ? `LIMIT ${this.limitValue}` : "";
     const offsetClause = this.offsetValue ? `OFFSET ${this.offsetValue}` : "";
+    const ordering = this.ordering;
 
-    if (this.ordering?.mode?.kind === "numericString") {
-      const { direction = "ASC", mode } = this.ordering;
-      const rowId = !this.isDistinct && mode.rowId ? this.escapeIdentifier(mode.rowId) : undefined;
-      const keys = numericStringKeys(this.columnExpression(this.ordering.column), rowId);
-      const names = this.sortKeyNames();
-      const sortedBy: NumericStringKeys = {
-        group: names.group,
-        decimal: names.decimal,
-        value: names.value,
-        rowId: rowId === undefined ? undefined : names.rowId,
-      };
-      const hidden = SORT_KEYS.flatMap((key) => {
-        const name = sortedBy[key];
-        return name === undefined ? [] : [{ sql: `${keys[key]} AS ${name}`, name }];
-      });
+    const query =
+      ordering?.mode?.kind === "numericString" &&
+      !(
+        this.isDistinct &&
+        (this.selectColumns === undefined || this.selectColumns.includes(ordering.column))
+      )
+        ? this.buildNumericQuery(ordering, projection, where)
+        : this.joinClauses([
+            `${selectKeyword} ${projection}`,
+            `FROM ${this.fromClause}`,
+            where,
+            ordering
+              ? `ORDER BY ${this.buildOrdering(ordering, this.orderTarget(ordering.column))}`
+              : "",
+          ]);
 
-      // An expression sort key is re-evaluated in every comparison, so the inner query computes
-      // the keys once per row and the outer one sorts by them and drops them.
-      return this.joinClauses([
-        `SELECT * EXCEPT (${hidden.map(({ name }) => name).join(", ")})`,
-        "FROM (",
-        `${selectKeyword} ${[projection, ...hidden.map(({ sql }) => sql)].join(", ")}`,
-        `FROM ${this.fromClause}`,
-        where,
-        ")",
-        `ORDER BY ${numericStringOrdering(sortedBy, direction)}`,
-        limitClause,
-        offsetClause,
-      ]);
-    }
+    return this.joinClauses([query, limitClause, offsetClause]);
+  }
 
-    const order = this.ordering
-      ? `ORDER BY ${this.buildOrdering(this.ordering, this.orderTarget(this.ordering.column))}`
-      : "";
+  private buildNumericQuery(ordering: QueryOrdering, projection: string, where: string): string {
+    const { direction = "ASC", mode } = ordering;
+    const rowId = this.rowIdFor(mode);
+    const keys = numericStringKeys(this.columnExpression(ordering.column), rowId);
+    const names = this.sortKeyNames();
+    const sortedBy: NumericStringKeys = {
+      group: names.group,
+      decimal: names.decimal,
+      value: names.value,
+      rowId: rowId === undefined ? undefined : names.rowId,
+    };
+    const hidden = SORT_KEYS.flatMap((key) => {
+      const name = sortedBy[key];
+      return name === undefined ? [] : [{ sql: `${keys[key]} AS ${name}`, name }];
+    });
+    const selectKeyword = this.isDistinct ? "SELECT DISTINCT" : "SELECT";
 
+    // Materialize the keys below the sort, then remove them from the response.
     return this.joinClauses([
-      `${selectKeyword} ${projection}`,
+      `SELECT * EXCEPT (${hidden.map(({ name }) => name).join(", ")})`,
+      "FROM (",
+      `${selectKeyword} ${[projection, ...hidden.map(({ sql }) => sql)].join(", ")}`,
       `FROM ${this.fromClause}`,
       where,
-      order,
-      limitClause,
-      offsetClause,
+      ")",
+      `ORDER BY ${numericStringOrdering(sortedBy, direction)}`,
     ]);
   }
 

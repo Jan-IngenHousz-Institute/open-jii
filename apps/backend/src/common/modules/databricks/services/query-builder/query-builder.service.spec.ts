@@ -561,7 +561,7 @@ describe("numeric string ordering", () => {
     ["the star projection", {}],
     ["a projection with the field", { columns: ["id", "answer"] }],
     ["an id-only read", { columns: ["id"] }],
-    ["a distinct read", { columns: ["answer"], distinct: true }],
+    ["a distinct id-only read", { columns: ["id"], distinct: true }],
   ])("keeps %s and its filters unchanged inside", (_name, read) => {
     const filters = [{ column: "answer", operator: "equals" as const, value: "001" }];
     const unordered = unwrap(
@@ -581,14 +581,29 @@ describe("numeric string ordering", () => {
     expect(inner).toContain(`${extraction} AS ${keys[2]}`);
   });
 
-  it("does not add row identity to DISTINCT", () => {
-    const sql = unwrap(service.buildQuery({ ...params, columns: ["answer"], distinct: true }));
-    const { outer, inner, order } = parts(sql);
-    expect(outer).toBe(`SELECT * EXCEPT (${keys.slice(0, 3).join(", ")})`);
-    expect(inner).toMatch(/^SELECT DISTINCT try_variant_get/);
-    expect(sql).not.toContain("`id`");
-    expect(order).toMatch(/ NULLS LAST$/);
-  });
+  it.each(["ASC", "DESC"] as const)(
+    "deduplicates only the projected answer before numeric sorting %s",
+    (direction) => {
+      const sql = unwrap(
+        service.buildQuery({
+          ...params,
+          columns: ["answer"],
+          distinct: true,
+          ordering: { ...params.ordering, direction },
+          limit: 101,
+        }),
+      );
+      const [select, from, order, limit] = sql.split("\n");
+      expect(select).toBe(`SELECT DISTINCT ${extraction} AS \`answer\``);
+      expect(from).toBe("FROM measurements");
+      expect(order).toMatch(/^ORDER BY CASE WHEN/);
+      expect(order).toContain(`AS DECIMAL(38, 18)) END) ${direction}`);
+      expect(order).toContain(`\`answer\` ${direction} NULLS LAST`);
+      expect(limit).toBe("LIMIT 101");
+      expect(sql).not.toContain("__numeric_order");
+      expect(sql).not.toContain("`id`");
+    },
+  );
 
   it.each([
     ["a question field", { schema: "OBJECT<answer: STRING, __NUMERIC_ORDER_GROUP: STRING>" }, {}],
