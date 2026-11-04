@@ -134,6 +134,8 @@ SELECT
     THEN date_format(from_utc_timestamp(r.measurement_time_utc, r.timezone), 'HH:mm')
   END AS local_time,
   concat(coalesce(r.payload_annotations, array()), coalesce(a.annotations, array())) AS annotations,
+  -- The phone's alone, for a reader that adds the platform's from Postgres itself.
+  coalesce(r.payload_annotations, array()) AS payload_annotations,
   -- Matched the same way as in enriched_experiment_raw_data.sql.
   CASE WHEN md.records IS NOT NULL THEN aggregate(
     transform(
