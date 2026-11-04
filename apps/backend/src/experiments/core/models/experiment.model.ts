@@ -10,6 +10,7 @@ import type { SchemaData } from "../../../common/modules/databricks/services/sql
 export const createExperimentSchema = createInsertSchema(experiments)
   .omit({
     id: true,
+    questionTypesTracked: true,
     createdAt: true,
     updatedAt: true,
     createdBy: true,
@@ -36,6 +37,7 @@ export const updateExperimentSchema = createInsertSchema(experiments)
   .partial()
   .omit({
     id: true,
+    questionTypesTracked: true,
     createdAt: true,
     updatedAt: true,
     createdBy: true,
@@ -52,7 +54,7 @@ export const updateExperimentSchema = createInsertSchema(experiments)
       .optional(),
   });
 export const selectExperimentSchema = createSelectSchema(experiments)
-  .omit({ searchVector: true })
+  .omit({ searchVector: true, questionTypesTracked: true })
   .extend({
     ownerFirstName: z.string().nullable().optional(),
     /** Display name of the owning organization; `null` for a personal workspace. */

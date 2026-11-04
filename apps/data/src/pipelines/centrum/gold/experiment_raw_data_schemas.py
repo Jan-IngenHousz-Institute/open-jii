@@ -30,7 +30,7 @@ from openjii.variant_schema import variant_schema_key
 )
 def experiment_raw_data_schemas():
     return (
-        dlt.read_stream(EXPERIMENT_RAW_DATA_TABLE)
+        spark.readStream.option("skipChangeCommits", "true").table(f"LIVE.{EXPERIMENT_RAW_DATA_TABLE}")
         .select(
             "experiment_id",
             variant_schema_key("questions_data").alias("schema_key"),

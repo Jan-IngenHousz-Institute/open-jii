@@ -20,6 +20,7 @@ import type { ExperimentTableMetadata } from "../models/experiment-data.model";
 // `anonymizeContributors` is the resolved setting, the experiment's default or the export's
 // override; when true the job rewrites contributor cells to deterministic pseudonyms.
 export interface DataExportJobInput {
+  numericQuestionKeys?: string[];
   exportId: string;
   experimentId: string;
   tableName: string;
@@ -75,7 +76,7 @@ export interface DatabricksPort {
     tableType: "static" | "macro" | "upload";
     experimentId: string;
     columns?: string[];
-    variants?: { columnName: string; schema: string; suffix?: string }[];
+    variants?: { columnName: string; schema: string; suffix?: string; numericFields?: string[] }[];
     reservedColumns?: string[];
     exceptColumns?: string[];
     filters?: FilterCondition[];

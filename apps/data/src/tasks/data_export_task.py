@@ -35,6 +35,13 @@ TABLE_NAME = dbutils.widgets.get("TABLE_NAME")
 CATALOG_NAME = dbutils.widgets.get("CATALOG_NAME")
 FORMAT = dbutils.widgets.get("FORMAT").lower()  # csv, ndjson, json-array, parquet, or xlsx
 try:
+    _numeric_question_keys = dbutils.widgets.get("NUMERIC_QUESTION_KEYS")
+except Exception:
+    _numeric_question_keys = "[]"
+NUMERIC_QUESTION_KEYS = json.loads(_numeric_question_keys or "[]")
+if not isinstance(NUMERIC_QUESTION_KEYS, list) or not all(isinstance(key, str) for key in NUMERIC_QUESTION_KEYS):
+    raise ValueError("NUMERIC_QUESTION_KEYS must be a JSON array of column keys")
+try:
     ANONYMIZE_CONTRIBUTORS = (dbutils.widgets.get("ANONYMIZE_CONTRIBUTORS") or "").lower() == "true"
 except Exception:
     ANONYMIZE_CONTRIBUTORS = False
@@ -267,6 +274,7 @@ def load(parts=None):
         catalog_name=CATALOG_NAME,
         schema_name="centrum",
         parts=parts,
+        numeric_question_keys=NUMERIC_QUESTION_KEYS,
     )
 
 

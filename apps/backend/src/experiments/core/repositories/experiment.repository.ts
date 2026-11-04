@@ -104,8 +104,11 @@ export interface ExperimentCollaborators {
 const COLLABORATOR_GRANT_ROLE = "viewer";
 
 // All experiment columns except the internal full-text `search_vector` (never returned to clients).
-const { searchVector: _experimentSearchVector, ...experimentColumns } =
-  getTableColumns(experiments);
+const {
+  searchVector: _experimentSearchVector,
+  questionTypesTracked: _questionTypesTracked,
+  ...experimentColumns
+} = getTableColumns(experiments);
 
 /**
  * Direct collaborator grants only; org/team reach is unbounded and not a count.
@@ -137,6 +140,7 @@ export class ExperimentRepository {
     userId: string,
     targetOrganizationId?: string | null,
     collaboratorUserIds: string[] = [],
+    questionTypesTracked = false,
   ): Promise<Result<ExperimentDto[]>> {
     return tryCatch(async () => {
       // Own the experiment with the requested target org, falling back to the
@@ -148,6 +152,7 @@ export class ExperimentRepository {
           .insert(experiments)
           .values({
             ...createExperimentDto,
+            questionTypesTracked,
             createdBy: userId,
             organizationId,
           })

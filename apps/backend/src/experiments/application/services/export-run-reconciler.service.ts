@@ -26,6 +26,7 @@ import type { AwsPort } from "../../core/ports/aws.port";
 import { DATABRICKS_PORT } from "../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../core/ports/databricks.port";
 import { ExperimentDataExportsRepository } from "../../core/repositories/experiment-data-exports.repository";
+import { ExperimentQuestionTypesRepository } from "../../core/repositories/experiment-question-types.repository";
 import { ExperimentRepository } from "../../core/repositories/experiment.repository";
 
 /** Named so the test harness can keep it off the schedule. */
@@ -67,6 +68,7 @@ export class ExportRunReconcilerService {
   private reconciling = false;
 
   constructor(
+    private readonly questionTypes: ExperimentQuestionTypesRepository,
     private readonly exportsRepository: ExperimentDataExportsRepository,
     private readonly experimentRepository: ExperimentRepository,
     @Inject(DATABRICKS_PORT)
@@ -195,7 +197,10 @@ export class ExportRunReconcilerService {
    * instead of a second one starting.
    */
   private async startRun(record: ExperimentExportDto, age: number): Promise<void> {
+    const numericKeys = await this.questionTypes.activeNumericKeys(record.experimentId);
+    if (numericKeys.isFailure()) throw numericKeys.error;
     const triggered = await this.databricksPort.triggerDataExportJob({
+      numericQuestionKeys: numericKeys.value,
       exportId: record.id,
       experimentId: record.experimentId,
       tableName: record.tableName,

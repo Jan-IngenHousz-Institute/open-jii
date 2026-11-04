@@ -144,7 +144,7 @@ describe("ExecuteProjectTransferUseCase", () => {
 
     it("should handle flow creation failure gracefully (non-fatal)", async () => {
       // CreateFlowUseCase delegates to FlowRepository internally
-      vi.spyOn(FlowRepository.prototype, "create").mockResolvedValue(
+      vi.spyOn(FlowRepository.prototype, "importLegacy").mockResolvedValue(
         failure(AppError.internal("Flow creation failed")),
       );
 

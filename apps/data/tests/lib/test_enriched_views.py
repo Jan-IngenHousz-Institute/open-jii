@@ -125,6 +125,8 @@ def centrum(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> It
     location = tmp_path_factory.mktemp("centrum")
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {_CATALOG}.centrum LOCATION '{location}'")
     for name, query in _TABLES.items():
+        if name in {"experiment_raw_data", "experiment_macro_data"}:
+            query = f"SELECT *, cast(NULL AS VARIANT) questions_original_data FROM ({query})"
         spark.sql(f"CREATE TABLE {_CATALOG}.centrum.{name} USING parquet AS {query}")
 
     # One measurement per timezone in experiment e3, ids from 10 up.
@@ -138,7 +140,7 @@ def centrum(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> It
           DATE'2026-09-06', CAST(NULL AS ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>),
           CAST(NULL AS VARIANT), CAST(NULL AS ARRAY<{_ANNOTATION}>), 'u9', 'c9', CAST(NULL AS STRING),
           CAST(NULL AS STRING), CAST(NULL AS DOUBLE), CAST(NULL AS DOUBLE), parse_json('[]'),
-          TIMESTAMP'2026-09-23 10:03:00'
+          TIMESTAMP'2026-09-23 10:03:00', CAST(NULL AS VARIANT)
         FROM timezones
         """
     )
@@ -256,3 +258,36 @@ def test_uploaded_rows_credit_their_uploader_and_carry_their_annotations(
     # u3 is not a contributor of e1.
     assert rows[1002]["contributor"] is None
     assert rows[1002]["annotations"] == []
+
+
+@pytest.mark.parametrize("kind,row_id", [("raw", 1), ("macro", 101)])
+def test_numeric_question_metadata_uses_lexical_identifier_without_exposing_recovery_column(
+    spark: SparkSession, centrum: str, kind: str, row_id: int
+) -> None:
+    sql = (_VIEWS / f"enriched_experiment_{kind}_data.sql").read_text().replace("${catalog}", _CATALOG)
+    alias = "raw" if kind == "raw" else "macro"
+    table = f"{centrum}.experiment_{kind}_data"
+    sql = sql.replace(
+        f"FROM {table} AS {alias}",
+        f"""FROM (
+        SELECT * EXCEPT (questions_data, questions_original_data),
+               parse_json('{{"plot":12.5}}') questions_data,
+               parse_json('{{"plot":"12.50"}}') questions_original_data
+        FROM {table}) AS {alias}""",
+    )
+    sql = sql.replace(
+        f"FROM {centrum}.experiment_custom_metadata AS md",
+        f"""FROM (
+        SELECT * EXCEPT (metadata), parse_json(replace(to_json(metadata), 'A1', '12.50')) metadata
+        FROM {centrum}.experiment_custom_metadata) AS md""",
+    )
+    frame = spark.sql(sql)
+    assert "questions_original_data" not in frame.columns
+    row = (
+        frame.filter(F.col("id") == row_id)
+        .selectExpr("to_json(questions_data) questions", "to_json(custom_metadata) metadata")
+        .first()
+    )
+    assert row is not None
+    assert json.loads(row.questions) == {"plot": 12.5}
+    assert json.loads(row.metadata) == {"soil": "clay", "color": "blue"}

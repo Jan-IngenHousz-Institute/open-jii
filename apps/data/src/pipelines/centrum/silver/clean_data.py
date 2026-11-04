@@ -44,6 +44,13 @@ dlt.create_streaming_table(
 )
 
 
+def _questions():
+    return F.coalesce(
+        F.from_json(F.col("questions_json"), ArrayType(question_schema)),
+        F.from_json(F.to_json(F.col("parsed_data.questions")), ArrayType(question_schema)),
+    )
+
+
 def _remap_macro_id(id_col):
     """Remap legacy macro identifiers to actual UUIDs via chained CASE expression."""
     result = id_col
@@ -172,10 +179,7 @@ def clean_data():
         )
     )
 
-    df = df.withColumn(
-        "questions",
-        F.col("parsed_data.questions")
-    )
+    df = df.withColumn("questions", _questions())
 
     df = df.withColumn(
         "annotations",

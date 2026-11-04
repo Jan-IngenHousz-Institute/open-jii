@@ -20,6 +20,7 @@ import type { CreateWorkbookDto } from "../../../../workbooks/core/models/workbo
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
 import type { CreateLocationDto } from "../../../core/models/experiment-locations.model";
 import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
+import { ExperimentQuestionTypesRepository } from "../../../core/repositories/experiment-question-types.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { CreateFlowUseCase } from "../flows/create-flow";
 
@@ -28,6 +29,7 @@ export class ExecuteProjectTransferUseCase {
   private readonly logger = new Logger(ExecuteProjectTransferUseCase.name);
 
   constructor(
+    private readonly questionTypes: ExperimentQuestionTypesRepository,
     private readonly experimentRepository: ExperimentRepository,
     private readonly locationRepository: LocationRepository,
     private readonly createFlowUseCase: CreateFlowUseCase,
@@ -267,6 +269,7 @@ export class ExecuteProjectTransferUseCase {
         experiment.id,
         data.experiment.createdBy,
         { nodes: allNodes, edges },
+        true,
       );
 
       if (flowResult.isSuccess()) {
@@ -301,10 +304,11 @@ export class ExecuteProjectTransferUseCase {
           );
 
           if (versionResult.isSuccess()) {
-            const linkResult = await this.experimentRepository.update(experiment.id, {
-              workbookId,
-              workbookVersionId: versionResult.value.id,
-            });
+            const linkResult = await this.questionTypes.pinVersion(
+              experiment.id,
+              versionResult.value,
+              { legacyImport: true },
+            );
             if (linkResult.isFailure()) {
               this.logger.warn({
                 msg: "Failed to link workbook to experiment during project transfer (non-fatal)",

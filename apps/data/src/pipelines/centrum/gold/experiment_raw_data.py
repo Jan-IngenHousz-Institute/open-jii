@@ -8,10 +8,12 @@ import dlt
 from pyspark.sql import functions as F
 
 from data_repair import apply_inline_repairs
+from enrich.question_types import add_numeric_question_keys
 from openjii import scrub_non_finite_json
 from openjii.centrum import EXPERIMENT_RAW_DATA_TABLE
 from openjii.centrum.questions import sanitized_questions
-from openjii.centrum.runtime import SILVER_TABLE
+from openjii.centrum.runtime import ENVIRONMENT, SILVER_TABLE
+from openjii.number_answers import invalid_question_answer_count_expression, typed_question_answers
 from openjii.timezones import usable_timezone
 
 # COMMAND ----------
@@ -24,6 +26,7 @@ from openjii.timezones import usable_timezone
     comment="Gold layer: Per-experiment raw sample data clustered by experiment_id and timestamp with VARIANT sample",
     table_properties={
         "quality": "gold",
+        "pipelines.reset.allowed": "false",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
         "delta.autoOptimize.autoCompact": "false",
@@ -34,12 +37,16 @@ from openjii.timezones import usable_timezone
         "delta.enableVariantShredding": "true",
     }
 )
+@dlt.expect("valid_numeric_question_answers", invalid_question_answer_count_expression(
+    "questions_original_data", "questions_data",
+    "map_keys(cast(questions_original_data AS MAP<STRING, VARIANT>))") + " = 0")
 def experiment_raw_data():
     """Per-experiment raw sample data with VARIANT support."""
 
     return (
         dlt.read_stream(SILVER_TABLE)
         .filter("experiment_id IS NOT NULL")
+        .transform(lambda df: add_numeric_question_keys(df, ENVIRONMENT, dbutils))
         # Firmware serializes floats permissively, so calibration samples can
         # carry bare NaN/Infinity tokens that strict parse_json rejects,
         # poisoning the stream. The scrub UDF rewrites them to null and is a
@@ -70,6 +77,9 @@ def experiment_raw_data():
                 """)
             )
         )
+        .withColumn("_typed_questions_data", typed_question_answers("questions_data", "_numeric_question_keys"))
+        .withColumn("questions_original_data", F.col("questions_data"))
+        .withColumn("questions_data", F.col("_typed_questions_data"))
         .select(
             "id",
             "experiment_id",
@@ -90,6 +100,7 @@ def experiment_raw_data():
             usable_timezone(F.col("timezone")).alias("timezone"),
             "macros",
             "questions_data",
+            "questions_original_data",
             "annotations",
             "user_id",
             "protocol_id",

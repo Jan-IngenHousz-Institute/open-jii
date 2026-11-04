@@ -14,6 +14,7 @@ import type { AwsPort } from "../../core/ports/aws.port";
 import { DATABRICKS_PORT } from "../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../core/ports/databricks.port";
 import { ExperimentDataExportsRepository } from "../../core/repositories/experiment-data-exports.repository";
+import { ExperimentQuestionTypesRepository } from "../../core/repositories/experiment-question-types.repository";
 import { ExperimentRepository } from "../../core/repositories/experiment.repository";
 import { ExportRunReconcilerService } from "./export-run-reconciler.service";
 
@@ -290,6 +291,7 @@ describe("ExportRunReconcilerService", () => {
     await reconciler.reconcile();
 
     expect(trigger).toHaveBeenCalledWith({
+      numericQuestionKeys: [],
       exportId,
       experimentId,
       tableName: "raw_data",
@@ -398,6 +400,7 @@ describe("ExportRunReconcilerService", () => {
     );
     vi.spyOn(awsPort, "readExportObject").mockResolvedValue(success(manifest(exportId)));
     const otherTask = new ExportRunReconcilerService(
+      testApp.module.get(ExperimentQuestionTypesRepository),
       exportsRepository,
       testApp.module.get(ExperimentRepository),
       databricksPort,

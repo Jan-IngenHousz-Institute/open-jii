@@ -183,6 +183,7 @@ describe("QuestionsOnlySubmitNode", () => {
           {
             question_label: "q1",
             question_text: "What's your name?",
+            question_kind: "text",
             question_answer: "Alice",
           },
         ],

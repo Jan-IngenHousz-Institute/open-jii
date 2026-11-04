@@ -446,13 +446,15 @@ def test_macro_notebook_posts_only_eligible_rows_on_real_spark(spark, fake_dlt, 
         "longitude",
         "date",
         "processed_timestamp",
-        "questions_data",
         "annotations",
         "workbook_run_id",
         "workbook_version_id",
         "macro_context",
     ]:
         source = source.withColumn(name, F.lit(None).cast("string"))
+
+    for name in ["questions_data", "questions_original_data"]:
+        source = source.withColumn(name, F.lit(None).cast("variant"))
 
     posted = []
 
@@ -506,13 +508,16 @@ def test_macro_notebook_posts_only_eligible_rows_on_real_spark(spark, fake_dlt, 
         )
         execute = notebook["experiment_macro_data"]
         # Exercise the real notebook projections and pandas UDF. Only the table
-        # read and inline-repair hook are replaced for this local check.
+        # read, question classification and inline-repair hook are replaced.
         reader = SimpleNamespace(table=lambda name: source)
         reader.option = lambda key, value: reader
         execute.__globals__.update(
             spark=SimpleNamespace(readStream=reader),
             dbutils=dbutils,
             apply_inline_repairs=lambda frame, table: frame,
+            add_numeric_question_keys=lambda frame, *_, **__: frame.withColumn(
+                "_numeric_question_keys", F.array().cast("array<string>")
+            ),
         )
         rows = {row.raw_id: row for row in execute().collect()}
     finally:

@@ -18,7 +18,7 @@ const macroCell = (id: string, macroId: string): WorkbookCell => ({
   payload: { macroId, language: "python", name: "Macro" },
 });
 
-const questionCell = (id: string): WorkbookCell => ({
+const questionCell = (id: string): Extract<WorkbookCell, { type: "question" }> => ({
   id,
   type: "question",
   isCollapsed: false,
@@ -48,6 +48,26 @@ const ctx = (
 ): WorkbookValidationContext => ({ protocols, macros });
 
 describe("validateWorkbook", () => {
+  it("requires a new name when a question switches numeric class", () => {
+    const result = validateWorkbook([questionCell("q1")], {
+      ...ctx({}),
+      questionClasses: { reading: "number" },
+    });
+    expect(result.ok).toBe(false);
+    expect(result.issues[0].code).toBe("question-type-change");
+  });
+
+  it("rejects question names with the same Spark column key", () => {
+    const result = validateWorkbook(
+      [
+        { ...questionCell("q1"), name: "a__b" },
+        { ...questionCell("q2"), name: "a b" },
+      ],
+      ctx({}),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.issues[0].code).toBe("duplicate-question-name");
+  });
   it("reports no issues for a well-formed workbook", () => {
     const cells = [protocolCell("p1", "prot-1"), macroCell("m1", "mac-1")];
     const result = validateWorkbook(

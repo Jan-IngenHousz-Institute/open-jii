@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Keyboard, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "~/shared/i18n";
+import { answeredQuestions } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { formatTimeAgo } from "~/shared/time/format-time-ago";
 import { Button } from "~/shared/ui/Button";
@@ -43,6 +44,7 @@ export function CommentModal({
 }: CommentModalProps) {
   const colors = useThemeColors();
   const { t } = useTranslation(["common", "recentMeasurements"]);
+  const answered = answeredQuestions(questions);
 
   const textRef = useRef(initialText);
   const [inputKey, setInputKey] = useState(0);
@@ -108,13 +110,13 @@ export function CommentModal({
               numberOfLines={1}
               ellipsizeMode="tail"
               className={clsx(
-                answersValueStyle({ hasAnswers: questions.length > 0 }),
+                answersValueStyle({ hasAnswers: answered.length > 0 }),
                 "text-muted-foreground",
               )}
             >
-              {questions.length === 0
+              {answered.length === 0
                 ? t("recentMeasurements:list.noQuestionsAnswered")
-                : questions.map((q) => q.question_answer).join(" | ")}
+                : answered.map((q) => q.question_answer).join(" | ")}
             </Text>
           </View>
           {experimentName && (

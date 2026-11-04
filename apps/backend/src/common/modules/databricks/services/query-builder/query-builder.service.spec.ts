@@ -14,6 +14,40 @@ describe("QueryBuilderService", () => {
     service = new QueryBuilderService();
   });
 
+  it("uses the approved question cast for projection, numeric filtering, sorting and averages", () => {
+    const params = {
+      table: "answers",
+      variants: [
+        {
+          columnName: "questions_data",
+          schema: "OBJECT<height: DOUBLE, plot: STRING>",
+          numericFields: ["height"],
+        },
+      ],
+    };
+    const query = unwrap(
+      service.buildQuery({
+        ...params,
+        columns: ["height", "plot"],
+        filters: [{ column: "height", operator: "greater_than", value: 10 }],
+        orderBy: "height",
+      }),
+    );
+    expect(query).toContain("try_variant_get(`questions_data`, '$[\"height\"]', 'STRING') RLIKE");
+    expect(query).toContain("AS DOUBLE)");
+    expect(query).toContain("END > 10");
+    expect(query).toContain("ORDER BY `height` ASC");
+    expect(query).toContain("try_variant_get(`questions_data`, '$[\"plot\"]', 'STRING') AS `plot`");
+    const average = unwrap(
+      service.buildQuery({
+        ...params,
+        aggregation: { functions: [{ column: "height", function: "avg", alias: "mean_height" }] },
+      }),
+    );
+    expect(average).toContain("AVG(`height`)");
+    expect(average).toContain("RLIKE");
+  });
+
   it("should be defined", () => {
     expect(service).toBeDefined();
   });

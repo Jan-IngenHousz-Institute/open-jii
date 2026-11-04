@@ -7,7 +7,7 @@
 export function sanitizeQuestionLabel(label: string): string {
   if (!label) return "question_empty";
   let s = label.toLowerCase().replace(/[^a-z0-9_]+/g, "_");
-  s = s.replace(/^_+|_+$/g, "");
+  s = s.replace(/_+/g, "_").replace(/^_+|_+$/g, "");
   if (!s || /^\d/.test(s)) s = `question_${s}`;
   return s;
 }

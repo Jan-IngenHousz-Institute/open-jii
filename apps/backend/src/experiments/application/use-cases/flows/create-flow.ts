@@ -19,6 +19,7 @@ export class CreateFlowUseCase {
     experimentId: string,
     userId: string,
     graph: FlowGraphDto,
+    legacyImport = false,
   ): Promise<Result<FlowDto>> {
     const experimentResult = await this.experimentRepository.findOne(experimentId);
 
@@ -38,7 +39,9 @@ export class CreateFlowUseCase {
         if (flow) {
           return failure(AppError.badRequest("Flow already exists for this experiment"));
         }
-        const written = await this.flowRepository.create(experimentId, graph);
+        const written = legacyImport
+          ? await this.flowRepository.importLegacy(experimentId, graph)
+          : await this.flowRepository.create(experimentId, graph);
         if (written.isFailure()) return written;
         // The flow is already saved; a missed bump only affects list ordering.
         const touched = await this.experimentRepository.touch(experimentId);

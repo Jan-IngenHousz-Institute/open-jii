@@ -165,7 +165,9 @@ _UPLOAD_EXCLUDE_COLS = ["upload_table_id", "upload_table_name", "upload_id"]
 _PAYLOAD_SUFFIXES = {"macro_output": "output", "questions_data": "answer", "uploaded_data": "upload"}
 
 
-def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="centrum", parts=None):
+def load_experiment_table(
+    experiment_id, table_name, catalog_name, schema_name="centrum", parts=None, numeric_question_keys=()
+):
     """Load experiment data with proper variant parsing and column selection.
 
     Handles fetching variant schemas, loading from the correct source table,
@@ -240,6 +242,26 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
             "parsed_questions_data",
             from_json(col("questions_data").cast("string"), questions_schema),
         )
+        if numeric_question_keys:
+            from pyspark.sql import functions as F
+
+            from openjii.number_answers import number_answer
+
+            approved = set(numeric_question_keys)
+            fields = df.schema["parsed_questions_data"].dataType.fields
+            df = df.withColumn(
+                "parsed_questions_data",
+                F.struct(
+                    *[
+                        (
+                            number_answer(col("parsed_questions_data").getField(field.name))
+                            if field.name in approved
+                            else col("parsed_questions_data").getField(field.name)
+                        ).alias(field.name)
+                        for field in fields
+                    ]
+                ),
+            )
         parsed.append(("parsed_questions_data", _PAYLOAD_SUFFIXES["questions_data"]))
         exclude_cols.extend(["questions_data", "parsed_questions_data"])
 

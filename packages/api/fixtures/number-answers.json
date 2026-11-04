@@ -1,0 +1,166 @@
+[
+  {
+    "input": "1.23456789012345",
+    "value": 1.23456789012345
+  },
+  {
+    "input": "1e30",
+    "value": 1e30
+  },
+  {
+    "input": "1E-30",
+    "value": 1e-30
+  },
+  {
+    "input": "12.5",
+    "value": 12.5
+  },
+  {
+    "input": "007",
+    "value": 7.0
+  },
+  {
+    "input": "-0",
+    "value": -0.0
+  },
+  {
+    "input": "+5",
+    "value": 5.0
+  },
+  {
+    "input": ".5",
+    "value": 0.5
+  },
+  {
+    "input": "5.",
+    "value": 5.0
+  },
+  {
+    "input": "-.5",
+    "value": -0.5
+  },
+  {
+    "input": " 12 ",
+    "value": 12.0
+  },
+  {
+    "input": "\t12.5\n",
+    "value": 12.5
+  },
+  {
+    "input": "1.7976931348623157e308",
+    "value": 1.7976931348623157e308
+  },
+  {
+    "input": "4.9e-324",
+    "value": 5e-324
+  },
+  {
+    "input": "1e-400",
+    "value": 0.0
+  },
+  {
+    "input": "NaN",
+    "value": null
+  },
+  {
+    "input": "Infinity",
+    "value": null
+  },
+  {
+    "input": "-inf",
+    "value": null
+  },
+  {
+    "input": "2e308",
+    "value": null
+  },
+  {
+    "input": "1e400",
+    "value": null
+  },
+  {
+    "input": "1d",
+    "value": null
+  },
+  {
+    "input": "1f",
+    "value": null
+  },
+  {
+    "input": "1D",
+    "value": null
+  },
+  {
+    "input": "0x10",
+    "value": null
+  },
+  {
+    "input": "0b1",
+    "value": null
+  },
+  {
+    "input": "1_0",
+    "value": null
+  },
+  {
+    "input": "",
+    "value": null
+  },
+  {
+    "input": " ",
+    "value": null
+  },
+  {
+    "input": "abc",
+    "value": null
+  },
+  {
+    "input": "1,5",
+    "value": null
+  },
+  {
+    "input": "12.5.1",
+    "value": null
+  },
+  {
+    "input": "--1",
+    "value": null
+  },
+  {
+    "input": "1e",
+    "value": null
+  },
+  {
+    "input": "e5",
+    "value": null
+  },
+  {
+    "input": ".",
+    "value": null
+  },
+  {
+    "input": "+",
+    "value": null
+  },
+  {
+    "input": "-",
+    "value": null
+  },
+  {
+    "input": "\u0661\u0662",
+    "value": null
+  },
+  {
+    "input": "1 2",
+    "value": null
+  },
+  {
+    "input": "1e+",
+    "value": null
+  },
+  {
+    "input": "1e5.5",
+    "value": null
+  }
+]

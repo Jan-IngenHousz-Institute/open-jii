@@ -9,6 +9,7 @@ import { UploadFailureNote } from "~/features/recent-measurements/components/upl
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { uploadFailureMessageKey } from "~/features/recent-measurements/utils/upload-failure-category";
 import { useTranslation } from "~/shared/i18n";
+import { answeredQuestions } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { formatTimeAgo } from "~/shared/time/format-time-ago";
 import { cn } from "~/shared/ui/cn";
@@ -50,8 +51,9 @@ export const MeasurementRunItem = memo(function MeasurementRunItem({
 }: MeasurementRunItemProps) {
   const { colors } = useTheme();
   const { t } = useTranslation(["common", "recentMeasurements"]);
-  const hasAnswers = questions && questions.length > 0;
-  const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
+  const answered = answeredQuestions(questions);
+  const hasAnswers = answered.length > 0;
+  const answersText = hasAnswers ? answered.map((q) => q.question_answer).join(" | ") : null;
   const Chevron = expanded ? ChevronDown : ChevronRight;
 
   return (

@@ -103,6 +103,7 @@ import { ExperimentJoinCodeRepository } from "./core/repositories/experiment-joi
 import { ExperimentJoinRequestRepository } from "./core/repositories/experiment-join-request.repository";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
 import { ExperimentMetadataRepository } from "./core/repositories/experiment-metadata.repository";
+import { ExperimentQuestionTypesRepository } from "./core/repositories/experiment-question-types.repository";
 import { ExperimentVisualizationRepository } from "./core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
 import { FlowRepository } from "./core/repositories/flow.repository";
@@ -120,6 +121,7 @@ import { ExperimentJoinCodesController } from "./presentation/experiment-join-co
 import { ExperimentJoinRequestsController } from "./presentation/experiment-join-requests.controller";
 import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
 import { ExperimentMetadataController } from "./presentation/experiment-metadata.controller";
+import { ExperimentQuestionTypesWebhookController } from "./presentation/experiment-question-types-webhook.controller";
 import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
 import { ExperimentWorkbooksController } from "./presentation/experiment-workbooks.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
@@ -143,6 +145,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
   controllers: [
     ExperimentController,
     ExperimentDataController,
+    ExperimentQuestionTypesWebhookController,
     ExperimentDataExportsController,
     ExperimentFlowsController,
     ExperimentWorkbooksController,
@@ -205,6 +208,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentVisualizationRepository,
     ExperimentDashboardRepository,
     ExperimentDataRepository,
+    ExperimentQuestionTypesRepository,
     ExperimentDataExportsRepository,
     ExperimentDataUploadsRepository,
     FlowRepository,

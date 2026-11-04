@@ -49,6 +49,19 @@ beforeEach(() => {
 });
 
 describe("NavigationButtons", () => {
+  it("does not advance a malformed number, including optional questions", () => {
+    const nextStep = vi.fn();
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      flowNodes: [makeQuestion("q1", { kind: "number", required: false })],
+      nextStep,
+    });
+    useFlowAnswersStore.getState().setAnswer(0, "q1", "-");
+    render(<NavigationButtons />);
+    fireEvent.press(screen.getByText("Next"));
+    expect(nextStep).not.toHaveBeenCalled();
+  });
+
   it("renders nothing when there is no experiment", () => {
     useMeasurementFlowStore.setState({
       flowNodes: [makeQuestion("q1")],

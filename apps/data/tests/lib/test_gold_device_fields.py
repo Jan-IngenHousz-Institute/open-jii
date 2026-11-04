@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import functions as F
 
 pytestmark = pytest.mark.spark
 
@@ -35,7 +36,7 @@ _SILVER_SCHEMA = """
     device_address STRING, client_model STRING, client_manufacturer STRING, client_os STRING,
     client_os_version STRING, client_app_version STRING, timestamp TIMESTAMP, timezone STRING,
     macros ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>,
-    questions ARRAY<STRUCT<question_label: STRING, question_text: STRING, question_answer: STRING>>,
+    questions ARRAY<STRUCT<question_label: STRING, question_text: STRING, question_answer: STRING, question_kind: STRING>>,
     annotations ARRAY<STRING>, user_id STRING, protocol_id STRING, workbook_run_id STRING,
     workbook_version_id STRING, macro_context STRING, latitude DOUBLE, longitude DOUBLE,
     sample STRING, output STRING, date DATE, processed_timestamp TIMESTAMP,
@@ -73,6 +74,7 @@ def _silver_row(row_id: int, **device_fields: object) -> dict:
 @pytest.fixture
 def gold(spark: SparkSession, fake_dlt: types.ModuleType, monkeypatch: pytest.MonkeyPatch) -> DataFrame:
     runtime = types.ModuleType("openjii.centrum.runtime")
+    runtime.ENVIRONMENT = "dev"  # type: ignore[attr-defined]
     runtime.SILVER_TABLE = "clean_data"  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "openjii.centrum.runtime", runtime)
     silver = spark.createDataFrame([_silver_row(1, **_MEASURED), _silver_row(2)], _SILVER_SCHEMA)
@@ -83,6 +85,12 @@ def gold(spark: SparkSession, fake_dlt: types.ModuleType, monkeypatch: pytest.Mo
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    monkeypatch.setattr(module, "dbutils", None, raising=False)
+    monkeypatch.setattr(
+        module,
+        "add_numeric_question_keys",
+        lambda df, *_: df.withColumn("_numeric_question_keys", F.array().cast("array<string>")),
+    )
     return module.experiment_raw_data()
 
 

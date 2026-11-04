@@ -158,8 +158,8 @@ export class QueryBuilderService {
       builder.distinct();
     }
 
-    variants.forEach(({ columnName, schema, suffix }) => {
-      builder.parseVariant(columnName, schema, suffix);
+    variants.forEach(({ columnName, schema, suffix, numericFields }) => {
+      builder.parseVariant(columnName, schema, suffix, numericFields);
     });
 
     if (exceptColumns && exceptColumns.length > 0) {

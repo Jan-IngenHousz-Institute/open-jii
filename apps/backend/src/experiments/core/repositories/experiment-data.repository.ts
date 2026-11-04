@@ -1,4 +1,5 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
+import { createHash } from "node:crypto";
 
 import {
   DATA_QUERY_MAX_LIMIT,
@@ -11,6 +12,7 @@ import type {
   FilterCondition,
 } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
 import { FlattenedFields } from "../../../common/modules/databricks/services/query-builder/schema/flattened-fields";
+import { VariantSchema } from "../../../common/modules/databricks/services/query-builder/schema/variant-schema";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError, tryCatch } from "../../../common/utils/fp-utils";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
@@ -32,6 +34,7 @@ import { CACHE_PORT, SCHEMA_CACHE_PORT } from "../ports/cache.port";
 import type { CachePort } from "../ports/cache.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
+import { ExperimentQuestionTypesRepository } from "./experiment-question-types.repository";
 
 type ReadMode =
   | "aggregation"
@@ -77,7 +80,12 @@ const ROW_ID = "id";
 /** What a read of one table flattens and hides, and the names its base columns hold. */
 interface TableShape {
   metadata: ExperimentTableMetadata;
-  variants: { columnName: VariantColumn; schema: string; suffix: string }[];
+  variants: {
+    columnName: VariantColumn;
+    schema: string;
+    suffix: string;
+    numericFields?: string[];
+  }[];
   exceptColumns: string[];
   reservedColumns: string[];
 }
@@ -99,6 +107,7 @@ export class ExperimentDataRepository {
     @Inject(CACHE_PORT) private readonly cachePort: CachePort,
     @Inject(SCHEMA_CACHE_PORT) private readonly schemaCache: CachePort,
     private readonly contributorAnonymizer: ContributorAnonymizerService,
+    private readonly questionTypes: ExperimentQuestionTypesRepository,
   ) {}
 
   /**
@@ -449,7 +458,30 @@ export class ExperimentDataRepository {
           return result.value;
         },
       );
-      return rows ?? [];
+      if (!rows?.length) return [];
+      const active = await this.questionTypes.activeNumericKeys(experimentId);
+      if (active.isFailure()) throw active.error;
+      if (active.value.length === 0) return rows;
+      const approved = new Set(active.value);
+      return rows.map((row) => {
+        if (!row.questionsSchema) return row;
+        const fields = VariantSchema.topLevelFields(row.questionsSchema);
+        const numericQuestionKeys = fields
+          .filter((field) => approved.has(field.name))
+          .map((field) => field.name)
+          .sort();
+        if (numericQuestionKeys.length === 0) return row;
+        const questionsSchema = `OBJECT<${fields.map((field) => `\`${field.name.replaceAll("`", "``")}\`: ${approved.has(field.name) ? "DOUBLE" : field.type}`).join(", ")}>`;
+        const revision = createHash("sha256")
+          .update(JSON.stringify(numericQuestionKeys))
+          .digest("hex");
+        return {
+          ...row,
+          questionsSchema,
+          numericQuestionKeys,
+          schemaRevision: `${row.schemaRevision ?? ""}:questions:${revision}`,
+        };
+      });
     });
   }
 
@@ -582,6 +614,9 @@ export class ExperimentDataRepository {
           columnName: "questions_data",
           schema: questionsSchema,
           suffix: VARIANT_COLUMN_SUFFIX.questions_data,
+          ...(metadata.numericQuestionKeys?.length
+            ? { numericFields: metadata.numericQuestionKeys }
+            : {}),
         });
       } else {
         exceptColumns.push("questions_data");
