@@ -526,6 +526,8 @@ export function createBaseLayout(
      * the bottom instead.
      */
     hasColorbar?: boolean;
+    /** An overlay Y axis needs a separate legend band on its right. */
+    hasSecondaryAxis?: boolean;
   } = {},
 ): Partial<Layout> {
   const veryCompact = options.veryCompact ?? false;
@@ -570,11 +572,18 @@ export function createBaseLayout(
   const forceBottomLegend =
     !isInsideLegend && (ultraCompact || (compact && hasColorbar && legendPosition === "right"));
   const effectiveLegendPosition = forceBottomLegend ? "bottom" : legendPosition;
-  // Plotly places the scrollbar beyond its legend width. Inset container
-  // anchors so a scrolling legend and its handle stay inside the chart.
+  // Paper anchoring lets Plotly clamp oversized legends with the axis margins.
+  // Container anchoring separates shared right-side chrome, but its callers
+  // must bound legend names because Plotly reserves that band after the clamp.
   const legendAnchor = {
     ...legendAnchorFor(effectiveLegendPosition),
-    ...(effectiveLegendPosition === "right" && compact ? { x: 0.96 } : {}),
+    ...(effectiveLegendPosition === "right"
+      ? hasColorbar || options.hasSecondaryAxis
+        ? compact
+          ? { x: 0.96 }
+          : {}
+        : { x: 1.02, xref: "paper" as const, xanchor: "left" as const }
+      : {}),
   };
 
   // Use provided dimensions or undefined for responsive behavior

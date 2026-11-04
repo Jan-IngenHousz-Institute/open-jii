@@ -4,6 +4,7 @@ import type { Layout, PlotData, PlotRelayoutEvent } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
+import { withBoundedRightLegend } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type {
   BaseChartProps,
@@ -185,9 +186,10 @@ export function CartesianChart({
 }: CartesianChartProps) {
   // Faceted charts pass their grid so the sizing tier compares against
   // per-cell area (a 4x2 grid in an 800x500 box has ~200x250 cells).
-  const [containerRef, sizing] = useChartSizing<HTMLDivElement>(
-    subplots ? { grid: { rows: subplots.rows, columns: subplots.columns } } : {},
-  );
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({
+    trackWidth: true,
+    ...(subplots ? { grid: { rows: subplots.rows, columns: subplots.columns } } : {}),
+  });
   const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const scatterPlotType = getPlotType("scatter", renderer);
@@ -209,7 +211,11 @@ export function CartesianChart({
   }, [data]);
 
   const layout = useMemo(() => {
-    const next = createBaseLayout(config, sizing);
+    const next = createBaseLayout(config, {
+      ...sizing,
+      hasSecondaryAxis: data.some((series) => series.axis === "secondary"),
+      hasColorbar: data.some((series) => series.marker?.showscale),
+    });
 
     const xAxisValues = axisScan.x;
     const primaryYValues = axisScan.y;
@@ -309,6 +315,10 @@ export function CartesianChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
   }, [config, sizing, data, axisScan, subplots, uirevision, themeVersion]);
 
+  const bounded = useMemo(
+    () => withBoundedRightLegend(layout, config, plotData, sizing.width),
+    [layout, config, plotData, sizing.width],
+  );
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   const handleRelayout = React.useCallback(
     (event: Readonly<PlotRelayoutEvent>) => onRelayout?.({ ...event }),
@@ -318,8 +328,8 @@ export function CartesianChart({
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
-        data={plotData}
-        layout={layout}
+        data={bounded.data}
+        layout={bounded.layout}
         config={plotConfig}
         loading={loading}
         error={error}

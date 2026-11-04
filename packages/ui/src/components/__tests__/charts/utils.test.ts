@@ -348,10 +348,10 @@ describe("utils", () => {
       // Outside-right preset: anchor 'left' so the legend hangs OFF the
       // plot's right edge instead of overlapping the data area.
       expect(layout.legend).toMatchObject({
-        x: 0.98,
-        xref: "container",
+        x: 1.02,
+        xref: "paper",
         y: 1,
-        xanchor: "right",
+        xanchor: "left",
         yanchor: "top",
         orientation: "v",
       });
@@ -575,6 +575,11 @@ describe("utils", () => {
       // Inside legends overlay the plot; no need to force bottom.
       expect(layout.legend?.xanchor).toBe("right");
       expect(layout.legend?.yanchor).toBe("top");
+    });
+
+    it("reserves a separate right legend band beside a secondary axis", () => {
+      const layout = createBaseLayout(baseConfig, { hasSecondaryAxis: true });
+      expect(layout.legend).toMatchObject({ xref: "container", xanchor: "right" });
     });
 
     it("reserves a separate right legend band beside a colorbar", () => {

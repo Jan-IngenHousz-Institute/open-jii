@@ -48,15 +48,13 @@ export function wrapChartLabel(text: string, fontSize: number, maxWidth: number)
     .join("<br>");
 }
 
-/** Polar and ternary labels do not participate in Plotly's axis automargin. */
-export function withOuterLabels(
+function boundSideLegend(
   layout: Partial<Layout>,
   config: PlotlyChartConfig,
-  labels: { left: number; right: number; top: number; bottom: number },
+  labels: { left: number; right: number },
   traces: PlotData[],
-  radialTitle?: { text: string; fontSize: number },
   measuredWidth?: number,
-): { layout: Partial<Layout>; data: PlotData[] } {
+) {
   let legend = layout.legend ?? {};
   const legendNames = traces
     .filter((trace) => trace.showlegend !== false && trace.visible !== false)
@@ -69,6 +67,13 @@ export function withOuterLabels(
         ? "bottom"
         : "top"
       : (config.legendPosition ?? "right");
+  if (hasLegend && position === "right") {
+    legend = {
+      ...legend,
+      ...legendAnchorFor("right"),
+      ...(layout.legend?.xref === "container" ? { x: layout.legend.x } : {}),
+    };
+  }
   const legendFont = legend.font?.size ?? 12;
   const width = config.width ?? (measuredWidth && measuredWidth > 0 ? measuredWidth : 720);
   const plotFloor = Math.min(160, width * 0.35);
@@ -108,6 +113,58 @@ export function withOuterLabels(
     ) +
       56 +
       sideInset,
+  );
+  return { legend, data, position, sideBand, hasLegend };
+}
+
+/** Container legends reserve space after Plotly clamps its minimum plot width. */
+export function withBoundedRightLegend(
+  layout: Partial<Layout>,
+  config: PlotlyChartConfig,
+  traces: PlotData[],
+  measuredWidth?: number,
+): { layout: Partial<Layout>; data: PlotData[] } {
+  if (
+    layout.legend?.xref !== "container" ||
+    layout.legend.orientation === "h" ||
+    layout.legend.xanchor !== "right"
+  ) {
+    return { layout, data: traces };
+  }
+  const { legend, data, position, hasLegend } = boundSideLegend(
+    layout,
+    config,
+    { left: layout.margin?.l ?? 48, right: layout.margin?.r ?? 24 },
+    traces,
+    measuredWidth ?? 200,
+  );
+  return {
+    data,
+    layout: {
+      ...layout,
+      legend: { ...legend, ...(hasLegend && position === "bottom" ? { maxheight: 64 } : {}) },
+      ...(hasLegend && position === "bottom"
+        ? { margin: { ...layout.margin, b: (layout.margin?.b ?? 36) + 64 } }
+        : {}),
+    },
+  };
+}
+
+/** Polar and ternary labels do not participate in Plotly's axis automargin. */
+export function withOuterLabels(
+  layout: Partial<Layout>,
+  config: PlotlyChartConfig,
+  labels: { left: number; right: number; top: number; bottom: number },
+  traces: PlotData[],
+  radialTitle?: { text: string; fontSize: number },
+  measuredWidth?: number,
+): { layout: Partial<Layout>; data: PlotData[] } {
+  const { legend, data, position, sideBand, hasLegend } = boundSideLegend(
+    layout,
+    config,
+    labels,
+    traces,
+    measuredWidth,
   );
   // Long horizontal legends scroll within their own band, as vertical legends do.
   const horizontalBand = 64;
