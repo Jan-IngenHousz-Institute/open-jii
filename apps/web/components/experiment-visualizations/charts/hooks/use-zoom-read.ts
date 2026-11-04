@@ -1,11 +1,13 @@
 "use client";
 
+import { useColumnMetadata } from "@/hooks/experiment/useColumnMetadata/useColumnMetadata";
 import { shouldRetryQuery } from "@/util/query-retry";
 import { relativeFilterQueryOptions } from "@/util/relative-filter-query-options";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { orpc } from "~/lib/orpc";
 
+import { DEVICE_LABEL_COLUMN } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type {
   ExperimentDataAggregation,
   ExperimentDataFilter,
@@ -16,6 +18,7 @@ import { axisPosition } from "../cartesian/series-reduction";
 import type { AxisRange } from "../cartesian/series-reduction";
 import { BUCKETED_ROWS, WINDOW_BUCKETS } from "../cartesian/zoom-read-plan";
 import type { AxisScale } from "../cartesian/zoom-read-plan";
+import { deviceDisplayName, hasDeviceLabelColumn } from "../data/device-cells";
 
 const STALE_TIME = 2 * 60 * 1000;
 
@@ -50,6 +53,15 @@ export function useZoomRead(input: ZoomReadInput): ZoomRead {
   const { experimentId, tableName, filters, xColumn, scale, yColumns, splitColumns, enabled } =
     input;
 
+  const metadata = useColumnMetadata(
+    experimentId,
+    enabled && splitColumns.includes("device") ? tableName : undefined,
+  );
+  const hasDeviceLabel = hasDeviceLabelColumn(metadata.columns);
+  const bucketSplits = hasDeviceLabel
+    ? [...new Set([...splitColumns, DEVICE_LABEL_COLUMN])]
+    : splitColumns;
+
   const extent = useQuery(
     orpc.experiments.getExperimentData.queryOptions({
       input: {
@@ -83,10 +95,10 @@ export function useZoomRead(input: ZoomReadInput): ZoomRead {
         tableName,
         filters: filtersParam(windowFilters),
         aggregation: JSON.stringify(
-          window ? bucketAggregation(xColumn, scale, yColumns, splitColumns, window) : {},
+          window ? bucketAggregation(xColumn, scale, yColumns, bucketSplits, window) : {},
         ),
       },
-      enabled: enabled && window !== undefined,
+      enabled: enabled && !metadata.isLoading && !metadata.error && window !== undefined,
       placeholderData: keepPreviousData,
       ...relativeFilterQueryOptions(windowFilters, STALE_TIME),
       refetchOnWindowFocus: false,
@@ -114,8 +126,11 @@ export function useZoomRead(input: ZoomReadInput): ZoomRead {
   );
 
   const drawnBuckets = useMemo(
-    () => (bucketRows ? bucketsToRows(bucketRows, xColumn, yColumns, splitColumns) : undefined),
-    [bucketRows, xColumn, yColumns, splitColumns],
+    () =>
+      bucketRows
+        ? bucketsToRows(bucketRows, xColumn, yColumns, splitColumns, hasDeviceLabel)
+        : undefined,
+    [bucketRows, xColumn, yColumns, splitColumns, hasDeviceLabel],
   );
 
   const windowRows = fitsOneRead ? windowRead.data?.rows : undefined;
@@ -123,7 +138,7 @@ export function useZoomRead(input: ZoomReadInput): ZoomRead {
     rows: windowRows ?? drawnBuckets,
     total,
     isBucketed: windowRows === undefined && drawnBuckets !== undefined,
-    error: extent.error ?? buckets.error ?? windowRead.error,
+    error: metadata.error ?? extent.error ?? buckets.error ?? windowRead.error,
   };
 }
 
@@ -183,6 +198,7 @@ function bucketsToRows(
   xColumn: string,
   yColumns: string[],
   splitColumns: string[],
+  hasDeviceLabel: boolean,
 ): Record<string, unknown>[] {
   const ordered = [...rows].sort(
     (a, b) => axisPosition(cellOf(a.x_from)) - axisPosition(cellOf(b.x_from)),
@@ -190,6 +206,9 @@ function bucketsToRows(
 
   return ordered.flatMap((row) => {
     const splits = Object.fromEntries(splitColumns.map((column) => [column, row[column]]));
+    if (hasDeviceLabel) {
+      splits.device = deviceDisplayName(row[DEVICE_LABEL_COLUMN]);
+    }
     const low = Object.fromEntries(yColumns.map((column, i) => [column, row[`y${i}_low`]]));
     const high = Object.fromEntries(yColumns.map((column, i) => [column, row[`y${i}_high`]]));
     return [

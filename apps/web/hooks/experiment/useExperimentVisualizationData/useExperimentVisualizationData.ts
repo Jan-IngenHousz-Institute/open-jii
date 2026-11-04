@@ -1,5 +1,8 @@
 import { contributorDisplayName } from "@/components/experiment-visualizations/charts/data/contributor-cells";
-import { deviceDisplayName } from "@/components/experiment-visualizations/charts/data/device-cells";
+import {
+  deviceDisplayName,
+  hasDeviceLabelColumn,
+} from "@/components/experiment-visualizations/charts/data/device-cells";
 import { shouldRetryQuery } from "@/util/query-retry";
 import { relativeFilterQueryOptions } from "@/util/relative-filter-query-options";
 import { useQuery } from "@tanstack/react-query";
@@ -11,7 +14,12 @@ import type {
   ExperimentDataFilter,
   ExperimentDataJoin,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import {
+  DEVICE_LABEL_COLUMN,
+  WellKnownColumnTypes,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
+
+import { useColumnMetadata } from "../useColumnMetadata/useColumnMetadata";
 import { isDataJoinValid } from "@repo/api/transforms/joined-columns";
 
 const STALE_TIME = 2 * 60 * 1000;
@@ -135,26 +143,43 @@ export const useExperimentVisualizationData = (
   enabled = true,
   { retryOnMount = true }: { retryOnMount?: boolean } = {},
 ) => {
+  const needsDeviceLabel =
+    Boolean(dataConfig.columns?.includes("device")) ||
+    Boolean(dataConfig.aggregation?.groupBy?.some((group) => group.column === "device")) ||
+    dataConfig.extraGroupByColumns?.includes("device");
+  const metadata = useColumnMetadata(
+    experimentId,
+    enabled && needsDeviceLabel ? dataConfig.tableName : undefined,
+  );
+  const hasDeviceLabel = hasDeviceLabelColumn(metadata.columns);
   const cleanedColumns = dataConfig.columns?.filter((name) => name.length > 0);
+  const readColumns =
+    hasDeviceLabel && cleanedColumns?.includes("device")
+      ? [...new Set([...cleanedColumns, DEVICE_LABEL_COLUMN])]
+      : cleanedColumns;
   const cleanedFilters = compactFilters(dataConfig.filters);
   const baseAggregation = compactAggregation(dataConfig.aggregation);
   const baseAggregationActive = hasAggregationContent(baseAggregation);
   const extras = (dataConfig.extraGroupByColumns ?? []).filter((c) => c && c.length > 0);
-  const aggregation = useMemo(
-    () =>
-      baseAggregationActive && extras.length > 0 && baseAggregation
-        ? {
-            ...baseAggregation,
-            groupBy: [
-              ...(baseAggregation.groupBy ?? []),
-              ...extras
-                .filter((col) => !(baseAggregation.groupBy ?? []).some((g) => g.column === col))
-                .map((col) => ({ column: col })),
-            ],
-          }
-        : baseAggregation,
-    [baseAggregation, baseAggregationActive, extras],
-  );
+  const aggregation = useMemo(() => {
+    if (!baseAggregation) {
+      return undefined;
+    }
+    const groupBy = [...(baseAggregation.groupBy ?? [])];
+    for (const column of extras) {
+      if (!groupBy.some((group) => group.column === column)) {
+        groupBy.push({ column });
+      }
+    }
+    if (
+      hasDeviceLabel &&
+      groupBy.some((group) => group.column === "device") &&
+      !groupBy.some((group) => group.column === DEVICE_LABEL_COLUMN)
+    ) {
+      groupBy.push({ column: DEVICE_LABEL_COLUMN });
+    }
+    return { ...baseAggregation, groupBy: groupBy.length > 0 ? groupBy : undefined };
+  }, [baseAggregation, extras, hasDeviceLabel]);
   const aggregationActive = baseAggregationActive;
 
   const joinValid = isDataJoinValid(dataConfig.join);
@@ -173,8 +198,8 @@ export const useExperimentVisualizationData = (
 
   const columnsCsv = aggregationActive
     ? undefined
-    : cleanedColumns && cleanedColumns.length > 0
-      ? cleanedColumns.join(",")
+    : readColumns && readColumns.length > 0
+      ? readColumns.join(",")
       : undefined;
 
   const effectiveOrderBy =
@@ -214,7 +239,12 @@ export const useExperimentVisualizationData = (
       // not ask for.
       placeholderData: (previous, previousQuery) =>
         previousQuery?.meta?.readShape === readShape ? previous : undefined,
-      enabled: enabled && Boolean(dataConfig.tableName) && canQuery,
+      enabled:
+        enabled &&
+        !metadata.isLoading &&
+        !metadata.error &&
+        Boolean(dataConfig.tableName) &&
+        canQuery,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       retryOnMount,
@@ -246,7 +276,7 @@ export const useExperimentVisualizationData = (
       for (const col of structColumns) {
         out[col.name] =
           col.type_text === WellKnownColumnTypes.DEVICE
-            ? deviceDisplayName(row[col.name])
+            ? deviceDisplayName(row[DEVICE_LABEL_COLUMN] ?? row[col.name])
             : contributorDisplayName(row[col.name]);
       }
       return out;
@@ -268,8 +298,8 @@ export const useExperimentVisualizationData = (
           totalRows: tableData.totalRows,
         }
       : undefined,
-    isLoading,
+    isLoading: isLoading || metadata.isLoading,
     isRefreshing: isPlaceholderData,
-    error,
+    error: metadata.error ?? error,
   };
 };

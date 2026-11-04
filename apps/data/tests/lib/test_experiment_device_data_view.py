@@ -91,9 +91,11 @@ def test_the_registry_device_is_attached_through_the_client_id(spark: SparkSessi
     rows = _rows(spark)
 
     assert rows[("e1", "d1", "fw1")]["device"]["serial_number"] == "SN1"
-    assert rows[("e1", "d2", None)]["device"]["serial_number"] == "Ambit (d2)"
-    assert rows[("e1", "d2", None)]["device"]["id"] is None
-    assert rows[("e2", "d1", "fw2")]["device"]["serial_number"] == "MultispeQ (d1)"
+    assert rows[("e1", "d1", "fw1")]["device_label"] == "SN1"
+    assert rows[("e2", "d1", "fw2")]["device"] is None
+    assert rows[("e1", "d2", None)]["device_label"] == "Ambit (d2)"
+    assert rows[("e1", "d2", None)]["device"] is None
+    assert rows[("e2", "d1", "fw2")]["device_label"] == "MultispeQ (d1)"
 
 
 def test_the_row_id_hashes_experiment_device_and_firmware(spark: SparkSession, centrum: str) -> None:

@@ -5,6 +5,7 @@ import { relativeFilterStaleTime } from "@/util/relative-filter-query-options";
 import { afterEach, describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useExperimentVisualizationData } from "./useExperimentVisualizationData";
@@ -133,6 +134,107 @@ describe("useExperimentVisualizationData", () => {
       totalRows: 1000,
     });
     expect(result.current.error).toBeNull();
+  });
+
+  it.each([false, true])(
+    "uses separate device labels for a legacy Device chart, aggregated=%s",
+    async (aggregated) => {
+      const columns = [
+        { name: "device", type_name: "STRUCT", type_text: WellKnownColumnTypes.DEVICE },
+        { name: "device_label", type_name: "STRING", type_text: "STRING" },
+        { name: "signal", type_name: "DOUBLE", type_text: "DOUBLE" },
+      ];
+      server.mount(contract.experiments.getExperimentTableColumns, { body: { columns } });
+      const spy = server.mount(contract.experiments.getExperimentData, {
+        body: [
+          createExperimentDataTable({
+            data: {
+              columns,
+              rows: [
+                { device: null, device_label: "Ambit (d2)", signal: 1 },
+                { device: null, device_label: "Ambit (d3)", signal: 2 },
+              ],
+              totalRows: 2,
+              truncated: false,
+            },
+          }),
+        ],
+      });
+      const { result } = renderHook(() =>
+        useExperimentVisualizationData("exp-1", {
+          tableName: "raw_data",
+          columns: ["device", "signal"],
+          aggregation: aggregated
+            ? {
+                groupBy: [{ column: "device" }],
+                functions: [{ column: "signal", function: "sum" }],
+              }
+            : undefined,
+        }),
+      );
+      await waitFor(() => expect(result.current.data?.rows).toHaveLength(2));
+      expect(result.current.data?.rows.map((row) => row.device)).toEqual([
+        "Ambit (d2)",
+        "Ambit (d3)",
+      ]);
+      if (aggregated) {
+        expect(JSON.parse(String(spy.calls.at(-1)?.query.aggregation))).toMatchObject({
+          groupBy: [{ column: "device" }, { column: "device_label" }],
+        });
+      } else {
+        expect(spy.calls.at(-1)?.query.columns).toBe("device,signal,device_label");
+      }
+    },
+  );
+
+  it("surfaces metadata failures instead of silently merging unregistered devices", async () => {
+    server.mount(contract.experiments.getExperimentTableColumns, { status: 404 });
+    const spy = server.mount(contract.experiments.getExperimentData, { body: [] });
+    const { result } = renderHook(() =>
+      useExperimentVisualizationData("exp-1", {
+        tableName: "raw_data",
+        columns: ["device"],
+      }),
+    );
+    await waitFor(() => expect(result.current.error).toBeTruthy());
+    expect(result.current.isLoading).toBe(false);
+    expect(spy.callCount).toBe(0);
+  });
+
+  it("keeps uploaded columns named device and device_label independent", async () => {
+    const columns = ["device", "device_label"].map((name) => ({
+      name,
+      type_name: "STRING",
+      type_text: "STRING",
+    }));
+    server.mount(contract.experiments.getExperimentTableColumns, { body: { columns } });
+    const spy = server.mount(contract.experiments.getExperimentData, {
+      body: [
+        createExperimentDataTable({
+          data: {
+            columns,
+            rows: [{ device: "User value", device_label: "Other value" }],
+            totalRows: 1,
+            truncated: false,
+          },
+        }),
+      ],
+    });
+    const { result } = renderHook(() =>
+      useExperimentVisualizationData("exp-1", {
+        tableName: "raw_data",
+        columns: ["device"],
+        aggregation: {
+          groupBy: [{ column: "device" }],
+          functions: [{ column: "*", function: "count" }],
+        },
+      }),
+    );
+    await waitFor(() => expect(result.current.data?.rows).toHaveLength(1));
+    expect(result.current.data?.rows[0].device).toBe("User value");
+    expect(JSON.parse(String(spy.calls.at(-1)?.query.aggregation))).toMatchObject({
+      groupBy: [{ column: "device" }],
+    });
   });
 
   describe("while a new read loads", () => {

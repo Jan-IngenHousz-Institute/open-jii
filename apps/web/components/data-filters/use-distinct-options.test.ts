@@ -70,20 +70,21 @@ describe("useDistinctOptions", () => {
   });
 
   it("flags DEVICE columns and does not build a contributor map", async () => {
-    const struct = JSON.stringify({ id: "d-1", serial_number: "AA:11" });
-    server.mount(contract.experiments.getDistinctColumnValues, {
-      body: { values: [struct], truncated: false },
+    const spy = server.mount(contract.experiments.getDistinctColumnValues, {
+      body: { values: ["AA:11"], truncated: false },
     });
 
     const { result } = renderHook(() => useDistinctOptions(deviceColumn, "exp-1", "raw_data"));
 
     await waitFor(() => expect(result.current.values).toHaveLength(1));
+    expect(spy.calls.at(-1)?.query.column).toBe("device.serial_number");
     expect(result.current.isDevice).toBe(true);
     expect(result.current.isContributor).toBe(false);
     expect(result.current.contributorMap).toBeUndefined();
   });
 
-  it("fetches the entire sorted fleet beyond both the default and maximum page size", async () => {
+  it("fetches the entire fleet for device_label beyond the maximum page size", async () => {
+    const column = { name: "device_label", type_name: "STRING", type_text: "STRING" };
     const fleet = Array.from({ length: 1205 }, (_, i) => `Sensor ${String(i).padStart(4, "0")}`);
     const spy = server.mount(contract.experiments.getDistinctColumnValues, {
       body: ({ query }: SpyCall) => {
@@ -95,7 +96,7 @@ describe("useDistinctOptions", () => {
         };
       },
     });
-    const { result } = renderHook(() => useDistinctOptions(deviceColumn, "exp-1", "raw_data"));
+    const { result } = renderHook(() => useDistinctOptions(column, "exp-1", "raw_data"));
     await waitFor(() => expect(result.current.values).toHaveLength(1205));
     expect(result.current.isLoading).toBe(false);
     expect(result.current.values).toEqual(fleet);

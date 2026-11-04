@@ -81,18 +81,13 @@ measurements AS (
     raw.questions_data,
     raw.annotations AS payload_annotations,
     contributors.user AS contributor,
-    named_struct(
-      'id', devices.device.id,
-      'serial_number', CASE
-        WHEN nullif(trim(devices.device.serial_number), '') IS NOT NULL THEN devices.device.serial_number
-        WHEN raw.fallback_device_name = raw.fallback_device_id THEN raw.fallback_device_name
-        WHEN raw.fallback_device_id IS NOT NULL THEN concat(raw.fallback_device_name, ' (', raw.fallback_device_id, ')')
-        ELSE coalesce(raw.fallback_device_name, 'Unknown device')
-      END,
-      'owner', devices.device.owner,
-      'status', devices.device.status,
-      'device_type', devices.device.device_type
-    ) AS device,
+    devices.device,
+    CASE
+      WHEN nullif(trim(devices.device.serial_number), '') IS NOT NULL THEN devices.device.serial_number
+      WHEN raw.fallback_device_name = raw.fallback_device_id THEN raw.fallback_device_name
+      WHEN raw.fallback_device_id IS NOT NULL THEN concat(raw.fallback_device_name, ' (', raw.fallback_device_id, ')')
+      ELSE coalesce(raw.fallback_device_name, 'Unknown device')
+    END AS device_label,
     raw.protocol_id,
     raw.workbook_run_id,
     raw.latitude,
@@ -123,6 +118,7 @@ SELECT
   m.questions_data,
   m.contributor,
   m.device,
+  m.device_label,
   m.protocol_id,
   m.workbook_run_id,
   m.latitude,
