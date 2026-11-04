@@ -19,6 +19,10 @@ const heartbeatConstants = readFileSync(
   join(repoRoot, "apps/data/src/lib/openjii/openjii/heartbeat/constants.py"),
   "utf8",
 );
+const metricsPublisher = readFileSync(
+  join(repoRoot, "infrastructure/modules/grafana/metrics-publisher/lambda/index.js"),
+  "utf8",
+);
 
 // Named so a failure says where to look. The rules live in terraform and the entries live
 // in yaml, so a mismatch is otherwise a hunt through two languages.
@@ -401,6 +405,24 @@ describe("signals", () => {
       [],
     );
     expect(catalogued.filter((m) => m.source !== "ce").map((m) => m.id)).toEqual([]);
+  });
+
+  it("name the same series the metrics publisher emits, in both directions", () => {
+    const emitted = new Set(
+      [...metricsPublisher.matchAll(/MetricName: "([^"]+)"/g)].map(([, name]) => name),
+    );
+    expect(emitted.size).toBeGreaterThan(2);
+
+    const catalogued = metrics.filter(
+      (m) => m.active && m.signal?.namespace === "OpenJII/UserRegistrations",
+    );
+
+    expect(catalogued.filter((m) => !emitted.has(m.signal?.metric ?? "")).map((m) => m.id)).toEqual(
+      [],
+    );
+    expect(
+      [...emitted].filter((name) => !catalogued.some((m) => m.signal?.metric === name)),
+    ).toEqual([]);
   });
 });
 

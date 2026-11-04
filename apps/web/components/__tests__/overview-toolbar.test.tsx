@@ -26,6 +26,14 @@ describe("OverviewToolbar", () => {
     expect(strip).not.toHaveClass("flex-wrap");
   });
 
+  it("gives every list's search box the same width, wider only when asked", () => {
+    const { rerender } = render(<OverviewToolbar search={<input aria-label="Search" />} />);
+    expect(screen.getByLabelText("Search").parentElement).toHaveClass("w-full", "md:w-64");
+
+    rerender(<OverviewToolbar search={<input aria-label="Search" />} searchWidth="wide" />);
+    expect(screen.getByLabelText("Search").parentElement).toHaveClass("md:w-80");
+  });
+
   it("renders no filter strip when a listing has no filters", () => {
     render(<OverviewToolbar search={<input aria-label="Search" />} />);
 

@@ -7,7 +7,8 @@
       "delete": "Delete dashboard",
       "edit": "Edit dashboard",
       "done": "Done",
-      "back": "Back to dashboards"
+      "back": "Back to dashboards",
+      "moreActions": "More actions"
     },
     "messages": {
       "noDashboards": "No dashboards yet",
@@ -33,7 +34,9 @@
         "widgets": "Widgets",
         "user": "User",
         "updated": "Updated"
-      }
+      },
+      "listCount_one": "{{count}} dashboard",
+      "listCount_other": "{{count}} dashboards"
     }
   },
   "form": {

@@ -12,7 +12,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { getExperimentColumns } from "./experiment-columns";
 import { getMacroColumns } from "./macro-columns";
 import { getOrganizationColumns } from "./organization-columns";
-import { createOverviewTableSorting, OverviewTable } from "./overview-table";
+import { OverviewTable } from "./overview-table";
 import type { OverviewTableColumn } from "./overview-table";
 import { getProtocolColumns } from "./protocol-columns";
 import { getWorkbookColumns } from "./workbook-columns";
@@ -148,35 +148,6 @@ describe("OverviewTable", () => {
   });
 });
 
-describe("createOverviewTableSorting", () => {
-  it("maps server sort criteria to table state and forwards field toggles", () => {
-    const toggleSort = vi.fn();
-    const labels = {
-      unsorted: "Unsorted",
-      asc: "Ascending",
-      desc: "Descending",
-      secondary: "Secondary sort",
-    };
-    const sorting = createOverviewTableSorting(
-      [
-        { field: "usedBy", direction: "desc" },
-        { field: "name", direction: "asc" },
-      ],
-      toggleSort,
-      labels,
-    );
-
-    expect(sorting.state).toEqual([
-      { id: "usedBy", desc: true },
-      { id: "name", desc: false },
-    ]);
-    expect(sorting.labels).toBe(labels);
-
-    sorting.onToggle("name", true);
-    expect(toggleSort).toHaveBeenCalledWith("name", true);
-  });
-});
-
 describe("experiment overview columns", () => {
   function renderExperiments(experiments: ReturnType<typeof createExperiment>[]) {
     return render(
@@ -268,12 +239,7 @@ describe("organization overview columns", () => {
     return render(
       <OverviewTable
         columns={getOrganizationColumns(t)}
-        sorting={createOverviewTableSorting(sort, toggleSort, {
-          unsorted: "Unsorted",
-          asc: "Ascending",
-          desc: "Descending",
-          secondary: "Secondary sort",
-        })}
+        sorting={{ sort, onToggle: toggleSort }}
         items={items}
         getRowKey={(organization) => organization.id}
         getRowHref={(organization) => `/platform/organizations/${organization.id}`}
@@ -315,7 +281,7 @@ describe("organization overview columns", () => {
 
     const typeHeader = screen.getByRole("columnheader", { name: /organizations\.fields\.type/ });
     const typeButton = within(typeHeader).getByRole("button", {
-      name: "organizations.fields.type: Unsorted",
+      name: "organizations.fields.type: common.sortUnsorted",
     });
 
     await user.click(typeButton);
@@ -340,7 +306,7 @@ describe("organization overview columns", () => {
     expect(typeHeader).not.toHaveAttribute("aria-sort");
     expect(
       within(typeHeader).getByRole("button", {
-        name: "organizations.fields.type: Descending, Secondary sort",
+        name: "organizations.fields.type: common.sortDescending, common.sortSecondary",
       }),
     ).toBeInTheDocument();
   });

@@ -80,7 +80,7 @@ locals {
       key     = "usage"
       title   = "Usage"
       areas   = ["usage"]
-      caption = "**Active** means at least one measurement uploaded in the seven days, so people who only browse do not count. **Researchers** is everyone registered, counted each Monday at 06:00 UTC. A sharp drop shows first on the [daily report](/d/${local.heartbeat_daily_uid}), as devices or experiments gone quiet."
+      caption = "**Active** means at least one measurement uploaded in the seven days, so people who only browse do not count. **Researchers** is everyone registered, counted each Monday at 06:00 UTC. **Researchers who exported** and **Researchers who uploaded** count the people whose export or file upload finished in the previous Monday-to-Sunday week, each once however many they ran; failed ones do not count, and an upload here is files added to an experiment, not measurements from a phone. A sharp drop shows first on the [daily report](/d/${local.heartbeat_daily_uid}), as devices or experiments gone quiet."
     },
     {
       key     = "path"
@@ -128,12 +128,12 @@ locals {
       cadence  = try(m.signal.cadence, null)
       search   = templatestring(try(m.signal.search, ""), local.heartbeat_placeholders)
       # Rules read "more than N", so a limit of zero is red from the first one, and a count,
-      # always whole, from N + 1.
+      # always whole, from N + 1. A count is summed, or read at its maximum with no unit.
       red_from = (
         try(m.baseline.anomaly, "") == "any-nonzero" ? 1 :
         local.heartbeat_limits[m.id] == null ? null :
         local.heartbeat_limits[m.id] == 0 ? 1 :
-        m.signal.stat == "Sum" ? local.heartbeat_limits[m.id] + 1 :
+        m.signal.stat == "Sum" || (m.signal.stat == "Maximum" && try(m.signal.unit, null) == null) ? local.heartbeat_limits[m.id] + 1 :
         local.heartbeat_limits[m.id]
       )
       # A dead-man on a CloudWatch metric, which arrives every minute, fires within minutes, so its
