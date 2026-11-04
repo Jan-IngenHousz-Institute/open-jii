@@ -5,7 +5,7 @@ import {
   hasRelativeTimeFilters,
   relativeTimeMinute,
   resolveRelativeTimeFilters,
-} from "@repo/api/domains/experiment/data/relative-time-filter";
+} from "@repo/api/transforms/relative-time-filter";
 
 import { ErrorCodes } from "../../../../../common/utils/error-codes";
 import { Result, failure, success, AppError } from "../../../../../common/utils/fp-utils";

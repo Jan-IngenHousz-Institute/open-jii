@@ -25,7 +25,7 @@ import {
   hasRelativeTimeFilters,
   relativeTimeMinute,
   resolveRelativeTimeFilters,
-} from "@repo/api/domains/experiment/data/relative-time-filter";
+} from "@repo/api/transforms/relative-time-filter";
 
 import type { FixtureRow, FixtureTable, FixtureValue } from "./fixture-tables.js";
 

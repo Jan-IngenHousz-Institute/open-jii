@@ -1,7 +1,7 @@
 import { createExperimentDataTable } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { act, createTestQueryClient, renderHook, waitFor } from "@/test/test-utils";
-import { relativeFilterStaleTime } from "@/util/relative-filter-stale-time";
+import { relativeFilterStaleTime } from "@/util/relative-filter-query-options";
 import { afterEach, describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";

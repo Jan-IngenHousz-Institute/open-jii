@@ -2,7 +2,7 @@ import type {
   ExperimentDataFilter,
   ExperimentDataFilterValue,
   ExperimentRelativeTimeWindow,
-} from "./experiment-data.schema";
+} from "../domains/experiment/data/experiment-data.schema";
 
 export function isRelativeTimeWindow(
   value: ExperimentDataFilterValue | undefined,

@@ -7,7 +7,7 @@ import { ColumnName } from "~/components/experiment-data/column-name";
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import { isRelativeTimeWindow } from "@repo/api/domains/experiment/data/relative-time-filter";
+import { isRelativeTimeWindow } from "@repo/api/transforms/relative-time-filter";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";

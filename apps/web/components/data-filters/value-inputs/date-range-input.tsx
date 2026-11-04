@@ -7,7 +7,7 @@ import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/dat
 import {
   isRelativeTimeWindow,
   resolveRelativeTimeWindow,
-} from "@repo/api/domains/experiment/data/relative-time-filter";
+} from "@repo/api/transforms/relative-time-filter";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Calendar } from "@repo/ui/components/calendar";
@@ -17,13 +17,10 @@ import { Separator } from "@repo/ui/components/separator";
 import { cn } from "@repo/ui/lib/utils";
 
 import { applyTimeOfDay, formatHm, formatYmdHm, parseIsoDate } from "../../../util/date";
+import { RollingRangeLabel } from "../rolling-range-label";
 import { useFilterEvaluationTime } from "../use-filter-evaluation-time";
 import type { DateRangePresetDef, DateRangePresetId } from "./date-range-presets";
-import {
-  DATE_RANGE_PRESETS,
-  computeDateRangePreset,
-  relativeTimePresetLabelKey,
-} from "./date-range-presets";
+import { DATE_RANGE_PRESETS, computeDateRangePreset } from "./date-range-presets";
 
 const DAY_END_TIME = "23:59";
 const DAY_START_TIME = "00:00";
@@ -133,19 +130,13 @@ export function DateRangeInput({
           aria-describedby={errorMessageId}
         >
           <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0" />
-          <span className="min-w-0 text-left">
-            {relative && (
-              <span className="block truncate">{t(relativeTimePresetLabelKey(relative))}</span>
-            )}
-            <span className={cn("block truncate", relative && "text-muted-foreground text-xs")}>
-              {triggerLabel}
+          {relative ? (
+            <RollingRangeLabel window={relative} evaluation={evaluation} />
+          ) : (
+            <span className="min-w-0 text-left">
+              <span className="block truncate">{triggerLabel}</span>
             </span>
-            {relative && !evaluation.server && (
-              <span className="text-muted-foreground block text-xs">
-                {t("dataFilters.rangePreview")}
-              </span>
-            )}
-          </span>
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">

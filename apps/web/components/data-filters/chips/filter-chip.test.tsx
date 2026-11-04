@@ -1,5 +1,5 @@
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -133,6 +133,34 @@ describe("FilterChip", () => {
     expect(onChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ operator: "contains", value: "hello" }),
     );
+  });
+
+  it("does not commit when the active rolling preset is picked again", async () => {
+    const onChange = vi.fn();
+    const filter: ExperimentDataFilter = {
+      column: "timestamp",
+      operator: "between",
+      value: { last: 24, unit: "hours" },
+    };
+    const user = userEvent.setup();
+    render(
+      <FilterChip
+        filter={filter}
+        column={{ name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" }}
+        experimentId="exp-1"
+        tableName="raw_data"
+        onChange={onChange}
+        onRemove={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByText("dataFilters.presetLast24h"));
+    const rangeTrigger = within(screen.getByRole("dialog")).getByRole("button", {
+      name: /dataFilters.presetLast24h/,
+    });
+    await user.click(rangeTrigger);
+    await user.click(screen.getByRole("button", { name: "dataFilters.presetLast24h" }));
+    await user.click(screen.getByRole("button", { name: "dataFilters.apply" }));
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("treats unchanged array-value drafts as equal and skips onChange on apply", async () => {

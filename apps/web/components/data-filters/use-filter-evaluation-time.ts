@@ -10,7 +10,7 @@ import type {
 import {
   relativeTimeFilterIdentity,
   relativeTimeMinute,
-} from "@repo/api/domains/experiment/data/relative-time-filter";
+} from "@repo/api/transforms/relative-time-filter";
 
 /** A local preview until a matching read supplies the server's actual rolling-window anchor. */
 export function useFilterEvaluationTime(

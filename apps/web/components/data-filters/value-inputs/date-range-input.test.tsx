@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import { relativeTimeFilterIdentities } from "@repo/api/domains/experiment/data/relative-time-filter";
+import { relativeTimeFilterIdentities } from "@repo/api/transforms/relative-time-filter";
 
 import { DateRangeInput } from "./date-range-input";
 
