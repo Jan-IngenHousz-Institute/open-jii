@@ -14,6 +14,9 @@ export default mergeConfig(
     },
     test: {
       setupFiles: ["./vitest.setup.ts"],
+      // The page-level tests draw every component's 90 days of bars. In CI they share the runner with
+      // web's suite under coverage and pass five seconds, while alone each takes about 0.1 s.
+      testTimeout: 20_000,
       coverage: {
         exclude: [".next/**", "out/**", ".releaserc.js"],
       },
