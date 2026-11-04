@@ -18,7 +18,7 @@ export function expectUnsubscribeFooter(
 ): void {
   const config = testApp.module.get(ConfigService);
   const webBaseUrl = config.getOrThrow<string>("email.baseUrl");
-  const apiBaseUrl = config.getOrThrow<string>("auth.url");
+  const apiBaseUrl = config.getOrThrow<string>("api.url");
   const token = new URL(unsubscribe?.unsubscribeUrl ?? webBaseUrl).searchParams.get("token") ?? "";
 
   expect(unsubscribe).toEqual({
