@@ -307,7 +307,7 @@ export class ExecuteProjectTransferUseCase {
             const linkResult = await this.questionTypes.pinVersion(
               experiment.id,
               versionResult.value,
-              true,
+              { legacyImport: true },
             );
             if (linkResult.isFailure()) {
               this.logger.warn({

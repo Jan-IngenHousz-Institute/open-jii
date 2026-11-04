@@ -56,7 +56,11 @@ export class ExperimentQuestionTypesRepository {
   }
 
   /** The experiment lock serializes pins and flow edits, including remove/reintroduce and concurrent pins. */
-  pinVersion(experimentId: string, version: WorkbookVersionDto, legacyImport = false) {
+  pinVersion(
+    experimentId: string,
+    version: WorkbookVersionDto,
+    { legacyImport = false }: { legacyImport?: boolean } = {},
+  ) {
     return tryCatch(() =>
       this.database.transaction(async (tx) => {
         const experiment = (
@@ -71,32 +75,23 @@ export class ExperimentQuestionTypesRepository {
               .where(eq(workbookVersions.id, experiment.workbookVersionId))
           ).at(0);
           if (previous)
-            await this.record(
-              tx,
-              experimentId,
-              questions(previous.cells as WorkbookCell[]),
-              false,
-              true,
-            );
+            await this.record(tx, experimentId, questions(previous.cells as WorkbookCell[]), {
+              activate: false,
+              historical: true,
+            });
         }
         const previousFlow = (
           await tx.select().from(flows).where(eq(flows.experimentId, experimentId))
         ).at(0);
         if (previousFlow)
-          await this.record(
-            tx,
-            experimentId,
-            graphQuestions(previousFlow.graph as FlowGraphDto),
-            false,
-            true,
-          );
-        await this.record(
-          tx,
-          experimentId,
-          questions(version.cells),
-          experiment.questionTypesTracked,
-          legacyImport,
-        );
+          await this.record(tx, experimentId, graphQuestions(previousFlow.graph as FlowGraphDto), {
+            activate: false,
+            historical: true,
+          });
+        await this.record(tx, experimentId, questions(version.cells), {
+          activate: experiment.questionTypesTracked,
+          historical: legacyImport,
+        });
         const graph = cellsToFlowGraph(version.cells);
         await tx
           .insert(flows)
@@ -114,7 +109,7 @@ export class ExperimentQuestionTypesRepository {
     experimentId: string,
     graph: FlowGraphDto,
     mode: "create" | "update" | "upsert",
-    legacyImport = false,
+    { legacyImport = false }: { legacyImport?: boolean } = {},
   ) {
     return tryCatch(() =>
       this.database.transaction(async (tx) => {
@@ -126,20 +121,14 @@ export class ExperimentQuestionTypesRepository {
           await tx.select().from(flows).where(eq(flows.experimentId, experimentId))
         ).at(0);
         if (previous)
-          await this.record(
-            tx,
-            experimentId,
-            graphQuestions(previous.graph as FlowGraphDto),
-            false,
-            true,
-          );
-        await this.record(
-          tx,
-          experimentId,
-          graphQuestions(graph),
-          experiment.questionTypesTracked,
-          legacyImport,
-        );
+          await this.record(tx, experimentId, graphQuestions(previous.graph as FlowGraphDto), {
+            activate: false,
+            historical: true,
+          });
+        await this.record(tx, experimentId, graphQuestions(graph), {
+          activate: experiment.questionTypesTracked,
+          historical: legacyImport,
+        });
         const rows =
           mode === "update"
             ? await tx
@@ -165,8 +154,7 @@ export class ExperimentQuestionTypesRepository {
     tx: DbOrTx,
     experimentId: string,
     items: Question[],
-    activate: boolean,
-    historical = false,
+    { activate, historical = false }: { activate: boolean; historical?: boolean },
   ) {
     const seen = new Set<string>();
     for (const item of items) {

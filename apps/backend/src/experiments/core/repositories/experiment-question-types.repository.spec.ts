@@ -118,7 +118,7 @@ describe("experiment question types", () => {
     const publish = app.module.get(PublishVersionUseCase);
     const previous = await publish.execute(workbookId, userId);
     assertSuccess(previous);
-    assertSuccess(await registry.pinVersion(experimentId, previous.value, true));
+    assertSuccess(await registry.pinVersion(experimentId, previous.value, { legacyImport: true }));
     await workbooks.update(workbookId, {
       cells: [question("number", "a__b"), { ...question("open_ended", "Leaf note"), id: "second" }],
     });
