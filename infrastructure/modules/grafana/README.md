@@ -424,7 +424,7 @@ tofu force-unlock LOCK_ID
 - [Amazon Managed Grafana Docs](https://docs.aws.amazon.com/grafana/)
 - [DORA Metrics Guide](https://cloud.google.com/blog/products/devops-sre/using-the-four-keys-to-measure-your-devops-performance)
 - [CloudWatch Metrics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/working_with_metrics.html)
-- [Amazon Managed Grafana service accounts](https://docs.aws.amazon.com/grafana/latest/userguide/service-accounts.html)
+- [Amazon Managed Grafana service accounts](https://docs.aws.amazon.com/grafana/latest/userguide/v10-service-accounts.html)
 
 ## Support
 

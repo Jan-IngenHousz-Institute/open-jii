@@ -21,6 +21,31 @@ outputs:
 runs:
   using: "composite"
   steps:
+    # Expired tokens still count toward the workspace's fixed quota of 100, so a run that could
+    # not delete its own token would otherwise use up a slot for good.
+    - name: Delete expired CI tokens
+      shell: bash
+      env:
+        WORKSPACE_ID: ${{ inputs.workspace_id }}
+        SERVICE_ACCOUNT_ID: ${{ inputs.service_account_id }}
+      run: |
+        NOW=$(date -u +%Y-%m-%dT%H:%M:%S)
+        if ! EXPIRED=$(aws grafana list-workspace-service-account-tokens \
+          --workspace-id "$WORKSPACE_ID" \
+          --service-account-id "$SERVICE_ACCOUNT_ID" \
+          --output json \
+          | jq -r --arg now "$NOW" '.serviceAccountTokens[] | select((.name | startswith("ci-")) and .expiresAt != null and .expiresAt[0:19] < $now) | .id'); then
+          echo "::warning::Could not list Grafana tokens, so expired ones stay until a later run"
+          exit 0
+        fi
+        for TOKEN_ID in $EXPIRED; do
+          aws grafana delete-workspace-service-account-token \
+            --workspace-id "$WORKSPACE_ID" \
+            --service-account-id "$SERVICE_ACCOUNT_ID" \
+            --token-id "$TOKEN_ID" \
+            || echo "::warning::Could not delete expired Grafana token $TOKEN_ID"
+        done
+
     - name: Create the token
       id: create
       shell: bash
