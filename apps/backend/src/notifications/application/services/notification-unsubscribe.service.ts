@@ -105,7 +105,7 @@ export class NotificationUnsubscribeService {
   footerFor(userId: string, category: NotificationCategory): NotificationUnsubscribeFooter {
     const token = this.sign(userId, category);
     const webBaseUrl = this.configService.getOrThrow<string>("email.baseUrl");
-    const apiBaseUrl = this.configService.getOrThrow<string>("auth.url");
+    const apiBaseUrl = this.configService.getOrThrow<string>("api.url");
 
     return {
       categoryLabel: NOTIFICATION_CATEGORY_LABEL[category],

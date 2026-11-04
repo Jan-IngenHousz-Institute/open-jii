@@ -39,7 +39,7 @@ const configWith = (values: Record<string, string>) =>
 
 const CONFIG = {
   "notification.unsubscribeSecret": "test-unsubscribe-secret",
-  "auth.url": "https://api.example.org",
+  "api.url": "https://api.example.org",
   "email.baseUrl": "https://openjii.example.org",
 };
 

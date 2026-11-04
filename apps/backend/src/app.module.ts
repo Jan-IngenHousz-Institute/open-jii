@@ -15,7 +15,7 @@ import { auth } from "@repo/auth/server";
 
 import { AuthorizationModule } from "./authorization/authorization.module";
 import analyticsConfig from "./common/config/analytics.config";
-import authConfig from "./common/config/auth.config";
+import apiConfig from "./common/config/api.config";
 import awsConfig from "./common/config/aws.config";
 import databaseConfig from "./common/config/database.config";
 import databricksConfig from "./common/config/databricks.config";
@@ -55,7 +55,7 @@ import { WorkbookModule } from "./workbooks/workbook.module";
         databaseConfig,
         databricksConfig,
         awsConfig,
-        authConfig,
+        apiConfig,
         emailConfig,
         mailchimpConfig,
         notificationConfig,
