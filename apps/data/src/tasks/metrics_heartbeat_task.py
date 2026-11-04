@@ -629,7 +629,7 @@ def collect_cluster_starts(now: datetime) -> list[dict]:
     return [
         observation(
             PIPELINE_CLUSTER_STARTS_METRIC,
-            cluster_starts(os.listdir(os.path.join(PIPELINE_LOGS_PATH, pipeline)), hour),
+            cluster_starts(os.path.join(PIPELINE_LOGS_PATH, pipeline), hour),
             DATA_NAMESPACE,
             hour,
             ENVIRONMENT,

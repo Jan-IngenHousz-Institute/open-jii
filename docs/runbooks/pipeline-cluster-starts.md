@@ -1,9 +1,10 @@
 # pipeline-cluster-starts
 
-**A pipeline started more than two clusters in an hour.** A planned restart starts one, so more usually
-means its updates keep failing and starting again. While it does, its flows run little or not at all,
-and measurements wait in Kinesis. Nothing is lost while the stream keeps them, 24 hours
-on dev and 72 on prod.
+**A pipeline started more than two clusters in an hour.** A planned change starts one or two, so more
+usually means its updates keep failing and starting again. While it does, its flows run little or not
+at all, and their input waits. For `centrum` that is measurements in Kinesis, which nothing loses while
+the stream keeps them, 24 hours on dev and 72 on prod. For `macro` it is gold's measurements, which
+stay in gold until the pipeline takes them.
 
 The heartbeat export counts the cluster folders created in the last closed hour under
 `/Volumes/<catalog>/centrum/pipeline-logs/<pipeline>/`, whose names start with the time they were

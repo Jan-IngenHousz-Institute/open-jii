@@ -133,10 +133,13 @@ def recent_drivers(pipeline_dir: str, since: float) -> list[str]:
     ]
 
 
-def _logged_hour(name: str) -> str | None:
-    """The hour a rotated log4j file holds, as YYYY-MM-DD-HH, or None for any other file."""
-    if name.startswith(_HOURLY_LOG_PREFIX) and name.endswith(_HOURLY_LOG_SUFFIX):
-        return name.removeprefix(_HOURLY_LOG_PREFIX).removesuffix(_HOURLY_LOG_SUFFIX)
+def _logged_hour(name: str) -> datetime | None:
+    """The hour a rotated log4j file holds, or None for any other file."""
+    if not (name.startswith(_HOURLY_LOG_PREFIX) and name.endswith(_HOURLY_LOG_SUFFIX)):
+        return None
+    hour = name.removeprefix(_HOURLY_LOG_PREFIX).removesuffix(_HOURLY_LOG_SUFFIX)
+    with contextlib.suppress(ValueError):
+        return datetime.strptime(hour, "%Y-%m-%d-%H").replace(tzinfo=timezone.utc)
     return None
 
 
@@ -149,7 +152,7 @@ def _lines(paths: list[str]) -> Iterator[str]:
 def latest_pipeline_hour(pipeline_dir: str, flows: Collection[str], since: float) -> PipelineHour | None:
     """The latest hour any driver written since `since` has logged, per watched flow, read from every driver
     that logged it. A cluster too new to have rotated an hour leaves the one before it to read."""
-    logs: dict[str, list[str]] = {}
+    logs: dict[datetime, list[str]] = {}
     for driver in recent_drivers(pipeline_dir, since):
         for name in os.listdir(driver):
             logged = _logged_hour(name)
@@ -159,12 +162,21 @@ def latest_pipeline_hour(pipeline_dir: str, flows: Collection[str], since: float
         return None
 
     latest = max(logs)
-    hour = datetime.strptime(latest, "%Y-%m-%d-%H").replace(tzinfo=timezone.utc)
-    return PipelineHour(hour, flow_hours(_lines(sorted(logs[latest])), flows))
+    return PipelineHour(latest, flow_hours(_lines(sorted(logs[latest])), flows))
 
 
-def cluster_starts(clusters: Iterable[str], hour: datetime) -> int:
+def cluster_starts(pipeline_dir: str, hour: datetime) -> int:
     """How many of a pipeline's clusters were created within the hour. A cluster id opens with the month,
-    day and time it was created: 1030-173330-96v7f5e4 at 17:33:30 UTC on 30 October."""
+    day and time it was created (1030-173330-96v7f5e4 at 17:33:30 UTC on 30 October) but not the year, and
+    the volume keeps every year's, so a cluster whose driver last wrote before the hour is an older one."""
     created = f"{hour:%m%d-%H}"
-    return sum(1 for cluster in clusters if cluster[: len(created)] == created)
+
+    def wrote_before(cluster: str) -> bool:
+        stdout = os.path.join(pipeline_dir, cluster, "driver", "stdout")
+        return os.path.isfile(stdout) and os.path.getmtime(stdout) < hour.timestamp()
+
+    return sum(
+        1
+        for cluster in os.listdir(pipeline_dir)
+        if cluster[: len(created)] == created and not wrote_before(cluster)
+    )

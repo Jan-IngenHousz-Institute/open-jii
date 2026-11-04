@@ -2324,8 +2324,9 @@ metrics:
     notes: >-
       How many runs of each watched flow started within an hour, per Pipeline and Flow, counted from
       the start line its driver logs for every run, so a retry that fails before its first batch still
-      counts. A planned restart counts one. A gold pipeline once failed about 760 times in eight days,
-      four an hour, with no one told. A pipeline that keeps replacing its cluster rotates no hourly log,
+      counts. A planned restart counts one: the hour the old cluster stopped in never rotates. The alert
+      waits for more than two, as entry 129's does. A gold pipeline once failed about 760 times in
+      eight days, four an hour, with no one told. A pipeline that keeps replacing its cluster rotates no hourly log,
       which entry 129 covers.
 
   - num: 129
@@ -2349,4 +2350,7 @@ metrics:
       How many clusters each pipeline created in the last closed hour, per Pipeline, read from the
       cluster ids in the pipeline-logs volume, so it reads within the half hour. A cluster that stops
       within an hour never rotates its log, so this is the one signal of a pipeline that keeps failing
-      and starting again on a new cluster. A planned restart counts one.
+      and starting again on a new cluster. A planned change counts one or two: on dev on 30 October
+      2026 a settings change started two clusters in one hour in both pipelines. From 28 September to
+      3 November no hour on prod started more than two; from 26 September one hour on dev, on 1 October,
+      started four.
