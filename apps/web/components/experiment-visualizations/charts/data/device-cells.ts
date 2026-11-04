@@ -1,12 +1,6 @@
-import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import {
-  DEVICE_LABEL_COLUMN,
-  WellKnownColumnTypes,
-} from "@repo/api/domains/experiment/data/experiment-data.schema";
-
 const UNKNOWN_DEVICE = "Unknown device";
 
-// Accept a display label or a registry struct from older reads.
+// Rows carry DEVICE structs; the distinct-values endpoint projects their labels.
 export function deviceDisplayName(value: unknown): string {
   if (typeof value !== "string" || value.trim().length === 0) {
     return UNKNOWN_DEVICE;
@@ -23,13 +17,4 @@ export function deviceDisplayName(value: unknown): string {
   } catch {
     return value.trim();
   }
-}
-
-export function hasDeviceLabelColumn(columns: ExperimentDataColumn[]): boolean {
-  return (
-    columns.some((column) => column.name === DEVICE_LABEL_COLUMN) &&
-    columns.some(
-      (column) => column.name === "device" && column.type_text === WellKnownColumnTypes.DEVICE,
-    )
-  );
 }

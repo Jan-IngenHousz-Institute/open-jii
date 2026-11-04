@@ -86,21 +86,21 @@ same line, for the datasets their charts and tables use.
 {/* NEEDS-RECAPTURE: this frame predates the dataset picker and the live-update line, and still shows the tab strip the picker replaced. */}
 ![A populated Data tab with dataset tabs, filtering controls, and sortable columns](/img/guide/web/data-first-measurement.png)
 
-The **device_label** column supplies display names for charts and filters. It
-uses a registered device's serial number. For an unregistered sensor, it uses
-the reported name, then the client id when the name is empty. A device-id
-suffix keeps sensors with the same name or uploading phone separate, for
-example `Ambit (d2)` and `Ambit (d3)`. When only a device id is available, that
-id is the label. Rows without a name, client id or device id use `Unknown device`.
+In the platform, the **Device** column uses a registered device's serial number.
+For an unregistered sensor, it uses the reported name, then the client id when
+the name is empty. A device-id suffix keeps sensors with the same name or
+uploading phone separate, for example `Ambit (d2)` and `Ambit (d3)`. When only a
+device id is available, that id is the label. Rows without a name, client id or
+device id appear as `Unknown device`.
 
-To filter the full fleet, choose **device_label**. Its options load in name
-order without case sensitivity, including devices beyond the first page. The
-picker shows a loading hint while more options arrive. The **Device** filter
-continues to match registry serial numbers and offers only those serials.
+The **Device** filter uses these same labels. Its options load in name order
+without case sensitivity, including devices beyond the first page. The picker
+shows a loading hint while more options arrive.
+
 Exports and Python table loads keep the registry `device` struct unchanged.
-Use `device IS NULL` to find unregistered sensors and `device_label` for display
-names.
-
+There, `device IS NULL` still finds unregistered sensors and `serial_number`
+contains only the registry serial. The platform computes display labels when
+it reads the data.
 
 {/* NEEDS-RECAPTURE-REVIEW: the rolling-filter capture is staged as charts-filters.webp; publish after human frame review. */}
 ![A saved line visualization built from an experiment dataset](/img/guide/web/charts-filters.webp)

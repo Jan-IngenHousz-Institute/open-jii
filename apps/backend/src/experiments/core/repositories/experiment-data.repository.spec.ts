@@ -78,6 +78,55 @@ describe("ExperimentDataRepository", () => {
     await testApp.teardown();
   });
 
+  it.each(["static", "macro"] as const)(
+    "keeps %s client ids available for labels but hidden from user columns",
+    async (tableType) => {
+      const experimentId = faker.string.uuid();
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([
+          {
+            identifier: "raw_data",
+            tableType,
+            displayName: null,
+            rowCount: 1,
+            latestRowAt: null,
+            schemaRevision: "client-id",
+            macroSchema: tableType === "macro" ? "OBJECT<client_id: STRING>" : null,
+            questionsSchema: tableType === "static" ? "OBJECT<client_id: STRING>" : null,
+          },
+        ]),
+      );
+      vi.spyOn(databricksPort, "getExperimentTableColumns").mockResolvedValue(
+        success([...VIEW_COLUMNS, "client_id"]),
+      );
+      const build = vi
+        .spyOn(databricksPort, "buildExperimentQuery")
+        .mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [{ name: "client_id", type_name: "STRING", type_text: "STRING", position: 0 }],
+          rows: [["user-defined"]],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
+      const result = await repository.getTableColumns({
+        experimentId,
+        tableName: "raw_data",
+        source: WAREHOUSE,
+      });
+      assertSuccess(result);
+      expect(build).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseColumns: [...VIEW_COLUMNS, "client_id"],
+          reservedColumns: VIEW_COLUMNS,
+        }),
+      );
+      expect(build.mock.calls[0]?.[0].exceptColumns).toContain("client_id");
+      expect(result.value[0]).not.toHaveProperty("renamedFrom");
+    },
+  );
+
   describe("getTableData", () => {
     const experimentId = faker.string.uuid();
 
@@ -150,6 +199,7 @@ describe("ExperimentDataRepository", () => {
         includeSchemas: true,
       });
       expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
+        baseColumns: VIEW_COLUMNS,
         tableName: "raw_data",
         tableType: "static",
         experimentId,
@@ -961,6 +1011,7 @@ describe("ExperimentDataRepository", () => {
       });
 
       expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
+        baseColumns: VIEW_COLUMNS,
         tableName: "raw_data",
         tableType: "static",
         experimentId,
@@ -1146,6 +1197,7 @@ describe("ExperimentDataRepository", () => {
 
       expect(result.isSuccess()).toBe(true);
       expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
+        baseColumns: VIEW_COLUMNS,
         tableName: "macro_123",
         tableType: "macro",
         experimentId,
@@ -1242,7 +1294,7 @@ describe("ExperimentDataRepository", () => {
       });
     });
 
-    it("looks a view's columns up once for many reads, and not for a table without payloads", async () => {
+    it("looks each view's columns up once across reads with and without payloads", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success([
           {
@@ -1283,8 +1335,9 @@ describe("ExperimentDataRepository", () => {
       });
       await repository.getTableData({ ...baseParams, tableName: "device" });
 
-      expect(databricksPort.getExperimentTableColumns).toHaveBeenCalledTimes(1);
+      expect(databricksPort.getExperimentTableColumns).toHaveBeenCalledTimes(2);
       expect(databricksPort.getExperimentTableColumns).toHaveBeenCalledWith("macro", "macro_123");
+      expect(databricksPort.getExperimentTableColumns).toHaveBeenCalledWith("static", "device");
     });
 
     it("should exclude macro_output when schema is missing for macro tables", async () => {
@@ -1323,6 +1376,7 @@ describe("ExperimentDataRepository", () => {
 
       expect(result.isSuccess()).toBe(true);
       expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
+        baseColumns: VIEW_COLUMNS,
         tableName: "macro_123",
         tableType: "macro",
         experimentId,
@@ -1380,6 +1434,7 @@ describe("ExperimentDataRepository", () => {
 
       expect(result.isSuccess()).toBe(true);
       expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
+        baseColumns: VIEW_COLUMNS,
         tableName: "raw_data",
         tableType: "static",
         experimentId,
@@ -1428,6 +1483,7 @@ describe("ExperimentDataRepository", () => {
 
       expect(result.isSuccess()).toBe(true);
       expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
+        baseColumns: VIEW_COLUMNS,
         tableName: "device",
         tableType: "static",
         experimentId,
@@ -2017,37 +2073,34 @@ describe("ExperimentDataRepository", () => {
       );
     });
 
-    it.each(["device", "device_label"])(
-      "projects %s labels before distinct, sorting and paging",
-      async (column) => {
-        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
-        vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
-        vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
-          success(mockRows(["Bench (d1)", "Bench (d2)"])),
-        );
+    it("projects device names before distinct, sorting and paging", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success(mockRows(["Bench (d1)", "Bench (d2)"])),
+      );
 
-        const result = await repository.getDistinctColumnValues({
-          ...baseParams,
-          column,
-          offset: 200,
-        });
+      const result = await repository.getDistinctColumnValues({
+        ...baseParams,
+        column: "device",
+        offset: 200,
+      });
 
-        assertSuccess(result);
-        expect(result.value.values).toEqual(["Bench (d1)", "Bench (d2)"]);
-        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
-          expect.objectContaining({
-            columns: ["device_label"],
-            distinct: undefined,
-            limit: undefined,
-            offset: undefined,
-          }),
-        );
-        expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-          expect.any(String),
-          "SELECT DISTINCT `device_label` FROM (SELECT ...) AS device_names WHERE `device_label` IS NOT NULL AND trim(`device_label`) <> '' ORDER BY lower(`device_label`) ASC, `device_label` ASC LIMIT 4 OFFSET 200",
-        );
-      },
-    );
+      assertSuccess(result);
+      expect(result.value.values).toEqual(["Bench (d1)", "Bench (d2)"]);
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          columns: ["device.serial_number"],
+          distinct: undefined,
+          limit: undefined,
+          offset: undefined,
+        }),
+      );
+      expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
+        expect.any(String),
+        "SELECT DISTINCT `serial_number` FROM (SELECT ...) AS device_names WHERE `serial_number` IS NOT NULL AND trim(`serial_number`) <> '' ORDER BY lower(`serial_number`) ASC, `serial_number` ASC LIMIT 4 OFFSET 200",
+      );
+    });
 
     it.each(["static", "macro"] as const)(
       "builds executable device-name projection for a %s table",
@@ -2070,32 +2123,14 @@ describe("ExperimentDataRepository", () => {
           offset: 200,
         });
         assertSuccess(result);
-        expect(execute.mock.calls[0][1]).toContain("SELECT `device_label`");
-        expect(execute.mock.calls[0][1]).toContain("SELECT DISTINCT `device_label`");
+        expect(execute.mock.calls[0][1]).toContain("SELECT `device`.`serial_number`");
+        expect(execute.mock.calls[0][1]).toContain("SELECT DISTINCT `serial_number`");
         expect(execute.mock.calls[0][1]).toContain("WHERE `experiment_id` =");
         expect(execute.mock.calls[0][1]).toContain(
-          "ORDER BY lower(`device_label`) ASC, `device_label` ASC LIMIT 4 OFFSET 200",
+          "ORDER BY lower(`serial_number`) ASC, `serial_number` ASC LIMIT 4 OFFSET 200",
         );
       },
     );
-
-    it("keeps serial-number picker options separate from fallback device labels", async () => {
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
-      const execute = vi
-        .spyOn(databricksPort, "executeSqlQuery")
-        .mockResolvedValue(success(mockRows(["SN1", null, ""])));
-      const result = await repository.getDistinctColumnValues({
-        ...baseParams,
-        column: "device.serial_number",
-      });
-      assertSuccess(result);
-      expect(result.value.values).toEqual(["SN1"]);
-      expect(execute.mock.calls[0][1]).toContain(
-        "SELECT DISTINCT `serial_number` FROM (SELECT `device`.`serial_number`",
-      );
-      expect(execute.mock.calls[0][1]).toContain("ORDER BY `serial_number` ASC LIMIT 4");
-      expect(execute.mock.calls[0][1]).not.toContain("device_label");
-    });
 
     it("rejects nonzero offsets for non-device columns", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));

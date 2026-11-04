@@ -5,10 +5,7 @@ import { createTestQueryClient, renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import {
-  WellKnownColumnTypes,
-  zExperimentDataAggregation,
-} from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { zExperimentDataAggregation } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataAggregation } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useZoomRead } from "./use-zoom-read";
@@ -121,45 +118,6 @@ describe("useZoomRead", () => {
       { column: "device_id", operator: "equals", value: "d1" },
       { column: "timestamp", operator: "between", value: [DAY_START, DAY_END] },
     ]);
-  });
-
-  it("keeps unregistered Device series separate in a bucketed read", async () => {
-    server.mount(contract.experiments.getExperimentTableColumns, {
-      body: {
-        columns: [
-          { name: "device", type_name: "STRUCT", type_text: WellKnownColumnTypes.DEVICE },
-          { name: "device_label", type_name: "STRING", type_text: "STRING" },
-        ],
-      },
-    });
-    const spy = server.mount(contract.experiments.getExperimentData, {
-      body: (call: SpyCall) =>
-        aggregationOf(call)?.groupBy
-          ? table(
-              ["Ambit (d2)", "Ambit (d3)"].map((device_label) => ({
-                device: null,
-                device_label,
-                x_from: DAY_START,
-                x_to: DAY_END,
-                y0_low: "0",
-                y0_high: "10",
-                rows: "100000",
-              })),
-            )
-          : table([{ x_from: DAY_START, x_to: DAY_END }]),
-    });
-    const { result } = renderHook(() => useZoomRead({ ...INPUT, splitColumns: ["device"] }));
-    await waitFor(() => expect(result.current.rows).toHaveLength(4));
-    expect(result.current.rows?.map((row) => row.device)).toEqual([
-      "Ambit (d2)",
-      "Ambit (d2)",
-      "Ambit (d3)",
-      "Ambit (d3)",
-    ]);
-    const groups = spy.calls
-      .map(aggregationOf)
-      .find((aggregation) => aggregation?.groupBy)?.groupBy;
-    expect(groups?.map((group) => group.column)).toEqual(["timestamp", "device", "device_label"]);
   });
 
   it("keeps a window denser than the plot's pixels in buckets, though one read could hold it", async () => {

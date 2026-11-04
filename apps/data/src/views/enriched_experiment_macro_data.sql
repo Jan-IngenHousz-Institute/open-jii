@@ -2,6 +2,8 @@ WITH
 -- Macro results joined at read time with their contributor, device, annotations
 -- and custom metadata as they are now. See enriched_experiment_raw_data.sql for
 -- why this is a plain view. ${catalog} is filled in by terraform.
+-- Restart backend instances after redefining or rolling back this view to refresh
+-- their cached source columns. See apps/data/README.md.
 -- Inside the WITH because Unity Catalog drops comments above a view's first keyword.
 db_annotations AS (
   SELECT
@@ -72,6 +74,7 @@ results AS (
     -- Cast so the view binds BIGINT once the column widens; a view keeps the type it was made with.
     CAST(macro.id AS BIGINT) AS id,
     macro.raw_id,
+    macro.client_id,
     macro.device_id,
     macro.device_name,
     macro.timestamp,
@@ -79,13 +82,7 @@ results AS (
     macro.timezone,
     macro.date,
     contributors.user AS contributor,
-    devices.device,
-    CASE
-      WHEN nullif(trim(devices.device.serial_number), '') IS NOT NULL THEN devices.device.serial_number
-      WHEN macro.fallback_device_name = macro.fallback_device_id THEN macro.fallback_device_name
-      WHEN macro.fallback_device_id IS NOT NULL THEN concat(macro.fallback_device_name, ' (', macro.fallback_device_id, ')')
-      ELSE coalesce(macro.fallback_device_name, 'Unknown device')
-    END AS device_label,
+    devices.device AS device,
     macro.latitude,
     macro.longitude,
     macro.macro_id,
@@ -97,12 +94,7 @@ results AS (
     macro.processed_timestamp,
     macro.questions_data,
     macro.annotations AS payload_annotations
-  FROM (
-    SELECT *,
-      coalesce(nullif(trim(device_name), ''), nullif(trim(client_id), ''), nullif(trim(device_id), '')) AS fallback_device_name,
-      coalesce(nullif(trim(device_id), ''), nullif(trim(client_id), '')) AS fallback_device_id
-    FROM ${catalog}.centrum.experiment_macro_data
-  ) AS macro
+  FROM ${catalog}.centrum.experiment_macro_data AS macro
   LEFT JOIN ${catalog}.centrum.experiment_contributors AS contributors
     ON macro.experiment_id = contributors.experiment_id AND macro.user_id = contributors.user_id
   LEFT JOIN ${catalog}.centrum.experiment_devices AS devices
@@ -112,6 +104,7 @@ SELECT
   r.experiment_id,
   r.id,
   r.raw_id,
+  r.client_id,
   r.device_id,
   r.device_name,
   r.timestamp,
@@ -120,7 +113,6 @@ SELECT
   r.date,
   r.contributor,
   r.device,
-  r.device_label,
   r.latitude,
   r.longitude,
   r.macro_id,
