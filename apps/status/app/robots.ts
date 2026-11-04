@@ -1,8 +1,12 @@
 import type { MetadataRoute } from "next";
-import { INDEXABLE } from "~/lib/indexable";
+import { env } from "~/env";
 
 export const dynamic = "force-static";
 
 export default function robots(): MetadataRoute.Robots {
-  return { rules: INDEXABLE ? { userAgent: "*", allow: "/" } : { userAgent: "*", disallow: "/" } };
+  const isIndexable = env.STATUS_INDEXABLE === "true";
+
+  return {
+    rules: isIndexable ? { userAgent: "*", allow: "/" } : { userAgent: "*", disallow: "/" },
+  };
 }

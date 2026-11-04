@@ -1,15 +1,15 @@
 import { act, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NOW, renderWithTranslations, stubStatusFetch } from "~/test/render-status";
+import { NOW, renderWithProviders, stubStatusFetch } from "~/test/test-utils";
+
+import type { StatusDocument } from "@repo/monitoring/status-document";
 import {
   incidentStatusDocument,
   operationalStatusDocument,
   plannedStatusDocument,
   staleStatusDocument,
   upcomingMaintenance,
-} from "~/test/status-fixtures";
-
-import type { StatusDocument } from "@repo/monitoring/status-document";
+} from "@repo/monitoring/status-fixtures";
 
 import Page from "../page";
 
@@ -24,7 +24,7 @@ async function advance(ms: number) {
 
 async function renderPage(document: StatusDocument, serverDate?: string) {
   const stub = stubStatusFetch(document, serverDate);
-  renderWithTranslations(<Page />);
+  renderWithProviders(<Page />);
   await advance(0);
 
   return stub;

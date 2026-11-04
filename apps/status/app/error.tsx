@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { StatusFrame } from "~/components/status-frame";
-import { StatusUnavailable } from "~/components/status-unavailable";
+import { StatusFrame } from "~/components/status-page/status-frame";
+import { StatusUnavailable } from "~/components/status-page/status-unavailable";
 
 const RETRY_MS = 60_000;
 

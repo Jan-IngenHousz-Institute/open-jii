@@ -1,6 +1,6 @@
 import { act, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithTranslations } from "~/test/render-status";
+import { renderWithProviders } from "~/test/test-utils";
 
 import ErrorPage from "../error";
 
@@ -10,7 +10,7 @@ beforeEach(() => {
 
 describe("the error page", () => {
   it("shows the unavailable card inside the page's header and footer", () => {
-    renderWithTranslations(<ErrorPage reset={() => undefined} />);
+    renderWithProviders(<ErrorPage reset={() => undefined} />);
 
     expect(screen.getByRole("heading", { level: 1, name: "Platform status" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Status unavailable" })).toBeInTheDocument();
@@ -20,7 +20,7 @@ describe("the error page", () => {
 
   it("tries the page again after a minute, as the card says it does", async () => {
     const reset = vi.fn();
-    renderWithTranslations(<ErrorPage reset={reset} />);
+    renderWithProviders(<ErrorPage reset={reset} />);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(59_999);
@@ -34,7 +34,7 @@ describe("the error page", () => {
   });
 
   it("stops waiting when it goes away", () => {
-    const { unmount } = renderWithTranslations(<ErrorPage reset={() => undefined} />);
+    const { unmount } = renderWithProviders(<ErrorPage reset={() => undefined} />);
 
     unmount();
 

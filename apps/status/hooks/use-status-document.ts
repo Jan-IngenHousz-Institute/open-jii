@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { readableStatusDocumentSchema } from "@repo/monitoring/status-document";
 import type { StatusDocument } from "@repo/monitoring/status-document";
 
 const STATUS_URL = "/data/status.json";
+const STATUS_QUERY_KEY = ["status-document"];
 const REFRESH_MS = 60_000;
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -24,18 +25,27 @@ function offsetFrom(headers: Headers, receivedAt: number) {
   return Number.isNaN(serverTime) ? undefined : serverTime + ageMs - receivedAt;
 }
 
+// One controller per request rather than AbortSignal.any, which older phones' browsers lack.
 async function fetchDocument(signal: AbortSignal): Promise<Fetched> {
-  const response = await fetch(STATUS_URL, { cache: "no-store", signal });
-  const receivedAt = Date.now();
+  const request = new AbortController();
+  const timeout = window.setTimeout(() => request.abort(), FETCH_TIMEOUT_MS);
+  signal.addEventListener("abort", () => request.abort(), { once: true });
 
-  if (!response.ok) {
-    throw new Error(`${STATUS_URL} answered ${response.status}`);
+  try {
+    const response = await fetch(STATUS_URL, { cache: "no-store", signal: request.signal });
+    const receivedAt = Date.now();
+
+    if (!response.ok) {
+      throw new Error(`${STATUS_URL} answered ${response.status}`);
+    }
+
+    return {
+      document: readableStatusDocumentSchema.parse(await response.json()),
+      serverOffsetMs: offsetFrom(response.headers, receivedAt),
+    };
+  } finally {
+    window.clearTimeout(timeout);
   }
-
-  return {
-    document: readableStatusDocumentSchema.parse(await response.json()),
-    serverOffsetMs: offsetFrom(response.headers, receivedAt),
-  };
 }
 
 function isNewer(fetched: StatusDocument, held: StatusDocument) {
@@ -44,57 +54,35 @@ function isNewer(fetched: StatusDocument, held: StatusDocument) {
 
 // A failed refresh keeps the last good document, which is judged stale on the server's clock.
 export function useStatusDocument() {
-  const [current, setCurrent] = useState<StatusDocument>();
-  const [serverOffsetMs, setServerOffsetMs] = useState(0);
-  const [hasFailed, setHasFailed] = useState(false);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const controller = new AbortController();
+  // A CDN edge can still answer with an older copy, so a refresh never replaces a newer document.
+  async function fetchNewest({ signal }: { signal: AbortSignal }): Promise<Fetched> {
+    const fetched = await fetchDocument(signal);
+    const held = queryClient.getQueryData<Fetched>(STATUS_QUERY_KEY);
+    const serverOffsetMs = fetched.serverOffsetMs ?? held?.serverOffsetMs;
 
-    function accept(fetched: Fetched) {
-      setCurrent((held) =>
-        held === undefined || isNewer(fetched.document, held) ? fetched.document : held,
-      );
-      if (fetched.serverOffsetMs !== undefined) {
-        setServerOffsetMs(fetched.serverOffsetMs);
-      }
-      setHasFailed(false);
+    if (held === undefined || isNewer(fetched.document, held.document)) {
+      return { document: fetched.document, serverOffsetMs };
     }
 
-    // One controller per request rather than AbortSignal.any, which older phones' browsers lack.
-    function refresh() {
-      const request = new AbortController();
-      const timeout = window.setTimeout(() => request.abort(), FETCH_TIMEOUT_MS);
-      controller.signal.addEventListener("abort", () => request.abort(), { once: true });
+    return { document: held.document, serverOffsetMs };
+  }
 
-      fetchDocument(request.signal)
-        .then(accept)
-        .catch(() => {
-          if (!controller.signal.aborted) {
-            setHasFailed(true);
-          }
-        })
-        .finally(() => window.clearTimeout(timeout));
-    }
+  const { data, isError } = useQuery({
+    queryKey: STATUS_QUERY_KEY,
+    queryFn: fetchNewest,
+    refetchInterval: REFRESH_MS,
+    retry: false,
+    // Offline, a refresh fails and says so, rather than pausing until the network returns.
+    networkMode: "always",
+    // That mode turns the refresh on reconnecting off by default.
+    refetchOnReconnect: true,
+  });
 
-    function refreshWhenVisible() {
-      if (window.document.visibilityState === "visible") {
-        refresh();
-      }
-    }
-
-    refresh();
-    const timer = window.setInterval(refresh, REFRESH_MS);
-    window.document.addEventListener("visibilitychange", refreshWhenVisible);
-    window.addEventListener("online", refresh);
-
-    return () => {
-      controller.abort();
-      window.clearInterval(timer);
-      window.document.removeEventListener("visibilitychange", refreshWhenVisible);
-      window.removeEventListener("online", refresh);
-    };
-  }, []);
-
-  return { document: current, serverOffsetMs, hasFailed };
+  return {
+    document: data?.document,
+    serverOffsetMs: data?.serverOffsetMs ?? 0,
+    hasFailed: isError,
+  };
 }

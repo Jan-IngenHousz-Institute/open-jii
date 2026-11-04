@@ -1,6 +1,8 @@
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NOW, renderWithTranslations, stubStatusFetch } from "~/test/render-status";
+import { NOW, renderWithProviders, stubStatusFetch } from "~/test/test-utils";
+
+import type { StatusDocument } from "@repo/monitoring/status-document";
 import {
   incidentStatusDocument,
   operationalStatusDocument,
@@ -8,9 +10,7 @@ import {
   resolvedIncident,
   staleStatusDocument,
   upcomingMaintenance,
-} from "~/test/status-fixtures";
-
-import type { StatusDocument } from "@repo/monitoring/status-document";
+} from "@repo/monitoring/status-fixtures";
 
 import Page from "../page";
 
@@ -18,7 +18,7 @@ const GENERATED_AT = Date.parse(operationalStatusDocument.generatedAt);
 
 async function renderPage(document: StatusDocument) {
   const { fetchMock } = stubStatusFetch(document);
-  renderWithTranslations(<Page />);
+  renderWithProviders(<Page />);
   await screen.findByRole("heading", { level: 1, name: "Platform status" });
   await screen.findByText(/Last checked|Our checks last reported/);
 
@@ -54,7 +54,7 @@ beforeEach(() => {
 describe("Page", () => {
   it("shows a skeleton while the first document loads", () => {
     stubStatusFetch("pending");
-    renderWithTranslations(<Page />);
+    renderWithProviders(<Page />);
 
     expect(screen.getByRole("status")).toHaveTextContent("Loading the current status");
     expect(screen.getByRole("heading", { level: 1, name: "Platform status" })).toBeInTheDocument();
@@ -62,7 +62,7 @@ describe("Page", () => {
 
   it("shows the status unavailable when no document could be loaded", async () => {
     stubStatusFetch("fails");
-    renderWithTranslations(<Page />);
+    renderWithProviders(<Page />);
 
     expect(await screen.findByRole("heading", { name: "Status unavailable" })).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
@@ -75,7 +75,7 @@ describe("Page", () => {
   it("ends in the unavailable state when the first fetch hangs, rather than staying a skeleton", async () => {
     vi.useFakeTimers({ now: NOW });
     stubStatusFetch("pending");
-    renderWithTranslations(<Page />);
+    renderWithProviders(<Page />);
     expect(screen.getByRole("status")).toHaveTextContent("Loading the current status");
 
     await act(async () => {

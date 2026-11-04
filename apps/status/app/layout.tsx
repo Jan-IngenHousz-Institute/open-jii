@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import type { ReactNode } from "react";
-import { TranslationsProvider } from "~/components/translations-provider";
-import { BASE_URL } from "~/lib/base-url";
-import { INDEXABLE } from "~/lib/indexable";
+import { env } from "~/env";
+import { QueryProvider } from "~/providers/query-provider";
+import { TranslationsProvider } from "~/providers/translations-provider";
 
 import { defaultLocale } from "@repo/i18n/config";
 import type { Namespace } from "@repo/i18n/config";
@@ -24,12 +24,13 @@ const PAGE_NAMESPACES: Namespace[] = ["status"];
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await initTranslations({ locale: defaultLocale, namespaces: PAGE_NAMESPACES });
+  const isIndexable = env.STATUS_INDEXABLE === "true";
 
   return {
-    metadataBase: BASE_URL,
+    metadataBase: env.STATUS_BASE_URL === undefined ? undefined : new URL(env.STATUS_BASE_URL),
     title: t("metadata.title"),
     description: t("metadata.description"),
-    robots: { index: INDEXABLE, follow: INDEXABLE },
+    robots: { index: isIndexable, follow: isIndexable },
   };
 }
 
@@ -46,13 +47,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           enableSystem
           disableTransitionOnChange
         >
-          <TranslationsProvider
-            locale={defaultLocale}
-            namespaces={PAGE_NAMESPACES}
-            resources={resources}
-          >
-            {children}
-          </TranslationsProvider>
+          <QueryProvider>
+            <TranslationsProvider
+              locale={defaultLocale}
+              namespaces={PAGE_NAMESPACES}
+              resources={resources}
+            >
+              {children}
+            </TranslationsProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

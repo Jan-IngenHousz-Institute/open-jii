@@ -8,7 +8,6 @@
     "check-types": "tsc --noEmit",
     "clean": "git clean -xdf .cache .next .turbo out node_modules",
     "dev": "next dev -p 3030",
-    "dev:data": "tsx scripts/write-fixture-data.ts",
     "lint": "eslint",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
@@ -17,11 +16,13 @@
     "@repo/i18n": "workspace:*",
     "@repo/monitoring": "workspace:*",
     "@repo/ui": "workspace:*",
+    "@tanstack/react-query": "catalog:react-query",
     "lucide-react": "^0.507.0",
     "next": "catalog:",
     "next-themes": "^0.4.6",
     "react": "catalog:react19",
-    "react-dom": "catalog:react19"
+    "react-dom": "catalog:react19",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@open-jii/release-tools": "workspace:*",
@@ -40,7 +41,6 @@
     "jsdom": "catalog:testing",
     "postcss": "catalog:",
     "tailwindcss": "catalog:",
-    "tsx": "^4.21.0",
     "tw-animate-css": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:testing"

@@ -2,9 +2,17 @@
 
 The public status page for openJII, served at https://status.openjii.org in production and https://status.dev.openjii.org in dev. It is a Next.js static export (`output: "export"`) that lives in its own S3 bucket behind its own CloudFront distribution, apart from the platform, so a platform outage does not take it down.
 
-The page holds no data of its own. In the browser it fetches `/data/status.json` on load and every 60 seconds, parses the file with the schema in `@repo/monitoring`, and shows each component's current state, 90 days of history, incidents and planned maintenance. A Lambda called the status publisher writes that file every minute (`infrastructure/modules/monitoring/status-publisher`). The page fetches again when the tab becomes visible and when the connection returns. When a refresh fails, the page keeps the last good document and adds a "We could not refresh this page" line above it. Once that document is more than five minutes old on the server's clock, whether or not a refresh failed, the headline reads "Status may be out of date" and the badges are muted. If the first fetch fails there is nothing to keep, so the page shows the "Status unavailable" card and tries again every minute.
+The page holds no data of its own. In the browser it fetches `/data/status.json` through TanStack Query on load and every 60 seconds while the tab is visible, parses the file with the schema in `@repo/monitoring`, and shows each component's current state, 90 days of history, incidents and planned maintenance. A Lambda called the status publisher writes that file every minute (`infrastructure/modules/monitoring/status-publisher`). The page fetches again when the tab becomes visible and when the connection returns. When a refresh fails, the page keeps the last good document and adds a "We could not refresh this page" line above it. Once that document is more than five minutes old on the server's clock, whether or not a refresh failed, the headline reads "Status may be out of date" and the badges are muted. If the first fetch fails there is nothing to keep, so the page shows the "Status unavailable" card and tries again every minute.
 
-Routes and layout live in `app/`, components in `components/`, the polling hook in `hooks/use-status-document.ts`, and the page copy in the `status` namespace of `@repo/i18n` (`packages/i18n/locales/<locale>/status.json`). Test fixtures are in `test/status-fixtures.ts`.
+The layout follows `apps/web`, with each part of the page in its own folder and every test beside the file it tests:
+
+- `app/` holds the routes only: the layout, the page, the error and not-found pages, and `robots.txt`.
+- `components/<part>/` holds one part of the page with the hooks and pure logic only it uses: `status-page` (the shell and what the page derives from a document), `headline`, `component-list`, `history`, `incidents`, and `shared` for pieces several parts use.
+- `hooks/` holds the hooks several parts share, among them `use-status-document.ts`, which fetches the file.
+- `lib/` holds logic several parts share, `providers/` the query and translation providers, and `test/` the render helpers and setup.
+- `env.ts` validates the build settings below.
+
+The page copy is in the `status` namespace of `@repo/i18n` (`packages/i18n/locales/<locale>/status.json`). The sample documents the tests use live beside the contract, in `packages/monitoring/src/status-fixtures.ts`.
 
 ## Run it locally
 
@@ -14,27 +22,28 @@ Node 24 is required. The page reads `@repo/monitoring`, `@repo/ui` and `@repo/i1
 pnpm install
 ```
 
-The page needs a `data/status.json` to show anything. The dev server serves files from `public/`, so a file at `public/data/status.json` answers on the same path as production. That directory is gitignored. This writes one from a fixture in `test/status-fixtures.ts`:
-
-```sh
-pnpm --filter status dev:data incidentStatusDocument
-```
-
-Name any export that ends in `StatusDocument`, such as `operationalStatusDocument`, `incidentStatusDocument` or `maintenanceStatusDocument`. A second argument makes the document that many minutes old, so `incidentStatusDocument 20` shows the stale view. The script stamps the current time, so run it again when the page starts to look stale. Then start the dev server:
+Start the dev server, which serves http://localhost:3030:
 
 ```sh
 pnpm --filter status dev
 ```
 
-It serves http://localhost:3030. Without the file the page shows "Status unavailable" and retries every minute, so you can write the file after the server is up.
+Only the dev server proxies `/data/*` to `STATUS_DATA_ORIGIN`, which is dev's live file unless you set it. A static export cannot rewrite, so `next.config.ts` adds the proxy for the dev server alone and a build stays a plain export.
 
-A build copies `public/` into `out/`, so delete `public/data` before building if you want an export that matches what ships. The deploy never uploads `data/` in any case.
+To see a particular state, serve one of the sample documents instead and point the dev server at it:
+
+```sh
+pnpm status:fixtures incident
+STATUS_DATA_ORIGIN=http://localhost:3031 pnpm --filter status dev
+```
+
+The samples are `operational`, `stale`, `incident`, `planned` and `maintenance`. The fixture server's `Date` header runs on from two minutes after the sample was generated, and the page takes its clock from that header, so a sample looks as it does in the tests and never goes stale.
 
 Other commands, all with `--filter status`: `test`, `lint` and `check-types`. `pnpm run build --filter=status` writes the export to `apps/status/out`.
 
 ### Build variables
 
-`STATUS_INDEXABLE` is `true` only in production. Any other value adds a `noindex` meta tag and makes `robots.txt` disallow everything. `STATUS_BASE_URL` is the public origin that metadata URLs resolve against; leave it unset locally. Both are listed under the build task in `turbo.json`, so changing either rebuilds instead of reusing the cache.
+`env.ts` validates these. `STATUS_INDEXABLE` is `true` only in production. Any other value adds a `noindex` meta tag and makes `robots.txt` disallow everything. `STATUS_BASE_URL` is the public origin that metadata URLs resolve against; leave it unset locally. Both are listed under the build task in `turbo.json`, so changing either rebuilds instead of reusing the cache. `STATUS_DATA_ORIGIN` only changes where the dev server's proxy points, so a build ignores it.
 
 ## Deploy
 
