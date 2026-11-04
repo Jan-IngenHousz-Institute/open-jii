@@ -8,6 +8,7 @@ import {
 import { TestHarness } from "../../../../../test/test-harness";
 import { ErrorCodes } from "../../../../utils/error-codes";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
+import type { Result } from "../../../../utils/fp-utils";
 import {
   MAIL_TRANSPORT_TIMEOUTS_MS,
   NotificationsService,
@@ -1589,6 +1590,255 @@ describe("NotificationsService", () => {
         }),
       );
     });
+  });
+
+  describe("the unsubscribe footer", () => {
+    const FOOTER = {
+      categoryLabel: "Requests and invitations",
+      settingsUrl: "http://localhost:3000/platform/account/notifications",
+      unsubscribeUrl: "http://localhost:3000/unsubscribe?token=signed",
+      oneClickUrl: "http://localhost:3020/api/v1/notifications/email/unsubscribe/signed",
+    };
+    type Footer = typeof FOOTER;
+
+    const METHODS: [string, string, (unsubscribe?: Footer) => Promise<Result<void>>][] = [
+      [
+        "sendAccessGrantedNotification",
+        "renderAccessGrantedNotificationEmail",
+        (unsubscribe) =>
+          service.sendAccessGrantedNotification({
+            resourceType: "experiment",
+            resourceId: MOCK_EXPERIMENT_ID,
+            resourceName: MOCK_EXPERIMENT_NAME,
+            actor: MOCK_ACTOR,
+            role: "a member who can view",
+            email: MOCK_EMAIL,
+            unsubscribe,
+          }),
+      ],
+      [
+        "sendResourceDeletedNotification",
+        "renderResourceDeletedNotificationEmail",
+        (unsubscribe) =>
+          service.sendResourceDeletedNotification({
+            resourceType: "workbook",
+            resourceName: MOCK_EXPERIMENT_NAME,
+            actor: MOCK_ACTOR,
+            email: MOCK_EMAIL,
+            unsubscribe,
+          }),
+      ],
+      [
+        "sendExperimentMadePublicNotification",
+        "renderExperimentMadePublicNotificationEmail",
+        (unsubscribe) =>
+          service.sendExperimentMadePublicNotification(
+            MOCK_EXPERIMENT_ID,
+            MOCK_EXPERIMENT_NAME,
+            MOCK_EMAIL,
+            unsubscribe,
+          ),
+      ],
+      [
+        "sendTransferRequestConfirmation",
+        "renderTransferRequestConfirmationEmail",
+        (unsubscribe) =>
+          service.sendTransferRequestConfirmation(
+            MOCK_EMAIL,
+            "project-123",
+            "https://photosynq.org/projects/123",
+            unsubscribe,
+          ),
+      ],
+      [
+        "sendProjectTransferComplete",
+        "renderProjectTransferCompleteEmail",
+        (unsubscribe) =>
+          service.sendProjectTransferComplete(
+            MOCK_EMAIL,
+            MOCK_EXPERIMENT_ID,
+            MOCK_EXPERIMENT_NAME,
+            unsubscribe,
+          ),
+      ],
+      [
+        "sendJoinRequestSubmittedNotification",
+        "renderJoinRequestSubmittedEmail",
+        (unsubscribe) =>
+          service.sendJoinRequestSubmittedNotification(
+            MOCK_EXPERIMENT_ID,
+            MOCK_EXPERIMENT_NAME,
+            MOCK_ACTOR,
+            MOCK_EMAIL,
+            "Hello",
+            unsubscribe,
+          ),
+      ],
+      [
+        "sendJoinRequestRejectedNotification",
+        "renderJoinRequestRejectedEmail",
+        (unsubscribe) =>
+          service.sendJoinRequestRejectedNotification(
+            MOCK_EXPERIMENT_ID,
+            MOCK_EXPERIMENT_NAME,
+            MOCK_EMAIL,
+            unsubscribe,
+          ),
+      ],
+      [
+        "sendOrganizationInvitationNotification",
+        "renderOrganizationInvitationEmail",
+        (unsubscribe) =>
+          service.sendOrganizationInvitationNotification(
+            "org-123",
+            "Photosynthesis Lab",
+            MOCK_ACTOR,
+            "member",
+            MOCK_EMAIL,
+            unsubscribe,
+          ),
+      ],
+      [
+        "sendOrganizationJoinRequestSubmittedNotification",
+        "renderOrganizationJoinRequestSubmittedEmail",
+        (unsubscribe) =>
+          service.sendOrganizationJoinRequestSubmittedNotification(
+            "org-123",
+            "Photosynthesis Lab",
+            MOCK_ACTOR,
+            MOCK_EMAIL,
+            "Hello",
+            unsubscribe,
+          ),
+      ],
+      [
+        "sendOrganizationJoinRequestApprovedNotification",
+        "renderOrganizationJoinRequestApprovedEmail",
+        (unsubscribe) =>
+          service.sendOrganizationJoinRequestApprovedNotification(
+            "org-123",
+            "Photosynthesis Lab",
+            MOCK_EMAIL,
+            unsubscribe,
+          ),
+      ],
+      [
+        "sendOrganizationJoinRequestRejectedNotification",
+        "renderOrganizationJoinRequestRejectedEmail",
+        (unsubscribe) =>
+          service.sendOrganizationJoinRequestRejectedNotification(
+            "org-123",
+            "Photosynthesis Lab",
+            MOCK_EMAIL,
+            unsubscribe,
+          ),
+      ],
+      [
+        "sendOrganizationRoleChangedNotification",
+        "renderOrganizationRoleChangedEmail",
+        (unsubscribe) =>
+          service.sendOrganizationRoleChangedNotification({
+            organizationId: "org-123",
+            organizationName: "Photosynthesis Lab",
+            actor: MOCK_ACTOR,
+            role: "an admin of",
+            email: MOCK_EMAIL,
+            unsubscribe,
+          }),
+      ],
+      [
+        "sendOrganizationMembershipRemovedNotification",
+        "renderOrganizationMembershipRemovedEmail",
+        (unsubscribe) =>
+          service.sendOrganizationMembershipRemovedNotification({
+            organizationName: "Photosynthesis Lab",
+            actor: MOCK_ACTOR,
+            email: MOCK_EMAIL,
+            unsubscribe,
+          }),
+      ],
+    ];
+
+    let mockSendMail: MockInstance;
+
+    beforeEach(() => {
+      mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+    });
+
+    const renderSpy = (renderMethod: string) =>
+      spyOnProtected(service, renderMethod).mockResolvedValue({
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+
+    it.each(METHODS)(
+      "%s renders the links and sends both unsubscribe headers",
+      async (_, renderMethod, send) => {
+        const render = renderSpy(renderMethod);
+
+        assertSuccess(await send(FOOTER));
+
+        expect(render).toHaveBeenCalledExactlyOnceWith(
+          expect.objectContaining({
+            unsubscribe: {
+              categoryLabel: FOOTER.categoryLabel,
+              settingsUrl: FOOTER.settingsUrl,
+              unsubscribeUrl: FOOTER.unsubscribeUrl,
+            },
+          }),
+        );
+        expect(mockSendMail).toHaveBeenCalledExactlyOnceWith(
+          expect.objectContaining({
+            to: MOCK_EMAIL,
+            headers: {
+              "List-Unsubscribe": `<${FOOTER.oneClickUrl}>`,
+              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
+          }),
+        );
+      },
+    );
+
+    it.each(METHODS)(
+      "%s without a footer renders none and sends no unsubscribe header",
+      async (_, renderMethod, send) => {
+        const render = renderSpy(renderMethod);
+
+        assertSuccess(await send());
+
+        expect(render.mock.calls[0]?.[0]).toHaveProperty("unsubscribe", undefined);
+        expect(mockSendMail.mock.calls[0]?.[0]).toHaveProperty("headers", undefined);
+      },
+    );
+
+    it.each([
+      [
+        "sendApiKeyCreatedNotification",
+        "renderApiKeyCreatedNotificationEmail",
+        () => service.sendApiKeyCreatedNotification({ keyName: "Laptop", email: MOCK_EMAIL }),
+      ],
+      [
+        "sendPasskeyAddedNotification",
+        "renderPasskeyAddedNotificationEmail",
+        () => service.sendPasskeyAddedNotification({ passkeyName: "Phone", email: MOCK_EMAIL }),
+      ],
+    ])(
+      "%s, an account security email, sends no unsubscribe header",
+      async (_, renderMethod, send) => {
+        const render = renderSpy(renderMethod);
+
+        assertSuccess(await send());
+
+        expect(render.mock.calls[0]?.[0]).not.toHaveProperty("unsubscribe");
+        expect(mockSendMail.mock.calls[0]?.[0]).toHaveProperty("headers", undefined);
+      },
+    );
   });
 
   describe("verifyTransport", () => {

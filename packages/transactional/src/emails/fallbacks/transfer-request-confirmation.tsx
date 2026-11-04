@@ -1,5 +1,6 @@
 import { Button, Section, Text } from "@react-email/components";
 
+import type { EmailUnsubscribe } from "../../components/email-layout";
 import { EmailLayout } from "../../components/email-layout";
 
 export interface TransferRequestConfirmationProps {
@@ -9,6 +10,7 @@ export interface TransferRequestConfirmationProps {
   senderName?: string;
   host: string;
   baseUrl: string;
+  unsubscribe?: EmailUnsubscribe;
 }
 
 export const TransferRequestConfirmation = ({
@@ -18,6 +20,7 @@ export const TransferRequestConfirmation = ({
   senderName = "openJII",
   host,
   baseUrl,
+  unsubscribe,
 }: TransferRequestConfirmationProps) => {
   return (
     <EmailLayout
@@ -25,6 +28,7 @@ export const TransferRequestConfirmation = ({
       senderName={senderName}
       host={host}
       baseUrl={baseUrl}
+      unsubscribe={unsubscribe}
     >
       <Section className="rounded-t-xl bg-white px-8 pb-6 pt-8">
         {/* Title */}

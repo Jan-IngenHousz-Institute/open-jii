@@ -105,5 +105,28 @@
     "newsletterNote": "The newsletter has its own setting under General.",
     "locked": "Always on",
     "unavailable": "Not available yet"
+  },
+  "unsubscribe": {
+    "title": "Unsubscribe",
+    "working": "Updating your email settings…",
+    "done": {
+      "heading": "You are unsubscribed",
+      "body": "You will no longer get emails about {{category}}. They still appear in your notifications in openJII."
+    },
+    "undone": {
+      "heading": "Emails are back on",
+      "body": "You will get emails about {{category}} again."
+    },
+    "invalid": {
+      "heading": "This link no longer works",
+      "body": "It may have expired or been changed, so nothing was changed. Sign in to manage your notification settings."
+    },
+    "error": {
+      "body": "Your email settings could not be updated."
+    },
+    "undo": "Undo",
+    "settings": "Manage all settings",
+    "signIn": "Sign in",
+    "retry": "Try again"
   }
 }

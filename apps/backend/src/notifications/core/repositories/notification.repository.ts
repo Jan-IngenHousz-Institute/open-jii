@@ -28,7 +28,13 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
-import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import {
+  AppError,
+  Result,
+  defaultRepositoryErrorMapper,
+  isForeignKeyViolation,
+  tryCatch,
+} from "../../../common/utils/fp-utils";
 import {
   getAnonymizedEmail,
   getAnonymizedFirstName,
@@ -402,19 +408,26 @@ export class NotificationRepository {
     channel: NotificationChannel,
     enabled: boolean,
   ): Promise<Result<void>> {
-    return tryCatch(async () => {
-      await this.database
-        .insert(notificationPreferences)
-        .values({ userId, category, channel, enabled })
-        .onConflictDoUpdate({
-          target: [
-            notificationPreferences.userId,
-            notificationPreferences.category,
-            notificationPreferences.channel,
-          ],
-          set: { enabled },
-        });
-    });
+    return tryCatch(
+      async () => {
+        await this.database
+          .insert(notificationPreferences)
+          .values({ userId, category, channel, enabled })
+          .onConflictDoUpdate({
+            target: [
+              notificationPreferences.userId,
+              notificationPreferences.category,
+              notificationPreferences.channel,
+            ],
+            set: { enabled },
+          });
+      },
+      // The default mapper reads the upsert's "on conflict" as a duplicate.
+      (error) =>
+        isForeignKeyViolation(error)
+          ? AppError.badRequest("Preference owner does not exist", "REPOSITORY_REFERENCE")
+          : defaultRepositoryErrorMapper(error),
+    );
   }
 
   private pageCondition(recipientId: string, filter: NotificationFilter): SQL | undefined {

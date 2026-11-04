@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 
+import type { EmailUnsubscribe } from "../components/email-layout";
 import { Email } from "../emails/email";
 import { ResourceDeletedNotification } from "../emails/fallbacks/resource-deleted-notification";
 import { getCmsEmail } from "../lib/contentful";
@@ -10,6 +11,7 @@ export interface RenderResourceDeletedNotificationParams {
   resourceKind: string;
   resourceName: string;
   actor: string;
+  unsubscribe?: EmailUnsubscribe;
 }
 
 export interface RenderedEmail {
@@ -21,7 +23,7 @@ export interface RenderedEmail {
 export async function renderResourceDeletedNotification(
   params: RenderResourceDeletedNotificationParams,
 ): Promise<RenderedEmail> {
-  const { host, baseUrl, resourceKind, resourceName, actor } = params;
+  const { host, baseUrl, resourceKind, resourceName, actor, unsubscribe } = params;
 
   const emailData = await getCmsEmail("resource-deleted-notification", {
     host,
@@ -33,11 +35,25 @@ export async function renderResourceDeletedNotification(
 
   if (!emailData) {
     const html = await render(
-      ResourceDeletedNotification({ host, baseUrl, resourceKind, resourceName, actor }),
+      ResourceDeletedNotification({
+        host,
+        baseUrl,
+        resourceKind,
+        resourceName,
+        actor,
+        unsubscribe,
+      }),
       {},
     );
     const text = await render(
-      ResourceDeletedNotification({ host, baseUrl, resourceKind, resourceName, actor }),
+      ResourceDeletedNotification({
+        host,
+        baseUrl,
+        resourceKind,
+        resourceName,
+        actor,
+        unsubscribe,
+      }),
       { plainText: true },
     );
     return { html, text, preview: `${resourceName} was deleted on openJII` };
@@ -49,6 +65,7 @@ export async function renderResourceDeletedNotification(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     {},
   );
@@ -59,6 +76,7 @@ export async function renderResourceDeletedNotification(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     { plainText: true },
   );

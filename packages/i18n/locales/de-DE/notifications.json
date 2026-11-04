@@ -105,5 +105,28 @@
     "newsletterNote": "Für den Newsletter gibt es eine eigene Einstellung unter Allgemein.",
     "locked": "Immer an",
     "unavailable": "Noch nicht verfügbar"
+  },
+  "unsubscribe": {
+    "title": "Abmelden",
+    "working": "Ihre E-Mail-Einstellungen werden aktualisiert…",
+    "done": {
+      "heading": "Sie sind abgemeldet",
+      "body": "Sie erhalten keine E-Mails mehr zu {{category}}. In Ihren Benachrichtigungen in openJII sehen Sie sie weiterhin."
+    },
+    "undone": {
+      "heading": "E-Mails sind wieder aktiviert",
+      "body": "Sie erhalten wieder E-Mails zu {{category}}."
+    },
+    "invalid": {
+      "heading": "Dieser Link funktioniert nicht mehr",
+      "body": "Er ist möglicherweise abgelaufen oder wurde verändert, daher wurde nichts geändert. Melden Sie sich an, um Ihre Benachrichtigungseinstellungen zu verwalten."
+    },
+    "error": {
+      "body": "Ihre E-Mail-Einstellungen konnten nicht aktualisiert werden."
+    },
+    "undo": "Rückgängig machen",
+    "settings": "Alle Einstellungen verwalten",
+    "signIn": "Anmelden",
+    "retry": "Erneut versuchen"
   }
 }

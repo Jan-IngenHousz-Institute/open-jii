@@ -6,6 +6,7 @@ import type { EmailPort as HealthEmailPort } from "../../../../health/core/ports
 import { EmailPort as UsersEmailPort } from "../../../../users/core/ports/email.port";
 import { Result } from "../../../utils/fp-utils";
 import { NotificationsService } from "./notifications/notifications.service";
+import type { NotificationEmailUnsubscribe } from "./notifications/notifications.service";
 
 @Injectable()
 export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
@@ -20,6 +21,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     actor: string;
     role: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }): Promise<Result<void>> {
     this.logger.log({
       msg: "Sending access granted notification",
@@ -36,6 +38,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     resourceName: string;
     actor: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }): Promise<Result<void>> {
     return this.notificationService.sendResourceDeletedNotification(input);
   }
@@ -44,11 +47,13 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     experimentId: string,
     experimentName: string,
     email: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ): Promise<Result<void>> {
     return this.notificationService.sendExperimentMadePublicNotification(
       experimentId,
       experimentName,
       email,
+      unsubscribe,
     );
   }
 
@@ -86,6 +91,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     email: string,
     projectIdOld: string,
     projectUrlOld: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ): Promise<Result<void>> {
     this.logger.log({
       msg: "Sending transfer request confirmation",
@@ -97,6 +103,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
       email,
       projectIdOld,
       projectUrlOld,
+      unsubscribe,
     );
   }
 
@@ -115,11 +122,13 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     email: string,
     experimentId: string,
     experimentName: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ): Promise<Result<void>> {
     return this.notificationService.sendProjectTransferComplete(
       email,
       experimentId,
       experimentName,
+      unsubscribe,
     );
   }
 
@@ -129,6 +138,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     requesterName: string,
     adminEmail: string,
     message?: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ): Promise<Result<void>> {
     this.logger.log({
       msg: "Sending join request submitted notification",
@@ -142,6 +152,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
       requesterName,
       adminEmail,
       message,
+      unsubscribe,
     );
   }
 
@@ -149,6 +160,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     experimentId: string,
     experimentName: string,
     requesterEmail: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ): Promise<Result<void>> {
     this.logger.log({
       msg: "Sending join request rejected notification",
@@ -160,6 +172,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
       experimentId,
       experimentName,
       requesterEmail,
+      unsubscribe,
     );
   }
 
@@ -169,6 +182,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     inviterName: string,
     role: string,
     recipientEmail: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ): Promise<Result<void>> {
     this.logger.log({
       msg: "Sending organization invitation notification",
@@ -182,6 +196,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
       inviterName,
       role,
       recipientEmail,
+      unsubscribe,
     );
   }
 
@@ -191,6 +206,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     requesterName: string,
     recipientEmail: string,
     message?: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ): Promise<Result<void>> {
     this.logger.log({
       msg: "Sending organization join request submitted notification",
@@ -204,6 +220,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
       requesterName,
       recipientEmail,
       message,
+      unsubscribe,
     );
   }
 
@@ -211,6 +228,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     organizationId: string,
     organizationName: string,
     requesterEmail: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ): Promise<Result<void>> {
     this.logger.log({
       msg: "Sending organization join request approved notification",
@@ -222,6 +240,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
       organizationId,
       organizationName,
       requesterEmail,
+      unsubscribe,
     );
   }
 
@@ -229,6 +248,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     organizationId: string,
     organizationName: string,
     requesterEmail: string,
+    unsubscribe?: NotificationEmailUnsubscribe,
   ): Promise<Result<void>> {
     this.logger.log({
       msg: "Sending organization join request rejected notification",
@@ -240,6 +260,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
       organizationId,
       organizationName,
       requesterEmail,
+      unsubscribe,
     );
   }
 
@@ -249,6 +270,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     actor: string;
     role: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }): Promise<Result<void>> {
     this.logger.log({
       msg: "Sending organization role changed notification",
@@ -263,6 +285,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     organizationName: string;
     actor: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }): Promise<Result<void>> {
     this.logger.log({
       msg: "Sending organization membership removed notification",

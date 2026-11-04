@@ -3,6 +3,13 @@ import { assertFailure, assertSuccess, failure, success } from "../../../utils/f
 import { EmailAdapter } from "./email.adapter";
 import { NotificationsService } from "./notifications/notifications.service";
 
+const FOOTER = {
+  categoryLabel: "Requests and invitations",
+  settingsUrl: "http://localhost:3000/platform/account/notifications",
+  unsubscribeUrl: "http://localhost:3000/unsubscribe?token=signed",
+  oneClickUrl: "http://localhost:3020/api/v1/notifications/email/unsubscribe/signed",
+};
+
 describe("EmailAdapter", () => {
   const testApp = TestHarness.App;
   let adapter: EmailAdapter;
@@ -58,6 +65,7 @@ describe("EmailAdapter", () => {
         MOCK_EMAIL,
         MOCK_PROJECT_ID_OLD,
         MOCK_PROJECT_URL_OLD,
+        undefined,
       );
     });
 
@@ -126,6 +134,7 @@ describe("EmailAdapter", () => {
         customEmail,
         customProjectIdOld,
         customProjectUrlOld,
+        FOOTER,
       );
 
       // Assert
@@ -133,6 +142,7 @@ describe("EmailAdapter", () => {
         customEmail,
         customProjectIdOld,
         customProjectUrlOld,
+        FOOTER,
       );
     });
   });
@@ -227,6 +237,7 @@ describe("EmailAdapter", () => {
         MOCK_EMAIL,
         MOCK_EXPERIMENT_ID,
         MOCK_EXPERIMENT_NAME,
+        undefined,
       );
     });
 
@@ -291,6 +302,7 @@ describe("EmailAdapter", () => {
         customEmail,
         customExperimentId,
         customExperimentName,
+        FOOTER,
       );
 
       // Assert
@@ -298,6 +310,7 @@ describe("EmailAdapter", () => {
         customEmail,
         customExperimentId,
         customExperimentName,
+        FOOTER,
       );
     });
   });
@@ -314,6 +327,7 @@ describe("EmailAdapter", () => {
         "Ada Lovelace",
         "member",
         "invitee@example.com",
+        FOOTER,
       );
 
       assertSuccess(result);
@@ -323,6 +337,7 @@ describe("EmailAdapter", () => {
         "Ada Lovelace",
         "member",
         "invitee@example.com",
+        FOOTER,
       );
     });
   });
@@ -337,6 +352,7 @@ describe("EmailAdapter", () => {
         resourceName: "North Field Sensors",
         actor: "Ada Lovelace",
         email: "member@example.com",
+        unsubscribe: FOOTER,
       };
 
       const result = await adapter.sendResourceDeletedNotification(input);
@@ -357,6 +373,7 @@ describe("EmailAdapter", () => {
         actor: "Ada Lovelace",
         role: "an admin of",
         email: "member@example.com",
+        unsubscribe: FOOTER,
       };
 
       const result = await adapter.sendOrganizationRoleChangedNotification(input);
@@ -375,6 +392,7 @@ describe("EmailAdapter", () => {
         organizationName: "Photosynthesis Lab",
         actor: "Ada Lovelace",
         email: "member@example.com",
+        unsubscribe: FOOTER,
       };
 
       const result = await adapter.sendOrganizationMembershipRemovedNotification(input);
@@ -394,6 +412,7 @@ describe("EmailAdapter", () => {
         "exp-123",
         "Leaf Area Index",
         "admin@example.com",
+        FOOTER,
       );
 
       assertSuccess(result);
@@ -401,7 +420,114 @@ describe("EmailAdapter", () => {
         "exp-123",
         "Leaf Area Index",
         "admin@example.com",
+        FOOTER,
       );
+    });
+  });
+
+  describe("the join request and organization request methods", () => {
+    it("forward the footer after every other argument", async () => {
+      const spies = {
+        submitted: vi
+          .spyOn(notificationsService, "sendJoinRequestSubmittedNotification")
+          .mockResolvedValue(success(undefined)),
+        rejected: vi
+          .spyOn(notificationsService, "sendJoinRequestRejectedNotification")
+          .mockResolvedValue(success(undefined)),
+        orgSubmitted: vi
+          .spyOn(notificationsService, "sendOrganizationJoinRequestSubmittedNotification")
+          .mockResolvedValue(success(undefined)),
+        orgApproved: vi
+          .spyOn(notificationsService, "sendOrganizationJoinRequestApprovedNotification")
+          .mockResolvedValue(success(undefined)),
+        orgRejected: vi
+          .spyOn(notificationsService, "sendOrganizationJoinRequestRejectedNotification")
+          .mockResolvedValue(success(undefined)),
+        accessGranted: vi
+          .spyOn(notificationsService, "sendAccessGrantedNotification")
+          .mockResolvedValue(success(undefined)),
+      };
+      const access = {
+        resourceType: "experiment" as const,
+        resourceId: "exp-123",
+        resourceName: "Leaf Area Index",
+        actor: "Ada Lovelace",
+        role: "a member who can view",
+        email: "member@example.com",
+        unsubscribe: FOOTER,
+      };
+
+      await adapter.sendJoinRequestSubmittedNotification(
+        "exp-123",
+        "Leaf Area Index",
+        "Ada Lovelace",
+        "admin@example.com",
+        "Hello",
+        FOOTER,
+      );
+      await adapter.sendJoinRequestRejectedNotification(
+        "exp-123",
+        "Leaf Area Index",
+        "requester@example.com",
+        FOOTER,
+      );
+      await adapter.sendOrganizationJoinRequestSubmittedNotification(
+        "org-123",
+        "Photosynthesis Lab",
+        "Ada Lovelace",
+        "admin@example.com",
+        "Hello",
+        FOOTER,
+      );
+      await adapter.sendOrganizationJoinRequestApprovedNotification(
+        "org-123",
+        "Photosynthesis Lab",
+        "requester@example.com",
+        FOOTER,
+      );
+      await adapter.sendOrganizationJoinRequestRejectedNotification(
+        "org-123",
+        "Photosynthesis Lab",
+        "requester@example.com",
+        FOOTER,
+      );
+      await adapter.sendAccessGrantedNotification(access);
+
+      expect(spies.submitted).toHaveBeenCalledExactlyOnceWith(
+        "exp-123",
+        "Leaf Area Index",
+        "Ada Lovelace",
+        "admin@example.com",
+        "Hello",
+        FOOTER,
+      );
+      expect(spies.rejected).toHaveBeenCalledExactlyOnceWith(
+        "exp-123",
+        "Leaf Area Index",
+        "requester@example.com",
+        FOOTER,
+      );
+      expect(spies.orgSubmitted).toHaveBeenCalledExactlyOnceWith(
+        "org-123",
+        "Photosynthesis Lab",
+        "Ada Lovelace",
+        "admin@example.com",
+        "Hello",
+        FOOTER,
+      );
+      expect(spies.orgApproved).toHaveBeenCalledExactlyOnceWith(
+        "org-123",
+        "Photosynthesis Lab",
+        "requester@example.com",
+        FOOTER,
+      );
+      expect(spies.orgRejected).toHaveBeenCalledExactlyOnceWith(
+        "org-123",
+        "Photosynthesis Lab",
+        "requester@example.com",
+        FOOTER,
+      );
+      expect(spies.accessGranted).toHaveBeenCalledExactlyOnceWith(access);
     });
   });
 
