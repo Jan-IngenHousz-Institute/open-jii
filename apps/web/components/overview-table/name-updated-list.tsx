@@ -48,7 +48,6 @@ export function NameUpdatedList<T extends NamedAndUpdated>({
 
   return (
     <div className="space-y-3">
-      {/* Always rendered at the button's height, so Reset sorting appearing never moves the table. */}
       <div className="flex h-8 items-center justify-between gap-3">
         <p className="text-muted-foreground text-sm">
           {isLoading ? null : countLabel(items.length)}

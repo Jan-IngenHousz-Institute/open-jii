@@ -12,11 +12,9 @@ interface ListFilterBarProps {
   search: ReactNode;
   filters: readonly ListFilter[];
   onClearFilters: () => void;
-  /** Controls after the Filter menu, such as a sort control or Reset sorting. */
   actions?: ReactNode;
 }
 
-/** A list's search, Filter menu and extra controls in one row, with the filter chips below. */
 export function ListFilterBar({ search, filters, onClearFilters, actions }: ListFilterBarProps) {
   const { t } = useTranslation("common");
   const labels: ListFilterLabels = {

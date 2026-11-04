@@ -50,7 +50,6 @@ interface OverviewTableProps<T extends RowData, F extends string> {
   sorting?: OverviewTableSorting<F>;
 }
 
-/** The list's sort, first item primary, and how a header click changes it. */
 export interface OverviewTableSorting<F extends string> {
   sort: readonly { field: F; direction: "asc" | "desc" }[];
   onToggle: (field: F, multi: boolean) => void;

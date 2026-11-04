@@ -32,7 +32,6 @@ export interface RowActionsMenuLabels {
   delete: string;
   deleteDescription: string;
   cancel: string;
-  /** The toast once the delete succeeds. */
   deleted: string;
 }
 

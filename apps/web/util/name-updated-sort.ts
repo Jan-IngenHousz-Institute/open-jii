@@ -16,7 +16,6 @@ interface NamedAndUpdated {
   updatedAt: string;
 }
 
-/** The default order of every in-browser list: the last thing touched, first. */
 export const newestUpdateFirst = (a: { updatedAt: string }, b: { updatedAt: string }) =>
   Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
 

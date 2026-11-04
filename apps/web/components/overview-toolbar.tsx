@@ -4,10 +4,6 @@ import { cn } from "@repo/ui/lib/utils";
 
 interface OverviewToolbarProps {
   search: ReactNode;
-  /**
-   * Every list's search box has one width, so they line up page to page. `wide` is for a
-   * placeholder that does not fit it, such as the devices list's.
-   */
   searchWidth?: "default" | "wide";
   filters?: ReactNode;
   className?: string;

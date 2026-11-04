@@ -33,7 +33,6 @@ describe("nameColumn", () => {
     );
   });
 
-  // The link navigates itself; without stopping the click, the row would push the same page again.
   it("keeps a click on the name from also opening the row", async () => {
     const user = userEvent.setup();
     renderRow();

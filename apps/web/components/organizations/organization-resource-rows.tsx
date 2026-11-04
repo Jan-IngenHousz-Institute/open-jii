@@ -129,7 +129,6 @@ export function OrganizationResourceRows({
                 aria-label={t("organizations.resources.sortLabel")}
               >
                 <ArrowUpDown aria-hidden className="size-4 opacity-60" />
-                {/* Says "Sort:" so it cannot read as a second filter beside the Filter menu. */}
                 <span className="text-muted-foreground">
                   {t("organizations.resources.sortPrefix")}
                 </span>

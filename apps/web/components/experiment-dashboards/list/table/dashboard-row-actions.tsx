@@ -9,7 +9,6 @@ import { useTranslation } from "@repo/i18n";
 export interface DashboardRowActionsProps {
   dashboard: ExperimentDashboard;
   experimentId: string;
-  /** The dashboard's page; Edit opens it in edit mode. */
   href: string;
 }
 

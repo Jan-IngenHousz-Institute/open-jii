@@ -173,7 +173,6 @@ describe("<OrganizationResourceRows />", () => {
       expect(list.parentElement).not.toHaveClass("min-h-dvh");
       first.unmount();
 
-      // A shorter page would scroll the browser up and move the toolbar under the cursor.
       openOnUrl(ORG_PATH, "type=device");
       const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
       expect(within(container).getByRole("list").parentElement).toHaveClass("min-h-dvh");
