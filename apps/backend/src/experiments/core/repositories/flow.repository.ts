@@ -41,7 +41,7 @@ export class FlowRepository {
   }
 
   async importLegacy(experimentId: string, graph: FlowGraphDto): Promise<Result<FlowDto>> {
-    return this.questionTypes.saveFlow(experimentId, graph, "upsert", true);
+    return this.questionTypes.saveFlow(experimentId, graph, "upsert", { legacyImport: true });
   }
 
   async deleteByExperimentId(experimentId: string): Promise<Result<void>> {

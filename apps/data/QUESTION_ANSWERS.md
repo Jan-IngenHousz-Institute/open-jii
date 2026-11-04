@@ -16,6 +16,11 @@ New experiments created through the platform start with tracked history. Their N
 questions activate when first pinned. Existing experiments and project transfers start
 untracked. Their current Number question alone is not evidence about historical data.
 
+The mobile upload includes every question in the flow. An unanswered question is
+serialized as JSON null even when its branch was skipped; optional and cleared
+questions use the same rule. The upload does not distinguish an unvisited question
+from one the user saw and left empty.
+
 ## Historical preflight and reviewed seed
 
 No shared read, seed or activation was run for this change. Obtain authorization before

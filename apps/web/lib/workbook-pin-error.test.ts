@@ -22,12 +22,12 @@ describe("workbook pin error", () => {
       workbookPinError(error, "fallback", "type conflict", "Localized unique-name instruction"),
     ).toBe("Localized unique-name instruction");
   });
-  it("preserves the message for other bad requests", () => {
+  it("keeps the localized fallback for other bad requests", () => {
     const error = new ORPCError("BAD_REQUEST", {
       message: "Other validation",
       data: { code: "BAD_REQUEST" },
     });
-    expect(workbookPinError(error, "fallback", "conflict", "duplicate")).toBe("Other validation");
+    expect(workbookPinError(error, "fallback", "conflict", "duplicate")).toBe("fallback");
   });
   it("keeps unrelated errors on the normal error path", () => {
     expect(
