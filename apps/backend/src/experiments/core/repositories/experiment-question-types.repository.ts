@@ -9,6 +9,7 @@ import {
   experimentQuestionTypes,
   experiments,
   flows,
+  inArray,
   workbookVersions,
 } from "@repo/database";
 import type { DatabaseInstance, DbOrTx } from "@repo/database";
@@ -52,6 +53,31 @@ export class ExperimentQuestionTypesRepository {
           ),
         );
       return rows.map((row) => row.key).sort();
+    });
+  }
+
+  activeNumericKeysForExperiments(experimentIds: string[]) {
+    return tryCatch(async () => {
+      const ids = [...new Set(experimentIds)];
+      const rows = await this.database
+        .select({
+          experimentId: experimentQuestionTypes.experimentId,
+          key: experimentQuestionTypes.key,
+        })
+        .from(experimentQuestionTypes)
+        .where(
+          and(
+            inArray(experimentQuestionTypes.experimentId, ids),
+            eq(experimentQuestionTypes.active, true),
+          ),
+        );
+      return ids.map((experimentId) => ({
+        experimentId,
+        numericKeys: rows
+          .filter((row) => row.experimentId === experimentId.toLowerCase())
+          .map((row) => row.key)
+          .sort(),
+      }));
     });
   }
 

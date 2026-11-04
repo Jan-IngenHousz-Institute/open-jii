@@ -79,6 +79,7 @@ measurements AS (
     raw.date,
     raw.macros,
     raw.questions_data,
+    raw.questions_original_data,
     raw.annotations AS payload_annotations,
     contributors.user AS contributor,
     devices.device AS device,
@@ -130,7 +131,7 @@ SELECT
       meta -> try_element_at(meta.lookup, CASE
         WHEN meta.question_id = 'column:device_id' THEN CAST(m.device_id AS STRING)
         WHEN meta.question_id LIKE 'column:%' THEN CAST(NULL AS STRING)
-        ELSE variant_get(m.questions_data, concat('$.', meta.question_id), 'STRING')
+        ELSE variant_get(coalesce(m.questions_original_data, m.questions_data), concat('$.', meta.question_id), 'STRING')
       END)
     ),
     CAST(NULL AS MAP<STRING, VARIANT>),

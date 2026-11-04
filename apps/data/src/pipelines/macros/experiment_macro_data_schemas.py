@@ -37,7 +37,7 @@ def _samples(results: DataFrame, column: str) -> DataFrame:
     spark_conf={"spark.sql.streaming.stateStore.partitions": "2"},
 )
 def experiment_macro_data_schemas():
-    results = dlt.read_stream(EXPERIMENT_MACRO_DATA_TABLE)
+    results = spark.readStream.option("skipChangeCommits", "true").table(f"LIVE.{EXPERIMENT_MACRO_DATA_TABLE}")
 
     return (
         _samples(results, "macro_output")

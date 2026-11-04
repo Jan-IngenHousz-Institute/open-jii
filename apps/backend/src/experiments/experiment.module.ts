@@ -121,6 +121,7 @@ import { ExperimentJoinCodesController } from "./presentation/experiment-join-co
 import { ExperimentJoinRequestsController } from "./presentation/experiment-join-requests.controller";
 import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
 import { ExperimentMetadataController } from "./presentation/experiment-metadata.controller";
+import { ExperimentQuestionTypesWebhookController } from "./presentation/experiment-question-types-webhook.controller";
 import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
 import { ExperimentWorkbooksController } from "./presentation/experiment-workbooks.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
@@ -144,6 +145,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
   controllers: [
     ExperimentController,
     ExperimentDataController,
+    ExperimentQuestionTypesWebhookController,
     ExperimentDataExportsController,
     ExperimentFlowsController,
     ExperimentWorkbooksController,

@@ -64,6 +64,7 @@ class BackendClient:
     - Session management with connection pooling
     """
 
+    WEBHOOK_QUESTION_TYPES_PATH = "/api/v1/experiments/question-types"
     WEBHOOK_USER_METADATA_PATH = "/api/v1/users/metadata"
     WEBHOOK_MACRO_BATCH_PATH = "/api/v1/macros/execute-batch"
     WEBHOOK_IOT_REGISTRY_PATH = "/api/v1/iot/devices/registry"
@@ -212,6 +213,49 @@ class BackendClient:
             is_transient = status is None or status == 429 or status >= 500
             error_type = TransientBackendError if is_transient else BackendIntegrationError
             raise error_type(error_msg) from e
+
+    def get_numeric_question_keys(self, experiment_ids: list[str]) -> dict[str, list[str]]:
+        """Fetch a complete classification or fail; unavailable evidence must not write guessed types."""
+        ids = list(dict.fromkeys(experiment_ids))
+        deadline = time.monotonic() + 30
+        output = {}
+        for start in range(0, len(ids), 500):
+            chunk = ids[start : start + 500]
+            for attempt in range(3):
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TransientBackendError("Question classification lookup exceeded 30 seconds")
+                try:
+                    result = self._make_request(
+                        self.WEBHOOK_QUESTION_TYPES_PATH, {"experimentIds": chunk}, timeout=min(5, remaining)
+                    )
+                    break
+                except TransientBackendError:
+                    if attempt == 2:
+                        raise
+                    time.sleep(min(attempt + 1, max(0, deadline - time.monotonic())))
+            entries = result.get("experiments")
+            if not isinstance(entries, list):
+                raise BackendIntegrationError("Question classification response is missing experiments")
+            found = {}
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    raise BackendIntegrationError("Invalid question classification entry")
+                experiment_id = entry.get("experimentId")
+                keys = entry.get("numericKeys")
+                if (
+                    not isinstance(experiment_id, str)
+                    or experiment_id not in chunk
+                    or experiment_id in found
+                    or not isinstance(keys, list)
+                    or any(not isinstance(key, str) for key in keys)
+                ):
+                    raise BackendIntegrationError("Invalid question classification response")
+                found[experiment_id] = sorted(set(keys))
+            if set(found) != set(chunk):
+                raise BackendIntegrationError("Question classification response is incomplete")
+            output.update(found)
+        return output
 
     def get_user_metadata(self, user_ids: list[str]) -> dict[str, dict[str, Any]]:
         """
