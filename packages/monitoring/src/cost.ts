@@ -41,6 +41,9 @@ const COST_MEASURE = "UnblendedCost";
 /** The same measure as GetCostForecast spells it; it refuses the other spelling. */
 const FORECAST_MEASURE = "UNBLENDED_COST";
 
+/** The service whose instance types cost-services.json can split. */
+const EC2_COMPUTE = "Amazon Elastic Compute Cloud - Compute";
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -66,7 +69,7 @@ export interface CostRequest {
   TimePeriod: { Start: string; End: string };
   Granularity: "DAILY" | "MONTHLY";
   Metrics: string[];
-  GroupBy?: { Type: "DIMENSION"; Key: "SERVICE" }[];
+  GroupBy?: { Type: "DIMENSION"; Key: "SERVICE" | "INSTANCE_TYPE" }[];
   Filter?: { Dimensions: { Key: "RECORD_TYPE"; Values: string[] } };
 }
 
@@ -105,6 +108,8 @@ function isCostServices(value: unknown): value is CostServices {
     isRecord(value.services) &&
     Object.values(value.services).every(isLabel) &&
     isLabel(value.otherServices) &&
+    isRecord(value.ec2InstanceTypes) &&
+    Object.values(value.ec2InstanceTypes).every(isLabel) &&
     isRecord(value.databricksComponents)
   );
 }
@@ -163,7 +168,11 @@ export function costRequests(now: Date): CostRequests {
       TimePeriod: { Start: costDate(windows.previousMonthStart), End: costDate(windows.today) },
       Granularity: "DAILY",
       Metrics: [COST_MEASURE],
-      GroupBy: [{ Type: "DIMENSION", Key: "SERVICE" }],
+      // By instance type too, so EC2 the serving store runs on is told apart from the clusters' VMs.
+      GroupBy: [
+        { Type: "DIMENSION", Key: "SERVICE" },
+        { Type: "DIMENSION", Key: "INSTANCE_TYPE" },
+      ],
       Filter: { Dimensions: { Key: "RECORD_TYPE", Values: ["Usage"] } },
     },
     totals: {
@@ -207,7 +216,11 @@ export function percentOfSpendLimit(yesterday: number, history: number[]): numbe
 
 /** Every label the publisher reports, so a service that spent nothing reads zero, not a gap. */
 function serviceLabels(services: CostServices): CostLabel[] {
-  const labels = [...Object.values(services.services), services.otherServices];
+  const labels = [
+    ...Object.values(services.services),
+    ...Object.values(services.ec2InstanceTypes),
+    services.otherServices,
+  ];
   return [...new Map(labels.map((label) => [label.label, label])).values()];
 }
 
@@ -222,8 +235,11 @@ function usageByDay(
     const byLabel = byDay.get(day) ?? new Map<string, number>();
 
     for (const group of result.Groups ?? []) {
-      const service = group.Keys?.[0] ?? "";
-      const { label } = services.services[service] ?? services.otherServices;
+      const [service = "", instanceType = ""] = group.Keys ?? [];
+      const listed = services.services[service] ?? services.otherServices;
+      const onInstance =
+        service === EC2_COMPUTE ? services.ec2InstanceTypes[instanceType] : undefined;
+      const { label } = onInstance ?? listed;
       byLabel.set(label, (byLabel.get(label) ?? 0) + amount(group.Metrics));
     }
 

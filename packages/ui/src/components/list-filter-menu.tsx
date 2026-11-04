@@ -49,7 +49,7 @@ export function ListFilterMenu({ filters, labels }: ListFilterMenuProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9">
+        <Button variant="outline" size="sm" className="h-9 bg-transparent">
           <FilterIcon aria-hidden="true" />
           {labels.filter}
           {count > 0 && (

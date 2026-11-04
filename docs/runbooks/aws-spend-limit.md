@@ -26,6 +26,8 @@ The Cost Explorer names are the keys of `docs/monitoring/cost-services.json`.
 
 - **EC2 compute** is Databricks' cluster VMs. A pipeline or job that scaled up, or a cluster left
   running, shows on the Databricks spend alert or the Databricks chart at the same time.
+- **Serving store** is the store's own EC2 instance, told apart by its instance type. A jump means
+  it was resized or a second instance is running.
 - **EC2 other** is disks, NAT and IPs: a jump in NAT bytes is usually a pipeline reading or writing
   across the internet, such as a bulk export.
 - **CloudWatch** is usually log ingestion: a service logging in a loop, or debug logging left on.

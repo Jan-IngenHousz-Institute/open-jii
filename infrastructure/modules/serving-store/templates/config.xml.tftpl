@@ -2,6 +2,10 @@
     <listen_host>0.0.0.0</listen_host>
     <http_port>${http_port}</http_port>
 
+    <!-- Past this share of the memory ClickHouse refuses queries rather than the kernel killing it. The
+         rest is left to the system, the CloudWatch agent and the feed timer. -->
+    <max_server_memory_usage_to_ram_ratio>0.8</max_server_memory_usage_to_ram_ratio>
+
     <!-- The packaged defaults log at trace level into ten 1 GB files on the root volume. -->
     <logger>
         <level>information</level>

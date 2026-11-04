@@ -42,10 +42,10 @@ describe("<ListOrganizations />", () => {
 
     render(<ListOrganizations />);
 
-    // 224px clipped the placeholder's ellipsis.
-    expect(screen.getByLabelText("organizations.searchLabel").closest("form")).toHaveClass(
-      "md:w-64",
-    );
+    // 224px clipped the placeholder's ellipsis; the toolbar's default width fits it.
+    expect(
+      screen.getByLabelText("organizations.searchLabel").closest("form")?.parentElement,
+    ).toHaveClass("md:w-64");
     expect(screen.queryByRole("link", { name: "organizations.createAction" })).toBeNull();
   });
 

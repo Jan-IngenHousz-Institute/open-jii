@@ -34,7 +34,6 @@ export function ListProtocols() {
         placeholder: t("protocols.searchProtocols"),
         clearLabel: t("protocols.clearSearch"),
         loadingLabel: t("protocols.loadingProtocols"),
-        className: "w-full md:w-[220px]",
       }}
       columns={getProtocolColumns(t, locale)}
       getRowKey={(protocol) => protocol.id}

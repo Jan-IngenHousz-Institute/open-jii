@@ -671,15 +671,14 @@
       },
       "searchPlaceholder": "Zoek een resource…",
       "searchLabel": "Zoek in de resources van deze organisatie",
-      "typeFilterLabel": "Filter op type",
-      "allTypes": "Alle typen",
+      "typeFilter": "Type",
       "sortLabel": "Resources sorteren",
+      "sortPrefix": "Sortering:",
       "sortRecent": "Recent bijgewerkt",
       "sortName": "Naam",
       "sortType": "Type",
       "noMatchesTitle": "Geen resource komt overeen met deze filters",
       "noMatchesHint": "Probeer een kortere zoekopdracht of verbreed het typefilter.",
-      "clearFilters": "Filters wissen",
       "noDescription": "Geen beschrijving opgegeven"
     },
     "members": {

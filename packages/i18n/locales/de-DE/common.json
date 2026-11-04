@@ -671,15 +671,14 @@
       },
       "searchPlaceholder": "Ressource finden…",
       "searchLabel": "Ressourcen dieser Organisation durchsuchen",
-      "typeFilterLabel": "Nach Typ filtern",
-      "allTypes": "Alle Typen",
+      "typeFilter": "Typ",
       "sortLabel": "Ressourcen sortieren",
+      "sortPrefix": "Sortierung:",
       "sortRecent": "Zuletzt aktualisiert",
       "sortName": "Name",
       "sortType": "Typ",
       "noMatchesTitle": "Keine Ressource entspricht diesen Filtern",
       "noMatchesHint": "Versuche eine kürzere Suche oder erweitere den Typfilter.",
-      "clearFilters": "Filter zurücksetzen",
       "noDescription": "Keine Beschreibung vorhanden"
     },
     "members": {

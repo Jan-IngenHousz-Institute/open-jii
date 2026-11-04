@@ -50,7 +50,8 @@ answer the driver's check, in the driver's:
 `[serving store] measurements batch 812: 4000 rows not sent, writing the batch again in 30 s` and
 `[serving store] measurements batch 812: the store did not answer: ConnectionError: ..., writing the batch again in 60 s`.
 
-- Code 241 is memory: work `store-memory`.
+- Code 241 is memory: work `store-memory`. The feed's inserts have no per-query cap, so for them it
+  reads `(total) memory limit exceeded`, the server's.
 - Code 252 is too many parts, which means merges have fallen behind the inserts. The system tables
   need the admin, so connect as `store-disk` describes, then
   `SELECT table, count() FROM system.parts WHERE active AND database = 'store' GROUP BY table` shows

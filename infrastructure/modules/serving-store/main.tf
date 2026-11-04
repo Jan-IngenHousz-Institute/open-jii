@@ -45,17 +45,19 @@ locals {
   })
 
   # No grants means the admin, which manages access and applies the schema. The writer only inserts,
-  # and keeps out of the migration ledger, which records what the schema already holds.
+  # and keeps out of the migration ledger, which records what the schema already holds. The profiles
+  # are in templates/users.xml.tftpl.
   users = {
-    admin = { name = "openjii_admin", grants = [] }
+    admin = { name = "openjii_admin", profile = "default", grants = [] }
     writer = {
-      name = "openjii_writer"
+      name    = "openjii_writer"
+      profile = "ingest"
       grants = [
         "GRANT SELECT, INSERT ON store.*",
         "REVOKE INSERT ON store._migrations",
       ]
     }
-    reader = { name = "openjii_reader", grants = ["GRANT SELECT ON store.*"] }
+    reader = { name = "openjii_reader", profile = "reader", grants = ["GRANT SELECT ON store.*"] }
   }
 
   # The hashes of 32 random characters, shown in plans so a replacement says what changed.
@@ -63,6 +65,7 @@ locals {
     users = [
       for role, user in local.users : {
         name            = user.name
+        profile         = user.profile
         grants          = user.grants
         password_sha256 = nonsensitive(sha256(random_password.user[role].result))
       }

@@ -241,6 +241,7 @@ describe("NotificationController", () => {
         .sort();
 
       expect(available).toEqual([
+        "devices_and_calibration",
         "experiments_and_resources",
         "membership_and_access",
         "project_transfers",

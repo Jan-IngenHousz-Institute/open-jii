@@ -28,6 +28,7 @@ import type { AwsPort } from "../../../core/ports/aws.port";
 import { IotCalibrationDefinitionRepository } from "../../../core/repositories/iot-calibration-definition.repository";
 import { IotCalibrationRunRepository } from "../../../core/repositories/iot-calibration-run.repository";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
+import { CalibrationRunNotifier } from "../../services/calibration-run-notifier";
 
 @Injectable()
 export class CreateCalibrationRunUseCase {
@@ -40,6 +41,7 @@ export class CreateCalibrationRunUseCase {
     private readonly authz: AuthorizationService,
     @Inject(AWS_PORT)
     private readonly awsPort: AwsPort,
+    private readonly notifier: CalibrationRunNotifier,
   ) {}
 
   async execute(
@@ -196,10 +198,14 @@ export class CreateCalibrationRunUseCase {
           errorMessage: "No block produced coefficients",
         });
       }
-      return this.runRepository.saveResult(runId, {
+      const saved = await this.runRepository.saveResult(runId, {
         status: "computed",
         blocks: response.blocks,
       });
+      if (saved.isSuccess()) {
+        await this.notifier.runAwaitingApproval("createCalibrationRun", saved.value);
+      }
+      return saved;
     }
 
     return this.runRepository.saveResult(runId, {

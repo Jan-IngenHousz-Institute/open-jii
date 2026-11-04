@@ -50,7 +50,6 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
         clearLabel: t("experiments.clearSearch"),
         loadingLabel: t("experiments.loadingExperiments"),
         autoFocus: focusSearch,
-        className: "w-full md:w-56",
       }}
       columns={getExperimentColumns(t, locale)}
       getRowKey={(experiment) => experiment.id}
