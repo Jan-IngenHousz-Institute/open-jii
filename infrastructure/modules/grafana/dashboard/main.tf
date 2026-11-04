@@ -1288,7 +1288,7 @@ resource "grafana_rule_group" "serving_store_health" {
       datasource_uid = "__expr__"
 
       model = jsonencode({
-        expression = "$B > 85"
+        expression = "$B > 75"
         type       = "math"
         refId      = "C"
       })
@@ -1304,7 +1304,7 @@ resource "grafana_rule_group" "serving_store_health" {
     for            = "5m"
 
     annotations = {
-      description      = "The serving store's instance is above 85% memory. ClickHouse refuses queries past 90%."
+      description      = "The serving store's instance is above 75% memory. ClickHouse refuses queries past 80%."
       summary          = "High memory on the serving store"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-memory.md"
       __dashboardUid__ = local.heartbeat_daily_uid
