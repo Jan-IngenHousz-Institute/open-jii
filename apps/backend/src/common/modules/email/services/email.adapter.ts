@@ -26,7 +26,6 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
       operation: "sendAccessGrantedNotification",
       resourceType: input.resourceType,
       resourceId: input.resourceId,
-      email: input.email,
     });
 
     return this.notificationService.sendAccessGrantedNotification(input);
@@ -91,7 +90,6 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     this.logger.log({
       msg: "Sending transfer request confirmation",
       operation: "sendTransferRequestConfirmation",
-      email,
       projectIdOld,
     });
 
@@ -136,7 +134,6 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
       msg: "Sending join request submitted notification",
       operation: "sendJoinRequestSubmittedNotification",
       experimentId,
-      email: adminEmail,
     });
 
     return this.notificationService.sendJoinRequestSubmittedNotification(
@@ -157,7 +154,6 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
       msg: "Sending join request rejected notification",
       operation: "sendJoinRequestRejectedNotification",
       experimentId,
-      email: requesterEmail,
     });
 
     return this.notificationService.sendJoinRequestRejectedNotification(
@@ -178,7 +174,6 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
       msg: "Sending organization invitation notification",
       operation: "sendOrganizationInvitationNotification",
       organizationId,
-      email: recipientEmail,
     });
 
     return this.notificationService.sendOrganizationInvitationNotification(
@@ -201,7 +196,6 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
       msg: "Sending organization join request submitted notification",
       operation: "sendOrganizationJoinRequestSubmittedNotification",
       organizationId,
-      email: recipientEmail,
     });
 
     return this.notificationService.sendOrganizationJoinRequestSubmittedNotification(
@@ -222,7 +216,6 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
       msg: "Sending organization join request approved notification",
       operation: "sendOrganizationJoinRequestApprovedNotification",
       organizationId,
-      email: requesterEmail,
     });
 
     return this.notificationService.sendOrganizationJoinRequestApprovedNotification(
@@ -241,7 +234,6 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
       msg: "Sending organization join request rejected notification",
       operation: "sendOrganizationJoinRequestRejectedNotification",
       organizationId,
-      email: requesterEmail,
     });
 
     return this.notificationService.sendOrganizationJoinRequestRejectedNotification(
@@ -262,7 +254,6 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
       msg: "Sending organization role changed notification",
       operation: "sendOrganizationRoleChangedNotification",
       organizationId: input.organizationId,
-      email: input.email,
     });
 
     return this.notificationService.sendOrganizationRoleChangedNotification(input);
@@ -276,7 +267,6 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     this.logger.log({
       msg: "Sending organization membership removed notification",
       operation: "sendOrganizationMembershipRemovedNotification",
-      email: input.email,
     });
 
     return this.notificationService.sendOrganizationMembershipRemovedNotification(input);
@@ -289,7 +279,6 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     this.logger.log({
       msg: "Sending API key created notification",
       operation: "sendApiKeyCreatedNotification",
-      email: input.email,
     });
 
     return this.notificationService.sendApiKeyCreatedNotification(input);
@@ -302,7 +291,6 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     this.logger.log({
       msg: "Sending passkey added notification",
       operation: "sendPasskeyAddedNotification",
-      email: input.email,
     });
 
     return this.notificationService.sendPasskeyAddedNotification(input);
