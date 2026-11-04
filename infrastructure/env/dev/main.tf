@@ -955,6 +955,9 @@ module "macro_execution_pipeline" {
     "CATALOG_NAME"                = module.databricks_catalog.catalog_name
     "CENTRUM_SCHEMA_NAME"         = "centrum"
     "ENVIRONMENT"                 = var.environment
+    # Lets the macro results id widen from INT to BIGINT in place. Set on one table only, the
+    # tables that stream from it refuse the new type and the update stops.
+    "pipelines.enableTypeWidening" = "true"
   }, local.serving_store_feed_settings)
 
   # Neither AUTO CDC nor expectations, so CORE is enough.

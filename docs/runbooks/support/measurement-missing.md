@@ -72,8 +72,11 @@ aws logs filter-log-events --profile openjii-<env> --log-group-name AWSIotLogsV2
 The rule writes every message, with its topic and client added, to
 `s3://open-jii-iot-raw-archive-<env>/raw-iot/<yyyy>/<MM>/<dd>/`. The day is when Firehose received
 it, which for a reading taken offline can be later than its measurement. The objects are gzipped,
-one JSON message per line. This is the last place a measurement carries its
-own id, `_client_id`, the phone's row UUID:
+one JSON message per line. A measurement from the phone carries its own id here, `_client_id`, the
+phone's row UUID. Bronze keeps it as a column, and silver and gold give the row the id
+`xxhash64('<experiment id>', '<_client_id>') & 9223372036854775807`, so from here on the row is found by that id.
+That holds for rows bronze wrote once it kept `_client_id`; an older row has the id it was given
+then, and is found by its phone or device and its time:
 
 ```bash
 aws s3 cp --profile openjii-<env> --recursive \
@@ -81,6 +84,11 @@ aws s3 cp --profile openjii-<env> --recursive \
 for f in ./archive/*; do gzip -dc "$f"; done \
   | jq -c 'select(.client_id == "<thing name>") | {topic, _client_id, timestamp}'
 ```
+
+A publish the phone repeats after a crash between the broker's acknowledgement and saving it as
+synced arrives twice with one id. Silver keeps both, with their processing times. The Data page
+shows both until it reads the serving store, which keeps one, as exports do, and the heartbeat's
+`measurement-copies` counts the second.
 
 Firehose writes an object 15 minutes after the first message it buffered, so the newest quarter of
 an hour is not there yet. A message the broker
@@ -170,12 +178,10 @@ URL, which the backend logs as `getIotUploadUrl` with the experiment id.
 
 ## What cannot be traced
 
-- **One measurement past the archive.** Bronze drops `_client_id`, so from bronze on a measurement
-  is found by its phone or device and its time, not by its own id. Keeping `_client_id` as a column
-  through gold would make a single measurement traceable end to end.
-- **A re-sent measurement.** Nothing deduplicates a publish the phone repeats after a crash between
-  the broker's acknowledgement and saving it as synced, so the same reading can arrive twice, with
-  the same `_client_id` in the archive.
+- **An older measurement past the archive.** Rows bronze wrote before it kept `_client_id` have a
+  32-bit id hashed from their arrival, or from their content for a large upload, so from bronze on
+  they are found by their phone or device and their time, not by their own id. A device on its own
+  certificate sends no `_client_id`; its newer rows' ids come from what the capture holds.
 - **The stream after 24 hours**, and the archive's newest quarter of an hour before Firehose
   writes it.
 

@@ -4,7 +4,7 @@ WITH
 -- newest row wins by processing time, then measurement time, then id. Silver, since
 -- gold carries firmware, battery and version only on rows written after it gained them;
 -- a read scans silver's columns for the experiment asked for. ${catalog} is filled in by
--- terraform.
+-- terraform. A capture that arrived more than once keeps its id and time, so it counts once.
 -- Inside the WITH because Unity Catalog drops comments above a view's first keyword.
 devices AS (
   SELECT
@@ -17,7 +17,7 @@ devices AS (
         'processed_timestamp', processed_timestamp),
       named_struct('processed_timestamp', processed_timestamp, 'timestamp', `timestamp`, 'id', id)
     ) AS newest,
-    count(*) AS total_measurements
+    count(DISTINCT id, `timestamp`) AS total_measurements
   FROM ${catalog}.centrum.clean_data
   WHERE experiment_id IS NOT NULL
   GROUP BY experiment_id, device_id, device_firmware

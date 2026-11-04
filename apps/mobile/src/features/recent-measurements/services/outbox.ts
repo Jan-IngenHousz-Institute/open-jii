@@ -343,9 +343,9 @@ class OutboxImpl implements Outbox {
 
     const payload = {
       ...row.data.measurementResult,
-      // Embed the row UUID so an AWS IoT rule can deduplicate on the
-      // downstream side if a crash between PUBACK and markAsSuccessful
-      // leaves the row "pending" and we re-publish on next boot.
+      // Embed the row UUID, which the pipeline derives the measurement's id
+      // from, so a re-publish on next boot after a crash between PUBACK and
+      // markAsSuccessful lands with the same id.
       _client_id: id,
     };
 
@@ -409,8 +409,8 @@ class OutboxImpl implements Outbox {
 
     // Phase 2 - record. PUBACK is in (message delivered), so a DB-write failure
     // must NOT mark the row failed. Emit the successful settle regardless; if the
-    // write throws the row stays "pending" and re-publishes next drain (deduped
-    // downstream via _client_id).
+    // write throws the row stays "pending" and re-publishes next drain. The copy
+    // carries the same _client_id, so it gets the same row id downstream.
     try {
       await markAsSuccessful(id);
       trace?.event("marked_successful");

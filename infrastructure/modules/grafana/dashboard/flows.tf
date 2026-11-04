@@ -131,6 +131,7 @@ locals {
     "ingest-idle"                = "lakehouse"
     "ingest-bad-payload-rate"    = "lakehouse"
     "experiment-rows"            = "experiments"
+    "measurement-copies"         = "experiments"
     "experiment-latency"         = "experiments"
     "gold-materialization-age"   = "experiments"
     "stale-experiments"          = "experiments"

@@ -69,7 +69,8 @@ metadata_records AS (
 results AS (
   SELECT
     macro.experiment_id,
-    macro.id,
+    -- Cast so the view binds BIGINT once the column widens; a view keeps the type it was made with.
+    CAST(macro.id AS BIGINT) AS id,
     macro.raw_id,
     macro.device_id,
     macro.device_name,

@@ -19,7 +19,10 @@ from openjii.centrum.runtime import LARGE_IOT_S3_PATH
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "false"
+        "delta.autoOptimize.autoCompact": "false",
+        # As for raw_data: a refresh would read every upload again, now with its _client_id, and
+        # silver would give the measurements made from them new ids.
+        "pipelines.reset.allowed": "false"
     },
     partition_cols=["experiment_id"]
 )
@@ -49,5 +52,7 @@ def raw_large_data():
                 F.col("experiment_id"),
             )
         )
+        # Empty rather than null when a payload has none, as in raw_data.
+        .withColumn("_client_id", F.coalesce(F.col("_client_id"), F.lit("")))
         .withColumn("ingestion_timestamp", F.current_timestamp())
     )
