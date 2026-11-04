@@ -34,6 +34,8 @@ _TABLES = {
            TIMESTAMP'2026-09-23 12:00:00', TIMESTAMP'2026-09-23 11:55:00', 9),
           ('e2', 'd1', 'fw2', 'MultispeQ', 'v2', 60.0D, 'c1',
            TIMESTAMP'2026-09-23 13:00:00', TIMESTAMP'2026-09-23 12:59:00', 4),
+          ('e2', 'd1', 'fw2', 'MultispeQ', 'v2', 60.0D, 'c1',
+           TIMESTAMP'2026-09-23 13:05:00', TIMESTAMP'2026-09-23 12:59:00', 4),
           (CAST(NULL AS STRING), 'd1', 'fw1', 'MultispeQ', 'v9', 10.0D, 'c1',
            TIMESTAMP'2026-09-23 14:00:00', TIMESTAMP'2026-09-23 13:59:00', 5)
         AS t(experiment_id, device_id, device_firmware, device_name, device_version, device_battery, client_id,
@@ -73,6 +75,10 @@ def test_each_device_row_carries_its_newest_attributes_and_count(spark: SparkSes
     assert rows[("e1", "d1", "fw1")]["device_battery"] == 75.0
     assert rows[("e1", "d1", "fw1")]["processed_timestamp"] == datetime(2026, 9, 23, 10, 5)
     assert rows[("e1", "d2", None)]["total_measurements"] == 3
+
+
+def test_a_capture_that_arrived_twice_counts_once(spark: SparkSession, centrum: str) -> None:
+    assert _rows(spark)[("e2", "d1", "fw2")]["total_measurements"] == 1
 
 
 def test_a_tie_on_processing_and_measurement_time_goes_to_the_higher_id(

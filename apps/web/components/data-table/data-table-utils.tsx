@@ -314,8 +314,9 @@ export function DataTableRows({
     const isExpandedRow = !!expandedColumn;
     const hasJustLanded = landedRowIds?.has(rowId) ?? false;
 
+    // Copies of one capture share its id and its selection; the position keeps their keys apart.
     return (
-      <React.Fragment key={row.id}>
+      <React.Fragment key={`${row.id}:${row.index}`}>
         <TableRow
           data-state={row.getIsSelected() && "selected"}
           className={cn(

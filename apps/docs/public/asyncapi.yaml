@@ -149,6 +149,14 @@ components:
             description: >
               When present, the `sample` field is compressed (gzip) and
               base64-encoded. Absent on raw (uncompressed) payloads.
+          _client_id:
+            type: string
+            description: >
+              The phone's local id for the measurement record, sent again
+              whenever the phone re-publishes that record. The pipeline
+              derives the measurement's row id from it, so the copies of
+              one capture share an id. Optional; publishers without one get
+              an id from the capture's content.
           timestamp:
             type: string
             description: >

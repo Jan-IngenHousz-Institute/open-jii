@@ -127,6 +127,8 @@ large_iot_schema = StructType(
         # GPS fix at measurement time; absent without permission or fix.
         StructField("latitude", DoubleType(), True),
         StructField("longitude", DoubleType(), True),
+        # The phone's local record id, which silver keys a measurement's id on.
+        StructField("_client_id", StringType(), True),
     ]
 )
 
