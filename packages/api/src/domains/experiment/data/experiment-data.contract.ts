@@ -10,8 +10,16 @@ import {
   zExperimentTableColumnsResponse,
   zExperimentTablesMetadataList,
 } from "./experiment-data.schema";
+import {
+  zExperimentQuestionTypesRequest,
+  zExperimentQuestionTypesResponse,
+} from "./experiment-question-types.schema";
 
 export const experimentDataContract = {
+  getExperimentQuestionTypes: oc
+    .route({ method: "POST", path: "/api/v1/experiments/question-types", successStatus: 200 })
+    .input(zExperimentQuestionTypesRequest)
+    .output(zExperimentQuestionTypesResponse),
   getExperimentTables: oc
     .route({ method: "GET", path: "/api/v1/experiments/{id}/tables", successStatus: 200 })
     .input(zExperimentIdPathParam)

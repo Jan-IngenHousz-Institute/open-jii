@@ -14,6 +14,8 @@ import dlt
 from pyspark.sql import functions as F
 
 from data_repair import apply_inline_repairs
+from enrich.question_types import add_numeric_question_keys
+from openjii.number_answers import typed_question_answers
 from enrich.macro_execution import distribute_macro_execution_rows, make_execute_macro_udf
 from openjii.centrum import (
     EXPERIMENT_MACRO_DATA_TABLE,
@@ -56,6 +58,7 @@ def experiment_macro_data():
 
     base_df = (
         spark.readStream
+        .option("skipChangeCommits", "true")
         .option("maxFilesPerTrigger", MACRO_MAX_FILES_PER_TRIGGER)
         .option("maxBytesPerTrigger", MACRO_MAX_BYTES_PER_TRIGGER)
         .table(centrum_table(EXPERIMENT_RAW_DATA_TABLE))
@@ -77,6 +80,7 @@ def experiment_macro_data():
             "date",
             "processed_timestamp",
             "questions_data",
+            "questions_original_data",
             "annotations",
             "skip_macro_processing",
             "workbook_run_id",
@@ -100,6 +104,7 @@ def experiment_macro_data():
             "date",
             "processed_timestamp",
             "questions_data",
+            "questions_original_data",
             "annotations",
             "skip_macro_processing",
             "workbook_run_id",
@@ -119,6 +124,10 @@ def experiment_macro_data():
 
     return (
         base_df
+        .transform(lambda df: add_numeric_question_keys(df, ENVIRONMENT, dbutils,
+            has_questions=F.col("questions_data").isNotNull()))
+        .withColumn("questions_original_data", F.coalesce("questions_original_data", "questions_data"))
+        .withColumn("questions_data", typed_question_answers("questions_original_data", "_numeric_question_keys"))
         .transform(lambda df: apply_inline_repairs(df, EXPERIMENT_MACRO_DATA_TABLE))
         .transform(
             lambda df: distribute_macro_execution_rows(
@@ -194,6 +203,7 @@ def experiment_macro_data():
             "processed_timestamp",
             "date",
             "questions_data",
+            "questions_original_data",
             "annotations",
         )
     )

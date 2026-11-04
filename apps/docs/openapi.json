@@ -3049,6 +3049,78 @@
         }
       }
     },
+    "/api/v1/experiments/question-types": {
+      "post": {
+        "operationId": "experiments.getExperimentQuestionTypes",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "experimentIds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                },
+                "required": [
+                  "experimentIds"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "experiments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "experimentId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "numericKeys": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "experimentId",
+                          "numericKeys"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "experiments"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/experiments/{id}/tables": {
       "get": {
         "operationId": "experiments.getExperimentTables",
