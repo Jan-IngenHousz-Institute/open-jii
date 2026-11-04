@@ -1,4 +1,5 @@
 import type { ConfigService } from "@nestjs/config";
+import { createHmac } from "crypto";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { z } from "zod";
@@ -111,6 +112,34 @@ describe("NotificationUnsubscribeService", () => {
     expectInvalid("not-a-token");
     expectInvalid("");
     expectInvalid("a.b.c");
+  });
+
+  // Signed with the real key, so the signature holds and only the payload checks can refuse it.
+  const signedOver = (payload: string) => {
+    const bytes = Buffer.from(payload);
+    const signature = createHmac("sha256", Buffer.from(CONFIG["notification.unsubscribeSecret"]))
+      .update(bytes)
+      .digest("base64url");
+    return `${bytes.toString("base64url")}.${signature}`;
+  };
+  const payload = (overrides: Record<string, unknown> = {}) =>
+    JSON.stringify({
+      v: 1,
+      u: userId,
+      c: "requests_and_invitations",
+      ch: "email",
+      exp: Math.floor(Date.now() / 1000) + 3600,
+      ...overrides,
+    });
+
+  it("refuses a correctly signed payload that is not JSON", () => {
+    expectInvalid(signedOver("not json"));
+  });
+
+  it("refuses a correctly signed payload that is not a token's shape", () => {
+    assertSuccess(service.verify(signedOver(payload())));
+
+    expectInvalid(signedOver(payload({ v: 2 })));
   });
 
   it("builds the settings and unsubscribe links on the web base and the one-click link on the API", () => {
