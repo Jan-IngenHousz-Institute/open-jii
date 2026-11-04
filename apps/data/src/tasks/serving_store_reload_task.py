@@ -17,6 +17,7 @@ TABLES = {table.name: table for table in (MEASUREMENTS, MACRO_RESULTS, UPLOADS)}
 WIDGETS = ("CATALOG_NAME", "CENTRAL_SCHEMA", "ENVIRONMENT", "EXPERIMENT_ID", "TABLE")
 for name in WIDGETS:
     dbutils.widgets.text(name, "")
+dbutils.widgets.text("ALLOW_REMOVAL", "false")
 
 
 def required_widget(name: str) -> str:
@@ -37,6 +38,13 @@ if TABLE != "all" and TABLE not in TABLES:
     raise ValueError(f"TABLE is {TABLE!r}; use all or one of {', '.join(TABLES)}")
 tables = list(TABLES.values()) if TABLE == "all" else [TABLES[TABLE]]
 experiment_id = None if EXPERIMENT_ID == "all" else EXPERIMENT_ID
+
+# Lets the delete remove more than the reload's limit of rows gold no longer holds, as for a
+# deleted experiment. Anything but true or false is refused, so a typo cannot pass for either.
+ALLOW_REMOVAL = dbutils.widgets.get("ALLOW_REMOVAL").strip().lower()
+if ALLOW_REMOVAL not in ("true", "false"):
+    raise ValueError(f"ALLOW_REMOVAL is {ALLOW_REMOVAL!r}; use true or false")
+allow_removal = ALLOW_REMOVAL == "true"
 
 scope = f"serving-store-{ENVIRONMENT}"
 writer = StoreWriter(
@@ -60,7 +68,7 @@ def named(rows: dict[str, int]) -> str:
 for table in tables:
     # One table's failure is reported with the others' results rather than in their place.
     try:
-        reloaded = reload.reload(table, experiment_id)
+        reloaded = reload.reload(table, experiment_id, allow_removal)
     except Exception as error:
         traceback.print_exc()
         mismatches.append(f"{table.name} failed: {type(error).__name__}: {error}")

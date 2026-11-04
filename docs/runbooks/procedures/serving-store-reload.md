@@ -53,7 +53,8 @@ feed on first and reload `all` once it has caught up.
 
 Never run it while gold's table is being refreshed. A full refresh rewrites the table over many
 commits, so at any one of them gold holds part of it, and a reload then deletes the rest from the
-store. Wait for the pipeline's update to finish.
+store. Past 1,000 such rows it stops before deleting, but below that it does not, so wait for the
+pipeline's update to finish.
 
 Reloading every experiment rewrites and recounts whole tables, which loads the store far more than
 the feed does, so run that when the app's reads can wait. The rows it deletes stay on disk until
@@ -70,6 +71,9 @@ databricks jobs run-now --no-wait --json '{"job_id": <job id>,
   "notebook_params": {"EXPERIMENT_ID": "<experiment id or all>", "TABLE": "all"}}'
 ```
 
+A reload removes at most 1,000 rows gold no longer holds unless `ALLOW_REMOVAL` is `true`. Set it
+only when those rows should go, as for an experiment gold has dropped, and only for that run.
+
 The cluster takes a few minutes to start. Each table's result is one line of the task's output:
 
 `[serving store] Reloaded <table> at gold version <V>: <n> rows sent, <n> refused (in feed_rejects); <n> rows in gold and <n> in the store over <n> experiments, <n> of them written by the feed since`
@@ -79,6 +83,10 @@ The cluster takes a few minutes to start. Each table's result is one line of the
 - **The store refused rows.** They also fire `store-feed-rejects`, which counts every refused row
   however it was sent. Follow it to find and fix them, then run it again.
 - **The store lacks gold's rows.** Run it again for the experiments the error names.
+- **The delete would remove more rows than the limit.** Nothing was deleted; the load's rows are in,
+  beside the old ones. Check the experiments the error names against gold. If gold's pipeline is
+  running a refresh, wait for it to finish and run again. If gold really dropped those rows, run
+  again for the same experiments with `ALLOW_REMOVAL` set to `true`.
 - **The store holds rows from before the version.** Wait until the feed has caught up, then run it
   again for the same experiments; the new delete takes them.
 - **The store holds a version newer than gold's.** Gold's table was recreated and its versions

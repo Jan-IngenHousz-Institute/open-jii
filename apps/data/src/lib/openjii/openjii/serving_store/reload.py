@@ -17,9 +17,17 @@ from .writer import StoreUnavailable, StoreWriter, Written
 # drop what already landed. A reload is run by hand, so after the last it fails instead of waiting.
 WRITE_RETRY_DELAYS = (10, 30, 60, 120, 300)
 
+# More rows than this that gold no longer holds stop a reload before its delete, unless asked for.
+# A repair removes a few; a gold table part way through a refresh looks as if it lost most of them.
+REMOVAL_LIMIT = 1000
+
 
 class StoreAheadOfGold(Exception):
     """The store holds a commit newer than gold's latest, as after gold's table was recreated."""
+
+
+class RemovalOverLimit(Exception):
+    """The delete would take more rows that gold no longer holds than a reload removes unasked."""
 
 
 @dataclass(frozen=True)
@@ -65,10 +73,13 @@ class StoreReload:
         self.writer = writer
         self.gold_schema = gold_schema
 
-    def reload(self, table: StoreTable, experiment_id: str | None = None) -> Reloaded:
+    def reload(
+        self, table: StoreTable, experiment_id: str | None = None, allow_removal: bool = False
+    ) -> Reloaded:
         """Reloads one experiment, or every experiment when ``experiment_id`` is None. An
-        experiment gold no longer holds leaves the store with it. When the store refuses any row,
-        nothing is deleted, since a refused row's older copy is the only one the store has."""
+        experiment gold no longer holds leaves the store with it, once ``allow_removal`` says more
+        than ``REMOVAL_LIMIT`` rows may go. When the store refuses any row, nothing is deleted,
+        since a refused row's older copy is the only one the store has."""
         # Read first, so a commit the feed sends meanwhile cannot look newer than gold's latest.
         newest = self._newest_stored_version(table)
         version, committed_at = self.latest_version(table)
@@ -92,6 +103,8 @@ class StoreReload:
 
         written = self._write(table, changes)
         if not written.rejected:
+            if not allow_removal:
+                self._check_removal(table, version, experiment_id)
             self._delete_older(table, version, experiment_id)
 
         gold = rows.select(*table.key()).dropDuplicates().groupBy("experiment_id").count().collect()
@@ -158,6 +171,28 @@ class StoreReload:
             f"SELECT max(_commit_version) AS newest FROM {self.writer.database}.{table.name} FORMAT JSONEachRow"
         )
         return int(row["newest"])
+
+    def _check_removal(self, table: StoreTable, version: int, experiment_id: str | None) -> None:
+        """Stops before the delete when it would take more than ``REMOVAL_LIMIT`` rows gold no
+        longer holds. After the load, a key gold holds has its newest copy at the version, so the
+        keys still older are the ones the delete removes for good."""
+        removed = {
+            row["experiment_id"]: int(row["older"])
+            for row in self._stored_rows(table, version, experiment_id)
+            if int(row["older"])
+        }
+        total = sum(removed.values())
+        if total <= REMOVAL_LIMIT:
+            return
+
+        largest = sorted(removed.items(), key=lambda item: item[1], reverse=True)[:20]
+        raise RemovalOverLimit(
+            f"the delete would remove {total} rows of store.{table.name} that gold's {table.gold_table} "
+            f"no longer holds, over the limit of {REMOVAL_LIMIT}: "
+            + ", ".join(f"{experiment} ({count})" for experiment, count in largest)
+            + ". Nothing was deleted. If gold is being refreshed, wait for it; if the rows should go, "
+            "run again with ALLOW_REMOVAL set to true (docs/runbooks/procedures/serving-store-reload.md)"
+        )
 
     def _delete_older(self, table: StoreTable, version: int, experiment_id: str | None) -> None:
         """Deletes the store's rows from before ``version``. The delete returns once every part is

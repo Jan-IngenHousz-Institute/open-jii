@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 import requests
 from openjii.serving_store import reload as reload_module
-from openjii.serving_store.reload import Reloaded, StoreAheadOfGold, StoreReload
+from openjii.serving_store.reload import Reloaded, RemovalOverLimit, StoreAheadOfGold, StoreReload
 from openjii.serving_store.tables import UPLOADS, StoreTable
 from openjii.serving_store.writer import StoreUnavailable, StoreWriter, Written
 from pyspark.sql import DataFrame, SparkSession
@@ -338,6 +338,47 @@ def test_reloading_an_experiment_gold_no_longer_holds_removes_it(
     assert [row for row in _uploads(store) if row[0] == "e2"] == []
     assert [row[1] for row in _uploads(store)] == [21, 22, 23]
     assert (reloaded.gold, reloaded.store) == ({}, {})
+
+
+@pytest.mark.clickhouse
+def test_a_delete_past_the_removal_limit_stops_before_deleting(
+    spark: SparkSession, store: _Admin, reloader: StoreWriter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(reload_module, "REMOVAL_LIMIT", 0)
+    reloader.write(UPLOADS.lines(spark.sql(_FED)), "uploads")
+    before = [row for row in _uploads(store) if row[0] == "e2"]
+    gold_without_e2 = f"SELECT * FROM ({_GOLD}) WHERE experiment_id != 'e2'"
+
+    with pytest.raises(RemovalOverLimit, match=r"e2 \(\d+\)"):
+        _GoldAt(spark, reloader, gold_without_e2).reload(UPLOADS, "e2")
+
+    assert before
+    assert [row for row in _uploads(store) if row[0] == "e2"] == before
+
+
+@pytest.mark.clickhouse
+def test_a_delete_past_the_removal_limit_goes_ahead_when_allowed(
+    spark: SparkSession, store: _Admin, reloader: StoreWriter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(reload_module, "REMOVAL_LIMIT", 0)
+    reloader.write(UPLOADS.lines(spark.sql(_FED)), "uploads")
+    gold_without_e2 = f"SELECT * FROM ({_GOLD}) WHERE experiment_id != 'e2'"
+
+    _GoldAt(spark, reloader, gold_without_e2).reload(UPLOADS, "e2", allow_removal=True)
+
+    assert [row for row in _uploads(store) if row[0] == "e2"] == []
+
+
+@pytest.mark.clickhouse
+def test_rows_gold_sends_again_do_not_count_against_the_removal_limit(
+    spark: SparkSession, store: _Admin, reloader: StoreWriter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(reload_module, "REMOVAL_LIMIT", 0)
+    reloader.write(UPLOADS.lines(spark.sql(_FED)), "uploads")
+
+    reloaded = _GoldAt(spark, reloader, _GOLD).reload(UPLOADS, "e2")
+
+    assert reloaded.store == reloaded.gold
 
 
 @pytest.mark.clickhouse

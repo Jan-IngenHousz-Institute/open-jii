@@ -2187,6 +2187,8 @@ module "serving_store_reload_job" {
         # Given per run: an experiment's id or all, and one store table or all.
         "EXPERIMENT_ID" = ""
         "TABLE"         = "all"
+        # True only when the rows gold no longer holds should leave the store, as for a deleted experiment.
+        "ALLOW_REMOVAL" = "false"
       }
     }
   ]
