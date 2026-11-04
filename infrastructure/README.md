@@ -1,12 +1,14 @@
 # openJII infrastructure
 
-OpenJII's cloud resources are declared with OpenTofu. Environment compositions live under `infrastructure/env/`; reusable modules live under `infrastructure/modules/`.
+OpenJII's cloud resources are declared with OpenTofu. Environment compositions live under `infrastructure/env/`, CI's own access lives under `infrastructure/foundation/`, and reusable modules live under `infrastructure/modules/`.
 
-| Composition | Region in `variables.tf` | Purpose                                                                                                                                                                                                                                        |
-| ----------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `env/dev`   | `eu-central-1`           | Development services and data paths.                                                                                                                                                                                                           |
-| `env/prod`  | `eu-central-1`           | Production services and data paths, including cross-region backup configuration.                                                                                                                                                               |
-| `env/dr`    | `eu-west-1`              | Disaster recovery configuration. It references some production resources and creates traffic-switching DNS records only when its cutover input is enabled. This directory establishes configuration, not evidence that a DR stack is deployed. |
+| Composition       | Region in `variables.tf` | Purpose                                                                                                                                                                                                                                        |
+| ----------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `env/dev`         | `eu-central-1`           | Development services and data paths.                                                                                                                                                                                                           |
+| `env/prod`        | `eu-central-1`           | Production services and data paths, including cross-region backup configuration.                                                                                                                                                               |
+| `env/dr`          | `eu-west-1`              | Disaster recovery configuration. It references some production resources and creates traffic-switching DNS records only when its cutover input is enabled. This directory establishes configuration, not evidence that a DR stack is deployed. |
+| `foundation/dev`  | `eu-central-1`           | Dev's CI roles, GitHub trust, state bucket and lock table.                                                                                                                                                                                     |
+| `foundation/prod` | `eu-central-1`           | The same for prod.                                                                                                                                                                                                                             |
 
 Each composition has its own `main.tf`, variables and S3 state backend. There is no `env/staging` directory. Read the target environment's files before changing a module or interpreting a plan.
 
@@ -18,6 +20,9 @@ infrastructure/
 │   ├── dev/
 │   ├── prod/
 │   └── dr/
+├── foundation/
+│   ├── dev/
+│   └── prod/
 ├── modules/
 │   ├── iot-core/
 │   ├── kinesis/
@@ -29,6 +34,14 @@ infrastructure/
 ```
 
 The environment compositions select the modules they need. The DR composition does not provision a Databricks workspace or Grafana, but it stores connection details for the existing production Databricks workspace in a Secrets Manager module. Dev and prod provision their own Databricks and Grafana resources. Follow the source references in each environment's `main.tf` for the exact current set.
+
+## Foundation
+
+`foundation/` holds what lets CI reach AWS: the GitHub OIDC trust, the deploy role, prod's read-only plan role, the state bucket and the lock table. The environment roots only read these, so a change to CI's access goes through its own workflow and its own approval.
+
+A release runs the Foundation workflow before the infrastructure deploy whenever `foundation/` or the `iam-oidc`, `s3` or `dynamodb` modules change. It plans with the environment's deploy role and applies with `GithubActionsFoundationAccess`, which only the `foundation-dev` or `foundation-prod` GitHub environment can assume, so the apply waits for that environment's reviewers. A plan with no changes applies nothing.
+
+`GithubActionsFoundationAccess` can change only the roles and policies named `GithubActions*`, the OIDC trust and the state backend. It may edit its own policy, so the permissions boundary `CiFoundationBoundary` caps what that policy can grant. An admin created the role and the boundary by hand once in each account; the root then imported the role, and no root CI applies manages the boundary.
 
 ## Review a change
 

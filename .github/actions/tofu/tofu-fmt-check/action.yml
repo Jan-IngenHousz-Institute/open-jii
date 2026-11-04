@@ -2,6 +2,10 @@ name: "OpenTofu Format Check"
 description: "Runs OpenTofu fmt -check to verify HCL formatting"
 
 inputs:
+  root:
+    description: "Directory under infrastructure/ that holds the environment roots: env or foundation"
+    required: false
+    default: "env"
   continue-on-error:
     description: "Whether to continue on error"
     required: false
@@ -12,6 +16,6 @@ runs:
   steps:
     - name: OpenTofu Fmt Check
       shell: bash
-      working-directory: infrastructure/env/${{ env.environment }}
+      working-directory: infrastructure/${{ inputs.root }}/${{ env.environment }}
       run: tofu fmt -check
       continue-on-error: ${{ inputs.continue-on-error }}

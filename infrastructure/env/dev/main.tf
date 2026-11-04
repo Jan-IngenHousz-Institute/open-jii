@@ -1,22 +1,42 @@
-module "terraform_state_s3" {
-  source      = "../../modules/s3"
-  bucket_name = "open-jii-terraform-state-${var.environment}"
+# CI's roles, the GitHub trust and the state backend belong to infrastructure/foundation, which a
+# separate workflow applies with its own role. This root forgets them without destroying anything
+# and only reads them. Delete the removed blocks once the first apply has run.
+removed {
+  from = module.terraform_state_s3
 
-  lifecycle_rules = [
-    {
-      id                                 = "expire-saved-plans"
-      status                             = "Enabled"
-      prefix                             = "plans/"
-      transitions                        = []
-      expiration_days                    = 7
-      noncurrent_version_expiration_days = 1
-    }
-  ]
-
-  providers = {
-    aws    = aws
-    aws.dr = aws.dr
+  lifecycle {
+    destroy = false
   }
+}
+
+removed {
+  from = module.terraform_state_lock
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.iam_oidc
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+data "aws_caller_identity" "current" {}
+
+data "aws_dynamodb_table" "terraform_state_lock" {
+  name = "terraform-state-lock"
+}
+
+data "aws_iam_role" "github_actions_deploy" {
+  name = "GithubActionsDeployAccess"
+}
+
+data "aws_iam_openid_connect_provider" "github" {
+  arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
 }
 
 module "backup" {
@@ -28,7 +48,7 @@ module "backup" {
   aurora_cluster_arns = [module.aurora_db.cluster_arn]
 
   dynamodb_table_arns = [
-    module.terraform_state_lock.table_arn,
+    data.aws_dynamodb_table.terraform_state_lock.arn,
   ]
 
   backup_retention_days    = 14
@@ -46,21 +66,7 @@ module "backup" {
     Component   = "disaster-recovery"
   }
 
-  depends_on = [module.aurora_db, module.terraform_state_lock]
-}
-
-module "terraform_state_lock" {
-  source     = "../../modules/dynamodb"
-  table_name = "terraform-state-lock"
-}
-
-module "iam_oidc" {
-  source     = "../../modules/iam-oidc"
-  role_name  = "GithubActionsDeployAccess"
-  repository = "Jan-IngenHousz-Institute/open-jii"
-  aws_region = var.aws_region
-
-  github_environments = [var.environment]
+  depends_on = [module.aurora_db]
 }
 
 module "cloudwatch" {
@@ -256,7 +262,7 @@ module "firmware_rollout_role" {
 
   aws_region          = var.aws_region
   environment         = var.environment
-  oidc_provider_arn   = module.iam_oidc.oidc_provider_arn
+  oidc_provider_arn   = data.aws_iam_openid_connect_provider.github.arn
   firmware_bucket_arn = module.firmware_s3.bucket_arn
   presign_role_arn    = module.iot_core.jobs_presign_role_arn
 }
@@ -299,7 +305,7 @@ module "macro_sandbox" {
 
   aws_region          = var.aws_region
   environment         = var.environment
-  ci_cd_role_arn      = module.iam_oidc.role_arn
+  ci_cd_role_arn      = data.aws_iam_role.github_actions_deploy.arn
   isolated_subnet_ids = module.vpc.isolated_subnets
   lambda_sg_id        = module.vpc.macro_sandbox_lambda_security_group_id
 
@@ -329,7 +335,7 @@ module "calibration_sandbox" {
 
   aws_region          = var.aws_region
   environment         = var.environment
-  ci_cd_role_arn      = module.iam_oidc.role_arn
+  ci_cd_role_arn      = data.aws_iam_role.github_actions_deploy.arn
   isolated_subnet_ids = module.vpc.isolated_subnets
   lambda_sg_id        = module.vpc.calibration_sandbox_lambda_security_group_id
   flow_log_group_name = module.macro_sandbox.flow_log_group_name
@@ -2509,7 +2515,7 @@ module "migration_runner_ecr" {
   encryption_type               = "KMS"
   image_tag_mutability          = "IMMUTABLE"
 
-  ci_cd_role_arn = module.iam_oidc.role_arn
+  ci_cd_role_arn = data.aws_iam_role.github_actions_deploy.arn
 
   tags = {
     Environment = var.environment
@@ -2613,7 +2619,7 @@ module "backend_ecr" {
   encryption_type               = "KMS"
   image_tag_mutability          = "IMMUTABLE"
 
-  ci_cd_role_arn = module.iam_oidc.role_arn
+  ci_cd_role_arn = data.aws_iam_role.github_actions_deploy.arn
 
   tags = {
     Environment = var.environment

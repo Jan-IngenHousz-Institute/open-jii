@@ -1,5 +1,11 @@
 name: "OpenTofu Init and Validate"
 description: "Initializes OpenTofu and validates the configuration"
+inputs:
+  root:
+    description: "Directory under infrastructure/ that holds the environment roots: env or foundation"
+    required: false
+    default: "env"
+
 runs:
   using: "composite"
   steps:
@@ -14,10 +20,10 @@ runs:
 
     - name: OpenTofu Init
       shell: bash
-      working-directory: infrastructure/env/${{ env.RESOLVED_ENV }}
+      working-directory: infrastructure/${{ inputs.root }}/${{ env.RESOLVED_ENV }}
       run: tofu init
 
     - name: OpenTofu Validate
       shell: bash
-      working-directory: infrastructure/env/${{ env.RESOLVED_ENV }}
+      working-directory: infrastructure/${{ inputs.root }}/${{ env.RESOLVED_ENV }}
       run: tofu validate
