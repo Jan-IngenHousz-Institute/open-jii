@@ -2059,6 +2059,8 @@ locals {
 }
 
 # Where the pipelines' feed sends gold's changes, and the credentials the feed and the reload use
+# in one scope: the reload runs as the principal that owns gold, which reads gold's tables directly
+# and can already write them, so a scope of its own would narrow nothing.
 module "serving_store_secret_scope" {
   source = "../../modules/databricks/secret_scope"
 
