@@ -121,7 +121,7 @@ passes:
     note: measurements that arrived again, which keep one row id however often they come
   - date: 2026-11-03
     range: [131, 131]
-    note: how long the backend's reads of the serving store take, against the project's second
+    note: how long the backend's reads of the serving store take, against the project's one-second target
 
 metrics:
   # Ingest path
