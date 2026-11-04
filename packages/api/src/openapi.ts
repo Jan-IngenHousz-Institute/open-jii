@@ -4,13 +4,22 @@ import fs from "fs";
 import path from "path";
 
 import { contract } from "./contract";
+import {
+  zExperimentDataFilterValue,
+  zExperimentRelativeTimeWindow,
+} from "./domains/experiment/data/experiment-data.schema";
 
 const generator = new OpenAPIGenerator({
   schemaConverters: [new ZodToJsonSchemaConverter()],
 });
 
-async function generate() {
+export async function generateOpenApiDocument() {
   const openApiDocument = await generator.generate(contract, {
+    // Dashboard responses nest filters beyond the converter's inline depth limit.
+    commonSchemas: {
+      ExperimentDataFilterValue: { schema: zExperimentDataFilterValue },
+      ExperimentRelativeTimeWindow: { schema: zExperimentRelativeTimeWindow },
+    },
     info: {
       title: "openJII API",
       version: "1.0.0",
@@ -60,6 +69,11 @@ async function generate() {
     }
   }
 
+  return openApiDocument;
+}
+
+async function generate() {
+  const openApiDocument = await generateOpenApiDocument();
   const outputDir = path.resolve(__dirname, "../dist");
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
@@ -71,4 +85,4 @@ async function generate() {
   console.log(`OpenAPI document generated at ${outputPath}`);
 }
 
-void generate();
+if (require.main === module) void generate();

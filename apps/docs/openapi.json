@@ -11,6 +11,95 @@
     }
   ],
   "openapi": "3.1.1",
+  "components": {
+    "schemas": {
+      "ExperimentDataFilterValue": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            }
+          },
+          {
+            "$ref": "#/components/schemas/ExperimentRelativeTimeWindow"
+          }
+        ]
+      },
+      "ExperimentRelativeTimeWindow": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "last": {
+                "anyOf": [
+                  {
+                    "const": 1
+                  },
+                  {
+                    "const": 24
+                  }
+                ]
+              },
+              "unit": {
+                "const": "hours"
+              }
+            },
+            "required": [
+              "last",
+              "unit"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "last": {
+                "anyOf": [
+                  {
+                    "const": 7
+                  },
+                  {
+                    "const": 30
+                  },
+                  {
+                    "const": 90
+                  }
+                ]
+              },
+              "unit": {
+                "const": "days"
+              }
+            },
+            "required": [
+              "last",
+              "unit"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
   "paths": {
     "/api/v1/experiments": {
       "post": {
@@ -8886,55 +8975,7 @@
                                             "type": "string"
                                           },
                                           "value": {
-                                            "anyOf": [
-                                              {
-                                                "type": "string",
-                                                "minLength": 1
-                                              },
-                                              {
-                                                "type": "number"
-                                              },
-                                              {
-                                                "type": "boolean"
-                                              },
-                                              {
-                                                "type": "array",
-                                                "minItems": 1,
-                                                "items": {
-                                                  "anyOf": [
-                                                    {
-                                                      "anyOf": [
-                                                        {},
-                                                        {}
-                                                      ]
-                                                    },
-                                                    {
-                                                      "type": "null"
-                                                    }
-                                                  ]
-                                                }
-                                              },
-                                              {
-                                                "anyOf": [
-                                                  {
-                                                    "type": "object",
-                                                    "properties": {
-                                                      "last": {},
-                                                      "unit": {}
-                                                    },
-                                                    "additionalProperties": false
-                                                  },
-                                                  {
-                                                    "type": "object",
-                                                    "properties": {
-                                                      "last": {},
-                                                      "unit": {}
-                                                    },
-                                                    "additionalProperties": false
-                                                  }
-                                                ]
-                                              }
-                                            ]
+                                            "$ref": "#/components/schemas/ExperimentDataFilterValue"
                                           }
                                         },
                                         "required": [
@@ -9019,86 +9060,7 @@
                                       "type": "string"
                                     },
                                     "defaultValue": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "minLength": 1
-                                        },
-                                        {
-                                          "type": "number"
-                                        },
-                                        {
-                                          "type": "boolean"
-                                        },
-                                        {
-                                          "type": "array",
-                                          "minItems": 1,
-                                          "items": {
-                                            "anyOf": [
-                                              {
-                                                "type": "string",
-                                                "minLength": 1
-                                              },
-                                              {
-                                                "type": "number"
-                                              }
-                                            ]
-                                          }
-                                        },
-                                        {
-                                          "anyOf": [
-                                            {
-                                              "type": "object",
-                                              "properties": {
-                                                "last": {
-                                                  "anyOf": [
-                                                    {
-                                                      "const": 1
-                                                    },
-                                                    {
-                                                      "const": 24
-                                                    }
-                                                  ]
-                                                },
-                                                "unit": {
-                                                  "const": "hours"
-                                                }
-                                              },
-                                              "required": [
-                                                "last",
-                                                "unit"
-                                              ],
-                                              "additionalProperties": false
-                                            },
-                                            {
-                                              "type": "object",
-                                              "properties": {
-                                                "last": {
-                                                  "anyOf": [
-                                                    {
-                                                      "const": 7
-                                                    },
-                                                    {
-                                                      "const": 30
-                                                    },
-                                                    {
-                                                      "const": 90
-                                                    }
-                                                  ]
-                                                },
-                                                "unit": {
-                                                  "const": "days"
-                                                }
-                                              },
-                                              "required": [
-                                                "last",
-                                                "unit"
-                                              ],
-                                              "additionalProperties": false
-                                            }
-                                          ]
-                                        }
-                                      ]
+                                      "$ref": "#/components/schemas/ExperimentDataFilterValue"
                                     },
                                     "title": {
                                       "type": "string"
@@ -9456,74 +9418,7 @@
                                         "type": "string"
                                       },
                                       "value": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "minLength": 1
-                                          },
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "type": "boolean"
-                                          },
-                                          {
-                                            "type": "array",
-                                            "minItems": 1,
-                                            "items": {
-                                              "anyOf": [
-                                                {
-                                                  "type": "string",
-                                                  "minLength": 1
-                                                },
-                                                {
-                                                  "type": "number"
-                                                }
-                                              ]
-                                            }
-                                          },
-                                          {
-                                            "anyOf": [
-                                              {
-                                                "type": "object",
-                                                "properties": {
-                                                  "last": {
-                                                    "anyOf": [
-                                                      {},
-                                                      {}
-                                                    ]
-                                                  },
-                                                  "unit": {
-                                                    "const": "hours"
-                                                  }
-                                                },
-                                                "required": [
-                                                  "unit"
-                                                ],
-                                                "additionalProperties": false
-                                              },
-                                              {
-                                                "type": "object",
-                                                "properties": {
-                                                  "last": {
-                                                    "anyOf": [
-                                                      {},
-                                                      {},
-                                                      {}
-                                                    ]
-                                                  },
-                                                  "unit": {
-                                                    "const": "days"
-                                                  }
-                                                },
-                                                "required": [
-                                                  "unit"
-                                                ],
-                                                "additionalProperties": false
-                                              }
-                                            ]
-                                          }
-                                        ]
+                                        "$ref": "#/components/schemas/ExperimentDataFilterValue"
                                       }
                                     },
                                     "required": [
@@ -9608,86 +9503,7 @@
                                   "type": "string"
                                 },
                                 "defaultValue": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "minLength": 1
-                                    },
-                                    {
-                                      "type": "number"
-                                    },
-                                    {
-                                      "type": "boolean"
-                                    },
-                                    {
-                                      "type": "array",
-                                      "minItems": 1,
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "minLength": 1
-                                          },
-                                          {
-                                            "type": "number"
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    {
-                                      "anyOf": [
-                                        {
-                                          "type": "object",
-                                          "properties": {
-                                            "last": {
-                                              "anyOf": [
-                                                {
-                                                  "const": 1
-                                                },
-                                                {
-                                                  "const": 24
-                                                }
-                                              ]
-                                            },
-                                            "unit": {
-                                              "const": "hours"
-                                            }
-                                          },
-                                          "required": [
-                                            "last",
-                                            "unit"
-                                          ],
-                                          "additionalProperties": false
-                                        },
-                                        {
-                                          "type": "object",
-                                          "properties": {
-                                            "last": {
-                                              "anyOf": [
-                                                {
-                                                  "const": 7
-                                                },
-                                                {
-                                                  "const": 30
-                                                },
-                                                {
-                                                  "const": 90
-                                                }
-                                              ]
-                                            },
-                                            "unit": {
-                                              "const": "days"
-                                            }
-                                          },
-                                          "required": [
-                                            "last",
-                                            "unit"
-                                          ],
-                                          "additionalProperties": false
-                                        }
-                                      ]
-                                    }
-                                  ]
+                                  "$ref": "#/components/schemas/ExperimentDataFilterValue"
                                 },
                                 "title": {
                                   "type": "string"
@@ -10021,74 +9837,7 @@
                                           "type": "string"
                                         },
                                         "value": {
-                                          "anyOf": [
-                                            {
-                                              "type": "string",
-                                              "minLength": 1
-                                            },
-                                            {
-                                              "type": "number"
-                                            },
-                                            {
-                                              "type": "boolean"
-                                            },
-                                            {
-                                              "type": "array",
-                                              "minItems": 1,
-                                              "items": {
-                                                "anyOf": [
-                                                  {
-                                                    "type": "string",
-                                                    "minLength": 1
-                                                  },
-                                                  {
-                                                    "type": "number"
-                                                  }
-                                                ]
-                                              }
-                                            },
-                                            {
-                                              "anyOf": [
-                                                {
-                                                  "type": "object",
-                                                  "properties": {
-                                                    "last": {
-                                                      "anyOf": [
-                                                        {},
-                                                        {}
-                                                      ]
-                                                    },
-                                                    "unit": {
-                                                      "const": "hours"
-                                                    }
-                                                  },
-                                                  "required": [
-                                                    "unit"
-                                                  ],
-                                                  "additionalProperties": false
-                                                },
-                                                {
-                                                  "type": "object",
-                                                  "properties": {
-                                                    "last": {
-                                                      "anyOf": [
-                                                        {},
-                                                        {},
-                                                        {}
-                                                      ]
-                                                    },
-                                                    "unit": {
-                                                      "const": "days"
-                                                    }
-                                                  },
-                                                  "required": [
-                                                    "unit"
-                                                  ],
-                                                  "additionalProperties": false
-                                                }
-                                              ]
-                                            }
-                                          ]
+                                          "$ref": "#/components/schemas/ExperimentDataFilterValue"
                                         }
                                       },
                                       "required": [
@@ -10173,86 +9922,7 @@
                                     "type": "string"
                                   },
                                   "defaultValue": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string",
-                                        "minLength": 1
-                                      },
-                                      {
-                                        "type": "number"
-                                      },
-                                      {
-                                        "type": "boolean"
-                                      },
-                                      {
-                                        "type": "array",
-                                        "minItems": 1,
-                                        "items": {
-                                          "anyOf": [
-                                            {
-                                              "type": "string",
-                                              "minLength": 1
-                                            },
-                                            {
-                                              "type": "number"
-                                            }
-                                          ]
-                                        }
-                                      },
-                                      {
-                                        "anyOf": [
-                                          {
-                                            "type": "object",
-                                            "properties": {
-                                              "last": {
-                                                "anyOf": [
-                                                  {
-                                                    "const": 1
-                                                  },
-                                                  {
-                                                    "const": 24
-                                                  }
-                                                ]
-                                              },
-                                              "unit": {
-                                                "const": "hours"
-                                              }
-                                            },
-                                            "required": [
-                                              "last",
-                                              "unit"
-                                            ],
-                                            "additionalProperties": false
-                                          },
-                                          {
-                                            "type": "object",
-                                            "properties": {
-                                              "last": {
-                                                "anyOf": [
-                                                  {
-                                                    "const": 7
-                                                  },
-                                                  {
-                                                    "const": 30
-                                                  },
-                                                  {
-                                                    "const": 90
-                                                  }
-                                                ]
-                                              },
-                                              "unit": {
-                                                "const": "days"
-                                              }
-                                            },
-                                            "required": [
-                                              "last",
-                                              "unit"
-                                            ],
-                                            "additionalProperties": false
-                                          }
-                                        ]
-                                      }
-                                    ]
+                                    "$ref": "#/components/schemas/ExperimentDataFilterValue"
                                   },
                                   "title": {
                                     "type": "string"
@@ -10637,74 +10307,7 @@
                                           "type": "string"
                                         },
                                         "value": {
-                                          "anyOf": [
-                                            {
-                                              "type": "string",
-                                              "minLength": 1
-                                            },
-                                            {
-                                              "type": "number"
-                                            },
-                                            {
-                                              "type": "boolean"
-                                            },
-                                            {
-                                              "type": "array",
-                                              "minItems": 1,
-                                              "items": {
-                                                "anyOf": [
-                                                  {
-                                                    "type": "string",
-                                                    "minLength": 1
-                                                  },
-                                                  {
-                                                    "type": "number"
-                                                  }
-                                                ]
-                                              }
-                                            },
-                                            {
-                                              "anyOf": [
-                                                {
-                                                  "type": "object",
-                                                  "properties": {
-                                                    "last": {
-                                                      "anyOf": [
-                                                        {},
-                                                        {}
-                                                      ]
-                                                    },
-                                                    "unit": {
-                                                      "const": "hours"
-                                                    }
-                                                  },
-                                                  "required": [
-                                                    "unit"
-                                                  ],
-                                                  "additionalProperties": false
-                                                },
-                                                {
-                                                  "type": "object",
-                                                  "properties": {
-                                                    "last": {
-                                                      "anyOf": [
-                                                        {},
-                                                        {},
-                                                        {}
-                                                      ]
-                                                    },
-                                                    "unit": {
-                                                      "const": "days"
-                                                    }
-                                                  },
-                                                  "required": [
-                                                    "unit"
-                                                  ],
-                                                  "additionalProperties": false
-                                                }
-                                              ]
-                                            }
-                                          ]
+                                          "$ref": "#/components/schemas/ExperimentDataFilterValue"
                                         }
                                       },
                                       "required": [
@@ -10789,86 +10392,7 @@
                                     "type": "string"
                                   },
                                   "defaultValue": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string",
-                                        "minLength": 1
-                                      },
-                                      {
-                                        "type": "number"
-                                      },
-                                      {
-                                        "type": "boolean"
-                                      },
-                                      {
-                                        "type": "array",
-                                        "minItems": 1,
-                                        "items": {
-                                          "anyOf": [
-                                            {
-                                              "type": "string",
-                                              "minLength": 1
-                                            },
-                                            {
-                                              "type": "number"
-                                            }
-                                          ]
-                                        }
-                                      },
-                                      {
-                                        "anyOf": [
-                                          {
-                                            "type": "object",
-                                            "properties": {
-                                              "last": {
-                                                "anyOf": [
-                                                  {
-                                                    "const": 1
-                                                  },
-                                                  {
-                                                    "const": 24
-                                                  }
-                                                ]
-                                              },
-                                              "unit": {
-                                                "const": "hours"
-                                              }
-                                            },
-                                            "required": [
-                                              "last",
-                                              "unit"
-                                            ],
-                                            "additionalProperties": false
-                                          },
-                                          {
-                                            "type": "object",
-                                            "properties": {
-                                              "last": {
-                                                "anyOf": [
-                                                  {
-                                                    "const": 7
-                                                  },
-                                                  {
-                                                    "const": 30
-                                                  },
-                                                  {
-                                                    "const": 90
-                                                  }
-                                                ]
-                                              },
-                                              "unit": {
-                                                "const": "days"
-                                              }
-                                            },
-                                            "required": [
-                                              "last",
-                                              "unit"
-                                            ],
-                                            "additionalProperties": false
-                                          }
-                                        ]
-                                      }
-                                    ]
+                                    "$ref": "#/components/schemas/ExperimentDataFilterValue"
                                   },
                                   "title": {
                                     "type": "string"
@@ -11235,74 +10759,7 @@
                                         "type": "string"
                                       },
                                       "value": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "minLength": 1
-                                          },
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "type": "boolean"
-                                          },
-                                          {
-                                            "type": "array",
-                                            "minItems": 1,
-                                            "items": {
-                                              "anyOf": [
-                                                {
-                                                  "type": "string",
-                                                  "minLength": 1
-                                                },
-                                                {
-                                                  "type": "number"
-                                                }
-                                              ]
-                                            }
-                                          },
-                                          {
-                                            "anyOf": [
-                                              {
-                                                "type": "object",
-                                                "properties": {
-                                                  "last": {
-                                                    "anyOf": [
-                                                      {},
-                                                      {}
-                                                    ]
-                                                  },
-                                                  "unit": {
-                                                    "const": "hours"
-                                                  }
-                                                },
-                                                "required": [
-                                                  "unit"
-                                                ],
-                                                "additionalProperties": false
-                                              },
-                                              {
-                                                "type": "object",
-                                                "properties": {
-                                                  "last": {
-                                                    "anyOf": [
-                                                      {},
-                                                      {},
-                                                      {}
-                                                    ]
-                                                  },
-                                                  "unit": {
-                                                    "const": "days"
-                                                  }
-                                                },
-                                                "required": [
-                                                  "unit"
-                                                ],
-                                                "additionalProperties": false
-                                              }
-                                            ]
-                                          }
-                                        ]
+                                        "$ref": "#/components/schemas/ExperimentDataFilterValue"
                                       }
                                     },
                                     "required": [
@@ -11387,86 +10844,7 @@
                                   "type": "string"
                                 },
                                 "defaultValue": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "minLength": 1
-                                    },
-                                    {
-                                      "type": "number"
-                                    },
-                                    {
-                                      "type": "boolean"
-                                    },
-                                    {
-                                      "type": "array",
-                                      "minItems": 1,
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "minLength": 1
-                                          },
-                                          {
-                                            "type": "number"
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    {
-                                      "anyOf": [
-                                        {
-                                          "type": "object",
-                                          "properties": {
-                                            "last": {
-                                              "anyOf": [
-                                                {
-                                                  "const": 1
-                                                },
-                                                {
-                                                  "const": 24
-                                                }
-                                              ]
-                                            },
-                                            "unit": {
-                                              "const": "hours"
-                                            }
-                                          },
-                                          "required": [
-                                            "last",
-                                            "unit"
-                                          ],
-                                          "additionalProperties": false
-                                        },
-                                        {
-                                          "type": "object",
-                                          "properties": {
-                                            "last": {
-                                              "anyOf": [
-                                                {
-                                                  "const": 7
-                                                },
-                                                {
-                                                  "const": 30
-                                                },
-                                                {
-                                                  "const": 90
-                                                }
-                                              ]
-                                            },
-                                            "unit": {
-                                              "const": "days"
-                                            }
-                                          },
-                                          "required": [
-                                            "last",
-                                            "unit"
-                                          ],
-                                          "additionalProperties": false
-                                        }
-                                      ]
-                                    }
-                                  ]
+                                  "$ref": "#/components/schemas/ExperimentDataFilterValue"
                                 },
                                 "title": {
                                   "type": "string"
@@ -11797,74 +11175,7 @@
                                           "type": "string"
                                         },
                                         "value": {
-                                          "anyOf": [
-                                            {
-                                              "type": "string",
-                                              "minLength": 1
-                                            },
-                                            {
-                                              "type": "number"
-                                            },
-                                            {
-                                              "type": "boolean"
-                                            },
-                                            {
-                                              "type": "array",
-                                              "minItems": 1,
-                                              "items": {
-                                                "anyOf": [
-                                                  {
-                                                    "type": "string",
-                                                    "minLength": 1
-                                                  },
-                                                  {
-                                                    "type": "number"
-                                                  }
-                                                ]
-                                              }
-                                            },
-                                            {
-                                              "anyOf": [
-                                                {
-                                                  "type": "object",
-                                                  "properties": {
-                                                    "last": {
-                                                      "anyOf": [
-                                                        {},
-                                                        {}
-                                                      ]
-                                                    },
-                                                    "unit": {
-                                                      "const": "hours"
-                                                    }
-                                                  },
-                                                  "required": [
-                                                    "unit"
-                                                  ],
-                                                  "additionalProperties": false
-                                                },
-                                                {
-                                                  "type": "object",
-                                                  "properties": {
-                                                    "last": {
-                                                      "anyOf": [
-                                                        {},
-                                                        {},
-                                                        {}
-                                                      ]
-                                                    },
-                                                    "unit": {
-                                                      "const": "days"
-                                                    }
-                                                  },
-                                                  "required": [
-                                                    "unit"
-                                                  ],
-                                                  "additionalProperties": false
-                                                }
-                                              ]
-                                            }
-                                          ]
+                                          "$ref": "#/components/schemas/ExperimentDataFilterValue"
                                         }
                                       },
                                       "required": [
@@ -11949,86 +11260,7 @@
                                     "type": "string"
                                   },
                                   "defaultValue": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string",
-                                        "minLength": 1
-                                      },
-                                      {
-                                        "type": "number"
-                                      },
-                                      {
-                                        "type": "boolean"
-                                      },
-                                      {
-                                        "type": "array",
-                                        "minItems": 1,
-                                        "items": {
-                                          "anyOf": [
-                                            {
-                                              "type": "string",
-                                              "minLength": 1
-                                            },
-                                            {
-                                              "type": "number"
-                                            }
-                                          ]
-                                        }
-                                      },
-                                      {
-                                        "anyOf": [
-                                          {
-                                            "type": "object",
-                                            "properties": {
-                                              "last": {
-                                                "anyOf": [
-                                                  {
-                                                    "const": 1
-                                                  },
-                                                  {
-                                                    "const": 24
-                                                  }
-                                                ]
-                                              },
-                                              "unit": {
-                                                "const": "hours"
-                                              }
-                                            },
-                                            "required": [
-                                              "last",
-                                              "unit"
-                                            ],
-                                            "additionalProperties": false
-                                          },
-                                          {
-                                            "type": "object",
-                                            "properties": {
-                                              "last": {
-                                                "anyOf": [
-                                                  {
-                                                    "const": 7
-                                                  },
-                                                  {
-                                                    "const": 30
-                                                  },
-                                                  {
-                                                    "const": 90
-                                                  }
-                                                ]
-                                              },
-                                              "unit": {
-                                                "const": "days"
-                                              }
-                                            },
-                                            "required": [
-                                              "last",
-                                              "unit"
-                                            ],
-                                            "additionalProperties": false
-                                          }
-                                        ]
-                                      }
-                                    ]
+                                    "$ref": "#/components/schemas/ExperimentDataFilterValue"
                                   },
                                   "title": {
                                     "type": "string"
@@ -12424,86 +11656,7 @@
                                   "type": "string"
                                 },
                                 "value": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "minLength": 1
-                                    },
-                                    {
-                                      "type": "number"
-                                    },
-                                    {
-                                      "type": "boolean"
-                                    },
-                                    {
-                                      "type": "array",
-                                      "minItems": 1,
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "minLength": 1
-                                          },
-                                          {
-                                            "type": "number"
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    {
-                                      "anyOf": [
-                                        {
-                                          "type": "object",
-                                          "properties": {
-                                            "last": {
-                                              "anyOf": [
-                                                {
-                                                  "const": 1
-                                                },
-                                                {
-                                                  "const": 24
-                                                }
-                                              ]
-                                            },
-                                            "unit": {
-                                              "const": "hours"
-                                            }
-                                          },
-                                          "required": [
-                                            "last",
-                                            "unit"
-                                          ],
-                                          "additionalProperties": false
-                                        },
-                                        {
-                                          "type": "object",
-                                          "properties": {
-                                            "last": {
-                                              "anyOf": [
-                                                {
-                                                  "const": 7
-                                                },
-                                                {
-                                                  "const": 30
-                                                },
-                                                {
-                                                  "const": 90
-                                                }
-                                              ]
-                                            },
-                                            "unit": {
-                                              "const": "days"
-                                            }
-                                          },
-                                          "required": [
-                                            "last",
-                                            "unit"
-                                          ],
-                                          "additionalProperties": false
-                                        }
-                                      ]
-                                    }
-                                  ]
+                                  "$ref": "#/components/schemas/ExperimentDataFilterValue"
                                 }
                               },
                               "required": [
@@ -12880,86 +12033,7 @@
                               "type": "string"
                             },
                             "value": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "minLength": 1
-                                },
-                                {
-                                  "type": "number"
-                                },
-                                {
-                                  "type": "boolean"
-                                },
-                                {
-                                  "type": "array",
-                                  "minItems": 1,
-                                  "items": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string",
-                                        "minLength": 1
-                                      },
-                                      {
-                                        "type": "number"
-                                      }
-                                    ]
-                                  }
-                                },
-                                {
-                                  "anyOf": [
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "last": {
-                                          "anyOf": [
-                                            {
-                                              "const": 1
-                                            },
-                                            {
-                                              "const": 24
-                                            }
-                                          ]
-                                        },
-                                        "unit": {
-                                          "const": "hours"
-                                        }
-                                      },
-                                      "required": [
-                                        "last",
-                                        "unit"
-                                      ],
-                                      "additionalProperties": false
-                                    },
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "last": {
-                                          "anyOf": [
-                                            {
-                                              "const": 7
-                                            },
-                                            {
-                                              "const": 30
-                                            },
-                                            {
-                                              "const": 90
-                                            }
-                                          ]
-                                        },
-                                        "unit": {
-                                          "const": "days"
-                                        }
-                                      },
-                                      "required": [
-                                        "last",
-                                        "unit"
-                                      ],
-                                      "additionalProperties": false
-                                    }
-                                  ]
-                                }
-                              ]
+                              "$ref": "#/components/schemas/ExperimentDataFilterValue"
                             }
                           },
                           "required": [
@@ -13314,86 +12388,7 @@
                                 "type": "string"
                               },
                               "value": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "minLength": 1
-                                  },
-                                  {
-                                    "type": "number"
-                                  },
-                                  {
-                                    "type": "boolean"
-                                  },
-                                  {
-                                    "type": "array",
-                                    "minItems": 1,
-                                    "items": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "minLength": 1
-                                        },
-                                        {
-                                          "type": "number"
-                                        }
-                                      ]
-                                    }
-                                  },
-                                  {
-                                    "anyOf": [
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "last": {
-                                            "anyOf": [
-                                              {
-                                                "const": 1
-                                              },
-                                              {
-                                                "const": 24
-                                              }
-                                            ]
-                                          },
-                                          "unit": {
-                                            "const": "hours"
-                                          }
-                                        },
-                                        "required": [
-                                          "last",
-                                          "unit"
-                                        ],
-                                        "additionalProperties": false
-                                      },
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "last": {
-                                            "anyOf": [
-                                              {
-                                                "const": 7
-                                              },
-                                              {
-                                                "const": 30
-                                              },
-                                              {
-                                                "const": 90
-                                              }
-                                            ]
-                                          },
-                                          "unit": {
-                                            "const": "days"
-                                          }
-                                        },
-                                        "required": [
-                                          "last",
-                                          "unit"
-                                        ],
-                                        "additionalProperties": false
-                                      }
-                                    ]
-                                  }
-                                ]
+                                "$ref": "#/components/schemas/ExperimentDataFilterValue"
                               }
                             },
                             "required": [
@@ -13797,86 +12792,7 @@
                                 "type": "string"
                               },
                               "value": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "minLength": 1
-                                  },
-                                  {
-                                    "type": "number"
-                                  },
-                                  {
-                                    "type": "boolean"
-                                  },
-                                  {
-                                    "type": "array",
-                                    "minItems": 1,
-                                    "items": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "minLength": 1
-                                        },
-                                        {
-                                          "type": "number"
-                                        }
-                                      ]
-                                    }
-                                  },
-                                  {
-                                    "anyOf": [
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "last": {
-                                            "anyOf": [
-                                              {
-                                                "const": 1
-                                              },
-                                              {
-                                                "const": 24
-                                              }
-                                            ]
-                                          },
-                                          "unit": {
-                                            "const": "hours"
-                                          }
-                                        },
-                                        "required": [
-                                          "last",
-                                          "unit"
-                                        ],
-                                        "additionalProperties": false
-                                      },
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "last": {
-                                            "anyOf": [
-                                              {
-                                                "const": 7
-                                              },
-                                              {
-                                                "const": 30
-                                              },
-                                              {
-                                                "const": 90
-                                              }
-                                            ]
-                                          },
-                                          "unit": {
-                                            "const": "days"
-                                          }
-                                        },
-                                        "required": [
-                                          "last",
-                                          "unit"
-                                        ],
-                                        "additionalProperties": false
-                                      }
-                                    ]
-                                  }
-                                ]
+                                "$ref": "#/components/schemas/ExperimentDataFilterValue"
                               }
                             },
                             "required": [
@@ -14262,86 +13178,7 @@
                               "type": "string"
                             },
                             "value": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "minLength": 1
-                                },
-                                {
-                                  "type": "number"
-                                },
-                                {
-                                  "type": "boolean"
-                                },
-                                {
-                                  "type": "array",
-                                  "minItems": 1,
-                                  "items": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string",
-                                        "minLength": 1
-                                      },
-                                      {
-                                        "type": "number"
-                                      }
-                                    ]
-                                  }
-                                },
-                                {
-                                  "anyOf": [
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "last": {
-                                          "anyOf": [
-                                            {
-                                              "const": 1
-                                            },
-                                            {
-                                              "const": 24
-                                            }
-                                          ]
-                                        },
-                                        "unit": {
-                                          "const": "hours"
-                                        }
-                                      },
-                                      "required": [
-                                        "last",
-                                        "unit"
-                                      ],
-                                      "additionalProperties": false
-                                    },
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "last": {
-                                          "anyOf": [
-                                            {
-                                              "const": 7
-                                            },
-                                            {
-                                              "const": 30
-                                            },
-                                            {
-                                              "const": 90
-                                            }
-                                          ]
-                                        },
-                                        "unit": {
-                                          "const": "days"
-                                        }
-                                      },
-                                      "required": [
-                                        "last",
-                                        "unit"
-                                      ],
-                                      "additionalProperties": false
-                                    }
-                                  ]
-                                }
-                              ]
+                              "$ref": "#/components/schemas/ExperimentDataFilterValue"
                             }
                           },
                           "required": [
@@ -14696,86 +13533,7 @@
                                 "type": "string"
                               },
                               "value": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "minLength": 1
-                                  },
-                                  {
-                                    "type": "number"
-                                  },
-                                  {
-                                    "type": "boolean"
-                                  },
-                                  {
-                                    "type": "array",
-                                    "minItems": 1,
-                                    "items": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "minLength": 1
-                                        },
-                                        {
-                                          "type": "number"
-                                        }
-                                      ]
-                                    }
-                                  },
-                                  {
-                                    "anyOf": [
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "last": {
-                                            "anyOf": [
-                                              {
-                                                "const": 1
-                                              },
-                                              {
-                                                "const": 24
-                                              }
-                                            ]
-                                          },
-                                          "unit": {
-                                            "const": "hours"
-                                          }
-                                        },
-                                        "required": [
-                                          "last",
-                                          "unit"
-                                        ],
-                                        "additionalProperties": false
-                                      },
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "last": {
-                                            "anyOf": [
-                                              {
-                                                "const": 7
-                                              },
-                                              {
-                                                "const": 30
-                                              },
-                                              {
-                                                "const": 90
-                                              }
-                                            ]
-                                          },
-                                          "unit": {
-                                            "const": "days"
-                                          }
-                                        },
-                                        "required": [
-                                          "last",
-                                          "unit"
-                                        ],
-                                        "additionalProperties": false
-                                      }
-                                    ]
-                                  }
-                                ]
+                                "$ref": "#/components/schemas/ExperimentDataFilterValue"
                               }
                             },
                             "required": [
