@@ -1,28 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
-import { DocsHelpLink } from "~/components/docs-help-link";
+import { NameUpdatedList } from "@/components/overview-table/name-updated-list";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
-import { Card } from "@repo/ui/components/card";
-import { Skeleton } from "@repo/ui/components/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@repo/ui/components/table";
-import { cn } from "@repo/ui/lib/utils";
 
-import {
-  LIST_HEADER_BG,
-  LIST_TABLE_BORDER,
-  LIST_TEXT_MUTED,
-} from "../../experiment-dashboards/list/table/experiment-dashboards-list-tokens";
-import { VisualizationTableRow } from "./visualization-table-row";
+import { getVisualizationColumns } from "./visualization-columns";
 
 interface ExperimentVisualizationsListProps {
   visualizations: ExperimentVisualization[];
@@ -31,13 +14,6 @@ interface ExperimentVisualizationsListProps {
   isArchived?: boolean;
 }
 
-const SKELETON_ROW_COUNT = 4;
-
-/**
- * Tabular visualizations list. Mirrors the dashboards list: bordered container,
- * tinted header band, uppercase column labels, semibold row title, type pill,
- * avatar in the user column.
- */
 export default function ExperimentVisualizationsList({
   visualizations,
   experimentId,
@@ -47,93 +23,17 @@ export default function ExperimentVisualizationsList({
   const { t } = useTranslation("experimentVisualizations");
   const basePath = isArchived ? "experiments-archive" : "experiments";
 
-  const sorted = useMemo(
-    () =>
-      [...visualizations].sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-      ),
-    [visualizations],
-  );
-
-  const isEmpty = !isLoading && sorted.length === 0;
-  if (isEmpty) {
-    return (
-      <Card
-        className={cn("border-dashed p-10 text-center text-sm", LIST_TABLE_BORDER, LIST_TEXT_MUTED)}
-      >
-        {t("ui.messages.noVisualizations")}
-        {!isArchived && (
-          <div className="mt-2">
-            <DocsHelpLink path="/guide/data-analysis/viewing-data" />
-          </div>
-        )}
-      </Card>
-    );
-  }
-
   return (
-    <div className={cn("overflow-hidden rounded-lg border", LIST_TABLE_BORDER)}>
-      <Table>
-        <TableHeader className={LIST_HEADER_BG}>
-          <TableRow className={cn("hover:bg-transparent", LIST_TABLE_BORDER)}>
-            <ColumnHead>{t("ui.labels.columns.name")}</ColumnHead>
-            <ColumnHead>{t("ui.labels.columns.type")}</ColumnHead>
-            <ColumnHead>{t("ui.labels.columns.user")}</ColumnHead>
-            <ColumnHead>{t("ui.labels.columns.updated")}</ColumnHead>
-            <TableHead aria-hidden className="w-12" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isLoading
-            ? Array.from({ length: SKELETON_ROW_COUNT }).map((_, index) => (
-                <SkeletonRow key={index} />
-              ))
-            : sorted.map((visualization) => (
-                <VisualizationTableRow
-                  key={visualization.id}
-                  visualization={visualization}
-                  experimentId={experimentId}
-                  basePath={basePath}
-                />
-              ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
-
-function ColumnHead({ children }: { children: React.ReactNode }) {
-  return (
-    <TableHead
-      className={cn(
-        "h-10 px-6 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]",
-        LIST_TEXT_MUTED,
-      )}
-    >
-      {children}
-    </TableHead>
-  );
-}
-
-function SkeletonRow() {
-  return (
-    <TableRow className={cn("hover:bg-transparent", LIST_TABLE_BORDER)}>
-      <TableCell className="px-6 py-3">
-        <Skeleton className="h-4 w-48" />
-      </TableCell>
-      <TableCell className="px-6 py-3">
-        <Skeleton className="h-5 w-16 rounded-full" />
-      </TableCell>
-      <TableCell className="px-6 py-3">
-        <div className="flex items-center gap-2">
-          <Skeleton className="size-6 rounded-full" />
-          <Skeleton className="h-4 w-20" />
-        </div>
-      </TableCell>
-      <TableCell className="px-6 py-3">
-        <Skeleton className="h-4 w-24" />
-      </TableCell>
-      <TableCell className="w-12 px-6 py-3" />
-    </TableRow>
+    <NameUpdatedList
+      items={visualizations}
+      columns={getVisualizationColumns(t, experimentId)}
+      getRowHref={(visualization) =>
+        `/platform/${basePath}/${experimentId}/analysis/visualizations/${visualization.id}`
+      }
+      countLabel={(count) => t("ui.labels.listCount", { count })}
+      isLoading={isLoading}
+      emptyMessage={t("ui.messages.noVisualizations")}
+      emptyHelpPath={isArchived ? undefined : "/guide/data-analysis/viewing-data"}
+    />
   );
 }

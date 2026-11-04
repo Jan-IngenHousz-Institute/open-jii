@@ -22,8 +22,8 @@ test("a shared filtered link opens the filtered list and clears back to all", as
   await dismissCookieBanner(page);
   await filtered;
 
-  await expect(page.getByRole("button", { name: "Language 1 selected" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Visibility 1 selected" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Language is R" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Visibility is Public" })).toBeVisible();
   await expect(page.getByRole("link", { name: "[Seed] ANOVA Analysis" })).toBeVisible();
   await expect(page.getByRole("link", { name: "[Seed] Phi2 Quantum Yield" })).toHaveCount(0);
 
@@ -39,7 +39,7 @@ test("a shared filtered link opens the filtered list and clears back to all", as
   await expect(page).toHaveURL(
     (url) => !url.search.includes("language") && !url.search.includes("visibility"),
   );
-  await expect(page.getByRole("button", { name: "Language", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Filter", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Clear filters" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "[Seed] ANOVA Analysis" })).toBeVisible();
   await expect(page.getByRole("link", { name: "[Seed] Phi2 Quantum Yield" })).toBeVisible();

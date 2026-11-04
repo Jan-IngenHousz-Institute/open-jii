@@ -53,6 +53,36 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     );
   }
 
+  async sendCalibrationRunAwaitingApprovalNotification(input: {
+    deviceId: string;
+    deviceName: string;
+    definitionName: string;
+    actor: string;
+    email: string;
+  }): Promise<Result<void>> {
+    return this.notificationService.sendCalibrationRunAwaitingApprovalNotification(input);
+  }
+
+  async sendCalibrationRunApprovedNotification(input: {
+    deviceId: string;
+    deviceName: string;
+    definitionName: string;
+    actor: string;
+    email: string;
+  }): Promise<Result<void>> {
+    return this.notificationService.sendCalibrationRunApprovedNotification(input);
+  }
+
+  async sendCalibrationRunRejectedNotification(input: {
+    deviceId: string;
+    deviceName: string;
+    definitionName: string;
+    actor: string;
+    email: string;
+  }): Promise<Result<void>> {
+    return this.notificationService.sendCalibrationRunRejectedNotification(input);
+  }
+
   async sendTransferRequestConfirmation(
     email: string,
     projectIdOld: string,

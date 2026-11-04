@@ -22,17 +22,19 @@ const SERVICES: CostServices = {
     "Amazon Managed Grafana": { label: "Grafana", category: "Other AWS", billsMonthly: true },
   },
   otherServices: { label: "Other AWS services", category: "Other AWS" },
+  ec2InstanceTypes: { "r7g.large": { label: "Serving store", category: "Other AWS" } },
   databricksComponents: {},
 };
 
 // A Tuesday, so the latest complete week is 19 to 25 October.
+// A group's key is its service, or its service and instance type joined by "@".
 const RUN = new Date("2026-10-27T06:00:00Z");
 
 function day(date: string, groups: Record<string, number>): CostResultByTime {
   return {
     TimePeriod: { Start: date },
     Groups: Object.entries(groups).map(([service, usd]) => ({
-      Keys: [service],
+      Keys: service.split("@"),
       Metrics: { UnblendedCost: { Amount: String(usd) } },
     })),
   };
@@ -101,7 +103,10 @@ describe("costRequests", () => {
     expect(requests.usageByService).toMatchObject({
       TimePeriod: { Start: "2026-09-01", End: "2026-10-27" },
       Granularity: "DAILY",
-      GroupBy: [{ Type: "DIMENSION", Key: "SERVICE" }],
+      GroupBy: [
+        { Type: "DIMENSION", Key: "SERVICE" },
+        { Type: "DIMENSION", Key: "INSTANCE_TYPE" },
+      ],
       Filter: { Dimensions: { Key: "RECORD_TYPE", Values: ["Usage"] } },
     });
     expect(requests.totals).toMatchObject({
@@ -177,6 +182,33 @@ describe("costDatums", () => {
     expect(value(costDatums(readings), "DailyCostUsd", "Other AWS services")).toBe(0.5);
   });
 
+  it("counts EC2 compute on a listed instance type apart from the clusters' VMs", () => {
+    const split = costDatums({
+      ...readings,
+      usageByService: [
+        day("2026-10-26", {
+          "Amazon Elastic Compute Cloud - Compute@r6id.large": 10,
+          "Amazon Elastic Compute Cloud - Compute@r7i.xlarge": 5,
+          "Amazon Elastic Compute Cloud - Compute@r7g.large": 3,
+          "Amazon Simple Storage Service@r7g.large": 1,
+        }),
+      ],
+    });
+
+    // The clusters' instance types add up to one point for the day, not one each.
+    const yesterday = find(split, "DailyCostUsd", "EC2 compute").filter(
+      ({ datum }) => datum.Timestamp.toISOString() === "2026-10-27T00:00:00.000Z",
+    );
+    expect(yesterday.map(({ datum }) => datum.Value)).toEqual([15]);
+    expect(value(split, "DailyCostUsd", "Serving store")).toBe(3);
+    expect(find(split, "DailyCostUsd", "Serving store")[0].datum.Dimensions).toContainEqual({
+      Name: "Category",
+      Value: "Other AWS",
+    });
+    // Only EC2 compute splits by instance type.
+    expect(value(split, "DailyCostUsd", "S3")).toBe(1);
+  });
+
   it("reads zero for a listed service that spent nothing, rather than leaving a gap", () => {
     const quiet = costDatums({ ...readings, usageByService: [day("2026-10-26", {})] });
 
@@ -237,6 +269,7 @@ describe("costDatums", () => {
       "EC2 compute",
       "S3",
       "Grafana",
+      "Serving store",
       "Other AWS services",
     ]);
   });
@@ -338,7 +371,11 @@ describe("the category file", () => {
     ),
   );
   const categories = services.categories.map(({ name }) => name);
-  const labels = [...Object.values(services.services), services.otherServices];
+  const labels = [
+    ...Object.values(services.services),
+    ...Object.values(services.ec2InstanceTypes),
+    services.otherServices,
+  ];
 
   it("puts every service in a category the dashboards colour", () => {
     expect(labels.filter(({ category }) => !categories.includes(category))).toEqual([]);

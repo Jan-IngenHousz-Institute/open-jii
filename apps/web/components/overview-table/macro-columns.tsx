@@ -7,6 +7,7 @@ import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { getMacroLanguageBadgeTone, getMacroLanguageLabel } from "@/util/macro-language";
 
 import type { MacroListItem } from "@repo/api/domains/macro/macro.schema";
+import type { MacroSort } from "@repo/api/domains/macro/macro.schema";
 import { Badge } from "@repo/ui/components/badge";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { cn } from "@repo/ui/lib/utils";
@@ -17,7 +18,7 @@ import { overviewTableText } from "./overview-table";
 export function getMacroColumns(
   t: (key: string) => string,
   locale: string,
-): OverviewTableColumn<MacroListItem>[] {
+): OverviewTableColumn<MacroListItem, MacroSort[number]["field"]>[] {
   return [
     {
       header: t("macros.columns.name"),

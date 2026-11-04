@@ -6,7 +6,8 @@
       "delete": "Verwijderen",
       "deleting": "Verwijderen...",
       "create": "Nieuwe maken",
-      "back": "Terug"
+      "back": "Terug",
+      "moreActions": "Meer acties"
     },
     "messages": {
       "noVisualizations": "Nog geen visualisaties",
@@ -28,7 +29,9 @@
         "user": "Gebruiker",
         "updated": "Bijgewerkt"
       },
-      "updatedAgo": "Bijgewerkt {{date}}"
+      "updatedAgo": "Bijgewerkt {{date}}",
+      "listCount_one": "{{count}} visualisatie",
+      "listCount_other": "{{count}} visualisaties"
     }
   },
   "form": {

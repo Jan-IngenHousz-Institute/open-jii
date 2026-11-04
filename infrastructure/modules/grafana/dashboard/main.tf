@@ -1288,7 +1288,7 @@ resource "grafana_rule_group" "serving_store_health" {
       datasource_uid = "__expr__"
 
       model = jsonencode({
-        expression = "$B > 85"
+        expression = "$B > 75"
         type       = "math"
         refId      = "C"
       })
@@ -1304,7 +1304,7 @@ resource "grafana_rule_group" "serving_store_health" {
     for            = "5m"
 
     annotations = {
-      description      = "The serving store's instance is above 85% memory. ClickHouse refuses queries past 90%."
+      description      = "The serving store's instance is above 75% memory. ClickHouse refuses queries past 80%."
       summary          = "High memory on the serving store"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-memory.md"
       __dashboardUid__ = local.heartbeat_daily_uid
@@ -3875,9 +3875,10 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     }
   }
 
-  # Catalog entry 97. Published per pipeline, so matchExact false with only the environment
-  # covers every driver and each series alerts on its own. A point is a full collection in
-  # the last hour; a driver without one is under no pressure.
+  # Catalog entry 97. Published per pipeline. The pipeline is named with a wildcard so each
+  # driver's series alerts under its own label; with only the environment named, both
+  # pipelines' alerts carried the same labels and could not say which driver it was. A point
+  # is a full collection in the last hour; a driver without one is under no pressure.
   rule {
     name      = "Pipeline Driver Memory"
     condition = "C"
@@ -3895,6 +3896,7 @@ resource "grafana_rule_group" "lakehouse_freshness" {
         statistic  = "Maximum"
         dimensions = {
           Environment = var.environment
+          Pipeline    = "*"
         }
         matchExact = false
       })

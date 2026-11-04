@@ -1,109 +1,44 @@
 import { orpc } from "@/lib/orpc";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 
-import { zExperimentSort } from "@repo/api/domains/experiment/experiment.schema";
-import { isPaginatedList } from "@repo/api/shared/listing";
+import {
+  zExperimentSort,
+  zExperimentStatus,
+  zExperimentVisibility,
+} from "@repo/api/domains/experiment/experiment.schema";
 
-import { useDebounce } from "../../useDebounce";
-import { useListSorting } from "../../useListSorting";
-import { useSearchPending } from "../../useSearchPending";
+import { useResourceList } from "../../useResourceList";
 import { experimentsListQuery } from "./experiments-list-query";
-import { useExperimentListFilters } from "./useExperimentListFilters";
+
+const EXPERIMENT_LIST_FILTERS = {
+  // Archived rows have their own page, so the main list never offers that status.
+  status: zExperimentStatus.exclude(["archived"]),
+  visibility: zExperimentVisibility,
+};
 
 /**
- * Fetch a paginated experiment list with URL filters and sorting and a 300 ms search debounce.
- * `initialSearch` seeds local search state. `archived` restricts requests to related archived
- * experiments and ignores the URL status filter. Search, filter and sort setters reset to page 1;
- * clearing filters keeps search and sort. Previous data remains visible while a new query loads,
- * and query errors are exposed through `error`.
+ * The experiments list: status and visibility filters and sort in the URL, server-paged.
+ * `archived` lists related archived experiments; a stray `status` param there is neither
+ * applied nor counted as an active filter.
  */
-export const useExperiments = ({
-  initialSearch = "",
-  archived = false,
-}: {
-  initialSearch?: string;
-  archived?: boolean;
-}) => {
-  const filters = useExperimentListFilters({ archived });
-  const { statuses, visibilities } = filters;
-  const [search, setSearchState] = useState<string>(initialSearch);
-  const [page, setPage] = useState(1);
-  const { sort, setSort, toggleSort } = useListSorting(zExperimentSort);
-  const [debouncedSearch] = useDebounce(search, 300);
-
-  const setSearch = (value: string) => {
-    setSearchState(value);
-    setPage(1);
-  };
-
-  const setStatuses = (values: typeof statuses) => {
-    filters.setStatuses(values);
-    setPage(1);
-  };
-
-  const setVisibilities = (values: typeof visibilities) => {
-    filters.setVisibilities(values);
-    setPage(1);
-  };
-
-  const clearFilters = () => {
-    filters.clearFilters();
-    setPage(1);
-  };
-
-  const query = useQuery({
-    ...experimentsListQuery(orpc, {
-      archived,
-      statuses,
-      visibilities,
-      search: debouncedSearch,
-      page,
-      sort,
-    }),
-    placeholderData: (prev) => prev,
+export function useExperiments({ archived = false }: { archived?: boolean } = {}) {
+  const list = useResourceList({
+    filters: EXPERIMENT_LIST_FILTERS,
+    sort: zExperimentSort,
+    query: (view) =>
+      experimentsListQuery(orpc, {
+        archived,
+        statuses: view.filters.status,
+        visibilities: view.filters.visibility,
+        search: view.search,
+        page: view.page,
+        sort: view.sort,
+      }),
   });
 
-  // `page` is always sent, so the response is the envelope; narrow the union.
-  const data = query.data && isPaginatedList(query.data) ? query.data : undefined;
-  const isSearchPending = useSearchPending({
-    search,
-    debouncedSearch,
-    isFetching: query.isFetching,
-  });
-
-  // A mutation or background update can shrink the result set under the current
-  // page; snap back into range once a real (non-placeholder) response says so.
-  if (data && !query.isPlaceholderData && page > Math.max(1, data.totalPages)) {
-    setPage(Math.max(1, data.totalPages));
-  }
-
+  if (!archived) return list;
   return {
-    data,
-    isLoading: query.isLoading,
-    isPlaceholderData: query.isPlaceholderData,
-    isSearchPending,
-    error: query.error,
-    refetch: query.refetch,
-    statuses,
-    setStatuses,
-    visibilities,
-    setVisibilities,
-    clearFilters,
-    hasActiveFilters: filters.hasActiveFilters,
-    search,
-    debouncedSearch,
-    setSearch,
-    page,
-    setPage,
-    sort,
-    setSort: (next: typeof sort) => {
-      setSort(next);
-      setPage(1);
-    },
-    toggleSort: (field: (typeof sort)[number]["field"], multi: boolean) => {
-      toggleSort(field, multi);
-      setPage(1);
-    },
+    ...list,
+    filters: { ...list.filters, status: [] },
+    hasActiveFilters: list.filters.visibility.length > 0,
   };
-};
+}

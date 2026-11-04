@@ -78,6 +78,18 @@
     "./render/passkey-added-notification": {
       "types": "./dist/render/passkey-added-notification.d.ts",
       "default": "./dist/render/passkey-added-notification.js"
+    },
+    "./render/calibration-run-awaiting-approval-notification": {
+      "types": "./dist/render/calibration-run-awaiting-approval-notification.d.ts",
+      "default": "./dist/render/calibration-run-awaiting-approval-notification.js"
+    },
+    "./render/calibration-run-approved-notification": {
+      "types": "./dist/render/calibration-run-approved-notification.d.ts",
+      "default": "./dist/render/calibration-run-approved-notification.js"
+    },
+    "./render/calibration-run-rejected-notification": {
+      "types": "./dist/render/calibration-run-rejected-notification.d.ts",
+      "default": "./dist/render/calibration-run-rejected-notification.js"
     }
   },
   "scripts": {

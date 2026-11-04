@@ -408,7 +408,7 @@ locals {
     [merge(local.cost_stacks.platform, {
       id          = 711
       title       = "Platform cost per week"
-      description = "The platform's usage per Monday-to-Sunday week, in five parts. Databricks VMs are the EC2 its clusters run on, which AWS bills; network is EC2's disks, NAT and IPs, the VPC and the load balancer; monitoring and audit is CloudWatch, CloudTrail, Config, the security services and Grafana. Tax and fees are at the bottom of the page."
+      description = "The platform's usage per Monday-to-Sunday week, in five parts. Databricks VMs are the EC2 its clusters run on, which AWS bills; network is EC2's disks, NAT and IPs, the VPC and the load balancer; monitoring and audit is CloudWatch, CloudTrail, Config, the security services and Grafana. The serving store's own instance counts under other AWS. Tax and fees are at the bottom of the page."
       gridPos     = { h = 10, w = 24, x = 0, y = 7 }
       options     = local.cost_right_legend
     })],
@@ -430,7 +430,7 @@ locals {
     [merge(local.cost_stacks.databricks, {
       id          = 731
       title       = "Databricks per week: its charges and the VMs AWS bills for it"
-      description = "Databricks bills its own charges; AWS bills the EC2 its clusters run on. Nothing else the platform deploys runs on EC2, so all of EC2 compute counts as its VMs."
+      description = "Databricks bills its own charges; AWS bills the EC2 its clusters run on. EC2 compute counts as its VMs, apart from the serving store's instance type, which counts as the serving store."
       gridPos     = { h = 8, w = 24, x = 0, y = 57 }
       options     = local.cost_right_legend
     })],
