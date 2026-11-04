@@ -1757,6 +1757,45 @@ describe("NotificationsService", () => {
             unsubscribe,
           }),
       ],
+      [
+        "sendCalibrationRunAwaitingApprovalNotification",
+        "renderCalibrationRunAwaitingApprovalNotificationEmail",
+        (unsubscribe) =>
+          service.sendCalibrationRunAwaitingApprovalNotification({
+            deviceId: "device-123",
+            deviceName: "Greenhouse 3 MiniPAR",
+            definitionName: "PAR sweep",
+            actor: MOCK_ACTOR,
+            email: MOCK_EMAIL,
+            unsubscribe,
+          }),
+      ],
+      [
+        "sendCalibrationRunApprovedNotification",
+        "renderCalibrationRunApprovedNotificationEmail",
+        (unsubscribe) =>
+          service.sendCalibrationRunApprovedNotification({
+            deviceId: "device-123",
+            deviceName: "Greenhouse 3 MiniPAR",
+            definitionName: "PAR sweep",
+            actor: MOCK_ACTOR,
+            email: MOCK_EMAIL,
+            unsubscribe,
+          }),
+      ],
+      [
+        "sendCalibrationRunRejectedNotification",
+        "renderCalibrationRunRejectedNotificationEmail",
+        (unsubscribe) =>
+          service.sendCalibrationRunRejectedNotification({
+            deviceId: "device-123",
+            deviceName: "Greenhouse 3 MiniPAR",
+            definitionName: "PAR sweep",
+            actor: MOCK_ACTOR,
+            email: MOCK_EMAIL,
+            unsubscribe,
+          }),
+      ],
     ];
 
     let mockSendMail: MockInstance;

@@ -186,33 +186,36 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
       ),
   ),
   calibration_run_awaiting_approval: aboutResource(
-    (deviceId, email, { params, actorName, recipientEmail }) =>
+    (deviceId, email, { params, actorName, recipientEmail, unsubscribe }) =>
       email.sendCalibrationRunAwaitingApprovalNotification({
         deviceId,
         deviceName: params.deviceName,
         definitionName: params.definitionName,
         actor: actorName ?? "Someone",
         email: recipientEmail,
+        unsubscribe,
       }),
   ),
   calibration_run_approved: aboutResource(
-    (deviceId, email, { params, actorName, recipientEmail }) =>
+    (deviceId, email, { params, actorName, recipientEmail, unsubscribe }) =>
       email.sendCalibrationRunApprovedNotification({
         deviceId,
         deviceName: params.deviceName,
         definitionName: params.definitionName,
         actor: actorName ?? "Someone",
         email: recipientEmail,
+        unsubscribe,
       }),
   ),
   calibration_run_rejected: aboutResource(
-    (deviceId, email, { params, actorName, recipientEmail }) =>
+    (deviceId, email, { params, actorName, recipientEmail, unsubscribe }) =>
       email.sendCalibrationRunRejectedNotification({
         deviceId,
         deviceName: params.deviceName,
         definitionName: params.definitionName,
         actor: actorName ?? "Someone",
         email: recipientEmail,
+        unsubscribe,
       }),
   ),
   // No `aboutResource`: a deleted resource has no page to link back to.

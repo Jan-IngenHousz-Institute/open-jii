@@ -989,6 +989,7 @@ describe("NotificationDispatchService", () => {
       resource: typeof device | null,
       actorName: string | null = "Ada Lovelace",
     ) => ({
+      recipientId,
       recipientEmail,
       actorName,
       resource,
@@ -1002,7 +1003,7 @@ describe("NotificationDispatchService", () => {
     ] as const;
 
     it.each(entries)(
-      "%s sends the device's id, both names, the actor and the address",
+      "%s sends the device's id, both names, the actor, the address and the footer",
       async (type, method) => {
         const send = vi
           .spyOn(testApp.module.get(EmailAdapter), method)
@@ -1017,6 +1018,12 @@ describe("NotificationDispatchService", () => {
           definitionName: "PAR sweep",
           actor: "Ada Lovelace",
           email: recipientEmail,
+          unsubscribe: send.mock.calls[0]?.[0].unsubscribe,
+        });
+        expectUnsubscribeFooter(testApp, send.mock.calls[0]?.[0].unsubscribe, {
+          recipientId,
+          category: "devices_and_calibration",
+          categoryLabel: "Devices and calibration",
         });
       },
     );
