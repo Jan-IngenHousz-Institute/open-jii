@@ -97,7 +97,8 @@
     "reduced": "Drawn at screen resolution from {{total}} rows.",
     "showingAllPoints": "Showing every point.",
     "showAllPoints": "Show every point",
-    "drawAtResolution": "Draw at screen resolution"
+    "drawAtResolution": "Draw at screen resolution",
+    "frequency": "Frequency"
   },
   "configuration": {
     "columns": {

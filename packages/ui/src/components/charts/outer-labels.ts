@@ -1,7 +1,12 @@
 import type { Layout, PlotData } from "plotly.js";
 
 import type { PlotlyChartConfig } from "./types";
-import { legendAnchorFor } from "./utils";
+import type { ChartTierOptions } from "./utils";
+import { effectiveLegendPosition, legendAnchorFor, responsiveChrome } from "./utils";
+
+const HORIZONTAL_LEGEND_HEIGHT = 64;
+const LEGEND_PADDING = 56;
+const MIN_SIDE_TEXT_WIDTH = 96;
 
 let textContext: CanvasRenderingContext2D | null | undefined;
 let fontFamily = "sans-serif";
@@ -50,23 +55,18 @@ export function wrapChartLabel(text: string, fontSize: number, maxWidth: number)
 
 function boundSideLegend(
   layout: Partial<Layout>,
-  config: PlotlyChartConfig,
+  initialPosition: NonNullable<PlotlyChartConfig["legendPosition"]>,
   labels: { left: number; right: number },
   traces: PlotData[],
-  measuredWidth?: number,
+  width: number,
 ) {
   let legend = layout.legend ?? {};
   const legendNames = traces
     .filter((trace) => trace.showlegend !== false && trace.visible !== false)
     .map((trace) => trace.name ?? "");
-  const outside = !config.legendPosition?.startsWith("inside-");
+  const outside = !initialPosition.startsWith("inside-");
   const hasLegend = layout.showlegend !== false && outside && legendNames.length > 0;
-  let position =
-    legend.orientation === "h"
-      ? legend.y === 0
-        ? "bottom"
-        : "top"
-      : (config.legendPosition ?? "right");
+  let position = initialPosition;
   if (hasLegend && position === "right") {
     legend = {
       ...legend,
@@ -75,7 +75,6 @@ function boundSideLegend(
     };
   }
   const legendFont = legend.font?.size ?? 12;
-  const width = config.width ?? (measuredWidth && measuredWidth > 0 ? measuredWidth : 720);
   const plotFloor = Math.min(160, width * 0.35);
   const availableSide = Math.max(0, width - labels.left - labels.right - plotFloor);
   const sideBudget = Math.min(width * 0.4, availableSide);
@@ -86,14 +85,14 @@ function boundSideLegend(
   if (
     hasLegend &&
     (position === "left" || position === "right") &&
-    longestName + 56 + sideInset > availableSide
+    longestName + LEGEND_PADDING + sideInset > availableSide
   ) {
-    if (sideBudget - 56 - sideInset < 96) {
+    if (sideBudget - LEGEND_PADDING - sideInset < MIN_SIDE_TEXT_WIDTH) {
       position = "bottom";
       legend = { ...legend, ...legendAnchorFor("bottom") };
       nameWidth = Math.max(32, width - labels.left - labels.right - 64);
     } else {
-      nameWidth = Math.max(24, sideBudget - 56 - sideInset);
+      nameWidth = Math.max(24, sideBudget - LEGEND_PADDING - sideInset);
     }
   }
   const data = Number.isFinite(nameWidth)
@@ -111,7 +110,7 @@ function boundSideLegend(
           .map((trace) => chartTextWidth(trace.name ?? "", legendFont)),
       ),
     ) +
-      56 +
+      LEGEND_PADDING +
       sideInset,
   );
   return { legend, data, position, sideBand, hasLegend };
@@ -133,44 +132,53 @@ export function withBoundedRightLegend(
   }
   const { legend, data, position, hasLegend } = boundSideLegend(
     layout,
-    config,
+    "right",
     { left: layout.margin?.l ?? 48, right: layout.margin?.r ?? 24 },
     traces,
-    measuredWidth ?? 200,
+    config.width ?? measuredWidth ?? 200,
   );
   return {
     data,
     layout: {
       ...layout,
-      legend: { ...legend, ...(hasLegend && position === "bottom" ? { maxheight: 64 } : {}) },
+      legend: {
+        ...legend,
+        ...(hasLegend && position === "bottom" ? { maxheight: HORIZONTAL_LEGEND_HEIGHT } : {}),
+      },
       ...(hasLegend && position === "bottom"
-        ? { margin: { ...layout.margin, b: (layout.margin?.b ?? 36) + 64 } }
+        ? { margin: { ...layout.margin, b: (layout.margin?.b ?? 36) + HORIZONTAL_LEGEND_HEIGHT } }
         : {}),
     },
   };
 }
 
 /** Polar and ternary labels do not participate in Plotly's axis automargin. */
-export function withOuterLabels(
-  layout: Partial<Layout>,
-  config: PlotlyChartConfig,
-  labels: { left: number; right: number; top: number; bottom: number },
-  traces: PlotData[],
-  radialTitle?: { text: string; fontSize: number },
-  measuredWidth?: number,
-): { layout: Partial<Layout>; data: PlotData[] } {
+export function withOuterLabels({
+  config,
+  sizing = {},
+  labels,
+  traces,
+  radialTitle,
+}: {
+  config: PlotlyChartConfig;
+  sizing?: ChartTierOptions & { width?: number };
+  labels: { left: number; right: number; top: number; bottom: number };
+  traces: PlotData[];
+  radialTitle?: { text: string; fontSize: number };
+}): { layout: Partial<Layout>; data: PlotData[] } {
+  const layout = responsiveChrome(config, { ...sizing, reserveMargins: false });
+  const width = config.width ?? (sizing.width && sizing.width > 0 ? sizing.width : 720);
   const { legend, data, position, sideBand, hasLegend } = boundSideLegend(
     layout,
-    config,
+    effectiveLegendPosition(config, sizing),
     labels,
     traces,
-    measuredWidth,
+    width,
   );
   // Long horizontal legends scroll within their own band, as vertical legends do.
-  const horizontalBand = 64;
   const legendBand = hasLegend
     ? position === "top" || position === "bottom"
-      ? horizontalBand
+      ? HORIZONTAL_LEGEND_HEIGHT
       : sideBand
     : 0;
   const titleFont = layout.title?.font?.size ?? 14;
@@ -203,7 +211,7 @@ export function withOuterLabels(
       legend: {
         ...legend,
         ...(hasLegend && (position === "top" || position === "bottom")
-          ? { maxheight: horizontalBand }
+          ? { maxheight: HORIZONTAL_LEGEND_HEIGHT }
           : {}),
       },
       ...(radialTitle?.text

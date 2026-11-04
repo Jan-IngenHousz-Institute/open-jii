@@ -51,12 +51,11 @@ describe("responsiveChrome", () => {
 
 it("keeps a non-cartesian title between the top legend and outer labels", () => {
   const config: PlotlyChartConfig = { title: "Chart title", legendPosition: "top" };
-  const { layout } = withOuterLabels(
-    responsiveChrome(config),
+  const { layout } = withOuterLabels({
     config,
-    { left: 32, right: 32, top: 32, bottom: 32 },
-    [{ name: "North" } as PlotData],
-  );
+    labels: { left: 32, right: 32, top: 32, bottom: 32 },
+    traces: [{ name: "North" } as PlotData],
+  });
   const legendHeight = Number(Reflect.get(layout.legend ?? {}, "maxheight"));
   expect(layout.title?.pad?.t).toBeGreaterThanOrEqual(legendHeight);
   expect((layout.margin?.t ?? 0) - (layout.title?.pad?.t ?? 0)).toBeGreaterThanOrEqual(32);
@@ -64,21 +63,32 @@ it("keeps a non-cartesian title between the top legend and outer labels", () => 
 
 it("keeps an oversized side legend from consuming a narrow plot", () => {
   const config: PlotlyChartConfig = { width: 373, legendPosition: "right" };
-  const { layout, data } = withOuterLabels(
-    responsiveChrome(config),
+  const { layout, data } = withOuterLabels({
     config,
-    { left: 40, right: 40, top: 32, bottom: 32 },
-    [
+    labels: { left: 40, right: 40, top: 32, bottom: 32 },
+    traces: [
       {
         name: "Long weather station name with complete location and sensor description",
       } as PlotData,
     ],
-  );
+  });
   expect(layout.margin?.r).toBeLessThanOrEqual(40 + 373 * 0.3 + 1);
   expect(data[0]?.name.replaceAll(/<br>|\s/g, "")).toBe(
     "Long weather station name with complete location and sensor description".replaceAll(/\s/g, ""),
   );
   expect(data[0]?.name).toContain("<br>");
+});
+
+it("uses the responsive legend position before reserving outer margins", () => {
+  const { layout } = withOuterLabels({
+    config: { legendPosition: "top", width: 180 },
+    sizing: { ultraCompact: true },
+    labels: { left: 32, right: 32, top: 32, bottom: 32 },
+    traces: [{ name: "North" } as PlotData],
+  });
+  expect(layout.legend).toMatchObject({ orientation: "h", yanchor: "bottom" });
+  expect(layout.margin?.t).toBe(32);
+  expect(layout.margin?.b).toBe(96);
 });
 
 it("wraps words without blank or space-prefixed lines", () => {

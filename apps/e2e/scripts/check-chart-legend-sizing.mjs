@@ -2,7 +2,10 @@ import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 
-import { withBoundedRightLegend } from "../../../packages/ui/src/components/charts/outer-labels.ts";
+import {
+  withBoundedRightLegend,
+  withOuterLabels,
+} from "../../../packages/ui/src/components/charts/outer-labels.ts";
 import { createBaseLayout } from "../../../packages/ui/src/components/charts/utils.ts";
 
 // Run with: pnpm --filter @repo/e2e exec tsx scripts/check-chart-legend-sizing.mjs
@@ -13,7 +16,7 @@ let checked = 0;
 try {
   const page = await browser.newPage();
   await page.setContent('<div id="chart"></div>');
-  await page.addScriptTag({ path: requireUi.resolve("plotly.js/dist/plotly-basic.min.js") });
+  await page.addScriptTag({ path: requireUi.resolve("plotly.js/dist/plotly.min.js") });
 
   for (const width of [240, 280, 480, 720, 1000]) {
     for (const length of [40, 120, 400]) {
@@ -92,6 +95,67 @@ try {
         );
         const label = `${family}, ${width}px, ${length} characters`;
         assert.equal(result.error, undefined, `${label}: axis scaling must not throw`);
+        assert.ok(
+          result.width > 0 && result.height > 0,
+          `${label}: plot dimensions must stay positive`,
+        );
+        assert.ok(result.marks > 0, `${label}: data must remain visible`);
+        checked++;
+      }
+    }
+  }
+  for (const width of [280, 480, 1000]) {
+    for (const legendPosition of ["left", "right", "top", "bottom"]) {
+      for (const family of ["polar", "radar", "wind-rose", "ternary"]) {
+        const config = { width, height: 300, title: family, legendPosition };
+        const sizing = { width, snug: width < 720, compact: width < 480 };
+        const name = "Long scientific series name ".repeat(5);
+        const trace =
+          family === "ternary"
+            ? {
+                type: "scatterternary",
+                a: [0.2, 0.4],
+                b: [0.3, 0.3],
+                c: [0.5, 0.3],
+                mode: "markers",
+                name,
+              }
+            : {
+                type: family === "wind-rose" ? "barpolar" : "scatterpolar",
+                r: [1, 2, 3],
+                theta: [0, 120, 240],
+                mode: "lines+markers",
+                name,
+              };
+        const figure = withOuterLabels({
+          config,
+          sizing,
+          labels: { left: 40, right: 40, top: 32, bottom: 32 },
+          traces: [trace],
+          ...(family === "wind-rose" ? { radialTitle: { text: "Frequency", fontSize: 12 } } : {}),
+        });
+        const result = await page.evaluate(async ({ layout, data }) => {
+          const node = document.getElementById("chart");
+          if (!node) throw new Error("Missing chart container");
+          const plotly = Reflect.get(window, "Plotly");
+          let error;
+          try {
+            await plotly.newPlot(node, data, layout);
+          } catch (cause) {
+            error = String(cause);
+          }
+          const size = Reflect.get(node, "_fullLayout")?._size;
+          const result = {
+            error,
+            width: size?.w ?? 0,
+            height: size?.h ?? 0,
+            marks: node.querySelectorAll(".point, .js-line").length,
+          };
+          plotly.purge(node);
+          return result;
+        }, figure);
+        const label = `${family}, ${legendPosition}, ${width}px`;
+        assert.equal(result.error, undefined, `${label}: outer labels must render`);
         assert.ok(
           result.width > 0 && result.height > 0,
           `${label}: plot dimensions must stay positive`,

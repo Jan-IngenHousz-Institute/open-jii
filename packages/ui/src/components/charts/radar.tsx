@@ -13,7 +13,6 @@ import {
   createPlotlyConfig,
   getRenderer,
   getPlotType,
-  responsiveChrome,
   tierAxisFontSizes,
   chartGridColor,
 } from "./utils";
@@ -171,14 +170,12 @@ export function RadarPlot({
   // Tier-aware chrome + the polar config createBaseLayout cannot provide.
   const figure = useMemo(
     () => {
-      const outer = withOuterLabels(
-        responsiveChrome(config, sizing),
+      const outer = withOuterLabels({
         config,
-        outerLabels,
-        plotData,
-        undefined,
-        sizing.width,
-      );
+        sizing,
+        labels: outerLabels,
+        traces: plotData,
+      });
       return {
         data: outer.data,
         layout: {

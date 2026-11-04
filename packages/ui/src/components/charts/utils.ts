@@ -435,10 +435,9 @@ export function truncateCategoryTicks(
 
 type LegendPosition = NonNullable<PlotlyChartConfig["legendPosition"]>;
 
-/** Map a legendPosition to its Plotly `layout.legend` anchor block.
- *  Shared with polar / radar / ternary / wind-rose so they get the same
- *  position dropdown as cartesian charts. `top` / `bottom` use container
- *  coords so the legend doesn't overlap axis tick / title bands. */
+/** Outside anchors use container coordinates to clear axis labels and titles.
+ * Ordinary cartesian and pie right legends use a paper override in createBaseLayout
+ * so Plotly can clamp their width together with the axis margins. */
 export function legendAnchorFor(position: LegendPosition) {
   const anchors = {
     right: { x: 0.98, y: 1, xref: "container", xanchor: "right", yanchor: "top", orientation: "v" },
@@ -498,6 +497,47 @@ export function legendAnchorFor(position: LegendPosition) {
   return anchors[position];
 }
 
+export function effectiveLegendPosition(
+  config: PlotlyChartConfig,
+  options: ChartTierOptions = {},
+): LegendPosition {
+  const position = config.legendPosition ?? "right";
+  if (position.startsWith("inside-")) return position;
+  const compact = options.compact ?? options.veryCompact ?? false;
+  if (options.ultraCompact || (compact && options.hasColorbar && position === "right")) {
+    return "bottom";
+  }
+  return position;
+}
+
+function chartMargins(
+  config: PlotlyChartConfig,
+  { veryCompact, compact, snug }: ChartTierOptions,
+  legendPositionForSize: LegendPosition,
+  titleFontSize: number,
+) {
+  const base = veryCompact
+    ? { l: 24, r: 8, t: 16, b: 20 }
+    : compact
+      ? { l: 32, r: 16, t: 32, b: 28 }
+      : snug
+        ? { l: 40, r: 20, t: 36, b: 32 }
+        : { l: 48, r: 24, t: 40, b: 36 };
+  if (config.showLegend === false) return base;
+  // Inside legends sit on top of the plot; no dedicated margin.
+  if (legendPositionForSize.startsWith("inside-")) return base;
+  if (legendPositionForSize === "bottom") {
+    return { ...base, b: Math.max(base.b, 64) };
+  }
+  if (legendPositionForSize === "top") {
+    return { ...base, t: Math.max(base.t, 56) + (config.title ? titleFontSize + 16 : 0) };
+  }
+  if (legendPositionForSize === "left") {
+    return { ...base, l: Math.max(base.l, 80) };
+  }
+  return base;
+}
+
 export function createBaseLayout(
   config: PlotlyChartConfig,
   options: {
@@ -528,12 +568,13 @@ export function createBaseLayout(
     hasColorbar?: boolean;
     /** An overlay Y axis needs a separate legend band on its right. */
     hasSecondaryAxis?: boolean;
+    /** Outer-label layouts reserve their own measured margins. */
+    reserveMargins?: boolean;
   } = {},
 ): Partial<Layout> {
   const veryCompact = options.veryCompact ?? false;
   const compact = options.compact ?? veryCompact;
   const snug = options.snug ?? compact;
-  const ultraCompact = options.ultraCompact ?? false;
   // Cell tiers fall back to outer when caller doesn't differentiate.
   const cellVeryCompact = options.cellVeryCompact ?? veryCompact;
   const cellCompact = options.cellCompact ?? compact;
@@ -556,28 +597,15 @@ export function createBaseLayout(
     shapes = [],
     hoverMode = "closest",
     dragMode = "zoom",
-    legendPosition = "right",
   } = config;
 
-  // Inside legends overlay the plot area and don't compete with axis
-  // chrome, so the outside-position overrides below don't apply.
-  const isInsideLegend = legendPosition.startsWith("inside-");
-  // Two override paths apply only to outside positions:
-  //  - ultraCompact: force "bottom" since other outside positions would
-  //    push the plot region to zero width.
-  //  - compact + colorbar + user-picked "right": force "bottom" since the
-  //    right gutter is taken by the colorbar.
-  // Otherwise respect the user's pick; compact tiers shrink fonts and
-  // ticks but leave legend placement alone.
-  const forceBottomLegend =
-    !isInsideLegend && (ultraCompact || (compact && hasColorbar && legendPosition === "right"));
-  const effectiveLegendPosition = forceBottomLegend ? "bottom" : legendPosition;
+  const legendPositionForSize = effectiveLegendPosition(config, options);
   // Paper anchoring lets Plotly clamp oversized legends with the axis margins.
   // Container anchoring separates shared right-side chrome, but its callers
   // must bound legend names because Plotly reserves that band after the clamp.
   const legendAnchor = {
-    ...legendAnchorFor(effectiveLegendPosition),
-    ...(effectiveLegendPosition === "right"
+    ...legendAnchorFor(legendPositionForSize),
+    ...(legendPositionForSize === "right"
       ? hasColorbar || options.hasSecondaryAxis
         ? compact
           ? { x: 0.96 }
@@ -638,7 +666,7 @@ export function createBaseLayout(
     title: title
       ? {
           text: title,
-          ...(showLegend && effectiveLegendPosition === "top"
+          ...(showLegend && legendPositionForSize === "top"
             ? { yref: "paper", y: 1, yanchor: "bottom", pad: { b: 8 } }
             : {}),
           font: {
@@ -685,7 +713,7 @@ export function createBaseLayout(
     showlegend: showLegend,
     legend: {
       ...legendAnchor,
-      ...(effectiveLegendPosition === "top" && title ? { maxheight: 64 } : {}),
+      ...(legendPositionForSize === "top" && title ? { maxheight: 64 } : {}),
       bgcolor: plateBgColor,
       bordercolor: gridColor,
       borderwidth: 1,
@@ -721,28 +749,15 @@ export function createBaseLayout(
     // / titles. Top/bottom legends use `yref: "container"` and won't
     // auto-expand the margin, so these floors reserve a band big enough
     // for the legend alongside axis ticks / modebar.
-    margin: (() => {
-      const base = veryCompact
-        ? { l: 24, r: 8, t: 16, b: 20 }
-        : compact
-          ? { l: 32, r: 16, t: 32, b: 28 }
-          : snug
-            ? { l: 40, r: 20, t: 36, b: 32 }
-            : { l: 48, r: 24, t: 40, b: 36 };
-      if (!showLegend) return base;
-      // Inside legends sit on top of the plot; no dedicated margin.
-      if (effectiveLegendPosition.startsWith("inside-")) return base;
-      if (effectiveLegendPosition === "bottom") {
-        return { ...base, b: Math.max(base.b, 64) };
-      }
-      if (effectiveLegendPosition === "top") {
-        return { ...base, t: Math.max(base.t, 56) + (title ? titleFontSize + 16 : 0) };
-      }
-      if (effectiveLegendPosition === "left") {
-        return { ...base, l: Math.max(base.l, 80) };
-      }
-      return base;
-    })(),
+    margin:
+      options.reserveMargins === false
+        ? undefined
+        : chartMargins(
+            config,
+            { veryCompact, compact, snug },
+            legendPositionForSize,
+            titleFontSize,
+          ),
     ...(sparkline ? { margin: { l: 0, r: 0, t: 2, b: 2, pad: 0 } } : {}),
     autosize: !width && !height, // Enable autosize when no fixed dimensions
     ...(width && { width }), // Only include width if it's defined
@@ -791,7 +806,7 @@ export function createBaseLayout(
  */
 export function responsiveChrome(
   config: PlotlyChartConfig,
-  options: ChartTierOptions = {},
+  options: ChartTierOptions & { reserveMargins?: boolean } = {},
 ): Partial<Layout> {
   const {
     title,

@@ -13,7 +13,6 @@ import {
   createPlotlyConfig,
   getRenderer,
   getPlotType,
-  responsiveChrome,
   tierAxisFontSizes,
   chartGridColor,
 } from "./utils";
@@ -176,14 +175,13 @@ export function PolarPlot({
   // Tier-aware chrome + the polar config createBaseLayout cannot provide.
   const figure = useMemo(
     () => {
-      const outer = withOuterLabels(
-        responsiveChrome(config, sizing),
+      const outer = withOuterLabels({
         config,
-        { left: 40, right: 40, top: 32, bottom: 32 },
-        plotData,
-        { text: radialAxis.title ?? "R", fontSize: fontSizes.axisTitle },
-        sizing.width,
-      );
+        sizing,
+        labels: { left: 40, right: 40, top: 32, bottom: 32 },
+        traces: plotData,
+        radialTitle: { text: radialAxis.title ?? "R", fontSize: fontSizes.axisTitle },
+      });
       return {
         data: outer.data,
         layout: {

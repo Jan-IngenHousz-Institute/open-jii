@@ -84,8 +84,10 @@ describe("WindRoseRenderer", () => {
     render(<WindRoseRenderer visualization={viz} experimentId="exp-1" data={rows} />);
     expect(screen.queryByText("errors.invalidConfiguration")).not.toBeInTheDocument();
     expect(screen.queryByText("errors.noData")).not.toBeInTheDocument();
-    // Radius counts rows, so let the chart use its Frequency title.
-    expect(vi.mocked(WindRose).mock.lastCall?.[0]).not.toHaveProperty("radialAxisTitle");
+    expect(vi.mocked(WindRose).mock.lastCall?.[0]).toHaveProperty(
+      "radialAxisTitle",
+      "charts.frequency",
+    );
   });
 
   it("normalises directions outside 0-360 via mod", () => {

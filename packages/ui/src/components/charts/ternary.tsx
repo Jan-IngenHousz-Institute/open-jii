@@ -13,7 +13,6 @@ import {
   createPlotlyConfig,
   getRenderer,
   getPlotType,
-  responsiveChrome,
   tierAxisFontSizes,
   chartGridColor,
 } from "./utils";
@@ -239,10 +238,10 @@ export function TernaryPlot({
   // Tier-aware chrome + the ternary config createBaseLayout cannot provide.
   const figure = useMemo(
     () => {
-      const outer = withOuterLabels(
-        responsiveChrome(config, sizing),
+      const outer = withOuterLabels({
         config,
-        {
+        sizing,
+        labels: {
           left:
             chartTextWidth(
               ternaryAxisTitle(baxis.title, "B", fontSizes.axisTitle).text,
@@ -260,10 +259,8 @@ export function TernaryPlot({
           top: 44,
           bottom: 48,
         },
-        allTraces,
-        undefined,
-        sizing.width,
-      );
+        traces: allTraces,
+      });
       return {
         data: outer.data,
         layout: {
