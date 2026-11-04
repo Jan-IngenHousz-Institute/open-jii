@@ -70,6 +70,12 @@ interface PageQuery {
   offset: number;
 }
 
+/** A read's filters and sort once an anonymized experiment's contributors are behind pseudonyms. */
+interface AnonymizedQuery {
+  filters?: FilterCondition[];
+  ordering?: QueryOrdering;
+}
+
 /**
  * Above this many rows a page is picked by id before its rows are read in full. The extra round
  * trip costs a second or two, while a single statement extracts the payload of every row before
@@ -181,26 +187,19 @@ export class ExperimentDataRepository {
     const hasPaging = page !== undefined && pageSize !== undefined;
     const ceiling = limit ?? DATA_QUERY_MAX_LIMIT;
 
-    // When the experiment anonymizes contributors, the filter picker selects
-    // pseudonyms; tag contributor id filters so the SQL compares the pseudonym
-    // (recomputed in-query) instead of the raw id the client never receives.
-    const effectiveFilters = this.pseudonymizeContributorFilters(
-      experiment,
+    const anonymizedResult = await this.anonymizedQuery(experiment, tableName, {
+      columns,
       filters,
-      shape.columns,
-    );
-    const orderingResult = await this.requestedOrdering(
-      experiment,
-      tableName,
+      aggregation,
       orderBy,
       orderDirection,
       join,
-    );
-    if (orderingResult.isFailure()) {
-      return orderingResult;
+    });
+    if (anonymizedResult.isFailure()) {
+      return anonymizedResult;
     }
 
-    const ordering = orderingResult.value;
+    const { filters: effectiveFilters, ordering } = anonymizedResult.value;
 
     // Aggregation summary: page/pageSize ignored.
     if (hasAggregation) {
@@ -361,6 +360,14 @@ export class ExperimentDataRepository {
       return shapeResult;
     }
 
+    const anonymizedResult = await this.anonymizedQuery(experiment, tableName, {
+      columns: [column],
+      orderDirection: "ASC",
+    });
+    if (anonymizedResult.isFailure()) {
+      return anonymizedResult;
+    }
+
     const queryResult = this.buildQuery(experimentId, shapeResult.value, {
       columns: [column],
       distinct: true,
@@ -497,44 +504,37 @@ export class ExperimentDataRepository {
   }
 
   /**
-   * Tag contributor id filters so the query compares the pseudonym (recomputed
-   * in SQL) instead of the raw id. The picker sends pseudonyms when the
-   * experiment anonymizes (see `anonymizeDistinctValues`); this lets them match
-   * without the real id ever reaching the client. The FE routes contributor
-   * filters through a `<column>.id` struct path (its only producer of one).
+   * Keep an anonymized experiment's contributors behind their pseudonyms. A read may name a
+   * contributor column whole, since its cells are rewritten after the read; filter it by
+   * `<column>.id`, compared as the pseudonym the picker sends; and sort by it, in the order of the
+   * pseudonyms it shows. Any other field of it would return or match the real person, so the read
+   * is refused. The column's type decides, so another struct's fields read as they are. An absent
+   * `orderBy` or an empty string means no sort.
    */
-  private pseudonymizeContributorFilters(
-    experiment: ExperimentDto,
-    filters?: FilterCondition[],
-    columns?: SchemaDataDto["columns"],
-  ): FilterCondition[] | undefined {
-    if (!experiment.anonymizeContributors || !filters) {
-      return filters;
-    }
-
-    return filters.map((f) =>
-      !columns?.some((column) => column.name === f.column) && /^[^.]+\.id$/.test(f.column)
-        ? { ...f, contributorPseudonymSalt: experiment.id }
-        : f,
-    );
-  }
-
-  /**
-   * Build the requested ordering. An absent `orderBy` or an empty string means no sort.
-   * An anonymized experiment's contributor column sorts by its displayed pseudonym, since ordering
-   * by the real name would leak it. The column's type is checked before mapping a `.name` path.
-   */
-  private async requestedOrdering(
+  private async anonymizedQuery(
     experiment: ExperimentDto,
     tableName: string,
-    orderBy: string | undefined,
-    direction: "ASC" | "DESC",
-    join?: ExperimentDataJoin,
-  ): Promise<Result<QueryOrdering | undefined>> {
-    if (!orderBy) return success(undefined);
-    const path = /^([^.]+)\.name$/.exec(orderBy);
-    if (!experiment.anonymizeContributors || path === null) {
-      return success({ column: orderBy, direction });
+    query: {
+      columns?: string[];
+      filters?: FilterCondition[];
+      aggregation?: AggregationSpec;
+      orderBy?: string;
+      orderDirection: "ASC" | "DESC";
+      join?: ExperimentDataJoin;
+    },
+  ): Promise<Result<AnonymizedQuery>> {
+    const { columns = [], filters, aggregation, orderBy, orderDirection: direction, join } = query;
+    const ordering = orderBy ? { column: orderBy, direction } : undefined;
+    const projected = [
+      ...columns,
+      ...(aggregation?.groupBy ?? []).map((group) => group.column),
+      ...(aggregation?.functions ?? []).flatMap((fn) =>
+        fn.secondColumn === undefined ? [fn.column] : [fn.column, fn.secondColumn],
+      ),
+    ];
+    const namesAColumn = projected.length > 0 || (filters?.length ?? 0) > 0 || Boolean(orderBy);
+    if (!experiment.anonymizeContributors || !namesAColumn) {
+      return success({ filters, ordering });
     }
 
     const columnsResult = await this.getTableColumns({
@@ -546,22 +546,80 @@ export class ExperimentDataRepository {
       return columnsResult;
     }
 
-    if (join && columnsResult.value.some((column) => column.name === orderBy)) {
-      return success({ column: orderBy, direction });
+    const referenceOf = (name: string) => this.contributorReference(name, columnsResult.value);
+
+    const revealing = projected.find((name) => referenceOf(name)?.field !== undefined);
+    if (revealing !== undefined) {
+      return this.anonymizedRefusal(revealing);
     }
 
-    const isContributorColumn = columnsResult.value.some(
-      (column) => column.name === path[1] && column.type_text === WellKnownColumnTypes.CONTRIBUTOR,
-    );
-    if (!isContributorColumn) {
-      return success({ column: orderBy, direction });
+    const pseudonymFilters: FilterCondition[] = [];
+    for (const filter of filters ?? []) {
+      const reference = referenceOf(filter.column);
+      if (reference === undefined) {
+        pseudonymFilters.push(filter);
+        continue;
+      }
+      if (reference.field !== "id") {
+        return this.anonymizedRefusal(filter.column);
+      }
+      pseudonymFilters.push({ ...filter, contributorPseudonymSalt: experiment.id });
+    }
+
+    const effectiveFilters = filters === undefined ? undefined : pseudonymFilters;
+    const sorted = ordering === undefined ? undefined : referenceOf(ordering.column);
+    // With a join, a column named whole keeps its own order.
+    const isJoinedColumn = join !== undefined && sorted?.field === undefined;
+    if (ordering === undefined || sorted === undefined || isJoinedColumn) {
+      return success({ filters: effectiveFilters, ordering });
+    }
+    const sortsByPseudonym =
+      sorted.field === undefined || sorted.field === "id" || sorted.field === "name";
+    if (!sortsByPseudonym) {
+      return this.anonymizedRefusal(ordering.column);
     }
 
     return success({
-      column: `${path[1]}.id`,
-      direction,
-      mode: { kind: "pseudonym", salt: experiment.id },
+      filters: effectiveFilters,
+      ordering: {
+        column: `${sorted.column}.id`,
+        direction,
+        mode: { kind: "pseudonym", salt: experiment.id },
+      },
     });
+  }
+
+  /**
+   * The contributor column a name reads and the field it reads of it, if it names one. A name that
+   * is a column's own, such as a payload field with a dot in it, is that column.
+   */
+  private contributorReference(
+    name: string,
+    columns: SchemaDataDto["columns"],
+  ): { column: string; field?: string } | undefined {
+    const isContributor = (column: string) =>
+      columns.some(
+        (candidate) =>
+          candidate.name === column && candidate.type_text === WellKnownColumnTypes.CONTRIBUTOR,
+      );
+    if (columns.some((candidate) => candidate.name === name)) {
+      return isContributor(name) ? { column: name } : undefined;
+    }
+
+    const dot = name.indexOf(".");
+    if (dot === -1 || !isContributor(name.slice(0, dot))) {
+      return undefined;
+    }
+    return { column: name.slice(0, dot), field: name.slice(dot + 1) };
+  }
+
+  private anonymizedRefusal(name: string): Result<never> {
+    return failure(
+      AppError.badRequest(
+        `Contributors are anonymized in this experiment, so '${name}' cannot be read; ` +
+          "filter a contributor column by its '.id' with the pseudonyms the table shows",
+      ),
+    );
   }
 
   /**
