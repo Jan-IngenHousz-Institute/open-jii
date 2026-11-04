@@ -189,8 +189,10 @@ export function wrapWithAggregation(
   if (orderSql !== undefined) {
     const direction = opts.ordering?.direction ?? "ASC";
     const outputOrder =
-      opts.columnNames !== undefined && opts.ordering?.column !== undefined && outputNames.has(opts.ordering?.column)
-        ? builder.quoteName(opts.ordering?.column)
+      opts.columnNames !== undefined &&
+      opts.ordering?.column !== undefined &&
+      outputNames.has(opts.ordering.column)
+        ? builder.quoteName(opts.ordering.column)
         : orderSql;
     sql += ` ORDER BY ${outputOrder} ${direction}`;
   }

@@ -90,6 +90,34 @@ export class QueryBuilderService {
       primaryNames.has(column) || join.primaryColumns.some((name) => column.startsWith(`${name}.`));
     const primaryFilters = filters?.filter((filter) => isPrimary(filter.column));
     const secondaryFilters = filters?.filter((filter) => !isPrimary(filter.column));
+    const rowAggregation =
+      (aggregation?.groupBy?.length ?? 0) > 0 ||
+      aggregation?.functions?.some((fn) => fn.function !== "cumsum");
+    const allNames = new Set([
+      ...join.primaryColumns,
+      ...join.secondaryColumns.map((column) => column.alias),
+    ]);
+    const references = [
+      ...(columns ?? []),
+      ...(secondaryFilters?.map((filter) => filter.column) ?? []),
+      ...(ordering ? [ordering.column] : []),
+      ...(aggregation?.groupBy?.map((group) => group.column) ?? []),
+      ...(aggregation?.functions?.flatMap((fn) => [
+        fn.column,
+        ...(fn.secondColumn ? [fn.secondColumn] : []),
+      ]) ?? []),
+      ...(aggregation?.explode ? [aggregation.explode.column] : []),
+    ];
+    const selectedSecondary =
+      !columns?.length && !rowAggregation
+        ? join.secondaryColumns
+        : join.secondaryColumns.filter((column) =>
+            references.some(
+              (reference) =>
+                reference === column.alias ||
+                (!allNames.has(reference) && reference.startsWith(`${column.alias}.`)),
+            ),
+          );
     const base = this.buildQuery({
       ...primary,
       columnNames: join.primaryColumns,
@@ -127,25 +155,57 @@ export class QueryBuilderService {
       used.add(name.toLowerCase());
       return name;
     };
-    const occurrence = unique("__asof_row");
-    const rank = unique("__asof_rank");
+    const key = unique("__asof_key");
+    const at = unique("__asof_time");
+    const kind = unique("__asof_kind");
+    const tie = unique("__asof_tie");
+    const primaryRow = unique("__asof_primary");
+    const secondaryRow = unique("__asof_secondary");
+    const latest = unique("__asof_latest");
+    const struct = (names: string[], reference: (name: string) => string) =>
+      `named_struct(${names.map((name) => `${builder.escapeValue(name)}, ${reference(name)}`).join(", ")})`;
     const outputs = [...join.primaryColumns, ...join.secondaryColumns.map((c) => c.alias)];
+    const withinTolerance = `${quoteName(latest)}.at >= ${quoteName(at)} - INTERVAL '${join.toleranceMinutes}' MINUTE`;
     const projection = [
-      ...join.primaryColumns.map(p),
-      ...join.secondaryColumns.map((c) => `${s(c.name)} AS ${quoteName(c.alias)}`),
+      ...join.primaryColumns.map(
+        (name) => `${quoteName(primaryRow)}.${quoteName(name)} AS ${quoteName(name)}`,
+      ),
+      ...selectedSecondary.map(
+        (c) =>
+          `CASE WHEN ${withinTolerance} THEN ${quoteName(latest)}.data.${quoteName(c.name)} END AS ${quoteName(c.alias)}`,
+      ),
     ];
-    // Row ids can repeat. This query-local identity preserves even identical primary occurrences.
-    const sql = `SELECT ${outputs.map(quoteName).join(", ")}
+    // Carry one secondary row through a sorted timeline instead of expanding all candidate pairs.
+    // Secondary events precede primary events at the same instant; the lowest id wins a tie.
+    const sql = `SELECT ${projection.join(", ")}
 FROM (
-  SELECT ${projection.join(", ")},
-    ROW_NUMBER() OVER (PARTITION BY ${p("id")}, ${p(occurrence)} ORDER BY ${secondaryTime} DESC, ${s("id")} ASC) AS ${quoteName(rank)}
-  FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY ${quoteName("id")} ORDER BY ${quoteName("id")}) AS ${quoteName(occurrence)} FROM (${base.value}) primary_input) p
-  LEFT JOIN (${second.value}) s
-    ON ${p(join.matchColumn)} = ${s(join.matchColumn)}
-    AND ${secondaryTime} <= ${primaryTime}
-    AND ${secondaryTime} >= ${primaryTime} - INTERVAL '${join.toleranceMinutes}' MINUTE
-) matched
-WHERE ${quoteName(rank)} = 1`;
+  SELECT *, LAST_VALUE(${quoteName(secondaryRow)}, true) OVER (
+    PARTITION BY ${quoteName(key)}
+    ORDER BY ${quoteName(at)}, ${quoteName(kind)}, ${quoteName(tie)} DESC NULLS LAST
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS ${quoteName(latest)}
+  FROM (
+    SELECT ${p(join.matchColumn)} AS ${quoteName(key)}, ${primaryTime} AS ${quoteName(at)},
+      1 AS ${quoteName(kind)}, NULL AS ${quoteName(tie)},
+      ${struct(join.primaryColumns, p)} AS ${quoteName(primaryRow)}, NULL AS ${quoteName(secondaryRow)}
+    FROM (${base.value}) p
+    UNION ALL
+    SELECT ${s(join.matchColumn)} AS ${quoteName(key)}, ${secondaryTime} AS ${quoteName(at)},
+      0 AS ${quoteName(kind)}, ${s("id")} AS ${quoteName(tie)},
+      NULL AS ${quoteName(primaryRow)},
+      named_struct('at', ${secondaryTime}, 'data', ${
+        selectedSecondary.length
+          ? struct(
+              selectedSecondary.map((c) => c.name),
+              s,
+            )
+          : "NULL"
+      }) AS ${quoteName(secondaryRow)}
+    FROM (${second.value}) s
+    WHERE ${s(join.matchColumn)} IS NOT NULL AND ${secondaryTime} IS NOT NULL
+  ) events
+) carried
+WHERE ${quoteName(kind)} = 1`;
     return {
       table: `(${sql}) joined_data`,
       columnNames: outputs,

@@ -686,7 +686,7 @@ describe("as-of joins", () => {
     secondaryTimeType: "TIMESTAMP",
     toleranceMinutes: 5,
   };
-  it("ranks independently per primary occurrence before filtering, grouping and limiting", () => {
+  it("carries the latest row before secondary filtering, grouping and limiting", () => {
     const sql = unwrap(
       service.buildQuery({
         table: "leaf",
@@ -703,18 +703,22 @@ describe("as-of joins", () => {
       }),
     );
     expect(sql).toContain(
-      "FROM (SELECT * FROM leaf WHERE `experiment_id` = 'e1' AND `station` = 'A') primary_input",
+      "FROM (SELECT * FROM leaf WHERE `experiment_id` = 'e1' AND `station` = 'A') p",
     );
+    expect(sql).toContain("ORDER BY `__asof_time`, `__asof_kind`, `__asof_tie` DESC NULLS LAST");
     expect(sql).toContain(
-      "PARTITION BY p.`id`, p.`__asof_row` ORDER BY s.`timestamp` DESC, s.`id` ASC",
+      "FROM (SELECT * FROM weather WHERE `experiment_id` = 'e1' AND `upload_table_id` = 'weather-id') s",
     );
-    expect(sql).toContain(
-      "LEFT JOIN (SELECT * FROM weather WHERE `experiment_id` = 'e1' AND `upload_table_id` = 'weather-id')",
-    );
-    expect(sql).toContain("s.`timestamp` <= p.`timestamp`");
-    expect(sql).toContain("s.`timestamp` >= p.`timestamp` - INTERVAL '5' MINUTE");
+    expect(sql).toContain("LAST_VALUE(`__asof_secondary`, true)");
+    expect(sql).toContain("PARTITION BY `__asof_key`");
+    expect(sql).toContain("ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW");
+    expect(sql).toContain("`__asof_latest`.at >= `__asof_time` - INTERVAL '5' MINUTE");
+    expect(sql).toContain("UNION ALL");
+    expect(sql).not.toContain(" JOIN ");
+    expect(sql).not.toContain("ROW_NUMBER");
+    expect(sql).toContain("WHERE s.`station` IS NOT NULL AND s.`timestamp` IS NOT NULL");
     expect(sql.indexOf("WHERE `second__temperature` > 20")).toBeGreaterThan(
-      sql.indexOf("WHERE `__asof_rank` = 1"),
+      sql.indexOf("WHERE `__asof_kind` = 1"),
     );
     expect(sql).toContain("AVG(`second__temperature`) AS `air`");
     expect(sql).toMatch(/LIMIT 10$/);
@@ -739,7 +743,8 @@ describe("as-of joins", () => {
     );
     expect(sql).toMatch(/^SELECT `Plant.ID`, `second__Air_Temp` FROM/);
     expect(sql).toContain("FROM leaf WHERE `Plant.ID` = 'x'");
-    expect(sql).toContain("s.`Air.Temp` AS `second__Air_Temp`");
+    expect(sql).toContain("'Air.Temp', s.`Air.Temp`");
+    expect(sql).toContain("`__asof_latest`.data.`Air.Temp` END AS `second__Air_Temp`");
     expect(sql).toMatch(/WHERE `second__Air_Temp` > 19 ORDER BY `Plant.ID` ASC$/);
     expect(sql).not.toContain("`Plant`.`ID`");
   });
@@ -760,6 +765,111 @@ describe("as-of joins", () => {
       /^SELECT `Plant.ID` AS `Plant.ID`, AVG\(`second__temperature`\) AS `Air.mean`/,
     );
     expect(sql).toMatch(/GROUP BY `Plant.ID` ORDER BY `Air.mean` ASC$/);
+  });
+
+  it("orders numeric question answers after matching and before pagination", () => {
+    const sql = unwrap(
+      service.buildQuery({
+        table: "leaf",
+        join: { ...join, primaryColumns: [...join.primaryColumns, "answer"] },
+        columns: ["id", "answer", "second__temperature"],
+        ordering: {
+          column: "answer",
+          direction: "DESC",
+          mode: { kind: "numericString", rowId: "id" },
+        },
+        limit: 5,
+        offset: 5,
+      }),
+    );
+    const outerOrder = sql.slice(sql.indexOf(") joined_data ORDER BY"));
+    expect(outerOrder).toContain("AS DECIMAL(38, 18)) END) DESC");
+    expect(outerOrder).toContain("`answer` DESC NULLS LAST, `id` ASC");
+    expect(outerOrder).toMatch(/LIMIT 5 OFFSET 5$/);
+    expect(sql.slice(0, sql.indexOf(") joined_data ORDER BY"))).not.toContain("LIMIT");
+  });
+
+  it("carries only secondary fields used by projection, filters, sort or aggregation", () => {
+    const names = [
+      "projected",
+      "filtered",
+      "sorted",
+      "grouped",
+      "aggregated",
+      "correlated",
+      "array",
+      "big_blob",
+    ];
+    const sql = unwrap(
+      service.buildQuery({
+        table: "leaf",
+        columns: ["id", "second__projected"],
+        filters: [{ column: "second__filtered.id", operator: "equals", value: "person" }],
+        ordering: { column: "second__sorted" },
+        aggregation: {
+          groupBy: [{ column: "second__grouped" }],
+          functions: [
+            { column: "second__aggregated", function: "avg" },
+            { column: "temperature", secondColumn: "second__correlated", function: "corr" },
+          ],
+          explode: { column: "second__array", alias: "element" },
+        },
+        join: {
+          ...join,
+          secondaryColumns: names.map((name) => ({ name, alias: `second__${name}` })),
+        },
+      }),
+    );
+    for (const name of names.slice(0, -1)) expect(sql).toContain(`s.\`${name}\``);
+    expect(sql).not.toContain("s.`big_blob`");
+  });
+
+  it("prunes unneeded secondary fields for row aggregates without a projection", () => {
+    const sql = unwrap(
+      service.buildQuery({
+        table: "leaf",
+        aggregation: { functions: [{ column: "second__temperature", function: "avg" }] },
+        join: {
+          ...join,
+          secondaryColumns: [
+            ...join.secondaryColumns,
+            { name: "big_blob", alias: "second__big_blob" },
+          ],
+        },
+      }),
+    );
+    expect(sql).toContain("s.`temperature`");
+    expect(sql).not.toContain("s.`big_blob`");
+  });
+
+  it.each([undefined, []])(
+    "retains all secondary values when selecting all columns (%s)",
+    (columns) => {
+      const sql = unwrap(service.buildQuery({ table: "leaf", columns, join }));
+      expect(sql).toContain("s.`temperature`");
+    },
+  );
+
+  it("does not carry secondary payload for a primary-only projection", () => {
+    const sql = unwrap(service.buildQuery({ table: "leaf", columns: ["id"], join }));
+    expect(sql).not.toContain("s.`temperature`");
+  });
+
+  it("keeps internal names separate from user columns and quotes struct field names", () => {
+    const sql = unwrap(
+      service.buildQuery({
+        table: "leaf",
+        join: {
+          ...join,
+          primaryColumns: [...join.primaryColumns, "__asof_time", "it's`a field"],
+          secondaryColumns: [{ name: "it's`a field", alias: "__asof_latest" }],
+        },
+      }),
+    );
+    expect(sql).toContain("p.`timestamp` AS `__asof_time_`");
+    expect(sql).toContain("AS `__asof_latest_`");
+    expect(sql).toContain("`__asof_primary`.`it's``a field` AS `it's``a field`");
+    expect(sql).toContain("`__asof_latest_`.data.`it's``a field` END AS `__asof_latest`");
   });
 
   it("interprets date and timezone-free timestamps explicitly as UTC", () => {
