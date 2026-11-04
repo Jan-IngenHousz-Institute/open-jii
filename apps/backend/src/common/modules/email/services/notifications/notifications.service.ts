@@ -854,8 +854,9 @@ export class NotificationsService {
     definitionName: string;
     actor: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }) {
-    const { deviceId, deviceName, definitionName, actor, email } = input;
+    const { deviceId, deviceName, definitionName, actor, email, unsubscribe } = input;
 
     return await tryCatch(
       async () => {
@@ -879,6 +880,7 @@ export class NotificationsService {
           definitionName,
           actor,
           calibrationUrl,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
         await this.dispatch({
@@ -886,6 +888,7 @@ export class NotificationsService {
           subject: `A ${definitionName} calibration of ${deviceName} is waiting for approval`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
 
         this.logger.log({
@@ -911,8 +914,9 @@ export class NotificationsService {
     definitionName: string;
     actor: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }) {
-    const { deviceId, deviceName, definitionName, actor, email } = input;
+    const { deviceId, deviceName, definitionName, actor, email, unsubscribe } = input;
 
     return await tryCatch(
       async () => {
@@ -936,6 +940,7 @@ export class NotificationsService {
           definitionName,
           actor,
           calibrationUrl,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
         await this.dispatch({
@@ -943,6 +948,7 @@ export class NotificationsService {
           subject: `Your ${definitionName} calibration of ${deviceName} was approved`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
 
         this.logger.log({
@@ -968,8 +974,9 @@ export class NotificationsService {
     definitionName: string;
     actor: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }) {
-    const { deviceId, deviceName, definitionName, actor, email } = input;
+    const { deviceId, deviceName, definitionName, actor, email, unsubscribe } = input;
 
     return await tryCatch(
       async () => {
@@ -993,6 +1000,7 @@ export class NotificationsService {
           definitionName,
           actor,
           calibrationUrl,
+          unsubscribe: footerLinks(unsubscribe),
         });
 
         await this.dispatch({
@@ -1000,6 +1008,7 @@ export class NotificationsService {
           subject: `Your ${definitionName} calibration of ${deviceName} was rejected`,
           html,
           text,
+          headers: listUnsubscribeHeaders(unsubscribe),
         });
 
         this.logger.log({

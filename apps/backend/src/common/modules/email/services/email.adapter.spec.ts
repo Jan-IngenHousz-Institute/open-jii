@@ -425,6 +425,31 @@ describe("EmailAdapter", () => {
     });
   });
 
+  describe("the calibration methods", () => {
+    it.each([
+      "sendCalibrationRunAwaitingApprovalNotification",
+      "sendCalibrationRunApprovedNotification",
+      "sendCalibrationRunRejectedNotification",
+    ] as const)("%s forwards the input with its footer unchanged", async (method) => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, method)
+        .mockResolvedValue(success(undefined));
+      const input = {
+        deviceId: "device-123",
+        deviceName: "Greenhouse 3 MiniPAR",
+        definitionName: "PAR sweep",
+        actor: "Ada Lovelace",
+        email: "manager@example.com",
+        unsubscribe: FOOTER,
+      };
+
+      const result = await adapter[method](input);
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
+    });
+  });
+
   describe("the join request and organization request methods", () => {
     it("forward the footer after every other argument", async () => {
       const spies = {

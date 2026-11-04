@@ -63,6 +63,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     definitionName: string;
     actor: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }): Promise<Result<void>> {
     return this.notificationService.sendCalibrationRunAwaitingApprovalNotification(input);
   }
@@ -73,6 +74,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     definitionName: string;
     actor: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }): Promise<Result<void>> {
     return this.notificationService.sendCalibrationRunApprovedNotification(input);
   }
@@ -83,6 +85,7 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     definitionName: string;
     actor: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }): Promise<Result<void>> {
     return this.notificationService.sendCalibrationRunRejectedNotification(input);
   }
