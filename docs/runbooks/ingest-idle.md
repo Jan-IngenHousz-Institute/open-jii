@@ -7,7 +7,8 @@ catches up once it writes again. Everything downstream (experiments, macros, the
 the idle time on the daily report.
 
 The heartbeat export measures the idle time every half hour, so the reading can be up to 35 minutes
-old. It counts only commits that wrote rows, because the pipeline commits empty micro-batches too.
+old. It reads the newest row of `raw_data`, not the commit history, because the pipeline commits
+empty micro-batches too. With no row in the last two days it reads two days.
 The rule counts only MQTT publishes IoT Core accepted 45 to 60 minutes ago, after bronze's last
 write and before the reading, so a quiet night never fires it and neither does a burst after a quiet
 spell. The stream also carries one ingest health check record a minute, which bronze drops from

@@ -14,6 +14,9 @@ from openjii.heartbeat import (
     DATA_NAMESPACE,
     HEALTHCHECK_AGE_METRIC,
     HEALTHCHECK_LATENCY_METRIC,
+    INGEST_IDLE_METRIC,
+    MACRO_IDLE_METRIC,
+    bronze_idle_sql,
     ingest_healthcheck_sql,
     observation,
 )
@@ -22,7 +25,14 @@ from pyspark.sql import DataFrame, SparkSession
 pytestmark = pytest.mark.spark
 
 _TASK_PATH = Path(__file__).parents[2] / "src/tasks/metrics_heartbeat_task.py"
-_NAMES = {"HISTORY_DEPTH", "log", "data_point", "idle_minutes", "collect_ingest_healthcheck"}
+_NAMES = {
+    "HISTORY_DEPTH",
+    "log",
+    "data_point",
+    "idle_minutes",
+    "collect_ingest_healthcheck",
+    "collect_path_idle",
+}
 _NOW = datetime(2026, 11, 3, 12, 0, tzinfo=timezone.utc)
 
 _HEALTHCHECK_SCHEMA = "sent_at TIMESTAMP, kinesis_arrival_time TIMESTAMP, ingestion_timestamp TIMESTAMP"
@@ -54,6 +64,11 @@ def _task(session: SparkSession) -> dict[str, Any]:
         "spark": _Lakehouse(session),
         "ENVIRONMENT": "dev",
         "INGEST_HEALTHCHECKS": "ingest_healthchecks",
+        "RAW_DATA": "raw_data",
+        "EXPERIMENT_MACRO_DATA": "experiment_macro_data",
+        "INGEST_IDLE_METRIC": INGEST_IDLE_METRIC,
+        "MACRO_IDLE_METRIC": MACRO_IDLE_METRIC,
+        "bronze_idle_sql": bronze_idle_sql,
         "DATA_NAMESPACE": DATA_NAMESPACE,
         "HEALTHCHECK_AGE_METRIC": HEALTHCHECK_AGE_METRIC,
         "HEALTHCHECK_LATENCY_METRIC": HEALTHCHECK_LATENCY_METRIC,
@@ -70,6 +85,7 @@ def drop_views(spark: SparkSession) -> Iterator[None]:
 
     spark.catalog.dropTempView("history")
     spark.catalog.dropTempView("ingest_healthchecks")
+    spark.catalog.dropTempView("raw_data")
 
 
 def _history(spark: SparkSession, *commits: tuple[int, str, dict[str, str]]) -> None:
@@ -84,8 +100,8 @@ def _history(spark: SparkSession, *commits: tuple[int, str, dict[str, str]]) -> 
     ).createOrReplaceTempView("history")
 
 
-def _idle(spark: SparkSession, *wrote_rows: bool) -> float | None:
-    return cast(Callable[..., float | None], _task(spark)["idle_minutes"])("table", *wrote_rows)
+def _idle(spark: SparkSession) -> float | None:
+    return cast(Callable[[str], float | None], _task(spark)["idle_minutes"])("table")
 
 
 def _commits_with_an_empty_batch_last(spark: SparkSession) -> None:
@@ -104,16 +120,18 @@ def test_idle_counts_every_streaming_commit_by_default(spark: SparkSession) -> N
     assert _idle(spark) == pytest.approx(3, abs=0.2)
 
 
-def test_idle_can_count_only_the_commits_that_wrote_rows(spark: SparkSession) -> None:
+def test_bronze_idle_reads_its_newest_row_so_empty_commits_cannot_hide_a_stall(spark: SparkSession) -> None:
     _commits_with_an_empty_batch_last(spark)
+    spark.sql(
+        "SELECT current_timestamp() - INTERVAL 25 MINUTES AS ingestion_timestamp, "
+        "to_date(current_timestamp() - INTERVAL 25 MINUTES) AS ingest_date"
+    ).createOrReplaceTempView("raw_data")
 
-    assert _idle(spark, True) == pytest.approx(40, abs=0.2)
+    records = cast(Callable[[datetime], list[dict]], _task(spark)["collect_path_idle"])(_NOW)
 
-
-def test_idle_that_counts_rows_is_none_when_no_commit_wrote_any(spark: SparkSession) -> None:
-    _history(spark, (3, "STREAMING UPDATE", {"numOutputRows": "0"}))
-
-    assert _idle(spark, True) is None
+    idle = {record["metric"]: record["value"] for record in records}
+    assert idle[INGEST_IDLE_METRIC] == pytest.approx(25, abs=0.2)
+    assert idle[MACRO_IDLE_METRIC] == pytest.approx(3, abs=0.2)
 
 
 def _collect(spark: SparkSession) -> list[dict]:

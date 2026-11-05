@@ -1767,9 +1767,10 @@ metrics:
         dev: { method: threshold, max: 1440 }
     runbook: docs/runbooks/ingest-idle.md
     notes: >-
-      Minutes since bronze last wrote rows. A commit that wrote none does not count: the pipeline
-      commits empty micro-batches, and the ingest health check (132), one record a minute on the same
-      stream that bronze drops from `raw_data`, would otherwise keep this fresh. It is a stall only
+      Minutes since bronze last wrote rows, read from the newest row of `raw_data` and not its commit
+      history: the ingest health check (132) sends one record a minute on the same stream, bronze
+      drops it, and the empty commit it leaves would otherwise keep this fresh. With no row in the last
+      two days it reads two days, which is past every threshold. It is a stall only
       beside records still waiting, which is what its rule checks against IoT Core's MQTT publishes,
       the devices' own, since the health check publishes over HTTP.
 

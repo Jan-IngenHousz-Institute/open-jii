@@ -55,8 +55,9 @@ def ingest_healthchecks():
             & (F.get_json_object(payload, "$.healthcheck") == F.lit("true"))
         )
         .select(
-            # The publisher stamps epoch milliseconds
-            (F.get_json_object(payload, "$.sent_at").cast("long") / 1000).cast("timestamp").alias("sent_at"),
+            # The publisher stamps epoch milliseconds. Anyone may publish here, and a cast that throws
+            # would fail the flow on every replay, so a value that is not one reads as null.
+            (F.get_json_object(payload, "$.sent_at").try_cast("long") / 1000).try_cast("timestamp").alias("sent_at"),
             F.get_json_object(payload, "$.environment").alias("environment"),
             F.col("approximateArrivalTimestamp").alias("kinesis_arrival_time"),
             F.current_timestamp().alias("ingestion_timestamp"),

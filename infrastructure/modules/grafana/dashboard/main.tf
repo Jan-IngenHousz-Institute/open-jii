@@ -2687,7 +2687,7 @@ resource "grafana_rule_group" "ingest_path" {
     }
   }
 
-  # Catalog entry 89. Records waiting on the stream while bronze has written no rows for an
+  # Catalog entry 89. Devices publishing while bronze has written no rows for an
   # hour: the consumer died or runs without writing. Kinesis keeps records for 24 hours, so
   # this is data held up rather than lost. It also covers a consumer that died entirely,
   # which Ingest Lag reads as no data.
@@ -2697,7 +2697,7 @@ resource "grafana_rule_group" "ingest_path" {
   # reading says over 60 minutes ago) and at least five minutes before the reading, so bronze
   # had time to take them. Newer ones would fire it on a stale reading after a quiet spell. The
   # count is MQTT only, so the ingest health check, which publishes over HTTP and which bronze
-  # drops from raw_data, never stands for waiting records.
+  # drops from raw_data, never stands for a device's publish.
   rule {
     name      = "Ingest Stalled"
     condition = "E"
@@ -2806,8 +2806,8 @@ resource "grafana_rule_group" "ingest_path" {
     for            = "10m"
 
     annotations = {
-      description      = "Records have been waiting on the ingest stream while bronze has written nothing for over an hour; measurements are held up in Kinesis, which keeps them 24 hours."
-      summary          = "Ingest stalled: records waiting, bronze not writing"
+      description      = "Devices have been publishing while bronze has written nothing for over an hour; measurements are held up in Kinesis, which keeps them 24 hours."
+      summary          = "Ingest stalled: devices publishing, bronze not writing"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/ingest-idle.md"
       __dashboardUid__ = local.heartbeat_daily_uid
       __panelId__      = local.heartbeat_panel_ids["ingest-idle"]

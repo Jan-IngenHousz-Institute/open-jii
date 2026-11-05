@@ -82,6 +82,7 @@ from openjii.heartbeat import (
     failed_rows_by_cause_sql,
     heartbeat_key,
     hop,
+    bronze_idle_sql,
     ingest_healthcheck_sql,
     latest_full_collection,
     latest_pipeline_hour,
@@ -315,17 +316,15 @@ def commit_versions(table: str, start: datetime, end: datetime) -> tuple[int, in
     return row["lo"], row["hi"]
 
 
-def idle_minutes(table: str, wrote_rows: bool = False) -> float | None:
-    """Minutes since the stage last committed, measured at query time: the
+def idle_minutes(table: str) -> float | None:
+    """Minutes since the stage last committed rows, measured at query time: the
     pipelines commit every few seconds, so against the run's start this would
-    read negative. An empty micro-batch commits too, so `wrote_rows` counts only
-    the commits that wrote rows, for a stage that drops some of what it reads.
-    Either way it reads as a stall only beside data still arriving."""
-    wrote_rows_filter = "AND CAST(operationMetrics['numOutputRows'] AS BIGINT) > 0" if wrote_rows else ""
+    read negative. A streaming table only commits when rows arrive, so this
+    reads as a stall only beside data still arriving."""
     row = spark.sql(f"""
         SELECT round((unix_millis(current_timestamp()) - unix_millis(max(timestamp))) / 60000, 1) AS idle
         FROM (DESCRIBE HISTORY {table} LIMIT {HISTORY_DEPTH})
-        WHERE operation = 'STREAMING UPDATE' {wrote_rows_filter}
+        WHERE operation = 'STREAMING UPDATE'
     """).first()
     return row["idle"]
 
@@ -584,14 +583,12 @@ def collect_macro_protocol_failures(now: datetime) -> list[dict]:
 
 def collect_path_idle(now: datetime) -> list[dict]:
     """Minutes since bronze last wrote rows and the macro results last committed."""
-    records = []
-    for metric, table, wrote_rows in (
-        (INGEST_IDLE_METRIC, RAW_DATA, True),
-        (MACRO_IDLE_METRIC, EXPERIMENT_MACRO_DATA, False),
-    ):
-        idle = idle_minutes(table, wrote_rows)
-        if idle is not None:
-            records.append(data_point(metric, idle, now, "None"))
+    bronze = spark.sql(bronze_idle_sql(RAW_DATA)).first()
+    records = [data_point(INGEST_IDLE_METRIC, bronze["idle"], now, "None")]
+
+    macro_idle = idle_minutes(EXPERIMENT_MACRO_DATA)
+    if macro_idle is not None:
+        records.append(data_point(MACRO_IDLE_METRIC, macro_idle, now, "None"))
 
     return records
 

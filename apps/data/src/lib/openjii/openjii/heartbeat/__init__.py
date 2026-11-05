@@ -1,5 +1,6 @@
 """Heartbeat observation builders for the platform monitoring pipeline."""
 
+from .bronze_idle import IDLE_LOOKBACK_DAYS, bronze_idle_sql
 from .constants import (
     ACTIVE_CONTRIBUTORS_7D_METRIC,
     ACTIVE_DEVICES_7D_METRIC,
@@ -114,6 +115,7 @@ __all__ = [
     "HEALTHCHECK_AGE_METRIC",
     "HEALTHCHECK_LATENCY_METRIC",
     "HEARTBEAT_KEY_PREFIX",
+    "IDLE_LOOKBACK_DAYS",
     "INGESTED_ROWS_METRIC",
     "INGEST_BAD_PAYLOAD_RATE_METRIC",
     "INGEST_IDLE_METRIC",
@@ -147,6 +149,7 @@ __all__ = [
     "FlowHour",
     "FullCollection",
     "PipelineHour",
+    "bronze_idle_sql",
     "cluster_starts",
     "cost_components",
     "cost_windows",

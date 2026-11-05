@@ -155,3 +155,25 @@ def test_every_record_lands_in_one_table_unless_it_only_borrows_the_health_check
 
     assert "healthcheck" not in raw_data
     assert len(raw_data) + healthchecks == len(_RECORDS) - _UNFLAGGED_ON_THE_HEALTHCHECK_TOPIC
+
+
+_FORGED_SENT_AT = ["not a time", 1.5e30, 9_000_000_000_000_000_000, {"a": 1}]
+
+
+def test_a_forged_send_time_reads_as_null_rather_than_failing_the_flow(
+    spark: SparkSession, fake_dlt: types.ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    forged = [
+        _record(
+            f"forged-{index}",
+            json.dumps({"topic": _HEALTHCHECK_TOPIC, "healthcheck": True, "sent_at": value}),
+        )
+        for index, value in enumerate(_FORGED_SENT_AT)
+    ]
+    kinesis = spark.createDataFrame([_RECORDS[0], *forged], _KINESIS_SCHEMA)
+
+    rows = _load("ingest_healthchecks", monkeypatch, kinesis).ingest_healthchecks().collect()
+
+    sent_at = sorted((row.sent_at for row in rows), key=lambda value: value is not None)
+    assert sent_at[: len(_FORGED_SENT_AT)] == [None] * len(_FORGED_SENT_AT)
+    assert sent_at[-1] is not None and int(sent_at[-1].timestamp() * 1000) == _SENT_AT_MS

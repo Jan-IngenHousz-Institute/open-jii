@@ -841,7 +841,6 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/raw_uploaded_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/raw_large_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/raw_device_lifecycle_events",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/ingest_healthchecks",
     # silver
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/silver/clean_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/silver/clean_device_lifecycle_events",
@@ -859,7 +858,7 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/sources",
     # event hooks
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/hooks",
-  ], local.centrum_feed_notebooks)
+  ], local.centrum_feed_notebooks, local.ingest_healthcheck_notebooks)
 
   # Use Databricks per-flow trigger defaults; notebooks may override individual tables.
   configuration = merge({
@@ -3412,6 +3411,10 @@ module "cost_publisher" {
 locals {
   # Flip once the centrum pipeline that drops health checks from raw_data is running here.
   ingest_healthcheck_publishing = false
+
+  # The pipeline carries the notebook only while publishing is on: a settings change starts it before
+  # a release has deployed a new notebook.
+  ingest_healthcheck_notebooks = local.ingest_healthcheck_publishing ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/ingest_healthchecks"] : []
 
   # Flip after the first HealthcheckAgeMinutes datapoint appears, and not with the publisher: the
   # stalled rule fires on no data, so switching it on earlier pages before any message is read.
