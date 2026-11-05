@@ -1,4 +1,5 @@
 import { shouldRetryQuery } from "@/util/query-retry";
+import { relativeFilterQueryOptions } from "@/util/relative-filter-query-options";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import {
@@ -115,12 +116,13 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
     columns: columns && columns.length > 0 ? columns.join(",") : undefined,
   };
   const dataView = JSON.stringify({ ...input, page: undefined });
+  const freshness = relativeFilterQueryOptions(cleanedFilters, STALE_TIME);
 
   const { data, isLoading, isPlaceholderData, error } = useQuery(
     orpc.experiments.getExperimentData.queryOptions({
       input,
-      meta: { dataView },
-      staleTime: STALE_TIME,
+      ...freshness,
+      meta: { ...freshness.meta, dataView },
       enabled,
       placeholderData: keepPreviousPage
         ? (previous, previousQuery) =>

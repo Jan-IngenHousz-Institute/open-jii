@@ -5,6 +5,7 @@ import { useTranslation } from "@repo/i18n";
 
 import { useExperimentDistinctValues } from "../../../hooks/experiment/useExperimentDistinctValues/useExperimentDistinctValues";
 import { ContributorIdentity } from "../../contributor/contributor-identity";
+import { scalarFilterDisplay } from "../scalar-filter-display";
 import { useContributorIdMap } from "../use-distinct-options";
 
 const NO_VALUE = "-";
@@ -56,8 +57,6 @@ function collectSelectedIds(filterValue: ExperimentDataFilter["value"]): string[
   if (Array.isArray(filterValue)) {
     return filterValue.map((v) => String(v));
   }
-  if (filterValue === "") {
-    return [];
-  }
-  return [String(filterValue)];
+  const display = scalarFilterDisplay(filterValue);
+  return display ? [display] : [];
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   zExperimentDataResponse,
@@ -441,6 +441,26 @@ describe("FixtureQuery, time matching", () => {
       { id: "p1", second__air_temperature: 19 },
       { id: "p2", second__air_temperature: null },
     ]);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-10-20T10:31:59Z"));
+    try {
+      const rolling = fixture.answer(
+        "/data",
+        new URLSearchParams({
+          tableName: "leaf_readings",
+          columns: "id,second__air_temperature",
+          join,
+          filters: JSON.stringify([
+            { column: "timestamp", operator: "between", value: { last: 24, unit: "hours" } },
+          ]),
+        }),
+      );
+      if (rolling?.status !== 200) throw new Error("Expected rolling joined data");
+      const result = zExperimentDataResponse.parse(rolling.body)[0];
+      expect(result.filterEvaluatedAt).toBe("2026-10-20T10:31:00.000Z");
+      expect(result.data?.rows).toEqual(data.rows);
+    } finally {
+      clock.mockRestore();
+    }
     const columns = fixture.answer(
       "/data/columns",
       new URLSearchParams({ tableName: "leaf_readings", join }),
@@ -452,4 +472,20 @@ describe("FixtureQuery, time matching", () => {
         .columns.find((c) => c.name === "second__air_temperature")?.sourceTable,
     ).toEqual({ tableName: "weather_readings", columnName: "air_temperature" });
   });
+});
+
+it("evaluates a relative fixture read at the same UTC minute reported to the UI", () => {
+  const clock = vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-06-08T11:00:59.999Z"));
+  try {
+    const answer = ask("/data", {
+      tableName: "plots",
+      filters: [{ column: "timestamp", operator: "between", value: { last: 24, unit: "hours" } }],
+    });
+    if (answer?.status !== 200) throw new Error("Fixture read failed");
+    const result = zExperimentDataResponse.parse(answer.body)[0];
+    expect(result.filterEvaluatedAt).toBe("2026-06-08T11:00:00.000Z");
+    expect(result.data?.rows).toHaveLength(2);
+  } finally {
+    clock.mockRestore();
+  }
 });

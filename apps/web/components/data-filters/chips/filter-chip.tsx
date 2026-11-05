@@ -8,6 +8,7 @@ import type {
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { zExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { isRelativeTimeWindow } from "@repo/api/transforms/relative-time-filter";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverAnchor, PopoverContent } from "@repo/ui/components/popover";
@@ -158,6 +159,9 @@ function filterValuesEqual(
   const bothArrays = Array.isArray(a) && Array.isArray(b);
   if (bothArrays) {
     return a.length === b.length && a.every((v, i) => v === b[i]);
+  }
+  if (isRelativeTimeWindow(a) && isRelativeTimeWindow(b)) {
+    return a.last === b.last && a.unit === b.unit;
   }
   return a === b;
 }

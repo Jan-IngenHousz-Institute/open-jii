@@ -1,6 +1,9 @@
+import { useExperimentVisualizationData } from "@/hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
+import { createExperimentDataTable } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { formatYmdHm } from "@/util/date";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -21,6 +24,67 @@ const numericColumn: ExperimentDataColumn = {
 };
 
 describe("FilterChipFace", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("shows a rolling preview, adopts the read's server bounds, and remains operable", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-25T01:59:59.999Z"));
+    const serverAt = "2026-10-25T02:00:00.000Z";
+    let unblock!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      unblock = resolve;
+    });
+    server.mount(contract.experiments.getExperimentData, {
+      unblock: pending,
+      body: [createExperimentDataTable({ filterEvaluatedAt: serverAt })],
+    });
+    const filter: ExperimentDataFilter = {
+      column: "timestamp",
+      operator: "between",
+      value: { last: 24, unit: "hours" },
+    };
+    const onClick = vi.fn();
+    const onRemove = vi.fn();
+    function Probe() {
+      useExperimentVisualizationData("exp-1", {
+        tableName: "raw_data",
+        columns: ["timestamp"],
+        filters: [filter],
+      });
+      return (
+        <FilterChipFace
+          filter={filter}
+          column={{ name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" }}
+          experimentId="exp-1"
+          tableName="raw_data"
+          fullWidth
+          onClick={onClick}
+          onRemove={onRemove}
+        />
+      );
+    }
+    render(<Probe />);
+    const chipButton = screen.getByRole("button", { name: /dataFilters.presetLast24h/ });
+    expect(screen.getByText("dataFilters.rangePreview")).toBeInTheDocument();
+    expect(screen.getByText(/→/)).toHaveTextContent(
+      `${formatYmdHm(new Date("2026-10-24T01:59:00.000Z"))} → ${formatYmdHm(new Date("2026-10-25T01:59:00.000Z"))}`,
+    );
+    expect(chipButton).toHaveClass("h-auto", "py-1");
+    expect(chipButton.parentElement).toHaveClass("h-auto", "min-h-7");
+    unblock();
+    await waitFor(() =>
+      expect(screen.queryByText("dataFilters.rangePreview")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText(/→/)).toHaveTextContent(
+      `${formatYmdHm(new Date("2026-10-24T02:00:00.000Z"))} → ${formatYmdHm(new Date(serverAt))}`,
+    );
+    const user = userEvent.setup();
+    await user.click(chipButton);
+    await user.click(screen.getByRole("button", { name: "dataFilters.removeFilterOn" }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(onRemove).toHaveBeenCalledTimes(1);
+  });
+
   it("shows the parent column name and the operator label for the column kind", () => {
     const filter: ExperimentDataFilter = { column: "label", operator: "contains", value: "abc" };
     render(<FilterChipFace filter={filter} column={stringColumn} onRemove={vi.fn()} />);

@@ -41,6 +41,18 @@ describe("useUrlDataFilters", () => {
     expect(result.current.completeFilters).toEqual(seed);
   });
 
+  it("restores relative windows from the URL and writes them without resolving dates", () => {
+    const filters: ExperimentDataFilter[] = [
+      { column: "timestamp", operator: "between", value: { last: 7, unit: "days" } },
+    ];
+    setSearchParams(`f_raw_data=${encodeFilters(filters)}`);
+    const { result } = renderHook(() => useUrlDataFilters("raw_data"));
+    expect(result.current.completeFilters).toEqual(filters);
+    const next: ExperimentDataFilter[] = [{ ...filters[0], value: { last: 30, unit: "days" } }];
+    act(() => result.current.setFilters(next));
+    expect(mockedReplace.mock.calls.at(-1)?.[0]).toContain(`f_raw_data=${encodeFilters(next)}`);
+  });
+
   it("namespaces filters per table so two tabs don't collide", () => {
     const a: ExperimentDataFilter[] = [{ column: "device_id", operator: "equals", value: "D1" }];
     const b: ExperimentDataFilter[] = [{ column: "lot", operator: "equals", value: "L42" }];

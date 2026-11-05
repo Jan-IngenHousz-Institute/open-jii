@@ -1,12 +1,7 @@
-import {
-  endOfDay,
-  endOfMonth,
-  startOfMonth,
-  startOfYear,
-  subDays,
-  subHours,
-  subMonths,
-} from "date-fns";
+import { endOfDay, endOfMonth, startOfMonth, startOfYear, subMonths } from "date-fns";
+
+import type { ExperimentRelativeTimeWindow } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { resolveRelativeTimeWindow } from "@repo/api/transforms/relative-time-filter";
 
 export type DateRangePresetId =
   | "last1h"
@@ -22,14 +17,31 @@ export type DateRangePresetId =
 export interface DateRangePresetDef {
   id: DateRangePresetId;
   labelKey: string;
+  relativeWindow?: ExperimentRelativeTimeWindow;
 }
 
 export const DATE_RANGE_PRESETS: DateRangePresetDef[] = [
-  { id: "last1h", labelKey: "dataFilters.presetLastHour" },
-  { id: "last24h", labelKey: "dataFilters.presetLast24h" },
-  { id: "last7d", labelKey: "dataFilters.presetLast7d" },
-  { id: "last30d", labelKey: "dataFilters.presetLast30d" },
-  { id: "last90d", labelKey: "dataFilters.presetLast90d" },
+  {
+    id: "last1h",
+    labelKey: "dataFilters.presetLastHour",
+    relativeWindow: { last: 1, unit: "hours" },
+  },
+  {
+    id: "last24h",
+    labelKey: "dataFilters.presetLast24h",
+    relativeWindow: { last: 24, unit: "hours" },
+  },
+  { id: "last7d", labelKey: "dataFilters.presetLast7d", relativeWindow: { last: 7, unit: "days" } },
+  {
+    id: "last30d",
+    labelKey: "dataFilters.presetLast30d",
+    relativeWindow: { last: 30, unit: "days" },
+  },
+  {
+    id: "last90d",
+    labelKey: "dataFilters.presetLast90d",
+    relativeWindow: { last: 90, unit: "days" },
+  },
   { id: "thisMonth", labelKey: "dataFilters.presetThisMonth" },
   { id: "lastMonth", labelKey: "dataFilters.presetLastMonth" },
   { id: "thisYear", labelKey: "dataFilters.presetThisYear" },
@@ -38,17 +50,12 @@ export const DATE_RANGE_PRESETS: DateRangePresetDef[] = [
 
 export function computeDateRangePreset(id: DateRangePresetId): [Date, Date] {
   const now = new Date();
+  const relative = DATE_RANGE_PRESETS.find((preset) => preset.id === id)?.relativeWindow;
+  if (relative) {
+    const [start, end] = resolveRelativeTimeWindow(relative, now.getTime());
+    return [new Date(start), new Date(end)];
+  }
   switch (id) {
-    case "last1h":
-      return [subHours(now, 1), now];
-    case "last24h":
-      return [subHours(now, 24), now];
-    case "last7d":
-      return [subDays(now, 7), now];
-    case "last30d":
-      return [subDays(now, 30), now];
-    case "last90d":
-      return [subDays(now, 90), now];
     case "thisMonth":
       return [startOfMonth(now), now];
     case "lastMonth": {
@@ -58,5 +65,15 @@ export function computeDateRangePreset(id: DateRangePresetId): [Date, Date] {
     case "thisYear":
     case "yearToDate":
       return [startOfYear(now), now];
+    default:
+      throw new Error(`Missing relative window for ${id}`);
   }
+}
+
+export function relativeTimePresetLabelKey(window: ExperimentRelativeTimeWindow): string {
+  const preset = DATE_RANGE_PRESETS.find(
+    (preset) =>
+      preset.relativeWindow?.last === window.last && preset.relativeWindow.unit === window.unit,
+  );
+  return preset?.labelKey ?? "dataFilters.pickRange";
 }

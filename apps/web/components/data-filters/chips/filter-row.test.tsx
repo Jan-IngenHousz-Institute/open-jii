@@ -95,6 +95,33 @@ describe("FilterRow", () => {
     });
   });
 
+  it("clears a rolling window when changing from between to a single-date operator", async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    const timestamp: ExperimentDataColumn = {
+      name: "timestamp",
+      type_name: "TIMESTAMP",
+      type_text: "TIMESTAMP",
+    };
+    render(
+      <FilterRow
+        filter={{ column: "timestamp", operator: "between", value: { last: 24, unit: "hours" } }}
+        columns={[timestamp]}
+        experimentId="exp-1"
+        tableName="raw_data"
+        onChange={onChange}
+        onRemove={vi.fn()}
+      />,
+    );
+    await user.click(screen.getAllByRole("combobox")[1]);
+    await user.click(screen.getByRole("option", { name: /^after$/ }));
+    expect(onChange).toHaveBeenLastCalledWith({
+      column: "timestamp",
+      operator: "greater_than",
+      value: "",
+    });
+  });
+
   it("resets the value and routes through the struct sub-path when the column changes", async () => {
     mountDistinct();
     const onChange = vi.fn();

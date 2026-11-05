@@ -86,7 +86,10 @@ describe("useDashboardFiltersForTable", () => {
       return (
         <ul>
           {filters.map((f, i) => (
-            <li key={i} data-testid={`f-${i}`}>{`${f.column}|${f.operator}|${String(f.value)}`}</li>
+            <li
+              key={i}
+              data-testid={`f-${i}`}
+            >{`${f.column}|${f.operator}|${typeof f.value === "object" ? JSON.stringify(f.value) : String(f.value)}`}</li>
           ))}
         </ul>
       );

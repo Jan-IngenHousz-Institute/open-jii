@@ -1,6 +1,7 @@
 import { contributorDisplayName } from "@/components/experiment-visualizations/charts/data/contributor-cells";
 import { deviceDisplayName } from "@/components/experiment-visualizations/charts/data/device-cells";
 import { shouldRetryQuery } from "@/util/query-retry";
+import { relativeFilterQueryOptions } from "@/util/relative-filter-query-options";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { orpc } from "~/lib/orpc";
@@ -191,6 +192,7 @@ export const useExperimentVisualizationData = (
     aggregationJson,
     joinJson,
   ].join("|");
+  const freshness = relativeFilterQueryOptions(cleanedFilters, STALE_TIME);
 
   const { data, isLoading, isPlaceholderData, error } = useQuery(
     orpc.experiments.getExperimentData.queryOptions({
@@ -204,14 +206,14 @@ export const useExperimentVisualizationData = (
         orderBy: effectiveOrderBy,
         orderDirection: effectiveOrderDirection,
       },
-      meta: { readShape, secondaryTableName: dataConfig.join?.tableName },
+      ...freshness,
+      meta: { ...freshness.meta, readShape, secondaryTableName: dataConfig.join?.tableName },
       // A new filter is a new cache key. Without this the chart drops to its loading state and
       // Plotly rebuilds it from scratch when the rows land; the previous rows stay drawn instead.
       // Held only while the read's columns are unchanged, so a chart never draws columns it did
       // not ask for.
       placeholderData: (previous, previousQuery) =>
         previousQuery?.meta?.readShape === readShape ? previous : undefined,
-      staleTime: STALE_TIME,
       enabled: enabled && Boolean(dataConfig.tableName) && canQuery,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
