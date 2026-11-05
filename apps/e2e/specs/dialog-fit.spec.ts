@@ -2,9 +2,9 @@ import type { Locator, Page } from "@playwright/test";
 import postgres from "postgres";
 
 import {
-  cleanupDialogFitExperiment,
+  cleanupDataExperiment,
   mockLakehouse,
-  seedDialogFitExperiment,
+  seedDataExperiment,
 } from "../experiment-data-fixtures.js";
 import type { LakehouseData } from "../experiment-data-fixtures.js";
 import { expect, test } from "../fixtures.js";
@@ -80,12 +80,12 @@ test.beforeAll(async () => {
   } finally {
     await sql.end({ timeout: 1 });
   }
-  experimentId = await seedDialogFitExperiment();
+  experimentId = await seedDataExperiment();
 });
 
 test.afterAll(async () => {
   await cleanup();
-  await cleanupDialogFitExperiment();
+  await cleanupDataExperiment();
 });
 
 async function openWorkbook(page: Page): Promise<void> {

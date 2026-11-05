@@ -48,29 +48,42 @@ describe("QueryBuilder Base", () => {
     });
 
     it("should order by column", () => {
-      const query = builder.from("t").orderBy("created_at", "DESC").build();
+      const query = builder.from("t").orderBy({ column: "created_at", direction: "DESC" }).build();
       expect(query).toBe("SELECT * FROM t ORDER BY `created_at` DESC");
     });
 
     it("should order by nested struct field", () => {
-      const query = builder.from("t").orderBy("contributor.name", "ASC").build();
+      const query = builder
+        .from("t")
+        .orderBy({ column: "contributor.name", direction: "ASC" })
+        .build();
       expect(query).toBe("SELECT * FROM t ORDER BY `contributor`.`name` ASC");
     });
 
     it("should order by deeply nested struct field", () => {
-      const query = builder.from("t").orderBy("user.profile.name", "DESC").build();
+      const query = builder
+        .from("t")
+        .orderBy({ column: "user.profile.name", direction: "DESC" })
+        .build();
       expect(query).toBe("SELECT * FROM t ORDER BY `user`.`profile`.`name` DESC");
     });
 
     it("orders an anonymized contributor by the pseudonym of its id", () => {
-      const query = builder.from("t").orderBy("contributor.id", "DESC", "exp-1").build();
+      const query = builder
+        .from("t")
+        .orderBy({
+          column: "contributor.id",
+          direction: "DESC",
+          mode: { kind: "pseudonym", salt: "exp-1" },
+        })
+        .build();
       expect(query).toBe(
         "SELECT * FROM t ORDER BY concat('Contributor-', upper(substr(sha2(concat('exp-1:', `contributor`.`id`), 256), 1, 6))) DESC",
       );
     });
 
     it("should allow disabling case-insensitive sorting", () => {
-      const query = builder.from("t").orderBy("created_at", "ASC").build();
+      const query = builder.from("t").orderBy({ column: "created_at", direction: "ASC" }).build();
       expect(query).toBe("SELECT * FROM t ORDER BY `created_at` ASC");
     });
 
@@ -115,7 +128,7 @@ describe("QueryBuilder Base", () => {
         .from("users")
         .except(["password", "token"])
         .where("active = true")
-        .orderBy("created_at", "DESC")
+        .orderBy({ column: "created_at", direction: "DESC" })
         .limit(10)
         .build();
       expect(query).toBe(
@@ -199,13 +212,13 @@ describe("QueryBuilder Base", () => {
         .parseVariant("v", "OBJECT<x: INT>")
         .select(["x"])
         .distinct()
-        .orderBy("x", "DESC")
+        .orderBy({ column: "x", direction: "DESC" })
         .build();
       const unprojected = new VariantQueryBuilder()
         .from("t")
         .parseVariant("v", "OBJECT<x: INT>")
         .select(["id"])
-        .orderBy("x")
+        .orderBy({ column: "x" })
         .build();
 
       expect(projected).toContain("ORDER BY `x` DESC");
@@ -216,7 +229,11 @@ describe("QueryBuilder Base", () => {
       const query = new VariantQueryBuilder()
         .from("t")
         .parseVariant("v", "OBJECT<x: INT>")
-        .orderBy("contributor.id", "ASC", "exp-1")
+        .orderBy({
+          column: "contributor.id",
+          direction: "ASC",
+          mode: { kind: "pseudonym", salt: "exp-1" },
+        })
         .build();
 
       expect(query).toContain(
@@ -251,7 +268,7 @@ describe("QueryBuilder Base", () => {
         .from("t")
         .parseVariant("a", "OBJECT<time: STRING, x: INT>", "output")
         .parseVariant("b", "OBJECT<time: STRING, y: INT>", "answer")
-        .orderBy("time_answer")
+        .orderBy({ column: "time_answer" })
         .build();
 
       expect(query).toContain(

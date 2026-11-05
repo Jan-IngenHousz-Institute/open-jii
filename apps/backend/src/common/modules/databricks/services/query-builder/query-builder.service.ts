@@ -32,13 +32,11 @@ export class QueryBuilderService {
       }
 
       // Aggregation: build the inner with filters baked in so filtering
-      // happens pre-aggregation. Drop orderBy/limit from the inner; the
+      // happens pre-aggregation. Drop ordering/limit from the inner; the
       // outer wrapper applies them on aggregated columns.
       const innerParams: QueryParams = {
         ...params,
-        orderBy: undefined,
-        orderDirection: undefined,
-        orderByContributorPseudonymSalt: undefined,
+        ordering: undefined,
         limit: undefined,
         offset: undefined,
         aggregation: undefined,
@@ -51,9 +49,7 @@ export class QueryBuilderService {
       return success(
         wrapWithAggregation(innerSql, {
           aggregation: params.aggregation,
-          orderBy: params.orderBy,
-          orderDirection: params.orderDirection,
-          orderByContributorPseudonymSalt: params.orderByContributorPseudonymSalt,
+          ordering: params.ordering,
           limit: params.limit,
           offset: params.offset,
         }),
@@ -91,9 +87,7 @@ export class QueryBuilderService {
       whereConditions,
       filters,
       distinct,
-      orderBy,
-      orderDirection,
-      orderByContributorPseudonymSalt,
+      ordering,
       limit,
       offset,
     } = params;
@@ -119,8 +113,8 @@ export class QueryBuilderService {
       for (const filter of filters) builder.filter(filter);
     }
 
-    if (orderBy) {
-      builder.orderBy(orderBy, orderDirection, orderByContributorPseudonymSalt);
+    if (ordering) {
+      builder.orderBy(ordering);
     }
 
     if (limit !== undefined) {
@@ -145,9 +139,7 @@ export class QueryBuilderService {
       whereConditions,
       filters,
       distinct,
-      orderBy,
-      orderDirection,
-      orderByContributorPseudonymSalt,
+      ordering,
       limit,
       offset,
     } = params;
@@ -179,8 +171,8 @@ export class QueryBuilderService {
       for (const filter of filters) builder.filter(filter);
     }
 
-    if (orderBy) {
-      builder.orderBy(orderBy, orderDirection, orderByContributorPseudonymSalt);
+    if (ordering) {
+      builder.orderBy(ordering);
     }
 
     if (limit !== undefined) {

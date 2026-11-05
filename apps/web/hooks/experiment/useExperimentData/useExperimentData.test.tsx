@@ -10,6 +10,7 @@ import type {
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataResponse } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
+import type { UseExperimentDataParams } from "./useExperimentData";
 import { useExperimentData } from "./useExperimentData";
 
 describe("useExperimentData", () => {
@@ -162,6 +163,81 @@ describe("useExperimentData", () => {
 
     expect(result.current.tableRows).toBeUndefined();
     expect(result.current.isLoading).toBe(true);
+  });
+
+  const viewChanges: { name: string; input: Partial<UseExperimentDataParams> }[] = [
+    { name: "sort column", input: { orderBy: "value" } },
+    { name: "sort direction", input: { orderDirection: "DESC" } },
+    { name: "filter", input: { filters: [{ column: "id", operator: "equals", value: 1 }] } },
+    { name: "projection", input: { columns: ["id"] } },
+    { name: "table", input: { tableName: "other_table" } },
+    { name: "experiment", input: { experimentId: "other-experiment" } },
+    { name: "page size", input: { pageSize: 10 } },
+  ];
+  describe.each(["initial", "paged", "sorted"])("view loading after %s history", (history) => {
+    it.each(viewChanges)(
+      "hides stale rows for a changed $name and resumes placeholders for page-only changes",
+      async ({ input: change }) => {
+        mountData();
+        const initial: UseExperimentDataParams = {
+          experimentId: "experiment-123",
+          tableName: "test_table",
+          page: 1,
+          pageSize: 20,
+          orderBy: "id",
+          orderDirection: "ASC",
+          keepPreviousPage: true,
+        };
+        const { result, rerender } = renderHook(
+          (input: UseExperimentDataParams) => useExperimentData(input),
+          { initialProps: initial },
+        );
+        await waitFor(() => expect(result.current.tableRows).toHaveLength(2));
+        const current =
+          history === "paged"
+            ? { ...initial, page: 2 }
+            : history === "sorted"
+              ? { ...initial, orderBy: "timestamp" }
+              : initial;
+        if (history !== "initial") {
+          rerender(current);
+          await waitFor(() =>
+            expect(result.current.isLoading || result.current.isRefreshing).toBe(false),
+          );
+        }
+        let release: (() => void) | undefined;
+        const pending = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        const request = server.mount(contract.experiments.getExperimentData, {
+          body: [createExperimentDataTable({ data: mockExperimentData })],
+          unblock: pending,
+        });
+        const next = { ...current, ...change, page: 1 };
+        rerender(next);
+        await waitFor(() => expect(request.called).toBe(true));
+        expect(result.current.tableRows).toBeUndefined();
+        expect(result.current.isLoading).toBe(true);
+        expect(result.current.isRefreshing).toBe(false);
+        release?.();
+        await waitFor(() => expect(result.current.tableRows).toHaveLength(2));
+        let releasePage: (() => void) | undefined;
+        const pendingPage = new Promise<void>((resolve) => {
+          releasePage = resolve;
+        });
+        const pageRequest = server.mount(contract.experiments.getExperimentData, {
+          body: [createExperimentDataTable({ data: mockExperimentData })],
+          unblock: pendingPage,
+        });
+        rerender({ ...next, page: 3 });
+        await waitFor(() => expect(pageRequest.called).toBe(true));
+        expect(result.current.tableRows).toHaveLength(2);
+        expect(result.current.isRefreshing).toBe(true);
+        expect(result.current.isLoading).toBe(false);
+        releasePage?.();
+        await waitFor(() => expect(result.current.isRefreshing).toBe(false));
+      },
+    );
   });
 
   it("should start in loading state before data arrives", async () => {

@@ -148,8 +148,7 @@ describe("ExperimentDataRepository", () => {
         columns: undefined,
         variants: undefined,
         exceptColumns: ["experiment_id", "questions_data", "custom_metadata"],
-        orderBy: undefined,
-        orderDirection: "ASC",
+        ordering: undefined,
         limit: 5,
         offset: 0,
       });
@@ -605,9 +604,11 @@ describe("ExperimentDataRepository", () => {
 
         expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
           expect.objectContaining({
-            orderBy: "contributor.id",
-            orderDirection: "DESC",
-            orderByContributorPseudonymSalt: mockExperiment.id,
+            ordering: {
+              column: "contributor.id",
+              direction: "DESC",
+              mode: { kind: "pseudonym", salt: mockExperiment.id },
+            },
           }),
         );
       });
@@ -623,8 +624,7 @@ describe("ExperimentDataRepository", () => {
 
         expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
           expect.objectContaining({
-            orderBy: "contributor.name",
-            orderByContributorPseudonymSalt: undefined,
+            ordering: { column: "contributor.name", direction: "ASC" },
           }),
         );
       });
@@ -640,8 +640,7 @@ describe("ExperimentDataRepository", () => {
 
         expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
           expect.objectContaining({
-            orderBy: "plot.name",
-            orderByContributorPseudonymSalt: undefined,
+            ordering: { column: "plot.name", direction: "ASC" },
           }),
         );
       });
@@ -662,8 +661,11 @@ describe("ExperimentDataRepository", () => {
         expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
           expect.objectContaining({
             aggregation,
-            orderBy: "contributor.id",
-            orderByContributorPseudonymSalt: mockExperiment.id,
+            ordering: {
+              column: "contributor.id",
+              direction: "ASC",
+              mode: { kind: "pseudonym", salt: mockExperiment.id },
+            },
           }),
         );
       });
@@ -760,8 +762,7 @@ describe("ExperimentDataRepository", () => {
         ],
         reservedColumns: VIEW_COLUMNS,
         exceptColumns: ["experiment_id", "custom_metadata"],
-        orderBy: undefined,
-        orderDirection: "ASC",
+        ordering: undefined,
         limit: DATA_QUERY_MAX_LIMIT + 1,
         offset: undefined,
       });
@@ -955,8 +956,7 @@ describe("ExperimentDataRepository", () => {
           "date",
           "custom_metadata",
         ],
-        orderBy: undefined,
-        orderDirection: "ASC",
+        ordering: undefined,
         limit: 5,
         offset: 0,
       });
@@ -1133,8 +1133,7 @@ describe("ExperimentDataRepository", () => {
           "macro_output",
           "custom_metadata",
         ],
-        orderBy: undefined,
-        orderDirection: "ASC",
+        ordering: undefined,
         limit: 5,
         offset: 0,
       });
@@ -1179,8 +1178,7 @@ describe("ExperimentDataRepository", () => {
         columns: undefined,
         variants: undefined,
         exceptColumns: ["experiment_id", "questions_data", "custom_metadata"],
-        orderBy: undefined,
-        orderDirection: "ASC",
+        ordering: undefined,
         limit: 5,
         offset: 0,
       });
@@ -1228,8 +1226,7 @@ describe("ExperimentDataRepository", () => {
         columns: undefined,
         variants: undefined,
         exceptColumns: ["experiment_id"],
-        orderBy: undefined,
-        orderDirection: "ASC",
+        ordering: undefined,
         limit: 5,
         offset: 0,
       });
@@ -1795,8 +1792,7 @@ describe("ExperimentDataRepository", () => {
           experimentId,
           columns: ["site"],
           distinct: true,
-          orderBy: "site",
-          orderDirection: "ASC",
+          ordering: { column: "site", direction: "ASC" },
           limit: 11,
         }),
       );
@@ -2041,6 +2037,230 @@ describe("ExperimentDataRepository", () => {
 
       assertFailure(result);
       expect(result.error.code).toBe("NOT_FOUND");
+    });
+  });
+  describe("question answer sorting policy", () => {
+    const empty = { columns: [], rows: [], totalRows: 0, truncated: false };
+    const params = {
+      experimentId: faker.string.uuid(),
+      experiment: mockExperiment,
+      page: 1,
+      pageSize: 5,
+    };
+
+    it.each([
+      { source: "question", orderBy: "q", questionsSchema: "OBJECT<q: STRING>", numeric: true },
+      {
+        source: "empty ordering",
+        orderBy: "",
+        questionsSchema: "OBJECT<q: STRING>",
+        numeric: false,
+      },
+      {
+        source: "base collision",
+        orderBy: "id_answer",
+        questionsSchema: "OBJECT<id: STRING>",
+        numeric: true,
+      },
+      {
+        source: "case collision",
+        orderBy: "ID_answer",
+        questionsSchema: "OBJECT<ID: STRING>",
+        numeric: true,
+      },
+      {
+        source: "macro collision",
+        orderBy: "q_answer_2",
+        questionsSchema: "OBJECT<q: STRING>",
+        macroSchema: "OBJECT<q: STRING, q_answer: STRING>",
+        numeric: true,
+      },
+      {
+        source: "native integer",
+        orderBy: "q",
+        questionsSchema: "OBJECT<q: BIGINT>",
+        numeric: false,
+      },
+      {
+        source: "native double",
+        orderBy: "q",
+        questionsSchema: "OBJECT<q: DOUBLE>",
+        numeric: false,
+      },
+      {
+        source: "native boolean",
+        orderBy: "q",
+        questionsSchema: "OBJECT<q: BOOLEAN>",
+        numeric: false,
+      },
+      {
+        source: "mixed types",
+        orderBy: "q",
+        questionsSchema: "OBJECT<q: VARIANT>",
+        numeric: false,
+      },
+      {
+        source: "macro output",
+        orderBy: "q",
+        questionsSchema: "OBJECT<q: STRING>",
+        macroSchema: "OBJECT<q: STRING>",
+        numeric: false,
+      },
+      {
+        source: "metadata answer suffix",
+        orderBy: "q_answer",
+        questionsSchema: "OBJECT<q: STRING>",
+        customMetadataSchema: "OBJECT<q_answer: STRING>",
+        numeric: false,
+      },
+    ])(
+      "uses the resolved source for $source",
+      async ({ orderBy, questionsSchema, macroSchema, customMetadataSchema, numeric }) => {
+        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+          success([
+            {
+              identifier: "fixture",
+              tableType: "macro",
+              displayName: null,
+              rowCount: 100,
+              latestRowAt: null,
+              schemaRevision: null,
+              questionsSchema,
+              macroSchema,
+              customMetadataSchema,
+            },
+          ]),
+        );
+        const build = vi
+          .spyOn(databricksPort, "buildExperimentQuery")
+          .mockReturnValue(success("SELECT 1"));
+        vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(empty));
+        const result = await repository.getTableData({ ...params, tableName: "fixture", orderBy });
+        assertSuccess(result);
+        if (orderBy === "") expect(build.mock.calls[0][0].ordering).toBeUndefined();
+        expect(build.mock.calls[0][0].ordering?.mode).toEqual(
+          numeric ? { kind: "numericString", rowId: "id" } : undefined,
+        );
+      },
+    );
+
+    it("applies the same policy to the distinct picker", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([
+          {
+            identifier: "raw_data",
+            tableType: "static",
+            displayName: null,
+            rowCount: 100,
+            latestRowAt: null,
+            schemaRevision: null,
+            questionsSchema: "OBJECT<q: STRING>",
+          },
+        ]),
+      );
+      const build = vi
+        .spyOn(databricksPort, "buildExperimentQuery")
+        .mockReturnValue(success("SELECT 1"));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(empty));
+      const result = await repository.getDistinctColumnValues({
+        ...params,
+        tableName: "raw_data",
+        column: "q",
+        limit: 5,
+      });
+      assertSuccess(result);
+      expect(build).toHaveBeenCalledWith(
+        expect.objectContaining({
+          distinct: true,
+          columns: ["q"],
+          ordering: { column: "q", direction: "ASC", mode: { kind: "numericString", rowId: "id" } },
+          limit: 6,
+        }),
+      );
+    });
+
+    const rawData: ExperimentTableMetadata = {
+      identifier: "raw_data",
+      tableType: "static",
+      displayName: null,
+      rowCount: 100,
+      latestRowAt: null,
+      schemaRevision: null,
+      questionsSchema: "OBJECT<q: STRING>",
+    };
+
+    it.each(["ASC", "DESC"] as const)(
+      "orders a chart's filtered rows by answer value %s before the ceiling",
+      async (orderDirection) => {
+        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+          success([rawData]),
+        );
+        const execute = vi
+          .spyOn(databricksPort, "executeSqlQuery")
+          .mockResolvedValue(success(empty));
+        const filters = [{ column: "q", operator: "contains" as const, value: "0" }];
+
+        const result = await repository.getTableData({
+          experimentId: params.experimentId,
+          experiment: mockExperiment,
+          tableName: "raw_data",
+          columns: ["id", "q"],
+          filters,
+          orderBy: "q",
+          orderDirection,
+          limit: 10,
+        });
+
+        assertSuccess(result);
+        const sql = execute.mock.calls[0][1];
+        expect(sql).toMatch(/^SELECT \* EXCEPT \(`__numeric_order_group`, /);
+        expect(sql).toContain(
+          "\nSELECT `id`, try_variant_get(`questions_data`, '$[\"q\"]', 'STRING') AS `q`, ",
+        );
+        expect(sql).toContain("LIKE '%0%'");
+        expect(sql).toContain(
+          `ORDER BY \`__numeric_order_group\` ASC, (\`__numeric_order_decimal\`) ${orderDirection}, \`__numeric_order_value\` ${orderDirection} NULLS LAST, \`__numeric_order_row\` ASC\nLIMIT 11`,
+        );
+      },
+    );
+
+    it("orders a grouped answer by the plain output", async () => {
+      const aggregation = {
+        groupBy: [{ column: "q" }],
+        functions: [{ column: "id", function: "count" as const }],
+      };
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([rawData]));
+      const execute = vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(empty));
+
+      const result = await repository.getTableData({
+        experimentId: params.experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        aggregation,
+        orderBy: "q",
+        orderDirection: "DESC",
+      });
+
+      assertSuccess(result);
+      const sql = execute.mock.calls[0][1];
+      expect(sql).toMatch(/ORDER BY `q` DESC LIMIT 100001$/);
+      expect(sql).not.toContain("DECIMAL(38, 18)");
+      expect(sql).not.toContain("__numeric_order");
+    });
+
+    it("reads an empty aggregation as rows ordered by answer value", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([rawData]));
+      const execute = vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(empty));
+
+      const result = await repository.getTableData({
+        ...params,
+        tableName: "raw_data",
+        aggregation: {},
+        orderBy: "q",
+      });
+
+      assertSuccess(result);
+      expect(execute.mock.calls[0][1]).toMatch(/^SELECT \* EXCEPT \(`__numeric_order_group`, /);
     });
   });
 });
