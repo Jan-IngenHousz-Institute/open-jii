@@ -105,9 +105,18 @@ class StoreFeed:
         schemas_written = writer.insert(PAYLOAD_SCHEMAS, schemas)
         if schemas_written.unfinished:
             return f"{schemas_written.unfinished} schemas not sent"
-        if unsent is not None:
+        # A refused schema is recorded under its own table too, whose rejects alert covers it; the
+        # refused line itself is filed under payload_schemas, which no alert reads.
+        refused = (
+            f"batch {batch_id}: the store refused {schemas_written.rejected} of its payload schemas"
+            if schemas_written.rejected
+            else None
+        )
+        for reason in (unsent, refused):
+            if reason is None:
+                continue
             try:
-                writer.reject_unsent_schemas(table.name, unsent)
+                writer.reject_unsent_schemas(table.name, reason)
             except StoreUnavailable as error:
                 return str(error)
 

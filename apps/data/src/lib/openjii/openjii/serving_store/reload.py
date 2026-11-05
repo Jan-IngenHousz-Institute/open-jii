@@ -46,6 +46,7 @@ class Reloaded:
     table: str
     version: int
     written: Written
+    schemas: Written
     # Rows per experiment, one per store key: gold's at the version, and the store's afterwards by
     # where the newest commit of each falls against the version.
     gold: dict[str, int]
@@ -90,7 +91,8 @@ class StoreReload:
         """Reloads one experiment, or every experiment when ``experiment_id`` is None. An
         experiment gold no longer holds leaves the store with it, once ``allow_removal`` says more
         than ``REMOVAL_LIMIT`` rows may go. When the store refuses any row, nothing is deleted,
-        since a refused row's older copy is the only one the store has."""
+        since a refused row's older copy is the only one the store has, and a refused schema keeps
+        the older schemas for the same reason."""
         # Read first, so a commit the feed sends meanwhile cannot look newer than gold's latest.
         newest = self._newest_stored_version(table)
         version, committed_at = self.latest_version(table)
@@ -113,14 +115,15 @@ class StoreReload:
         )
 
         written = self._write(table, changes)
-        self._write_schemas(table, changes)
+        schemas = self._write_schemas(table, changes)
         if not written.rejected:
             if not allow_removal:
                 self._check_removal(table, version, experiment_id)
             self._delete_older(table.name, version, experiment_id)
-            # A table type's schemas carry its gold table's versions, so the older ones are those
-            # only rows from before the load had.
-            self._delete_older(PAYLOAD_SCHEMAS, version, experiment_id, table_type=table.table_type)
+            if not schemas.rejected:
+                # A table type's schemas carry its gold table's versions, so the older ones are
+                # those only rows from before the load had.
+                self._delete_older(PAYLOAD_SCHEMAS, version, experiment_id, table_type=table.table_type)
             self._prune_ids(experiment_id)
 
         gold = rows.select(*table.key()).dropDuplicates().groupBy("experiment_id").count().collect()
@@ -129,6 +132,7 @@ class StoreReload:
             table.name,
             version,
             written,
+            schemas,
             gold={row["experiment_id"]: row["count"] for row in gold},
             store={row["experiment_id"]: int(row["current"]) for row in stored if int(row["current"])},
             newer={row["experiment_id"]: int(row["newer"]) for row in stored if int(row["newer"])},
@@ -166,10 +170,12 @@ class StoreReload:
         lines = table.lines(changes, reloaded=True)
         return self._until_sent(f"rows of {table.name}", lambda: self.writer.write(lines, table.name))
 
-    def _write_schemas(self, table: StoreTable, changes: DataFrame) -> None:
+    def _write_schemas(self, table: StoreTable, changes: DataFrame) -> Written:
         """Sends the load's payload schemas, rebuilt from gold's rows as the rows are."""
         lines = [row.line for row in table.schema_lines(changes).collect()]
-        self._until_sent(f"schemas of {table.name}", lambda: self.writer.insert(PAYLOAD_SCHEMAS, lines))
+        return self._until_sent(
+            f"schemas of {table.name}", lambda: self.writer.insert(PAYLOAD_SCHEMAS, lines)
+        )
 
     def _until_sent(self, what: str, send: Callable[[], Written]) -> Written:
         """Sends again until nothing is left unsent, waiting longer each time; the dedup tokens

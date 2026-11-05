@@ -283,11 +283,31 @@ def test_a_load_the_store_refused_rows_of_deletes_nothing(spark: SparkSession) -
     assert [sql for sql, _ in writer.statements if sql.startswith("DELETE")] == []
 
 
+class _SchemasRefused(_Writer):
+    """A store that refuses every payload schema the reload sends."""
+
+    def insert(self, table: str, lines: Iterable[str]) -> Written:
+        sent = list(lines)
+        super().insert(table, sent)
+        return Written(rejected=len(sent))
+
+
+def test_a_load_whose_schemas_the_store_refused_keeps_the_older_schemas(spark: SparkSession) -> None:
+    writer = _SchemasRefused()
+
+    reloaded = _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
+
+    assert reloaded.schemas.rejected == 1
+    deletes = [sql for sql, _ in writer.statements if sql.startswith(_ROW_DELETES)]
+    assert [sql.split(" WHERE")[0] for sql in deletes] == ["DELETE FROM store.uploads"]
+
+
 def test_missing_counts_the_experiments_short_of_gold() -> None:
     reloaded = Reloaded(
         "uploads",
         7,
         Written(inserted=9),
+        Written(inserted=1),
         gold={"e1": 5, "e2": 4},
         store={"e1": 3, "e2": 6},
         newer={"e2": 2},

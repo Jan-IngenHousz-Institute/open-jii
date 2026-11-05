@@ -94,6 +94,11 @@ for table in tables:
             "older copies stay; fix them as store-feed-rejects describes, then run the reload again"
         )
         continue
+    if reloaded.schemas.rejected:
+        mismatches.append(
+            f"{table.name}: the store refused {reloaded.schemas.rejected} payload schemas (in feed_rejects), so "
+            "the older ones stay; fix them as store-feed-rejects describes, then run the reload again"
+        )
     if reloaded.missing:
         mismatches.append(f"{table.name} lacks {reloaded.missing} of gold's rows, in {named(reloaded.short)}")
     if reloaded.older:

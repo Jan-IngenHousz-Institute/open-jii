@@ -22,11 +22,12 @@ clickhouse-client --user openjii_monitor --query "
 
 Read one row with `SELECT row FROM store.feed_rejects WHERE source_table = '<table>' LIMIT 1`.
 
-Code 0 is not the store's: the feed records it itself when Spark could not work out a batch's payload
-schemas. That batch's rows went, but the fields only they carry do not show on pages until a
-[reload](procedures/serving-store-reload.md) of the table rebuilds the schemas; the message says
-why Spark failed. Fix that first if it repeats, then reload the table for the experiments the batch
-carried. Its rows landed just before the reject:
+Code 0 is not the store's: the feed records it itself when a batch's payload schemas did not land,
+because Spark could not work them out or because the store refused them. Refused schemas sit beside
+it under `payload_schemas`, with the store's code. That batch's rows went, but the fields only they
+carry do not show on pages until a [reload](procedures/serving-store-reload.md) of the table
+rebuilds the schemas; the message says which of the two happened. Fix the cause first if it
+repeats, then reload the table for the experiments the batch carried. Its rows landed just before the reject:
 `SELECT DISTINCT experiment_id FROM store.<table> WHERE inserted_at BETWEEN <rejected_at> - INTERVAL 10 MINUTE AND <rejected_at>`
 lists them, with perhaps a few from neighbouring batches, which a reload leaves as they are.
 

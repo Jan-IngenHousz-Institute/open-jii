@@ -238,6 +238,26 @@ def test_a_batch_whose_schemas_cannot_be_worked_out_sends_its_rows_and_records_a
     }
 
 
+def test_a_batch_whose_schemas_the_store_refused_records_a_reject_under_its_table(
+    spark: SparkSession, fake_dp: types.ModuleType, start_versions: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rejects: list[tuple[str, list[str]]] = []
+    monkeypatch.setattr(StoreWriter, "write", lambda self, lines, table: Written(inserted=1))
+    monkeypatch.setattr(StoreWriter, "insert", lambda self, table, lines: Written(rejected=len(list(lines))))
+    monkeypatch.setattr(StoreWriter, "_insert", lambda self, table, lines: rejects.append((table, lines)))
+    _load("centrum/serving_store_feed.py", spark, _Secrets())
+
+    fake_dp.sinks["serving_store_uploads"](spark.sql(_UPLOAD_CHANGES), 5)
+
+    [(table, [line])] = rejects
+    assert table == "feed_rejects"
+    reject = json.loads(line)
+    assert (reject["source_table"], reject["message"]) == (
+        "uploads",
+        "batch 5: the store refused 1 of its payload schemas",
+    )
+
+
 def test_a_batch_the_store_could_not_take_is_written_again_from_the_driver(
     spark: SparkSession, fake_dp: types.ModuleType, start_versions: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
