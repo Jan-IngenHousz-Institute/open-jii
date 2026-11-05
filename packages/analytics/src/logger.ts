@@ -5,7 +5,7 @@ const isProduction = process.env.NODE_ENV === "production";
 
 // An unsubscribe token in the path is a credential for a year; it stays out of every log line.
 const UNSUBSCRIBE_TOKEN_PATH =
-  /(\/api\/v1\/notifications\/email\/(?:unsubscribe|resubscribe)\/)[^/?#]+/;
+  /(\/api\/v1\/notifications\/email\/(?:unsubscribe|resubscribe)\/)[^/?#]+/i;
 
 export function redactRequestUrl(url: string): string {
   return url.replace(UNSUBSCRIBE_TOKEN_PATH, "$1[redacted]");
