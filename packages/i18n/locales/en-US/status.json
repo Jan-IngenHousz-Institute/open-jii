@@ -132,7 +132,7 @@
     "data-intake": {
       "name": "Data intake",
       "description": "Measurements from devices and the field app arriving at openJII.",
-      "details": "Data intake is degraded when, in the last 15 minutes, the step that stores incoming measurements failed to store one, the device network refused an upload, or too many measurements arrived at once and some were held back. A failed check of the platform's link to the device network also makes it degraded. It is down when more than five measurements could not be stored in the last 15 minutes."
+      "details": "Data intake is degraded when, in the last 15 minutes, the step that stores incoming measurements failed to store one, the device network could not accept an upload because of a fault of its own, or too many measurements arrived at once and some were held back. A failed check of the platform's link to the device network also makes it degraded. It is down when more than five measurements could not be stored in the last 15 minutes."
     },
     "data-delivery": {
       "name": "Data delivery",
