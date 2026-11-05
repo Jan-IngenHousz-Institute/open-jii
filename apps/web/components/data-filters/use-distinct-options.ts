@@ -12,8 +12,8 @@ export function useDistinctOptions(
 ) {
   const { values, truncated, isLoading, isSuccess, error } = useExperimentDistinctValues({
     experimentId,
-    tableName,
-    column: column.name,
+    tableName: column.sourceTable?.tableName ?? tableName,
+    column: column.sourceTable?.columnName ?? column.name,
   });
   const isContributor = column.type_text === WellKnownColumnTypes.CONTRIBUTOR;
   const isDevice = column.type_text === WellKnownColumnTypes.DEVICE;

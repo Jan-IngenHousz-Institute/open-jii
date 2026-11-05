@@ -36,6 +36,39 @@ function columnsKey(tableName: string) {
 }
 
 describe("useExperimentDataFreshness", () => {
+  it("invalidates joined reads and metadata when the secondary schema changes", async () => {
+    const queryClient = createTestQueryClient();
+    const join = JSON.stringify({
+      tableName: "macro-1",
+      matchColumn: "station",
+      primaryTimeColumn: "timestamp",
+      secondaryTimeColumn: "timestamp",
+      toleranceMinutes: 5,
+    });
+    const rows = orpc.experiments.getExperimentData.queryKey({
+      input: { id: "exp-1", tableName: "raw_data", join },
+    });
+    const columns = orpc.experiments.getExperimentTableColumns.queryKey({
+      input: { id: "exp-1", tableName: "raw_data", join },
+    });
+    for (const key of [rows, columns]) {
+      queryClient.setQueryDefaults(key, {
+        gcTime: Infinity,
+        meta: { secondaryTableName: "macro-1" },
+      });
+      queryClient.setQueryData(key, []);
+    }
+    const spy = server.mount(contract.experiments.getExperimentTables, {
+      body: () => [RAW, spy.callCount > 1 ? { ...MACRO, schemaRevision: "schema-2" } : MACRO],
+    });
+    const { result } = renderHook(() => useExperimentDataFreshness("exp-1"), { queryClient });
+    await waitFor(() => expect(result.current.hasLoaded).toBe(true));
+    await act(() =>
+      queryClient.refetchQueries({ queryKey: orpc.experiments.getExperimentTables.key() }),
+    );
+    await waitFor(() => expect(queryClient.getQueryState(rows)?.isInvalidated).toBe(true));
+    expect(queryClient.getQueryState(columns)?.isInvalidated).toBe(true);
+  });
   afterEach(() => {
     vi.useRealTimers();
   });

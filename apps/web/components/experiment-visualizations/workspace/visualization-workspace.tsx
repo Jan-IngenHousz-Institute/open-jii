@@ -55,11 +55,13 @@ export function VisualizationWorkspace({
   const tableName = useWatch({ control: form.control, name: "dataConfig.tableName" });
   const watchedChartType = useWatch({ control: form.control, name: "chartType" });
 
+  const join = useWatch({ control: form.control, name: "dataConfig.join" });
+
   const {
     columns: tableColumns,
     isLoading: isColumnsLoading,
     error: columnsError,
-  } = useColumnMetadata(experimentId, tableName);
+  } = useColumnMetadata(experimentId, tableName, join);
 
   // One plottable column list (complex types stripped). Each chart's
   // data-panel applies per-role kind filtering on top via
@@ -93,6 +95,7 @@ export function VisualizationWorkspace({
       aggregate: undefined,
     }));
     form.setValue("dataConfig.dataSources", reset, { shouldDirty: true });
+    form.setValue("dataConfig.join", undefined, { shouldDirty: true });
     form.setValue("dataConfig.aggregation", undefined, { shouldDirty: true });
     form.setValue("dataConfig.filters", undefined, { shouldDirty: true });
     form.setValue("config.xAxisTitle", "", { shouldDirty: true });
@@ -133,7 +136,8 @@ export function VisualizationWorkspace({
 
   const isLoadingShell = isLoadingTables;
   // A chart with no table yet reports the whole experiment.
-  const freshnessTables = tableName === "" ? undefined : [tableName];
+  const freshnessTables =
+    tableName === "" ? undefined : [tableName, ...(join ? [join.tableName] : [])];
 
   return (
     <TooltipProvider delayDuration={200}>

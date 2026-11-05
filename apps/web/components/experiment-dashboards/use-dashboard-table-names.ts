@@ -15,17 +15,21 @@ export function useDashboardTableNames(
   const tableByVisualization = new Map(
     (visualizations ?? []).map((visualization) => [
       visualization.id,
-      visualization.dataConfig.tableName,
+      [
+        visualization.dataConfig.tableName,
+        ...(visualization.dataConfig.join ? [visualization.dataConfig.join.tableName] : []),
+      ],
     ]),
   );
 
-  const tableOf = (widget: ExperimentDashboardWidget): string | undefined => {
+  const tableOf = (widget: ExperimentDashboardWidget): string[] | undefined => {
     if (widget.type === "visualization") {
       return widget.config.visualizationId === undefined
         ? undefined
         : tableByVisualization.get(widget.config.visualizationId);
     }
-    return widget.type === "table" ? widget.config.tableName : undefined;
+    const name = widget.type === "table" ? widget.config.tableName : undefined;
+    return name === undefined ? undefined : [name];
   };
 
   const names = [...new Set(widgets.flatMap((widget) => tableOf(widget) ?? []))];

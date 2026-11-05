@@ -392,3 +392,64 @@ describe("FixtureQuery, example tables", () => {
     expect(zExperimentDataResponse.parse(fleet?.body)[0]?.data?.rows.length).toBeGreaterThan(0);
   });
 });
+
+describe("FixtureQuery, time matching", () => {
+  it("draws joined and unmatched rows with secondary metadata aliases", () => {
+    const fixtureColumns: FixtureTable["columns"] = [
+      { name: "id", type_name: "STRING", type_text: "STRING" },
+      { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+      { name: "station", type_name: "STRING", type_text: "STRING" },
+      { name: "air_temperature", type_name: "DOUBLE", type_text: "DOUBLE" },
+    ];
+    const fixture = new FixtureQuery([
+      {
+        identifier: "leaf_readings",
+        displayName: "Primary readings",
+        columns: fixtureColumns,
+        rows: [
+          { id: "p1", timestamp: "2026-10-20T10:00:00Z", station: "A" },
+          { id: "p2", timestamp: "2026-10-20T10:30:00Z", station: "A" },
+        ],
+      },
+      {
+        identifier: "weather_readings",
+        displayName: "Secondary readings",
+        columns: fixtureColumns,
+        rows: [{ id: "s1", timestamp: "2026-10-20T09:58:00Z", station: "A", air_temperature: 19 }],
+      },
+    ]);
+    const join = JSON.stringify({
+      tableName: "weather_readings",
+      matchColumn: "station",
+      primaryTimeColumn: "timestamp",
+      secondaryTimeColumn: "timestamp",
+      toleranceMinutes: 5,
+    });
+    const answer = fixture.answer(
+      "/data",
+      new URLSearchParams({
+        tableName: "leaf_readings",
+        columns: "id,second__air_temperature",
+        join,
+      }),
+    );
+    expect(answer?.status).toBe(200);
+    if (answer?.status !== 200) throw new Error("Expected data");
+    const data = zExperimentDataResponse.parse(answer.body)[0].data;
+    if (!data) throw new Error("Expected joined data");
+    expect(data.rows).toEqual([
+      { id: "p1", second__air_temperature: 19 },
+      { id: "p2", second__air_temperature: null },
+    ]);
+    const columns = fixture.answer(
+      "/data/columns",
+      new URLSearchParams({ tableName: "leaf_readings", join }),
+    );
+    if (columns?.status !== 200) throw new Error("Expected columns");
+    expect(
+      zExperimentTableColumnsResponse
+        .parse(columns.body)
+        .columns.find((c) => c.name === "second__air_temperature")?.sourceTable,
+    ).toEqual({ tableName: "weather_readings", columnName: "air_temperature" });
+  });
+});

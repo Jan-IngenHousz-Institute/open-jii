@@ -115,13 +115,39 @@ times, alongside a numeric column or another timestamp column. A contour chart
 also needs a numeric **Z** column with varying values across the grid. Its
 **Fill** and **Lines** colouring modes both support time axes.
 
+### Add a second table
+
+In the **Data** tab, choose the primary dataset, then open **Second table** and choose another table from the
+same experiment. Choose a **Match column** that exists in both tables with the
+same scalar type, then choose the time column on each table. Use measurement
+time when you want readings matched by when they were taken, rather than by
+when they were uploaded. Complete the match and time fields and a valid tolerance
+before the chart previews or saves the change.
+
+Set **Tolerance in minutes** to a whole number of zero or more. For each row in
+the primary table, the chart takes the second table's latest reading with the
+same match value, at or before that row's time and no more than the tolerance
+earlier. Both time limits count. Zero requires exactly the same time. Match
+values are case-sensitive. Missing match values or times do not match.
+Date columns mean midnight UTC, and timestamps without a timezone also use UTC.
+If second-table readings share a time, the lowest row ID wins.
+
+Second-table columns start with `second__` in the column pickers. Select them
+for axes, series, grouping, filters or style options that accept their type.
+Rows without a match stay in the data, with empty second-table values. Filters
+on second-table columns apply after the latest match is chosen, so they cannot
+substitute an older reading. Grouping follows matching and filtering.
+Choose **None** to remove the second table. Changing or removing the second
+table clears its series, filters and aggregation settings. Filters, grouping,
+time buckets and aggregates on primary-table columns stay in place.
+
 Line and area charts draw a long series at screen resolution, keeping the
 lowest and highest value for every pixel column, so a peak or a gap never
 disappears from view. When the table holds more than 4,000 rows and the chart
 plots line or area series over a time or numeric x axis, the platform reads the
 table this way instead of reading its rows. Zooming in reads the visible range
 in more detail, down to single rows once it holds 4,000 rows or fewer. That
-applies only when the chart has no aggregation, stacking or size column, every
+applies only when the chart uses one table and has no aggregation, stacking or size column, every
 series is drawn as a line or area, facets share their x axis, and the column
 names start with a letter or underscore and use only ASCII letters, digits and
 underscores.

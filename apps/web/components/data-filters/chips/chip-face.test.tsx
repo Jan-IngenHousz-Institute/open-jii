@@ -1,5 +1,5 @@
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -83,5 +83,29 @@ describe("FilterChipFace", () => {
 
     // The struct sub-path is hidden; the column label shows the parent name.
     expect(screen.getByText("owner")).toBeInTheDocument();
+  });
+  it("resolves a joined contributor chip from its source table and column", async () => {
+    const spy = server.mount(contract.experiments.getDistinctColumnValues, {
+      body: {
+        values: [JSON.stringify({ id: "u-1", name: "Alice", avatar: null })],
+        truncated: false,
+      },
+    });
+    render(
+      <FilterChipFace
+        filter={{ column: "second__owner.id", operator: "equals", value: "u-1" }}
+        column={{
+          name: "second__owner",
+          type_name: "STRUCT",
+          type_text: WellKnownColumnTypes.CONTRIBUTOR,
+          sourceTable: { tableName: "weather", columnName: "owner" },
+        }}
+        experimentId="exp-1"
+        tableName="raw_data"
+        onRemove={vi.fn()}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText("Alice")).toBeInTheDocument());
+    expect(spy.calls[0].query).toMatchObject({ tableName: "weather", column: "owner" });
   });
 });

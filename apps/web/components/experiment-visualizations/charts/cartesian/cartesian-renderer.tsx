@@ -53,7 +53,11 @@ export function CartesianRenderer({
 
   const colorColumn = dataSources.find((ds) => ds.role === "color")?.columnName;
   const tableName = visualization.dataConfig.tableName;
-  const { columns, isLoading: isColumnsLoading } = useColumnMetadata(experimentId, tableName);
+  const { columns, isLoading: isColumnsLoading } = useColumnMetadata(
+    experimentId,
+    tableName,
+    visualization.dataConfig.join,
+  );
   const colorColumnType = columns.find((c) => c.name === colorColumn)?.type_text;
   const xColumnType = columns.find((c) => c.name === xColumn)?.type_text;
 

@@ -5,7 +5,7 @@ import { useExperimentTables } from "@/hooks/experiment/useExperimentTables/useE
 import { useExperimentVisualization } from "@/hooks/experiment/useExperimentVisualization/useExperimentVisualization";
 import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
-import { FormProvider, useForm } from "react-hook-form";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { isPlottableColumn } from "@repo/api/transforms/column-type-utils";
@@ -123,11 +123,13 @@ function SectionBody({ form, experimentId, tableName, section }: SectionBodyProp
     isLoading: isLoadingTables,
     error: tablesError,
   } = useExperimentTables(experimentId);
+  const join = useWatch({ control: form.control, name: "dataConfig.join" });
+
   const {
     columns: tableColumns,
     isLoading: isColumnsLoading,
     error: columnsError,
-  } = useColumnMetadata(experimentId, tableName);
+  } = useColumnMetadata(experimentId, tableName, join);
   const columns = useMemo(
     () => tableColumns.filter((col) => isPlottableColumn(col.type_text)),
     [tableColumns],
@@ -144,6 +146,7 @@ function SectionBody({ form, experimentId, tableName, section }: SectionBodyProp
     }));
     form.setValue("dataConfig.tableName", newTable, { shouldDirty: true });
     form.setValue("dataConfig.dataSources", reset, { shouldDirty: true });
+    form.setValue("dataConfig.join", undefined, { shouldDirty: true });
     form.setValue("dataConfig.aggregation", undefined, { shouldDirty: true });
     form.setValue("dataConfig.filters", undefined, { shouldDirty: true });
     form.setValue("config.xAxisTitle", "", { shouldDirty: true });

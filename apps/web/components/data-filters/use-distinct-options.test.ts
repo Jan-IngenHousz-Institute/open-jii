@@ -29,6 +29,19 @@ const deviceColumn: ExperimentDataColumn = {
 };
 
 describe("useDistinctOptions", () => {
+  it("looks up joined categorical values in the original secondary table", async () => {
+    const spy = server.mount(contract.experiments.getDistinctColumnValues, {
+      body: { values: ["A"], truncated: false },
+    });
+    const joined = {
+      ...labelColumn,
+      name: "second__label",
+      sourceTable: { tableName: "weather", columnName: "label" },
+    };
+    const { result } = renderHook(() => useDistinctOptions(joined, "exp-1", "leaf"));
+    await waitFor(() => expect(result.current.values).toEqual(["A"]));
+    expect(spy.calls[0].query).toMatchObject({ tableName: "weather", column: "label" });
+  });
   it("returns the fetched values and exposes truncated state", async () => {
     server.mount(contract.experiments.getDistinctColumnValues, {
       body: { values: ["alpha", "beta"], truncated: true },

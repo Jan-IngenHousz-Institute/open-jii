@@ -48,6 +48,7 @@ export const zExperimentDataColumn = z.object({
    * Set when a payload field could not keep its own name because the table already has a column
    * by it. `name` is then the key the field reads as; this is its own name and where it came from.
    */
+  sourceTable: z.object({ tableName: z.string(), columnName: z.string() }).optional(),
   renamedFrom: z.object({ name: z.string(), source: zExperimentDataColumnSource }).optional(),
 });
 
@@ -298,6 +299,21 @@ function jsonQuerySchema<S extends z.ZodTypeAny>(inner: S) {
     .pipe(inner);
 }
 
+export const zExperimentDataJoin = z.object({
+  tableName: zExperimentTableNameInput,
+  matchColumn: z.string().min(1),
+  primaryTimeColumn: z.string().min(1),
+  secondaryTimeColumn: z.string().min(1),
+  // Keep the interval exactly representable in microseconds.
+  toleranceMinutes: z
+    .number()
+    .int()
+    .nonnegative()
+    .max(Math.floor(Number.MAX_SAFE_INTEGER / 60_000_000)),
+});
+
+export type ExperimentDataJoin = z.infer<typeof zExperimentDataJoin>;
+
 export const zExperimentDataQuery = z.object({
   page: z.coerce.number().int().min(1).optional().describe("Page number for pagination"),
   pageSize: z.coerce.number().int().min(1).max(1000).optional().describe("Number of rows per page"),
@@ -317,6 +333,11 @@ export const zExperimentDataQuery = z.object({
   filters: jsonQuerySchema(z.array(zExperimentDataFilter))
     .optional()
     .describe("JSON-encoded array of filter conditions applied as a WHERE clause"),
+  join: jsonQuerySchema(zExperimentDataJoin)
+    .optional()
+    .describe(
+      "JSON-encoded second-table settings for latest earlier readings matched by key and time",
+    ),
   aggregation: jsonQuerySchema(zExperimentDataAggregation)
     .optional()
     .describe("JSON-encoded GROUP BY + aggregate functions"),
@@ -362,6 +383,11 @@ export const zExperimentDistinctValuesResponse = z.object({
 });
 
 export const zExperimentTableColumnsQuery = z.object({
+  join: jsonQuerySchema(zExperimentDataJoin)
+    .optional()
+    .describe(
+      "JSON-encoded second-table settings for latest earlier readings matched by key and time",
+    ),
   tableName: zExperimentTableNameInput.describe("Table whose columns to return"),
 });
 

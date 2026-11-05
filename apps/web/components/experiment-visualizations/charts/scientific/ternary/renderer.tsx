@@ -37,7 +37,11 @@ export function TernaryRenderer({
   const sum = chartConfig.ternarySum ?? 100;
 
   const colorColumn = dataSources.find((ds) => ds.role === "color")?.columnName;
-  const { columns } = useColumnMetadata(experimentId, visualization.dataConfig.tableName);
+  const { columns } = useColumnMetadata(
+    experimentId,
+    visualization.dataConfig.tableName,
+    visualization.dataConfig.join,
+  );
   const colorColumnType = columns.find((c) => c.name === colorColumn)?.type_text;
 
   // KEEP IN SYNC with the field reads in `transformTernaryData`.

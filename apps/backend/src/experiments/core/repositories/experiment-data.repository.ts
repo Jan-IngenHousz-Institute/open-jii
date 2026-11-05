@@ -4,7 +4,13 @@ import {
   DATA_QUERY_MAX_LIMIT,
   WellKnownColumnTypes,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import { isDecimalType, isNumericType } from "@repo/api/transforms/column-type-utils";
+import type { ExperimentDataJoin } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import {
+  getColumnKind,
+  isDecimalType,
+  isNumericType,
+} from "@repo/api/transforms/column-type-utils";
+import { isJoinMatchColumn, joinedColumns } from "@repo/api/transforms/joined-columns";
 
 import type {
   AggregationSpec,
@@ -33,7 +39,7 @@ import { ExperimentDto } from "../models/experiment.model";
 import { CACHE_PORT, SCHEMA_CACHE_PORT } from "../ports/cache.port";
 import type { CachePort } from "../ports/cache.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
-import type { DatabricksPort } from "../ports/databricks.port";
+import type { ExperimentAsOfJoin, DatabricksPort } from "../ports/databricks.port";
 
 type ReadMode =
   | "aggregation"
@@ -76,6 +82,8 @@ const ROW_ID = "id";
 
 /** What a read of one table flattens and hides, and the names its base columns hold. */
 interface TableShape {
+  columns?: SchemaDataDto["columns"];
+  join?: ExperimentAsOfJoin;
   metadata: ExperimentTableMetadata;
   variants: { columnName: VariantColumn; schema: string; suffix: string }[];
   exceptColumns: string[];
@@ -121,6 +129,7 @@ export class ExperimentDataRepository {
     columns?: string[];
     filters?: FilterCondition[];
     aggregation?: AggregationSpec;
+    join?: ExperimentDataJoin;
     orderBy?: string;
     orderDirection?: "ASC" | "DESC";
     page?: number;
@@ -134,6 +143,7 @@ export class ExperimentDataRepository {
       columns,
       filters,
       aggregation,
+      join,
       orderBy,
       orderDirection = "ASC",
       page,
@@ -158,23 +168,33 @@ export class ExperimentDataRepository {
       return shapeResult;
     }
 
-    const shape = shapeResult.value;
+    let shape = shapeResult.value;
+    if (join) {
+      const joined = await this.joinedShape(experimentId, tableName, shape, join);
+      if (joined.isFailure()) return joined;
+      shape = joined.value;
+    }
     const hasAggregation =
       (aggregation?.groupBy?.length ?? 0) > 0 || (aggregation?.functions?.length ?? 0) > 0;
     const hasFilters = (filters?.length ?? 0) > 0;
-    const hasColumns = Boolean(columns && columns.length > 0);
+    const hasColumns = join !== undefined || (columns?.length ?? 0) > 0;
     const hasPaging = page !== undefined && pageSize !== undefined;
     const ceiling = limit ?? DATA_QUERY_MAX_LIMIT;
 
     // When the experiment anonymizes contributors, the filter picker selects
     // pseudonyms; tag contributor id filters so the SQL compares the pseudonym
     // (recomputed in-query) instead of the raw id the client never receives.
-    const effectiveFilters = this.pseudonymizeContributorFilters(experiment, filters);
+    const effectiveFilters = this.pseudonymizeContributorFilters(
+      experiment,
+      filters,
+      shape.columns,
+    );
     const orderingResult = await this.requestedOrdering(
       experiment,
       tableName,
       orderBy,
       orderDirection,
+      join,
     );
     if (orderingResult.isFailure()) {
       return orderingResult;
@@ -400,8 +420,16 @@ export class ExperimentDataRepository {
   async getTableColumns(params: {
     experimentId: string;
     tableName: string;
+    join?: ExperimentDataJoin;
   }): Promise<Result<SchemaDataDto["columns"]>> {
-    const { experimentId, tableName } = params;
+    const { experimentId, tableName, join } = params;
+    if (join) {
+      const shape = await this.tableShape(experimentId, tableName);
+      if (shape.isFailure()) return shape;
+      const joined = await this.joinedShape(experimentId, tableName, shape.value, join);
+      if (joined.isFailure()) return joined;
+      return success(joined.value.columns);
+    }
 
     const shapeResult = await this.tableShape(experimentId, tableName);
     if (shapeResult.isFailure()) {
@@ -478,13 +506,16 @@ export class ExperimentDataRepository {
   private pseudonymizeContributorFilters(
     experiment: ExperimentDto,
     filters?: FilterCondition[],
+    columns?: SchemaDataDto["columns"],
   ): FilterCondition[] | undefined {
     if (!experiment.anonymizeContributors || !filters) {
       return filters;
     }
 
     return filters.map((f) =>
-      /^[^.]+\.id$/.test(f.column) ? { ...f, contributorPseudonymSalt: experiment.id } : f,
+      !columns?.some((column) => column.name === f.column) && /^[^.]+\.id$/.test(f.column)
+        ? { ...f, contributorPseudonymSalt: experiment.id }
+        : f,
     );
   }
 
@@ -498,6 +529,7 @@ export class ExperimentDataRepository {
     tableName: string,
     orderBy: string | undefined,
     direction: "ASC" | "DESC",
+    join?: ExperimentDataJoin,
   ): Promise<Result<QueryOrdering | undefined>> {
     if (!orderBy) return success(undefined);
     const path = /^([^.]+)\.name$/.exec(orderBy);
@@ -505,9 +537,17 @@ export class ExperimentDataRepository {
       return success({ column: orderBy, direction });
     }
 
-    const columnsResult = await this.getTableColumns({ experimentId: experiment.id, tableName });
+    const columnsResult = await this.getTableColumns({
+      experimentId: experiment.id,
+      tableName,
+      join,
+    });
     if (columnsResult.isFailure()) {
       return columnsResult;
+    }
+
+    if (join && columnsResult.value.some((column) => column.name === orderBy)) {
+      return success({ column: orderBy, direction });
     }
 
     const isContributorColumn = columnsResult.value.some(
@@ -651,6 +691,72 @@ export class ExperimentDataRepository {
     });
   }
 
+  private async joinedShape(
+    experimentId: string,
+    tableName: string,
+    shape: TableShape,
+    join: ExperimentDataJoin,
+  ): Promise<Result<TableShape & { columns: SchemaDataDto["columns"] }>> {
+    if (join.tableName === tableName)
+      return failure(AppError.badRequest("Choose a different second table"));
+    const secondary = await this.tableShape(experimentId, join.tableName);
+    if (secondary.isFailure()) return secondary;
+    const primaryColumns = await this.getTableColumns({ experimentId, tableName });
+    if (primaryColumns.isFailure()) return primaryColumns;
+    const secondaryColumns = await this.getTableColumns({
+      experimentId,
+      tableName: join.tableName,
+    });
+    if (secondaryColumns.isFailure()) return secondaryColumns;
+    const left = primaryColumns.value;
+    const right = secondaryColumns.value;
+    const matchLeft = left.find((c) => c.name === join.matchColumn);
+    const matchRight = right.find((c) => c.name === join.matchColumn);
+    if (
+      !matchLeft ||
+      !matchRight ||
+      !isJoinMatchColumn(matchLeft) ||
+      matchLeft.type_text.toUpperCase() !== matchRight.type_text.toUpperCase()
+    ) {
+      return failure(AppError.badRequest("Match columns must have the same scalar type"));
+    }
+    const primaryTime = left.find((c) => c.name === join.primaryTimeColumn);
+    const secondaryTime = right.find((c) => c.name === join.secondaryTimeColumn);
+    if (!primaryTime || !secondaryTime) {
+      return failure(AppError.badRequest("Choose a timestamp or date column on each table"));
+    }
+    if (
+      [primaryTime, secondaryTime].some(
+        (c) => getColumnKind(c.type_text.toUpperCase()) !== "temporal",
+      )
+    ) {
+      return failure(AppError.badRequest("Choose a timestamp or date column on each table"));
+    }
+    if ([left, right].some((columns) => !columns.some((c) => c.name === "id"))) {
+      return failure(AppError.badRequest("Time matching requires row ids"));
+    }
+    const resolved = joinedColumns(left, right, join.tableName);
+    const { metadata, variants, exceptColumns, reservedColumns } = secondary.value;
+    return success({
+      ...shape,
+      columns: [...left, ...resolved],
+      join: {
+        ...join,
+        primaryTimeType: primaryTime.type_text,
+        secondaryTimeType: secondaryTime.type_text,
+        primaryColumns: left.map((c) => c.name),
+        secondaryColumns: resolved.map((c) => ({ name: c.sourceTable.columnName, alias: c.name })),
+        secondary: {
+          tableName: metadata.identifier,
+          tableType: metadata.tableType,
+          variants,
+          exceptColumns,
+          reservedColumns,
+        },
+      },
+    });
+  }
+
   private buildQuery(
     experimentId: string,
     shape: TableShape,
@@ -679,6 +785,7 @@ export class ExperimentDataRepository {
     }
 
     return this.databricksPort.buildExperimentQuery({
+      join: shape.join,
       tableName: metadata.identifier,
       tableType: metadata.tableType,
       experimentId,
@@ -884,7 +991,7 @@ export class ExperimentDataRepository {
     const isLargeTable = shape.metadata.rowCount > LATE_PAYLOAD_MIN_ROWS;
     const hasPayload = shape.variants.length > 0;
     const carriesRowId = columns === undefined || columns.length === 0 || columns.includes(ROW_ID);
-    return isLargeTable && hasPayload && carriesRowId;
+    return !shape.join && isLargeTable && hasPayload && carriesRowId;
   }
 
   /**
@@ -978,8 +1085,13 @@ export class ExperimentDataRepository {
   ): SchemaDataDto["columns"] {
     const renamed = this.renamedColumns(shape);
     return columns.map((column) => {
-      const renamedFrom = renamed.get(column.name);
-      return renamedFrom === undefined ? column : { ...column, renamedFrom };
+      const joined = shape.columns?.find((c) => c.name === column.name);
+      const renamedFrom = joined?.renamedFrom ?? renamed.get(column.name);
+      return {
+        ...column,
+        ...(joined?.sourceTable ? { sourceTable: joined.sourceTable } : {}),
+        ...(renamedFrom ? { renamedFrom } : {}),
+      };
     });
   }
 
