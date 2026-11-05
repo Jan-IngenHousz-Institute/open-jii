@@ -2484,13 +2484,14 @@ metrics:
       metric: Errors
       stat: Sum
       dimensions: { FunctionName: "${STATUS_PUBLISHER_FUNCTION_NAME}" }
-    baseline: { method: threshold, max: 5 }
+    baseline: { method: threshold, max: 2 }
     runbook: docs/runbooks/status-publisher-errors.md
     notes: >-
       The status publisher checks the platform every minute and rewrites the public status page's data
       file. A run that fails before it writes leaves the file as it was, and the page shows when it was
       last checked. A failed minute is not retried and the next run records it as unknown time, so
-      this fires on more than five failed runs in an hour, when the page is going stale.
+      this fires on more than two failed runs in five minutes, when the page is going stale rather
+      than blinking.
 
   - num: 136
     id: status-publisher-stopped
@@ -2507,10 +2508,11 @@ metrics:
       metric: Invocations
       stat: Sum
       dimensions: { FunctionName: "${STATUS_PUBLISHER_FUNCTION_NAME}" }
-    baseline: { method: threshold, min: 10 }
+    baseline: { method: threshold, min: 3 }
     runbook: docs/runbooks/status-publisher-stopped.md
     notes: >-
-      How many times the status publisher ran. A schedule that fires every minute gives fifteen in a
-      quarter of an hour, so fewer than ten means it stopped or is being refused. Entry 135 cannot
+      How many times the status publisher ran. A schedule that fires every minute gives five in five
+      minutes, and Lambda's newest minutes can lag, so fewer than three means it stopped or is being
+      refused. Entry 135 cannot
       see this, since a function that never runs reports no errors, which is why this one also fires
       when CloudWatch has no datapoints at all.

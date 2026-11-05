@@ -293,7 +293,7 @@ describe("statusQueries", () => {
       {
         Id: "ingestRefusedPublishes",
         Expression:
-          "SUM(SEARCH('{AWS/IoT,Protocol} MetricName=\"PublishIn.ServerError\" OR MetricName=\"PublishIn.Throttle\"', 'Sum', 60))",
+          "SUM(SEARCH('{AWS/IoT,Protocol} MetricName=\"PublishIn.ServerError\"', 'Sum', 60))",
       },
     ],
     [
@@ -336,9 +336,11 @@ describe("statusQueries", () => {
     },
   );
 
-  it("counts only server errors and throttling as refused publishes", () => {
+  it("counts only the broker's own errors as refused publishes, never one client's throttling", () => {
     const expression = queryFor("ingestRefusedPublishes").Expression ?? "";
 
+    expect(expression).toContain("PublishIn.ServerError");
+    expect(expression).not.toContain("Throttle");
     expect(expression).not.toContain("ClientError");
     expect(expression).not.toContain("AuthError");
   });

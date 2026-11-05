@@ -295,10 +295,9 @@ export function statusSignals(config: StatusConfig): StatusSignal[] {
     define({
       ...awsCount,
       id: "ingestRefusedPublishes",
-      read: searchSum(
-        "{AWS/IoT,Protocol}",
-        'MetricName="PublishIn.ServerError" OR MetricName="PublishIn.Throttle"',
-      ),
+      // The broker's own failures only. A throttle is one client sending faster than its own limit,
+      // which says nothing about the platform and would let any one device colour the public row.
+      read: searchSum("{AWS/IoT,Protocol}", 'MetricName="PublishIn.ServerError"'),
     }),
     define({
       ...awsCount,

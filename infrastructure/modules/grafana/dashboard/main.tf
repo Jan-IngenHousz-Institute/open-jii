@@ -3399,7 +3399,7 @@ resource "grafana_rule_group" "status_publisher_health" {
       })
 
       relative_time_range {
-        from = 3600
+        from = 300
         to   = 0
       }
     }
@@ -3432,7 +3432,7 @@ resource "grafana_rule_group" "status_publisher_health" {
       datasource_uid = "__expr__"
 
       model = jsonencode({
-        expression = "$B > 5"
+        expression = "$B > 2"
         type       = "math"
         refId      = "C"
       })
@@ -3463,7 +3463,7 @@ resource "grafana_rule_group" "status_publisher_health" {
 
   # A function that is never invoked reports no errors, so the rule above stays quiet through the
   # very failure that matters most. Silence is the signal: no datapoints alert, and so do fewer
-  # than ten runs in a quarter of an hour.
+  # than three runs in five minutes.
   rule {
     name      = "Status Publisher Stopped"
     condition = "C"
@@ -3485,7 +3485,7 @@ resource "grafana_rule_group" "status_publisher_health" {
       })
 
       relative_time_range {
-        from = 900
+        from = 300
         to   = 0
       }
     }
@@ -3518,7 +3518,7 @@ resource "grafana_rule_group" "status_publisher_health" {
       datasource_uid = "__expr__"
 
       model = jsonencode({
-        expression = "$B < 10"
+        expression = "$B < 3"
         type       = "math"
         refId      = "C"
       })
@@ -3534,7 +3534,7 @@ resource "grafana_rule_group" "status_publisher_health" {
     for            = "5m"
 
     annotations = {
-      description      = "The status publisher ran fewer than ten times in the last quarter of an hour, so the public status page has stopped updating."
+      description      = "The status publisher ran fewer than three times in the last five minutes, so the public status page has stopped updating."
       summary          = "Status publisher is not running"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/status-publisher-stopped.md"
       __dashboardUid__ = local.heartbeat_daily_uid

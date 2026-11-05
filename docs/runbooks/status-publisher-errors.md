@@ -9,7 +9,7 @@ checked, so a stale file shows as a stale time.
 The run validates the document against its schema before it writes anything, so a run that throws
 on a check, a read or the schema writes nothing and the file stays as the last good run left it. A
 failed minute is not retried: the next run is a minute away and records the lost minute as unknown
-time. The alert fires on more than five failed runs in an hour, which is when the page is going
+time. The alert fires on more than two failed runs in five minutes, which is when the page is going
 stale rather than blinking.
 
 ## Read what it said
@@ -69,5 +69,5 @@ aws lambda invoke --function-name <env>-status-publisher /dev/stdout
 ```
 
 The function runs one at a time, so Lambda answers `TooManyRequestsException` while a scheduled run
-is in flight. Wait a few seconds and invoke again. The rule looks back an hour, so it clears about an
-hour after the last failed run.
+is in flight. Wait a few seconds and invoke again. The rule looks back five minutes, so it clears
+about five minutes after the last failed run.

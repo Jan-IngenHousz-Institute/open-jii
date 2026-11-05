@@ -1,8 +1,8 @@
 # status-publisher-stopped
 
 **The status publisher is not running every minute, so the public status page's data file has
-stopped updating.** The schedule should invoke it fifteen times in a quarter of an hour. This fires
-on fewer than ten, and when CloudWatch has no invocation datapoints at all, which is what a function
+stopped updating.** The schedule should invoke it five times in five minutes. This fires on fewer
+than three, and when CloudWatch has no invocation datapoints at all, which is what a function
 that is never called looks like. `status-publisher-errors` cannot see this: a function that does not
 run reports no errors.
 
@@ -59,4 +59,4 @@ aws lambda invoke --function-name <env>-status-publisher /dev/stdout
 
 A successful run ends with a line naming each component's state and both probes. If that works and
 the rule is enabled with the target and permission in place, the schedule resumes on the next minute
-and the alert clears about fifteen minutes after.
+and the alert clears about five minutes after.
