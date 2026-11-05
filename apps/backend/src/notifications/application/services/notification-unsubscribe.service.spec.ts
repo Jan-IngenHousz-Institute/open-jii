@@ -54,6 +54,18 @@ describe("NotificationUnsubscribeService", () => {
     expect(result.error.statusCode).toBe(400);
   };
 
+  it.each([
+    ["an empty", ""],
+    ["a whitespace-only", "   "],
+  ])("refuses to start with %s secret", (_, secret) => {
+    expect(
+      () =>
+        new NotificationUnsubscribeService(
+          configWith({ ...CONFIG, "notification.unsubscribeSecret": secret }),
+        ),
+    ).toThrow("NOTIFICATION_UNSUBSCRIBE_SECRET");
+  });
+
   it("verifies a signed token to its user, category and the email channel", () => {
     const result = service.verify(service.sign(userId, "requests_and_invitations"));
 

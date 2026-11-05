@@ -20,6 +20,13 @@ describe("redactRequestUrl", () => {
     );
   });
 
+  it.each(["/API/V1/NOTIFICATIONS/EMAIL/UNSUBSCRIBE/", "/api/v1/Notifications/Email/Resubscribe/"])(
+    "redacts the token whatever the case of %s, keeping it as sent",
+    (prefix) => {
+      expect(redactRequestUrl(`${prefix}${TOKEN}`)).toBe(`${prefix}[redacted]`);
+    },
+  );
+
   it("keeps the query string", () => {
     expect(redactRequestUrl(`/api/v1/notifications/email/unsubscribe/${TOKEN}?source=mail`)).toBe(
       "/api/v1/notifications/email/unsubscribe/[redacted]?source=mail",

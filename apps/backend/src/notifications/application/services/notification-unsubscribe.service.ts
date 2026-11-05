@@ -29,6 +29,8 @@ export const NOTIFICATION_CATEGORY_LABEL: Record<NotificationCategory, string> =
   account_security: "Account security",
 };
 
+const zSecret = z.string().trim().min(1);
+
 const zTokenPayload = z.object({
   v: z.literal(1),
   u: z.string().guid(),
@@ -55,7 +57,14 @@ export class NotificationUnsubscribeService {
   private readonly key: Buffer;
 
   constructor(private readonly configService: ConfigService) {
-    this.key = Buffer.from(this.configService.getOrThrow<string>("notification.unsubscribeSecret"));
+    const secret = this.configService.getOrThrow<string>("notification.unsubscribeSecret");
+    // getOrThrow lets an empty string through, which is what an unset deploy secret becomes.
+    if (!zSecret.safeParse(secret).success) {
+      throw new Error(
+        "Invalid notification configuration: NOTIFICATION_UNSUBSCRIBE_SECRET is empty",
+      );
+    }
+    this.key = Buffer.from(secret);
   }
 
   sign(userId: string, category: NotificationCategory, expiresAt?: Date): string {
