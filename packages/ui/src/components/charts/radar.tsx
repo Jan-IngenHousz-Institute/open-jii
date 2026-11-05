@@ -4,6 +4,7 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
+import { chartTextWidth, withOuterLabels, wrapChartLabel } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -12,7 +13,6 @@ import {
   createPlotlyConfig,
   getRenderer,
   getPlotType,
-  responsiveChrome,
   tierAxisFontSizes,
   chartGridColor,
 } from "./utils";
@@ -73,7 +73,7 @@ export function RadarPlot({
   radialAxisVisible = true,
   angularAxisVisible = true,
 }: RadarPlotProps) {
-  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({ trackWidth: true });
   const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
@@ -138,48 +138,98 @@ export function RadarPlot({
     [data, plotType],
   );
 
-  // Tier-aware chrome + the polar config createBaseLayout cannot provide.
-  const layout = useMemo(
-    () =>
-      ({
-        ...responsiveChrome(config, sizing),
+  const inferredCategories = useMemo(() => {
+    if (categories !== undefined) return undefined;
+    const theta = data.flatMap((series) => [...series.theta]);
+    if (!theta.length || !theta.every((value) => typeof value === "string")) return undefined;
+    return [...new Set(theta)];
+  }, [categories, data]);
+  const axisCategories = categories ?? inferredCategories;
 
-        polar: {
-          radialaxis: {
-            visible: radialAxisVisible,
-            range: rangeMode === "tozero" ? [0, undefined] : undefined,
-            rangemode: rangeMode,
-            tickfont: { size: fontSizes.tick },
-            gridcolor: chartGridColor(),
-            linecolor: chartGridColor(),
-            showgrid: config.showGrid !== false,
+  const displayCategories = useMemo(
+    () =>
+      axisCategories?.map((label) =>
+        wrapChartLabel(label, fontSizes.tick, sizing.compact ? 72 : 96),
+      ),
+    [axisCategories, fontSizes.tick, sizing.compact],
+  );
+  const outerLabels = useMemo(() => {
+    const side = Math.max(
+      32,
+      ...(displayCategories ?? []).map((label) => chartTextWidth(label, fontSizes.tick) + 12),
+    );
+    const height = Math.max(
+      32,
+      ...(displayCategories ?? []).map(
+        (label) => label.split("<br>").length * fontSizes.tick * 1.3 + 12,
+      ),
+    );
+    return { left: side, right: side, top: height, bottom: height };
+  }, [displayCategories, fontSizes.tick]);
+
+  // Tier-aware chrome + the polar config createBaseLayout cannot provide.
+  const figure = useMemo(
+    () => {
+      const outer = withOuterLabels({
+        config,
+        sizing,
+        labels: outerLabels,
+        traces: plotData,
+      });
+      return {
+        data: outer.data,
+        layout: {
+          ...outer.layout,
+
+          polar: {
+            radialaxis: {
+              visible: radialAxisVisible,
+              range: rangeMode === "tozero" ? [0, undefined] : undefined,
+              rangemode: rangeMode,
+              nticks: sizing.compact ? 3 : 5,
+              tickfont: { size: fontSizes.tick },
+              gridcolor: chartGridColor(),
+              linecolor: chartGridColor(),
+              showgrid: config.showGrid !== false,
+            },
+            angularaxis: {
+              visible: angularAxisVisible,
+              showgrid: config.showGrid !== false,
+              tickmode: axisCategories ? "array" : "linear",
+              ...(axisCategories
+                ? {
+                    tickvals: categories
+                      ? categories.map((_, i) => i * (360 / categories.length))
+                      : inferredCategories,
+                    ticktext: displayCategories,
+                  }
+                : {}),
+              tickangle: tickAngle,
+              tickfont: { size: fontSizes.tick },
+              direction: "clockwise",
+              period: inferredCategories?.length ?? 360,
+              ...(inferredCategories
+                ? { type: "category", categoryorder: "array", categoryarray: inferredCategories }
+                : {}),
+              gridcolor: chartGridColor(),
+              linecolor: chartGridColor(),
+              showticklabels: showTickLabels,
+            },
+            gridshape: gridShape,
           },
-          angularaxis: {
-            visible: angularAxisVisible,
-            showgrid: config.showGrid !== false,
-            tickmode: categories ? "array" : "linear",
-            ...(categories
-              ? {
-                  tickvals: categories.map((_, i) => i * (360 / categories.length)),
-                  ticktext: categories,
-                }
-              : {}),
-            tickangle: tickAngle,
-            tickfont: { size: fontSizes.tick },
-            direction: "clockwise",
-            period: 360,
-            gridcolor: chartGridColor(),
-            linecolor: chartGridColor(),
-            showticklabels: showTickLabels,
-          },
-          gridshape: gridShape,
-        },
-      }) as any,
+        } as any,
+      };
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
     [
       angularAxisVisible,
       categories,
+      axisCategories,
+      inferredCategories,
+      displayCategories,
+      outerLabels,
       config,
+      plotData,
       fontSizes.tick,
       gridShape,
       radialAxisVisible,
@@ -196,8 +246,8 @@ export function RadarPlot({
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
-        data={plotData}
-        layout={layout}
+        data={figure.data}
+        layout={figure.layout}
         config={plotConfig}
         loading={loading}
         error={error}

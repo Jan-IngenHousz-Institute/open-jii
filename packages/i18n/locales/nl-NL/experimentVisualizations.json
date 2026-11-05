@@ -95,7 +95,8 @@
     "reduced": "Getekend op schermresolutie uit {{total}} rijen.",
     "showingAllPoints": "Elk punt wordt getoond.",
     "showAllPoints": "Toon elk punt",
-    "drawAtResolution": "Teken op schermresolutie"
+    "drawAtResolution": "Teken op schermresolutie",
+    "frequency": "Frequentie"
   },
   "configuration": {
     "columns": {

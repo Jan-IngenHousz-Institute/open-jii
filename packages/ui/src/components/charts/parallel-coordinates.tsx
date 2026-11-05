@@ -4,6 +4,7 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
+import { chartTextWidth } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -165,9 +166,42 @@ export function ParallelCoordinates({
   );
 
   const layout = useMemo(
-    () => createBaseLayout(config, sizing),
+    () => {
+      const base = createBaseLayout(config, sizing);
+      const dimensions = data.flatMap((series) =>
+        series.dimensions.filter((dim) => dim.visible !== false),
+      );
+      const endLabelWidth =
+        Math.max(
+          0,
+          ...dimensions.map((dim) => chartTextWidth(dim.label ?? "", fontSizes.axisTitle)),
+        ) /
+          2 +
+        12;
+      return {
+        ...base,
+        ...(config.title
+          ? {
+              title: {
+                ...base.title,
+                yref: "container" as const,
+                y: 1,
+                yanchor: "top" as const,
+                pad: { t: 8 },
+              },
+            }
+          : {}),
+        margin: {
+          ...base.margin,
+          l: Math.max(base.margin?.l ?? 0, endLabelWidth),
+          r: Math.max(base.margin?.r ?? 0, endLabelWidth),
+          t: Math.max(base.margin?.t ?? 0, (config.title ? 72 : 40) + fontSizes.axisTitle),
+          b: Math.max(base.margin?.b ?? 0, 32),
+        },
+      };
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-    [config, sizing, themeVersion],
+    [config, data, fontSizes.axisTitle, sizing, themeVersion],
   );
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 

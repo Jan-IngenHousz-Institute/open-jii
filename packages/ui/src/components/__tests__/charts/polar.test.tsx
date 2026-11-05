@@ -20,7 +20,8 @@ vi.mock("../../charts/plotly-chart", () => ({
   ),
 }));
 
-vi.mock("../../charts/utils", () => ({
+vi.mock("../../charts/utils", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../charts/utils")>()),
   chartGridColor: vi.fn(() => "#E6E6E6"),
   readThemeColor: vi.fn(() => undefined),
   createPlotlyConfig: vi.fn((config: any) => ({
@@ -350,7 +351,7 @@ describe("PolarPlot", () => {
 
     const chartLayout = JSON.parse(getByTestId("chart-layout").textContent || "{}");
     expect(chartLayout.polar.radialaxis).toMatchObject({
-      title: { text: "Radius", font: { size: 14 } },
+      title: { text: "" },
       range: [0, 10],
       tickmode: "array",
       tick0: 1,
@@ -367,13 +368,25 @@ describe("PolarPlot", () => {
     });
   });
 
+  it("keeps an explicit radial tick interval and an east-facing axis", () => {
+    const { getByTestId } = render(
+      <PolarPlot data={mockData} radialAxis={{ dtick: 2, angle: 0 }} />,
+    );
+    const layout = JSON.parse(getByTestId("chart-layout").textContent || "{}");
+    expect(layout.polar.radialaxis).toMatchObject({ tickmode: "linear", dtick: 2, angle: 0 });
+  });
+
   it("applies default radial axis configuration", () => {
     const { getByTestId } = render(<PolarPlot data={mockData} />);
 
     const chartLayout = JSON.parse(getByTestId("chart-layout").textContent || "{}");
+    expect(chartLayout.annotations).toContainEqual(
+      expect.objectContaining({ text: "R", yref: "paper", y: 0 }),
+    );
     expect(chartLayout.polar.radialaxis).toMatchObject({
-      title: { text: "R", font: { size: 14 } },
-      tickmode: "linear",
+      title: { text: "" },
+      tickmode: "auto",
+      nticks: 5,
       tick0: 0,
       angle: 90,
       side: "clockwise",

@@ -1,9 +1,16 @@
+import type * as WindRoseModule from "@/components/charts/wind-rose";
+import { WindRose } from "@/components/charts/wind-rose";
 import { createVisualization } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { windRoseDefaultConfig } from "./defaults";
 import { WindRoseRenderer } from "./renderer";
+
+vi.mock("@/components/charts/wind-rose", async (importOriginal) => ({
+  ...(await importOriginal<typeof WindRoseModule>()),
+  WindRose: vi.fn(() => <div data-testid="wind-rose" />),
+}));
 
 function buildViz(overrides: Parameters<typeof createVisualization>[0] = {}) {
   return createVisualization({
@@ -77,6 +84,10 @@ describe("WindRoseRenderer", () => {
     render(<WindRoseRenderer visualization={viz} experimentId="exp-1" data={rows} />);
     expect(screen.queryByText("errors.invalidConfiguration")).not.toBeInTheDocument();
     expect(screen.queryByText("errors.noData")).not.toBeInTheDocument();
+    expect(vi.mocked(WindRose).mock.lastCall?.[0]).toHaveProperty(
+      "radialAxisTitle",
+      "charts.frequency",
+    );
   });
 
   it("normalises directions outside 0-360 via mod", () => {

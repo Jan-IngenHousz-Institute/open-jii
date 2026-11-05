@@ -18,7 +18,8 @@ vi.mock("../../charts/plotly-chart", () => ({
   )),
 }));
 
-vi.mock("../../charts/utils", () => ({
+vi.mock("../../charts/utils", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../charts/utils")>()),
   chartGridColor: vi.fn(() => "#E6E6E6"),
   readThemeColor: vi.fn(() => undefined),
   createBaseLayout: vi.fn((config: any) => ({
@@ -322,12 +323,56 @@ describe("RadarPlot", () => {
     expect(plotData[0]?.customdata).toEqual(["data1", "data2", "data3", "data4", "data5"]);
   });
 
+  it("wraps a long outer label without dropping any of its name", () => {
+    const categories = ["very_long_weather_measurement_column", ...sampleCategories.slice(1)];
+    const { getByTestId } = render(<RadarPlot data={sampleData} categories={categories} />);
+    const layout = JSON.parse(getByTestId("plot-layout").textContent || "{}");
+    expect(layout.polar.angularaxis.ticktext[0]).toContain("<br>");
+    expect(layout.polar.angularaxis.ticktext[0].replaceAll("<br>", "")).toBe(categories[0]);
+  });
+
+  it("wraps categorical theta labels from every series without changing their positions", () => {
+    const first = "very_long_weather_measurement_column";
+    const later = "another_long_measurement_only_in_second_series";
+    const data: RadarSeriesData[] = [
+      { r: [2, 3], theta: [first, "Short"], name: "North" },
+      { r: [4, 5], theta: ["Short", later], name: "South" },
+    ];
+    render(<RadarPlot data={data} />);
+    const layout = JSON.parse(screen.getByTestId("plot-layout").textContent || "{}");
+    const plotted = JSON.parse(screen.getByTestId("plot-data").textContent || "[]");
+    expect(layout.polar.angularaxis.tickvals).toEqual([first, "Short", later]);
+    expect(layout.polar.angularaxis.type).toBe("category");
+    expect(layout.polar.angularaxis.categoryarray).toEqual([first, "Short", later]);
+    expect(layout.polar.angularaxis.period).toBe(3);
+    expect(
+      layout.polar.angularaxis.ticktext.map((text: string) => text.replaceAll("<br>", "")),
+    ).toEqual([first, "Short", later]);
+    expect(layout.polar.angularaxis.ticktext[0]).toContain("<br>");
+    expect(layout.polar.angularaxis.ticktext[2]).toContain("<br>");
+    expect(plotted.map((trace: RadarSeriesData) => trace.theta)).toEqual(
+      data.map((series) => series.theta),
+    );
+    expect(layout.margin.l).toBeGreaterThan(32);
+  });
+
+  it("keeps numeric theta axes numeric without inferred category ticks", () => {
+    render(<RadarPlot data={[{ r: [2, 3, 4], theta: [0, 120, 240] }]} />);
+    const layout = JSON.parse(screen.getByTestId("plot-layout").textContent || "{}");
+    expect(layout.polar.angularaxis.tickmode).toBe("linear");
+    expect(layout.polar.angularaxis.tickvals).toBeUndefined();
+  });
+
   it("handles custom categories", () => {
     render(<RadarPlot data={sampleData} categories={sampleCategories} />);
 
     const plotLayout = JSON.parse(screen.getByTestId("plot-layout").textContent || "{}");
     expect(plotLayout.polar?.angularaxis?.tickmode).toBe("array");
-    expect(plotLayout.polar?.angularaxis?.ticktext).toEqual(sampleCategories);
+    expect(
+      plotLayout.polar?.angularaxis?.ticktext.map((label: string) =>
+        label.replaceAll(/<br>|\s/g, ""),
+      ),
+    ).toEqual(sampleCategories.map((label) => label.replaceAll(/\s/g, "")));
     expect(plotLayout.polar?.angularaxis?.tickvals).toEqual([0, 72, 144, 216, 288]);
   });
 

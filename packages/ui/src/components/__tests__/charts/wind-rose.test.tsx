@@ -17,7 +17,8 @@ vi.mock("../../charts/plotly-chart", () => ({
   ),
 }));
 
-vi.mock("../../charts/utils", () => ({
+vi.mock("../../charts/utils", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../charts/utils")>()),
   chartGridColor: vi.fn(() => "#E6E6E6"),
   readThemeColor: vi.fn(() => undefined),
   createPlotlyConfig: vi.fn(() => ({
@@ -136,12 +137,19 @@ describe("WindRose", () => {
 
   it("defaults the radial-axis title to Frequency", () => {
     render(<WindRose data={sampleData} />);
-    expect(getLayout().polar.radialaxis.title).toEqual({ text: "Frequency", font: { size: 14 } });
+    expect(getLayout().annotations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ text: "Frequency", yref: "paper", y: 0, yanchor: "top" }),
+      ]),
+    );
+    expect(getLayout().polar.radialaxis.title.text).toBe("");
   });
 
   it("respects a custom radial-axis title (e.g. translated)", () => {
     render(<WindRose data={sampleData} radialAxisTitle="Häufigkeit" />);
-    expect(getLayout().polar.radialaxis.title).toEqual({ text: "Häufigkeit", font: { size: 14 } });
+    expect(getLayout().annotations).toEqual(
+      expect.arrayContaining([expect.objectContaining({ text: "Häufigkeit" })]),
+    );
   });
 
   it("renders the radial axis horizontally to the east (angle: 0)", () => {
@@ -159,7 +167,7 @@ describe("WindRose", () => {
       <WindRose data={sampleData} config={{ title: "March 2026", backgroundColor: "#f0f0f0" }} />,
     );
     const layout = getLayout();
-    expect(layout.title).toEqual({ text: "March 2026" });
+    expect(layout.title).toMatchObject({ text: "March 2026" });
     expect(layout.paper_bgcolor).toBe("#f0f0f0");
   });
 

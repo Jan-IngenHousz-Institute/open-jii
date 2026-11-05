@@ -159,6 +159,29 @@ says _Continuous gradient needs a numeric or temporal column._
 - **Continuous (gradient)** colours each point along a gradient, with a colour
   bar you can hide with **Show colorbar**.
 
+### Read legends and circular charts
+
+An outside legend has its own space beside the chart's labels and colour bar.
+Cartesian charts with a secondary axis or colour bar wrap long right legend names.
+If those names leave too little room for the plot, the legend moves below it.
+On radar, polar, wind rose and ternary charts, long side legend names wrap. If
+there is too little room beside the plot, the legend moves below it.
+On radar, polar, wind rose and ternary charts, a top or bottom legend scrolls
+when its entries exceed the available legend space. The 64-pixel band keeps the
+plot visible when there are many entries. Scrolling those entries requires a
+pointer; Plotly legends do not support keyboard interaction. The chart title stays
+above the outer axis labels. A top legend also scrolls within its own space when a
+chart title is set. Long radar axis names wrap across lines. Polar charts show
+the radial axis title below the plot. A wind rose uses the translated **Frequency**
+label because its radius counts observations in each direction and speed band,
+rather than showing the speed itself.
+
+When no radial tick interval is set, polar charts choose tick spacing automatically.
+Polar, radar and ternary charts use fewer tick labels in smaller widgets. Explicit
+tick intervals remain in use, and full-sized ternary charts keep divisions of one
+tenth of the axis sum. A polar radial axis defaults to 90 degrees; an explicit
+angle of zero is also respected.
+
 ### Turn a box or violin plot sideways
 
 For a box or violin plot, choose a category column under **X axis** and a numeric

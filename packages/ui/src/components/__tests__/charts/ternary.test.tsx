@@ -20,7 +20,8 @@ vi.mock("../../charts/plotly-chart", () => ({
   ),
 }));
 
-vi.mock("../../charts/utils", () => ({
+vi.mock("../../charts/utils", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../charts/utils")>()),
   chartGridColor: vi.fn(() => "#E6E6E6"),
   readThemeColor: vi.fn(() => undefined),
   getRenderer: vi.fn(() => "svg"),
@@ -497,7 +498,7 @@ describe("TernaryPlot", () => {
     render(<TernaryPlot data={mockData} config={config} />);
 
     const plotLayout = JSON.parse(screen.getByTestId("plot-layout").textContent || "{}");
-    expect(plotLayout.title).toEqual({ text: "Custom Ternary Plot" });
+    expect(plotLayout.title).toMatchObject({ text: "Custom Ternary Plot" });
     expect(plotLayout.paper_bgcolor).toBe("#f5f5f5");
     expect(plotLayout.showlegend).toBe(false);
     expect(plotLayout.autosize).toBe(true);

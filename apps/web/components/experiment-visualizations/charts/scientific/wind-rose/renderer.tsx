@@ -75,7 +75,7 @@ export function WindRoseRenderer({
           config={chartConfig}
           directionTicks={directionTicks}
           directionLabels={directionLabels}
-          radialAxisTitle={yColumn}
+          radialAxisTitle={t("charts.frequency")}
         />
       </div>
     </ChartFrame>

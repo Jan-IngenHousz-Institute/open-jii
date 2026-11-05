@@ -1,5 +1,7 @@
+import type { PlotData } from "plotly.js";
 import { describe, expect, it } from "vitest";
 
+import { withOuterLabels, wrapChartLabel } from "../../charts/outer-labels";
 import type { PlotlyChartConfig } from "../../charts/types";
 import {
   createBaseLayout,
@@ -45,6 +47,57 @@ describe("responsiveChrome", () => {
     const compactSize = (compact.title as { font?: { size?: number } }).font?.size ?? 0;
     expect(compactSize).toBeLessThan(fullSize);
   });
+});
+
+it("keeps a non-cartesian title between the top legend and outer labels", () => {
+  const config: PlotlyChartConfig = { title: "Chart title", legendPosition: "top" };
+  const { layout } = withOuterLabels({
+    config,
+    labels: { left: 32, right: 32, top: 32, bottom: 32 },
+    traces: [{ name: "North" } as PlotData],
+  });
+  const legendHeight = Number(Reflect.get(layout.legend ?? {}, "maxheight"));
+  expect(layout.title?.pad?.t).toBeGreaterThanOrEqual(legendHeight);
+  expect((layout.margin?.t ?? 0) - (layout.title?.pad?.t ?? 0)).toBeGreaterThanOrEqual(32);
+});
+
+it("keeps an oversized side legend from consuming a narrow plot", () => {
+  const config: PlotlyChartConfig = { width: 373, legendPosition: "right" };
+  const { layout, data } = withOuterLabels({
+    config,
+    labels: { left: 40, right: 40, top: 32, bottom: 32 },
+    traces: [
+      {
+        name: "Long weather station name with complete location and sensor description",
+      } as PlotData,
+    ],
+  });
+  expect(layout.margin?.r).toBeLessThanOrEqual(40 + 373 * 0.3 + 1);
+  expect(data[0]?.name.replaceAll(/<br>|\s/g, "")).toBe(
+    "Long weather station name with complete location and sensor description".replaceAll(/\s/g, ""),
+  );
+  expect(data[0]?.name).toContain("<br>");
+});
+
+it("uses the responsive legend position before reserving outer margins", () => {
+  const { layout } = withOuterLabels({
+    config: { legendPosition: "top", width: 180 },
+    sizing: { ultraCompact: true },
+    labels: { left: 32, right: 32, top: 32, bottom: 32 },
+    traces: [{ name: "North" } as PlotData],
+  });
+  expect(layout.legend).toMatchObject({ orientation: "h", yanchor: "bottom" });
+  expect(layout.margin?.t).toBe(32);
+  expect(layout.margin?.b).toBe(96);
+});
+
+it("wraps words without blank or space-prefixed lines", () => {
+  const text = "Photosystem II quantum efficiency under high light stress";
+  for (const width of [41, 60]) {
+    const lines = wrapChartLabel(text, 12, width).split("<br>");
+    expect(lines.every((line) => line.length > 0 && line === line.trim())).toBe(true);
+    expect(lines.join("").replaceAll(/\s/g, "")).toBe(text.replaceAll(/\s/g, ""));
+  }
 });
 
 describe("tierAxisFontSizes", () => {

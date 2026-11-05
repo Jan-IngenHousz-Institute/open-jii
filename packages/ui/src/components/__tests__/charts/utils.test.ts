@@ -272,6 +272,25 @@ describe("utils", () => {
       });
     });
 
+    it("places a chart title below the top legend's reserved band", () => {
+      const layout = createBaseLayout({ title: "Chart title", legendPosition: "top" });
+      expect(layout.legend).toMatchObject({
+        yref: "container",
+        y: 1,
+        yanchor: "top",
+        maxheight: 64,
+      });
+      expect(layout.title).toMatchObject({
+        text: "Chart title",
+        yref: "paper",
+        y: 1,
+        yanchor: "bottom",
+      });
+      expect(layout.margin?.t).toBeGreaterThan(
+        createBaseLayout({ legendPosition: "top" }).margin?.t ?? 0,
+      );
+    });
+
     it("configures axis titles", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,
@@ -330,6 +349,7 @@ describe("utils", () => {
       // plot's right edge instead of overlapping the data area.
       expect(layout.legend).toMatchObject({
         x: 1.02,
+        xref: "paper",
         y: 1,
         xanchor: "left",
         yanchor: "top",
@@ -557,10 +577,14 @@ describe("utils", () => {
       expect(layout.legend?.yanchor).toBe("top");
     });
 
-    it("nudges a right legend past the colorbar when hasColorbar is set", () => {
+    it("reserves a separate right legend band beside a secondary axis", () => {
+      const layout = createBaseLayout(baseConfig, { hasSecondaryAxis: true });
+      expect(layout.legend).toMatchObject({ xref: "container", xanchor: "right" });
+    });
+
+    it("reserves a separate right legend band beside a colorbar", () => {
       const layout = createBaseLayout(baseConfig, { hasColorbar: true });
-      // Default legendPosition is "right"; colorbar shifts x from 1.02 → 1.18.
-      expect(layout.legend?.x).toBe(1.18);
+      expect(layout.legend).toMatchObject({ x: 0.98, xref: "container", xanchor: "right" });
     });
 
     it("forces a right legend to bottom under compact + hasColorbar", () => {

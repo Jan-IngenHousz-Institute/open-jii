@@ -4,6 +4,7 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
+import { withBoundedRightLegend } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, LineConfig, MarkerConfig, ErrorBarConfig } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -62,7 +63,7 @@ export interface ScatterChartProps extends BaseChartProps {
 }
 
 export function ScatterChart({ data, config = {}, className, loading, error }: ScatterChartProps) {
-  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({ trackWidth: true });
   const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatter", renderer);
@@ -173,12 +174,16 @@ export function ScatterChart({ data, config = {}, className, loading, error }: S
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
   }, [config, sizing, hasColorbar, data, axisTypes, themeVersion]);
 
+  const bounded = useMemo(
+    () => withBoundedRightLegend(layout, config, plotData, sizing.width),
+    [layout, config, plotData, sizing.width],
+  );
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
-        data={plotData}
-        layout={layout}
+        data={bounded.data}
+        layout={bounded.layout}
         config={plotConfig}
         loading={loading}
         error={error}

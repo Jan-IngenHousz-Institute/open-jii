@@ -4,6 +4,7 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
+import { chartTextWidth, withOuterLabels } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig, SafeFont } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -12,7 +13,6 @@ import {
   createPlotlyConfig,
   getRenderer,
   getPlotType,
-  responsiveChrome,
   tierAxisFontSizes,
   chartGridColor,
 } from "./utils";
@@ -138,7 +138,7 @@ export function TernaryPlot({
   sum = 1,
   bgcolor = "white",
 }: TernaryPlotProps) {
-  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({ trackWidth: true });
   const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
@@ -236,56 +236,90 @@ export function TernaryPlot({
   const allTraces = useMemo(() => [...boundaryTraces, ...plotData], [boundaryTraces, plotData]);
 
   // Tier-aware chrome + the ternary config createBaseLayout cannot provide.
-  const baseLayout = useMemo(
-    () =>
-      ({
-        ...responsiveChrome(config, sizing),
-        plot_bgcolor: bgcolor,
-
-        ternary: {
-          sum: sum,
-          aaxis: {
-            title: ternaryAxisTitle(aaxis.title, "A", fontSizes.axisTitle),
-            tickfont: { size: fontSizes.tick },
-            min: aaxis.min || 0,
-            max: aaxis.max || sum,
-            tick0: aaxis.tick0 || 0,
-            dtick: aaxis.dtick || sum / 10,
-            gridcolor: aaxis.gridcolor || chartGridColor(),
-            linecolor: aaxis.linecolor || chartGridColor(),
-            showgrid: aaxis.showgrid !== false,
-            showline: aaxis.showline !== false,
-            showticklabels: aaxis.showticklabels !== false,
-          },
-          baxis: {
-            title: ternaryAxisTitle(baxis.title, "B", fontSizes.axisTitle),
-            tickfont: { size: fontSizes.tick },
-            min: baxis.min || 0,
-            max: baxis.max || sum,
-            tick0: baxis.tick0 || 0,
-            dtick: baxis.dtick || sum / 10,
-            gridcolor: baxis.gridcolor || chartGridColor(),
-            linecolor: baxis.linecolor || chartGridColor(),
-            showgrid: baxis.showgrid !== false,
-            showline: baxis.showline !== false,
-            showticklabels: baxis.showticklabels !== false,
-          },
-          caxis: {
-            title: ternaryAxisTitle(caxis.title, "C", fontSizes.axisTitle),
-            tickfont: { size: fontSizes.tick },
-            min: caxis.min || 0,
-            max: caxis.max || sum,
-            tick0: caxis.tick0 || 0,
-            dtick: caxis.dtick || sum / 10,
-            gridcolor: caxis.gridcolor || chartGridColor(),
-            linecolor: caxis.linecolor || chartGridColor(),
-            showgrid: caxis.showgrid !== false,
-            showline: caxis.showline !== false,
-            showticklabels: caxis.showticklabels !== false,
-          },
-          bgcolor: bgcolor,
+  const figure = useMemo(
+    () => {
+      const outer = withOuterLabels({
+        config,
+        sizing,
+        labels: {
+          left:
+            chartTextWidth(
+              ternaryAxisTitle(baxis.title, "B", fontSizes.axisTitle).text,
+              fontSizes.axisTitle,
+            ) /
+              2 +
+            36,
+          right:
+            chartTextWidth(
+              ternaryAxisTitle(caxis.title, "C", fontSizes.axisTitle).text,
+              fontSizes.axisTitle,
+            ) /
+              2 +
+            36,
+          top: 44,
+          bottom: 48,
         },
-      }) as any,
+        traces: allTraces,
+      });
+      return {
+        data: outer.data,
+        layout: {
+          ...outer.layout,
+          plot_bgcolor: bgcolor,
+
+          ternary: {
+            sum: sum,
+            aaxis: {
+              title: ternaryAxisTitle(aaxis.title, "A", fontSizes.axisTitle),
+              tickfont: { size: fontSizes.tick },
+              min: aaxis.min || 0,
+              max: aaxis.max || sum,
+              tick0: aaxis.tick0 || 0,
+              dtick: aaxis.dtick ?? (sizing.snug ? undefined : sum / 10),
+              nticks: 5,
+              gridcolor: aaxis.gridcolor || chartGridColor(),
+              linecolor: aaxis.linecolor || chartGridColor(),
+              showgrid: aaxis.showgrid !== false,
+              showline: aaxis.showline !== false,
+              showticklabels: aaxis.showticklabels !== false,
+            },
+            baxis: {
+              ticks: "outside",
+              ticklen: 8,
+              title: ternaryAxisTitle(baxis.title, "B", fontSizes.axisTitle),
+              tickfont: { size: fontSizes.tick },
+              min: baxis.min || 0,
+              max: baxis.max || sum,
+              tick0: baxis.tick0 || 0,
+              dtick: baxis.dtick ?? (sizing.snug ? undefined : sum / 10),
+              nticks: 5,
+              gridcolor: baxis.gridcolor || chartGridColor(),
+              linecolor: baxis.linecolor || chartGridColor(),
+              showgrid: baxis.showgrid !== false,
+              showline: baxis.showline !== false,
+              showticklabels: baxis.showticklabels !== false,
+            },
+            caxis: {
+              ticks: "outside",
+              ticklen: 8,
+              title: ternaryAxisTitle(caxis.title, "C", fontSizes.axisTitle),
+              tickfont: { size: fontSizes.tick },
+              min: caxis.min || 0,
+              max: caxis.max || sum,
+              tick0: caxis.tick0 || 0,
+              dtick: caxis.dtick ?? (sizing.snug ? undefined : sum / 10),
+              nticks: 5,
+              gridcolor: caxis.gridcolor || chartGridColor(),
+              linecolor: caxis.linecolor || chartGridColor(),
+              showgrid: caxis.showgrid !== false,
+              showline: caxis.showline !== false,
+              showticklabels: caxis.showticklabels !== false,
+            },
+            bgcolor: bgcolor,
+          },
+        } as any,
+      };
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
     [
       aaxis.dtick,
@@ -320,6 +354,7 @@ export function TernaryPlot({
       caxis.tick0,
       caxis.title,
       config,
+      allTraces,
       fontSizes.axisTitle,
       fontSizes.tick,
       sizing,
@@ -333,8 +368,8 @@ export function TernaryPlot({
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
-        data={allTraces}
-        layout={baseLayout}
+        data={figure.data}
+        layout={figure.layout}
         config={plotConfig}
         loading={loading}
         error={error}

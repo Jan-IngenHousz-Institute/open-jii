@@ -4,6 +4,7 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
+import { withOuterLabels } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -12,7 +13,6 @@ import {
   createPlotlyConfig,
   getRenderer,
   getPlotType,
-  responsiveChrome,
   tierAxisFontSizes,
   chartGridColor,
 } from "./utils";
@@ -108,7 +108,7 @@ export function PolarPlot({
   hole = 0,
   bgcolor = "white",
 }: PolarPlotProps) {
-  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({ trackWidth: true });
   const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
@@ -173,55 +173,73 @@ export function PolarPlot({
   );
 
   // Tier-aware chrome + the polar config createBaseLayout cannot provide.
-  const layout = useMemo(
-    () =>
-      ({
-        ...responsiveChrome(config, sizing),
+  const figure = useMemo(
+    () => {
+      const outer = withOuterLabels({
+        config,
+        sizing,
+        labels: { left: 40, right: 40, top: 32, bottom: 32 },
+        traces: plotData,
+        radialTitle: { text: radialAxis.title ?? "R", fontSize: fontSizes.axisTitle },
+      });
+      return {
+        data: outer.data,
+        layout: {
+          ...outer.layout,
 
-        polar: {
-          radialaxis: {
-            title: { text: radialAxis.title || "R", font: { size: fontSizes.axisTitle } },
-            tickfont: { size: fontSizes.tick },
-            range: radialAxis.range,
-            tickmode: radialAxis.tickmode || "linear",
-            tick0: radialAxis.tick0 || 0,
-            dtick: radialAxis.dtick,
-            tickvals: radialAxis.tickvals,
-            ticktext: radialAxis.ticktext,
-            angle: radialAxis.angle || 90,
-            side: radialAxis.side || "clockwise",
-            gridcolor: radialAxis.gridcolor || chartGridColor(),
-            linecolor: radialAxis.linecolor || chartGridColor(),
-            showgrid: radialAxis.showgrid !== false,
-            showline: radialAxis.showline !== false,
-            showticklabels: radialAxis.showticklabels !== false,
+          polar: {
+            radialaxis: {
+              title: { text: "" },
+              tickfont: { size: fontSizes.tick },
+              range: radialAxis.range,
+              tickmode:
+                radialAxis.tickmode ??
+                (radialAxis.tickvals
+                  ? "array"
+                  : radialAxis.dtick !== undefined
+                    ? "linear"
+                    : "auto"),
+              nticks: sizing.snug ? 5 : 10,
+              tick0: radialAxis.tick0 || 0,
+              dtick: radialAxis.dtick,
+              tickvals: radialAxis.tickvals,
+              ticktext: radialAxis.ticktext,
+              angle: radialAxis.angle ?? 90,
+              side: radialAxis.side || "clockwise",
+              gridcolor: radialAxis.gridcolor || chartGridColor(),
+              linecolor: radialAxis.linecolor || chartGridColor(),
+              showgrid: radialAxis.showgrid !== false,
+              showline: radialAxis.showline !== false,
+              showticklabels: radialAxis.showticklabels !== false,
+            },
+            angularaxis: {
+              title: { text: angularAxis.title || "θ", font: { size: fontSizes.axisTitle } },
+              tickfont: { size: fontSizes.tick },
+              tickmode: angularAxis.tickmode || "linear",
+              tick0: angularAxis.tick0 || 0,
+              dtick: angularAxis.dtick || 45,
+              tickvals: angularAxis.tickvals,
+              ticktext: angularAxis.ticktext,
+              direction: angularAxis.direction || "counterclockwise",
+              rotation: angularAxis.rotation || 0,
+              period: angularAxis.period || 360,
+              gridcolor: angularAxis.gridcolor || chartGridColor(),
+              linecolor: angularAxis.linecolor || chartGridColor(),
+              showgrid: angularAxis.showgrid !== false,
+              showline: angularAxis.showline !== false,
+              showticklabels: angularAxis.showticklabels !== false,
+            },
+            ...(sector
+              ? {
+                  sector: [sector.start || 0, sector.end || 360],
+                }
+              : {}),
+            hole: hole,
+            bgcolor: bgcolor,
           },
-          angularaxis: {
-            title: { text: angularAxis.title || "θ", font: { size: fontSizes.axisTitle } },
-            tickfont: { size: fontSizes.tick },
-            tickmode: angularAxis.tickmode || "linear",
-            tick0: angularAxis.tick0 || 0,
-            dtick: angularAxis.dtick || 45,
-            tickvals: angularAxis.tickvals,
-            ticktext: angularAxis.ticktext,
-            direction: angularAxis.direction || "counterclockwise",
-            rotation: angularAxis.rotation || 0,
-            period: angularAxis.period || 360,
-            gridcolor: angularAxis.gridcolor || chartGridColor(),
-            linecolor: angularAxis.linecolor || chartGridColor(),
-            showgrid: angularAxis.showgrid !== false,
-            showline: angularAxis.showline !== false,
-            showticklabels: angularAxis.showticklabels !== false,
-          },
-          ...(sector
-            ? {
-                sector: [sector.start || 0, sector.end || 360],
-              }
-            : {}),
-          hole: hole,
-          bgcolor: bgcolor,
-        },
-      }) as any,
+        } as any,
+      };
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
     [
       angularAxis.direction,
@@ -240,6 +258,7 @@ export function PolarPlot({
       angularAxis.title,
       bgcolor,
       config,
+      plotData,
       fontSizes.axisTitle,
       fontSizes.tick,
       hole,
@@ -268,8 +287,8 @@ export function PolarPlot({
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
-        data={plotData}
-        layout={layout}
+        data={figure.data}
+        layout={figure.layout}
         config={plotConfig}
         loading={loading}
         error={error}

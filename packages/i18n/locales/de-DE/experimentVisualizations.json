@@ -95,7 +95,8 @@
     "reduced": "In Bildschirmauflösung aus {{total}} Zeilen gezeichnet.",
     "showingAllPoints": "Jeder Punkt wird angezeigt.",
     "showAllPoints": "Jeden Punkt anzeigen",
-    "drawAtResolution": "In Bildschirmauflösung zeichnen"
+    "drawAtResolution": "In Bildschirmauflösung zeichnen",
+    "frequency": "Häufigkeit"
   },
   "configuration": {
     "columns": {
