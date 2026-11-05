@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  INGEST_THROUGHPUT_WINDOW_MINUTES,
+  STALL_PUBLISHES_END_MINUTES,
+  STALL_PUBLISHES_START_MINUTES,
   STATUS_COMPONENTS,
   STATUS_SIGNAL_IDS,
   statusQueries,
@@ -126,6 +129,26 @@ describe("statusQueries", () => {
     ).toBe(false);
   });
 
+  it("reads messages per minute over five whole minutes that CloudWatch has finished counting", () => {
+    const published = region("eu-central-1").readings.find(({ id }) => id === "ingestPublished");
+
+    expect(published).toMatchObject({
+      lookbackMinutes: INGEST_THROUGHPUT_WINDOW_MINUTES + 1,
+      endMinutesAgo: 1,
+    });
+  });
+
+  it("reads device publishes from an hour to 45 minutes ago beside bronze's idle reading", () => {
+    const publishes = region("eu-central-1").readings.find(
+      ({ id }) => id === "devicePublishesBeforeIdle",
+    );
+
+    expect(publishes).toMatchObject({
+      lookbackMinutes: STALL_PUBLISHES_START_MINUTES,
+      endMinutesAgo: STALL_PUBLISHES_END_MINUTES,
+    });
+  });
+
   it("leaves out the signals of components that are not live", () => {
     const ids = regions.flatMap((entry) => entry.readings.map((reading) => reading.id));
 
@@ -247,6 +270,22 @@ describe("statusQueries", () => {
         Id: "ingestForwardingFailures",
         Expression:
           "SUM(SEARCH('{AWS/IoT,ActionType,RuleName} MetricName=\"Failure\"', 'Sum', 60))",
+      },
+    ],
+    [
+      "ingestPublished",
+      {
+        Id: "ingestPublished",
+        Expression:
+          "SUM(SEARCH('{AWS/IoT,Protocol} MetricName=\"PublishIn.Success\" AND Protocol=\"MQTT\"', 'Sum', 60))",
+      },
+    ],
+    [
+      "devicePublishesBeforeIdle",
+      {
+        Id: "devicePublishesBeforeIdle",
+        Expression:
+          "SUM(SEARCH('{AWS/IoT,Protocol} MetricName=\"PublishIn.Success\" AND Protocol=\"MQTT\"', 'Sum', 60))",
       },
     ],
     [

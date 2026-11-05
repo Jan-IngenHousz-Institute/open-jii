@@ -61,6 +61,9 @@ export const DELIVERY_OUTAGE_LATENCY_MINUTES = 60;
 /** The consumer ten minutes behind the stream is falling behind rather than catching up. */
 export const ITERATOR_AGE_DEGRADED_MINUTES = 10;
 
+/** Bronze idle this long while devices publish is a stopped pipeline, as Ingest Stalled reads it. */
+export const DELIVERY_STALL_IDLE_MINUTES = 60;
+
 /** Macro results more than five minutes after their measurement are slower than a researcher expects. */
 export const MACRO_DEGRADED_LATENCY_MINUTES = 5;
 
@@ -186,17 +189,25 @@ function judgeDataIntake({ readings }: ComponentEvidence): ComponentVerdict {
 }
 
 function judgeDataDelivery({ readings }: ComponentEvidence): ComponentVerdict {
-  const latencySeconds = readings.experimentLatencyP95 ?? 0;
+  const latencySeconds = readings.deliveryLatencyP95 ?? 0;
   const iteratorAgeMs = readings.ingestIteratorAge ?? 0;
 
   const isLate = latencySeconds > DELIVERY_DEGRADED_LATENCY_MINUTES * 60;
   const isVeryLate = latencySeconds > DELIVERY_OUTAGE_LATENCY_MINUTES * 60;
   const isSilent = readings.collectorHeartbeat === undefined;
+  // A stopped pipeline reports no latency at all, so only bronze's idle time beside devices still
+  // publishing shows it.
+  const isStalled =
+    (readings.ingestIdle ?? 0) > DELIVERY_STALL_IDLE_MINUTES &&
+    (readings.devicePublishesBeforeIdle ?? 0) > 0;
   const isBehindStream = iteratorAgeMs > ITERATOR_AGE_DEGRADED_MINUTES * 60_000;
   const isDatabricksDown = isDependencyDown(readings.databricksUp);
 
   return {
-    state: stateOf(isVeryLate || isSilent, isLate || isBehindStream || isDatabricksDown),
+    state: stateOf(
+      isVeryLate || isSilent || isStalled,
+      isLate || isBehindStream || isDatabricksDown,
+    ),
     ...(isLate ? { delayMinutes: Math.round(latencySeconds / 60) } : {}),
   };
 }

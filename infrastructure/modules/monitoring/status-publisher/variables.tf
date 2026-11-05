@@ -24,7 +24,7 @@ variable "state_bucket_arn" {
 }
 
 variable "web_url" {
-  description = "Public https URL of the web app, which the website check requests"
+  description = "Public https URL of a web app page that reads nothing from the backend, which the website check requests"
   type        = string
 }
 

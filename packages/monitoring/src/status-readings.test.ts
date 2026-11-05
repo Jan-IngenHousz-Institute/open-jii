@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { collapseReadings } from "./status-readings.js";
+import { collapseReadings, unreadableResults } from "./status-readings.js";
 
 const now = new Date("2026-11-03T12:00:00Z");
 const minutesAgo = (minutes: number) => new Date(now.getTime() - minutes * 60_000);
@@ -104,5 +104,65 @@ describe("collapseReadings", () => {
     );
 
     expect(readings).toEqual({ macroBacklog: 5 });
+  });
+
+  it("reads a window that ends before now from the buckets inside it only", () => {
+    const readings = collapseReadings(
+      [
+        {
+          id: "devicePublishesBeforeIdle",
+          periodSeconds: 60,
+          lookbackMinutes: 60,
+          endMinutesAgo: 45,
+          reduce: "sum",
+        },
+      ],
+      [
+        {
+          Id: "devicePublishesBeforeIdle",
+          Timestamps: [
+            minutesAgo(61),
+            minutesAgo(60),
+            minutesAgo(46),
+            minutesAgo(45),
+            minutesAgo(1),
+          ],
+          Values: [1000, 3, 4, 100, 100],
+        },
+      ],
+      now,
+    );
+
+    expect(readings).toEqual({ devicePublishesBeforeIdle: 7 });
+  });
+});
+
+describe("unreadableResults", () => {
+  const result = (Id: string, StatusCode: string) => ({ Id, StatusCode });
+
+  it("stops the run on a result CloudWatch refused or failed to read", () => {
+    const page = {
+      MetricDataResults: [
+        result("databaseUp", "Complete"),
+        result("websiteRequests", "Forbidden"),
+        result("ingestPublished", "InternalError"),
+      ],
+    };
+
+    expect(unreadableResults(page).map(({ Id }) => Id)).toEqual([
+      "websiteRequests",
+      "ingestPublished",
+    ]);
+  });
+
+  it("takes partial data as unreadable only on the last page", () => {
+    const partial = [result("ingestPublished", "PartialData")];
+
+    expect(unreadableResults({ NextToken: "next", MetricDataResults: partial })).toEqual([]);
+    expect(unreadableResults({ MetricDataResults: partial })).toEqual(partial);
+  });
+
+  it("finds nothing to stop on a page without results", () => {
+    expect(unreadableResults({})).toEqual([]);
   });
 });

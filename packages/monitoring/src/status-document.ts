@@ -8,6 +8,12 @@ import { z } from "zod/mini";
 /** Bumped when the document's shape changes in a way an older page cannot read. */
 export const STATUS_DOCUMENT_VERSION = 1;
 
+/**
+ * The page polls every minute, so a change reaches it within two minutes only while the file is
+ * cached for at most 30 seconds. stale-if-error keeps the last file served through an origin outage.
+ */
+export const STATUS_DOCUMENT_CACHE_CONTROL = "public, max-age=30, stale-if-error=86400";
+
 /** Days of history kept and shown, counted in UTC. */
 export const STATUS_HISTORY_DAYS = 90;
 

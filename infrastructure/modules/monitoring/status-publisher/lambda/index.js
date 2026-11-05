@@ -1,14 +1,16 @@
 "use strict";
 
-// Handler only: AWS and HTTP I/O. What to read, how readings become states, minutes and uptime,
-// and the shape of the published file live in @repo/monitoring, copied to ./lib at build time.
+// Handler only: AWS and HTTP I/O. What to read, what a healthy answer is, how readings become
+// states, minutes and uptime, and the published file and its caching live in @repo/monitoring,
+// copied to ./lib at build time.
 const { CloudWatchClient, GetMetricDataCommand } = require("@aws-sdk/client-cloudwatch");
 const { GetObjectCommand, NoSuchKey, PutObjectCommand, S3Client } = require("@aws-sdk/client-s3");
 
 const { statusQueries } = require("./lib/status-components.js");
-const { statusDocumentSchema } = require("./lib/status-document.js");
+const { STATUS_DOCUMENT_CACHE_CONTROL, statusDocumentSchema } = require("./lib/status-document.js");
 const { judgeStatus, publisherStateSchema } = require("./lib/status-judge.js");
-const { collapseReadings } = require("./lib/status-readings.js");
+const { isApiHealthy, isWebsiteHealthy } = require("./lib/status-probes.js");
+const { collapseReadings, unreadableResults } = require("./lib/status-readings.js");
 
 const MINUTE_MS = 60_000;
 // Under the function's 50 s timeout with both probes and every metric read in flight together.
@@ -21,10 +23,6 @@ const AWS_REQUEST_HANDLER = {
 };
 const STATE_KEY = "publisher-state.json";
 const DOCUMENT_KEY = "data/status.json";
-// The page polls every minute; CloudFront otherwise keeps an object without this for a day.
-// stale-if-error lets CloudFront keep serving the last file through an origin outage.
-const DOCUMENT_CACHE_CONTROL = "public, max-age=30, stale-if-error=86400";
-const UNREADABLE_STATUS_CODES = new Set(["Forbidden", "InternalError"]);
 
 const s3 = new S3Client({ requestHandler: AWS_REQUEST_HANDLER });
 const cloudwatchByRegion = new Map();
@@ -61,29 +59,6 @@ async function probe(url, isHealthy) {
   } catch {
     return { ok: false, durationMs: Date.now() - started };
   }
-}
-
-// A page that renders the product's name is up; an empty 200 from a broken deploy is not.
-const isWebsiteHealthy = (body) => body.includes("openJII");
-
-function isApiHealthy(body) {
-  try {
-    return JSON.parse(body).status === "ok";
-  } catch {
-    return false;
-  }
-}
-
-// A result CloudWatch could not answer reads as no datapoints, which the judge takes for a quiet
-// signal or a silent producer, so it has to stop the run instead. PartialData only means more
-// pages follow until the last one.
-function unreadableResults(page) {
-  const isLastPage = !page.NextToken;
-
-  return (page.MetricDataResults ?? []).filter(
-    ({ StatusCode }) =>
-      UNREADABLE_STATUS_CODES.has(StatusCode) || (isLastPage && StatusCode === "PartialData"),
-  );
 }
 
 function describeUnreadable({ Id, StatusCode, Messages }) {
@@ -178,7 +153,7 @@ exports.handler = async (event) => {
   const validDocument = statusDocumentSchema.parse(document);
 
   await writeJson(stateBucket, STATE_KEY, state, "no-store");
-  await writeJson(siteBucket, DOCUMENT_KEY, validDocument, DOCUMENT_CACHE_CONTROL);
+  await writeJson(siteBucket, DOCUMENT_KEY, validDocument, STATUS_DOCUMENT_CACHE_CONTROL);
 
   console.log(
     JSON.stringify({

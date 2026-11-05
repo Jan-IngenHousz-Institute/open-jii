@@ -58,7 +58,7 @@ resource "aws_iam_role_policy" "status_publisher" {
         Sid      = "PublishStatusData"
         Effect   = "Allow"
         Action   = ["s3:PutObject"]
-        Resource = "${var.site_bucket_arn}/data/*"
+        Resource = "${var.site_bucket_arn}/data/status.json"
       },
       {
         Sid    = "CloudWatchLogs"

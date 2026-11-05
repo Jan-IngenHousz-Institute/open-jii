@@ -40,7 +40,9 @@ export const STATUS_SIGNAL_IDS = [
   "ingestThrottled",
   "iotUp",
   "ingestPublished",
-  "experimentLatencyP95",
+  "deliveryLatencyP95",
+  "ingestIdle",
+  "devicePublishesBeforeIdle",
   "collectorHeartbeat",
   "ingestIteratorAge",
   "macroPlatformFailures",
@@ -94,11 +96,21 @@ export const INGEST_THROUGHPUT_WINDOW_MINUTES = 5;
  */
 export const PIPELINE_WINDOW_MINUTES = 75;
 
+/**
+ * Device publishes from an hour to 45 minutes ago stand beside bronze's idle reading, as Ingest
+ * Stalled (catalogue 89) reads them: the reading can be 35 minutes old, and a publish at least
+ * five minutes before it had time to reach bronze, so a burst after a quiet spell is no stall.
+ */
+export const STALL_PUBLISHES_START_MINUTES = 60;
+export const STALL_PUBLISHES_END_MINUTES = 45;
+
 export interface StatusSignal {
   id: StatusSignalId;
   region: StatusRegion;
   periodSeconds: number;
   lookbackMinutes: number;
+  /** Where the window ends, when it is not now: a reading of an earlier quarter of an hour, say. */
+  endMinutesAgo?: number;
   reduce: SignalReduction;
   /** The query whose result is the reading. */
   query: MetricDataQuery;
@@ -135,7 +147,14 @@ export const STATUS_COMPONENTS: StatusComponentDefinition[] = [
   {
     id: "data-delivery",
     live: true,
-    signals: ["experimentLatencyP95", "collectorHeartbeat", "ingestIteratorAge", "databricksUp"],
+    signals: [
+      "deliveryLatencyP95",
+      "ingestIdle",
+      "devicePublishesBeforeIdle",
+      "collectorHeartbeat",
+      "ingestIteratorAge",
+      "databricksUp",
+    ],
   },
   {
     id: "macro-processing",
@@ -179,6 +198,7 @@ interface SignalTiming {
   region: StatusRegion;
   periodSeconds: number;
   lookbackMinutes: number;
+  endMinutesAgo?: number;
   reduce: SignalReduction;
 }
 
@@ -189,12 +209,14 @@ interface SignalDefinition extends SignalTiming {
 }
 
 function define(definition: SignalDefinition): StatusSignal {
-  const { id, region, periodSeconds, lookbackMinutes, reduce, read, inputs } = definition;
+  const { id, region, periodSeconds, lookbackMinutes, endMinutesAgo, reduce, read, inputs } =
+    definition;
   return {
     id,
     region,
     periodSeconds,
     lookbackMinutes,
+    ...(endMinutesAgo === undefined ? {} : { endMinutesAgo }),
     reduce,
     query: read(id, periodSeconds),
     inputs: inputs ?? [],
@@ -287,15 +309,27 @@ export function statusSignals(config: StatusConfig): StatusSignal[] {
     define({
       ...awsCount,
       id: "ingestPublished",
-      lookbackMinutes: INGEST_THROUGHPUT_WINDOW_MINUTES,
+      // Whole minutes CloudWatch has finished counting: the current one is partial and the one
+      // before it still arriving.
+      lookbackMinutes: INGEST_THROUGHPUT_WINDOW_MINUTES + 1,
+      endMinutesAgo: 1,
       // Devices publish over MQTT; the ingest health check publishes over HTTP and is not traffic.
       read: searchSum("{AWS/IoT,Protocol}", 'MetricName="PublishIn.Success" AND Protocol="MQTT"'),
     }),
 
     define({
       ...pipelineGauge,
-      id: "experimentLatencyP95",
-      read: heartbeat("ExperimentLatencyP95Seconds", "Maximum"),
+      id: "deliveryLatencyP95",
+      // The whole trip, from the broker to the experiment table the API reads.
+      read: heartbeat("BrokerToApiP95Seconds", "Maximum"),
+    }),
+    define({ ...pipelineGauge, id: "ingestIdle", read: heartbeat("IngestIdleMinutes", "Maximum") }),
+    define({
+      ...awsCount,
+      id: "devicePublishesBeforeIdle",
+      lookbackMinutes: STALL_PUBLISHES_START_MINUTES,
+      endMinutesAgo: STALL_PUBLISHES_END_MINUTES,
+      read: searchSum("{AWS/IoT,Protocol}", 'MetricName="PublishIn.Success" AND Protocol="MQTT"'),
     }),
     define({
       ...pipelineGauge,
@@ -349,7 +383,10 @@ export interface RegionQueries {
   /** The longest lookback of the signals in this region, which sets the call's start time. */
   lookbackMinutes: number;
   /** How to turn each returned query into a reading, over its own lookback. */
-  readings: Pick<StatusSignal, "id" | "periodSeconds" | "lookbackMinutes" | "reduce">[];
+  readings: Pick<
+    StatusSignal,
+    "id" | "periodSeconds" | "lookbackMinutes" | "endMinutesAgo" | "reduce"
+  >[];
 }
 
 /**
@@ -371,10 +408,11 @@ export function statusQueries(config: StatusConfig): RegionQueries[] {
       region,
       queries: inRegion.flatMap((signal) => [...signal.inputs, signal.query]),
       lookbackMinutes: Math.max(...inRegion.map((signal) => signal.lookbackMinutes)),
-      readings: inRegion.map(({ id, periodSeconds, lookbackMinutes, reduce }) => ({
+      readings: inRegion.map(({ id, periodSeconds, lookbackMinutes, endMinutesAgo, reduce }) => ({
         id,
         periodSeconds,
         lookbackMinutes,
+        ...(endMinutesAgo === undefined ? {} : { endMinutesAgo }),
         reduce,
       })),
     };

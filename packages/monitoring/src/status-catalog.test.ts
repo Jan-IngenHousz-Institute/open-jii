@@ -255,6 +255,7 @@ describe("the status queries against the catalogue", () => {
     const iotSearches = statusReads.filter((read) => read.isSearch);
 
     expect(iotSearches.map((read) => read.signal).sort()).toEqual([
+      "devicePublishesBeforeIdle",
       "ingestForwardingFailures",
       "ingestPublished",
       "ingestRefusedPublishes",

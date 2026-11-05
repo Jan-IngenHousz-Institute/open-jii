@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { StatusComponent, StatusDocument } from "./status-document.js";
-import { readableStatusDocumentSchema, statusDocumentSchema } from "./status-document.js";
+import {
+  readableStatusDocumentSchema,
+  STATUS_DOCUMENT_CACHE_CONTROL,
+  statusDocumentSchema,
+} from "./status-document.js";
 
 function component(id: StatusComponent["id"]): StatusComponent {
   return {
@@ -94,5 +98,14 @@ describe("readableStatusDocumentSchema", () => {
     };
 
     expect(readableStatusDocumentSchema.safeParse(document).success).toBe(false);
+  });
+});
+
+describe("STATUS_DOCUMENT_CACHE_CONTROL", () => {
+  it("caches the file for no more than 30 seconds, so a change reaches the page within two minutes", () => {
+    const maxAge = Number(/max-age=(\d+)/.exec(STATUS_DOCUMENT_CACHE_CONTROL)?.[1]);
+
+    expect(maxAge).toBeGreaterThan(0);
+    expect(maxAge).toBeLessThanOrEqual(30);
   });
 });

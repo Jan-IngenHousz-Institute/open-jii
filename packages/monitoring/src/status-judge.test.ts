@@ -23,6 +23,7 @@ import {
   BAD_PROBES_FOR_DEGRADED,
   DELIVERY_DEGRADED_LATENCY_MINUTES,
   DELIVERY_OUTAGE_LATENCY_MINUTES,
+  DELIVERY_STALL_IDLE_MINUTES,
   INGEST_OUTAGE_FAILURES,
   ITERATOR_AGE_DEGRADED_MINUTES,
   MACRO_DEGRADED_LATENCY_MINUTES,
@@ -75,7 +76,9 @@ const HEALTHY_READINGS: StatusReadings = {
   ingestThrottled: 0,
   iotUp: 1,
   ingestPublished: 300,
-  experimentLatencyP95: 20,
+  deliveryLatencyP95: 20,
+  ingestIdle: 2,
+  devicePublishesBeforeIdle: 4500,
   collectorHeartbeat: 1,
   ingestIteratorAge: 1000,
   macroPlatformFailures: 0,
@@ -360,55 +363,55 @@ const thresholdCases: Case[] = [
   {
     id: "data-delivery",
     name: "latency at the degraded limit",
-    change: { readings: { experimentLatencyP95: DELIVERY_DEGRADED_LATENCY_MINUTES * 60 } },
+    change: { readings: { deliveryLatencyP95: DELIVERY_DEGRADED_LATENCY_MINUTES * 60 } },
     state: "operational",
   },
   {
     id: "data-delivery",
     name: "latency just over the degraded limit",
-    change: { readings: { experimentLatencyP95: DELIVERY_DEGRADED_LATENCY_MINUTES * 60 + 1 } },
+    change: { readings: { deliveryLatencyP95: DELIVERY_DEGRADED_LATENCY_MINUTES * 60 + 1 } },
     state: "degraded",
     delayMinutes: 15,
   },
   {
     id: "data-delivery",
     name: "latency that rounds up to the next minute",
-    change: { readings: { experimentLatencyP95: 930 } },
+    change: { readings: { deliveryLatencyP95: 930 } },
     state: "degraded",
     delayMinutes: 16,
   },
   {
     id: "data-delivery",
     name: "latency well inside degraded",
-    change: { readings: { experimentLatencyP95: 1500 } },
+    change: { readings: { deliveryLatencyP95: 1500 } },
     state: "degraded",
     delayMinutes: 25,
   },
   {
     id: "data-delivery",
     name: "latency at the outage limit",
-    change: { readings: { experimentLatencyP95: DELIVERY_OUTAGE_LATENCY_MINUTES * 60 } },
+    change: { readings: { deliveryLatencyP95: DELIVERY_OUTAGE_LATENCY_MINUTES * 60 } },
     state: "degraded",
     delayMinutes: 60,
   },
   {
     id: "data-delivery",
     name: "latency just over the outage limit",
-    change: { readings: { experimentLatencyP95: DELIVERY_OUTAGE_LATENCY_MINUTES * 60 + 1 } },
+    change: { readings: { deliveryLatencyP95: DELIVERY_OUTAGE_LATENCY_MINUTES * 60 + 1 } },
     state: "outage",
     delayMinutes: 60,
   },
   {
     id: "data-delivery",
     name: "latency far over the outage limit",
-    change: { readings: { experimentLatencyP95: 5400 } },
+    change: { readings: { deliveryLatencyP95: 5400 } },
     state: "outage",
     delayMinutes: 90,
   },
   {
     id: "data-delivery",
     name: "no latency datapoint",
-    change: { readings: { experimentLatencyP95: undefined } },
+    change: { readings: { deliveryLatencyP95: undefined } },
     state: "operational",
   },
   {
@@ -428,6 +431,36 @@ const thresholdCases: Case[] = [
     name: "no iterator age datapoint",
     change: { readings: { ingestIteratorAge: undefined } },
     state: "operational",
+  },
+  {
+    id: "data-delivery",
+    name: "bronze idle at the stall limit while devices publish",
+    change: { readings: { ingestIdle: DELIVERY_STALL_IDLE_MINUTES } },
+    state: "operational",
+  },
+  {
+    id: "data-delivery",
+    name: "bronze idle past the stall limit while devices publish",
+    change: { readings: { ingestIdle: DELIVERY_STALL_IDLE_MINUTES + 0.1 } },
+    state: "outage",
+  },
+  {
+    id: "data-delivery",
+    name: "bronze idle for hours on a quiet night with no device publishing",
+    change: { readings: { ingestIdle: 600, devicePublishesBeforeIdle: undefined } },
+    state: "operational",
+  },
+  {
+    id: "data-delivery",
+    name: "a stopped pipeline, which reports no latency and no iterator age",
+    change: {
+      readings: {
+        deliveryLatencyP95: undefined,
+        ingestIteratorAge: undefined,
+        ingestIdle: 180,
+      },
+    },
+    state: "outage",
   },
   {
     id: "data-delivery",
@@ -783,7 +816,7 @@ describe("recording measured outcomes", () => {
 
   it("reports how far behind delivery is while latency makes it degraded or down", () => {
     const late = run(undefined, "2026-11-03T12:00:00.000Z", {
-      readings: { experimentLatencyP95: 1500 },
+      readings: { deliveryLatencyP95: 1500 },
     });
     const recovered = run(late.state, "2026-11-03T12:01:00.000Z");
 
