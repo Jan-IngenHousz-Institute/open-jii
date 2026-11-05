@@ -1123,6 +1123,74 @@ describe("NotificationDispatchService", () => {
     });
   });
 
+  describe("the data upload email entries", () => {
+    const uploadedTo = { type: "experiment" as const, id: crypto.randomUUID() };
+
+    it("data_upload_completed sends the experiment's id, its name and the address", async () => {
+      const send = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendDataUploadCompletedNotification")
+        .mockResolvedValue(success(undefined));
+
+      const result = await notificationEmail.send("data_upload_completed", {
+        recipientEmail,
+        actorName: null,
+        resource: uploadedTo,
+        params: { experimentName: "Drought trial" },
+      });
+
+      assertSuccess(result);
+      expect(send).toHaveBeenCalledExactlyOnceWith({
+        experimentId: uploadedTo.id,
+        experimentName: "Drought trial",
+        email: recipientEmail,
+      });
+    });
+
+    it("data_upload_failed sends the experiment's id, its name, the table and the address", async () => {
+      const send = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendDataUploadFailedNotification")
+        .mockResolvedValue(success(undefined));
+
+      const result = await notificationEmail.send("data_upload_failed", {
+        recipientEmail,
+        actorName: null,
+        resource: uploadedTo,
+        params: { experimentName: "Drought trial", tableName: "leaf_traits" },
+      });
+
+      assertSuccess(result);
+      expect(send).toHaveBeenCalledExactlyOnceWith({
+        experimentId: uploadedTo.id,
+        experimentName: "Drought trial",
+        tableName: "leaf_traits",
+        email: recipientEmail,
+      });
+    });
+
+    it.each([
+      ["data_upload_completed", "sendDataUploadCompletedNotification", {}],
+      ["data_upload_failed", "sendDataUploadFailedNotification", { tableName: "leaf_traits" }],
+    ] as const)(
+      "%s refuses a notification stored with no resource",
+      async (type, method, extraParams) => {
+        const send = vi
+          .spyOn(testApp.module.get(EmailAdapter), method)
+          .mockResolvedValue(success(undefined));
+
+        const result = await notificationEmail.send(type, {
+          recipientEmail,
+          actorName: null,
+          resource: null,
+          params: { experimentName: "Drought trial", ...extraParams },
+        });
+
+        assertFailure(result);
+        expect(result.error.message).toContain("no resource to email about");
+        expect(send).not.toHaveBeenCalled();
+      },
+    );
+  });
+
   it("writes both rows on a replay after a first attempt rolled back", async () => {
     const send = {
       type: "experiment_join_request_received" as const,

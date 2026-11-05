@@ -28,7 +28,9 @@ export type CmsEmailType =
   | "organization-membership-removed"
   | "calibration-run-awaiting-approval-notification"
   | "calibration-run-approved-notification"
-  | "calibration-run-rejected-notification";
+  | "calibration-run-rejected-notification"
+  | "data-upload-completed-notification"
+  | "data-upload-failed-notification";
 
 export interface CmsEmail {
   internalName: string;

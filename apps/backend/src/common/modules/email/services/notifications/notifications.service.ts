@@ -9,6 +9,8 @@ import { renderApiKeyCreatedNotification } from "@repo/transactional/render/api-
 import { renderCalibrationRunApprovedNotification } from "@repo/transactional/render/calibration-run-approved-notification";
 import { renderCalibrationRunAwaitingApprovalNotification } from "@repo/transactional/render/calibration-run-awaiting-approval-notification";
 import { renderCalibrationRunRejectedNotification } from "@repo/transactional/render/calibration-run-rejected-notification";
+import { renderDataUploadCompletedNotification } from "@repo/transactional/render/data-upload-completed-notification";
+import { renderDataUploadFailedNotification } from "@repo/transactional/render/data-upload-failed-notification";
 import { renderExperimentMadePublicNotification } from "@repo/transactional/render/experiment-made-public-notification";
 import { renderJoinRequestRejected } from "@repo/transactional/render/join-request-rejected";
 import { renderJoinRequestSubmitted } from "@repo/transactional/render/join-request-submitted";
@@ -143,6 +145,20 @@ export class NotificationsService {
     ...args: Parameters<typeof renderCalibrationRunRejectedNotification>
   ) {
     return renderCalibrationRunRejectedNotification(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderDataUploadCompletedNotificationEmail(
+    ...args: Parameters<typeof renderDataUploadCompletedNotification>
+  ) {
+    return renderDataUploadCompletedNotification(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderDataUploadFailedNotificationEmail(
+    ...args: Parameters<typeof renderDataUploadFailedNotification>
+  ) {
+    return renderDataUploadFailedNotification(...args);
   }
 
   /* v8 ignore next 5 */
@@ -1011,6 +1027,108 @@ export class NotificationsService {
           msg: "Failed to send calibration run rejected notification email",
           operation: "sendCalibrationRunRejectedNotification",
           deviceId,
+          error,
+        }),
+    );
+  }
+
+  async sendDataUploadCompletedNotification(input: {
+    experimentId: string;
+    experimentName: string;
+    email: string;
+  }) {
+    const { experimentId, experimentName, email } = input;
+
+    return await tryCatch(
+      async () => {
+        this.logger.log({
+          msg: "Sending data upload completed notification email",
+          operation: "sendDataUploadCompletedNotification",
+          experimentId,
+        });
+
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { href: dataUrl } = new URL(`/platform/experiments/${experimentId}/data`, baseUrl);
+
+        const { html, text } = await this.renderDataUploadCompletedNotificationEmail({
+          host,
+          baseUrl,
+          experimentName,
+          dataUrl,
+        });
+
+        await this.dispatch({
+          to: email,
+          subject: `Your upload to ${experimentName} is ready to query`,
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Data upload completed notification email sent successfully",
+          operation: "sendDataUploadCompletedNotification",
+          experimentId,
+          status: "success",
+        });
+      },
+      (error) =>
+        this.sendFailure(error, {
+          msg: "Failed to send data upload completed notification email",
+          operation: "sendDataUploadCompletedNotification",
+          experimentId,
+          error,
+        }),
+    );
+  }
+
+  async sendDataUploadFailedNotification(input: {
+    experimentId: string;
+    experimentName: string;
+    tableName: string;
+    email: string;
+  }) {
+    const { experimentId, experimentName, tableName, email } = input;
+
+    return await tryCatch(
+      async () => {
+        this.logger.log({
+          msg: "Sending data upload failed notification email",
+          operation: "sendDataUploadFailedNotification",
+          experimentId,
+        });
+
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { href: dataUrl } = new URL(`/platform/experiments/${experimentId}/data`, baseUrl);
+
+        const { html, text } = await this.renderDataUploadFailedNotificationEmail({
+          host,
+          baseUrl,
+          experimentName,
+          tableName,
+          dataUrl,
+        });
+
+        await this.dispatch({
+          to: email,
+          subject: `Your upload to ${tableName} in ${experimentName} failed`,
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Data upload failed notification email sent successfully",
+          operation: "sendDataUploadFailedNotification",
+          experimentId,
+          status: "success",
+        });
+      },
+      (error) =>
+        this.sendFailure(error, {
+          msg: "Failed to send data upload failed notification email",
+          operation: "sendDataUploadFailedNotification",
+          experimentId,
           error,
         }),
     );

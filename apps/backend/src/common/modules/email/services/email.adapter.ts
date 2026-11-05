@@ -90,6 +90,23 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     return this.notificationService.sendCalibrationRunRejectedNotification(input);
   }
 
+  async sendDataUploadCompletedNotification(input: {
+    experimentId: string;
+    experimentName: string;
+    email: string;
+  }): Promise<Result<void>> {
+    return this.notificationService.sendDataUploadCompletedNotification(input);
+  }
+
+  async sendDataUploadFailedNotification(input: {
+    experimentId: string;
+    experimentName: string;
+    tableName: string;
+    email: string;
+  }): Promise<Result<void>> {
+    return this.notificationService.sendDataUploadFailedNotification(input);
+  }
+
   async sendTransferRequestConfirmation(
     email: string,
     projectIdOld: string,
