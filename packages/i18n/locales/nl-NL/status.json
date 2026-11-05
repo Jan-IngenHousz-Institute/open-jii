@@ -132,7 +132,7 @@
     "data-intake": {
       "name": "Data-invoer",
       "description": "Metingen van apparaten en de veldapp die bij openJII aankomen.",
-      "details": "De data-invoer werkt beperkt als in de afgelopen 15 minuten de stap die binnenkomende metingen opslaat een meting niet kon opslaan, het apparaatnetwerk een upload weigerde, of er te veel metingen tegelijk binnenkwamen en sommige werden vastgehouden. Ook een mislukte controle van de verbinding van het platform met het apparaatnetwerk maakt de invoer beperkt. De invoer is uitgevallen als in de afgelopen 15 minuten meer dan vijf metingen niet konden worden opgeslagen."
+      "details": "De data-invoer werkt beperkt als in de afgelopen 15 minuten de stap die binnenkomende metingen opslaat een meting niet kon opslaan, het apparaatnetwerk door een eigen fout een upload niet kon aannemen, of er te veel metingen tegelijk binnenkwamen en sommige werden vastgehouden. Ook een mislukte controle van de verbinding van het platform met het apparaatnetwerk maakt de invoer beperkt. De invoer is uitgevallen als in de afgelopen 15 minuten meer dan vijf metingen niet konden worden opgeslagen."
     },
     "data-delivery": {
       "name": "Datalevering",

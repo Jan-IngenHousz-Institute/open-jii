@@ -132,7 +132,7 @@
     "data-intake": {
       "name": "Dateneingang",
       "description": "Messungen von Geräten und der Feld-App, die bei openJII ankommen.",
-      "details": "Der Dateneingang gilt als beeinträchtigt, wenn in den letzten 15 Minuten der Schritt, der eingehende Messungen speichert, eine Messung nicht speichern konnte, das Gerätenetzwerk einen Upload abgelehnt hat oder zu viele Messungen auf einmal ankamen und einige zurückgehalten wurden. Auch eine fehlgeschlagene Prüfung der Verbindung der Plattform zum Gerätenetzwerk macht ihn beeinträchtigt. Er gilt als ausgefallen, wenn in den letzten 15 Minuten mehr als fünf Messungen nicht gespeichert werden konnten."
+      "details": "Der Dateneingang gilt als beeinträchtigt, wenn in den letzten 15 Minuten der Schritt, der eingehende Messungen speichert, eine Messung nicht speichern konnte, das Gerätenetzwerk wegen eines eigenen Fehlers einen Upload nicht annehmen konnte oder zu viele Messungen auf einmal ankamen und einige zurückgehalten wurden. Auch eine fehlgeschlagene Prüfung der Verbindung der Plattform zum Gerätenetzwerk macht ihn beeinträchtigt. Er gilt als ausgefallen, wenn in den letzten 15 Minuten mehr als fünf Messungen nicht gespeichert werden konnten."
     },
     "data-delivery": {
       "name": "Datenbereitstellung",
