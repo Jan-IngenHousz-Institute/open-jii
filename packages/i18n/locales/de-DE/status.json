@@ -137,7 +137,7 @@
     "data-delivery": {
       "name": "Datenbereitstellung",
       "description": "Neue Messungen, die in Ihren Experimenten erscheinen.",
-      "details": "Alle 30 Minuten meldet die Datenpipeline, wie lange sie gebraucht hat, um die langsamsten der neuen Messungen zu den Experimenten hinzuzufügen. Die Datenbereitstellung gilt als beeinträchtigt, wenn das mehr als 15 Minuten gedauert hat, wenn die Pipeline beim Lesen neuer Messungen mehr als 10 Minuten zurückliegt oder wenn die Verbindung zu Databricks, unserem Anbieter für die Datenverarbeitung, fehlschlägt. Sie gilt als ausgefallen, wenn es länger als eine Stunde gedauert hat oder wenn sich die Pipeline 75 Minuten lang nicht gemeldet hat."
+      "details": "Alle 30 Minuten meldet die Datenpipeline, wie lange sie gebraucht hat, um die langsamsten der neuen Messungen zu den Experimenten hinzuzufügen. Die Datenbereitstellung gilt als beeinträchtigt, wenn das mehr als 15 Minuten gedauert hat, wenn die Pipeline beim Lesen neuer Messungen mehr als 10 Minuten zurückliegt oder wenn die Verbindung zu Databricks, unserem Anbieter für die Datenverarbeitung, fehlschlägt. Sie gilt als ausgefallen, wenn es länger als eine Stunde gedauert hat, wenn die Pipeline eine Stunde lang keine neue Messung gespeichert hat, obwohl Geräte Messungen senden, oder wenn sich die Pipeline 75 Minuten lang nicht gemeldet hat."
     },
     "macro-processing": {
       "name": "Makro-Verarbeitung",

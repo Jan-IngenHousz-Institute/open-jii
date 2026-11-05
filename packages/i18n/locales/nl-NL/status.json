@@ -137,7 +137,7 @@
     "data-delivery": {
       "name": "Datalevering",
       "description": "Nieuwe metingen die in je experimenten verschijnen.",
-      "details": "Elk half uur meldt de datapijplijn hoe lang het duurde om de traagste nieuwe metingen aan experimenten toe te voegen. De datalevering werkt beperkt als dat langer dan 15 minuten duurde, als de pijplijn meer dan 10 minuten achterloopt met het inlezen van nieuwe metingen, of als de verbinding met Databricks, onze leverancier voor gegevensverwerking, mislukt. De datalevering is uitgevallen als het langer dan een uur duurde, of als de pijplijn 75 minuten lang niets heeft gemeld."
+      "details": "Elk half uur meldt de datapijplijn hoe lang het duurde om de traagste nieuwe metingen aan experimenten toe te voegen. De datalevering werkt beperkt als dat langer dan 15 minuten duurde, als de pijplijn meer dan 10 minuten achterloopt met het inlezen van nieuwe metingen, of als de verbinding met Databricks, onze leverancier voor gegevensverwerking, mislukt. De datalevering is uitgevallen als het langer dan een uur duurde, als de pijplijn een uur lang geen nieuwe meting heeft opgeslagen terwijl apparaten metingen versturen, of als de pijplijn 75 minuten lang niets heeft gemeld."
     },
     "macro-processing": {
       "name": "Macroverwerking",
