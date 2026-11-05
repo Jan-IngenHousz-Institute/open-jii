@@ -137,7 +137,7 @@
     "data-delivery": {
       "name": "Data delivery",
       "description": "New measurements appearing in your experiments.",
-      "details": "Every half hour the data pipeline reports how long it took to add the slowest few new measurements to experiments. Data delivery is degraded when that took more than 15 minutes, when the pipeline is more than 10 minutes behind in reading new measurements, or when the connection to Databricks, our data processing provider, fails. It is down when it took more than an hour, or when the pipeline has not reported for 75 minutes."
+      "details": "Every half hour the data pipeline reports how long it took to add the slowest few new measurements to experiments. Data delivery is degraded when that took more than 15 minutes, when the pipeline is more than 10 minutes behind in reading new measurements, or when the connection to Databricks, our data processing provider, fails. It is down when it took more than an hour, when the pipeline has stored no new measurement for an hour although devices are sending them, or when the pipeline has not reported for 75 minutes."
     },
     "macro-processing": {
       "name": "Macro processing",
