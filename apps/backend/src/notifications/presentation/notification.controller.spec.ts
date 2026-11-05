@@ -214,7 +214,7 @@ describe("NotificationController", () => {
         channel: "email",
         enabled: false,
         locked: false,
-        available: false,
+        available: true,
       });
       expect(response.body.preferences).toContainEqual({
         category: "account_security",
@@ -229,7 +229,7 @@ describe("NotificationController", () => {
      * `available` is derived from the email table, not listed anywhere: a category
      * offers its switch once one of its `preference` types has an email behind it.
      */
-    it("marks only the categories whose emails exist today as available", async () => {
+    it("marks every category but account security as available", async () => {
       const response: SuperTestResponse<NotificationPreferences> = await testApp
         .get(testApp.resolveOrpcPath(contract.notifications.getNotificationPreferences))
         .withAuth(recipientId)
@@ -241,6 +241,7 @@ describe("NotificationController", () => {
         .sort();
 
       expect(available).toEqual([
+        "data_jobs",
         "devices_and_calibration",
         "experiments_and_resources",
         "membership_and_access",
