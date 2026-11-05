@@ -2082,7 +2082,8 @@ module "serving_store_secret_scope" {
 }
 
 # Two write partitions at a time on one worker, so a reload leaves the store's second core to its
-# merges and reads, behind a driver that only collects counts.
+# merges and reads, behind a driver that only collects counts. Both are r6id, whose local disk a job
+# cluster needs: Databricks refuses a node type without one, such as m7i, unless EBS is attached.
 module "serving_store_reload_cluster_policy" {
   source = "../../modules/databricks/cluster-policy"
 
@@ -2100,7 +2101,7 @@ module "serving_store_reload_cluster_policy" {
     }
     driver_node_type_id = {
       type  = "fixed"
-      value = "m7i.large"
+      value = "r6id.large"
     }
     num_workers = {
       type  = "fixed"
@@ -2174,7 +2175,7 @@ module "serving_store_reload_job" {
       notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/serving_store_reload_task"
 
       node_type_id        = "r6id.large"
-      driver_node_type_id = "m7i.large"
+      driver_node_type_id = "r6id.large"
       num_workers         = 1
       data_security_mode  = "SINGLE_USER"
       single_user_name    = module.node_service_principal.service_principal_application_id
