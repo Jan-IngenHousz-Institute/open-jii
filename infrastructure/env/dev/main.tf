@@ -2474,6 +2474,17 @@ module "opennext" {
   }
 }
 
+# Adopts the Lambda@Edge log groups AWS created before retention was set in code.
+import {
+  to = module.opennext.module.cloudfront.aws_cloudwatch_log_group.edge_hash_body
+  id = "/aws/lambda/us-east-1.open-jii-edge-hash-body"
+}
+
+import {
+  to = module.opennext.module.cloudfront.aws_cloudwatch_log_group.edge_hash_body_us_east_1
+  id = "/aws/lambda/us-east-1.open-jii-edge-hash-body"
+}
+
 module "migration_runner_ecr" {
   source = "../../modules/ecr"
 
