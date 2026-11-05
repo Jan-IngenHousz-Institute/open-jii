@@ -590,27 +590,33 @@ export class ExperimentDataRepository {
   }
 
   /**
-   * The contributor column a name reads and the field it reads of it, if it names one. A name that
-   * is a column's own, such as a payload field with a dot in it, is that column.
+   * The contributor column a name reads and the field it reads of it, if it names one. The
+   * warehouse resolves a name in any case, so a contributor column matches in any case too. A name
+   * that is another column's own, such as a payload field with a dot in it, is that column, matched
+   * exactly as the query builder matches it.
    */
   private contributorReference(
     name: string,
     columns: SchemaDataDto["columns"],
   ): { column: string; field?: string } | undefined {
-    const isContributor = (column: string) =>
-      columns.some(
-        (candidate) =>
-          candidate.name === column && candidate.type_text === WellKnownColumnTypes.CONTRIBUTOR,
-      );
-    if (columns.some((candidate) => candidate.name === name)) {
-      return isContributor(name) ? { column: name } : undefined;
+    const contributorNamed = (candidate: string) =>
+      columns.find(
+        (column) =>
+          column.name.toLowerCase() === candidate.toLowerCase() &&
+          column.type_text === WellKnownColumnTypes.CONTRIBUTOR,
+      )?.name;
+
+    const whole = contributorNamed(name);
+    if (whole !== undefined) {
+      return { column: whole };
+    }
+    if (columns.some((column) => column.name === name)) {
+      return undefined;
     }
 
     const dot = name.indexOf(".");
-    if (dot === -1 || !isContributor(name.slice(0, dot))) {
-      return undefined;
-    }
-    return { column: name.slice(0, dot), field: name.slice(dot + 1) };
+    const column = dot === -1 ? undefined : contributorNamed(name.slice(0, dot));
+    return column === undefined ? undefined : { column, field: name.slice(dot + 1) };
   }
 
   private anonymizedRefusal(name: string): Result<never> {

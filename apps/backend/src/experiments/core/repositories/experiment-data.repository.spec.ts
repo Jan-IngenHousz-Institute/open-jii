@@ -751,6 +751,15 @@ describe("ExperimentDataRepository", () => {
           "sorting by a contributor's avatar",
           { orderBy: "contributor.avatar", page: 1, pageSize: 5 },
         ],
+        ["selecting a contributor's name in another case", { columns: ["Contributor.name"] }],
+        [
+          "filtering by the contributor column in another case",
+          { filters: [{ column: "CONTRIBUTOR", operator: "equals", value: "u1" }] },
+        ],
+        [
+          "sorting by a contributor's avatar in another case",
+          { orderBy: "CONTRIBUTOR.avatar", page: 1, pageSize: 5 },
+        ],
       ] satisfies [string, Partial<Parameters<ExperimentDataRepository["getTableData"]>[0]>][])(
         "refuses %s",
         async (_case, request) => {
@@ -795,6 +804,27 @@ describe("ExperimentDataRepository", () => {
             ordering: {
               column: "contributor.id",
               direction: "ASC",
+              mode: { kind: "pseudonym", salt: mockExperiment.id },
+            },
+          }),
+        );
+      });
+
+      it("sorts a contributor's name in another case by the pseudonym, under the column's own name", async () => {
+        await repository.getTableData({
+          ...baseParams,
+          experiment: anonymized,
+          orderBy: "Contributor.name",
+          orderDirection: "DESC",
+          page: 1,
+          pageSize: 5,
+        });
+
+        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            ordering: {
+              column: "contributor.id",
+              direction: "DESC",
               mode: { kind: "pseudonym", salt: mockExperiment.id },
             },
           }),
