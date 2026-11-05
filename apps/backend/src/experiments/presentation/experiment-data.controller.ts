@@ -3,10 +3,12 @@ import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { experimentDataContract } from "@repo/api/domains/experiment/data/experiment-data.contract";
 
 import { CanAccess } from "../../authorization/can-access.decorator";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { ExperimentDataSourceService } from "../application/services/experiment-data-source.service";
 import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTableColumnsUseCase } from "../application/use-cases/experiment-data/get-experiment-table-columns";
@@ -21,13 +23,22 @@ export class ExperimentDataController {
     private readonly getExperimentTablesUseCase: GetExperimentTablesUseCase,
     private readonly getDistinctColumnValuesUseCase: GetDistinctColumnValuesUseCase,
     private readonly getExperimentTableColumnsUseCase: GetExperimentTableColumnsUseCase,
+    private readonly dataSource: ExperimentDataSourceService,
   ) {}
 
   @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentDataContract.getExperimentTables)
   getExperimentTables(@Session() session: UserSession) {
     return implement(experimentDataContract.getExperimentTables).handler(async ({ input }) => {
-      const result = await this.getExperimentTablesUseCase.execute(input.id, session.user.id);
+      const source = await this.dataSource.sourceFor(
+        FEATURE_FLAGS.STORE_EXPERIMENT_TABLES,
+        session.user,
+      );
+      const result = await this.getExperimentTablesUseCase.execute(
+        input.id,
+        session.user.id,
+        source,
+      );
       if (result.isSuccess()) {
         return result.value;
       }
@@ -40,7 +51,16 @@ export class ExperimentDataController {
   getExperimentData(@Session() session: UserSession) {
     return implement(experimentDataContract.getExperimentData).handler(async ({ input }) => {
       const { id, ...query } = input;
-      const result = await this.getExperimentDataUseCase.execute(id, session.user.id, query);
+      const source = await this.dataSource.sourceFor(
+        FEATURE_FLAGS.STORE_EXPERIMENT_DATA,
+        session.user,
+      );
+      const result = await this.getExperimentDataUseCase.execute(
+        id,
+        session.user.id,
+        query,
+        source,
+      );
       if (result.isSuccess()) {
         return result.value;
       }
@@ -53,7 +73,16 @@ export class ExperimentDataController {
   getDistinctColumnValues(@Session() session: UserSession) {
     return implement(experimentDataContract.getDistinctColumnValues).handler(async ({ input }) => {
       const { id, ...query } = input;
-      const result = await this.getDistinctColumnValuesUseCase.execute(id, session.user.id, query);
+      const source = await this.dataSource.sourceFor(
+        FEATURE_FLAGS.STORE_EXPERIMENT_DISTINCT_VALUES,
+        session.user,
+      );
+      const result = await this.getDistinctColumnValuesUseCase.execute(
+        id,
+        session.user.id,
+        query,
+        source,
+      );
       if (result.isSuccess()) {
         return result.value;
       }
@@ -67,10 +96,15 @@ export class ExperimentDataController {
     return implement(experimentDataContract.getExperimentTableColumns).handler(
       async ({ input }) => {
         const { id, ...query } = input;
+        const source = await this.dataSource.sourceFor(
+          FEATURE_FLAGS.STORE_EXPERIMENT_COLUMNS,
+          session.user,
+        );
         const result = await this.getExperimentTableColumnsUseCase.execute(
           id,
           session.user.id,
           query,
+          source,
         );
         if (result.isSuccess()) {
           return result.value;

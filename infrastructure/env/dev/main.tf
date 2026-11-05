@@ -2760,6 +2760,15 @@ module "backend_ecs" {
       name      = "DATABRICKS_HOST"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::"
     },
+    # The store's read-only user, which may read only experiment views and only under its caps.
+    {
+      name      = "SERVING_STORE_USERNAME"
+      valueFrom = "${module.serving_store.credentials_secret_arns["reader"]}:username::"
+    },
+    {
+      name      = "SERVING_STORE_PASSWORD"
+      valueFrom = "${module.serving_store.credentials_secret_arns["reader"]}:password::"
+    },
     {
       name      = "DATABRICKS_DATA_UPLOAD_JOB_ID"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_UPLOAD_JOB_ID::"
@@ -2859,6 +2868,10 @@ module "backend_ecs" {
     {
       name  = "DATABRICKS_UPLOADED_DATA_TABLE_NAME"
       value = "enriched_experiment_uploaded_data"
+    },
+    {
+      name  = "SERVING_STORE_URL"
+      value = module.serving_store.url
     },
     {
       name  = "DB_HOST"

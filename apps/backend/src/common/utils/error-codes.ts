@@ -39,6 +39,10 @@ export enum ErrorCodes {
   DATABRICKS_WORKSPACE_FAILED = "DATABRICKS_WORKSPACE_FAILED", // Workspace operations failed
   DATABRICKS_REFRESH_FAILED = "DATABRICKS_REFRESH_FAILED", // Refresh operations failed
 
+  // ==================== Serving Store Operations ====================
+  // Location: src/common/modules/serving-store/
+  SERVING_STORE_QUERY_FAILED = "SERVING_STORE_QUERY_FAILED", // A read from the store failed
+
   // ==================== AWS Operations ====================
   // Location: src/common/modules/aws/
   AWS_LOCATION_FAILED = "AWS_LOCATION_FAILED", // AWS Location Service failed

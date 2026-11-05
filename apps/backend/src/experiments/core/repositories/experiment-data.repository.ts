@@ -22,6 +22,8 @@ import { FlattenedFields } from "../../../common/modules/databricks/services/que
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError, tryCatch } from "../../../common/utils/fp-utils";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
+import { ExperimentStoreReadsService } from "../../application/services/experiment-store-reads.service";
+import { ExperimentWarehouseReadsService } from "../../application/services/experiment-warehouse-reads.service";
 import {
   MACRO_TABLE_CONFIG,
   STATIC_TABLE_CONFIG,
@@ -29,6 +31,9 @@ import {
   VARIANT_COLUMN_SUFFIX,
 } from "../models/experiment-data.model";
 import type {
+  ExperimentAsOfJoin,
+  ExperimentDataSource,
+  ExperimentQueryParams,
   ExperimentTableMetadata,
   ExperimentTableType,
   SchemaDataDto,
@@ -39,7 +44,8 @@ import { ExperimentDto } from "../models/experiment.model";
 import { CACHE_PORT, SCHEMA_CACHE_PORT } from "../ports/cache.port";
 import type { CachePort } from "../ports/cache.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
-import type { ExperimentAsOfJoin, DatabricksPort } from "../ports/databricks.port";
+import type { DatabricksPort } from "../ports/databricks.port";
+import type { ExperimentTableReads, TableQuery } from "../ports/experiment-table-reads.port";
 
 type ReadMode =
   | "aggregation"
@@ -52,6 +58,7 @@ type ReadMode =
 interface ReadTrace {
   experimentId: string;
   tableName: string;
+  source: ExperimentDataSource;
   mode: ReadMode;
   startedAt: number;
   metadataMs: number;
@@ -88,6 +95,7 @@ const ROW_ID = "id";
 
 /** What a read of one table flattens and hides, and the names its base columns hold. */
 interface TableShape {
+  source: ExperimentDataSource;
   columns?: SchemaDataDto["columns"];
   join?: ExperimentAsOfJoin;
   metadata: ExperimentTableMetadata;
@@ -103,8 +111,8 @@ export class ExperimentDataRepository {
   private readonly logger = new Logger(ExperimentDataRepository.name);
 
   /**
-   * Reads already running, keyed by their SQL. A second tab, a refetch or two charts asking the
-   * same question join the running statement instead of queueing a copy behind it.
+   * Reads already running, keyed by their source and query. A second tab, a refetch or two charts
+   * asking the same question join the running statement instead of queueing a copy behind it.
    */
   private readonly readsInFlight = new Map<string, Promise<Result<SchemaData>>>();
 
@@ -113,6 +121,8 @@ export class ExperimentDataRepository {
     @Inject(CACHE_PORT) private readonly cachePort: CachePort,
     @Inject(SCHEMA_CACHE_PORT) private readonly schemaCache: CachePort,
     private readonly contributorAnonymizer: ContributorAnonymizerService,
+    private readonly warehouseReads: ExperimentWarehouseReadsService,
+    private readonly storeReads: ExperimentStoreReadsService,
   ) {}
 
   /**
@@ -126,7 +136,8 @@ export class ExperimentDataRepository {
    *   - none of the above: plain paginated read using the cached row count.
    *
    * The two one-page reads stop at `limit`, or `DATA_QUERY_MAX_LIMIT` when it is omitted, and
-   * say when they stopped short.
+   * say when they stopped short. They feed charts, which read from the warehouse until the store
+   * aggregates, whatever `source` says, as does a read joined to a second table.
    */
   async getTableData(params: {
     experimentId: string;
@@ -141,6 +152,7 @@ export class ExperimentDataRepository {
     page?: number;
     pageSize?: number;
     limit?: number;
+    source: ExperimentDataSource;
   }): Promise<Result<TableDataDto[]>> {
     const {
       experimentId,
@@ -155,18 +167,29 @@ export class ExperimentDataRepository {
       page,
       pageSize,
       limit,
+      source,
     } = params;
+
+    const hasAggregation =
+      (aggregation?.groupBy?.length ?? 0) > 0 || (aggregation?.functions?.length ?? 0) > 0;
+    const hasFilters = (filters?.length ?? 0) > 0;
+    const hasColumns = join !== undefined || (columns?.length ?? 0) > 0;
+    const hasPaging = page !== undefined && pageSize !== undefined;
+    const ceiling = limit ?? DATA_QUERY_MAX_LIMIT;
+    const isChartRead = hasAggregation || ((hasFilters || hasColumns) && !hasPaging);
+    const readSource = isChartRead || join !== undefined ? "warehouse" : source;
 
     const read: ReadTrace = {
       experimentId,
       tableName,
+      source: readSource,
       mode: "page",
       startedAt: performance.now(),
       metadataMs: 0,
     };
 
     const [shapeResult, metadataMs] = await this.measure(() =>
-      this.tableShape(experimentId, tableName),
+      this.tableShape(experimentId, tableName, readSource),
     );
     read.metadataMs = metadataMs;
 
@@ -175,19 +198,14 @@ export class ExperimentDataRepository {
     }
 
     let shape = shapeResult.value;
+    read.source = shape.source;
     if (join) {
       const joined = await this.joinedShape(experimentId, tableName, shape, join);
       if (joined.isFailure()) return joined;
       shape = joined.value;
     }
-    const hasAggregation =
-      (aggregation?.groupBy?.length ?? 0) > 0 || (aggregation?.functions?.length ?? 0) > 0;
-    const hasFilters = (filters?.length ?? 0) > 0;
-    const hasColumns = join !== undefined || (columns?.length ?? 0) > 0;
-    const hasPaging = page !== undefined && pageSize !== undefined;
-    const ceiling = limit ?? DATA_QUERY_MAX_LIMIT;
 
-    const anonymizedResult = await this.anonymizedQuery(experiment, tableName, {
+    const anonymizedResult = await this.anonymizedQuery(experiment, tableName, shape.source, {
       columns,
       filters,
       aggregation,
@@ -204,7 +222,7 @@ export class ExperimentDataRepository {
     // Aggregation summary: page/pageSize ignored.
     if (hasAggregation) {
       read.mode = "aggregation";
-      const queryResult = this.buildQuery(experimentId, shape, {
+      const queryResult = await this.buildQuery(experimentId, shape, {
         filters: effectiveFilters,
         aggregation,
         ordering,
@@ -213,7 +231,7 @@ export class ExperimentDataRepository {
       if (queryResult.isFailure()) {
         return queryResult;
       }
-      const countSubqueryResult = this.buildQuery(experimentId, shape, {
+      const countSubqueryResult = await this.buildQuery(experimentId, shape, {
         filters: effectiveFilters,
         aggregation,
       });
@@ -225,7 +243,7 @@ export class ExperimentDataRepository {
         experiment,
         shape,
         query: queryResult.value,
-        countSql: this.countSql(countSubqueryResult.value),
+        countQuery: this.reads(shape).countQuery(countSubqueryResult.value),
         ceiling,
         read,
       });
@@ -238,17 +256,17 @@ export class ExperimentDataRepository {
         const offset = (page - 1) * pageSize;
 
         // COUNT(*) over the unpaged filter query.
-        const countSubqueryResult = this.buildQuery(experimentId, shape, {
+        const countSubqueryResult = await this.buildQuery(experimentId, shape, {
           columns,
           filters: effectiveFilters,
         });
         if (countSubqueryResult.isFailure()) {
           return countSubqueryResult;
         }
-        const countSql = this.countSql(countSubqueryResult.value);
+        const countQuery = this.reads(shape).countQuery(countSubqueryResult.value);
 
         const [[countResult, countMs], pageResult] = await Promise.all([
-          this.measure(() => this.executeQuery(countSql)),
+          this.measure(() => this.executeQuery(shape, countQuery)),
           this.pageData(experimentId, shape, read, {
             columns,
             filters: effectiveFilters,
@@ -285,7 +303,7 @@ export class ExperimentDataRepository {
 
       // Chart-style: all matching rows in one page.
       read.mode = "filtered-all";
-      const queryResult = this.buildQuery(experimentId, shape, {
+      const queryResult = await this.buildQuery(experimentId, shape, {
         columns,
         filters: effectiveFilters,
         ordering,
@@ -294,7 +312,7 @@ export class ExperimentDataRepository {
       if (queryResult.isFailure()) {
         return queryResult;
       }
-      const countSubqueryResult = this.buildQuery(experimentId, shape, {
+      const countSubqueryResult = await this.buildQuery(experimentId, shape, {
         columns,
         filters: effectiveFilters,
       });
@@ -306,7 +324,7 @@ export class ExperimentDataRepository {
         experiment,
         shape,
         query: queryResult.value,
-        countSql: this.countSql(countSubqueryResult.value),
+        countQuery: this.reads(shape).countQuery(countSubqueryResult.value),
         ceiling,
         read,
       });
@@ -352,15 +370,17 @@ export class ExperimentDataRepository {
     tableName: string;
     column: string;
     limit: number;
+    source: ExperimentDataSource;
   }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
-    const { experimentId, experiment, tableName, column, limit } = params;
+    const { experimentId, experiment, tableName, column, limit, source } = params;
 
-    const shapeResult = await this.tableShape(experimentId, tableName);
+    const shapeResult = await this.tableShape(experimentId, tableName, source);
     if (shapeResult.isFailure()) {
       return shapeResult;
     }
 
-    const anonymizedResult = await this.anonymizedQuery(experiment, tableName, {
+    const shape = shapeResult.value;
+    const anonymizedResult = await this.anonymizedQuery(experiment, tableName, shape.source, {
       columns: [column],
       orderDirection: "ASC",
     });
@@ -368,7 +388,7 @@ export class ExperimentDataRepository {
       return anonymizedResult;
     }
 
-    const queryResult = this.buildQuery(experimentId, shapeResult.value, {
+    const queryResult = await this.buildQuery(experimentId, shape, {
       columns: [column],
       distinct: true,
       ordering: { column, direction: "ASC" },
@@ -380,7 +400,7 @@ export class ExperimentDataRepository {
       return queryResult;
     }
 
-    const dataResult = await this.executeQuery(queryResult.value);
+    const dataResult = await this.executeQuery(shape, queryResult.value);
     if (dataResult.isFailure()) {
       return dataResult;
     }
@@ -428,32 +448,33 @@ export class ExperimentDataRepository {
     experimentId: string;
     tableName: string;
     join?: ExperimentDataJoin;
+    source: ExperimentDataSource;
   }): Promise<Result<SchemaDataDto["columns"]>> {
-    const { experimentId, tableName, join } = params;
+    const { experimentId, tableName, join, source } = params;
     if (join) {
-      const shape = await this.tableShape(experimentId, tableName);
+      const shape = await this.tableShape(experimentId, tableName, "warehouse");
       if (shape.isFailure()) return shape;
       const joined = await this.joinedShape(experimentId, tableName, shape.value, join);
       if (joined.isFailure()) return joined;
       return success(joined.value.columns);
     }
 
-    const shapeResult = await this.tableShape(experimentId, tableName);
+    const shapeResult = await this.tableShape(experimentId, tableName, source);
     if (shapeResult.isFailure()) {
       return shapeResult;
     }
 
     const shape = shapeResult.value;
-    const queryResult = this.buildQuery(experimentId, shape, { limit: 1 });
+    const queryResult = await this.buildQuery(experimentId, shape, { limit: 1 });
     if (queryResult.isFailure()) {
       return queryResult;
     }
 
     const revision = shape.metadata.schemaRevision ?? "";
-    const cacheKey = `table-columns:${experimentId}:${tableName}:${revision}`;
+    const cacheKey = `table-columns:${shape.source}:${experimentId}:${tableName}:${revision}`;
     return tryCatch(async () => {
       const columns = await this.cachePort.tryCache(cacheKey, async () => {
-        const dataResult = await this.executeQuery(queryResult.value);
+        const dataResult = await this.executeQuery(shape, queryResult.value);
         if (dataResult.isFailure()) {
           throw dataResult.error;
         }
@@ -470,14 +491,15 @@ export class ExperimentDataRepository {
    * A failed lookup is thrown through the cache so it is never stored, and
    * callers sharing the in-flight load all see the failure.
    */
-  tablesMetadata(experimentId: string): Promise<Result<ExperimentTableMetadata[]>> {
+  tablesMetadata(
+    experimentId: string,
+    source: ExperimentDataSource,
+  ): Promise<Result<ExperimentTableMetadata[]>> {
     return tryCatch(async () => {
       const rows = await this.cachePort.tryCache(
-        this.tablesMetadataCacheKey(experimentId),
+        `table-metadata:${source}:${experimentId}`,
         async () => {
-          const result = await this.databricksPort.getExperimentTableMetadata(experimentId, {
-            includeSchemas: true,
-          });
+          const result = await this.sourceReads(source).tablesMetadata(experimentId);
           if (result.isFailure()) {
             throw result.error;
           }
@@ -488,15 +510,12 @@ export class ExperimentDataRepository {
     });
   }
 
-  private tablesMetadataCacheKey(experimentId: string): string {
-    return `table-metadata:${experimentId}`;
-  }
-
   private async tableMetadata(
     experimentId: string,
     tableName: string,
+    source: ExperimentDataSource,
   ): Promise<Result<ExperimentTableMetadata[]>> {
-    const result = await this.tablesMetadata(experimentId);
+    const result = await this.tablesMetadata(experimentId, source);
     if (result.isFailure()) {
       return result;
     }
@@ -514,6 +533,7 @@ export class ExperimentDataRepository {
   private async anonymizedQuery(
     experiment: ExperimentDto,
     tableName: string,
+    source: ExperimentDataSource,
     query: {
       columns?: string[];
       filters?: FilterCondition[];
@@ -541,6 +561,7 @@ export class ExperimentDataRepository {
       experimentId: experiment.id,
       tableName,
       join,
+      source,
     });
     if (columnsResult.isFailure()) {
       return columnsResult;
@@ -633,8 +654,15 @@ export class ExperimentDataRepository {
    * hold. The view's columns are looked up only when a payload is flattened, since only then can
    * a field's name clash with one of them.
    */
-  private async tableShape(experimentId: string, tableName: string): Promise<Result<TableShape>> {
-    const metadataResult = await this.tableMetadata(experimentId, tableName);
+  private async tableShape(
+    experimentId: string,
+    tableName: string,
+    requestedSource: ExperimentDataSource,
+  ): Promise<Result<TableShape>> {
+    const source = this.sourceReads(requestedSource).readsTable(tableName)
+      ? requestedSource
+      : "warehouse";
+    const metadataResult = await this.tableMetadata(experimentId, tableName, source);
     if (metadataResult.isFailure()) {
       return metadataResult;
     }
@@ -723,34 +751,38 @@ export class ExperimentDataRepository {
     }
 
     if (variants.length === 0) {
-      return success({ metadata, variants, exceptColumns, reservedColumns: [] });
+      return success({ source, metadata, variants, exceptColumns, reservedColumns: [] });
     }
 
-    const viewColumnsResult = await this.viewColumns(tableType, identifier);
+    const viewColumnsResult = await this.viewColumns(source, tableType, identifier);
     if (viewColumnsResult.isFailure()) {
       return viewColumnsResult;
     }
 
     const hidden = new Set<string>([...config.variantColumns, ...exceptColumns]);
     const reservedColumns = viewColumnsResult.value.filter((column) => !hidden.has(column));
-    return success({ metadata, variants, exceptColumns, reservedColumns });
+    return success({ source, metadata, variants, exceptColumns, reservedColumns });
   }
 
   /** A view's columns change only when it is redefined, so they come from the long-lived cache. */
   private viewColumns(
+    source: ExperimentDataSource,
     tableType: ExperimentTableType,
     identifier: string,
   ): Promise<Result<string[]>> {
     // Macro and upload tables each read one shared view; every static table has its own.
     const view = tableType === "static" ? `static:${identifier}` : tableType;
     return tryCatch(async () => {
-      const columns = await this.schemaCache.tryCache(`view-columns:${view}`, async () => {
-        const result = await this.databricksPort.getExperimentTableColumns(tableType, identifier);
-        if (result.isFailure()) {
-          throw result.error;
-        }
-        return result.value;
-      });
+      const columns = await this.schemaCache.tryCache(
+        `view-columns:${source}:${view}`,
+        async () => {
+          const result = await this.sourceReads(source).viewColumns(tableType, identifier);
+          if (result.isFailure()) {
+            throw result.error;
+          }
+          return result.value;
+        },
+      );
       return columns ?? [];
     });
   }
@@ -763,13 +795,18 @@ export class ExperimentDataRepository {
   ): Promise<Result<TableShape & { columns: SchemaDataDto["columns"] }>> {
     if (join.tableName === tableName)
       return failure(AppError.badRequest("Choose a different second table"));
-    const secondary = await this.tableShape(experimentId, join.tableName);
+    const secondary = await this.tableShape(experimentId, join.tableName, "warehouse");
     if (secondary.isFailure()) return secondary;
-    const primaryColumns = await this.getTableColumns({ experimentId, tableName });
+    const primaryColumns = await this.getTableColumns({
+      experimentId,
+      tableName,
+      source: "warehouse",
+    });
     if (primaryColumns.isFailure()) return primaryColumns;
     const secondaryColumns = await this.getTableColumns({
       experimentId,
       tableName: join.tableName,
+      source: "warehouse",
     });
     if (secondaryColumns.isFailure()) return secondaryColumns;
     const left = primaryColumns.value;
@@ -821,19 +858,22 @@ export class ExperimentDataRepository {
     });
   }
 
+  private reads(shape: TableShape): ExperimentTableReads {
+    return this.sourceReads(shape.source);
+  }
+
+  private sourceReads(source: ExperimentDataSource): ExperimentTableReads {
+    return source === "store" ? this.storeReads : this.warehouseReads;
+  }
+
   private buildQuery(
     experimentId: string,
     shape: TableShape,
-    options: {
-      columns?: string[];
-      filters?: FilterCondition[];
-      aggregation?: AggregationSpec;
-      distinct?: boolean;
-      ordering?: QueryOrdering;
-      limit?: number;
-      offset?: number;
-    } = {},
-  ): Result<string> {
+    options: Pick<
+      ExperimentQueryParams,
+      "columns" | "filters" | "aggregation" | "distinct" | "ordering" | "limit" | "offset"
+    > = {},
+  ): Promise<Result<TableQuery>> {
     const { columns, filters, aggregation, distinct, ordering, limit, offset } = options;
     const { metadata, variants, exceptColumns, reservedColumns } = shape;
 
@@ -848,7 +888,7 @@ export class ExperimentDataRepository {
       };
     }
 
-    return this.databricksPort.buildExperimentQuery({
+    return this.reads(shape).buildQuery({
       join: shape.join,
       tableName: metadata.identifier,
       tableType: metadata.tableType,
@@ -892,14 +932,15 @@ export class ExperimentDataRepository {
     );
   }
 
-  private executeQuery(query: string): Promise<Result<SchemaData>> {
-    const running = this.readsInFlight.get(query);
+  private executeQuery(shape: TableShape, query: TableQuery): Promise<Result<SchemaData>> {
+    const key = `${shape.source}:${JSON.stringify(query)}`;
+    const running = this.readsInFlight.get(key);
     if (running !== undefined) {
       return running;
     }
 
-    const read = this.runQuery(query).finally(() => this.readsInFlight.delete(query));
-    this.readsInFlight.set(query, read);
+    const read = this.runQuery(shape, query).finally(() => this.readsInFlight.delete(key));
+    this.readsInFlight.set(key, read);
     return read;
   }
 
@@ -907,15 +948,13 @@ export class ExperimentDataRepository {
    * Execute a generated SQL; on failure log the SQL too, since errors like
    * `UNRESOLVED_COLUMN` depend on the exact compiled query.
    */
-  private async runQuery(query: string): Promise<Result<SchemaData>> {
-    const dataResult = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      query,
-    );
+  private async runQuery(shape: TableShape, query: TableQuery): Promise<Result<SchemaData>> {
+    const dataResult = await this.reads(shape).runQuery(query);
     if (dataResult.isFailure()) {
       this.logger.error({
         msg: "Experiment data query failed",
-        sql: query,
+        source: shape.source,
+        sql: query.sql,
         error: dataResult.error.message,
       });
     }
@@ -931,14 +970,14 @@ export class ExperimentDataRepository {
     tableName: string;
     experiment: ExperimentDto;
     shape: TableShape;
-    query: string;
-    countSql: string;
+    query: TableQuery;
+    countQuery: TableQuery;
     ceiling: number;
     read: ReadTrace;
   }): Promise<Result<TableDataDto[]>> {
-    const { tableName, experiment, shape, query, countSql, ceiling, read } = params;
+    const { tableName, experiment, shape, query, countQuery, ceiling, read } = params;
 
-    const [dataResult, dataMs] = await this.measure(() => this.executeQuery(query));
+    const [dataResult, dataMs] = await this.measure(() => this.executeQuery(shape, query));
     read.dataMs = dataMs;
     if (dataResult.isFailure()) {
       return dataResult;
@@ -947,7 +986,9 @@ export class ExperimentDataRepository {
     const rows = dataResult.value.rows.slice(0, ceiling);
     const truncated = dataResult.value.rows.length > ceiling || dataResult.value.truncated;
 
-    const totalResult = truncated ? await this.countRows(countSql, read) : success(rows.length);
+    const totalResult = truncated
+      ? await this.countRows(shape, countQuery, read)
+      : success(rows.length);
     if (totalResult.isFailure()) {
       return totalResult;
     }
@@ -969,12 +1010,12 @@ export class ExperimentDataRepository {
     ]);
   }
 
-  private countSql(subquery: string): string {
-    return `SELECT COUNT(*) AS total FROM (${subquery}) AS sub`;
-  }
-
-  private async countRows(countSql: string, read: ReadTrace): Promise<Result<number>> {
-    const [countResult, countMs] = await this.measure(() => this.executeQuery(countSql));
+  private async countRows(
+    shape: TableShape,
+    countQuery: TableQuery,
+    read: ReadTrace,
+  ): Promise<Result<number>> {
+    const [countResult, countMs] = await this.measure(() => this.executeQuery(shape, countQuery));
     read.countMs = countMs;
     if (countResult.isFailure()) {
       return countResult;
@@ -998,12 +1039,12 @@ export class ExperimentDataRepository {
       return this.singleStatementPage(experimentId, shape, read, page);
     }
 
-    const idsQuery = this.buildQuery(experimentId, shape, { ...page, columns: [ROW_ID] });
+    const idsQuery = await this.buildQuery(experimentId, shape, { ...page, columns: [ROW_ID] });
     if (idsQuery.isFailure()) {
       return idsQuery;
     }
 
-    const [idsResult, idsMs] = await this.measure(() => this.executeQuery(idsQuery.value));
+    const [idsResult, idsMs] = await this.measure(() => this.executeQuery(shape, idsQuery.value));
     read.idsMs = idsMs;
     if (idsResult.isFailure()) {
       return idsResult;
@@ -1017,7 +1058,7 @@ export class ExperimentDataRepository {
     read.mode = read.mode === "filtered-page" ? "filtered-page-late-payload" : "page-late-payload";
     // Ids go as strings: a quoted literal compares exactly against an INT or BIGINT id, and upload
     // ids pass 2^53, which a JavaScript number cannot hold.
-    const rowsQuery = this.buildQuery(experimentId, shape, {
+    const rowsQuery = await this.buildQuery(experimentId, shape, {
       columns: page.columns,
       filters: [{ column: ROW_ID, operator: "in", value: [...new Set(ids)] }],
     });
@@ -1025,7 +1066,9 @@ export class ExperimentDataRepository {
       return rowsQuery;
     }
 
-    const [rowsResult, dataMs] = await this.measure(() => this.executeQuery(rowsQuery.value));
+    const [rowsResult, dataMs] = await this.measure(() =>
+      this.executeQuery(shape, rowsQuery.value),
+    );
     read.dataMs = dataMs;
     if (rowsResult.isFailure()) {
       return rowsResult;
@@ -1040,12 +1083,14 @@ export class ExperimentDataRepository {
     read: ReadTrace,
     page: PageQuery,
   ): Promise<Result<SchemaData>> {
-    const queryResult = this.buildQuery(experimentId, shape, page);
+    const queryResult = await this.buildQuery(experimentId, shape, page);
     if (queryResult.isFailure()) {
       return queryResult;
     }
 
-    const [dataResult, dataMs] = await this.measure(() => this.executeQuery(queryResult.value));
+    const [dataResult, dataMs] = await this.measure(() =>
+      this.executeQuery(shape, queryResult.value),
+    );
     read.dataMs = dataMs;
     return dataResult;
   }
@@ -1055,7 +1100,8 @@ export class ExperimentDataRepository {
     const isLargeTable = shape.metadata.rowCount > LATE_PAYLOAD_MIN_ROWS;
     const hasPayload = shape.variants.length > 0;
     const carriesRowId = columns === undefined || columns.length === 0 || columns.includes(ROW_ID);
-    return !shape.join && isLargeTable && hasPayload && carriesRowId;
+    const picksById = this.reads(shape).picksLargePagesById;
+    return picksById && !shape.join && isLargeTable && hasPayload && carriesRowId;
   }
 
   /**
@@ -1125,6 +1171,7 @@ export class ExperimentDataRepository {
       operation: "getTableData",
       experimentId: read.experimentId,
       tableName: read.tableName,
+      source: read.source,
       mode: read.mode,
       metadataMs: read.metadataMs,
       countMs: read.countMs,

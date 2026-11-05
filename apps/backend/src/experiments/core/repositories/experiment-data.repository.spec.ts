@@ -19,17 +19,24 @@ import {
 } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
-import type { ExperimentTableMetadata } from "../models/experiment-data.model";
+import type {
+  ExperimentDataSource,
+  ExperimentTableMetadata,
+} from "../models/experiment-data.model";
 import type { ExperimentDto } from "../models/experiment.model";
 import { CACHE_PORT } from "../ports/cache.port";
 import type { CachePort } from "../ports/cache.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
+import { SERVING_STORE_PORT } from "../ports/serving-store.port";
+import type { ServingStorePort } from "../ports/serving-store.port";
 import { ExperimentDataRepository } from "./experiment-data.repository";
 
 /* eslint-disable @typescript-eslint/unbound-method */
 
 type ExperimentQuery = Parameters<DatabricksPort["buildExperimentQuery"]>[0];
+
+const WAREHOUSE: ExperimentDataSource = "warehouse";
 
 describe("ExperimentDataRepository", () => {
   const testApp = TestHarness.App;
@@ -78,6 +85,7 @@ describe("ExperimentDataRepository", () => {
       experimentId,
       experiment: mockExperiment,
       tableName: "raw_data",
+      source: WAREHOUSE,
     };
 
     it("should successfully get table data with pagination", async () => {
@@ -412,7 +420,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(pageData));
 
-      const listing = await repository.tablesMetadata(experimentId);
+      const listing = await repository.tablesMetadata(experimentId, WAREHOUSE);
       const page = await repository.getTableData({ ...baseParams, page: 1, pageSize: 5 });
 
       assertSuccess(listing);
@@ -778,6 +786,7 @@ describe("ExperimentDataRepository", () => {
 
       it("refuses the distinct values of a contributor's name", async () => {
         const result = await repository.getDistinctColumnValues({
+          source: WAREHOUSE,
           experimentId: baseParams.experimentId,
           experiment: anonymized,
           tableName: "raw_data",
@@ -1469,7 +1478,11 @@ describe("ExperimentDataRepository", () => {
   });
 
   describe("table shape", () => {
-    const readParams = { experimentId: faker.string.uuid(), experiment: mockExperiment };
+    const readParams = {
+      experimentId: faker.string.uuid(),
+      experiment: mockExperiment,
+      source: WAREHOUSE,
+    };
     const macroTable: ExperimentTableMetadata = {
       identifier: "macro_123",
       tableType: "macro",
@@ -1492,6 +1505,7 @@ describe("ExperimentDataRepository", () => {
       const aggregation = { groupBy: [{ column: "phi2" }], functions: [] };
 
       const result = await repository.getTableData({
+        source: WAREHOUSE,
         experimentId: faker.string.uuid(),
         experiment: mockExperiment,
         tableName: "macro_123",
@@ -1522,6 +1536,7 @@ describe("ExperimentDataRepository", () => {
         experimentId: faker.string.uuid(),
         experiment: mockExperiment,
         tableName: "macro_123",
+        source: WAREHOUSE,
       };
 
       const aggregated = await repository.getTableData({
@@ -1669,6 +1684,7 @@ describe("ExperimentDataRepository", () => {
     const readPage = (metadata: ExperimentTableMetadata, extra: object = {}) => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([metadata]));
       return repository.getTableData({
+        source: WAREHOUSE,
         ...{ experimentId: faker.string.uuid(), experiment: mockExperiment },
         tableName: metadata.identifier,
         page: 1,
@@ -1856,6 +1872,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       const result = await repository.getTableData({
+        source: WAREHOUSE,
         experimentId,
         experiment: mockExperiment,
         tableName: "device",
@@ -1896,6 +1913,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(failure(error));
 
       const result = await repository.getTableData({
+        source: WAREHOUSE,
         experimentId,
         experiment: mockExperiment,
         tableName: "raw_data",
@@ -1929,6 +1947,7 @@ describe("ExperimentDataRepository", () => {
       );
 
       const result = await repository.getTableData({
+        source: WAREHOUSE,
         experimentId,
         experiment: mockExperiment,
         tableName: "unknown_table",
@@ -1949,6 +1968,7 @@ describe("ExperimentDataRepository", () => {
       tableName: "raw_data",
       column: "site",
       limit: 3,
+      source: WAREHOUSE,
     };
     const metadata: ExperimentTableMetadata[] = [
       {
@@ -2102,7 +2122,7 @@ describe("ExperimentDataRepository", () => {
 
   describe("getTableColumns", () => {
     const experimentId = faker.string.uuid();
-    const params = { experimentId, tableName: "raw_data" };
+    const params = { experimentId, tableName: "raw_data", source: WAREHOUSE };
     const columns = [
       { name: "time", type_name: "TIMESTAMP", type_text: "TIMESTAMP", position: 0 },
       { name: "temp", type_name: "DOUBLE", type_text: "DOUBLE", position: 1 },
@@ -2160,7 +2180,9 @@ describe("ExperimentDataRepository", () => {
 
       await repository.getTableColumns(params);
       metadataSpy.mockResolvedValue(success(metadataAt("r2")));
-      await testApp.module.get<CachePort>(CACHE_PORT).invalidate(`table-metadata:${experimentId}`);
+      await testApp.module
+        .get<CachePort>(CACHE_PORT)
+        .invalidate(`table-metadata:warehouse:${experimentId}`);
       await repository.getTableColumns(params);
 
       expect(executeSpy).toHaveBeenCalledTimes(2);
@@ -2217,7 +2239,11 @@ describe("ExperimentDataRepository", () => {
         }),
       );
 
-      const result = await repository.getTableColumns({ experimentId, tableName: "macro_123" });
+      const result = await repository.getTableColumns({
+        experimentId,
+        tableName: "macro_123",
+        source: WAREHOUSE,
+      });
 
       assertSuccess(result);
       expect(result.value[1]).toEqual({
@@ -2245,6 +2271,7 @@ describe("ExperimentDataRepository", () => {
       experiment: mockExperiment,
       page: 1,
       pageSize: 5,
+      source: WAREHOUSE,
     };
 
     it.each([
@@ -2400,6 +2427,7 @@ describe("ExperimentDataRepository", () => {
         const filters = [{ column: "q", operator: "contains" as const, value: "0" }];
 
         const result = await repository.getTableData({
+          source: WAREHOUSE,
           experimentId: params.experimentId,
           experiment: mockExperiment,
           tableName: "raw_data",
@@ -2432,6 +2460,7 @@ describe("ExperimentDataRepository", () => {
       const execute = vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(empty));
 
       const result = await repository.getTableData({
+        source: WAREHOUSE,
         experimentId: params.experimentId,
         experiment: mockExperiment,
         tableName: "raw_data",
@@ -2530,6 +2559,7 @@ describe("ExperimentDataRepository", () => {
 
     it("resolves both shapes in the same experiment and describes secondary aliases", async () => {
       const result = await repository.getTableColumns({
+        source: WAREHOUSE,
         experimentId,
         tableName: "raw_data",
         join,
@@ -2546,6 +2576,7 @@ describe("ExperimentDataRepository", () => {
 
     it("passes a scoped semantic secondary source and anonymizes joined contributor cells", async () => {
       const result = await repository.getTableData({
+        source: WAREHOUSE,
         experimentId,
         experiment: { ...mockExperiment, anonymizeContributors: true },
         tableName: "raw_data",
@@ -2574,6 +2605,7 @@ describe("ExperimentDataRepository", () => {
 
     it("pseudonymizes secondary contributor filters and ordering", async () => {
       const result = await repository.getTableData({
+        source: WAREHOUSE,
         experimentId,
         experiment: { ...mockExperiment, anonymizeContributors: true },
         tableName: "raw_data",
@@ -2620,6 +2652,7 @@ describe("ExperimentDataRepository", () => {
       );
       const filters = [{ column: "Plant.id", operator: "equals" as const, value: "literal" }];
       const result = await repository.getTableData({
+        source: WAREHOUSE,
         experimentId,
         experiment: { ...mockExperiment, anonymizeContributors: true },
         tableName: "raw_data",
@@ -2641,6 +2674,7 @@ describe("ExperimentDataRepository", () => {
         success(metadata.slice(0, 1)),
       );
       const result = await repository.getTableData({
+        source: WAREHOUSE,
         experimentId,
         experiment: mockExperiment,
         tableName: "raw_data",
@@ -2664,6 +2698,7 @@ describe("ExperimentDataRepository", () => {
         }),
       );
       const result = await repository.getTableData({
+        source: WAREHOUSE,
         experimentId,
         experiment: mockExperiment,
         tableName: "raw_data",
@@ -2671,6 +2706,354 @@ describe("ExperimentDataRepository", () => {
       });
       assertFailure(result);
       expect(result.error.message).toContain("timestamp or date");
+    });
+  });
+
+  describe("reading from the store", () => {
+    const experimentId = faker.string.uuid();
+    const storeColumns = [
+      { name: "id", type_name: "LONG", type_text: "BIGINT", position: 0 },
+      { name: "plot", type_name: "STRING", type_text: "STRING", position: 1 },
+    ];
+    let servingStore: ServingStorePort;
+
+    const largeTable: ExperimentTableMetadata = {
+      identifier: "raw_data",
+      tableType: "static",
+      displayName: null,
+      rowCount: 1_000_000,
+      latestRowAt: null,
+      schemaRevision: "r1",
+      questionsSchema: "OBJECT<plot: STRING>",
+    };
+
+    beforeEach(() => {
+      servingStore = testApp.module.get(SERVING_STORE_PORT);
+      vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(success([largeTable]));
+    });
+
+    it("reads a large table's page in one statement, never picking it by id first", async () => {
+      const execute = vi
+        .spyOn(servingStore, "executeQuery")
+        .mockResolvedValue(
+          success({ columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: false }),
+        );
+      const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        page: 2,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(execute).toHaveBeenCalledTimes(1);
+      expect(execute.mock.calls[0][0].sql).toContain("LIMIT 10\nOFFSET 10");
+      expect(warehouse).not.toHaveBeenCalled();
+      expect(result.value[0]).toMatchObject({ totalRows: 1_000_000, page: 2 });
+      expect(result.value[0].data?.rows).toEqual([{ id: "1", plot: "A1" }]);
+    });
+
+    it("sorts a text answer by its numeric value in the store", async () => {
+      const execute = vi
+        .spyOn(servingStore, "executeQuery")
+        .mockResolvedValue(
+          success({ columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: false }),
+        );
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        orderBy: "plot",
+        orderDirection: "DESC",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(execute.mock.calls[0][0].sql).toContain("toDecimal128OrNull");
+    });
+
+    it("counts a filtered page in the store", async () => {
+      const countSql = "SELECT toString(count()) AS total";
+      const execute = vi.spyOn(servingStore, "executeQuery").mockImplementation(({ sql }) =>
+        Promise.resolve(
+          sql.startsWith(countSql)
+            ? success({
+                columns: [{ name: "total", type_name: "LONG", type_text: "BIGINT", position: 0 }],
+                rows: [["3"]],
+                totalRows: 1,
+                truncated: false,
+              })
+            : success({
+                columns: storeColumns,
+                rows: [["1", "A1"]],
+                totalRows: 1,
+                truncated: false,
+              }),
+        ),
+      );
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        filters: [{ column: "plot", operator: "equals", value: "A1" }],
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(execute).toHaveBeenCalledTimes(2);
+      expect(result.value[0].totalRows).toBe(3);
+      expect(result.value[0].data?.rows).toEqual([{ id: "1", plot: "A1" }]);
+    });
+
+    it("keeps charts' reads on the warehouse until the store aggregates", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable]),
+      );
+      const warehouse = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(
+          success({ columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: false }),
+        );
+      const store = vi.spyOn(servingStore, "executeQuery");
+
+      await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        aggregation: { groupBy: [{ column: "plot" }] },
+        source: "store",
+      });
+      await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        columns: ["plot"],
+        source: "store",
+      });
+
+      expect(warehouse).toHaveBeenCalled();
+      expect(store).not.toHaveBeenCalled();
+    });
+
+    it("keeps a read joined to a second table on the warehouse, paged or not", async () => {
+      const store = vi.spyOn(servingStore, "executeQuery");
+      const warehouseMetadata = vi
+        .spyOn(databricksPort, "getExperimentTableMetadata")
+        .mockResolvedValue(success([]));
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        join: {
+          tableName: "macro_1",
+          matchColumn: "device_id",
+          primaryTimeColumn: "timestamp",
+          secondaryTimeColumn: "timestamp",
+          toleranceMinutes: 5,
+        },
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertFailure(result);
+      expect(warehouseMetadata).toHaveBeenCalled();
+      expect(servingStore.getExperimentTableMetadata).not.toHaveBeenCalled();
+      expect(store).not.toHaveBeenCalled();
+    });
+
+    it("reads a table the store does not hold from the warehouse", async () => {
+      const deviceTable: ExperimentTableMetadata = {
+        ...largeTable,
+        identifier: "device",
+        rowCount: 2,
+        questionsSchema: null,
+      };
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([deviceTable]),
+      );
+      const warehouse = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(success({ columns: [], rows: [], totalRows: 0, truncated: false }));
+      const store = vi.spyOn(servingStore, "executeQuery");
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "device",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(warehouse).toHaveBeenCalled();
+      expect(store).not.toHaveBeenCalled();
+    });
+
+    it("runs two distinct device reads apart when only their limits differ", async () => {
+      const owner = await testApp.createTestUser({});
+      for (const thingName of ["thing-a", "thing-b", "thing-c"]) {
+        await testApp.createIotDevice({ createdBy: owner, serialNumber: thingName, thingName });
+      }
+      vi.spyOn(servingStore, "getExperimentIds").mockResolvedValue(
+        success(["thing-a", "thing-b", "thing-c"]),
+      );
+      const devices = {
+        columns: [
+          {
+            name: "device",
+            type_name: "STRUCT",
+            type_text: WellKnownColumnTypes.DEVICE,
+            position: 0,
+          },
+        ],
+        rows: [["thing-a"], ["thing-b"], ["thing-c"]],
+        totalRows: 3,
+        truncated: false,
+      };
+      const settle: (() => void)[] = [];
+      const execute = vi.spyOn(servingStore, "executeQuery").mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            settle.push(() => resolve(success(devices)));
+          }),
+      );
+      const distinctDevices = (limit: number) =>
+        repository.getDistinctColumnValues({
+          experimentId,
+          experiment: mockExperiment,
+          tableName: "raw_data",
+          column: "device",
+          limit,
+          source: "store",
+        });
+
+      const reads = Promise.all([distinctDevices(1), distinctDevices(5)]);
+
+      // A distinct device read limits after the store answers, so both send the same SQL.
+      await vi.waitFor(() => expect(execute).toHaveBeenCalledTimes(2));
+      expect(execute.mock.calls[0][0].sql).toBe(execute.mock.calls[1][0].sql);
+      settle.forEach((resolve) => resolve());
+
+      const [first, all] = await reads;
+      assertSuccess(first);
+      assertSuccess(all);
+      expect(first.value).toMatchObject({ truncated: true });
+      expect(first.value.values).toHaveLength(1);
+      expect(all.value).toMatchObject({ truncated: false });
+      expect(all.value.values).toHaveLength(3);
+    });
+
+    describe("in an anonymized experiment", () => {
+      const anonymized = { ...mockExperiment, anonymizeContributors: true };
+      const contributorColumns = [
+        { name: "id", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        {
+          name: "contributor",
+          type_name: "STRUCT",
+          type_text: WellKnownColumnTypes.CONTRIBUTOR,
+          position: 1,
+        },
+      ];
+
+      it("refuses a filter on the contributor column itself, which compares real ids", async () => {
+        const execute = vi
+          .spyOn(servingStore, "executeQuery")
+          .mockResolvedValue(
+            success({ columns: contributorColumns, rows: [], totalRows: 0, truncated: false }),
+          );
+
+        const result = await repository.getTableData({
+          experimentId,
+          experiment: anonymized,
+          tableName: "raw_data",
+          filters: [{ column: "contributor", operator: "equals", value: faker.string.uuid() }],
+          page: 1,
+          pageSize: 10,
+          source: "store",
+        });
+
+        assertFailure(result);
+        expect(result.error.statusCode).toBe(400);
+        // Only the lookup of the table's column types reached the store.
+        expect(execute).toHaveBeenCalledTimes(1);
+      });
+
+      it("compares a contributor id filter as the pseudonym", async () => {
+        const pseudo = new ContributorAnonymizerService().pseudonymFor(anonymized.id, "u1");
+        const execute = vi
+          .spyOn(servingStore, "executeQuery")
+          .mockResolvedValue(
+            success({ columns: contributorColumns, rows: [], totalRows: 0, truncated: false }),
+          );
+
+        const result = await repository.getTableData({
+          experimentId,
+          experiment: anonymized,
+          tableName: "raw_data",
+          filters: [{ column: "contributor.id", operator: "equals", value: pseudo }],
+          page: 1,
+          pageSize: 10,
+          source: "store",
+        });
+
+        assertSuccess(result);
+        const filtered = execute.mock.calls
+          .map(([query]) => query.sql)
+          .filter((sql) => sql.includes(pseudo));
+        expect(filtered.length).toBeGreaterThan(0);
+        expect(filtered.every((sql) => sql.includes("concat('Contributor-'"))).toBe(true);
+      });
+
+      it("sorts by a contributor's name in the order of its pseudonyms", async () => {
+        const execute = vi
+          .spyOn(servingStore, "executeQuery")
+          .mockResolvedValue(
+            success({ columns: contributorColumns, rows: [], totalRows: 0, truncated: false }),
+          );
+
+        const result = await repository.getTableData({
+          experimentId,
+          experiment: anonymized,
+          tableName: "raw_data",
+          orderBy: "contributor.name",
+          page: 1,
+          pageSize: 10,
+          source: "store",
+        });
+
+        assertSuccess(result);
+        const page = execute.mock.calls.map(([query]) => query.sql).at(-1) ?? "";
+        expect(page).toContain("ORDER BY concat('Contributor-'");
+        expect(page).not.toContain("indexOf(");
+      });
+    });
+
+    it("caches each source's tables apart", async () => {
+      const warehouseListing = vi
+        .spyOn(databricksPort, "getExperimentTableMetadata")
+        .mockResolvedValue(success([{ ...largeTable, rowCount: 5 }]));
+
+      const fromStore = await repository.tablesMetadata(experimentId, "store");
+      const fromWarehouse = await repository.tablesMetadata(experimentId, "warehouse");
+
+      assertSuccess(fromStore);
+      assertSuccess(fromWarehouse);
+      expect(fromStore.value[0].rowCount).toBe(1_000_000);
+      expect(fromWarehouse.value[0].rowCount).toBe(5);
+      expect(warehouseListing).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -2,7 +2,6 @@ import { SqlQueryBuilder } from "../query-builder.base";
 import type { BaseQueryBuilder } from "../query-builder.base";
 import type { AggregateExpression, AggregationSpec, QueryOrdering } from "../query-builder.types";
 import { QueryBuilderInputError } from "../query-builder.types";
-import { contributorPseudonym } from "./filter";
 
 /** True when the spec has any grouping or aggregate functions to apply. */
 export function hasAggregationContent(spec: AggregationSpec | undefined): boolean {
@@ -79,7 +78,7 @@ function sortTarget(
 
   const target = builder.escapeIdentifier(ordering.column);
   return ordering.mode?.kind === "pseudonym"
-    ? contributorPseudonym(target, ordering.mode.salt, builder)
+    ? builder.contributorPseudonym(target, ordering.mode.salt)
     : target;
 }
 

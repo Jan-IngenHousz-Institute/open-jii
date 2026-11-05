@@ -11,6 +11,8 @@ import { CacheAdapter } from "../common/modules/cache/cache.adapter";
 import { CacheModule } from "../common/modules/cache/cache.module";
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
+import { ServingStoreAdapter } from "../common/modules/serving-store/serving-store.adapter";
+import { ServingStoreModule } from "../common/modules/serving-store/serving-store.module";
 import { CreateMacroUseCase } from "../macros/application/use-cases/create-macro/create-macro";
 import { MacroModule } from "../macros/macro.module";
 import { MetricsModule } from "../metrics/metrics.module";
@@ -23,6 +25,9 @@ import { WorkbookModule } from "../workbooks/workbook.module";
 // Services
 import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
+import { ExperimentDataSourceService } from "./application/services/experiment-data-source.service";
+import { ExperimentStoreReadsService } from "./application/services/experiment-store-reads.service";
+import { ExperimentWarehouseReadsService } from "./application/services/experiment-warehouse-reads.service";
 import { ExportRunReconcilerService } from "./application/services/export-run-reconciler.service";
 import { MultipartUploadService } from "./application/services/multipart-upload.service";
 import { UploadRunReconcilerService } from "./application/services/upload-run-reconciler.service";
@@ -92,6 +97,7 @@ import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { CACHE_PORT, SCHEMA_CACHE_PORT } from "./core/ports/cache.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
+import { SERVING_STORE_PORT } from "./core/ports/serving-store.port";
 import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
 // Repositories
 import { ExperimentDataAnnotationsRepository } from "./core/repositories/experiment-data-annotations.repository";
@@ -99,6 +105,7 @@ import { ExperimentDataExportsRepository } from "./core/repositories/experiment-
 import { ExperimentDataUploadsRepository } from "./core/repositories/experiment-data-uploads.repository";
 // Repositories
 import { ExperimentDataRepository } from "./core/repositories/experiment-data.repository";
+import { ExperimentDeviceRegistryRepository } from "./core/repositories/experiment-device-registry.repository";
 import { ExperimentJoinCodeRepository } from "./core/repositories/experiment-join-code.repository";
 import { ExperimentJoinRequestRepository } from "./core/repositories/experiment-join-request.repository";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
@@ -132,6 +139,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     MetricsModule,
     CacheModule,
     DatabricksModule,
+    ServingStoreModule,
     AwsModule,
     AnalyticsModule,
     NotificationModule,
@@ -164,6 +172,10 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     {
       provide: DATABRICKS_PORT,
       useExisting: DatabricksAdapter,
+    },
+    {
+      provide: SERVING_STORE_PORT,
+      useExisting: ServingStoreAdapter,
     },
     {
       provide: AWS_PORT,
@@ -205,6 +217,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentVisualizationRepository,
     ExperimentDashboardRepository,
     ExperimentDataRepository,
+    ExperimentDeviceRegistryRepository,
     ExperimentDataExportsRepository,
     ExperimentDataUploadsRepository,
     FlowRepository,
@@ -222,6 +235,9 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     EmbargoProcessorService,
     ExportRunReconcilerService,
     ContributorAnonymizerService,
+    ExperimentDataSourceService,
+    ExperimentWarehouseReadsService,
+    ExperimentStoreReadsService,
     MultipartUploadService,
     UploadRunReconcilerService,
 

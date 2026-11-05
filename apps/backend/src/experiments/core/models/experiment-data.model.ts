@@ -1,5 +1,11 @@
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
+import type {
+  AggregationSpec,
+  FilterCondition,
+  QueryOrdering,
+} from "../../../common/modules/databricks/services/query-builder/query-builder.types";
+
 export type VariantColumn = "macro_output" | "questions_data" | "custom_metadata" | "uploaded_data";
 
 /** What a payload field reads as when the table already holds its name: `device_output`. */
@@ -11,6 +17,9 @@ export const VARIANT_COLUMN_SUFFIX: Record<VariantColumn, string> = {
 };
 
 export type ExperimentTableType = "static" | "macro" | "upload";
+
+/** Where a read of experiment data goes: the warehouse's views, or the serving store. */
+export type ExperimentDataSource = "warehouse" | "store";
 
 export interface TableConfig {
   displayName: string;
@@ -73,6 +82,43 @@ export interface ExperimentTableMetadata {
   questionsSchema?: string | null;
   customMetadataSchema?: string | null;
   uploadSchema?: string | null;
+}
+
+export interface ExperimentQuerySource {
+  tableName: string;
+  tableType: ExperimentTableType;
+  variants?: { columnName: string; schema: string; suffix?: string }[];
+  reservedColumns?: string[];
+  exceptColumns?: string[];
+}
+
+export interface ExperimentAsOfJoin {
+  secondary: ExperimentQuerySource;
+  primaryColumns: string[];
+  secondaryColumns: { name: string; alias: string }[];
+  matchColumn: string;
+  primaryTimeColumn: string;
+  primaryTimeType: string;
+  secondaryTimeColumn: string;
+  secondaryTimeType: string;
+  toleranceMinutes: number;
+}
+
+export interface ExperimentQueryParams {
+  join?: ExperimentAsOfJoin;
+  tableName: string;
+  tableType: ExperimentTableType;
+  experimentId: string;
+  columns?: string[];
+  variants?: { columnName: string; schema: string; suffix?: string }[];
+  reservedColumns?: string[];
+  exceptColumns?: string[];
+  filters?: FilterCondition[];
+  aggregation?: AggregationSpec;
+  distinct?: boolean;
+  ordering?: QueryOrdering;
+  limit?: number;
+  offset?: number;
 }
 
 /**

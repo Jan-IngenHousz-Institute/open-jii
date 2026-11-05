@@ -11,6 +11,7 @@ const localNotes = new Map([
   ["EMAIL_SERVER", "No local SMTP service listens on this address."],
   ["MAILCHIMP_API_KEY", "Mailchimp keys are all-or-none; leave all unset locally."],
   ["AWS_LAMBDA_FUNCTION_NAME", "Leave unset outside Lambda."],
+  ["SERVING_STORE_URL", "No local serving store; experiment data reads from the warehouse."],
 ]);
 
 export function renderEnvExample(target: EnvTarget): string {
