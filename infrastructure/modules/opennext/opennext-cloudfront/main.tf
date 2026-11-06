@@ -77,6 +77,22 @@ resource "aws_lambda_function" "edge_hash_body" {
   }
 }
 
+# Lambda@Edge logs to a group named after its home region, created in whichever region served the
+# request. These are the regions it has logged in so far; a group AWS creates in another region has
+# no retention until it is added here.
+resource "aws_cloudwatch_log_group" "edge_hash_body" {
+  name              = "/aws/lambda/us-east-1.${aws_lambda_function.edge_hash_body.function_name}"
+  retention_in_days = var.log_retention_days
+  tags              = var.tags
+}
+
+resource "aws_cloudwatch_log_group" "edge_hash_body_us_east_1" {
+  provider          = aws.us_east_1
+  name              = "/aws/lambda/us-east-1.${aws_lambda_function.edge_hash_body.function_name}"
+  retention_in_days = var.log_retention_days
+  tags              = var.tags
+}
+
 # Origin Access Control for S3
 resource "aws_cloudfront_origin_access_control" "s3_oac" {
   name                              = "${var.project_name}-s3-oac"

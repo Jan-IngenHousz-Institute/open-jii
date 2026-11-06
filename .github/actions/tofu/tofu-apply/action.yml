@@ -1,5 +1,10 @@
 name: "OpenTofu Apply"
 description: "Runs OpenTofu apply"
+inputs:
+  plan_file:
+    description: "Absolute path of a saved plan to apply exactly; empty plans again and applies"
+    required: false
+    default: ""
 runs:
   using: "composite"
   steps:
@@ -14,4 +19,12 @@ runs:
     - name: OpenTofu Apply
       shell: bash
       working-directory: infrastructure/env/${{ env.RESOLVED_ENV }}
-      run: tofu apply -auto-approve
+      env:
+        PLAN_FILE: ${{ inputs.plan_file }}
+      # A saved plan applies as it was approved, and OpenTofu refuses it once the state has moved on.
+      run: |
+        if [ -n "$PLAN_FILE" ]; then
+          tofu apply -input=false "$PLAN_FILE"
+        else
+          tofu apply -input=false -auto-approve
+        fi

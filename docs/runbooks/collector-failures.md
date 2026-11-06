@@ -18,18 +18,19 @@ aws s3 cp "$prefix$(aws s3 ls "$prefix" | tail -1 | awk '{print $4}')" - | grep 
 The full error is in the run's task output on the `Metrics-Heartbeat-Export-<ENV>` job. The
 collectors, and what goes quiet when one fails:
 
-| Collector           | Series                                  |
-| ------------------- | --------------------------------------- |
-| `experiment_status` | Gold tables age, stale experiments      |
-| `metrics_tables`    | Public metrics age, the usage counts    |
-| `device_silence`    | Silent devices                          |
-| `ingest_quality`    | Malformed payloads                      |
-| `ingest`            | Ingested rows and their latency         |
-| `experiment_rows`   | Rows into experiments and their latency |
-| `broker_to_api`     | Broker to API                           |
-| `macro_results`     | Macro results and their latency         |
-| `macro_backlog`     | Macro backlog                           |
-| `path_idle`         | Since last ingest, since last macro     |
+| Collector            | Series                                      |
+| -------------------- | ------------------------------------------- |
+| `experiment_status`  | Gold tables age, stale experiments          |
+| `metrics_tables`     | Public metrics age, the usage counts        |
+| `device_silence`     | Silent devices                              |
+| `ingest_quality`     | Malformed payloads                          |
+| `ingest`             | Ingested rows and their latency             |
+| `ingest_healthcheck` | Since last ingest health check, its latency |
+| `experiment_rows`    | Rows into experiments and their latency     |
+| `broker_to_api`      | Broker to API                               |
+| `macro_results`      | Macro results and their latency             |
+| `macro_backlog`      | Macro backlog                               |
+| `path_idle`          | Since last ingest, since last macro         |
 
 ## Likely causes, most common first
 

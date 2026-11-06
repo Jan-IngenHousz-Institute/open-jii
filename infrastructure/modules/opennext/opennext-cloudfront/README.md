@@ -25,6 +25,10 @@ reverse proxy. Behaviors are matched in the order below; the first path pattern 
   the bare host and copies `host` into `x-forwarded-host`, which the origins route on.
 - `edge_hash_body` is a Lambda@Edge function on origin request. It adds `x-amz-content-sha256` to
   bodied requests, so the Lambda function URL accepts them under origin access control.
+  It logs to `/aws/lambda/us-east-1.<function>` in whichever region served the request. The
+  module sets retention on that group in the caller's region and in `us-east-1`, the regions it
+  has logged in so far. A group AWS creates in any other region has no retention until it is
+  declared here.
 
 ## 🗄 Page caching
 
@@ -66,6 +70,7 @@ Origin errors (500, 502, 503 and 504) are never cached (`error_caching_min_ttl =
 | `aws_cloudfront_origin_access_control` | Signed access to the S3 bucket and the Lambda function URLs          |
 | `aws_cloudfront_function`              | `forward_host_header` and `posthog_rewrite`                          |
 | `aws_lambda_function`                  | `edge_hash_body`, the Lambda@Edge body hasher                        |
+| `aws_cloudwatch_log_group`             | The body hasher's log groups, with retention                         |
 
 ## ⚙️ Usage
 
@@ -99,6 +104,7 @@ module "opennext_cloudfront" {
 | `waf_acl_id`                 | WAFv2 ACL to associate with the distribution         | `string`       | `""`               |    No    |
 | `enable_logging`             | Enable CloudFront access logging                     | `bool`         | `false`            |    No    |
 | `log_bucket`                 | S3 bucket for the access logs                        | `string`       | `""`               |    No    |
+| `log_retention_days`         | Retention for the Lambda@Edge log groups (days)      | `number`       | `14`               |    No    |
 | `tags`                       | Tags to apply to resources                           | `map(string)`  | `{}`               |    No    |
 
 ## 📤 Outputs

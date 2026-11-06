@@ -2,6 +2,17 @@ module "terraform_state_s3" {
   source      = "../../modules/s3"
   bucket_name = "open-jii-terraform-state-${var.environment}"
 
+  lifecycle_rules = [
+    {
+      id                                 = "expire-saved-plans"
+      status                             = "Enabled"
+      prefix                             = "plans/"
+      transitions                        = []
+      expiration_days                    = 7
+      noncurrent_version_expiration_days = 1
+    }
+  ]
+
   providers = {
     aws    = aws
     aws.dr = aws.dr
@@ -858,7 +869,7 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/sources",
     # event hooks
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/hooks",
-  ], local.centrum_feed_notebooks)
+  ], local.centrum_feed_notebooks, local.ingest_healthcheck_notebooks)
 
   # Use Databricks per-flow trigger defaults; notebooks may override individual tables.
   configuration = merge({
@@ -2475,6 +2486,17 @@ module "opennext" {
   }
 }
 
+# Adopts the Lambda@Edge log groups AWS created before retention was set in code.
+import {
+  to = module.opennext.module.cloudfront.aws_cloudwatch_log_group.edge_hash_body
+  id = "/aws/lambda/us-east-1.open-jii-edge-hash-body"
+}
+
+import {
+  to = module.opennext.module.cloudfront.aws_cloudwatch_log_group.edge_hash_body_us_east_1
+  id = "/aws/lambda/us-east-1.open-jii-edge-hash-body"
+}
+
 module "migration_runner_ecr" {
   source = "../../modules/ecr"
 
@@ -3349,10 +3371,12 @@ module "grafana_dashboard" {
 
   # Passed in rather than interpolated: a rule watching a misspelled function is NoData
   # forever, which is either permanently firing or permanently silent.
-  metrics_forwarder_function_name = module.metrics_forwarder.function_name
-  cost_publisher_function_name    = module.cost_publisher.function_name
-  metrics_publisher_function_name = module.grafana_metrics_publisher.function_name
-  db_cluster_identifier           = "open-jii-${var.environment}-db-cluster"
+  metrics_forwarder_function_name  = module.metrics_forwarder.function_name
+  cost_publisher_function_name     = module.cost_publisher.function_name
+  metrics_publisher_function_name  = module.grafana_metrics_publisher.function_name
+  ingest_healthcheck_function_name = local.ingest_healthcheck_publishing ? module.ingest_healthcheck.function_name : ""
+  ingest_healthcheck_alerting      = local.ingest_healthcheck_alerting
+  db_cluster_identifier            = "open-jii-${var.environment}-db-cluster"
 
   # Measured over 14 days on this stream while dev's consumer ran on a schedule: the median
   # iterator age was 2.8M ms and 600000 would have fired in 315 of 316 hours. Continuous since
@@ -3404,6 +3428,26 @@ module "cost_publisher" {
   source = "../../modules/grafana/cost-publisher"
 
   environment = var.environment
+}
+
+locals {
+  # Flip once the centrum pipeline that drops health checks from raw_data is running here.
+  ingest_healthcheck_publishing = false
+
+  # The pipeline carries the notebook only while publishing is on: a settings change starts it before
+  # a release has deployed a new notebook.
+  ingest_healthcheck_notebooks = local.ingest_healthcheck_publishing ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/ingest_healthchecks"] : []
+
+  # Flip after the first HealthcheckAgeMinutes datapoint appears, and not with the publisher: the
+  # stalled rule fires on no data, so switching it on earlier pages before any message is read.
+  ingest_healthcheck_alerting = false
+}
+
+module "ingest_healthcheck" {
+  source = "../../modules/monitoring/ingest-healthcheck"
+
+  environment        = var.environment
+  publishing_enabled = local.ingest_healthcheck_publishing
 }
 
 module "heartbeat_metrics_s3" {

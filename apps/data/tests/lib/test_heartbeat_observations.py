@@ -57,6 +57,8 @@ def test_metric_names_are_the_literals_the_catalog_binds():
     assert heartbeat.MACRO_BACKLOG_METRIC == "MacroBacklogRows"
     assert heartbeat.INGEST_IDLE_METRIC == "IngestIdleMinutes"
     assert heartbeat.MACRO_IDLE_METRIC == "MacroIdleMinutes"
+    assert heartbeat.HEALTHCHECK_AGE_METRIC == "HealthcheckAgeMinutes"
+    assert heartbeat.HEALTHCHECK_LATENCY_METRIC == "HealthcheckLatencyP95Seconds"
     assert heartbeat.DRIVER_OLD_GEN_METRIC == "DriverOldGenAfterFullGcPercent"
     assert heartbeat.DATABRICKS_DAILY_COST_METRIC == "DatabricksDailyCostUsd"
     assert heartbeat.DATABRICKS_WEEKLY_COST_METRIC == "DatabricksWeeklyCostUsd"

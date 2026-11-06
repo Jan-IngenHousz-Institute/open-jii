@@ -77,7 +77,8 @@ jobs:
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+          DATABRICKS_AUTH_TYPE: github-oidc
+          DATABRICKS_TOKEN_AUDIENCE: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
 
       - name: Plan bundle deployment
         working-directory: apps/data
@@ -87,7 +88,8 @@ jobs:
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+          DATABRICKS_AUTH_TYPE: github-oidc
+          DATABRICKS_TOKEN_AUDIENCE: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
 
       - name: Deploy bundle
         id: deploy-bundle
@@ -98,7 +100,8 @@ jobs:
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+          DATABRICKS_AUTH_TYPE: github-oidc
+          DATABRICKS_TOKEN_AUDIENCE: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
 
       - name: Publish DORA Metrics
         if: always()
@@ -117,4 +120,5 @@ jobs:
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+          DATABRICKS_AUTH_TYPE: github-oidc
+          DATABRICKS_TOKEN_AUDIENCE: ${{ secrets.DATABRICKS_ACCOUNT_ID }}

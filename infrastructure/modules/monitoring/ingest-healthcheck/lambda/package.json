@@ -1,0 +1,13 @@
+{
+  "name": "ingest-healthcheck",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Publishes a synthetic message through the ingest IoT rule once a minute",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm ci --omit=dev && rm -f function.zip && zip -Xr function.zip index.js package.json node_modules > /dev/null"
+  },
+  "dependencies": {
+    "@aws-sdk/client-iot-data-plane": "^3.0.0"
+  }
+}

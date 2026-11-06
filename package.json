@@ -24,7 +24,7 @@
     "view-report": "turbo run view-report",
     "tf": "pnpm run tf:dev",
     "tf:fmt": "cd infrastructure && tofu fmt --recursive",
-    "tf:dev": "cd infrastructure/env/dev && tofu init && tofu plan && tofu apply",
+    "tf:dev": "cd infrastructure/env/dev && tofu init && tofu plan",
     "db:migrate": "turbo db:migrate",
     "db:generate": "turbo --filter @repo/database db:generate",
     "db:studio": "turbo --filter @repo/database db:studio",

@@ -75,6 +75,12 @@ MACRO_IDLE_METRIC = "MacroIdleMinutes"
 MACRO_FAILED_ROWS_METRIC = "MacroFailedRows"
 MACRO_PROTOCOL_FAILURES_METRIC = "MacroProtocolFailures"
 
+# The ingest health check, a synthetic message sent through the real ingest rule every minute: minutes
+# since the newest one reached Kinesis, and p95 seconds from a message's sending to bronze's write over
+# the last hour. The age is unbounded, so a path stopped for a day reads a day.
+HEALTHCHECK_AGE_METRIC = "HealthcheckAgeMinutes"
+HEALTHCHECK_LATENCY_METRIC = "HealthcheckLatencyP95Seconds"
+
 PATH_BUCKET_MINUTES = 30
 
 # How full a classic pipeline driver's old generation is right after a full collection, per
