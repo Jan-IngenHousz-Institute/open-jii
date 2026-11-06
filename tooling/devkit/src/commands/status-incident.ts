@@ -380,10 +380,19 @@ async function inspect(client: ContentfulManagement, deps: Deps): Promise<Inspec
   return {
     environment: client.environment,
     warnings,
-    incidents: entries
-      .map((entry) => inspectedOf(entry, updates, now))
-      .sort((a, b) => Date.parse(b.startsAt ?? "") - Date.parse(a.startsAt ?? "")),
+    incidents: entries.map((entry) => inspectedOf(entry, updates, now)).sort(newestStartFirst),
   };
+}
+
+// A start that is missing or unreadable sorts last instead of breaking the order of the rest.
+function startMs(incident: InspectedIncident): number {
+  const ms = Date.parse(incident.startsAt ?? "");
+  return Number.isNaN(ms) ? -Infinity : ms;
+}
+
+function newestStartFirst(a: InspectedIncident, b: InspectedIncident): number {
+  const [left, right] = [startMs(a), startMs(b)];
+  return left === right ? 0 : right > left ? 1 : -1;
 }
 
 function newUpdateOf(input: UpdateInput, now: Date): RawUpdate {
