@@ -200,9 +200,7 @@ export class CmsModels {
       ? live
       : await this.client.putContentType(id, model.requestBodyKeeping(live), live?.version ?? null);
     const activated =
-      isCurrent && saved.state === "published"
-        ? saved
-        : await this.client.activateContentType(id, saved.version);
+      isCurrent && saved.state === "published" ? saved : await this.activate(id, saved);
 
     const editorInterface = await this.applyEditorInterface(id, model, activated);
 
@@ -278,6 +276,17 @@ export class CmsModels {
     if (missing.length > 0) {
       throw new Error(
         `${id} links to ${missing.join(", ")}, which ${missing.length > 1 ? "do" : "does"} not exist live, and Contentful rejects a link validation to a missing type. Apply ${missing.join(", ")} first.`,
+      );
+    }
+  }
+
+  private async activate(id: string, saved: LiveContentType): Promise<LiveContentType> {
+    try {
+      return await this.client.activateContentType(id, saved.version);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "The request failed";
+      throw new Error(
+        `${reason}. The ${id} content type was saved (live version ${saved.version}) but not activated, so Contentful still serves the previous published version. Run diff, then pnpm cms:models apply ${id} --expected-version ${saved.version} --environment ${this.client.environment} activates it without saving it again.`,
       );
     }
   }

@@ -723,6 +723,52 @@ describe("apply", () => {
     });
   });
 
+  describe("when activating the saved type fails", () => {
+    function failActivation(fake: FakeContentful): void {
+      const original = fake.request.getMockImplementation();
+      fake.request.mockImplementation((input, init) => {
+        const url = input instanceof Request ? input.url : input.toString();
+        const isActivation = init?.method === "PUT" && url.endsWith("/published");
+        if (isActivation) {
+          return Promise.resolve(
+            Response.json({ sys: { type: "Error", id: "UnprocessableEntity" } }, { status: 422 }),
+          );
+        }
+        return original ? original(input, init) : fetch(input, init);
+      });
+    }
+
+    it("names the saved version and the rerun that activates it", async () => {
+      await copyRepoModel("statusUpdate");
+      const { fake, models } = setup();
+      failActivation(fake);
+
+      const failure = await models.apply("statusUpdate", 0, "staging").catch((e: unknown) => e);
+
+      const message = failure instanceof Error ? failure.message : "";
+      expect(message).toContain("422");
+      expect(message).toContain(
+        "The statusUpdate content type was saved (live version 1) but not activated",
+      );
+      expect(message).toContain("apply statusUpdate --expected-version 1 --environment staging");
+    });
+
+    it("lets the advised rerun activate it without saving it again", async () => {
+      await copyRepoModel("statusUpdate");
+      const { fake, models } = setup();
+      const restore = fake.request.getMockImplementation();
+      failActivation(fake);
+      await models.apply("statusUpdate", 0, "staging").catch(() => undefined);
+      if (restore) fake.request.mockImplementation(restore);
+      fake.calls.length = 0;
+
+      await models.apply("statusUpdate", 1, "staging");
+
+      expect(fake.summary()).not.toContain("PUT content_types/statusUpdate");
+      expect(fake.summary()).toContain("PUT content_types/statusUpdate/published");
+    });
+  });
+
   describe("when the editor interface step fails", () => {
     function failEditorInterface(fake: FakeContentful): void {
       const original = fake.request.getMockImplementation();
