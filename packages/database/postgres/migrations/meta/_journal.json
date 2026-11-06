@@ -449,6 +449,13 @@
       "when": 1793628515687,
       "tag": "0063_metrics_publisher_counts_exports_and_uploads",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1793972430073,
+      "tag": "0064_experiment_annotations",
+      "breakpoints": true
     }
   ]
 }
