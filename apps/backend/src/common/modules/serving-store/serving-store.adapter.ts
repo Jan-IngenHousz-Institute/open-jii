@@ -16,8 +16,8 @@ import type { Result } from "../../utils/fp-utils";
 import { QueryBuilderInputError } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
 import type { SchemaData } from "../databricks/services/sql/sql.types";
-import { WarehouseCells } from "./services/cells/warehouse-cells";
 import { ServingStoreClientService } from "./services/client/client.service";
+import { WarehouseCells } from "./services/client/warehouse-cells";
 import { StoreQueryBuilder } from "./services/query-builder/store-query-builder";
 import { StoreTables } from "./services/query-builder/store-tables";
 
