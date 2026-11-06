@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import type { DayRecord } from "./status-document.js";
-import { dayRecordSchema } from "./status-document.js";
+import { DAY_MINUTES, dayRecordSchema } from "./status-document.js";
 import {
   DAY_DEGRADED_MINUTES,
-  DAY_MINUTES,
   dayState,
   minuteOf,
   recordMinute,

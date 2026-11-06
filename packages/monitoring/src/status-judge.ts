@@ -23,7 +23,6 @@ import {
   totalDegradedMinutes,
   uptimePercent,
 } from "./status-history.js";
-import type { MinuteOutcome } from "./status-history.js";
 
 /** A page that takes longer than this to answer feels broken to a visitor, even though it loads. */
 export const WEBSITE_SLOW_PROBE_MS = 3000;
@@ -325,7 +324,7 @@ function nextProbeStreaks(
 function advanceDays(
   history: ComponentHistory | undefined,
   run: Run,
-  outcome: MinuteOutcome,
+  outcome: ComponentState,
   incidentIds: string[],
 ): DayRecord[] {
   if (history === undefined || run.previousMinute === undefined) {

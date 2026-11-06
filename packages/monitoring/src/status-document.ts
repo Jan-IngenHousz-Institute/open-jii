@@ -17,6 +17,8 @@ export const STATUS_DOCUMENT_CACHE_CONTROL = "public, max-age=30, stale-if-error
 /** Days of history kept and shown, counted in UTC. */
 export const STATUS_HISTORY_DAYS = 90;
 
+export const DAY_MINUTES = 1440;
+
 export const STATUS_COMPONENT_IDS = [
   "website",
   "sign-in",
@@ -38,7 +40,7 @@ export type ComponentState = z.infer<typeof componentStateSchema>;
 const dayStateSchema = z.enum(["operational", "degraded", "outage", "maintenance", "none"]);
 export type DayState = z.infer<typeof dayStateSchema>;
 
-const minutesInDay = z.int().check(z.minimum(0), z.maximum(1440));
+const minutesInDay = z.int().check(z.minimum(0), z.maximum(DAY_MINUTES));
 
 const wholeMinutes = z.int().check(z.nonnegative());
 

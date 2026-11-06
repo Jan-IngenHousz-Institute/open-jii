@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { StatusComponent, StatusDocument } from "./status-document.js";
 import {
+  DAY_MINUTES,
+  dayRecordSchema,
   readableStatusDocumentSchema,
   STATUS_DOCUMENT_CACHE_CONTROL,
   statusDocumentSchema,
@@ -98,6 +100,20 @@ describe("readableStatusDocumentSchema", () => {
     };
 
     expect(readableStatusDocumentSchema.safeParse(document).success).toBe(false);
+  });
+});
+
+describe("dayRecordSchema", () => {
+  const [day] = component("website").days;
+
+  it("accepts a whole day of recorded minutes", () => {
+    expect(dayRecordSchema.safeParse({ ...day, recordedMinutes: DAY_MINUTES }).success).toBe(true);
+  });
+
+  it("rejects more minutes than a day holds", () => {
+    expect(dayRecordSchema.safeParse({ ...day, recordedMinutes: DAY_MINUTES + 1 }).success).toBe(
+      false,
+    );
   });
 });
 

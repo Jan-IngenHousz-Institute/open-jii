@@ -1,14 +1,10 @@
-import { STATUS_HISTORY_DAYS } from "./status-document.js";
-import type { DayRecord, DayState } from "./status-document.js";
+import { DAY_MINUTES, STATUS_HISTORY_DAYS } from "./status-document.js";
+import type { ComponentState, DayRecord, DayState } from "./status-document.js";
 
 const MINUTE_MS = 60_000;
-export const DAY_MINUTES = 1440;
 
 /** Short blips stay visible in the day's details but do not colour the bar. */
 export const DAY_DEGRADED_MINUTES = 5;
-
-/** What one judged minute is recorded as; maintenance wins over what was measured. */
-export type MinuteOutcome = "operational" | "degraded" | "outage" | "maintenance";
 
 type DayCounts = Pick<
   DayRecord,
@@ -94,7 +90,7 @@ function addToDay(
 export function recordMinute(
   days: DayRecord[],
   minute: number,
-  outcome: MinuteOutcome,
+  outcome: ComponentState,
   incidentIds: string[],
 ): DayRecord[] {
   const added: DayCounts = {
