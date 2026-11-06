@@ -223,6 +223,20 @@ describe("Page", () => {
       ).toBeInTheDocument();
     });
 
+    it("keeps the extras off while an incident names a component the checks do not cover", async () => {
+      const open = incidentStatusDocument.incidents.find(({ kind }) => kind === "incident");
+      if (open === undefined) {
+        throw new Error("the fixture has no open incident");
+      }
+      await renderPage({
+        ...operationalStatusDocument,
+        incidents: [{ ...open, components: ["sign-in"], impact: "outage" }],
+      });
+
+      expect(screen.queryByText("All systems operational")).not.toBeInTheDocument();
+      expect(document.querySelectorAll("svg.lucide-leaf")).toHaveLength(0);
+    });
+
     it("shows the incident with its updates newest first", async () => {
       await renderPage(incidentStatusDocument);
 
