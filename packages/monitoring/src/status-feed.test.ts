@@ -41,10 +41,10 @@ const { announced } = statusEvents({
 });
 
 describe("statusFeedStateSchema", () => {
-  it("round trips a snapshot from the events, with no cached content yet", () => {
+  it("refuses a snapshot without the content it was sent beside", () => {
     const state = { version: STATUS_FEED_STATE_VERSION, announced };
 
-    expect(statusFeedStateSchema.parse(JSON.parse(JSON.stringify(state)))).toEqual(state);
+    expect(statusFeedStateSchema.safeParse(state).success).toBe(false);
   });
 
   it("carries the last good read of Contentful beside it", () => {

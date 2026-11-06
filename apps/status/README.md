@@ -72,7 +72,7 @@ The publisher writes `data/status.json` with `Cache-Control: public, max-age=30,
 
 ## The document contract
 
-`packages/monitoring/src/status-document.ts` defines the file. The publisher validates every document against `statusDocumentSchema` before it writes. The page parses with `readableStatusDocumentSchema`, which is the same schema except that it drops components whose `id` is not in the page's own list. A component added in the publisher first therefore does not break pages built before it.
+`packages/monitoring/src/status-document.ts` defines the file. The publisher validates every document against `statusDocumentSchema` before it writes. The page parses with `readableStatusDocumentSchema`, which is the same schema except that it drops components whose `id` is not in the page's own list, and the ids it does not know from an incident's `components`, leaving out an incident that names only those. A component added in the publisher first therefore does not break pages built before it.
 
 Older pages also ignore keys they do not know, so adding an optional field is safe. Anything else is a change an older page cannot read: a new required field, a removed or renamed field, a new value in an enum such as a component state or an incident stage, or a new `STATUS_DOCUMENT_VERSION`. A page that fails to parse a document treats it like a failed fetch and keeps showing the last good one until it goes stale.
 
