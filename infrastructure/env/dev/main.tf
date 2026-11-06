@@ -108,6 +108,38 @@ module "docusaurus_s3" {
   }
 }
 
+module "status_public_s3" {
+  source                      = "../../modules/s3"
+  enable_versioning           = false
+  bucket_name                 = "open-jii-status-public-${var.environment}"
+  cloudfront_distribution_arn = module.status_cloudfront.cloudfront_distribution_arn
+  create_cloudfront_policy    = true
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
+module "status_state_s3" {
+  source            = "../../modules/s3"
+  enable_versioning = true
+  bucket_name       = "open-jii-status-state-${var.environment}"
+
+  # Rewritten every minute; a week of old versions is enough to roll back a bad write.
+  lifecycle_rules = [{
+    id                                 = "expire-old-state"
+    status                             = "Enabled"
+    transitions                        = []
+    noncurrent_version_expiration_days = 7
+  }]
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
 module "kinesis" {
   source      = "../../modules/kinesis"
   stream_name = "open-jii-${var.environment}-data-ingest-stream"
@@ -3158,6 +3190,42 @@ module "docs_cloudfront" {
   # TODO: Add tags, logging configuration
 }
 
+# WAF for the public status page
+module "status_waf" {
+  source = "../../modules/waf"
+
+  service_name = "status"
+  environment  = var.environment
+  # Every visitor polls the page each minute, and a campus NAT shares one IP.
+  rate_limit         = 2000
+  log_retention_days = 365
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "Terraform"
+    Component   = "status-waf"
+  }
+}
+
+# CloudFront distribution for the public status page
+module "status_cloudfront" {
+  source          = "../../modules/cloudfront"
+  aws_region      = var.aws_region
+  bucket_name     = module.status_public_s3.bucket_name
+  certificate_arn = module.route53.cloudfront_certificate_arns["status"]
+  custom_domain   = module.route53.status_domain
+  waf_acl_id      = module.status_waf.cloudfront_web_acl_arn
+
+  # Static export: clean-URL rewrite + real 404, no legacy redirects.
+  enable_redirect_function  = true
+  enable_spa_error_response = false
+  redirect_map              = {}
+
+  # The page polls its data file every minute, often over a phone's data plan.
+  compress = true
+}
+
 # Route53 configuration for openJII services
 module "route53" {
   source = "../../modules/route53"
@@ -3168,9 +3236,10 @@ module "route53" {
 
   # Input for CloudFront domains that need us-east-1 certificates
   cloudfront_domain_configs = {
-    "api"  = "api.${var.environment}.${var.domain_name}"  # For the backend API
-    "docs" = "docs.${var.environment}.${var.domain_name}" # For the Docusaurus static site
-    "web"  = "${var.environment}.${var.domain_name}"      # For the OpenNext frontend
+    "api"    = "api.${var.environment}.${var.domain_name}"    # For the backend API
+    "docs"   = "docs.${var.environment}.${var.domain_name}"   # For the Docusaurus static site
+    "status" = "status.${var.environment}.${var.domain_name}" # For the public status page
+    "web"    = "${var.environment}.${var.domain_name}"        # For the OpenNext frontend
   }
 
   cloudfront_records = {
@@ -3183,6 +3252,11 @@ module "route53" {
     "docs" = {
       domain_name    = module.docs_cloudfront.cloudfront_distribution_domain_name
       hosted_zone_id = module.docs_cloudfront.cloudfront_hosted_zone_id
+    },
+    # Public Status Page Record
+    "status" = {
+      domain_name    = module.status_cloudfront.cloudfront_distribution_domain_name
+      hosted_zone_id = module.status_cloudfront.cloudfront_hosted_zone_id
     },
     # Backend API Record
     "api" = {
@@ -3343,6 +3417,19 @@ module "ssm_opennext_outputs" {
       description = "CloudFront distribution ID for documentation site"
       type        = "String"
     }
+    # Public Status Page Outputs
+    status_bucket = {
+      name        = "/status/${var.environment}/status-bucket"
+      value       = module.status_public_s3.bucket_name
+      description = "S3 bucket name for the public status page assets"
+      type        = "String"
+    }
+    status_cloudfront_distribution_id = {
+      name        = "/status/${var.environment}/cloudfront-distribution-id"
+      value       = module.status_cloudfront.distribution_id
+      description = "CloudFront distribution ID for the public status page"
+      type        = "String"
+    }
   }
   tags = {
     Environment = var.environment
@@ -3389,6 +3476,7 @@ module "grafana_dashboard" {
   metrics_publisher_function_name  = module.grafana_metrics_publisher.function_name
   ingest_healthcheck_function_name = local.ingest_healthcheck_publishing ? module.ingest_healthcheck.function_name : ""
   ingest_healthcheck_alerting      = local.ingest_healthcheck_alerting
+  status_publisher_function_name   = module.status_publisher.function_name
   db_cluster_identifier            = "open-jii-${var.environment}-db-cluster"
 
   # Measured over 14 days on this stream while dev's consumer ran on a schedule: the median
@@ -3461,6 +3549,25 @@ module "ingest_healthcheck" {
 
   environment        = var.environment
   publishing_enabled = local.ingest_healthcheck_publishing
+}
+
+module "status_publisher" {
+  source = "../../modules/monitoring/status-publisher"
+
+  environment = var.environment
+
+  site_bucket_id   = module.status_public_s3.bucket_id
+  site_bucket_arn  = module.status_public_s3.bucket_arn
+  state_bucket_id  = module.status_state_s3.bucket_id
+  state_bucket_arn = module.status_state_s3.bucket_arn
+
+  # A static page that reads nothing from the backend: the home page's public metrics reload
+  # through the SQL warehouse, which a probe every minute would keep starting.
+  web_url             = "https://${module.route53.environment_domain}/en-US/cookie-settings"
+  api_health_url      = "https://${module.route53.api_domain}/health"
+  load_balancer_arn   = module.backend_alb.alb_arn
+  web_distribution_id = module.opennext.cloudfront_distribution_id
+  kinesis_stream_name = module.kinesis.kinesis_stream_name
 }
 
 module "heartbeat_metrics_s3" {

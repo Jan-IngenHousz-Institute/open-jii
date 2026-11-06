@@ -3370,6 +3370,187 @@ resource "grafana_rule_group" "ingest_healthcheck_health" {
   }
 }
 
+resource "grafana_rule_group" "status_publisher_health" {
+  count = var.status_publisher_function_name != "" ? 1 : 0
+
+  provider         = grafana.amg
+  name             = "Status Publisher Health"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  # Catalog entry 135. A failed run is not retried and the next one records its minute as unknown,
+  # so one failure is noise and a few in five minutes, still there at the next check, mean the page
+  # is going stale.
+  rule {
+    name      = "Status Publisher Errors"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Lambda"
+        metricName = "Errors"
+        statistic  = "Sum"
+        dimensions = {
+          FunctionName = var.status_publisher_function_name
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 2"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "The status publisher threw, so the public status page has stopped updating."
+      summary          = "Status publisher is failing to publish"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/status-publisher-errors.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["status-publisher-errors"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "monitoring"
+      metric_id = "status-publisher-errors"
+    }
+  }
+
+  # Catalog entry 136. A function that is never invoked reports no errors, so the rule above stays
+  # quiet through the very failure that matters most. Silence is the signal: no datapoints alert,
+  # and so do fewer than three runs in five minutes, held at the next check.
+  rule {
+    name      = "Status Publisher Stopped"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Lambda"
+        metricName = "Invocations"
+        statistic  = "Sum"
+        dimensions = {
+          FunctionName = var.status_publisher_function_name
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B < 3"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "Alerting"
+    exec_err_state = "Alerting"
+    for            = "5m"
+
+    annotations = {
+      description      = "The status publisher ran fewer than three times in five minutes at two checks in a row, so the public status page has stopped updating."
+      summary          = "Status publisher is not running"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/status-publisher-stopped.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["status-publisher-stopped"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "monitoring"
+      metric_id = "status-publisher-stopped"
+    }
+  }
+}
+
 # A day's spend past its limit, one alert per service or pipeline. Each producer works out the
 # limit and publishes yesterday as a share of it, the same figure the daily board and the Cost
 # dashboard draw. Neither publishes a day before 06:00 UTC, when the billing data has most of it, so

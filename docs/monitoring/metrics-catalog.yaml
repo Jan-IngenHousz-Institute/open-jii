@@ -127,6 +127,9 @@ passes:
     note: >-
       a synthetic message sent through the real ingest rule every minute, so a stopped ingest path
       reaches someone at a quiet hour, how long it takes, and the publisher's own errors
+  - date: 2026-11-04
+    range: [135, 136]
+    note: the status publisher's errors and its silence, since a failed or missing run leaves the public status page's data file as it was
 
 metrics:
   # Ingest path
@@ -2465,3 +2468,51 @@ metrics:
       The publisher runs every minute and is not retried, so one failed run costs one minute of the
       check and the rule waits for more than two in five minutes. While it fires, a stalled health
       check (132) may be the publisher and not the path.
+
+  - num: 135
+    id: status-publisher-errors
+    name: Status publisher errors
+    family: observability
+    area: api
+    source: aws
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: AWS/Lambda
+      metric: Errors
+      stat: Sum
+      dimensions: { FunctionName: "${STATUS_PUBLISHER_FUNCTION_NAME}" }
+    baseline: { method: threshold, max: 2 }
+    runbook: docs/runbooks/status-publisher-errors.md
+    notes: >-
+      The status publisher checks the platform every minute and rewrites the public status page's
+      data file. A run that fails before it writes leaves the file as it was, and the page shows
+      when it was last checked. A failed minute is not retried and the next run records it as
+      unknown time, so this fires when more than two runs fail in five minutes and that still holds
+      at the next check five minutes later, when the page is going stale rather than blinking.
+
+  - num: 136
+    id: status-publisher-stopped
+    name: Status publisher invocations
+    family: observability
+    area: api
+    source: aws
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: AWS/Lambda
+      metric: Invocations
+      stat: Sum
+      dimensions: { FunctionName: "${STATUS_PUBLISHER_FUNCTION_NAME}" }
+    baseline: { method: threshold, min: 3 }
+    runbook: docs/runbooks/status-publisher-stopped.md
+    notes: >-
+      How many times the status publisher ran. A schedule that fires every minute gives five in five
+      minutes, and Lambda's newest minutes can lag, so fewer than three means it stopped or is being
+      refused, and the rule fires when that holds at two checks in a row five minutes apart. Entry
+      135 cannot see this, since a function that never runs reports no errors, which is why this one
+      also fires when CloudWatch has no datapoints at all.
