@@ -77,10 +77,6 @@ export const zExperimentUpdateAnnotationBody = z.object({
   content: zExperimentAnnotationContent.describe("Updated content"),
 });
 
-export const zExperimentAnnotationDeleteBulkPathParam = z.object({
-  id: zLowercaseId.describe("ID of the experiment"),
-});
-
 export const zExperimentAnnotationExperimentPathParam = z.object({
   id: zLowercaseId.describe("ID of the experiment"),
 });

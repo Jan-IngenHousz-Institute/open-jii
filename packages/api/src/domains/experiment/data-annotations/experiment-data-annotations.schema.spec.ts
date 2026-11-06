@@ -7,7 +7,6 @@ import {
   zExperimentAnnotationCommentContent,
   zExperimentAnnotationContent,
   zExperimentAnnotationDeleteBulkBody,
-  zExperimentAnnotationDeleteBulkPathParam,
   zExperimentAnnotationExperimentPathParam,
   zExperimentAnnotationFlagContent,
   zExperimentAnnotationFlagType,
@@ -208,11 +207,6 @@ describe("Annotations", () => {
     expect(zExperimentUpdateAnnotationBody.parse(body)).toEqual(body);
   });
 
-  it("zExperimentAnnotationDeleteBulkPathParam valid", () => {
-    const params = { id: uuidA };
-    expect(zExperimentAnnotationDeleteBulkPathParam.parse(params)).toEqual(params);
-  });
-
   it("zExperimentAnnotationDeleteBulkBody valid", () => {
     const body = {
       tableName: "measurements",
@@ -248,7 +242,6 @@ describe("Annotations", () => {
       id: lower,
       annotationId: lower,
     });
-    expect(zExperimentAnnotationDeleteBulkPathParam.parse({ id: upper })).toEqual({ id: lower });
     expect(zExperimentAnnotationExperimentPathParam.parse({ id: upper })).toEqual({ id: lower });
   });
 
