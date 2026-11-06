@@ -6,24 +6,24 @@ export const zExperimentAnnotationType = z.enum(["comment", "flag"]);
 export const zExperimentAnnotationFlagType = z.enum(["outlier", "needs_review"]);
 
 // Postgres keeps no NUL character in text, and rows and tables by names of up to 64.
-const zAnnotationText = z
+const zNoNulText = z
   .string()
   .refine((text) => !text.includes("\u0000"), "Text cannot hold a NUL character");
-const zRowId = z.string().min(1).max(64);
-const zTableName = z.string().min(1).max(64);
+const zRowId = zNoNulText.min(1).max(64);
+const zTableName = zNoNulText.min(1).max(64);
 // Lowercase, as Postgres prints a uuid, so the lakehouse and Postgres match an id alike.
 const zLowercaseId = z.string().guid().toLowerCase();
 
 // Use discriminated union to properly differentiate between comment and flag content
 export const zExperimentAnnotationCommentContent = z.object({
   type: z.literal("comment"),
-  text: zAnnotationText.min(1).max(255),
+  text: zNoNulText.min(1).max(255),
 });
 
 export const zExperimentAnnotationFlagContent = z.object({
   type: z.literal("flag"),
   flagType: zExperimentAnnotationFlagType,
-  text: zAnnotationText.max(255).optional(),
+  text: zNoNulText.max(255).optional(),
 });
 
 export const zExperimentAnnotationContent = z.discriminatedUnion("type", [
