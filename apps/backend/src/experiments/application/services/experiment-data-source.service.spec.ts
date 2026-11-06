@@ -33,28 +33,28 @@ describe("ExperimentDataSourceService", () => {
     await testApp.teardown();
   });
 
-  it("reads from the store once the surface's flag is on", async () => {
+  it("reads from the store once its flag is on", async () => {
     vi.spyOn(servingStore, "isConfigured").mockReturnValue(true);
     const flag = vi.spyOn(analyticsPort, "isFeatureFlagEnabled").mockResolvedValue(true);
 
-    const source = await service.sourceFor(FEATURE_FLAGS.STORE_EXPERIMENT_DATA, user);
+    const source = await service.sourceFor(user);
 
     expect(source).toBe("store");
-    expect(flag).toHaveBeenCalledWith(FEATURE_FLAGS.STORE_EXPERIMENT_DATA, user);
+    expect(flag).toHaveBeenCalledWith(FEATURE_FLAGS.STORE_EXPERIMENT_READS, user);
   });
 
   it("reads from the warehouse while the flag is off", async () => {
     vi.spyOn(servingStore, "isConfigured").mockReturnValue(true);
     vi.spyOn(analyticsPort, "isFeatureFlagEnabled").mockResolvedValue(false);
 
-    expect(await service.sourceFor(FEATURE_FLAGS.STORE_EXPERIMENT_DATA, user)).toBe("warehouse");
+    expect(await service.sourceFor(user)).toBe("warehouse");
   });
 
   it("reads from the warehouse where there is no store, whatever the flag says", async () => {
     vi.spyOn(servingStore, "isConfigured").mockReturnValue(false);
     const flag = vi.spyOn(analyticsPort, "isFeatureFlagEnabled").mockResolvedValue(true);
 
-    expect(await service.sourceFor(FEATURE_FLAGS.STORE_EXPERIMENT_TABLES, user)).toBe("warehouse");
+    expect(await service.sourceFor(user)).toBe("warehouse");
     expect(flag).not.toHaveBeenCalled();
   });
 });

@@ -56,29 +56,8 @@
     "tags": [],
     "filters": { "groups": [{ "rollout_percentage": 0 }] }
   },
-  "store-experiment-tables": {
-    "name": "An experiment's table listing reads from the serving store. Off until a clean comparison of both read paths.",
-    "active": true,
-    "continuity": false,
-    "tags": ["backend", "serving-store"],
-    "filters": { "groups": [{ "rollout_percentage": 0 }] }
-  },
-  "store-experiment-data": {
-    "name": "An experiment's table pages read from the serving store; charts stay on the warehouse. Off until a clean comparison.",
-    "active": true,
-    "continuity": false,
-    "tags": ["backend", "serving-store"],
-    "filters": { "groups": [{ "rollout_percentage": 0 }] }
-  },
-  "store-experiment-distinct-values": {
-    "name": "A column filter's values read from the serving store. Off until a clean comparison of both read paths.",
-    "active": true,
-    "continuity": false,
-    "tags": ["backend", "serving-store"],
-    "filters": { "groups": [{ "rollout_percentage": 0 }] }
-  },
-  "store-experiment-columns": {
-    "name": "A table's columns read from the serving store. Off until a clean comparison of both read paths.",
+  "store-experiment-reads": {
+    "name": "An experiment's tables, pages, filter values and columns read from the serving store; charts stay on the warehouse. Off until a clean comparison of both read paths.",
     "active": true,
     "continuity": false,
     "tags": ["backend", "serving-store"],

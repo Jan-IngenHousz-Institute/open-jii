@@ -12,12 +12,9 @@ export const FEATURE_FLAGS = {
   // The PostHog key is the one that once hid the device registry; it was kept there when
   // the registry shipped and now hides device calibration instead.
   CALIBRATION: "iot-devices",
-  // Each surface of an experiment's data reads from the serving store once its flag is on, and
-  // switches back on its own.
-  STORE_EXPERIMENT_TABLES: "store-experiment-tables",
-  STORE_EXPERIMENT_DATA: "store-experiment-data",
-  STORE_EXPERIMENT_DISTINCT_VALUES: "store-experiment-distinct-values",
-  STORE_EXPERIMENT_COLUMNS: "store-experiment-columns",
+  // An experiment's tables, pages, filter values and columns read from the serving store together,
+  // so a page never mixes the store's columns with the warehouse's cells.
+  STORE_EXPERIMENT_READS: "store-experiment-reads",
 } as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS];
@@ -34,10 +31,7 @@ export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
   [FEATURE_FLAGS.MACRO_DELETION]: false, // Default to disabled for safety
   [FEATURE_FLAGS.WORKBOOK_DELETION]: false, // Default to disabled for safety
   [FEATURE_FLAGS.CALIBRATION]: false, // Hidden until targeted in PostHog
-  [FEATURE_FLAGS.STORE_EXPERIMENT_TABLES]: false, // The warehouse until a clean comparison
-  [FEATURE_FLAGS.STORE_EXPERIMENT_DATA]: false,
-  [FEATURE_FLAGS.STORE_EXPERIMENT_DISTINCT_VALUES]: false,
-  [FEATURE_FLAGS.STORE_EXPERIMENT_COLUMNS]: false,
+  [FEATURE_FLAGS.STORE_EXPERIMENT_READS]: false, // The warehouse until a clean comparison
 };
 
 /** The signed-in user a flag is evaluated for. */

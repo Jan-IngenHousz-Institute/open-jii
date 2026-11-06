@@ -3,7 +3,6 @@ import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
 import { experimentDataContract } from "@repo/api/domains/experiment/data/experiment-data.contract";
 
 import { CanAccess } from "../../authorization/can-access.decorator";
@@ -30,10 +29,7 @@ export class ExperimentDataController {
   @Implement(experimentDataContract.getExperimentTables)
   getExperimentTables(@Session() session: UserSession) {
     return implement(experimentDataContract.getExperimentTables).handler(async ({ input }) => {
-      const source = await this.dataSource.sourceFor(
-        FEATURE_FLAGS.STORE_EXPERIMENT_TABLES,
-        session.user,
-      );
+      const source = await this.dataSource.sourceFor(session.user);
       const result = await this.getExperimentTablesUseCase.execute(
         input.id,
         session.user.id,
@@ -51,10 +47,7 @@ export class ExperimentDataController {
   getExperimentData(@Session() session: UserSession) {
     return implement(experimentDataContract.getExperimentData).handler(async ({ input }) => {
       const { id, ...query } = input;
-      const source = await this.dataSource.sourceFor(
-        FEATURE_FLAGS.STORE_EXPERIMENT_DATA,
-        session.user,
-      );
+      const source = await this.dataSource.sourceFor(session.user);
       const result = await this.getExperimentDataUseCase.execute(
         id,
         session.user.id,
@@ -73,10 +66,7 @@ export class ExperimentDataController {
   getDistinctColumnValues(@Session() session: UserSession) {
     return implement(experimentDataContract.getDistinctColumnValues).handler(async ({ input }) => {
       const { id, ...query } = input;
-      const source = await this.dataSource.sourceFor(
-        FEATURE_FLAGS.STORE_EXPERIMENT_DISTINCT_VALUES,
-        session.user,
-      );
+      const source = await this.dataSource.sourceFor(session.user);
       const result = await this.getDistinctColumnValuesUseCase.execute(
         id,
         session.user.id,
@@ -96,10 +86,7 @@ export class ExperimentDataController {
     return implement(experimentDataContract.getExperimentTableColumns).handler(
       async ({ input }) => {
         const { id, ...query } = input;
-        const source = await this.dataSource.sourceFor(
-          FEATURE_FLAGS.STORE_EXPERIMENT_COLUMNS,
-          session.user,
-        );
+        const source = await this.dataSource.sourceFor(session.user);
         const result = await this.getExperimentTableColumnsUseCase.execute(
           id,
           session.user.id,

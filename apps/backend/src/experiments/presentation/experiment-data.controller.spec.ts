@@ -1,7 +1,5 @@
 import { expect } from "vitest";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
-
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, success, failure } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
@@ -230,7 +228,6 @@ describe("ExperimentDataController", () => {
   describe("read source", () => {
     it.each([
       {
-        flag: FEATURE_FLAGS.STORE_EXPERIMENT_TABLES,
         path: "tables",
         mockUseCase: () =>
           vi
@@ -238,7 +235,6 @@ describe("ExperimentDataController", () => {
             .mockResolvedValue(failure(AppError.notFound("No tables"))),
       },
       {
-        flag: FEATURE_FLAGS.STORE_EXPERIMENT_DATA,
         path: "data?tableName=raw_data",
         mockUseCase: () =>
           vi
@@ -246,7 +242,6 @@ describe("ExperimentDataController", () => {
             .mockResolvedValue(failure(AppError.notFound("No data"))),
       },
       {
-        flag: FEATURE_FLAGS.STORE_EXPERIMENT_DISTINCT_VALUES,
         path: "data/distinct?tableName=raw_data&column=site",
         mockUseCase: () =>
           vi
@@ -254,14 +249,13 @@ describe("ExperimentDataController", () => {
             .mockResolvedValue(failure(AppError.notFound("No values"))),
       },
       {
-        flag: FEATURE_FLAGS.STORE_EXPERIMENT_COLUMNS,
         path: "data/columns?tableName=raw_data",
         mockUseCase: () =>
           vi
             .spyOn(getExperimentTableColumnsUseCase, "execute")
             .mockResolvedValue(failure(AppError.notFound("No columns"))),
       },
-    ])("reads $path from the source $flag picks", async ({ flag, path, mockUseCase }) => {
+    ])("reads $path from the source the store flag picks", async ({ path, mockUseCase }) => {
       const sourceFor = vi
         .spyOn(testApp.module.get(ExperimentDataSourceService), "sourceFor")
         .mockResolvedValue("store");
@@ -272,7 +266,7 @@ describe("ExperimentDataController", () => {
         .withAuth(testUserId)
         .expect(404);
 
-      expect(sourceFor).toHaveBeenCalledWith(flag, expect.objectContaining({ id: testUserId }));
+      expect(sourceFor).toHaveBeenCalledWith(expect.objectContaining({ id: testUserId }));
       expect(execute.mock.lastCall?.at(-1)).toBe("store");
     });
   });

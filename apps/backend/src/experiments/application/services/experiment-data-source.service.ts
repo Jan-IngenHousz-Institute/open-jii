@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import type { FeatureFlagKey, FlagUser } from "@repo/analytics";
+import { FEATURE_FLAGS } from "@repo/analytics";
+import type { FlagUser } from "@repo/analytics";
 
 import type { ExperimentDataSource } from "../../core/models/experiment-data.model";
 import { ANALYTICS_PORT } from "../../core/ports/analytics.port";
@@ -15,12 +16,15 @@ export class ExperimentDataSourceService {
     @Inject(SERVING_STORE_PORT) private readonly servingStore: ServingStorePort,
   ) {}
 
-  /** The store once the surface's flag is on, except where there is no store, such as DR. */
-  async sourceFor(flag: FeatureFlagKey, user: FlagUser): Promise<ExperimentDataSource> {
+  /** The store once its flag is on, except where there is no store, such as DR. */
+  async sourceFor(user: FlagUser): Promise<ExperimentDataSource> {
     if (!this.servingStore.isConfigured()) {
       return "warehouse";
     }
-    const isStoreRead = await this.analyticsPort.isFeatureFlagEnabled(flag, user);
+    const isStoreRead = await this.analyticsPort.isFeatureFlagEnabled(
+      FEATURE_FLAGS.STORE_EXPERIMENT_READS,
+      user,
+    );
     return isStoreRead ? "store" : "warehouse";
   }
 }
