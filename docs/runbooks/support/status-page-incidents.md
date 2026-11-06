@@ -134,6 +134,69 @@ A published change appears on the page in about two minutes. The publisher runs 
 data file is cached for 30 seconds, and an open page fetches it again every minute, so nobody needs
 to reload. Slack gets its message when the publisher sees the change, in the same window.
 
+## Slack
+
+The status channel in Slack carries the changes as they happen, so support staff see them without
+opening the page. The page is where the current state lives, and the channel is where you see what
+changed and when.
+
+### What the channel shows
+
+The channel gets one message for each of these:
+
+- An incident opened, updated or resolved.
+- Planned maintenance scheduled, started, updated or completed.
+- A component changing state on its own, when our checks turned it and no incident or planned
+  window explains it. An open incident or window that names the component already says so.
+- A notice posted or taken down.
+
+Each message starts with a bold line saying what happened, such as "Incident opened: Uploads from
+the field app are delayed". An incident's message then says the impact, "Impact: outage" or "Impact:
+degraded", and the affected components by the names the page uses. After that come the newest
+update's stage with the time it was posted, its text, the time of the next update, the planned window
+for maintenance, a link to the page and the time of the change in UTC. A message about a component
+changing state says the old and the new state.
+
+Messages are flat. Slack gets no threads, and a message is never edited or deleted.
+
+### What it does not show
+
+- **Edits.** An update is posted once, when it first appears. Editing its text, stage or time
+  afterwards does not post it again, so write a new update when something researchers could act on
+  changes (see Correct a mistake).
+- **What was already open** when the channel was connected. The first run only records what the page
+  shows, so an incident that was open at that moment is not announced.
+- **Long text in full.** A message holds about the first 2,500 characters of an update and ends with
+  "...". The page shows the whole update, so keep updates short.
+- **A message that Slack refused.** A failed post is tried twice more and then dropped, and the
+  engineer on call is alerted. They post it by hand using `status-slack-errors.md`.
+- **A guarantee of no repeats.** The channel skips an event it has just posted, but only while the
+  same function instance is still running, so a message can occasionally appear twice.
+
+Messages arrive within about two minutes of the page changing, and two changes made in the same
+minute may arrive in either order.
+
+### Connect a channel
+
+This is a one-time job for whoever administers Slack and the repository's GitHub secrets. Each
+environment posts to the webhook it is given, so use a separate channel for dev, or leave dev
+without one. Messages from any environment other than production name it in their footer.
+
+1. Create the channel, for example one for status only, and decide who joins it.
+2. In the Slack app that holds the repository's webhooks, or a new one, switch on Incoming Webhooks
+   and choose Add New Webhook to Workspace. Pick the channel and copy the address that Slack shows.
+   Treat it like a password, since anyone who has it can post to the channel.
+3. Save the address as the GitHub secret `STATUS_SLACK_WEBHOOK_URL` for each environment that should
+   post. For production, save it in the `prod-plan` GitHub environment as well, which is the one
+   `pr.yml` uses for production plans. Without it, every pull request plan reads an empty address and
+   shows the Slack resources being destroyed. Do not reuse `SLACK_WEBHOOK_URL`, which belongs to the
+   monitoring channel.
+4. Run the tofu workflow for the environment. While the secret is empty or unset, the apply creates
+   nothing, so this is also how the feed is switched off. With the secret set, it stores the address
+   in Secrets Manager as `openjii-status-slack-<env>` and creates the function that posts.
+5. Post a test incident in dev as described under One-time setup, check that the channel gets it,
+   then resolve it.
+
 ## If a change does not show
 
 1. Check that the incident and every update show Published in Contentful, not Draft or Changed. The
