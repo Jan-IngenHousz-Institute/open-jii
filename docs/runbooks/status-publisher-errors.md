@@ -25,7 +25,7 @@ ends with the error instead.
 
 - **S3 refused a read or a write.** An `AccessDenied` means the role and the buckets drifted apart.
   The function reads and writes only `publisher-state.json` in `open-jii-status-state-<env>`, and
-  writes only the `data/` prefix of `open-jii-status-public-<env>`.
+  writes only `data/status.json` in `open-jii-status-public-<env>`.
 - **CloudWatch refused or throttled the metrics read.** `AccessDenied` on `GetMetricData` means the
   role lost it. `Throttling` passes on the next run.
 - **CloudWatch could not answer a query.** The run throws when a result comes back `Forbidden` or

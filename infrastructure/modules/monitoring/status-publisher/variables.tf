@@ -4,7 +4,7 @@ variable "environment" {
 }
 
 variable "site_bucket_id" {
-  description = "Public bucket the status page is served from; the publisher writes its data/ prefix"
+  description = "Public bucket the status page is served from; the publisher writes its data/status.json"
   type        = string
 }
 
