@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
+import type { ExperimentAsOfJoin } from "../../../experiments/core/ports/databricks.port";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type {
   DataExportJobInput,
@@ -870,6 +871,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
    * Build a SQL query for experiment data, dispatching to static vs macro table.
    */
   buildExperimentQuery(params: {
+    join?: ExperimentAsOfJoin;
     tableName: string;
     tableType: "static" | "macro" | "upload";
     experimentId: string;
@@ -884,24 +886,41 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     limit?: number;
     offset?: number;
   }): Result<string> {
-    const { tableName, tableType, experimentId, ...query } = params;
+    const { tableName, tableType, experimentId, join, ...query } = params;
 
     const tableResult = this.experimentTable(tableType, tableName);
     if (tableResult.isFailure()) {
       return tableResult;
     }
 
-    // Macro and upload tables each share one physical table; `tableName` is then the macro_id or
-    // the stable upload_table_id passed by the caller.
-    const whereConditions: [string, string][] = [["experiment_id", experimentId]];
-    if (tableType === "macro") {
-      whereConditions.push(["macro_id", tableName]);
-    }
-    if (tableType === "upload") {
-      whereConditions.push(["upload_table_id", tableName]);
-    }
+    const whereConditions = this.experimentScope(tableType, tableName, experimentId);
 
-    return this.queryBuilder.buildQuery({ ...query, table: tableResult.value, whereConditions });
+    let resolvedJoin: QueryParams["join"];
+    if (join) {
+      const secondaryTable = this.experimentTable(
+        join.secondary.tableType,
+        join.secondary.tableName,
+      );
+      if (secondaryTable.isFailure()) return secondaryTable;
+      resolvedJoin = {
+        ...join,
+        secondary: {
+          ...join.secondary,
+          table: secondaryTable.value,
+          whereConditions: this.experimentScope(
+            join.secondary.tableType,
+            join.secondary.tableName,
+            experimentId,
+          ),
+        },
+      };
+    }
+    return this.queryBuilder.buildQuery({
+      ...query,
+      join: resolvedJoin,
+      table: tableResult.value,
+      whereConditions,
+    });
   }
 
   /** Column names of the view an experiment table reads from, in its own order. */
@@ -926,6 +945,17 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     const names = described.value.rows.map(([name]) => name ?? "");
     const sectionEnd = names.findIndex((name) => name === "" || name.startsWith("#"));
     return success(sectionEnd === -1 ? names : names.slice(0, sectionEnd));
+  }
+
+  private experimentScope(
+    tableType: "static" | "macro" | "upload",
+    tableName: string,
+    experimentId: string,
+  ): [string, string][] {
+    const conditions: [string, string][] = [["experiment_id", experimentId]];
+    if (tableType === "macro") conditions.push(["macro_id", tableName]);
+    if (tableType === "upload") conditions.push(["upload_table_id", tableName]);
+    return conditions;
   }
 
   private experimentTable(

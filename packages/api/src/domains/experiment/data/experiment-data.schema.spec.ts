@@ -10,6 +10,7 @@ import {
   zExperimentDataFilterOperator,
   zExperimentDataFilterValue,
   zExperimentDataQuery,
+  zExperimentDataJoin,
   zExperimentDataResponse,
   zExperimentDataTable,
   zExperimentDataTableList,
@@ -20,6 +21,42 @@ import {
 } from "./experiment-data.schema";
 
 describe("Data filter primitives & distinct values", () => {
+  it.each([
+    { last: 1, unit: "hours" },
+    { last: 24, unit: "hours" },
+    { last: 7, unit: "days" },
+    { last: 30, unit: "days" },
+    { last: 90, unit: "days" },
+  ])("accepts the rolling window %j only with between", (value) => {
+    expect(
+      zExperimentDataFilter.parse({ column: "timestamp", operator: "between", value }).value,
+    ).toEqual(value);
+    for (const operator of zExperimentDataFilterOperator.options.filter((op) => op !== "between")) {
+      expect(
+        zExperimentDataFilter.safeParse({ column: "timestamp", operator, value }).success,
+      ).toBe(false);
+    }
+    expect(
+      zExperimentDataQuery.parse({
+        tableName: "raw_data",
+        filters: JSON.stringify([{ column: "timestamp", operator: "between", value }]),
+      }).filters?.[0]?.value,
+    ).toEqual(value);
+  });
+
+  it.each([
+    { last: 0, unit: "hours" },
+    { last: -1, unit: "days" },
+    { last: 1.5, unit: "hours" },
+    { last: 24, unit: "weeks" },
+    { last: 100000000000, unit: "days" },
+    { last: 24 },
+    { last: "24", unit: "hours" },
+    { last: 24, unit: "hours", extra: true },
+  ])("rejects malformed rolling windows %j", (value) => {
+    expect(zExperimentDataFilterValue.safeParse(value).success).toBe(false);
+  });
+
   describe("zExperimentDataFilterOperator", () => {
     it("accepts every supported operator", () => {
       for (const op of [
@@ -329,5 +366,31 @@ describe("data queries & tables", () => {
     ];
     expect(zExperimentDataTableList.parse(list)).toEqual(list);
     expect(zExperimentDataResponse.parse(list)).toEqual(list);
+  });
+});
+
+describe("time matching query", () => {
+  const join = {
+    tableName: "weather",
+    matchColumn: "station",
+    primaryTimeColumn: "timestamp",
+    secondaryTimeColumn: "measured_at",
+    toleranceMinutes: 5,
+  };
+  it("uses the same validated join in data and column reads", () => {
+    expect(
+      zExperimentDataQuery.parse({ tableName: "leaf", join: JSON.stringify(join) }).join,
+    ).toEqual(join);
+    expect(zExperimentDataJoin.parse({ ...join, toleranceMinutes: 0 }).toleranceMinutes).toBe(0);
+  });
+  it.each([-1, 0.5, Infinity, NaN, Number.MAX_SAFE_INTEGER])(
+    "rejects invalid tolerance %s",
+    (toleranceMinutes) => {
+      expect(zExperimentDataJoin.safeParse({ ...join, toleranceMinutes }).success).toBe(false);
+    },
+  );
+  it("rejects malformed JSON and incomplete time columns", () => {
+    expect(zExperimentDataQuery.safeParse({ tableName: "leaf", join: "{" }).success).toBe(false);
+    expect(zExperimentDataJoin.safeParse({ ...join, secondaryTimeColumn: "" }).success).toBe(false);
   });
 });

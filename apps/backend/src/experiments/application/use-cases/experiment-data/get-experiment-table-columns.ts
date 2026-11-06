@@ -55,6 +55,7 @@ export class GetExperimentTableColumnsUseCase {
       const columnsResult = await this.experimentDataRepository.getTableColumns({
         experimentId,
         tableName: query.tableName,
+        join: query.join,
       });
       if (columnsResult.isFailure()) {
         return columnsResult;

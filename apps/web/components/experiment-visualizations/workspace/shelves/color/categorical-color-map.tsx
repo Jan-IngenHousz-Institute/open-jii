@@ -68,7 +68,8 @@ export function CategoricalColorMap({ form, columns }: CategoricalColorMapProps)
   // CONTRIBUTOR distinct values arrive as STRUCT JSON; the renderer flattens
   // them to the contributor name, so the picker must key/label by name too or
   // the overrides never match what the chart looks up.
-  const colorColumnType = columns.find((c) => c.name === colorColumn)?.type_text;
+  const colorMetadata = columns.find((c) => c.name === colorColumn);
+  const colorColumnType = colorMetadata?.type_text;
   const isContributor = colorColumnType === WellKnownColumnTypes.CONTRIBUTOR;
   const isDevice = colorColumnType === WellKnownColumnTypes.DEVICE;
 
@@ -85,8 +86,8 @@ export function CategoricalColorMap({ form, columns }: CategoricalColorMapProps)
     isLoading,
   } = useExperimentDistinctValues({
     experimentId: experimentId ?? "",
-    tableName: tableName,
-    column: colorColumn,
+    tableName: colorMetadata?.sourceTable?.tableName ?? tableName,
+    column: colorMetadata?.sourceTable?.columnName ?? colorColumn,
     limit: MAX_CATEGORIES,
     enabled: Boolean(experimentId) && Boolean(tableName) && Boolean(colorColumn),
   });

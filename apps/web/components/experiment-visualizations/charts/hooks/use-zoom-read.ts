@@ -1,6 +1,7 @@
 "use client";
 
 import { shouldRetryQuery } from "@/util/query-retry";
+import { relativeFilterQueryOptions } from "@/util/relative-filter-query-options";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { orpc } from "~/lib/orpc";
@@ -63,7 +64,7 @@ export function useZoomRead(input: ZoomReadInput): ZoomRead {
         } satisfies ExperimentDataAggregation),
       },
       enabled,
-      staleTime: STALE_TIME,
+      ...relativeFilterQueryOptions(filters, STALE_TIME),
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       retry: shouldRetryQuery,
@@ -87,7 +88,7 @@ export function useZoomRead(input: ZoomReadInput): ZoomRead {
       },
       enabled: enabled && window !== undefined,
       placeholderData: keepPreviousData,
-      staleTime: STALE_TIME,
+      ...relativeFilterQueryOptions(windowFilters, STALE_TIME),
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       retry: shouldRetryQuery,

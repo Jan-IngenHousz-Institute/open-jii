@@ -865,6 +865,19 @@
       },
       "topN": "Top N weergeven",
       "topNPlaceholder": "Alles"
+    },
+    "secondTable": {
+      "title": "Tweede tabel",
+      "table": "Dataset van de tweede tabel",
+      "none": "Geen",
+      "matchColumn": "Koppelkolom",
+      "primaryTimeColumn": "Tijdkolom van de eerste tabel",
+      "secondaryTimeColumn": "Tijdkolom van de tweede tabel",
+      "tolerance": "Tolerantie in minuten",
+      "chooseColumn": "Kies een kolom",
+      "help": "Gebruikt de laatste eerdere meting met dezelfde koppelwaarde. Beide tijdgrenzen tellen mee. Nul betekent exact dezelfde tijd. Datums en tijdstempels zonder tijdzone gebruiken UTC. Kolommen uit de tweede tabel beginnen met second__.",
+      "incompleteTitle": "Maak de tijdkoppeling af",
+      "incompleteHelp": "Kies een gedeelde koppelkolom, beide tijdkolommen en een gehele tolerantie om een voorbeeld te tonen en op te slaan."
     }
   }
 }

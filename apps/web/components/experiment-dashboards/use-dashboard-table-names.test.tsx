@@ -22,7 +22,17 @@ function tableWidget(tableName: string) {
 describe("useDashboardTableNames", () => {
   it("names each table the dashboard's charts and tables read, once", async () => {
     const chart = createVisualization({
-      dataConfig: { tableName: "macro-1", dataSources: [] },
+      dataConfig: {
+        tableName: "macro-1",
+        dataSources: [],
+        join: {
+          tableName: "weather",
+          matchColumn: "station",
+          primaryTimeColumn: "timestamp",
+          secondaryTimeColumn: "timestamp",
+          toleranceMinutes: 5,
+        },
+      },
     });
     server.mount(contract.experiments.listExperimentVisualizations, { body: [chart] });
     const widgets = [
@@ -37,7 +47,7 @@ describe("useDashboardTableNames", () => {
 
     const { result } = renderHook(() => useDashboardTableNames("exp-1", widgets));
 
-    await waitFor(() => expect(result.current).toEqual(["macro-1", "raw_data"]));
+    await waitFor(() => expect(result.current).toEqual(["macro-1", "weather", "raw_data"]));
   });
 
   it("names nothing while no widget reads a table", () => {

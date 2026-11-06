@@ -83,6 +83,7 @@ export interface SchemaDataDto {
     name: string;
     type_name: string;
     type_text: string;
+    sourceTable?: { tableName: string; columnName: string };
     renamedFrom?: { name: string; source: VariantColumn };
   }[];
   rows: Record<string, string | null>[];
@@ -102,4 +103,5 @@ export interface TableDataDto {
   pageSize: number;
   totalPages: number;
   totalRows: number;
+  filterEvaluatedAt?: string;
 }

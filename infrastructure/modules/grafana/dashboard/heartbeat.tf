@@ -508,7 +508,7 @@ locals {
       },
       {
         title       = "How long each hop takes"
-        description = "The slowest twentieth of each hop per half hour: arrival to bronze, bronze to the experiment tables, the experiment tables to macro results, and the whole trip from the broker until the API can read it."
+        description = "The slowest twentieth of each hop per half hour: arrival to bronze, bronze to the experiment tables, the experiment tables to macro results, the whole trip from the broker until the API can read it, gold to the serving store, and the backend's reads of the store."
         area        = "latency"
         calcs       = ["mean", "max"]
       },

@@ -3,6 +3,8 @@
 import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { Input } from "@repo/ui/components/input";
 
+import { scalarFilterDisplay } from "../scalar-filter-display";
+
 export interface TextInputProps {
   value: ExperimentDataFilterValue;
   onChange: (value: ExperimentDataFilterValue) => void;
@@ -10,7 +12,7 @@ export interface TextInputProps {
 }
 
 export function TextInput({ value, onChange, placeholder }: TextInputProps) {
-  const display = Array.isArray(value) ? value.join(", ") : String(value);
+  const display = scalarFilterDisplay(value);
   return (
     <Input
       className="h-9"

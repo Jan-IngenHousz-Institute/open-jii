@@ -4,18 +4,29 @@ now: the first load, and the repair for what the feed cannot send, such as rows 
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
 from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql import functions as F
 
-from .tables import StoreTable
+from .tables import PAYLOAD_SCHEMAS, StoreTable
 from .writer import StoreUnavailable, StoreWriter, Written
 
 # Waits between writes of the whole load while the store cannot take some of it; the dedup tokens
 # drop what already landed. A reload is run by hand, so after the last it fails instead of waiting.
 WRITE_RETRY_DELAYS = (10, 30, 60, 120, 300)
+
+# Each id table, the column it lists, and the column that holds the id in each table whose rows it
+# lists, as packages/database/clickhouse/migrations/0006_experiment_ids.sql fills them.
+ID_SOURCES = {
+    "contributor_ids": (
+        "user_id",
+        {"measurements": "user_id", "macro_results": "user_id", "uploads": "created_by"},
+    ),
+    "client_ids": ("client_id", {"measurements": "client_id", "macro_results": "client_id"}),
+}
 
 # More rows than this that gold no longer holds stop a reload before its delete, unless asked for.
 # A repair removes a few; a gold table part way through a refresh looks as if it lost most of them.
@@ -35,6 +46,7 @@ class Reloaded:
     table: str
     version: int
     written: Written
+    schemas: Written
     # Rows per experiment, one per store key: gold's at the version, and the store's afterwards by
     # where the newest commit of each falls against the version.
     gold: dict[str, int]
@@ -79,14 +91,15 @@ class StoreReload:
         """Reloads one experiment, or every experiment when ``experiment_id`` is None. An
         experiment gold no longer holds leaves the store with it, once ``allow_removal`` says more
         than ``REMOVAL_LIMIT`` rows may go. When the store refuses any row, nothing is deleted,
-        since a refused row's older copy is the only one the store has."""
+        since a refused row's older copy is the only one the store has, and a refused schema keeps
+        the older schemas for the same reason."""
         # Read first, so a commit the feed sends meanwhile cannot look newer than gold's latest.
         newest = self._newest_stored_version(table)
         version, committed_at = self.latest_version(table)
         if newest > version:
             raise StoreAheadOfGold(
-                f"store.{table.name} holds version {newest} and gold's {table.gold_table} only "
-                f"{version}: empty the store table first (docs/runbooks/procedures/serving-store-reload.md)"
+                f"store.{table.name} or its payload schemas hold version {newest} and gold's {table.gold_table} "
+                f"only {version}: empty both first (docs/runbooks/procedures/serving-store-reload.md)"
             )
 
         rows = self.gold_rows(table, version)
@@ -102,10 +115,16 @@ class StoreReload:
         )
 
         written = self._write(table, changes)
+        schemas = self._write_schemas(table, changes)
         if not written.rejected:
             if not allow_removal:
                 self._check_removal(table, version, experiment_id)
-            self._delete_older(table, version, experiment_id)
+            self._delete_older(table.name, version, experiment_id)
+            if not schemas.rejected:
+                # A table type's schemas carry its gold table's versions, so the older ones are
+                # those only rows from before the load had.
+                self._delete_older(PAYLOAD_SCHEMAS, version, experiment_id, table_type=table.table_type)
+            self._prune_ids(experiment_id)
 
         gold = rows.select(*table.key()).dropDuplicates().groupBy("experiment_id").count().collect()
         stored = self._stored_rows(table, version, experiment_id)
@@ -113,6 +132,7 @@ class StoreReload:
             table.name,
             version,
             written,
+            schemas,
             gold={row["experiment_id"]: row["count"] for row in gold},
             store={row["experiment_id"]: int(row["current"]) for row in stored if int(row["current"])},
             newer={row["experiment_id"]: int(row["newer"]) for row in stored if int(row["newer"])},
@@ -148,27 +168,43 @@ class StoreReload:
     def _write(self, table: StoreTable, changes: DataFrame) -> Written:
         """Writes the load, again until every row has gone."""
         lines = table.lines(changes, reloaded=True)
+        return self._until_sent(f"rows of {table.name}", lambda: self.writer.write(lines, table.name))
+
+    def _write_schemas(self, table: StoreTable, changes: DataFrame) -> Written:
+        """Sends the load's payload schemas, rebuilt from gold's rows as the rows are."""
+        lines = [row.line for row in table.schema_lines(changes).collect()]
+        return self._until_sent(
+            f"schemas of {table.name}", lambda: self.writer.insert(PAYLOAD_SCHEMAS, lines)
+        )
+
+    def _until_sent(self, what: str, send: Callable[[], Written]) -> Written:
+        """Sends again until nothing is left unsent, waiting longer each time; the dedup tokens
+        drop what already landed."""
         delays = iter(WRITE_RETRY_DELAYS)
         while True:
-            written = self.writer.write(lines, table.name)
+            written = send()
             if not written.unfinished:
                 return written
 
             delay = next(delays, None)
             if delay is None:
                 raise StoreUnavailable(
-                    f"{written.unfinished} rows of {table.name} not sent after {len(WRITE_RETRY_DELAYS) + 1} attempts"
+                    f"{written.unfinished} {what} not sent after {len(WRITE_RETRY_DELAYS) + 1} attempts"
                 )
             print(
-                f"[serving store] Reload of {table.name}: {written.unfinished} rows not sent, "
-                f"writing the load again in {delay} s",
+                f"[serving store] Reload: {written.unfinished} {what} not sent, sending them again in {delay} s",
                 flush=True,
             )
             time.sleep(delay)
 
     def _newest_stored_version(self, table: StoreTable) -> int:
+        """The newest commit the store holds of the table, its rows or its payload schemas."""
+        database = self.writer.database
         [row] = self.writer.query(
-            f"SELECT max(_commit_version) AS newest FROM {self.writer.database}.{table.name} FORMAT JSONEachRow"
+            f"SELECT greatest((SELECT max(_commit_version) FROM {database}.{table.name}), "
+            f"(SELECT max(_commit_version) FROM {database}.{PAYLOAD_SCHEMAS} WHERE table_type = {{table_type:String}})) "
+            "AS newest FORMAT JSONEachRow",
+            table_type=table.table_type,
         )
         return int(row["newest"])
 
@@ -194,15 +230,35 @@ class StoreReload:
             "run again with ALLOW_REMOVAL set to true (docs/runbooks/procedures/serving-store-reload.md)"
         )
 
-    def _delete_older(self, table: StoreTable, version: int, experiment_id: str | None) -> None:
-        """Deletes the store's rows from before ``version``. The delete returns once every part is
-        marked, so the count after it sees the result."""
+    def _delete_older(
+        self, store_table: str, version: int, experiment_id: str | None, **matches: str
+    ) -> None:
+        """Deletes a store table's rows from before ``version``, of the experiment and with the
+        column values in ``matches``. The delete returns once every part is marked, so the count
+        after it sees the result."""
         scope, parameters = self._scope(experiment_id)
+        scope += "".join(f" AND {column} = {{{column}:String}}" for column in matches)
         self.writer.query(
-            f"DELETE FROM {self.writer.database}.{table.name} WHERE _commit_version < {{version:Int64}}{scope}",
+            f"DELETE FROM {self.writer.database}.{store_table} WHERE _commit_version < {{version:Int64}}{scope}",
             version=version,
             **parameters,
+            **matches,
         )
+
+    def _prune_ids(self, experiment_id: str | None) -> None:
+        """Removes the contributor and client ids no row names any longer. The views that fill the
+        id tables add an id as a row lands and never take one away, so after a delete an id whose
+        rows are gone, such as an erased contributor's, would still be listed."""
+        scope, parameters = self._scope(experiment_id)
+        database = self.writer.database
+        for id_table, (column, sources) in ID_SOURCES.items():
+            # One NOT IN per table: a mutation refuses a UNION.
+            still_named = "".join(
+                f" AND (experiment_id, {column}) NOT IN (SELECT experiment_id, assumeNotNull({source_column}) "
+                f"FROM {database}.{source} WHERE {source_column} IS NOT NULL{scope})"
+                for source, source_column in sources.items()
+            )
+            self.writer.query(f"DELETE FROM {database}.{id_table} WHERE 1{scope}{still_named}", **parameters)
 
     def _stored_rows(self, table: StoreTable, version: int, experiment_id: str | None) -> list[dict]:
         """The store's rows per experiment, one per key, counted by where each one's newest commit

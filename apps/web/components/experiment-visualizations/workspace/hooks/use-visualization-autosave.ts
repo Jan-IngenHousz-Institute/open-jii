@@ -7,6 +7,7 @@ import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
 import type { UpdateExperimentVisualizationBody } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import { isDataJoinValid } from "@repo/api/transforms/joined-columns";
 
 import { useReportAutosaveStatus } from "../../../shared/autosave/autosave-status-context";
 import type { ChartFormValues } from "../../charts/chart-config";
@@ -14,6 +15,7 @@ import { sanitizeDataConfigForSave } from "../../charts/data/aggregation";
 
 // Module-scoped: inline arrows churn useAutosave's memo every render.
 const stringifyChart = (v: ChartFormValues) => JSON.stringify(v);
+const validJoin = (v: ChartFormValues) => isDataJoinValid(v.dataConfig.join);
 
 interface UseVisualizationAutosaveOptions {
   form: UseFormReturn<ChartFormValues>;
@@ -47,8 +49,12 @@ export function useVisualizationAutosave({
   const autosave = useAutosave<ChartFormValues>({
     value: values,
     toKey: stringifyChart,
+    isValid: validJoin,
     save,
     enabled,
   });
-  useReportAutosaveStatus({ status: enabled ? autosave.status : null, error: autosave.error });
+  useReportAutosaveStatus({
+    status: enabled ? (validJoin(values) ? autosave.status : "dirty") : null,
+    error: autosave.error,
+  });
 }

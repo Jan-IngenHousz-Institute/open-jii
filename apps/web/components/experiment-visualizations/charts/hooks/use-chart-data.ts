@@ -72,6 +72,7 @@ export function useChartData(
   // through a shared plan; the plan's input becomes the query key they share.
   const own: OwnRead = {
     tableName: dataConfig.tableName,
+    join: dataConfig.join,
     columns,
     filters: mergedFilters,
     aggregation: dataConfig.aggregation,
@@ -110,6 +111,7 @@ export function useChartData(
     experimentId,
     {
       tableName: dataConfig.tableName,
+      join: dataConfig.join,
       columns,
       filters: mergedFilters,
       aggregation: dataConfig.aggregation,

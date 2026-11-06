@@ -54,16 +54,32 @@ export const zExperimentTableWidget = zWidgetBase.extend({
 // Single-column control card; AND-merges into widgets whose `tableName` matches.
 export const zExperimentFilterWidget = zWidgetBase.extend({
   type: z.literal("filter"),
-  config: z.object({
-    tableName: z.string().optional(),
-    column: z.string().optional(),
-    operator: zExperimentDataFilterOperator.optional(),
-    defaultValue: zExperimentDataFilterValue.optional(),
-    title: z.string().optional(),
-    description: z.string().optional(),
-    showTitle: z.boolean().optional().default(true),
-    showDescription: z.boolean().optional().default(true),
-  }),
+  config: z
+    .object({
+      tableName: z.string().optional(),
+      column: z.string().optional(),
+      operator: zExperimentDataFilterOperator.optional(),
+      defaultValue: zExperimentDataFilterValue.optional(),
+      title: z.string().optional(),
+      description: z.string().optional(),
+      showTitle: z.boolean().optional().default(true),
+      showDescription: z.boolean().optional().default(true),
+    })
+    .superRefine((config, ctx) => {
+      const value = config.defaultValue;
+      if (
+        value !== undefined &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        config.operator !== "between"
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["defaultValue"],
+          message: "Relative time windows require the 'between' operator",
+        });
+      }
+    }),
 });
 
 export const zExperimentDashboardWidget = z.discriminatedUnion("type", [

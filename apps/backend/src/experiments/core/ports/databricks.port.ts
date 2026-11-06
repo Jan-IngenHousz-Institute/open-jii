@@ -44,6 +44,26 @@ export interface DataUploadJobInput {
   createdAt: Date;
 }
 
+export interface ExperimentQuerySource {
+  tableName: string;
+  tableType: "static" | "macro" | "upload";
+  variants?: { columnName: string; schema: string; suffix?: string }[];
+  reservedColumns?: string[];
+  exceptColumns?: string[];
+}
+
+export interface ExperimentAsOfJoin {
+  secondary: ExperimentQuerySource;
+  primaryColumns: string[];
+  secondaryColumns: { name: string; alias: string }[];
+  matchColumn: string;
+  primaryTimeColumn: string;
+  primaryTimeType: string;
+  secondaryTimeColumn: string;
+  secondaryTimeType: string;
+  toleranceMinutes: number;
+}
+
 export const DATABRICKS_PORT = Symbol("DATABRICKS_PORT");
 
 /** Contract for Databricks operations consumed by the experiments domain. */
@@ -72,6 +92,7 @@ export interface DatabricksPort {
 
   /** Build a SQL query for experiment data, dispatching by table type. */
   buildExperimentQuery(params: {
+    join?: ExperimentAsOfJoin;
     tableName: string;
     tableType: "static" | "macro" | "upload";
     experimentId: string;

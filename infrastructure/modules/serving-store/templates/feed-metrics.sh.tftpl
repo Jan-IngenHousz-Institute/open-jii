@@ -2,7 +2,7 @@
 # Each store table's feed, once a minute: rows it took in the last minute and, over the last five,
 # rows it refused and the p95 from gold's commit to the store's insert. Refused rows are counted
 # over five minutes so that a run that fails or comes late cannot leave them unreported. A table
-# nothing reached reports zero rows.
+# nothing reached reports zero rows. The backend's reads follow.
 set -euo pipefail
 
 query="
@@ -37,5 +37,29 @@ while IFS=$'\t' read -r table inserted p95 rejected; do
     metrics+="{\"MetricName\":\"FeedDeliveryP95Seconds\",\"Dimensions\":$dimensions,\"Value\":$p95,\"Unit\":\"Seconds\"},"
   fi
 done <<<"$rows"
+
+# The backend's reads, from the query log: how many ended, and how many failed, in a minute, and the
+# p95 of their durations over five, with a failed read taken as the 30 s a read may last, so failing
+# reads raise it. The windows end ten seconds back, past the log's 7.5 s flush, so each run counts a
+# read once. Without reads there is no p95. A query log the timer cannot read costs these metrics
+# alone, never the feed's above.
+if read_stats=$(clickhouse-client --user openjii_monitor --format TSV --query "
+  SELECT countIf(event_time > now() - INTERVAL 70 SECOND),
+    countIf(event_time > now() - INTERVAL 70 SECOND AND type != 'QueryFinish'),
+    quantile(0.95)(if(type = 'QueryFinish', query_duration_ms, 30000)) / 1000
+  FROM system.query_log
+  WHERE user = 'openjii_reader' AND type != 'QueryStart'
+    AND event_time > now() - INTERVAL 310 SECOND AND event_time <= now() - INTERVAL 10 SECOND
+"); then
+  IFS=$'\t' read -r reads failed p95 <<<"$read_stats"
+  dimensions="[{\"Name\":\"Environment\",\"Value\":\"${environment}\"}]"
+  metrics+="{\"MetricName\":\"StoreReads\",\"Dimensions\":$dimensions,\"Value\":$reads,\"Unit\":\"Count\"},"
+  metrics+="{\"MetricName\":\"StoreReadFailures\",\"Dimensions\":$dimensions,\"Value\":$failed,\"Unit\":\"Count\"},"
+  if [ "$p95" != "nan" ]; then
+    metrics+="{\"MetricName\":\"StoreReadP95Seconds\",\"Dimensions\":$dimensions,\"Value\":$p95,\"Unit\":\"Seconds\"},"
+  fi
+else
+  echo "Read metrics not sent: the query log did not answer" >&2
+fi
 
 aws cloudwatch put-metric-data --region "${region}" --namespace "${namespace}" --metric-data "[$${metrics%,}]"

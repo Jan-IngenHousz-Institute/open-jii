@@ -27,6 +27,8 @@ const SORT_KEYS = ["group", "decimal", "value", "rowId"] as const;
 export abstract class BaseQueryBuilder {
   protected isDistinct = false;
 
+  constructor(private readonly columnNames: readonly string[] = []) {}
+
   abstract select(columns?: string[]): this;
   abstract from(table: string): this;
   abstract where(condition: string): this;
@@ -49,10 +51,29 @@ export abstract class BaseQueryBuilder {
    * pass through with one set of backticks.
    */
   escapeIdentifier(identifier: string): string {
+    if (this.columnNames.includes(identifier)) {
+      return this.quoteName(identifier);
+    }
+    const parent = this.columnNames
+      .filter((name) => identifier.startsWith(`${name}.`))
+      .sort((a, b) => b.length - a.length)
+      .at(0);
+    if (parent !== undefined) {
+      return `${this.quoteName(parent)}.${identifier
+        .slice(parent.length + 1)
+        .split(".")
+        .map((part) => this.quoteName(part))
+        .join(".")}`;
+    }
     return identifier
       .split(".")
-      .map((part) => `\`${part.replace(/`/g, "``")}\``)
+      .map((part) => this.quoteName(part))
       .join(".");
+  }
+
+  /** One identifier, never a struct path. Column names and aliases may contain dots. */
+  quoteName(name: string): string {
+    return `\`${name.replaceAll("`", "``")}\``;
   }
 
   /**
@@ -521,10 +542,5 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
 
     const value = `element_at(try_cast(${source} AS MAP<STRING, VARIANT>), ${this.escapeValue(field.name)})`;
     return `try_cast(${value} AS ${castType})`;
-  }
-
-  /** One identifier, never split on dots: a field name may contain them. */
-  private quoteName(name: string): string {
-    return `\`${name.replaceAll("`", "``")}\``;
   }
 }

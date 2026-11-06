@@ -1,10 +1,14 @@
 "use client";
 
+import type { ExperimentRelativeTimeWindow } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { isRelativeTimeWindow } from "@repo/api/transforms/relative-time-filter";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
 import { formatYmdHm } from "../../../util/date";
+import { RollingRangeLabel } from "../rolling-range-label";
+import { useFilterEvaluationTime } from "../use-filter-evaluation-time";
 import { ContributorChipValue } from "./contributor-chip-value";
 
 const NO_VALUE = "—";
@@ -28,10 +32,22 @@ export function ChipValue({
   tableName,
 }: ChipValueProps) {
   const { t } = useTranslation("common");
+  const relative = isRelativeTimeWindow(filter.value) ? filter.value : undefined;
   const className = cn(
     "text-foreground/80 truncate",
     fullWidth ? "min-w-0 flex-1 text-left" : "max-w-[16ch]",
   );
+
+  if (relative) {
+    return (
+      <RelativeChipValue
+        value={relative}
+        experimentId={experimentId}
+        tableName={tableName}
+        column={filter.column}
+      />
+    );
+  }
 
   if (isContributor) {
     return (
@@ -47,6 +63,21 @@ export function ChipValue({
 
   const display = formatFilterDisplay(filter, (count) => t("dataFilters.selectedCount", { count }));
   return <span className={className}>{display}</span>;
+}
+
+function RelativeChipValue({
+  value,
+  experimentId,
+  tableName,
+  column,
+}: {
+  value: ExperimentRelativeTimeWindow;
+  experimentId?: string;
+  tableName?: string;
+  column: string;
+}) {
+  const evaluation = useFilterEvaluationTime(experimentId, tableName, column, value);
+  return <RollingRangeLabel window={value} evaluation={evaluation} compact />;
 }
 
 function formatFilterDisplay(

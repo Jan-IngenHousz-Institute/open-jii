@@ -9,7 +9,6 @@ import type {
   ExperimentAggregationItem,
   ExperimentDataAggregation,
   ExperimentDataColumn,
-  ExperimentDataFilter,
   ExperimentDataQuery,
   ExperimentDataResponse,
   ExperimentDataTable,
@@ -20,6 +19,13 @@ import type {
   ExperimentTablesMetadataList,
   ExperimentTimeBucketUnit,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataJoin } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { joinedColumns } from "@repo/api/transforms/joined-columns";
+import {
+  hasRelativeTimeFilters,
+  relativeTimeMinute,
+  resolveRelativeTimeFilters,
+} from "@repo/api/transforms/relative-time-filter";
 
 import type { FixtureRow, FixtureTable, FixtureValue } from "./fixture-tables.js";
 
@@ -71,7 +77,12 @@ export class FixtureQuery {
       if (!query.success) return this.badRequest(query.error.message);
       const table = this.find(query.data.tableName);
       if (table === undefined) return this.notFound(query.data.tableName);
-      return { status: 200, body: { columns: [...table.columns] } };
+      try {
+        const joined = query.data.join ? this.join(table, query.data.join) : table;
+        return { status: 200, body: { columns: [...joined.columns] } };
+      } catch (error) {
+        return this.badRequest(error instanceof Error ? error.message : String(error));
+      }
     }
 
     if (path === "/data/distinct") {
@@ -89,13 +100,67 @@ export class FixtureQuery {
       const table = this.find(query.data.tableName);
       if (table === undefined) return this.notFound(query.data.tableName);
       try {
-        return { status: 200, body: [this.read(table, query.data)] };
+        const evaluatedAt = hasRelativeTimeFilters(query.data.filters)
+          ? relativeTimeMinute(Date.now())
+          : undefined;
+        const read = this.read(
+          query.data.join ? this.join(table, query.data.join) : table,
+          query.data,
+          evaluatedAt ?? 0,
+        );
+        return {
+          status: 200,
+          body: [
+            {
+              ...read,
+              ...(evaluatedAt === undefined
+                ? {}
+                : { filterEvaluatedAt: new Date(evaluatedAt).toISOString() }),
+            },
+          ],
+        };
       } catch (error) {
         return this.badRequest(error instanceof Error ? error.message : String(error));
       }
     }
 
     return null;
+  }
+
+  // Synthetic warehouse boundary for capture only. SQL correctness is checked separately.
+  private join(primary: FixtureTable, config: ExperimentDataJoin): FixtureTable {
+    const secondary = this.find(config.tableName);
+    if (!secondary) throw new Error("Second table not found");
+    const columns = joinedColumns([...primary.columns], [...secondary.columns], config.tableName);
+    const timestamp = (value: FixtureValue | undefined) =>
+      typeof value === "string" ? Date.parse(value) : NaN;
+    const rows = primary.rows.map((row) => {
+      const time = timestamp(row[config.primaryTimeColumn]);
+      const key = row[config.matchColumn];
+      const candidates = secondary.rows
+        .filter((other) => {
+          const otherTime = timestamp(other[config.secondaryTimeColumn]);
+          return (
+            key != null &&
+            other[config.matchColumn] === key &&
+            otherTime <= time &&
+            otherTime >= time - config.toleranceMinutes * 60_000
+          );
+        })
+        .sort(
+          (a, b) =>
+            timestamp(b[config.secondaryTimeColumn]) - timestamp(a[config.secondaryTimeColumn]) ||
+            this.compare(a.id ?? "", b.id ?? ""),
+        );
+      const selected = candidates.at(0);
+      return {
+        ...row,
+        ...Object.fromEntries(
+          columns.map((column) => [column.name, selected?.[column.sourceTable.columnName] ?? null]),
+        ),
+      };
+    });
+    return { ...primary, columns: [...primary.columns, ...columns], rows };
   }
 
   private find(tableName: string): FixtureTable | undefined {
@@ -141,8 +206,12 @@ export class FixtureQuery {
   }
 
   // Mirrors the repository's three branches: aggregated, filtered or projected, and plain pages.
-  private read(table: FixtureTable, query: ExperimentDataQuery): ExperimentDataTable {
-    const filters = query.filters ?? [];
+  private read(
+    table: FixtureTable,
+    query: ExperimentDataQuery,
+    evaluatedAt: number,
+  ): ExperimentDataTable {
+    const filters = resolveRelativeTimeFilters(query.filters ?? [], evaluatedAt);
     const filtered = table.rows.filter((row) =>
       filters.every((filter) => this.matches(row, filter)),
     );
@@ -226,7 +295,10 @@ export class FixtureQuery {
     return { columns: shaped.columns, rows };
   }
 
-  private matches(row: FixtureRow, filter: ExperimentDataFilter): boolean {
+  private matches(
+    row: FixtureRow,
+    filter: ReturnType<typeof resolveRelativeTimeFilters>[number],
+  ): boolean {
     const cell = row[filter.column] ?? null;
     if (cell === null) return false;
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   zExperimentDataResponse,
@@ -391,4 +391,101 @@ describe("FixtureQuery, example tables", () => {
     expect(zExperimentDataResponse.parse(trial?.body)[0]?.data?.rows).toHaveLength(15);
     expect(zExperimentDataResponse.parse(fleet?.body)[0]?.data?.rows.length).toBeGreaterThan(0);
   });
+});
+
+describe("FixtureQuery, time matching", () => {
+  it("draws joined and unmatched rows with secondary metadata aliases", () => {
+    const fixtureColumns: FixtureTable["columns"] = [
+      { name: "id", type_name: "STRING", type_text: "STRING" },
+      { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+      { name: "station", type_name: "STRING", type_text: "STRING" },
+      { name: "air_temperature", type_name: "DOUBLE", type_text: "DOUBLE" },
+    ];
+    const fixture = new FixtureQuery([
+      {
+        identifier: "leaf_readings",
+        displayName: "Primary readings",
+        columns: fixtureColumns,
+        rows: [
+          { id: "p1", timestamp: "2026-10-20T10:00:00Z", station: "A" },
+          { id: "p2", timestamp: "2026-10-20T10:30:00Z", station: "A" },
+        ],
+      },
+      {
+        identifier: "weather_readings",
+        displayName: "Secondary readings",
+        columns: fixtureColumns,
+        rows: [{ id: "s1", timestamp: "2026-10-20T09:58:00Z", station: "A", air_temperature: 19 }],
+      },
+    ]);
+    const join = JSON.stringify({
+      tableName: "weather_readings",
+      matchColumn: "station",
+      primaryTimeColumn: "timestamp",
+      secondaryTimeColumn: "timestamp",
+      toleranceMinutes: 5,
+    });
+    const answer = fixture.answer(
+      "/data",
+      new URLSearchParams({
+        tableName: "leaf_readings",
+        columns: "id,second__air_temperature",
+        join,
+      }),
+    );
+    expect(answer?.status).toBe(200);
+    if (answer?.status !== 200) throw new Error("Expected data");
+    const data = zExperimentDataResponse.parse(answer.body)[0].data;
+    if (!data) throw new Error("Expected joined data");
+    expect(data.rows).toEqual([
+      { id: "p1", second__air_temperature: 19 },
+      { id: "p2", second__air_temperature: null },
+    ]);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-10-20T10:31:59Z"));
+    try {
+      const rolling = fixture.answer(
+        "/data",
+        new URLSearchParams({
+          tableName: "leaf_readings",
+          columns: "id,second__air_temperature",
+          join,
+          filters: JSON.stringify([
+            { column: "timestamp", operator: "between", value: { last: 24, unit: "hours" } },
+          ]),
+        }),
+      );
+      if (rolling?.status !== 200) throw new Error("Expected rolling joined data");
+      const result = zExperimentDataResponse.parse(rolling.body)[0];
+      expect(result.filterEvaluatedAt).toBe("2026-10-20T10:31:00.000Z");
+      expect(result.data?.rows).toEqual(data.rows);
+    } finally {
+      clock.mockRestore();
+    }
+    const columns = fixture.answer(
+      "/data/columns",
+      new URLSearchParams({ tableName: "leaf_readings", join }),
+    );
+    if (columns?.status !== 200) throw new Error("Expected columns");
+    expect(
+      zExperimentTableColumnsResponse
+        .parse(columns.body)
+        .columns.find((c) => c.name === "second__air_temperature")?.sourceTable,
+    ).toEqual({ tableName: "weather_readings", columnName: "air_temperature" });
+  });
+});
+
+it("evaluates a relative fixture read at the same UTC minute reported to the UI", () => {
+  const clock = vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-06-08T11:00:59.999Z"));
+  try {
+    const answer = ask("/data", {
+      tableName: "plots",
+      filters: [{ column: "timestamp", operator: "between", value: { last: 24, unit: "hours" } }],
+    });
+    if (answer?.status !== 200) throw new Error("Fixture read failed");
+    const result = zExperimentDataResponse.parse(answer.body)[0];
+    expect(result.filterEvaluatedAt).toBe("2026-06-08T11:00:00.000Z");
+    expect(result.data?.rows).toHaveLength(2);
+  } finally {
+    clock.mockRestore();
+  }
 });

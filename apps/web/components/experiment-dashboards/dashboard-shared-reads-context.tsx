@@ -8,6 +8,7 @@ import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/das
 import type {
   ExperimentDataAggregation,
   ExperimentDataFilter,
+  ExperimentDataJoin,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type {
   ExperimentChartDataConfig,
@@ -30,6 +31,7 @@ export interface SharedRead {
 
 /** What one chart would read on its own. */
 export interface OwnRead {
+  join?: ExperimentDataJoin;
   tableName: string;
   columns: string[];
   filters: ExperimentDataFilter[] | undefined;
@@ -109,7 +111,7 @@ export function useDashboardSharedRead(
   own: OwnRead,
 ): SharedReadPlan | undefined {
   const plans = useContext(DashboardSharedReadsContext);
-  const plan = plans?.get(visualizationId);
+  const plan = own.join ? undefined : plans?.get(visualizationId);
   if (plan === undefined || plan === SHARED_READ_PENDING) {
     return plan;
   }
@@ -215,7 +217,9 @@ function memberOf(
   filtersFor: FilterResolver,
 ): (GroupMember & Pick<ReadGroup, "tableName" | "filters">) | undefined {
   const canJoinGroup =
-    Boolean(dataConfig.tableName) && !isAggregationActive(dataConfig.aggregation);
+    Boolean(dataConfig.tableName) &&
+    !dataConfig.join &&
+    !isAggregationActive(dataConfig.aggregation);
   if (!canJoinGroup) {
     return undefined;
   }
@@ -254,7 +258,7 @@ function commonestX(members: GroupMember[]): string | undefined {
 
 function covers(plan: SharedRead, own: OwnRead): boolean {
   const sameTable = plan.tableName === own.tableName;
-  if (!sameTable || isAggregationActive(own.aggregation)) {
+  if (!sameTable || own.join || isAggregationActive(own.aggregation)) {
     return false;
   }
   if (JSON.stringify(plan.filters ?? []) !== JSON.stringify(own.filters ?? [])) {

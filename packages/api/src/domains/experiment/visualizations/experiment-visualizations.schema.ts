@@ -4,6 +4,7 @@ import {
   zExperimentAggregationFunction,
   zExperimentDataAggregation,
   zExperimentDataFilter,
+  zExperimentDataJoin,
 } from "../data/experiment-data.schema";
 
 // Chart family enum
@@ -143,6 +144,7 @@ export const zExperimentChartConfig = z.record(z.string(), z.unknown()).optional
 // empty strings to match the draft state of zExperimentDataSourceConfig.
 export const zExperimentChartDataConfig = z.object({
   tableName: z.string(),
+  join: zExperimentDataJoin.optional(),
   dataSources: z.array(zExperimentDataSourceConfig).min(1),
   // Optional filtering: applied as a WHERE clause when the chart is rendered.
   filters: z.array(zExperimentDataFilter).optional(),

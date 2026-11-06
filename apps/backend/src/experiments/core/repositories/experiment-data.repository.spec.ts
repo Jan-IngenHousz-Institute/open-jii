@@ -481,7 +481,19 @@ describe("ExperimentDataRepository", () => {
       );
       vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
-        success({ columns: [], rows: [], totalRows: 0, truncated: false }),
+        success({
+          columns: [
+            {
+              name: "contributor",
+              type_name: "STRUCT",
+              type_text: WellKnownColumnTypes.CONTRIBUTOR,
+              position: 0,
+            },
+          ],
+          rows: [],
+          totalRows: 0,
+          truncated: false,
+        }),
       );
 
       const result = await repository.getTableData({
@@ -496,8 +508,8 @@ describe("ExperimentDataRepository", () => {
 
       assertSuccess(result);
 
-      // No extra lookup query: the pseudonym is recomputed in SQL, not reversed.
-      expect(databricksPort.executeSqlQuery).toHaveBeenCalledTimes(1);
+      // The table's column types, then the read: the pseudonym is recomputed in SQL, not reversed.
+      expect(databricksPort.executeSqlQuery).toHaveBeenCalledTimes(2);
       // The contributor filter carries the salt; the plain column filter does not.
       expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -666,6 +678,193 @@ describe("ExperimentDataRepository", () => {
               direction: "ASC",
               mode: { kind: "pseudonym", salt: mockExperiment.id },
             },
+          }),
+        );
+      });
+    });
+
+    describe("an anonymized experiment's contributors", () => {
+      const rawData: ExperimentTableMetadata = {
+        identifier: "raw_data",
+        displayName: "Raw data",
+        tableType: "static",
+        rowCount: 10,
+        latestRowAt: null,
+        schemaRevision: null,
+        macroSchema: null,
+        questionsSchema: null,
+        customMetadataSchema: null,
+      };
+      const anonymized = { ...mockExperiment, anonymizeContributors: true };
+
+      beforeEach(() => {
+        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+          success([rawData]),
+        );
+        vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+        vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+          success({
+            columns: [
+              {
+                name: "contributor",
+                type_name: "STRUCT",
+                type_text: WellKnownColumnTypes.CONTRIBUTOR,
+                position: 0,
+              },
+              {
+                name: "plot",
+                type_name: "STRUCT",
+                type_text: "STRUCT<id: STRING, name: STRING>",
+                position: 1,
+              },
+            ],
+            rows: [],
+            totalRows: 0,
+            truncated: false,
+          }),
+        );
+      });
+
+      it.each([
+        ["selecting a contributor's name", { columns: ["contributor.name"] }],
+        [
+          "filtering by a contributor's name",
+          { filters: [{ column: "contributor.name", operator: "contains", value: "Ali" }] },
+        ],
+        [
+          "filtering by the contributor column itself",
+          { filters: [{ column: "contributor", operator: "equals", value: "u1" }] },
+        ],
+        [
+          "grouping by a contributor's id",
+          { aggregation: { groupBy: [{ column: "contributor.id", alias: "who" }] } },
+        ],
+        [
+          "counting a contributor's names",
+          {
+            aggregation: {
+              functions: [{ column: "contributor.name", function: "count_distinct" }],
+            },
+          },
+        ],
+        [
+          "sorting by a contributor's avatar",
+          { orderBy: "contributor.avatar", page: 1, pageSize: 5 },
+        ],
+        ["selecting a contributor's name in another case", { columns: ["Contributor.name"] }],
+        [
+          "filtering by the contributor column in another case",
+          { filters: [{ column: "CONTRIBUTOR", operator: "equals", value: "u1" }] },
+        ],
+        [
+          "sorting by a contributor's avatar in another case",
+          { orderBy: "CONTRIBUTOR.avatar", page: 1, pageSize: 5 },
+        ],
+      ] satisfies [string, Partial<Parameters<ExperimentDataRepository["getTableData"]>[0]>][])(
+        "refuses %s",
+        async (_case, request) => {
+          const result = await repository.getTableData({
+            ...baseParams,
+            experiment: anonymized,
+            ...request,
+          });
+
+          assertFailure(result);
+          expect(result.error.statusCode).toBe(400);
+          // Only the lookup of the table's column types ran.
+          expect(databricksPort.executeSqlQuery).toHaveBeenCalledTimes(1);
+        },
+      );
+
+      it("refuses the distinct values of a contributor's name", async () => {
+        const result = await repository.getDistinctColumnValues({
+          experimentId: baseParams.experimentId,
+          experiment: anonymized,
+          tableName: "raw_data",
+          column: "contributor.name",
+          limit: 10,
+        });
+
+        assertFailure(result);
+        expect(result.error.statusCode).toBe(400);
+        expect(databricksPort.executeSqlQuery).toHaveBeenCalledTimes(1);
+      });
+
+      it("sorts by the contributor column itself in the order of its pseudonyms", async () => {
+        await repository.getTableData({
+          ...baseParams,
+          experiment: anonymized,
+          orderBy: "contributor",
+          page: 1,
+          pageSize: 5,
+        });
+
+        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            ordering: {
+              column: "contributor.id",
+              direction: "ASC",
+              mode: { kind: "pseudonym", salt: mockExperiment.id },
+            },
+          }),
+        );
+      });
+
+      it("sorts a contributor's name in another case by the pseudonym, under the column's own name", async () => {
+        await repository.getTableData({
+          ...baseParams,
+          experiment: anonymized,
+          orderBy: "Contributor.name",
+          orderDirection: "DESC",
+          page: 1,
+          pageSize: 5,
+        });
+
+        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            ordering: {
+              column: "contributor.id",
+              direction: "DESC",
+              mode: { kind: "pseudonym", salt: mockExperiment.id },
+            },
+          }),
+        );
+      });
+
+      it("reads another struct's fields as they are", async () => {
+        const result = await repository.getTableData({
+          ...baseParams,
+          experiment: anonymized,
+          columns: ["plot.name"],
+          filters: [{ column: "plot.id", operator: "equals", value: "p1" }],
+          page: 1,
+          pageSize: 5,
+        });
+
+        assertSuccess(result);
+        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            columns: ["plot.name"],
+            filters: [{ column: "plot.id", operator: "equals", value: "p1" }],
+          }),
+        );
+      });
+
+      it("leaves a contributor's fields readable when the experiment does not anonymize", async () => {
+        const result = await repository.getTableData({
+          ...baseParams,
+          experiment: { ...mockExperiment, anonymizeContributors: false },
+          columns: ["contributor.name"],
+          filters: [{ column: "contributor.name", operator: "contains", value: "Ali" }],
+          page: 1,
+          pageSize: 5,
+        });
+
+        assertSuccess(result);
+        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            columns: ["contributor.name"],
+            filters: [{ column: "contributor.name", operator: "contains", value: "Ali" }],
           }),
         );
       });
@@ -2261,6 +2460,217 @@ describe("ExperimentDataRepository", () => {
 
       assertSuccess(result);
       expect(execute.mock.calls[0][1]).toMatch(/^SELECT \* EXCEPT \(`__numeric_order_group`, /);
+    });
+  });
+  describe("time-matched second table", () => {
+    const experimentId = mockExperiment.id;
+    const join = {
+      tableName: "weather",
+      matchColumn: "station",
+      primaryTimeColumn: "timestamp",
+      secondaryTimeColumn: "timestamp",
+      toleranceMinutes: 5,
+    };
+    const column = (name: string, type_text: string) => ({
+      name,
+      type_name: type_text,
+      type_text,
+      position: 0,
+    });
+    const baseColumns = [
+      column("id", "STRING"),
+      column("timestamp", "TIMESTAMP"),
+      column("station", "STRING"),
+      column("contributor", WellKnownColumnTypes.CONTRIBUTOR),
+    ];
+    const metadata = ["raw_data", "weather"].map((identifier) => ({
+      identifier,
+      tableType: identifier === "raw_data" ? "static" : "upload",
+      rowCount: 2,
+      displayName: null,
+      latestRowAt: null,
+      schemaRevision: "r1",
+      macroSchema: null,
+      questionsSchema: null,
+      customMetadataSchema: null,
+      uploadSchema: null,
+    })) as ExperimentTableMetadata[];
+
+    beforeEach(() => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockImplementation((input) =>
+        success(input.join ? "joined" : `columns ${input.tableName}`),
+      );
+      vi.spyOn(databricksPort, "executeSqlQuery").mockImplementation((_schema, query) =>
+        Promise.resolve(
+          success({
+            columns:
+              query === "joined"
+                ? [
+                    column("id", "STRING"),
+                    column("second__contributor", WellKnownColumnTypes.CONTRIBUTOR),
+                  ]
+                : baseColumns,
+            rows:
+              query === "joined"
+                ? [
+                    [
+                      "p1",
+                      JSON.stringify({ id: "person", name: "Private Name", avatar: "private" }),
+                    ],
+                    ["p2", null],
+                  ]
+                : [],
+            totalRows: query === "joined" ? 2 : 0,
+            truncated: false,
+          }),
+        ),
+      );
+    });
+
+    it("resolves both shapes in the same experiment and describes secondary aliases", async () => {
+      const result = await repository.getTableColumns({
+        experimentId,
+        tableName: "raw_data",
+        join,
+      });
+      assertSuccess(result);
+      expect(result.value.find((c) => c.name === "second__station")?.sourceTable).toEqual({
+        tableName: "weather",
+        columnName: "station",
+      });
+      expect(databricksPort.getExperimentTableMetadata).toHaveBeenCalledWith(experimentId, {
+        includeSchemas: true,
+      });
+    });
+
+    it("passes a scoped semantic secondary source and anonymizes joined contributor cells", async () => {
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: { ...mockExperiment, anonymizeContributors: true },
+        tableName: "raw_data",
+        columns: ["id", "second__contributor"],
+        join,
+      });
+      assertSuccess(result);
+      const data = result.value[0].data;
+      if (!data) throw new Error("Expected joined data");
+      const rows = data.rows;
+      const contributor = rows[0].second__contributor;
+      if (typeof contributor !== "string") throw new Error("Expected contributor struct");
+      const parsed: unknown = JSON.parse(contributor);
+      expect(parsed).toMatchObject({ avatar: null });
+      expect(contributor).toMatch(/Contributor-[A-F0-9]{6}/);
+      expect(rows[1]).toEqual({ id: "p2", second__contributor: null });
+      expect(JSON.stringify(result.value)).not.toContain("Private Name");
+      const query = vi
+        .mocked(databricksPort.buildExperimentQuery)
+        .mock.calls.find(([input]) => input.join)?.[0];
+      expect(query?.experimentId).toBe(experimentId);
+      expect(query?.join?.secondary.tableName).toBe("weather");
+      expect(query?.join?.secondary.tableType).toBe("upload");
+      expect(query?.join?.primaryColumns).toEqual(baseColumns.map((c) => c.name));
+    });
+
+    it("pseudonymizes secondary contributor filters and ordering", async () => {
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: { ...mockExperiment, anonymizeContributors: true },
+        tableName: "raw_data",
+        columns: ["second__contributor"],
+        join,
+        filters: [
+          { column: "second__contributor.id", operator: "equals", value: "Contributor-ABC123" },
+        ],
+        orderBy: "second__contributor.name",
+      });
+      assertSuccess(result);
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: [
+            {
+              column: "second__contributor.id",
+              operator: "equals",
+              value: "Contributor-ABC123",
+              contributorPseudonymSalt: experimentId,
+            },
+          ],
+          ordering: {
+            column: "second__contributor.id",
+            direction: "ASC",
+            mode: { kind: "pseudonym", salt: experimentId },
+          },
+        }),
+      );
+    });
+
+    it("prefers literal dotted names over contributor paths when anonymizing a joined read", async () => {
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [
+            ...baseColumns,
+            column("Plant.id", "STRING"),
+            column("Plant.name", "STRING"),
+            column("Plant", WellKnownColumnTypes.CONTRIBUTOR),
+          ],
+          rows: [],
+          totalRows: 0,
+          truncated: false,
+        }),
+      );
+      const filters = [{ column: "Plant.id", operator: "equals" as const, value: "literal" }];
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: { ...mockExperiment, anonymizeContributors: true },
+        tableName: "raw_data",
+        columns: ["Plant.id"],
+        join,
+        filters,
+        orderBy: "Plant.name",
+      });
+      assertSuccess(result);
+      const query = vi
+        .mocked(databricksPort.buildExperimentQuery)
+        .mock.calls.find(([input]) => input.join)?.[0];
+      expect(query?.filters).toEqual(filters);
+      expect(query?.ordering).toEqual({ column: "Plant.name", direction: "ASC" });
+    });
+
+    it("rejects a secondary table absent from the experiment before querying it", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(metadata.slice(0, 1)),
+      );
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        join,
+      });
+      assertFailure(result);
+      expect(databricksPort.executeSqlQuery).not.toHaveBeenCalled();
+    });
+
+    it("rejects unsupported timestamp columns", async () => {
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [
+            column("id", "STRING"),
+            column("timestamp", "STRING"),
+            column("station", "STRING"),
+          ],
+          rows: [],
+          totalRows: 0,
+          truncated: false,
+        }),
+      );
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        join,
+      });
+      assertFailure(result);
+      expect(result.error.message).toContain("timestamp or date");
     });
   });
 });

@@ -18,7 +18,12 @@ import {
 } from "@repo/ui/components/select";
 
 import { filterColumnPathFor, parentColumnName } from "../filter-column-path";
-import { coerceOperatorForColumn, operatorsForColumn } from "../filter-operators";
+import {
+  coerceOperatorForColumn,
+  defaultValueForOperator,
+  operatorValueShape,
+  operatorsForColumn,
+} from "../filter-operators";
 import { FilterValueInput } from "../value-input";
 
 interface FilterRowProps {
@@ -52,6 +57,18 @@ export function FilterRow({
     onChange({ column: nextPath, operator: nextOperator, value: nextValue });
   };
 
+  const handleOperatorChange = (operator: string) => {
+    const next = operator as ExperimentDataFilter["operator"];
+    onChange({
+      ...filter,
+      operator: next,
+      value:
+        operatorValueShape(next) === operatorValueShape(filter.operator)
+          ? filter.value
+          : defaultValueForOperator(next),
+    });
+  };
+
   return (
     <InsetPanel padding="sm" className="space-y-2">
       <div className="flex items-center gap-2">
@@ -78,12 +95,7 @@ export function FilterRow({
           </SelectContent>
         </Select>
 
-        <Select
-          value={filter.operator}
-          onValueChange={(op) =>
-            onChange({ ...filter, operator: op as ExperimentDataFilter["operator"] })
-          }
-        >
+        <Select value={filter.operator} onValueChange={handleOperatorChange}>
           <SelectTrigger className="h-9 w-[110px] shrink-0">
             <SelectValue />
           </SelectTrigger>

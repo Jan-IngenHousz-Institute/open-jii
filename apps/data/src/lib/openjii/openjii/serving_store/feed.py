@@ -9,7 +9,7 @@ from typing import Any
 
 from pyspark.sql import DataFrame, SparkSession
 
-from .tables import StoreTable
+from .tables import PAYLOAD_SCHEMAS, StoreTable
 from .writer import StoreUnavailable, StoreWriter
 
 # Bounds a catch-up batch, so the feed cannot hold the cores ingestion needs for long. Delta reads a
@@ -57,10 +57,12 @@ class StoreFeed:
     def write(self, table: StoreTable, changes: DataFrame, batch_id: int) -> None:
         """Writes one batch, again and again until every row has gone; the dedup tokens drop what
         already landed. The credentials are read on every attempt, so a changed password takes
-        effect without a restart."""
+        effect without a restart. The batch's schemas go after its rows, gathered once, so a retry
+        sends the same ones."""
         lines = table.lines(changes)
+        schemas, unsent = self._schemas(table, changes, batch_id)
         for attempt in itertools.count():
-            failure = self._write_once(table, lines, batch_id)
+            failure = self._write_once(table, lines, schemas, unsent, batch_id)
             if failure is None:
                 return
 
@@ -71,7 +73,20 @@ class StoreFeed:
             )
             time.sleep(delay)
 
-    def _write_once(self, table: StoreTable, lines: DataFrame, batch_id: int) -> str | None:
+    def _schemas(self, table: StoreTable, changes: DataFrame, batch_id: int) -> tuple[list[str], str | None]:
+        """The batch's payload schemas, or none and why when Spark cannot work them out. The rows
+        still go, and the reason goes to ``feed_rejects``, since an upload's rows arrive in one batch
+        and no later one would bring its schemas."""
+        try:
+            return [row.line for row in table.schema_lines(changes).collect()], None
+        except Exception as error:
+            reason = f"batch {batch_id} went without its payload schemas: {type(error).__name__}: {error}"
+            print(f"[serving store] {table.name} {reason}", flush=True)
+            return [], reason
+
+    def _write_once(
+        self, table: StoreTable, lines: DataFrame, schemas: list[str], unsent: str | None, batch_id: int
+    ) -> str | None:
         """Writes the batch once, returning why some of it did not go, or None when all of it did."""
         try:
             writer = self.writer()
@@ -87,10 +102,27 @@ class StoreFeed:
         written = writer.write(lines, table.name)
         if written.unfinished:
             return f"{written.unfinished} rows not sent"
+        schemas_written = writer.insert(PAYLOAD_SCHEMAS, schemas)
+        if schemas_written.unfinished:
+            return f"{schemas_written.unfinished} schemas not sent"
+        # A refused schema is recorded under its own table too, whose rejects alert covers it; the
+        # refused line itself is filed under payload_schemas, which no alert reads.
+        refused = (
+            f"batch {batch_id}: the store refused {schemas_written.rejected} of its payload schemas"
+            if schemas_written.rejected
+            else None
+        )
+        for reason in (unsent, refused):
+            if reason is None:
+                continue
+            try:
+                writer.reject_unsent_schemas(table.name, reason)
+            except StoreUnavailable as error:
+                return str(error)
 
         print(
             f"[serving store] {table.name} batch {batch_id}: {written.inserted} inserted, "
-            f"{written.rejected} rejected",
+            f"{written.rejected} rejected, {schemas_written.inserted} schemas, {schemas_written.rejected} refused",
             flush=True,
         )
         return None

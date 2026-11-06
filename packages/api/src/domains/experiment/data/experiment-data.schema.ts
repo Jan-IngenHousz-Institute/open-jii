@@ -48,6 +48,7 @@ export const zExperimentDataColumn = z.object({
    * Set when a payload field could not keep its own name because the table already has a column
    * by it. `name` is then the key the field reads as; this is its own name and where it came from.
    */
+  sourceTable: z.object({ tableName: z.string(), columnName: z.string() }).optional(),
   renamedFrom: z.object({ name: z.string(), source: zExperimentDataColumnSource }).optional(),
 });
 
@@ -111,6 +112,16 @@ export const zExperimentDataFilterOperator = z.enum([
   "in",
 ]);
 
+export const zExperimentRelativeTimeWindow = z.discriminatedUnion("unit", [
+  z.object({ last: z.union([z.literal(1), z.literal(24)]), unit: z.literal("hours") }).strict(),
+  z
+    .object({
+      last: z.union([z.literal(7), z.literal(30), z.literal(90)]),
+      unit: z.literal("days"),
+    })
+    .strict(),
+]);
+
 // Non-empty scalar / non-empty array enforced natively so the schema is
 // also the FE "this filter is applicable" gate.
 export const zExperimentDataFilterValue = z.union([
@@ -118,6 +129,7 @@ export const zExperimentDataFilterValue = z.union([
   z.number(),
   z.boolean(),
   z.array(z.union([z.string().min(1), z.number()])).min(1),
+  zExperimentRelativeTimeWindow,
 ]);
 
 // superRefine enforces operator-specific value shape that the value union
@@ -134,6 +146,12 @@ export const zExperimentDataFilter = z
     const issue = (message: string) =>
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["value"], message });
 
+    if (typeof value === "object" && !isArray) {
+      if (operator !== "between") {
+        issue("Relative time windows require the 'between' operator");
+      }
+      return;
+    }
     if (operator === "in") {
       if (!isArray) {
         issue("'in' operator requires a non-empty array of values");
@@ -268,6 +286,7 @@ export const zExperimentDataAggregation = z
 
 export type ExperimentDataFilterOperator = z.infer<typeof zExperimentDataFilterOperator>;
 export type ExperimentDataFilterValue = z.infer<typeof zExperimentDataFilterValue>;
+export type ExperimentRelativeTimeWindow = z.infer<typeof zExperimentRelativeTimeWindow>;
 export type ExperimentDataFilter = z.infer<typeof zExperimentDataFilter>;
 export type ExperimentTimeBucketUnit = z.infer<typeof zExperimentTimeBucketUnit>;
 export type ExperimentGroupByItem = z.infer<typeof zExperimentGroupByItem>;
@@ -298,6 +317,21 @@ function jsonQuerySchema<S extends z.ZodTypeAny>(inner: S) {
     .pipe(inner);
 }
 
+export const zExperimentDataJoin = z.object({
+  tableName: zExperimentTableNameInput,
+  matchColumn: z.string().min(1),
+  primaryTimeColumn: z.string().min(1),
+  secondaryTimeColumn: z.string().min(1),
+  // Keep the interval exactly representable in microseconds.
+  toleranceMinutes: z
+    .number()
+    .int()
+    .nonnegative()
+    .max(Math.floor(Number.MAX_SAFE_INTEGER / 60_000_000)),
+});
+
+export type ExperimentDataJoin = z.infer<typeof zExperimentDataJoin>;
+
 export const zExperimentDataQuery = z.object({
   page: z.coerce.number().int().min(1).optional().describe("Page number for pagination"),
   pageSize: z.coerce.number().int().min(1).max(1000).optional().describe("Number of rows per page"),
@@ -317,6 +351,11 @@ export const zExperimentDataQuery = z.object({
   filters: jsonQuerySchema(z.array(zExperimentDataFilter))
     .optional()
     .describe("JSON-encoded array of filter conditions applied as a WHERE clause"),
+  join: jsonQuerySchema(zExperimentDataJoin)
+    .optional()
+    .describe(
+      "JSON-encoded second-table settings for latest earlier readings matched by key and time",
+    ),
   aggregation: jsonQuerySchema(zExperimentDataAggregation)
     .optional()
     .describe("JSON-encoded GROUP BY + aggregate functions"),
@@ -362,6 +401,11 @@ export const zExperimentDistinctValuesResponse = z.object({
 });
 
 export const zExperimentTableColumnsQuery = z.object({
+  join: jsonQuerySchema(zExperimentDataJoin)
+    .optional()
+    .describe(
+      "JSON-encoded second-table settings for latest earlier readings matched by key and time",
+    ),
   tableName: zExperimentTableNameInput.describe("Table whose columns to return"),
 });
 
@@ -380,6 +424,11 @@ export const zExperimentDataTable = z.object({
   pageSize: z.number().int(),
   totalPages: z.number().int(),
   totalRows: z.number().int(),
+  filterEvaluatedAt: z
+    .string()
+    .datetime()
+    .optional()
+    .describe("UTC minute used to resolve rolling time filters for this read"),
 });
 
 export const zExperimentDataTableList = z.array(zExperimentDataTable);

@@ -894,6 +894,19 @@
       },
       "topN": "Show top N",
       "topNPlaceholder": "All"
+    },
+    "secondTable": {
+      "title": "Second table",
+      "table": "Second table dataset",
+      "none": "None",
+      "matchColumn": "Match column",
+      "primaryTimeColumn": "Primary time column",
+      "secondaryTimeColumn": "Second table time column",
+      "tolerance": "Tolerance in minutes",
+      "chooseColumn": "Choose a column",
+      "help": "Take the latest earlier reading with the same match value. Both time limits are inclusive. Zero matches the exact time. Date and timezone-free timestamps use UTC. Second table columns start with second__.",
+      "incompleteTitle": "Finish time matching",
+      "incompleteHelp": "Choose a shared match column, both time columns and a whole-number tolerance to preview and save."
     }
   }
 }

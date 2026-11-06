@@ -7,6 +7,8 @@ import type { getColumnKind } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import { Input } from "@repo/ui/components/input";
 
+import { scalarFilterDisplay } from "../scalar-filter-display";
+
 export interface CommaSeparatedInputProps {
   value: ExperimentDataFilterValue;
   onChange: (value: ExperimentDataFilterValue) => void;
@@ -15,7 +17,7 @@ export interface CommaSeparatedInputProps {
 
 export function CommaSeparatedInput({ value, onChange, kind }: CommaSeparatedInputProps) {
   const { t } = useTranslation("common");
-  const display = Array.isArray(value) ? value.join(", ") : String(value);
+  const display = scalarFilterDisplay(value);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const parts = e.target.value

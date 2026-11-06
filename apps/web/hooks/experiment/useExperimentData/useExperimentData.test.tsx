@@ -1,6 +1,6 @@
 import { createExperimentDataTable } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { renderHook, waitFor } from "@/test/test-utils";
+import { createTestQueryClient, renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -14,6 +14,32 @@ import type { UseExperimentDataParams } from "./useExperimentData";
 import { useExperimentData } from "./useExperimentData";
 
 describe("useExperimentData", () => {
+  it("refetches a saved relative filter on a return visit using the same query key", async () => {
+    const spy = server.mount(contract.experiments.getExperimentData, {
+      body: [createExperimentDataTable()],
+    });
+    const client = createTestQueryClient();
+    client.setDefaultOptions({ queries: { gcTime: Infinity, retry: false } });
+    const useRead = () =>
+      useExperimentData({
+        experimentId: "exp-1",
+        tableName: "raw_data",
+        page: 1,
+        pageSize: 10,
+        filters: [{ column: "timestamp", operator: "between", value: { last: 24, unit: "hours" } }],
+      });
+    const first = renderHook(useRead, { queryClient: client });
+    await waitFor(() => expect(first.result.current.tableRows).toBeDefined());
+    first.unmount();
+    const second = renderHook(useRead, { queryClient: client });
+    await waitFor(() => expect(spy.callCount).toBe(2));
+    expect(JSON.parse(spy.calls[1]?.query.filters ?? "[]")).toEqual([
+      { column: "timestamp", operator: "between", value: { last: 24, unit: "hours" } },
+    ]);
+    expect(client.getQueryCache().getAll()).toHaveLength(1);
+    second.unmount();
+    client.clear();
+  });
   const mockExperimentData: ExperimentData = {
     columns: [
       { name: "id", type_name: "INT", type_text: "INT" },
