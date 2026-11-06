@@ -31,7 +31,7 @@ function renderSection(
     <ComponentsSection
       components={document.components}
       incidents={document.incidents}
-      today="2026-11-03"
+      generatedAt={document.generatedAt}
       messagesPerMinute={document.messagesPerMinute}
       hasExtras={hasExtras}
       isStale={isStale}

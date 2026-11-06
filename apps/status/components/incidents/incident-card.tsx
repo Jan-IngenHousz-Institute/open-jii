@@ -21,13 +21,7 @@ export function IncidentCard({ incident }: { incident: Incident }) {
   });
 
   function renderUpdate(update: IncidentUpdateEntry, index: number) {
-    return (
-      <IncidentUpdate
-        key={`${update.stage}-${update.postedAt}-${index}`}
-        update={update}
-        isLatest={index === 0}
-      />
-    );
+    return <IncidentUpdate key={update.id} update={update} isLatest={index === 0} />;
   }
 
   return (

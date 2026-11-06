@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import type { ReactNode } from "react";
 import { HistoryStrip } from "~/components/history/history-strip";
 import { ProblemDays } from "~/components/history/problem-days";
@@ -21,7 +21,7 @@ import {
 interface ComponentRowProps {
   component: StatusComponent;
   incidents: Incident[];
-  today: string;
+  generatedAt: string;
   isStale: boolean;
   adornment?: ReactNode;
 }
@@ -29,7 +29,7 @@ interface ComponentRowProps {
 export function ComponentRow({
   component,
   incidents,
-  today,
+  generatedAt,
   isStale,
   adornment,
 }: ComponentRowProps) {
@@ -39,7 +39,11 @@ export function ComponentRow({
   const id = useId();
   const badgeId = `${id}-state`;
   const uptimeId = `${id}-uptime`;
-  const checksBegan = component.days.at(0)?.date ?? today;
+  const checksBegan = component.days.at(0)?.date ?? generatedAt.slice(0, 10);
+  const affecting = useMemo(
+    () => incidents.filter((incident) => incident.components.includes(component.id)),
+    [incidents, component.id],
+  );
   const text = (field: "name" | "description" | "details") =>
     t(`component.${component.id}.${field}`);
   const hasFullHistory = component.days.length >= STATUS_HISTORY_DAYS;
@@ -80,13 +84,19 @@ export function ComponentRow({
 
       <CollapsibleContent>
         <p className="mt-3 max-w-prose text-sm leading-relaxed">{text("details")}</p>
-        <ProblemDays days={component.days} incidents={incidents} checksBegan={checksBegan} />
+        <ProblemDays
+          days={component.days}
+          incidents={affecting}
+          generatedAt={generatedAt}
+          checksBegan={checksBegan}
+        />
       </CollapsibleContent>
 
       <div className="mt-4">
         <HistoryStrip
           component={component}
-          incidents={incidents}
+          incidents={affecting}
+          generatedAt={generatedAt}
           checksBegan={checksBegan}
           dayCount={dayCount}
           describedBy={`${badgeId} ${uptimeId}`}

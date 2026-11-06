@@ -33,7 +33,7 @@ export const statusComponentIdSchema = z.enum(STATUS_COMPONENT_IDS);
 export type StatusComponentId = z.infer<typeof statusComponentIdSchema>;
 
 /** "maintenance" while a planned window that names the component is open, whatever was measured. */
-const componentStateSchema = z.enum(["operational", "degraded", "outage", "maintenance"]);
+export const componentStateSchema = z.enum(["operational", "degraded", "outage", "maintenance"]);
 export type ComponentState = z.infer<typeof componentStateSchema>;
 
 /** A day's worst state; "none" marks a day before checks began. */
@@ -54,7 +54,6 @@ export const dayRecordSchema = z.object({
   maintenanceMinutes: minutesInDay,
   /** Minutes our checks could not run; they count as down in uptime. */
   unknownMinutes: minutesInDay,
-  incidentIds: z.array(z.string()),
 });
 export type DayRecord = z.infer<typeof dayRecordSchema>;
 
@@ -70,7 +69,7 @@ const statusComponentSchema = z.object({
 });
 export type StatusComponent = z.infer<typeof statusComponentSchema>;
 
-const incidentStageSchema = z.enum([
+export const incidentStageSchema = z.enum([
   "investigating",
   "identified",
   "monitoring",
@@ -80,16 +79,17 @@ const incidentStageSchema = z.enum([
   "completed",
 ]);
 
-const nonEmptyText = z.string().check(z.minLength(1));
+export const nonEmptyText = z.string().check(z.minLength(1));
 
-const incidentUpdateSchema = z.object({
+export const incidentUpdateSchema = z.object({
+  id: nonEmptyText,
   stage: incidentStageSchema,
   postedAt: z.iso.datetime(),
   text: nonEmptyText,
   nextUpdateBy: z.optional(z.iso.datetime()),
 });
 
-const incidentSchema = z.object({
+export const incidentSchema = z.object({
   id: nonEmptyText,
   kind: z.enum(["incident", "maintenance"]),
   title: nonEmptyText,
@@ -101,13 +101,15 @@ const incidentSchema = z.object({
   updates: z.array(incidentUpdateSchema),
 });
 export type Incident = z.infer<typeof incidentSchema>;
+export type IncidentUpdate = z.infer<typeof incidentUpdateSchema>;
 
-const noticeSchema = z.object({
+export const noticeSchema = z.object({
   id: nonEmptyText,
   title: nonEmptyText,
   body: z.string(),
   severity: z.enum(["info", "warning", "critical"]),
 });
+export type Notice = z.infer<typeof noticeSchema>;
 
 /** An empty list would read as every component operational. */
 const componentsSchema = z.array(statusComponentSchema).check(z.minLength(1));
@@ -123,13 +125,34 @@ export const statusDocumentSchema = z.object({
 });
 export type StatusDocument = z.infer<typeof statusDocumentSchema>;
 
-const newerComponentSchema = z.object({
-  id: z.string().check(z.refine((id) => !statusComponentIdSchema.safeParse(id).success)),
-});
+const newerComponentIdSchema = z
+  .string()
+  .check(z.refine((id) => !statusComponentIdSchema.safeParse(id).success));
+
+const newerComponentSchema = z.object({ id: newerComponentIdSchema });
+
+const namedComponentsSchema = z.looseObject({ components: z.array(z.unknown()) });
+
+/**
+ * The incident without the components added after the page was built, or nothing when it names
+ * only those. An entry that is not shaped like an incident passes on, for the contract to reject.
+ */
+function readableIncidents(item: unknown): unknown[] {
+  const named = namedComponentsSchema.safeParse(item);
+  if (!named.success) {
+    return [item];
+  }
+
+  const known = named.data.components.filter((id) => !newerComponentIdSchema.safeParse(id).success);
+  const isOnlyNewer = known.length === 0 && named.data.components.length > 0;
+
+  return isOnlyNewer ? [] : [{ ...named.data, components: known }];
+}
 
 /**
  * What a page parses. A component added after the page was built is dropped rather than failing
- * the whole document, so a publisher deployed before the page cannot take the page down.
+ * the whole document, and so is an incident left naming none, so a publisher deployed before the
+ * page cannot take the page down.
  */
 export const readableStatusDocumentSchema = z.extend(statusDocumentSchema, {
   components: z.pipe(
@@ -138,5 +161,12 @@ export const readableStatusDocumentSchema = z.extend(statusDocumentSchema, {
       z.transform((items) => items.filter((item) => !newerComponentSchema.safeParse(item).success)),
     ),
     componentsSchema,
+  ),
+  incidents: z.pipe(
+    z.pipe(
+      z.array(z.unknown()),
+      z.transform((items) => items.flatMap(readableIncidents)),
+    ),
+    z.array(incidentSchema),
   ),
 });

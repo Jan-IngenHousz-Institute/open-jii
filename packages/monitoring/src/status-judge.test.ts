@@ -16,6 +16,7 @@ import type {
   ComponentState,
   DayRecord,
   Incident,
+  Notice,
   StatusComponent,
   StatusComponentId,
 } from "./status-document.js";
@@ -37,6 +38,7 @@ import {
   WEBSITE_MIN_REQUESTS,
   WEBSITE_OUTAGE_ERROR_PERCENT,
   WEBSITE_SLOW_PROBE_MS,
+  endedAt,
   judgeComponent,
   judgeStatus,
   publisherStateSchema,
@@ -710,6 +712,7 @@ function at(iso: string): Date {
 interface RunChange extends Change {
   probes?: Partial<StatusProbes>;
   incidents?: Incident[];
+  notices?: Notice[];
 }
 
 function run(
@@ -723,6 +726,7 @@ function run(
     readings: { ...HEALTHY_READINGS, ...change.readings },
     previous,
     incidents: change.incidents ?? [],
+    notices: change.notices ?? [],
   });
 }
 
@@ -747,7 +751,7 @@ function cleanDay(date: string): DayRecord {
     maintenanceMinutes: 0,
     unknownMinutes: 0,
   };
-  return { date, ...counts, state: dayState(counts), incidentIds: [] };
+  return { date, ...counts, state: dayState(counts) };
 }
 
 function cleanDays(lastDate: string, count: number): DayRecord[] {
@@ -814,14 +818,19 @@ describe("judgeStatus first run", () => {
     expectValid(result);
   });
 
-  it("carries no notices and the incidents it was given", () => {
+  it("carries the incidents and notices it was given", () => {
     const open = incident();
-    const withIncident = run(undefined, "2026-11-03T12:00:00.000Z", { incidents: [open] });
+    const notice: Notice = { id: "notice-1", title: "Heads up", body: "", severity: "info" };
+    const withContent = run(undefined, "2026-11-03T12:00:00.000Z", {
+      incidents: [open],
+      notices: [notice],
+    });
 
-    expect(result.document.notices).toEqual([]);
     expect(result.document.incidents).toEqual([]);
-    expect(withIncident.document.incidents).toEqual([open]);
-    expectValid(withIncident);
+    expect(result.document.notices).toEqual([]);
+    expect(withContent.document.incidents).toEqual([open]);
+    expect(withContent.document.notices).toEqual([notice]);
+    expectValid(withContent);
   });
 });
 
@@ -1250,10 +1259,8 @@ describe("open incidents", () => {
     expect(componentOf(result, "platform").days[0]).toMatchObject({
       downMinutes: 1,
       state: "outage",
-      incidentIds: ["inc-1"],
     });
     expect(componentOf(result, "website").state).toBe("operational");
-    expect(componentOf(result, "website").days[0]?.incidentIds).toEqual([]);
     expectValid(result);
   });
 
@@ -1293,7 +1300,6 @@ describe("open incidents", () => {
     const result = run(undefined, now, { incidents: [incident({ impact: "outage", ...change })] });
 
     expect(componentOf(result, "platform").state).toBe("operational");
-    expect(componentOf(result, "platform").days[0]?.incidentIds).toEqual([]);
   });
 
   it("applies until the time it is resolved", () => {
@@ -1313,6 +1319,47 @@ describe("open incidents", () => {
   });
 });
 
+describe("endedAt", () => {
+  it.each([
+    ["an incident still open", incident(), undefined],
+    [
+      "an incident, by its resolution",
+      incident({ resolvedAt: "2026-11-03T11:30:00.000Z" }),
+      "2026-11-03T11:30:00.000Z",
+    ],
+    [
+      "an incident, ignoring a planned end",
+      incident({ endsAt: "2026-11-03T11:30:00.000Z" }),
+      undefined,
+    ],
+    [
+      "a window nobody closed, by its planned end",
+      incident({ kind: "maintenance", endsAt: "2026-11-03T13:00:00.000Z" }),
+      "2026-11-03T13:00:00.000Z",
+    ],
+    [
+      "a window resolved before its planned end",
+      incident({
+        kind: "maintenance",
+        endsAt: "2026-11-03T13:00:00.000Z",
+        resolvedAt: "2026-11-03T12:10:00.000Z",
+      }),
+      "2026-11-03T12:10:00.000Z",
+    ],
+    [
+      "a window resolved after its planned end",
+      incident({
+        kind: "maintenance",
+        endsAt: "2026-11-03T12:10:00.000Z",
+        resolvedAt: "2026-11-03T13:00:00.000Z",
+      }),
+      "2026-11-03T12:10:00.000Z",
+    ],
+  ])("gives the end of %s", (_name, entry, expected) => {
+    expect(endedAt(entry)).toBe(expected);
+  });
+});
+
 describe("maintenance", () => {
   const now = "2026-11-03T12:00:00.000Z";
   const maintenance = incident({ id: "maint-1", kind: "maintenance", components: ["platform"] });
@@ -1329,7 +1376,6 @@ describe("maintenance", () => {
       maintenanceMinutes: 1,
       downMinutes: 0,
       degradedMinutes: 0,
-      incidentIds: ["maint-1"],
     });
     expect(componentOf(result, "platform").uptimePercent).toBe(100);
     expectValid(result);

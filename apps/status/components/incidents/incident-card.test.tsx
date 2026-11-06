@@ -17,7 +17,10 @@ describe("IncidentCard", () => {
       <IncidentCard
         incident={{
           ...incident,
-          updates: [update, { ...update, text: "A second note at the same minute." }],
+          updates: [
+            update,
+            { ...update, id: "upd-second", text: "A second note at the same minute." },
+          ],
         }}
       />,
     );

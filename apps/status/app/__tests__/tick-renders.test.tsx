@@ -51,21 +51,14 @@ describe("the page's clock ticks", () => {
     expect(sectionRenders.count).toBe(rendersAfterLoad);
   });
 
-  it("render the components again only when a new document changes them", async () => {
+  // A window nobody closed runs up to the document's time, so each new document draws the bars again.
+  it("render the components again only when a new document arrives", async () => {
     const { respondWith } = await renderPage();
     const rendersAfterLoad = sectionRenders.count;
-    const [website, ...others] = operationalStatusDocument.components;
 
     respondWith({ ...operationalStatusDocument, generatedAt: "2026-11-03T12:03:00.000Z" });
     await advance(60_000);
-    expect(sectionRenders.count).toBe(rendersAfterLoad);
 
-    respondWith({
-      ...operationalStatusDocument,
-      generatedAt: "2026-11-03T12:04:00.000Z",
-      components: [{ ...website, state: "degraded" }, ...others],
-    });
-    await advance(60_000);
     expect(sectionRenders.count).toBe(rendersAfterLoad + 1);
   });
 

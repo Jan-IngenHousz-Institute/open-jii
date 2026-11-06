@@ -65,7 +65,7 @@ export function StatusContent({ document, serverOffsetMs, hasRefreshFailed }: St
       <ComponentsSection
         components={components}
         incidents={document.incidents}
-        today={document.generatedAt.slice(0, 10)}
+        generatedAt={document.generatedAt}
         messagesPerMinute={document.messagesPerMinute}
         hasExtras={hasExtras}
         isStale={isStale}
