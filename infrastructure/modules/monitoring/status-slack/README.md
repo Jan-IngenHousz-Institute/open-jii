@@ -39,7 +39,7 @@ The role may call `secretsmanager:GetSecretValue` on the webhook secret only, an
 
 ## Where the code lives
 
-`lambda/index.js` is the handler only: the secret read and the webhook request. The message itself, including the English component names, the stage names, the escaping that Slack's markup needs and the cut that keeps a section under Slack's limit of 3000 characters, lives in `packages/monitoring/src/status-slack.ts` with vitest coverage. The handler requires it from `./lib`, a copy of that package's compiled output.
+`lambda/index.js` is the handler only: the secret read, the webhook request, the webhook address cache and a per-instance memory of posted ids. The message itself, including the English component names, the stage names, the escaping that Slack's markup needs and the cut that keeps a section under Slack's limit of 3000 characters, lives in `packages/monitoring/src/status-slack.ts` with vitest coverage. The handler requires it from `./lib`, a copy of that package's compiled output.
 
 ## Build
 
@@ -48,4 +48,4 @@ pnpm turbo run build --filter=@repo/monitoring   # refresh dist/ first
 cd infrastructure/modules/monitoring/status-slack/lambda && npm run build
 ```
 
-The compiled package is copied into every Lambda bundle, so a change to `packages/monitoring` means rebuilding all five bundles listed in `BUNDLE_DIRS` in `.github/workflows/pr.yml`.
+The bundle check in `.github/workflows/pr.yml` rebuilds every bundle listed in `BUNDLE_DIRS`, so a change to `packages/monitoring` means rebuilding them all and committing the zips that change.
