@@ -16,6 +16,7 @@ The platform heartbeat's tested logic: the metrics forwarder's parsing, the cost
 | `status-feed.ts`              | The state the publisher keeps beside its history: what was announced and the last content    |
 | `status-probes.ts`            | What a healthy answer from the website and the API looks like                                |
 | `status-slack.ts`             | Turn one status event into the Slack message that the status channel receives                |
+| `status-slack-delivery.ts`    | Check the stored webhook address and remember the event ids an instance posted               |
 | `catalog.ts`                  | Parse `docs/monitoring/metrics-catalog.yaml`                                                 |
 | `catalog-consistency.test.ts` | Fail when the catalogue, the exporter's metric names, the rules or the dashboards diverge    |
 

@@ -39,7 +39,7 @@ The role may call `secretsmanager:GetSecretValue` on the webhook secret only, an
 
 ## Where the code lives
 
-`lambda/index.js` is the handler only: the secret read, the webhook request, the webhook address cache and a per-instance memory of posted ids. The message itself, including the English component names, the stage names, the escaping that Slack's markup needs and the cut that keeps a section under Slack's limit of 3000 characters, lives in `packages/monitoring/src/status-slack.ts` with vitest coverage. The handler requires it from `./lib`, a copy of that package's compiled output.
+`lambda/index.js` is the handler only: the secret read, the webhook request and the webhook address cache. The check that the stored address is https with no credentials, and the per-instance memory of posted ids, live in `packages/monitoring/src/status-slack-delivery.ts`. The message itself, including the English component names, the stage names, the escaping that Slack's markup needs and the cut that keeps a section under Slack's limit of 3000 characters, lives in `packages/monitoring/src/status-slack.ts` with vitest coverage. The handler requires it from `./lib`, a copy of that package's compiled output.
 
 ## Build
 
