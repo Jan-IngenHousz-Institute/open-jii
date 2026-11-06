@@ -110,6 +110,23 @@ describe("the headline", () => {
       expect(iconOf(card)).toContain("lucide-octagon-x");
     });
 
+    it("counts an open incident on a component the checks do not cover yet", async () => {
+      const open = incidentStatusDocument.incidents.find(({ kind }) => kind === "incident");
+      if (open === undefined) {
+        throw new Error("the fixture has no open incident");
+      }
+      await renderPage({
+        ...operationalStatusDocument,
+        incidents: [{ ...open, components: ["sign-in"], impact: "outage" }],
+      });
+
+      const { card, region } = headline();
+
+      expect(region).toHaveTextContent("Sign-in is down.");
+      expect(region).not.toHaveTextContent("All systems operational");
+      expect(iconOf(card)).toContain("lucide-octagon-x");
+    });
+
     it("is amber when components are only degraded", async () => {
       await renderPage(withStates(incidentStatusDocument, { "data-intake": "degraded" }));
 
@@ -165,6 +182,15 @@ describe("the headline", () => {
       expect(iconOf(card)).toContain("text-status-published-foreground");
       expect(iconOf(card)).not.toContain("text-destructive");
       expect(iconOf(card)).toContain("lucide-wrench");
+    });
+
+    it("names a component the checks do not cover yet when a window covers it", async () => {
+      await renderPage({
+        ...operationalStatusDocument,
+        incidents: [{ ...maintenanceInProgress, components: ["exports"] }],
+      });
+
+      expect(headline().region).toHaveTextContent("Exports is under planned maintenance");
     });
 
     it("gives the date as well when the window ends on a later day", async () => {

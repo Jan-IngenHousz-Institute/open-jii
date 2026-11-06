@@ -2490,11 +2490,14 @@ metrics:
     baseline: { method: threshold, max: 2 }
     runbook: docs/runbooks/status-publisher-errors.md
     notes: >-
-      The status publisher checks the platform every minute and rewrites the public status page's
-      data file. A run that fails before it writes leaves the file as it was, and the page shows
-      when it was last checked. A failed minute is not retried and the next run records it as
-      unknown time, so this fires when more than two runs fail in five minutes and that still holds
-      at the next check five minutes later, when the page is going stale rather than blinking.
+      The status publisher checks the platform every minute, rewrites the public status page's data
+      file and sends what changed to the status events topic. A run that fails before it writes
+      leaves the file as it was, and the page shows when it was last checked; the next run records
+      the lost minute as unknown time. A run that fails while sending events has already written the
+      file, and the next run sends the same events again. A Contentful read that fails is covered by
+      the last good one and fails the run only once that one is more than 15 minutes old, or when
+      there is none, after everything is written. This fires when more than two runs fail in five
+      minutes and that still holds at the next check five minutes later.
 
   - num: 136
     id: status-publisher-stopped

@@ -28,6 +28,7 @@ interface HistoryDayProps {
   dayCount: number;
   day: DayRecord;
   incidents: Incident[];
+  generatedAt: string;
   checksBegan: string;
   isToday: boolean;
   isStop: boolean;
@@ -43,6 +44,7 @@ export const HistoryDay = memo(function HistoryDay({
   dayCount,
   day,
   incidents,
+  generatedAt,
   checksBegan,
   isToday,
   isStop,
@@ -54,7 +56,7 @@ export const HistoryDay = memo(function HistoryDay({
   const { t } = useTranslation("status");
   const format = useFormat();
   const dominoes = useDominoes();
-  const summary = summarizeDay(day, incidents);
+  const summary = summarizeDay(day, incidents, generatedAt);
   const domino = dominoAnimation(dominoes.run, index, dayCount);
   const label = useDayLabel(day.date, summary, checksBegan, isToday);
   const wasOpenOnPress = useRef(false);

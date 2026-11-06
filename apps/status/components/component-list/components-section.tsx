@@ -15,7 +15,7 @@ import { ComponentRow } from "./component-row";
 interface ComponentsSectionProps {
   components: StatusComponent[];
   incidents: Incident[];
-  today: string;
+  generatedAt: string;
   messagesPerMinute: number | undefined;
   hasExtras: boolean;
   isStale: boolean;
@@ -25,7 +25,7 @@ interface ComponentsSectionProps {
 export const ComponentsSection = memo(function ComponentsSection({
   components,
   incidents,
-  today,
+  generatedAt,
   messagesPerMinute,
   hasExtras,
   isStale,
@@ -40,7 +40,7 @@ export const ComponentsSection = memo(function ComponentsSection({
         key={component.id}
         component={component}
         incidents={incidents}
-        today={today}
+        generatedAt={generatedAt}
         isStale={isStale}
         adornment={hasLeaf ? <IntakeLeaf messagesPerMinute={messagesPerMinute} /> : undefined}
       />

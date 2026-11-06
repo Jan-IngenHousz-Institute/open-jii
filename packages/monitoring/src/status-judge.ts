@@ -6,12 +6,14 @@ import {
   STATUS_DOCUMENT_VERSION,
   STATUS_HISTORY_DAYS,
   dayRecordSchema,
+  endedAt,
   statusComponentIdSchema,
 } from "./status-document.js";
 import type {
   ComponentState,
   DayRecord,
   Incident,
+  Notice,
   StatusComponent,
   StatusComponentId,
   StatusDocument,
@@ -249,15 +251,12 @@ export function judgeComponent(
  * Open from its start until it is resolved. Planned work also ends at its scheduled end, so a
  * window nobody closed cannot hide a real outage behind it.
  */
-function isOpen(incident: Incident, atMs: number): boolean {
+export function isOpen(incident: Incident, atMs: number): boolean {
   const hasStarted = Date.parse(incident.startsAt) <= atMs;
-  const isResolved = incident.resolvedAt !== undefined && Date.parse(incident.resolvedAt) <= atMs;
-  const hasWindowEnded =
-    incident.kind === "maintenance" &&
-    incident.endsAt !== undefined &&
-    Date.parse(incident.endsAt) <= atMs;
+  const end = endedAt(incident);
+  const hasEnded = end !== undefined && Date.parse(end) <= atMs;
 
-  return hasStarted && !isResolved && !hasWindowEnded;
+  return hasStarted && !hasEnded;
 }
 
 interface ComponentProbe {
@@ -283,6 +282,7 @@ interface JudgeInput {
   /** Undefined on the first run. */
   previous: PublisherState | undefined;
   incidents: Incident[];
+  notices: Notice[];
 }
 
 export interface JudgeResult {
@@ -325,17 +325,16 @@ function advanceDays(
   history: ComponentHistory | undefined,
   run: Run,
   outcome: ComponentState,
-  incidentIds: string[],
 ): DayRecord[] {
   if (history === undefined || run.previousMinute === undefined) {
-    return recordMinute([], run.minute, outcome, incidentIds);
+    return recordMinute([], run.minute, outcome);
   }
   if (run.isRepeat) {
     return history.days;
   }
 
   const withGap = recordUnknown(history.days, run.previousMinute + 1, run.minute - 1);
-  return recordMinute(withGap, run.minute, outcome, incidentIds);
+  return recordMinute(withGap, run.minute, outcome);
 }
 
 function judgeLiveComponent(id: StatusComponentId, run: Run) {
@@ -360,12 +359,7 @@ function judgeLiveComponent(id: StatusComponentId, run: Run) {
   const measured = worstState([verdict.state, ...incidentImpacts]);
   const isUnderMaintenance = open.some((incident) => incident.kind === "maintenance");
   const state = isUnderMaintenance ? "maintenance" : measured;
-  const days = advanceDays(
-    history,
-    run,
-    state,
-    open.map((incident) => incident.id),
-  );
+  const days = advanceDays(history, run, state);
 
   const component: StatusComponent = {
     id,
@@ -408,7 +402,7 @@ export function judgeStatus(input: JudgeInput): JudgeResult {
       generatedAt: now.toISOString(),
       components,
       incidents: input.incidents,
-      notices: [],
+      notices: input.notices,
       messagesPerMinute: (input.readings.ingestPublished ?? 0) / INGEST_THROUGHPUT_WINDOW_MINUTES,
     },
     state: {

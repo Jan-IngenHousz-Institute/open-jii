@@ -1,0 +1,132 @@
+{
+  "name": "Status incident",
+  "description": "An incident or planned maintenance window on the public status page. Link its updates in the Updates field.",
+  "displayField": "title",
+  "fields": [
+    {
+      "id": "title",
+      "name": "Title",
+      "type": "Symbol",
+      "localized": true,
+      "required": true,
+      "validations": [],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "kind",
+      "name": "Kind",
+      "type": "Symbol",
+      "localized": false,
+      "required": true,
+      "validations": [
+        {
+          "in": ["incident", "maintenance"]
+        }
+      ],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "impact",
+      "name": "Impact",
+      "type": "Symbol",
+      "localized": false,
+      "required": true,
+      "validations": [
+        {
+          "in": ["degraded", "outage"]
+        }
+      ],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "components",
+      "name": "Affected components",
+      "type": "Array",
+      "localized": false,
+      "required": true,
+      "validations": [
+        {
+          "size": {
+            "min": 1
+          }
+        }
+      ],
+      "disabled": false,
+      "omitted": false,
+      "items": {
+        "type": "Symbol",
+        "validations": [
+          {
+            "in": [
+              "website",
+              "sign-in",
+              "platform",
+              "data-intake",
+              "data-delivery",
+              "macro-processing",
+              "exports"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "startsAt",
+      "name": "Starts at",
+      "type": "Date",
+      "localized": false,
+      "required": true,
+      "validations": [],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "endsAt",
+      "name": "Planned end (maintenance only)",
+      "type": "Date",
+      "localized": false,
+      "required": false,
+      "validations": [],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "resolvedAt",
+      "name": "Resolved at (empty while open)",
+      "type": "Date",
+      "localized": false,
+      "required": false,
+      "validations": [],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "updates",
+      "name": "Updates",
+      "type": "Array",
+      "localized": false,
+      "required": false,
+      "validations": [
+        {
+          "size": {
+            "max": 20
+          }
+        }
+      ],
+      "disabled": false,
+      "omitted": false,
+      "items": {
+        "type": "Link",
+        "validations": [
+          {
+            "linkContentType": ["statusUpdate"]
+          }
+        ],
+        "linkType": "Entry"
+      }
+    }
+  ]
+}

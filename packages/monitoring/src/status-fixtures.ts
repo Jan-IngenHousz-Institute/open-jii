@@ -31,7 +31,6 @@ interface DaySpec {
   degraded?: number;
   maintenance?: number;
   unknown?: number;
-  incidentIds?: string[];
 }
 
 function dateOfDay(index: number): string {
@@ -47,7 +46,7 @@ function day(date: string, spec: DaySpec): DayRecord {
     unknownMinutes: spec.unknown ?? 0,
   };
 
-  return { date, ...counts, state: dayState(counts), incidentIds: spec.incidentIds ?? [] };
+  return { date, ...counts, state: dayState(counts) };
 }
 
 /**
@@ -165,12 +164,14 @@ const incident: Incident = {
   startsAt: "2026-11-03T11:22:00.000Z",
   updates: [
     {
+      id: "upd-investigating-1",
       stage: "investigating",
       postedAt: "2026-11-03T11:25:00.000Z",
       text: "Measurements sent from devices are not being stored. We are looking into it.",
       nextUpdateBy: "2026-11-03T11:55:00.000Z",
     },
     {
+      id: "upd-identified-1",
       stage: "identified",
       postedAt: "2026-11-03T11:48:00.000Z",
       text: "The step that stores incoming measurements stopped. Nothing is lost: devices keep their data and send it again once it is back.",
@@ -191,7 +192,7 @@ export const incidentStatusDocument: StatusDocument = document(
       "outage",
       daysSince({
         ...dataIntakeSpecs,
-        [TODAY]: { down: INCIDENT_MINUTES, incidentIds: [incident.id] },
+        [TODAY]: { down: INCIDENT_MINUTES },
       }),
     ),
     component(
@@ -199,7 +200,7 @@ export const incidentStatusDocument: StatusDocument = document(
       "degraded",
       daysSince({
         ...dataDeliverySpecs,
-        [TODAY]: { degraded: INCIDENT_MINUTES, incidentIds: [incident.id] },
+        [TODAY]: { degraded: INCIDENT_MINUTES },
       }),
       27,
     ),
@@ -223,11 +224,13 @@ export const resolvedIncident: Incident = {
   resolvedAt: "2026-10-28T09:52:00.000Z",
   updates: [
     {
+      id: "upd-investigating-2",
       stage: "investigating",
       postedAt: "2026-10-28T09:15:00.000Z",
       text: "New measurements are taking longer than usual to appear. We are looking into it.",
     },
     {
+      id: "upd-resolved-2",
       stage: "resolved",
       postedAt: "2026-10-28T09:52:00.000Z",
       text: "From 09:10 to 09:52 UTC, new measurements took up to 25 minutes to appear. Nothing was lost.",
@@ -246,11 +249,13 @@ export const completedMaintenance: Incident = {
   resolvedAt: "2026-10-03T08:10:00.000Z",
   updates: [
     {
+      id: "upd-scheduled-3",
       stage: "scheduled",
       postedAt: "2026-09-26T10:00:00.000Z",
       text: "The website and the platform will not work during the window.",
     },
     {
+      id: "upd-completed-3",
       stage: "completed",
       postedAt: "2026-10-03T08:10:00.000Z",
       text: "The website and the platform were unavailable from 07:00 to 08:10 UTC, as announced a week ahead.",
@@ -268,6 +273,7 @@ export const upcomingMaintenance: Incident = {
   endsAt: "2026-11-07T09:00:00.000Z",
   updates: [
     {
+      id: "upd-scheduled-4",
       stage: "scheduled",
       postedAt: "2026-10-31T10:00:00.000Z",
       text: "The website and the platform will not work. The field app keeps collecting measurements and uploads them once the work ends. If you need to export data, do it before 07:00 UTC.",
@@ -285,7 +291,7 @@ export const plannedStatusDocument: StatusDocument = {
         "operational",
         daysSince({
           ...websiteSpecs,
-          "2026-10-03": { maintenance: 70, incidentIds: [completedMaintenance.id] },
+          "2026-10-03": { maintenance: 70 },
         }),
       ),
       component(
@@ -293,7 +299,7 @@ export const plannedStatusDocument: StatusDocument = {
         "operational",
         daysSince({
           ...platformSpecs,
-          "2026-10-03": { maintenance: 70, incidentIds: [completedMaintenance.id] },
+          "2026-10-03": { maintenance: 70 },
         }),
       ),
       component("data-intake", "operational", daysSince(dataIntakeSpecs)),
@@ -302,7 +308,7 @@ export const plannedStatusDocument: StatusDocument = {
         "operational",
         daysSince({
           ...dataDeliverySpecs,
-          "2026-10-28": { degraded: 42, incidentIds: [resolvedIncident.id] },
+          "2026-10-28": { degraded: 42 },
         }),
       ),
       component(
@@ -334,6 +340,7 @@ export const maintenanceInProgress: Incident = {
   endsAt: "2026-11-03T13:00:00.000Z",
   updates: [
     {
+      id: "upd-in-progress-5",
       stage: "in-progress",
       postedAt: "2026-11-03T11:00:00.000Z",
       text: "The website and the platform will not work until the window ends. The field app keeps collecting measurements and uploads them afterwards.",
@@ -352,7 +359,7 @@ export const maintenanceStatusDocument: StatusDocument = document(
       "maintenance",
       daysSince({
         ...websiteSpecs,
-        [TODAY]: { maintenance: MAINTENANCE_MINUTES, incidentIds: [maintenanceInProgress.id] },
+        [TODAY]: { maintenance: MAINTENANCE_MINUTES },
       }),
     ),
     component(
@@ -360,7 +367,7 @@ export const maintenanceStatusDocument: StatusDocument = document(
       "maintenance",
       daysSince({
         ...platformSpecs,
-        [TODAY]: { maintenance: MAINTENANCE_MINUTES, incidentIds: [maintenanceInProgress.id] },
+        [TODAY]: { maintenance: MAINTENANCE_MINUTES },
       }),
     ),
     component("data-intake", "operational", daysSince(dataIntakeSpecs)),

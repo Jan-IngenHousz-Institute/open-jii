@@ -16,6 +16,12 @@ The history bars are about 8 to 11 px wide with a 2 px gap, under the 24 px targ
 
 The page copy is in the `status` namespace of `@repo/i18n` (`packages/i18n/locales/<locale>/status.json`). The sample documents the tests use live beside the contract, in `packages/monitoring/src/status-fixtures.ts`.
 
+## Where the words come from
+
+The colours come from measurements. The publisher records what its checks saw minute by minute, and every bar is coloured from those minutes as they were recorded, so nothing written afterwards recolours a day. The words come from people. Incidents, their updates, planned maintenance and notices are written in Contentful, following `docs/runbooks/support/status-page-incidents.md`, and the publisher reads them every minute and puts them in the document.
+
+A day's card and the list of problem days name the incidents and maintenance windows whose time overlaps that UTC day, so a problem entered afterwards with past start and end times still reaches the days it covered. A window nobody closed runs up to the document's `generatedAt`, never the device's clock, which can be hours off. A day names only the incidents that list its component. The rule lives in `components/history/day-summary.ts`.
+
 ## Run it locally
 
 Node 24 is required. The page reads `@repo/monitoring`, `@repo/ui` and `@repo/i18n` from their source, so there is no package to build first:
@@ -66,7 +72,7 @@ The publisher writes `data/status.json` with `Cache-Control: public, max-age=30,
 
 ## The document contract
 
-`packages/monitoring/src/status-document.ts` defines the file. The publisher validates every document against `statusDocumentSchema` before it writes. The page parses with `readableStatusDocumentSchema`, which is the same schema except that it drops components whose `id` is not in the page's own list. A component added in the publisher first therefore does not break pages built before it.
+`packages/monitoring/src/status-document.ts` defines the file. The publisher validates every document against `statusDocumentSchema` before it writes. The page parses with `readableStatusDocumentSchema`, which is the same schema except that it drops components whose `id` is not in the page's own list, and the ids it does not know from an incident's `components`, leaving out an incident that names only those. A component added in the publisher first therefore does not break pages built before it.
 
 Older pages also ignore keys they do not know, so adding an optional field is safe. Anything else is a change an older page cannot read: a new required field, a removed or renamed field, a new value in an enum such as a component state or an incident stage, or a new `STATUS_DOCUMENT_VERSION`. A page that fails to parse a document treats it like a failed fetch and keeps showing the last good one until it goes stale.
 

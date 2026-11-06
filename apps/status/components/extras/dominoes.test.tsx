@@ -241,6 +241,7 @@ describe("Dominoes", () => {
           <HistoryStrip
             component={component}
             incidents={[]}
+            generatedAt={operationalStatusDocument.generatedAt}
             checksBegan={component.days[0]?.date ?? ""}
             dayCount={dayCount}
             describedBy=""

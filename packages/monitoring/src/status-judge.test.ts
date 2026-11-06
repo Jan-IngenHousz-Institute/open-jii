@@ -16,6 +16,7 @@ import type {
   ComponentState,
   DayRecord,
   Incident,
+  Notice,
   StatusComponent,
   StatusComponentId,
 } from "./status-document.js";
@@ -710,6 +711,7 @@ function at(iso: string): Date {
 interface RunChange extends Change {
   probes?: Partial<StatusProbes>;
   incidents?: Incident[];
+  notices?: Notice[];
 }
 
 function run(
@@ -723,6 +725,7 @@ function run(
     readings: { ...HEALTHY_READINGS, ...change.readings },
     previous,
     incidents: change.incidents ?? [],
+    notices: change.notices ?? [],
   });
 }
 
@@ -747,7 +750,7 @@ function cleanDay(date: string): DayRecord {
     maintenanceMinutes: 0,
     unknownMinutes: 0,
   };
-  return { date, ...counts, state: dayState(counts), incidentIds: [] };
+  return { date, ...counts, state: dayState(counts) };
 }
 
 function cleanDays(lastDate: string, count: number): DayRecord[] {
@@ -814,14 +817,19 @@ describe("judgeStatus first run", () => {
     expectValid(result);
   });
 
-  it("carries no notices and the incidents it was given", () => {
+  it("carries the incidents and notices it was given", () => {
     const open = incident();
-    const withIncident = run(undefined, "2026-11-03T12:00:00.000Z", { incidents: [open] });
+    const notice: Notice = { id: "notice-1", title: "Heads up", body: "", severity: "info" };
+    const withContent = run(undefined, "2026-11-03T12:00:00.000Z", {
+      incidents: [open],
+      notices: [notice],
+    });
 
-    expect(result.document.notices).toEqual([]);
     expect(result.document.incidents).toEqual([]);
-    expect(withIncident.document.incidents).toEqual([open]);
-    expectValid(withIncident);
+    expect(result.document.notices).toEqual([]);
+    expect(withContent.document.incidents).toEqual([open]);
+    expect(withContent.document.notices).toEqual([notice]);
+    expectValid(withContent);
   });
 });
 
@@ -1250,10 +1258,8 @@ describe("open incidents", () => {
     expect(componentOf(result, "platform").days[0]).toMatchObject({
       downMinutes: 1,
       state: "outage",
-      incidentIds: ["inc-1"],
     });
     expect(componentOf(result, "website").state).toBe("operational");
-    expect(componentOf(result, "website").days[0]?.incidentIds).toEqual([]);
     expectValid(result);
   });
 
@@ -1293,7 +1299,6 @@ describe("open incidents", () => {
     const result = run(undefined, now, { incidents: [incident({ impact: "outage", ...change })] });
 
     expect(componentOf(result, "platform").state).toBe("operational");
-    expect(componentOf(result, "platform").days[0]?.incidentIds).toEqual([]);
   });
 
   it("applies until the time it is resolved", () => {
@@ -1329,7 +1334,6 @@ describe("maintenance", () => {
       maintenanceMinutes: 1,
       downMinutes: 0,
       degradedMinutes: 0,
-      incidentIds: ["maint-1"],
     });
     expect(componentOf(result, "platform").uptimePercent).toBe(100);
     expectValid(result);

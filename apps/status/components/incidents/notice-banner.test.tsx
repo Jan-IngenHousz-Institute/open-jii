@@ -2,11 +2,9 @@ import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { renderWithProviders } from "~/test/test-utils";
 
-import type { StatusDocument } from "@repo/monitoring/status-document";
+import type { Notice } from "@repo/monitoring/status-document";
 
 import { NoticeBanner } from "./notice-banner";
-
-type Notice = StatusDocument["notices"][number];
 
 function notice(overrides: Partial<Notice> = {}): Notice {
   return {
@@ -30,6 +28,12 @@ describe("NoticeBanner", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent("Field app update available");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("keeps the paragraph breaks an editor wrote", () => {
+    renderWithProviders(<NoticeBanner notice={notice({ body: "First.\n\nSecond." })} />);
+
+    expect(screen.getByText(/First\.\s+Second\./)).toHaveClass("whitespace-pre-line");
   });
 
   it("shows the body under the title", () => {

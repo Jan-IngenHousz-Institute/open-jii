@@ -12,6 +12,7 @@ import { padDays } from "./history-days";
 interface HistoryStripProps {
   component: StatusComponent;
   incidents: Incident[];
+  generatedAt: string;
   checksBegan: string;
   dayCount: number;
   describedBy: string;
@@ -38,6 +39,7 @@ function targetIndex(key: string, current: number, last: number) {
 export function HistoryStrip({
   component,
   incidents,
+  generatedAt,
   checksBegan,
   dayCount,
   describedBy,
@@ -93,6 +95,7 @@ export function HistoryStrip({
         dayCount={dayCount}
         day={day}
         incidents={incidents}
+        generatedAt={generatedAt}
         checksBegan={checksBegan}
         isToday={index === lastIndex}
         isStop={index === stopIndex}
