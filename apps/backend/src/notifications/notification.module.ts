@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { ClientIpThrottlerGuard } from "../common/guards/client-ip-throttler.guard";
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
 import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
 import { EmailModule } from "../common/modules/email/services/email.module";
@@ -9,6 +10,7 @@ import { NotificationEmailService } from "./application/services/notification-em
 import { NotificationOutboxWorker } from "./application/services/notification-outbox.worker";
 import { NotificationPreferencesService } from "./application/services/notification-preferences.service";
 import { NotificationRetentionService } from "./application/services/notification-retention.service";
+import { NotificationUnsubscribeService } from "./application/services/notification-unsubscribe.service";
 import { ResourceDeletedNotifier } from "./application/services/resource-deleted-notifier";
 // Use Cases
 import { GetNotificationPreferencesUseCase } from "./application/use-cases/get-notification-preferences/get-notification-preferences";
@@ -16,6 +18,7 @@ import { GetUnreadNotificationCountUseCase } from "./application/use-cases/get-u
 import { ListNotificationsUseCase } from "./application/use-cases/list-notifications/list-notifications";
 import { MarkAllNotificationsReadUseCase } from "./application/use-cases/mark-all-notifications-read/mark-all-notifications-read";
 import { MarkNotificationsReadUseCase } from "./application/use-cases/mark-notifications-read/mark-notifications-read";
+import { SetEmailPreferenceByTokenUseCase } from "./application/use-cases/set-email-preference-by-token/set-email-preference-by-token";
 import { UpdateNotificationPreferenceUseCase } from "./application/use-cases/update-notification-preference/update-notification-preference";
 // Ports
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
@@ -23,11 +26,12 @@ import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { NotificationDeliveryRepository } from "./core/repositories/notification-delivery.repository";
 import { NotificationRepository } from "./core/repositories/notification.repository";
 // Controllers
+import { NotificationUnsubscribeController } from "./presentation/notification-unsubscribe.controller";
 import { NotificationController } from "./presentation/notification.controller";
 
 @Module({
   imports: [EmailModule, AnalyticsModule],
-  controllers: [NotificationController],
+  controllers: [NotificationController, NotificationUnsubscribeController],
   providers: [
     // Ports
     {
@@ -46,6 +50,7 @@ import { NotificationController } from "./presentation/notification.controller";
     NotificationOutboxWorker,
     NotificationRetentionService,
     ResourceDeletedNotifier,
+    NotificationUnsubscribeService,
 
     // Use cases
     ListNotificationsUseCase,
@@ -54,6 +59,10 @@ import { NotificationController } from "./presentation/notification.controller";
     MarkAllNotificationsReadUseCase,
     GetNotificationPreferencesUseCase,
     UpdateNotificationPreferenceUseCase,
+    SetEmailPreferenceByTokenUseCase,
+
+    // Guards
+    ClientIpThrottlerGuard,
   ],
   // Producers inject the dispatch service directly; it is an in-process domain
   // service, not infrastructure behind a port.

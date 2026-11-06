@@ -28,6 +28,7 @@ export const envManifest: readonly EnvVar[] = [
   // Deployed only: the dependency checks read the cluster's state from AWS by this name.
   env("DB_CLUSTER_IDENTIFIER", unset, undefined, backend),
   env("AUTH_SECRET", set, "local-dev-secret-change-me-000000000000", backend),
+  env("NOTIFICATION_UNSUBSCRIBE_SECRET", set, "local-dev-unsubscribe-secret-change-me", backend),
   env("AUTH_EMAIL_SERVER", unset, undefined, backend),
   env("AUTH_EMAIL_FROM", unset, undefined, backend),
   env("AUTH_GITHUB_ID", set, undefined, backend),

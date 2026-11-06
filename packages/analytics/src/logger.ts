@@ -1,6 +1,8 @@
 import pino from "pino";
 import type { LoggerOptions } from "pino";
 
+import { redactRequestUrl } from "./redact-url";
+
 const isProduction = process.env.NODE_ENV === "production";
 
 export const pinoConfig: LoggerOptions = {
@@ -20,7 +22,7 @@ export const pinoConfig: LoggerOptions = {
     req: (req: Request & { id: string }) => ({
       id: req.id,
       method: req.method,
-      url: req.url,
+      url: redactRequestUrl(req.url),
     }),
     error: (e: unknown): string | Record<string, unknown> => {
       if (typeof e === "string") {

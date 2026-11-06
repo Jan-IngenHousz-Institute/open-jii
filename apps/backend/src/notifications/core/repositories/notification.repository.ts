@@ -28,7 +28,7 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
-import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { AppError, Result, isForeignKeyViolation, tryCatch } from "../../../common/utils/fp-utils";
 import {
   getAnonymizedEmail,
   getAnonymizedFirstName,
@@ -402,19 +402,35 @@ export class NotificationRepository {
     channel: NotificationChannel,
     enabled: boolean,
   ): Promise<Result<void>> {
-    return tryCatch(async () => {
-      await this.database
-        .insert(notificationPreferences)
-        .values({ userId, category, channel, enabled })
-        .onConflictDoUpdate({
-          target: [
-            notificationPreferences.userId,
-            notificationPreferences.category,
-            notificationPreferences.channel,
-          ],
-          set: { enabled },
-        });
-    });
+    return tryCatch(
+      async () => {
+        await this.database
+          .insert(notificationPreferences)
+          .values({ userId, category, channel, enabled })
+          .onConflictDoUpdate({
+            target: [
+              notificationPreferences.userId,
+              notificationPreferences.category,
+              notificationPreferences.channel,
+            ],
+            set: { enabled },
+          });
+      },
+      // The default mapper reads the upsert's "on conflict" as a duplicate, so it is not used here.
+      (error) =>
+        isForeignKeyViolation(error)
+          ? AppError.badRequest("Preference owner does not exist", "REPOSITORY_REFERENCE")
+          : AppError.repositoryError(
+              "Failed to save the notification preference",
+              "REPOSITORY_ERROR",
+              // Drizzle's own message is the failed query; why it failed is on its cause.
+              error instanceof Error
+                ? error.cause instanceof Error
+                  ? error.cause.message
+                  : error.message
+                : String(error),
+            ),
+    );
   }
 
   private pageCondition(recipientId: string, filter: NotificationFilter): SQL | undefined {

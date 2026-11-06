@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 
+import type { EmailUnsubscribe } from "../components/email-layout";
 import { Email } from "../emails/email";
 import { CalibrationRunAwaitingApprovalNotification } from "../emails/fallbacks/calibration-run-awaiting-approval-notification";
 import { getCmsEmail } from "../lib/contentful";
@@ -11,6 +12,7 @@ export interface RenderCalibrationRunAwaitingApprovalNotificationParams {
   definitionName: string;
   actor: string;
   calibrationUrl: string;
+  unsubscribe?: EmailUnsubscribe;
 }
 
 export interface RenderedEmail {
@@ -22,7 +24,7 @@ export interface RenderedEmail {
 export async function renderCalibrationRunAwaitingApprovalNotification(
   params: RenderCalibrationRunAwaitingApprovalNotificationParams,
 ): Promise<RenderedEmail> {
-  const { host, baseUrl, deviceName, definitionName, actor, calibrationUrl } = params;
+  const { host, baseUrl, deviceName, definitionName, actor, calibrationUrl, unsubscribe } = params;
 
   const emailData = await getCmsEmail("calibration-run-awaiting-approval-notification", {
     host,
@@ -42,6 +44,7 @@ export async function renderCalibrationRunAwaitingApprovalNotification(
         definitionName,
         actor,
         calibrationUrl,
+        unsubscribe,
       }),
       {},
     );
@@ -53,6 +56,7 @@ export async function renderCalibrationRunAwaitingApprovalNotification(
         definitionName,
         actor,
         calibrationUrl,
+        unsubscribe,
       }),
       { plainText: true },
     );
@@ -69,6 +73,7 @@ export async function renderCalibrationRunAwaitingApprovalNotification(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     {},
   );
@@ -79,6 +84,7 @@ export async function renderCalibrationRunAwaitingApprovalNotification(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     { plainText: true },
   );

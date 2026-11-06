@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 
+import type { EmailUnsubscribe } from "../components/email-layout";
 import { Email } from "../emails/email";
 import { TransferRequestConfirmation } from "../emails/fallbacks/transfer-request-confirmation";
 import { getCmsEmail } from "../lib/contentful";
@@ -10,6 +11,7 @@ export interface RenderTransferRequestConfirmationParams {
   projectUrlOld: string;
   userEmail: string;
   baseUrl: string;
+  unsubscribe?: EmailUnsubscribe;
 }
 
 export interface RenderedEmail {
@@ -21,7 +23,7 @@ export interface RenderedEmail {
 export async function renderTransferRequestConfirmation(
   params: RenderTransferRequestConfirmationParams,
 ): Promise<RenderedEmail> {
-  const { host, projectIdOld, projectUrlOld, userEmail, baseUrl } = params;
+  const { host, projectIdOld, projectUrlOld, userEmail, baseUrl, unsubscribe } = params;
 
   const emailData = await getCmsEmail("transfer-request-confirmation", {
     host,
@@ -33,11 +35,25 @@ export async function renderTransferRequestConfirmation(
 
   if (!emailData) {
     const html = await render(
-      TransferRequestConfirmation({ host, projectIdOld, projectUrlOld, userEmail, baseUrl }),
+      TransferRequestConfirmation({
+        host,
+        projectIdOld,
+        projectUrlOld,
+        userEmail,
+        baseUrl,
+        unsubscribe,
+      }),
       {},
     );
     const text = await render(
-      TransferRequestConfirmation({ host, projectIdOld, projectUrlOld, userEmail, baseUrl }),
+      TransferRequestConfirmation({
+        host,
+        projectIdOld,
+        projectUrlOld,
+        userEmail,
+        baseUrl,
+        unsubscribe,
+      }),
       { plainText: true },
     );
     return { html, text, preview: "Your transfer request has been received" };
@@ -49,6 +65,7 @@ export async function renderTransferRequestConfirmation(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     {},
   );
@@ -59,6 +76,7 @@ export async function renderTransferRequestConfirmation(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     { plainText: true },
   );

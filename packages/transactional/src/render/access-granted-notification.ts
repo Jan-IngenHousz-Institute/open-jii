@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 
+import type { EmailUnsubscribe } from "../components/email-layout";
 import { Email } from "../emails/email";
 import { AccessGrantedNotification } from "../emails/fallbacks/access-granted-notification";
 import { getCmsEmail } from "../lib/contentful";
@@ -12,6 +13,7 @@ export interface RenderAccessGrantedNotificationParams {
   resourceUrl: string;
   actor: string;
   role: string;
+  unsubscribe?: EmailUnsubscribe;
 }
 
 export interface RenderedEmail {
@@ -23,7 +25,8 @@ export interface RenderedEmail {
 export async function renderAccessGrantedNotification(
   params: RenderAccessGrantedNotificationParams,
 ): Promise<RenderedEmail> {
-  const { host, baseUrl, resourceKind, resourceName, resourceUrl, actor, role } = params;
+  const { host, baseUrl, resourceKind, resourceName, resourceUrl, actor, role, unsubscribe } =
+    params;
 
   const emailData = await getCmsEmail("access-granted-notification", {
     host,
@@ -45,6 +48,7 @@ export async function renderAccessGrantedNotification(
         resourceUrl,
         actor,
         role,
+        unsubscribe,
       }),
       {},
     );
@@ -57,6 +61,7 @@ export async function renderAccessGrantedNotification(
         resourceUrl,
         actor,
         role,
+        unsubscribe,
       }),
       { plainText: true },
     );
@@ -69,6 +74,7 @@ export async function renderAccessGrantedNotification(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     {},
   );
@@ -79,6 +85,7 @@ export async function renderAccessGrantedNotification(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     { plainText: true },
   );

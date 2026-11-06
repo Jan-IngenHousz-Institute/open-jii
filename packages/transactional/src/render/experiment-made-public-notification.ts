@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 
+import type { EmailUnsubscribe } from "../components/email-layout";
 import { Email } from "../emails/email";
 import { ExperimentMadePublicNotification } from "../emails/fallbacks/experiment-made-public-notification";
 import { getCmsEmail } from "../lib/contentful";
@@ -9,6 +10,7 @@ export interface RenderExperimentMadePublicNotificationParams {
   baseUrl: string;
   experimentName: string;
   experimentUrl: string;
+  unsubscribe?: EmailUnsubscribe;
 }
 
 export interface RenderedEmail {
@@ -20,7 +22,7 @@ export interface RenderedEmail {
 export async function renderExperimentMadePublicNotification(
   params: RenderExperimentMadePublicNotificationParams,
 ): Promise<RenderedEmail> {
-  const { host, baseUrl, experimentName, experimentUrl } = params;
+  const { host, baseUrl, experimentName, experimentUrl, unsubscribe } = params;
 
   const emailData = await getCmsEmail("experiment-made-public-notification", {
     host,
@@ -31,11 +33,23 @@ export async function renderExperimentMadePublicNotification(
 
   if (!emailData) {
     const html = await render(
-      ExperimentMadePublicNotification({ host, baseUrl, experimentName, experimentUrl }),
+      ExperimentMadePublicNotification({
+        host,
+        baseUrl,
+        experimentName,
+        experimentUrl,
+        unsubscribe,
+      }),
       {},
     );
     const text = await render(
-      ExperimentMadePublicNotification({ host, baseUrl, experimentName, experimentUrl }),
+      ExperimentMadePublicNotification({
+        host,
+        baseUrl,
+        experimentName,
+        experimentUrl,
+        unsubscribe,
+      }),
       { plainText: true },
     );
     return { html, text, preview: `${experimentName} is now public on openJII` };
@@ -47,6 +61,7 @@ export async function renderExperimentMadePublicNotification(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     {},
   );
@@ -57,6 +72,7 @@ export async function renderExperimentMadePublicNotification(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     { plainText: true },
   );

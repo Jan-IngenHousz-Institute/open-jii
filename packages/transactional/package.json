@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "exports": {
+    "./components/email-layout": {
+      "types": "./dist/components/email-layout.d.ts",
+      "default": "./dist/components/email-layout.js"
+    },
     "./emails/email": {
       "types": "./dist/emails/email.d.ts",
       "default": "./dist/emails/email.js"

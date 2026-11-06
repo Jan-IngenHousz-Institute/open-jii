@@ -213,6 +213,7 @@ export enum ErrorCodes {
 
   // Location: src/notifications/application/services/
   NOTIFICATION_RETENTION_FAILED = "NOTIFICATION_RETENTION_FAILED", // Failed to delete expired notifications
+  NOTIFICATION_UNSUBSCRIBE_LINK_INVALID = "NOTIFICATION_UNSUBSCRIBE_LINK_INVALID", // Unsubscribe token failed verification
 
   // Location: src/health/application/services/
   DEPENDENCY_HEALTH_PUBLISH_FAILED = "DEPENDENCY_HEALTH_PUBLISH_FAILED", // Dependency health metrics not published
