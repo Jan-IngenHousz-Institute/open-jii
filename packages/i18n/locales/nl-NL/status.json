@@ -107,6 +107,7 @@
     "group": "{{name}}, afgelopen {{days}} dagen",
     "daysAgo": "{{days}} dagen geleden",
     "uptime": "{{uptime}} beschikbaar in de afgelopen 90 dagen",
+    "uptimeSince": "{{uptime}} beschikbaar sinds {{date}}",
     "degraded": "{{degraded}} beperkt",
     "today": "Vandaag",
     "problemDays": "Dagen waarop niet alles in bedrijf was",
