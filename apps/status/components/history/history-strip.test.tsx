@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { act } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { componentOf } from "~/test/component-of";
 import { renderWithProviders } from "~/test/test-utils";
 
@@ -392,6 +393,54 @@ describe("HistoryStrip", () => {
         expect(screen.queryByText("November 1, 2026", { selector: "p" })).not.toBeInTheDocument();
       });
       expect(screen.getAllByText(/^November \d, 2026$/, { selector: "p" })).toHaveLength(1);
+    });
+  });
+
+  describe("hover with the card's close delay", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    function advance(ms: number) {
+      act(() => {
+        vi.advanceTimersByTime(ms);
+      });
+    }
+
+    function card(date: string) {
+      return screen.queryByText(date, { selector: "p" });
+    }
+
+    it("keeps the card open while the pointer crosses the gap to it", () => {
+      vi.useFakeTimers();
+      renderStrip(operationalStatusDocument, "website");
+      const bar = bars()[87] ?? document.body;
+
+      fireEvent.pointerEnter(bar);
+      advance(0);
+      fireEvent.pointerLeave(bar);
+      advance(100);
+
+      const text = card("November 1, 2026");
+      expect(text).toBeInTheDocument();
+
+      fireEvent.pointerEnter(cardAround(text ?? document.body));
+      advance(1000);
+      expect(card("November 1, 2026")).toBeInTheDocument();
+    });
+
+    it("still swaps to the next bar's card at once", () => {
+      vi.useFakeTimers();
+      renderStrip(operationalStatusDocument, "website");
+
+      fireEvent.pointerEnter(bars()[87] ?? document.body);
+      advance(0);
+      fireEvent.pointerLeave(bars()[87] ?? document.body);
+      fireEvent.pointerEnter(bars()[88] ?? document.body);
+      advance(0);
+
+      expect(card("November 2, 2026")).toBeInTheDocument();
+      expect(card("November 1, 2026")).not.toBeInTheDocument();
     });
   });
 
