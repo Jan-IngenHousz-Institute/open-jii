@@ -583,10 +583,11 @@ EOT
     }
   }
 
-  # Catalog entry 138. Reviewers paste the code from Play Console, so a failed or refused sign-in
-  # for the review address is almost certainly someone else trying it.
+  # Catalog entry 138. Any use of the Google Play review account outside a review means someone
+  # else has its address or code, and a refused new sign-in method means someone is trying to keep
+  # access.
   rule {
-    name      = "Play Review Sign-In Failures"
+    name      = "Play Review Account Used"
     condition = "C"
 
     data {
@@ -598,7 +599,7 @@ EOT
         refId      = "A"
         region     = var.aws_region
         namespace  = "OpenJII/Backend"
-        metricName = "PlayReviewSignInFailures"
+        metricName = "PlayReviewAccountUse"
         statistic  = "Sum"
         period     = "300"
         dimensions = {}
@@ -655,14 +656,14 @@ EOT
     for            = "5m"
 
     annotations = {
-      description      = "A sign-in for the Google Play review address failed or was refused. Reviewers have the code, so someone else may be guessing it."
-      summary          = "Someone is trying the Play review sign-in"
-      runbook_url      = "${var.runbook_base_url}/docs/runbooks/play-review-sign-in-failures.md"
+      description      = "Someone signed in to, tried, or tried to add a sign-in method to the Google Play review account. Outside a review that is not Google's reviewers."
+      summary          = "The Play review account was used"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/play-review-account-use.md"
       __dashboardUid__ = local.heartbeat_daily_uid
-      __panelId__      = local.heartbeat_panel_ids["play-review-sign-in-failures"]
+      __panelId__      = local.heartbeat_panel_ids["play-review-account-use"]
     }
     labels = {
-      metric_id = "play-review-sign-in-failures"
+      metric_id = "play-review-account-use"
       severity  = "warning"
       service   = "backend"
     }

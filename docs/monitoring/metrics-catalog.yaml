@@ -129,7 +129,7 @@ passes:
       reaches someone at a quiet hour, how long it takes, and the publisher's own errors
   - date: 2026-11-03
     range: [138, 138]
-    note: failed and refused sign-ins for the Google Play review address, since nothing else shows someone trying its fixed code
+    note: every use of the Google Play review account, since nothing else shows someone signing in with or guessing its fixed code
 
 metrics:
   # Ingest path
@@ -2470,8 +2470,8 @@ metrics:
       check (132) may be the publisher and not the path.
 
   - num: 138
-    id: play-review-sign-in-failures
-    name: Play review sign-in failures
+    id: play-review-account-use
+    name: Play review account use
     family: observability
     area: api
     source: aws
@@ -2481,12 +2481,13 @@ metrics:
     severity: warning
     signal:
       namespace: OpenJII/Backend
-      metric: PlayReviewSignInFailures
+      metric: PlayReviewAccountUse
       stat: Sum
     baseline: { method: threshold, max: 0 }
-    runbook: docs/runbooks/play-review-sign-in-failures.md
+    runbook: docs/runbooks/play-review-account-use.md
     notes: >-
-      Failed and refused sign-ins for the Google Play review address, from a metric filter on the
-      backend's log group (infrastructure/modules/play-review-sign-in). Reviewers paste the code from
-      Play Console, so any count is most likely someone else trying it. The auth server refuses the
-      address after ten attempts a day per backend task.
+      Sign-ins to the Google Play review account, failed, refused or successful, and refused attempts
+      to add a sign-in method to it, from a metric filter on the backend's log group
+      (infrastructure/modules/play-review-sign-in). Outside a review, any count means someone else has
+      the address or the code. Each backend task refuses the address after ten attempts, counted from
+      when the task started and reset each UTC day, so a deployment or a replaced task starts at zero.

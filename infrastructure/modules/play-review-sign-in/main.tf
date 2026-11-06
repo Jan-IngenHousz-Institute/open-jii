@@ -42,16 +42,17 @@ module "secret" {
   tags = var.tags
 }
 
-# Reviewers paste the code from Play Console, so a failed or refused review sign-in is almost
-# certainly someone else. Both auth server lines start this way, and the info line that issues
-# the code does not.
-resource "aws_cloudwatch_log_metric_filter" "failures" {
-  name           = "play-review-sign-in-failures-${var.environment}"
+# Every sign-in to the review account, failed, refused or successful, and every refused attempt
+# to add a sign-in method. Outside a review, any of them means someone else has the address or the
+# code. The terms are PLAY_REVIEW_LOG_LINES in packages/auth/src/email-otp.ts, and the info line
+# that issues the code matches none of them.
+resource "aws_cloudwatch_log_metric_filter" "account_use" {
+  name           = "play-review-account-use-${var.environment}"
   log_group_name = var.log_group_name
-  pattern        = "?\"Play review sign-in failed\" ?\"Play review sign-in refused\""
+  pattern        = "?\"Play review sign-in succeeded\" ?\"Play review sign-in failed\" ?\"Play review sign-in refused\" ?\"Play review account refused a new sign-in method\""
 
   metric_transformation {
-    name          = "PlayReviewSignInFailures"
+    name          = "PlayReviewAccountUse"
     namespace     = "OpenJII/Backend"
     value         = "1"
     default_value = "0"

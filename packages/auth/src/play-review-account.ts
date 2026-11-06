@@ -56,8 +56,12 @@ export class PlayReviewAccount {
     return new PlayReviewAccount(normalizedEmail, otp);
   }
 
+  isReviewAddress(email: string): boolean {
+    return email.toLowerCase() === this.email;
+  }
+
   isReviewSignIn({ email, type }: OTPRequest): boolean {
-    return type === "sign-in" && email.toLowerCase() === this.email;
+    return type === "sign-in" && this.isReviewAddress(email);
   }
 
   /** The configured code for the review sign-in; undefined lets Better Auth generate one. */

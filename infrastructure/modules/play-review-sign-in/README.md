@@ -1,6 +1,6 @@
 # Play review sign-in
 
-Generates the address and the six-digit code that Google Play's reviewers sign in with, for one environment, and keeps them in their own Secrets Manager secret, `openjii-play-review-sign-in-<env>`. The backend gives that address the fixed code instead of emailing one (`packages/auth/src/email-otp.ts`). A metric filter on the backend's log group counts failed and refused review sign-ins as `OpenJII/Backend` `PlayReviewSignInFailures`, which catalog entry `play-review-sign-in-failures` alerts on.
+Generates the address and the six-digit code that Google Play's reviewers sign in with, for one environment, and keeps them in their own Secrets Manager secret, `openjii-play-review-sign-in-<env>`. The backend gives that address the fixed code instead of emailing one (`packages/auth/src/email-otp.ts`). A metric filter on the backend's log group counts every sign-in to the account and every refused attempt to add a sign-in method as `OpenJII/Backend` `PlayReviewAccountUse`, which catalog entry `play-review-account-use` alerts on.
 
 ## Usage
 

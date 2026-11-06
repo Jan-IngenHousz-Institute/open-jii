@@ -1,4 +1,5 @@
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import type { BetterAuthPlugin } from "better-auth";
+import { APIError, createAuthMiddleware, getSessionFromCtx, isAPIError } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
 import { z } from "zod";
 
@@ -7,11 +8,27 @@ import { PlayReviewAccount } from "./play-review-account";
 const OTP_LENGTH = 6;
 const SIGN_IN_PATH = "/sign-in/email-otp";
 
-// Checks a code without using it up. Neither app calls it, so it would only be a second way to
-// guess the review code.
-export const DISABLED_EMAIL_OTP_PATHS = ["/email-otp/check-verification-otp"];
+// Each of these leaves the review account a way in that a new code does not close: a passkey, an
+// API key, a linked GitHub or ORCID account, or the account moved to an address someone else reads.
+const NEW_SIGN_IN_METHOD_PATHS = [
+  "/passkey/generate-register-options",
+  "/passkey/verify-registration",
+  "/api-key/create",
+  "/link-social",
+  "/change-email",
+  "/email-otp/request-email-change",
+  "/email-otp/change-email",
+];
 
-const zSignInBody = z.object({ email: z.string() });
+/** What the auth server logs about the review account. The backend's metric filter matches these. */
+export const PLAY_REVIEW_LOG_LINES = {
+  signInSucceeded: "Play review sign-in succeeded",
+  signInFailed: "Play review sign-in failed",
+  signInRefused: "Play review sign-in refused",
+  newSignInMethodRefused: "Play review account refused a new sign-in method",
+};
+
+const zSignInBody = z.object({ email: z.string(), otp: z.string() });
 
 interface OTPMessage {
   email: string;
@@ -34,12 +51,10 @@ export function openJiiEmailOTP({ playReview, sendEmail }: OpenJiiEmailOTPOption
     otpLength: OTP_LENGTH,
   });
 
-  function isReviewSignIn(body: unknown): boolean {
+  // Before hooks see the body unvalidated, so a body that would fail validation counts as nothing.
+  function isReviewSignInBody(body: unknown): boolean {
     const parsed = zSignInBody.safeParse(body);
-    return (
-      parsed.success &&
-      !!playReviewAccount?.isReviewSignIn({ email: parsed.data.email, type: "sign-in" })
-    );
+    return parsed.success && !!playReviewAccount?.isReviewAddress(parsed.data.email);
   }
 
   const plugin = emailOTP({
@@ -57,27 +72,55 @@ export function openJiiEmailOTP({ playReview, sendEmail }: OpenJiiEmailOTPOption
     },
   });
 
-  const isSignInPath = (context: { path?: string }) => context.path === SIGN_IN_PATH;
+  // Checks a code without using it up. Neither app calls it, so it would only be a second way to
+  // guess the review code.
+  const { checkVerificationOTP: _checkVerificationOTP, ...endpoints } = plugin.endpoints;
 
-  // A refusal thrown here skips the after hooks, so it logs itself. Neither line names the address.
+  // Read through the shared shape, so hooks a later version declares are carried, not dropped.
+  const declaredHooks: BetterAuthPlugin["hooks"] = plugin.hooks;
+
+  const isSignInPath = (context: { path?: string }) => context.path === SIGN_IN_PATH;
+  const isNewSignInMethodPath = (context: { path?: string }) =>
+    !!context.path && NEW_SIGN_IN_METHOD_PATHS.includes(context.path);
+
+  // A refusal thrown here skips the after hooks, so it logs itself. No line names the address.
   const capReviewSignIn = createAuthMiddleware((ctx) => {
-    if (!playReviewAccount || !isReviewSignIn(ctx.body)) {
+    if (!playReviewAccount || !isReviewSignInBody(ctx.body)) {
       return Promise.resolve();
     }
 
     const isWithinCap = playReviewAccount.recordSignInAttempt();
     if (!isWithinCap) {
-      ctx.context.logger.warn("Play review sign-in refused: today's attempts are used up");
+      ctx.context.logger.warn(PLAY_REVIEW_LOG_LINES.signInRefused, { reason: "daily cap" });
       throw new APIError("TOO_MANY_REQUESTS", { message: "Too many sign-in attempts" });
     }
 
     return Promise.resolve();
   });
 
-  const logFailedReviewSignIn = createAuthMiddleware((ctx) => {
+  const refuseNewSignInMethod = createAuthMiddleware(async (ctx) => {
+    if (!playReviewAccount) {
+      return;
+    }
+
+    const session = await getSessionFromCtx(ctx);
+    const isReviewSession = !!session && playReviewAccount.isReviewAddress(session.user.email);
+    if (isReviewSession) {
+      ctx.context.logger.warn(PLAY_REVIEW_LOG_LINES.newSignInMethodRefused, { path: ctx.path });
+      throw new APIError("FORBIDDEN", { message: "This account cannot add sign-in methods" });
+    }
+  });
+
+  const logReviewSignIn = createAuthMiddleware((ctx) => {
+    if (!isReviewSignInBody(ctx.body)) {
+      return Promise.resolve();
+    }
+
     const { returned } = ctx.context;
-    if (isReviewSignIn(ctx.body) && returned instanceof APIError) {
-      ctx.context.logger.warn("Play review sign-in failed", { reason: returned.body?.code });
+    if (isAPIError(returned)) {
+      ctx.context.logger.warn(PLAY_REVIEW_LOG_LINES.signInFailed, { reason: returned.body?.code });
+    } else {
+      ctx.context.logger.info(PLAY_REVIEW_LOG_LINES.signInSucceeded);
     }
 
     return Promise.resolve();
@@ -85,10 +128,15 @@ export function openJiiEmailOTP({ playReview, sendEmail }: OpenJiiEmailOTPOption
 
   return {
     ...plugin,
+    endpoints,
     hooks: {
-      ...plugin.hooks,
-      before: [{ matcher: isSignInPath, handler: capReviewSignIn }],
-      after: [...plugin.hooks.after, { matcher: isSignInPath, handler: logFailedReviewSignIn }],
+      ...declaredHooks,
+      before: [
+        ...(declaredHooks.before ?? []),
+        { matcher: isSignInPath, handler: capReviewSignIn },
+        { matcher: isNewSignInMethodPath, handler: refuseNewSignInMethod },
+      ],
+      after: [...(declaredHooks.after ?? []), { matcher: isSignInPath, handler: logReviewSignIn }],
     },
   };
 }
