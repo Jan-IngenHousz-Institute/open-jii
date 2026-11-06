@@ -93,6 +93,20 @@ describe("loadContentfulConfig", () => {
     ).toEqual({ space: "from-shell", environment: "dev", token: "token" });
   });
 
+  it("reads the main checkout's file from a linked worktree, under the worktree's own", async () => {
+    const main = await rootWith(
+      "CONTENTFUL_SPACE_ID=main-space\nCONTENTFUL_MANAGEMENT_TOKEN=main-token\n",
+    );
+    const linked = await rootWith("CONTENTFUL_SPACE_ID=linked-space\n");
+    await writeFile(join(linked, ".git"), `gitdir: ${main}/.git/worktrees/linked\n`);
+
+    expect(await loadContentfulConfig(linked, {})).toEqual({
+      space: "linked-space",
+      environment: "",
+      token: "main-token",
+    });
+  });
+
   it("falls back to the CMA name when the management token is empty", async () => {
     const root = await rootWith("CMA=alias-token\n");
 

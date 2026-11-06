@@ -2,7 +2,7 @@ import { appendFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { z } from "zod";
 
-import { devkitEnvPath, readEnvFile } from "./config.js";
+import { devkitEnvPath, mainWorktreeRoot, readEnvFile } from "./config.js";
 import { ContentModel } from "./content-model.js";
 import type { LiveContentType } from "./content-model.js";
 import { EditorInterface } from "./editor-interface.js";
@@ -96,12 +96,16 @@ export class ContentfulError extends Error {
   }
 }
 
+// Shell first, then this checkout's env file, then the main worktree's, as the devkit finds its
+// keys, so settings stored once in the main checkout serve every worktree.
 export async function loadContentfulConfig(
   root: string,
   env: NodeJS.ProcessEnv,
 ): Promise<ContentfulConfig> {
+  const mainRoot = await mainWorktreeRoot(root);
+  const shared = mainRoot === null ? {} : await readEnvFile(devkitEnvPath(mainRoot));
   const file = await readEnvFile(devkitEnvPath(root));
-  const values = { ...file, ...env };
+  const values = { ...shared, ...file, ...env };
   return {
     space: values.CONTENTFUL_SPACE_ID?.trim() ?? "",
     environment: values.CONTENTFUL_SPACE_ENVIRONMENT?.trim() ?? "",
