@@ -192,11 +192,17 @@ describe("NotificationUnsubscribeController", () => {
       throw outage;
     });
 
-    await testApp
+    const response = await testApp
       .post(unsubscribePath(unsubscribe.sign(userId, "requests_and_invitations")))
       .withoutAuth()
       .set("X-Forwarded-For", nextClientIp())
       .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+
+    // Details reach the body only outside production; they are what the error log carries.
+    expect(response.body).toMatchObject({
+      data: { details: "Connection terminated unexpectedly" },
+    });
+    expect(JSON.stringify(response.body)).not.toContain("Failed query");
   });
 
   it("answers a server error, not a refused link, when the preference cannot be saved", async () => {
