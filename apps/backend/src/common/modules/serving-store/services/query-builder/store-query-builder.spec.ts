@@ -206,6 +206,24 @@ describe("StoreQueryBuilder", () => {
     ).toThrow(QueryBuilderInputError);
   });
 
+  it("refuses text a number column cannot read, which the store would answer with an error", () => {
+    expect(() =>
+      measurements().filter({ column: "id", operator: "equals", value: "abc" }).build(),
+    ).toThrow(QueryBuilderInputError);
+    expect(() =>
+      measurements().filter({ column: "id", operator: "equals", value: "1.5" }).build(),
+    ).toThrow(QueryBuilderInputError);
+
+    const sql = measurements()
+      .select(["id"])
+      .filter({ column: "id", operator: "equals", value: "12" })
+      .filter({ column: "latitude", operator: "greater_than", value: "-1.5" })
+      .build();
+
+    expect(sql).toContain("id = '12'");
+    expect(sql).toContain("latitude > '-1.5'");
+  });
+
   it("refuses a number for a time, which the store would answer with an error", () => {
     expect(() =>
       measurements().filter({ column: "date", operator: "equals", value: 5 }).build(),

@@ -1,3 +1,5 @@
+import { isNumericType } from "@repo/api/transforms/column-type-utils";
+
 import { numericStringOrdering } from "../../../databricks/services/query-builder/expressions/numeric-string-order";
 import type { NumericStringKeys } from "../../../databricks/services/query-builder/expressions/numeric-string-order";
 import { BaseQueryBuilder } from "../../../databricks/services/query-builder/query-builder.base";
@@ -145,6 +147,10 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     if (isTime && typeof value !== "string") {
       throw new QueryBuilderInputError(`'${column}' is compared with a time given as text`);
     }
+    const isNumber = isNumericType(type);
+    if (isNumber && typeof value === "string" && !this.readsAsNumber(value, type)) {
+      throw new QueryBuilderInputError(`'${column}' is compared with a number`);
+    }
     if (typeof value === "string" && type === "TIMESTAMP") {
       return `parseDateTime64BestEffortOrNull(${this.escapeValue(value)}, 6, 'UTC')`;
     }
@@ -155,6 +161,13 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       return this.escapeValue(String(value));
     }
     return this.escapeScalarValue(value);
+  }
+
+  /** The store reads text as a number column's value only as plain digits, with a fraction where
+   *  the type holds one. */
+  private readsAsNumber(text: string, type: string): boolean {
+    const isInteger = type === "BIGINT" || type === "INT";
+    return isInteger ? /^-?\d+$/.test(text) : /^-?\d+(\.\d+)?$/.test(text);
   }
 
   textOf(columnSql: string): string {

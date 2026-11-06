@@ -132,12 +132,15 @@ describe("ServingStoreAdapter", () => {
     );
   });
 
-  it("answers input it cannot read as a bad request", () => {
+  it.each([
+    ["a column it does not have", "nope", 1],
+    ["text that is no number for a number column", "id", "abc"],
+  ])("answers %s as a bad request", (_, column, value) => {
     const result = adapter.buildExperimentQuery({
       tableName: "raw_data",
       tableType: "static",
       experimentId: "e1",
-      filters: [{ column: "nope", operator: "equals", value: 1 }],
+      filters: [{ column, operator: "equals", value }],
     });
 
     assertFailure(result);
