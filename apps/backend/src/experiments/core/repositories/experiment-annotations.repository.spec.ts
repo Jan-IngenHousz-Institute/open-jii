@@ -156,4 +156,15 @@ describe("ExperimentAnnotationsRepository", () => {
     assertFailure(result);
     expect(result.error.message).toBe("Postgres refused the annotations query with SQLSTATE 23505");
   });
+
+  it("reports a driver failure as no answer, not as an SQLSTATE", async () => {
+    vi.spyOn(testApp.database, "transaction").mockRejectedValue(
+      new Error("write failed", { cause: { code: "CONNECT_TIMEOUT" } }),
+    );
+
+    const result = await repository.insert([record()]);
+
+    assertFailure(result);
+    expect(result.error.message).toBe("Postgres did not answer the annotations query");
+  });
 });

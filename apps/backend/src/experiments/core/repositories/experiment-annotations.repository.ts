@@ -100,7 +100,8 @@ export class ExperimentAnnotationsRepository {
 
   /**
    * Drizzle's message repeats the statement with its parameters, the annotations' text and authors,
-   * which would reach the logs; Postgres's SQLSTATE says what went wrong.
+   * which would reach the logs; Postgres's SQLSTATE says what went wrong. The driver puts its own
+   * failures, such as CONNECT_TIMEOUT, in the same field, and those are no SQLSTATE.
    */
   private queryError(error: unknown): AppError {
     const cause = error instanceof Error ? error.cause : undefined;
@@ -108,7 +109,8 @@ export class ExperimentAnnotationsRepository {
       typeof cause === "object" &&
       cause !== null &&
       "code" in cause &&
-      typeof cause.code === "string"
+      typeof cause.code === "string" &&
+      /^[0-9A-Z]{5}$/.test(cause.code)
         ? cause.code
         : null;
     return AppError.internal(
