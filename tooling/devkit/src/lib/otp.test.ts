@@ -1,6 +1,23 @@
-import { describe, expect, it } from "vitest";
+import { symmetricEncrypt } from "better-auth/crypto";
+import { describe, expect, it, vi } from "vitest";
 
 import { assertLocalDatabase, readLatestSignInOtp } from "./otp.js";
+
+const LOCAL_DATABASE = "postgresql://postgres:postgres@127.0.0.1:5432/openjii_local";
+
+const stored = vi.hoisted(() => ({ value: "" }));
+
+// The one query the reader makes returns the stored verification value.
+vi.mock("postgres", () => ({
+  default: () =>
+    Object.assign(() => Promise.resolve([{ value: stored.value }]), {
+      end: () => Promise.resolve(),
+    }),
+}));
+
+async function storeEncrypted(otp: string, secret: string) {
+  stored.value = `${await symmetricEncrypt({ key: secret, data: otp })}:0`;
+}
 
 describe("assertLocalDatabase", () => {
   it("accepts loopback hosts", () => {
@@ -39,7 +56,23 @@ describe("assertLocalDatabase", () => {
 describe("readLatestSignInOtp", () => {
   it("rejects a remote database before opening a connection", async () => {
     await expect(
-      readLatestSignInOtp("postgresql://u:p@db.example.internal:5432/app", "a@b.test"),
+      readLatestSignInOtp("postgresql://u:p@db.example.internal:5432/app", "a@b.test", "secret"),
     ).rejects.toThrow("only a local database is allowed");
+  });
+
+  it("decrypts the stored code with the backend's AUTH_SECRET", async () => {
+    await storeEncrypted("123456", "local-secret");
+
+    await expect(readLatestSignInOtp(LOCAL_DATABASE, "a@b.test", "local-secret")).resolves.toBe(
+      "123456",
+    );
+  });
+
+  it("names AUTH_SECRET when the code was encrypted with another secret", async () => {
+    await storeEncrypted("123456", "local-secret");
+
+    await expect(readLatestSignInOtp(LOCAL_DATABASE, "a@b.test", "another-secret")).rejects.toThrow(
+      "is AUTH_SECRET the backend's?",
+    );
   });
 });
