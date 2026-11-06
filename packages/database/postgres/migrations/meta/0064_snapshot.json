@@ -1,5 +1,5 @@
 {
-  "id": "8486a981-4db8-4366-91c7-6f045195581b",
+  "id": "920c1cb7-645e-4bc5-b85d-27669a677753",
   "prevId": "cc0d1fee-7233-404e-a5cf-f29e2733791b",
   "version": "7",
   "dialect": "postgresql",
@@ -1245,7 +1245,8 @@
         },
         "flag_type": {
           "name": "flag_type",
-          "type": "varchar(100)",
+          "type": "annotation_flag_type",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
         },
@@ -5745,6 +5746,14 @@
     }
   },
   "enums": {
+    "public.annotation_flag_type": {
+      "name": "annotation_flag_type",
+      "schema": "public",
+      "values": [
+        "outlier",
+        "needs_review"
+      ]
+    },
     "public.annotation_type": {
       "name": "annotation_type",
       "schema": "public",

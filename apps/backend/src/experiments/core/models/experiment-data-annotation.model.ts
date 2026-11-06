@@ -4,6 +4,7 @@
 import type {
   ExperimentAnnotationCommentContent,
   ExperimentAnnotationFlagContent,
+  ExperimentAnnotationFlagType,
   ExperimentAnnotationType,
 } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
@@ -37,7 +38,7 @@ export interface BaseAnnotation {
   rowId: string;
   type: string; // 'comment' or 'flag'
   contentText?: string | null; // For comment text or flag reason
-  flagType?: string | null; // 'outlier' or 'needs_review'
+  flagType?: ExperimentAnnotationFlagType | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,7 +54,7 @@ export interface AnnotationRecord {
   rowId: string;
   type: ExperimentAnnotationType;
   contentText: string | null;
-  flagType: string | null;
+  flagType: ExperimentAnnotationFlagType | null;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;

@@ -1,3 +1,4 @@
+CREATE TYPE "public"."annotation_flag_type" AS ENUM('outlier', 'needs_review');--> statement-breakpoint
 CREATE TYPE "public"."annotation_type" AS ENUM('comment', 'flag');--> statement-breakpoint
 CREATE TABLE "experiment_annotations" (
 	"id" uuid PRIMARY KEY NOT NULL,
@@ -6,7 +7,7 @@ CREATE TABLE "experiment_annotations" (
 	"row_id" varchar(64) NOT NULL,
 	"type" "annotation_type" NOT NULL,
 	"content_text" text,
-	"flag_type" varchar(100),
+	"flag_type" "annotation_flag_type",
 	"created_by" uuid NOT NULL,
 	"created_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL,
 	"updated_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL
