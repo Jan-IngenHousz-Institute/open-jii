@@ -107,6 +107,20 @@ describe("ServingStoreAdapter", () => {
     ]);
   });
 
+  it("types a macro table's id as the warehouse's view casts it", async () => {
+    const columns = adapter.getExperimentTableColumns("macro", "m1");
+    assertSuccess(columns);
+    const id = columns.value.filter(({ name }) => name === "id");
+    vi.spyOn(client, "query").mockResolvedValue(success({ rows: [["12"]] }));
+
+    const result = await adapter.executeQuery({ sql: "SELECT id", columns: id });
+
+    assertSuccess(result);
+    expect(result.value.columns).toEqual([
+      { name: "id", type_name: "LONG", type_text: "BIGINT", position: 0 },
+    ]);
+  });
+
   it("holds no device table", () => {
     assertFailure(adapter.getExperimentTableColumns("static", "device"));
     assertFailure(
@@ -517,7 +531,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     });
 
     expect(data.columns.map(({ type_text }) => type_text)).toEqual([
-      "INT",
+      "BIGINT",
       "STRUCT<id: STRING, name: STRING, avatar: STRING>",
       "DOUBLE",
       "STRING",

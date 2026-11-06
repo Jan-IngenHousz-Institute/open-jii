@@ -99,7 +99,7 @@ export const MACRO_RESULTS_TABLE: StoreTable = {
   identifierColumn: "macro_id",
   columns: [
     { name: "experiment_id", type: "STRING", expression: "experiment_id" },
-    { name: "id", type: "INT", expression: "id" },
+    { name: "id", type: "BIGINT", expression: "id" },
     { name: "raw_id", type: "BIGINT", expression: "raw_id" },
     { name: "device_id", type: "STRING", expression: "device_id" },
     { name: "device_name", type: "STRING", expression: "device_name" },
