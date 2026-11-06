@@ -4,7 +4,6 @@ import {
   zExperimentAddAnnotationBody,
   zExperimentAddAnnotationsBulkBody,
   zExperimentAnnotationDeleteBulkBody,
-  zExperimentAnnotationDeleteBulkPathParam,
   zExperimentAnnotationExperimentPathParam,
   zExperimentAnnotationPathParam,
   zExperimentAnnotationRowsAffected,
@@ -50,6 +49,6 @@ export const experimentDataAnnotationsContract = {
       path: "/api/v1/experiments/{id}/data/annotations/bulk-delete",
       successStatus: 200,
     })
-    .input(zExperimentAnnotationDeleteBulkPathParam.and(zExperimentAnnotationDeleteBulkBody))
+    .input(zExperimentAnnotationExperimentPathParam.and(zExperimentAnnotationDeleteBulkBody))
     .output(zExperimentAnnotationRowsAffected),
 };
