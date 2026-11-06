@@ -285,8 +285,8 @@ minutes. Slack posts each message once and never edits or deletes it, so an edit
 
 ## One-time setup
 
-For whoever adds the content types to Contentful, in each environment that a status publisher
-reads. The JSON files in `packages/cms/content-models/` record the definitions, and `pnpm cms:models`
+For whoever adds the content types to Contentful, in each environment that a status publisher reads.
+The JSON files in `packages/cms/content-models/` record the definitions, and `pnpm cms:models`
 applies them with your own management token, as `tooling/devkit/README.md` describes. Steps 1 to 4
 name the command first and the manual route after it. The manual route is the fallback. An
 administrator follows it in the Contentful content model, as
@@ -305,11 +305,12 @@ administrator follows it in the Contentful content model, as
    field's appearance settings and choose date and time with time zone. A date without a time cannot
    say when an incident started.
 3. `apply` publishes the types. By hand, publish both content types.
-4. Add `status` to the Audience values of `componentAlert`. Run `pnpm cms:models pull componentAlert`
-   to write the live model to `packages/cms/content-models/componentAlert.json`, add `"status"` to
-   the `in` validation of its `audience` field, and review the change in a pull request. Then run
-   `diff componentAlert` and `apply componentAlert --expected-version <n> --environment <name>` with the
-   version `diff` printed. By hand, open the content type, open the Audience field, then Validation, add `status`
+4. Add `status` to the Audience values of `componentAlert`. Run
+   `pnpm cms:models pull componentAlert` to write the live model to
+   `packages/cms/content-models/componentAlert.json`, add `"status"` to the `in` validation of its
+   `audience` field, and review the change in a pull request. Then run `diff componentAlert` and
+   `apply componentAlert --expected-version <n> --environment <name>` with the version `diff`
+   printed. By hand, open the content type, open the Audience field, then Validation, add `status`
    to the accepted values, and save and publish the content type. Web and mobile cannot show a
    `status` alert. Their queries ask for `web` and `both`, or `mobile` and `both`, and the audience
    filter matches exactly (`apps/web/components/alerts-bar.tsx`,
