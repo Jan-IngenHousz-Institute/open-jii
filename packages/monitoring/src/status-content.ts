@@ -14,6 +14,12 @@ import type { Incident, IncidentUpdate, Notice } from "./status-document.js";
 
 export const STATUS_CONTENT_LOCALE = "en-US";
 
+/** The Contentful environment both the publisher and the devkit read. */
+export const STATUS_CONTENTFUL_ENVIRONMENT = "master";
+
+/** The most updates an incident carries, as the content model caps them. */
+export const STATUS_UPDATES_LIMIT = 20;
+
 const DAY_MS = 86_400_000;
 
 // Each incident collection costs its limit times 21 (the incident and up to 20 updates), so these
@@ -30,7 +36,7 @@ fragment StatusIncidentFields on StatusIncident {
   startsAt
   endsAt
   resolvedAt
-  updatesCollection(limit: 20, locale: $locale) {
+  updatesCollection(limit: ${STATUS_UPDATES_LIMIT}, locale: $locale) {
     items {
       sys {
         id
@@ -249,7 +255,7 @@ function plainTextOf(json: unknown): string {
 }
 
 /** An unreadable value is passed on as it is, so the contract rejects the entry that carries it. */
-function isoOf(value: string | null | undefined): string | undefined {
+export function isoOf(value: string | null | undefined): string | undefined {
   if (value === null || value === undefined) {
     return undefined;
   }

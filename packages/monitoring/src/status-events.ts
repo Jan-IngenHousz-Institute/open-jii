@@ -119,7 +119,7 @@ const announcedIncidentSchema = z.discriminatedUnion("kind", [
     updates: toldUpdatesSchema,
   }),
 ]);
-type AnnouncedIncident = z.infer<typeof announcedIncidentSchema>;
+export type AnnouncedIncident = z.infer<typeof announcedIncidentSchema>;
 
 const announcedComponentSchema = z.object({
   state: componentStateSchema,
@@ -192,7 +192,7 @@ function maintenanceNow(window: Incident, atMs: number): MaintenanceNow {
   return { phase: isOpen(window, atMs) ? "in-progress" : "scheduled" };
 }
 
-function announcedIncidentOf(incident: Incident, atMs: number): AnnouncedIncident {
+export function announcedIncidentOf(incident: Incident, atMs: number): AnnouncedIncident {
   const updates = incident.updates.map((update) => update.id);
 
   if (incident.kind === "maintenance") {
