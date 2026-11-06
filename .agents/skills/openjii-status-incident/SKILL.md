@@ -25,9 +25,9 @@ the person has read the exact text and said publish.
   `preflight` and `inspect` warn about any other name. Stop on that warning, since an incident
   written there never reaches the page.
 - Preflight cannot say whether the space is dev or production. Ask which one the credentials reach
-  if you do not already know. Rehearse in dev first, where the page is https://status.dev.openjii.org.
-  Write to production only when the person says production in this conversation, and never on a
-  guess.
+  if you do not already know. Rehearse in dev first, where the page is
+  https://status.dev.openjii.org. Write to production only when the person says production in this
+  conversation, and never on a guess.
 - Every write names its environment. `publish` takes `--environment <name>`, which has to equal the
   configured `CONTENTFUL_SPACE_ENVIRONMENT`, and refuses otherwise. Take the name from what the
   person told you about where this is going, not from `preflight` alone.
@@ -142,9 +142,9 @@ maintenance and no `nextUpdateBy`. `resolvedAt` is when the problem ended and ne
 Resolving goes through `resolve` and every other stage through `update`; each refuses the other's
 stages.
 
-The dry run of `update` and `resolve` cannot read Contentful, so add an `incident` block to the file, copied from `inspect`
-(title, kind, impact, components, startsAt, and endsAt for maintenance). Then run the same sequence
-as above:
+The dry run of `update` and `resolve` cannot read Contentful, so add an `incident` block to the
+file, copied from `inspect` (title, kind, impact, components, startsAt, and endsAt for maintenance).
+Then run the same sequence as above:
 
 ```bash
 pnpm status:incident update --entry-id <id> --file /abs/path/update.json --dry-run
@@ -197,11 +197,11 @@ pnpm cms:models apply statusUpdate --expected-version 0 --dry-run
 pnpm cms:models apply statusUpdate --expected-version <version diff printed> --environment <name>
 ```
 
-Show the person the `diff` first. Apply on their word with the version `diff` printed, since
-`apply` refuses when the live type has moved, and with `--environment <name>`, which has to equal
-the configured environment, since `apply` refuses to write without it. The dry run reads the live
-type, so it needs credentials; it prints the exact request bodies and writes nothing. A live type can
-hold keys the repo files cannot express, such as a field's `defaultValue` or the type's `metadata`.
+Show the person the `diff` first. Apply on their word with the version `diff` printed, since `apply`
+refuses when the live type has moved, and with `--environment <name>`, which has to equal the
+configured environment, since `apply` refuses to write without it. The dry run reads the live type,
+so it needs credentials; it prints the exact request bodies and writes nothing. A live type can hold
+keys the repo files cannot express, such as a field's `defaultValue` or the type's `metadata`.
 `apply` sends them back unchanged, and `diff` and the dry run list them as kept from the live type.
 If `apply` stops at the editor interface step, the type is already saved and activated. Pass on the
 error, which says so and names the rerun.
@@ -215,8 +215,9 @@ only on the person's words.
 To let a notice use the status audience, bring `componentAlert` into the repo so the change is
 reviewed:
 
-1. Run `pnpm cms:models pull componentAlert`. It writes `packages/cms/content-models/componentAlert.json`
-   from the live type and lists anything the repo format cannot express.
+1. Run `pnpm cms:models pull componentAlert`. It writes
+   `packages/cms/content-models/componentAlert.json` from the live type and lists anything the repo
+   format cannot express.
 2. In that file, add `"status"` to the `in` validation of the `audience` field. Change nothing else.
 3. Show the person the file, with the audience field as pulled and as changed. Leave the commit and
    the pull request to them.
@@ -231,8 +232,8 @@ If `pull` says the file already exists, review the live type with `diff` and ask
 
 - `inspect` shows a flag on an incident: tell the person what the publisher drops or leaves out and
   why. A draft update stays off the page even when its incident is published.
-- The page does not change within a few minutes of publish: `docs/runbooks/support/status-page-incidents.md`
-  has the checks under "If a change does not show". The publisher runbooks are for the engineer on
-  call.
+- The page does not change within a few minutes of publish:
+  `docs/runbooks/support/status-page-incidents.md` has the checks under "If a change does not show".
+  The publisher runbooks are for the engineer on call.
 - A Slack message went out wrong: it cannot be undone. Correct the page, add an update that says
   what changed, and tell the person the old message stays in the channel.
