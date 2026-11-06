@@ -3,9 +3,9 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-import { createInstance, initTranslations } from "@repo/i18n";
-import type { InitTranslationsProps } from "@repo/i18n";
-import { I18nextProvider } from "@repo/i18n/client";
+import { createInstance, I18nextProvider } from "@repo/i18n/client";
+import initTranslations from "@repo/i18n/server";
+import type { InitTranslationsProps } from "@repo/i18n/server";
 
 interface TranslationProviderProps {
   children: ReactNode;

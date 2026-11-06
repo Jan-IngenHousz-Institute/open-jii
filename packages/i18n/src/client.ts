@@ -8,6 +8,9 @@ import type { Namespace } from "./config";
 // Re-export React components that can only be used on client-side
 export { I18nextProvider, Trans, Translation, withTranslation } from "react-i18next";
 
+// A client provider makes its own instance; the package root also carries the server router.
+export { createInstance } from "i18next";
+
 /**
  * Client-side translation hook for React components.
  *
