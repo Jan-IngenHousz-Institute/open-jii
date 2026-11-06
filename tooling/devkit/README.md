@@ -361,10 +361,10 @@ nine people as news. Put it in a document instead.
 ## Contentful content models
 
 `packages/cms/content-models/*.json` holds the content types the repo depends on, and
-`pnpm cms:models` keeps a Contentful environment in step with them. It reads
-`CONTENTFUL_SPACE_ID`, `CONTENTFUL_SPACE_ENVIRONMENT` and `CONTENTFUL_MANAGEMENT_TOKEN` (or `CMA`)
-from the shell or from `tooling/devkit/.env`. The environment has no default, so a run always names
-the one it touches.
+`pnpm cms:models` keeps a Contentful environment in step with them. It reads `CONTENTFUL_SPACE_ID`,
+`CONTENTFUL_SPACE_ENVIRONMENT` and `CONTENTFUL_MANAGEMENT_TOKEN` (or `CMA`) from the shell, then
+this checkout's `tooling/devkit/.env`, then the main checkout's, as the keys above are found. The
+environment has no default, so a run always names the one it touches.
 
 ```bash
 pnpm cms:models preflight                                  # which settings are present, as booleans
