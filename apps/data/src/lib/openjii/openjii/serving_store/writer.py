@@ -48,6 +48,10 @@ BAD_DATA_CODES = frozenset({6, 26, 27, 32, 33, 38, 41, 53, 69, 70, 72, 117, 130,
 
 _LONG_DIGITS = re.compile(r"\d{19,}")
 _REJECT_MESSAGE_CHARS = 4_000
+
+# The code of a reject the feed records itself, for a batch whose payload schemas did not go; the
+# store's own error codes start at 1.
+SCHEMAS_NOT_SENT = 0
 # The store refuses a JSON object over ten times min_chunk_bytes_for_parallel_parsing, 100 MiB by
 # default, and a reject that raised would stop the pipeline. Escaped, a row this long stays under it.
 _REJECT_ROW_CHARS = 16_000_000
@@ -289,6 +293,19 @@ class StoreWriter:
                 flush=True,
             )
             time.sleep(delay)
+
+    def reject_unsent_schemas(self, table: str, message: str) -> None:
+        """Records in ``feed_rejects`` that a batch of ``table`` went without its payload schemas, so
+        the rejects alert names the table until a reload rebuilds them. Like every insert it is sent
+        once however often its batch is written again."""
+        line = {
+            "source_table": table,
+            "commit_version": None,
+            "code": SCHEMAS_NOT_SENT,
+            "message": message[:_REJECT_MESSAGE_CHARS],
+            "row": "",
+        }
+        self._insert("feed_rejects", [json.dumps(line)])
 
     def _reject_line(self, table: str, line: str, error: StoreRefusedData) -> str:
         message = str(error)[:_REJECT_MESSAGE_CHARS]

@@ -119,6 +119,9 @@ passes:
   - date: 2026-11-03
     range: [130, 130]
     note: measurements that arrived again, which keep one row id however often they come
+  - date: 2026-11-03
+    range: [131, 131]
+    note: how long the backend's reads of the serving store take, against the project's one-second target
 
 metrics:
   # Ingest path
@@ -2354,3 +2357,27 @@ metrics:
       2026 a settings change started two clusters in one hour in both pipelines. From 28 September to
       3 November no hour on prod started more than two; from 26 September one hour on dev, on 1 October,
       started four.
+
+  - num: 131
+    id: store-read-latency
+    name: Serving store reads
+    family: observability
+    area: latency
+    source: aws
+    phase: P2
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: OpenJII/ServingStore
+      search: SEARCH('{OpenJII/ServingStore,Environment} MetricName="StoreReadP95Seconds" Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
+      unit: seconds
+    baseline: { method: threshold, max: 1 }
+    runbook: docs/runbooks/store-read-latency.md
+    notes: >-
+      The p95 duration of the backend's reads of the serving store over five minutes, from the
+      store's query log, sent once a minute by the timer on its instance while reads arrive. A read
+      that failed counts as the 30 s a read may last, so reads that time out or hit the memory cap
+      raise it. The project's target is a second. StoreReads and StoreReadFailures go out beside it,
+      over one minute; every window ends ten seconds back, past the log's flush.

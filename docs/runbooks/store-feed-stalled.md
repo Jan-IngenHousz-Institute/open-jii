@@ -84,11 +84,14 @@ newest half hour gained rows before the start versions; it clears as soon as new
 
 ## Resetting a sink's checkpoint
 
-Needed when the feed was off for more than seven days, or when a gold table was recreated (its
-versions restart, so empty the store table first with `TRUNCATE TABLE store.<table>` as the admin).
-Empty a store table only with `TRUNCATE`: after a `DELETE` the store still holds the dedup tokens of
-the deleted rows' inserts, and drops those rows when the feed sends them again. Rows gold gained
-before the new start version stay missing until a [reload](procedures/serving-store-reload.md).
+Needed when the feed was off for more than seven days, or when a gold table was recreated. Its
+versions then restart, so first empty the store table with `TRUNCATE TABLE store.<table>` as the
+admin, and `TRUNCATE TABLE store.payload_schemas`, whose schemas carry the same versions. Left
+behind, either keeps a reload from running. Empty a store table only with `TRUNCATE`: after a
+`DELETE` the store still holds the dedup tokens of the deleted rows' inserts, and drops those rows
+when the feed sends them again. `payload_schemas` holds every table's schemas, so once the feed has
+caught up, [reload](procedures/serving-store-reload.md) every table for `all`; that also brings back
+the rows gold gained before the new start version.
 
 1. Put the new start version in the map and apply. The pipelines restart; the old checkpoint still
    wins.

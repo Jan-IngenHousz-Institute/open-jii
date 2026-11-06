@@ -12,11 +12,14 @@ holds now.** The feed only sends rows gold inserts or updates, so the store need
 ## What it does
 
 The job `Serving-Store-Reload-<ENV>` reads each gold table's latest version, V, and inserts every
-row gold holds at V as a commit at V. Gold only appends, so a recomputed row stands beside the one it
-replaced; of each store key the load sends the copy gold added last. Then it deletes the store's rows from versions before V. The
-store keeps each row's newest commit, so an experiment reads whole throughout. Rows the live feed
-writes meanwhile carry later versions and stay. Sending a row twice does no harm, because each chunk
-carries a dedup token and the store folds rows that share a key into one.
+row gold holds at V as a commit at V, with the payload schemas of those rows. Gold only appends,
+so a recomputed row stands beside the one it replaced; of each store key the load sends the copy
+gold added last. Then it deletes the store's rows and schemas from versions before V, so a field
+only removed rows had leaves the page, unless a feed batch that spanned V also carried it: a batch's
+schema takes its newest commit, so a second reload clears that field. The store keeps each row's newest commit, so an experiment
+reads whole throughout. Rows the live feed writes meanwhile carry later versions and stay. Sending a
+row twice does no harm, because each chunk carries a dedup token and the store folds rows that share
+a key into one.
 
 It then counts the rows per experiment, once per store key, since gold can hold a capture more than
 once and the store folds the copies. The run fails in three cases, and its error names the
@@ -35,10 +38,14 @@ and alerts, which read the last five minutes of arrivals, see only the rows the 
 committed V less than five minutes before the load, its rows count in those metrics until then, at a
 delivery time near zero.
 
-It connects as `openjii_reloader`, which may read and insert in `store` and delete from the three
-tables it reloads, but cannot update their values, delete from `feed_rejects`, or write to the
-migration ledger. Its right to delete also lets it drop or detach those tables' partitions, which
-empties a table as `TRUNCATE` would; ClickHouse has no narrower grant for a delete.
+After its delete it removes the contributor and client ids that no row names any longer, such as an
+erased contributor's, from the id tables the page sorts use.
+
+It connects as `openjii_reloader`, which may read and insert in `store` and delete from the tables it
+reloads (the three row tables, `payload_schemas` and the two id tables), but cannot update their
+values, delete from `feed_rejects`, or write to the migration ledger. Its right to delete also lets
+it drop or detach those tables' partitions, which empties a table as `TRUNCATE` would; ClickHouse has
+no narrower grant for a delete.
 
 ## Running it
 
@@ -90,10 +97,11 @@ The cluster takes a few minutes to start. Each table's result is one line of the
 - **The store holds rows from before the version.** Wait until the feed has caught up, then run it
   again for the same experiments; the new delete takes them.
 - **The store holds a version newer than gold's.** Gold's table was recreated and its versions
-  restarted, so the load's rows would lose to the old ones. As the admin, empty the store table with
-  `TRUNCATE TABLE store.<table>` (never `DELETE`; `store-feed-stalled` says why). Then set the feed's
-  start version to gold's latest and reset its checkpoint as `store-feed-stalled` describes, and once
-  the feed has caught up, reload that table for `all`.
+  restarted, so the load's rows and schemas would lose to the old ones. As the admin, empty the store
+  table and `store.payload_schemas` with `TRUNCATE TABLE` (never `DELETE`; `store-feed-stalled` says
+  why). Then set the feed's start version to gold's latest and reset its checkpoint as
+  `store-feed-stalled` describes, and once the feed has caught up, reload every table for `all`, since
+  `payload_schemas` held every table's schemas.
 - **Neither gold nor the store holds the experiment.** The run succeeds and says so. Unless the
   experiment was deleted, check its id.
 - **Rows not sent after six attempts.** The store could not take the load; `store-answers` and

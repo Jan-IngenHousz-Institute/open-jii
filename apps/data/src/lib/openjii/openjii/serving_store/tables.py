@@ -12,6 +12,7 @@ from openjii.centrum.constants import (
     EXPERIMENT_RAW_DATA_TABLE,
     EXPERIMENT_UPLOADED_DATA_TABLE,
 )
+from openjii.variant_schema import merged_variant_schema
 
 # The store parses microseconds without an offset. Spark's default writes milliseconds with the
 # session's offset, and pre-1900 zones carry offsets such as +00:17:30 that the store refuses.
@@ -26,6 +27,9 @@ _LATEST = datetime(2299, 12, 31, 23, 59, 59, 999999, tzinfo=timezone.utc)
 # drops, so a row gold removes stays in the store until a reload
 # (docs/runbooks/procedures/serving-store-reload.md).
 _KEPT_CHANGES = ("insert", "update_postimage")
+
+# The store table that holds every table's payload schemas.
+PAYLOAD_SCHEMAS = "payload_schemas"
 
 
 def clamped(column: str) -> Column:
@@ -60,6 +64,10 @@ class StoreTable:
     gold_table: str
     # The time the store table's month partitions follow.
     partitioned_by = "timestamp"
+    # How gold's table listing (experiment_table_metadata) types the experiment tables this table
+    # holds, and the payload columns whose schemas it lists.
+    table_type: str
+    payloads: tuple[str, ...]
 
     def lines(self, changes: DataFrame, reloaded: bool = False) -> DataFrame:
         """One JSON line, in column ``line``, per row gold inserted or updated in ``changes``, with
@@ -77,6 +85,39 @@ class StoreTable:
             F.to_json(row, JSON_OPTIONS).alias("line"), F.col(self.partitioned_by).alias("partition_time")
         )
 
+    def schema_lines(self, changes: DataFrame) -> DataFrame:
+        """One JSON line, in column ``line``, per experiment table and payload column the rows in
+        ``changes`` fill: the merge of their schemas, normalised as gold's listing normalises them,
+        at the newest commit among them."""
+        rows = changes.filter(F.col("_change_type").isin(*_KEPT_CHANGES))
+        merged = rows.groupBy("experiment_id", self.identifier().alias("identifier")).agg(
+            F.max("_commit_version").alias("_commit_version"),
+            *[merged_variant_schema(payload).alias(payload) for payload in self.payloads],
+        )
+        schemas = merged.select(
+            "experiment_id",
+            "identifier",
+            "_commit_version",
+            F.explode(
+                F.array(
+                    *[F.struct(F.lit(p).alias("payload"), F.col(p).alias("schema")) for p in self.payloads]
+                )
+            ).alias("payload"),
+        ).filter(F.col("identifier").isNotNull() & F.col("payload.schema").isNotNull())
+        row = F.struct(
+            "experiment_id",
+            F.lit(self.table_type).alias("table_type"),
+            "identifier",
+            F.col("payload.payload").alias("payload"),
+            F.col("payload.schema").alias("schema"),
+            "_commit_version",
+        )
+        return schemas.select(F.to_json(row).alias("line"))
+
+    def identifier(self) -> Column:
+        """The experiment table a row belongs to, as gold's listing names it."""
+        raise NotImplementedError
+
     def columns(self) -> list[str | Column]:
         raise NotImplementedError
 
@@ -88,6 +129,11 @@ class StoreTable:
 class Measurements(StoreTable):
     name = "measurements"
     gold_table = EXPERIMENT_RAW_DATA_TABLE
+    table_type = "static"
+    payloads = ("questions_data",)
+
+    def identifier(self) -> Column:
+        return F.lit("raw_data")
 
     def key(self) -> list[Column]:
         return [F.col("experiment_id"), clamped("timestamp"), F.col("id"), or_empty("device_id")]
@@ -132,6 +178,11 @@ class Measurements(StoreTable):
 class MacroResults(StoreTable):
     name = "macro_results"
     gold_table = EXPERIMENT_MACRO_DATA_TABLE
+    table_type = "macro"
+    payloads = ("macro_output", "questions_data")
+
+    def identifier(self) -> Column:
+        return F.col("macro_id")
 
     def key(self) -> list[Column]:
         return [
@@ -173,6 +224,11 @@ class Uploads(StoreTable):
     name = "uploads"
     gold_table = EXPERIMENT_UPLOADED_DATA_TABLE
     partitioned_by = "uploaded_at"
+    table_type = "upload"
+    payloads = ("uploaded_data",)
+
+    def identifier(self) -> Column:
+        return F.col("upload_table_id")
 
     def key(self) -> list[Column]:
         return [F.col("experiment_id"), or_empty("upload_table_id"), clamped("uploaded_at"), F.col("id")]
