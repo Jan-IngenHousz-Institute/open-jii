@@ -1,12 +1,13 @@
 "use strict";
 
-// Handler only: the secret read, the webhook request, the webhook address cache and a per-instance
-// memory of posted ids. Reading an event and turning it into a Slack message live in
+// Handler only: the secret read, the webhook request and the webhook address cache. Reading an
+// event, turning it into a Slack message, checking the address and remembering posted ids live in
 // @repo/monitoring, copied to ./lib at build time.
 const { GetSecretValueCommand, SecretsManagerClient } = require("@aws-sdk/client-secrets-manager");
 
 const { statusEventSchema } = require("./lib/status-events.js");
 const { slackMessage } = require("./lib/status-slack.js");
+const { PostedIds, webhookUrlOf } = require("./lib/status-slack-delivery.js");
 
 const WEBHOOK_TIMEOUT_MS = 10_000;
 // Without throwOnRequestTimeout the SDK only logs a request that outlives its timeout.
@@ -27,10 +28,7 @@ const secrets = new SecretsManagerClient({ requestHandler: AWS_REQUEST_HANDLER }
 let webhookUrl;
 let webhookReadAt = 0;
 
-// Event ids this instance posted, oldest first. The publisher can send an event again and SNS can
-// deliver one twice, so a repeat on a warm instance is skipped. A cold instance starts empty, so
-// this is best effort.
-const postedIds = new Set();
+const postedIds = new PostedIds(POSTED_IDS_LIMIT);
 
 function required(name) {
   const value = process.env[name];
@@ -54,13 +52,8 @@ async function readWebhookUrl(secretArn) {
   }
 
   const { SecretString } = await secrets.send(new GetSecretValueCommand({ SecretId: secretArn }));
-  const candidate = SecretString?.trim();
 
-  if (!candidate || !URL.canParse(candidate) || new URL(candidate).protocol !== "https:") {
-    throw new Error("The Slack webhook secret does not hold an https address");
-  }
-
-  webhookUrl = candidate;
+  webhookUrl = webhookUrlOf(SecretString);
   webhookReadAt = Date.now();
   return webhookUrl;
 }
@@ -84,15 +77,6 @@ async function postToSlack(url, message) {
   }
 }
 
-function rememberPosted(id) {
-  postedIds.add(id);
-
-  if (postedIds.size > POSTED_IDS_LIMIT) {
-    const [oldest] = postedIds;
-    postedIds.delete(oldest);
-  }
-}
-
 async function post(secretArn, record) {
   const event = statusEventSchema.parse(JSON.parse(record.Sns.Message));
 
@@ -102,7 +86,7 @@ async function post(secretArn, record) {
   }
 
   await postToSlack(await readWebhookUrl(secretArn), slackMessage(event));
-  rememberPosted(event.id);
+  postedIds.remember(event.id);
 
   console.log(JSON.stringify({ posted: event.type, id: event.id }));
 }
