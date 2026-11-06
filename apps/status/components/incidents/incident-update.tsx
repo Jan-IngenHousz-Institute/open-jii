@@ -26,7 +26,7 @@ export function IncidentUpdate({ update, isLatest }: IncidentUpdateProps) {
         <span className="text-muted-foreground">{postedAt}</span>
       </p>
       <div className="text-sm leading-relaxed">
-        <p>{update.text}</p>
+        <p className="whitespace-pre-line">{update.text}</p>
         {nextUpdateBy === undefined ? null : (
           <p className="text-muted-foreground mt-1">
             {t("incident.nextUpdateBy", { time: format.time(nextUpdateBy) })}

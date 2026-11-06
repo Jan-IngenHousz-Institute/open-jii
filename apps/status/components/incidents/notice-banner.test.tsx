@@ -32,6 +32,12 @@ describe("NoticeBanner", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("keeps the paragraph breaks an editor wrote", () => {
+    renderWithProviders(<NoticeBanner notice={notice({ body: "First.\n\nSecond." })} />);
+
+    expect(screen.getByText(/First\.\s+Second\./)).toHaveClass("whitespace-pre-line");
+  });
+
   it("shows the body under the title", () => {
     renderWithProviders(<NoticeBanner notice={notice()} />);
 

@@ -19,7 +19,9 @@ export function NoticeBanner({ notice }: { notice: Notice }) {
     <Alert role={role} className={className}>
       <Icon aria-hidden />
       <p className="col-start-2 font-medium">{notice.title}</p>
-      {notice.body === "" ? null : <AlertDescription>{notice.body}</AlertDescription>}
+      {notice.body === "" ? null : (
+        <AlertDescription className="whitespace-pre-line">{notice.body}</AlertDescription>
+      )}
     </Alert>
   );
 }
