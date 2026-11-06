@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { repositoryRoot } from "./config.js";
-import { ContentModel } from "./content-model.js";
+import { ContentModel, publicationState } from "./content-model.js";
+import type { PublishedState } from "./content-model.js";
 
 const record = z.record(z.string(), z.unknown());
 const serialized = z.object({ fields: z.array(record) });
@@ -135,5 +136,18 @@ describe("ContentModel", () => {
       "statusUpdate",
     );
     expect(file.diff(live).reordered).toBe(true);
+  });
+});
+
+describe("publicationState", () => {
+  const cases: [string, number, number | null | undefined, PublishedState][] = [
+    ["never published", 1, undefined, "draft"],
+    ["never published, from the content type API", 1, null, "draft"],
+    ["published as saved", 4, 3, "published"],
+    ["saved again after publishing", 5, 3, "changed"],
+  ];
+
+  it.each(cases)("reads an entry %s as %s", (_name, version, publishedVersion, state) => {
+    expect(publicationState(version, publishedVersion)).toBe(state);
   });
 });
