@@ -14,7 +14,8 @@ holds now.** The feed only sends rows gold inserts or updates, so the store need
 The job `Serving-Store-Reload-<ENV>` reads each gold table's latest version, V, and inserts every
 row gold holds at V as a commit at V, with the payload schemas of those rows. Gold only appends,
 so a recomputed row stands beside the one it replaced; of each store key the load sends the copy
-gold added last. Then it deletes the store's rows and schemas from versions before V, so a field
+gold processed last, by `processed_timestamp`. Copies with one processing time, and copies of an
+upload row, which carry none, send any one of them. Then it deletes the store's rows and schemas from versions before V, so a field
 only removed rows had leaves the page, unless a feed batch that spanned V also carried it: a batch's
 schema takes its newest commit, so a second reload clears that field. The store keeps each row's newest commit, so an experiment
 reads whole throughout. Rows the live feed writes meanwhile carry later versions and stay. Sending a
