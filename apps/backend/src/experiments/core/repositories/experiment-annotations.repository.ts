@@ -1,15 +1,13 @@
 import { Inject, Injectable } from "@nestjs/common";
 
 import { and, eq, experimentAnnotations, inArray } from "@repo/database";
-import type { DatabaseInstance } from "@repo/database";
+import type { DatabaseInstance, Transaction } from "@repo/database";
 
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import type {
   AnnotationRecord,
   UpdateAnnotationDto,
 } from "../models/experiment-data-annotation.model";
-
-type Transaction = Parameters<Parameters<DatabaseInstance["transaction"]>[0]>[0];
 
 // Ten columns a record, well inside the 65,535 parameters a Postgres statement takes.
 const INSERT_CHUNK = 1000;
