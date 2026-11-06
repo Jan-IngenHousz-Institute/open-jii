@@ -20,6 +20,9 @@ import { summarizeDay } from "./day-summary";
 import { CELL } from "./history-cells";
 import { useDayLabel } from "./use-day-label";
 
+// Long enough for the pointer to cross to the card (WCAG 1.4.13); the next bar's card still replaces it at once.
+const CARD_CLOSE_DELAY_MS = 200;
+
 interface HistoryDayProps {
   index: number;
   dayCount: number;
@@ -82,7 +85,12 @@ export const HistoryDay = memo(function HistoryDay({
   }
 
   return (
-    <HoverCard open={isOpen} onOpenChange={changeOpen} openDelay={0} closeDelay={0}>
+    <HoverCard
+      open={isOpen}
+      onOpenChange={changeOpen}
+      openDelay={0}
+      closeDelay={CARD_CLOSE_DELAY_MS}
+    >
       <HoverCardTrigger asChild>
         <span
           ref={keepBar}

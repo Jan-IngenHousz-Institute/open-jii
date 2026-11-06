@@ -12,6 +12,8 @@ The layout follows `apps/web`, with each part of the page in its own folder and 
 - `lib/` holds logic several parts share, `providers/` the query and translation providers, and `test/` the render helpers and setup.
 - `env.ts` validates the build settings below.
 
+The history bars are about 8 to 11 px wide with a 2 px gap, under the 24 px target WCAG 2.5.8 asks for. They rely on its Equivalent exception: opening a component's row lists its problem days as text, so nothing a bar shows is reachable through the bar alone.
+
 The page copy is in the `status` namespace of `@repo/i18n` (`packages/i18n/locales/<locale>/status.json`). The sample documents the tests use live beside the contract, in `packages/monitoring/src/status-fixtures.ts`.
 
 ## Run it locally
