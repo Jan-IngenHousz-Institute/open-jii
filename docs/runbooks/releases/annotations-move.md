@@ -83,11 +83,20 @@ WHERE experiment_annotations.updated_at < EXCLUDED.updated_at;
 
 Annotations of experiments Postgres no longer has stay behind, since Postgres removes an
 experiment's annotations with it. A row Postgres already holds is replaced only when the
-lakehouse's copy is newer, so a write the first release made after the export stands.
+lakehouse's copy is newer, so an add or an edit the first release made after the export stands. A
+delete made after it is undone by this step, and only a second export shows it.
 
-## 5. Check both sides
+## 5. Export again and check both sides
 
-Still in psql:
+Repeat step 2 for a second export, `annotations-2.csv`, and load it in place of the first:
+
+```sql
+TRUNCATE lakehouse_annotations;
+\copy lakehouse_annotations (id, experiment_id, table_name, row_id, type, content_text, flag_type, created_by, created_at, updated_at) FROM 'annotations-2.csv' WITH (FORMAT csv, HEADER)
+SELECT count(*), sum(length(content_text)) FROM lakehouse_annotations;
+```
+
+Both numbers must match the second export's. Then:
 
 ```sql
 -- Annotations the lakehouse held that Postgres lacks or holds differently.
@@ -113,14 +122,15 @@ SELECT count(*) FROM lakehouse_annotations l
 LEFT JOIN experiments e ON e.id = l.experiment_id WHERE e.id IS NULL;
 ```
 
-The first query is clean when every row it returns was edited in Postgres after the export, so
-`in_postgres` is the newer time. The second is clean when every row was created after the export.
-A row created before the export is a delete whose copy to Postgres failed; the service's log warns
-"not copied to Postgres" for it. Check it is gone from the lakehouse and delete it from Postgres.
+The first query is clean when every row it returns was edited in Postgres after the second export,
+so `in_postgres` is the newer time. The second is clean when every row was created after the second
+export. A row created before it is a delete that step 4 undid, or one whose copy to Postgres failed,
+for which the service's log warns "not copied to Postgres". Check it is gone from the lakehouse and
+delete it from Postgres.
 
 ## Before the second release, and after
 
 Run steps 1 to 5 again right before the second release goes out, with a fresh export; a clean check
-is what lets it go. Once it is out, run steps 2, 3 and 5 once more without step 4, since Postgres is
-then where annotations are written: a difference is a write the first release's tasks took while the
-second rolled out, whose copy failed. Note its id in OJD-2153.
+is what lets it go. Once it is out, run steps 2 and 3 and step 5's checks once more without step 4,
+since Postgres is then where annotations are written: a difference is a write the first release's
+tasks took while the second rolled out, whose copy failed. Note its id in OJD-2153.
