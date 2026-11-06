@@ -1,7 +1,5 @@
-import { STATUS_HISTORY_DAYS } from "@repo/monitoring/status-document";
-import type { Incident, StatusComponentId } from "@repo/monitoring/status-document";
-
-export type IncidentUpdateEntry = Incident["updates"][number];
+import { STATUS_HISTORY_DAYS, endedAt } from "@repo/monitoring/status-document";
+import type { Incident, IncidentUpdate, StatusComponentId } from "@repo/monitoring/status-document";
 
 export interface IncidentGroups {
   open: Incident[];
@@ -11,13 +9,10 @@ export interface IncidentGroups {
 
 const DAY_MS = 86_400_000;
 
-// Planned work also ends at its window, so a window nobody closed does not stay open.
-export function endedAt(incident: Incident): number | undefined {
-  const ends = [incident.resolvedAt, incident.kind === "maintenance" ? incident.endsAt : undefined]
-    .filter((at) => at !== undefined)
-    .map((at) => Date.parse(at));
+export function endedAtMs(incident: Incident): number | undefined {
+  const end = endedAt(incident);
 
-  return ends.length === 0 ? undefined : Math.min(...ends);
+  return end === undefined ? undefined : Date.parse(end);
 }
 
 // An incident cannot start in the future, so a clock that runs behind never hides one.
@@ -26,7 +21,7 @@ export function groupIncidents(incidents: Incident[], now: number): IncidentGrou
   const groups: IncidentGroups = { open: [], planned: [], past: [] };
 
   for (const incident of incidents) {
-    const ended = endedAt(incident);
+    const ended = endedAtMs(incident);
     const hasEnded = ended !== undefined && ended <= now;
 
     if (hasEnded) {
@@ -42,7 +37,7 @@ export function groupIncidents(incidents: Incident[], now: number): IncidentGrou
 
   groups.open.sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt));
   groups.planned.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
-  groups.past.sort((a, b) => (endedAt(b) ?? 0) - (endedAt(a) ?? 0));
+  groups.past.sort((a, b) => (endedAtMs(b) ?? 0) - (endedAtMs(a) ?? 0));
 
   return groups;
 }
@@ -69,6 +64,6 @@ export function maintenanceEndsAt(
     : ends.reduce((latest, end) => (Date.parse(end) > Date.parse(latest) ? end : latest));
 }
 
-export function newestUpdatesFirst(incident: Incident): IncidentUpdateEntry[] {
+export function newestUpdatesFirst(incident: Incident): IncidentUpdate[] {
   return [...incident.updates].sort((a, b) => Date.parse(b.postedAt) - Date.parse(a.postedAt));
 }

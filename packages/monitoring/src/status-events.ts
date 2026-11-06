@@ -2,6 +2,7 @@ import { z } from "zod/mini";
 
 import {
   componentStateSchema,
+  endedAt,
   incidentSchema,
   incidentUpdateSchema,
   nonEmptyText,
@@ -15,7 +16,7 @@ import type {
   StatusComponent,
   StatusDocument,
 } from "./status-document.js";
-import { endedAt, isOpen } from "./status-judge.js";
+import { isOpen } from "./status-judge.js";
 
 // What changed on the status page since subscribers were last told, for a channel such as Slack.
 // The publisher keeps the snapshot of what it announced, and only stores a new one once the events

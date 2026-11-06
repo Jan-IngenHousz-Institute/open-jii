@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { Incident } from "@repo/monitoring/status-document";
+import type { Incident, IncidentUpdate } from "@repo/monitoring/status-document";
 
 import { groupIncidents, isInProgress, maintenanceEndsAt, newestUpdatesFirst } from "./incidents";
-import type { IncidentUpdateEntry } from "./incidents";
 
 const NOW = Date.parse("2026-11-03T12:00:00.000Z");
 const MINUTE_MS = 60_000;
@@ -206,13 +205,13 @@ describe("maintenanceEndsAt", () => {
 
 describe("newestUpdatesFirst", () => {
   it("sorts by when each update was posted, without changing the incident", () => {
-    const first: IncidentUpdateEntry = {
+    const first: IncidentUpdate = {
       id: "upd-first",
       stage: "investigating",
       postedAt: at(-30 * MINUTE_MS),
       text: "a",
     };
-    const second: IncidentUpdateEntry = {
+    const second: IncidentUpdate = {
       id: "upd-second",
       stage: "identified",
       postedAt: at(-10 * MINUTE_MS),

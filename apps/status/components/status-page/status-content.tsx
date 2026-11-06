@@ -9,12 +9,10 @@ import { MaintenanceCard } from "~/components/incidents/maintenance-card";
 import { NoticeBanner } from "~/components/incidents/notice-banner";
 import { PastIncidents } from "~/components/incidents/past-incidents";
 
-import type { Incident, StatusDocument } from "@repo/monitoring/status-document";
+import type { Incident, Notice, StatusDocument } from "@repo/monitoring/status-document";
 
 import { StatusTitle } from "./status-title";
 import { useStatusView } from "./use-status-view";
-
-type Notice = StatusDocument["notices"][number];
 
 interface StatusContentProps {
   document: StatusDocument;

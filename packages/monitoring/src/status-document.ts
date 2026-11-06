@@ -101,6 +101,20 @@ export const incidentSchema = z.object({
   updates: z.array(incidentUpdateSchema),
 });
 export type Incident = z.infer<typeof incidentSchema>;
+
+/**
+ * When it is over: its resolution, or for planned work the earlier of that and its scheduled end.
+ * It may still be ahead of now.
+ */
+export function endedAt(
+  incident: Pick<Incident, "kind" | "endsAt" | "resolvedAt">,
+): string | undefined {
+  const ends = [incident.resolvedAt, incident.kind === "maintenance" ? incident.endsAt : undefined]
+    .filter((at) => at !== undefined)
+    .sort((a, b) => Date.parse(a) - Date.parse(b));
+
+  return ends[0];
+}
 export type IncidentUpdate = z.infer<typeof incidentUpdateSchema>;
 
 export const noticeSchema = z.object({

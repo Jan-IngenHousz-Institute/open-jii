@@ -6,6 +6,7 @@ import {
   STATUS_DOCUMENT_VERSION,
   STATUS_HISTORY_DAYS,
   dayRecordSchema,
+  endedAt,
   statusComponentIdSchema,
 } from "./status-document.js";
 import type {
@@ -244,18 +245,6 @@ export function judgeComponent(
     case "exports":
       return { state: stateOf(false, (evidence.readings.exportsFailed ?? 0) > 0) };
   }
-}
-
-/**
- * When it is over: its resolution, or for planned work the earlier of that and its scheduled end.
- * It may still be ahead of now.
- */
-export function endedAt(incident: Incident): string | undefined {
-  const ends = [incident.resolvedAt, incident.kind === "maintenance" ? incident.endsAt : undefined]
-    .filter((at) => at !== undefined)
-    .sort((a, b) => Date.parse(a) - Date.parse(b));
-
-  return ends[0];
 }
 
 /**

@@ -1,9 +1,7 @@
 import { CircleAlert, Info, OctagonX } from "lucide-react";
 
-import type { StatusDocument } from "@repo/monitoring/status-document";
+import type { Notice } from "@repo/monitoring/status-document";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
-
-type Notice = StatusDocument["notices"][number];
 
 const SEVERITY = {
   info: { icon: Info, className: "" },

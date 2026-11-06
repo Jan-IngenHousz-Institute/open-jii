@@ -3,10 +3,12 @@
 import { StatusBadge } from "~/components/shared/status-badge";
 import { useFormat } from "~/hooks/use-format";
 import { newestUpdatesFirst } from "~/lib/incidents";
-import type { IncidentUpdateEntry } from "~/lib/incidents";
 
 import { useTranslation } from "@repo/i18n/client";
-import type { Incident } from "@repo/monitoring/status-document";
+import type {
+  Incident,
+  IncidentUpdate as IncidentUpdateRecord,
+} from "@repo/monitoring/status-document";
 import { Card } from "@repo/ui/components/card";
 
 import { IncidentUpdate } from "./incident-update";
@@ -20,7 +22,7 @@ export function IncidentCard({ incident }: { incident: Incident }) {
     time: format.time(incident.startsAt),
   });
 
-  function renderUpdate(update: IncidentUpdateEntry, index: number) {
+  function renderUpdate(update: IncidentUpdateRecord, index: number) {
     return <IncidentUpdate key={update.id} update={update} isLatest={index === 0} />;
   }
 
