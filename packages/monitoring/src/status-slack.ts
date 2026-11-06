@@ -1,3 +1,4 @@
+import { endedAt } from "./status-document.js";
 import type {
   ComponentState,
   IncidentUpdate,
@@ -204,7 +205,7 @@ function maintenanceParts(
     lines: [
       affects(maintenance.components),
       plannedWindow(maintenance),
-      ...finishedLine("Ended", maintenance.resolvedAt, occurredAt),
+      ...finishedLine("Ended", endedAt(maintenance), occurredAt),
     ],
     update,
   };
