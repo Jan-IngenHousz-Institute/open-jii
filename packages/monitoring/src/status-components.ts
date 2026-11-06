@@ -95,8 +95,10 @@ export const LAG_WINDOW_MINUTES = 5;
 export const INGEST_THROUGHPUT_WINDOW_MINUTES = 5;
 
 /**
- * The heartbeat export publishes every half hour, so 75 minutes spans two missed runs plus delivery
- * lag; a collector silent for that long is stopped, not late.
+ * The heartbeat export publishes every half hour. Latencies are stamped at the start of the bucket
+ * they measure, so the newest is 30 to 60 minutes old, and 75 minutes tolerates delivery lag but
+ * not a missed run, which reads as no latency. The collector heartbeat, stamped at the run, is what
+ * shows a dead export.
  */
 export const PIPELINE_WINDOW_MINUTES = 75;
 
