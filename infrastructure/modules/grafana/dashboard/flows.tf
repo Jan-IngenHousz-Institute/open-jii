@@ -140,6 +140,7 @@ locals {
     "macro-idle"                 = "macros"
     "macro-backlog"              = "macros"
     "broker-to-api-latency"      = "whole"
+    "ingest-healthcheck-latency" = "whole"
     "driver-heap"                = "whole"
     "dlt-heartbeat"              = "whole"
     "metrics-mv-freshness"       = "whole"
@@ -337,7 +338,7 @@ locals {
         region      = var.aws_region
         statsGroups = []
         id          = ""
-        expression  = "fields @timestamp, client_id as device, strlen(@message) as bytes, substr(@message, 0, 300) as preview\n| parse topic \"experiment/data_ingest/v1/*/*/*/*\" as experiment, family, family_version, sensor\n| sort @timestamp desc\n| limit 200"
+        expression  = "fields @timestamp, client_id as device, strlen(@message) as bytes, substr(@message, 0, 300) as preview\n| parse topic \"experiment/data_ingest/v1/*/*/*/*\" as experiment, family, family_version, sensor\n| filter experiment != \"healthcheck\"\n| sort @timestamp desc\n| limit 200"
         logGroups = [{
           accountId = data.aws_caller_identity.current.account_id
           arn       = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:${var.payload_samples_log_group_name}:*"

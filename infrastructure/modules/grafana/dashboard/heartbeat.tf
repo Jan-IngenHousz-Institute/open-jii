@@ -508,7 +508,7 @@ locals {
       },
       {
         title       = "How long each hop takes"
-        description = "The slowest twentieth of each hop per half hour: arrival to bronze, bronze to the experiment tables, the experiment tables to macro results, the whole trip from the broker until the API can read it, gold to the serving store, and the backend's reads of the store."
+        description = "The slowest twentieth of each hop per half hour: arrival to bronze, bronze to the experiment tables, the experiment tables to macro results, the whole trip from the broker until the API can read it, gold to the serving store, the backend's reads of the store, and the ingest health check's trip from its publisher to bronze."
         area        = "latency"
         calcs       = ["mean", "max"]
       },
@@ -832,21 +832,22 @@ locals {
   # resolve them with templatestring rather than a chain of replaces. A name missing here
   # fails the plan instead of rendering a panel that queries a literal forever.
   heartbeat_placeholders = {
-    ENVIRONMENT                     = var.environment
-    EXCEPTIONS_SCOPE                = "${local.heartbeat_exception_scope} AND ${local.heartbeat_open_issues_filter}"
-    KINESIS_STREAM_NAME             = var.kinesis_stream_name
-    ALB_ARN_SUFFIX                  = local.alb_arn_suffix_heartbeat
-    CLOUDFRONT_DISTRIBUTION_ID      = var.cloudfront_distribution_id
-    SERVER_FUNCTION_NAME            = var.server_function_name
-    MACRO_FUNCTION_FILTER           = local.heartbeat_macro_filter
-    DB_CLUSTER_IDENTIFIER           = var.db_cluster_identifier
-    HEALTH_CHECK_ID                 = var.route53_health_check_id
-    TARGET_GROUP_DIMENSION          = local.dashboard_vars.target_group_dimension
-    ECS_CLUSTER_NAME                = var.ecs_cluster_name
-    ECS_SERVICE_NAME                = var.ecs_service_name
-    METRICS_FORWARDER_FUNCTION_NAME = var.metrics_forwarder_function_name
-    COST_PUBLISHER_FUNCTION_NAME    = var.cost_publisher_function_name
-    METRICS_PUBLISHER_FUNCTION_NAME = var.metrics_publisher_function_name
+    ENVIRONMENT                      = var.environment
+    EXCEPTIONS_SCOPE                 = "${local.heartbeat_exception_scope} AND ${local.heartbeat_open_issues_filter}"
+    KINESIS_STREAM_NAME              = var.kinesis_stream_name
+    ALB_ARN_SUFFIX                   = local.alb_arn_suffix_heartbeat
+    CLOUDFRONT_DISTRIBUTION_ID       = var.cloudfront_distribution_id
+    SERVER_FUNCTION_NAME             = var.server_function_name
+    MACRO_FUNCTION_FILTER            = local.heartbeat_macro_filter
+    DB_CLUSTER_IDENTIFIER            = var.db_cluster_identifier
+    HEALTH_CHECK_ID                  = var.route53_health_check_id
+    TARGET_GROUP_DIMENSION           = local.dashboard_vars.target_group_dimension
+    ECS_CLUSTER_NAME                 = var.ecs_cluster_name
+    ECS_SERVICE_NAME                 = var.ecs_service_name
+    METRICS_FORWARDER_FUNCTION_NAME  = var.metrics_forwarder_function_name
+    COST_PUBLISHER_FUNCTION_NAME     = var.cost_publisher_function_name
+    METRICS_PUBLISHER_FUNCTION_NAME  = var.metrics_publisher_function_name
+    INGEST_HEALTHCHECK_FUNCTION_NAME = var.ingest_healthcheck_function_name
   }
 
   # Grafana's unit ids for the units the catalog declares.

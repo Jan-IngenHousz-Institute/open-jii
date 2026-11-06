@@ -88,6 +88,8 @@ meaning:
 | `{sensorVersion}` | Device firmware or hardware revision.             | Preserved as provenance so results can be traced to device behavior.                |
 | `{sensorId}`      | Unique identifier of the physical device.         | Attributes readings to one device across sessions.                                  |
 
+The experiment id `healthcheck` is reserved for the ingest health check, a synthetic message the platform sends through this path every minute, so it never holds research data.
+
 A transitional legacy channel with a trailing `{protocolId}` level remains routed for older mobile builds. On the lean topic, Silver reads `protocol_id` from the payload when the publisher supplies it. Normal mobile measurements include that id; questions-only uploads do not have a protocol result to attribute.
 
 Mobile workbook uploads carry `workbook_version_id` and one `workbook_run_id` shared across the run's measurements, including questions-only uploads. For mobile uploads, the topic's `{sensorType}` is `mobile`, `{sensorVersion}` is the app version and `{sensorId}` is the phone's local IoT Thing name. The phone uses that same Thing name as its MQTT client ID. The broker-authenticated ID is distinct from self-reported `device_*` sensor details and `client_*` phone details in the payload.

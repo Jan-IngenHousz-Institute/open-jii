@@ -2687,15 +2687,17 @@ resource "grafana_rule_group" "ingest_path" {
     }
   }
 
-  # Catalog entry 89. Records waiting on the stream while bronze has written nothing for an
+  # Catalog entry 89. Devices publishing while bronze has written no rows for an
   # hour: the consumer died or runs without writing. Kinesis keeps records for 24 hours, so
   # this is data held up rather than lost. It also covers a consumer that died entirely,
   # which Ingest Lag reads as no data.
   #
   # The export measures idle time every half hour, so a reading can be 35 minutes old. Only
-  # records that arrived 45 to 60 minutes ago count: they came after bronze's last write (the
+  # device publishes accepted 45 to 60 minutes ago count: they came after bronze's last write (the
   # reading says over 60 minutes ago) and at least five minutes before the reading, so bronze
-  # had time to take them. Newer records would fire it on a stale reading after a quiet spell.
+  # had time to take them. Newer ones would fire it on a stale reading after a quiet spell. The
+  # count is MQTT only, so the ingest health check, which publishes over HTTP and which bronze
+  # drops from raw_data, never stands for a device's publish.
   rule {
     name      = "Ingest Stalled"
     condition = "E"
@@ -2749,11 +2751,11 @@ resource "grafana_rule_group" "ingest_path" {
       model = jsonencode({
         refId      = "C"
         region     = var.aws_region
-        namespace  = "AWS/Kinesis"
-        metricName = "IncomingRecords"
+        namespace  = "AWS/IoT"
+        metricName = "PublishIn.Success"
         statistic  = "Sum"
         dimensions = {
-          StreamName = var.kinesis_stream_name
+          Protocol = "MQTT"
         }
       })
 
@@ -2804,8 +2806,8 @@ resource "grafana_rule_group" "ingest_path" {
     for            = "10m"
 
     annotations = {
-      description      = "Records have been waiting on the ingest stream while bronze has written nothing for over an hour; measurements are held up in Kinesis, which keeps them 24 hours."
-      summary          = "Ingest stalled: records waiting, bronze not writing"
+      description      = "Devices have been publishing while bronze has written nothing for over an hour; measurements are held up in Kinesis, which keeps them 24 hours."
+      summary          = "Ingest stalled: devices publishing, bronze not writing"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/ingest-idle.md"
       __dashboardUid__ = local.heartbeat_daily_uid
       __panelId__      = local.heartbeat_panel_ids["ingest-idle"]
@@ -3182,6 +3184,188 @@ resource "grafana_rule_group" "metrics_publisher_health" {
       severity  = "warning"
       service   = "monitoring"
       metric_id = "metrics-publisher-errors"
+    }
+  }
+}
+
+# A synthetic message goes through the real ingest rule every minute and lands in its own bronze
+# table, so these are the only signals that the whole path works at a quiet hour. Left out until
+# alerting is on and where the publisher is not deployed, since its age would read No data and fire.
+resource "grafana_rule_group" "ingest_healthcheck_health" {
+  count = var.ingest_healthcheck_alerting && var.ingest_healthcheck_function_name != "" ? 1 : 0
+
+  provider         = grafana.amg
+  name             = "Ingest Health Check"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  # Catalog entry 132. The heartbeat export reads minutes since the newest message reached Kinesis,
+  # every half hour, so the reading is never newer than that. No message in the table, or no export
+  # reporting one, is No data, which is as bad as a stale one.
+  rule {
+    name      = "Ingest Health Check Stalled"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Data"
+        metricName = "HealthcheckAgeMinutes"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+      })
+
+      relative_time_range {
+        from = local.heartbeat_dead_man_window_minutes * 60
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 45"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "Alerting"
+    exec_err_state = "Alerting"
+    for            = "15m"
+
+    annotations = {
+      description      = "No ingest health check message has reached the lakehouse for over 45 minutes, or the heartbeat export has not reported one. A message sent through the real ingest rule every minute is the one signal that the whole path from the IoT broker to bronze works at a quiet hour, so measurements may be delayed or lost."
+      summary          = "Ingest health check has stopped arriving"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/ingest-healthcheck-age.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["ingest-healthcheck-age"]
+    }
+    labels = {
+      severity  = "critical"
+      service   = "ingest"
+      metric_id = "ingest-healthcheck-age"
+    }
+  }
+
+  # Catalog entry 134. The publisher runs every minute without retries, so one failed run is
+  # noise and a few in a row mean it is broken, which the stalled rule would read as the path.
+  rule {
+    name      = "Ingest Health Check Publisher Errors"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Lambda"
+        metricName = "Errors"
+        statistic  = "Sum"
+        dimensions = {
+          FunctionName = var.ingest_healthcheck_function_name
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 2"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "The ingest health check publisher failed more than twice in five minutes, so the check no longer says whether the ingest path works. While this fires, read a stalled health check as the publisher, not the path."
+      summary          = "Ingest health check publisher is failing"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/ingest-healthcheck-errors.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["ingest-healthcheck-errors"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "monitoring"
+      metric_id = "ingest-healthcheck-errors"
     }
   }
 }

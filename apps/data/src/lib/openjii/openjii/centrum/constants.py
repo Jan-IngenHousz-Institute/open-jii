@@ -15,6 +15,14 @@ SILVER_TABLE_DEFAULT = "clean_data"
 # once its own updates are shown to finish inside it.
 MEASUREMENT_PATH_TRIGGER_INTERVAL = "2 seconds"
 
+# Captures the experiment id from an ingest topic.
+INGEST_TOPIC_EXPERIMENT_PATTERN = r"experiment/data_ingest/v1/([^/]+)/"
+
+# The experiment segment of the ingest health check's topic. Bronze keeps messages with it out of
+# raw_data, so it must equal the segment in infrastructure/modules/monitoring/ingest-healthcheck/main.tf.
+INGEST_HEALTHCHECK_EXPERIMENT_ID = "healthcheck"
+INGEST_HEALTHCHECKS_TABLE = "ingest_healthchecks"
+
 # Gold layer
 EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
 EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"

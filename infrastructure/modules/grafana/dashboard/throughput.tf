@@ -67,7 +67,7 @@ locals {
     },
     {
       title       = "Records in"
-      description = "Records, one per published measurement, the ingest stream took in over the time range."
+      description = "Records the ingest stream took in over the time range: one per published measurement, and one a minute from the ingest health check."
       unit        = "short"
       calc        = "sum"
       thresholds  = []
