@@ -1,7 +1,8 @@
 "use strict";
 
-// Handler only: the secret read and the webhook request. Reading an event and turning it into a
-// Slack message live in @repo/monitoring, copied to ./lib at build time.
+// Handler only: the secret read, the webhook request, the webhook address cache and a per-instance
+// memory of posted ids. Reading an event and turning it into a Slack message live in
+// @repo/monitoring, copied to ./lib at build time.
 const { GetSecretValueCommand, SecretsManagerClient } = require("@aws-sdk/client-secrets-manager");
 
 const { statusEventSchema } = require("./lib/status-events.js");
