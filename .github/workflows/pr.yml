@@ -621,3 +621,55 @@ jobs:
           workspace_id: ${{ secrets.GRAFANA_WORKSPACE_ID_DEV }}
           service_account_id: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
           token_id: ${{ steps.grafana.outputs.token_id }}
+
+  tofu-foundation:
+    name: OpenTofu Foundation (Plan) (${{ matrix.environment }})
+    needs: detect
+    runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]' && needs.detect.outputs.has_infrastructure_changes == 'true'
+    strategy:
+      matrix:
+        include:
+          - environment: dev
+            github_environment: dev
+            refresh: true
+          - environment: prod
+            github_environment: prod-plan
+            refresh: false
+      fail-fast: false
+    environment: ${{ matrix.github_environment }}
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      environment: ${{ matrix.environment }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup OpenTofu and AWS Credentials
+        uses: ./.github/actions/tofu/tofu-setup
+        with:
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region: ${{ secrets.AWS_REGION }}
+          tofu_version: "1.12.9"
+
+      - name: OpenTofu Format Check
+        uses: ./.github/actions/tofu/tofu-fmt-check
+        with:
+          root: foundation
+          continue-on-error: "false"
+
+      - name: OpenTofu Init and Validate
+        uses: ./.github/actions/tofu/tofu-init-validate
+        with:
+          root: foundation
+
+      - name: OpenTofu Plan
+        uses: ./.github/actions/tofu/tofu-plan
+        with:
+          root: foundation
+          lock: false
+          refresh: ${{ matrix.refresh }}
