@@ -3,18 +3,17 @@ import type { ClickHouseClient } from "@clickhouse/client";
 import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import { z } from "zod";
 
+import { PAGE_TOO_LARGE_MESSAGE } from "../../../../../experiments/core/models/experiment-data.model";
 import { ErrorCodes } from "../../../../utils/error-codes";
 import { AppError, failure, tryCatch } from "../../../../utils/fp-utils";
 import type { Result } from "../../../../utils/fp-utils";
 import { ServingStoreConfigService } from "../config/config.service";
 
 export interface StoreResult {
-  columns: { name: string; type: string }[];
   rows: unknown[][];
 }
 
 const zRows = z.array(z.array(z.unknown()));
-const zHeader = z.array(z.string());
 
 @Injectable()
 export class ServingStoreClientService implements OnModuleDestroy {
@@ -44,6 +43,12 @@ export class ServingStoreClientService implements OnModuleDestroy {
               // A payload field is projected under its own name, which may be a column's, such as
               // user_id; the column must still read as the column everywhere else in the query.
               prefer_column_name_to_alias: 1,
+              // The client holds the whole result, so a page past 25 MiB is refused rather than
+              // read. The store refuses it before sending only when it waits for the end of the
+              // query; otherwise the refusal arrives mid-stream, which the client reads from 25.11.
+              max_result_bytes: "26214400",
+              result_overflow_mode: "throw",
+              wait_end_of_query: 1,
             },
           });
   }
@@ -60,16 +65,8 @@ export class ServingStoreClientService implements OnModuleDestroy {
 
     return tryCatch(
       async () => {
-        const resultSet = await client.query({
-          query: sql,
-          format: "JSONCompactEachRowWithNamesAndTypes",
-        });
-        const [names = [], types = [], ...rows] = zRows.parse(await resultSet.json());
-        const columnTypes = zHeader.parse(types);
-        const columns = zHeader
-          .parse(names)
-          .map((name, index) => ({ name, type: columnTypes[index] ?? "" }));
-        return { columns, rows };
+        const resultSet = await client.query({ query: sql, format: "JSONCompactEachRow" });
+        return { rows: zRows.parse(await resultSet.json()) };
       },
       (error) => this.storeError(error),
     );
@@ -91,6 +88,12 @@ export class ServingStoreClientService implements OnModuleDestroy {
     const isClientTimeout = error instanceof Error && error.message.startsWith("Timeout error");
     if (isStoreTimeout || isClientTimeout) {
       return AppError.timeout("The store did not finish the read within 30 s", "STORE_TIMEOUT");
+    }
+
+    const isPageTooLarge =
+      error instanceof ClickHouseError && error.type === "TOO_MANY_ROWS_OR_BYTES";
+    if (isPageTooLarge) {
+      return AppError.badRequest(PAGE_TOO_LARGE_MESSAGE, ErrorCodes.PAGE_TOO_LARGE);
     }
 
     const isMemoryLimit =

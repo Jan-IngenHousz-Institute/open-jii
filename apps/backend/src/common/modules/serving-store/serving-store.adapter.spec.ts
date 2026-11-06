@@ -29,7 +29,6 @@ describe("ServingStoreAdapter", () => {
       .spyOn(client, "query")
       .mockResolvedValueOnce(
         success({
-          columns: [],
           rows: [
             ["static", "raw_data", null, 3, "2026-09-14 17:06:42.965000"],
             ["macro", "m1", null, "2", null],
@@ -39,7 +38,6 @@ describe("ServingStoreAdapter", () => {
       )
       .mockResolvedValueOnce(
         success({
-          columns: [],
           rows: [
             ["macro", "m1", "macro_output", "OBJECT<a: BIGINT>"],
             ["macro", "m1", "macro_output", "OBJECT<a: DOUBLE, b: STRING>"],
@@ -135,7 +133,6 @@ describe("ServingStoreAdapter", () => {
   it("writes rows as the warehouse writes its cells and leaves ids for the backend to fill", async () => {
     vi.spyOn(client, "query").mockResolvedValue(
       success({
-        columns: [],
         rows: [
           ["1", "2026-09-14 16:56:31.972123", 3, "u1", '{"x":1}'],
           ["2", null, null, null, null],
@@ -183,9 +180,7 @@ describe("ServingStoreAdapter", () => {
   });
 
   it("lists an experiment's contributor and client ids from their views", async () => {
-    const query = vi
-      .spyOn(client, "query")
-      .mockResolvedValue(success({ columns: [], rows: [["u1"], ["u2"]] }));
+    const query = vi.spyOn(client, "query").mockResolvedValue(success({ rows: [["u1"], ["u2"]] }));
 
     const contributors = await adapter.getExperimentIds("e1", "contributor");
     await adapter.getExperimentIds("e1", "device");

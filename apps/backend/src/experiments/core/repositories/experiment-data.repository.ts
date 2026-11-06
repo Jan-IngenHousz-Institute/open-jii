@@ -20,12 +20,14 @@ import type {
 import type { FlattenedField } from "../../../common/modules/databricks/services/query-builder/schema/flattened-fields";
 import { FlattenedFields } from "../../../common/modules/databricks/services/query-builder/schema/flattened-fields";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
+import { ErrorCodes } from "../../../common/utils/error-codes";
 import { Result, success, failure, AppError, tryCatch } from "../../../common/utils/fp-utils";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
 import { ExperimentStoreReadsService } from "../../application/services/experiment-store-reads.service";
 import { ExperimentWarehouseReadsService } from "../../application/services/experiment-warehouse-reads.service";
 import {
   MACRO_TABLE_CONFIG,
+  PAGE_TOO_LARGE_MESSAGE,
   STATIC_TABLE_CONFIG,
   UPLOAD_TABLE_CONFIG,
   VARIANT_COLUMN_SUFFIX,
@@ -1128,12 +1130,7 @@ export class ExperimentDataRepository {
 
   /** A page the warehouse cut at its byte limit would come back short, and paging on would skip rows. */
   private pageTooLarge(): Result<TableDataDto[]> {
-    return failure(
-      AppError.badRequest(
-        "This page holds more data than one read can return. Choose a smaller page size.",
-        "PAGE_TOO_LARGE",
-      ),
-    );
+    return failure(AppError.badRequest(PAGE_TOO_LARGE_MESSAGE, ErrorCodes.PAGE_TOO_LARGE));
   }
 
   private tablePage(params: {

@@ -13,10 +13,12 @@ describe("ServingStoreClientService", () => {
   let server: Server;
   let url: string;
   let answer: { status: number; body: string };
+  let requested: URLSearchParams;
   let client: ServingStoreClientService;
 
   beforeAll(async () => {
     server = createServer((request, response) => {
+      requested = new URL(request.url ?? "/", "http://store").searchParams;
       request.resume();
       request.on("end", () => {
         response.writeHead(answer.status, { "Content-Type": "text/plain" });
@@ -58,27 +60,44 @@ describe("ServingStoreClientService", () => {
     expect(result.error.code).toBe("STORE_NOT_CONFIGURED");
   });
 
-  it("returns the rows under their names and types", async () => {
+  it("returns the rows", async () => {
     answer = {
       status: 200,
-      body: ['["id","plot"]', '["String","Nullable(String)"]', '["1","A1"]', '["2",null]']
-        .map((line) => `${line}\n`)
-        .join(""),
+      body: ['["1","A1"]', '["2",null]'].map((line) => `${line}\n`).join(""),
     };
 
     const result = await client.query(STATEMENT);
 
     assertSuccess(result);
     expect(result.value).toEqual({
-      columns: [
-        { name: "id", type: "String" },
-        { name: "plot", type: "Nullable(String)" },
-      ],
       rows: [
         ["1", "A1"],
         ["2", null],
       ],
     });
+  });
+
+  it("asks the store to refuse a result past 25 MiB before it sends any of it", async () => {
+    answer = { status: 200, body: "" };
+
+    await client.query(STATEMENT);
+
+    expect(requested.get("max_result_bytes")).toBe("26214400");
+    expect(requested.get("result_overflow_mode")).toBe("throw");
+    expect(requested.get("wait_end_of_query")).toBe("1");
+  });
+
+  it("answers a result past the store's limit as a page too large", async () => {
+    answer = {
+      status: 500,
+      body: "Code: 396. DB::Exception: Limit for result exceeded, max bytes: 25.00 MiB, current bytes: 63.38 MiB. (TOO_MANY_ROWS_OR_BYTES) (version 25.8.33.6)",
+    };
+
+    const result = await client.query(STATEMENT);
+
+    assertFailure(result);
+    expect(result.error.code).toBe("PAGE_TOO_LARGE");
+    expect(result.error.statusCode).toBe(400);
   });
 
   it("answers a failed read without its statement or the values in it", async () => {

@@ -160,6 +160,7 @@ export enum ErrorCodes {
   // Location: src/experiments/application/use-cases/
   EXPERIMENT_DATA_UPLOAD_FAILED = "EXPERIMENT_DATA_UPLOAD_FAILED", // Data upload failed
   EXPERIMENT_DATA_DOWNLOAD_FAILED = "EXPERIMENT_DATA_DOWNLOAD_FAILED", // Data download failed
+  PAGE_TOO_LARGE = "PAGE_TOO_LARGE", // A page holds more data than one read can return
 
   // ==================== Domain Operations - Experiments Protocols ====================
   // Location: src/experiments/application/use-cases/
