@@ -13,6 +13,17 @@
         <count>5</count>
     </logger>
 
+    <!-- A failed statement's text, with its parameters filled in, reaches the error returned, these
+         logs, which go to CloudWatch, and the query log: experiment ids and what researchers filter
+         by. Every string literal reads as '***' in all three; the statement itself runs unchanged. -->
+    <query_masking_rules>
+        <rule>
+            <name>string literals</name>
+            <regexp>'(?:[^'\\]|\\.)*'</regexp>
+            <replace>'***'</replace>
+        </rule>
+    </query_masking_rules>
+
     <prometheus>
         <endpoint>/metrics</endpoint>
         <port>${prometheus_port}</port>

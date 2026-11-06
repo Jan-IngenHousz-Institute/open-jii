@@ -5,14 +5,28 @@
     <profiles>
         <default>
             <json_type_escape_dots_in_keys>1</json_type_escape_dots_in_keys>
+            <!-- A payload's text that reads as a date stays text, as gold keeps it; inferred, it would
+                 come back rewritten, 2026-05-01T12:30:00.123 as 2026-05-01 12:30:00.123000000. -->
+            <input_format_try_infer_dates>0</input_format_try_infer_dates>
+            <input_format_try_infer_datetimes>0</input_format_try_infer_datetimes>
             <!-- One query may hold 4 GiB, so a runaway read cannot take the memory the feed's inserts need. -->
             <max_memory_usage>4294967296</max_memory_usage>
         </default>
-        <!-- The users that only read, which may not lift the cap; the admin can, for a migration. -->
+        <!-- The users that only read, which may not lift the cap or the time limit; the admin can,
+             for a migration. A page that takes 30 s has failed its reader anyway. -->
         <reader>
             <profile>default</profile>
+            <max_execution_time>30</max_execution_time>
+            <!-- Its reads together, so a few heavy ones at once leave the server's cap to the feed. -->
+            <max_memory_usage_for_user>6442450944</max_memory_usage_for_user>
+            <!-- Fixed too: a read stopped at the limit fails rather than answers part, and rows a
+                 reload deleted stay hidden until a merge drops them. -->
             <constraints>
                 <max_memory_usage><const/></max_memory_usage>
+                <max_execution_time><const/></max_execution_time>
+                <max_memory_usage_for_user><const/></max_memory_usage_for_user>
+                <timeout_overflow_mode><const/></timeout_overflow_mode>
+                <apply_deleted_mask><const/></apply_deleted_mask>
             </constraints>
         </reader>
         <!-- The users that insert, under the server's cap alone: an insert the per-query cap refused
@@ -49,6 +63,8 @@
             <quota>default</quota>
             <grants>
                 <query>GRANT SELECT ON store.*</query>
+                <!-- The reads' timings and outcomes, never their text, which holds their parameters. -->
+                <query>GRANT SELECT(event_time, type, user, query_duration_ms) ON system.query_log</query>
             </grants>
         </openjii_monitor>
     </users>

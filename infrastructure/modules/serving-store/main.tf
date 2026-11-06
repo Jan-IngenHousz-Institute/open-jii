@@ -44,6 +44,14 @@ locals {
     system_log_retention_days = var.system_log_retention_days
   })
 
+  # The views that name an experiment (packages/database/clickhouse/migrations), the reader's only
+  # way to experiment data, and the tables a reload replaces rows of or removes ids from.
+  reader_views = [
+    "experiment_measurements", "experiment_macro_results", "experiment_uploads",
+    "experiment_contributor_ids", "experiment_client_ids", "experiment_payload_schemas",
+  ]
+  reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas", "contributor_ids", "client_ids"]
+
   # No grants means the admin, which manages access and applies the schema. The writer only inserts,
   # and keeps out of the migration ledger, which records what the schema already holds. The reloader
   # also deletes from the tables it reloads; a lightweight delete updates their rows' mask column,
@@ -62,15 +70,17 @@ locals {
     reloader = {
       name    = "openjii_reloader"
       profile = "ingest"
-      grants = [
-        "GRANT SELECT, INSERT ON store.*",
-        "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.measurements",
-        "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.macro_results",
-        "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.uploads",
-        "REVOKE INSERT ON store._migrations",
-      ]
+      grants = concat(
+        ["GRANT SELECT, INSERT ON store.*"],
+        [for table in local.reloaded_tables : "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.${table}"],
+        ["REVOKE INSERT ON store._migrations"],
+      )
     }
-    reader = { name = "openjii_reader", profile = "reader", grants = ["GRANT SELECT ON store.*"] }
+    reader = {
+      name    = "openjii_reader"
+      profile = "reader"
+      grants  = [for view in local.reader_views : "GRANT SELECT ON store.${view}"]
+    }
   }
 
   # The hashes of 32 random characters, shown in plans so a replacement says what changed.
@@ -284,7 +294,8 @@ resource "aws_instance" "store" {
     tags        = merge(var.tags, { Name = "${local.name}-root" })
   }
 
-  user_data = templatefile("${path.module}/templates/cloud-config.yaml.tftpl", {
+  # Gzipped, which cloud-init unpacks: rendered, the config is past EC2's 16 KB limit for user data.
+  user_data_base64 = base64gzip(templatefile("${path.module}/templates/cloud-config.yaml.tftpl", {
     clickhouse_version           = var.clickhouse_version
     clickhouse_id                = local.clickhouse_id
     data_device                  = local.data_device
@@ -295,7 +306,7 @@ resource "aws_instance" "store" {
     cloudwatch_agent_config_path = local.cloudwatch_agent_config_path
     cloudwatch_agent_config      = local.cloudwatch_agent_config
     feed_metrics_script          = local.feed_metrics_script
-  })
+  }))
   user_data_replace_on_change = true
 
   tags = merge(var.tags, { Name = local.name })

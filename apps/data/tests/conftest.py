@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 import types
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 
@@ -100,3 +101,23 @@ def fake_dp(monkeypatch: pytest.MonkeyPatch) -> Iterator[types.ModuleType]:
     monkeypatch.setitem(sys.modules, "pyspark.pipelines", fake)
     monkeypatch.setattr(pyspark, "pipelines", fake, raising=False)
     yield fake
+
+
+_STORE_MIGRATIONS = Path(__file__).parents[3] / "packages/database/clickhouse/migrations"
+
+
+@pytest.fixture(scope="session")
+def store_migrations() -> list[str]:
+    """The serving store's migrations as their runner applies them: file by file, one statement at a
+    time, a statement ending at a line that ends with a semicolon."""
+    statements = []
+    for migration in sorted(_STORE_MIGRATIONS.glob("*.sql")):
+        lines: list[str] = []
+        for line in migration.read_text().splitlines():
+            lines.append(line)
+            if line.rstrip().endswith(";"):
+                statements.append("\n".join(lines).rstrip().removesuffix(";"))
+                lines = []
+        if any(line.strip() and not line.lstrip().startswith("--") for line in lines):
+            statements.append("\n".join(lines))
+    return statements
