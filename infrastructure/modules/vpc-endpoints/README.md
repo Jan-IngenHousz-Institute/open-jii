@@ -6,6 +6,8 @@ This module provisions VPC endpoints for S3, STS, and Kinesis Streams in AWS. It
 
 VPC endpoints streamline secure connectivity between a VPC and essential AWS services by provisioning dedicated endpoints. It sets up a Gateway endpoint for S3, linking it to both public and private route tables for efficient and private access. At the same time, it deploys Interface endpoints for STS and Kinesis Streams that are anchored in specific private subnets and protected by security groups.
 
+When enabled, it also places ECR API, ECR Docker and CloudWatch Logs interface endpoints in the isolated subnets. They are the only AWS services the macro and calibration sandboxes can reach, and private DNS sends the rest of the VPC through them too. Their endpoint policies accept only callers signing as this account, and the two ECR endpoints accept only this account's repositories. `ecr:GetAuthorizationToken` names no repository, so it is checked on the caller's account alone. A task that pulls images from another account's registry needs that account added to the ECR policy.
+
 ```mermaid
 graph LR;
     subgraph "AWS VPC Architecture"
