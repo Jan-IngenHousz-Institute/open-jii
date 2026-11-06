@@ -206,6 +206,17 @@ describe("StoreQueryBuilder", () => {
     ).toThrow(QueryBuilderInputError);
   });
 
+  it("escapes a value that ends in a backslash or tries to close its quote", () => {
+    const sql = measurements()
+      .select(["id"])
+      .filter({ column: "protocol_id", operator: "equals", value: "p1\\" })
+      .filter({ column: "protocol_id", operator: "equals", value: "\\' OR 1=1 --" })
+      .build();
+
+    expect(sql).toContain("protocol_id = 'p1\\\\'");
+    expect(sql).toContain("protocol_id = '\\\\\\' OR 1=1 --'");
+  });
+
   it("refuses text a number column cannot read, which the store would answer with an error", () => {
     expect(() =>
       measurements().filter({ column: "id", operator: "equals", value: "abc" }).build(),
