@@ -1,3 +1,5 @@
+import { Logger } from "@nestjs/common";
+
 import { experimentAnnotations } from "@repo/database";
 
 import {
@@ -353,6 +355,7 @@ describe("DeleteAnnotations", () => {
       testApp.module.get(ExperimentAnnotationsRepository),
       "deleteFromRows",
     ).mockResolvedValue(failure(AppError.internal("Postgres down")));
+    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
 
     const result = await useCase.execute(
       experiment.id,
@@ -362,5 +365,39 @@ describe("DeleteAnnotations", () => {
 
     assertSuccess(result);
     expect(result.value.rowsAffected).toBe(2);
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        msg: "Annotation delete not copied to Postgres",
+        experimentId: experiment.id,
+        tableName: "raw_data",
+        rowCount: 2,
+      }),
+    );
+  });
+
+  it("names the annotation whose delete did not reach Postgres", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
+    const annotationId = "5b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e";
+    vi.spyOn(
+      testApp.module.get(ExperimentAnnotationsWarehouseRepository),
+      "deleteAnnotation",
+    ).mockResolvedValue(success({ rowsAffected: 1 }));
+    vi.spyOn(testApp.module.get(ExperimentAnnotationsRepository), "delete").mockResolvedValue(
+      failure(AppError.internal("Postgres down")),
+    );
+    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+
+    assertSuccess(await useCase.execute(experiment.id, { annotationId }, testUserId));
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        msg: "Annotation delete not copied to Postgres",
+        experimentId: experiment.id,
+        annotationId,
+      }),
+    );
   });
 });
