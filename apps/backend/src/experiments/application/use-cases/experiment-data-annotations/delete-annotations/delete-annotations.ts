@@ -71,6 +71,7 @@ export class DeleteAnnotationsUseCase {
 
       this.warnIfNotCopied(
         experimentId,
+        { annotationId: request.annotationId },
         await this.annotationsRepository.delete(experimentId, request.annotationId),
       );
       return success(result.value);
@@ -89,6 +90,7 @@ export class DeleteAnnotationsUseCase {
 
     this.warnIfNotCopied(
       experimentId,
+      { tableName: request.tableName, rowCount: request.rowIds.length },
       await this.annotationsRepository.deleteFromRows(
         experimentId,
         request.tableName,
@@ -103,12 +105,17 @@ export class DeleteAnnotationsUseCase {
    * Postgres follows the lakehouse until pages read it, and the annotations-move runbook fills in
    * what a failed copy missed.
    */
-  private warnIfNotCopied(experimentId: string, copied: Result<void>): void {
+  private warnIfNotCopied(
+    experimentId: string,
+    deleted: { annotationId: string } | { tableName: string; rowCount: number },
+    copied: Result<void>,
+  ): void {
     if (copied.isFailure()) {
       this.logger.warn({
         msg: "Annotation delete not copied to Postgres",
         operation: "deleteAnnotations",
         experimentId,
+        ...deleted,
         error: copied.error.message,
       });
     }

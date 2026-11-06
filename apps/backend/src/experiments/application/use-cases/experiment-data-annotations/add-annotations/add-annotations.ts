@@ -146,6 +146,8 @@ export class AddAnnotationsUseCase {
         msg: "Annotations not copied to Postgres",
         operation: "addAnnotations",
         experimentId,
+        tableName: data.tableName,
+        annotationCount: records.length,
         error: copied.error.message,
       });
     }

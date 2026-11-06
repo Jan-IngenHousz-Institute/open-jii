@@ -1,3 +1,5 @@
+import { Logger } from "@nestjs/common";
+
 import type { ExperimentAddAnnotationsBulkBody } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import { experimentAnnotations } from "@repo/database";
 
@@ -404,6 +406,37 @@ describe("AddAnnotations", () => {
       });
     });
 
+    it("keeps a flag with its type", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Drought trial",
+        userId: testUserId,
+      });
+      vi.spyOn(
+        testApp.module.get(ExperimentAnnotationsWarehouseRepository),
+        "storeAnnotations",
+      ).mockResolvedValue(success({ rowsAffected: 1 }));
+
+      assertSuccess(
+        await useCase.execute(
+          experiment.id,
+          {
+            tableName: "raw_data",
+            rowIds: ["3"],
+            annotation: {
+              type: "flag",
+              content: { type: "flag", flagType: "needs_review", text: "Clip slipped" },
+            },
+          },
+          testUserId,
+        ),
+      );
+
+      const copied = await testApp.database.select().from(experimentAnnotations);
+      expect(copied).toMatchObject([
+        { rowId: "3", type: "flag", flagType: "needs_review", contentText: "Clip slipped" },
+      ]);
+    });
+
     it("copies nothing when the lakehouse refuses the annotations", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Drought trial",
@@ -431,11 +464,20 @@ describe("AddAnnotations", () => {
       vi.spyOn(testApp.module.get(ExperimentAnnotationsRepository), "insert").mockResolvedValue(
         failure(AppError.internal("Postgres down")),
       );
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
 
       const result = await useCase.execute(experiment.id, comment, testUserId);
 
       assertSuccess(result);
       expect(result.value.rowsAffected).toBe(2);
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: "Annotations not copied to Postgres",
+          experimentId: experiment.id,
+          tableName: "raw_data",
+          annotationCount: 2,
+        }),
+      );
     });
   });
 });
