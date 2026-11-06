@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 import { toStatusContent } from "./status-content.js";
 import type { StatusDocument } from "./status-document.js";
 import { statusEvents } from "./status-events.js";
-import { STATUS_FEED_STATE_VERSION, statusFeedStateSchema } from "./status-feed.js";
+import {
+  CONTENT_STALE_MINUTES,
+  STATUS_FEED_STATE_VERSION,
+  contentFailure,
+  statusFeedStateSchema,
+} from "./status-feed.js";
 
 const NOW = "2026-11-03T12:00:00.000Z";
 
@@ -90,5 +95,32 @@ describe("statusFeedStateSchema", () => {
     ],
   ])("rejects %s", (_name, state) => {
     expect(statusFeedStateSchema.safeParse(state).success).toBe(false);
+  });
+});
+
+describe("contentFailure", () => {
+  const cached = { fetchedAt: "2026-11-03T12:00:00.000Z", incidents: [], notices: [] };
+  const after = (minutes: number, seconds = 0) =>
+    new Date(Date.parse(cached.fetchedAt) + (minutes * 60 + seconds) * 1000);
+
+  it("owes nothing for a read that worked", () => {
+    expect(contentFailure(undefined, cached, after(60))).toBeUndefined();
+  });
+
+  it("covers a failed read with the cache up to the limit", () => {
+    expect(contentFailure("timed out", cached, after(CONTENT_STALE_MINUTES))).toBeUndefined();
+  });
+
+  it("names how long and since when once the cache is past the limit", () => {
+    expect(contentFailure("timed out", cached, after(CONTENT_STALE_MINUTES, 1))).toBe(
+      `Contentful has been unreadable for 15 minutes, since ${cached.fetchedAt}: timed out`,
+    );
+    expect(contentFailure("timed out", cached, after(16))).toContain("for 16 minutes");
+  });
+
+  it("fails the first read with nothing to fall back on", () => {
+    expect(contentFailure("timed out", undefined, after(0))).toBe(
+      "Contentful is unreadable and no earlier read is kept: timed out",
+    );
   });
 });

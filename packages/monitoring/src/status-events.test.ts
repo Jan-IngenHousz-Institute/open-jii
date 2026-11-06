@@ -10,8 +10,12 @@ import type {
   StatusDocument,
 } from "./status-document.js";
 import {
+  SNS_BATCH_BYTES,
+  SNS_BATCH_SIZE,
   STATUS_EVENTS_VERSION,
   announcedSchema,
+  batchEvents,
+  failedEntriesText,
   statusEventSchema,
   statusEvents,
 } from "./status-events.js";
@@ -1403,5 +1407,68 @@ describe("statusEventSchema", () => {
     ["no payload", { notice: undefined }],
   ])("rejects an event with %s", (_name, change) => {
     expect(statusEventSchema.safeParse({ ...valid, ...change }).success).toBe(false);
+  });
+});
+
+function changed(id: string): StatusEvent {
+  return {
+    version: STATUS_EVENTS_VERSION,
+    id,
+    environment: ENVIRONMENT,
+    occurredAt: BASE,
+    pageUrl: PAGE_URL,
+    type: "component.changed",
+    component: "website",
+    from: "operational",
+    to: "degraded",
+  };
+}
+
+describe("batchEvents", () => {
+  const ids = (batches: ReturnType<typeof batchEvents>) =>
+    batches.map((batch) => batch.map(({ event }) => event.id));
+
+  it("sends nothing for no events", () => {
+    expect(batchEvents([])).toEqual([]);
+  });
+
+  it("fills batches of ten in order", () => {
+    const events = Array.from({ length: SNS_BATCH_SIZE + 2 }, (_, index) => changed(`e${index}`));
+
+    expect(ids(batchEvents(events))).toEqual([
+      events.slice(0, SNS_BATCH_SIZE).map(({ id }) => id),
+      ["e10", "e11"],
+    ]);
+  });
+
+  it("starts a new batch before the bytes would pass the limit", () => {
+    const big = (name: string) => changed(name.padEnd(SNS_BATCH_BYTES / 2, "x"));
+    const batches = batchEvents([big("a"), big("b"), changed("c")]);
+
+    expect(batches.map((batch) => batch.length)).toEqual([1, 2]);
+    expect(batches.flat().map(({ message, event }) => message === JSON.stringify(event))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+  });
+
+  it("sends a message over the limit on its own", () => {
+    const huge = changed("h".repeat(SNS_BATCH_BYTES));
+
+    expect(ids(batchEvents([changed("a"), huge, changed("b")]))).toEqual([["a"], [huge.id], ["b"]]);
+  });
+});
+
+describe("failedEntriesText", () => {
+  it("names each refused entry by its event and keeps an id it cannot match", () => {
+    const sent = [changed("first"), changed("second")];
+
+    expect(
+      failedEntriesText(sent, [
+        { Id: "1", Code: "Throttled", Message: "slow down" },
+        { Id: "7", Code: "InternalError" },
+      ]),
+    ).toBe("second (Throttled: slow down), 7 (InternalError: undefined)");
   });
 });

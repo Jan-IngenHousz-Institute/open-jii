@@ -1,8 +1,9 @@
 "use strict";
 
 // Handler only: AWS and HTTP I/O. What to read, what a healthy answer is, how readings become
-// states, minutes and uptime, the published file and its caching, the Contentful query and the
-// events live in @repo/monitoring, copied to ./lib at build time.
+// states, minutes and uptime, the published file and its caching, the Contentful query, when a
+// failed read fails the run, and the events and their batches live in @repo/monitoring, copied to
+// ./lib at build time.
 const { CloudWatchClient, GetMetricDataCommand } = require("@aws-sdk/client-cloudwatch");
 const { GetObjectCommand, NoSuchKey, PutObjectCommand, S3Client } = require("@aws-sdk/client-s3");
 const { GetSecretValueCommand, SecretsManagerClient } = require("@aws-sdk/client-secrets-manager");
@@ -16,16 +17,22 @@ const {
   toStatusContent,
 } = require("./lib/status-content.js");
 const { STATUS_DOCUMENT_CACHE_CONTROL, statusDocumentSchema } = require("./lib/status-document.js");
-const { statusEventSchema, statusEvents } = require("./lib/status-events.js");
-const { STATUS_FEED_STATE_VERSION, statusFeedStateSchema } = require("./lib/status-feed.js");
+const {
+  batchEvents,
+  failedEntriesText,
+  statusEventSchema,
+  statusEvents,
+} = require("./lib/status-events.js");
+const {
+  STATUS_FEED_STATE_VERSION,
+  contentFailure,
+  statusFeedStateSchema,
+} = require("./lib/status-feed.js");
 const { judgeStatus, publisherStateSchema } = require("./lib/status-judge.js");
 const { isApiHealthy, isWebsiteHealthy, websiteProbeUrl } = require("./lib/status-probes.js");
 const { collapseReadings, unreadableResults } = require("./lib/status-readings.js");
 
 const MINUTE_MS = 60_000;
-// How long the page may run on the cached incidents before a failed Contentful read fails the run,
-// so the errors alarm reaches someone.
-const CONTENT_STALE_MS = 15 * MINUTE_MS;
 // Under the function's 50 s timeout with both probes and every metric read in flight together.
 const PROBE_TIMEOUT_MS = 10_000;
 // Without throwOnRequestTimeout the SDK only logs a request that outlives its timeout.
@@ -37,9 +44,6 @@ const AWS_REQUEST_HANDLER = {
 const STATE_KEY = "publisher-state.json";
 const FEED_STATE_KEY = "status-feed.json";
 const DOCUMENT_KEY = "data/status.json";
-// SNS takes at most 10 messages and 256 KiB per batch; the margin covers the type attribute.
-const SNS_BATCH_SIZE = 10;
-const SNS_BATCH_BYTES = 250_000;
 const MAX_LOGGED_ERROR_LENGTH = 500;
 
 const s3 = new S3Client({ requestHandler: AWS_REQUEST_HANDLER });
@@ -235,65 +239,8 @@ async function readFeedState(bucket) {
   }
 }
 
-// What a failed read of Contentful owes the errors alarm. Nothing while the cached content is
-// recent; past that, or with no cache, an error naming how long it has been, thrown only once the
-// run has written everything.
-function staleContentError(contentRead, cached, now) {
-  if (contentRead.error === undefined) {
-    return undefined;
-  }
-
-  const cause = describeError(contentRead.error);
-  if (cached === undefined) {
-    return new Error(`Contentful is unreadable and no earlier read is kept: ${cause}`);
-  }
-
-  const unreadableMs = now.getTime() - Date.parse(cached.fetchedAt);
-  if (unreadableMs <= CONTENT_STALE_MS) {
-    return undefined;
-  }
-
-  const minutes = Math.floor(unreadableMs / MINUTE_MS);
-  return new Error(
-    `Contentful has been unreadable for ${minutes} minutes, since ${cached.fetchedAt}: ${cause}`,
-  );
-}
-
-function failedEntries(chunk, failed) {
-  return failed
-    .map(({ Id, Code, Message }) => `${chunk[Number(Id)]?.id ?? Id} (${Code}: ${Message})`)
-    .join(", ");
-}
-
-function batchesOf(events) {
-  const batches = [];
-  let batch = [];
-  let bytes = 0;
-
-  for (const event of events) {
-    const message = JSON.stringify(event);
-    const size = Buffer.byteLength(message);
-    const isFull = batch.length === SNS_BATCH_SIZE || bytes + size > SNS_BATCH_BYTES;
-
-    if (isFull && batch.length > 0) {
-      batches.push(batch);
-      batch = [];
-      bytes = 0;
-    }
-
-    batch.push({ event, message });
-    bytes += size;
-  }
-
-  if (batch.length > 0) {
-    batches.push(batch);
-  }
-
-  return batches;
-}
-
 async function publishEvents(topicArn, events) {
-  for (const batch of batchesOf(events)) {
+  for (const batch of batchEvents(events)) {
     const result = await sns.send(
       new PublishBatchCommand({
         TopicArn: topicArn,
@@ -308,7 +255,7 @@ async function publishEvents(topicArn, events) {
     const failed = result.Failed ?? [];
     if (failed.length > 0) {
       const sent = batch.map(({ event }) => event);
-      throw new Error(`SNS rejected status events: ${failedEntries(sent, failed)}`);
+      throw new Error(`SNS rejected status events: ${failedEntriesText(sent, failed)}`);
     }
   }
 }
@@ -426,8 +373,9 @@ exports.handler = async (event) => {
     }),
   );
 
-  const staleError = staleContentError(contentRead, feed?.content, now);
-  if (staleError !== undefined) {
-    throw staleError;
+  const cause = contentRead.error === undefined ? undefined : describeError(contentRead.error);
+  const failure = contentFailure(cause, feed?.content, now);
+  if (failure !== undefined) {
+    throw new Error(failure);
   }
 };
