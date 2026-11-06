@@ -3378,6 +3378,8 @@ resource "grafana_rule_group" "status_publisher_health" {
   folder_uid       = grafana_folder.folder.uid
   interval_seconds = 300
 
+  # Catalog entry 135. A failed run is not retried and the next one records its minute as unknown,
+  # so one failure is noise and a few in five minutes mean the page is going stale.
   rule {
     name      = "Status Publisher Errors"
     condition = "C"
@@ -3461,9 +3463,9 @@ resource "grafana_rule_group" "status_publisher_health" {
     }
   }
 
-  # A function that is never invoked reports no errors, so the rule above stays quiet through the
-  # very failure that matters most. Silence is the signal: no datapoints alert, and so do fewer
-  # than three runs in five minutes.
+  # Catalog entry 136. A function that is never invoked reports no errors, so the rule above stays
+  # quiet through the very failure that matters most. Silence is the signal: no datapoints alert,
+  # and so do fewer than three runs in five minutes.
   rule {
     name      = "Status Publisher Stopped"
     condition = "C"
@@ -3530,7 +3532,7 @@ resource "grafana_rule_group" "status_publisher_health" {
     }
 
     no_data_state  = "Alerting"
-    exec_err_state = "OK"
+    exec_err_state = "Alerting"
     for            = "5m"
 
     annotations = {

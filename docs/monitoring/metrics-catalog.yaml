@@ -2487,11 +2487,11 @@ metrics:
     baseline: { method: threshold, max: 2 }
     runbook: docs/runbooks/status-publisher-errors.md
     notes: >-
-      The status publisher checks the platform every minute and rewrites the public status page's data
-      file. A run that fails before it writes leaves the file as it was, and the page shows when it was
-      last checked. A failed minute is not retried and the next run records it as unknown time, so
-      this fires on more than two failed runs in five minutes, when the page is going stale rather
-      than blinking.
+      The status publisher checks the platform every minute and rewrites the public status page's
+      data file. A run that fails before it writes leaves the file as it was, and the page shows
+      when it was last checked. A failed minute is not retried and the next run records it as
+      unknown time, so this fires on more than two failed runs in five minutes, when the page is
+      going stale rather than blinking.
 
   - num: 136
     id: status-publisher-stopped
@@ -2513,6 +2513,5 @@ metrics:
     notes: >-
       How many times the status publisher ran. A schedule that fires every minute gives five in five
       minutes, and Lambda's newest minutes can lag, so fewer than three means it stopped or is being
-      refused. Entry 135 cannot
-      see this, since a function that never runs reports no errors, which is why this one also fires
-      when CloudWatch has no datapoints at all.
+      refused. Entry 135 cannot see this, since a function that never runs reports no errors, which
+      is why this one also fires when CloudWatch has no datapoints at all.
