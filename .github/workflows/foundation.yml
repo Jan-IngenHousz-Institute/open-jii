@@ -1,8 +1,8 @@
 # Foundation Workflow
 # Plans and applies infrastructure/foundation: CI's roles, the GitHub trust and the state backend.
 # The plan runs with the environment's deploy role, which can read all of it. The apply runs with
-# the foundation role, which only the foundation-<env> environment can assume, so it waits for
-# that environment's reviewers and runs only when the plan changes something.
+# the foundation role, which only the foundation-<env> environment can assume, so in prod it waits
+# for that environment's reviewers. It runs only when the plan changes something.
 
 name: Foundation Workflow
 
@@ -34,7 +34,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     outputs:
-      plan_key: ${{ steps.save-plan.outputs.key }}
       has_changes: ${{ steps.save-plan.outputs.has_changes }}
     permissions:
       id-token: write
@@ -81,6 +80,8 @@ jobs:
           root: foundation
           out: ${{ runner.temp }}/tfplan
 
+      # Both jobs derive the key from the run ID: GitHub drops a job output that contains any
+      # secret's value, and a one-character secret matches most run IDs.
       - name: Save the plan for the apply
         id: save-plan
         env:
@@ -88,11 +89,10 @@ jobs:
         working-directory: infrastructure/foundation/${{ inputs.environment }}
         run: |
           if ! tofu show -no-color "$RUNNER_TEMP/tfplan" | grep -q "^No changes\."; then
-            KEY="plans/foundation-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            KEY="plans/foundation-${GITHUB_RUN_ID}"
             BUCKET="s3://open-jii-terraform-state-${TARGET_ENV}"
             aws s3 cp "$RUNNER_TEMP/tfplan" "${BUCKET}/${KEY}.tfplan" --only-show-errors
             aws s3 cp .terraform.lock.hcl "${BUCKET}/${KEY}.lock.hcl" --only-show-errors
-            echo "key=$KEY" >> "$GITHUB_OUTPUT"
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
           else
             echo "No foundation changes, so nothing to apply."
@@ -128,11 +128,11 @@ jobs:
       - name: Fetch the approved plan
         env:
           TARGET_ENV: ${{ inputs.environment }}
-          PLAN_KEY: ${{ needs.plan.outputs.plan_key }}
         run: |
+          KEY="plans/foundation-${GITHUB_RUN_ID}"
           BUCKET="s3://open-jii-terraform-state-${TARGET_ENV}"
-          aws s3 cp "${BUCKET}/${PLAN_KEY}.tfplan" "$RUNNER_TEMP/tfplan" --only-show-errors
-          aws s3 cp "${BUCKET}/${PLAN_KEY}.lock.hcl" "infrastructure/foundation/${TARGET_ENV}/.terraform.lock.hcl" --only-show-errors
+          aws s3 cp "${BUCKET}/${KEY}.tfplan" "$RUNNER_TEMP/tfplan" --only-show-errors
+          aws s3 cp "${BUCKET}/${KEY}.lock.hcl" "infrastructure/foundation/${TARGET_ENV}/.terraform.lock.hcl" --only-show-errors
 
       - name: OpenTofu Init and Validate
         uses: ./.github/actions/tofu/tofu-init-validate
