@@ -3572,6 +3572,27 @@ module "ingest_healthcheck" {
   publishing_enabled = local.ingest_healthcheck_publishing
 }
 
+# The status publisher's own Contentful credentials: the delivery token only, never the preview ones.
+module "status_contentful_secrets" {
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-status-contentful-${var.environment}"
+  description = "Contentful delivery credentials for the status publisher"
+
+  secret_string = jsonencode({
+    CONTENTFUL_SPACE_ID     = var.contentful_space_id
+    CONTENTFUL_ACCESS_TOKEN = var.contentful_access_token
+  })
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "status-publisher"
+    SecretType  = "contentful"
+  }
+}
+
 module "status_publisher" {
   source = "../../modules/monitoring/status-publisher"
 
@@ -3589,6 +3610,10 @@ module "status_publisher" {
   load_balancer_arn   = module.backend_alb.alb_arn
   web_distribution_id = module.opennext.cloudfront_distribution_id
   kinesis_stream_name = module.kinesis.kinesis_stream_name
+
+  # An ARN is not a secret, and a sensitive one would hide the role policy's diff.
+  contentful_secret_arn = nonsensitive(module.status_contentful_secrets.secret_arn)
+  page_url              = "https://${module.route53.status_domain}"
 }
 
 module "heartbeat_metrics_s3" {
