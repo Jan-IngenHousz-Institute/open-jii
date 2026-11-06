@@ -1,8 +1,13 @@
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { z } from "zod/mini";
 
 import {
+  STATUS_CONTENTFUL_ENVIRONMENT,
   STATUS_CONTENT_LOCALE,
   STATUS_CONTENT_QUERY,
+  STATUS_UPDATES_LIMIT,
   cachedStatusContentSchema,
   parseStatusContentResponse,
   statusContentResponseSchema,
@@ -10,7 +15,7 @@ import {
   toStatusContent,
 } from "./status-content.js";
 import type { StatusContentResponse } from "./status-content.js";
-import { STATUS_COMPONENT_IDS } from "./status-document.js";
+import { STATUS_COMPONENT_IDS, incidentSchema, incidentStageSchema } from "./status-document.js";
 
 type RawIncident = NonNullable<StatusContentResponse["open"]["items"][number]>;
 type RawUpdate = NonNullable<NonNullable<RawIncident["updatesCollection"]>["items"][number]>;
@@ -655,5 +660,77 @@ describe("toStatusContent as a whole", () => {
     const cached = { fetchedAt: "2026-11-03T12:00:00.000Z", ...content };
 
     expect(cachedStatusContentSchema.parse(cached)).toEqual(cached);
+  });
+});
+
+describe("the content models and the publisher", () => {
+  const repoRoot = resolve(__dirname, "../../..");
+  const validationsSchema = z.optional(
+    z.array(
+      z.object({
+        in: z.optional(z.array(z.string())),
+        size: z.optional(z.object({ max: z.optional(z.number()) })),
+      }),
+    ),
+  );
+  const modelSchema = z.object({
+    fields: z.array(
+      z.object({
+        id: z.string(),
+        validations: validationsSchema,
+        items: z.optional(z.object({ validations: validationsSchema })),
+      }),
+    ),
+  });
+
+  function fieldOf(model: string, id: string) {
+    const source = readFileSync(
+      join(repoRoot, `packages/cms/content-models/${model}.json`),
+      "utf8",
+    );
+    const field = modelSchema.parse(JSON.parse(source)).fields.find((entry) => entry.id === id);
+    if (field === undefined) {
+      throw new Error(`${model} has no ${id} field`);
+    }
+    return field;
+  }
+
+  function allowedIn(validations: z.infer<typeof validationsSchema>) {
+    return validations?.find((validation) => validation.in !== undefined)?.in;
+  }
+
+  it("lets editors pick only the kinds, impacts, components and stages the contract knows", () => {
+    expect(allowedIn(fieldOf("statusIncident", "kind").validations)).toEqual(
+      incidentSchema.shape.kind.options,
+    );
+    expect(allowedIn(fieldOf("statusIncident", "impact").validations)).toEqual(
+      incidentSchema.shape.impact.options,
+    );
+    expect(allowedIn(fieldOf("statusIncident", "components").items?.validations)).toEqual([
+      ...STATUS_COMPONENT_IDS,
+    ]);
+    expect(allowedIn(fieldOf("statusUpdate", "stage").validations)).toEqual(
+      incidentStageSchema.options,
+    );
+  });
+
+  it("caps an incident's updates at what the query fetches", () => {
+    const sizes = fieldOf("statusIncident", "updates").validations ?? [];
+
+    expect(sizes.find((validation) => validation.size !== undefined)?.size?.max).toBe(
+      STATUS_UPDATES_LIMIT,
+    );
+    expect(STATUS_CONTENT_QUERY).toContain(`updatesCollection(limit: ${STATUS_UPDATES_LIMIT},`);
+  });
+
+  it("reads the same Contentful environment in the publisher", () => {
+    const handler = readFileSync(
+      join(repoRoot, "infrastructure/modules/monitoring/status-publisher/lambda/index.js"),
+      "utf8",
+    );
+
+    expect(STATUS_CONTENTFUL_ENVIRONMENT).toBe("master");
+    expect(handler).toContain("/environments/${STATUS_CONTENTFUL_ENVIRONMENT}`");
+    expect(handler).not.toContain("/environments/master");
   });
 });
