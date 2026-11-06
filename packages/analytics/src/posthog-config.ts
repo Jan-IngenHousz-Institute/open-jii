@@ -1,6 +1,7 @@
 /**
  * PostHog configuration types and utilities
  */
+import { redactRequestUrl } from "./redact-url";
 
 /**
  * PostHog configuration interface (subset of actual PostHogConfig)
@@ -15,8 +16,28 @@ export interface PostHogConfig {
   capture_exceptions?: boolean;
   capture_dead_clicks?: boolean;
   debug?: boolean;
+  session_recording?: PostHogSessionRecordingConfig;
   [key: string]: unknown;
 }
+
+/** The part of a recorded network request this package reads: `name` is its URL. */
+export interface RecordedNetworkRequest {
+  name: string;
+}
+
+export interface PostHogSessionRecordingConfig {
+  maskCapturedNetworkRequestFn?: <T extends RecordedNetworkRequest>(request: T) => T;
+  [key: string]: unknown;
+}
+
+/**
+ * Replay records every request's URL as it was sent, and the personal-data masking covers only
+ * the page addresses, so the unsubscribe token is taken out of each request here.
+ */
+const maskRecordedRequest = <T extends RecordedNetworkRequest>(request: T): T => ({
+  ...request,
+  name: redactRequestUrl(request.name),
+});
 
 /** The `service` property every app puts on its events, so one project can tell them apart. */
 export type PostHogService = "web" | "backend" | "mobile";
@@ -55,6 +76,10 @@ export function createPostHogClientConfig(
     custom_personal_data_properties: ["token"],
     debug: false, // Set to true for debugging PostHog issues
     ...options,
+    session_recording: {
+      maskCapturedNetworkRequestFn: maskRecordedRequest,
+      ...options?.session_recording,
+    },
   };
 }
 
