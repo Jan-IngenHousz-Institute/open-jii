@@ -66,7 +66,9 @@ describe("ComponentRow", () => {
 
       await user.click(screen.getByRole("button", { name: "Website" }));
 
-      expect(screen.getByText(/Every minute we load a page of the openJII website/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Every minute we load a page of the openJII website/),
+      ).toBeInTheDocument();
     });
   });
 
@@ -95,6 +97,14 @@ describe("ComponentRow", () => {
 
       expect(screen.getByText("99.97% available in the last 90 days")).toBeInTheDocument();
       expect(screen.getByText(/· 27 min degraded/)).toBeInTheDocument();
+    });
+
+    it("says since when while fewer than 90 days are recorded", () => {
+      const days = componentOf(operationalStatusDocument, "website").days.slice(-3);
+      renderRow(operationalStatusDocument, "website", { days });
+
+      expect(screen.getByText("99.97% available since November 1, 2026")).toBeInTheDocument();
+      expect(screen.queryByText(/in the last 90 days/)).not.toBeInTheDocument();
     });
 
     it("writes every figure with two decimals", () => {

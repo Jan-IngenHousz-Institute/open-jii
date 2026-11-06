@@ -10,6 +10,7 @@ import { StatusBadge } from "~/components/shared/status-badge";
 import { useFormat } from "~/hooks/use-format";
 
 import { useTranslation } from "@repo/i18n/client";
+import { STATUS_HISTORY_DAYS } from "@repo/monitoring/status-document";
 import type { Incident, StatusComponent } from "@repo/monitoring/status-document";
 import {
   Collapsible,
@@ -41,6 +42,11 @@ export function ComponentRow({
   const checksBegan = component.days.at(0)?.date ?? today;
   const text = (field: "name" | "description" | "details") =>
     t(`component.${component.id}.${field}`);
+  const hasFullHistory = component.days.length >= STATUS_HISTORY_DAYS;
+  const uptime = format.uptime(component.uptimePercent);
+  const uptimeLine = hasFullHistory
+    ? t("history.uptime", { uptime })
+    : t("history.uptimeSince", { uptime, date: format.date(checksBegan) });
 
   return (
     <Collapsible className="border-border border-t px-6 py-5 first:border-t-0">
@@ -89,10 +95,8 @@ export function ComponentRow({
       <div className="text-muted-foreground mt-2 flex flex-wrap justify-between gap-y-1 text-xs">
         <span>{t("history.daysAgo", { days: dayCount })}</span>
         <span id={uptimeId} className="order-last basis-full sm:order-none sm:basis-auto">
-          <span className="text-foreground font-semibold">
-            {t("history.uptime", { uptime: format.uptime(component.uptimePercent) })}
-          </span>{" "}
-          · {t("history.degraded", { degraded: format.duration(component.degradedMinutes) })}
+          <span className="text-foreground font-semibold">{uptimeLine}</span> ·{" "}
+          {t("history.degraded", { degraded: format.duration(component.degradedMinutes) })}
         </span>
         <span>{t("history.today")}</span>
       </div>

@@ -107,6 +107,7 @@
     "group": "{{name}}, last {{days}} days",
     "daysAgo": "{{days}} days ago",
     "uptime": "{{uptime}} available in the last 90 days",
+    "uptimeSince": "{{uptime}} available since {{date}}",
     "degraded": "{{degraded}} degraded",
     "today": "Today",
     "problemDays": "Days that were not fully operational",

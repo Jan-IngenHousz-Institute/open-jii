@@ -107,6 +107,7 @@
     "group": "{{name}}, letzte {{days}} Tage",
     "daysAgo": "Vor {{days}} Tagen",
     "uptime": "{{uptime}} verfügbar in den letzten 90 Tagen",
+    "uptimeSince": "{{uptime}} verfügbar seit {{date}}",
     "degraded": "{{degraded}} beeinträchtigt",
     "today": "Heute",
     "problemDays": "Tage, an denen nicht alles in Betrieb war",
