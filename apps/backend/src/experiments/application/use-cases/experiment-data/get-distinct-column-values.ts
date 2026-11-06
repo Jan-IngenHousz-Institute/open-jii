@@ -8,6 +8,7 @@ import type {
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
+import type { ExperimentDataSource } from "../../../core/models/experiment-data.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentDataRepository } from "../../../core/repositories/experiment-data.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -29,6 +30,7 @@ export class GetDistinctColumnValuesUseCase {
     experimentId: string,
     userId: string,
     query: ExperimentDistinctValuesQuery,
+    source: ExperimentDataSource,
   ): Promise<Result<ExperimentDistinctValuesResponse>> {
     this.logger.log({
       msg: "Looking up distinct column values",
@@ -61,6 +63,7 @@ export class GetDistinctColumnValuesUseCase {
         tableName: query.tableName,
         column: query.column,
         limit: query.limit ?? DISTINCT_VALUES_DEFAULT_LIMIT,
+        source,
       });
     });
   }

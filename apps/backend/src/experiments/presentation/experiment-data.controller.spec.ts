@@ -3,6 +3,7 @@ import { expect } from "vitest";
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, success, failure } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
+import { ExperimentDataSourceService } from "../application/services/experiment-data-source.service";
 import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTableColumnsUseCase } from "../application/use-cases/experiment-data/get-experiment-table-columns";
@@ -67,7 +68,11 @@ describe("ExperimentDataController", () => {
         .expect(200);
 
       expect(response.body).toEqual(mockTables);
-      expect(getExperimentTablesUseCase.execute).toHaveBeenCalledWith(experimentId, testUserId);
+      expect(getExperimentTablesUseCase.execute).toHaveBeenCalledWith(
+        experimentId,
+        testUserId,
+        "warehouse",
+      );
     });
 
     it("should map a use-case failure to its HTTP status", async () => {
@@ -122,6 +127,7 @@ describe("ExperimentDataController", () => {
         experimentId,
         testUserId,
         expect.objectContaining({ tableName: "raw_data", page: 1, pageSize: 10 }),
+        "warehouse",
       );
     });
 
@@ -169,6 +175,7 @@ describe("ExperimentDataController", () => {
         experimentId,
         testUserId,
         expect.objectContaining({ tableName: "raw_data", column: "site", limit: 50 }),
+        "warehouse",
       );
     });
 
@@ -202,6 +209,7 @@ describe("ExperimentDataController", () => {
         experimentId,
         testUserId,
         expect.objectContaining({ tableName: "raw_data" }),
+        "warehouse",
       );
     });
 
@@ -214,6 +222,52 @@ describe("ExperimentDataController", () => {
         .get(`/api/v1/experiments/${readableExperimentId}/data/columns?tableName=raw_data`)
         .withAuth(testUserId)
         .expect(404);
+    });
+  });
+
+  describe("read source", () => {
+    it.each([
+      {
+        path: "tables",
+        mockUseCase: () =>
+          vi
+            .spyOn(getExperimentTablesUseCase, "execute")
+            .mockResolvedValue(failure(AppError.notFound("No tables"))),
+      },
+      {
+        path: "data?tableName=raw_data",
+        mockUseCase: () =>
+          vi
+            .spyOn(getExperimentDataUseCase, "execute")
+            .mockResolvedValue(failure(AppError.notFound("No data"))),
+      },
+      {
+        path: "data/distinct?tableName=raw_data&column=site",
+        mockUseCase: () =>
+          vi
+            .spyOn(getDistinctColumnValuesUseCase, "execute")
+            .mockResolvedValue(failure(AppError.notFound("No values"))),
+      },
+      {
+        path: "data/columns?tableName=raw_data",
+        mockUseCase: () =>
+          vi
+            .spyOn(getExperimentTableColumnsUseCase, "execute")
+            .mockResolvedValue(failure(AppError.notFound("No columns"))),
+      },
+    ])("reads $path from the source the store flag picks", async ({ path, mockUseCase }) => {
+      const sourceFor = vi
+        .spyOn(testApp.module.get(ExperimentDataSourceService), "sourceFor")
+        .mockResolvedValue("store");
+      const execute = mockUseCase();
+
+      await testApp
+        .get(`/api/v1/experiments/${readableExperimentId}/${path}`)
+        .withAuth(testUserId)
+        .expect(404);
+
+      expect(sourceFor).toHaveBeenCalledWith(expect.objectContaining({ id: testUserId }));
+      expect(execute.mock.lastCall?.at(-1)).toBe("store");
     });
   });
 

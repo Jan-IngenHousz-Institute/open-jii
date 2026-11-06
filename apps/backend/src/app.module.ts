@@ -22,6 +22,7 @@ import emailConfig from "./common/config/email.config";
 import githubConfig from "./common/config/github.config";
 import healthConfig from "./common/config/health.config";
 import mailchimpConfig from "./common/config/mailchimp.config";
+import servingStoreConfig from "./common/config/serving-store.config";
 import { DatabaseModule } from "./common/database/database.module";
 import { CompressionMiddleware } from "./common/middleware/compression.middleware";
 import { AnalyticsModule } from "./common/modules/analytics/analytics.module";
@@ -57,6 +58,7 @@ import { WorkbookModule } from "./workbooks/workbook.module";
         analyticsConfig,
         githubConfig,
         healthConfig,
+        servingStoreConfig,
       ],
     }),
     LoggerModule.forRoot({

@@ -1,4 +1,22 @@
+import { readFileSync } from "fs";
+import { resolve } from "path";
+import { z } from "zod";
+
 import { VariantSchema } from "./variant-schema";
+
+// Worked out by Spark in the data tests, so both sides read one set of merges.
+const MERGE_CASES = resolve(
+  __dirname,
+  "../../../../../../../../data/tests/fixtures/variant_schema_merges.json",
+);
+
+const zMergeCases = z.array(
+  z.object({
+    name: z.string(),
+    batch_schemas: z.array(z.string().nullable()),
+    merged: z.string().nullable(),
+  }),
+);
 
 describe("VariantSchema.topLevelFieldNames", () => {
   it("extracts simple comma-separated fields", () => {
@@ -68,5 +86,20 @@ describe("VariantSchema.topLevelFields", () => {
       { name: "ratio: a/b", type: "DOUBLE" },
       { name: "a`b", type: "STRING" },
     ]);
+  });
+});
+
+describe("VariantSchema.merge", () => {
+  const cases = zMergeCases.parse(JSON.parse(readFileSync(MERGE_CASES, "utf-8")));
+
+  // A batch whose payloads are all null has no schema, so the store holds none for it.
+  it.each(cases)("merges $name as Spark does", (merge) => {
+    const schemas = merge.batch_schemas.filter((schema) => schema !== null);
+
+    expect(VariantSchema.merge(schemas)).toBe(merge.merged);
+  });
+
+  it("has nothing to merge without a schema", () => {
+    expect(VariantSchema.merge([])).toBeNull();
   });
 });

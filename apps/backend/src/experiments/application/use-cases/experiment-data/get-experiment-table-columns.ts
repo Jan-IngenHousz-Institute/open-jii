@@ -7,6 +7,7 @@ import type {
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
+import type { ExperimentDataSource } from "../../../core/models/experiment-data.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentDataRepository } from "../../../core/repositories/experiment-data.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -28,6 +29,7 @@ export class GetExperimentTableColumnsUseCase {
     experimentId: string,
     userId: string,
     query: ExperimentTableColumnsQuery,
+    source: ExperimentDataSource,
   ): Promise<Result<ExperimentTableColumnsResponse>> {
     this.logger.log({
       msg: "Looking up table columns",
@@ -56,6 +58,7 @@ export class GetExperimentTableColumnsUseCase {
         experimentId,
         tableName: query.tableName,
         join: query.join,
+        source,
       });
       if (columnsResult.isFailure()) {
         return columnsResult;

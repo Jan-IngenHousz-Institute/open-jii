@@ -4,6 +4,18 @@ export interface VariantField {
   type: string;
 }
 
+/** A schema as a tree: a type by name, an array of one element type, or an object's fields. */
+type SchemaNode =
+  | { kind: "scalar"; name: string }
+  | { kind: "array"; element: SchemaNode }
+  | { kind: "object"; fields: Map<string, SchemaNode> };
+
+const VARIANT: SchemaNode = { kind: "scalar", name: "VARIANT" };
+const DOUBLE: SchemaNode = { kind: "scalar", name: "DOUBLE" };
+
+// Spark leaves a field name bare when it reads as an identifier, and quotes any other.
+const BARE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
 /**
  * Parses Spark variant/struct DDL strings — the `OBJECT<...>` /
  * `STRUCT<...>` shape emitted by Databricks's `schema_of_variant_agg(...)`.
@@ -26,6 +38,89 @@ export class VariantSchema {
 
   static topLevelFieldNames(schema: string): string[] {
     return VariantSchema.topLevelFields(schema).map((field) => field.name);
+  }
+
+  /**
+   * The schema Spark's `schema_of_variant_agg` gives the rows of several schemas together,
+   * normalised as gold's table listing is, with decimals as DOUBLE. The serving store keeps a
+   * table's schema per feed batch, and this joins them. Null when there are none. The cases in
+   * `apps/data/tests/fixtures/variant_schema_merges.json`, worked out by Spark, pin it.
+   */
+  static merge(schemas: readonly string[]): string | null {
+    const merged = schemas
+      .map((schema) => VariantSchema.parse(schema))
+      .reduce<SchemaNode | null>(
+        (sum, node) => (sum === null ? node : VariantSchema.mergeNodes(sum, node)),
+        null,
+      );
+    return merged === null ? null : VariantSchema.render(merged);
+  }
+
+  private static parse(schema: string): SchemaNode {
+    const trimmed = schema.trim();
+    const inner = VariantSchema.unwrap(trimmed);
+    if (inner !== null) {
+      // Unlike topLevelFields, keeps a field whose name is empty, which Spark writes as ``.
+      const fields = VariantSchema.splitTopLevel(inner)
+        .map((segment) => VariantSchema.parseField(segment))
+        .filter((field) => field.type.length > 0);
+      return {
+        kind: "object",
+        fields: new Map(fields.map((field) => [field.name, VariantSchema.parse(field.type)])),
+      };
+    }
+
+    const isArray = trimmed.toUpperCase().startsWith("ARRAY<") && trimmed.endsWith(">");
+    if (isArray) {
+      return { kind: "array", element: VariantSchema.parse(trimmed.slice("ARRAY<".length, -1)) };
+    }
+    return { kind: "scalar", name: trimmed.toUpperCase() };
+  }
+
+  /** Spark's rules: a missing value gives way, numbers widen, objects and arrays merge inside, and
+   *  any other pair of kinds becomes VARIANT. */
+  private static mergeNodes(a: SchemaNode, b: SchemaNode): SchemaNode {
+    if (VariantSchema.isVoid(a)) return b;
+    if (VariantSchema.isVoid(b)) return a;
+
+    if (a.kind === "object" && b.kind === "object") {
+      const fields = new Map(a.fields);
+      for (const [name, node] of b.fields) {
+        const existing = fields.get(name);
+        fields.set(name, existing === undefined ? node : VariantSchema.mergeNodes(existing, node));
+      }
+      return { kind: "object", fields };
+    }
+
+    if (a.kind === "array" && b.kind === "array") {
+      return { kind: "array", element: VariantSchema.mergeNodes(a.element, b.element) };
+    }
+
+    if (a.kind === "scalar" && b.kind === "scalar") {
+      if (a.name === b.name) return a;
+      const isNumberPair = [a.name, b.name].every((name) => name === "BIGINT" || name === "DOUBLE");
+      if (isNumberPair) return DOUBLE;
+    }
+    return VARIANT;
+  }
+
+  /** Fields in UTF-16 order, as Spark's Java strings compare and as JavaScript's do. */
+  private static render(node: SchemaNode): string {
+    if (node.kind === "scalar") return node.name;
+    if (node.kind === "array") return `ARRAY<${VariantSchema.render(node.element)}>`;
+
+    const fields = [...node.fields.entries()]
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([name, type]) => `${VariantSchema.quoted(name)}: ${VariantSchema.render(type)}`);
+    return `OBJECT<${fields.join(", ")}>`;
+  }
+
+  private static quoted(name: string): string {
+    return BARE_NAME.test(name) ? name : `\`${name.replaceAll("`", "``")}\``;
+  }
+
+  private static isVoid(node: SchemaNode): boolean {
+    return node.kind === "scalar" && node.name === "VOID";
   }
 
   /** Strip the OBJECT<…> / STRUCT<…> envelope. Null when the input

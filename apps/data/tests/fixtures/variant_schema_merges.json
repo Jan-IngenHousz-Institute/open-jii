@@ -1,0 +1,899 @@
+[
+  {
+    "name": "null-only keys stay",
+    "batches": [["{\"note\": null}"], ["{\"plot\": \"A1\", \"note\": null}"]],
+    "batch_schemas": ["OBJECT<note: VOID>", "OBJECT<note: VOID, plot: STRING>"],
+    "merged": "OBJECT<note: VOID, plot: STRING>"
+  },
+  {
+    "name": "integers widen to doubles",
+    "batches": [["{\"v\": 1}"], ["{\"v\": 0.5}"], ["{\"v\": 1e300}"]],
+    "batch_schemas": ["OBJECT<v: BIGINT>", "OBJECT<v: DOUBLE>", "OBJECT<v: DOUBLE>"],
+    "merged": "OBJECT<v: DOUBLE>"
+  },
+  {
+    "name": "a kind clash becomes variant",
+    "batches": [["{\"v\": 1.5}"], ["{\"v\": \"x\"}"]],
+    "batch_schemas": ["OBJECT<v: DOUBLE>", "OBJECT<v: STRING>"],
+    "merged": "OBJECT<v: VARIANT>"
+  },
+  {
+    "name": "booleans clash with numbers",
+    "batches": [["{\"v\": true}"], ["{\"v\": 1}"]],
+    "batch_schemas": ["OBJECT<v: BOOLEAN>", "OBJECT<v: BIGINT>"],
+    "merged": "OBJECT<v: VARIANT>"
+  },
+  {
+    "name": "objects merge field by field",
+    "batches": [["{\"a\": {\"b\": 1}}"], ["{\"a\": {\"c\": \"x\"}}", "{\"d\": [1]}"]],
+    "batch_schemas": [
+      "OBJECT<a: OBJECT<b: BIGINT>>",
+      "OBJECT<a: OBJECT<c: STRING>, d: ARRAY<BIGINT>>"
+    ],
+    "merged": "OBJECT<a: OBJECT<b: BIGINT, c: STRING>, d: ARRAY<BIGINT>>"
+  },
+  {
+    "name": "a nested clash stays nested",
+    "batches": [["{\"a\": {\"b\": 1}}"], ["{\"a\": {\"b\": \"s\"}}"]],
+    "batch_schemas": ["OBJECT<a: OBJECT<b: BIGINT>>", "OBJECT<a: OBJECT<b: STRING>>"],
+    "merged": "OBJECT<a: OBJECT<b: VARIANT>>"
+  },
+  {
+    "name": "arrays merge their elements",
+    "batches": [["{\"t\": [1, 2]}"], ["{\"t\": [1.5]}"], ["{\"t\": []}"]],
+    "batch_schemas": [
+      "OBJECT<t: ARRAY<BIGINT>>",
+      "OBJECT<t: ARRAY<DOUBLE>>",
+      "OBJECT<t: ARRAY<VOID>>"
+    ],
+    "merged": "OBJECT<t: ARRAY<DOUBLE>>"
+  },
+  {
+    "name": "arrays of objects merge",
+    "batches": [["{\"a\": [{\"k\": 1}]}"], ["{\"a\": [{\"j\": \"x\"}]}"]],
+    "batch_schemas": ["OBJECT<a: ARRAY<OBJECT<k: BIGINT>>>", "OBJECT<a: ARRAY<OBJECT<j: STRING>>>"],
+    "merged": "OBJECT<a: ARRAY<OBJECT<j: STRING, k: BIGINT>>>"
+  },
+  {
+    "name": "an object against an array",
+    "batches": [["{\"a\": {\"k\": 1}}"], ["{\"a\": [1]}"]],
+    "batch_schemas": ["OBJECT<a: OBJECT<k: BIGINT>>", "OBJECT<a: ARRAY<BIGINT>>"],
+    "merged": "OBJECT<a: VARIANT>"
+  },
+  {
+    "name": "empty shapes",
+    "batches": [["{\"o\": {}, \"a\": []}"], ["{\"o\": {\"x\": 1}}"]],
+    "batch_schemas": ["OBJECT<a: ARRAY<VOID>, o: OBJECT<>>", "OBJECT<o: OBJECT<x: BIGINT>>"],
+    "merged": "OBJECT<a: ARRAY<VOID>, o: OBJECT<x: BIGINT>>"
+  },
+  {
+    "name": "awkward names",
+    "batches": [
+      ["{\"Plot no.\": 1, \"a b\": \"x\", \"c:d\": true}"],
+      [
+        "{\"e`f\": null, \"\\u00dcn\\u00efcode\": 1.5, \"x,y\": [1], \"\": 2, \"1a\": 1, \"123\": 1, \"select\": 1}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`Plot no.`: BIGINT, `a b`: STRING, `c:d`: BOOLEAN>",
+      "OBJECT<``: BIGINT, `123`: BIGINT, `1a`: BIGINT, `e``f`: VOID, select: BIGINT, `x,y`: ARRAY<BIGINT>, `Ünïcode`: DOUBLE>"
+    ],
+    "merged": "OBJECT<``: BIGINT, `123`: BIGINT, `1a`: BIGINT, `Plot no.`: BIGINT, `a b`: STRING, `c:d`: BOOLEAN, `e``f`: VOID, select: BIGINT, `x,y`: ARRAY<BIGINT>, `Ünïcode`: DOUBLE>"
+  },
+  {
+    "name": "utf-16 order",
+    "batches": [["{\"z\": 1}"], ["{\"\\ud83d\\ude00\": 1, \"\\ufffd\": 1}"]],
+    "batch_schemas": ["OBJECT<z: BIGINT>", "OBJECT<`😀`: BIGINT, `�`: BIGINT>"],
+    "merged": "OBJECT<z: BIGINT, `😀`: BIGINT, `�`: BIGINT>"
+  },
+  {
+    "name": "long decimals and huge integers",
+    "batches": [
+      ["{\"v\": 0.1234567890123456789012345678901234567}"],
+      ["{\"v\": 123456789012345678901234567890}"],
+      ["{\"v\": 1}"]
+    ],
+    "batch_schemas": ["OBJECT<v: DOUBLE>", "OBJECT<v: DOUBLE>", "OBJECT<v: BIGINT>"],
+    "merged": "OBJECT<v: DOUBLE>"
+  },
+  {
+    "name": "top-level arrays",
+    "batches": [["[1, 2]"], ["[1.5]"]],
+    "batch_schemas": ["ARRAY<BIGINT>", "ARRAY<DOUBLE>"],
+    "merged": "ARRAY<DOUBLE>"
+  },
+  {
+    "name": "top-level scalars",
+    "batches": [["3"], ["4.5"]],
+    "batch_schemas": ["BIGINT", "DOUBLE"],
+    "merged": "DOUBLE"
+  },
+  {
+    "name": "a null row merges away",
+    "batches": [["null"], ["{\"v\": 1}"]],
+    "batch_schemas": [null, "OBJECT<v: BIGINT>"],
+    "merged": "OBJECT<v: BIGINT>"
+  },
+  {
+    "name": "a batch of nulls has no schema",
+    "batches": [["null"], ["{\"v\": 1}"], ["null", "null"]],
+    "batch_schemas": [null, "OBJECT<v: BIGINT>", null],
+    "merged": "OBJECT<v: BIGINT>"
+  },
+  {
+    "name": "variant absorbs",
+    "batches": [["{\"v\": 1}"], ["{\"v\": \"x\"}"], ["{\"v\": [1]}"], ["{\"v\": {\"k\": 1}}"]],
+    "batch_schemas": [
+      "OBJECT<v: BIGINT>",
+      "OBJECT<v: STRING>",
+      "OBJECT<v: ARRAY<BIGINT>>",
+      "OBJECT<v: OBJECT<k: BIGINT>>"
+    ],
+    "merged": "OBJECT<v: VARIANT>"
+  },
+  {
+    "name": "random 0",
+    "batches": [
+      [
+        "{\"1\": {}, \"a\": {\"x y\": true, \"phi2\": -2.7774}}",
+        "{\"_z\": -1.6, \"1\": -8.3, \"Plot no.\": {}, \"a\": null}"
+      ],
+      ["{\"_z\": \"high\", \"b\": \"high\"}", "{\"_z\": [], \"1\": 3e+299, \"phi2\": null}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: VARIANT, `Plot no.`: OBJECT<>, _z: DOUBLE, a: OBJECT<phi2: DOUBLE, `x y`: BOOLEAN>>",
+      "OBJECT<`1`: DOUBLE, _z: VARIANT, b: STRING, phi2: VOID>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: OBJECT<>, _z: VARIANT, a: OBJECT<phi2: DOUBLE, `x y`: BOOLEAN>, b: STRING, phi2: VOID>"
+  },
+  {
+    "name": "random 1",
+    "batches": [
+      ["{\"1\": [-387], \"phi2\": true}"],
+      [
+        "{\"phi2\": true, \"x y\": [], \"1\": \"high\", \"_z\": false}",
+        "{\"1\": \"A1\", \"_z\": [8.635], \"b\": null}"
+      ],
+      [
+        "{\"phi2\": false, \"Plot no.\": -3.9836, \"x y\": 2.174}",
+        "{\"_z\": []}",
+        "{\"a\": {\"phi2\": true, \"Plot no.\": 8.0}, \"Plot no.\": \"x\", \"b\": \"\", \"1\": 2.48}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: ARRAY<BIGINT>, phi2: BOOLEAN>",
+      "OBJECT<`1`: STRING, _z: VARIANT, b: VOID, phi2: BOOLEAN, `x y`: ARRAY<VOID>>",
+      "OBJECT<`1`: DOUBLE, `Plot no.`: VARIANT, _z: ARRAY<VOID>, a: OBJECT<`Plot no.`: DOUBLE, phi2: BOOLEAN>, b: STRING, phi2: BOOLEAN, `x y`: DOUBLE>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: VARIANT, _z: VARIANT, a: OBJECT<`Plot no.`: DOUBLE, phi2: BOOLEAN>, b: STRING, phi2: BOOLEAN, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 2",
+    "batches": [
+      [
+        "{\"x y\": \"A1\", \"_z\": [true]}",
+        "{\"phi2\": 565, \"1\": \"high\", \"b\": -446, \"x y\": true}"
+      ],
+      [
+        "{\"_z\": []}",
+        "{\"phi2\": {}, \"Plot no.\": true, \"a\": 2e+25, \"b\": \"\"}",
+        "{\"a\": null, \"x y\": null, \"Plot no.\": {\"b\": 7.4}, \"b\": 6.04}"
+      ],
+      [
+        "{\"x y\": 946, \"_z\": -6.0033, \"phi2\": -0.9}",
+        "{\"x y\": \"A1\", \"b\": false, \"phi2\": 6e+185, \"_z\": 7e+51}",
+        "{\"phi2\": null}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: STRING, _z: ARRAY<BOOLEAN>, b: BIGINT, phi2: BIGINT, `x y`: VARIANT>",
+      "OBJECT<`Plot no.`: VARIANT, _z: ARRAY<VOID>, a: DOUBLE, b: VARIANT, phi2: OBJECT<>, `x y`: VOID>",
+      "OBJECT<_z: DOUBLE, b: BOOLEAN, phi2: DOUBLE, `x y`: VARIANT>"
+    ],
+    "merged": "OBJECT<`1`: STRING, `Plot no.`: VARIANT, _z: VARIANT, a: DOUBLE, b: VARIANT, phi2: VARIANT, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 3",
+    "batches": [
+      ["{\"x y\": 594}"],
+      ["{\"a\": null, \"x y\": -3.0, \"1\": -1.202}", "{\"phi2\": -127}"],
+      [
+        "{\"b\": [5.998, 4e+105, 218], \"phi2\": {\"Plot no.\": 3e+247}}",
+        "{\"phi2\": null, \"Plot no.\": 1e+274}",
+        "{\"b\": -3.3, \"Plot no.\": 8e+200, \"1\": -306, \"phi2\": {\"Plot no.\": 4e+248, \"_z\": null}}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`x y`: BIGINT>",
+      "OBJECT<`1`: DOUBLE, a: VOID, phi2: BIGINT, `x y`: DOUBLE>",
+      "OBJECT<`1`: BIGINT, `Plot no.`: DOUBLE, b: VARIANT, phi2: OBJECT<`Plot no.`: DOUBLE, _z: VOID>>"
+    ],
+    "merged": "OBJECT<`1`: DOUBLE, `Plot no.`: DOUBLE, a: VOID, b: VARIANT, phi2: VARIANT, `x y`: DOUBLE>"
+  },
+  {
+    "name": "random 4",
+    "batches": [
+      [
+        "{\"1\": {\"phi2\": 7e+112, \"Plot no.\": -8.0367, \"b\": null}, \"b\": {\"Plot no.\": false}}",
+        "{\"b\": 811, \"Plot no.\": [806], \"a\": null, \"_z\": 85}"
+      ],
+      ["{\"1\": true}", "{\"b\": true, \"a\": null, \"Plot no.\": [true, null], \"_z\": 7e+104}"],
+      ["{\"phi2\": false, \"_z\": \"x\"}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: OBJECT<`Plot no.`: DOUBLE, b: VOID, phi2: DOUBLE>, `Plot no.`: ARRAY<BIGINT>, _z: BIGINT, a: VOID, b: VARIANT>",
+      "OBJECT<`1`: BOOLEAN, `Plot no.`: ARRAY<BOOLEAN>, _z: DOUBLE, a: VOID, b: BOOLEAN>",
+      "OBJECT<_z: STRING, phi2: BOOLEAN>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: ARRAY<VARIANT>, _z: VARIANT, a: VOID, b: VARIANT, phi2: BOOLEAN>"
+  },
+  {
+    "name": "random 5",
+    "batches": [
+      ["{\"phi2\": \"\", \"a\": -5.03, \"Plot no.\": null, \"1\": -611}"],
+      [
+        "{\"1\": 4.1, \"phi2\": 8.9, \"b\": null, \"_z\": {\"_z\": false, \"Plot no.\": \"\"}}",
+        "{\"phi2\": [7e+130, -5.74, true]}",
+        "{\"b\": false}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: BIGINT, `Plot no.`: VOID, a: DOUBLE, phi2: STRING>",
+      "OBJECT<`1`: DOUBLE, _z: OBJECT<`Plot no.`: STRING, _z: BOOLEAN>, b: BOOLEAN, phi2: VARIANT>"
+    ],
+    "merged": "OBJECT<`1`: DOUBLE, `Plot no.`: VOID, _z: OBJECT<`Plot no.`: STRING, _z: BOOLEAN>, a: DOUBLE, b: BOOLEAN, phi2: VARIANT>"
+  },
+  {
+    "name": "random 6",
+    "batches": [
+      [
+        "{\"a\": 8e+294, \"1\": 2.1252, \"phi2\": [true, true], \"Plot no.\": [null, 8e+149, -7.88]}",
+        "{\"x y\": [-219], \"Plot no.\": [-946, -7.3]}"
+      ],
+      [
+        "{\"a\": \"\", \"x y\": 56, \"b\": -8.3}",
+        "{\"_z\": \"x\", \"1\": 0.2, \"a\": {\"b\": -1.56, \"_z\": -271, \"phi2\": null}, \"Plot no.\": 7e+68}"
+      ],
+      ["{\"_z\": []}"],
+      ["{\"1\": {}, \"x y\": true, \"Plot no.\": 8.9467}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: DOUBLE, `Plot no.`: ARRAY<DOUBLE>, a: DOUBLE, phi2: ARRAY<BOOLEAN>, `x y`: ARRAY<BIGINT>>",
+      "OBJECT<`1`: DOUBLE, `Plot no.`: DOUBLE, _z: STRING, a: VARIANT, b: DOUBLE, `x y`: BIGINT>",
+      "OBJECT<_z: ARRAY<VOID>>",
+      "OBJECT<`1`: OBJECT<>, `Plot no.`: DOUBLE, `x y`: BOOLEAN>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: VARIANT, _z: VARIANT, a: VARIANT, b: DOUBLE, phi2: ARRAY<BOOLEAN>, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 7",
+    "batches": [
+      ["{\"1\": 1e+89, \"_z\": -212}"],
+      [
+        "{\"x y\": -3.1, \"b\": 5e+63, \"Plot no.\": \"high\"}",
+        "{\"phi2\": 868}",
+        "{\"x y\": [6.927]}"
+      ],
+      ["{\"Plot no.\": [6e+53, true, 3e+283]}", "{\"_z\": true, \"1\": null}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: DOUBLE, _z: BIGINT>",
+      "OBJECT<`Plot no.`: STRING, b: DOUBLE, phi2: BIGINT, `x y`: VARIANT>",
+      "OBJECT<`1`: VOID, `Plot no.`: ARRAY<VARIANT>, _z: BOOLEAN>"
+    ],
+    "merged": "OBJECT<`1`: DOUBLE, `Plot no.`: VARIANT, _z: VARIANT, b: DOUBLE, phi2: BIGINT, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 8",
+    "batches": [
+      [
+        "{\"x y\": {\"x y\": \"A1\", \"phi2\": null, \"b\": null}, \"a\": {}, \"_z\": null}",
+        "{\"phi2\": -157, \"Plot no.\": \"\", \"_z\": true}",
+        "{\"x y\": {}}"
+      ],
+      [
+        "{\"Plot no.\": \"x\", \"_z\": 4e+81, \"phi2\": 2e+173, \"a\": null}",
+        "{\"1\": [], \"b\": null}",
+        "{\"x y\": null}"
+      ],
+      ["{\"Plot no.\": 2e+173}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`Plot no.`: STRING, _z: BOOLEAN, a: OBJECT<>, phi2: BIGINT, `x y`: OBJECT<b: VOID, phi2: VOID, `x y`: STRING>>",
+      "OBJECT<`1`: ARRAY<VOID>, `Plot no.`: STRING, _z: DOUBLE, a: VOID, b: VOID, phi2: DOUBLE, `x y`: VOID>",
+      "OBJECT<`Plot no.`: DOUBLE>"
+    ],
+    "merged": "OBJECT<`1`: ARRAY<VOID>, `Plot no.`: VARIANT, _z: VARIANT, a: OBJECT<>, b: VOID, phi2: DOUBLE, `x y`: OBJECT<b: VOID, phi2: VOID, `x y`: STRING>>"
+  },
+  {
+    "name": "random 9",
+    "batches": [
+      [
+        "{\"b\": {\"x y\": true, \"b\": false, \"a\": 832}, \"1\": []}",
+        "{\"phi2\": 6.025, \"x y\": -957}",
+        "{\"a\": {\"Plot no.\": -3.32, \"b\": false, \"x y\": 9e+244}, \"x y\": \"x\"}"
+      ],
+      ["{\"1\": null, \"a\": {\"b\": true}}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: ARRAY<VOID>, a: OBJECT<`Plot no.`: DOUBLE, b: BOOLEAN, `x y`: DOUBLE>, b: OBJECT<a: BIGINT, b: BOOLEAN, `x y`: BOOLEAN>, phi2: DOUBLE, `x y`: VARIANT>",
+      "OBJECT<`1`: VOID, a: OBJECT<b: BOOLEAN>>"
+    ],
+    "merged": "OBJECT<`1`: ARRAY<VOID>, a: OBJECT<`Plot no.`: DOUBLE, b: BOOLEAN, `x y`: DOUBLE>, b: OBJECT<a: BIGINT, b: BOOLEAN, `x y`: BOOLEAN>, phi2: DOUBLE, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 10",
+    "batches": [
+      [
+        "{\"a\": 5.4452, \"phi2\": 62}",
+        "{\"a\": 987, \"Plot no.\": true, \"b\": false, \"_z\": 138}"
+      ],
+      ["{\"1\": -489}", "{\"b\": true}"],
+      [
+        "{\"_z\": false, \"a\": 7e+97, \"x y\": 7.14}",
+        "{\"x y\": 70, \"phi2\": -9.26, \"a\": 7e+214, \"b\": 0.98}"
+      ],
+      ["{\"x y\": [-212, null], \"a\": -102}", "{\"_z\": \"high\", \"a\": 756, \"Plot no.\": null}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`Plot no.`: BOOLEAN, _z: BIGINT, a: DOUBLE, b: BOOLEAN, phi2: BIGINT>",
+      "OBJECT<`1`: BIGINT, b: BOOLEAN>",
+      "OBJECT<_z: BOOLEAN, a: DOUBLE, b: DOUBLE, phi2: DOUBLE, `x y`: DOUBLE>",
+      "OBJECT<`Plot no.`: VOID, _z: STRING, a: BIGINT, `x y`: ARRAY<BIGINT>>"
+    ],
+    "merged": "OBJECT<`1`: BIGINT, `Plot no.`: BOOLEAN, _z: VARIANT, a: DOUBLE, b: VARIANT, phi2: DOUBLE, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 11",
+    "batches": [
+      [
+        "{\"Plot no.\": null, \"phi2\": \"high\", \"b\": [], \"1\": 728}",
+        "{\"1\": {}, \"_z\": 6e+237, \"b\": -56, \"a\": 513}"
+      ],
+      [
+        "{\"_z\": 3.05}",
+        "{\"b\": [\"\", -821, -553], \"phi2\": 8e+52, \"Plot no.\": null, \"x y\": \"A1\"}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: VARIANT, `Plot no.`: VOID, _z: DOUBLE, a: BIGINT, b: VARIANT, phi2: STRING>",
+      "OBJECT<`Plot no.`: VOID, _z: DOUBLE, b: ARRAY<VARIANT>, phi2: DOUBLE, `x y`: STRING>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: VOID, _z: DOUBLE, a: BIGINT, b: VARIANT, phi2: VARIANT, `x y`: STRING>"
+  },
+  {
+    "name": "random 12",
+    "batches": [
+      [
+        "{\"b\": \"\", \"1\": null, \"a\": null, \"_z\": -87}",
+        "{\"a\": 9e+231, \"_z\": \"high\", \"phi2\": 2.508}"
+      ],
+      [
+        "{\"phi2\": {\"Plot no.\": 1e+116, \"x y\": false, \"1\": null}, \"b\": \"\", \"Plot no.\": 462, \"x y\": \"A1\"}",
+        "{\"x y\": -8.958, \"b\": true}"
+      ],
+      ["{\"_z\": \"\"}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: VOID, _z: VARIANT, a: DOUBLE, b: STRING, phi2: DOUBLE>",
+      "OBJECT<`Plot no.`: BIGINT, b: VARIANT, phi2: OBJECT<`1`: VOID, `Plot no.`: DOUBLE, `x y`: BOOLEAN>, `x y`: VARIANT>",
+      "OBJECT<_z: STRING>"
+    ],
+    "merged": "OBJECT<`1`: VOID, `Plot no.`: BIGINT, _z: VARIANT, a: DOUBLE, b: VARIANT, phi2: VARIANT, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 13",
+    "batches": [
+      ["{\"phi2\": \"high\", \"_z\": [false], \"b\": 4e+93}"],
+      [
+        "{\"a\": \"\"}",
+        "{\"Plot no.\": null}",
+        "{\"1\": -0.2469, \"Plot no.\": true, \"a\": {\"x y\": 4e+57}, \"x y\": 5e+67}"
+      ],
+      ["{\"x y\": null, \"_z\": null, \"Plot no.\": []}", "{\"1\": null}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<_z: ARRAY<BOOLEAN>, b: DOUBLE, phi2: STRING>",
+      "OBJECT<`1`: DOUBLE, `Plot no.`: BOOLEAN, a: VARIANT, `x y`: DOUBLE>",
+      "OBJECT<`1`: VOID, `Plot no.`: ARRAY<VOID>, _z: VOID, `x y`: VOID>"
+    ],
+    "merged": "OBJECT<`1`: DOUBLE, `Plot no.`: VARIANT, _z: ARRAY<BOOLEAN>, a: VARIANT, b: DOUBLE, phi2: STRING, `x y`: DOUBLE>"
+  },
+  {
+    "name": "random 14",
+    "batches": [
+      [
+        "{\"_z\": \"x\", \"Plot no.\": {}}",
+        "{\"phi2\": \"high\", \"b\": {}}",
+        "{\"_z\": null, \"1\": 155}"
+      ],
+      [
+        "{\"x y\": 3.69, \"b\": true, \"phi2\": {}, \"a\": false}",
+        "{\"_z\": 694, \"1\": -9.5039, \"x y\": true, \"Plot no.\": \"x\"}",
+        "{\"x y\": 9.5}"
+      ],
+      [
+        "{\"1\": null, \"phi2\": 7.9457, \"x y\": 479, \"Plot no.\": false}",
+        "{\"phi2\": {\"a\": \"x\"}, \"_z\": 6e+260, \"b\": {\"a\": 790}, \"a\": 390}"
+      ],
+      ["{\"_z\": 9e+48, \"Plot no.\": -9.5, \"1\": 136, \"phi2\": 6e+54}", "{\"1\": {}}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: BIGINT, `Plot no.`: OBJECT<>, _z: STRING, b: OBJECT<>, phi2: STRING>",
+      "OBJECT<`1`: DOUBLE, `Plot no.`: STRING, _z: BIGINT, a: BOOLEAN, b: BOOLEAN, phi2: OBJECT<>, `x y`: VARIANT>",
+      "OBJECT<`1`: VOID, `Plot no.`: BOOLEAN, _z: DOUBLE, a: BIGINT, b: OBJECT<a: BIGINT>, phi2: VARIANT, `x y`: BIGINT>",
+      "OBJECT<`1`: VARIANT, `Plot no.`: DOUBLE, _z: DOUBLE, phi2: DOUBLE>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: VARIANT, _z: VARIANT, a: VARIANT, b: VARIANT, phi2: VARIANT, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 15",
+    "batches": [
+      ["{\"Plot no.\": -911}", "{\"Plot no.\": 4e+52}", "{\"b\": 2e+52, \"Plot no.\": []}"],
+      [
+        "{\"Plot no.\": null, \"x y\": 3.292, \"b\": \"high\"}",
+        "{\"Plot no.\": null, \"_z\": null}",
+        "{\"a\": null, \"Plot no.\": null, \"_z\": 758, \"phi2\": {\"b\": \"A1\", \"x y\": -9.47, \"_z\": 1.9238}}"
+      ],
+      [
+        "{\"_z\": null}",
+        "{\"b\": 706, \"1\": -2.33}",
+        "{\"_z\": {\"x y\": 0.27, \"1\": null}, \"phi2\": 388, \"a\": 958}"
+      ],
+      [
+        "{\"1\": [3.851, 2e+63], \"x y\": \"x\", \"phi2\": 3.5455}",
+        "{\"Plot no.\": [-352, 280], \"_z\": 322}",
+        "{\"1\": {\"phi2\": null, \"b\": true, \"1\": \"x\"}}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`Plot no.`: VARIANT, b: DOUBLE>",
+      "OBJECT<`Plot no.`: VOID, _z: BIGINT, a: VOID, b: STRING, phi2: OBJECT<_z: DOUBLE, b: STRING, `x y`: DOUBLE>, `x y`: DOUBLE>",
+      "OBJECT<`1`: DOUBLE, _z: OBJECT<`1`: VOID, `x y`: DOUBLE>, a: BIGINT, b: BIGINT, phi2: BIGINT>",
+      "OBJECT<`1`: VARIANT, `Plot no.`: ARRAY<BIGINT>, _z: BIGINT, phi2: DOUBLE, `x y`: STRING>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: VARIANT, _z: VARIANT, a: BIGINT, b: VARIANT, phi2: VARIANT, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 16",
+    "batches": [
+      [
+        "{\"1\": true, \"x y\": 5.8, \"phi2\": true, \"a\": null}",
+        "{\"Plot no.\": \"\", \"b\": [-5.85, -1.6978, 119]}"
+      ],
+      ["{\"1\": {}, \"a\": null, \"Plot no.\": false, \"b\": [8e+198]}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: BOOLEAN, `Plot no.`: STRING, a: VOID, b: ARRAY<DOUBLE>, phi2: BOOLEAN, `x y`: DOUBLE>",
+      "OBJECT<`1`: OBJECT<>, `Plot no.`: BOOLEAN, a: VOID, b: ARRAY<DOUBLE>>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: VARIANT, a: VOID, b: ARRAY<DOUBLE>, phi2: BOOLEAN, `x y`: DOUBLE>"
+  },
+  {
+    "name": "random 17",
+    "batches": [
+      ["{\"_z\": -725, \"phi2\": true, \"b\": null}"],
+      [
+        "{\"_z\": [12, 4e+140, \"\"], \"phi2\": {\"phi2\": 3e+129}, \"a\": 9e+35}",
+        "{\"a\": 276}",
+        "{\"phi2\": 0.21}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<_z: BIGINT, b: VOID, phi2: BOOLEAN>",
+      "OBJECT<_z: ARRAY<VARIANT>, a: DOUBLE, phi2: VARIANT>"
+    ],
+    "merged": "OBJECT<_z: VARIANT, a: DOUBLE, b: VOID, phi2: VARIANT>"
+  },
+  {
+    "name": "random 18",
+    "batches": [
+      [
+        "{\"phi2\": \"A1\", \"x y\": true, \"a\": [], \"Plot no.\": {}}",
+        "{\"Plot no.\": -434, \"x y\": -0.0}",
+        "{\"a\": null, \"b\": 5e+230, \"_z\": {\"_z\": false, \"b\": \"A1\"}}"
+      ],
+      [
+        "{\"phi2\": {\"_z\": false, \"Plot no.\": 8e+297, \"x y\": 2e+129}, \"1\": 8e+166}",
+        "{\"_z\": [null, \"high\", 2e+161], \"phi2\": null}",
+        "{\"b\": 9e+228, \"1\": null}"
+      ],
+      ["{\"phi2\": 5e+83, \"_z\": -153}", "{\"x y\": \"\"}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`Plot no.`: VARIANT, _z: OBJECT<_z: BOOLEAN, b: STRING>, a: ARRAY<VOID>, b: DOUBLE, phi2: STRING, `x y`: VARIANT>",
+      "OBJECT<`1`: DOUBLE, _z: ARRAY<VARIANT>, b: DOUBLE, phi2: OBJECT<`Plot no.`: DOUBLE, _z: BOOLEAN, `x y`: DOUBLE>>",
+      "OBJECT<_z: BIGINT, phi2: DOUBLE, `x y`: STRING>"
+    ],
+    "merged": "OBJECT<`1`: DOUBLE, `Plot no.`: VARIANT, _z: VARIANT, a: ARRAY<VOID>, b: DOUBLE, phi2: VARIANT, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 19",
+    "batches": [
+      [
+        "{\"Plot no.\": 498, \"b\": 586, \"1\": 6e+161, \"x y\": {\"1\": 6e+100, \"_z\": false}}",
+        "{\"a\": {\"a\": \"x\", \"Plot no.\": 1e+93}}",
+        "{\"1\": true}"
+      ],
+      ["{\"a\": 5e+24, \"1\": true, \"x y\": true}", "{\"Plot no.\": null}"],
+      ["{\"b\": 2e+279, \"x y\": false, \"phi2\": {}, \"Plot no.\": [null]}"],
+      [
+        "{\"a\": \"\", \"1\": -3.341, \"Plot no.\": 7.3}",
+        "{\"a\": {\"x y\": true, \"a\": true, \"b\": \"high\"}}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: VARIANT, `Plot no.`: BIGINT, a: OBJECT<`Plot no.`: DOUBLE, a: STRING>, b: BIGINT, `x y`: OBJECT<`1`: DOUBLE, _z: BOOLEAN>>",
+      "OBJECT<`1`: BOOLEAN, `Plot no.`: VOID, a: DOUBLE, `x y`: BOOLEAN>",
+      "OBJECT<`Plot no.`: ARRAY<VOID>, b: DOUBLE, phi2: OBJECT<>, `x y`: BOOLEAN>",
+      "OBJECT<`1`: DOUBLE, `Plot no.`: DOUBLE, a: VARIANT>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: VARIANT, a: VARIANT, b: DOUBLE, phi2: OBJECT<>, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 20",
+    "batches": [
+      ["{\"Plot no.\": -704, \"a\": \"A1\"}"],
+      ["{\"a\": -2.42}", "{\"_z\": 127, \"b\": false, \"phi2\": [-598], \"a\": 9e+278}"],
+      ["{\"a\": [false, true], \"_z\": -2.65, \"1\": -177, \"Plot no.\": []}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`Plot no.`: BIGINT, a: STRING>",
+      "OBJECT<_z: BIGINT, a: DOUBLE, b: BOOLEAN, phi2: ARRAY<BIGINT>>",
+      "OBJECT<`1`: BIGINT, `Plot no.`: ARRAY<VOID>, _z: DOUBLE, a: ARRAY<BOOLEAN>>"
+    ],
+    "merged": "OBJECT<`1`: BIGINT, `Plot no.`: VARIANT, _z: DOUBLE, a: VARIANT, b: BOOLEAN, phi2: ARRAY<BIGINT>>"
+  },
+  {
+    "name": "random 21",
+    "batches": [
+      [
+        "{\"a\": null, \"x y\": {}}",
+        "{\"Plot no.\": {\"x y\": true}, \"_z\": true, \"a\": \"x\", \"phi2\": 8e+288}",
+        "{\"x y\": 20, \"phi2\": 6e+284, \"b\": {}, \"1\": \"A1\"}"
+      ],
+      ["{\"_z\": 9.32, \"1\": [5.5442, \"\"]}", "{\"Plot no.\": false, \"phi2\": true}"],
+      [
+        "{\"b\": 8e+196, \"a\": [false, -926]}",
+        "{\"x y\": 3.4566, \"1\": -2.8, \"b\": [3e+90, null]}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: STRING, `Plot no.`: OBJECT<`x y`: BOOLEAN>, _z: BOOLEAN, a: STRING, b: OBJECT<>, phi2: DOUBLE, `x y`: VARIANT>",
+      "OBJECT<`1`: ARRAY<VARIANT>, `Plot no.`: BOOLEAN, _z: DOUBLE, phi2: BOOLEAN>",
+      "OBJECT<`1`: DOUBLE, a: ARRAY<VARIANT>, b: VARIANT, `x y`: DOUBLE>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: VARIANT, _z: VARIANT, a: VARIANT, b: VARIANT, phi2: VARIANT, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 22",
+    "batches": [
+      ["{\"_z\": 6e+131, \"a\": false, \"x y\": 3e+180}", "{\"Plot no.\": {}, \"b\": \"x\"}"],
+      [
+        "{\"_z\": -1.1, \"b\": \"\"}",
+        "{\"_z\": null, \"a\": 122, \"phi2\": {\"a\": -555, \"Plot no.\": -9.898}}",
+        "{\"Plot no.\": [9e+128], \"x y\": [], \"a\": \"A1\", \"_z\": false}"
+      ],
+      [
+        "{\"a\": -890, \"_z\": true, \"x y\": [1e+87]}",
+        "{\"_z\": [\"high\"], \"phi2\": \"A1\", \"a\": false}",
+        "{\"Plot no.\": 1e+169, \"_z\": -2.55, \"1\": {}, \"phi2\": \"A1\"}"
+      ],
+      [
+        "{\"phi2\": [null], \"1\": {\"phi2\": \"x\", \"a\": \"\"}, \"b\": {\"Plot no.\": 2.15, \"_z\": -2.747, \"x y\": -462}}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`Plot no.`: OBJECT<>, _z: DOUBLE, a: BOOLEAN, b: STRING, `x y`: DOUBLE>",
+      "OBJECT<`Plot no.`: ARRAY<DOUBLE>, _z: VARIANT, a: VARIANT, b: STRING, phi2: OBJECT<`Plot no.`: DOUBLE, a: BIGINT>, `x y`: ARRAY<VOID>>",
+      "OBJECT<`1`: OBJECT<>, `Plot no.`: DOUBLE, _z: VARIANT, a: VARIANT, phi2: STRING, `x y`: ARRAY<DOUBLE>>",
+      "OBJECT<`1`: OBJECT<a: STRING, phi2: STRING>, b: OBJECT<`Plot no.`: DOUBLE, _z: DOUBLE, `x y`: BIGINT>, phi2: ARRAY<VOID>>"
+    ],
+    "merged": "OBJECT<`1`: OBJECT<a: STRING, phi2: STRING>, `Plot no.`: VARIANT, _z: VARIANT, a: VARIANT, b: VARIANT, phi2: VARIANT, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 23",
+    "batches": [
+      [
+        "{\"Plot no.\": [], \"_z\": {\"b\": 7e+180, \"_z\": false, \"Plot no.\": true}, \"x y\": \"\"}",
+        "{\"x y\": null, \"_z\": {\"x y\": 831}, \"a\": []}"
+      ],
+      [
+        "{\"x y\": \"A1\"}",
+        "{\"x y\": null, \"1\": null}",
+        "{\"a\": -5.87, \"Plot no.\": -297, \"1\": -3.0046}"
+      ],
+      ["{\"_z\": null, \"a\": 1e+173, \"x y\": \"\", \"phi2\": {\"1\": -4.729}}"],
+      [
+        "{\"Plot no.\": false}",
+        "{\"a\": {\"Plot no.\": 0.59}, \"_z\": 7e+159, \"b\": \"\", \"Plot no.\": true}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`Plot no.`: ARRAY<VOID>, _z: OBJECT<`Plot no.`: BOOLEAN, _z: BOOLEAN, b: DOUBLE, `x y`: BIGINT>, a: ARRAY<VOID>, `x y`: STRING>",
+      "OBJECT<`1`: DOUBLE, `Plot no.`: BIGINT, a: DOUBLE, `x y`: STRING>",
+      "OBJECT<_z: VOID, a: DOUBLE, phi2: OBJECT<`1`: DOUBLE>, `x y`: STRING>",
+      "OBJECT<`Plot no.`: BOOLEAN, _z: DOUBLE, a: OBJECT<`Plot no.`: DOUBLE>, b: STRING>"
+    ],
+    "merged": "OBJECT<`1`: DOUBLE, `Plot no.`: VARIANT, _z: VARIANT, a: VARIANT, b: STRING, phi2: OBJECT<`1`: DOUBLE>, `x y`: STRING>"
+  },
+  {
+    "name": "random 24",
+    "batches": [
+      [
+        "{\"x y\": false}",
+        "{\"b\": null, \"Plot no.\": \"high\", \"1\": true, \"_z\": \"A1\"}",
+        "{\"a\": \"A1\", \"x y\": null}"
+      ],
+      ["{\"b\": [16]}", "{\"a\": null}", "{\"1\": \"high\", \"Plot no.\": [], \"b\": [9e+282]}"],
+      ["{\"1\": 351, \"a\": 6e+52, \"_z\": \"high\"}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: BOOLEAN, `Plot no.`: STRING, _z: STRING, a: STRING, b: VOID, `x y`: BOOLEAN>",
+      "OBJECT<`1`: STRING, `Plot no.`: ARRAY<VOID>, a: VOID, b: ARRAY<DOUBLE>>",
+      "OBJECT<`1`: BIGINT, _z: STRING, a: DOUBLE>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: VARIANT, _z: STRING, a: VARIANT, b: ARRAY<DOUBLE>, `x y`: BOOLEAN>"
+  },
+  {
+    "name": "random 25",
+    "batches": [
+      [
+        "{\"phi2\": \"A1\", \"1\": 5.5}",
+        "{\"_z\": {\"1\": \"\", \"b\": 5.2133}, \"b\": [false, -285]}",
+        "{\"a\": 6e+209, \"b\": [\"x\", \"A1\", \"x\"], \"Plot no.\": null, \"1\": null}"
+      ],
+      ["{\"a\": false, \"b\": 4e+228}", "{\"b\": {\"_z\": 677, \"b\": true, \"phi2\": false}}"],
+      ["{\"a\": 5e+154, \"1\": [\"high\"]}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: DOUBLE, `Plot no.`: VOID, _z: OBJECT<`1`: STRING, b: DOUBLE>, a: DOUBLE, b: ARRAY<VARIANT>, phi2: STRING>",
+      "OBJECT<a: BOOLEAN, b: VARIANT>",
+      "OBJECT<`1`: ARRAY<STRING>, a: DOUBLE>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: VOID, _z: OBJECT<`1`: STRING, b: DOUBLE>, a: VARIANT, b: VARIANT, phi2: STRING>"
+  },
+  {
+    "name": "random 26",
+    "batches": [
+      ["{\"x y\": \"high\", \"phi2\": -677, \"b\": -0.091}"],
+      [
+        "{\"x y\": false, \"Plot no.\": {\"1\": \"high\", \"a\": true, \"b\": 9.772}, \"phi2\": null}",
+        "{\"Plot no.\": -697}"
+      ],
+      ["{\"x y\": 7e+126, \"b\": 102, \"a\": \"\"}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<b: DOUBLE, phi2: BIGINT, `x y`: STRING>",
+      "OBJECT<`Plot no.`: VARIANT, phi2: VOID, `x y`: BOOLEAN>",
+      "OBJECT<a: STRING, b: BIGINT, `x y`: DOUBLE>"
+    ],
+    "merged": "OBJECT<`Plot no.`: VARIANT, a: STRING, b: DOUBLE, phi2: BIGINT, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 27",
+    "batches": [
+      ["{\"_z\": 1e+110}"],
+      ["{\"x y\": null, \"b\": null}", "{\"_z\": 309}", "{\"Plot no.\": {}}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<_z: DOUBLE>",
+      "OBJECT<`Plot no.`: OBJECT<>, _z: BIGINT, b: VOID, `x y`: VOID>"
+    ],
+    "merged": "OBJECT<`Plot no.`: OBJECT<>, _z: DOUBLE, b: VOID, `x y`: VOID>"
+  },
+  {
+    "name": "random 28",
+    "batches": [
+      [
+        "{\"Plot no.\": [], \"b\": -0.8, \"a\": 460, \"x y\": \"\"}",
+        "{\"b\": null, \"_z\": null, \"phi2\": null, \"1\": 9.208}"
+      ],
+      ["{\"b\": [], \"phi2\": -3.902, \"x y\": {\"phi2\": 8.2828, \"1\": 4e+136}}"],
+      [
+        "{\"b\": 8e+151, \"x y\": {\"x y\": 1.67, \"phi2\": 510, \"a\": 0.8}, \"Plot no.\": null, \"_z\": {\"Plot no.\": false, \"_z\": 7e+268}}",
+        "{\"b\": [], \"a\": 519}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: DOUBLE, `Plot no.`: ARRAY<VOID>, _z: VOID, a: BIGINT, b: DOUBLE, phi2: VOID, `x y`: STRING>",
+      "OBJECT<b: ARRAY<VOID>, phi2: DOUBLE, `x y`: OBJECT<`1`: DOUBLE, phi2: DOUBLE>>",
+      "OBJECT<`Plot no.`: VOID, _z: OBJECT<`Plot no.`: BOOLEAN, _z: DOUBLE>, a: BIGINT, b: VARIANT, `x y`: OBJECT<a: DOUBLE, phi2: BIGINT, `x y`: DOUBLE>>"
+    ],
+    "merged": "OBJECT<`1`: DOUBLE, `Plot no.`: ARRAY<VOID>, _z: OBJECT<`Plot no.`: BOOLEAN, _z: DOUBLE>, a: BIGINT, b: VARIANT, phi2: DOUBLE, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 29",
+    "batches": [
+      [
+        "{\"a\": null, \"b\": 6.371, \"phi2\": {\"Plot no.\": true, \"b\": 5e+94, \"phi2\": 345}}",
+        "{\"a\": \"\", \"_z\": null}",
+        "{\"b\": [], \"a\": {\"Plot no.\": -5.5401, \"phi2\": null, \"_z\": -0.753}, \"phi2\": \"A1\", \"Plot no.\": -533}"
+      ],
+      [
+        "{\"Plot no.\": true, \"_z\": \"\", \"b\": -5.1627}",
+        "{\"1\": false}",
+        "{\"_z\": 373, \"x y\": 1e+173}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`Plot no.`: BIGINT, _z: VOID, a: VARIANT, b: VARIANT, phi2: VARIANT>",
+      "OBJECT<`1`: BOOLEAN, `Plot no.`: BOOLEAN, _z: VARIANT, b: DOUBLE, `x y`: DOUBLE>"
+    ],
+    "merged": "OBJECT<`1`: BOOLEAN, `Plot no.`: VARIANT, _z: VARIANT, a: VARIANT, b: VARIANT, phi2: VARIANT, `x y`: DOUBLE>"
+  },
+  {
+    "name": "random 30",
+    "batches": [
+      ["{\"x y\": null}"],
+      ["{\"_z\": null}", "{\"Plot no.\": [], \"phi2\": true}"],
+      ["{\"a\": null, \"x y\": false}", "{\"_z\": \"high\", \"x y\": 2.03}", "{\"_z\": -0.2}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`x y`: VOID>",
+      "OBJECT<`Plot no.`: ARRAY<VOID>, _z: VOID, phi2: BOOLEAN>",
+      "OBJECT<_z: VARIANT, a: VOID, `x y`: VARIANT>"
+    ],
+    "merged": "OBJECT<`Plot no.`: ARRAY<VOID>, _z: VARIANT, a: VOID, phi2: BOOLEAN, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 31",
+    "batches": [
+      [
+        "{\"_z\": -463, \"x y\": {\"b\": null, \"Plot no.\": false, \"x y\": null}, \"phi2\": 5e+292, \"a\": 6e+285}",
+        "{\"b\": 3e+23}",
+        "{\"1\": true, \"Plot no.\": \"x\", \"phi2\": false, \"_z\": [2e+55]}"
+      ],
+      ["{\"Plot no.\": 6e+188, \"phi2\": 9.302}", "{\"1\": true, \"x y\": null}"],
+      ["{\"Plot no.\": -2.9, \"_z\": false}"],
+      [
+        "{\"Plot no.\": null, \"1\": \"A1\", \"b\": {\"x y\": -3.91, \"Plot no.\": \"A1\", \"1\": null}, \"x y\": true}",
+        "{\"b\": 6e+92, \"x y\": {}, \"Plot no.\": null}",
+        "{\"a\": 2e+82}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: BOOLEAN, `Plot no.`: STRING, _z: VARIANT, a: DOUBLE, b: DOUBLE, phi2: VARIANT, `x y`: OBJECT<`Plot no.`: BOOLEAN, b: VOID, `x y`: VOID>>",
+      "OBJECT<`1`: BOOLEAN, `Plot no.`: DOUBLE, phi2: DOUBLE, `x y`: VOID>",
+      "OBJECT<`Plot no.`: DOUBLE, _z: BOOLEAN>",
+      "OBJECT<`1`: STRING, `Plot no.`: VOID, a: DOUBLE, b: VARIANT, `x y`: VARIANT>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: VARIANT, _z: VARIANT, a: DOUBLE, b: VARIANT, phi2: VARIANT, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 32",
+    "batches": [
+      ["{\"Plot no.\": \"A1\", \"1\": 388}"],
+      ["{\"phi2\": {\"b\": 985}, \"Plot no.\": null, \"x y\": 1.71}"],
+      [
+        "{\"a\": false, \"Plot no.\": 6e+296}",
+        "{\"x y\": [null, 6e+267]}",
+        "{\"Plot no.\": 5.1, \"x y\": \"\"}"
+      ],
+      ["{\"1\": false, \"b\": false, \"phi2\": true}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: BIGINT, `Plot no.`: STRING>",
+      "OBJECT<`Plot no.`: VOID, phi2: OBJECT<b: BIGINT>, `x y`: DOUBLE>",
+      "OBJECT<`Plot no.`: DOUBLE, a: BOOLEAN, `x y`: VARIANT>",
+      "OBJECT<`1`: BOOLEAN, b: BOOLEAN, phi2: BOOLEAN>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: VARIANT, a: BOOLEAN, b: BOOLEAN, phi2: VARIANT, `x y`: VARIANT>"
+  },
+  {
+    "name": "random 33",
+    "batches": [
+      ["{\"b\": -0.34, \"_z\": {\"Plot no.\": 51}}"],
+      [
+        "{\"1\": {\"phi2\": -338}, \"_z\": \"A1\", \"b\": [-1.779, \"\"]}",
+        "{\"1\": 7e+102, \"_z\": 6.883}",
+        "{\"b\": \"x\", \"x y\": \"x\"}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<_z: OBJECT<`Plot no.`: BIGINT>, b: DOUBLE>",
+      "OBJECT<`1`: VARIANT, _z: VARIANT, b: VARIANT, `x y`: STRING>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, _z: VARIANT, b: VARIANT, `x y`: STRING>"
+  },
+  {
+    "name": "random 34",
+    "batches": [
+      ["{\"_z\": {\"b\": 1e+76, \"1\": 6e+259}, \"b\": false, \"a\": -5.7}"],
+      ["{\"phi2\": -2.71, \"_z\": null, \"b\": -1.325, \"a\": []}"],
+      ["{\"Plot no.\": {\"a\": 656}, \"1\": {\"_z\": null}}", "{\"x y\": \"high\"}"],
+      [
+        "{\"Plot no.\": {\"x y\": true, \"Plot no.\": \"\"}, \"phi2\": null}",
+        "{\"Plot no.\": [], \"phi2\": 9e+218, \"1\": null, \"x y\": null}",
+        "{\"a\": true}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<_z: OBJECT<`1`: DOUBLE, b: DOUBLE>, a: DOUBLE, b: BOOLEAN>",
+      "OBJECT<_z: VOID, a: ARRAY<VOID>, b: DOUBLE, phi2: DOUBLE>",
+      "OBJECT<`1`: OBJECT<_z: VOID>, `Plot no.`: OBJECT<a: BIGINT>, `x y`: STRING>",
+      "OBJECT<`1`: VOID, `Plot no.`: VARIANT, a: BOOLEAN, phi2: DOUBLE, `x y`: VOID>"
+    ],
+    "merged": "OBJECT<`1`: OBJECT<_z: VOID>, `Plot no.`: VARIANT, _z: OBJECT<`1`: DOUBLE, b: DOUBLE>, a: VARIANT, b: VARIANT, phi2: DOUBLE, `x y`: STRING>"
+  },
+  {
+    "name": "random 35",
+    "batches": [
+      [
+        "{\"1\": {\"Plot no.\": false, \"b\": 3e+128}}",
+        "{\"x y\": -334}",
+        "{\"a\": [752, -7.591], \"_z\": 5.616}"
+      ],
+      ["{\"x y\": 4.4609, \"a\": [true], \"_z\": 3e+268}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: OBJECT<`Plot no.`: BOOLEAN, b: DOUBLE>, _z: DOUBLE, a: ARRAY<DOUBLE>, `x y`: BIGINT>",
+      "OBJECT<_z: DOUBLE, a: ARRAY<BOOLEAN>, `x y`: DOUBLE>"
+    ],
+    "merged": "OBJECT<`1`: OBJECT<`Plot no.`: BOOLEAN, b: DOUBLE>, _z: DOUBLE, a: ARRAY<VARIANT>, `x y`: DOUBLE>"
+  },
+  {
+    "name": "random 36",
+    "batches": [
+      [
+        "{\"Plot no.\": [], \"x y\": {\"phi2\": -3.355}, \"1\": \"\", \"b\": null}",
+        "{\"b\": null, \"a\": 617, \"1\": -0.7434}",
+        "{\"Plot no.\": 2e+181, \"1\": [\"x\", \"high\", -121], \"phi2\": -8.232}"
+      ],
+      ["{\"_z\": false, \"a\": false}"]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: VARIANT, `Plot no.`: VARIANT, a: BIGINT, b: VOID, phi2: DOUBLE, `x y`: OBJECT<phi2: DOUBLE>>",
+      "OBJECT<_z: BOOLEAN, a: BOOLEAN>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: VARIANT, _z: BOOLEAN, a: VARIANT, b: VOID, phi2: DOUBLE, `x y`: OBJECT<phi2: DOUBLE>>"
+  },
+  {
+    "name": "random 37",
+    "batches": [["{\"a\": 8e+229}"], ["{\"1\": 773, \"x y\": false}"]],
+    "batch_schemas": ["OBJECT<a: DOUBLE>", "OBJECT<`1`: BIGINT, `x y`: BOOLEAN>"],
+    "merged": "OBJECT<`1`: BIGINT, a: DOUBLE, `x y`: BOOLEAN>"
+  },
+  {
+    "name": "random 38",
+    "batches": [
+      [
+        "{\"_z\": null, \"1\": -433, \"phi2\": \"x\"}",
+        "{\"b\": null, \"Plot no.\": [1e+214], \"a\": null}",
+        "{\"1\": 9.4543}"
+      ],
+      [
+        "{\"b\": 5e+164, \"phi2\": {\"phi2\": 938, \"x y\": null, \"a\": -2.0448}, \"x y\": 447, \"1\": {\"phi2\": \"A1\", \"x y\": false, \"1\": \"\"}}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`1`: DOUBLE, `Plot no.`: ARRAY<DOUBLE>, _z: VOID, a: VOID, b: VOID, phi2: STRING>",
+      "OBJECT<`1`: OBJECT<`1`: STRING, phi2: STRING, `x y`: BOOLEAN>, b: DOUBLE, phi2: OBJECT<a: DOUBLE, phi2: BIGINT, `x y`: VOID>, `x y`: BIGINT>"
+    ],
+    "merged": "OBJECT<`1`: VARIANT, `Plot no.`: ARRAY<DOUBLE>, _z: VOID, a: VOID, b: DOUBLE, phi2: VARIANT, `x y`: BIGINT>"
+  },
+  {
+    "name": "random 39",
+    "batches": [
+      [
+        "{\"Plot no.\": {\"phi2\": 6e+136, \"1\": false}, \"phi2\": null, \"b\": {\"phi2\": false}}",
+        "{\"phi2\": {\"phi2\": -6.9104}, \"Plot no.\": [null, \"A1\"]}",
+        "{\"a\": null, \"_z\": null, \"x y\": [4e+212, true, false]}"
+      ],
+      [
+        "{\"1\": 5.69, \"phi2\": \"x\", \"_z\": 8e+21, \"x y\": null}",
+        "{\"x y\": -833, \"b\": {\"1\": false, \"_z\": true}, \"_z\": {\"x y\": \"A1\", \"a\": false}, \"phi2\": 5.926}"
+      ],
+      [
+        "{\"1\": null, \"Plot no.\": {\"Plot no.\": false}, \"_z\": [\"A1\", true, -1.4], \"b\": null}",
+        "{\"_z\": [false, \"x\"], \"x y\": []}"
+      ]
+    ],
+    "batch_schemas": [
+      "OBJECT<`Plot no.`: VARIANT, _z: VOID, a: VOID, b: OBJECT<phi2: BOOLEAN>, phi2: OBJECT<phi2: DOUBLE>, `x y`: ARRAY<VARIANT>>",
+      "OBJECT<`1`: DOUBLE, _z: VARIANT, b: OBJECT<`1`: BOOLEAN, _z: BOOLEAN>, phi2: VARIANT, `x y`: BIGINT>",
+      "OBJECT<`1`: VOID, `Plot no.`: OBJECT<`Plot no.`: BOOLEAN>, _z: ARRAY<VARIANT>, b: VOID, `x y`: ARRAY<VOID>>"
+    ],
+    "merged": "OBJECT<`1`: DOUBLE, `Plot no.`: VARIANT, _z: VARIANT, a: VOID, b: OBJECT<`1`: BOOLEAN, _z: BOOLEAN, phi2: BOOLEAN>, phi2: VARIANT, `x y`: VARIANT>"
+  }
+]

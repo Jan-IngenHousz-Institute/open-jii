@@ -1,6 +1,6 @@
 import { buildAggregateExpression } from "./expressions/aggregation";
 import { buildCumsumExpression } from "./expressions/cumsum";
-import { buildFilterCondition, contributorPseudonym } from "./expressions/filter";
+import { buildFilterCondition } from "./expressions/filter";
 import {
   numericStringKeys,
   numericStringOrder,
@@ -119,7 +119,7 @@ export abstract class BaseQueryBuilder {
       return numericStringOrder(target, direction, this.rowIdFor(mode));
     }
     const value =
-      mode?.kind === "pseudonym" ? contributorPseudonym(target, mode.salt, this) : target;
+      mode?.kind === "pseudonym" ? this.contributorPseudonym(target, mode.salt) : target;
     return `${value} ${direction}`;
   }
 
@@ -127,6 +127,26 @@ export abstract class BaseQueryBuilder {
     return !this.isDistinct && mode?.kind === "numericString" && mode.rowId
       ? this.escapeIdentifier(mode.rowId)
       : undefined;
+  }
+
+  /** The SQL literal a filter on `column` compares with. */
+  filterLiteral(_column: string, value: Exclude<FilterValue, (string | number)[]>): string {
+    return this.escapeScalarValue(value);
+  }
+
+  /** A column's value as text, for `LIKE`. Databricks casts to text itself. */
+  textOf(columnSql: string): string {
+    return columnSql;
+  }
+
+  /**
+   * The pseudonym of a contributor id expression, kept byte-identical to
+   * `ContributorAnonymizerService.pseudonymFor`: `Contributor-` + first 6
+   * upper-hex of `sha2('<experimentId>:<id>', 256)`.
+   */
+  contributorPseudonym(idSql: string, salt: string): string {
+    const prefix = this.escapeValue(`${salt}:`);
+    return `concat('Contributor-', upper(substr(sha2(concat(${prefix}, ${idSql}), 256), 1, 6)))`;
   }
 
   buildFilterCondition(filter: FilterCondition): string {

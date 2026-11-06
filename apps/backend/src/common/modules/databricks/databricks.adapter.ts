@@ -2,8 +2,10 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
-import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
-import type { ExperimentAsOfJoin } from "../../../experiments/core/ports/databricks.port";
+import type {
+  ExperimentAsOfJoin,
+  ExperimentTableMetadata,
+} from "../../../experiments/core/models/experiment-data.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type {
   DataExportJobInput,
