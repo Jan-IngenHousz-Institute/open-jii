@@ -16,8 +16,8 @@ import type { Result } from "../../utils/fp-utils";
 import { QueryBuilderInputError } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
 import type { SchemaData } from "../databricks/services/sql/sql.types";
+import { CellValues } from "./services/client/cell-values";
 import { ServingStoreClientService } from "./services/client/client.service";
-import { WarehouseCells } from "./services/client/warehouse-cells";
 import { StoreQueryBuilder } from "./services/query-builder/store-query-builder";
 import { StoreTables } from "./services/query-builder/store-tables";
 
@@ -82,7 +82,7 @@ export class ServingStoreAdapter implements ServingStorePort {
           tableType: type,
           displayName: typeof displayName === "string" ? displayName : null,
           rowCount: Number(rowCount),
-          latestRowAt: WarehouseCells.text(latestRowAt, "TIMESTAMP"),
+          latestRowAt: CellValues.text(latestRowAt, "TIMESTAMP"),
           schemaRevision: this.schemaRevision([macroSchema, questionsSchema, null, uploadSchema]),
           macroSchema,
           questionsSchema,
@@ -183,7 +183,7 @@ export class ServingStoreAdapter implements ServingStorePort {
         if (idOf !== undefined) {
           return typeof value === "string" ? value : null;
         }
-        return WarehouseCells.text(value, type);
+        return CellValues.text(value, type);
       }),
     );
     return success({ columns, rows, totalRows: rows.length, truncated: false });

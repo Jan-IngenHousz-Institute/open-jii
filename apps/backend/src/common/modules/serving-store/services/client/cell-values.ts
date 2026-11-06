@@ -12,23 +12,21 @@ const TIMESTAMP = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:\.(\d+))?/;
  * times in UTC to the millisecond, doubles as Java prints them, and arrays and structs as JSON
  * whose every leaf is text. A VARIANT is JSON with its keys sorted and its numbers bare.
  */
-export class WarehouseCells {
+export class CellValues {
   static text(value: unknown, type: string): string | null {
     if (value === null || value === undefined) {
       return null;
     }
     if (type === "VARIANT") {
-      return WarehouseCells.variantJson(
-        typeof value === "string" ? WarehouseCells.parse(value) : value,
-      );
+      return CellValues.variantJson(typeof value === "string" ? CellValues.parse(value) : value);
     }
 
     const isComplex = type.startsWith("ARRAY<") || type.startsWith("STRUCT<");
     if (isComplex) {
-      const parsed = typeof value === "string" ? WarehouseCells.parse(value) : value;
-      return JSON.stringify(WarehouseCells.leaves(parsed, type));
+      const parsed = typeof value === "string" ? CellValues.parse(value) : value;
+      return JSON.stringify(CellValues.leaves(parsed, type));
     }
-    return WarehouseCells.scalar(value, type);
+    return CellValues.scalar(value, type);
   }
 
   /** Java's `Double.toString`: plain from 10^-3 up to 10^7, otherwise `d.dddE±n`. */
@@ -72,39 +70,37 @@ export class WarehouseCells {
     if (type.startsWith("ARRAY<")) {
       const element = type.slice("ARRAY<".length, -1);
       return Array.isArray(value)
-        ? value.map((item: unknown) => WarehouseCells.leaves(item, element))
+        ? value.map((item: unknown) => CellValues.leaves(item, element))
         : null;
     }
     if (type.startsWith("STRUCT<")) {
-      if (!WarehouseCells.isRecord(value)) {
+      if (!CellValues.isRecord(value)) {
         return null;
       }
       const fields = VariantSchema.topLevelFields(type);
       return Object.fromEntries(
         fields.map(({ name, type: fieldType }) => [
           name,
-          WarehouseCells.leaves(value[name], fieldType),
+          CellValues.leaves(value[name], fieldType),
         ]),
       );
     }
     if (type === "VARIANT") {
-      return WarehouseCells.variantJson(value);
+      return CellValues.variantJson(value);
     }
-    return WarehouseCells.scalar(value, type);
+    return CellValues.scalar(value, type);
   }
 
   private static scalar(value: unknown, type: string): string | null {
-    const number = WarehouseCells.numberText(value);
+    const number = CellValues.numberText(value);
 
     if (type === "DOUBLE" || type === "FLOAT") {
-      return number === null
-        ? WarehouseCells.loose(value)
-        : WarehouseCells.javaDouble(Number(number));
+      return number === null ? CellValues.loose(value) : CellValues.javaDouble(Number(number));
     }
     if (type === "BIGINT" || type === "INT") {
       const digits = number ?? (typeof value === "string" ? value : null);
       if (digits === null) {
-        return WarehouseCells.loose(value);
+        return CellValues.loose(value);
       }
       return /^-?\d+$/.test(digits) ? digits : String(Math.trunc(Number(digits)));
     }
@@ -116,7 +112,7 @@ export class WarehouseCells {
       const millis = (match.at(3) ?? "").padEnd(3, "0").slice(0, 3);
       return `${match[1]}T${match[2]}.${millis}Z`;
     }
-    return number ?? WarehouseCells.loose(value);
+    return number ?? CellValues.loose(value);
   }
 
   private static loose(value: unknown): string | null {
@@ -126,7 +122,7 @@ export class WarehouseCells {
     if (typeof value === "boolean") {
       return String(value);
     }
-    return WarehouseCells.variantJson(value);
+    return CellValues.variantJson(value);
   }
 
   private static numberText(value: unknown): string | null {
@@ -138,9 +134,9 @@ export class WarehouseCells {
 
   /** Spark keeps a number written plainly as a decimal and one with an exponent as a double. */
   private static variantJson(value: unknown): string {
-    const number = WarehouseCells.numberText(value);
+    const number = CellValues.numberText(value);
     if (number !== null) {
-      return /[eE]/.test(number) ? WarehouseCells.javaDouble(Number(number)) : number;
+      return /[eE]/.test(number) ? CellValues.javaDouble(Number(number)) : number;
     }
     if (value === null || value === undefined) {
       return "null";
@@ -149,9 +145,9 @@ export class WarehouseCells {
       return JSON.stringify(value);
     }
     if (Array.isArray(value)) {
-      return `[${value.map((item: unknown) => WarehouseCells.variantJson(item)).join(",")}]`;
+      return `[${value.map((item: unknown) => CellValues.variantJson(item)).join(",")}]`;
     }
-    if (!WarehouseCells.isRecord(value)) {
+    if (!CellValues.isRecord(value)) {
       return "null";
     }
 
@@ -160,7 +156,7 @@ export class WarehouseCells {
       Buffer.compare(Buffer.from(a), Buffer.from(b)),
     );
     const members = entries.map(
-      ([key, item]) => `${JSON.stringify(key)}:${WarehouseCells.variantJson(item)}`,
+      ([key, item]) => `${JSON.stringify(key)}:${CellValues.variantJson(item)}`,
     );
     return `{${members.join(",")}}`;
   }
