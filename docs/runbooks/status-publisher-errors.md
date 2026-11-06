@@ -9,8 +9,8 @@ checked, so a stale file shows as a stale time.
 The run validates the document against its schema before it writes anything, so a run that throws
 on a check, a read or the schema writes nothing and the file stays as the last good run left it. A
 failed minute is not retried: the next run is a minute away and records the lost minute as unknown
-time. The alert fires on more than two failed runs in five minutes, which is when the page is going
-stale rather than blinking.
+time. The alert fires when more than two runs fail in five minutes and that still holds at the next
+check five minutes later, which is when the page is going stale rather than blinking.
 
 ## Read what it said
 

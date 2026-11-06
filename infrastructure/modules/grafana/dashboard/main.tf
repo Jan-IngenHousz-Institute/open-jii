@@ -3379,7 +3379,8 @@ resource "grafana_rule_group" "status_publisher_health" {
   interval_seconds = 300
 
   # Catalog entry 135. A failed run is not retried and the next one records its minute as unknown,
-  # so one failure is noise and a few in five minutes mean the page is going stale.
+  # so one failure is noise and a few in five minutes, still there at the next check, mean the page
+  # is going stale.
   rule {
     name      = "Status Publisher Errors"
     condition = "C"
@@ -3465,7 +3466,7 @@ resource "grafana_rule_group" "status_publisher_health" {
 
   # Catalog entry 136. A function that is never invoked reports no errors, so the rule above stays
   # quiet through the very failure that matters most. Silence is the signal: no datapoints alert,
-  # and so do fewer than three runs in five minutes.
+  # and so do fewer than three runs in five minutes, held at the next check.
   rule {
     name      = "Status Publisher Stopped"
     condition = "C"
@@ -3536,7 +3537,7 @@ resource "grafana_rule_group" "status_publisher_health" {
     for            = "5m"
 
     annotations = {
-      description      = "The status publisher ran fewer than three times in the last five minutes, so the public status page has stopped updating."
+      description      = "The status publisher ran fewer than three times in five minutes at two checks in a row, so the public status page has stopped updating."
       summary          = "Status publisher is not running"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/status-publisher-stopped.md"
       __dashboardUid__ = local.heartbeat_daily_uid

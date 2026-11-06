@@ -1,9 +1,9 @@
 # status-publisher-stopped
 
 **The status publisher is not running every minute, so the public status page's data file has
-stopped updating.** The schedule should invoke it five times in five minutes. This fires on fewer
-than three, and when CloudWatch has no invocation datapoints at all, which is what a function
-that is never called looks like. `status-publisher-errors` cannot see this: a function that does not
+stopped updating.** The schedule should invoke it five times in five minutes. This fires when there
+are fewer than three, or no invocation datapoints at all, at two checks in a row five minutes apart.
+No datapoints is what a function that is never called looks like. `status-publisher-errors` cannot see this: a function that does not
 run reports no errors.
 
 The file stays as the last run left it, and the page shows when it was last checked. The minutes
