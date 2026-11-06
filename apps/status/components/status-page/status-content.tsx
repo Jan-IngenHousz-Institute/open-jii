@@ -31,10 +31,8 @@ function renderIncident(incident: Incident) {
 }
 
 export function StatusContent({ document, serverOffsetMs, hasRefreshFailed }: StatusContentProps) {
-  const { now, groups, openWindows, components, isStale, isAllOperational } = useStatusView(
-    document,
-    serverOffsetMs,
-  );
+  const { now, groups, openWindows, components, headlineComponents, isStale, isAllOperational } =
+    useStatusView(document, serverOffsetMs);
 
   function renderWindow(maintenance: Incident) {
     return <MaintenanceCard key={maintenance.id} incident={maintenance} now={now} />;
@@ -54,7 +52,7 @@ export function StatusContent({ document, serverOffsetMs, hasRefreshFailed }: St
       {document.notices.map(renderNotice)}
 
       <StatusHeadline
-        components={components}
+        components={headlineComponents}
         openWindows={openWindows}
         generatedAt={document.generatedAt}
         isStale={isStale}
