@@ -72,6 +72,12 @@ variable "foundation_role_name" {
   default     = "GithubActionsFoundationAccess"
 }
 
+variable "foundation_role_allowed_refs" {
+  description = "Git refs allowed to assume the foundation role, wildcards allowed. Null allows any ref."
+  type        = list(string)
+  default     = null
+}
+
 variable "foundation_role_boundary_name" {
   description = "Name of the permissions boundary on the foundation role. An admin creates it outside every root CI applies."
   type        = string

@@ -1268,9 +1268,9 @@ resource "aws_iam_role" "foundation_role" {
               "token.actions.githubusercontent.com:sub" : "repo:${var.repository}:environment:${var.foundation_role_github_environment}"
             }
           },
-          var.allowed_refs == null ? {} : {
+          var.foundation_role_allowed_refs == null ? {} : {
             "StringLike" : {
-              "token.actions.githubusercontent.com:ref" : var.allowed_refs
+              "token.actions.githubusercontent.com:ref" : var.foundation_role_allowed_refs
             }
           }
         )
@@ -1369,13 +1369,20 @@ resource "aws_iam_role_policy" "foundation_role" {
           "s3:PutBucketOwnershipControls",
           "s3:GetBucketPublicAccessBlock",
           "s3:PutBucketPublicAccessBlock",
+        ]
+        Resource = "arn:aws:s3:::open-jii-terraform-state-${var.environment}"
+      },
+      {
+        Sid    = "FoundationStateAndPlans"
+        Effect = "Allow"
+        Action = [
           "s3:GetObject",
           "s3:PutObject",
           "s3:DeleteObject",
         ]
         Resource = [
-          "arn:aws:s3:::open-jii-terraform-state-${var.environment}",
-          "arn:aws:s3:::open-jii-terraform-state-${var.environment}/*",
+          "arn:aws:s3:::open-jii-terraform-state-${var.environment}/foundation/*",
+          "arn:aws:s3:::open-jii-terraform-state-${var.environment}/plans/foundation-*",
         ]
       },
       {
@@ -1394,6 +1401,79 @@ resource "aws_iam_role_policy" "foundation_role" {
           "dynamodb:GetItem",
           "dynamodb:PutItem",
           "dynamodb:DeleteItem",
+        ]
+        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/terraform-state-lock"
+      },
+    ]
+  })
+}
+
+# The deploy role's broad IAM, S3 and DynamoDB rights would otherwise let an environment root
+# change CI's access. A deny outranks every allow, so only the foundation role can.
+resource "aws_iam_role_policy" "oidc_role_ci_access_guard" {
+  count = length(aws_iam_role.foundation_role)
+
+  name = "${var.role_name}CiAccessGuard"
+  role = aws_iam_role.oidc_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "NoChangesToCiRolesOrTrust"
+        Effect = "Deny"
+        Action = [
+          "iam:Add*",
+          "iam:Attach*",
+          "iam:Create*",
+          "iam:Delete*",
+          "iam:Detach*",
+          "iam:Put*",
+          "iam:Remove*",
+          "iam:SetDefaultPolicyVersion",
+          "iam:Tag*",
+          "iam:Untag*",
+          "iam:Update*",
+        ]
+        Resource = [
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/GithubActions*",
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/GithubActions*",
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${var.foundation_role_boundary_name}",
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com",
+        ]
+      },
+      {
+        Sid    = "NoChangesToStateBucketSettings"
+        Effect = "Deny"
+        Action = [
+          "s3:DeleteBucket*",
+          "s3:PutAccelerateConfiguration",
+          "s3:PutBucket*",
+          "s3:PutEncryptionConfiguration",
+          "s3:PutLifecycleConfiguration",
+          "s3:PutReplicationConfiguration",
+        ]
+        Resource = "arn:aws:s3:::open-jii-terraform-state-${var.environment}"
+      },
+      {
+        Sid    = "NoChangesToFoundationState"
+        Effect = "Deny"
+        Action = [
+          "s3:DeleteObject*",
+          "s3:PutObject*",
+        ]
+        Resource = "arn:aws:s3:::open-jii-terraform-state-${var.environment}/foundation/*"
+      },
+      {
+        Sid    = "NoChangesToLockTableSettings"
+        Effect = "Deny"
+        Action = [
+          "dynamodb:DeleteTable",
+          "dynamodb:TagResource",
+          "dynamodb:UntagResource",
+          "dynamodb:UpdateContinuousBackups",
+          "dynamodb:UpdateTable",
+          "dynamodb:UpdateTimeToLive",
         ]
         Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/terraform-state-lock"
       },
