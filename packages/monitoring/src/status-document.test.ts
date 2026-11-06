@@ -4,6 +4,7 @@ import type { StatusComponent, StatusDocument } from "./status-document.js";
 import {
   DAY_MINUTES,
   dayRecordSchema,
+  endedAt,
   readableStatusDocumentSchema,
   STATUS_DOCUMENT_CACHE_CONTROL,
   statusDocumentSchema,
@@ -209,5 +210,52 @@ describe("STATUS_DOCUMENT_CACHE_CONTROL", () => {
 
     expect(maxAge).toBeGreaterThan(0);
     expect(maxAge).toBeLessThanOrEqual(30);
+  });
+});
+
+type Ending = Parameters<typeof endedAt>[0];
+
+function ending(change: Partial<Ending> = {}): Ending {
+  return { kind: "incident", ...change };
+}
+
+describe("endedAt", () => {
+  it.each([
+    ["an incident still open", ending(), undefined],
+    [
+      "an incident, by its resolution",
+      ending({ resolvedAt: "2026-11-03T11:30:00.000Z" }),
+      "2026-11-03T11:30:00.000Z",
+    ],
+    [
+      "an incident, ignoring a planned end",
+      ending({ endsAt: "2026-11-03T11:30:00.000Z" }),
+      undefined,
+    ],
+    [
+      "a window nobody closed, by its planned end",
+      ending({ kind: "maintenance", endsAt: "2026-11-03T13:00:00.000Z" }),
+      "2026-11-03T13:00:00.000Z",
+    ],
+    [
+      "a window resolved before its planned end",
+      ending({
+        kind: "maintenance",
+        endsAt: "2026-11-03T13:00:00.000Z",
+        resolvedAt: "2026-11-03T12:10:00.000Z",
+      }),
+      "2026-11-03T12:10:00.000Z",
+    ],
+    [
+      "a window resolved after its planned end",
+      ending({
+        kind: "maintenance",
+        endsAt: "2026-11-03T12:10:00.000Z",
+        resolvedAt: "2026-11-03T13:00:00.000Z",
+      }),
+      "2026-11-03T12:10:00.000Z",
+    ],
+  ])("gives the end of %s", (_name, entry, expected) => {
+    expect(endedAt(entry)).toBe(expected);
   });
 });

@@ -38,7 +38,6 @@ import {
   WEBSITE_MIN_REQUESTS,
   WEBSITE_OUTAGE_ERROR_PERCENT,
   WEBSITE_SLOW_PROBE_MS,
-  endedAt,
   judgeComponent,
   judgeStatus,
   publisherStateSchema,
@@ -1316,47 +1315,6 @@ describe("open incidents", () => {
     });
 
     expect(componentOf(result, "platform").state).toBe("outage");
-  });
-});
-
-describe("endedAt", () => {
-  it.each([
-    ["an incident still open", incident(), undefined],
-    [
-      "an incident, by its resolution",
-      incident({ resolvedAt: "2026-11-03T11:30:00.000Z" }),
-      "2026-11-03T11:30:00.000Z",
-    ],
-    [
-      "an incident, ignoring a planned end",
-      incident({ endsAt: "2026-11-03T11:30:00.000Z" }),
-      undefined,
-    ],
-    [
-      "a window nobody closed, by its planned end",
-      incident({ kind: "maintenance", endsAt: "2026-11-03T13:00:00.000Z" }),
-      "2026-11-03T13:00:00.000Z",
-    ],
-    [
-      "a window resolved before its planned end",
-      incident({
-        kind: "maintenance",
-        endsAt: "2026-11-03T13:00:00.000Z",
-        resolvedAt: "2026-11-03T12:10:00.000Z",
-      }),
-      "2026-11-03T12:10:00.000Z",
-    ],
-    [
-      "a window resolved after its planned end",
-      incident({
-        kind: "maintenance",
-        endsAt: "2026-11-03T12:10:00.000Z",
-        resolvedAt: "2026-11-03T13:00:00.000Z",
-      }),
-      "2026-11-03T12:10:00.000Z",
-    ],
-  ])("gives the end of %s", (_name, entry, expected) => {
-    expect(endedAt(entry)).toBe(expected);
   });
 });
 
