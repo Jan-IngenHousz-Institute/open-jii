@@ -33,7 +33,8 @@ jobs:
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
-      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+      DATABRICKS_AUTH_TYPE: github-oidc
+      DATABRICKS_TOKEN_AUDIENCE: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
       PID: ${{ vars.DLT_PIPELINE_ID }}
       TABLES: ${{ inputs.tables }}
 
