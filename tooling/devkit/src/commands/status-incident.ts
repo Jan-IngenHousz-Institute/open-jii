@@ -13,8 +13,13 @@ import type { Incident } from "@repo/monitoring/status-document";
 
 import { pathFromRoot, repositoryRoot } from "../lib/config.js";
 import { publicationState } from "../lib/content-model.js";
-import { ContentfulManagement, loadContentfulConfig } from "../lib/contentful-management.js";
+import {
+  ContentfulManagement,
+  createContentfulAudit,
+  loadContentfulConfig,
+} from "../lib/contentful-management.js";
 import type {
+  ContentfulAudit,
   ContentfulConfig,
   Entry,
   Preflight as ClientPreflight,
@@ -38,6 +43,7 @@ import type { RawIncident, RawUpdate, UpdateInput } from "../lib/status-incident
 
 export interface Deps {
   request: typeof fetch;
+  audit?: ContentfulAudit;
   write: (text: string) => void;
   now: () => Date;
 }
@@ -822,7 +828,7 @@ export async function statusIncident(
   config: ContentfulConfig,
   deps: Deps,
 ): Promise<Result> {
-  const client = new ContentfulManagement(config, deps.request);
+  const client = new ContentfulManagement(config, deps.request, deps.audit);
 
   switch (options.action) {
     case "preflight":
@@ -983,6 +989,7 @@ async function run(): Promise<void> {
   const config = await loadContentfulConfig(root, process.env);
   const result = await statusIncident(await optionsOf(args, root), config, {
     request: fetch,
+    audit: createContentfulAudit(root),
     write: (text) => process.stdout.write(text),
     now: () => new Date(),
   });
