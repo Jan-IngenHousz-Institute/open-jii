@@ -11,7 +11,11 @@ import type {
   PropertyChange,
   PublishedState,
 } from "../lib/content-model.js";
-import { ContentfulManagement, loadContentfulConfig } from "../lib/contentful-management.js";
+import {
+  ContentfulManagement,
+  createContentfulAudit,
+  loadContentfulConfig,
+} from "../lib/contentful-management.js";
 import type { Preflight } from "../lib/contentful-management.js";
 import { dateControl } from "../lib/editor-interface.js";
 
@@ -520,7 +524,7 @@ async function run(): Promise<void> {
   const config = await loadContentfulConfig(root, process.env);
   const models = new CmsModels(
     new ModelFiles(join(root, "packages/cms/content-models")),
-    new ContentfulManagement(config),
+    new ContentfulManagement(config, fetch, createContentfulAudit(root)),
   );
   const argv = process.argv.slice(2);
   process.stdout.write(await execute(argv[0] === "--" ? argv.slice(1) : argv, models));
