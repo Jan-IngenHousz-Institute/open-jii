@@ -5,9 +5,8 @@ import type {
   StatusComponent,
   StatusDocument,
 } from "@repo/monitoring/status-document";
-import { statusEvents } from "@repo/monitoring/status-events";
+import { announcedIncidentOf, statusEvents } from "@repo/monitoring/status-events";
 import type { Announced, StatusEvent } from "@repo/monitoring/status-events";
-import { endedAt, isOpen } from "@repo/monitoring/status-judge";
 import { STATUS_COMPONENT_NAMES, slackMessage } from "@repo/monitoring/status-slack";
 import type { SlackMessage } from "@repo/monitoring/status-slack";
 
@@ -50,21 +49,7 @@ function time(iso: string): string {
 }
 
 function announcedOf(before: Incident, told: string[], atMs: number): Announced["incidents"] {
-  const end = endedAt(before);
-  const hasEnded = end !== undefined && Date.parse(end) <= atMs;
-
-  if (before.kind === "incident") {
-    return [
-      { id: before.id, kind: "incident", phase: hasEnded ? "resolved" : "open", updates: told },
-    ];
-  }
-
-  if (hasEnded) {
-    return [{ id: before.id, kind: "maintenance", phase: "completed", updates: told }];
-  }
-
-  const phase = isOpen(before, atMs) ? "in-progress" : "scheduled";
-  return [{ id: before.id, kind: "maintenance", phase, updates: told }];
+  return [{ ...announcedIncidentOf(before, atMs), updates: told }];
 }
 
 function componentOf(id: StatusComponent["id"]): StatusComponent {
@@ -82,7 +67,9 @@ export function slackPosts(input: PreviewInput): SlackPost[] {
     incidents: [after],
     notices: [],
   };
+  // Only the event ids read the snapshot's time, and a preview shows none.
   const previous: Announced = {
+    at: now.toISOString(),
     incidents: before === undefined ? [] : announcedOf(before, told, now.getTime()),
     components: {},
     notices: [],
