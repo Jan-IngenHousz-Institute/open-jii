@@ -1,4 +1,7 @@
 {
+  "permissions": {
+    "ask": ["Bash(pnpm status:incident publish:*)", "Bash(pnpm cms:models apply:*)"]
+  },
   "hooks": {
     "PreToolUse": [
       {
