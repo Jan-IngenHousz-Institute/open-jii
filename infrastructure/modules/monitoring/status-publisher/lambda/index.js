@@ -11,6 +11,7 @@ const { PublishBatchCommand, SNSClient } = require("@aws-sdk/client-sns");
 
 const { statusQueries } = require("./lib/status-components.js");
 const {
+  STATUS_CONTENTFUL_ENVIRONMENT,
   STATUS_CONTENT_QUERY,
   parseStatusContentResponse,
   statusContentVariables,
@@ -181,7 +182,7 @@ async function readContentfulCredentials(secretArn) {
 async function queryContentful(secretArn, now) {
   const { spaceId, accessToken } = await readContentfulCredentials(secretArn);
   const response = await fetch(
-    `https://graphql.contentful.com/content/v1/spaces/${encodeURIComponent(spaceId)}/environments/master`,
+    `https://graphql.contentful.com/content/v1/spaces/${encodeURIComponent(spaceId)}/environments/${STATUS_CONTENTFUL_ENVIRONMENT}`,
     {
       method: "POST",
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
