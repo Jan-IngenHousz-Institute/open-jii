@@ -16,15 +16,26 @@ They are a copy done once, so nothing in the repository runs them.
 In the environment's Databricks SQL editor:
 
 ```sql
-SELECT id, type, length(row_id), length(table_name), length(flag_type)
+SELECT id, experiment_id, user_id, type, length(row_id), length(table_name), flag_type
 FROM centrum.experiment_annotations
-WHERE type NOT IN ('comment', 'flag')
-   OR length(row_id) > 64 OR length(table_name) > 64 OR length(flag_type) > 100
-   OR instr(content_text, char(0)) > 0 OR instr(flag_type, char(0)) > 0;
+WHERE type NOT IN ('comment', 'flag') OR flag_type NOT IN ('outlier', 'needs_review')
+   OR length(row_id) > 64 OR length(table_name) > 64 OR instr(content_text, char(0)) > 0
+   OR id IS NULL OR experiment_id IS NULL OR table_name IS NULL OR row_id IS NULL
+   OR type IS NULL OR user_id IS NULL OR created_at IS NULL OR updated_at IS NULL
+   OR NOT lower(id) RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+   OR NOT lower(experiment_id) RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+   OR NOT lower(user_id) RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+
+SELECT id, count(*) FROM centrum.experiment_annotations GROUP BY id HAVING count(*) > 1;
+
+SELECT table_name, count(*) FROM centrum.experiment_annotations GROUP BY table_name ORDER BY 1;
 ```
 
-Expect no rows. Postgres refuses any of these, and the API refuses them since the first release.
-Decide with the team what each one should be and correct it in the lakehouse before going on.
+Expect no rows from the first two. Postgres refuses any of the first, and the API refuses them since
+the first release; step 4 refuses an id held twice. Decide with the team what each one should be and
+correct it in the lakehouse before going on. The third lists the tables annotated, which should be
+`raw_data`, macro ids and upload table ids only, since the second release finds a row by its table
+and row id.
 
 ## 2. Export the lakehouse's annotations
 
@@ -37,10 +48,13 @@ SELECT id, experiment_id, table_name, row_id, type, content_text, flag_type,
        date_format(created_at, 'yyyy-MM-dd HH:mm:ss.SSSSSS') AS created_at,
        date_format(updated_at, 'yyyy-MM-dd HH:mm:ss.SSSSSS') AS updated_at
 FROM centrum.experiment_annotations;
+
+SELECT count(*), sum(length(content_text)) FROM centrum.experiment_annotations;
 ```
 
-Note the row count and the time you ran it, then download the result as CSV. If the editor cuts the
-download short of the count, export it in parts with a `WHERE experiment_id IN (...)`.
+Note the time you ran it and the two numbers the last query gives, then download the export's
+result as CSV. If the editor cuts the download short of the count, export it in parts with a
+`WHERE experiment_id IN (...)`.
 
 ## 3. Load it beside Postgres's annotations
 
@@ -49,10 +63,10 @@ In a psql session to the environment's Aurora, as the admin, from the folder hol
 ```sql
 CREATE TEMP TABLE lakehouse_annotations (LIKE experiment_annotations);
 \copy lakehouse_annotations (id, experiment_id, table_name, row_id, type, content_text, flag_type, created_by, created_at, updated_at) FROM 'annotations.csv' WITH (FORMAT csv, HEADER)
-SELECT count(*) FROM lakehouse_annotations;
+SELECT count(*), sum(length(content_text)) FROM lakehouse_annotations;
 ```
 
-The count must match the export's.
+Both numbers must match the export's.
 
 ## 4. Copy what Postgres lacks or holds older
 
