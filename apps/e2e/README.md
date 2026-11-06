@@ -24,9 +24,9 @@ pnpm e2e
 The default web URL is `http://localhost:3000`, the seed identity is `seed@openjii.local`, the
 database is `postgresql://postgres:postgres@127.0.0.1:5432/openjii_local`, and the auth secret that
 decrypts stored sign-in codes is the one in `apps/backend/.env.example`. Override them with
-`E2E_BASE_URL`, `E2E_EMAIL`, `E2E_DATABASE_URL`, and `E2E_AUTH_SECRET` when needed. Authentication state is recreated
-under `.auth` for every run. Fixture cleanup only accepts the `openjii_local` database on a loopback
-host unless `E2E_ALLOW_UNSAFE_DATABASE=1` is set.
+`E2E_BASE_URL`, `E2E_EMAIL`, `E2E_DATABASE_URL`, and `E2E_AUTH_SECRET` when needed. Authentication
+state is recreated under `.auth` for every run. Fixture cleanup only accepts the `openjii_local`
+database on a loopback host unless `E2E_ALLOW_UNSAFE_DATABASE=1` is set.
 
 The Web E2E workflow runs nightly, on manual dispatch, and on pull requests that change the web E2E
 stack. It uses a production build and its standalone server while local development uses `next dev`.

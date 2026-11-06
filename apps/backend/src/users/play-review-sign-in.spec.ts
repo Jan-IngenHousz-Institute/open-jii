@@ -5,7 +5,7 @@ import { openJiiEmailOTP } from "@repo/auth/email-otp";
 import { db } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
-import { TestHarness } from "../../test/test-harness";
+import { TestHarness } from "../test/test-harness";
 
 const REVIEW_EMAIL = "play-reviewer@example.com";
 const REVIEW_OTP = "482913";
@@ -17,7 +17,7 @@ const sendEmail = vi.fn(() => Promise.resolve());
  * database around the same email OTP plugin the server config uses.
  */
 const auth = betterAuth({
-  secret: "test-secret",
+  secret: "play-review-sign-in-spec-secret-0123456789",
   baseURL: "http://localhost:3020",
   basePath: "/api/v1/auth",
   emailAndPassword: { enabled: false },
