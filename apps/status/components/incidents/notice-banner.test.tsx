@@ -2,11 +2,9 @@ import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { renderWithProviders } from "~/test/test-utils";
 
-import type { StatusDocument } from "@repo/monitoring/status-document";
+import type { Notice } from "@repo/monitoring/status-document";
 
 import { NoticeBanner } from "./notice-banner";
-
-type Notice = StatusDocument["notices"][number];
 
 function notice(overrides: Partial<Notice> = {}): Notice {
   return {

@@ -1,4 +1,4 @@
-import { endedAt } from "~/lib/incidents";
+import { endedAtMs } from "~/lib/incidents";
 
 import type { DayRecord, Incident } from "@repo/monitoring/status-document";
 
@@ -19,7 +19,7 @@ export interface DaySummary {
 
 // A window nobody closed runs to the document's own time, because a device clock can be hours off.
 function endOfWindow(incident: Incident, generatedAt: string): number {
-  return endedAt(incident) ?? Date.parse(generatedAt);
+  return endedAtMs(incident) ?? Date.parse(generatedAt);
 }
 
 // The written times decide, not the minutes judged, so a problem entered after the fact still

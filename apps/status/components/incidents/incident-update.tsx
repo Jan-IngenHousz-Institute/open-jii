@@ -1,12 +1,12 @@
 "use client";
 
 import { useFormat } from "~/hooks/use-format";
-import type { IncidentUpdateEntry } from "~/lib/incidents";
 
 import { useTranslation } from "@repo/i18n/client";
+import type { IncidentUpdate as IncidentUpdateRecord } from "@repo/monitoring/status-document";
 
 interface IncidentUpdateProps {
-  update: IncidentUpdateEntry;
+  update: IncidentUpdateRecord;
   isLatest: boolean;
 }
 
