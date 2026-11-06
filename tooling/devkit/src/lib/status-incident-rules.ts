@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { STATUS_UPDATES_LIMIT } from "@repo/monitoring/status-content";
 import {
   STATUS_HISTORY_DAYS,
   incidentSchema,
@@ -8,7 +9,6 @@ import {
 import type { Incident, IncidentUpdate } from "@repo/monitoring/status-document";
 
 export const NEW_UPDATE_ID = "new-update";
-export const MAX_UPDATES = 20;
 
 // Contentful's short text (Symbol) field holds 256 characters at most:
 // https://www.contentful.com/developers/docs/concepts/data-model/
@@ -331,12 +331,12 @@ function changeRules(raw: RawIncident, change: Change, nowMs: number): string[] 
       `The incident is already resolved at ${change.before.resolvedAt}. Add an update instead.`,
     );
   }
-  if (change.action === "update" && linked >= MAX_UPDATES - 1) {
+  if (change.action === "update" && linked >= STATUS_UPDATES_LIMIT - 1) {
     rules.push(
-      `The incident already links ${linked} updates. It links ${MAX_UPDATES} at most, and the last place is kept for the update that resolves it. Use the resolve action now, or, if the problem goes on, resolve this incident and draft a new one that continues it.`,
+      `The incident already links ${linked} updates. It links ${STATUS_UPDATES_LIMIT} at most, and the last place is kept for the update that resolves it. Use the resolve action now, or, if the problem goes on, resolve this incident and draft a new one that continues it.`,
     );
   }
-  if (change.action === "resolve" && linked >= MAX_UPDATES) {
+  if (change.action === "resolve" && linked >= STATUS_UPDATES_LIMIT) {
     rules.push(
       `The incident already links ${linked} updates, the most it can hold, so the resolving update has no place. In Contentful, unlink one older update that adds nothing from the Updates field, then run resolve again.`,
     );
@@ -351,9 +351,9 @@ function publishRules(raw: RawIncident, linked: number): string[] {
   if (raw.updates.length === 0) {
     rules.push("The incident has no updates. Link the first update before the first publish.");
   }
-  if (linked > MAX_UPDATES) {
+  if (linked > STATUS_UPDATES_LIMIT) {
     rules.push(
-      `The incident links ${linked} updates, but it holds ${MAX_UPDATES} at most and the publisher reads no more. In Contentful, unlink the ${linked - MAX_UPDATES} oldest that add nothing from the Updates field, then review it again.`,
+      `The incident links ${linked} updates, but it holds ${STATUS_UPDATES_LIMIT} at most and the publisher reads no more. In Contentful, unlink the ${linked - STATUS_UPDATES_LIMIT} oldest that add nothing from the Updates field, then review it again.`,
     );
   }
 
