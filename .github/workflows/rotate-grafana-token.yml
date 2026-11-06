@@ -1,5 +1,6 @@
 # Grafana Service Account Token Rotation Workflow
-# Runs every ~15 days to rotate Grafana AMG service account tokens for all environments
+# Runs every ~15 days to rotate the Viewer token prod-plan's pull request plans read. Deploys and
+# the dev pull request plan create their own token for each run instead.
 
 name: Rotate Grafana Token
 
@@ -21,10 +22,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - environment: dev
-            secret_environment: dev
-          - environment: prod
-            secret_environment: prod
           # The Viewer account behind prod-plan's read-only pull request plans.
           - environment: prod
             secret_environment: prod-plan
@@ -38,21 +35,11 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Set Grafana IDs (dev)
-        if: matrix.environment == 'dev'
-        run: |
-          echo "::add-mask::${{ secrets.GRAFANA_WORKSPACE_ID_DEV }}"
-          echo "::add-mask::${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}"
-          echo "WORKSPACE_ID=${{ secrets.GRAFANA_WORKSPACE_ID_DEV }}" >> $GITHUB_ENV
-          echo "SERVICE_ACCOUNT_ID=${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}" >> $GITHUB_ENV
-
-      - name: Set Grafana IDs (prod)
+      - name: Set Grafana workspace ID (prod)
         if: matrix.environment == 'prod'
         run: |
           echo "::add-mask::${{ secrets.GRAFANA_WORKSPACE_ID_PROD }}"
-          echo "::add-mask::${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_PROD }}"
           echo "WORKSPACE_ID=${{ secrets.GRAFANA_WORKSPACE_ID_PROD }}" >> $GITHUB_ENV
-          echo "SERVICE_ACCOUNT_ID=${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_PROD }}" >> $GITHUB_ENV
 
       - name: Use the named service account
         if: matrix.service_account_name != ''
