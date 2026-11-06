@@ -6,19 +6,19 @@ The function runs one at a time and does not retry a failed minute. The next run
 
 Each run reads about twenty metrics with GetMetricData, which CloudWatch bills per metric read, so the publisher costs roughly ten dollars a month per environment at list price. Its S3 requests and Lambda time add less than a dollar.
 
-| Input                 | What it is                                                                                               |
-| --------------------- | -------------------------------------------------------------------------------------------------------- |
-| `environment`         | Deployment environment, used in resource names and as the metrics' scope                                 |
-| `site_bucket_id`      | Public bucket the page is served from; the publisher writes `data/status.json` there                     |
-| `site_bucket_arn`     | ARN of the public site bucket                                                                            |
-| `state_bucket_id`     | Private, versioned bucket holding `publisher-state.json`                                                 |
-| `state_bucket_arn`    | ARN of the state bucket                                                                                  |
-| `web_url`             | Public https URL of a web app page that reads nothing from the backend, which the website check requests |
-| `api_health_url`      | Public https URL of the backend's health endpoint                                                        |
-| `load_balancer_arn`   | Backend ALB, from which the CloudWatch `LoadBalancer` dimension is derived                               |
-| `web_distribution_id` | CloudFront distribution serving the web app                                                              |
-| `kinesis_stream_name` | Ingest stream whose metrics the data intake check reads                                                  |
-| `log_retention_days`  | CloudWatch log retention, 30 days by default                                                             |
+| Input                 | What it is                                                                                                                                     |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `environment`         | Deployment environment, used in resource names and as the metrics' scope                                                                       |
+| `site_bucket_id`      | Public bucket the page is served from; the publisher writes `data/status.json` there                                                           |
+| `site_bucket_arn`     | ARN of the public site bucket                                                                                                                  |
+| `state_bucket_id`     | Private, versioned bucket holding `publisher-state.json`                                                                                       |
+| `state_bucket_arn`    | ARN of the state bucket                                                                                                                        |
+| `web_url`             | Public https URL of a web app page that reads nothing from the backend, which the website check requests with a fresh query string each minute |
+| `api_health_url`      | Public https URL of the backend's health endpoint                                                                                              |
+| `load_balancer_arn`   | Backend ALB, from which the CloudWatch `LoadBalancer` dimension is derived                                                                     |
+| `web_distribution_id` | CloudFront distribution serving the web app                                                                                                    |
+| `kinesis_stream_name` | Ingest stream whose metrics the data intake check reads                                                                                        |
+| `log_retention_days`  | CloudWatch log retention, 30 days by default                                                                                                   |
 
 The `function_name` output feeds the dashboard module, whose `Status Publisher Errors` and `Status Publisher Stopped` rules watch the function. See [`docs/runbooks/status-publisher-errors.md`](../../../../docs/runbooks/status-publisher-errors.md) and [`docs/runbooks/status-publisher-stopped.md`](../../../../docs/runbooks/status-publisher-stopped.md).
 

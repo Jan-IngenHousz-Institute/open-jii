@@ -9,7 +9,7 @@ const { GetObjectCommand, NoSuchKey, PutObjectCommand, S3Client } = require("@aw
 const { statusQueries } = require("./lib/status-components.js");
 const { STATUS_DOCUMENT_CACHE_CONTROL, statusDocumentSchema } = require("./lib/status-document.js");
 const { judgeStatus, publisherStateSchema } = require("./lib/status-judge.js");
-const { isApiHealthy, isWebsiteHealthy } = require("./lib/status-probes.js");
+const { isApiHealthy, isWebsiteHealthy, websiteProbeUrl } = require("./lib/status-probes.js");
 const { collapseReadings, unreadableResults } = require("./lib/status-readings.js");
 
 const MINUTE_MS = 60_000;
@@ -136,7 +136,7 @@ exports.handler = async (event) => {
   // skip or repeat minutes.
   const now = event?.time ? new Date(event.time) : new Date();
   const [website, platform, previous, ...regions] = await Promise.all([
-    probe(required("WEB_URL"), isWebsiteHealthy),
+    probe(websiteProbeUrl(required("WEB_URL"), now), isWebsiteHealthy),
     probe(required("API_HEALTH_URL"), isApiHealthy),
     readState(stateBucket),
     ...statusQueries(config).map((region) => regionReadings(region, now)),
