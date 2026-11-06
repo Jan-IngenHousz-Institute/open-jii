@@ -117,27 +117,27 @@
     "website": {
       "name": "Website",
       "description": "The openJII website you open in a browser.",
-      "details": "Every minute we load the openJII home page from outside our network and check that it answers and contains the product name. The website is degraded after two slow or failed checks in a row. A check is slow if it takes more than 3 seconds. The website is down after three failed checks in a row, or when, in the last 15 minutes, at least 20 requests came in and more than half of them failed."
+      "details": "Every minute we load a page of the openJII website from outside our network and check that it answers and contains the product name. The website is degraded after two slow or failed checks in a row. A check is slow if it takes more than 3 seconds. The website is down after three failed checks in a row, or when, in the last 15 minutes, at least 20 requests came in and more than half of them failed."
     },
     "sign-in": {
       "name": "Sign-in",
       "description": "Signing in to your openJII account.",
-      "details": "Signing in with an email code needs our email service. Every five minutes the platform tests its connection to that service. Sign-in is degraded when the test fails."
+      "details": "Signing in with an email code needs our email service. Every five minutes the platform tests its connection to that service. Sign-in is degraded when every test in the last 10 minutes fails."
     },
     "platform": {
       "name": "Platform",
       "description": "The openJII service behind the website and the field app.",
-      "details": "Every minute we send a test request to the platform and time the answer. Every five minutes the platform also checks its own connections to the database and to Databricks, our data processing provider. The platform is degraded after two slow or failed test requests in a row, or when the connection to Databricks fails. A test request is slow if it takes more than 2 seconds. The platform is down after three failed test requests in a row, when the connection to the database fails, or when, in the last 15 minutes, at least 10 requests ended in a server error and those were more than half of all requests."
+      "details": "Every minute we send a test request to the platform and time the answer. Every five minutes the platform also checks its own connections to the database and to Databricks, our data processing provider. The platform is degraded after two slow or failed test requests in a row, or when its connection to Databricks failed every check in the last 10 minutes. A test request is slow if it takes more than 2 seconds. The platform is down after three failed test requests in a row, when its connection to the database failed every check in the last 10 minutes, or when, in the last 15 minutes, at least 10 requests ended in a server error and those were more than half of all requests."
     },
     "data-intake": {
       "name": "Data intake",
       "description": "Measurements from devices and the field app arriving at openJII.",
-      "details": "Data intake is degraded when, in the last 15 minutes, the step that stores incoming measurements failed to store one, the device network could not accept an upload because of a fault of its own, or too many measurements arrived at once and some were held back. A failed check of the platform's link to the device network also makes it degraded. It is down when more than five measurements could not be stored in the last 15 minutes."
+      "details": "Data intake is degraded when, in the last 15 minutes, the step that stores incoming measurements failed to store one, the device network could not accept an upload because of a fault of its own, or too many measurements arrived at once and some were held back. The platform's link to the device network failing every check in the last 10 minutes also makes it degraded. It is down when more than five measurements could not be stored in the last 15 minutes."
     },
     "data-delivery": {
       "name": "Data delivery",
       "description": "New measurements appearing in your experiments.",
-      "details": "Every half hour the data pipeline reports how long it took to add the slowest few new measurements to experiments. Data delivery is degraded when that took more than 15 minutes, when the pipeline is more than 10 minutes behind in reading new measurements, or when the connection to Databricks, our data processing provider, fails. It is down when it took more than an hour, when the pipeline has stored no new measurement for an hour although devices are sending them, or when the pipeline has not reported for 75 minutes."
+      "details": "Every half hour the data pipeline reports how long it took to add the slowest few new measurements to experiments. Data delivery is degraded when that took more than 15 minutes, when the pipeline is more than 10 minutes behind in reading new measurements, or when the connection to Databricks, our data processing provider, failed every check in the last 10 minutes. It is down when it took more than an hour, when the pipeline has stored no new measurement for an hour although devices are sending them, or when the pipeline has not reported for 75 minutes."
     },
     "macro-processing": {
       "name": "Macro processing",

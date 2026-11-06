@@ -62,11 +62,11 @@ describe("ComponentRow", () => {
     it("expands to the details", async () => {
       const user = userEvent.setup();
       renderRow(operationalStatusDocument, "website");
-      expect(screen.queryByText(/Every minute we load the openJII home page/)).toBeNull();
+      expect(screen.queryByText(/Every minute we load a page of the openJII website/)).toBeNull();
 
       await user.click(screen.getByRole("button", { name: "Website" }));
 
-      expect(screen.getByText(/Every minute we load the openJII home page/)).toBeInTheDocument();
+      expect(screen.getByText(/Every minute we load a page of the openJII website/)).toBeInTheDocument();
     });
   });
 
