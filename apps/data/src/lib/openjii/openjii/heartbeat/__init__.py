@@ -1,5 +1,6 @@
 """Heartbeat observation builders for the platform monitoring pipeline."""
 
+from .bronze_idle import IDLE_LOOKBACK_DAYS, bronze_idle_sql
 from .constants import (
     ACTIVE_CONTRIBUTORS_7D_METRIC,
     ACTIVE_DEVICES_7D_METRIC,
@@ -24,6 +25,8 @@ from .constants import (
     FLOW_BUSY_METRIC,
     FLOW_RESTARTS_METRIC,
     GOLD_AGE_METRIC,
+    HEALTHCHECK_AGE_METRIC,
+    HEALTHCHECK_LATENCY_METRIC,
     HEARTBEAT_KEY_PREFIX,
     INGEST_BAD_PAYLOAD_RATE_METRIC,
     INGEST_IDLE_METRIC,
@@ -67,6 +70,7 @@ from .costs import (
 from .driver_heap import FullCollection, latest_full_collection
 from .first_measurements import loggers_started_sql, researchers_started_sql
 from .flow_batches import FlowHour, PipelineHour, cluster_starts, latest_pipeline_hour
+from .ingest_healthcheck import ingest_healthcheck_sql
 from .macro_failures import (
     MACRO_CAUSES,
     PROTOCOL_WINDOW_HOURS,
@@ -108,7 +112,10 @@ __all__ = [
     "FLOW_BUSY_METRIC",
     "FLOW_RESTARTS_METRIC",
     "GOLD_AGE_METRIC",
+    "HEALTHCHECK_AGE_METRIC",
+    "HEALTHCHECK_LATENCY_METRIC",
     "HEARTBEAT_KEY_PREFIX",
+    "IDLE_LOOKBACK_DAYS",
     "INGESTED_ROWS_METRIC",
     "INGEST_BAD_PAYLOAD_RATE_METRIC",
     "INGEST_IDLE_METRIC",
@@ -142,6 +149,7 @@ __all__ = [
     "FlowHour",
     "FullCollection",
     "PipelineHour",
+    "bronze_idle_sql",
     "cluster_starts",
     "cost_components",
     "cost_windows",
@@ -151,6 +159,7 @@ __all__ = [
     "failed_rows_by_cause_sql",
     "heartbeat_key",
     "hop",
+    "ingest_healthcheck_sql",
     "latest_full_collection",
     "latest_pipeline_hour",
     "loggers_started_sql",

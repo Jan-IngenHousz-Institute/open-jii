@@ -9,7 +9,11 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import StringType
 
 from openjii.centrum import sensor_schema
-from openjii.centrum.constants import MEASUREMENT_PATH_TRIGGER_INTERVAL
+from openjii.centrum.constants import (
+    INGEST_HEALTHCHECK_EXPERIMENT_ID,
+    INGEST_TOPIC_EXPERIMENT_PATTERN,
+    MEASUREMENT_PATH_TRIGGER_INTERVAL,
+)
 from openjii.centrum.runtime import (
     BRONZE_TABLE,
     KINESIS_STREAM_NAME,
@@ -55,10 +59,13 @@ def raw_data():
         .withColumn("ingest_date", F.to_date(F.col("ingestion_timestamp")))
         # Basic experiment_id extraction for partitioning
         .withColumn("experiment_id", F.coalesce(
-            F.regexp_extract(F.col("parsed_data.topic"), r"experiment/data_ingest/v1/([^/]+)/", 1),
+            F.regexp_extract(F.col("parsed_data.topic"), INGEST_TOPIC_EXPERIMENT_PATTERN, 1),
             F.regexp_extract(F.col("partitionKey"), r"/experiment/([^/]+)/", 1),
             F.lit(None).cast(StringType())
         ))
+        # The ingest health check's messages belong to ingest_healthchecks. A null id is not
+        # equal to anything, so the null-safe form keeps those rows.
+        .filter(~F.col("experiment_id").eqNullSafe(F.lit(INGEST_HEALTHCHECK_EXPERIMENT_ID)))
         # clientid() from the IoT rule is the broker-authenticated Thing name (X.509 devices);
         # extracted top-level to avoid evolving the non-resettable bronze parsed_data struct.
         .withColumn("client_id", F.get_json_object(F.col("data").cast("string"), "$.client_id"))

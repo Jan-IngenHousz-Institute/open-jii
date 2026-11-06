@@ -19,6 +19,7 @@ import os
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 
+from openjii.centrum.constants import INGEST_HEALTHCHECKS_TABLE
 from openjii.heartbeat import (
     ACTIVE_CONTRIBUTORS_7D_METRIC,
     ACTIVE_DEVICES_7D_METRIC,
@@ -41,6 +42,8 @@ from openjii.heartbeat import (
     FLOW_BUSY_METRIC,
     FLOW_RESTARTS_METRIC,
     GOLD_AGE_METRIC,
+    HEALTHCHECK_AGE_METRIC,
+    HEALTHCHECK_LATENCY_METRIC,
     INGEST_BAD_PAYLOAD_RATE_METRIC,
     INGEST_IDLE_METRIC,
     INGEST_LATENCY_METRIC,
@@ -79,6 +82,8 @@ from openjii.heartbeat import (
     failed_rows_by_cause_sql,
     heartbeat_key,
     hop,
+    bronze_idle_sql,
+    ingest_healthcheck_sql,
     latest_full_collection,
     latest_pipeline_hour,
     loggers_started_sql,
@@ -142,6 +147,7 @@ ACTIVITY_WINDOWS = f"{CATALOG_NAME}.{METRICS_SCHEMA}.{ACTIVITY_WINDOWS_TABLE}"
 DEVICE_SILENCE = f"{CATALOG_NAME}.{METRICS_SCHEMA}.{OPS_DEVICE_SILENCE_TABLE}"
 INGEST_QUALITY = f"{CATALOG_NAME}.{METRICS_SCHEMA}.{OPS_INGEST_QUALITY_TABLE}"
 RAW_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.raw_data"
+INGEST_HEALTHCHECKS = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{INGEST_HEALTHCHECKS_TABLE}"
 CLEAN_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.clean_data"
 EXPERIMENT_RAW_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.experiment_raw_data"
 EXPERIMENT_MACRO_DATA = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.experiment_macro_data"
@@ -347,6 +353,25 @@ def collect_ingest(now: datetime) -> list[dict]:
         DATA_NAMESPACE,
         ENVIRONMENT,
     )
+
+
+def collect_ingest_healthcheck(now: datetime) -> list[dict]:
+    """The whole ingest path as one probe: minutes since the newest health check message reached
+    Kinesis, and p95 from a message's sending to bronze's write over the last hour. A table with no
+    message, or not created yet, emits neither, which reads as No data and trips the age's dead-man."""
+    if not spark.catalog.tableExists(INGEST_HEALTHCHECKS):
+        log("ingest_healthchecks does not exist yet; emitting no health check signal", "WARN")
+        return []
+
+    row = spark.sql(ingest_healthcheck_sql(INGEST_HEALTHCHECKS)).first()
+
+    records = []
+    if row["age_minutes"] is not None:
+        records.append(data_point(HEALTHCHECK_AGE_METRIC, row["age_minutes"], now, "None"))
+    if row["p95_seconds"] is not None:
+        records.append(data_point(HEALTHCHECK_LATENCY_METRIC, round(row["p95_seconds"], 1), now, "Seconds"))
+
+    return records
 
 
 def collect_experiment_rows(now: datetime) -> list[dict]:
@@ -557,12 +582,13 @@ def collect_macro_protocol_failures(now: datetime) -> list[dict]:
 
 
 def collect_path_idle(now: datetime) -> list[dict]:
-    """Minutes since bronze and the macro results last wrote."""
-    records = []
-    for metric, table in ((INGEST_IDLE_METRIC, RAW_DATA), (MACRO_IDLE_METRIC, EXPERIMENT_MACRO_DATA)):
-        idle = idle_minutes(table)
-        if idle is not None:
-            records.append(data_point(metric, idle, now, "None"))
+    """Minutes since bronze last wrote rows and the macro results last committed."""
+    bronze = spark.sql(bronze_idle_sql(RAW_DATA)).first()
+    records = [data_point(INGEST_IDLE_METRIC, bronze["idle"], now, "None")]
+
+    macro_idle = idle_minutes(EXPERIMENT_MACRO_DATA)
+    if macro_idle is not None:
+        records.append(data_point(MACRO_IDLE_METRIC, macro_idle, now, "None"))
 
     return records
 
@@ -735,6 +761,7 @@ collectors = [
     ("device_silence", collect_device_silence),
     ("ingest_quality", collect_ingest_quality),
     ("ingest", collect_ingest),
+    ("ingest_healthcheck", collect_ingest_healthcheck),
     ("experiment_rows", collect_experiment_rows),
     ("measurement_copies", collect_measurement_copies),
     ("broker_to_api", collect_broker_to_api),
