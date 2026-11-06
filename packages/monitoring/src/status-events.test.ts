@@ -125,6 +125,7 @@ describe("the first run", () => {
 
   it("records everything it saw as the baseline", () => {
     expect(result.announced).toEqual({
+      at: BASE,
       incidents: [
         {
           id: "inc-1",
@@ -168,7 +169,7 @@ describe("incidents", () => {
     const { events } = run(baselineOf(statusDocument()), document);
 
     expect(events).toMatchObject([
-      { type: "incident.opened", id: "incident.opened:inc-1", update: late },
+      { type: "incident.opened", id: `incident.opened:inc-1:${BASE}`, update: late },
     ]);
   });
 
@@ -463,8 +464,8 @@ describe("incidents", () => {
     );
 
     expect(events.map((event) => event.id)).toEqual([
-      "incident.opened:inc-1",
-      "incident.opened:inc-2",
+      `incident.opened:inc-1:${BASE}`,
+      `incident.opened:inc-2:${BASE}`,
     ]);
   });
 });
@@ -1201,7 +1202,7 @@ describe("notices", () => {
     const { events } = run(baselineOf(statusDocument()), statusDocument({ notices: [posted] }));
 
     expect(events).toMatchObject([
-      { type: "notice.posted", id: "notice.posted:notice-1", notice: posted },
+      { type: "notice.posted", id: `notice.posted:notice-1:${BASE}`, notice: posted },
     ]);
   });
 
@@ -1213,7 +1214,7 @@ describe("notices", () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
       type: "notice.removed",
-      id: "notice.removed:notice-1",
+      id: `notice.removed:notice-1:${BASE}`,
       notice: { id: "notice-1", title: "Heads up" },
     });
     expect(events[0]).not.toHaveProperty("notice.body");
@@ -1306,10 +1307,11 @@ describe("a busy run", () => {
   });
 
   it("yields nothing when run again on the same document", () => {
-    const again = run(result.announced, after, "2026-11-03T12:02:00.000Z");
+    const at = "2026-11-03T12:02:00.000Z";
+    const again = run(result.announced, after, at);
 
     expect(again.events).toEqual([]);
-    expect(again.announced).toEqual(result.announced);
+    expect(again.announced).toEqual({ ...result.announced, at });
   });
 });
 
@@ -1364,13 +1366,13 @@ describe("every event type", () => {
     expect(events.map((event) => event.id)).toEqual([
       "incident.updated:open-1:upd-a",
       "incident.resolved:open-2:2026-11-03T11:50:00.000Z",
-      "incident.opened:open-3",
+      `incident.opened:open-3:${baselineAt}`,
       "maintenance.started:window-1:2026-11-03T11:58:00.000Z",
       "maintenance.completed:window-2:2026-11-03T11:58:00.000Z",
       "maintenance.updated:window-4:upd-c",
       "maintenance.scheduled:window-3:2026-11-04T12:00:00.000Z",
-      "notice.posted:fresh",
-      "notice.removed:gone",
+      `notice.posted:fresh:${baselineAt}`,
+      `notice.removed:gone:${baselineAt}`,
       `component.changed:website:${baselineAt}:degraded`,
     ]);
   });
@@ -1379,6 +1381,31 @@ describe("every event type", () => {
     for (const event of events) {
       expect(statusEventSchema.parse(event)).toEqual(event);
     }
+  });
+});
+
+describe("the id of a repeated change", () => {
+  const posted = notice({ id: "notice-1" });
+  const withNotice = statusDocument({ notices: [posted] });
+  const without = statusDocument();
+
+  it("differs for a notice posted again after it was removed", () => {
+    const first = run(baselineOf(without), withNotice, LATER);
+    const removed = run(first.announced, without, "2026-11-03T12:02:00.000Z");
+    const again = run(removed.announced, withNotice, "2026-11-03T12:03:00.000Z");
+    const ids = [...first.events, ...again.events]
+      .filter((event) => event.type === "notice.posted")
+      .map((event) => event.id);
+
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it("stays the same when a failed send is retried from the same snapshot", () => {
+    const previous = baselineOf(without);
+    const ids = (now: string) => run(previous, withNotice, now).events.map((event) => event.id);
+
+    expect(ids("2026-11-03T12:05:00.000Z")).toEqual(ids(LATER));
   });
 });
 
