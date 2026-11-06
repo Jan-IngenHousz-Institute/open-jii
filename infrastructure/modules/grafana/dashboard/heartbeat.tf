@@ -851,6 +851,7 @@ locals {
     METRICS_PUBLISHER_FUNCTION_NAME  = var.metrics_publisher_function_name
     INGEST_HEALTHCHECK_FUNCTION_NAME = var.ingest_healthcheck_function_name
     STATUS_PUBLISHER_FUNCTION_NAME   = var.status_publisher_function_name
+    STATUS_SLACK_FUNCTION_NAME       = var.status_slack_function_name
   }
 
   # Grafana's unit ids for the units the catalog declares.

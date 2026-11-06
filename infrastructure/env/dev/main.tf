@@ -3498,6 +3498,7 @@ module "grafana_dashboard" {
   ingest_healthcheck_function_name = local.ingest_healthcheck_publishing ? module.ingest_healthcheck.function_name : ""
   ingest_healthcheck_alerting      = local.ingest_healthcheck_alerting
   status_publisher_function_name   = module.status_publisher.function_name
+  status_slack_function_name       = local.status_slack_enabled ? module.status_slack[0].function_name : ""
   db_cluster_identifier            = "open-jii-${var.environment}-db-cluster"
 
   # Measured over 14 days on this stream while dev's consumer ran on a schedule: the median
@@ -3615,6 +3616,44 @@ module "status_publisher" {
   # An ARN is not a secret, and a sensitive one would hide the role policy's diff.
   contentful_secret_arn = nonsensitive(module.status_contentful_secrets.secret_arn)
   page_url              = "https://${module.route53.status_domain}"
+}
+
+locals {
+  status_slack_enabled = nonsensitive(var.status_slack_webhook_url != "")
+}
+
+# The webhook is the whole secret value, a plain address and not JSON.
+module "status_slack_secrets" {
+  count  = local.status_slack_enabled ? 1 : 0
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-status-slack-${var.environment}"
+  description = "Slack incoming webhook for the status channel"
+
+  secret_string = var.status_slack_webhook_url
+
+  # A name scheduled for deletion cannot be created again, so clearing the variable and setting it
+  # within the default week would fail. The value is only a copy of the GitHub secret.
+  recovery_window_in_days = 0
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "status-slack"
+    SecretType  = "slack-webhook"
+  }
+}
+
+module "status_slack" {
+  count  = local.status_slack_enabled ? 1 : 0
+  source = "../../modules/monitoring/status-slack"
+
+  environment      = var.environment
+  events_topic_arn = module.status_publisher.events_topic_arn
+
+  # An ARN is not a secret, and a sensitive one would hide the role policy's diff.
+  webhook_secret_arn = nonsensitive(module.status_slack_secrets[0].secret_arn)
 }
 
 module "heartbeat_metrics_s3" {

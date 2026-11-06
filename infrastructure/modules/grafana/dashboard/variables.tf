@@ -175,6 +175,12 @@ variable "status_publisher_function_name" {
   default     = ""
 }
 
+variable "status_slack_function_name" {
+  description = "Status Slack Lambda to watch. Empty leaves its error rule out."
+  type        = string
+  default     = ""
+}
+
 variable "serving_store_feed_enabled" {
   description = "Whether the pipelines feed the serving store here. Off leaves the feed's rules out, which would otherwise read the switched-off feed as stalled; the board keeps the feed's rows, which then read zero."
   type        = bool
