@@ -200,6 +200,16 @@ export interface StatusContent {
   notices: Notice[];
 }
 
+/** The entries left out for not satisfying the contract, by id, so the publisher can log them. */
+export interface DroppedEntries {
+  incidents: string[];
+  notices: string[];
+}
+
+export interface StatusContentRead extends StatusContent {
+  dropped: DroppedEntries;
+}
+
 /** The last good read, kept so the page keeps its notes while Contentful is unreachable. */
 export const cachedStatusContentSchema = z.object({
   fetchedAt: z.iso.datetime(),
@@ -312,11 +322,7 @@ function severityOf(value: string | null | undefined): Notice["severity"] {
   return parsed.success ? parsed.data : "info";
 }
 
-function noticeOf(raw: RawNotice | null): Notice | undefined {
-  if (raw === null) {
-    return undefined;
-  }
-
+function noticeOf(raw: RawNotice): Notice | undefined {
   const parsed = noticeSchema.safeParse({
     id: raw.sys.id,
     title: raw.title,
@@ -343,7 +349,7 @@ function bySeverity(a: Notice, b: Notice): number {
  * Incidents come oldest start first, updates newest first as the page shows them, and notices
  * most severe first.
  */
-export function toStatusContent(response: StatusContentResponse): StatusContent {
+export function toStatusContent(response: StatusContentResponse): StatusContentRead {
   const raw = new Map<string, RawIncident>();
 
   for (const { items } of [response.open, response.recent, response.upcoming]) {
@@ -354,14 +360,31 @@ export function toStatusContent(response: StatusContentResponse): StatusContent 
     }
   }
 
-  return {
-    incidents: [...raw.values()]
-      .map(incidentOf)
-      .filter((incident) => incident !== undefined)
-      .sort(byStart),
-    notices: response.notices.items
-      .map(noticeOf)
-      .filter((notice) => notice !== undefined)
-      .sort(bySeverity),
-  };
+  const incidents: Incident[] = [];
+  const notices: Notice[] = [];
+  const dropped: DroppedEntries = { incidents: [], notices: [] };
+
+  for (const item of raw.values()) {
+    const incident = incidentOf(item);
+    if (incident === undefined) {
+      dropped.incidents.push(item.sys.id);
+    } else {
+      incidents.push(incident);
+    }
+  }
+
+  for (const item of response.notices.items) {
+    if (item === null) {
+      continue;
+    }
+
+    const notice = noticeOf(item);
+    if (notice === undefined) {
+      dropped.notices.push(item.sys.id);
+    } else {
+      notices.push(notice);
+    }
+  }
+
+  return { incidents: incidents.sort(byStart), notices: notices.sort(bySeverity), dropped };
 }

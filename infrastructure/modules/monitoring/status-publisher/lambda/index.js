@@ -210,7 +210,8 @@ async function queryContentful(secretArn, now) {
 // log and cover with the cached content.
 async function readStatusContent(secretArn, now) {
   try {
-    return { content: toStatusContent(await queryContentful(secretArn, now)) };
+    const { dropped, ...content } = toStatusContent(await queryContentful(secretArn, now));
+    return { content, dropped };
   } catch (error) {
     contentfulCredentials = undefined;
     return { error };
@@ -319,6 +320,12 @@ exports.handler = async (event) => {
     readStatusContent(contentfulSecretArn, now),
     ...statusQueries(config).map((region) => regionReadings(region, now)),
   ]);
+
+  const dropped = contentRead.dropped;
+  const hasDropped = dropped !== undefined && dropped.incidents.length + dropped.notices.length > 0;
+  if (hasDropped) {
+    console.warn(JSON.stringify({ warning: "status-entry-dropped", ids: dropped }));
+  }
 
   if (contentRead.error !== undefined) {
     console.warn(

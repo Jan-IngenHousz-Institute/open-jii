@@ -645,11 +645,15 @@ describe("toStatusContent notices", () => {
 
 describe("toStatusContent as a whole", () => {
   it("returns nothing for an answer with nothing in it", () => {
-    expect(toStatusContent(response())).toEqual({ incidents: [], notices: [] });
+    expect(toStatusContent(response())).toEqual({
+      incidents: [],
+      notices: [],
+      dropped: { incidents: [], notices: [] },
+    });
   });
 
   it("produces content the cached form and the document contract accept", () => {
-    const content = toStatusContent(
+    const { dropped: _dropped, ...content } = toStatusContent(
       response({
         open: { items: [rawIncident({ endsAt: "2026-11-03T13:00:00+01:00" })] },
         notices: {
@@ -660,6 +664,20 @@ describe("toStatusContent as a whole", () => {
     const cached = { fetchedAt: "2026-11-03T12:00:00.000Z", ...content };
 
     expect(cachedStatusContentSchema.parse(cached)).toEqual(cached);
+  });
+});
+
+describe("toStatusContent dropped entries", () => {
+  it("names by id an incident and a notice the contract rejects, and keeps the rest", () => {
+    const content = toStatusContent(
+      response({
+        open: { items: [rawIncident({ sys: { id: "no-start" }, startsAt: null }), rawIncident()] },
+        notices: { items: [rawNotice({ sys: { id: "no-title" }, title: null }), null] },
+      }),
+    );
+
+    expect(content.dropped).toEqual({ incidents: ["no-start"], notices: ["no-title"] });
+    expect(content.incidents).toHaveLength(1);
   });
 });
 
