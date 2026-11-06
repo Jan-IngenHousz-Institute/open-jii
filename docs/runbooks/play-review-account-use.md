@@ -34,7 +34,8 @@ Anything else means the code or the address is out. Rotate the code and revoke t
 sessions, passkeys and API keys as the module README describes
 (`infrastructure/modules/play-review-sign-in/README.md`, "Rotating the code"). A new code ends none of
 them on its own. If failures carry on after the rotation and keep using up the cap, replace the
-address with `email_generation` as well, which means setting up a new account.
+address with `email_generation` as well, and set up the new account as the README's "Setting up the
+account" describes.
 
 Then run the membership check from the README's "Setting up the account". The account should belong
 to its personal organization only. Any other row is an organization whose data the code has reached.
