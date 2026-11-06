@@ -13,3 +13,7 @@ Regenerate GraphQL types after content-model changes:
 ```bash
 pnpm --filter @repo/cms codegen
 ```
+
+`content-models/*.json` holds the Contentful content types that code in this repo depends on.
+`pnpm cms:models diff` compares them with a live environment, `pull` brings a live type into the
+repo for review, and `apply` writes a reviewed file back; `tooling/devkit/README.md` has the details.

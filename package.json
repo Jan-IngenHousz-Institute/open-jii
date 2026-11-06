@@ -49,8 +49,10 @@
     "posthog:query": "pnpm --filter @repo/devkit posthog:query --",
     "grafana:auth": "pnpm --filter @repo/devkit grafana:auth --",
     "grafana:get": "pnpm --filter @repo/devkit grafana:get --",
+    "cms:models": "pnpm --filter @repo/devkit cms:models --",
     "round:read": "pnpm --filter @repo/devkit round:read --",
-    "status:fixtures": "pnpm --filter @repo/devkit status:fixtures --"
+    "status:fixtures": "pnpm --filter @repo/devkit status:fixtures --",
+    "status:incident": "pnpm --filter @repo/devkit status:incident --"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",
