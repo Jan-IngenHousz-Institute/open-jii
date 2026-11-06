@@ -416,6 +416,12 @@ locals {
         "logs:PutMetricFilter",
         "logs:DeleteMetricFilter",
         "logs:DescribeMetricFilters",
+        # WAF logging to a log group (Terraform)
+        # https://docs.aws.amazon.com/waf/latest/developerguide/logging-cw-logs.html#logging-cw-logs-permissions
+        "logs:CreateLogDelivery",
+        "logs:DeleteLogDelivery",
+        "logs:PutResourcePolicy",
+        "logs:DescribeResourcePolicies",
       ]
       resource = "*"
     }
