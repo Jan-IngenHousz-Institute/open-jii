@@ -129,6 +129,8 @@ const announcedComponentSchema = z.object({
 
 /** What subscribers were last told, which is all the next run needs to know what is new. */
 export const announcedSchema = z.object({
+  /** When this snapshot was taken, which tells a later occurrence of a change from a retried send. */
+  at: z.iso.datetime(),
   incidents: z.array(announcedIncidentSchema),
   components: z.partialRecord(statusComponentIdSchema, announcedComponentSchema),
   notices: z.array(z.pick(noticeSchema, { id: true, title: true })),
@@ -227,6 +229,7 @@ function snapshotOf(
   }
 
   return {
+    at: now.toISOString(),
     incidents: document.incidents.map((incident) => announcedIncidentOf(incident, atMs)),
     components,
     notices: document.notices.map(({ id, title }) => ({ id, title })),
@@ -243,6 +246,7 @@ function incidentEvents(
   before: Extract<AnnouncedIncident, { kind: "incident" }> | undefined,
   stamp: Stamp,
   atMs: number,
+  previousAt: string,
 ): StatusEvent[] {
   const incidentSummary = summaryOf(incident);
   const told = new Set(before?.updates);
@@ -252,7 +256,7 @@ function incidentEvents(
   function opened(update: IncidentUpdate | undefined): StatusEvent {
     return {
       ...stamp,
-      id: `incident.opened:${incident.id}`,
+      id: `incident.opened:${incident.id}:${previousAt}`,
       type: "incident.opened",
       incident: incidentSummary,
       update,
@@ -378,6 +382,7 @@ function lifecycleEvents(
         before?.kind === "incident" ? before : undefined,
         stamp,
         atMs,
+        previous.at,
       );
     }
 
@@ -399,7 +404,7 @@ function noticeEvents(document: StatusDocument, previous: Announced, stamp: Stam
     .map(
       (notice): StatusEvent => ({
         ...stamp,
-        id: `notice.posted:${notice.id}`,
+        id: `notice.posted:${notice.id}:${previous.at}`,
         type: "notice.posted",
         notice,
       }),
@@ -409,7 +414,7 @@ function noticeEvents(document: StatusDocument, previous: Announced, stamp: Stam
     .map(
       (notice): StatusEvent => ({
         ...stamp,
-        id: `notice.removed:${notice.id}`,
+        id: `notice.removed:${notice.id}:${previous.at}`,
         type: "notice.removed",
         notice,
       }),
