@@ -512,3 +512,57 @@ export function statusEvents(input: StatusEventsInput): StatusEventsResult {
     announced,
   };
 }
+
+/** SNS takes at most 10 messages and 256 KiB per batch; the margin covers the type attribute. */
+export const SNS_BATCH_SIZE = 10;
+export const SNS_BATCH_BYTES = 250_000;
+
+export interface EventMessage {
+  event: StatusEvent;
+  message: string;
+}
+
+/** Splits events into SNS batches in order; a message over the byte limit on its own goes alone. */
+export function batchEvents(events: StatusEvent[]): EventMessage[][] {
+  const batches: EventMessage[][] = [];
+  let batch: EventMessage[] = [];
+  let bytes = 0;
+
+  for (const event of events) {
+    const message = JSON.stringify(event);
+    const size = Buffer.byteLength(message);
+    const isFull = batch.length === SNS_BATCH_SIZE || bytes + size > SNS_BATCH_BYTES;
+
+    if (isFull && batch.length > 0) {
+      batches.push(batch);
+      batch = [];
+      bytes = 0;
+    }
+
+    batch.push({ event, message });
+    bytes += size;
+  }
+
+  if (batch.length > 0) {
+    batches.push(batch);
+  }
+
+  return batches;
+}
+
+/** One entry SNS refused, as `PublishBatch` reports it against the batch's own ids. */
+export interface FailedEntry {
+  Id: string;
+  Code?: string;
+  Message?: string;
+}
+
+/** Names each refused entry by the event it carried. */
+export function failedEntriesText(sent: StatusEvent[], failed: FailedEntry[]): string {
+  return failed
+    .map(({ Id, Code, Message }) => {
+      const event = sent.find((_, index) => String(index) === Id);
+      return `${event?.id ?? Id} (${Code}: ${Message})`;
+    })
+    .join(", ");
+}
