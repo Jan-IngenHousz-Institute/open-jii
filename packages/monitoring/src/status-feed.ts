@@ -13,7 +13,7 @@ export const STATUS_FEED_STATE_VERSION = 1;
 export const statusFeedStateSchema = z.object({
   version: z.literal(STATUS_FEED_STATE_VERSION),
   announced: announcedSchema,
-  content: z.optional(cachedStatusContentSchema),
+  content: cachedStatusContentSchema,
 });
 export type StatusFeedState = z.infer<typeof statusFeedStateSchema>;
 
