@@ -30,6 +30,8 @@ export interface ModelReport {
   displayField: ModelDiff["displayField"];
   fields: Pick<ModelDiff, "added" | "removed" | "changed" | "reordered">;
   kept: string[];
+  /** Date fields whose live widget apply switches to the date and time picker with a time zone. */
+  dateControls: string[];
 }
 
 export interface DiffReport {
@@ -136,7 +138,7 @@ export class CmsModels {
     for (const id of ids) {
       const model = await this.files.read(id);
       const live = await this.client.getContentType(id);
-      models.push(CmsModels.report(id, model, live));
+      models.push(CmsModels.report(id, model, live, await this.dateControlsOf(id, model, live)));
     }
     return { environment: this.client.environment || null, models };
   }
@@ -228,10 +230,24 @@ export class CmsModels {
     }
   }
 
+  private async dateControlsOf(
+    id: string,
+    model: ContentModel,
+    live: LiveContentType | null,
+  ): Promise<string[]> {
+    const dateFields = model.dateFieldIds();
+    if (live === null || dateFields.length === 0) {
+      return dateFields;
+    }
+
+    return (await this.client.getEditorInterface(id)).fieldsWithoutDateControl(dateFields);
+  }
+
   private static report(
     id: string,
     model: ContentModel,
     live: LiveContentType | null,
+    dateControls: string[],
   ): ModelReport {
     if (live === null) {
       return {
@@ -245,6 +261,7 @@ export class CmsModels {
         displayField: { file: model.displayField, live: null, differs: true },
         fields: { added: model.fieldIds(), removed: [], changed: [], reordered: false },
         kept: [],
+        dateControls,
       };
     }
 
@@ -265,6 +282,7 @@ export class CmsModels {
         reordered: diff.reordered,
       },
       kept: live.unexpressed,
+      dateControls,
     };
   }
 
@@ -394,6 +412,9 @@ function describeModel(report: ModelReport): string[] {
     }
   }
   if (report.fields.reordered) lines.push("  fields are in a different order");
+  for (const id of report.dateControls) {
+    lines.push(`  ~ field ${id} widget: apply sets the date and time picker with a time zone`);
+  }
   if (report.kept.length > 0) {
     lines.push(
       `  kept from the live type, which the repo format cannot express: ${report.kept.join(", ")}`,
@@ -420,7 +441,7 @@ function describeHeadline(report: ModelReport): string {
 export function formatDiff(report: DiffReport): string {
   const blocks = report.models.map((model) => {
     const lines = [describeHeadline(model), ...describeModel(model)];
-    const isApplicable = !model.identical && !model.missing;
+    const isApplicable = (!model.identical || model.dateControls.length > 0) && !model.missing;
     if (isApplicable) lines.push(`  apply with --expected-version ${model.liveVersion}`);
     return lines.join("\n");
   });

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { repositoryRoot } from "../lib/config.js";
 import { ContentfulManagement } from "../lib/contentful-management.js";
 import type { ContentfulConfig } from "../lib/contentful-management.js";
+import { dateControl as timeZoneControl } from "../lib/editor-interface.js";
 import { CmsModels, ModelFiles, execute, formatApply, formatDiff } from "./cms-models.js";
 
 const config: ContentfulConfig = {
@@ -246,6 +247,40 @@ describe("preflight", () => {
 });
 
 describe("diff", () => {
+  describe("Date field widgets", () => {
+    const event = model([field("title", "Symbol"), field("startAt", "Date")]);
+
+    it("names a Date field whose live widget apply would switch to the time zone picker", async () => {
+      await writeModel("event", event);
+      const { fake, models } = setup();
+      fake.seed("event", event, {
+        controls: [
+          { fieldId: "title" },
+          { fieldId: "startAt", widgetNamespace: "builtin", widgetId: "datePicker" },
+        ],
+      });
+
+      const report = await models.diff(["event"]);
+
+      expect(report.models[0]).toMatchObject({ identical: true, dateControls: ["startAt"] });
+      expect(formatDiff(report)).toContain(
+        "~ field startAt widget: apply sets the date and time picker with a time zone",
+      );
+      expect(formatDiff(report)).toContain("apply with --expected-version");
+    });
+
+    it("names none when the live widget already has the time zone picker", async () => {
+      await writeModel("event", event);
+      const { fake, models } = setup();
+      fake.seed("event", event, { controls: [{ fieldId: "title" }, timeZoneControl("startAt")] });
+
+      const report = await models.diff(["event"]);
+
+      expect(report.models[0]).toMatchObject({ dateControls: [] });
+      expect(formatDiff(report)).not.toContain("apply with");
+    });
+  });
+
   it("reports a type that is missing live", async () => {
     await writeModel("thing", thing);
     const { models } = setup();
