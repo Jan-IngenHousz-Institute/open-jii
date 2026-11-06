@@ -192,6 +192,26 @@ const events: [string, StatusEvent, string[]][] = [
     ],
   ],
   [
+    "maintenance that ran to its planned end",
+    {
+      ...envelope,
+      occurredAt: "2026-11-05T11:31:00.000Z",
+      type: "maintenance.completed",
+      maintenance: window,
+    },
+    ["*Maintenance completed: Database upgrade*", "Ended Thursday, November 5, 2026, 11:30 UTC."],
+  ],
+  [
+    "maintenance closed after its planned end",
+    {
+      ...envelope,
+      occurredAt: "2026-11-05T12:01:00.000Z",
+      type: "maintenance.completed",
+      maintenance: { ...window, resolvedAt: "2026-11-05T12:00:00.000Z" },
+    },
+    ["Ended Thursday, November 5, 2026, 11:30 UTC."],
+  ],
+  [
     "a component changed",
     {
       ...envelope,
@@ -361,7 +381,7 @@ describe("when something ended", () => {
   it.each([
     ["before the event", "2026-11-05T11:10:00.000Z", "2026-11-05T12:00:00.000Z", true],
     ["at the event", "2026-11-05T12:00:00.000Z", "2026-11-05T12:00:00.000Z", true],
-    ["after the event", "2026-11-05T13:00:00.000Z", "2026-11-05T12:00:00.000Z", false],
+    ["after the event", "2026-11-05T13:00:00.000Z", "2026-11-05T11:20:00.000Z", false],
   ])(
     "a window that ended %s prints its time only when it has passed, and always its planned window",
     (_name, resolvedAt, eventAt, isPrinted) => {
