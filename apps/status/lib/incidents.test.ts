@@ -207,11 +207,13 @@ describe("maintenanceEndsAt", () => {
 describe("newestUpdatesFirst", () => {
   it("sorts by when each update was posted, without changing the incident", () => {
     const first: IncidentUpdateEntry = {
+      id: "upd-first",
       stage: "investigating",
       postedAt: at(-30 * MINUTE_MS),
       text: "a",
     };
     const second: IncidentUpdateEntry = {
+      id: "upd-second",
       stage: "identified",
       postedAt: at(-10 * MINUTE_MS),
       text: "b",

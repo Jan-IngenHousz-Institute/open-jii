@@ -16,6 +16,12 @@ The history bars are about 8 to 11 px wide with a 2 px gap, under the 24 px targ
 
 The page copy is in the `status` namespace of `@repo/i18n` (`packages/i18n/locales/<locale>/status.json`). The sample documents the tests use live beside the contract, in `packages/monitoring/src/status-fixtures.ts`.
 
+## Where the words come from
+
+The colours come from measurements. The publisher records what its checks saw minute by minute, and every bar is coloured from those minutes as they were recorded, so nothing written afterwards recolours a day. The words come from people. Incidents, their updates, planned maintenance and notices are written in Contentful, following `docs/runbooks/support/status-page-incidents.md`, and the publisher reads them every minute and puts them in the document.
+
+A day's card and the list of problem days name the incidents and maintenance windows whose time overlaps that UTC day, so a problem entered afterwards with past start and end times still reaches the days it covered. A window nobody closed runs up to the document's `generatedAt`, never the device's clock, which can be hours off. A day names only the incidents that list its component. The rule lives in `components/history/day-summary.ts`.
+
 ## Run it locally
 
 Node 24 is required. The page reads `@repo/monitoring`, `@repo/ui` and `@repo/i18n` from their source, so there is no package to build first:

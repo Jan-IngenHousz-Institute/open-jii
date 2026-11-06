@@ -133,11 +133,14 @@ describe("the incident fixture", () => {
     expect(incidents[0]?.updates).toHaveLength(2);
   });
 
-  it("ties today's minutes on those components to the incident", () => {
-    const incidentId = incidentStatusDocument.incidents[0]?.id;
+  it("leaves the incident open on the day those components record its minutes", () => {
+    const [incident] = incidentStatusDocument.incidents;
 
+    expect(incident.resolvedAt).toBeUndefined();
     for (const id of ["data-intake", "data-delivery"]) {
-      expect(componentOf(incidentStatusDocument, id).days[89]?.incidentIds).toEqual([incidentId]);
+      expect(componentOf(incidentStatusDocument, id).days.at(-1)?.date).toBe(
+        incident.startsAt.slice(0, 10),
+      );
     }
   });
 });

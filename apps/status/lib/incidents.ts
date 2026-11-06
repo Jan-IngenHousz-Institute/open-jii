@@ -12,7 +12,7 @@ export interface IncidentGroups {
 const DAY_MS = 86_400_000;
 
 // Planned work also ends at its window, so a window nobody closed does not stay open.
-function endedAt(incident: Incident): number | undefined {
+export function endedAt(incident: Incident): number | undefined {
   const ends = [incident.resolvedAt, incident.kind === "maintenance" ? incident.endsAt : undefined]
     .filter((at) => at !== undefined)
     .map((at) => Date.parse(at));

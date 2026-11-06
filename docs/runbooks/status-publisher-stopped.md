@@ -57,6 +57,7 @@ To check that the function itself works, invoke it by hand:
 aws lambda invoke --function-name <env>-status-publisher /dev/stdout
 ```
 
-A successful run ends with a line naming each component's state and both probes. If that works and
+A successful run ends with a line naming each component's state, both probes and the number of
+events it sent. If that works and
 the rule is enabled with the target and permission in place, the schedule resumes on the next minute
 and the alert clears about five minutes after.
