@@ -28,7 +28,9 @@ linked worktree serves only that worktree.
 | `pnpm grafana:auth`                       | Stores your Grafana token for the daily round               |
 | `pnpm grafana:get`                        | Reads one path of a Grafana workspace's API                 |
 | `pnpm round:read`                         | Writes the daily round's reading of one environment         |
+| `pnpm cms:models`                         | Diffs, pulls and applies Contentful content types           |
 | `pnpm status:fixtures`                    | Serves a sample status file to the status page's dev server |
+| `pnpm status:incident`                    | Drafts, previews and publishes status page incidents        |
 | `pnpm --filter @repo/devkit env:generate` | Regenerates the `.env.example` files from the manifest      |
 
 ## Linear access
@@ -356,6 +358,42 @@ Bookkeeping belongs in one of these documents or nowhere. Linear's project updat
 status post the team reads in its feed, so an inventory or a migration note posted there reaches
 nine people as news. Put it in a document instead.
 
+## Contentful content models
+
+`packages/cms/content-models/*.json` holds the content types the repo depends on, and
+`pnpm cms:models` keeps a Contentful environment in step with them. It reads
+`CONTENTFUL_SPACE_ID`, `CONTENTFUL_SPACE_ENVIRONMENT` and `CONTENTFUL_MANAGEMENT_TOKEN` (or `CMA`)
+from the shell or from `tooling/devkit/.env`. The environment has no default, so a run always names
+the one it touches.
+
+```bash
+pnpm cms:models preflight                                  # which settings are present, as booleans
+pnpm cms:models diff [id ...] [--json]                     # file against live, every model by default
+pnpm cms:models pull <id> [--force]                        # write a live type into the repo for review
+pnpm cms:models apply <id> --expected-version <n> --dry-run
+pnpm cms:models apply <id> --expected-version <n> --environment <name>
+```
+
+`diff` shows, for each model, whether it is missing live, which fields differ and how, the display
+field, the live version and whether that version is published. `apply` refuses unless the live
+version is the one you reviewed (0 for a type that does not exist yet), saves the type from the file,
+activates it, and then gives every Date field the date and time with time zone widget. It refuses a
+type that links to a type missing live, so `statusUpdate` goes before `statusIncident`, and a file
+that would drop a live field. `pull` refuses to overwrite a file without `--force`; it is how a
+type that was built in the Contentful UI, such as `componentAlert`, comes into the repo as a
+reviewed change.
+
+A live type can hold keys the repo format cannot express, such as a field's `defaultValue` or the
+type's `metadata`. `apply` sends them back unchanged so a save never drops them, and `diff` and
+`--dry-run` list them as kept from the live type. If the editor interface step fails after the type
+was saved and activated, the error says so, and running `apply` again with the live version it names
+repeats only that step.
+
+`apply` writes, so it needs `--environment <name>`, which must equal `CONTENTFUL_SPACE_ENVIRONMENT`.
+It refuses otherwise, so a write never lands in an environment nobody named. `--dry-run` reads the
+live type, prints every request body as it would be sent and writes nothing, so it needs credentials
+but no `--environment`.
+
 ## A local session without a browser
 
 ```bash
@@ -373,6 +411,93 @@ curl -H @.claude/session.header http://127.0.0.1:3020/api/v1/experiments
 Pass `--email` for a different seeded account, or `--print` to put the cookie on stdout instead.
 Reading sign-in codes only works against a local database; the command refuses any host that is not
 loopback, which is the same guard the end-to-end fixtures use.
+
+## Status page incidents
+
+`pnpm status:incident` writes incidents for the public status page into Contentful, and holds back
+what the status publisher would silently drop. It reads `CONTENTFUL_SPACE_ID`,
+`CONTENTFUL_SPACE_ENVIRONMENT` and `CONTENTFUL_MANAGEMENT_TOKEN` (or `CMA`) from the shell or from
+`tooling/devkit/.env`, and the environment has no default. It shares its Contentful client with
+`pnpm cms:models`, which redacts the token from any error text. The publisher reads `master` only, so
+`preflight` and `inspect` warn about any other environment. `docs/runbooks/support/status-page-incidents.md`
+is the writing guide for the text.
+
+```bash
+pnpm status:incident preflight                                   # which settings are present, as booleans
+pnpm status:incident inspect                                     # open and last 90 days, with what the publisher drops
+pnpm status:incident draft --file /abs/new.json --dry-run        # validate and preview, no request
+pnpm status:incident draft --file /abs/new.json                  # create the update and incident drafts
+pnpm status:incident update --entry-id <id> --file /abs/update.json [--dry-run]
+pnpm status:incident resolve --entry-id <id> --file /abs/resolve.json [--dry-run]
+pnpm status:incident publish --entry-id <id> --dry-run           # reads Contentful, prints the preview and token
+pnpm status:incident publish --entry-id <id> --review <token> --environment <name>
+```
+
+`draft`, `update`, `resolve` and `publish --dry-run` take `--target dev|prod` (default `prod`),
+which says whose publisher will read the space. It sets the page link and the environment line in
+the Slack footer exactly as the publisher does: `prod` links to https://status.openjii.org and
+prints no environment line, `dev` links to https://status.dev.openjii.org and prints
+`Environment: dev`.
+
+A draft file holds the incident and its first update. `postedAt` defaults to now and the locale is
+`en-US`:
+
+```json
+{
+  "incident": {
+    "title": "Uploads from the field app are delayed",
+    "kind": "incident",
+    "impact": "degraded",
+    "components": ["data-intake"],
+    "startsAt": "2026-11-04T08:30:00Z"
+  },
+  "update": {
+    "stage": "investigating",
+    "text": "We are looking into a problem with uploads from the field app.",
+    "nextUpdateBy": "2026-11-04T12:00:00Z"
+  }
+}
+```
+
+An `update` file is `{ "update": { ... } }` and a `resolve` file is `{ "resolvedAt": "...", "update": { ... } }`
+with the final stage `resolved` or `completed`. A dry run cannot read the incident from Contentful,
+so it needs an `incident` block in the file, copied from `inspect`, to preview offline. A real run
+ignores that block and reads the live entry.
+
+Every action validates first, by parsing the incident with the contract the publisher uses and by the
+guide's rules: an incident never starts in the future, maintenance needs a planned end, the stage fits
+the kind, and an update has text. A title and text are not blank and the title fits Contentful's
+256 characters, no component repeats, an incident that began and ended over 90 days ago is refused
+because the publisher reads only the last 90 days, a new update's next update time is still ahead
+and its post time is not before the start. An update dated before the newest existing one only
+warns, since it will not show as the newest. A failure lists every problem and sends nothing. Then it prints a
+plain-text approximation of the page's incident card and the exact Slack message or messages the
+publisher will send. Slack posts are final: a message is never edited or deleted, and editing an
+update later does not post it again.
+
+`draft`, `update` and `resolve` only ever write drafts, the update first and then the incident.
+Each ends with a review token, a short hash of the incident's saved version and the id and saved
+version of every update it links, printed beside the readable list it covers. After a successful
+`draft`, the output also says that running it again creates a second incident and that `inspect`
+shows what exists.
+
+`publish` needs `--review <token>` and `--environment <name>`, which must equal the configured
+`CONTENTFUL_SPACE_ENVIRONMENT`. It recomputes the token from live state and refuses when it
+differs, for example after a text edit in Contentful. The refusal lists the live state, prints the
+text as it now stands and the new token. When the token matches it validates the whole incident
+again, checks the number of linked updates before it writes anything, publishes every update that
+is a draft or has changes, and publishes the incident last. A token stays valid after a publish
+that stopped half way, so a failure that lists the updates already published can be answered by
+running the same command again.
+
+`--dry-run` makes no request on `draft`, `update` and `resolve`. `publish --dry-run` is the
+exception: it reads Contentful, so it needs credentials, and it prints the same preview and the
+token and writes nothing.
+
+An incident links 20 updates at most. `update` refuses when 19 are linked, which keeps the last
+place for the update that resolves it, and `resolve` refuses at 20. When writing the incident fails
+or times out after the update draft was created, the command reads the incident back before it
+advises anything, and never advises deleting an update the incident links.
 
 ## Label taxonomy, for maintainers
 

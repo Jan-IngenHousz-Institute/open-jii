@@ -84,6 +84,7 @@ Git, and `jq`; a missing `jq` prints a warning and skips the hook.
 | `openjii-backlog-triage`   | Gate, label and state hygiene across many tickets, never their bodies.                                        |
 | `openjii-daily-round`      | Once a day, or coming back after time away, and you need to know whether the platform needs a person.         |
 | `openjii-triage`           | A Grafana alert, a report panel or a runbook points at a metric id and you need evidence rather than a guess. |
+| `openjii-status-incident`  | Telling researchers about a problem or planned work on the public status page.                                |
 | `unslop`                   | Writing or editing prose a human will read: docs, PR bodies, changelogs.                                      |
 
 `unslop` comes from a third party rather than from this repo, so it does not open with
