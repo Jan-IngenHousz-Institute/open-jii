@@ -114,6 +114,13 @@ jobs:
           fi
           echo "✓ 404.html found"
 
+          # Middleware code in a client chunk means a client file imported a server entry point.
+          if grep -rlq "x-middleware" apps/status/out/_next/static/chunks; then
+            echo "::error::A client chunk carries Next.js middleware code"
+            exit 1
+          fi
+          echo "✓ no middleware code in the client chunks"
+
           # Check build size
           BUILD_SIZE=$(du -sh apps/status/out | cut -f1)
           echo "Build size: $BUILD_SIZE"
