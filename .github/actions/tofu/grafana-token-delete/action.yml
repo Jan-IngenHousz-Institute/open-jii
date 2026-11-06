@@ -1,0 +1,28 @@
+name: "Delete Grafana Token"
+description: "Deletes the Grafana service account token this run created"
+inputs:
+  workspace_id:
+    description: "Amazon Managed Grafana workspace id"
+    required: true
+  service_account_id:
+    description: "Service account the token was created for"
+    required: true
+  token_id:
+    description: "The token's id"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Delete the token
+      shell: bash
+      env:
+        WORKSPACE_ID: ${{ inputs.workspace_id }}
+        SERVICE_ACCOUNT_ID: ${{ inputs.service_account_id }}
+        TOKEN_ID: ${{ inputs.token_id }}
+      # A failed delete must not fail a deploy that already succeeded; the token expires on its own.
+      run: |
+        aws grafana delete-workspace-service-account-token \
+          --workspace-id "$WORKSPACE_ID" \
+          --service-account-id "$SERVICE_ACCOUNT_ID" \
+          --token-id "$TOKEN_ID" \
+          || echo "::warning::Could not delete this run's Grafana token; it expires on its own"
