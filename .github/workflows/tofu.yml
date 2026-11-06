@@ -50,8 +50,6 @@ jobs:
     name: OpenTofu Plan
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    outputs:
-      plan_key: ${{ steps.save-plan.outputs.key }}
     permissions:
       id-token: write
       contents: read
@@ -135,17 +133,17 @@ jobs:
 
       # The saved plan holds the configuration's secret values, as the state does, so it is kept
       # beside the state and never as a workflow artifact. The lock file goes with it, because the
-      # apply must install the providers the plan was made with.
+      # apply must install the providers the plan was made with. Both jobs derive the key from the
+      # run ID: GitHub drops a job output that contains any secret's value, and a one-character
+      # secret matches most run IDs.
       - name: Save the plan for the apply
-        id: save-plan
         env:
           TARGET_ENV: ${{ inputs.environment }}
         run: |
-          KEY="plans/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          KEY="plans/${GITHUB_RUN_ID}"
           BUCKET="s3://open-jii-terraform-state-${TARGET_ENV}"
           aws s3 cp "$RUNNER_TEMP/tfplan" "${BUCKET}/${KEY}.tfplan" --only-show-errors
           aws s3 cp "infrastructure/env/${TARGET_ENV}/.terraform.lock.hcl" "${BUCKET}/${KEY}.lock.hcl" --only-show-errors
-          echo "key=$KEY" >> "$GITHUB_OUTPUT"
 
       - name: Delete the Grafana token
         if: always() && steps.grafana.outputs.token_id != ''
@@ -229,11 +227,11 @@ jobs:
       - name: Fetch the approved plan
         env:
           TARGET_ENV: ${{ inputs.environment }}
-          PLAN_KEY: ${{ needs.plan.outputs.plan_key }}
         run: |
+          KEY="plans/${GITHUB_RUN_ID}"
           BUCKET="s3://open-jii-terraform-state-${TARGET_ENV}"
-          aws s3 cp "${BUCKET}/${PLAN_KEY}.tfplan" "$RUNNER_TEMP/tfplan" --only-show-errors
-          aws s3 cp "${BUCKET}/${PLAN_KEY}.lock.hcl" "infrastructure/env/${TARGET_ENV}/.terraform.lock.hcl" --only-show-errors
+          aws s3 cp "${BUCKET}/${KEY}.tfplan" "$RUNNER_TEMP/tfplan" --only-show-errors
+          aws s3 cp "${BUCKET}/${KEY}.lock.hcl" "infrastructure/env/${TARGET_ENV}/.terraform.lock.hcl" --only-show-errors
 
       - name: OpenTofu Init and Validate
         uses: ./.github/actions/tofu/tofu-init-validate
