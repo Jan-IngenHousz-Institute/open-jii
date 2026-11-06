@@ -93,7 +93,7 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
 
     it("should successfully store multiple annotations with bulk insert", async () => {
       // Arrange
-      const annotations = [
+      const annotations: (CreateAnnotationDto & { id: string })[] = [
         createValidAnnotation(),
         {
           ...createValidAnnotation(),
@@ -121,7 +121,7 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
 
     it("should store annotations on macro tables whose name is a UUID", async () => {
       // Arrange: macro tables are identified by a UUID, not a static identifier
-      const macroTableAnnotation = {
+      const macroTableAnnotation: CreateAnnotationDto & { id: string } = {
         ...createValidAnnotation(),
         tableName: faker.string.uuid(),
         type: "flag" as const,

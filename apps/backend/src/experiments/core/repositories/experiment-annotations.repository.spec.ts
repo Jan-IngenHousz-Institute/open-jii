@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { eq, experimentAnnotations, experiments } from "@repo/database";
+import { eq, experimentAnnotations, experiments, sql } from "@repo/database";
 
 import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -105,6 +105,20 @@ describe("ExperimentAnnotationsRepository", () => {
     expect((await stored()).map(({ id }) => id).sort()).toEqual(
       [onRow2.id, flagOnRow1.id, otherTable.id].sort(),
     );
+  });
+
+  it("keeps a flag's type, and only a type the API takes", async () => {
+    const flag = record({ type: "flag", flagType: "needs_review", contentText: null });
+
+    assertSuccess(await repository.insert([flag]));
+
+    expect(await stored()).toEqual([flag]);
+    await expect(
+      testApp.database.execute(
+        sql`INSERT INTO experiment_annotations (id, experiment_id, table_name, row_id, type, flag_type, created_by)
+            VALUES (${faker.string.uuid()}, ${experimentId}, 'raw_data', '2', 'flag', 'bogus', ${userId})`,
+      ),
+    ).rejects.toThrow();
   });
 
   it("goes with its experiment", async () => {

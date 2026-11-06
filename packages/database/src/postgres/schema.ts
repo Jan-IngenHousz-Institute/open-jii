@@ -901,6 +901,7 @@ export const experimentLocations = pgTable("experiment_locations", {
 });
 
 export const annotationTypeEnum = pgEnum("annotation_type", ["comment", "flag"]);
+export const annotationFlagTypeEnum = pgEnum("annotation_flag_type", ["outlier", "needs_review"]);
 
 // Researchers' comments and flags on rows of an experiment's data tables.
 export const experimentAnnotations = pgTable(
@@ -916,7 +917,7 @@ export const experimentAnnotations = pgTable(
     rowId: varchar("row_id", { length: 64 }).notNull(),
     type: annotationTypeEnum("type").notNull(),
     contentText: text("content_text"),
-    flagType: varchar("flag_type", { length: 100 }),
+    flagType: annotationFlagTypeEnum("flag_type"),
     // No foreign key: an annotation outlives its author's account, as the data rows do.
     createdBy: uuid("created_by").notNull(),
     ...timestamps,
