@@ -1890,6 +1890,8 @@ describe("parseCommandLine", () => {
   it.each([
     [[], "Usage:"],
     [["post"], "Usage:"],
+    [["constructor"], "Usage:"],
+    [["toString"], "Usage:"],
     [["draft"], "draft requires --file"],
     [["update", "--file", "/a.json"], "update requires --entry-id"],
     [["resolve", "--entry-id", "inc-1"], "resolve requires --file"],
@@ -1898,7 +1900,7 @@ describe("parseCommandLine", () => {
     [["publish", "--review", "abc", "--environment", "master"], "publish requires --entry-id"],
     [
       ["publish", "--entry-id", "inc-1", "--version", "1", "--review", "abc"],
-      "publish does not accept --version",
+      "Unknown option '--version'",
     ],
     [["inspect", "--file", "/a.json"], "inspect does not accept --file"],
     [["draft", "--file", "/a.json", "--entry-id", "inc-1"], "draft does not accept --entry-id"],
