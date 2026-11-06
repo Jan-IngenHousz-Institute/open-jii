@@ -76,7 +76,7 @@ export class NotificationUnsubscribeService {
   verify(token: string): Result<UnsubscribeTokenClaims> {
     const parts = token.split(".");
     if (parts.length !== 2) {
-      return invalidLink();
+      return this.invalidLink();
     }
     const [encodedPayload, providedSignature] = parts;
     const payload = Buffer.from(encodedPayload, "base64url");
@@ -86,26 +86,26 @@ export class NotificationUnsubscribeService {
     const expected = Buffer.from(this.signature(payload));
     const provided = Buffer.from(providedSignature);
     if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
-      return invalidLink();
+      return this.invalidLink();
     }
 
     let decoded: unknown;
     try {
       decoded = JSON.parse(payload.toString("utf8"));
     } catch {
-      return invalidLink();
+      return this.invalidLink();
     }
     const parsed = zTokenPayload.safeParse(decoded);
     if (!parsed.success) {
-      return invalidLink();
+      return this.invalidLink();
     }
 
     const { u: userId, c: category, ch: channel, exp } = parsed.data;
     if (exp * 1000 <= Date.now()) {
-      return invalidLink();
+      return this.invalidLink();
     }
     if (NOTIFICATION_CATEGORIES[category][channel].locked) {
-      return invalidLink();
+      return this.invalidLink();
     }
 
     return success({ userId, category, channel });
@@ -130,16 +130,17 @@ export class NotificationUnsubscribeService {
     };
   }
 
+  /** One refusal for every reason a link fails, so a caller cannot tell which check it was. */
+  invalidLink(): Result<never> {
+    return failure(
+      AppError.badRequest(
+        "Unsubscribe link is invalid or expired",
+        ErrorCodes.NOTIFICATION_UNSUBSCRIBE_LINK_INVALID,
+      ),
+    );
+  }
+
   private signature(payload: Buffer): string {
     return createHmac("sha256", this.key).update(payload).digest("base64url");
   }
-}
-
-function invalidLink() {
-  return failure(
-    AppError.badRequest(
-      "Unsubscribe link is invalid or expired",
-      ErrorCodes.NOTIFICATION_UNSUBSCRIBE_LINK_INVALID,
-    ),
-  );
 }

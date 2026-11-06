@@ -50,6 +50,9 @@ export function createPostHogClientConfig(
     // Off in code, so a PostHog project setting cannot turn it back on: its observer adds work to
     // every click.
     capture_dead_clicks: false,
+    // The unsubscribe page carries a credential in its query string; PostHog records the URL.
+    mask_personal_data_properties: true,
+    custom_personal_data_properties: ["token"],
     debug: false, // Set to true for debugging PostHog issues
     ...options,
   };

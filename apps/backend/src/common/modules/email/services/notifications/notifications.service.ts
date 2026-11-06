@@ -92,22 +92,6 @@ export const mailTransportOptions = (url: string) => ({ url, ...MAIL_TRANSPORT_T
 
 export type NotificationEmailUnsubscribe = EmailUnsubscribe & { oneClickUrl: string };
 
-/** RFC 8058: the mail client's own unsubscribe button posts once to the URL, with no page in between. */
-export const listUnsubscribeHeaders = (
-  unsubscribe?: NotificationEmailUnsubscribe,
-): Record<string, string> | undefined =>
-  unsubscribe && {
-    "List-Unsubscribe": `<${unsubscribe.oneClickUrl}>`,
-    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-  };
-
-const footerLinks = (unsubscribe?: NotificationEmailUnsubscribe): EmailUnsubscribe | undefined =>
-  unsubscribe && {
-    categoryLabel: unsubscribe.categoryLabel,
-    settingsUrl: unsubscribe.settingsUrl,
-    unsubscribeUrl: unsubscribe.unsubscribeUrl,
-  };
-
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -266,7 +250,7 @@ export class NotificationsService {
     subject: string;
     html: string;
     text: string;
-    headers?: Record<string, string>;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }): Promise<void> {
     const transport = this.createMailTransport(this.emailConfigService.getServer());
 
@@ -276,7 +260,11 @@ export class NotificationsService {
       subject: params.subject,
       html: params.html,
       text: params.text,
-      headers: params.headers,
+      // RFC 8058: the mail client's own unsubscribe button posts once to the URL, with no page in between.
+      headers: params.unsubscribe && {
+        "List-Unsubscribe": `<${params.unsubscribe.oneClickUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
     });
 
     const rejected: (string | Mail.Address)[] = result.rejected;
@@ -347,7 +335,7 @@ export class NotificationsService {
           inviterName,
           role,
           baseUrl,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -355,7 +343,7 @@ export class NotificationsService {
           subject: `You've been invited to join ${organizationName}`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({
@@ -393,7 +381,7 @@ export class NotificationsService {
           requesterName,
           message,
           baseUrl,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -401,7 +389,7 @@ export class NotificationsService {
           subject: `New request to join ${organizationName} on openJII`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({
@@ -435,7 +423,7 @@ export class NotificationsService {
           organizationName,
           organizationUrl: url,
           baseUrl,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -443,7 +431,7 @@ export class NotificationsService {
           subject: `You have joined ${organizationName} on openJII`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({
@@ -476,7 +464,7 @@ export class NotificationsService {
           host,
           organizationName,
           baseUrl,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -484,7 +472,7 @@ export class NotificationsService {
           subject: `Update on your request to join ${organizationName}`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({
@@ -524,7 +512,7 @@ export class NotificationsService {
           organizationUrl: url,
           actor,
           role,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -532,7 +520,7 @@ export class NotificationsService {
           subject: `Your role in ${organizationName} changed on the openJII Platform`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({
@@ -569,7 +557,7 @@ export class NotificationsService {
           baseUrl,
           organizationName,
           actor,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -577,7 +565,7 @@ export class NotificationsService {
           subject: `You were removed from ${organizationName} on the openJII Platform`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({
@@ -636,7 +624,7 @@ export class NotificationsService {
           resourceUrl,
           actor,
           role,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -644,7 +632,7 @@ export class NotificationsService {
           subject: `Access to ${resourceName} on the openJII Platform`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({
@@ -693,7 +681,7 @@ export class NotificationsService {
           resourceKind: RESOURCE_KIND_LABEL[resourceType],
           resourceName,
           actor,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -701,7 +689,7 @@ export class NotificationsService {
           subject: `${resourceName} was deleted on the openJII Platform`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({
@@ -744,7 +732,7 @@ export class NotificationsService {
           baseUrl,
           experimentName,
           experimentUrl,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -752,7 +740,7 @@ export class NotificationsService {
           subject: `${experimentName} is now public on the openJII Platform`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({
@@ -880,7 +868,7 @@ export class NotificationsService {
           definitionName,
           actor,
           calibrationUrl,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -888,7 +876,7 @@ export class NotificationsService {
           subject: `A ${definitionName} calibration of ${deviceName} is waiting for approval`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({
@@ -940,7 +928,7 @@ export class NotificationsService {
           definitionName,
           actor,
           calibrationUrl,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -948,7 +936,7 @@ export class NotificationsService {
           subject: `Your ${definitionName} calibration of ${deviceName} was approved`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({
@@ -1000,7 +988,7 @@ export class NotificationsService {
           definitionName,
           actor,
           calibrationUrl,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -1008,7 +996,7 @@ export class NotificationsService {
           subject: `Your ${definitionName} calibration of ${deviceName} was rejected`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({
@@ -1051,7 +1039,7 @@ export class NotificationsService {
           projectUrlOld,
           userEmail: email,
           baseUrl,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -1059,7 +1047,7 @@ export class NotificationsService {
           subject: `Project Transfer Request Received - openJII`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({
@@ -1102,7 +1090,7 @@ export class NotificationsService {
           experimentName,
           experimentUrl,
           baseUrl,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -1110,7 +1098,7 @@ export class NotificationsService {
           subject: `Project Transfer Complete - openJII`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({
@@ -1157,7 +1145,7 @@ export class NotificationsService {
           requesterName,
           message,
           baseUrl,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -1165,7 +1153,7 @@ export class NotificationsService {
           subject: `New request to join ${experimentName} on openJII`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({
@@ -1206,7 +1194,7 @@ export class NotificationsService {
           host,
           experimentName,
           baseUrl,
-          unsubscribe: footerLinks(unsubscribe),
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -1214,7 +1202,7 @@ export class NotificationsService {
           subject: `Update on your request to join ${experimentName}`,
           html,
           text,
-          headers: listUnsubscribeHeaders(unsubscribe),
+          unsubscribe,
         });
 
         this.logger.log({

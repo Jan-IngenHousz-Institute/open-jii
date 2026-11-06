@@ -9,4 +9,4 @@ export {
   type PostHogServerConfig,
   type PostHogService,
 } from "./posthog-config";
-export { logger, pinoConfig } from "./logger";
+export { logger, pinoConfig, redactRequestUrl } from "./logger";
