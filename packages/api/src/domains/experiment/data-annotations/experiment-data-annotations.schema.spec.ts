@@ -289,4 +289,47 @@ describe("Annotations", () => {
       zExperimentAnnotationFlagContent.parse({ type: "flag", flagType: "outlier", text: "\u0000" }),
     ).toThrow();
   });
+
+  it("refuses a row id or table name with a NUL character, which Postgres cannot keep", () => {
+    const comment = {
+      type: "comment" as const,
+      content: { type: "comment" as const, text: "Wet" },
+    };
+
+    expect(() =>
+      zExperimentAddAnnotationBody.parse({
+        tableName: "raw\u0000",
+        rowId: "1",
+        annotation: comment,
+      }),
+    ).toThrow();
+    expect(() =>
+      zExperimentAddAnnotationBody.parse({
+        tableName: "raw_data",
+        rowId: "1\u0000",
+        annotation: comment,
+      }),
+    ).toThrow();
+    expect(() =>
+      zExperimentAddAnnotationsBulkBody.parse({
+        tableName: "raw_data",
+        rowIds: ["1", "2\u0000"],
+        annotation: comment,
+      }),
+    ).toThrow();
+    expect(() =>
+      zExperimentAnnotationDeleteBulkBody.parse({
+        tableName: "raw\u0000",
+        rowIds: ["1"],
+        type: "comment",
+      }),
+    ).toThrow();
+    expect(() =>
+      zExperimentAnnotationDeleteBulkBody.parse({
+        tableName: "raw_data",
+        rowIds: ["1\u0000"],
+        type: "comment",
+      }),
+    ).toThrow();
+  });
 });
