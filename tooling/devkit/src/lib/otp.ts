@@ -1,3 +1,4 @@
+import { symmetricDecrypt } from "better-auth/crypto";
 import postgres from "postgres";
 
 const loopbackHosts = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
@@ -26,7 +27,27 @@ export function assertLocalDatabase(
   );
 }
 
-export async function readLatestSignInOtp(databaseUrl: string, email: string): Promise<string> {
+async function decryptSignInOtp(
+  stored: string,
+  authSecret: string,
+  email: string,
+): Promise<string> {
+  try {
+    return await symmetricDecrypt({ key: authSecret, data: stored });
+  } catch (cause) {
+    throw new Error(
+      `Could not decrypt the sign-in OTP for ${email}; is AUTH_SECRET the backend's?`,
+      { cause },
+    );
+  }
+}
+
+// The backend stores sign-in codes encrypted with its AUTH_SECRET.
+export async function readLatestSignInOtp(
+  databaseUrl: string,
+  email: string,
+  authSecret: string,
+): Promise<string> {
   assertLocalDatabase(databaseUrl);
   const sql = postgres(databaseUrl, { connect_timeout: 2, idle_timeout: 1, max: 1 });
   try {
@@ -39,7 +60,7 @@ export async function readLatestSignInOtp(databaseUrl: string, email: string): P
     `;
     const value = rows.at(0)?.value;
     if (!value) throw new Error(`No sign-in OTP found for ${email}`);
-    const otp = value.split(":", 1)[0];
+    const otp = await decryptSignInOtp(value.split(":", 1)[0], authSecret, email);
     if (!/^\d{6}$/.test(otp)) throw new Error(`Invalid sign-in OTP stored for ${email}`);
     return otp;
   } finally {

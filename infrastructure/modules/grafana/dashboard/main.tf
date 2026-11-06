@@ -582,6 +582,92 @@ EOT
       service   = "backend"
     }
   }
+
+  # Catalog entry 138. Any use of the Google Play review account outside a review means someone
+  # else has its address or code, and a refused new sign-in method means someone is trying to keep
+  # access.
+  rule {
+    name      = "Play Review Account Used"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Backend"
+        metricName = "PlayReviewAccountUse"
+        statistic  = "Sum"
+        period     = "300"
+        dimensions = {}
+        matchExact = true
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "max"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "Someone signed in to, tried, or tried to add a sign-in method to the Google Play review account. Outside a review that is not Google's reviewers."
+      summary          = "The Play review account was used"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/play-review-account-use.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["play-review-account-use"]
+    }
+    labels = {
+      metric_id = "play-review-account-use"
+      severity  = "warning"
+      service   = "backend"
+    }
+  }
 }
 
 # CloudFront Alerts

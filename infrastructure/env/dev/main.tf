@@ -2281,6 +2281,22 @@ module "cloud_trail" {
 
 }
 
+module "play_review_sign_in" {
+  source = "../../modules/play-review-sign-in"
+
+  enabled        = true
+  environment    = var.environment
+  domain_name    = var.domain_name
+  log_group_name = module.backend_ecs.cloudwatch_log_group_name
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+  }
+}
+
 # Authentication secrets
 module "auth_secrets" {
   source = "../../modules/secrets-manager"
@@ -2751,7 +2767,7 @@ module "backend_ecs" {
   database_cluster_arn            = module.aurora_db.cluster_arn
 
   # Secrets configuration
-  secrets = [
+  secrets = concat([
     {
       name      = "AUTH_GITHUB_ID"
       valueFrom = "${module.auth_secrets.secret_arn}:AUTH_GITHUB_ID::"
@@ -2869,7 +2885,7 @@ module "backend_ecs" {
       name      = "MAILCHIMP_COMMUNITY_NAME"
       valueFrom = "${module.mailchimp_secrets.secret_arn}:MAILCHIMP_COMMUNITY_NAME::"
     },
-  ]
+  ], module.play_review_sign_in.ecs_secrets)
 
   # Environment variables for the backend service
   environment_variables = [
