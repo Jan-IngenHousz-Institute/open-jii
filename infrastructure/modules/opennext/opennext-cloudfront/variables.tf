@@ -71,6 +71,12 @@ variable "log_bucket" {
   default     = ""
 }
 
+variable "log_retention_days" {
+  description = "Retention period (days) for the Lambda@Edge log groups"
+  type        = number
+  default     = 14
+}
+
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
