@@ -154,9 +154,9 @@ The channel gets one message for each of these:
 Each message starts with a bold line saying what happened, such as "Incident opened: Uploads from
 the field app are delayed". An incident's message then says the impact, "Impact: outage" or "Impact:
 degraded", and the affected components by the names the page uses. After that come the newest
-update's stage with the time it was posted, its text, the time of the next update, the planned window
-for maintenance, a link to the page and the time of the change in UTC. A message about a component
-changing state says the old and the new state.
+update's stage with the time it was posted, its text, the time of the next update, the planned
+window for maintenance, a link to the page and the time of the change in UTC. A message about a
+component changing state says the old and the new state.
 
 Messages are flat. Slack gets no threads, and a message is never edited or deleted.
 
@@ -165,14 +165,18 @@ Messages are flat. Slack gets no threads, and a message is never edited or delet
 - **Edits.** An update is posted once, when it first appears. Editing its text, stage or time
   afterwards does not post it again, so write a new update when something researchers could act on
   changes (see Correct a mistake).
-- **What was already open** when the channel was connected. The first run only records what the page
-  shows, so an incident that was open at that moment is not announced.
+- **The opening of an incident already open** when the channel was connected. The publisher sends
+  its events to the topic from its own first run, whether or not a channel listens, so that incident
+  has no "Incident opened" message. Its later updates arrive as "Incident updated" and "Incident
+  resolved".
 - **Long text in full.** A message holds about the first 2,500 characters of an update and ends with
   "...". The page shows the whole update, so keep updates short.
 - **A message that Slack refused.** A failed post is tried twice more and then dropped, and the
   engineer on call is alerted. They post it by hand using `status-slack-errors.md`.
 - **A guarantee of no repeats.** The channel skips an event it has just posted, but only while the
   same function instance is still running, so a message can occasionally appear twice.
+- **A component still down when its incident is resolved.** It is not announced again, because the
+  page shows it. The channel posts when the component recovers.
 
 Messages arrive within about two minutes of the page changing, and two changes made in the same
 minute may arrive in either order.
@@ -189,9 +193,9 @@ without one. Messages from any environment other than production name it in thei
    Treat it like a password, since anyone who has it can post to the channel.
 3. Save the address as the GitHub secret `STATUS_SLACK_WEBHOOK_URL` for each environment that should
    post. For production, save it in the `prod-plan` GitHub environment as well, which is the one
-   `pr.yml` uses for production plans. Without it, every pull request plan reads an empty address and
-   shows the Slack resources being destroyed. Do not reuse `SLACK_WEBHOOK_URL`, which belongs to the
-   monitoring channel.
+   `pr.yml` uses for production plans. Without it, every pull request plan reads an empty address
+   and shows the Slack resources being destroyed. Do not reuse `SLACK_WEBHOOK_URL`, which belongs to
+   the monitoring channel.
 4. Run the tofu workflow for the environment. While the secret is empty or unset, the apply creates
    nothing, so this is also how the feed is switched off. With the secret set, it stores the address
    in Secrets Manager as `openjii-status-slack-<env>` and creates the function that posts.
