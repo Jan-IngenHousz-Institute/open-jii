@@ -423,7 +423,12 @@ export class NotificationRepository {
           : AppError.repositoryError(
               "Failed to save the notification preference",
               "REPOSITORY_ERROR",
-              error instanceof Error ? error.message : String(error),
+              // Drizzle's own message is the failed query; why it failed is on its cause.
+              error instanceof Error
+                ? error.cause instanceof Error
+                  ? error.cause.message
+                  : error.message
+                : String(error),
             ),
     );
   }
