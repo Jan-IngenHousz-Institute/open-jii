@@ -6,7 +6,7 @@ inputs:
     description: "The outcome of the deployment step (success or failure)"
     required: true
   service:
-    description: "Service name (backend, web, database, databricks, docs)"
+    description: "Service name (backend, web, database, databricks, docs, status)"
     required: true
   environment:
     description: "Deployment environment (dev, staging, prod)"

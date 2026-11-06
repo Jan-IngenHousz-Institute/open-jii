@@ -45,7 +45,7 @@ jobs:
         if: inputs.deploy_all == true
         run: |
           echo "Force releasing all applications..."
-          ALL_APPS='["backend","web","mobile","docs","@repo/database","@repo/api","@repo/auth"]'
+          ALL_APPS='["backend","web","mobile","docs","status","@repo/database","@repo/api","@repo/auth"]'
           echo "affected_apps=$ALL_APPS" >> $GITHUB_OUTPUT
           echo "has_affected_apps=true" >> $GITHUB_OUTPUT
 
@@ -103,7 +103,7 @@ jobs:
       - name: Filter Apps for Release
         id: filter_apps
         run: |
-          # Filter out @repo/* packages - only keep actual apps (backend, web, mobile, docs)
+          # Filter out @repo/* packages - only keep actual apps (backend, web, mobile, docs, status)
           AFFECTED_APPS='${{ needs.detect.outputs.affected_apps }}'
           RELEASE_APPS=$(echo "$AFFECTED_APPS" | jq -c '[.[] | select(startswith("@repo/") | not)]') || {
             echo "Error: Failed to filter apps"
