@@ -49,3 +49,9 @@ variable "enable_spa_error_response" {
   type        = bool
   default     = true
 }
+
+variable "compress" {
+  description = "Compress responses for viewers that accept it. Off by default so other module consumers are unaffected."
+  type        = bool
+  default     = false
+}

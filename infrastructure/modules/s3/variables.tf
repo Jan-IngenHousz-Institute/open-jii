@@ -62,6 +62,8 @@ variable "lifecycle_rules" {
     }))
     expiration_days                        = optional(number)
     abort_incomplete_multipart_upload_days = optional(number)
+    prefix                                 = optional(string)
+    noncurrent_version_expiration_days     = optional(number)
   }))
   default = []
 }

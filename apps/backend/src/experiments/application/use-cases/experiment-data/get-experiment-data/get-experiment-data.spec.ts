@@ -62,10 +62,12 @@ describe("GetExperimentDataUseCase", () => {
         value: { last: 7 as const, unit: "days" as const },
       },
     ];
-    const first = await useCase.execute(experiment.id, testUserId, {
-      tableName: "raw_data",
-      filters,
-    });
+    const first = await useCase.execute(
+      experiment.id,
+      testUserId,
+      { tableName: "raw_data", filters },
+      "warehouse",
+    );
     assertSuccess(first);
     expect(read.mock.calls[0]?.[0].filters).toEqual([
       {
@@ -76,10 +78,12 @@ describe("GetExperimentDataUseCase", () => {
     ]);
     expect(first.value[0]?.filterEvaluatedAt).toBe("2026-03-29T01:59:00.000Z");
     clock.mockReturnValue(Date.parse("2026-03-30T02:00:00.000Z"));
-    const second = await useCase.execute(experiment.id, testUserId, {
-      tableName: "raw_data",
-      filters,
-    });
+    const second = await useCase.execute(
+      experiment.id,
+      testUserId,
+      { tableName: "raw_data", filters },
+      "warehouse",
+    );
     assertSuccess(second);
     expect(read.mock.calls[1]?.[0].filters).toEqual([
       {
@@ -98,10 +102,12 @@ describe("GetExperimentDataUseCase", () => {
         value: ["2025-01-01T00:00:00.000Z", "2025-01-02T00:00:00.000Z"],
       },
     ];
-    const fixed = await useCase.execute(experiment.id, testUserId, {
-      tableName: "raw_data",
-      filters: absolute,
-    });
+    const fixed = await useCase.execute(
+      experiment.id,
+      testUserId,
+      { tableName: "raw_data", filters: absolute },
+      "warehouse",
+    );
     assertSuccess(fixed);
     expect(read.mock.calls[2]?.[0].filters).toEqual(absolute);
     expect(fixed.value[0]).not.toHaveProperty("filterEvaluatedAt");
@@ -141,11 +147,16 @@ describe("GetExperimentDataUseCase", () => {
 
     vi.spyOn(experimentDataRepository, "getTableData").mockResolvedValue(success([mockTableData]));
 
-    const result = await useCase.execute(experiment.id, testUserId, {
-      tableName: "bronze_data",
-      page: 1,
-      pageSize: 5,
-    });
+    const result = await useCase.execute(
+      experiment.id,
+      testUserId,
+      {
+        tableName: "bronze_data",
+        page: 1,
+        pageSize: 5,
+      },
+      "warehouse",
+    );
 
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
@@ -161,6 +172,7 @@ describe("GetExperimentDataUseCase", () => {
       orderDirection: "ASC",
       page: 1,
       pageSize: 5,
+      source: "warehouse",
     });
   });
 
@@ -192,12 +204,17 @@ describe("GetExperimentDataUseCase", () => {
 
     vi.spyOn(experimentDataRepository, "getTableData").mockResolvedValue(success([mockTableData]));
 
-    const result = await useCase.execute(experiment.id, testUserId, {
-      tableName: "bronze_data",
-      columns: "timestamp,temperature",
-      page: 1,
-      pageSize: 5,
-    });
+    const result = await useCase.execute(
+      experiment.id,
+      testUserId,
+      {
+        tableName: "bronze_data",
+        columns: "timestamp,temperature",
+        page: 1,
+        pageSize: 5,
+      },
+      "warehouse",
+    );
 
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
@@ -212,6 +229,7 @@ describe("GetExperimentDataUseCase", () => {
       orderDirection: "ASC",
       page: 1,
       pageSize: 5,
+      source: "warehouse",
     });
   });
 
@@ -242,11 +260,16 @@ describe("GetExperimentDataUseCase", () => {
 
     vi.spyOn(experimentDataRepository, "getTableData").mockResolvedValue(success([mockTableData]));
 
-    const result = await useCase.execute(experiment.id, testUserId, {
-      tableName: "bronze_data",
-      orderBy: "timestamp",
-      orderDirection: "DESC",
-    });
+    const result = await useCase.execute(
+      experiment.id,
+      testUserId,
+      {
+        tableName: "bronze_data",
+        orderBy: "timestamp",
+        orderDirection: "DESC",
+      },
+      "warehouse",
+    );
 
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
@@ -266,9 +289,14 @@ describe("GetExperimentDataUseCase", () => {
   it("should return not found error when experiment does not exist", async () => {
     const nonExistentId = faker.string.uuid();
 
-    const result = await useCase.execute(nonExistentId, testUserId, {
-      tableName: "bronze_data",
-    });
+    const result = await useCase.execute(
+      nonExistentId,
+      testUserId,
+      {
+        tableName: "bronze_data",
+      },
+      "warehouse",
+    );
 
     expect(result.isFailure()).toBe(true);
     assertFailure(result);
@@ -306,9 +334,14 @@ describe("GetExperimentDataUseCase", () => {
 
     vi.spyOn(experimentDataRepository, "getTableData").mockResolvedValue(success([mockTableData]));
 
-    const result = await useCase.execute(experiment.id, anotherUserId, {
-      tableName: "bronze_data",
-    });
+    const result = await useCase.execute(
+      experiment.id,
+      anotherUserId,
+      {
+        tableName: "bronze_data",
+      },
+      "warehouse",
+    );
 
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
@@ -320,7 +353,12 @@ describe("GetExperimentDataUseCase", () => {
       userId: testUserId,
     });
 
-    const result = await useCase.execute(experiment.id, testUserId, {} as { tableName: string });
+    const result = await useCase.execute(
+      experiment.id,
+      testUserId,
+      {} as { tableName: string },
+      "warehouse",
+    );
 
     expect(result.isFailure()).toBe(true);
     assertFailure(result);
@@ -338,9 +376,14 @@ describe("GetExperimentDataUseCase", () => {
       failure(AppError.internal("Failed to fetch table data")),
     );
 
-    const result = await useCase.execute(experiment.id, testUserId, {
-      tableName: "bronze_data",
-    });
+    const result = await useCase.execute(
+      experiment.id,
+      testUserId,
+      {
+        tableName: "bronze_data",
+      },
+      "warehouse",
+    );
 
     expect(result.isFailure()).toBe(true);
     assertFailure(result);

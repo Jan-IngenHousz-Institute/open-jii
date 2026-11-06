@@ -6,17 +6,15 @@ import type {
   DatabricksJobRunStatusResponse,
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
 import type {
-  AggregationSpec,
-  QueryOrdering,
-  FilterCondition,
-} from "../../../common/modules/databricks/services/query-builder/query-builder.types";
-import type {
   SchemaData,
   StatementParameter,
 } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { Result } from "../../../common/utils/fp-utils";
 import type { ExportFormat } from "../models/experiment-data-exports.model";
-import type { ExperimentTableMetadata } from "../models/experiment-data.model";
+import type {
+  ExperimentQueryParams,
+  ExperimentTableMetadata,
+} from "../models/experiment-data.model";
 
 // `anonymizeContributors` is the resolved setting, the experiment's default or the export's
 // override; when true the job rewrites contributor cells to deterministic pseudonyms.
@@ -42,26 +40,6 @@ export interface DataUploadJobInput {
   uploadTableName: string;
   userId: string;
   createdAt: Date;
-}
-
-export interface ExperimentQuerySource {
-  tableName: string;
-  tableType: "static" | "macro" | "upload";
-  variants?: { columnName: string; schema: string; suffix?: string }[];
-  reservedColumns?: string[];
-  exceptColumns?: string[];
-}
-
-export interface ExperimentAsOfJoin {
-  secondary: ExperimentQuerySource;
-  primaryColumns: string[];
-  secondaryColumns: { name: string; alias: string }[];
-  matchColumn: string;
-  primaryTimeColumn: string;
-  primaryTimeType: string;
-  secondaryTimeColumn: string;
-  secondaryTimeType: string;
-  toleranceMinutes: number;
 }
 
 export const DATABRICKS_PORT = Symbol("DATABRICKS_PORT");
@@ -91,22 +69,7 @@ export interface DatabricksPort {
   ): Promise<Result<ExperimentTableMetadata[]>>;
 
   /** Build a SQL query for experiment data, dispatching by table type. */
-  buildExperimentQuery(params: {
-    join?: ExperimentAsOfJoin;
-    tableName: string;
-    tableType: "static" | "macro" | "upload";
-    experimentId: string;
-    columns?: string[];
-    variants?: { columnName: string; schema: string; suffix?: string }[];
-    reservedColumns?: string[];
-    exceptColumns?: string[];
-    filters?: FilterCondition[];
-    aggregation?: AggregationSpec;
-    distinct?: boolean;
-    ordering?: QueryOrdering;
-    limit?: number;
-    offset?: number;
-  }): Result<string>;
+  buildExperimentQuery(params: ExperimentQueryParams): Result<string>;
 
   /** Column names of the view an experiment table reads from, in its own order. */
   getExperimentTableColumns(

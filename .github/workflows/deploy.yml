@@ -172,7 +172,7 @@ jobs:
     with:
       environment: ${{ inputs.environment }}
       ref: ${{ needs.detect.outputs.deploy_sha }}
-      tofu_version: "1.9.0"
+      tofu_version: "1.12.9"
     secrets: inherit
 
   # Each job below runs only if every deploy job it needs either succeeded or

@@ -47,6 +47,7 @@ module "cloudfront" {
 | enable_redirect_function  | Attach a viewer-request function that 301-redirects legacy paths and rewrites clean URLs to static-export `.html`.   | bool        | false        |    No    |
 | redirect_map              | Old-path → new-path 301 map templated into the function (only used when `enable_redirect_function` is true).         | map(string) | {}           |    No    |
 | enable_spa_error_response | `true` serves 403/404 as `/index.html` (200) for SPA routing; `false` serves the exported `/404.html` with HTTP 404. | bool        | true         |    No    |
+| compress                  | Compress responses for viewers that accept it.                                                                       | bool        | false        |    No    |
 
 ## 📤 Outputs
 

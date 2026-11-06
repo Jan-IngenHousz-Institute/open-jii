@@ -401,8 +401,9 @@ module "cloudfront" {
   waf_acl_id = var.waf_acl_id
 
   # Logging configuration
-  enable_logging = var.enable_logging
-  log_bucket     = var.log_bucket
+  enable_logging     = var.enable_logging
+  log_bucket         = var.log_bucket
+  log_retention_days = var.log_retention_days
 }
 
 # S3 bucket policy to allow CloudFront OAC access

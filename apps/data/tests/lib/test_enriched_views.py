@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
+from pyspark.sql.types import ArrayType
 
 pytestmark = pytest.mark.spark
 
@@ -256,3 +257,19 @@ def test_uploaded_rows_credit_their_uploader_and_carry_their_annotations(
     # u3 is not a contributor of e1.
     assert rows[1002]["contributor"] is None
     assert rows[1002]["annotations"] == []
+
+
+@pytest.mark.parametrize(
+    "view",
+    ["enriched_experiment_raw_data", "enriched_experiment_macro_data", "enriched_experiment_uploaded_data"],
+)
+def test_annotations_read_as_the_type_the_app_renders_as_annotations(
+    spark: SparkSession, centrum: str, view: str
+) -> None:
+    # The app matches the type's text, in which a field that cannot be null reads NOT NULL.
+    frame = spark.sql((_VIEWS / f"{view}.sql").read_text().replace("${catalog}", _CATALOG))
+    actual = frame.schema["annotations"].dataType
+    expected = spark.sql(f"SELECT CAST(NULL AS ARRAY<{_ANNOTATION}>) AS a").schema["a"].dataType
+
+    assert isinstance(actual, ArrayType) and isinstance(expected, ArrayType)
+    assert actual.elementType == expected.elementType

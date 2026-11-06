@@ -100,6 +100,11 @@ export const envManifest: readonly EnvVar[] = [
   env("FIRMWARE_REPO_AMBIT", unset, undefined, backend),
   env("FIRMWARE_REPO_MINIPAR", unset, undefined, backend),
 
+  // Without a store, experiment data reads from the warehouse whatever the flags say.
+  env("SERVING_STORE_URL", unset, undefined, backend),
+  env("SERVING_STORE_USERNAME", unset, undefined, backend),
+  env("SERVING_STORE_PASSWORD", unset, undefined, backend),
+
   env("EMAIL_BASE_URL", set, "http://localhost:3000", backend),
   // The sentinel is intentionally closed; no local SMTP service listens on port 9.
   env("EMAIL_SERVER", set, "smtp://127.0.0.1:9", backend),
