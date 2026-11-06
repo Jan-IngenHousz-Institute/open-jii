@@ -887,7 +887,7 @@ const USAGE =
   "Usage: status:incident preflight | inspect | draft --file <json> [--dry-run] [--target dev|prod] | update --entry-id <id> --file <json> [--dry-run] [--target dev|prod] | resolve --entry-id <id> --file <json> [--dry-run] [--target dev|prod] | publish --entry-id <id> --dry-run [--target dev|prod] | publish --entry-id <id> --review <token> --environment <name> [--target dev|prod]";
 
 function isAction(value: string | undefined): value is Action {
-  return value !== undefined && value in ACTIONS;
+  return value !== undefined && Object.hasOwn(ACTIONS, value);
 }
 
 function isTarget(value: string): value is Target {
@@ -917,8 +917,6 @@ export function parseCommandLine(argv: string[]): Args {
       review: { type: "string" },
       environment: { type: "string" },
       target: { type: "string" },
-      // Declared so a leftover --version gets the usage text instead of a parser error.
-      version: { type: "string" },
       "dry-run": { type: "boolean" },
     },
   });
