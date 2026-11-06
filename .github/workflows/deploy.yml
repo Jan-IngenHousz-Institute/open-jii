@@ -172,8 +172,8 @@ jobs:
         run: echo "Approved deployment for ${{ inputs.environment }} environment."
 
   # CI's roles, the GitHub trust and the state backend, applied before the infrastructure that
-  # depends on them. It applies only when its plan changes something, after foundation-<env>
-  # approves.
+  # depends on them. It applies only when its plan changes something, in prod after
+  # foundation-prod approves.
   deploy-foundation:
     name: Deploy Foundation
     needs: [detect, approval-gate]
