@@ -54,7 +54,7 @@ SELECT count(*), sum(length(content_text)) FROM centrum.experiment_annotations;
 
 Note the time you ran it and the two numbers the last query gives, then download the export's
 result as CSV. If the editor cuts the download short of the count, export it in parts with a
-`WHERE experiment_id IN (...)`.
+`WHERE experiment_id IN (...)`. `user_name` is not copied; pages look names up at read time.
 
 ## 3. Load it beside Postgres's annotations
 
