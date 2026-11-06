@@ -1,0 +1,15 @@
+{
+  "name": "status-slack",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Posts the public status page's events to a Slack channel",
+  "main": "index.js",
+  "scripts": {
+    "sync": "rm -rf ./lib && cp -R ../../../../../packages/monitoring/dist ./lib",
+    "build": "npm run sync && npm ci --omit=dev && rm -f function.zip && zip -Xr function.zip index.js package.json lib node_modules > /dev/null"
+  },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.0.0",
+    "zod": "^4.0.0"
+  }
+}

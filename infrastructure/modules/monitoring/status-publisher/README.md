@@ -44,7 +44,7 @@ A Contentful read that fails does not stop the run at first. The Lambda logs one
 
 ## The topic
 
-The module owns the SNS topic `status-events-<env>` and nothing that subscribes to it, so a chat integration or any other consumer attaches outside the module. The repository had no SNS topic before this one, so the topic is as small as it can be: standard, encrypted with the AWS managed key `alias/aws/sns`, with no access policy beyond the account's default.
+The module owns the SNS topic `status-events-<env>` and nothing that subscribes to it, so a chat integration or any other consumer attaches outside the module. The Slack feed is the [`status-slack`](../status-slack/README.md) module. The repository had no SNS topic before this one, so the topic is as small as it can be: standard, encrypted with the AWS managed key `alias/aws/sns`, with no access policy beyond the account's default.
 
 Each message is one event as JSON, validated against `statusEventSchema` in `packages/monitoring`, and carries a `type` message attribute (`incident.opened`, `component.changed` and so on) that a subscription's filter policy can match. Delivery is at least once, so a subscriber should treat a repeated `id` as the same event.
 
