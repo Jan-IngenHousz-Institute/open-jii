@@ -220,8 +220,9 @@ reviewed:
 2. In that file, add `"status"` to the `in` validation of the `audience` field. Change nothing else.
 3. Show the person the file, with the audience field as pulled and as changed. Leave the commit and
    the pull request to them.
-4. Run `diff componentAlert`, which should show only that field, then the dry run and the apply with
-   the version it printed, each on their word.
+4. Run `diff componentAlert`, which should show only that field and any Date field whose widget
+   apply switches to the time zone picker, then the dry run and the apply with the version it
+   printed, each on their word.
 
 If `pull` says the file already exists, review the live type with `diff` and ask before passing
 `--force`.

@@ -62,6 +62,14 @@ export class EditorInterface {
     return new EditorInterface(this.version, [...replaced, ...appended], this.rest);
   }
 
+  /** The given Date fields whose control `withDateControls` would change. */
+  fieldsWithoutDateControl(fieldIds: readonly string[]): string[] {
+    return fieldIds.filter((id) => {
+      const control = this.controls.find((entry) => entry.fieldId === id);
+      return control === undefined || !isDeepStrictEqual(control, dateControl(id, control));
+    });
+  }
+
   equals(other: EditorInterface): boolean {
     return isDeepStrictEqual(this.controls, other.controls);
   }
