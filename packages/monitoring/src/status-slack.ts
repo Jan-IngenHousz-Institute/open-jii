@@ -137,8 +137,16 @@ function clip(text: string, limit: number, isQuote: boolean): string {
   return `${kept}${ELLIPSIS}`;
 }
 
+function oneLine(text: string, limit: number): string {
+  return clip(text, limit, false);
+}
+
+function quoted(text: string, limit: number): string {
+  return clip(text, limit, true);
+}
+
 function escaped(text: string): string {
-  return clip(text, Infinity, false);
+  return oneLine(text, Infinity);
 }
 
 function affects(components: StatusComponentId[]): string {
@@ -184,7 +192,7 @@ function incidentParts(
   occurredAt: string,
 ): MessageParts {
   return {
-    headline: `${label}: ${clip(incident.title, TITLE_LIMIT, false)}`,
+    headline: `${label}: ${oneLine(incident.title, TITLE_LIMIT)}`,
     lines: [
       `Impact: ${IMPACT_NAMES[incident.impact]}. ${affects(incident.components)}`,
       `Started ${weekdayDateTime(incident.startsAt)}.`,
@@ -201,7 +209,7 @@ function maintenanceParts(
   occurredAt: string,
 ): MessageParts {
   return {
-    headline: `${label}: ${clip(maintenance.title, TITLE_LIMIT, false)}`,
+    headline: `${label}: ${oneLine(maintenance.title, TITLE_LIMIT)}`,
     lines: [
       affects(maintenance.components),
       plannedWindow(maintenance),
@@ -257,13 +265,13 @@ function partsOf(event: StatusEvent): MessageParts {
     }
     case "notice.posted":
       return {
-        headline: `Notice posted: ${clip(event.notice.title, TITLE_LIMIT, false)}`,
+        headline: `Notice posted: ${oneLine(event.notice.title, TITLE_LIMIT)}`,
         lines: [SEVERITY_SENTENCES[event.notice.severity]],
         quote: event.notice.body.trim() === "" ? undefined : event.notice.body,
       };
     case "notice.removed":
       return {
-        headline: `Notice removed: ${clip(event.notice.title, TITLE_LIMIT, false)}`,
+        headline: `Notice removed: ${oneLine(event.notice.title, TITLE_LIMIT)}`,
         lines: ["The notice is no longer on the status page."],
       };
   }
@@ -275,7 +283,7 @@ function updateText(update: IncidentUpdate): string {
 
   return [
     `*${STAGE_NAMES[update.stage]}* (posted ${dateTime(update.postedAt)})`,
-    clip(update.text, UPDATE_TEXT_LIMIT, true),
+    quoted(update.text, UPDATE_TEXT_LIMIT),
     ...next,
   ].join("\n");
 }
@@ -306,7 +314,7 @@ export function slackMessage(event: StatusEvent): SlackMessage {
     blocks: [
       section(`*${headline}*`),
       section(lines.join("\n")),
-      ...(quote === undefined ? [] : [section(clip(quote, UPDATE_TEXT_LIMIT, true))]),
+      ...(quote === undefined ? [] : [section(quoted(quote, UPDATE_TEXT_LIMIT))]),
       ...(update === undefined ? [] : [section(updateText(update))]),
       footer(event),
     ],
