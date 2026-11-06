@@ -178,7 +178,7 @@
     "title": "So messen wir",
     "states": "Beeinträchtigt bedeutet, dass eine Komponente langsam ist oder nur teilweise funktioniert. Ausfall oder ausgefallen bedeutet, dass sie nicht funktioniert.",
     "checks": "Wir testen die Website und die Plattform jede Minute von außen. Für alles andere nutzen wir die eigenen Messwerte der Plattform. Die Plattform prüft ihre Verbindungen alle fünf Minuten, und die Datenpipeline meldet sich alle 30 Minuten. Öffnen Sie eine Komponente, um genau zu sehen, was als beeinträchtigt und als ausgefallen gilt.",
-    "uptime": "Die Verfügbarkeit ist der Anteil der Minuten in den letzten 90 UTC-Tagen, in denen eine Komponente nicht ausgefallen war. Minuten, in denen unsere eigenen Prüfungen nicht ausgeführt werden konnten, zählen als Ausfall. Die beeinträchtigte Zeit steht daneben. Geplante Wartung erscheint in den Balken, fließt aber nicht in den Wert ein. Ein Tag wird ab fünf beeinträchtigten Minuten als Beeinträchtigt markiert, kürzere Störungen bleiben in den Details des Tages sichtbar."
+    "uptime": "Die Verfügbarkeit ist der Anteil der Minuten in den letzten 90 UTC-Tagen, in denen eine Komponente nicht ausgefallen war. Minuten, in denen unsere eigenen Prüfungen nicht ausgeführt werden konnten, zählen als Ausfall. Solange ein Vorfall offen ist, zeigt eine Komponente mindestens den Zustand, den wir für sie angegeben haben, und angegebene Ausfallzeit senkt den Wert wie gemessene. Die beeinträchtigte Zeit steht daneben. Geplante Wartung erscheint in den Balken, fließt aber nicht in den Wert ein. Ein Tag wird ab fünf beeinträchtigten Minuten als Beeinträchtigt markiert, kürzere Störungen bleiben in den Details des Tages sichtbar."
   },
   "past": {
     "title": "Frühere Vorfälle",
