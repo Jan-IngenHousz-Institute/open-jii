@@ -3,7 +3,11 @@ import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { z } from "zod";
 
-import { STATUS_CONTENT_LOCALE } from "@repo/monitoring/status-content";
+import {
+  STATUS_CONTENTFUL_ENVIRONMENT,
+  STATUS_CONTENT_LOCALE,
+  isoOf,
+} from "@repo/monitoring/status-content";
 import { STATUS_HISTORY_DAYS } from "@repo/monitoring/status-document";
 import type { Incident } from "@repo/monitoring/status-document";
 
@@ -130,7 +134,6 @@ interface Published {
 
 export type Result = StatusPreflight | Inspection | DryRun | Drafted | PublishDryRun | Published;
 
-const EXPECTED_ENVIRONMENT = "master";
 const PUBLISH_DRY_RUN_NOTE =
   "This dry run reads Contentful, unlike the dry runs of draft, update and resolve, which read nothing. It writes nothing.";
 const DRAFT_AGAIN_NOTE =
@@ -160,12 +163,12 @@ const updateFieldsSchema = z.object({
 });
 
 function environmentWarnings(environment: string): string[] {
-  if (environment === "" || environment === EXPECTED_ENVIRONMENT) {
+  if (environment === "" || environment === STATUS_CONTENTFUL_ENVIRONMENT) {
     return [];
   }
 
   return [
-    `Environment "${environment}" is not "${EXPECTED_ENVIRONMENT}". The status publisher reads ${EXPECTED_ENVIRONMENT} only, so incidents written here never reach the page.`,
+    `Environment "${environment}" is not "${STATUS_CONTENTFUL_ENVIRONMENT}". The status publisher reads ${STATUS_CONTENTFUL_ENVIRONMENT} only, so incidents written here never reach the page.`,
   ];
 }
 
@@ -184,16 +187,6 @@ function fieldsOf(entry: Entry): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(entry.fields).map(([id, byLocale]) => [id, byLocale[STATUS_CONTENT_LOCALE]]),
   );
-}
-
-// Contentful stores the time as typed, with an offset. The publisher reads it back as UTC.
-function isoOf(value: string | undefined): string | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toISOString();
 }
 
 function rawUpdateOf(entry: Entry): RawUpdate {
