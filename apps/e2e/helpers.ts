@@ -38,12 +38,20 @@ export async function waitForFreshOtp(
   timeoutMs = 20_000,
 ): Promise<string> {
   const deadline = Date.now() + timeoutMs;
+  // A missing row is expected until the code is sent; a wrong AUTH_SECRET is not, so the timeout
+  // carries the last error.
+  let lastError: unknown;
   while (Date.now() < deadline) {
-    const otp = await readLatestSignInOtp(url, email, authSecret).catch(() => null);
+    const otp = await readLatestSignInOtp(url, email, authSecret).catch((error: unknown) => {
+      lastError = error;
+      return null;
+    });
     if (otp && otp !== previousOtp) return otp;
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error(`No fresh sign-in OTP found for ${email} within ${timeoutMs}ms`);
+  throw new Error(`No fresh sign-in OTP found for ${email} within ${timeoutMs}ms`, {
+    cause: lastError,
+  });
 }
 
 export interface SeedExperiment {
