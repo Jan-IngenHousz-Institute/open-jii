@@ -33,4 +33,5 @@ module "iam_oidc" {
   environment                        = var.environment
   github_environments                = [var.environment]
   foundation_role_github_environment = "foundation-${var.environment}"
+  foundation_role_allowed_refs       = ["refs/heads/main"]
 }
