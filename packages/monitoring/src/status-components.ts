@@ -59,8 +59,9 @@ export type StatusReadings = Partial<Record<StatusSignalId, number>>;
 
 /**
  * How a signal's datapoints inside its lookback become one reading. A count is summed, a
- * level the rules compare with a limit is the highest, and a gauge published every few minutes
- * is its newest point, so a recovered value stops counting as soon as the next one lands.
+ * level the rules compare with a limit is the highest, and so is a dependency check, which then
+ * reads down only when every check in its window failed. A gauge published every few minutes is
+ * its newest point, so a recovered value stops counting as soon as the next one lands.
  */
 type SignalReduction = "sum" | "max" | "latest";
 
@@ -81,7 +82,10 @@ export const RULE_WINDOW_MINUTES = 15;
 /** The macro failures rule counts the last hour, since the heartbeat export reports them per half hour. */
 export const MACRO_FAILURE_WINDOW_MINUTES = 60;
 
-/** The backend checks its dependencies every five minutes, so ten spans one missed check. */
+/**
+ * The backend checks its dependencies every five minutes with a ten-second timeout, so ten minutes
+ * holds two or three checks, and one slow answer between good ones does not show the platform down.
+ */
 export const DEPENDENCY_WINDOW_MINUTES = 10;
 
 /** Iterator age moves slowly, so a few minutes is enough to read its level. */
@@ -247,7 +251,7 @@ export function statusSignals(config: StatusConfig): StatusSignal[] {
     region: HOME_REGION,
     periodSeconds: OPENJII_PERIOD_SECONDS,
     lookbackMinutes: DEPENDENCY_WINDOW_MINUTES,
-    reduce: "latest",
+    reduce: "max",
   };
   const awsCount: SignalTiming = {
     region: HOME_REGION,

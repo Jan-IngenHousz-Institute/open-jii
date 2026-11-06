@@ -8,8 +8,9 @@ import {
   PIPELINE_WINDOW_MINUTES,
   RULE_WINDOW_MINUTES,
   STATUS_SIGNAL_IDS,
+  statusSignals,
 } from "./status-components.js";
-import type { StatusReadings } from "./status-components.js";
+import type { StatusConfig, StatusReadings } from "./status-components.js";
 import { STATUS_COMPONENT_IDS, statusDocumentSchema } from "./status-document.js";
 import type {
   ComponentState,
@@ -48,6 +49,7 @@ import type {
   StatusProbeResult,
   StatusProbes,
 } from "./status-judge.js";
+import { collapseReadings } from "./status-readings.js";
 
 const LIVE_IDS: StatusComponentId[] = [
   "website",
@@ -624,6 +626,34 @@ describe("judgeComponent thresholds", () => {
     expect([...new Set(thresholdCases.map((entry) => entry.id))].sort()).toEqual(
       [...STATUS_COMPONENT_IDS].sort(),
     );
+  });
+});
+
+describe("a dependency check whose newest answer failed after good ones", () => {
+  const config: StatusConfig = {
+    environment: "prod",
+    albArnSuffix: "app/backend-alb/abc123",
+    webDistributionId: "E2EXAMPLE",
+    kinesisStreamName: "ingest-stream-prod",
+  };
+  const now = new Date("2026-11-03T12:00:00Z");
+  const minutesAgo = (minutes: number) => new Date(now.getTime() - minutes * 60_000);
+  const checks = statusSignals(config).filter(
+    ({ id }) => id === "databaseUp" || id === "databricksUp",
+  );
+  const readings = collapseReadings(
+    checks,
+    checks.map(({ id }) => ({
+      Id: id,
+      Timestamps: [minutesAgo(0), minutesAgo(5), minutesAgo(10)],
+      Values: [0, 1, 1],
+    })),
+    now,
+  );
+  const affected: StatusComponentId[] = ["platform", "data-delivery"];
+
+  it.each(affected)("leaves %s operational", (id) => {
+    expect(judgeComponent(id, evidence({ readings })).state).toBe("operational");
   });
 });
 

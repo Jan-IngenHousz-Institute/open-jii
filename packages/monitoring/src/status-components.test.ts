@@ -95,6 +95,19 @@ describe("statusSignals", () => {
     }
   });
 
+  it("reads a dependency as up when any check in its window passed", () => {
+    const dependencies = signals.filter((signal) =>
+      ["databaseUp", "databricksUp", "iotUp", "emailUp"].includes(signal.id),
+    );
+
+    expect(dependencies.map((signal) => [signal.id, signal.reduce])).toEqual([
+      ["databaseUp", "max"],
+      ["databricksUp", "max"],
+      ["emailUp", "max"],
+      ["iotUp", "max"],
+    ]);
+  });
+
   it("puts the expression's inputs in the region the expression runs in", () => {
     const failed = signals.find((signal) => signal.id === "websiteFailedRequests");
     const requests = signals.find((signal) => signal.id === "websiteRequests");

@@ -26,16 +26,29 @@ describe("collapseReadings", () => {
     const readings = collapseReadings(
       [
         { id: "ingestIteratorAge", periodSeconds: 60, lookbackMinutes: 5, reduce: "max" },
-        { id: "databaseUp", periodSeconds: 60, lookbackMinutes: 10, reduce: "latest" },
+        { id: "ingestIdle", periodSeconds: 300, lookbackMinutes: 75, reduce: "latest" },
       ],
       [
         { Id: "ingestIteratorAge", Timestamps: [minutesAgo(1), minutesAgo(2)], Values: [10, 40] },
-        { Id: "databaseUp", Timestamps: [minutesAgo(1), minutesAgo(6)], Values: [1, 0] },
+        { Id: "ingestIdle", Timestamps: [minutesAgo(5), minutesAgo(35)], Values: [2, 90] },
       ],
       now,
     );
 
-    expect(readings).toEqual({ ingestIteratorAge: 40, databaseUp: 1 });
+    expect(readings).toEqual({ ingestIteratorAge: 40, ingestIdle: 2 });
+  });
+
+  it("reads a dependency down only when every check in its window failed", () => {
+    const read = (values: number[]) =>
+      collapseReadings(
+        [{ id: "databaseUp", periodSeconds: 300, lookbackMinutes: 10, reduce: "max" }],
+        [{ Id: "databaseUp", Timestamps: values.map((_, i) => minutesAgo(i * 5)), Values: values }],
+        now,
+      );
+
+    expect(read([1, 0, 1])).toEqual({ databaseUp: 1 });
+    expect(read([0, 1])).toEqual({ databaseUp: 1 });
+    expect(read([0, 0])).toEqual({ databaseUp: 0 });
   });
 
   it("leaves a signal out when it has no point in its window or no result at all", () => {
