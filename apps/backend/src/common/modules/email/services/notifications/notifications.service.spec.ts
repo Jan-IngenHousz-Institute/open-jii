@@ -1825,11 +1825,7 @@ describe("NotificationsService", () => {
 
         expect(render).toHaveBeenCalledExactlyOnceWith(
           expect.objectContaining({
-            unsubscribe: {
-              categoryLabel: FOOTER.categoryLabel,
-              settingsUrl: FOOTER.settingsUrl,
-              unsubscribeUrl: FOOTER.unsubscribeUrl,
-            },
+            unsubscribe: FOOTER,
           }),
         );
         expect(mockSendMail).toHaveBeenCalledExactlyOnceWith(

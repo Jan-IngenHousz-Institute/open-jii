@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
+import { redactRequestUrl } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import type {
   EmailPreferenceByTokenResponse,
@@ -181,6 +182,23 @@ describe("NotificationUnsubscribeController", () => {
     expect(await emailRowsFor(userId, "requests_and_invitations")).toEqual([]);
   });
 
+  it("answers a server error when the database fails for a reason other than a deleted account", async () => {
+    // Drizzle's message carries the failed query, whose "on conflict" a text match reads as a duplicate.
+    const outage = new Error(
+      'Failed query: insert into "notification_preferences" on conflict do update',
+      { cause: new Error("Connection terminated unexpectedly") },
+    );
+    vi.spyOn(testApp.database, "insert").mockImplementationOnce(() => {
+      throw outage;
+    });
+
+    await testApp
+      .post(unsubscribePath(unsubscribe.sign(userId, "requests_and_invitations")))
+      .withoutAuth()
+      .set("X-Forwarded-For", nextClientIp())
+      .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+  });
+
   it("answers a server error, not a refused link, when the preference cannot be saved", async () => {
     vi.spyOn(testApp.module.get(NotificationRepository), "upsertPreference").mockResolvedValueOnce(
       failure(AppError.internal("Database unavailable")),
@@ -195,6 +213,17 @@ describe("NotificationUnsubscribeController", () => {
     expect(response.body).not.toMatchObject({
       data: { code: ErrorCodes.NOTIFICATION_UNSUBSCRIBE_LINK_INVALID },
     });
+  });
+
+  it.each([
+    ["unsubscribe", contract.notifications.unsubscribeEmailByToken],
+    ["resubscribe", contract.notifications.resubscribeEmailByToken],
+  ])("keeps the token of the %s route out of the request log", (_, route) => {
+    const token = unsubscribe.sign(userId, "requests_and_invitations");
+    const logged = redactRequestUrl(testApp.resolveOrpcPath(route, { token }));
+
+    expect(logged).not.toContain(token);
+    expect(logged).toBe(testApp.resolveOrpcPath(route, { token: "[redacted]" }));
   });
 
   it("allows ten requests per client per minute, then answers 429", async () => {

@@ -4,13 +4,10 @@ import { pinoConfig, redactRequestUrl } from "./logger";
 
 const TOKEN = "eyJ2IjoxfQ.c2lnbmF0dXJl";
 
-const serializeUrl = (url: string) => {
-  const serialize = pinoConfig.serializers?.req as (req: {
-    id: string;
-    method: string;
-    url: string;
-  }) => { url: string };
-  return serialize({ id: "req-1", method: "POST", url }).url;
+const serialize = (url: string): unknown => {
+  const req = pinoConfig.serializers?.req;
+  if (!req) throw new Error("pinoConfig has no req serializer");
+  return req({ id: "req-1", method: "POST", url });
 };
 
 describe("redactRequestUrl", () => {
@@ -45,9 +42,13 @@ describe("redactRequestUrl", () => {
 
 describe("the request serializer", () => {
   it("logs the unsubscribe route without its token", () => {
-    const url = serializeUrl(`/api/v1/notifications/email/unsubscribe/${TOKEN}`);
+    const serialized = serialize(`/api/v1/notifications/email/unsubscribe/${TOKEN}`);
 
-    expect(url).toBe("/api/v1/notifications/email/unsubscribe/[redacted]");
-    expect(url).not.toContain(TOKEN);
+    expect(serialized).toEqual({
+      id: "req-1",
+      method: "POST",
+      url: "/api/v1/notifications/email/unsubscribe/[redacted]",
+    });
+    expect(JSON.stringify(serialized)).not.toContain(TOKEN);
   });
 });

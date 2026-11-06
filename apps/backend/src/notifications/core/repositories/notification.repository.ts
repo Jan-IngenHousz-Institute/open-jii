@@ -28,13 +28,7 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
-import {
-  AppError,
-  Result,
-  defaultRepositoryErrorMapper,
-  isForeignKeyViolation,
-  tryCatch,
-} from "../../../common/utils/fp-utils";
+import { AppError, Result, isForeignKeyViolation, tryCatch } from "../../../common/utils/fp-utils";
 import {
   getAnonymizedEmail,
   getAnonymizedFirstName,
@@ -422,11 +416,15 @@ export class NotificationRepository {
             set: { enabled },
           });
       },
-      // The default mapper reads the upsert's "on conflict" as a duplicate.
+      // The default mapper reads the upsert's "on conflict" as a duplicate, so it is not used here.
       (error) =>
         isForeignKeyViolation(error)
           ? AppError.badRequest("Preference owner does not exist", "REPOSITORY_REFERENCE")
-          : defaultRepositoryErrorMapper(error),
+          : AppError.repositoryError(
+              "Failed to save the notification preference",
+              "REPOSITORY_ERROR",
+              error instanceof Error ? error.message : String(error),
+            ),
     );
   }
 

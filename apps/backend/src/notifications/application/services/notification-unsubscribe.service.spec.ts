@@ -1,4 +1,4 @@
-import type { ConfigService } from "@nestjs/config";
+import { ConfigService } from "@nestjs/config";
 import { createHmac } from "crypto";
 import { readFileSync } from "fs";
 import { resolve } from "path";
@@ -27,25 +27,18 @@ const BASE64URL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012345678
 // Flips the character's lowest bit, which in a signature's last character is one of the unused bits.
 const flipLowBit = (character: string) => BASE64URL[BASE64URL.indexOf(character) ^ 1];
 
-const configWith = (values: Record<string, string>) =>
-  ({
-    getOrThrow: (key: string) => {
-      if (!(key in values)) {
-        throw new Error(`Missing config ${key}`);
-      }
-      return values[key];
-    },
-  }) as unknown as ConfigService;
+const SECRET = "test-unsubscribe-secret";
 
-const CONFIG = {
-  "notification.unsubscribeSecret": "test-unsubscribe-secret",
-  "api.url": "https://api.example.org",
-  "email.baseUrl": "https://openjii.example.org",
-};
+const configWith = (unsubscribeSecret = SECRET) =>
+  new ConfigService({
+    notification: { unsubscribeSecret },
+    email: { baseUrl: "https://openjii.example.org" },
+    api: { url: "https://api.example.org" },
+  });
 
 describe("NotificationUnsubscribeService", () => {
   const userId = "4b1f6f4e-2f0a-4c1e-9a43-6b7e8d1c2a10";
-  const service = new NotificationUnsubscribeService(configWith(CONFIG));
+  const service = new NotificationUnsubscribeService(configWith());
 
   const expectInvalid = (token: string) => {
     const result = service.verify(token);
@@ -58,12 +51,9 @@ describe("NotificationUnsubscribeService", () => {
     ["an empty", ""],
     ["a whitespace-only", "   "],
   ])("refuses to start with %s secret", (_, secret) => {
-    expect(
-      () =>
-        new NotificationUnsubscribeService(
-          configWith({ ...CONFIG, "notification.unsubscribeSecret": secret }),
-        ),
-    ).toThrow("NOTIFICATION_UNSUBSCRIBE_SECRET");
+    expect(() => new NotificationUnsubscribeService(configWith(secret))).toThrow(
+      "NOTIFICATION_UNSUBSCRIBE_SECRET",
+    );
   });
 
   it("verifies a signed token to its user, category and the email channel", () => {
@@ -93,10 +83,9 @@ describe("NotificationUnsubscribeService", () => {
 
   it("refuses an edited payload that keeps the original signature", () => {
     const [encoded, signature] = service.sign(userId, "requests_and_invitations").split(".");
-    const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as Record<
-      string,
-      unknown
-    >;
+    const payload = z
+      .record(z.string(), z.unknown())
+      .parse(JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")));
     const edited = Buffer.from(JSON.stringify({ ...payload, c: "project_transfers" })).toString(
       "base64url",
     );
@@ -105,9 +94,7 @@ describe("NotificationUnsubscribeService", () => {
   });
 
   it("refuses a token signed with another secret", () => {
-    const other = new NotificationUnsubscribeService(
-      configWith({ ...CONFIG, "notification.unsubscribeSecret": "another-secret" }),
-    );
+    const other = new NotificationUnsubscribeService(configWith("another-secret"));
 
     expectInvalid(other.sign(userId, "requests_and_invitations"));
   });
@@ -129,9 +116,7 @@ describe("NotificationUnsubscribeService", () => {
   // Signed with the real key, so the signature holds and only the payload checks can refuse it.
   const signedOver = (payload: string) => {
     const bytes = Buffer.from(payload);
-    const signature = createHmac("sha256", Buffer.from(CONFIG["notification.unsubscribeSecret"]))
-      .update(bytes)
-      .digest("base64url");
+    const signature = createHmac("sha256", Buffer.from(SECRET)).update(bytes).digest("base64url");
     return `${bytes.toString("base64url")}.${signature}`;
   };
   const payload = (overrides: Record<string, unknown> = {}) =>
