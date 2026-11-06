@@ -16,8 +16,9 @@ the person has read the exact text and said publish.
 
 ## Before anything
 
-- The command uses the person's own Contentful management token, read from the shell or from
-  `tooling/devkit/.env`. Never mint one, ask for one in chat, or open the env file. Run
+- The command uses the person's own Contentful management token, read from the shell, then from
+  this checkout's `tooling/devkit/.env`, then from the main checkout's, so one stored in the main
+  checkout serves every worktree. Never mint one, ask for one in chat, or open the env file. Run
   `pnpm status:incident preflight`, which prints presence flags and the environment name and nothing
   else. If a setting is missing, name the key and ask the person to set it as
   `tooling/devkit/README.md` shows, then wait.
@@ -28,6 +29,8 @@ the person has read the exact text and said publish.
   if you do not already know. Rehearse in dev first, where the page is
   https://status.dev.openjii.org. Write to production only when the person says production in this
   conversation, and never on a guess.
+- In Claude Code, `.claude/settings.json` makes `pnpm status:incident publish` and
+  `pnpm cms:models apply` ask before they run, so the person approves the exact command.
 - Every write names its environment. `publish` takes `--environment <name>`, which has to equal the
   configured `CONTENTFUL_SPACE_ENVIRONMENT`, and refuses otherwise. Take the name from what the
   person told you about where this is going, not from `preflight` alone.
