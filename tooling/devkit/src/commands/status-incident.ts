@@ -12,6 +12,7 @@ import { STATUS_HISTORY_DAYS } from "@repo/monitoring/status-document";
 import type { Incident } from "@repo/monitoring/status-document";
 
 import { pathFromRoot, repositoryRoot } from "../lib/config.js";
+import { publicationState } from "../lib/content-model.js";
 import { ContentfulManagement, loadContentfulConfig } from "../lib/contentful-management.js";
 import type {
   ContentfulConfig,
@@ -176,11 +177,8 @@ function stateOf(sys: Entry["sys"]): EntryState {
   if (sys.archivedVersion !== undefined) {
     return "archived";
   }
-  if (sys.publishedVersion === undefined) {
-    return "draft";
-  }
 
-  return sys.version > sys.publishedVersion + 1 ? "changed" : "published";
+  return publicationState(sys.version, sys.publishedVersion);
 }
 
 function fieldsOf(entry: Entry): Record<string, unknown> {
@@ -292,6 +290,25 @@ function updateFlags(id: string, entry: Entry | undefined): string[] {
   }
 }
 
+function incidentFlags(entry: Entry): string[] {
+  switch (stateOf(entry.sys)) {
+    case "draft":
+      return [
+        "The incident is a draft. The publisher cannot read it, so the page leaves the whole incident out.",
+      ];
+    case "archived":
+      return [
+        "The incident is archived. The publisher cannot read it, so the page leaves the whole incident out.",
+      ];
+    case "changed":
+      return [
+        "The incident has unpublished changes. The page shows its last published fields, and the checks above read the saved draft.",
+      ];
+    case "published":
+      return [];
+  }
+}
+
 function inspectedOf(entry: Entry, updates: Map<string, Entry>, now: Date): InspectedIncident {
   const ids = linkedIdsOf(entry);
   const linked = inOrder(ids, updates);
@@ -317,6 +334,7 @@ function inspectedOf(entry: Entry, updates: Map<string, Entry>, now: Date): Insp
       version: update.sys.version,
     })),
     flags: [
+      ...incidentFlags(entry),
       ...check.dropped.map(({ scope, message }) => `The publisher drops this ${scope}: ${message}`),
       ...check.rules,
       ...ids.flatMap((id) => updateFlags(id, updates.get(id))),

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { publicationState } from "./content-model.js";
 import type { Entry } from "./contentful-management.js";
 
 interface Subject {
@@ -20,9 +21,9 @@ const TOKEN_LENGTH = 12;
 // that stopped half way.
 function contentVersion(sys: Entry["sys"]): number {
   const { version, publishedVersion } = sys;
-  const isPublishedAsSaved = publishedVersion !== undefined && version === publishedVersion + 1;
+  const isPublishedAsSaved = publicationState(version, publishedVersion) === "published";
 
-  return isPublishedAsSaved ? publishedVersion : version;
+  return isPublishedAsSaved ? (publishedVersion ?? version) : version;
 }
 
 /** The exact entries and versions a person read, as a short token publish checks again. */
