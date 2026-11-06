@@ -409,6 +409,34 @@ describe("inspect", () => {
     expect(open.search.get("content_type")).toBe("statusIncident");
   });
 
+  describe("the order", () => {
+    function incidentAt(id: string, startsAt: string | undefined): Stored {
+      const entry = liveIncident({ startsAt });
+      return { ...entry, sys: { ...entry.sys, id } };
+    }
+
+    const oldest = incidentAt("oldest", "2026-11-01T08:00:00Z");
+    const middle = incidentAt("middle", "2026-11-02T08:00:00Z");
+    const newest = incidentAt("newest", "2026-11-03T08:00:00Z");
+    const unstarted = incidentAt("unstarted", undefined);
+
+    it.each([
+      ["missing start first", [unstarted, oldest, newest, middle]],
+      ["missing start between", [oldest, unstarted, newest, middle]],
+    ])(
+      "lists newest first and an incident with no start last, given %s",
+      async (_name, entries) => {
+        const { run } = setup([liveUpdate(), ...entries]);
+
+        const result = await run({ action: "inspect" });
+
+        expect(result).toMatchObject({
+          incidents: [{ id: "newest" }, { id: "middle" }, { id: "oldest" }, { id: "unstarted" }],
+        });
+      },
+    );
+  });
+
   it("reports draft, published and changed states", async () => {
     const { run } = setup([
       liveUpdate("upd-draft", {}, draftState),
