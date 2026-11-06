@@ -61,7 +61,7 @@ function stored(
   id: string,
   type: string,
   fields: Record<string, unknown>,
-  sys: { version?: number; publishedVersion?: number | undefined } = {},
+  sys: { version?: number; publishedVersion?: number | undefined; archivedVersion?: number } = {},
 ): Stored {
   return {
     sys: { id, version: 2, publishedVersion: 1, contentType: { sys: { id: type } }, ...sys },
@@ -377,6 +377,25 @@ describe("inspect", () => {
       ],
     });
   });
+
+  it.each([
+    ["a draft", draftState, "The incident is a draft."],
+    [
+      "an archived",
+      { version: 4, publishedVersion: undefined, archivedVersion: 3 },
+      "The incident is archived.",
+    ],
+    ["a changed", { version: 4, publishedVersion: 2 }, "The incident has unpublished changes."],
+  ])(
+    "flags %s incident, which the page leaves out or shows as last published",
+    async (_name, sys, flag) => {
+      const { run } = setup([liveUpdate(), liveIncident({}, sys)]);
+
+      const result = await run({ action: "inspect" });
+
+      expect(result).toMatchObject({ incidents: [{ flags: [expect.stringContaining(flag)] }] });
+    },
+  );
 
   it("asks for open incidents and those resolved in the last 90 days", async () => {
     const { cms, run } = setup();

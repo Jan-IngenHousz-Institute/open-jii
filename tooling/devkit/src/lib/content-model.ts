@@ -175,8 +175,18 @@ function toField(parsed: ParsedField): ModelField {
   };
 }
 
-function publishedState(version: number, publishedVersion: number | null): PublishedState {
-  if (publishedVersion === null) return "draft";
+/**
+ * Contentful counts a publish as a version, so an entry published as saved sits one version past its
+ * published one, and anything further on has changes the published copy lacks.
+ */
+export function publicationState(
+  version: number,
+  publishedVersion: number | null | undefined,
+): PublishedState {
+  if (publishedVersion === null || publishedVersion === undefined) {
+    return "draft";
+  }
+
   return version === publishedVersion + 1 ? "published" : "changed";
 }
 
@@ -302,7 +312,7 @@ export class ContentModel {
       model: ContentModel.fromParsed(parsed),
       version,
       publishedVersion,
-      state: publishedState(version, publishedVersion),
+      state: publicationState(version, publishedVersion),
       unexpressed: unexpressedKeys(parsed, [...modelKeys, "sys"]),
       kept: keptKeys(parsed, [...modelKeys, "sys"]),
     };
