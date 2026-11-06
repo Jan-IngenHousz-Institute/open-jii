@@ -1,3 +1,5 @@
+import { appendFile, mkdir } from "node:fs/promises";
+import { dirname } from "node:path";
 import { z } from "zod";
 
 import { devkitEnvPath, readEnvFile } from "./config.js";
@@ -36,6 +38,36 @@ const entryListSchema = z.object({ total: z.number(), items: z.array(entrySchema
 
 export type Entry = z.output<typeof entrySchema>;
 export type EntryList = z.output<typeof entryListSchema>;
+
+type Method = "GET" | "POST" | "PUT";
+
+export interface ContentfulWrite {
+  at: string;
+  ok: boolean;
+  method: Exclude<Method, "GET">;
+  resource: string;
+  environment: string;
+}
+
+export type ContentfulAudit = (entry: ContentfulWrite) => Promise<void>;
+
+// Every write lands in .claude/contentful-writes.log, which .gitignore already excludes, naming the
+// session and the checkout that made it. A body or the token never does.
+export function createContentfulAudit(
+  root: string,
+  env: NodeJS.ProcessEnv = process.env,
+): ContentfulAudit {
+  const path = `${root}/.claude/contentful-writes.log`;
+  const session = env.CLAUDE_CODE_SESSION_ID ?? "shell";
+  return async (entry) => {
+    await mkdir(dirname(path), { recursive: true });
+    const outcome = entry.ok ? "ok" : "failed";
+    await appendFile(
+      path,
+      `${entry.at} ${outcome} ${entry.method} ${entry.resource} environment=${entry.environment} session=${session} root=${root}\n`,
+    );
+  };
+}
 
 interface SendOptions {
   body?: unknown;
@@ -84,6 +116,7 @@ export class ContentfulManagement {
   constructor(
     private readonly config: ContentfulConfig,
     private readonly request: typeof fetch = fetch,
+    private readonly audit?: ContentfulAudit,
   ) {}
 
   get environment(): string {
@@ -235,11 +268,16 @@ export class ContentfulManagement {
     return path.split("?")[0] ?? path;
   }
 
-  private async send(
-    method: "GET" | "POST" | "PUT",
-    path: string,
-    options: SendOptions = {},
-  ): Promise<unknown> {
+  private async record(method: Method, resource: string, ok: boolean): Promise<void> {
+    if (method === "GET" || this.audit === undefined) {
+      return;
+    }
+
+    const at = new Date().toISOString();
+    await this.audit({ at, ok, method, resource, environment: this.config.environment });
+  }
+
+  private async send(method: Method, path: string, options: SendOptions = {}): Promise<unknown> {
     const url = `${this.base()}/${path}`;
     const resource = ContentfulManagement.resourceOf(path);
     const hasBody = options.body !== undefined;
@@ -263,11 +301,13 @@ export class ContentfulManagement {
         ...(hasBody ? { body: JSON.stringify(options.body) } : {}),
       });
     } catch {
+      await this.record(method, resource, false);
       throw new Error(
         `Contentful ${method} ${resource} failed before a response; check what was saved before retrying`,
       );
     }
 
+    await this.record(method, resource, response.ok);
     if (!response.ok) {
       throw await this.failure(method, resource, response);
     }
