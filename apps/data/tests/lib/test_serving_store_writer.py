@@ -278,20 +278,27 @@ def test_integers_the_store_cannot_hold_become_floats_and_nothing_else_changes()
     assert storable(short) is short
 
 
-def test_the_float64_fields_are_written_as_17_digits_without_an_exponent() -> None:
+def test_the_leading_float64_fields_are_written_as_17_digits_without_an_exponent() -> None:
     line = (
-        '{"id":1,"latitude":51.986383,"longitude":1.0E-7,"device_battery":87.5,'
-        '"data":"[{\\"latitude\\":51.986383}]","output":{"latitude":0.0}}'
+        '{"latitude":51.986383,"longitude":1.0E-7,"device_battery":99.99999999999999,"id":1,'
+        '"questions_data":{"latitude":52},"output":{"longitude":5.1},"data":"[{\\"latitude\\":1.5}]"}'
     )
 
     written = exact_doubles(line)
 
     assert written == (
-        '{"id":1,"latitude":51.986382999999996,"longitude":0.00000010000000000000000,'
-        '"device_battery":87.500000000000000,'
-        '"data":"[{\\"latitude\\":51.986383}]","output":{"latitude":0.0}}'
+        '{"latitude":51.986382999999996,"longitude":0.000000099999999999999995,'
+        '"device_battery":99.999999999999986,"id":1,'
+        '"questions_data":{"latitude":52},"output":{"longitude":5.1},"data":"[{\\"latitude\\":1.5}]"}'
     )
     assert json.loads(written)["latitude"] == 51.986383
+    assert json.loads(written)["device_battery"] == 99.99999999999999
+
+
+def test_a_line_without_leading_float64_fields_is_left_as_it_is() -> None:
+    line = '{"experiment_id":"e1","latitude":51.986383}'
+
+    assert exact_doubles(line) is line
 
 
 @responses.activate

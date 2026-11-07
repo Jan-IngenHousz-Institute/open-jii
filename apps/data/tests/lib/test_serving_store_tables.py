@@ -102,6 +102,17 @@ def _rows(lines: DataFrame) -> dict[int, dict]:
     return {row["id"]: row for row in rows}
 
 
+def test_a_line_starts_with_its_float64_columns_for_the_writer_to_rewrite(spark: SparkSession) -> None:
+    measurement = MEASUREMENTS.lines(spark.sql(_RAW_DATA_CHANGES)).first()
+    upload = UPLOADS.lines(spark.sql(_UPLOADED_DATA_CHANGES)).first()
+
+    assert measurement is not None and upload is not None
+    assert measurement.line.startswith(
+        '{"latitude":52.1,"longitude":5.1,"device_battery":87.5,"experiment_id":'
+    )
+    assert upload.line.startswith('{"experiment_id":')
+
+
 def test_a_measurement_carries_its_columns(spark: SparkSession) -> None:
     row = _rows(MEASUREMENTS.lines(spark.sql(_RAW_DATA_CHANGES)))[1]
 

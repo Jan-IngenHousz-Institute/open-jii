@@ -5,16 +5,18 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
 import re
 import time
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
+from decimal import Decimal
 
 import pandas as pd
 import requests
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
+
+from openjii.serving_store.tables import FLOAT64_COLUMNS
 
 # One chunk is one insert block, so it lands whole or not at all.
 CHUNK_ROWS = 5_000
@@ -58,25 +60,29 @@ SCHEMAS_NOT_SENT = 0
 _REJECT_ROW_CHARS = 16_000_000
 
 
-# The store's Float64 columns. Written as Spark writes them (51.986383, 1.0E-7), the store reads about
-# one value in a hundred onto the neighbouring double; written as 17 significant digits without an
-# exponent, it reads every one exactly (measured on 25.8 from 1e-13 up). Its JSON columns read
-# numbers exactly and need none of this. Keys inside a string are skipped, since their quote follows
-# a backslash; a payload object's own latitude is rewritten too, which reads the same.
-_FLOAT64_FIELD = re.compile(r'(?<=[{,])("(?:latitude|longitude|device_battery)"):(-?\d[\d.eE+-]*)')
+# The store's Float64 columns, which each line holds first. Written as Spark writes them (51.986383,
+# 1.0E-7), the store reads about one value in a hundred onto the neighbouring double; written as 17
+# significant digits without an exponent, it reads every one exactly. Measured on 25.8 from 1e-13 up,
+# where precise_float_parsing changes nothing for an insert. Its JSON columns read numbers exactly,
+# so only the line's leading fields are rewritten, never a payload's own.
+_LEADING_FLOAT64 = re.compile(rf'"({"|".join(FLOAT64_COLUMNS)})":(-?\d[\d.eE+-]*),')
 
 
 def exact_doubles(line: str) -> str:
-    """The line with each of the store's Float64 fields written so the store reads it exactly."""
-    return _FLOAT64_FIELD.sub(_exact_double, line)
+    """The line with the Float64 fields it starts with written so the store reads them exactly."""
+    position = 1
+    fields = []
+    while match := _LEADING_FLOAT64.match(line, position):
+        fields.append(f'"{match[1]}":{_exact_digits(match[2])},')
+        position = match.end()
+    return "{" + "".join(fields) + line[position:] if fields else line
 
 
-def _exact_double(match: re.Match[str]) -> str:
-    value = float(match[2])
+def _exact_digits(text: str) -> str:
+    value = float(text)
     if not 1e-13 <= abs(value) < 1e15:
-        return match[0]
-    decimals = 16 - math.floor(math.log10(abs(value)))
-    return f"{match[1]}:{value:.{max(0, decimals)}f}"
+        return text
+    return format(Decimal(f"{value:.16e}"), "f")
 
 
 def storable(line: str) -> str:
