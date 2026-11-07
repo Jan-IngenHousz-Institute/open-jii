@@ -222,7 +222,6 @@ describe("StoreQueryBuilder", () => {
         "LIMIT 10",
         "OFFSET 20)",
         "ORDER BY timestamp DESC NULLS LAST",
-        "LIMIT 10",
       ].join("\n"),
     );
   });

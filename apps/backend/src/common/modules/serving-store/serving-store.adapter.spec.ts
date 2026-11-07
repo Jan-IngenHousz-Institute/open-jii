@@ -9,6 +9,11 @@ import { AppError, assertFailure, assertSuccess, failure, success } from "../../
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
 import { ServingStoreClientService } from "./services/client/client.service";
 import { ServingStoreConfigService } from "./services/config/config.service";
+import {
+  MACRO_RESULTS_TABLE,
+  MEASUREMENTS_TABLE,
+  UPLOADS_TABLE,
+} from "./services/query-builder/store-tables";
 import { ServingStoreAdapter } from "./serving-store.adapter";
 
 describe("ServingStoreAdapter", () => {
@@ -522,35 +527,37 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(second).toMatchObject({ latitude: "3.0", measurement_time_local: null });
   });
 
-  it("returns only the newest copy of each row on a sorted page", async () => {
+  it("returns a sorted page's own rows, each in its newest copy", async () => {
     const row = {
       experiment_id: "e2",
-      id: 7,
       device_id: "d1",
-      device_name: "first",
-      timestamp: "2026-10-01 08:00:00",
       _commit_version: 1,
       _commit_timestamp: "2026-10-01 08:00:01",
     };
-    const older = { ...row, id: 6, device_name: "older", timestamp: "2026-09-30 08:00:00" };
-    const copy = { ...row, device_name: "second", _commit_version: 2 };
+    const rows = [
+      { ...row, id: 5, device_name: "oldest", timestamp: "2026-09-29 08:00:00" },
+      { ...row, id: 6, device_name: "first", timestamp: "2026-09-30 08:00:00" },
+      { ...row, id: 7, device_name: "newest", timestamp: "2026-10-01 08:00:00" },
+    ];
+    const copy = { ...rows[1], device_name: "second", _commit_version: 2 };
     // A separate insert puts the copy in its own part, so the read itself has to merge it.
-    await admin.insert({ table: "measurements", values: [row, older], format: "JSONEachRow" });
+    await admin.insert({ table: "measurements", values: rows, format: "JSONEachRow" });
     await admin.insert({ table: "measurements", values: [copy], format: "JSONEachRow" });
 
-    const data = await rowsOf({
-      tableName: "raw_data",
-      tableType: "static",
-      experimentId: "e2",
-      columns: ["id", "device_name"],
-      ordering: { column: "timestamp", direction: "DESC" },
-      limit: 2,
-    });
+    const page = (offset: number) =>
+      rowsOf({
+        tableName: "raw_data",
+        tableType: "static",
+        experimentId: "e2",
+        columns: ["id", "device_name"],
+        ordering: { column: "timestamp", direction: "DESC" },
+        limit: 1,
+        offset,
+      });
 
-    expect(data.rows).toEqual([
-      ["7", "second"],
-      ["6", "older"],
-    ]);
+    expect((await page(0)).rows).toEqual([["7", "newest"]]);
+    expect((await page(1)).rows).toEqual([["6", "second"]]);
+    expect((await page(2)).rows).toEqual([["5", "oldest"]]);
   });
 
   it("flattens payload fields by type and keeps a field named like a column apart from it", async () => {
@@ -779,6 +786,28 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(contributors.value.sort()).toEqual([ADA, BEN]);
     expect(devices.value.sort()).toEqual(["PST-client", "thing-1"]);
   });
+});
+
+describe("StoreTables against the migrations", () => {
+  // A sorted page picks its rows by the key, so it must be the table's whole sorting key; and the
+  // client folds each month on its own, which holds only while a row's month is part of its key.
+  it.each([
+    ["measurements", MEASUREMENTS_TABLE],
+    ["macro_results", MACRO_RESULTS_TABLE],
+    ["uploads", UPLOADS_TABLE],
+  ])(
+    "%s is read by its migration's sorting key, which holds its partition's time",
+    (name, table) => {
+      const create =
+        migrationStatements().find((statement) =>
+          statement.includes(`CREATE TABLE IF NOT EXISTS ${name}\n`),
+        ) ?? "";
+
+      expect(create).toContain(`ORDER BY (${["experiment_id", ...table.key].join(", ")})`);
+      const partitionTime = /PARTITION BY toYYYYMM\((\w+)\)/.exec(create)?.[1];
+      expect(table.key).toContain(partitionTime);
+    },
+  );
 });
 
 /** The migrations as their runner applies them, one statement at a time. */

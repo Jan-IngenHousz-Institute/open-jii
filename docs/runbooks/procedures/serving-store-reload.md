@@ -95,7 +95,10 @@ background merges can leave them that way for a day or more. On dev, a 37M-row e
 took 1.5 to 2.9 s in that state and 0.4 s once merged; its pages took up to twice as long.
 
 When the run has finished, merge the three tables once, as the admin, starting `clickhouse-client`
-with `--receive_timeout=3600`:
+with `--receive_timeout=3600`. A merge writes each month's new part beside the old ones before it
+drops them, so first check the store's disk has about the table's size free (`store-disk`, or
+`SELECT formatReadableSize(sum(bytes_on_disk)) FROM system.parts WHERE database = 'store' AND table = 'measurements' AND active`
+against `SELECT formatReadableSize(free_space) FROM system.disks`):
 
 ```sql
 OPTIMIZE TABLE store.measurements FINAL;
@@ -105,11 +108,14 @@ OPTIMIZE TABLE store.uploads FINAL;
 
 Dev's measurements took about five minutes. Without the longer timeout the client gives up after
 300 s while the merge carries on, so check `SELECT table, progress FROM system.merges` before
-running it again. Afterwards this returns no rows:
+running it again. Afterwards no month before the current one holds more than one part, except
+where the feed has written since; the current month keeps gaining parts from the feed, which its
+own merges handle. This lists what is left:
 
 ```sql
 SELECT table, partition, count() AS parts FROM system.parts
 WHERE database = 'store' AND active AND table IN ('measurements', 'macro_results', 'uploads')
+  AND partition < toString(toYYYYMM(now()))
 GROUP BY table, partition HAVING parts > 1;
 ```
 

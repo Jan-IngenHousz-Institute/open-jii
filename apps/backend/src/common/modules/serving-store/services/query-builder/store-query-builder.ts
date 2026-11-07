@@ -221,11 +221,12 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
     // Through FINAL, the store reads every column of every matching row before it applies LIMIT.
     // A sorted page therefore finds its rows' keys first, reading only the key columns, and then
-    // reads just those rows.
-    const isSortedPage = order !== "" && limitClause !== "" && !this.isDistinct;
+    // reads just those rows. A key names one row, so the outer statement needs no LIMIT.
+    const isSortedPage =
+      this.ordering !== undefined && this.limitValue !== undefined && !this.isDistinct;
     if (isSortedPage) {
       const key = this.key.join(", ");
-      const page = this.statement([
+      const page = this.joinClauses([
         `SELECT ${key}`,
         `FROM ${this.fromClause}`,
         where,
@@ -233,16 +234,15 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
         limitClause,
         offsetClause,
       ]);
-      return this.statement([
+      return this.joinClauses([
         `SELECT ${projection}`,
         `FROM ${this.fromClause}`,
         `WHERE (${key}) IN (${page})`,
         order,
-        limitClause,
       ]);
     }
 
-    return this.statement([
+    return this.joinClauses([
       `${selectKeyword} ${projection}`,
       `FROM ${this.fromClause}`,
       where,
@@ -250,10 +250,6 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       limitClause,
       offsetClause,
     ]);
-  }
-
-  private statement(clauses: string[]): string {
-    return clauses.filter((clause) => clause.length > 0).join("\n");
   }
 
   private outputColumn(name: string): StoreOutputColumn {
