@@ -368,3 +368,21 @@ def test_text_that_reads_as_a_date_lands_as_text(
         f"FROM {_DATABASE}.uploads FINAL WHERE id = 21"
     )
     assert row == {"day_type": "String", "at": "2026-05-01T12:30:00.123"}
+
+
+@pytest.mark.clickhouse
+def test_coordinates_land_as_the_very_doubles_gold_holds(
+    spark: SparkSession, store: _Store, writer: StoreWriter
+) -> None:
+    # Both values the store read onto the neighbouring double on dev, as 51.986383000000004.
+    changes = _RAW_DATA_CHANGES.replace("'e1' AS experiment_id", "'exact' AS experiment_id").replace(
+        "52.1D AS latitude, 5.1D AS longitude", "51.986383D AS latitude, 5.6631109D AS longitude"
+    )
+
+    assert writer.write(MEASUREMENTS.lines(spark.sql(changes)), MEASUREMENTS.name) == Written(inserted=3)
+
+    rows = store.rows(
+        f"SELECT latitude, longitude, device_battery FROM {_DATABASE}.measurements FINAL "
+        "WHERE experiment_id = 'exact'"
+    )
+    assert rows == [{"latitude": 51.986383, "longitude": 5.6631109, "device_battery": 87.5}] * 3

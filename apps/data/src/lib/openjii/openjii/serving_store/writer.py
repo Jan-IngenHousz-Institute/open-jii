@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 import time
 from collections.abc import Iterable, Iterator
@@ -55,6 +56,27 @@ SCHEMAS_NOT_SENT = 0
 # The store refuses a JSON object over ten times min_chunk_bytes_for_parallel_parsing, 100 MiB by
 # default, and a reject that raised would stop the pipeline. Escaped, a row this long stays under it.
 _REJECT_ROW_CHARS = 16_000_000
+
+
+# The store's Float64 columns. Written as Spark writes them (51.986383, 1.0E-7), the store reads about
+# one value in a hundred onto the neighbouring double; written as 17 significant digits without an
+# exponent, it reads every one exactly (measured on 25.8 from 1e-13 up). Its JSON columns read
+# numbers exactly and need none of this. Keys inside a string are skipped, since their quote follows
+# a backslash; a payload object's own latitude is rewritten too, which reads the same.
+_FLOAT64_FIELD = re.compile(r'(?<=[{,])("(?:latitude|longitude|device_battery)"):(-?\d[\d.eE+-]*)')
+
+
+def exact_doubles(line: str) -> str:
+    """The line with each of the store's Float64 fields written so the store reads it exactly."""
+    return _FLOAT64_FIELD.sub(_exact_double, line)
+
+
+def _exact_double(match: re.Match[str]) -> str:
+    value = float(match[2])
+    if not 1e-13 <= abs(value) < 1e15:
+        return match[0]
+    decimals = 16 - math.floor(math.log10(abs(value)))
+    return f"{match[1]}:{value:.{max(0, decimals)}f}"
 
 
 def storable(line: str) -> str:
@@ -192,7 +214,8 @@ class StoreWriter:
     def insert(self, table: str, lines: Iterable[str]) -> Written:
         """Inserts ``lines`` chunk by chunk as they arrive, so a task holds one chunk however large
         its share of the batch."""
-        chunks = self._chunks(storable(line) for line in lines)
+        # Exact digits last: storable rewrites a line's numbers in their shortest form.
+        chunks = self._chunks(exact_doubles(storable(line)) for line in lines)
         written = Written()
         for chunk in chunks:
             try:
