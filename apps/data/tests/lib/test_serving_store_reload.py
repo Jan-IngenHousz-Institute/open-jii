@@ -16,7 +16,7 @@ import pytest
 import requests
 from openjii.serving_store import reload as reload_module
 from openjii.serving_store.reload import Reloaded, RemovalOverLimit, StoreAheadOfGold, StoreReload
-from openjii.serving_store.tables import UPLOADS, StoreTable
+from openjii.serving_store.tables import MEASUREMENTS, UPLOADS, StoreTable
 from openjii.serving_store.writer import StoreUnavailable, StoreWriter, Written
 from pyspark.sql import DataFrame, SparkSession
 
@@ -28,16 +28,37 @@ _RELOADER = "reload_test_reloader"
 _COMMITTED_AT = datetime(2026, 11, 3, 9, 0, 1, tzinfo=timezone.utc)
 
 # Gold's uploads at version 7: e1's row 21 changed, 22 held twice, 23 gone and 24 new; e2 unchanged.
-# Each row carries the commit that added it.
 _GOLD = """
     SELECT experiment_id, id, 't1' AS upload_table_id, 'Soil' AS upload_table_name, 'up1' AS upload_id,
-      'u1' AS created_by, TIMESTAMP'2026-10-19 09:00:00' AS uploaded_at, parse_json(data) AS uploaded_data,
-      added AS _row_commit_version
+      'u1' AS created_by, TIMESTAMP'2026-10-19 09:00:00' AS uploaded_at, parse_json(data) AS uploaded_data
     FROM VALUES
-      ('e1', 21L, '{"ph": 7.0}', 6L), ('e1', 22L, '{"ph": 6.1}', 2L), ('e1', 22L, '{"ph": 6.1}', 5L),
-      ('e1', 24L, '{"ph": 5.9}', 7L), ('e2', 31L, '{"ph": 6.8}', 1L)
-      AS t(experiment_id, id, data, added)
+      ('e1', 21L, '{"ph": 7.0}'), ('e1', 22L, '{"ph": 6.1}'), ('e1', 22L, '{"ph": 6.1}'),
+      ('e1', 24L, '{"ph": 5.9}'), ('e2', 31L, '{"ph": 6.8}')
+      AS t(experiment_id, id, data)
 """
+
+# Gold's raw data at version 7: measurement 1 held twice, its macro output recomputed a day after
+# it first arrived.
+_GOLD_RAW_DATA = """
+    SELECT
+      'e1' AS experiment_id, 1L AS id, 'd1' AS device_id, 'c1' AS client_id, 'MultispeQ' AS device_name,
+      'multispeq' AS device_family, '2' AS device_version, '2.345' AS device_firmware,
+      87.5D AS device_battery, 'AA:BB:CC:DD:EE:FF' AS device_address, 'Pixel 8' AS client_model,
+      'Google' AS client_manufacturer, 'android' AS client_os, '15' AS client_os_version,
+      '1.42.0' AS client_app_version, TIMESTAMP'2026-10-19 10:00:00' AS timestamp,
+      'Europe/Amsterdam' AS timezone,
+      array(named_struct('id', 'm1', 'name', 'Phi2', 'filename', 'phi2.js')) AS macros,
+      parse_json('{"plot": "A1"}') AS questions_data, CAST(NULL AS ARRAY<STRING>) AS annotations,
+      'u1' AS user_id, 'p1' AS protocol_id, CAST(NULL AS STRING) AS workbook_run_id,
+      CAST(NULL AS STRING) AS workbook_version_id, CAST(NULL AS STRING) AS macro_context,
+      52.1D AS latitude, 5.1D AS longitude, parse_json('{"par": 120}') AS data,
+      parse_json(output) AS output_data, processed AS processed_timestamp,
+      CAST(NULL AS TIMESTAMP) AS arrival_timestamp, CAST(NULL AS BOOLEAN) AS skip_macro_processing
+    FROM VALUES {copies}
+    AS t(output, processed)
+"""
+_FIRST_COPY = """('{"phi2": 0.7}', TIMESTAMP'2026-10-19 10:00:03')"""
+_RECOMPUTED_COPY = """('{"phi2": 0.8}', TIMESTAMP'2026-10-20 08:00:00')"""
 
 # What the feed sent before, at version 3.
 _FED = """
@@ -121,14 +142,19 @@ def test_gold_rows_go_in_as_inserts_at_golds_latest_version(spark: SparkSession)
     }
 
 
-def test_a_key_gold_holds_twice_goes_in_as_its_newest_copy(spark: SparkSession) -> None:
+@pytest.mark.parametrize(
+    "copies", [(_FIRST_COPY, _RECOMPUTED_COPY), (_RECOMPUTED_COPY, _FIRST_COPY)], ids=["after", "before"]
+)
+def test_a_key_gold_holds_twice_goes_in_as_the_copy_gold_processed_last(
+    spark: SparkSession, copies: tuple[str, str]
+) -> None:
     writer = _Writer()
-    recomputed = _GOLD.replace("""('e1', 22L, '{"ph": 6.1}', 5L)""", """('e1', 22L, '{"ph": 6.4}', 5L)""")
+    gold = _GOLD_RAW_DATA.replace("{copies}", ", ".join(copies))
 
-    _GoldAt(spark, writer, recomputed).reload(UPLOADS, "e1")
+    _GoldAt(spark, writer, gold).reload(MEASUREMENTS, "e1")
 
     [sent] = writer.lines
-    assert [line["uploaded_data"] for line in sent if line["id"] == 22] == [{"ph": 6.4}]
+    assert [(line["id"], line["output_data"]) for line in sent] == [(1, '{"phi2":0.8}')]
 
 
 # The deletes of a reloaded table's rows and schemas, apart from the ids pruned after them.
