@@ -41,6 +41,7 @@ const STORE_SCALARS: Record<string, string> = {
 export class StoreQueryBuilder extends BaseQueryBuilder {
   private fromClause = "";
   private columns: StoreColumn[] = [];
+  private key: string[] = [];
   private selectColumns?: string[];
   private variantColumns: FlattenedSource[] = [];
   private reservedColumns: string[] = [];
@@ -53,6 +54,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   read(table: StoreTable, experimentId: string, identifier?: string): this {
     this.columns = table.columns;
+    this.key = table.key;
     this.from(`${table.view}(experiment = ${this.escapeValue(experimentId)})`);
     if (table.identifierColumn !== undefined && identifier !== undefined) {
       this.where(`${table.identifierColumn} = ${this.escapeValue(identifier)}`);
@@ -217,16 +219,41 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const limitClause = this.limitValue === undefined ? "" : `LIMIT ${this.limitValue}`;
     const offsetClause = this.offsetValue === undefined ? "" : `OFFSET ${this.offsetValue}`;
 
-    return [
+    // Through FINAL, the store reads every column of every matching row before it applies LIMIT.
+    // A sorted page therefore finds its rows' keys first, reading only the key columns, and then
+    // reads just those rows.
+    const isSortedPage = order !== "" && limitClause !== "" && !this.isDistinct;
+    if (isSortedPage) {
+      const key = this.key.join(", ");
+      const page = this.statement([
+        `SELECT ${key}`,
+        `FROM ${this.fromClause}`,
+        where,
+        order,
+        limitClause,
+        offsetClause,
+      ]);
+      return this.statement([
+        `SELECT ${projection}`,
+        `FROM ${this.fromClause}`,
+        `WHERE (${key}) IN (${page})`,
+        order,
+        limitClause,
+      ]);
+    }
+
+    return this.statement([
       `${selectKeyword} ${projection}`,
       `FROM ${this.fromClause}`,
       where,
       order,
       limitClause,
       offsetClause,
-    ]
-      .filter((clause) => clause.length > 0)
-      .join("\n");
+    ]);
+  }
+
+  private statement(clauses: string[]): string {
+    return clauses.filter((clause) => clause.length > 0).join("\n");
   }
 
   private outputColumn(name: string): StoreOutputColumn {

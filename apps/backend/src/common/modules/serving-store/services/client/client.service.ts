@@ -49,6 +49,9 @@ export class ServingStoreClientService implements OnModuleDestroy {
               max_result_bytes: "26214400",
               result_overflow_mode: "throw",
               wait_end_of_query: 1,
+              // Copies of a row always land in the same month, so FINAL can merge each month
+              // separately, which is faster.
+              do_not_merge_across_partitions_select_final: 1,
             },
           });
   }

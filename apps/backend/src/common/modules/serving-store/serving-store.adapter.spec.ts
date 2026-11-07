@@ -522,6 +522,37 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(second).toMatchObject({ latitude: "3.0", measurement_time_local: null });
   });
 
+  it("returns only the newest copy of each row on a sorted page", async () => {
+    const row = {
+      experiment_id: "e2",
+      id: 7,
+      device_id: "d1",
+      device_name: "first",
+      timestamp: "2026-10-01 08:00:00",
+      _commit_version: 1,
+      _commit_timestamp: "2026-10-01 08:00:01",
+    };
+    const older = { ...row, id: 6, device_name: "older", timestamp: "2026-09-30 08:00:00" };
+    const copy = { ...row, device_name: "second", _commit_version: 2 };
+    // A separate insert puts the copy in its own part, so the read itself has to merge it.
+    await admin.insert({ table: "measurements", values: [row, older], format: "JSONEachRow" });
+    await admin.insert({ table: "measurements", values: [copy], format: "JSONEachRow" });
+
+    const data = await rowsOf({
+      tableName: "raw_data",
+      tableType: "static",
+      experimentId: "e2",
+      columns: ["id", "device_name"],
+      ordering: { column: "timestamp", direction: "DESC" },
+      limit: 2,
+    });
+
+    expect(data.rows).toEqual([
+      ["7", "second"],
+      ["6", "older"],
+    ]);
+  });
+
   it("flattens payload fields by type and keeps a field named like a column apart from it", async () => {
     const macroSchema = VariantSchema.merge([PAYLOAD_SCHEMAS[1].schema, PAYLOAD_SCHEMAS[2].schema]);
     const data = await rowsOf({
