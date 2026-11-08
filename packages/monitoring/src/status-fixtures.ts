@@ -115,7 +115,6 @@ function document(
   generatedAt: string,
   components: StatusComponent[],
   incidents: Incident[],
-  messagesPerMinute: number,
 ): StatusDocument {
   return {
     version: STATUS_DOCUMENT_VERSION,
@@ -123,7 +122,6 @@ function document(
     components,
     incidents,
     notices: [],
-    messagesPerMinute,
   };
 }
 
@@ -145,7 +143,6 @@ export const operationalStatusDocument: StatusDocument = document(
   GENERATED_AT,
   healthyComponents(),
   [],
-  42.6,
 );
 
 /** The same document, written twenty minutes earlier, for the page's stale-data banner. */
@@ -153,7 +150,6 @@ export const staleStatusDocument: StatusDocument = document(
   STALE_GENERATED_AT,
   healthyComponents(),
   [],
-  42.6,
 );
 
 const incident: Incident = {
@@ -210,7 +206,6 @@ export const incidentStatusDocument: StatusDocument = document(
     ),
   ],
   [incident],
-  3.2,
 );
 
 export const resolvedIncident: Incident = {
@@ -312,7 +307,6 @@ export const plannedStatusDocument: StatusDocument = {
       ),
     ],
     [upcomingMaintenance, resolvedIncident, completedMaintenance],
-    42.6,
   ),
   notices: [
     {
@@ -372,5 +366,4 @@ export const maintenanceStatusDocument: StatusDocument = document(
     ),
   ],
   [maintenanceInProgress],
-  42.6,
 );

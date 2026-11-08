@@ -158,18 +158,18 @@ describe("unreadableResults", () => {
       MetricDataResults: [
         result("databaseUp", "Complete"),
         result("websiteRequests", "Forbidden"),
-        result("ingestPublished", "InternalError"),
+        result("ingestThrottled", "InternalError"),
       ],
     };
 
     expect(unreadableResults(page).map(({ Id }) => Id)).toEqual([
       "websiteRequests",
-      "ingestPublished",
+      "ingestThrottled",
     ]);
   });
 
   it("takes partial data as unreadable only on the last page", () => {
-    const partial = [result("ingestPublished", "PartialData")];
+    const partial = [result("ingestThrottled", "PartialData")];
 
     expect(unreadableResults({ NextToken: "next", MetricDataResults: partial })).toEqual([]);
     expect(unreadableResults({ MetricDataResults: partial })).toEqual(partial);

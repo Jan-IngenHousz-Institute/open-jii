@@ -39,7 +39,6 @@ export const STATUS_SIGNAL_IDS = [
   "ingestRefusedPublishes",
   "ingestThrottled",
   "iotUp",
-  "ingestPublished",
   "deliveryLatencyP95",
   "ingestIdle",
   "devicePublishesBeforeIdle",
@@ -91,9 +90,6 @@ export const DEPENDENCY_WINDOW_MINUTES = 10;
 /** Iterator age moves slowly, so a few minutes is enough to read its level. */
 export const LAG_WINDOW_MINUTES = 5;
 
-/** The messages per minute figure averages over this many minutes. */
-export const INGEST_THROUGHPUT_WINDOW_MINUTES = 5;
-
 /**
  * The heartbeat export publishes every half hour. Latencies are stamped at the start of the bucket
  * they measure, so the newest is 30 to 60 minutes old, and 75 minutes tolerates delivery lag but
@@ -142,13 +138,7 @@ export const STATUS_COMPONENTS: StatusComponentDefinition[] = [
   {
     id: "data-intake",
     live: true,
-    signals: [
-      "ingestForwardingFailures",
-      "ingestRefusedPublishes",
-      "ingestThrottled",
-      "iotUp",
-      "ingestPublished",
-    ],
+    signals: ["ingestForwardingFailures", "ingestRefusedPublishes", "ingestThrottled", "iotUp"],
   },
   {
     id: "data-delivery",
@@ -311,16 +301,6 @@ export function statusSignals(config: StatusConfig): StatusSignal[] {
       read: stream("WriteProvisionedThroughputExceeded", "Sum"),
     }),
     define({ ...dependencyCheck, id: "iotUp", read: dependencyUp("iot") }),
-    define({
-      ...awsCount,
-      id: "ingestPublished",
-      // Whole minutes CloudWatch has finished counting: the current one is partial and the one
-      // before it still arriving.
-      lookbackMinutes: INGEST_THROUGHPUT_WINDOW_MINUTES + 1,
-      endMinutesAgo: 1,
-      // Devices publish over MQTT; the ingest health check publishes over HTTP and is not traffic.
-      read: searchSum("{AWS/IoT,Protocol}", 'MetricName="PublishIn.Success" AND Protocol="MQTT"'),
-    }),
 
     define({
       ...pipelineGauge,
