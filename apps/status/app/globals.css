@@ -4,46 +4,6 @@
 
 @source "../../../packages/ui/src";
 
-/* A bar tips right on its bottom corner and settles against its neighbour; the last one falls flat. */
-@theme {
-  --animate-domino-fall: domino-fall 240ms ease-out both;
-  --animate-domino-fall-flat: domino-fall-flat 240ms ease-out both;
-  --animate-domino-rise: domino-fall 320ms ease-out reverse both;
-  --animate-domino-rise-flat: domino-fall-flat 320ms ease-out reverse both;
-}
-
-@keyframes domino-fall {
-  0% {
-    transform: rotate(0deg);
-    animation-timing-function: cubic-bezier(0.5, 0, 1, 0.5);
-  }
-  78% {
-    transform: rotate(42deg);
-  }
-  90% {
-    transform: rotate(37deg);
-  }
-  100% {
-    transform: rotate(40deg);
-  }
-}
-
-@keyframes domino-fall-flat {
-  0% {
-    transform: rotate(0deg);
-    animation-timing-function: cubic-bezier(0.5, 0, 1, 0.5);
-  }
-  78% {
-    transform: rotate(90deg);
-  }
-  90% {
-    transform: rotate(84deg);
-  }
-  100% {
-    transform: rotate(90deg);
-  }
-}
-
 @layer base {
   * {
     @apply border-border;

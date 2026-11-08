@@ -2,7 +2,6 @@
 
 import { ChevronDown } from "lucide-react";
 import { useId } from "react";
-import type { ReactNode } from "react";
 import { HistoryStrip } from "~/components/history/history-strip";
 import { ProblemDays } from "~/components/history/problem-days";
 import { useVisibleDays } from "~/components/history/use-visible-days";
@@ -23,16 +22,9 @@ interface ComponentRowProps {
   incidents: Incident[];
   today: string;
   isStale: boolean;
-  adornment?: ReactNode;
 }
 
-export function ComponentRow({
-  component,
-  incidents,
-  today,
-  isStale,
-  adornment,
-}: ComponentRowProps) {
+export function ComponentRow({ component, incidents, today, isStale }: ComponentRowProps) {
   const { t } = useTranslation("status");
   const format = useFormat();
   const dayCount = useVisibleDays();
@@ -70,8 +62,7 @@ export function ComponentRow({
             )}
           </p>
         </div>
-        <div className="flex items-center gap-3 sm:shrink-0">
-          {adornment}
+        <div className="flex items-center sm:shrink-0">
           <span id={badgeId}>
             <StatusBadge state={component.state} isMuted={isStale} />
           </span>

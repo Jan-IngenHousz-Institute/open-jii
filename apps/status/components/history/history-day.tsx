@@ -2,7 +2,6 @@
 
 import { memo, useCallback, useRef } from "react";
 import type { PointerEvent } from "react";
-import { dominoAnimation, useDominoes } from "~/components/extras/dominoes";
 import { useFormat } from "~/hooks/use-format";
 
 import { useTranslation } from "@repo/i18n/client";
@@ -25,7 +24,6 @@ const CARD_CLOSE_DELAY_MS = 200;
 
 interface HistoryDayProps {
   index: number;
-  dayCount: number;
   day: DayRecord;
   incidents: Incident[];
   checksBegan: string;
@@ -40,7 +38,6 @@ interface HistoryDayProps {
 // Only the strip's current stop is exposed to assistive tech; the card repeats the bar's label.
 export const HistoryDay = memo(function HistoryDay({
   index,
-  dayCount,
   day,
   incidents,
   checksBegan,
@@ -53,9 +50,7 @@ export const HistoryDay = memo(function HistoryDay({
 }: HistoryDayProps) {
   const { t } = useTranslation("status");
   const format = useFormat();
-  const dominoes = useDominoes();
   const summary = summarizeDay(day, incidents);
-  const domino = dominoAnimation(dominoes.run, index, dayCount);
   const label = useDayLabel(day.date, summary, checksBegan, isToday);
   const wasOpenOnPress = useRef(false);
 
@@ -102,13 +97,9 @@ export const HistoryDay = memo(function HistoryDay({
           onPointerDown={press}
           onPointerUp={release}
           className={cn(
-            "focus-visible:outline-ring origin-bottom-right rounded-[2px] focus-visible:outline-2 focus-visible:outline-offset-2",
+            "focus-visible:outline-ring rounded-[2px] focus-visible:outline-2 focus-visible:outline-offset-2",
             CELL[day.state],
-            // A layer before any run starts, so starting one does not change how the bar renders.
-            dominoes.isEnabled && "will-change-transform",
-            domino.className,
           )}
-          style={{ animationDelay: domino.delay }}
         />
       </HoverCardTrigger>
       <HoverCardPortal>

@@ -31,6 +31,5 @@ export function useStatusView(document: StatusDocument, serverOffsetMs: number) 
     components,
     isStale,
     isAllOperational,
-    hasExtras: isAllOperational && !isStale,
   };
 }

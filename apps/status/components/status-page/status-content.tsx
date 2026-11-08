@@ -31,8 +31,10 @@ function renderIncident(incident: Incident) {
 }
 
 export function StatusContent({ document, serverOffsetMs, hasRefreshFailed }: StatusContentProps) {
-  const { now, groups, openWindows, components, isStale, isAllOperational, hasExtras } =
-    useStatusView(document, serverOffsetMs);
+  const { now, groups, openWindows, components, isStale, isAllOperational } = useStatusView(
+    document,
+    serverOffsetMs,
+  );
 
   function renderWindow(maintenance: Incident) {
     return <MaintenanceCard key={maintenance.id} incident={maintenance} now={now} />;
@@ -66,8 +68,6 @@ export function StatusContent({ document, serverOffsetMs, hasRefreshFailed }: St
         components={components}
         incidents={document.incidents}
         today={document.generatedAt.slice(0, 10)}
-        messagesPerMinute={document.messagesPerMinute}
-        hasExtras={hasExtras}
         isStale={isStale}
       />
 

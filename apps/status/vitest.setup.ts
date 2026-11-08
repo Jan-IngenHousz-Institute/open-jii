@@ -17,13 +17,6 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
-// jsdom has no Web Animations, which the intake bubbles and the leaf flash call.
-Object.defineProperty(Element.prototype, "animate", {
-  configurable: true,
-  writable: true,
-  value: () => ({ onfinish: null, cancel: () => undefined }),
-});
-
 // TanStack Query hands results to components on a zero-delay timer, which fake timers hold back
 // past the end of an advance. A microtask hands them over inside the act() each test awaits.
 notifyManager.setScheduler(queueMicrotask);

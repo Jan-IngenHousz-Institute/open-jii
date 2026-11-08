@@ -90,7 +90,6 @@ export function HistoryStrip({
       <HistoryDay
         key={day.date}
         index={index}
-        dayCount={dayCount}
         day={day}
         incidents={incidents}
         checksBegan={checksBegan}

@@ -1,8 +1,6 @@
 "use client";
 
 import { memo } from "react";
-import { Dominoes } from "~/components/extras/dominoes";
-import { IntakeLeaf } from "~/components/extras/intake-leaf";
 import { HistoryLegend } from "~/components/history/history-legend";
 import { SectionTitle } from "~/components/shared/section-title";
 
@@ -16,25 +14,18 @@ interface ComponentsSectionProps {
   components: StatusComponent[];
   incidents: Incident[];
   today: string;
-  messagesPerMinute: number | undefined;
-  hasExtras: boolean;
   isStale: boolean;
 }
 
-// The extras only play when nothing is wrong and the data is fresh.
 export const ComponentsSection = memo(function ComponentsSection({
   components,
   incidents,
   today,
-  messagesPerMinute,
-  hasExtras,
   isStale,
 }: ComponentsSectionProps) {
   const { t } = useTranslation("status");
 
   function renderRow(component: StatusComponent) {
-    const hasLeaf = hasExtras && component.id === "data-intake";
-
     return (
       <ComponentRow
         key={component.id}
@@ -42,7 +33,6 @@ export const ComponentsSection = memo(function ComponentsSection({
         incidents={incidents}
         today={today}
         isStale={isStale}
-        adornment={hasLeaf ? <IntakeLeaf messagesPerMinute={messagesPerMinute} /> : undefined}
       />
     );
   }
@@ -54,11 +44,9 @@ export const ComponentsSection = memo(function ComponentsSection({
         <HistoryLegend />
       </div>
 
-      <Dominoes isEnabled={hasExtras}>
-        <Card padding="none" className="gap-0 overflow-x-clip">
-          {components.map(renderRow)}
-        </Card>
-      </Dominoes>
+      <Card padding="none" className="gap-0">
+        {components.map(renderRow)}
+      </Card>
     </>
   );
 });

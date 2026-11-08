@@ -110,16 +110,3 @@ export function stubStatusFetch(initial: Outcome, serverDate?: string) {
     },
   };
 }
-
-export function stubReducedMotion(isReduced: boolean) {
-  vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
-    matches: isReduced && query === "(prefers-reduced-motion: reduce)",
-    media: query,
-    onchange: null,
-    addListener: () => undefined,
-    removeListener: () => undefined,
-    addEventListener: () => undefined,
-    removeEventListener: () => undefined,
-    dispatchEvent: () => false,
-  }));
-}
