@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { faker } from "@faker-js/faker";
+import { Logger } from "@nestjs/common";
 
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { AppError, assertSuccess, failure, success } from "../../../common/utils/fp-utils";
@@ -480,12 +481,18 @@ describe("ExperimentMetadataWarehouseRepository", () => {
       };
 
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(schemaData));
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
 
       const result = await repository.findAllByExperimentId(mockExperimentId);
 
       assertSuccess(result);
       // Invalid JSON should fallback to empty object
       expect(result.value[0].metadata).toEqual({});
+      expect(warn).toHaveBeenCalledWith({
+        msg: "Failed to parse metadata JSON",
+        metadataId: mockMetadataId,
+        length: "NOT VALID JSON {{{".length,
+      });
     });
 
     it("should handle missing column values gracefully", async () => {

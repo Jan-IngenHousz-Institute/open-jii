@@ -266,7 +266,12 @@ export class ExperimentMetadataWarehouseRepository {
       try {
         metadata = JSON.parse(rawMetadata) as Record<string, unknown>;
       } catch {
-        this.logger.warn({ msg: "Failed to parse metadata JSON", rawMetadata });
+        // The sheet's contents stay out of the log, as every other sheet read keeps them.
+        this.logger.warn({
+          msg: "Failed to parse metadata JSON",
+          metadataId: row[colIndex("metadata_id")],
+          length: rawMetadata.length,
+        });
       }
     }
 
