@@ -11,6 +11,8 @@ function isAllowedMetadataColumnChar(c: string): boolean {
   return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || (c >= "0" && c <= "9") || c === "_";
 }
 
+const MAX_METADATA_CHARACTERS = 5_000_000;
+
 // Half of a UTF-16 surrogate pair, which Postgres cannot keep in a jsonb document.
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 
@@ -112,6 +114,15 @@ export const zExperimentCustomMetadataPayload = z
         seen.set(canonicalName, idx);
       }
     });
+
+    // Reported on the rows, which make a sheet large, so the form can show it.
+    if (JSON.stringify(blob).length > MAX_METADATA_CHARACTERS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["rows"],
+        message: "Metadata cannot be larger than 5 MB",
+      });
+    }
 
     // Postgres keeps no NUL character and no half of a character pair in a jsonb document, in a key
     // or in a value. Reported on the field that holds it, so the form can show it there.
