@@ -90,14 +90,31 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
       );
     });
 
-    it("keeps the annotations' text out of the statement", async () => {
+    it("keeps every value a researcher typed out of the statement, as a parameter", async () => {
       const execute = vi
         .spyOn(databricksPort, "executeSqlQuery")
         .mockResolvedValue(success(nothing));
+      const hostile = copy({
+        contentText: "farmer's plot \\ north",
+        rowId: "1'); DROP TABLE x; --",
+        tableName: "raw_data' OR '1'='1",
+        userName: "O'Brien",
+      });
 
-      assertSuccess(await repository.merge([copy({ contentText: "farmer's plot \\ north" })]));
+      assertSuccess(await repository.merge([hostile]));
 
-      expect(execute.mock.calls[0][1]).not.toContain("farmer");
+      const [, statement, parameters] = execute.mock.calls[0];
+      for (const value of ["farmer", "DROP TABLE", "OR '1'", "O'Brien"]) {
+        expect(statement).not.toContain(value);
+      }
+      expect(parameters).toEqual(
+        expect.arrayContaining([
+          { name: "content_text_0", value: hostile.contentText },
+          { name: "row_id_0", value: hostile.rowId },
+          { name: "table_name_0", value: hostile.tableName },
+          { name: "user_name_0", value: hostile.userName },
+        ]),
+      );
     });
 
     it("sends nothing when there is nothing to write", async () => {
