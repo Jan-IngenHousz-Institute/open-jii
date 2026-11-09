@@ -1,3 +1,5 @@
+import { Logger } from "@nestjs/common";
+
 import { eq, profiles } from "@repo/database";
 
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
@@ -234,6 +236,34 @@ describe("PlatformAnnotationsService", () => {
 
     assertSuccess(result);
     expect(result.value).toEqual(data);
+  });
+
+  it("shows the platform's alone where the phone's cell cannot be read, and says so once", async () => {
+    const flag = await annotate({});
+    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+    const data = page(
+      ["id", "annotations"],
+      [
+        ["1", "{not a list"],
+        ["2", "{also not"],
+      ],
+    );
+
+    const result = await service.fill({
+      experimentId,
+      tableName: "raw_data",
+      data,
+      phoneAnnotationsFrom: "annotations",
+    });
+
+    assertSuccess(result);
+    expect(
+      result.value.rows.map(([, annotations]): unknown => JSON.parse(annotations ?? "null")),
+    ).toEqual([[cell(flag, "Ada Lovelace")], []]);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({ experimentId, tableName: "raw_data", rows: 2 }),
+    );
   });
 
   it("fails the read when Postgres cannot answer", async () => {
