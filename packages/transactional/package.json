@@ -102,6 +102,10 @@
     "./render/data-upload-failed-notification": {
       "types": "./dist/render/data-upload-failed-notification.d.ts",
       "default": "./dist/render/data-upload-failed-notification.js"
+    },
+    "./render/data-upload-partly-completed-notification": {
+      "types": "./dist/render/data-upload-partly-completed-notification.d.ts",
+      "default": "./dist/render/data-upload-partly-completed-notification.js"
     }
   },
   "scripts": {

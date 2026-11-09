@@ -212,7 +212,64 @@ describe("UploadRunReconcilerService", () => {
         actorId: null,
         resourceType: "experiment",
         resourceId: experimentId,
+        params: {
+          experimentName: "Drought trial",
+          skippedCount: "1",
+          skippedFiles: "broken.csv — could not be read",
+        },
+      }),
+    ]);
+  });
+
+  it("names no left-out files for an upload that took every file", async () => {
+    const uploadId = await uploadInFlight();
+    vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(success(succeededRun()));
+    vi.spyOn(databricksPort, "getJobRunOutput").mockResolvedValue(
+      success(outcome(uploadId, { rejectedFiles: [] })),
+    );
+
+    await reconciler.reconcile();
+
+    expect(await notificationsFor(userId)).toEqual([
+      expect.objectContaining({
+        type: "data_upload_completed",
         params: { experimentName: "Drought trial" },
+      }),
+    ]);
+  });
+
+  it("names ten left-out files with their reasons and counts the rest", async () => {
+    const uploadId = await uploadInFlight();
+    const rejectedFiles = Array.from({ length: 12 }, (_, index) => ({
+      name: `plot_${index + 1}.csv`,
+      reason: index % 2 === 0 ? ("unparseable" as const) : ("no_rows" as const),
+    }));
+    vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(success(succeededRun()));
+    vi.spyOn(databricksPort, "getJobRunOutput").mockResolvedValue(
+      success(outcome(uploadId, { rejectedFiles })),
+    );
+
+    await reconciler.reconcile();
+
+    expect(await notificationsFor(userId)).toEqual([
+      expect.objectContaining({
+        params: {
+          experimentName: "Drought trial",
+          skippedCount: "12",
+          skippedFiles: [
+            "plot_1.csv — could not be read",
+            "plot_2.csv — no rows",
+            "plot_3.csv — could not be read",
+            "plot_4.csv — no rows",
+            "plot_5.csv — could not be read",
+            "plot_6.csv — no rows",
+            "plot_7.csv — could not be read",
+            "plot_8.csv — no rows",
+            "plot_9.csv — could not be read",
+            "plot_10.csv — no rows",
+            "and 2 more, listed on the Data tab",
+          ].join("\n"),
+        },
       }),
     ]);
   });

@@ -11,6 +11,7 @@ import { renderCalibrationRunAwaitingApprovalNotification } from "../render/cali
 import { renderCalibrationRunRejectedNotification } from "../render/calibration-run-rejected-notification";
 import { renderDataUploadCompletedNotification } from "../render/data-upload-completed-notification";
 import { renderDataUploadFailedNotification } from "../render/data-upload-failed-notification";
+import { renderDataUploadPartlyCompletedNotification } from "../render/data-upload-partly-completed-notification";
 import { renderExperimentMadePublicNotification } from "../render/experiment-made-public-notification";
 import { renderJoinRequestSubmitted } from "../render/join-request-submitted";
 import { renderOrganizationMembershipRemoved } from "../render/organization-membership-removed";
@@ -193,6 +194,18 @@ async function main(): Promise<void> {
       host,
       baseUrl,
       experimentName: "Drought trial",
+      dataUrl: `${baseUrl}/en-US/platform/experiments/123/data`,
+    }),
+  );
+
+  write(
+    "data-upload-partly-completed",
+    await renderDataUploadPartlyCompletedNotification({
+      host,
+      baseUrl,
+      experimentName: "Drought trial",
+      skippedCount: "2",
+      skippedFiles: "broken.csv — could not be read\nempty.csv — no rows",
       dataUrl: `${baseUrl}/en-US/platform/experiments/123/data`,
     }),
   );

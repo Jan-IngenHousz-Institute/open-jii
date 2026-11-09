@@ -128,12 +128,24 @@ const TYPE_PATH: Record<NotificationType, (resource: NotificationResource) => st
   passkey_added: fixedPage("account/security"),
 };
 
-/** A move into a personal workspace and a role change each carry their own copy. */
+/**
+ * A move into a personal workspace, a role change and an upload that left files out each
+ * carry their own copy.
+ */
 const copyContext = (notification: Notification): string | undefined => {
   if (notification.type === "organization_role_changed") return notification.params.role;
   if (notification.type === "passkey_added" && !notification.params.passkeyName) return "unnamed";
+  if (notification.type === "data_upload_completed" && notification.params.skippedCount) {
+    return "skipped";
+  }
   return notification.params.organizationKind === "personal" ? "personal" : undefined;
 };
+
+/** The left-out count picks the plural of the upload's `skipped` copy. */
+const pluralCount = (notification: Notification): { count: number } | undefined =>
+  notification.type === "data_upload_completed" && notification.params.skippedCount
+    ? { count: Number(notification.params.skippedCount) }
+    : undefined;
 
 interface NotificationRowProps {
   notification: Notification;
@@ -151,13 +163,15 @@ export function NotificationRow({ notification, onOpen, layout = "feed" }: Notif
   const isUnread = notification.readAt === null;
   // `replace` keeps stored params apart from i18next's own options, so a future param
   // named `count` or `context` interpolates instead of changing how `t` behaves. The
-  // one option set on purpose is `context`, which picks a type's variant copy.
+  // options set on purpose are `context`, which picks a type's variant copy, and `count`,
+  // set only for an upload that left files out, which picks that copy's plural.
   const message = t(`types.${notification.type}`, {
     replace: {
       ...notification.params,
       actor: personName({ displayName: notification.actor?.name }, t, { placement: "text" }),
     },
     context: copyContext(notification),
+    ...pluralCount(notification),
   });
 
   const handleOpen = () => onOpen(notification);

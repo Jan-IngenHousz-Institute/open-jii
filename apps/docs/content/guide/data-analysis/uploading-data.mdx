@@ -53,8 +53,9 @@ well, switch **Data exports and uploads** on under Account → Notifications; it
 
 A file that cannot be read, or that holds no rows, is left out without failing the rest
 of the upload; for an Ambyte upload, that is a whole `Ambyte_N` folder. A completed upload
-says what it left out and names each file or folder with the reason, so you can fix them
-and upload them again to the same table.
+says what it left out and names each file or folder with the reason; its notification in
+the bell says how many were left out, and its email names them. Fix them and upload them
+again to the same table.
 
 An upload fails when none of its files matched the chosen format, when no rows could be
 read from them, or when the transfer from your browser stopped before every file arrived.

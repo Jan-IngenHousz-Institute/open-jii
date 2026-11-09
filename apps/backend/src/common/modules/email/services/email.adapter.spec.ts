@@ -626,6 +626,26 @@ describe("EmailAdapter", () => {
     });
   });
 
+  describe("sendDataUploadPartlyCompletedNotification", () => {
+    it("delegates to NotificationsService with the input unchanged", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendDataUploadPartlyCompletedNotification")
+        .mockResolvedValue(success(undefined));
+      const input = {
+        experimentId: "exp-123",
+        experimentName: "Drought trial",
+        skippedCount: "2",
+        skippedFiles: "broken.csv — could not be read\nempty.csv — no rows",
+        email: "uploader@example.com",
+      };
+
+      const result = await adapter.sendDataUploadPartlyCompletedNotification(input);
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
+    });
+  });
+
   describe("sendDataUploadFailedNotification", () => {
     it("delegates to NotificationsService with the input unchanged", async () => {
       const notificationSpy = vi

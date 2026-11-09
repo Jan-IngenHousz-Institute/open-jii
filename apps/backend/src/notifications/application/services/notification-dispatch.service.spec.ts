@@ -1130,6 +1130,9 @@ describe("NotificationDispatchService", () => {
       const send = vi
         .spyOn(testApp.module.get(EmailAdapter), "sendDataUploadCompletedNotification")
         .mockResolvedValue(success(undefined));
+      const partly = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendDataUploadPartlyCompletedNotification")
+        .mockResolvedValue(success(undefined));
 
       const result = await notificationEmail.send("data_upload_completed", {
         recipientEmail,
@@ -1144,6 +1147,37 @@ describe("NotificationDispatchService", () => {
         experimentName: "Drought trial",
         email: recipientEmail,
       });
+      expect(partly).not.toHaveBeenCalled();
+    });
+
+    it("data_upload_completed with files left out sends them with the experiment's id, its name and the address", async () => {
+      const plain = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendDataUploadCompletedNotification")
+        .mockResolvedValue(success(undefined));
+      const send = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendDataUploadPartlyCompletedNotification")
+        .mockResolvedValue(success(undefined));
+
+      const result = await notificationEmail.send("data_upload_completed", {
+        recipientEmail,
+        actorName: null,
+        resource: uploadedTo,
+        params: {
+          experimentName: "Drought trial",
+          skippedCount: "2",
+          skippedFiles: "broken.csv — could not be read\nempty.csv — no rows",
+        },
+      });
+
+      assertSuccess(result);
+      expect(send).toHaveBeenCalledExactlyOnceWith({
+        experimentId: uploadedTo.id,
+        experimentName: "Drought trial",
+        skippedCount: "2",
+        skippedFiles: "broken.csv — could not be read\nempty.csv — no rows",
+        email: recipientEmail,
+      });
+      expect(plain).not.toHaveBeenCalled();
     });
 
     it("data_upload_failed sends the experiment's id, its name, the table and the address", async () => {

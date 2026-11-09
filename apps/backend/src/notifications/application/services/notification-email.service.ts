@@ -219,11 +219,19 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
       }),
   ),
   data_upload_completed: aboutResource((experimentId, email, { params, recipientEmail }) =>
-    email.sendDataUploadCompletedNotification({
-      experimentId,
-      experimentName: params.experimentName,
-      email: recipientEmail,
-    }),
+    params.skippedCount && params.skippedFiles
+      ? email.sendDataUploadPartlyCompletedNotification({
+          experimentId,
+          experimentName: params.experimentName,
+          skippedCount: params.skippedCount,
+          skippedFiles: params.skippedFiles,
+          email: recipientEmail,
+        })
+      : email.sendDataUploadCompletedNotification({
+          experimentId,
+          experimentName: params.experimentName,
+          email: recipientEmail,
+        }),
   ),
   data_upload_failed: aboutResource((experimentId, email, { params, recipientEmail }) =>
     email.sendDataUploadFailedNotification({

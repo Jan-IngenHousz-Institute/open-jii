@@ -237,7 +237,10 @@ export const NOTIFICATION_TYPES = {
   data_upload_completed: {
     category: "data_jobs",
     channels: { email: "preference" },
-    params: experiment,
+    params: experiment.extend({
+      skippedCount: z.string().optional(),
+      skippedFiles: z.string().optional(),
+    }),
   },
   data_upload_failed: {
     category: "data_jobs",

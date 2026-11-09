@@ -11,6 +11,7 @@ import { renderCalibrationRunAwaitingApprovalNotification } from "@repo/transact
 import { renderCalibrationRunRejectedNotification } from "@repo/transactional/render/calibration-run-rejected-notification";
 import { renderDataUploadCompletedNotification } from "@repo/transactional/render/data-upload-completed-notification";
 import { renderDataUploadFailedNotification } from "@repo/transactional/render/data-upload-failed-notification";
+import { renderDataUploadPartlyCompletedNotification } from "@repo/transactional/render/data-upload-partly-completed-notification";
 import { renderExperimentMadePublicNotification } from "@repo/transactional/render/experiment-made-public-notification";
 import { renderJoinRequestRejected } from "@repo/transactional/render/join-request-rejected";
 import { renderJoinRequestSubmitted } from "@repo/transactional/render/join-request-submitted";
@@ -159,6 +160,13 @@ export class NotificationsService {
     ...args: Parameters<typeof renderDataUploadFailedNotification>
   ) {
     return renderDataUploadFailedNotification(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderDataUploadPartlyCompletedNotificationEmail(
+    ...args: Parameters<typeof renderDataUploadPartlyCompletedNotification>
+  ) {
+    return renderDataUploadPartlyCompletedNotification(...args);
   }
 
   /* v8 ignore next 5 */
@@ -1076,6 +1084,60 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send data upload completed notification email",
           operation: "sendDataUploadCompletedNotification",
+          experimentId,
+          error,
+        }),
+    );
+  }
+
+  async sendDataUploadPartlyCompletedNotification(input: {
+    experimentId: string;
+    experimentName: string;
+    skippedCount: string;
+    skippedFiles: string;
+    email: string;
+  }) {
+    const { experimentId, experimentName, skippedCount, skippedFiles, email } = input;
+
+    return await tryCatch(
+      async () => {
+        this.logger.log({
+          msg: "Sending data upload partly completed notification email",
+          operation: "sendDataUploadPartlyCompletedNotification",
+          experimentId,
+        });
+
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { href: dataUrl } = new URL(`/platform/experiments/${experimentId}/data`, baseUrl);
+
+        const { html, text } = await this.renderDataUploadPartlyCompletedNotificationEmail({
+          host,
+          baseUrl,
+          experimentName,
+          skippedCount,
+          skippedFiles,
+          dataUrl,
+        });
+
+        await this.dispatch({
+          to: email,
+          subject: `Your upload to ${experimentName} is ready to query, with files left out`,
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Data upload partly completed notification email sent successfully",
+          operation: "sendDataUploadPartlyCompletedNotification",
+          experimentId,
+          status: "success",
+        });
+      },
+      (error) =>
+        this.sendFailure(error, {
+          msg: "Failed to send data upload partly completed notification email",
+          operation: "sendDataUploadPartlyCompletedNotification",
           experimentId,
           error,
         }),
