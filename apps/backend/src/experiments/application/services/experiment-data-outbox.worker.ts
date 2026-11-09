@@ -119,8 +119,9 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
         }
 
         for (const [recordType, rows] of this.byRecordType(claimed.value)) {
-          this.inFlight = this.apply(recordType, rows);
-          const applied = await (this.inFlight as Promise<boolean>);
+          const attempt = this.apply(recordType, rows);
+          this.inFlight = attempt;
+          const applied = await attempt;
           this.inFlight = null;
           counts[applied ? "applied" : "retried"] += rows.length;
         }
@@ -168,18 +169,33 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
           rows: rows.length,
           error: deleted.error.message,
         });
+      } else if (deleted.value < rows.length) {
+        this.logger.warn({
+          msg: "Lost the claim on copied experiment data before clearing it; another task has those rows",
+          operation: "experiment-data-outbox",
+          recordType,
+          rows: rows.length - deleted.value,
+        });
       }
       return true;
     }
 
-    this.logger.warn({
+    const attempts = Math.max(...rows.map((row) => row.attempts)) + 1;
+    const failed = {
       msg: "Could not copy experiment data to the lakehouse; will retry",
       operation: "experiment-data-outbox",
       recordType,
       rows: rows.length,
-      attempts: Math.max(...rows.map((row) => row.attempts)) + 1,
+      attempts,
       error: copied.error.message,
-    });
+    };
+    // Past the last step of the ladder the copy is stuck rather than waiting out a cold warehouse,
+    // and error tracking reads errors.
+    if (attempts >= RETRY_WAITS_S.length) {
+      this.logger.error({ ...failed, errorCode: ErrorCodes.INTERNAL_SERVER_ERROR });
+    } else {
+      this.logger.warn(failed);
+    }
 
     const retried = await this.outbox.markRetry(rows, RETRY_WAITS_S, copied.error.message);
     if (retried.isFailure()) {

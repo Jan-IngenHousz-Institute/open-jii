@@ -1,6 +1,8 @@
 import { faker } from "@faker-js/faker";
+import { Logger } from "@nestjs/common";
+import { SchedulerRegistry } from "@nestjs/schedule";
 
-import { eq, experimentDataOutbox, profiles } from "@repo/database";
+import { createSecondaryDatabase, eq, experimentDataOutbox, profiles } from "@repo/database";
 
 import { AppError, assertSuccess, failure, success } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -11,7 +13,10 @@ import { ExperimentAnnotationsRepository } from "../../core/repositories/experim
 import { ExperimentDataOutboxRepository } from "../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentMetadataWarehouseRepository } from "../../core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentMetadataRepository } from "../../core/repositories/experiment-metadata.repository";
-import { ExperimentDataOutboxWorker } from "./experiment-data-outbox.worker";
+import {
+  EXPERIMENT_DATA_OUTBOX_INTERVAL,
+  ExperimentDataOutboxWorker,
+} from "./experiment-data-outbox.worker";
 
 describe("ExperimentDataOutboxWorker", () => {
   const testApp = TestHarness.App;
@@ -67,6 +72,25 @@ describe("ExperimentDataOutboxWorker", () => {
 
   function outboxRows() {
     return testApp.database.select().from(experimentDataOutbox);
+  }
+
+  /** A worker with its schedule and nudge live, as a task runs it; the harness hands out a quiet one. */
+  function realWorker(
+    outbox = testApp.module.get(ExperimentDataOutboxRepository),
+  ): ExperimentDataOutboxWorker {
+    return new ExperimentDataOutboxWorker(
+      outbox,
+      testApp.module.get(ExperimentAnnotationsRepository),
+      testApp.module.get(ExperimentAnnotationsWarehouseRepository),
+      testApp.module.get(ExperimentMetadataRepository),
+      testApp.module.get(ExperimentMetadataWarehouseRepository),
+    );
+  }
+
+  function mergeAnnotations() {
+    const warehouse = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
+    vi.spyOn(warehouse, "delete").mockResolvedValue(success(undefined));
+    return vi.spyOn(warehouse, "merge").mockResolvedValue(success(undefined));
   }
 
   beforeAll(async () => {
@@ -189,6 +213,190 @@ describe("ExperimentDataOutboxWorker", () => {
     expect(await outboxRows()).toEqual([
       expect.objectContaining({ attempts: 1, lastError: "Copy exceeded 0.02 s" }),
     ]);
+  });
+
+  it("copies each of forty annotations exactly once across two tasks draining together", async () => {
+    const merge = mergeAnnotations();
+    const records = await annotate(...Array.from({ length: 40 }, (_, index) => String(index)));
+    // A second instance on its own connection is what a second task is: `draining` is per
+    // process, so only the claim keeps the two apart.
+    const secondary = createSecondaryDatabase();
+
+    try {
+      const otherTask = realWorker(new ExperimentDataOutboxRepository(secondary.database));
+
+      const [first, second] = await Promise.all([worker.drain(), otherTask.drain()]);
+
+      expect(first.applied + second.applied).toBe(40);
+      const copied = merge.mock.calls.flatMap(([batch]) => batch.map(({ id }) => id));
+      expect(copied.sort()).toEqual(records.map(({ id }) => id).sort());
+      expect(await outboxRows()).toEqual([]);
+    } finally {
+      await secondary.close();
+    }
+  });
+
+  it("returns zeros from a second drain while the first is still running", async () => {
+    const merge = mergeAnnotations();
+    await annotate("1");
+    const claim = vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "claimDue");
+    const reentrant: { counts?: Awaited<ReturnType<ExperimentDataOutboxWorker["drain"]>> } = {};
+    merge.mockImplementationOnce(async () => {
+      reentrant.counts = await worker.drain();
+      return success(undefined);
+    });
+
+    expect(await worker.drain()).toEqual({ applied: 1, retried: 0 });
+
+    expect(reentrant.counts).toEqual({ applied: 0, retried: 0 });
+    // One claim that found the row, one that found nothing, none from the second call.
+    expect(claim).toHaveBeenCalledTimes(2);
+  });
+
+  it("drains on the interval and on a nudge", async () => {
+    const real = realWorker();
+    const drain = vi.spyOn(real, "drain").mockResolvedValue({ applied: 0, retried: 0 });
+
+    await real.drainOnSchedule();
+    expect(drain).toHaveBeenCalledTimes(1);
+
+    real.nudge();
+    expect(drain).toHaveBeenCalledTimes(2);
+  });
+
+  it("looks once more when a nudge lands during the last claim", async () => {
+    const claim = vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "claimDue");
+    const real = realWorker();
+
+    // Nothing is owed, so the first claim comes back empty; the nudge in that moment is a write
+    // that committed just after it looked.
+    const drained = real.drain();
+    real.nudge();
+
+    expect(await drained).toEqual({ applied: 0, retried: 0 });
+    expect(claim.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("stops the drain when the claim itself fails", async () => {
+    const merge = mergeAnnotations();
+    await annotate("1");
+    vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "claimDue").mockResolvedValue(
+      failure(AppError.internal("Database unavailable")),
+    );
+
+    expect(await worker.drain()).toEqual({ applied: 0, retried: 0 });
+    expect(merge).not.toHaveBeenCalled();
+  });
+
+  it("clears the flag when the claim throws, so the next drain still runs", async () => {
+    mergeAnnotations();
+    await annotate("1");
+    vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "claimDue").mockRejectedValueOnce(
+      new Error("connection terminated"),
+    );
+
+    expect(await worker.drain()).toEqual({ applied: 0, retried: 0 });
+    expect(await worker.drain()).toEqual({ applied: 1, retried: 0 });
+  });
+
+  it("treats a thrown copy as that attempt failing, not as the drain failing", async () => {
+    vi.spyOn(
+      testApp.module.get(ExperimentAnnotationsWarehouseRepository),
+      "merge",
+    ).mockRejectedValue(new Error("socket hang up"));
+    await annotate("1");
+
+    expect(await worker.drain()).toEqual({ applied: 0, retried: 1 });
+    expect(await outboxRows()).toEqual([
+      expect.objectContaining({ attempts: 1, lastError: "socket hang up" }),
+    ]);
+  });
+
+  it("claims nothing new once the task is shutting down, and waits for the copy in flight", async () => {
+    const merge = mergeAnnotations();
+    const [first] = await annotate("1");
+    const stopping = realWorker();
+    const stopped: { promise?: Promise<void>; later?: AnnotationRecord[] } = {};
+    // Shutdown arrives while the first copy is in flight, with a second record owed meanwhile.
+    merge.mockImplementationOnce(async () => {
+      stopped.promise = stopping.onApplicationShutdown();
+      stopped.later = await annotate("2");
+      return success(undefined);
+    });
+
+    expect(await stopping.drain()).toEqual({ applied: 1, retried: 0 });
+    await stopped.promise;
+
+    expect(merge).toHaveBeenCalledTimes(1);
+    expect(merge.mock.calls[0][0].map(({ id }) => id)).toEqual([first.id]);
+    expect((await outboxRows()).map(({ recordId }) => recordId)).toEqual(
+      stopped.later?.map(({ id }) => id),
+    );
+  });
+
+  it("counts a copy whose rows could not be cleared, and leaves them to the lease", async () => {
+    mergeAnnotations();
+    await annotate("1");
+    vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "markApplied").mockResolvedValue(
+      failure(AppError.internal("Database unavailable")),
+    );
+
+    expect(await worker.drain()).toEqual({ applied: 1, retried: 0 });
+    const [row] = await outboxRows();
+    expect(row.claimedAt).not.toBeNull();
+  });
+
+  it("says so when another task took copied rows back before they were cleared", async () => {
+    mergeAnnotations();
+    await annotate("1");
+    vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "markApplied").mockResolvedValue(
+      success(0),
+    );
+    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+
+    await worker.drain();
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        msg: "Lost the claim on copied experiment data before clearing it; another task has those rows",
+        rows: 1,
+      }),
+    );
+  });
+
+  it("logs a copy still failing at the last wait as an error, which error tracking reads", async () => {
+    vi.spyOn(
+      testApp.module.get(ExperimentAnnotationsWarehouseRepository),
+      "merge",
+    ).mockResolvedValue(failure(AppError.internal("Warehouse down")));
+    await annotate("1");
+    await testApp.database.update(experimentDataOutbox).set({ attempts: 4 });
+    const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+
+    expect(await worker.drain()).toEqual({ applied: 0, retried: 1 });
+
+    expect(error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        msg: "Could not copy experiment data to the lakehouse; will retry",
+        attempts: 5,
+      }),
+    );
+  });
+
+  it("leaves no outbox interval on the schedule under the harness", async () => {
+    const merge = mergeAnnotations();
+    await annotate("1");
+
+    // The whole app is booted here, so a registered interval would copy rows other specs queue.
+    expect(testApp.module.get(SchedulerRegistry).getIntervals()).not.toContain(
+      EXPERIMENT_DATA_OUTBOX_INTERVAL,
+    );
+
+    await worker.drainOnSchedule();
+    worker.nudge();
+
+    expect(merge).not.toHaveBeenCalled();
+    expect(await outboxRows()).toHaveLength(1);
   });
 
   it("does nothing when nothing is owed", async () => {
