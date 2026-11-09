@@ -28,9 +28,11 @@ export class ExperimentAnnotationsRepository {
     );
   }
 
+  /** Updates an annotation of the given type; one of the other type stays as it is. */
   async update(
     experimentId: string,
     annotationId: string,
+    type: AnnotationRecord["type"],
     update: UpdateAnnotationDto,
     updatedAt: Date,
   ): Promise<Result<void>> {
@@ -43,6 +45,7 @@ export class ExperimentAnnotationsRepository {
             and(
               eq(experimentAnnotations.id, annotationId),
               eq(experimentAnnotations.experimentId, experimentId),
+              eq(experimentAnnotations.type, type),
             ),
           );
       },

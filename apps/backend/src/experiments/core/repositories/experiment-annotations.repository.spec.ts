@@ -72,6 +72,7 @@ describe("ExperimentAnnotationsRepository", () => {
       await repository.update(
         experimentId,
         flag.id,
+        "flag",
         { flagType: "needs_review", contentText: "Check" },
         later,
       ),
@@ -80,6 +81,23 @@ describe("ExperimentAnnotationsRepository", () => {
     expect(await stored()).toEqual([
       { ...flag, flagType: "needs_review", contentText: "Check", updatedAt: later },
     ]);
+  });
+
+  it("leaves an annotation of the other type as it is", async () => {
+    const comment = record();
+    await repository.insert([comment]);
+
+    assertSuccess(
+      await repository.update(
+        experimentId,
+        comment.id,
+        "flag",
+        { flagType: "outlier", contentText: null },
+        new Date("2026-09-02T08:00:00.000Z"),
+      ),
+    );
+
+    expect(await stored()).toEqual([comment]);
   });
 
   it("deletes one annotation by its id, only in its experiment", async () => {

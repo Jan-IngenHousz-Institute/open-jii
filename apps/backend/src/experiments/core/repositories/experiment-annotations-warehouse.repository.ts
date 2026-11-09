@@ -1,7 +1,10 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 import { z } from "zod";
 
-import { ExperimentAnnotationRowsAffected } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
+import type {
+  ExperimentAnnotationRowsAffected,
+  ExperimentAnnotationType,
+} from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 import type {
   SchemaData,
@@ -172,12 +175,11 @@ export class ExperimentAnnotationsWarehouseRepository {
     return success(this.getRowsAffectedFromResult(insertResult.value));
   }
 
-  /**
-   * Update an existing annotation
-   */
+  /** Updates an annotation of the given type; one of the other type stays as it is. */
   async updateAnnotation(
     experimentId: string,
     annotationId: string,
+    type: ExperimentAnnotationType,
     updateData: UpdateAnnotationDto,
     now: Date,
   ): Promise<Result<ExperimentAnnotationRowsAffected>> {
@@ -201,6 +203,7 @@ export class ExperimentAnnotationsWarehouseRepository {
     const parameters: StatementParameter[] = [
       { name: "annotation_id", value: annotationId },
       { name: "experiment_id", value: experimentId },
+      { name: "type", value: type },
       { name: "now", value: now.toISOString(), type: "TIMESTAMP" },
     ];
 
@@ -218,7 +221,7 @@ export class ExperimentAnnotationsWarehouseRepository {
     const updateQuery = `
       UPDATE experiment_annotations
       SET ${setClauses.join(", ")}
-      WHERE id = :annotation_id AND experiment_id = :experiment_id
+      WHERE id = :annotation_id AND experiment_id = :experiment_id AND type = :type
     `;
 
     const updateResult = await this.databricksPort.executeSqlQuery(

@@ -264,10 +264,34 @@ describe("UpdateAnnotation", () => {
         ),
       );
 
-      const [, , , now] = update.mock.calls[0];
+      const [, , , , now] = update.mock.calls[0];
       expect(await postgres()).toEqual([
         { ...record, contentText: "Leaf was dry", updatedAt: now },
       ]);
+    });
+
+    it("leaves a comment alone when the update is a flag, in both places", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Drought trial",
+        userId: testUserId,
+      });
+      const record = await inPostgres(experiment.id);
+      const update = vi
+        .spyOn(testApp.module.get(ExperimentAnnotationsWarehouseRepository), "updateAnnotation")
+        .mockResolvedValue(success({ rowsAffected: 0 }));
+
+      const result = await useCase.execute(
+        experiment.id,
+        record.id,
+        { content: { type: "flag", flagType: "outlier" } },
+        testUserId,
+      );
+
+      assertSuccess(result);
+      expect(result.value.rowsAffected).toBe(0);
+      const [, , type] = update.mock.calls[0];
+      expect(type).toBe("flag");
+      expect(await postgres()).toEqual([record]);
     });
 
     it("keeps the old text when the lakehouse refuses the update", async () => {

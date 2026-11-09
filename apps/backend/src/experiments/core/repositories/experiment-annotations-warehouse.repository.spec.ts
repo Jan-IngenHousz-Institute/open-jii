@@ -248,6 +248,7 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
       const result = await repository.updateAnnotation(
         mockExperimentId,
         mockAnnotationId,
+        "flag",
         validUpdateData,
         now,
       );
@@ -261,6 +262,7 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
         expect.stringContaining("UPDATE experiment_annotations"),
         expect.arrayContaining([
           { name: "annotation_id", value: mockAnnotationId },
+          { name: "type", value: "flag" },
           { name: "content_text", value: validUpdateData.contentText },
           { name: "flag_type", value: validUpdateData.flagType },
           { name: "now", value: now.toISOString(), type: "TIMESTAMP" },
@@ -270,7 +272,9 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
       const sqlCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
       const sqlQuery = sqlCall[1];
 
-      expect(sqlQuery).toContain("WHERE id = :annotation_id AND experiment_id = :experiment_id");
+      expect(sqlQuery).toContain(
+        "WHERE id = :annotation_id AND experiment_id = :experiment_id AND type = :type",
+      );
       expect(sqlQuery).toContain("content_text = :content_text");
       expect(sqlQuery).toContain("flag_type = :flag_type");
       expect(sqlQuery).toContain("updated_at = :now");
@@ -288,6 +292,7 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
       const result = await repository.updateAnnotation(
         mockExperimentId,
         mockAnnotationId,
+        "comment",
         partialUpdateData,
         now,
       );
@@ -308,6 +313,7 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
       const result = await repository.updateAnnotation(
         mockExperimentId,
         "invalid-uuid",
+        "flag",
         validUpdateData,
         now,
       );
@@ -329,6 +335,7 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
       const result = await repository.updateAnnotation(
         mockExperimentId,
         mockAnnotationId,
+        "comment",
         invalidUpdateData,
         now,
       );

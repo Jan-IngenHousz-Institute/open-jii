@@ -78,6 +78,7 @@ export class UpdateAnnotationUseCase {
     const result = await this.annotationsWarehouseRepository.updateAnnotation(
       experimentId,
       annotationId,
+      data.content.type,
       updateAnnotation,
       now,
     );
@@ -91,6 +92,7 @@ export class UpdateAnnotationUseCase {
     const copied = await this.annotationsRepository.update(
       experimentId,
       annotationId,
+      data.content.type,
       updateAnnotation,
       now,
     );
