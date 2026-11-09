@@ -11,6 +11,15 @@ function isAllowedMetadataColumnChar(c: string): boolean {
   return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || (c >= "0" && c <= "9") || c === "_";
 }
 
+function holdsNul(value: unknown): boolean {
+  if (typeof value === "string") return value.includes("\u0000");
+  if (Array.isArray(value)) return value.some(holdsNul);
+  if (typeof value === "object" && value !== null) {
+    return Object.entries(value).some(([key, inner]) => key.includes("\u0000") || holdsNul(inner));
+  }
+  return false;
+}
+
 const zMetadataColumnName = z
   .string()
   .min(1, "Column name is required")
@@ -93,6 +102,15 @@ export const zExperimentCustomMetadataPayload = z
         seen.set(canonicalName, idx);
       }
     });
+
+    // Postgres keeps no NUL character in a jsonb document, in a key or in a value.
+    if (holdsNul(blob)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [],
+        message: "Metadata cannot hold a NUL character",
+      });
+    }
 
     // identifierColumnId must reference a real column on this blob.
     // Compared against `column.id` so the same schema validates both shapes:

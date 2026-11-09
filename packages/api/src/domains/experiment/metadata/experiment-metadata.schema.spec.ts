@@ -139,6 +139,26 @@ describe("zExperimentCustomMetadataPayload", () => {
   });
 
   it.each([
+    ["a cell", { rows: [{ _id: "row_1", plot: "A\u00001", treatment: "control" }] }],
+    ["a nested cell", { rows: [{ _id: "row_1", plot: "A1", notes: [{ text: "wet\u0000" }] }] }],
+    ["a row's key", { rows: [{ _id: "row_1", plot: "A1", "note\u0000": "dry" }] }],
+    ["the name", { name: "Plot\u0000 map" }],
+  ])("rejects a NUL character in %s, which Postgres cannot keep", (_where, change) => {
+    const result = zExperimentCustomMetadataPayload.safeParse({ ...validBlob, ...change });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.message)).toContain(
+      "Metadata cannot hold a NUL character",
+    );
+  });
+
+  it("accepts the text of an escape, which is no NUL character", () => {
+    const blob = { ...validBlob, name: "Plot \\u0000 map" };
+
+    expect(zExperimentCustomMetadataPayload.safeParse(blob).success).toBe(true);
+  });
+
+  it.each([
     ["space", "plot id"],
     ["hyphen", "plot-id"],
     ["dot", "plot.id"],
