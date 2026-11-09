@@ -904,3 +904,76 @@ describe("as-of joins", () => {
     ).toBe(true);
   });
 });
+
+describe("ordered aggregate query inputs", () => {
+  const service = new QueryBuilderService();
+
+  it("filters all rows before LAG and only then applies the result limit", () => {
+    const sql = unwrap(
+      service.buildQuery({
+        table: "readings",
+        filters: [{ column: "value", operator: "greater_than", value: 5 }],
+        aggregation: {
+          functions: [{ column: "value", function: "previous", orderColumn: "timestamp" }],
+        },
+        limit: 2,
+      }),
+    );
+    expect(sql).toBe(
+      "SELECT *, LAG(`value`) OVER (ORDER BY `timestamp` ASC) AS `value_previous` FROM (SELECT * FROM readings WHERE `value` > 5) LIMIT 2",
+    );
+  });
+
+  it("returns a bad request for a raw window mixed with grouped rows", () => {
+    const result = service.buildQuery({
+      table: "readings",
+      aggregation: {
+        groupBy: [{ column: "sensor" }],
+        functions: [{ column: "value", function: "previous", orderColumn: "timestamp" }],
+      },
+    });
+    expect(result.isFailure()).toBe(true);
+    if (result.isFailure()) expect(result.error.statusCode).toBe(400);
+  });
+
+  it.each(["latest", "previous"] as const)(
+    "keeps a second-table order column referenced only by %s",
+    (fn) => {
+      const sql = unwrap(
+        service.buildQuery({
+          table: "readings",
+          columns:
+            fn === "previous" ? ["id", "value", "second__ordered", "second__station"] : undefined,
+          aggregation: {
+            functions: [
+              {
+                column: "value",
+                function: fn,
+                orderColumn: "second__ordered",
+                ...(fn === "previous" ? { partitionColumn: "second__station" } : {}),
+              },
+            ],
+          },
+          join: {
+            secondary: { table: "weather" },
+            primaryColumns: ["id", "timestamp", "station", "value"],
+            secondaryColumns: [
+              { name: "ordered", alias: "second__ordered" },
+              { name: "station", alias: "second__station" },
+              { name: "unused", alias: "second__unused" },
+            ],
+            matchColumn: "station",
+            primaryTimeColumn: "timestamp",
+            secondaryTimeColumn: "timestamp",
+            primaryTimeType: "TIMESTAMP",
+            secondaryTimeType: "TIMESTAMP",
+            toleranceMinutes: 5,
+          },
+        }),
+      );
+      expect(sql).toContain("s.`ordered`");
+      if (fn === "previous") expect(sql).toContain("s.`station`");
+      expect(sql).not.toContain("s.`unused`");
+    },
+  );
+});

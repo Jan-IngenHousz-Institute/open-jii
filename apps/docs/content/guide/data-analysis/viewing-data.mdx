@@ -199,6 +199,49 @@ text, numeric and date columns. Their results use a numeric Y axis.
 In a bar chart, if you change a text Y series to a numeric aggregate such as **Sum**, the column
 selection clears. Choose a numeric column to continue.
 
+### Compare rows in order
+
+Under **Y axis**, the **Aggregate** menu offers **Previous value**, **Change from
+previous** and **Row number**. Choose **Ordered by** to set the numeric or date
+column that orders the rows from smallest to largest. Optionally choose **Per**
+to restart the calculation for each sensor or other group. **Whole table** uses
+one sequence for all rows.
+
+- **Previous value** returns the selected Y column's value from the preceding row.
+- **Change from previous** subtracts that value from the current value. It accepts
+  numeric and date columns. Differences between dates or times are in seconds.
+- **Row number** starts at 1 within each group and counts rows in the chosen order.
+  Its result uses a numeric Y axis, whatever Y column you selected.
+
+![A line chart of the seconds between sensor reports, using Change from previous on the timestamp column per sensor](/img/guide/web/ordered-aggregates-gap.webp)
+
+Filters apply before these calculations. The first row in each group, including
+the first row inside a filtered time range, has no previous value. A chart does
+not draw a point for that missing value. If rows have the same ordering value,
+the row ID breaks the tie when available. Otherwise their order can vary between reads.
+
+![A line chart numbering each sensor's readings in time order with Row number](/img/guide/web/ordered-aggregates-row-number.webp)
+
+These three functions keep every row. Turn off the X **Bucket** and remove other
+aggregates that combine rows before using them. Cumulative sum can share their
+chart. If you later add a bucket, the editor shows an error and holds the change.
+Other raw Y series stay raw. Remove the bucket to continue, or change the
+row calculation to a function that combines rows.
+
+### Choose a value at the latest or earliest row
+
+Choose **Value at latest** or **Value at earliest** under **Aggregate**, then set
+**Ordered by** to a numeric or date column. These return the selected Y value
+from the row with the largest or smallest ordering value. **Per** shows the
+chart's actual groups, including its X buckets, colour groups and panels. It is
+read-only because these functions use the chart's grouping. Choosing either
+function groups the chart by X and turns other raw Y series into **Average**.
+
+Filters apply first. Rows with a missing ordering value do not take part. A
+missing Y value at the selected row remains missing, so **Value at latest** does
+not mean the latest non-empty value. If several rows tie for the latest or
+earliest ordering value, any of their Y values may be returned.
+
 ### Split a chart into panels
 
 In the visualization editor's **Data** tab, set **Facet (small multiples)**

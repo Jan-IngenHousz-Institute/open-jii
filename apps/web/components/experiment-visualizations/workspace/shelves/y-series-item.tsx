@@ -2,14 +2,20 @@
 
 import { InsetPanel } from "@/components/shared/inset-panel";
 import { AlertTriangle, Trash2 } from "lucide-react";
+import { Fragment } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { ColumnName } from "~/components/experiment-data/column-name";
 
+import {
+  aggregateKind,
+  takesWindow,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type {
   ExperimentSeriesAxis,
   ExperimentSeriesTraceType,
 } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import { getColumnKind } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -25,6 +31,7 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 
 import type { ChartFormValues } from "../../charts/chart-config";
+import { setDataSourceAggregate } from "../../charts/data/aggregation";
 import { SeriesColorField } from "./series-color-field";
 
 export const AGG_NONE = "__none__";
@@ -36,6 +43,7 @@ interface AggregateOption {
   value: string;
   label: string;
   requiresXColumn?: boolean;
+  disabledReason?: string;
 }
 
 export interface YSeriesItemProps {
@@ -49,6 +57,9 @@ export interface YSeriesItemProps {
   allowAggregateWithoutColumn?: boolean;
   columns: ExperimentDataColumn[];
   effectiveErrorColumns: ExperimentDataColumn[];
+  windowColumns?: ExperimentDataColumn[];
+  rowWindowConflict?: boolean;
+  groupingColumns?: string[];
   xColumnName: string;
   aggregateOptions: AggregateOption[];
   showCartesianControls: boolean;
@@ -73,6 +84,9 @@ export function YSeriesItem({
   allowAggregateWithoutColumn = false,
   columns,
   effectiveErrorColumns,
+  windowColumns = columns,
+  rowWindowConflict = false,
+  groupingColumns = [],
   xColumnName,
   aggregateOptions,
   showCartesianControls,
@@ -86,6 +100,9 @@ export function YSeriesItem({
   onRemove,
 }: YSeriesItemProps) {
   const { t } = useTranslation("experimentVisualizations");
+  const aggregate = form.getValues(`dataConfig.dataSources.${dsIndex}.aggregate`);
+  const windowed = aggregate !== undefined && takesWindow(aggregate);
+  const rowWindow = aggregate !== undefined && aggregateKind(aggregate) === "rowWindow";
   const showPerSeriesOverrides = showCartesianControls && seriesIndex > 0;
   const colorRowClass = cn(showSeriesColor && "grid grid-cols-2 gap-3");
 
@@ -134,9 +151,7 @@ export function YSeriesItem({
         </div>
       )}
 
-      {/* One column on a phone: against a fixed 140px aggregate the column
-          select was left ~136px, which is less than a name plus its type badge. */}
-      <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
         <FormField
           control={form.control}
           name={`dataConfig.dataSources.${dsIndex}.columnName` as const}
@@ -177,7 +192,7 @@ export function YSeriesItem({
         />
 
         {!hideAggregate && (
-          <FormItem className="w-full sm:w-[140px]">
+          <FormItem className="min-w-0">
             <FormLabel className="text-xs font-medium">
               {t("workspace.shelves.aggregate")}
             </FormLabel>
@@ -187,7 +202,7 @@ export function YSeriesItem({
               disabled={!seriesColumn && !allowAggregateWithoutColumn}
             >
               <FormControl>
-                <SelectTrigger>
+                <SelectTrigger className="h-auto min-h-9 min-w-0 whitespace-normal text-left [&>span]:line-clamp-none [&>span]:min-w-0 [&>span]:whitespace-normal [&>span]:break-words">
                   <SelectValue placeholder={t("workspace.shelves.aggregateNone")} />
                 </SelectTrigger>
               </FormControl>
@@ -198,18 +213,34 @@ export function YSeriesItem({
                   </span>
                 </SelectItem>
                 {aggregateOptions.map((fn) => {
-                  const blocked = fn.requiresXColumn === true && !xColumnName;
+                  const needsX = fn.requiresXColumn === true && !xColumnName;
+                  const reason =
+                    fn.disabledReason ??
+                    (needsX ? t("workspace.shelves.aggregateNeedsXColumn") : undefined);
+                  const blocked = Boolean(reason);
                   return (
-                    <SelectItem
-                      key={fn.value}
-                      value={fn.value}
-                      disabled={blocked}
-                      title={blocked ? t("workspace.shelves.aggregateNeedsXColumn") : undefined}
-                    >
-                      {blocked
-                        ? t("workspace.shelves.aggregateNeedsXColumnLabel", { label: fn.label })
-                        : fn.label}
-                    </SelectItem>
+                    <Fragment key={fn.value}>
+                      <SelectItem
+                        value={fn.value}
+                        disabled={blocked}
+                        title={reason}
+                        aria-describedby={
+                          fn.disabledReason ? `aggregate-reason-${dsIndex}-${fn.value}` : undefined
+                        }
+                      >
+                        {needsX
+                          ? t("workspace.shelves.aggregateNeedsXColumnLabel", { label: fn.label })
+                          : fn.label}
+                      </SelectItem>
+                      {fn.disabledReason && (
+                        <p
+                          id={`aggregate-reason-${dsIndex}-${fn.value}`}
+                          className="text-muted-foreground px-2 pb-2 text-[11px]"
+                        >
+                          {fn.disabledReason}
+                        </p>
+                      )}
+                    </Fragment>
                   );
                 })}
               </SelectContent>
@@ -217,6 +248,112 @@ export function YSeriesItem({
           </FormItem>
         )}
       </div>
+
+      {windowed && (
+        <div className="space-y-3">
+          {rowWindowConflict && (
+            <p role="alert" className="text-destructive text-xs">
+              {t("workspace.shelves.rowWindowConflict")}
+            </p>
+          )}
+          {rowWindow ? (
+            <FormField
+              control={form.control}
+              name={`dataConfig.dataSources.${dsIndex}.partitionColumn`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-medium">
+                    {t("workspace.shelves.windowPer")}
+                  </FormLabel>
+                  <Select
+                    value={field.value === "" ? AGG_NONE : (field.value ?? AGG_NONE)}
+                    onValueChange={(value) => {
+                      field.onChange(value === AGG_NONE ? "" : value);
+                      setDataSourceAggregate(form, dsIndex, aggregate, xColumnName);
+                    }}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={AGG_NONE}>
+                        {t("workspace.shelves.windowWholeTable")}
+                      </SelectItem>
+                      {windowColumns.map((column) => (
+                        <SelectItem key={column.name} value={column.name}>
+                          <ColumnName column={column} />
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : (
+            <div className="space-y-1">
+              <p className="text-xs font-medium">{t("workspace.shelves.windowPer")}</p>
+              <p className="text-muted-foreground text-xs">
+                {groupingColumns.length > 0
+                  ? groupingColumns.join(", ")
+                  : t("workspace.shelves.windowWholeTable")}
+              </p>
+            </div>
+          )}
+          <FormField
+            control={form.control}
+            name={`dataConfig.dataSources.${dsIndex}.orderColumn`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-medium">
+                  {t("workspace.shelves.windowOrderedBy")}
+                </FormLabel>
+                <Select
+                  value={field.value === "" ? AGG_NONE : (field.value ?? AGG_NONE)}
+                  onValueChange={(value) => {
+                    field.onChange(value === AGG_NONE ? "" : value);
+                    setDataSourceAggregate(form, dsIndex, aggregate, xColumnName);
+                  }}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value={AGG_NONE}>{t("workspace.shelves.selectColumn")}</SelectItem>
+                    {windowColumns
+                      .filter((column) =>
+                        ["numeric", "temporal"].includes(getColumnKind(column.type_text) ?? ""),
+                      )
+                      .map((column) => (
+                        <SelectItem key={column.name} value={column.name}>
+                          <ColumnName column={column} />
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <p className="text-muted-foreground text-xs">
+            {t("workspace.shelves.windowFiltersFirst")}
+          </p>
+          {(aggregate === "previous" || aggregate === "change_from_previous") && (
+            <p className="text-muted-foreground text-xs">
+              {t("workspace.shelves.windowFirstRowNoPrevious")}
+            </p>
+          )}
+          {aggregate === "change_from_previous" && (
+            <p className="text-muted-foreground text-xs">
+              {t("workspace.shelves.windowChangeSeconds")}
+            </p>
+          )}
+        </div>
+      )}
 
       {showErrorColumn && (
         <FormField

@@ -165,3 +165,38 @@ describe("WorkspaceCanvas", () => {
     expect(await screen.findByText("charts.truncated")).toBeInTheDocument();
   });
 });
+
+describe("ordered calculation preview validation", () => {
+  it.each([false, true])(
+    "holds an incomplete or grouped row window without issuing a request, grouped=%s",
+    (grouped) => {
+      const spy = server.mount(contract.experiments.getExperimentData, {
+        body: [createExperimentDataTable()],
+      });
+      render(
+        <Harness
+          formDefaults={defaults({
+            dataConfig: {
+              tableName: "readings",
+              dataSources: [
+                { tableName: "readings", columnName: "time", role: "x" },
+                {
+                  tableName: "readings",
+                  columnName: "temp",
+                  role: "y",
+                  aggregate: "previous",
+                  ...(grouped ? { orderColumn: "time" } : {}),
+                },
+              ],
+              ...(grouped
+                ? { aggregation: { groupBy: [{ column: "time", timeBucket: "hour" }] } }
+                : {}),
+            },
+          })}
+        />,
+      );
+      expect(screen.getByText("workspace.canvas.incompleteWindowTitle")).toBeInTheDocument();
+      expect(spy.called).toBe(false);
+    },
+  );
+});

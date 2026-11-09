@@ -53,6 +53,16 @@ export function SecondTableSection({ form, experimentId, tables, tableName }: Pr
         ...source,
         columnName: isSecondaryColumn(source.columnName) ? "" : source.columnName,
         aggregate: isSecondaryColumn(source.columnName) ? undefined : source.aggregate,
+        partitionColumn:
+          isSecondaryColumn(source.columnName) ||
+          (source.partitionColumn && isSecondaryColumn(source.partitionColumn))
+            ? ""
+            : source.partitionColumn,
+        orderColumn:
+          isSecondaryColumn(source.columnName) ||
+          (source.orderColumn && isSecondaryColumn(source.orderColumn))
+            ? ""
+            : source.orderColumn,
         errorColumn:
           source.errorColumn && isSecondaryColumn(source.errorColumn)
             ? undefined
@@ -68,9 +78,17 @@ export function SecondTableSection({ form, experimentId, tables, tableName }: Pr
     });
     const aggregation = form.getValues("dataConfig.aggregation");
     const groupBy = aggregation?.groupBy?.filter((g) => !isSecondaryColumn(g.column));
-    const functions = aggregation?.functions?.filter(
-      (f) => !isSecondaryColumn(f.column) && !(f.secondColumn && isSecondaryColumn(f.secondColumn)),
-    );
+    const functions = aggregation?.functions
+      ?.filter(
+        (f) =>
+          !isSecondaryColumn(f.column) && !(f.secondColumn && isSecondaryColumn(f.secondColumn)),
+      )
+      .map((f) => ({
+        ...f,
+        partitionColumn:
+          f.partitionColumn && isSecondaryColumn(f.partitionColumn) ? undefined : f.partitionColumn,
+        orderColumn: f.orderColumn && isSecondaryColumn(f.orderColumn) ? undefined : f.orderColumn,
+      }));
     form.setValue(
       "dataConfig.aggregation",
       groupBy?.length || functions?.length

@@ -139,3 +139,114 @@ describe("zExperimentVisualization + CRUD", () => {
     ).toThrow();
   });
 });
+
+describe("ordered aggregate chart saves", () => {
+  const source = { tableName: "raw_data", columnName: "value", role: "y" };
+  const body = { name: "Readings", chartFamily: "basic", chartType: "line" };
+  const config = { tableName: "raw_data", dataSources: [source] };
+
+  it.each(["previous", "change_from_previous", "row_number", "latest", "earliest"])(
+    "puts the missing order error under the %s picker",
+    (aggregate) => {
+      const result = zCreateExperimentVisualizationBody.safeParse({
+        ...body,
+        dataConfig: { ...config, dataSources: [{ ...source, aggregate }] },
+      });
+      expect(result.success).toBe(false);
+      if (!result.success)
+        expect(result.error.issues[0]?.path).toEqual([
+          "dataConfig",
+          "dataSources",
+          0,
+          "orderColumn",
+        ]);
+      expect(
+        zCreateExperimentVisualizationBody.safeParse({
+          ...body,
+          dataConfig: {
+            ...config,
+            dataSources: [{ ...source, aggregate, orderColumn: "timestamp" }],
+          },
+        }).success,
+      ).toBe(true);
+    },
+  );
+
+  it("validates per-source mixes even when materialized functions are missing", () => {
+    const previous = { ...source, aggregate: "previous", orderColumn: "timestamp" };
+    const dataConfig = { ...config, dataSources: [previous, { ...source, aggregate: "avg" }] };
+    expect(zCreateExperimentVisualizationBody.safeParse({ ...body, dataConfig }).success).toBe(
+      false,
+    );
+    expect(
+      zExperimentChartDataConfig.safeParse({
+        ...config,
+        dataSources: [previous],
+        aggregation: { groupBy: [{ column: "sensor" }] },
+      }).success,
+    ).toBe(false);
+    expect(
+      zExperimentChartDataConfig.safeParse({
+        ...config,
+        dataSources: [{ ...source, aggregate: "avg" }],
+        aggregation: {
+          functions: [{ column: "value", function: "previous", orderColumn: "timestamp" }],
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      zExperimentChartDataConfig.safeParse({
+        ...config,
+        dataSources: [previous, { ...source, aggregate: "cumsum" }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("normalizes padded picker values and empty hidden Average settings", () => {
+    expect(
+      zExperimentChartDataConfig.parse({
+        ...config,
+        dataSources: [{ ...source, aggregate: "avg", partitionColumn: "", orderColumn: "" }],
+      }).dataSources[0],
+    ).toMatchObject({ partitionColumn: undefined, orderColumn: undefined });
+    expect(
+      zExperimentChartDataConfig.parse({
+        ...config,
+        dataSources: [
+          {
+            ...source,
+            aggregate: "previous",
+            partitionColumn: " sensor ",
+            orderColumn: " timestamp ",
+          },
+        ],
+      }).dataSources[0],
+    ).toMatchObject({ partitionColumn: "sensor", orderColumn: "timestamp" });
+    for (const orderColumn of ["", " "]) {
+      const result = zCreateExperimentVisualizationBody.safeParse({
+        ...body,
+        dataConfig: { ...config, dataSources: [{ ...source, aggregate: "previous", orderColumn }] },
+      });
+      expect(result.success).toBe(false);
+      if (!result.success)
+        expect(
+          result.error.issues.some(
+            (issue) => issue.path.join(".") === "dataConfig.dataSources.0.orderColumn",
+          ),
+        ).toBe(true);
+    }
+  });
+
+  it("rejects stale fields on other functions and partition overrides on latest", () => {
+    for (const fields of [
+      { aggregate: "avg", orderColumn: "timestamp" },
+      { aggregate: "avg", partitionColumn: "sensor" },
+      { aggregate: "latest", orderColumn: "timestamp", partitionColumn: "sensor" },
+    ]) {
+      expect(
+        zExperimentChartDataConfig.safeParse({ ...config, dataSources: [{ ...source, ...fields }] })
+          .success,
+      ).toBe(false);
+    }
+  });
+});

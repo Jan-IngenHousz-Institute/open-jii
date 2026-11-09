@@ -1,10 +1,14 @@
 import { createVisualization, createVisualizationWidget } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
+import { useEffect } from "react";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
+import type { ChartFormValues } from "../../../experiment-visualizations/charts/chart-config";
+import { LiveVizProvider, useLiveVizPublisher } from "../../editor/context/live-viz-context";
 import { LoadedVisualizationView } from "./loaded-visualization-view";
 
 vi.mock("../../../experiment-visualizations/experiment-visualization-renderer", () => ({
@@ -92,3 +96,55 @@ describe("LoadedVisualizationView", () => {
     );
   });
 });
+
+function LiveDraft({ values, children }: { values: ChartFormValues; children: ReactNode }) {
+  const publish = useLiveVizPublisher();
+  useEffect(() => {
+    publish({ vizId: "viz-1", values });
+  }, [publish, values]);
+  return children;
+}
+
+it.each(["missing order", "grouped rows", "valid"])(
+  "uses the server snapshot for invalid dashboard drafts: %s",
+  async (state) => {
+    const viz = createVisualization({ id: "viz-1", name: "Saved chart" });
+    server.mount(contract.experiments.getExperimentVisualization, { body: viz });
+    const widget = createVisualizationWidget({
+      config: { visualizationId: "viz-1", showTitle: true, showDescription: false },
+    });
+    const values: ChartFormValues = {
+      name: "Live chart",
+      chartFamily: "basic",
+      chartType: "line",
+      config: {},
+      dataConfig: {
+        tableName: "t",
+        dataSources: [
+          {
+            tableName: "t",
+            columnName: "value",
+            role: "y",
+            aggregate: "previous",
+            ...(state === "missing order" ? {} : { orderColumn: "time" }),
+          },
+        ],
+        ...(state === "grouped rows"
+          ? { aggregation: { groupBy: [{ column: "time", timeBucket: "hour" }] } }
+          : {}),
+      },
+    };
+    render(
+      <LiveVizProvider>
+        <LiveDraft values={values}>
+          <LoadedVisualizationView widget={widget} visualizationId="viz-1" experimentId="exp-1" />
+        </LiveDraft>
+      </LiveVizProvider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("viz-renderer")).toHaveTextContent(
+        state === "valid" ? "Live chart" : "Saved chart",
+      ),
+    );
+  },
+);

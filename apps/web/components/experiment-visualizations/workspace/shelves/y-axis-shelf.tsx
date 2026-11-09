@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
+import { aggregateKind } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentAggregationFunction } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { filterColumnsForRole } from "@repo/api/domains/experiment/visualizations/experiment-visualization-role-rules";
@@ -40,6 +41,7 @@ interface AggregateOption {
   value: ExperimentAggregationFunction;
   label: string;
   requiresXColumn?: boolean;
+  disabledReason?: string;
 }
 
 // `cumsum` produces a running total across the X-axis ordering;
@@ -54,6 +56,11 @@ const AGG_FUNCTIONS: AggregateOption[] = [
   { value: "std", label: "Std dev" },
   { value: "var", label: "Variance" },
   { value: "cumsum", label: "Cumulative sum", requiresXColumn: true },
+  { value: "previous", label: "previous" },
+  { value: "change_from_previous", label: "change_from_previous" },
+  { value: "row_number", label: "row_number" },
+  { value: "latest", label: "latest" },
+  { value: "earliest", label: "earliest" },
 ];
 
 export interface YAxisShelfProps {
@@ -106,18 +113,59 @@ export function YAxisShelf({
   const xIsBucketed = Boolean(
     aggregation?.groupBy?.find((g) => g.column === xColumnName)?.timeBucket,
   );
-  const anySiblingHasRowAggregate = sources.some((ds) => ds.aggregate && ds.aggregate !== "cumsum");
-  const groupByActive = xIsBucketed || anySiblingHasRowAggregate;
+  const anySiblingHasRowAggregate = sources.some(
+    (ds) => ds.aggregate && aggregateKind(ds.aggregate) === "row",
+  );
+  const groupByActive =
+    Boolean(aggregation?.groupBy?.length) || xIsBucketed || anySiblingHasRowAggregate;
+
+  const defaultSeriesName = (
+    columnName: string,
+    aggregate: ExperimentAggregationFunction | undefined,
+  ) => {
+    if (aggregate === "row_number") return t("workspace.shelves.rowNumberSeriesName");
+    if (
+      aggregate === "change_from_previous" &&
+      getColumnKind(columns.find((column) => column.name === columnName)?.type_text) === "temporal"
+    ) {
+      return t("workspace.shelves.temporalChangeSeriesName", { column: columnName });
+    }
+    return columnName;
+  };
+
+  const updateAutomaticLabels = (
+    dsIndex: number,
+    previous: (typeof sources)[number],
+    nextColumn: string,
+    nextAggregate: ExperimentAggregationFunction | undefined,
+    first: boolean,
+  ) => {
+    const previousDefault = defaultSeriesName(previous.columnName, previous.aggregate);
+    const nextDefault = defaultSeriesName(nextColumn, nextAggregate);
+    if (!previous.alias || previous.alias === previousDefault) {
+      form.setValue(`dataConfig.dataSources.${dsIndex}.alias`, nextDefault, { shouldDirty: true });
+    }
+    if (first) {
+      const title = form.getValues("config.yAxisTitle");
+      if (!title || title === previousDefault) {
+        form.setValue("config.yAxisTitle", nextDefault, { shouldDirty: true });
+      }
+    }
+  };
 
   const handleColumnChange = (value: string, seriesIndex: number) => {
+    const yEntry = ySources[seriesIndex];
+    const label = defaultSeriesName(value, yEntry.source.aggregate);
     if (seriesIndex === 0) {
-      form.setValue("config.yAxisTitle", value);
+      form.setValue("config.yAxisTitle", label);
       // Only the first Y series defines the axis; others just add traces.
       const picked = columns.find((c) => c.name === value);
       form.setValue(
         "config.yAxisType",
         ySources[seriesIndex].source.aggregate === "count" ||
-          ySources[seriesIndex].source.aggregate === "count_distinct"
+          ySources[seriesIndex].source.aggregate === "count_distinct" ||
+          ySources[seriesIndex].source.aggregate === "row_number" ||
+          ySources[seriesIndex].source.aggregate === "change_from_previous"
           ? "linear"
           : defaultAxisTypeFor(picked?.type_text),
         {
@@ -125,8 +173,7 @@ export function YAxisShelf({
         },
       );
     }
-    const yEntry = ySources[seriesIndex];
-    form.setValue(`dataConfig.dataSources.${yEntry.index}.alias` as const, value);
+    form.setValue(`dataConfig.dataSources.${yEntry.index}.alias`, label);
 
     // If aggregation is active elsewhere, a new Y without an aggregate would
     // silently drop from SQL projection — default to AVG to keep it visible.
@@ -141,7 +188,9 @@ export function YAxisShelf({
       )?.timeBucket;
       const otherSourcesAggregating = form
         .getValues("dataConfig.dataSources")
-        .some((ds, i) => i !== yEntryDsIndex && Boolean(ds.aggregate));
+        .some(
+          (ds, i) => i !== yEntryDsIndex && ds.aggregate && aggregateKind(ds.aggregate) === "row",
+        );
       const aggregationActive = Boolean(xBucket) || otherSourcesAggregating;
       if (aggregationActive) {
         setDataSourceAggregate(form, yEntryDsIndex, "avg", xColumnName);
@@ -162,20 +211,24 @@ export function YAxisShelf({
       if (ySources[0]?.index === dsIndex)
         form.setValue("config.yAxisTitle", "", { shouldDirty: true });
     }
-    if (ySources[0]?.index === dsIndex) {
-      if (fn === "count" || fn === "count_distinct") {
-        form.setValue("config.yAxisType", "linear", { shouldDirty: true });
-      } else if (
-        fn === undefined &&
-        (source.aggregate === "count" || source.aggregate === "count_distinct")
-      ) {
-        const columnName = form.getValues(`dataConfig.dataSources.${dsIndex}.columnName`);
-        const picked = columns.find((column) => column.name === columnName);
-        form.setValue("config.yAxisType", defaultAxisTypeFor(picked?.type_text), {
-          shouldDirty: true,
-        });
-      }
+    const previousForcedLinear = forcesLinearAxis(source.aggregate);
+    const nextForcedLinear = forcesLinearAxis(fn);
+    if (ySources[0]?.index === dsIndex && previousForcedLinear !== nextForcedLinear) {
+      const columnName = form.getValues(`dataConfig.dataSources.${dsIndex}.columnName`);
+      const picked = columns.find((column) => column.name === columnName);
+      form.setValue(
+        "config.yAxisType",
+        nextForcedLinear ? "linear" : defaultAxisTypeFor(picked?.type_text),
+        { shouldDirty: true },
+      );
     }
+    updateAutomaticLabels(
+      dsIndex,
+      source,
+      form.getValues(`dataConfig.dataSources.${dsIndex}.columnName`),
+      fn,
+      ySources[0]?.index === dsIndex,
+    );
     setDataSourceAggregate(form, dsIndex, fn, xColumnName);
   };
 
@@ -256,7 +309,55 @@ export function YAxisShelf({
               allowAggregateWithoutColumn={chartType !== undefined}
               effectiveErrorColumns={effectiveErrorColumns}
               xColumnName={xColumnName}
-              aggregateOptions={AGG_FUNCTIONS}
+              aggregateOptions={AGG_FUNCTIONS.map((option) => {
+                const siblings = sources.filter((_, i) => i !== dsIndex);
+                const hasRowWindowSibling = siblings.some(
+                  (ds) => ds.aggregate && aggregateKind(ds.aggregate) === "rowWindow",
+                );
+                const ownKind = entry.source.aggregate && aggregateKind(entry.source.aggregate);
+                const groupedElsewhere =
+                  Boolean(aggregation?.groupBy?.some((g) => g.timeBucket)) ||
+                  siblings.some((ds) => ds.aggregate && aggregateKind(ds.aggregate) === "row") ||
+                  (ownKind !== "row" && Boolean(aggregation?.groupBy?.length));
+                return {
+                  ...option,
+                  label: [
+                    "previous",
+                    "change_from_previous",
+                    "row_number",
+                    "latest",
+                    "earliest",
+                  ].includes(option.value)
+                    ? t(`workspace.shelves.windowFunctions.${option.value}`)
+                    : option.label,
+                  disabledReason:
+                    aggregateKind(option.value) === "rowWindow" && groupedElsewhere
+                      ? t("workspace.shelves.rowWindowNeedsRawRows")
+                      : aggregateKind(option.value) === "row" && hasRowWindowSibling
+                        ? t("workspace.shelves.aggregateConflictsWithRowWindow")
+                        : undefined,
+                };
+              })}
+              rowWindowConflict={Boolean(
+                entry.source.aggregate &&
+                  aggregateKind(entry.source.aggregate) === "rowWindow" &&
+                  groupByActive,
+              )}
+              groupingColumns={[
+                ...new Set(
+                  [
+                    ...(aggregation?.groupBy?.map((g) => g.column) ?? []),
+                    ...sources
+                      .filter((ds) => ds.role === "color" || ds.role === "facet")
+                      .map((ds) => ds.columnName),
+                  ].filter(Boolean),
+                ),
+              ]}
+              windowColumns={columns.filter((column) =>
+                ["numeric", "temporal", "categorical"].includes(
+                  getColumnKind(column.type_text) ?? "",
+                ),
+              )}
               showCartesianControls={showCartesianControls}
               showErrorColumn={showErrorColumn}
               showSeriesColor={showSeriesColor}
@@ -382,4 +483,11 @@ export function YAxisShelf({
 
 function pickAggregate(raw: string): ExperimentAggregationFunction | undefined {
   return AGG_FUNCTIONS.find((agg) => agg.value === raw)?.value;
+}
+
+function forcesLinearAxis(fn: ExperimentAggregationFunction | undefined): boolean {
+  return (
+    fn !== undefined &&
+    ["count", "count_distinct", "row_number", "change_from_previous"].includes(fn)
+  );
 }

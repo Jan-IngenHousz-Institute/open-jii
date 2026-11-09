@@ -1,6 +1,7 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import type { Resolver } from "react-hook-form";
+import { toNestErrors } from "@hookform/resolvers";
+import type { FieldError, Resolver } from "react-hook-form";
 
+import { takesWindow } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { CreateExperimentVisualizationBody } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { zCreateExperimentVisualizationBody } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { getColumnKind } from "@repo/api/transforms/column-type-utils";
@@ -21,6 +22,7 @@ import type {
   SecondaryAxisOptions,
 } from "./chart-options";
 import { CATEGORY_PALETTE } from "./colors/palettes";
+import { sanitizeDataConfigForSave } from "./data/aggregation";
 import type { AlluvialChartOptions } from "./scientific/alluvial/options";
 import type { CarpetChartOptions } from "./scientific/carpet/options";
 import type { ContourChartOptions } from "./scientific/contour/options";
@@ -119,15 +121,54 @@ export function narrowChartConfig(visualization: {
   return merged;
 }
 
-/**
- * Resolver for `useForm<ChartFormValues>`. The create body schema types
- * `config` as `Record<string, unknown>`; the form types it as the
- * typed `ChartFormConfig`. Structurally compatible per chart type but
- * not assignable, so the resolver cast lives here once.
- */
-export const chartFormResolver: Resolver<ChartFormValues> = zodResolver(
-  zCreateExperimentVisualizationBody,
-) as unknown as Resolver<ChartFormValues>;
+export interface ChartFormContext {
+  translate: (key: string) => string;
+}
+
+export const chartFormResolver: Resolver<ChartFormValues, ChartFormContext | undefined> = (
+  values,
+  context,
+  options,
+) => {
+  const result = zCreateExperimentVisualizationBody.safeParse({
+    ...values,
+    dataConfig: sanitizeDataConfigForSave(values.dataConfig),
+  });
+  if (result.success) return { values: result.data as ChartFormValues, errors: {} };
+  const errors: Record<string, FieldError> = {};
+  const translate = context?.translate ?? ((key: string) => key);
+  for (const issue of result.error.issues) {
+    const path = issue.path.map(String);
+    const isFilter = path[0] === "dataConfig" && path[1] === "filters";
+    const name = isFilter ? "dataConfig.filters" : path.join(".");
+    if (Object.hasOwn(errors, name)) continue;
+    let key = "workspace.validation.invalidChart";
+    if (isFilter) key = "workspace.validation.invalidFilters";
+    else if (path.at(-1) === "orderColumn") {
+      const aggregate =
+        path[1] === "dataSources"
+          ? values.dataConfig.dataSources[Number(path[2])]?.aggregate
+          : undefined;
+      key =
+        aggregate && !takesWindow(aggregate)
+          ? "workspace.shelves.windowOrderUnsupported"
+          : "workspace.shelves.windowOrderRequired";
+    } else if (path.at(-1) === "partitionColumn")
+      key =
+        issue.code === "custom"
+          ? "workspace.shelves.windowPerUnsupported"
+          : "workspace.shelves.windowPerInvalid";
+    else if (path.at(-1) === "name" && issue.code !== "too_big")
+      key = "workspace.validation.nameRequired";
+    else if (path.at(-1) === "alias" || path.at(-1) === "seriesName")
+      key = "workspace.validation.seriesNameRequired";
+    else if (path.at(-1) === "dataSources") key = "workspace.validation.seriesRequired";
+    else if (path.at(-1) === "aggregate" || path.at(-1) === "aggregation")
+      key = "workspace.shelves.rowWindowConflict";
+    errors[name] = { type: issue.code, message: translate(key) };
+  }
+  return { values: {}, errors: toNestErrors(errors, options) };
+};
 
 export type AxisType = "linear" | "log" | "date" | "category" | "multicategory";
 

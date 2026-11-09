@@ -263,7 +263,10 @@
       "configureColumns": "Choose at least one column in the Data tab to render the chart.",
       "loading": "Loading chart data...",
       "previewName": "Preview",
-      "fetchErrorBody": "Die Abfrage konnte mit der aktuellen Datenkonfiguration nicht ausgeführt werden. Versuche eine andere Spalte oder Tabelle."
+      "fetchErrorBody": "Die Abfrage konnte mit der aktuellen Datenkonfiguration nicht ausgeführt werden. Versuche eine andere Spalte oder Tabelle.",
+      "incompleteWindowTitle": "Vervollständige die Diagrammeinstellungen",
+      "incompleteWindowHelp": "Wähle eine Spalte unter Sortiert nach, um die Vorschau zu sehen.",
+      "invalidConfigHelp": "Prüfe die Diagrammeinstellungen, um die Vorschau zu sehen."
     },
     "inspector": {
       "dataset": "Dataset",
@@ -365,7 +368,30 @@
         "primary": "Primär",
         "secondary": "Sekundär (rechts)"
       },
-      "colorScaleHeatmap": "Heatmap color scale"
+      "colorScaleHeatmap": "Heatmap color scale",
+      "windowFunctions": {
+        "previous": "Vorheriger Wert",
+        "change_from_previous": "Änderung zum vorherigen Wert",
+        "row_number": "Zeilennummer",
+        "latest": "Wert am spätesten Zeitpunkt",
+        "earliest": "Wert am frühesten Zeitpunkt"
+      },
+      "windowPer": "Pro",
+      "windowWholeTable": "Gesamte Tabelle",
+      "windowOrderedBy": "Sortiert nach",
+      "windowFiltersFirst": "Filter werden zuerst angewendet.",
+      "windowFirstRowNoPrevious": "Die erste Zeile jeder Gruppe hat keinen vorherigen Wert.",
+      "windowChangeSeconds": "Änderungen in Datums- und Zeitspalten werden in Sekunden angegeben.",
+      "rowWindowNeedsRawRows": "Behält jede Zeile bei. Entferne zuerst das X-Zeitintervall und andere Aggregationen.",
+      "aggregateConflictsWithRowWindow": "Entferne zuerst Vorheriger Wert, Änderung zum vorherigen Wert und Zeilennummer aus anderen Reihen.",
+      "rowWindowConflict": "Vorheriger Wert, Änderung zum vorherigen Wert und Zeilennummer behalten jede Zeile bei. Entferne vor dem Speichern das X-Zeitintervall und andere Aggregationen.",
+      "windowOrderRequired": "Wähle vor dem Speichern eine Spalte unter Sortiert nach.",
+      "timeBucket": "Zeitintervall",
+      "windowOrderUnsupported": "Diese Berechnung verwendet Sortiert nach nicht.",
+      "windowPerUnsupported": "Pro ist nur für Vorheriger Wert, Änderung zum vorherigen Wert und Zeilennummer verfügbar.",
+      "windowPerInvalid": "Wähle eine Spalte unter Pro oder Gesamte Tabelle.",
+      "rowNumberSeriesName": "Zeilennummer",
+      "temporalChangeSeriesName": "{{column}} Änderung (s)"
     },
     "axisTypes": {
       "linear": "Linear",
@@ -878,6 +904,13 @@
       "help": "Verwendet den letzten früheren Messwert mit gleichem Abgleichswert. Beide Zeitgrenzen sind eingeschlossen. Null bedeutet exakt gleiche Zeit. Datumswerte und Zeitstempel ohne Zeitzone gelten als UTC. Spalten der zweiten Tabelle beginnen mit second__.",
       "incompleteTitle": "Zeitabgleich vervollständigen",
       "incompleteHelp": "Wählen Sie eine gemeinsame Abgleichsspalte, beide Zeitspalten und eine ganzzahlige Toleranz für Vorschau und Speichern."
+    },
+    "validation": {
+      "invalidChart": "Prüfe vor dem Speichern die Diagrammeinstellungen.",
+      "invalidFilters": "Prüfe vor dem Speichern die Filterwerte.",
+      "nameRequired": "Gib einen Namen für die Visualisierung ein.",
+      "seriesNameRequired": "Gib einen Seriennamen ein.",
+      "seriesRequired": "Füge eine Datenreihe hinzu."
     }
   }
 }

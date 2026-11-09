@@ -551,3 +551,235 @@ it("selects one same-name sensor by the device label's struct path", () => {
   expect(table?.data?.rows).toHaveLength(8);
   expect(table?.data?.rows.every((row) => String(row.device).includes("Ambit (d2)"))).toBe(true);
 });
+
+describe("FixtureQuery, ordered aggregates", () => {
+  const fixture = new FixtureQuery([
+    {
+      identifier: "sensor_runs",
+      displayName: "Synthetic sensor runs",
+      defaultSortColumn: "timestamp",
+      columns: [
+        { name: "id", type_name: "STRING", type_text: "STRING" },
+        { name: "sensor", type_name: "STRING", type_text: "STRING" },
+        { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+        { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" },
+      ],
+      rows: [
+        { id: "a3", sensor: "A", timestamp: "2026-06-01T10:05:00Z", value: 19 },
+        { id: "b1", sensor: "B", timestamp: "2026-06-01T10:01:00Z", value: 80 },
+        { id: "a2", sensor: "A", timestamp: "2026-06-01T10:02:00Z", value: 14 },
+        { id: "a1", sensor: "A", timestamp: "2026-06-01T10:00:00Z", value: 10 },
+        { id: "a4", sensor: "A", timestamp: "2026-06-01T10:05:00Z", value: null },
+        { id: "b0", sensor: "B", timestamp: null, value: 70 },
+      ],
+    },
+  ]);
+  const ordered = (aggregation: unknown, extra: Record<string, unknown> = {}) => {
+    const params = new URLSearchParams({
+      tableName: "sensor_runs",
+      aggregation: JSON.stringify(aggregation),
+      orderBy: "id",
+    });
+    for (const [key, value] of Object.entries(extra)) params.set(key, JSON.stringify(value));
+    const answer = fixture.answer("/data", params);
+    if (answer?.status !== 200) throw new Error(JSON.stringify(answer));
+    const data = zExperimentDataResponse.parse(answer.body)[0].data;
+    if (!data) throw new Error("No ordered data");
+    return data;
+  };
+
+  it("keeps raw rows, partitions, breaks time ties by id, and returns seconds", () => {
+    const data = ordered({
+      functions: [
+        {
+          column: "timestamp",
+          function: "previous",
+          orderColumn: "timestamp",
+          partitionColumn: "sensor",
+          alias: "prior",
+        },
+        {
+          column: "timestamp",
+          function: "change_from_previous",
+          orderColumn: "timestamp",
+          partitionColumn: "sensor",
+          alias: "gap",
+        },
+        {
+          column: "value",
+          function: "change_from_previous",
+          orderColumn: "timestamp",
+          partitionColumn: "sensor",
+          alias: "delta",
+        },
+        {
+          column: "*",
+          function: "row_number",
+          orderColumn: "timestamp",
+          partitionColumn: "sensor",
+          alias: "run",
+        },
+      ],
+    });
+    expect(
+      data.rows.map(({ id, prior, gap, delta, run }) => ({ id, prior, gap, delta, run })),
+    ).toEqual([
+      { id: "a1", prior: null, gap: null, delta: null, run: 1 },
+      { id: "a2", prior: "2026-06-01T10:00:00Z", gap: 120, delta: 4, run: 2 },
+      { id: "a3", prior: "2026-06-01T10:02:00Z", gap: 180, delta: 5, run: 3 },
+      { id: "a4", prior: "2026-06-01T10:05:00Z", gap: 0, delta: null, run: 4 },
+      { id: "b0", prior: null, gap: null, delta: null, run: 1 },
+      { id: "b1", prior: null, gap: null, delta: 10, run: 2 },
+    ]);
+    expect(data.columns.find((column) => column.name === "prior")?.type_name).toBe("TIMESTAMP");
+    expect(data.columns.find((column) => column.name === "run")?.type_name).toBe("BIGINT");
+  });
+
+  it("applies filters before windows, and uses the whole table without Per", () => {
+    const data = ordered(
+      {
+        functions: [
+          { column: "value", function: "previous", orderColumn: "timestamp", alias: "prior" },
+        ],
+      },
+      {
+        filters: [
+          { column: "timestamp", operator: "greater_than_or_equal", value: "2026-06-01T10:02:00Z" },
+        ],
+      },
+    );
+    expect(data.rows.map((row) => [row.id, row.prior])).toEqual([
+      ["a2", null],
+      ["a3", 14],
+      ["a4", 19],
+    ]);
+  });
+
+  it("picks earliest and latest rows per group, skips null order and preserves null values", () => {
+    const data = ordered({
+      groupBy: [{ column: "sensor" }],
+      functions: [
+        { column: "timestamp", function: "earliest", orderColumn: "timestamp", alias: "first" },
+        { column: "value", function: "latest", orderColumn: "value", alias: "last" },
+        { column: "timestamp", function: "latest", orderColumn: "value", alias: "last_time" },
+      ],
+    });
+    expect(data.rows).toEqual([
+      { sensor: "A", first: "2026-06-01T10:00:00Z", last: 19, last_time: "2026-06-01T10:05:00Z" },
+      { sensor: "B", first: "2026-06-01T10:01:00Z", last: 80, last_time: "2026-06-01T10:01:00Z" },
+    ]);
+    const nullable = ordered(
+      { functions: [{ column: "value", function: "latest", orderColumn: "id", alias: "last" }] },
+      { filters: [{ column: "sensor", operator: "equals", value: "A" }] },
+    );
+    expect(nullable.rows).toEqual([{ last: null }]);
+  });
+
+  it("refuses missing order and grouped raw windows through the real contract", () => {
+    for (const aggregation of [
+      { functions: [{ column: "value", function: "previous" }] },
+      {
+        groupBy: [{ column: "sensor" }],
+        functions: [{ column: "value", function: "row_number", orderColumn: "timestamp" }],
+      },
+    ])
+      expect(
+        fixture.answer(
+          "/data",
+          new URLSearchParams({
+            tableName: "sensor_runs",
+            aggregation: JSON.stringify(aggregation),
+          }),
+        )?.status,
+      ).toBe(400);
+  });
+});
+
+function orderedFixtureRead(table: FixtureTable, functions: unknown[]) {
+  const answer = new FixtureQuery([table]).answer(
+    "/data",
+    new URLSearchParams({
+      tableName: table.identifier,
+      aggregation: JSON.stringify({ functions }),
+    }),
+  );
+  if (answer?.status !== 200) throw new Error(JSON.stringify(answer));
+  const data = zExperimentDataResponse.parse(answer.body)[0].data;
+  if (!data) throw new Error("No ordered fixture data");
+  return data;
+}
+
+it("breaks equal ordering values with binary id order rather than natural numeric order", () => {
+  const data = orderedFixtureRead(
+    {
+      identifier: "binary_ids",
+      displayName: "Binary ids",
+      columns: [
+        { name: "id", type_name: "STRING", type_text: "STRING" },
+        { name: "position", type_name: "INT", type_text: "INT" },
+        { name: "value", type_name: "INT", type_text: "INT" },
+      ],
+      rows: [
+        { id: "a2", position: 1, value: 2 },
+        { id: "a10", position: 1, value: 10 },
+      ],
+    },
+    [
+      { column: "*", function: "row_number", orderColumn: "position" },
+      { column: "value", function: "previous", orderColumn: "position" },
+    ],
+  );
+  expect(data.rows).toEqual([
+    { id: "a2", position: 1, value: 2, "*_row_number": 2, value_previous: 10 },
+    { id: "a10", position: 1, value: 10, "*_row_number": 1, value_previous: null },
+  ]);
+});
+
+it("computes zone-less NTZ gaps as UTC even across the host's daylight-saving change", () => {
+  const previousTimezone = process.env.TZ;
+  process.env.TZ = "America/New_York";
+  try {
+    const data = orderedFixtureRead(
+      {
+        identifier: "ntz",
+        displayName: "NTZ reports",
+        columns: [{ name: "time", type_name: "TIMESTAMP_NTZ", type_text: "TIMESTAMP_NTZ" }],
+        rows: [{ time: "2026-03-08T01:30:00" }, { time: "2026-03-08T03:30:00" }],
+      },
+      [{ column: "time", function: "change_from_previous", orderColumn: "time" }],
+    );
+    expect(data.rows.map((row) => row.time_change_from_previous)).toEqual([null, 7200]);
+  } finally {
+    if (previousTimezone === undefined) delete process.env.TZ;
+    else process.env.TZ = previousTimezone;
+  }
+});
+
+it.each([
+  "TINYINT",
+  "SMALLINT",
+  "INT",
+  "BIGINT",
+  "LONG",
+  "FLOAT",
+  "DOUBLE",
+  "REAL",
+  "DECIMAL(12,2)",
+  "NUMERIC(12,3)",
+])("keeps %s metadata for numeric change from previous", (type) => {
+  const data = orderedFixtureRead(
+    {
+      identifier: "integers",
+      displayName: "Integer readings",
+      columns: [{ name: "value", type_name: type, type_text: type }],
+      rows: [{ value: 10 }, { value: 14 }],
+    },
+    [{ column: "value", function: "change_from_previous", orderColumn: "value" }],
+  );
+  expect(data.columns.at(-1)).toEqual({
+    name: "value_change_from_previous",
+    type_name: type,
+    type_text: type,
+  });
+  expect(data.rows.map((row) => row.value_change_from_previous)).toEqual([null, 4]);
+});

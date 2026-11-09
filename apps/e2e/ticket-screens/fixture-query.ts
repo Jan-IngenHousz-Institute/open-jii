@@ -1,4 +1,5 @@
 import {
+  aggregateKind,
   DATA_QUERY_MAX_LIMIT,
   DISTINCT_VALUES_DEFAULT_LIMIT,
   zExperimentDataQuery,
@@ -20,6 +21,7 @@ import type {
   ExperimentTimeBucketUnit,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataJoin } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { isNumericType } from "@repo/api/transforms/column-type-utils";
 import { joinedColumns } from "@repo/api/transforms/joined-columns";
 import {
   hasRelativeTimeFilters,
@@ -403,11 +405,11 @@ export class FixtureQuery {
   ): Shaped {
     const keys = (aggregation.groupBy ?? []).map((item) => this.groupKey(item, table));
     const functions = aggregation.functions ?? [];
-    const rowFunctions = functions.filter((item) => item.function !== "cumsum");
+    const rowFunctions = functions.filter((item) => aggregateKind(item.function) === "row");
     const cumulative = functions.filter((item) => item.function === "cumsum");
 
     const isWindowOnly = keys.length === 0 && rowFunctions.length === 0;
-    if (isWindowOnly) return this.windowOnly(rows, cumulative, table, orderBy);
+    if (isWindowOnly) return this.windowOnly(rows, functions, table, orderBy);
 
     const groups = new Map<string, { key: FixtureValue[]; rows: FixtureRow[] }>();
     for (const row of rows) {
@@ -461,38 +463,98 @@ export class FixtureQuery {
     return { columns, rows: out.map(({ row }) => row) };
   }
 
-  // Cumulative sums alone keep every raw row, the running total ordered by `orderBy`.
+  // Raw windows keep every filtered row. Cumsum uses RANGE peers; row windows use id ties.
   private windowOnly(
     rows: FixtureRow[],
-    cumulative: ExperimentAggregationItem[],
+    functions: ExperimentAggregationItem[],
     table: FixtureTable,
     orderBy: string | undefined,
   ): Shaped {
-    if (orderBy === undefined) {
+    if (functions.some((item) => item.function === "cumsum") && orderBy === undefined) {
       throw new Error(
         "Cumulative sum needs an X column or orderBy parameter to define the running-total order",
       );
     }
 
     const out = rows.map((row) => {
-      const at = row[orderBy] ?? null;
+      const at = row[orderBy ?? ""] ?? null;
       const peers = rows.filter((other) => {
-        const order = other[orderBy] ?? null;
+        const order = other[orderBy ?? ""] ?? null;
         return order === null || (at !== null && this.compare(order, at) <= 0);
       });
       const extra: Record<string, FixtureValue> = {};
-      for (const item of cumulative) {
-        extra[this.alias(item)] =
-          item.column === "*" ? peers.length : this.total(peers, item.column);
+      for (const item of functions) {
+        if (item.function === "cumsum") {
+          extra[this.alias(item)] =
+            item.column === "*" ? peers.length : this.total(peers, item.column);
+          continue;
+        }
+        const partition = rows.filter(
+          (other) =>
+            !item.partitionColumn || other[item.partitionColumn] === row[item.partitionColumn],
+        );
+        const ordered = [...partition];
+        // The backend appends id where present, including tied or null ordering values.
+        ordered.sort((a, b) => {
+          const left = a[item.orderColumn ?? ""] ?? null;
+          const right = b[item.orderColumn ?? ""] ?? null;
+          const leftId = String(a.id ?? "");
+          const rightId = String(b.id ?? "");
+          return (
+            (left === null && right === null
+              ? 0
+              : left === null
+                ? -1
+                : right === null
+                  ? 1
+                  : this.compare(left, right)) ||
+            (table.columns.some((column) => column.name === "id")
+              ? leftId < rightId
+                ? -1
+                : leftId > rightId
+                  ? 1
+                  : 0
+              : 0)
+          );
+        });
+        const index = ordered.indexOf(row);
+        const previous = ordered[index - 1]?.[item.column] ?? null;
+        const current = row[item.column] ?? null;
+        let value: FixtureValue;
+        if (item.function === "row_number") value = index + 1;
+        else if (item.function === "previous") value = previous;
+        else if (item.function === "change_from_previous") {
+          const type = table.columns.find((column) => column.name === item.column)?.type_name;
+          if (type && /^(TIMESTAMP|TIMESTAMP_NTZ|DATE)$/.test(type)) {
+            value =
+              previous === null || current === null
+                ? null
+                : (this.windowTime(current, type) - this.windowTime(previous, type)) / 1000;
+          } else {
+            if (current !== null && typeof current !== "number")
+              throw new Error("Change from previous requires numeric or temporal values");
+            value =
+              typeof previous === "number" && typeof current === "number"
+                ? current - previous
+                : null;
+          }
+        } else throw new Error(`Unsupported raw window: ${item.function}`);
+        extra[this.alias(item)] = value;
       }
       return { ...row, ...extra };
     });
 
     const columns = [
       ...table.columns,
-      ...cumulative.map((item) => this.functionColumn(item, table)),
+      ...functions.map((item) => this.functionColumn(item, table)),
     ];
     return { columns, rows: out };
+  }
+
+  private windowTime(value: FixtureValue, type: string): number {
+    const text = String(value);
+    const zoneless = type === "TIMESTAMP_NTZ" && !/(?:Z|[+-]\d{2}:\d{2})$/i.test(text);
+    return Date.parse(zoneless ? `${text}Z` : text);
   }
 
   private groupKey(item: ExperimentGroupByItem, table: FixtureTable): GroupKey {
@@ -556,6 +618,7 @@ export class FixtureQuery {
 
   private alias(item: ExperimentAggregationItem): string {
     if (item.alias !== undefined) return item.alias;
+    if (item.function === "row_number") return `${item.column}_row_number`;
     if (item.function === "corr") return `${item.column}_corr_${item.secondColumn ?? ""}`;
     const base = item.column === "*" ? "count" : item.column;
     return `${base}_${item.function}`;
@@ -566,14 +629,22 @@ export class FixtureQuery {
     table: FixtureTable,
   ): ExperimentDataColumn {
     const source = table.columns.find((column) => column.name === item.column);
-    const keepsType = item.function === "min" || item.function === "max";
+    const keepsType =
+      ["min", "max", "previous", "latest", "earliest"].includes(item.function) ||
+      (item.function === "change_from_previous" && isNumericType(source?.type_text));
     const type =
-      item.function === "count" || item.function === "count_distinct"
+      item.function === "count" ||
+      item.function === "count_distinct" ||
+      item.function === "row_number"
         ? "BIGINT"
         : keepsType
           ? (source?.type_name ?? "DOUBLE")
           : "DOUBLE";
-    return { name: this.alias(item), type_name: type, type_text: type };
+    return {
+      name: this.alias(item),
+      type_name: type,
+      type_text: keepsType ? (source?.type_text ?? type) : type,
+    };
   }
 
   private total(rows: FixtureRow[], column: string): number {
@@ -588,6 +659,18 @@ export class FixtureQuery {
 
   // STDDEV and VARIANCE are the sample forms, NULL below two values.
   private reduce(rows: FixtureRow[], item: ExperimentAggregationItem): FixtureValue {
+    if (item.function === "latest" || item.function === "earliest") {
+      const candidates = rows.filter((row) => row[item.orderColumn ?? ""] != null);
+      const ordered = this.ordered(
+        { columns: [], rows: candidates },
+        {
+          tableName: "fixture",
+          orderBy: item.orderColumn,
+          orderDirection: item.function === "latest" ? "DESC" : "ASC",
+        },
+      ).rows;
+      return ordered[0]?.[item.column] ?? null;
+    }
     if (item.function === "count_distinct") {
       return new Set(rows.map((row) => row[item.column] ?? null).filter((value) => value !== null))
         .size;
@@ -630,6 +713,8 @@ export class FixtureQuery {
         return variance;
       case "cumsum":
         return sum;
+      default:
+        throw new Error(`Unsupported grouped aggregate: ${item.function}`);
     }
   }
 
