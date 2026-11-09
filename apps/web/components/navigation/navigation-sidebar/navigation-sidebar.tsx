@@ -2,12 +2,12 @@
 
 import { CommandKHint } from "@/components/command/kbd";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { DepartureLink } from "@/components/navigation/list-departure/departure-link";
 import { NotificationsPopover } from "@/components/notifications/notifications-popover";
 import { COMMAND_PALETTE_OPEN_EVENT } from "@/components/shortcuts/shortcuts-root";
 import { WhatsNewFooterItem } from "@/components/whats-new/whats-new-footer-item";
 import { Search } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
@@ -132,7 +132,7 @@ export function AppSidebar({
             matches SiteHeader and px-2 puts the logo on the x=32 icon rail
             every other row sits on. The mobile Sheet reuses this row. */}
         <div className="flex h-12 items-center gap-2 px-2">
-          <Link
+          <DepartureLink
             href={`/${locale}/platform`}
             onClick={() => {
               if (isMobile) setOpenMobile(false);
@@ -153,7 +153,7 @@ export function AppSidebar({
               height={50}
               className="hidden h-7 w-auto dark:block"
             />
-          </Link>
+          </DepartureLink>
         </div>
 
         <Button

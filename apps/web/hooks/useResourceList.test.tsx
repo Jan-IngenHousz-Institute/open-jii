@@ -41,7 +41,7 @@ function fakeQuery(respond: (view: View) => ListResponse<Row>) {
   return { query, views };
 }
 
-function renderList(respond: (view: View) => ListResponse<Row>, searchKey?: string) {
+function renderList(respond: (view: View) => ListResponse<Row>, searchKey: "q" | null = null) {
   const fake = fakeQuery(respond);
   const hook = renderHook(() =>
     useResourceList({ filters, sort: zExperimentSort, searchKey, query: fake.query }),
@@ -51,6 +51,7 @@ function renderList(respond: (view: View) => ListResponse<Row>, searchKey?: stri
 
 describe("useResourceList", () => {
   beforeEach(() => {
+    window.history.replaceState(null, "", "/list");
     vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams(""));
     vi.mocked(nav.usePathname).mockReturnValue("/list");
   });
@@ -117,6 +118,7 @@ describe("useResourceList", () => {
       useResourceList({
         filters,
         sort: zExperimentSort,
+        searchKey: null,
         query: (view) => ({
           ...fake.query(view),
           queryFn: () =>
@@ -168,10 +170,13 @@ describe("useResourceList", () => {
   });
 
   it("keeps search in the URL when the list names a key for it", async () => {
+    window.history.replaceState(null, "", "/list?q=lab");
     vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams("q=lab"));
     const { result, views } = renderList(() => envelope([], 1, 1), "q");
 
     expect(result.current.search).toBe("lab");
+    expect(views[0]?.search).toBe("lab");
+    expect(nav.useRouter().replace).not.toHaveBeenCalled();
     await waitFor(() => expect(views.at(-1)?.search).toBe("lab"));
   });
 
@@ -187,5 +192,26 @@ describe("useResourceList", () => {
     await act(() => result.current.refetch());
 
     await waitFor(() => expect(result.current.data?.items).toHaveLength(1));
+  });
+
+  it("commits the URL and starts the request after the same 300 ms delay", async () => {
+    const { result, views } = renderList(() => envelope([], 1, 1), "q");
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    vi.useFakeTimers();
+    try {
+      act(() => result.current.setSearch("parallel"));
+      act(() => {
+        vi.advanceTimersByTime(299);
+      });
+      expect(views.at(-1)?.search).toBe("");
+      expect(nav.useRouter().replace).not.toHaveBeenCalled();
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(views.at(-1)?.search).toBe("parallel");
+      expect(nav.useRouter().replace).toHaveBeenCalledWith("/list?q=parallel", { scroll: false });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

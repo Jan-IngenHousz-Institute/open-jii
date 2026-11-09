@@ -1,7 +1,7 @@
 "use client";
 
+import { DepartureLink } from "@/components/navigation/list-departure/departure-link";
 import { useIsHydrated } from "@/hooks/useIsHydrated";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { usePostHog } from "~/providers/posthog-context";
 
@@ -58,9 +58,13 @@ export function CookieBanner() {
         <div className="mx-auto flex max-w-7xl flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-muted-foreground text-sm sm:pr-6">
             {t("cookieBanner.intro")}
-            <Link href="/cookie-policy" className="text-primary hover:underline" prefetch={false}>
+            <DepartureLink
+              href="/cookie-policy"
+              className="text-primary hover:underline"
+              prefetch={false}
+            >
               {t("cookieBanner.cookiePolicy")}
-            </Link>
+            </DepartureLink>
           </p>
 
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">

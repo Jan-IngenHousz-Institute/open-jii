@@ -1,5 +1,7 @@
 "use client";
 
+import { DepartureLink } from "@/components/navigation/list-departure/departure-link";
+import { useDepartureRouter } from "@/components/navigation/list-departure/list-departure";
 import { ownName, personName } from "@/components/people/person-name";
 import { UserAvatar } from "@/components/user-avatar";
 import {
@@ -11,8 +13,6 @@ import {
   MessageCircleQuestion,
 } from "lucide-react";
 import { User as UserIcon } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { env } from "~/env";
 import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
@@ -42,7 +42,7 @@ interface NavUserProps {
 
 export function NavUser({ user, locale, compact = false }: NavUserProps) {
   const { t } = useTranslation();
-  const router = useRouter();
+  const router = useDepartureRouter();
   const [open, setOpen] = useState(false);
   const signOut = useSignOut();
 
@@ -103,7 +103,7 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
 
           {/* ACCOUNT */}
           <DropdownMenuItem asChild>
-            <Link
+            <DepartureLink
               href={`/${locale}/platform/account`}
               className="flex w-full cursor-default items-center"
             >
@@ -113,12 +113,12 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                 </AvatarFallback>
               </Avatar>
               {t("auth.account")}
-            </Link>
+            </DepartureLink>
           </DropdownMenuItem>
 
           {/* SUPPORT */}
           <DropdownMenuItem asChild>
-            <Link
+            <DepartureLink
               href={env.NEXT_PUBLIC_DOCS_URL}
               target="_blank"
               rel="noopener noreferrer"
@@ -130,19 +130,22 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                 </AvatarFallback>
               </Avatar>
               {t("navigation.support")}
-            </Link>
+            </DepartureLink>
           </DropdownMenuItem>
 
           {/* FAQ */}
           <DropdownMenuItem asChild>
-            <Link href={`/${locale}/faq`} className="flex w-full cursor-default items-center">
+            <DepartureLink
+              href={`/${locale}/faq`}
+              className="flex w-full cursor-default items-center"
+            >
               <Avatar className="bg-muted mr-2 h-4 w-4">
                 <AvatarFallback className="rounded-lg">
                   <MessageCircleQuestion className="h-4 w-4" />
                 </AvatarFallback>
               </Avatar>
               {t("navigation.faq")}
-            </Link>
+            </DepartureLink>
           </DropdownMenuItem>
 
           {/* SIGN OUT */}
@@ -204,7 +207,7 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
 
             {/* ACCOUNT */}
             <DropdownMenuItem asChild>
-              <Link
+              <DepartureLink
                 href={`/${locale}/platform/account`}
                 className="flex w-full cursor-default items-center"
               >
@@ -214,12 +217,12 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                   </AvatarFallback>
                 </Avatar>
                 {t("auth.account")}
-              </Link>
+              </DepartureLink>
             </DropdownMenuItem>
 
             {/* SUPPORT */}
             <DropdownMenuItem asChild>
-              <Link
+              <DepartureLink
                 href={env.NEXT_PUBLIC_DOCS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -231,19 +234,22 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                   </AvatarFallback>
                 </Avatar>
                 {t("navigation.support")}
-              </Link>
+              </DepartureLink>
             </DropdownMenuItem>
 
             {/* FAQ */}
             <DropdownMenuItem asChild>
-              <Link href={`/${locale}/faq`} className="flex w-full cursor-default items-center">
+              <DepartureLink
+                href={`/${locale}/faq`}
+                className="flex w-full cursor-default items-center"
+              >
                 <Avatar className="bg-muted mr-2 h-4 w-4">
                   <AvatarFallback className="rounded-lg">
                     <MessageCircleQuestion className="h-4 w-4" />
                   </AvatarFallback>
                 </Avatar>
                 {t("navigation.faq")}
-              </Link>
+              </DepartureLink>
             </DropdownMenuItem>
 
             {/* SIGN OUT */}
