@@ -185,6 +185,17 @@ describe("zExperimentCustomMetadataPayload", () => {
     expect(zExperimentMetadataExperimentPathParam.parse({ id: upper })).toEqual({ id: lower });
   });
 
+  it("rejects a sheet larger than 5 MB", () => {
+    const blob = { ...validBlob, rows: [{ _id: "row_1", plot: "x".repeat(5_000_000) }] };
+
+    const result = zExperimentCustomMetadataPayload.safeParse(blob);
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(
+      expect.objectContaining({ path: ["rows"], message: "Metadata cannot be larger than 5 MB" }),
+    );
+  });
+
   it("accepts the text of an escape, which is no NUL character", () => {
     const blob = { ...validBlob, name: "Plot \\u0000 map" };
 
