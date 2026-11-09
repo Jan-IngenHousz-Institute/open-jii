@@ -19,6 +19,7 @@ import {
 } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
+import type { AnnotationRecord } from "../models/experiment-data-annotation.model";
 import type {
   ExperimentDataSource,
   ExperimentTableMetadata,
@@ -30,6 +31,7 @@ import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 import { SERVING_STORE_PORT } from "../ports/serving-store.port";
 import type { ServingStorePort } from "../ports/serving-store.port";
+import { ExperimentAnnotationsRepository } from "./experiment-annotations.repository";
 import { ExperimentDataRepository } from "./experiment-data.repository";
 
 /* eslint-disable @typescript-eslint/unbound-method */
@@ -3233,6 +3235,141 @@ describe("ExperimentDataRepository", () => {
       expect(fromStore.value[0].rowCount).toBe(1_000_000);
       expect(fromWarehouse.value[0].rowCount).toBe(5);
       expect(warehouseListing).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("a row's annotations", () => {
+    const phoneComment = {
+      id: "p1",
+      rowId: "1",
+      type: "comment",
+      content: { text: "From the phone", flagType: null },
+    };
+    const table: ExperimentTableMetadata = {
+      identifier: "raw_data",
+      tableType: "static",
+      displayName: null,
+      rowCount: 1,
+      latestRowAt: null,
+      schemaRevision: "r1",
+      macroSchema: null,
+      questionsSchema: null,
+      customMetadataSchema: null,
+    };
+    let experiment: ExperimentDto;
+    let flag: AnnotationRecord;
+
+    function column(name: string, position: number) {
+      return { name, type_name: "STRING", type_text: "STRING", position };
+    }
+
+    function annotationsOf(rows: Record<string, string | null>[] | undefined): unknown[] {
+      return (rows ?? []).map((row): unknown => JSON.parse(row.annotations ?? "null"));
+    }
+
+    beforeEach(async () => {
+      const userId = await testApp.createTestUser({});
+      const created = await testApp.createExperiment({ name: "Drought trial", userId });
+      experiment = { ...mockExperiment, id: created.experiment.id };
+      flag = {
+        id: faker.string.uuid(),
+        experimentId: experiment.id,
+        tableName: "raw_data",
+        rowId: "1",
+        type: "flag",
+        contentText: null,
+        flagType: "outlier",
+        createdBy: userId,
+        createdAt: new Date("2026-09-01T08:00:00.000Z"),
+        updatedAt: new Date("2026-09-01T08:00:00.000Z"),
+      };
+      const annotations = testApp.module.get(ExperimentAnnotationsRepository);
+      assertSuccess(await annotations.transaction((tx) => annotations.insert(tx, [flag])));
+    });
+
+    it("reads the phone's from the warehouse's own column and the platform's from Postgres", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([table]));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [column("id", 0), column("annotations", 1), column("payload_annotations", 2)],
+          rows: [
+            [
+              "1",
+              JSON.stringify([phoneComment, { id: "stale lakehouse copy" }]),
+              JSON.stringify([phoneComment]),
+            ],
+          ],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
+
+      const result = await repository.getTableData({
+        experimentId: experiment.id,
+        experiment,
+        tableName: "raw_data",
+        columns: ["id", "annotations"],
+        source: WAREHOUSE,
+      });
+
+      assertSuccess(result);
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ columns: ["id", "annotations", "payload_annotations"] }),
+      );
+      expect(result.value[0].data?.columns.map(({ name }) => name)).toEqual(["id", "annotations"]);
+      expect(annotationsOf(result.value[0].data?.rows)).toEqual([
+        [phoneComment, expect.objectContaining({ id: flag.id, type: "flag" })],
+      ]);
+    });
+
+    it("adds the platform's from Postgres to a store page's", async () => {
+      const servingStore = testApp.module.get<ServingStorePort>(SERVING_STORE_PORT);
+      vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(success([table]));
+      vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
+        success({
+          columns: [column("id", 0), column("annotations", 1)],
+          rows: [["1", JSON.stringify([phoneComment])]],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
+
+      const result = await repository.getTableData({
+        experimentId: experiment.id,
+        experiment,
+        tableName: "raw_data",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(annotationsOf(result.value[0].data?.rows)).toEqual([
+        [phoneComment, expect.objectContaining({ id: flag.id, type: "flag" })],
+      ]);
+    });
+
+    it("leaves the phone's own column out of a table's columns", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([table]));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [column("id", 0), column("annotations", 1), column("payload_annotations", 2)],
+          rows: [],
+          totalRows: 0,
+          truncated: false,
+        }),
+      );
+
+      const result = await repository.getTableColumns({
+        experimentId: experiment.id,
+        tableName: "raw_data",
+        source: WAREHOUSE,
+      });
+
+      assertSuccess(result);
+      expect(result.value.map(({ name }) => name)).toEqual(["id", "annotations"]);
     });
   });
 });

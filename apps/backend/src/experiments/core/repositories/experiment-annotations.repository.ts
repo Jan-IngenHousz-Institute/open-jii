@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import { and, eq, experimentAnnotations, inArray, profiles, sql } from "@repo/database";
-import type { DatabaseInstance, DbOrTx, Transaction } from "@repo/database";
+import { and, asc, eq, experimentAnnotations, inArray, profiles, sql } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, SQL, Transaction } from "@repo/database";
 
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
@@ -113,28 +113,58 @@ export class ExperimentAnnotationsRepository {
   /** The annotations among `ids` that still exist, each with its author's name as it reads now. */
   async findCopies(ids: string[]): Promise<Result<AnnotationCopy[]>> {
     return tryCatch(
-      () =>
-        this.database
-          .select({
-            id: experimentAnnotations.id,
-            experimentId: experimentAnnotations.experimentId,
-            tableName: experimentAnnotations.tableName,
-            rowId: experimentAnnotations.rowId,
-            type: experimentAnnotations.type,
-            contentText: experimentAnnotations.contentText,
-            flagType: experimentAnnotations.flagType,
-            createdBy: experimentAnnotations.createdBy,
-            createdAt: experimentAnnotations.createdAt,
-            updatedAt: experimentAnnotations.updatedAt,
-            // As every other read shows a person: "Unknown User" once they deactivate their profile.
-            userName: sql<string | null>`CASE WHEN ${profiles.userId} IS NULL THEN NULL
-              ELSE nullif(trim(${getAnonymizedFirstName()} || ' ' || ${getAnonymizedLastName()}), '') END`,
-          })
-          .from(experimentAnnotations)
-          .leftJoin(profiles, eq(profiles.userId, experimentAnnotations.createdBy))
-          .where(inArray(experimentAnnotations.id, ids)),
+      () => this.withAuthorNames(inArray(experimentAnnotations.id, ids)),
       (error) => this.queryError(error),
     );
+  }
+
+  /** The annotations on the given rows of one table, oldest first, with their authors' names. */
+  async findOnRows(
+    experimentId: string,
+    tableName: string,
+    rowIds: string[],
+  ): Promise<Result<AnnotationCopy[]>> {
+    return tryCatch(
+      async () => {
+        const found: AnnotationCopy[] = [];
+        for (let start = 0; start < rowIds.length; start += ROW_ID_CHUNK) {
+          found.push(
+            ...(await this.withAuthorNames(
+              and(
+                eq(experimentAnnotations.experimentId, experimentId),
+                eq(experimentAnnotations.tableName, tableName),
+                inArray(experimentAnnotations.rowId, rowIds.slice(start, start + ROW_ID_CHUNK)),
+              ),
+            )),
+          );
+        }
+        return found;
+      },
+      (error) => this.queryError(error),
+    );
+  }
+
+  private withAuthorNames(condition: SQL | undefined): Promise<AnnotationCopy[]> {
+    return this.database
+      .select({
+        id: experimentAnnotations.id,
+        experimentId: experimentAnnotations.experimentId,
+        tableName: experimentAnnotations.tableName,
+        rowId: experimentAnnotations.rowId,
+        type: experimentAnnotations.type,
+        contentText: experimentAnnotations.contentText,
+        flagType: experimentAnnotations.flagType,
+        createdBy: experimentAnnotations.createdBy,
+        createdAt: experimentAnnotations.createdAt,
+        updatedAt: experimentAnnotations.updatedAt,
+        // As every other read shows a person: "Unknown User" once they deactivate their profile.
+        userName: sql<string | null>`CASE WHEN ${profiles.userId} IS NULL THEN NULL
+          ELSE nullif(trim(${getAnonymizedFirstName()} || ' ' || ${getAnonymizedLastName()}), '') END`,
+      })
+      .from(experimentAnnotations)
+      .leftJoin(profiles, eq(profiles.userId, experimentAnnotations.createdBy))
+      .where(condition)
+      .orderBy(asc(experimentAnnotations.createdAt), asc(experimentAnnotations.id));
   }
 
   /**

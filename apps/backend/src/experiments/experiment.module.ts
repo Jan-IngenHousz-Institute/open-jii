@@ -33,6 +33,7 @@ import { ExperimentWarehouseReadsService } from "./application/services/experime
 import { ExportRunReconcilerService } from "./application/services/export-run-reconciler.service";
 import { MetadataSheetsLakehouseCopier } from "./application/services/metadata-sheets-lakehouse-copier";
 import { MultipartUploadService } from "./application/services/multipart-upload.service";
+import { PlatformAnnotationsService } from "./application/services/platform-annotations.service";
 import { UploadRunReconcilerService } from "./application/services/upload-run-reconciler.service";
 import { AttachWorkbookUseCase } from "./application/use-cases/attach-workbook/attach-workbook";
 // Use Cases
@@ -245,6 +246,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentDataOutboxWorker,
     AnnotationsLakehouseCopier,
     MetadataSheetsLakehouseCopier,
+    PlatformAnnotationsService,
     ExportRunReconcilerService,
     ContributorAnonymizerService,
     ExperimentDataSourceService,
