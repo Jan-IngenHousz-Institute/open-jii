@@ -1,3 +1,5 @@
+import { Logger } from "@nestjs/common";
+
 import { experimentMetadataSheets } from "@repo/database";
 
 import {
@@ -200,14 +202,25 @@ describe("CreateExperimentMetadataUseCase", () => {
       createdAt: new Date("2025-01-01"),
       updatedAt: new Date("2025-01-01"),
     };
-    vi.spyOn(metadataWarehouseRepository, "create").mockResolvedValue(success(mockResult));
+    const create = vi
+      .spyOn(metadataWarehouseRepository, "create")
+      .mockResolvedValue(success(mockResult));
     vi.spyOn(testApp.module.get(ExperimentMetadataRepository), "insert").mockResolvedValue(
       failure(AppError.internal("Postgres did not answer the metadata sheets query")),
     );
+    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
 
     const result = await useCase.execute(experiment.id, sampleMetadata, testUserId);
 
     assertSuccess(result);
     expect(result.value).toEqual(mockResult);
+    const [, metadataId] = create.mock.calls[0];
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        msg: "Experiment metadata not copied to Postgres",
+        experimentId: experiment.id,
+        metadataId,
+      }),
+    );
   });
 });

@@ -128,6 +128,15 @@ describe("ExperimentMetadataRepository", () => {
     expect(await stored()).toEqual([]);
   });
 
+  it("is refused a NUL character in a key as well as in a value", async () => {
+    const result = await repository.insert(
+      sheet({ metadata: { rows: [{ _id: "r1", "plot\u0000": "A1" }] } }),
+    );
+
+    assertFailure(result);
+    expect(await stored()).toEqual([]);
+  });
+
   it("reports a refused write by Postgres's code, without the sheet in it", async () => {
     const plots = sheet({ metadata: { name: "Field 12, trampled" } });
     await repository.insert(plots);

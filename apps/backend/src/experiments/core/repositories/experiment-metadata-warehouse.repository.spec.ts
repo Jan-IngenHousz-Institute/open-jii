@@ -174,6 +174,23 @@ describe("ExperimentMetadataWarehouseRepository", () => {
       expect(result.value.createdAt).toBe(now);
     });
 
+    it("writes the id and time it was given, the ones Postgres gets too", async () => {
+      const execute = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(success(emptySchemaData));
+
+      await repository.create(mockExperimentId, mockMetadataId, createDto, mockUserId, now);
+
+      expect(execute.mock.calls[0][2]).toEqual(
+        expect.arrayContaining([
+          { name: "metadata_id", value: mockMetadataId },
+          { name: "experiment_id", value: mockExperimentId },
+          { name: "created_by", value: mockUserId },
+          { name: "now", value: now.toISOString(), type: "TIMESTAMP" },
+        ]),
+      );
+    });
+
     it("should use PARSE_JSON in INSERT query", async () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptySchemaData));
 
@@ -273,6 +290,7 @@ describe("ExperimentMetadataWarehouseRepository", () => {
           { name: "metadata", value: JSON.stringify(updateDto.metadata) },
           { name: "metadata_id", value: mockMetadataId },
           { name: "experiment_id", value: mockExperimentId },
+          { name: "now", value: now.toISOString(), type: "TIMESTAMP" },
         ]),
       );
     });
