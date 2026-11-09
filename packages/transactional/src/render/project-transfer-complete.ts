@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 
+import type { EmailUnsubscribe } from "../components/email-layout";
 import { Email } from "../emails/email";
 import { ProjectTransferComplete } from "../emails/fallbacks/project-transfer-complete";
 import { getCmsEmail } from "../lib/contentful";
@@ -9,6 +10,7 @@ export interface RenderProjectTransferCompleteParams {
   experimentName: string;
   experimentUrl: string;
   baseUrl: string;
+  unsubscribe?: EmailUnsubscribe;
 }
 
 export interface RenderedEmail {
@@ -20,7 +22,7 @@ export interface RenderedEmail {
 export async function renderProjectTransferComplete(
   params: RenderProjectTransferCompleteParams,
 ): Promise<RenderedEmail> {
-  const { host, experimentName, experimentUrl, baseUrl } = params;
+  const { host, experimentName, experimentUrl, baseUrl, unsubscribe } = params;
 
   const emailData = await getCmsEmail("project-transfer-complete", {
     host,
@@ -31,11 +33,11 @@ export async function renderProjectTransferComplete(
 
   if (!emailData) {
     const html = await render(
-      ProjectTransferComplete({ host, experimentName, experimentUrl, baseUrl }),
+      ProjectTransferComplete({ host, experimentName, experimentUrl, baseUrl, unsubscribe }),
       {},
     );
     const text = await render(
-      ProjectTransferComplete({ host, experimentName, experimentUrl, baseUrl }),
+      ProjectTransferComplete({ host, experimentName, experimentUrl, baseUrl, unsubscribe }),
       { plainText: true },
     );
     return { html, text, preview: "Your project transfer has been completed" };
@@ -47,6 +49,7 @@ export async function renderProjectTransferComplete(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     {},
   );
@@ -57,6 +60,7 @@ export async function renderProjectTransferComplete(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     { plainText: true },
   );

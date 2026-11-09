@@ -147,7 +147,10 @@ vi.mock("@repo/i18n", () => ({
               ? `${key}:${options.filter}:${options.value}`
               : key === "workbooks.duplicateName" && typeof options?.name === "string"
                 ? `Fork of ${options.name}`
-                : key,
+                : (key === "unsubscribe.done.body" || key === "unsubscribe.undone.body") &&
+                    typeof options?.category === "string"
+                  ? `${key}:${options.category}`
+                  : key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
   useCurrentLocale: () => "en-US",

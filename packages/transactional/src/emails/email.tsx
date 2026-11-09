@@ -1,5 +1,6 @@
 import type { EmailRichTextInterface } from "../components/ctf-rich-text";
 import { EmailRichText } from "../components/ctf-rich-text";
+import type { EmailUnsubscribe } from "../components/email-layout";
 import { EmailLayout } from "../components/email-layout";
 
 export interface EmailProps {
@@ -8,6 +9,7 @@ export interface EmailProps {
   baseUrl: string;
   cmsPreview: string;
   cmsContent: EmailRichTextInterface;
+  unsubscribe?: EmailUnsubscribe;
 }
 
 export const Email = ({
@@ -16,9 +18,16 @@ export const Email = ({
   baseUrl,
   cmsPreview,
   cmsContent,
+  unsubscribe,
 }: EmailProps) => {
   return (
-    <EmailLayout preview={cmsPreview} senderName={senderName} host={host} baseUrl={baseUrl}>
+    <EmailLayout
+      preview={cmsPreview}
+      senderName={senderName}
+      host={host}
+      baseUrl={baseUrl}
+      unsubscribe={unsubscribe}
+    >
       <EmailRichText json={cmsContent.json} links={cmsContent.links} />
     </EmailLayout>
   );

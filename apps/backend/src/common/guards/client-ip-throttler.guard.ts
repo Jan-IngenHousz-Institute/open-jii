@@ -10,7 +10,7 @@ interface ThrottledRequest {
 // CloudFront appends. req.ip is the proxy (one shared bucket) and the leftmost entry
 // is client-supplied (rotating it would mint a fresh bucket per request).
 @Injectable()
-export class NewsletterThrottlerGuard extends ThrottlerGuard {
+export class ClientIpThrottlerGuard extends ThrottlerGuard {
   protected getTracker(req: ThrottledRequest): Promise<string> {
     const header = req.headers?.["x-forwarded-for"];
     const raw = Array.isArray(header) ? header.join(",") : header;

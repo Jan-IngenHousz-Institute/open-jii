@@ -550,6 +550,7 @@ jobs:
       TF_VAR_databricks_auth_type: github-oidc
       TF_VAR_databricks_host: ${{ secrets.DATABRICKS_HOST }}
       TF_VAR_auth_secret: ${{ secrets.AUTH_SECRET }}
+      TF_VAR_notification_unsubscribe_secret: ${{ secrets.NOTIFICATION_UNSUBSCRIBE_SECRET }}
       TF_VAR_github_oauth_client_id: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
       TF_VAR_github_oauth_client_secret: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
       TF_VAR_backend_webhook_api_key_id: ${{ secrets.BACKEND_WEBHOOK_API_KEY_ID }}
