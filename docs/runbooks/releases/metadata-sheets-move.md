@@ -56,7 +56,8 @@ SELECT count(*), sum(length(to_json(metadata))) FROM centrum.experiment_custom_m
 
 Note the time you ran it, in UTC, and the two numbers the last query gives, then download the
 export's result as CSV, `sheets.csv`. If the editor cuts the download short of the count, export it
-in parts with a `WHERE experiment_id IN (...)`.
+in parts with a `WHERE experiment_id IN (...)`. The editor's download writes a NULL as the text
+`null`, and step 1 leaves no NULL in any column this exports, so a column per field is safe here.
 
 ## 3. Load it beside Postgres's sheets
 
@@ -137,7 +138,20 @@ from the lakehouse and delete it from Postgres.
 
 A row of the first query whose `in_postgres` is older, or empty, is a change the lakehouse took
 that Postgres missed, such as an edit to a sheet step 4 had not reached yet. Run step 4
-again with this export, then step 5's checks again.
+with this export, then step 5's checks again.
+
+A row whose `in_postgres` equals the lakehouse's time, or is newer but from before the second
+export, holds two edits of one sheet that reached the two stores in opposite orders. Step 4 never
+replaces it. The first release's pages show the lakehouse's copy, so make Postgres match it, naming
+the rows' ids, then run step 5's checks again:
+
+```sql
+UPDATE experiment_metadata_sheets s
+SET experiment_id = l.experiment_id, metadata = l.metadata::jsonb, created_by = l.created_by,
+    created_at = l.created_at, updated_at = l.updated_at
+FROM lakehouse_sheets l
+WHERE s.id = l.id AND s.id IN ('<id>', '<id>');
+```
 
 ## Before the second release, and after
 
