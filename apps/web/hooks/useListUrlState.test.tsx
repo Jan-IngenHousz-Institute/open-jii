@@ -591,11 +591,17 @@ describe("useListUrlState", () => {
   });
 
   it("restores a same-path destination that equals the URL from before the flush", () => {
+    let renders = 0;
+    let maxRenders = 10;
     const { result, rerender } = renderHook(
-      () => ({
-        list: useListUrlState(withSearch),
-        router: useDepartureRouter(),
-      }),
+      () => {
+        renders += 1;
+        if (renders > maxRenders) throw new Error("the list kept rendering after the URL settled");
+        return {
+          list: useListUrlState(withSearch),
+          router: useDepartureRouter(),
+        };
+      },
       { wrapper: ListDepartureProvider },
     );
     act(() => result.current.list.setSearch("draft"));
@@ -603,9 +609,40 @@ describe("useListUrlState", () => {
     expect(location.search).toBe("?q=draft");
     // Next can batch the native replacement and push into the original search-params object.
     window.history.replaceState(null, "", "/list");
+    maxRenders = renders + 2;
     rerender();
     expect(result.current.list.search).toBe("");
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("waits for a write still in flight instead of resending it after an earlier echo", () => {
+    const { result, rerender } = renderHook(
+      () => ({
+        list: useListUrlState(withSearch),
+        router: useDepartureRouter(),
+      }),
+      { wrapper: ListDepartureProvider },
+    );
+    act(() => result.current.list.setSearch("w"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    act(() => result.current.list.setSearch("wh"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    for (const echo of ["q=w", "q=wh", "q=wh"]) {
+      setSearchParams(echo);
+      rerender();
+    }
+    expect(replace).toHaveBeenCalledTimes(2);
+    expect(result.current.list.search).toBe("wh");
+    act(() => result.current.list.setSearch("x"));
+    act(() => result.current.router.push("/list"));
+    setSearchParams("q=wh");
+    rerender();
+    expect(result.current.list.search).toBe("wh");
+    expect(replace).toHaveBeenCalledTimes(2);
   });
 
   it("repairs a late router echo after a native flush when the list stays mounted", () => {

@@ -233,9 +233,12 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
     const echoed = samePath ? emitted.current.indexOf(urlSerialized) : -1;
     if (echoed >= 0) {
       emitted.current = emitted.current.slice(echoed + 1);
-      // An acknowledgment never commits a newer draft ahead of its timer.
-      if (!pending.current && serialize(toParams(options, snapshot.current)) !== urlSerialized)
-        write("router");
+      const latest = serialize(toParams(options, snapshot.current));
+      // A write of the state the URL already shows changes nothing, so it never echoes.
+      if (latest === urlSerialized)
+        emitted.current = emitted.current.filter((entry) => entry !== latest);
+      // An acknowledgment never commits a newer draft ahead of its timer or repeats one in flight.
+      else if (!pending.current && !emitted.current.includes(latest)) write("router");
       return;
     }
     cancel();
