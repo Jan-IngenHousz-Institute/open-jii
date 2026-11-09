@@ -9,6 +9,7 @@ import {
 } from "../../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../../test/test-harness";
 import { ExperimentAnnotationsRepository } from "../../../../core/repositories/experiment-annotations.repository";
+import { ExperimentDataOutboxRepository } from "../../../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentDataOutboxWorker } from "../../../services/experiment-data-outbox.worker";
 import { AddAnnotationsUseCase } from "./add-annotations";
 
@@ -166,6 +167,24 @@ describe("AddAnnotations", () => {
 
     assertFailure(result);
     expect(result.error.message).toBe("Postgres refused the annotations query with SQLSTATE 23505");
+    expect(await outbox()).toEqual([]);
+    expect(nudge).not.toHaveBeenCalled();
+  });
+
+  it("keeps no annotation when the copy it owes cannot be written", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
+    vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe").mockRejectedValue(
+      new Error("outbox unavailable"),
+    );
+    const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+
+    const result = await useCase.execute(experiment.id, comment, testUserId);
+
+    assertFailure(result);
+    expect(await annotations()).toEqual([]);
     expect(await outbox()).toEqual([]);
     expect(nudge).not.toHaveBeenCalled();
   });

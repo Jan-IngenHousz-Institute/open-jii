@@ -3,6 +3,7 @@ import { experimentDataOutbox, experimentMetadataSheets } from "@repo/database";
 import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import type { MetadataSheetRecord } from "../../../core/models/experiment-metadata.model";
+import { ExperimentDataOutboxRepository } from "../../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
 import { ExperimentDataOutboxWorker } from "../../services/experiment-data-outbox.worker";
 import { DeleteExperimentMetadataUseCase } from "./delete-experiment-metadata";
@@ -120,5 +121,22 @@ describe("DeleteExperimentMetadataUseCase", () => {
 
     assertFailure(result);
     expect(result.error.code).toBe("INTERNAL_ERROR");
+  });
+
+  it("keeps the sheet when the copy it owes cannot be written", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
+    const record = await existing(experiment.id);
+    vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe").mockRejectedValue(
+      new Error("outbox unavailable"),
+    );
+
+    const result = await useCase.execute(experiment.id, record.id, testUserId);
+
+    assertFailure(result);
+    expect(await sheets()).toEqual([record]);
+    expect(await outbox()).toEqual([]);
   });
 });

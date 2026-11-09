@@ -9,6 +9,7 @@ import {
 import { TestHarness } from "../../../../../test/test-harness";
 import type { AnnotationRecord } from "../../../../core/models/experiment-data-annotation.model";
 import { ExperimentAnnotationsRepository } from "../../../../core/repositories/experiment-annotations.repository";
+import { ExperimentDataOutboxRepository } from "../../../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentDataOutboxWorker } from "../../../services/experiment-data-outbox.worker";
 import { UpdateAnnotationUseCase } from "./update-annotation";
 
@@ -208,5 +209,27 @@ describe("UpdateAnnotation", () => {
 
     assertFailure(result);
     expect(result.error.message).toBe("Postgres did not answer the annotations query");
+  });
+
+  it("keeps the old text when the copy it owes cannot be written", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
+    const record = await existing(experiment.id);
+    vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe").mockRejectedValue(
+      new Error("outbox unavailable"),
+    );
+
+    const result = await useCase.execute(
+      experiment.id,
+      record.id,
+      { content: { type: "comment", text: "Leaf was dry" } },
+      testUserId,
+    );
+
+    assertFailure(result);
+    expect(await annotations()).toEqual([record]);
+    expect(await outbox()).toEqual([]);
   });
 });
