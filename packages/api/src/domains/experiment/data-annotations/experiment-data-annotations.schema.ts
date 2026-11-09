@@ -7,12 +7,21 @@ export const zExperimentAnnotationType = z.enum(["comment", "flag"]);
 
 export const zExperimentAnnotationFlagType = z.enum(["outlier", "needs_review"]);
 
-// Postgres keeps no NUL character in text, and rows and tables by names of up to 64.
+// Postgres keeps no NUL character in text, and rows by ids of up to 64.
 const zNoNulText = z
   .string()
   .refine((text) => !text.includes("\u0000"), "Text cannot hold a NUL character");
 const zRowId = zNoNulText.min(1).max(64);
-const zTableName = zNoNulText.min(1).max(64);
+// `raw_data` and the like, or a macro's or an upload table's id.
+const zTableName = z.union([
+  z
+    .string()
+    .regex(/^[a-zA-Z0-9_]+$/)
+    .max(64),
+  z.string().guid(),
+]);
+// The most rows a data page holds; each row owes the lakehouse a copy.
+const zBulkRowIds = z.array(zRowId).min(1).max(1000);
 
 // Use discriminated union to properly differentiate between comment and flag content
 export const zExperimentAnnotationCommentContent = z.object({
@@ -69,7 +78,7 @@ export const zExperimentAddAnnotationBody = z.object({
 
 export const zExperimentAddAnnotationsBulkBody = z.object({
   tableName: zTableName,
-  rowIds: z.array(zRowId).min(1),
+  rowIds: zBulkRowIds,
   annotation: zNewAnnotation,
 });
 
@@ -89,7 +98,7 @@ export const zExperimentAnnotationExperimentPathParam = z.object({
 
 export const zExperimentAnnotationDeleteBulkBody = z.object({
   tableName: zTableName.describe("Name of the data table"),
-  rowIds: z.array(zRowId).min(1).describe("Rows IDs to delete"),
+  rowIds: zBulkRowIds.describe("Rows IDs to delete"),
   type: zExperimentAnnotationType.describe("Type of annotations to delete"),
 });
 
