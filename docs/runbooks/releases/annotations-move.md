@@ -154,7 +154,7 @@ with this export, then step 5's checks again.
 A row whose `in_postgres` equals the lakehouse's time, or is newer but from before the second
 export, holds two edits of one annotation that reached the two stores in opposite orders. Step 4
 never replaces it. The first release's pages show the lakehouse's copy, so make Postgres match it,
-naming the rows' ids, then run step 5's checks again:
+naming the rows' ids, then run step 5's checks again with a fresh export:
 
 ```sql
 UPDATE experiment_annotations a
@@ -162,8 +162,12 @@ SET experiment_id = l.experiment_id, table_name = l.table_name, row_id = l.row_i
     type = l.type, content_text = l.content_text, flag_type = l.flag_type,
     created_by = l.created_by, created_at = l.created_at, updated_at = l.updated_at
 FROM lakehouse_annotations l
-WHERE a.id = l.id AND a.id IN ('<id>', '<id>');
+WHERE a.id = l.id AND a.id IN ('<id>', '<id>')
+  AND a.updated_at < '<the second export's time, UTC>';
 ```
+
+The last condition leaves a row edited since the export: that edit reached both stores, and
+the export is older than it.
 
 ## Before the second release, and after
 
