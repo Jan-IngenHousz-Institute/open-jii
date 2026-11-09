@@ -5,7 +5,60 @@ locals {
     var.isolated_route_table_ids,
   )
   isolated_sg_ids = coalesce(var.isolated_security_group_ids, var.security_group_ids)
+
+  # The sandboxes run user code and reach AWS only through the isolated subnets' endpoints, so these
+  # refuse any caller signing as another account. Private DNS routes the whole VPC through them.
+  ecr_endpoint_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        # GetAuthorizationToken names no repository, so it is checked on the caller's account only.
+        Sid       = "AuthorizationTokenForThisAccount"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "ecr:GetAuthorizationToken"
+        Resource  = "*"
+        Condition = {
+          StringEquals = { "aws:PrincipalAccount" = data.aws_caller_identity.current.account_id }
+        }
+      },
+      {
+        # Callers in the VPC only pull. CI pushes from GitHub's runners, outside the VPC.
+        Sid       = "PullFromThisAccountsRepositories"
+        Effect    = "Allow"
+        Principal = "*"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer",
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:PrincipalAccount" = data.aws_caller_identity.current.account_id
+            "aws:ResourceAccount"  = data.aws_caller_identity.current.account_id
+          }
+        }
+      },
+    ]
+  })
+
+  logs_endpoint_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "ThisAccountOnly"
+      Effect    = "Allow"
+      Principal = "*"
+      Action    = "*"
+      Resource  = "*"
+      Condition = {
+        StringEquals = { "aws:PrincipalAccount" = data.aws_caller_identity.current.account_id }
+      }
+    }]
+  })
 }
+
+data "aws_caller_identity" "current" {}
 
 resource "aws_vpc_endpoint" "s3" {
   count = var.create_s3_endpoint ? 1 : 0
@@ -50,6 +103,7 @@ resource "aws_vpc_endpoint" "ecr_api" {
   subnet_ids          = var.isolated_subnet_ids
   private_dns_enabled = true
   security_group_ids  = local.isolated_sg_ids
+  policy              = local.ecr_endpoint_policy
   tags                = { Name = "open-jii-ecr-api-vpc-endpoint-${var.environment}" }
 }
 
@@ -62,6 +116,7 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
   subnet_ids          = var.isolated_subnet_ids
   private_dns_enabled = true
   security_group_ids  = local.isolated_sg_ids
+  policy              = local.ecr_endpoint_policy
   tags                = { Name = "open-jii-ecr-dkr-vpc-endpoint-${var.environment}" }
 }
 
@@ -74,5 +129,6 @@ resource "aws_vpc_endpoint" "logs" {
   subnet_ids          = var.isolated_subnet_ids
   private_dns_enabled = true
   security_group_ids  = local.isolated_sg_ids
+  policy              = local.logs_endpoint_policy
   tags                = { Name = "open-jii-logs-vpc-endpoint-${var.environment}" }
 }
