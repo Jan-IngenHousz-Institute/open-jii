@@ -12,7 +12,7 @@ import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 
 /**
- * Repository for experiment metadata operations.
+ * The lakehouse's metadata sheets, which pages read until Postgres holds every sheet.
  * Values are bound as statement parameters, never written into the SQL text.
  *
  * Databricks table schema:
