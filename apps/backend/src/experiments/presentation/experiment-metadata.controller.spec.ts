@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentMetadata } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
+import { experimentMetadataSheets } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { success } from "../../common/utils/fp-utils";
@@ -289,13 +290,25 @@ describe("ExperimentMetadataController", () => {
   });
 
   describe("deleteExperimentMetadata", () => {
-    it("should return 204 on successful deletion", async () => {
+    it("should return 204 on successful deletion, and the sheet is gone", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Delete Metadata Test",
         userId: testUserId,
       });
 
       const metadataId = faker.string.uuid();
+      const sheets = testApp.module.get(ExperimentMetadataRepository);
+      const created = new Date("2025-06-01T12:00:00.000Z");
+      await sheets.transaction((tx) =>
+        sheets.insert(tx, {
+          id: metadataId,
+          experimentId: experiment.id,
+          metadata: { location: "Lab C" },
+          createdBy: testUserId,
+          createdAt: created,
+          updatedAt: created,
+        }),
+      );
 
       const path = testApp.resolveOrpcPath(contract.experiments.deleteExperimentMetadata, {
         id: experiment.id,
@@ -303,6 +316,8 @@ describe("ExperimentMetadataController", () => {
       });
 
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
+
+      expect(await testApp.database.select().from(experimentMetadataSheets)).toEqual([]);
     });
 
     it("should return 401 if not authenticated", async () => {
