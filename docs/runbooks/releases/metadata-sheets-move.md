@@ -143,15 +143,19 @@ with this export, then step 5's checks again.
 A row whose `in_postgres` equals the lakehouse's time, or is newer but from before the second
 export, holds two edits of one sheet that reached the two stores in opposite orders. Step 4 never
 replaces it. The first release's pages show the lakehouse's copy, so make Postgres match it, naming
-the rows' ids, then run step 5's checks again:
+the rows' ids, then run step 5's checks again with a fresh export:
 
 ```sql
 UPDATE experiment_metadata_sheets s
 SET experiment_id = l.experiment_id, metadata = l.metadata::jsonb, created_by = l.created_by,
     created_at = l.created_at, updated_at = l.updated_at
 FROM lakehouse_sheets l
-WHERE s.id = l.id AND s.id IN ('<id>', '<id>');
+WHERE s.id = l.id AND s.id IN ('<id>', '<id>')
+  AND s.updated_at < '<the second export's time, UTC>';
 ```
+
+The last condition leaves a row edited since the export: that edit reached both stores, and
+the export is older than it.
 
 ## Before the second release, and after
 
