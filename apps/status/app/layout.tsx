@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 import { env } from "~/env";
 import { QueryProvider } from "~/providers/query-provider";
@@ -14,9 +14,10 @@ import "./globals.css";
 
 // The font variable has to sit on <html> so the `--font-sans` declaration in theme.css `:root`
 // can resolve it.
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+// Served from the repository so a build never depends on reaching Google Fonts.
+const inter = localFont({
+  src: "./fonts/inter-latin-wght-normal.woff2",
+  weight: "100 900",
   variable: "--font-inter",
 });
 

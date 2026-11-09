@@ -1,7 +1,7 @@
 import { ListDepartureProvider } from "@/components/navigation/list-departure/list-departure";
 import { INDEXABLE, SITE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 import { ThemeProvider } from "@repo/ui/components/theme";
@@ -13,15 +13,16 @@ import "./globals.css";
 
 // The font variables have to sit on <html> so the `--font-sans`/`--font-mono`
 // declarations in theme.css `:root` can resolve them.
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+// Served from the repository so a build never depends on reaching Google Fonts.
+const inter = localFont({
+  src: "./fonts/inter-latin-wght-normal.woff2",
+  weight: "100 900",
   variable: "--font-inter",
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const jetbrainsMono = localFont({
+  src: "./fonts/jetbrains-mono-latin-wght-normal.woff2",
+  weight: "100 800",
   variable: "--font-jetbrains-mono",
 });
 
