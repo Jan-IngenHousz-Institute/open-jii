@@ -3350,6 +3350,40 @@ describe("ExperimentDataRepository", () => {
       ]);
     });
 
+    it("shows a pseudonym for the platform's authors in an anonymised experiment", async () => {
+      const servingStore = testApp.module.get<ServingStorePort>(SERVING_STORE_PORT);
+      vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(success([table]));
+      vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
+        success({
+          columns: [
+            column("id", 0),
+            { ...column("annotations", 1), type_text: WellKnownColumnTypes.ANNOTATIONS },
+          ],
+          rows: [["1", "[]"]],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
+      const anonymised = { ...experiment, anonymizeContributors: true };
+
+      const result = await repository.getTableData({
+        experimentId: experiment.id,
+        experiment: anonymised,
+        tableName: "raw_data",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(result);
+      const pseudonym = testApp.module
+        .get(ContributorAnonymizerService)
+        .pseudonymFor(experiment.id, flag.createdBy);
+      expect(annotationsOf(result.value[0].data?.rows)).toEqual([
+        [expect.objectContaining({ createdBy: pseudonym, createdByName: pseudonym })],
+      ]);
+    });
+
     it("leaves the phone's own column out of a table's columns", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([table]));
       vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));

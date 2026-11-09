@@ -28,7 +28,8 @@ export class ContributorAnonymizerService {
   /**
    * Rewrite every CONTRIBUTOR cell when anonymization is enabled. Pseudonymises
    * `id` and `name` (so the FE can't recover the real id via name) and clears
-   * `avatar`.
+   * `avatar`. The author of each annotation in an ANNOTATIONS cell gets the same
+   * pseudonym.
    */
   anonymizeRows(
     rows: Record<string, string | null>[],
@@ -41,7 +42,10 @@ export class ContributorAnonymizerService {
     const contributorColumns = columns.filter(
       (c) => c.type_text === WellKnownColumnTypes.CONTRIBUTOR,
     );
-    if (contributorColumns.length === 0) {
+    const annotationColumns = columns.filter(
+      (c) => c.type_text === WellKnownColumnTypes.ANNOTATIONS,
+    );
+    if (contributorColumns.length === 0 && annotationColumns.length === 0) {
       return rows;
     }
 
@@ -56,8 +60,42 @@ export class ContributorAnonymizerService {
         const pseudo = this.pseudonymFor(experiment.id, parsed.id ?? "");
         next[col.name] = JSON.stringify({ id: pseudo, name: pseudo, avatar: null });
       }
+      for (const col of annotationColumns) {
+        const v = row[col.name];
+        if (v == null) {
+          continue;
+        }
+        next[col.name] = this.anonymizeAuthors(v, experiment.id);
+      }
       return next;
     });
+  }
+
+  /** The platform's annotations name their author; the phone's name none and stay as they are. */
+  private anonymizeAuthors(cell: string, experimentId: string): string {
+    const annotations: unknown = JSON.parse(cell);
+    if (!Array.isArray(annotations)) {
+      return cell;
+    }
+
+    return JSON.stringify(
+      annotations.map((annotation: unknown) => {
+        if (!this.hasAuthor(annotation)) {
+          return annotation;
+        }
+        const pseudo = this.pseudonymFor(experimentId, annotation.createdBy);
+        return { ...annotation, createdBy: pseudo, createdByName: pseudo };
+      }),
+    );
+  }
+
+  private hasAuthor(annotation: unknown): annotation is { createdBy: string } {
+    return (
+      typeof annotation === "object" &&
+      annotation !== null &&
+      "createdBy" in annotation &&
+      typeof annotation.createdBy === "string"
+    );
   }
 
   /**

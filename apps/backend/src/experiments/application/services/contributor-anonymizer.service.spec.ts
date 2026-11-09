@@ -112,6 +112,33 @@ describe("ContributorAnonymizerService", () => {
       expect(parsed.name).not.toBe("Alice");
     });
 
+    it("gives each platform annotation's author the contributor's pseudonym, and leaves the phone's", () => {
+      const annotationsColumn = {
+        name: "annotations",
+        type_text: WellKnownColumnTypes.ANNOTATIONS,
+      };
+      const platform = {
+        id: "a1",
+        type: "flag",
+        content: { text: null, flagType: "outlier" },
+        createdBy: "user-1",
+        createdByName: "Ada Lovelace",
+      };
+      const phone = { id: "p1", type: "comment", content: { text: "From the phone" } };
+      const rows = [{ annotations: JSON.stringify([phone, platform]) }];
+
+      const out = service.anonymizeRows(rows, [annotationsColumn], {
+        id: "exp-1",
+        anonymizeContributors: true,
+      });
+
+      const pseudo = service.pseudonymFor("exp-1", "user-1");
+      expect(JSON.parse(out[0].annotations ?? "null")).toEqual([
+        phone,
+        { ...platform, createdBy: pseudo, createdByName: pseudo },
+      ]);
+    });
+
     it("returns a fresh array — does not mutate the caller's row objects", () => {
       const original = JSON.stringify({ id: "u1", name: "Alice", avatar: "" });
       const rows = [{ contributor: original }];
