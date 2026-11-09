@@ -927,6 +927,23 @@ export const experimentAnnotations = pgTable(
   ],
 );
 
+// Researchers' custom metadata sheets, one document per uploaded sheet.
+export const experimentMetadataSheets = pgTable(
+  "experiment_metadata_sheets",
+  {
+    // Set by the backend, so sheets moved from the lakehouse keep theirs.
+    id: uuid("id").primaryKey(),
+    experimentId: uuid("experiment_id")
+      .notNull()
+      .references(() => experiments.id, { onDelete: "cascade" }),
+    metadata: postgresJsJsonb("metadata").$type<Record<string, unknown>>().notNull(),
+    // No foreign key: a sheet outlives its author's account, as the data rows do.
+    createdBy: uuid("created_by").notNull(),
+    ...timestamps,
+  },
+  (table) => [index("experiment_metadata_sheets_experiment_idx").on(table.experimentId)],
+);
+
 // Chart family enum for visualizations
 export const chartFamilyEnum = pgEnum("chart_family", ["basic", "scientific", "3d", "statistical"]);
 
