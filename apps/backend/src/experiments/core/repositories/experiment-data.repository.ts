@@ -1357,7 +1357,8 @@ export class ExperimentDataRepository {
   /** A read of the annotations also reads the phone's, when they sit in a column of their own. */
   private withPhoneAnnotations(shape: TableShape, columns?: string[]): string[] | undefined {
     const phone = this.separatePhoneAnnotations(shape);
-    if (phone === undefined || columns === undefined) {
+    // A joined read takes the primary table's listed columns, which leave the phone's out.
+    if (phone === undefined || columns === undefined || shape.join !== undefined) {
       return columns;
     }
     const missesPhoneColumn = columns.includes(ANNOTATIONS) && !columns.includes(phone);
