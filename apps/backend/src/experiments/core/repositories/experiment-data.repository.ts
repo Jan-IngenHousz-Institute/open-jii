@@ -70,6 +70,7 @@ interface ReadTrace {
   countMs?: number;
   idsMs?: number;
   dataMs?: number;
+  annotationsMs?: number;
   droppedRows?: number;
 }
 
@@ -299,14 +300,7 @@ export class ExperimentDataRepository {
         if (pageResult.value.truncated) {
           return this.pageTooLarge();
         }
-        this.logRead(read, pageResult.value);
-
-        const filled = await this.withPlatformAnnotations(
-          experimentId,
-          tableName,
-          shape,
-          pageResult.value,
-        );
+        const filled = await this.withPlatformAnnotations(read, shape, pageResult.value);
         if (filled.isFailure()) {
           return filled;
         }
@@ -369,14 +363,7 @@ export class ExperimentDataRepository {
     if (pageResult.value.truncated) {
       return this.pageTooLarge();
     }
-    this.logRead(read, pageResult.value);
-
-    const filled = await this.withPlatformAnnotations(
-      experimentId,
-      tableName,
-      shape,
-      pageResult.value,
-    );
+    const filled = await this.withPlatformAnnotations(read, shape, pageResult.value);
     if (filled.isFailure()) {
       return filled;
     }
@@ -1109,9 +1096,7 @@ export class ExperimentDataRepository {
     }
 
     const data: SchemaData = { ...dataResult.value, rows, totalRows: totalResult.value, truncated };
-    this.logRead(read, data);
-
-    const filled = await this.withPlatformAnnotations(experiment.id, tableName, shape, data);
+    const filled = await this.withPlatformAnnotations(read, shape, data);
     if (filled.isFailure()) {
       return filled;
     }
@@ -1319,6 +1304,7 @@ export class ExperimentDataRepository {
       countMs: read.countMs,
       idsMs: read.idsMs,
       dataMs: read.dataMs,
+      annotationsMs: read.annotationsMs,
       droppedRows: read.droppedRows,
       totalMs: Math.round(performance.now() - read.startedAt),
       rows: data.rows.length,
@@ -1370,19 +1356,23 @@ export class ExperimentDataRepository {
     return shape.phoneAnnotationsFrom === ANNOTATIONS ? undefined : shape.phoneAnnotationsFrom;
   }
 
-  /** Each row's annotations: the phone's, then the platform's from Postgres. */
-  private withPlatformAnnotations(
-    experimentId: string,
-    tableName: string,
+  /** Each row's annotations, the phone's then the platform's from Postgres, timed as a phase of the read. */
+  private async withPlatformAnnotations(
+    read: ReadTrace,
     shape: TableShape,
     data: SchemaData,
   ): Promise<Result<SchemaData>> {
-    return this.platformAnnotations.fill({
-      experimentId,
-      tableName,
-      data,
-      phoneAnnotationsFrom: shape.phoneAnnotationsFrom,
-    });
+    const [filled, annotationsMs] = await this.measure(() =>
+      this.platformAnnotations.fill({
+        experimentId: read.experimentId,
+        tableName: read.tableName,
+        data,
+        phoneAnnotationsFrom: shape.phoneAnnotationsFrom,
+      }),
+    );
+    read.annotationsMs = annotationsMs;
+    this.logRead(read, data);
+    return filled;
   }
 
   private transformSchemaData(

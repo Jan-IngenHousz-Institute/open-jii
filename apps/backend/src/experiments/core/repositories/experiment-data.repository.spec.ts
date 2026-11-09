@@ -277,6 +277,8 @@ describe("ExperimentDataRepository", () => {
           truncated: false,
         }),
       );
+      // The Postgres lookup of the platform's annotations is a phase of its own.
+      expect(JSON.stringify(logSpy.mock.calls)).toMatch(/"annotationsMs":\d+/);
       logSpy.mockRestore();
     });
 
