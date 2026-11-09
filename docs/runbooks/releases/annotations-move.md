@@ -51,6 +51,8 @@ In the same editor:
 
 ```sql
 SET TIME ZONE 'UTC';
+SELECT date_format(current_timestamp(), 'yyyy-MM-dd HH:mm:ss.SSSSSS') AS export_time;
+
 SELECT to_json(named_struct(
          'id', id, 'experiment_id', experiment_id, 'table_name', table_name, 'row_id', row_id,
          'type', type, 'content_text', content_text, 'flag_type', flag_type, 'created_by', user_id,
@@ -61,8 +63,8 @@ FROM centrum.experiment_annotations;
 SELECT count(*), sum(length(content_text)) FROM centrum.experiment_annotations;
 ```
 
-Note the time you ran it, in UTC, and the two numbers the last query gives, then download the
-export's result as CSV. If the editor cuts the download short of the count, export it in parts with
+Note `export_time`, which the first query reads before the export starts, and the two numbers the
+last query gives, then download the export's result as CSV. If the editor cuts the download short of the count, export it in parts with
 a `WHERE experiment_id IN (...)`. `user_name` is not copied; pages look names up at read time.
 
 Each row goes out as one JSON document because the editor's download writes a NULL as the text
@@ -82,8 +84,13 @@ SELECT count(*), sum(length(content_text)) FROM lakehouse_annotations;
 ```
 
 Both numbers must match the export's. When they do not, or `\copy` stops on a row, the download was
-cut short or mangled: export again in parts as step 2 says, `\copy` each part into
-`lakehouse_export`, then build `lakehouse_annotations`.
+cut short or mangled. Export again in parts as step 2 says and start this step over from empty
+tables, then `\copy` each part into `lakehouse_export` and build `lakehouse_annotations` as above:
+
+```sql
+TRUNCATE lakehouse_export;
+DROP TABLE IF EXISTS lakehouse_annotations;
+```
 
 ## 4. Copy what Postgres lacks or holds older
 
@@ -141,9 +148,8 @@ SELECT count(*) FROM lakehouse_annotations l
 LEFT JOIN experiments e ON e.id = l.experiment_id WHERE e.id IS NULL;
 ```
 
-The first query is clean when every row it returns was edited in Postgres after the second export,
-so `in_postgres` is the newer time. The second is clean when every row was created after the second
-export. A row created before it is a delete that step 4 undid, or one whose copy to Postgres failed,
+The first query is clean when every row it returns was edited in Postgres after the second export's
+`export_time`. The second is clean when every row was created after it. A row created before it is a delete that step 4 undid, or one whose copy to Postgres failed,
 for which the service's log warns "not copied to Postgres". Check it is gone from the lakehouse and
 delete it from Postgres.
 
@@ -163,18 +169,20 @@ SET experiment_id = l.experiment_id, table_name = l.table_name, row_id = l.row_i
     created_by = l.created_by, created_at = l.created_at, updated_at = l.updated_at
 FROM lakehouse_annotations l
 WHERE a.id = l.id AND a.id IN ('<id>', '<id>')
-  AND a.updated_at < '<the second export's time, UTC>';
+  AND a.updated_at < '<the second export's export_time>';
 ```
 
-The last condition leaves a row edited since the export: that edit reached both stores, and
-the export is older than it.
+The last condition leaves a row edited since the export started: that edit reached both stores,
+and the export is older than it.
 
 ## Before the second release, and after
 
 Run steps 1 to 5 again right before the second release goes out, with a fresh export; a clean check
 is what lets it go. Once it is out, run steps 2 and 3 and step 5's checks once more without step 4,
 since Postgres is then where annotations are written: a difference is a write the first release's
-tasks took while the second rolled out, whose copy failed. Note its id in OJD-2153.
+tasks took while the second rolled out, whose copy failed. Postgres is what pages read by then, so
+repair it as step 5 says: step 4 with `AND l.id IN ('<id>', '<id>')` added for a missing or older
+row, a `DELETE` from Postgres for one the lakehouse no longer holds. Note the ids in OJD-2153.
 
 Delete `annotations.csv`, `annotations-2.csv` and any parts once the checks are clean. They hold
 researchers' data.
