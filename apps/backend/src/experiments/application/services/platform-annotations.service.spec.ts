@@ -185,6 +185,41 @@ describe("PlatformAnnotationsService", () => {
     expect(result.value).toEqual(page(["id"], [["1"]]));
   });
 
+  it("keeps the warehouse's merged cell when the read has no row ids", async () => {
+    await annotate({});
+    const merged = JSON.stringify([phoneComment, { id: "lakehouse copy" }]);
+    const data = page(
+      ["annotations", "payload_annotations"],
+      [[merged, JSON.stringify([phoneComment])]],
+    );
+
+    const result = await service.fill({
+      experimentId,
+      tableName: "raw_data",
+      data,
+      phoneAnnotationsFrom: "payload_annotations",
+    });
+
+    assertSuccess(result);
+    expect(result.value).toEqual(page(["annotations"], [[merged]]));
+  });
+
+  it("keeps the warehouse's merged cell when the read lacks the phone's column", async () => {
+    await annotate({});
+    const merged = JSON.stringify([phoneComment, { id: "lakehouse copy" }]);
+    const data = page(["id", "annotations"], [["1", merged]]);
+
+    const result = await service.fill({
+      experimentId,
+      tableName: "raw_data",
+      data,
+      phoneAnnotationsFrom: "payload_annotations",
+    });
+
+    assertSuccess(result);
+    expect(result.value).toEqual(data);
+  });
+
   it("fails the read when Postgres cannot answer", async () => {
     vi.spyOn(testApp.module.get(ExperimentAnnotationsRepository), "findOnRows").mockResolvedValue(
       failure(AppError.internal("Postgres did not answer the annotations query")),

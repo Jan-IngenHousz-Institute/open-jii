@@ -32,16 +32,18 @@ export class PlatformAnnotationsService {
     const indexOf = (name: string | undefined) =>
       data.columns.findIndex((column) => column.name === name);
     const annotationsIndex = indexOf(ANNOTATIONS);
+    const idIndex = indexOf(ROW_ID);
     const phoneIndex = indexOf(phoneAnnotationsFrom);
     const separatePhoneIndex = phoneAnnotationsFrom === ANNOTATIONS ? -1 : phoneIndex;
-    if (annotationsIndex === -1) {
+    const holdsPhoneAnnotations = phoneAnnotationsFrom === undefined || phoneIndex !== -1;
+    // A read without the row ids or the phone's annotations, such as one joined to a second table,
+    // keeps the warehouse's merged cell rather than lose half of it.
+    const canFill = annotationsIndex !== -1 && idIndex !== -1 && holdsPhoneAnnotations;
+    if (!canFill) {
       return success(this.without(data, separatePhoneIndex));
     }
 
-    const idIndex = indexOf(ROW_ID);
-    const rowIds = [
-      ...new Set(data.rows.flatMap((row) => (idIndex === -1 ? [] : (row[idIndex] ?? [])))),
-    ];
+    const rowIds = [...new Set(data.rows.map((row) => row[idIndex]).filter((id) => id !== null))];
     const found =
       rowIds.length === 0
         ? success([])

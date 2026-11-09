@@ -2685,6 +2685,23 @@ describe("ExperimentDataRepository", () => {
       );
     });
 
+    it("asks a joined read for no column the primary table's listing leaves out", async () => {
+      await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        columns: ["id", "annotations"],
+        join,
+        source: WAREHOUSE,
+      });
+
+      const joined = vi
+        .mocked(databricksPort.buildExperimentQuery)
+        .mock.calls.filter(([input]) => input.join !== undefined);
+      expect(joined).not.toHaveLength(0);
+      expect(joined.flatMap(([input]) => input.columns ?? [])).not.toContain("payload_annotations");
+    });
+
     it("resolves both shapes in the same experiment and describes secondary aliases", async () => {
       const result = await repository.getTableColumns({
         source: WAREHOUSE,
