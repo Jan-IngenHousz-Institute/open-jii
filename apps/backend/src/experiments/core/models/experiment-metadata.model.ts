@@ -18,6 +18,16 @@ export interface ExperimentMetadataDto {
   updatedAt: Date;
 }
 
+/** A metadata sheet with the id and times it gets in every place that keeps it. */
+export interface MetadataSheetRecord {
+  id: string;
+  experimentId: string;
+  metadata: Record<string, unknown>;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface CreateExperimentMetadataDto {
   metadata: Record<string, unknown>;
 }

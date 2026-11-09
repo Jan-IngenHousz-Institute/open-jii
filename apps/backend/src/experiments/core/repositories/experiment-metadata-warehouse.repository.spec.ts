@@ -6,11 +6,12 @@ import { AppError, assertSuccess, failure, success } from "../../../common/utils
 import { TestHarness } from "../../../test/test-harness";
 import type { DatabricksPort } from "../ports/databricks.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
-import { ExperimentMetadataRepository } from "./experiment-metadata.repository";
+import { ExperimentMetadataWarehouseRepository } from "./experiment-metadata-warehouse.repository";
 
-describe("ExperimentMetadataRepository", () => {
+describe("ExperimentMetadataWarehouseRepository", () => {
+  const now = new Date("2026-09-01T08:00:00.000Z");
   const testApp = TestHarness.App;
-  let repository: ExperimentMetadataRepository;
+  let repository: ExperimentMetadataWarehouseRepository;
   let databricksPort: DatabricksPort;
 
   const mockExperimentId = faker.string.uuid();
@@ -76,7 +77,7 @@ describe("ExperimentMetadataRepository", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    repository = testApp.module.get(ExperimentMetadataRepository);
+    repository = testApp.module.get(ExperimentMetadataWarehouseRepository);
     databricksPort = testApp.module.get(DATABRICKS_PORT);
   });
 
@@ -157,20 +158,26 @@ describe("ExperimentMetadataRepository", () => {
     it("should create metadata and return the new record", async () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptySchemaData));
 
-      const result = await repository.create(mockExperimentId, createDto, mockUserId);
+      const result = await repository.create(
+        mockExperimentId,
+        mockMetadataId,
+        createDto,
+        mockUserId,
+        now,
+      );
 
       assertSuccess(result);
       expect(result.value.experimentId).toBe(mockExperimentId);
       expect(result.value.metadata).toEqual(mockMetadata);
       expect(result.value.createdBy).toBe(mockUserId);
-      expect(result.value.metadataId).toBeDefined();
-      expect(result.value.createdAt).toBeInstanceOf(Date);
+      expect(result.value.metadataId).toBe(mockMetadataId);
+      expect(result.value.createdAt).toBe(now);
     });
 
     it("should use PARSE_JSON in INSERT query", async () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptySchemaData));
 
-      await repository.create(mockExperimentId, createDto, mockUserId);
+      await repository.create(mockExperimentId, mockMetadataId, createDto, mockUserId, now);
 
       const insertCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
       expect(insertCall[1]).toContain("PARSE_JSON");
@@ -178,7 +185,7 @@ describe("ExperimentMetadataRepository", () => {
     });
 
     it("should reject invalid experiment ID", async () => {
-      const result = await repository.create("bad-id", createDto, mockUserId);
+      const result = await repository.create("bad-id", mockMetadataId, createDto, mockUserId, now);
 
       expect(result.isFailure()).toBe(true);
     });
@@ -188,7 +195,13 @@ describe("ExperimentMetadataRepository", () => {
         failure(AppError.internal("Insert failed")),
       );
 
-      const result = await repository.create(mockExperimentId, createDto, mockUserId);
+      const result = await repository.create(
+        mockExperimentId,
+        mockMetadataId,
+        createDto,
+        mockUserId,
+        now,
+      );
 
       expect(result.isFailure()).toBe(true);
     });
@@ -245,6 +258,7 @@ describe("ExperimentMetadataRepository", () => {
         updateDto,
         mockUserId,
         mockExperimentId,
+        now,
       );
 
       assertSuccess(result);
@@ -267,7 +281,7 @@ describe("ExperimentMetadataRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValueOnce(success(emptySchemaData));
       const metadata = { field: "farmer's plot \\ north" };
 
-      await repository.update(mockMetadataId, { metadata }, mockUserId, mockExperimentId);
+      await repository.update(mockMetadataId, { metadata }, mockUserId, mockExperimentId, now);
 
       const updateCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
       expect(updateCall[1]).not.toContain("farmer");
@@ -277,7 +291,7 @@ describe("ExperimentMetadataRepository", () => {
     it("should use PARSE_JSON in UPDATE query", async () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValueOnce(success(emptySchemaData));
 
-      await repository.update(mockMetadataId, updateDto, mockUserId, mockExperimentId);
+      await repository.update(mockMetadataId, updateDto, mockUserId, mockExperimentId, now);
 
       const updateCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
       expect(updateCall[1]).toContain("PARSE_JSON");
@@ -285,13 +299,19 @@ describe("ExperimentMetadataRepository", () => {
     });
 
     it("should reject invalid metadata ID", async () => {
-      const result = await repository.update("bad-id", updateDto, mockUserId, mockExperimentId);
+      const result = await repository.update(
+        "bad-id",
+        updateDto,
+        mockUserId,
+        mockExperimentId,
+        now,
+      );
 
       expect(result.isFailure()).toBe(true);
     });
 
     it("should reject invalid experiment ID", async () => {
-      const result = await repository.update(mockMetadataId, updateDto, mockUserId, "bad-id");
+      const result = await repository.update(mockMetadataId, updateDto, mockUserId, "bad-id", now);
 
       expect(result.isFailure()).toBe(true);
     });
@@ -306,6 +326,7 @@ describe("ExperimentMetadataRepository", () => {
         updateDto,
         mockUserId,
         mockExperimentId,
+        now,
       );
 
       expect(result.isFailure()).toBe(true);
@@ -318,6 +339,7 @@ describe("ExperimentMetadataRepository", () => {
         { metadata: hugePayload },
         mockUserId,
         mockExperimentId,
+        now,
       );
 
       expect(result.isFailure()).toBe(true);
@@ -362,7 +384,13 @@ describe("ExperimentMetadataRepository", () => {
     it("should reject metadata payload exceeding 5 MB on create", async () => {
       const hugeDto = { metadata: { data: "x".repeat(5_000_001) } };
 
-      const result = await repository.create(mockExperimentId, hugeDto, mockUserId);
+      const result = await repository.create(
+        mockExperimentId,
+        mockMetadataId,
+        hugeDto,
+        mockUserId,
+        now,
+      );
 
       expect(result.isFailure()).toBe(true);
       if (result.isFailure()) {
@@ -371,7 +399,13 @@ describe("ExperimentMetadataRepository", () => {
     });
 
     it("should reject invalid user ID on create", async () => {
-      const result = await repository.create(mockExperimentId, { metadata: {} }, "bad-user-id");
+      const result = await repository.create(
+        mockExperimentId,
+        mockMetadataId,
+        { metadata: {} },
+        "bad-user-id",
+        now,
+      );
 
       expect(result.isFailure()).toBe(true);
     });

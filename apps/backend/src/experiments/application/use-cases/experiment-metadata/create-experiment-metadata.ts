@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { randomUUID } from "crypto";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
@@ -7,6 +8,7 @@ import type {
   CreateExperimentMetadataDto,
 } from "../../../core/models/experiment-metadata.model";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
+import { ExperimentMetadataWarehouseRepository } from "../../../core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
@@ -16,7 +18,8 @@ export class CreateExperimentMetadataUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly experimentMetadataRepository: ExperimentMetadataRepository,
+    private readonly metadataWarehouseRepository: ExperimentMetadataWarehouseRepository,
+    private readonly metadataRepository: ExperimentMetadataRepository,
   ) {}
 
   async execute(
@@ -52,17 +55,45 @@ export class CreateExperimentMetadataUseCase {
         return failure(AppError.forbidden("Cannot modify an archived experiment"));
       }
 
-      const result = await this.experimentMetadataRepository.create(experimentId, data, userId);
+      const metadataId = randomUUID();
+      const now = new Date();
+      const result = await this.metadataWarehouseRepository.create(
+        experimentId,
+        metadataId,
+        data,
+        userId,
+        now,
+      );
 
       if (result.isSuccess()) {
         this.logger.log({
           msg: "Experiment metadata created successfully",
           operation: "createExperimentMetadata",
           experimentId,
-          metadataId: result.value.metadataId,
+          metadataId,
           userId,
           status: "success",
         });
+
+        // Postgres follows the lakehouse until pages read it, and the metadata-sheets-move runbook
+        // fills in what a failed copy missed.
+        const copied = await this.metadataRepository.insert({
+          id: metadataId,
+          experimentId,
+          metadata: data.metadata,
+          createdBy: userId,
+          createdAt: now,
+          updatedAt: now,
+        });
+        if (copied.isFailure()) {
+          this.logger.warn({
+            msg: "Experiment metadata not copied to Postgres",
+            operation: "createExperimentMetadata",
+            experimentId,
+            metadataId,
+            error: copied.error.message,
+          });
+        }
       } else {
         this.logger.error({
           msg: "Failed to create experiment metadata",

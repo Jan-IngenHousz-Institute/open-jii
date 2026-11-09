@@ -110,6 +110,7 @@ import { ExperimentDeviceRegistryRepository } from "./core/repositories/experime
 import { ExperimentJoinCodeRepository } from "./core/repositories/experiment-join-code.repository";
 import { ExperimentJoinRequestRepository } from "./core/repositories/experiment-join-request.repository";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
+import { ExperimentMetadataWarehouseRepository } from "./core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentMetadataRepository } from "./core/repositories/experiment-metadata.repository";
 import { ExperimentVisualizationRepository } from "./core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
@@ -213,6 +214,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentRepository,
     ExperimentJoinRequestRepository,
     ExperimentJoinCodeRepository,
+    ExperimentMetadataWarehouseRepository,
     ExperimentMetadataRepository,
     ExperimentAnnotationsWarehouseRepository,
     ExperimentAnnotationsRepository,
