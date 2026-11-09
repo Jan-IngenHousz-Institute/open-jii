@@ -278,7 +278,6 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
       expect(sqlQuery).toContain("content_text = :content_text");
       expect(sqlQuery).toContain("flag_type = :flag_type");
       expect(sqlQuery).toContain("updated_at = :now");
-      expect(sqlQuery).toContain("updated_at = :now");
     });
 
     it("should update only provided fields", async () => {
