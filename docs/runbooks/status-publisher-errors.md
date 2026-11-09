@@ -66,7 +66,8 @@ Contentful stayed unreadable, which logs that line first because it had written 
 
   Take a version from before the first failed run. If every version is bad, or the history is not
   worth keeping, delete `publisher-state.json` instead and the next run starts the history over from
-  that minute.
+  that minute. A release that raises `PUBLISHER_STATE_VERSION` fails the same way on its first run,
+  and no older version reads either, so delete the object then.
 
 - **The saved feed state is corrupt.** The publisher carries what subscribers were last told, and
   the last content it read from Contentful, in `status-feed.json`. A state that no longer parses
