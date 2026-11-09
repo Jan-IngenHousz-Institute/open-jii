@@ -1,5 +1,6 @@
 "use client";
 
+import { useListDeparture } from "@/components/navigation/list-departure/list-departure";
 import { myOrganizationInvitationsFamily } from "@/hooks/organization/organization-cache";
 import { allResourceCacheFamilies } from "@/hooks/sharing/resource-cache-keys";
 import { orpc } from "@/lib/orpc";
@@ -12,10 +13,12 @@ import { authClient } from "@repo/auth/client";
  * Hook to sign out
  */
 export function useSignOut() {
+  const departure = useListDeparture();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async () => {
+      departure?.flush();
       await authClient.signOut();
     },
     onSuccess: async () => {

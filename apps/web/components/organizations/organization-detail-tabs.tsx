@@ -1,7 +1,7 @@
 "use client";
 
+import { DepartureLink } from "@/components/navigation/list-departure/departure-link";
 import { useLocale } from "@/hooks/useLocale";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import type { OrganizationProfile } from "@repo/api/domains/organization/organization.schema";
@@ -68,23 +68,25 @@ export function OrganizationDetailTabs({ organization, children }: OrganizationD
         <OrganizationHeader organization={organization} />
         <NavTabsList>
           <NavTabsTrigger value="overview" asChild>
-            <Link href={organizationPath(locale, organization.id)}>{t("common.overview")}</Link>
+            <DepartureLink href={organizationPath(locale, organization.id)}>
+              {t("common.overview")}
+            </DepartureLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="members" asChild>
-            <Link href={organizationMembersPath(locale, organization.id)}>
+            <DepartureLink href={organizationMembersPath(locale, organization.id)}>
               {t("organizations.tabs.members")}
-            </Link>
+            </DepartureLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="teams" asChild>
-            <Link href={organizationTeamsPath(locale, organization.id)}>
+            <DepartureLink href={organizationTeamsPath(locale, organization.id)}>
               {t("organizations.tabs.teams")}
-            </Link>
+            </DepartureLink>
           </NavTabsTrigger>
           {isOwner && (
             <NavTabsTrigger value="settings" asChild>
-              <Link href={organizationSettingsPath(locale, organization.id)}>
+              <DepartureLink href={organizationSettingsPath(locale, organization.id)}>
                 {t("organizations.tabs.settings")}
-              </Link>
+              </DepartureLink>
             </NavTabsTrigger>
           )}
         </NavTabsList>

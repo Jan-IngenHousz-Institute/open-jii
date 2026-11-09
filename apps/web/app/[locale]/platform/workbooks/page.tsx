@@ -9,7 +9,7 @@ import initTranslations from "@repo/i18n/server";
 
 interface WorkbookPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ sort?: string; visibility?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; visibility?: string }>;
 }
 
 export async function generateMetadata({
@@ -22,10 +22,9 @@ export async function generateMetadata({
 }
 
 export default async function WorkbookPage({ searchParams }: WorkbookPageProps) {
-  // Only the default view is fetched ahead; a sorted or filtered view's input comes from the
-  // client's parsing.
-  const { sort, visibility } = await searchParams;
-  const isDefaultView = !sort && !visibility;
+  // Only the default view is fetched ahead; other views use the client's parsing.
+  const { q, sort, visibility } = await searchParams;
+  const isDefaultView = !q && !sort && !visibility;
 
   return (
     <PageContainer width="fluid" className="space-y-6">

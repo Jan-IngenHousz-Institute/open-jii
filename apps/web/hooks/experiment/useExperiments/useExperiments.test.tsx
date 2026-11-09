@@ -11,6 +11,18 @@ import { useExperiments } from "./useExperiments";
 const sort = encodeURIComponent(JSON.stringify([{ field: "name", direction: "asc" }]));
 
 describe("useExperiments", () => {
+  it("uses a shared link's search in the first request", async () => {
+    openOnUrl("/platform/experiments", "q=wheat");
+    const spy = server.mount(contract.experiments.listExperiments, { body: listEnvelope([]) });
+
+    const { result } = renderHook(() => useExperiments());
+
+    expect(result.current.search).toBe("wheat");
+    expect(result.current.debouncedSearch).toBe("wheat");
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.calls[0]?.query.search).toBe("wheat");
+  });
+
   it("returns the experiments from the API", async () => {
     server.mount(contract.experiments.listExperiments, {
       body: listEnvelope([createExperiment({ id: "e-1", name: "E1" })]),
@@ -51,6 +63,18 @@ describe("useExperiments", () => {
   });
 
   describe("archive", () => {
+    it("restores search alongside the archived status in the first request", async () => {
+      openOnUrl("/platform/experiments-archive", "q=lighting");
+      const spy = server.mount(contract.experiments.listExperiments, { body: listEnvelope([]) });
+
+      const { result } = renderHook(() => useExperiments({ archived: true }));
+
+      expect(result.current.search).toBe("lighting");
+      await waitFor(() => expect(spy.called).toBe(true));
+      expect(spy.calls[0]?.query.search).toBe("lighting");
+      expect(arrayParam(spy.calls[0]?.url ?? "", "status")).toEqual(["archived"]);
+    });
+
     it("asks for related archived experiments and applies visibility", async () => {
       openOnUrl("/platform/experiments-archive", "visibility=public");
       const spy = server.mount(contract.experiments.listExperiments, { body: listEnvelope([]) });

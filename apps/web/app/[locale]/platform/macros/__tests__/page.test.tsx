@@ -28,7 +28,7 @@ vi.mock("@/components/server-prefetch/prefetched-queries", () => ({
 
 describe("MacroPage", () => {
   const renderPage = async (
-    searchParams: { sort?: string; language?: string; visibility?: string } = {},
+    searchParams: { q?: string; sort?: string; language?: string; visibility?: string } = {},
   ) =>
     render(
       await Page({
@@ -67,5 +67,15 @@ describe("MacroPage", () => {
   it("leaves a visibility-filtered view to the browser, which parses the filter itself", async () => {
     await renderPage({ visibility: "private" });
     expect(prefetched.queries).toEqual([]);
+  });
+
+  it.each(["wheat", " "])("leaves search %j to the browser", async (q) => {
+    await renderPage({ q });
+    expect(prefetched.queries).toEqual([]);
+  });
+
+  it("prefetches the default view when search is empty", async () => {
+    await renderPage({ q: "" });
+    expect(prefetched.queries).toHaveLength(1);
   });
 });

@@ -8,7 +8,7 @@ import initTranslations from "@repo/i18n/server";
 
 interface ExperimentPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ sort?: string; visibility?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; visibility?: string }>;
 }
 
 export async function generateMetadata({
@@ -21,14 +21,14 @@ export async function generateMetadata({
 }
 
 /**
- * Render the archive, prefetching page 1 when sort and visibility are falsy.
+ * Render the archive, prefetching page 1 when search, sort and visibility are falsy.
  * The status query parameter does not affect prefetching or the archived view.
  */
 export default async function ExperimentPage({ searchParams }: ExperimentPageProps) {
-  // Only the default view is fetched ahead; a sorted or filtered view's input comes from the
-  // client's parsing. The archive ignores `status`, so it does not change the view.
-  const { sort, visibility } = await searchParams;
-  const isDefaultView = !sort && !visibility;
+  // Only the default view is fetched ahead; other views use the client's parsing.
+  // The archive ignores `status`, so it does not change the view.
+  const { q, sort, visibility } = await searchParams;
+  const isDefaultView = !q && !sort && !visibility;
 
   return (
     <PageContainer width="fluid" className="space-y-6">

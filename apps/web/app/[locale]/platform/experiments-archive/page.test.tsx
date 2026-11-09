@@ -62,4 +62,16 @@ describe("ExperimentArchivePage", () => {
       expect(prefetched.queries).toEqual([]);
     }
   });
+
+  it.each(["wheat", " "])("leaves search %j to the browser", async (q) => {
+    render(await ExperimentArchivePage({ ...defaultProps, searchParams: Promise.resolve({ q }) }));
+    expect(prefetched.queries).toEqual([]);
+  });
+
+  it("prefetches the default view when search is empty", async () => {
+    render(
+      await ExperimentArchivePage({ ...defaultProps, searchParams: Promise.resolve({ q: "" }) }),
+    );
+    expect(prefetched.queries).toHaveLength(1);
+  });
 });

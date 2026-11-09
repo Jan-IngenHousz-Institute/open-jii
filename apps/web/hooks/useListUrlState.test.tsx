@@ -1,5 +1,12 @@
-import { act, renderHook } from "@/test/test-utils";
+import {
+  ListDepartureProvider,
+  useDepartureNavigation,
+  useDepartureRouter,
+} from "@/components/navigation/list-departure/list-departure";
+import { act } from "@/test/test-utils";
+import { renderHook } from "@testing-library/react";
 import * as nav from "next/navigation";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -8,6 +15,7 @@ import { zExperimentSort } from "@repo/api/domains/experiment/experiment.schema"
 import { useListUrlState } from "./useListUrlState";
 
 function setSearchParams(qs: string): void {
+  window.history.replaceState(null, "", `/list${qs ? `?${qs}` : ""}`);
   vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams(qs));
 }
 
@@ -18,19 +26,21 @@ const filters = {
   visibility: z.enum(["private", "public"]),
 };
 
-const options = { filters, sort: zExperimentSort };
-const withSearch = { filters, sort: zExperimentSort, searchKey: "q" };
+const options = { filters, sort: zExperimentSort, searchKey: null };
+const withSearch = { filters, sort: zExperimentSort, searchKey: "q" as const };
 
 const sortParam = (value: unknown) => `sort=${encodeURIComponent(JSON.stringify(value))}`;
 
 describe("useListUrlState", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     replace.mockClear();
     setSearchParams("");
     vi.mocked(nav.usePathname).mockReturnValue("/list");
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.mocked(nav.useSearchParams).mockReset();
     vi.mocked(nav.usePathname).mockReset();
   });
@@ -176,24 +186,142 @@ describe("useListUrlState", () => {
   });
 
   describe("search", () => {
-    it("keeps search out of the URL unless the list names a key for it", () => {
+    it("leaves q alone for an explicit sort-only consumer", () => {
+      setSearchParams("q=unowned");
       const { result } = renderHook(() => useListUrlState(options));
-
       act(() => result.current.setSearch("wheat"));
-
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
       expect(result.current.search).toBe("wheat");
+      expect(replace).not.toHaveBeenCalled();
+      act(() => result.current.toggleSort("name", false));
+      expect(replace.mock.lastCall?.[0]).toContain("q=unowned");
+    });
+
+    it("initializes immediately, debounces edits for 300 ms, and removes an empty term", () => {
+      setSearchParams("q=lab");
+      const { result } = renderHook(() => useListUrlState(withSearch));
+      expect(result.current.search).toBe("lab");
+      act(() => result.current.setSearch("lab north"));
+      expect(result.current.search).toBe("lab north");
+      act(() => {
+        vi.advanceTimersByTime(299);
+      });
+      expect(replace).not.toHaveBeenCalled();
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(replace).toHaveBeenLastCalledWith("/list?q=lab+north", { scroll: false });
+      act(() => result.current.setSearch(""));
+      expect(replace).toHaveBeenCalledTimes(1);
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(replace).toHaveBeenLastCalledWith("/list", { scroll: false });
+    });
+
+    it("resets the timer on continued typing", () => {
+      const { result } = renderHook(() => useListUrlState(withSearch));
+      act(() => result.current.setSearch("w"));
+      act(() => {
+        vi.advanceTimersByTime(250);
+      });
+      act(() => result.current.setSearch("wheat"));
+      act(() => {
+        vi.advanceTimersByTime(299);
+      });
+      expect(replace).not.toHaveBeenCalled();
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(replace).toHaveBeenCalledExactlyOnceWith("/list?q=wheat", { scroll: false });
+    });
+
+    it("combines same-event search, filter and sort changes in one immediate write", () => {
+      const { result } = renderHook(() => useListUrlState(withSearch));
+      act(() => {
+        result.current.setSearch("wheat");
+        result.current.setFilter("status", ["active"]);
+        result.current.toggleSort("name", false);
+        result.current.setSearch("wheat north");
+      });
+      expect(replace).toHaveBeenCalledTimes(1);
+      const params = new URL(replace.mock.lastCall?.[0] ?? "", location.origin).searchParams;
+      expect(params.get("q")).toBe("wheat north");
+      expect(params.get("status")).toBe("active");
+      expect(params.get("sort")).toContain("name");
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(replace).toHaveBeenCalledTimes(1);
+    });
+
+    it("merges special characters into live unowned parameters and keeps the hash", () => {
+      const { result } = renderHook(() => useListUrlState(withSearch));
+      const term = "  植物, wheat & +  ";
+      act(() => result.current.setSearch(term));
+      window.history.replaceState(null, "", "/list?focus=new#section");
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      const url = new URL(replace.mock.lastCall?.[0] ?? "", location.origin);
+      expect(url.searchParams.get("q")).toBe(term);
+      expect(url.searchParams.get("focus")).toBe("new");
+      expect(url.hash).toBe("#section");
+    });
+
+    it("does not bypass the delay when the URL acknowledges an earlier write", () => {
+      const { result, rerender } = renderHook(() => useListUrlState(withSearch));
+      act(() => result.current.setSearch("w"));
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      act(() => result.current.setSearch("wheat"));
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+      setSearchParams("q=w");
+      rerender();
+      expect(result.current.search).toBe("wheat");
+      expect(replace).toHaveBeenCalledTimes(1);
+      act(() => {
+        vi.advanceTimersByTime(199);
+      });
+      expect(replace).toHaveBeenCalledTimes(1);
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(replace).toHaveBeenLastCalledWith("/list?q=wheat", { scroll: false });
+    });
+
+    it("restores an external owned URL edit and cancels the draft", () => {
+      const { result, rerender } = renderHook(() => useListUrlState(withSearch));
+      act(() => result.current.setSearch("unfinished"));
+      setSearchParams("q=external");
+      rerender();
+      expect(result.current.search).toBe("external");
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
       expect(replace).not.toHaveBeenCalled();
     });
 
-    it("reads and writes search under its key, and drops the key when blank", () => {
-      setSearchParams("q=lab");
-      const { result } = renderHook(() => useListUrlState(withSearch));
-
-      expect(result.current.search).toBe("lab");
-      act(() => result.current.setSearch("lab north"));
-      expect(replace).toHaveBeenLastCalledWith("/list?q=lab+north", { scroll: false });
-      act(() => result.current.setSearch(""));
-      expect(replace).toHaveBeenLastCalledWith("/list", { scroll: false });
+    it("keeps a draft and its original deadline across an unowned URL edit", () => {
+      const { result, rerender } = renderHook(() => useListUrlState(withSearch));
+      act(() => result.current.setSearch("draft"));
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+      setSearchParams("focus=other");
+      rerender();
+      expect(result.current.search).toBe("draft");
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(replace).toHaveBeenCalledExactlyOnceWith("/list?focus=other&q=draft", {
+        scroll: false,
+      });
     });
   });
 
@@ -230,7 +358,13 @@ describe("useListUrlState", () => {
     const { result, rerender } = renderHook(() => useListUrlState(withSearch));
 
     act(() => result.current.setSearch("w"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
     act(() => result.current.setSearch("wh"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
     setSearchParams("q=w");
     rerender();
 
@@ -248,7 +382,13 @@ describe("useListUrlState", () => {
     const { result, rerender } = renderHook(() => useListUrlState(withSearch));
 
     act(() => result.current.setSearch("w"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
     act(() => result.current.setSearch(""));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
     replace.mockClear();
     setSearchParams("q=w");
     rerender();
@@ -261,8 +401,17 @@ describe("useListUrlState", () => {
     const { result, rerender } = renderHook(() => useListUrlState(withSearch));
 
     act(() => result.current.setSearch("a"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
     act(() => result.current.setSearch("ab"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
     act(() => result.current.setSearch("a"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
     setSearchParams("q=a");
     rerender();
     replace.mockClear();
@@ -277,11 +426,17 @@ describe("useListUrlState", () => {
     const { result, rerender } = renderHook(() => useListUrlState(withSearch));
 
     act(() => result.current.setSearch("a"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
     act(() => result.current.setSearch("ab"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    setSearchParams("q=a");
     act(() => {
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
-    setSearchParams("q=a");
     rerender();
 
     expect(result.current.search).toBe("a");
@@ -297,5 +452,241 @@ describe("useListUrlState", () => {
     rerender();
 
     expect(result.current.filters).toEqual({ status: ["active"], visibility: ["public"] });
+  });
+
+  it("flushes same-event edits before push, once, with a null native-history payload", () => {
+    const native = vi.spyOn(window.history, "replaceState");
+    const { result } = renderHook(
+      () => ({
+        list: useListUrlState(withSearch),
+        router: useDepartureRouter(),
+      }),
+      { wrapper: ListDepartureProvider },
+    );
+    native.mockClear();
+    const push = vi.mocked(nav.useRouter().push);
+    push.mockImplementationOnce(() => {
+      expect(location.search).toBe("?q=latest");
+    });
+    act(() => {
+      result.current.list.setSearch("latest");
+      result.current.router.push("/detail");
+      result.current.router.push("/detail");
+    });
+    expect(native).toHaveBeenCalledExactlyOnceWith(null, "", "/list?q=latest");
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(replace).not.toHaveBeenCalled();
+    native.mockRestore();
+  });
+
+  it("does not flush sort-only consumers", () => {
+    const { result } = renderHook(
+      () => ({
+        list: useListUrlState(options),
+        router: useDepartureRouter(),
+      }),
+      { wrapper: ListDepartureProvider },
+    );
+    act(() => {
+      result.current.list.setSearch("memory");
+      result.current.router.push("/detail");
+    });
+    expect(location.search).toBe("");
+  });
+
+  it("invalidates a timer on popstate before React replays the destination", () => {
+    setSearchParams("q=committed");
+    const { result, rerender } = renderHook(() => useListUrlState(withSearch));
+    act(() => result.current.setSearch("draft"));
+    window.history.replaceState(null, "", "/other?q=destination");
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(replace).not.toHaveBeenCalled();
+    expect(result.current.search).toBe("destination");
+    vi.mocked(nav.usePathname).mockReturnValue("/other");
+    vi.mocked(nav.useSearchParams).mockReturnValue(
+      new nav.ReadonlyURLSearchParams("q=destination"),
+    );
+    rerender();
+    expect(result.current.search).toBe("destination");
+  });
+
+  it("does not write after the browser has moved to another source route", () => {
+    const { result } = renderHook(() => useListUrlState(withSearch));
+    act(() => result.current.setSearch("draft"));
+    window.history.replaceState(null, "", "/other?keep=destination");
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(replace).not.toHaveBeenCalled();
+    expect(location.pathname + location.search).toBe("/other?keep=destination");
+  });
+
+  it("cancels timers and unregisters callbacks on unmount, including Strict Mode", () => {
+    const { result, unmount } = renderHook(() => useListUrlState(withSearch), {
+      wrapper: ({ children }) => (
+        <StrictMode>
+          <ListDepartureProvider>{children}</ListDepartureProvider>
+        </StrictMode>
+      ),
+    });
+    act(() => result.current.setSearch("draft"));
+    unmount();
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(replace).not.toHaveBeenCalled();
+    expect(location.search).toBe("");
+  });
+
+  it("keeps typing usable after a cancelled link navigation", () => {
+    const { result } = renderHook(
+      () => ({
+        list: useListUrlState(withSearch),
+        navigate: useDepartureNavigation((event) => event.preventDefault()),
+      }),
+      { wrapper: ListDepartureProvider },
+    );
+    act(() => {
+      result.current.list.setSearch("first");
+      result.current.navigate({ preventDefault: () => undefined });
+    });
+    expect(location.search).toBe("");
+    act(() => result.current.list.setSearch("second"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(replace).toHaveBeenCalledExactlyOnceWith("/list?q=second", { scroll: false });
+  });
+
+  it("drops an old route's draft when the same hook survives a route change", () => {
+    const { result, rerender } = renderHook(() => useListUrlState(withSearch));
+    act(() => result.current.setSearch("draft"));
+    vi.mocked(nav.usePathname).mockReturnValue("/other");
+    window.history.replaceState(null, "", "/other?keep=destination");
+    rerender();
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(result.current.search).toBe("");
+    expect(replace).not.toHaveBeenCalled();
+    expect(location.pathname + location.search).toBe("/other?keep=destination");
+  });
+
+  it("still writes after Strict Mode's initial cleanup", () => {
+    const { result } = renderHook(() => useListUrlState(withSearch), {
+      wrapper: StrictMode,
+    });
+    act(() => result.current.setSearch("wheat"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(replace).toHaveBeenCalledExactlyOnceWith("/list?q=wheat", { scroll: false });
+  });
+
+  it("restores a same-path destination that equals the URL from before the flush", () => {
+    let renders = 0;
+    let maxRenders = 10;
+    const { result, rerender } = renderHook(
+      () => {
+        renders += 1;
+        if (renders > maxRenders) throw new Error("the list kept rendering after the URL settled");
+        return {
+          list: useListUrlState(withSearch),
+          router: useDepartureRouter(),
+        };
+      },
+      { wrapper: ListDepartureProvider },
+    );
+    act(() => result.current.list.setSearch("draft"));
+    act(() => result.current.router.push("/list"));
+    expect(location.search).toBe("?q=draft");
+    // Next can batch the native replacement and push into the original search-params object.
+    window.history.replaceState(null, "", "/list");
+    maxRenders = renders + 2;
+    rerender();
+    expect(result.current.list.search).toBe("");
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("waits for a write still in flight instead of resending it after an earlier echo", () => {
+    const { result, rerender } = renderHook(
+      () => ({
+        list: useListUrlState(withSearch),
+        router: useDepartureRouter(),
+      }),
+      { wrapper: ListDepartureProvider },
+    );
+    act(() => result.current.list.setSearch("w"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    act(() => result.current.list.setSearch("wh"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    for (const echo of ["q=w", "q=wh", "q=wh"]) {
+      setSearchParams(echo);
+      rerender();
+    }
+    expect(replace).toHaveBeenCalledTimes(2);
+    expect(result.current.list.search).toBe("wh");
+    act(() => result.current.list.setSearch("x"));
+    act(() => result.current.router.push("/list"));
+    setSearchParams("q=wh");
+    rerender();
+    expect(result.current.list.search).toBe("wh");
+    expect(replace).toHaveBeenCalledTimes(2);
+  });
+
+  it("repairs a late router echo after a native flush when the list stays mounted", () => {
+    const { result, rerender } = renderHook(
+      () => ({
+        list: useListUrlState(withSearch),
+        router: useDepartureRouter(),
+      }),
+      { wrapper: ListDepartureProvider },
+    );
+    act(() => result.current.list.setSearch("earlier"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    act(() => result.current.list.setSearch("latest"));
+    act(() => result.current.router.push("/list"));
+    expect(location.search).toBe("?q=latest");
+    replace.mockClear();
+    setSearchParams("q=earlier");
+    rerender();
+    expect(result.current.list.search).toBe("latest");
+    expect(replace).toHaveBeenCalledExactlyOnceWith("/list?q=latest", { scroll: false });
+    setSearchParams("q=latest");
+    rerender();
+    expect(result.current.list.search).toBe("latest");
+  });
+
+  it("keeps the draft and its deadline through a hash-only history step", () => {
+    setSearchParams("q=committed");
+    const { result, rerender } = renderHook(() => useListUrlState(withSearch));
+    act(() => result.current.setSearch("draft"));
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    window.history.pushState(null, "", "/list?q=committed#section");
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams("q=committed"));
+    rerender();
+    expect(result.current.search).toBe("draft");
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    expect(replace).toHaveBeenCalledExactlyOnceWith("/list?q=draft#section", { scroll: false });
   });
 });

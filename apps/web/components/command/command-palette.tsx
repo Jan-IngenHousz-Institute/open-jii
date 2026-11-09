@@ -1,5 +1,6 @@
 "use client";
 
+import { useDepartureRouter } from "@/components/navigation/list-departure/list-departure";
 import { iconMap } from "@/components/navigation/navigation-config";
 import {
   CHEATSHEET_OPEN_EVENT,
@@ -8,7 +9,6 @@ import {
 import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
 import { useGlobalSearch } from "@/hooks/useGlobalSearch";
 import { HelpCircle, Keyboard, Send, Sparkles } from "lucide-react";
-import { useRouter } from "next/navigation";
 import * as React from "react";
 import { env } from "~/env";
 
@@ -39,7 +39,7 @@ interface PaletteEntry {
 export function CommandPalette({ locale }: { locale: string }) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  const router = useRouter();
+  const router = useDepartureRouter();
   const { t } = useTranslation("navigation");
 
   React.useEffect(() => {

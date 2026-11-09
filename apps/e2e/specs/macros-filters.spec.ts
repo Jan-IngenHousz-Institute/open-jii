@@ -1,5 +1,5 @@
 import { expect, test } from "../fixtures.js";
-import { dismissCookieBanner, locale } from "../helpers.js";
+import { dismissCookieBanner, expectSearchSurvivesReopen, locale } from "../helpers.js";
 
 const macroListUrl = /\/api\/v1\/macros(?:\?|$)/;
 
@@ -43,4 +43,40 @@ test("a shared filtered link opens the filtered list and clears back to all", as
   await expect(page.getByRole("button", { name: "Clear filters" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "[Seed] ANOVA Analysis" })).toBeVisible();
   await expect(page.getByRole("link", { name: "[Seed] Phi2 Quantum Yield" })).toBeVisible();
+});
+
+test("macros search survives reload and a shared link with filters and sort", async ({ page }) => {
+  const sort = JSON.stringify([{ field: "name", direction: "asc" }]);
+  await page.goto(
+    `/${locale}/platform/macros?language=r&visibility=public&sort=${encodeURIComponent(sort)}`,
+  );
+  await dismissCookieBanner(page);
+
+  await expect(
+    page.getByRole("link", { name: "[Seed] Statistical Summary", exact: true }).first(),
+  ).toBeVisible();
+
+  const search = page.getByPlaceholder("Search macros...", { exact: true });
+  await search.fill("ANOVA");
+  await expect(page).toHaveURL((url) => url.searchParams.get("q") === "ANOVA");
+  await expect(
+    page.getByRole("link", { name: "[Seed] Statistical Summary", exact: true }),
+  ).toHaveCount(0);
+
+  await expectSearchSurvivesReopen(page, {
+    search,
+    term: "ANOVA",
+    matchingName: "[Seed] ANOVA Analysis",
+    excludedName: "[Seed] Statistical Summary",
+  });
+
+  await search.clear();
+  await expect(page).toHaveURL((url) => !url.searchParams.has("q"));
+  expect(new URL(page.url()).searchParams.get("sort")).toBe(sort);
+  for (const [key, value] of new URLSearchParams("language=r&visibility=public")) {
+    expect(new URL(page.url()).searchParams.get(key)).toBe(value);
+  }
+  await expect(
+    page.getByRole("link", { name: "[Seed] Statistical Summary", exact: true }).first(),
+  ).toBeVisible();
 });

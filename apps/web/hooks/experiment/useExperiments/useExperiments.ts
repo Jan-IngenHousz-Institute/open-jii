@@ -16,12 +16,13 @@ const EXPERIMENT_LIST_FILTERS = {
 };
 
 /**
- * The experiments list: status and visibility filters and sort in the URL, server-paged.
+ * The experiments list: status and visibility filters, search and sort in the URL, server-paged.
  * `archived` lists related archived experiments; a stray `status` param there is neither
  * applied nor counted as an active filter.
  */
 export function useExperiments({ archived = false }: { archived?: boolean } = {}) {
   const list = useResourceList({
+    searchKey: "q",
     filters: EXPERIMENT_LIST_FILTERS,
     sort: zExperimentSort,
     query: (view) =>

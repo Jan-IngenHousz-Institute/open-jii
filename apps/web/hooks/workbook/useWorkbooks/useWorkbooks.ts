@@ -8,9 +8,10 @@ import { workbooksListQuery } from "./workbooks-list-query";
 
 const WORKBOOK_LIST_FILTERS = { visibility: zVisibility };
 
-/** The workbooks list: visibility filter and sort in the URL, server-paged. */
+/** The workbooks list: visibility filter, search and sort in the URL, server-paged. */
 export function useWorkbooks() {
   return useResourceList({
+    searchKey: "q",
     filters: WORKBOOK_LIST_FILTERS,
     sort: zWorkbookSort,
     query: (view) =>

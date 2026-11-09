@@ -1,8 +1,8 @@
 "use client";
 
 import { useIsCalibrationEnabled } from "@/components/calibrations/calibration-flag-context";
+import { DepartureLink } from "@/components/navigation/list-departure/departure-link";
 import { Archive, ArrowRightLeft, ChevronRight, Plus } from "lucide-react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { useTranslation } from "@repo/i18n";
@@ -110,34 +110,34 @@ export function SiteHeader({ locale }: { locale: string }) {
       {label && best && (
         <nav aria-label={t("navigation.breadcrumbs")} className="flex min-w-0 items-center gap-1">
           {detailBreadcrumb ? (
-            <Link
+            <DepartureLink
               href={best.url}
               className="text-muted-foreground hover:text-foreground focus-visible:ring-ring truncate rounded-sm text-sm font-medium focus-visible:outline-none focus-visible:ring-2"
             >
               {label}
-            </Link>
+            </DepartureLink>
           ) : (
             <h1 className="min-w-0 text-sm font-medium">
-              <Link
+              <DepartureLink
                 href={best.url}
                 className="hover:text-foreground focus-visible:ring-ring block truncate rounded-sm focus-visible:outline-none focus-visible:ring-2"
               >
                 {label}
-              </Link>
+              </DepartureLink>
             </h1>
           )}
           {detailBreadcrumb && (
             <>
               <ChevronRight className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
               <span className="min-w-0 max-w-48 text-sm font-medium md:max-w-80">
-                <Link
+                <DepartureLink
                   href={detailBreadcrumb.href}
                   title={detailBreadcrumb.label}
                   aria-current="page"
                   className="hover:text-foreground focus-visible:ring-ring block truncate rounded-sm focus-visible:outline-none focus-visible:ring-2"
                 >
                   {detailBreadcrumb.label}
-                </Link>
+                </DepartureLink>
               </span>
             </>
           )}
@@ -157,10 +157,10 @@ function dispatch(name: PlatformHeaderEvent) {
 function CreateAction({ href, label }: { href: string; label: string }) {
   return (
     <Button asChild size="sm" title={label}>
-      <Link href={href} aria-label={label}>
+      <DepartureLink href={href} aria-label={label}>
         <Plus className="size-4" aria-hidden />
         <span className="hidden sm:inline">{label}</span>
-      </Link>
+      </DepartureLink>
     </Button>
   );
 }
@@ -186,18 +186,18 @@ function overviewActions(
     return (
       <>
         <Button asChild variant="ghost" size="sm" title={archiveLabel}>
-          <Link href={`/${locale}/platform/experiments-archive`} aria-label={archiveLabel}>
+          <DepartureLink href={`/${locale}/platform/experiments-archive`} aria-label={archiveLabel}>
             <Archive className="size-4" aria-hidden />
             <span className="hidden lg:inline">{archiveLabel}</span>
-          </Link>
+          </DepartureLink>
         </Button>
         <Button asChild variant="secondary" size="sm" title={transferLabel}>
-          <Link href={`/${locale}/platform/transfer-request`} aria-label={transferLabel}>
+          <DepartureLink href={`/${locale}/platform/transfer-request`} aria-label={transferLabel}>
             <ArrowRightLeft className="size-4" aria-hidden />
             {/* Three actions plus an open sidebar leave the section label ~30px at
                 md; the label waits for lg so the breadcrumb stays readable. */}
             <span className="hidden lg:inline">{transferLabel}</span>
-          </Link>
+          </DepartureLink>
         </Button>
         <CreateAction
           href={`/${locale}/platform/experiments/new`}

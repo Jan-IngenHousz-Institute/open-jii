@@ -63,7 +63,7 @@ interface TransferTarget {
 
 /**
  * Everything the organization owns that the caller can open, as one filtered list. The
- * type filter and the sort live in the URL, so a reload or a shared link keeps them. The
+ * search, type filter and sort live in the URL, so a reload or a shared link keeps them. The
  * type options and the type sort come off {@link GROUP_ORDER}, so neither can drift from
  * the featured card or the estate bar.
  *

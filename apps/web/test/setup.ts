@@ -222,6 +222,9 @@ vi.mock("next/navigation", () => ({
 // defaults here. Files that partially re-mock next/navigation get caught
 // because the proxy throws on access to exports the factory didn't return.
 beforeEach(async () => {
+  // List URL state reads the live location, and `openOnUrl` writes it, so a
+  // previous test's query would otherwise leak into this one.
+  window.history.replaceState(null, "", "/platform/experiments");
   try {
     const nav = await import("next/navigation");
     vi.mocked(nav.useRouter).mockReturnValue(mockRouter);
