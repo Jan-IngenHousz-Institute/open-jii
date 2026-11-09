@@ -11,6 +11,17 @@ import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 
 /**
+ * The documents one MERGE carries, at least one sheet. The statement API takes 16 MiB of SQL text
+ * and does not say whether bound values count, and a backlog can owe hundreds of 5 MB sheets.
+ */
+const MERGE_BYTES = 4 * 1024 * 1024;
+
+interface SheetDocument {
+  sheet: MetadataSheetRecord;
+  json: string;
+}
+
+/**
  * The lakehouse's copy of metadata sheets, which the warehouse views and exports read until they
  * leave Databricks. Postgres holds the sheets; the experiment data outbox keeps this copy to their
  * state. Values are bound as statement parameters, never written into the SQL text.
@@ -77,17 +88,48 @@ export class ExperimentMetadataWarehouseRepository {
   }
 
   /** Writes each sheet as Postgres holds it, inserting the ones the copy lacks. */
+  /** Writes each sheet's current state, in statements of at most `MERGE_BYTES` of documents. */
   async merge(sheets: MetadataSheetRecord[]): Promise<Result<void>> {
-    if (sheets.length === 0) {
-      return success(undefined);
+    for (const documents of this.bySize(sheets)) {
+      const merged = await this.mergeStatement(documents);
+      if (merged.isFailure()) {
+        return merged;
+      }
     }
 
+    return success(undefined);
+  }
+
+  private bySize(sheets: MetadataSheetRecord[]): SheetDocument[][] {
+    const statements: SheetDocument[][] = [];
+    let current: SheetDocument[] = [];
+    let bytes = 0;
+
+    for (const sheet of sheets) {
+      const json = JSON.stringify(sheet.metadata);
+      const size = Buffer.byteLength(json);
+      if (current.length > 0 && bytes + size > MERGE_BYTES) {
+        statements.push(current);
+        current = [];
+        bytes = 0;
+      }
+      current.push({ sheet, json });
+      bytes += size;
+    }
+
+    if (current.length > 0) {
+      statements.push(current);
+    }
+    return statements;
+  }
+
+  private async mergeStatement(documents: SheetDocument[]): Promise<Result<void>> {
     const parameters: StatementParameter[] = [];
-    const rows = sheets.map((sheet, i) => {
+    const rows = documents.map(({ sheet, json }, i) => {
       parameters.push(
         { name: `metadata_id_${i}`, value: sheet.id },
         { name: `experiment_id_${i}`, value: sheet.experimentId },
-        { name: `metadata_${i}`, value: JSON.stringify(sheet.metadata) },
+        { name: `metadata_${i}`, value: json },
         { name: `created_by_${i}`, value: sheet.createdBy },
         { name: `created_at_${i}`, value: sheet.createdAt.toISOString(), type: "TIMESTAMP" },
         { name: `updated_at_${i}`, value: sheet.updatedAt.toISOString(), type: "TIMESTAMP" },
