@@ -1,5 +1,4 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
-import { randomUUID } from "crypto";
 import { z } from "zod";
 
 import type { StatementParameter } from "../../../common/modules/databricks/services/sql/sql.types";
@@ -25,8 +24,8 @@ import type { DatabricksPort } from "../ports/databricks.port";
  *   updated_at    TIMESTAMP
  */
 @Injectable()
-export class ExperimentMetadataRepository {
-  private readonly logger = new Logger(ExperimentMetadataRepository.name);
+export class ExperimentMetadataWarehouseRepository {
+  private readonly logger = new Logger(ExperimentMetadataWarehouseRepository.name);
 
   constructor(@Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort) {}
 
@@ -80,8 +79,10 @@ export class ExperimentMetadataRepository {
 
   async create(
     experimentId: string,
+    metadataId: string,
     dto: CreateExperimentMetadataDto,
     userId: string,
+    now: Date,
   ): Promise<Result<ExperimentMetadataDto>> {
     this.logger.log({
       msg: "Creating metadata",
@@ -93,15 +94,12 @@ export class ExperimentMetadataRepository {
       return failure(AppError.validationError("Invalid experiment ID or user ID format"));
     }
 
-    const now = new Date();
     const isoNow = now.toISOString();
     const metadataJson = JSON.stringify(dto.metadata);
 
     if (!this.schemas.jsonString.safeParse(metadataJson).success) {
       return failure(AppError.validationError("Metadata payload exceeds the 5 MB size limit"));
     }
-
-    const metadataId = randomUUID();
 
     const insertQuery = `
       INSERT INTO ${this.metadataTable}
@@ -204,6 +202,7 @@ export class ExperimentMetadataRepository {
     dto: UpdateExperimentMetadataDto,
     _userId: string,
     experimentId: string,
+    now: Date,
   ): Promise<Result<ExperimentMetadataDto>> {
     this.logger.log({
       msg: "Updating metadata",
@@ -216,7 +215,6 @@ export class ExperimentMetadataRepository {
       return failure(AppError.validationError("Invalid metadata ID or experiment ID format"));
     }
 
-    const now = new Date();
     const isoNow = now.toISOString();
     const metadataJson = JSON.stringify(dto.metadata);
 

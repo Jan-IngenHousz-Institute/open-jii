@@ -7,6 +7,7 @@ import type {
   UpdateExperimentMetadataDto,
 } from "../../../core/models/experiment-metadata.model";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
+import { ExperimentMetadataWarehouseRepository } from "../../../core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
@@ -16,7 +17,8 @@ export class UpdateExperimentMetadataUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly experimentMetadataRepository: ExperimentMetadataRepository,
+    private readonly metadataWarehouseRepository: ExperimentMetadataWarehouseRepository,
+    private readonly metadataRepository: ExperimentMetadataRepository,
   ) {}
 
   async execute(
@@ -55,11 +57,13 @@ export class UpdateExperimentMetadataUseCase {
         return failure(AppError.forbidden("Cannot modify an archived experiment"));
       }
 
-      const result = await this.experimentMetadataRepository.update(
+      const now = new Date();
+      const result = await this.metadataWarehouseRepository.update(
         metadataId,
         data,
         userId,
         experimentId,
+        now,
       );
 
       if (result.isSuccess()) {
@@ -71,6 +75,24 @@ export class UpdateExperimentMetadataUseCase {
           userId,
           status: "success",
         });
+
+        // Postgres follows the lakehouse until pages read it, and the metadata-sheets-move runbook
+        // fills in what a failed copy missed.
+        const copied = await this.metadataRepository.update(
+          experimentId,
+          metadataId,
+          data.metadata,
+          now,
+        );
+        if (copied.isFailure()) {
+          this.logger.warn({
+            msg: "Experiment metadata update not copied to Postgres",
+            operation: "updateExperimentMetadata",
+            experimentId,
+            metadataId,
+            error: copied.error.message,
+          });
+        }
       } else {
         this.logger.error({
           msg: "Failed to update experiment metadata",

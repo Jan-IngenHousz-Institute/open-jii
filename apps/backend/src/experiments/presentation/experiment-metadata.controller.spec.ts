@@ -8,7 +8,7 @@ import { AuthorizationService } from "../../authorization/authorization.service"
 import { success } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
-import { ExperimentMetadataRepository } from "../core/repositories/experiment-metadata.repository";
+import { ExperimentMetadataWarehouseRepository } from "../core/repositories/experiment-metadata-warehouse.repository";
 
 // Minimal payload that satisfies zCustomMetadataPayload. Reused across
 // create/update tests since the controller-level checks (auth, access, 404)
@@ -51,7 +51,7 @@ describe("ExperimentMetadataController", () => {
         userId: testUserId,
       });
 
-      const metadataRepository = testApp.module.get(ExperimentMetadataRepository);
+      const metadataRepository = testApp.module.get(ExperimentMetadataWarehouseRepository);
       vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue(
         success([
           {
@@ -87,7 +87,7 @@ describe("ExperimentMetadataController", () => {
         userId: testUserId,
       });
 
-      const metadataRepository = testApp.module.get(ExperimentMetadataRepository);
+      const metadataRepository = testApp.module.get(ExperimentMetadataWarehouseRepository);
       vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue(success([]));
 
       const path = testApp.resolveOrpcPath(contract.experiments.listExperimentMetadata, {
@@ -132,7 +132,7 @@ describe("ExperimentMetadataController", () => {
         userId: testUserId,
       });
 
-      const metadataRepository = testApp.module.get(ExperimentMetadataRepository);
+      const metadataRepository = testApp.module.get(ExperimentMetadataWarehouseRepository);
       const mockResult = {
         metadataId: faker.string.uuid(),
         experimentId: experiment.id,
@@ -216,7 +216,7 @@ describe("ExperimentMetadataController", () => {
       });
 
       const metadataId = faker.string.uuid();
-      const metadataRepository = testApp.module.get(ExperimentMetadataRepository);
+      const metadataRepository = testApp.module.get(ExperimentMetadataWarehouseRepository);
       const mockResult = {
         metadataId,
         experimentId: experiment.id,
@@ -306,7 +306,7 @@ describe("ExperimentMetadataController", () => {
       });
 
       const metadataId = faker.string.uuid();
-      const metadataRepository = testApp.module.get(ExperimentMetadataRepository);
+      const metadataRepository = testApp.module.get(ExperimentMetadataWarehouseRepository);
       vi.spyOn(metadataRepository, "deleteByMetadataId").mockResolvedValue(success(true));
 
       const path = testApp.resolveOrpcPath(contract.experiments.deleteExperimentMetadata, {
