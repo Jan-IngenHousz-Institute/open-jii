@@ -1,5 +1,5 @@
 import { expect, test } from "../fixtures.js";
-import { dismissCookieBanner, locale } from "../helpers.js";
+import { dismissCookieBanner, expectSearchSurvivesReopen, locale } from "../helpers.js";
 
 const macroListUrl = /\/api\/v1\/macros(?:\?|$)/;
 
@@ -62,24 +62,13 @@ test("macros search survives reload and a shared link with filters and sort", as
   await expect(
     page.getByRole("link", { name: "[Seed] Statistical Summary", exact: true }),
   ).toHaveCount(0);
-  const sharedUrl = page.url();
 
-  for (const reopen of ["reload", "shared link"]) {
-    if (reopen === "reload") await page.reload();
-    else {
-      await page.goto("about:blank");
-      await page.goto(sharedUrl);
-    }
-
-    await expect(search).toHaveValue("ANOVA");
-    await expect(
-      page.getByRole("link", { name: "[Seed] ANOVA Analysis", exact: true }).first(),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "[Seed] Statistical Summary", exact: true }),
-    ).toHaveCount(0);
-    await expect(page).toHaveURL(sharedUrl);
-  }
+  await expectSearchSurvivesReopen(page, {
+    search,
+    term: "ANOVA",
+    matchingName: "[Seed] ANOVA Analysis",
+    excludedName: "[Seed] Statistical Summary",
+  });
 
   await search.clear();
   await expect(page).toHaveURL((url) => !url.searchParams.has("q"));

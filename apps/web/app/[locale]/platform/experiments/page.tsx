@@ -21,10 +21,9 @@ export async function generateMetadata({
   return { title: t("experiments.title") };
 }
 
-/** Render the experiments page, prefetching page 1 when search, sort, status and visibility are falsy. */
+/** Prefetch page 1 only when search, sort, status and visibility are empty. */
 export default async function ExperimentPage({ searchParams }: ExperimentPageProps) {
-  // Only the default view is fetched ahead; a searched, sorted or filtered view's input comes from the
-  // client's parsing.
+  // Only the default view is fetched ahead; other views use the client's parsing.
   const { q, sort, status, visibility } = await searchParams;
   const isDefaultView = !q && !sort && !status && !visibility;
 

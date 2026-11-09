@@ -22,8 +22,7 @@ export async function generateMetadata({
 }
 
 export default async function ProtocolPage({ searchParams }: ProtocolPageProps) {
-  // Only the default view is fetched ahead; a searched, sorted or filtered view's input comes from the
-  // client's parsing.
+  // Only the default view is fetched ahead; other views use the client's parsing.
   const { q, sort, family, visibility } = await searchParams;
   const isDefaultView = !q && !sort && !family && !visibility;
 

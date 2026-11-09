@@ -64,6 +64,7 @@ describe("useOrganizationResourceListState", () => {
     const { result } = renderHook(() => useOrganizationResourceListState());
 
     act(() => result.current.setQuery("canopy"));
+    expect(replace).not.toHaveBeenCalled();
 
     act(() => result.current.clearFilters());
     expect(result.current.filters.type).toEqual([]);

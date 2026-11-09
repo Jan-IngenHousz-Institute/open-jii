@@ -1,5 +1,5 @@
 import { expect, test } from "../fixtures.js";
-import { dismissCookieBanner, locale } from "../helpers.js";
+import { dismissCookieBanner, expectSearchSurvivesReopen, locale } from "../helpers.js";
 
 const protocolListUrl = /\/api\/v1\/protocols(?:\?|$)/;
 
@@ -59,33 +59,22 @@ test("protocols search survives reload and a shared link with filters and sort",
   await dismissCookieBanner(page);
 
   await expect(
-    page.getByRole("link", { name: "[Seed] Ambient Light & Temperature", exact: true }).first(),
+    page.getByRole("link", { name: "[Seed] Soil Moisture Probe", exact: true }).first(),
   ).toBeVisible();
 
   const search = page.getByPlaceholder("Search protocols...", { exact: true });
-  await search.fill("Soil");
-  await expect(page).toHaveURL((url) => url.searchParams.get("q") === "Soil");
+  await search.fill("Light & Temperature");
+  await expect(page).toHaveURL((url) => url.searchParams.get("q") === "Light & Temperature");
   await expect(
-    page.getByRole("link", { name: "[Seed] Ambient Light & Temperature", exact: true }),
+    page.getByRole("link", { name: "[Seed] Soil Moisture Probe", exact: true }),
   ).toHaveCount(0);
-  const sharedUrl = page.url();
 
-  for (const reopen of ["reload", "shared link"]) {
-    if (reopen === "reload") await page.reload();
-    else {
-      await page.goto("about:blank");
-      await page.goto(sharedUrl);
-    }
-
-    await expect(search).toHaveValue("Soil");
-    await expect(
-      page.getByRole("link", { name: "[Seed] Soil Moisture Probe", exact: true }).first(),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "[Seed] Ambient Light & Temperature", exact: true }),
-    ).toHaveCount(0);
-    await expect(page).toHaveURL(sharedUrl);
-  }
+  await expectSearchSurvivesReopen(page, {
+    search,
+    term: "Light & Temperature",
+    matchingName: "[Seed] Ambient Light & Temperature",
+    excludedName: "[Seed] Soil Moisture Probe",
+  });
 
   await search.clear();
   await expect(page).toHaveURL((url) => !url.searchParams.has("q"));
@@ -94,6 +83,6 @@ test("protocols search survives reload and a shared link with filters and sort",
     expect(new URL(page.url()).searchParams.get(key)).toBe(value);
   }
   await expect(
-    page.getByRole("link", { name: "[Seed] Ambient Light & Temperature", exact: true }).first(),
+    page.getByRole("link", { name: "[Seed] Soil Moisture Probe", exact: true }).first(),
   ).toBeVisible();
 });

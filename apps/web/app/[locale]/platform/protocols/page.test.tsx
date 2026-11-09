@@ -68,6 +68,7 @@ describe("ProtocolPage", () => {
     await renderPage({ visibility: "private" });
     expect(prefetched.queries).toEqual([]);
   });
+
   it.each(["wheat", " "])("leaves search %j to the browser", async (q) => {
     await renderPage({ q });
     expect(prefetched.queries).toEqual([]);

@@ -1,5 +1,5 @@
 import { expect, test } from "../fixtures.js";
-import { dismissCookieBanner, locale } from "../helpers.js";
+import { dismissCookieBanner, expectSearchSurvivesReopen, locale } from "../helpers.js";
 
 const experimentListUrl = /\/api\/v1\/experiments(?:\?|$)/;
 
@@ -103,24 +103,13 @@ test("experiments search survives reload and a shared link with filters and sort
   await expect(
     page.getByRole("link", { name: "[Seed] Soil Health Monitoring — Midwest", exact: true }),
   ).toHaveCount(0);
-  const sharedUrl = page.url();
 
-  for (const reopen of ["reload", "shared link"]) {
-    if (reopen === "reload") await page.reload();
-    else {
-      await page.goto("about:blank");
-      await page.goto(sharedUrl);
-    }
-
-    await expect(search).toHaveValue("Wheat");
-    await expect(
-      page.getByRole("link", { name: "[Seed] Winter Wheat Phenotyping", exact: true }).first(),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "[Seed] Soil Health Monitoring — Midwest", exact: true }),
-    ).toHaveCount(0);
-    await expect(page).toHaveURL(sharedUrl);
-  }
+  await expectSearchSurvivesReopen(page, {
+    search,
+    term: "Wheat",
+    matchingName: "[Seed] Winter Wheat Phenotyping",
+    excludedName: "[Seed] Soil Health Monitoring — Midwest",
+  });
 
   await search.clear();
   await expect(page).toHaveURL((url) => !url.searchParams.has("q"));
@@ -154,24 +143,13 @@ test("experiments-archive search survives reload and a shared link with filters 
   await expect(
     page.getByRole("link", { name: "[Seed] Barley Root Imaging", exact: true }),
   ).toHaveCount(0);
-  const sharedUrl = page.url();
 
-  for (const reopen of ["reload", "shared link"]) {
-    if (reopen === "reload") await page.reload();
-    else {
-      await page.goto("about:blank");
-      await page.goto(sharedUrl);
-    }
-
-    await expect(search).toHaveValue("Lighting");
-    await expect(
-      page.getByRole("link", { name: "[Seed] Indoor Lighting Calibration", exact: true }).first(),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "[Seed] Barley Root Imaging", exact: true }),
-    ).toHaveCount(0);
-    await expect(page).toHaveURL(sharedUrl);
-  }
+  await expectSearchSurvivesReopen(page, {
+    search,
+    term: "Lighting",
+    matchingName: "[Seed] Indoor Lighting Calibration",
+    excludedName: "[Seed] Barley Root Imaging",
+  });
 
   await search.clear();
   await expect(page).toHaveURL((url) => !url.searchParams.has("q"));

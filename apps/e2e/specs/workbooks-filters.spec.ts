@@ -1,5 +1,5 @@
 import { expect, test } from "../fixtures.js";
-import { dismissCookieBanner, locale } from "../helpers.js";
+import { dismissCookieBanner, expectSearchSurvivesReopen, locale } from "../helpers.js";
 
 const workbookListUrl = /\/api\/v1\/workbooks(?:\?|$)/;
 
@@ -57,24 +57,13 @@ test("workbooks search survives reload and a shared link with filters and sort",
   await expect(
     page.getByRole("link", { name: "[Seed] Corn Measurement Workbook", exact: true }),
   ).toHaveCount(0);
-  const sharedUrl = page.url();
 
-  for (const reopen of ["reload", "shared link"]) {
-    if (reopen === "reload") await page.reload();
-    else {
-      await page.goto("about:blank");
-      await page.goto(sharedUrl);
-    }
-
-    await expect(search).toHaveValue("Wheat");
-    await expect(
-      page.getByRole("link", { name: "[Seed] Wheat Phenotyping Workbook", exact: true }).first(),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "[Seed] Corn Measurement Workbook", exact: true }),
-    ).toHaveCount(0);
-    await expect(page).toHaveURL(sharedUrl);
-  }
+  await expectSearchSurvivesReopen(page, {
+    search,
+    term: "Wheat",
+    matchingName: "[Seed] Wheat Phenotyping Workbook",
+    excludedName: "[Seed] Corn Measurement Workbook",
+  });
 
   await search.clear();
   await expect(page).toHaveURL((url) => !url.searchParams.has("q"));

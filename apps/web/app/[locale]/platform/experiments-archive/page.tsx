@@ -25,8 +25,8 @@ export async function generateMetadata({
  * The status query parameter does not affect prefetching or the archived view.
  */
 export default async function ExperimentPage({ searchParams }: ExperimentPageProps) {
-  // Only the default view is fetched ahead; a searched, sorted or filtered view's input comes from the
-  // client's parsing. The archive ignores `status`, so it does not change the view.
+  // Only the default view is fetched ahead; other views use the client's parsing.
+  // The archive ignores `status`, so it does not change the view.
   const { q, sort, visibility } = await searchParams;
   const isDefaultView = !q && !sort && !visibility;
 

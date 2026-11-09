@@ -1,5 +1,5 @@
 import { expect, test } from "../fixtures.js";
-import { dismissCookieBanner, locale } from "../helpers.js";
+import { dismissCookieBanner, expectSearchSurvivesReopen, locale } from "../helpers.js";
 
 const organizationListUrl = /\/api\/v1\/organizations(?:\?|$)/;
 
@@ -60,24 +60,13 @@ test("organizations search survives reload and a shared link with filters and so
   await expect(
     page.getByRole("link", { name: "[Seed] Leaf Physiology Institute", exact: true }),
   ).toHaveCount(0);
-  const sharedUrl = page.url();
 
-  for (const reopen of ["reload", "shared link"]) {
-    if (reopen === "reload") await page.reload();
-    else {
-      await page.goto("about:blank");
-      await page.goto(sharedUrl);
-    }
-
-    await expect(search).toHaveValue("Northfield");
-    await expect(
-      page.getByRole("link", { name: "[Seed] Northfield University", exact: true }).first(),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "[Seed] Leaf Physiology Institute", exact: true }),
-    ).toHaveCount(0);
-    await expect(page).toHaveURL(sharedUrl);
-  }
+  await expectSearchSurvivesReopen(page, {
+    search,
+    term: "Northfield",
+    matchingName: "[Seed] Northfield University",
+    excludedName: "[Seed] Leaf Physiology Institute",
+  });
 
   await search.clear();
   await expect(page).toHaveURL((url) => !url.searchParams.has("q"));
@@ -110,7 +99,7 @@ test("organization resource search survives reload and a shared link", async ({ 
           {
             id: "00000000-0000-4000-8000-000000000001",
             type: "workbook",
-            name: "Wheat field workbook",
+            name: "Wheat + barley, field",
             description: null,
             visibility: "public",
             updatedAt: "2026-01-01T00:00:00.000Z",
@@ -142,23 +131,17 @@ test("organization resource search survives reload and a shared link", async ({ 
   const sort = JSON.stringify([{ field: "name", direction: "asc" }]);
   await page.goto(`${href}?type=workbook&sort=${encodeURIComponent(sort)}`);
   const search = page.getByRole("textbox", { name: "Search this organization's resources" });
-  await search.fill("Wheat");
-  await expect(page).toHaveURL((url) => url.searchParams.get("q") === "Wheat");
-  const sharedUrl = page.url();
+  await search.fill("Wheat + barley, field");
+  await expect(page).toHaveURL((url) => url.searchParams.get("q") === "Wheat + barley, field");
   const resources = page.getByRole("list", { name: "Resources", exact: true });
 
-  for (const reopen of ["reload", "shared link"]) {
-    if (reopen === "reload") await page.reload();
-    else {
-      await page.goto("about:blank");
-      await page.goto(sharedUrl);
-    }
-
-    await expect(search).toHaveValue("Wheat");
-    await expect(resources.getByRole("link", { name: "Wheat field workbook" })).toBeVisible();
-    await expect(resources.getByRole("link", { name: "Corn field workbook" })).toHaveCount(0);
-    await expect(page).toHaveURL(sharedUrl);
-  }
+  await expectSearchSurvivesReopen(page, {
+    search,
+    term: "Wheat + barley, field",
+    matchingName: "Wheat + barley, field",
+    excludedName: "Corn field workbook",
+    rows: resources,
+  });
 
   await search.clear();
   await expect(page).toHaveURL((url) => !url.searchParams.has("q"));
