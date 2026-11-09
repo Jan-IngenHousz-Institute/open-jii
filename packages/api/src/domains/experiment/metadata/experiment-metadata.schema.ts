@@ -15,8 +15,12 @@ function isAllowedMetadataColumnChar(c: string): boolean {
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 
 function holdsUnstorableText(value: unknown): boolean {
-  if (typeof value === "string") return value.includes("\u0000") || LONE_SURROGATE.test(value);
-  if (Array.isArray(value)) return value.some(holdsUnstorableText);
+  if (typeof value === "string") {
+    return value.includes("\u0000") || LONE_SURROGATE.test(value);
+  }
+  if (Array.isArray(value)) {
+    return value.some(holdsUnstorableText);
+  }
   if (typeof value === "object" && value !== null) {
     return Object.entries(value).some(
       ([key, inner]) => holdsUnstorableText(key) || holdsUnstorableText(inner),
@@ -109,8 +113,8 @@ export const zExperimentCustomMetadataPayload = z
       }
     });
 
-    // Postgres keeps no NUL character in a jsonb document, in a key or in a value. Reported on the
-    // field that holds it, so the form can show it there.
+    // Postgres keeps no NUL character and no half of a character pair in a jsonb document, in a key
+    // or in a value. Reported on the field that holds it, so the form can show it there.
     Object.entries(blob).forEach(([field, value]) => {
       if (holdsUnstorableText(value)) {
         ctx.addIssue({
