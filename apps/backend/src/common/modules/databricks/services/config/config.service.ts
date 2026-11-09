@@ -31,8 +31,8 @@ export class DatabricksConfigService {
       host: this.configService.getOrThrow<string>("databricks.host"),
       clientId: this.configService.getOrThrow<string>("databricks.clientId"),
       clientSecret: this.configService.getOrThrow<string>("databricks.clientSecret"),
-      dataExportJobId: this.configService.getOrThrow<string>("databricks.dataExportJobId"),
-      dataUploadJobId: this.configService.getOrThrow<string>("databricks.dataUploadJobId"),
+      dataExportJobName: this.configService.getOrThrow<string>("databricks.dataExportJobName"),
+      dataUploadJobName: this.configService.getOrThrow<string>("databricks.dataUploadJobName"),
       warehouseId: this.configService.getOrThrow<string>("databricks.warehouseId"),
       catalogName: this.configService.getOrThrow<string>("databricks.catalogName"),
       centrumSchemaName: this.configService.getOrThrow<string>("databricks.centrumSchemaName"),
@@ -96,17 +96,10 @@ export class DatabricksConfigService {
   }
 
   /**
-   * Returns the Databricks data export job ID
+   * Returns the name of the Databricks data export job
    */
-  getDataExportJobId(): string {
-    return this.config.dataExportJobId;
-  }
-
-  /**
-   * Returns the Databricks data export job ID as a number
-   */
-  getDataExportJobIdAsNumber(): number {
-    return parseInt(this.config.dataExportJobId, 10);
+  getDataExportJobName(): string {
+    return this.config.dataExportJobName;
   }
 
   /**
@@ -166,16 +159,9 @@ export class DatabricksConfigService {
   }
 
   /**
-   * Returns the data upload Databricks job ID
+   * Returns the name of the Databricks data upload job
    */
-  getDataUploadJobId(): string {
-    return this.config.dataUploadJobId;
-  }
-
-  /**
-   * Returns the data upload Databricks job ID as a number
-   */
-  getDataUploadJobIdAsNumber(): number {
-    return parseInt(this.config.dataUploadJobId, 10);
+  getDataUploadJobName(): string {
+    return this.config.dataUploadJobName;
   }
 }

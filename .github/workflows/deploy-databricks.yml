@@ -67,7 +67,7 @@ jobs:
         run: pip install --upgrade pip build
 
       - name: Setup Databricks CLI
-        uses: databricks/setup-cli@d268e8b0d8f5d8cc0e743697fe702c9f8c53c950 # v0.299.2
+        uses: databricks/setup-cli@9625fdde9ba2607df0087e0d3ec7449198bf2180 # v1.23.0
 
       - name: Validate bundle
         working-directory: apps/data
@@ -80,12 +80,55 @@ jobs:
           DATABRICKS_AUTH_TYPE: github-oidc
           DATABRICKS_TOKEN_AUDIENCE: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
 
+      # The deploy applies this saved plan, so what passes the checks is what changes.
       - name: Plan bundle deployment
         working-directory: apps/data
         run: |
-          echo "Planning bundle deployment to ${{ inputs.environment }} environment..."
-          databricks bundle plan -t ${{ inputs.environment }}
+          PLAN="$RUNNER_TEMP/bundle-plan.json"
+          databricks bundle plan -t "$TARGET_ENV" -o json > "$PLAN"
+          # An empty or malformed file would pass every check below.
+          jq -e '.plan_version' "$PLAN" > /dev/null
+          jq -r '(.plan // {}) | to_entries[] | "\(.value.action)\t\(.key)"' "$PLAN" | sort
+
+          # The CLI asks before deleting or recreating a pipeline, but never before a job.
+          DESTRUCTIVE=$(jq -r '
+            (.plan // {}) | to_entries[]
+            | select(.value.action == "delete" or .value.action == "recreate")
+            | select((.value.state_only or .value.gone) | not)
+            | select(.key | test("^resources\\.(pipelines|jobs)\\.[^.]+(\\.permissions)?$"))
+            | .key' "$PLAN")
+          if [ -n "$DESTRUCTIVE" ]; then
+            echo "::error::The plan deletes or recreates: $(echo $DESTRUCTIVE)"
+            exit 1
+          fi
+
+          # Creating a pipeline or job whose name is already taken means a live one was never bound.
+          CREATES=$(jq -r '
+            (.plan // {}) | to_entries[]
+            | select(.value.action == "create")
+            | select(.key | test("^resources\\.(pipelines|jobs)\\.[^.]+$"))
+            | "\(.key)\t\(.value.new_state.value.name // "")"' "$PLAN")
+          DUPLICATES=""
+          while IFS=$'\t' read -r KEY NAME; do
+            [ -n "$KEY" ] || continue
+            if [ -z "$NAME" ]; then
+              echo "::error::The plan creates $KEY without a name to check"
+              exit 1
+            fi
+            case "$KEY" in
+              resources.pipelines.*) FOUND=$(databricks pipelines list-pipelines --filter "name LIKE '$NAME'" -o json | jq length) ;;
+              resources.jobs.*) FOUND=$(databricks jobs list --name "$NAME" -o json | jq length) ;;
+            esac
+            if [ "$FOUND" -gt 0 ]; then
+              DUPLICATES="$DUPLICATES $KEY"
+            fi
+          done <<< "$CREATES"
+          if [ -n "$DUPLICATES" ]; then
+            echo "::error::The plan creates resources whose names already exist:$DUPLICATES"
+            exit 1
+          fi
         env:
+          TARGET_ENV: ${{ inputs.environment }}
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
           DATABRICKS_AUTH_TYPE: github-oidc
@@ -94,10 +137,9 @@ jobs:
       - name: Deploy bundle
         id: deploy-bundle
         working-directory: apps/data
-        run: |
-          echo "Deploying bundle to ${{ inputs.environment }} environment..."
-          databricks bundle deploy -t ${{ inputs.environment }}
+        run: databricks bundle deploy -t "$TARGET_ENV" --plan "$RUNNER_TEMP/bundle-plan.json"
         env:
+          TARGET_ENV: ${{ inputs.environment }}
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
           DATABRICKS_AUTH_TYPE: github-oidc

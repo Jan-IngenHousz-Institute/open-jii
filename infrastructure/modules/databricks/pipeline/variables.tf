@@ -190,12 +190,7 @@ variable "permissions" {
 }
 
 variable "environment_dependencies" {
-  description = "Library specs installed into a serverless pipeline's environment, e.g. workspace wheel paths. Serverless pipelines have no cluster, so cluster-policy libraries never reach them."
+  description = "Library specs installed into the pipeline's environment, e.g. workspace wheel paths"
   type        = list(string)
   default     = []
-
-  validation {
-    condition     = length(var.environment_dependencies) == 0 || var.serverless
-    error_message = "environment_dependencies applies to serverless pipelines only; non-serverless pipelines install libraries through their cluster policy."
-  }
 }

@@ -78,13 +78,18 @@ export interface DatabricksJobRunOutputResponse {
 export interface DatabricksJobsListRequest {
   limit: number;
   expand_tasks: boolean;
+  /** Exact, case-insensitive job name. */
+  name?: string;
+}
+
+export interface DatabricksJobSummary {
+  job_id: number;
+  settings: {
+    name: string;
+  };
 }
 
 export interface DatabricksJobsListResponse {
-  jobs: {
-    job_id: number;
-    settings: {
-      name: string;
-    };
-  }[];
+  /** Absent when no job matches. */
+  jobs?: DatabricksJobSummary[];
 }

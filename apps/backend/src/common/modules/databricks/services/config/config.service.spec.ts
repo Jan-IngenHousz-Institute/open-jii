@@ -33,7 +33,7 @@ describe("DatabricksConfigService", () => {
       expect(config.host).toBeDefined();
       expect(config.clientId).toBeDefined();
       expect(config.clientSecret).toBeDefined();
-      expect(config.dataUploadJobId).toBeDefined();
+      expect(config.dataUploadJobName).toBeDefined();
       expect(config.warehouseId).toBeDefined();
       expect(config.catalogName).toBeDefined();
     });
@@ -46,7 +46,7 @@ describe("DatabricksConfigService", () => {
       const getOrThrowSpy = vi
         .spyOn(configService, "getOrThrow")
         .mockImplementation((key: string) => {
-          if (key === "databricks.dataUploadJobId") {
+          if (key === "databricks.dataUploadJobName") {
             return "";
           }
 
@@ -77,24 +77,14 @@ describe("DatabricksConfigService", () => {
       expect(clientSecret).toBe(process.env.DATABRICKS_CLIENT_SECRET);
     });
 
-    it("should return the correct data upload job ID", () => {
-      const dataUploadJobId = configService.getDataUploadJobId();
-      expect(dataUploadJobId).toBe(process.env.DATABRICKS_DATA_UPLOAD_JOB_ID);
+    it("should return the correct data upload job name", () => {
+      const dataUploadJobName = configService.getDataUploadJobName();
+      expect(dataUploadJobName).toBe(process.env.DATABRICKS_DATA_UPLOAD_JOB_NAME);
     });
 
-    it("should return the correct data upload job ID as a number", () => {
-      const dataUploadJobIdAsNumber = configService.getDataUploadJobIdAsNumber();
-      expect(dataUploadJobIdAsNumber).toBe(Number(process.env.DATABRICKS_DATA_UPLOAD_JOB_ID));
-    });
-
-    it("should return the correct data export job ID", () => {
-      const dataExportJobId = configService.getDataExportJobId();
-      expect(dataExportJobId).toBe(process.env.DATABRICKS_DATA_EXPORT_JOB_ID);
-    });
-
-    it("should return the correct data export job ID as a number", () => {
-      const dataExportJobIdAsNumber = configService.getDataExportJobIdAsNumber();
-      expect(dataExportJobIdAsNumber).toBe(Number(process.env.DATABRICKS_DATA_EXPORT_JOB_ID));
+    it("should return the correct data export job name", () => {
+      const dataExportJobName = configService.getDataExportJobName();
+      expect(dataExportJobName).toBe(process.env.DATABRICKS_DATA_EXPORT_JOB_NAME);
     });
 
     it("should return the correct warehouse ID", () => {

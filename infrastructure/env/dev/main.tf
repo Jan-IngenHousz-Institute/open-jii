@@ -439,18 +439,34 @@ module "github_cicd_service_principal" {
   }
 }
 
+# The bundle deploys as the CI principal with the node principal as run-as, which needs the
+# Service Principal User role. The rule set is authoritative, so it also keeps OpenTofu's own
+# roles: manager for the node principal's secret, user for the run-as it sets on jobs. A client
+# id is not a credential, so it is unmarked to keep the grants readable in the plan.
+resource "databricks_access_control_rule_set" "node_service_principal" {
+  provider = databricks.mws
+  name     = "accounts/${var.databricks_account_id}/servicePrincipals/${module.node_service_principal.service_principal_application_id}/ruleSets/default"
+
+  grant_rules {
+    principals = ["servicePrincipals/${nonsensitive(var.databricks_client_id)}"]
+    role       = "roles/servicePrincipal.manager"
+  }
+
+  grant_rules {
+    principals = [
+      "servicePrincipals/${nonsensitive(var.databricks_client_id)}",
+      "servicePrincipals/${module.github_cicd_service_principal.service_principal_application_id}",
+    ]
+    role = "roles/servicePrincipal.user"
+  }
+}
+
 locals {
-  # The pipeline wheels, installed through the cluster policies.
-  pipeline_libraries = [
-    {
-      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
-    },
-    {
-      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
-    },
-    {
-      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/data_repair-0.1.0-py3-none-any.whl"
-    }
+  # The wheels the classic pipelines and the store reload install into their environment.
+  pipeline_wheels = [
+    "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl",
+    "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl",
+    "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/data_repair-0.1.0-py3-none-any.whl",
   ]
 }
 
@@ -518,11 +534,13 @@ module "node_cluster_policy" {
     }
   })
 
-  libraries = local.pipeline_libraries
-
   permissions = [
     {
       service_principal_name = module.node_service_principal.service_principal_application_id
+      permission_level       = "CAN_USE"
+    },
+    {
+      service_principal_name = module.github_cicd_service_principal.service_principal_application_id
       permission_level       = "CAN_USE"
     }
   ]
@@ -579,11 +597,13 @@ module "macro_cluster_policy" {
     }
   })
 
-  libraries = local.pipeline_libraries
-
   permissions = [
     {
       service_principal_name = module.node_service_principal.service_principal_application_id
+      permission_level       = "CAN_USE"
+    },
+    {
+      service_principal_name = module.github_cicd_service_principal.service_principal_application_id
       permission_level       = "CAN_USE"
     }
   ]
@@ -901,6 +921,9 @@ module "centrum_pipeline" {
     "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust a 16 GB driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
+    # Moves the pipeline off legacy publishing mode on its next update
+    # (docs/runbooks/releases/bundle-move-prep.md).
+    "pipelines.enableDPMForExistingPipeline" = "true"
   }, local.serving_store_feed_settings)
 
   # AUTO CDC needs PRO, and the silver expectations need ADVANCED.
@@ -915,6 +938,8 @@ module "centrum_pipeline" {
   driver_node_type_id = "r7i.xlarge"
   num_workers         = 1
   policy_id           = module.node_cluster_policy.policy_id
+
+  environment_dependencies = local.pipeline_wheels
 
   spark_conf = {
     # Streaming skips AQE, so shuffles run at one per worker core.
@@ -942,7 +967,7 @@ module "centrum_pipeline" {
   permissions = [
     {
       principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_RUN"
+      permission_level         = "IS_OWNER"
     },
     {
       principal_application_id = module.github_cicd_service_principal.service_principal_application_id
@@ -984,6 +1009,9 @@ module "macro_execution_pipeline" {
     # Lets the macro results id widen from INT to BIGINT in place. Set on one table only, the
     # tables that stream from it refuse the new type and the update stops.
     "pipelines.enableTypeWidening" = "true"
+    # Moves the pipeline off legacy publishing mode on its next update
+    # (docs/runbooks/releases/bundle-move-prep.md).
+    "pipelines.enableDPMForExistingPipeline" = "true"
   }, local.serving_store_feed_settings)
 
   # Neither AUTO CDC nor expectations, so CORE is enough.
@@ -997,6 +1025,8 @@ module "macro_execution_pipeline" {
   driver_node_type_id = "m7i.xlarge"
   num_workers         = 1
   policy_id           = module.macro_cluster_policy.policy_id
+
+  environment_dependencies = local.pipeline_wheels
 
   spark_conf = {
     # Streaming skips AQE, so shuffles run at one per worker core.
@@ -1017,7 +1047,7 @@ module "macro_execution_pipeline" {
   permissions = [
     {
       principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_RUN"
+      permission_level         = "IS_OWNER"
     },
     {
       principal_application_id = module.github_cicd_service_principal.service_principal_application_id
@@ -1065,6 +1095,9 @@ module "metrics_pipeline" {
     "CENTRUM_SCHEMA_NAME" = "centrum"
     "SILVER_TABLE"        = "clean_data"
     "BRONZE_TABLE"        = "raw_data"
+    # Moves the pipeline off legacy publishing mode on its next update
+    # (docs/runbooks/releases/bundle-move-prep.md).
+    "pipelines.enableDPMForExistingPipeline" = "true"
   }
 
   continuous_mode  = false
@@ -1078,7 +1111,7 @@ module "metrics_pipeline" {
   permissions = [
     {
       principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_RUN"
+      permission_level         = "IS_OWNER"
     },
     {
       principal_application_id = module.github_cicd_service_principal.service_principal_application_id
@@ -1137,7 +1170,11 @@ module "metrics_pipeline_scheduler" {
   permissions = [
     {
       principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE_RUN"
+      permission_level         = "IS_OWNER"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
     }
   ]
 
@@ -1229,7 +1266,11 @@ module "metrics_heartbeat_export" {
   permissions = [
     {
       principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE_RUN"
+      permission_level         = "IS_OWNER"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
     }
   ]
 
@@ -1375,7 +1416,11 @@ module "centrum_backup_job" {
   permissions = [
     {
       principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE_RUN"
+      permission_level         = "IS_OWNER"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
     }
   ]
 
@@ -1462,7 +1507,11 @@ module "data_upload_job" {
   permissions = [
     {
       principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE_RUN"
+      permission_level         = "IS_OWNER"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
     }
   ]
 
@@ -2051,7 +2100,11 @@ module "data_export_job" {
   permissions = [
     {
       principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE_RUN"
+      permission_level         = "IS_OWNER"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
     }
   ]
 
@@ -2134,7 +2187,11 @@ module "project_transfer_job" {
   permissions = [
     {
       principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE_RUN"
+      permission_level         = "IS_OWNER"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
     }
   ]
 
@@ -2276,11 +2333,13 @@ module "serving_store_reload_cluster_policy" {
     }
   })
 
-  libraries = local.pipeline_libraries
-
   permissions = [
     {
       service_principal_name = module.node_service_principal.service_principal_application_id
+      permission_level       = "CAN_USE"
+    },
+    {
+      service_principal_name = module.github_cicd_service_principal.service_principal_application_id
       permission_level       = "CAN_USE"
     }
   ]
@@ -2327,6 +2386,7 @@ module "serving_store_reload_job" {
       data_security_mode  = "SINGLE_USER"
       single_user_name    = module.node_service_principal.service_principal_application_id
       policy_id           = module.serving_store_reload_cluster_policy.policy_id
+      libraries           = local.pipeline_wheels
 
       parameters = {
         "CATALOG_NAME"   = module.databricks_catalog.catalog_name
@@ -2350,7 +2410,11 @@ module "serving_store_reload_job" {
   permissions = [
     {
       principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE_RUN"
+      permission_level         = "IS_OWNER"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
     }
   ]
 
@@ -2430,15 +2494,17 @@ module "databricks_secrets" {
 
   # Store secrets as JSON using variables
   secret_string = jsonencode({
-    DATABRICKS_HOST               = module.databricks_workspace.workspace_url
-    DATABRICKS_CLIENT_ID          = module.node_service_principal.service_principal_application_id
-    DATABRICKS_CLIENT_SECRET      = module.node_service_principal.service_principal_secret_value
-    DATABRICKS_DATA_UPLOAD_JOB_ID = module.data_upload_job.job_id
-    DATABRICKS_DATA_EXPORT_JOB_ID = module.data_export_job.job_id
-    DATABRICKS_WAREHOUSE_ID       = var.backend_databricks_warehouse_id
-    DATABRICKS_WEBHOOK_API_KEY_ID = var.backend_webhook_api_key_id
-    DATABRICKS_WEBHOOK_SECRET     = var.backend_webhook_secret
-    DATABRICKS_WEBHOOK_API_KEY    = var.backend_webhook_api_key
+    DATABRICKS_HOST                 = module.databricks_workspace.workspace_url
+    DATABRICKS_CLIENT_ID            = module.node_service_principal.service_principal_application_id
+    DATABRICKS_CLIENT_SECRET        = module.node_service_principal.service_principal_secret_value
+    DATABRICKS_DATA_UPLOAD_JOB_ID   = module.data_upload_job.job_id
+    DATABRICKS_DATA_EXPORT_JOB_ID   = module.data_export_job.job_id
+    DATABRICKS_DATA_UPLOAD_JOB_NAME = "Data-Upload-Job-DEV"
+    DATABRICKS_DATA_EXPORT_JOB_NAME = "Data-Export-Job-DEV"
+    DATABRICKS_WAREHOUSE_ID         = var.backend_databricks_warehouse_id
+    DATABRICKS_WEBHOOK_API_KEY_ID   = var.backend_webhook_api_key_id
+    DATABRICKS_WEBHOOK_SECRET       = var.backend_webhook_secret
+    DATABRICKS_WEBHOOK_API_KEY      = var.backend_webhook_api_key
   })
 
   tags = {
@@ -2901,13 +2967,22 @@ module "backend_ecs" {
       name      = "DATABRICKS_HOST"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::"
     },
+    # Older backend images read the job ids, so a rollback still boots on this task definition.
     {
       name      = "DATABRICKS_DATA_UPLOAD_JOB_ID"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_UPLOAD_JOB_ID::"
     },
     {
+      name      = "DATABRICKS_DATA_UPLOAD_JOB_NAME"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_UPLOAD_JOB_NAME::"
+    },
+    {
       name      = "DATABRICKS_DATA_EXPORT_JOB_ID"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_EXPORT_JOB_ID::"
+    },
+    {
+      name      = "DATABRICKS_DATA_EXPORT_JOB_NAME"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_EXPORT_JOB_NAME::"
     },
     {
       name      = "DATABRICKS_WAREHOUSE_ID"
