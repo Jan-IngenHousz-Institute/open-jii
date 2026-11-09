@@ -944,6 +944,41 @@ export const experimentMetadataSheets = pgTable(
   (table) => [index("experiment_metadata_sheets_experiment_idx").on(table.experimentId)],
 );
 
+export const experimentDataRecordTypeEnum = pgEnum("experiment_data_record_type", [
+  "annotation",
+  "metadata_sheet",
+]);
+export const experimentDataDestinationEnum = pgEnum("experiment_data_destination", ["lakehouse"]);
+
+// Annotations and metadata sheets whose current state is still owed to a copy elsewhere. A row
+// is deleted once the copy has it.
+export const experimentDataOutbox = pgTable(
+  "experiment_data_outbox",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    recordType: experimentDataRecordTypeEnum("record_type").notNull(),
+    // No foreign key: once the record is deleted, its row still has to carry the delete.
+    recordId: uuid("record_id").notNull(),
+    experimentId: uuid("experiment_id").notNull(),
+    destination: experimentDataDestinationEnum("destination").notNull(),
+    attempts: integer("attempts").default(0).notNull(),
+    nextAttemptAt: timestamp("next_attempt_at")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
+    // Set while a worker applies the row.
+    claimedAt: timestamp("claimed_at"),
+    lastError: text("last_error"),
+    ...timestamps,
+  },
+  (table) => [
+    // A change made while the record's row waits joins that row.
+    uniqueIndex("experiment_data_outbox_waiting_uniq")
+      .on(table.recordType, table.recordId, table.destination)
+      .where(sql`${table.claimedAt} IS NULL`),
+    index("experiment_data_outbox_due_idx").on(table.nextAttemptAt),
+  ],
+);
+
 // Chart family enum for visualizations
 export const chartFamilyEnum = pgEnum("chart_family", ["basic", "scientific", "3d", "statistical"]);
 
