@@ -177,6 +177,9 @@ and the export is older than it.
 
 ## Before the second release, and after
 
+Run this in the same session as [metadata-sheets-move](metadata-sheets-move.md). The second release
+goes out only when both are clean.
+
 Run steps 1 to 5 again right before the second release goes out, with a fresh export; a clean check
 is what lets it go. Once it is out, run steps 2 and 3 and step 5's checks once more without step 4,
 since Postgres is then where annotations are written: a difference is a write the first release's
