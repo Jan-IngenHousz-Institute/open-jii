@@ -31,6 +31,10 @@ _KEPT_CHANGES = ("insert", "update_postimage")
 # The store table that holds every table's payload schemas.
 PAYLOAD_SCHEMAS = "payload_schemas"
 
+# The store's Float64 columns, which each line writes first so the writer can rewrite their digits
+# without reading the rest of the line (writer.exact_doubles).
+FLOAT64_COLUMNS = ("latitude", "longitude", "device_battery")
+
 
 def clamped(column: str) -> Column:
     """A timestamp held within the store's range."""
@@ -74,13 +78,18 @@ class StoreTable:
 
     def lines(self, changes: DataFrame, reloaded: bool = False) -> DataFrame:
         """One JSON line, in column ``line``, per row gold inserted or updated in ``changes``, with
-        the time the store partitions it by in ``partition_time``.
+        the time the store partitions it by in ``partition_time``. The table's Float64 columns come
+        first in the line.
 
         A reloaded line says it arrived when gold committed it, so the store's delivery metrics,
         which read ``inserted_at``, count only the rows the feed sends.
         """
         rows = changes.filter(F.col("_change_type").isin(*_KEPT_CHANGES))
-        fields = [*self.columns(), "_commit_version", "_commit_timestamp"]
+        columns = self.columns()
+        names = [column for column in columns if isinstance(column, str)]
+        floats = [column for column in FLOAT64_COLUMNS if column in names]
+        others = [column for column in columns if isinstance(column, Column) or column not in floats]
+        fields = [*floats, *others, "_commit_version", "_commit_timestamp"]
         if reloaded:
             fields.append(F.col("_commit_timestamp").alias("inserted_at"))
         row = F.struct(*fields)

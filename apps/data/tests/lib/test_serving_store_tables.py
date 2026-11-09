@@ -102,6 +102,17 @@ def _rows(lines: DataFrame) -> dict[int, dict]:
     return {row["id"]: row for row in rows}
 
 
+def test_a_line_starts_with_its_float64_columns_for_the_writer_to_rewrite(spark: SparkSession) -> None:
+    measurement = MEASUREMENTS.lines(spark.sql(_RAW_DATA_CHANGES)).first()
+    upload = UPLOADS.lines(spark.sql(_UPLOADED_DATA_CHANGES)).first()
+
+    assert measurement is not None and upload is not None
+    assert measurement.line.startswith(
+        '{"latitude":52.1,"longitude":5.1,"device_battery":87.5,"experiment_id":'
+    )
+    assert upload.line.startswith('{"experiment_id":')
+
+
 def test_a_measurement_carries_its_columns(spark: SparkSession) -> None:
     row = _rows(MEASUREMENTS.lines(spark.sql(_RAW_DATA_CHANGES)))[1]
 
@@ -368,3 +379,21 @@ def test_text_that_reads_as_a_date_lands_as_text(
         f"FROM {_DATABASE}.uploads FINAL WHERE id = 21"
     )
     assert row == {"day_type": "String", "at": "2026-05-01T12:30:00.123"}
+
+
+@pytest.mark.clickhouse
+def test_coordinates_land_as_the_very_doubles_gold_holds(
+    spark: SparkSession, store: _Store, writer: StoreWriter
+) -> None:
+    # Both values the store read onto the neighbouring double on dev, as 51.986383000000004.
+    changes = _RAW_DATA_CHANGES.replace("'e1' AS experiment_id", "'exact' AS experiment_id").replace(
+        "52.1D AS latitude, 5.1D AS longitude", "51.986383D AS latitude, 5.6631109D AS longitude"
+    )
+
+    assert writer.write(MEASUREMENTS.lines(spark.sql(changes)), MEASUREMENTS.name) == Written(inserted=3)
+
+    rows = store.rows(
+        f"SELECT latitude, longitude, device_battery FROM {_DATABASE}.measurements FINAL "
+        "WHERE experiment_id = 'exact'"
+    )
+    assert rows == [{"latitude": 51.986383, "longitude": 5.6631109, "device_battery": 87.5}] * 3

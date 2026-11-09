@@ -16,7 +16,7 @@ import pytest
 import requests
 import responses
 from openjii.serving_store import writer
-from openjii.serving_store.writer import StoreUnavailable, StoreWriter, Written, storable
+from openjii.serving_store.writer import StoreUnavailable, StoreWriter, Written, exact_doubles, storable
 from pyspark.sql import DataFrame, SparkSession
 
 URL = "http://store.test/"
@@ -276,6 +276,40 @@ def test_integers_the_store_cannot_hold_become_floats_and_nothing_else_changes()
     assert json.loads(storable(at_the_limits)) == json.loads(at_the_limits)
     assert json.loads(storable(in_a_string)) == json.loads(in_a_string)
     assert storable(short) is short
+
+
+def test_the_leading_float64_fields_are_written_as_17_digits_without_an_exponent() -> None:
+    line = (
+        '{"latitude":51.986383,"longitude":1.0E-7,"device_battery":99.99999999999999,"id":1,'
+        '"questions_data":{"latitude":52},"output":{"longitude":5.1},"data":"[{\\"latitude\\":1.5}]"}'
+    )
+
+    written = exact_doubles(line)
+
+    assert written == (
+        '{"latitude":51.986382999999996,"longitude":0.000000099999999999999995,'
+        '"device_battery":99.999999999999986,"id":1,'
+        '"questions_data":{"latitude":52},"output":{"longitude":5.1},"data":"[{\\"latitude\\":1.5}]"}'
+    )
+    assert json.loads(written)["latitude"] == 51.986383
+    assert json.loads(written)["device_battery"] == 99.99999999999999
+
+
+def test_a_line_without_leading_float64_fields_is_left_as_it_is() -> None:
+    line = '{"experiment_id":"e1","latitude":51.986383}'
+
+    assert exact_doubles(line) is line
+
+
+@responses.activate
+def test_a_line_whose_integers_are_rewritten_still_sends_exact_doubles(store: StoreWriter) -> None:
+    responses.add(responses.POST, URL)
+
+    store.insert("measurements", ['{"latitude":51.986383,"j":{"w":18446744073709551616}}'])
+
+    [(_, _, [line])] = _inserts()
+    assert '"latitude":51.986382999999996' in line
+    assert json.loads(line)["j"] == {"w": 1.8446744073709552e19}
 
 
 class _Recorder(BaseHTTPRequestHandler):
