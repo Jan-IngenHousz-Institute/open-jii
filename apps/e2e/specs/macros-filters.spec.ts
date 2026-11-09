@@ -44,3 +44,50 @@ test("a shared filtered link opens the filtered list and clears back to all", as
   await expect(page.getByRole("link", { name: "[Seed] ANOVA Analysis" })).toBeVisible();
   await expect(page.getByRole("link", { name: "[Seed] Phi2 Quantum Yield" })).toBeVisible();
 });
+
+test("macros search survives reload and a shared link with filters and sort", async ({ page }) => {
+  const sort = JSON.stringify([{ field: "name", direction: "asc" }]);
+  await page.goto(
+    `/${locale}/platform/macros?language=r&visibility=public&sort=${encodeURIComponent(sort)}`,
+  );
+  await dismissCookieBanner(page);
+
+  await expect(
+    page.getByRole("link", { name: "[Seed] Statistical Summary", exact: true }).first(),
+  ).toBeVisible();
+
+  const search = page.getByPlaceholder("Search macros...", { exact: true });
+  await search.fill("ANOVA");
+  await expect(page).toHaveURL((url) => url.searchParams.get("q") === "ANOVA");
+  await expect(
+    page.getByRole("link", { name: "[Seed] Statistical Summary", exact: true }),
+  ).toHaveCount(0);
+  const sharedUrl = page.url();
+
+  for (const reopen of ["reload", "shared link"]) {
+    if (reopen === "reload") await page.reload();
+    else {
+      await page.goto("about:blank");
+      await page.goto(sharedUrl);
+    }
+
+    await expect(search).toHaveValue("ANOVA");
+    await expect(
+      page.getByRole("link", { name: "[Seed] ANOVA Analysis", exact: true }).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "[Seed] Statistical Summary", exact: true }),
+    ).toHaveCount(0);
+    await expect(page).toHaveURL(sharedUrl);
+  }
+
+  await search.clear();
+  await expect(page).toHaveURL((url) => !url.searchParams.has("q"));
+  expect(new URL(page.url()).searchParams.get("sort")).toBe(sort);
+  for (const [key, value] of new URLSearchParams("language=r&visibility=public")) {
+    expect(new URL(page.url()).searchParams.get(key)).toBe(value);
+  }
+  await expect(
+    page.getByRole("link", { name: "[Seed] Statistical Summary", exact: true }).first(),
+  ).toBeVisible();
+});

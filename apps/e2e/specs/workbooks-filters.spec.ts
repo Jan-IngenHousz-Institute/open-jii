@@ -37,3 +37,52 @@ test("a shared filtered link opens the filtered list and clears back to all", as
   await expect(page.getByRole("button", { name: "Filter", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Clear filters" })).toHaveCount(0);
 });
+
+test("workbooks search survives reload and a shared link with filters and sort", async ({
+  page,
+}) => {
+  const sort = JSON.stringify([{ field: "name", direction: "asc" }]);
+  await page.goto(
+    `/${locale}/platform/workbooks?visibility=public&sort=${encodeURIComponent(sort)}`,
+  );
+  await dismissCookieBanner(page);
+
+  await expect(
+    page.getByRole("link", { name: "[Seed] Corn Measurement Workbook", exact: true }).first(),
+  ).toBeVisible();
+
+  const search = page.getByPlaceholder("Search workbooks...", { exact: true });
+  await search.fill("Wheat");
+  await expect(page).toHaveURL((url) => url.searchParams.get("q") === "Wheat");
+  await expect(
+    page.getByRole("link", { name: "[Seed] Corn Measurement Workbook", exact: true }),
+  ).toHaveCount(0);
+  const sharedUrl = page.url();
+
+  for (const reopen of ["reload", "shared link"]) {
+    if (reopen === "reload") await page.reload();
+    else {
+      await page.goto("about:blank");
+      await page.goto(sharedUrl);
+    }
+
+    await expect(search).toHaveValue("Wheat");
+    await expect(
+      page.getByRole("link", { name: "[Seed] Wheat Phenotyping Workbook", exact: true }).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "[Seed] Corn Measurement Workbook", exact: true }),
+    ).toHaveCount(0);
+    await expect(page).toHaveURL(sharedUrl);
+  }
+
+  await search.clear();
+  await expect(page).toHaveURL((url) => !url.searchParams.has("q"));
+  expect(new URL(page.url()).searchParams.get("sort")).toBe(sort);
+  for (const [key, value] of new URLSearchParams("visibility=public")) {
+    expect(new URL(page.url()).searchParams.get(key)).toBe(value);
+  }
+  await expect(
+    page.getByRole("link", { name: "[Seed] Corn Measurement Workbook", exact: true }).first(),
+  ).toBeVisible();
+});

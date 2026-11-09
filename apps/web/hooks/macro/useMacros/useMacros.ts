@@ -8,9 +8,10 @@ import { macrosListQuery } from "./macros-list-query";
 
 const MACRO_LIST_FILTERS = { language: zMacroLanguage, visibility: zVisibility };
 
-/** The macros list: language and visibility filters and sort in the URL, server-paged. */
+/** The macros list: language and visibility filters, search and sort in the URL, server-paged. */
 export function useMacros() {
   return useResourceList({
+    searchKey: "q",
     filters: MACRO_LIST_FILTERS,
     sort: zMacroSort,
     query: (view) =>

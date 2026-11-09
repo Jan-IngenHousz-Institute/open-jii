@@ -17,12 +17,13 @@ const zOrganizationResourceSort = z
   .max(1);
 
 /**
- * The organization resources list's type filter and sort, in the URL. The list holds one
+ * The organization resources list's search, type filter and sort, in the URL. The list holds one
  * organization's rows, so it filters and sorts in the browser; the sort allowlist is local
- * because it never reaches the API. Search stays in memory, as on most resource lists.
+ * because it never reaches the API.
  */
 export function useOrganizationResourceListState() {
   const state = useListUrlState({
+    searchKey: "q",
     filters: ORGANIZATION_RESOURCE_FILTERS,
     sort: zOrganizationResourceSort,
   });

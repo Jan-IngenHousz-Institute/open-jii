@@ -8,9 +8,10 @@ import { protocolsListQuery } from "./protocols-list-query";
 
 const PROTOCOL_LIST_FILTERS = { family: zProtocolFamily, visibility: zVisibility };
 
-/** The protocols list: family and visibility filters and sort in the URL, server-paged. */
+/** The protocols list: family and visibility filters, search and sort in the URL, server-paged. */
 export function useProtocols() {
   return useResourceList({
+    searchKey: "q",
     filters: PROTOCOL_LIST_FILTERS,
     sort: zProtocolSort,
     query: (view) =>

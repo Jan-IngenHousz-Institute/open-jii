@@ -27,7 +27,9 @@ vi.mock("@/components/server-prefetch/prefetched-queries", () => ({
 }));
 
 describe("WorkbookPage", () => {
-  const renderPage = async (searchParams: { sort?: string; visibility?: string } = {}) =>
+  const renderPage = async (
+    searchParams: { q?: string; sort?: string; visibility?: string } = {},
+  ) =>
     render(
       await Page({
         params: Promise.resolve({ locale: "en-US" }),
@@ -60,5 +62,14 @@ describe("WorkbookPage", () => {
   it("leaves a filtered view to the browser, which parses the filter itself", async () => {
     await renderPage({ visibility: "public" });
     expect(prefetched.queries).toEqual([]);
+  });
+  it.each(["wheat", " "])("leaves search %j to the browser", async (q) => {
+    await renderPage({ q });
+    expect(prefetched.queries).toEqual([]);
+  });
+
+  it("prefetches the default view when search is empty", async () => {
+    await renderPage({ q: "" });
+    expect(prefetched.queries).toHaveLength(1);
   });
 });

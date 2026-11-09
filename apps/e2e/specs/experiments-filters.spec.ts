@@ -81,3 +81,105 @@ test("the Filter menu floats over the list, and chips edit and remove values", a
   await expect(page).toHaveURL((url) => url.searchParams.get("status") === "stale");
   await expect(activeChip).toHaveCount(0);
 });
+
+test("experiments search survives reload and a shared link with filters and sort", async ({
+  page,
+}) => {
+  const sort = JSON.stringify([{ field: "name", direction: "asc" }]);
+  await page.goto(
+    `/${locale}/platform/experiments?status=active&visibility=public&sort=${encodeURIComponent(sort)}`,
+  );
+  await dismissCookieBanner(page);
+
+  await expect(
+    page
+      .getByRole("link", { name: "[Seed] Soil Health Monitoring — Midwest", exact: true })
+      .first(),
+  ).toBeVisible();
+
+  const search = page.getByPlaceholder("Search experiments...", { exact: true });
+  await search.fill("Wheat");
+  await expect(page).toHaveURL((url) => url.searchParams.get("q") === "Wheat");
+  await expect(
+    page.getByRole("link", { name: "[Seed] Soil Health Monitoring — Midwest", exact: true }),
+  ).toHaveCount(0);
+  const sharedUrl = page.url();
+
+  for (const reopen of ["reload", "shared link"]) {
+    if (reopen === "reload") await page.reload();
+    else {
+      await page.goto("about:blank");
+      await page.goto(sharedUrl);
+    }
+
+    await expect(search).toHaveValue("Wheat");
+    await expect(
+      page.getByRole("link", { name: "[Seed] Winter Wheat Phenotyping", exact: true }).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "[Seed] Soil Health Monitoring — Midwest", exact: true }),
+    ).toHaveCount(0);
+    await expect(page).toHaveURL(sharedUrl);
+  }
+
+  await search.clear();
+  await expect(page).toHaveURL((url) => !url.searchParams.has("q"));
+  expect(new URL(page.url()).searchParams.get("sort")).toBe(sort);
+  for (const [key, value] of new URLSearchParams("status=active&visibility=public")) {
+    expect(new URL(page.url()).searchParams.get(key)).toBe(value);
+  }
+  await expect(
+    page
+      .getByRole("link", { name: "[Seed] Soil Health Monitoring — Midwest", exact: true })
+      .first(),
+  ).toBeVisible();
+});
+
+test("experiments-archive search survives reload and a shared link with filters and sort", async ({
+  page,
+}) => {
+  const sort = JSON.stringify([{ field: "name", direction: "asc" }]);
+  await page.goto(
+    `/${locale}/platform/experiments-archive?visibility=public,private&sort=${encodeURIComponent(sort)}`,
+  );
+  await dismissCookieBanner(page);
+
+  await expect(
+    page.getByRole("link", { name: "[Seed] Barley Root Imaging", exact: true }).first(),
+  ).toBeVisible();
+
+  const search = page.getByPlaceholder("Search experiments...", { exact: true });
+  await search.fill("Lighting");
+  await expect(page).toHaveURL((url) => url.searchParams.get("q") === "Lighting");
+  await expect(
+    page.getByRole("link", { name: "[Seed] Barley Root Imaging", exact: true }),
+  ).toHaveCount(0);
+  const sharedUrl = page.url();
+
+  for (const reopen of ["reload", "shared link"]) {
+    if (reopen === "reload") await page.reload();
+    else {
+      await page.goto("about:blank");
+      await page.goto(sharedUrl);
+    }
+
+    await expect(search).toHaveValue("Lighting");
+    await expect(
+      page.getByRole("link", { name: "[Seed] Indoor Lighting Calibration", exact: true }).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "[Seed] Barley Root Imaging", exact: true }),
+    ).toHaveCount(0);
+    await expect(page).toHaveURL(sharedUrl);
+  }
+
+  await search.clear();
+  await expect(page).toHaveURL((url) => !url.searchParams.has("q"));
+  expect(new URL(page.url()).searchParams.get("sort")).toBe(sort);
+  for (const [key, value] of new URLSearchParams("visibility=public,private")) {
+    expect(new URL(page.url()).searchParams.get(key)).toBe(value);
+  }
+  await expect(
+    page.getByRole("link", { name: "[Seed] Barley Root Imaging", exact: true }).first(),
+  ).toBeVisible();
+});

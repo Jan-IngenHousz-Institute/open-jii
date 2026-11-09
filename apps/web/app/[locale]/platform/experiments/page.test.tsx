@@ -28,7 +28,7 @@ vi.mock("@/components/server-prefetch/prefetched-queries", () => ({
 
 describe("ExperimentPage", () => {
   const renderPage = async (
-    searchParams: { sort?: string; status?: string; visibility?: string } = {},
+    searchParams: { q?: string; sort?: string; status?: string; visibility?: string } = {},
   ) =>
     render(
       await Page({
@@ -64,4 +64,13 @@ describe("ExperimentPage", () => {
       expect(prefetched.queries).toEqual([]);
     },
   );
+  it.each(["wheat", " "])("leaves search %j to the browser", async (q) => {
+    await renderPage({ q });
+    expect(prefetched.queries).toEqual([]);
+  });
+
+  it("prefetches the default view when search is empty", async () => {
+    await renderPage({ q: "" });
+    expect(prefetched.queries).toHaveLength(1);
+  });
 });
