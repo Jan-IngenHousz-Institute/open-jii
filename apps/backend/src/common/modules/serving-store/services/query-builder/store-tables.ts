@@ -18,6 +18,8 @@ export interface StoreColumn {
 export interface StoreTable {
   view: string;
   identifierColumn?: string;
+  /** The table's ORDER BY columns after experiment_id, exactly as its migration writes them. */
+  key: string[];
   columns: StoreColumn[];
 }
 
@@ -72,6 +74,7 @@ const CUSTOM_METADATA: StoreColumn = {
 
 export const MEASUREMENTS_TABLE: StoreTable = {
   view: "experiment_measurements",
+  key: ["timestamp", "id", "ifNull(device_id, '')"],
   columns: [
     { name: "experiment_id", type: "STRING", expression: "experiment_id" },
     { name: "id", type: "BIGINT", expression: "id" },
@@ -97,6 +100,13 @@ export const MEASUREMENTS_TABLE: StoreTable = {
 export const MACRO_RESULTS_TABLE: StoreTable = {
   view: "experiment_macro_results",
   identifierColumn: "macro_id",
+  key: [
+    "ifNull(macro_id, '')",
+    "timestamp",
+    "raw_id",
+    "ifNull(macro_filename, '')",
+    "ifNull(device_id, '')",
+  ],
   columns: [
     { name: "experiment_id", type: "STRING", expression: "experiment_id" },
     { name: "id", type: "BIGINT", expression: "id" },
@@ -125,6 +135,7 @@ export const MACRO_RESULTS_TABLE: StoreTable = {
 export const UPLOADS_TABLE: StoreTable = {
   view: "experiment_uploads",
   identifierColumn: "upload_table_id",
+  key: ["ifNull(upload_table_id, '')", "uploaded_at", "id"],
   columns: [
     { name: "id", type: "BIGINT", expression: "id" },
     { name: "experiment_id", type: "STRING", expression: "experiment_id" },

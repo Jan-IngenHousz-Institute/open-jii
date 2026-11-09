@@ -87,6 +87,22 @@ describe("ServingStoreClientService", () => {
     expect(requested.get("wait_end_of_query")).toBe("1");
   });
 
+  it("merges each month separately, since copies of a row never span two months", async () => {
+    answer = { status: 200, body: "" };
+
+    await client.query(STATEMENT);
+
+    expect(requested.get("do_not_merge_across_partitions_select_final")).toBe("1");
+  });
+
+  it("allows a query of 1 MiB, which a sort by thousands of inlined ids needs", async () => {
+    answer = { status: 200, body: "" };
+
+    await client.query(STATEMENT);
+
+    expect(requested.get("max_query_size")).toBe("1048576");
+  });
+
   it("answers a result past the store's limit as a page too large", async () => {
     answer = {
       status: 500,

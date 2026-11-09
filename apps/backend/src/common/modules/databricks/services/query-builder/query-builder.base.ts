@@ -42,6 +42,10 @@ export abstract class BaseQueryBuilder {
     return this;
   }
 
+  protected joinClauses(clauses: string[]): string {
+    return clauses.filter((clause) => clause.length > 0).join("\n");
+  }
+
   /**
    * Escape a SQL identifier (table, column, struct field path).
    *
@@ -457,10 +461,6 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
       ")",
       `ORDER BY ${numericStringOrdering(sortedBy, direction)}`,
     ]);
-  }
-
-  private joinClauses(clauses: string[]): string {
-    return clauses.filter((clause) => clause.length > 0).join("\n");
   }
 
   /** Every base column but the raw VARIANTs, then every flattened field under the name it reads
