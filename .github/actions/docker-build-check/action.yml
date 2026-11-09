@@ -32,6 +32,14 @@ inputs:
     description: "Whether to use GitHub Actions build cache"
     required: false
     default: "true"
+  cache-scope:
+    description: "GitHub Actions cache scope, one per image so images do not overwrite each other"
+    required: false
+    default: "buildkit"
+  scan:
+    description: "Whether to scan the built image with Trivy"
+    required: false
+    default: "true"
 
 runs:
   using: "composite"
@@ -49,10 +57,12 @@ runs:
         load: true
         tags: ${{ inputs.image-name }}
         build-args: ${{ inputs.build-args }}
-        cache-from: ${{ inputs.use-gha-cache == 'true' && 'type=gha' || '' }}
-        cache-to: ${{ inputs.use-gha-cache == 'true' && 'type=gha,mode=max' || '' }}
+        cache-from: ${{ inputs.use-gha-cache == 'true' && format('type=gha,scope={0}', inputs.cache-scope) || '' }}
+        # Only main writes, so the 10 GB repository cache holds one copy per image rather than one per pull request.
+        cache-to: ${{ inputs.use-gha-cache == 'true' && github.ref == 'refs/heads/main' && format('type=gha,scope={0},mode=max', inputs.cache-scope) || '' }}
 
     - name: Scan Docker image with Trivy
+      if: inputs.scan == 'true'
       uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
       with:
         image-ref: ${{ inputs.image-name }}

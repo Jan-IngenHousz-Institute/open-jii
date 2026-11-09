@@ -31,6 +31,7 @@ jobs:
       - uses: ./.github/actions/docker-build-check
         with:
           image-name: open-jii-backend:pr-check
+          cache-scope: backend
           dockerfile: apps/backend/Dockerfile
           build-args: PROJECT=backend
           trivyignores: .trivyignore.docker-images.yaml
@@ -46,6 +47,7 @@ jobs:
       - uses: ./.github/actions/docker-build-check
         with:
           image-name: open-jii-database:pr-check
+          cache-scope: database
           dockerfile: packages/database/Dockerfile
           trivyignores: .trivyignore.docker-images.yaml
 

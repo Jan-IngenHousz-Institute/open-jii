@@ -35,11 +35,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-nodejs-pnpm
-        with:
-          node-version: "24"
-
       - name: Detect Affected Packages
         id: detect
         uses: ./.github/actions/detect-affected-packages

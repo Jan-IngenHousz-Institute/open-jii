@@ -1,0 +1,54 @@
+name: Docker Layer Cache
+
+# Pull request image builds read these layers and write none of their own.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - apps/backend/**
+      - packages/**
+      - tooling/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - turbo.json
+      - .github/actions/docker-build-check/**
+      - .github/workflows/docker-layer-cache.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-layer-cache
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend Image Cache
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/docker-build-check
+        with:
+          image-name: open-jii-backend:layer-cache
+          cache-scope: backend
+          dockerfile: apps/backend/Dockerfile
+          build-args: PROJECT=backend
+          scan: "false"
+
+  database:
+    name: Database Migrations Image Cache
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/docker-build-check
+        with:
+          image-name: open-jii-database:layer-cache
+          cache-scope: database
+          dockerfile: packages/database/Dockerfile
+          scan: "false"
