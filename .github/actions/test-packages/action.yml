@@ -15,6 +15,10 @@ inputs:
   macro-sb-test-key:
     description: "AES key for decrypting macro-sandbox test scripts"
     required: false
+  shard:
+    description: "Vitest shard such as 1/2, read by the web and backend test scripts"
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -24,6 +28,7 @@ runs:
       shell: bash
       env:
         MACRO_SB_TEST_KEY: ${{ inputs.macro-sb-test-key }}
+        VITEST_SHARD: ${{ inputs.shard }}
       run: |
         echo "🧪 Testing affected packages"
 
@@ -31,14 +36,21 @@ runs:
         mapfile -t APPS < <(jq -r '.[]' <<<"$AFFECTED_APPS")
 
         TEST_ARGS=()
+        DEPENDENCY_ARGS=()
         for APP in "${APPS[@]}"; do
           TEST_ARGS+=("--filter=$APP")
+          DEPENDENCY_ARGS+=("--filter=$APP^...")
         done
 
-        echo "Running: pnpm turbo run test ${TEST_ARGS[*]}"
+        # Dependencies may replay from the turbo cache, but tests always run: some read
+        # files outside their package, which turbo does not hash.
+        pnpm turbo run build "${DEPENDENCY_ARGS[@]}"
+        NO_CACHE=(--only --cache=local:)
+
+        echo "Running: pnpm turbo run test ${NO_CACHE[*]} ${TEST_ARGS[*]}"
 
         TEST_LOG="$(mktemp)"
-        pnpm turbo run test "${TEST_ARGS[@]}" 2>&1 | tee "$TEST_LOG"
+        pnpm turbo run test "${NO_CACHE[@]}" "${TEST_ARGS[@]}" 2>&1 | tee "$TEST_LOG"
         EXIT_CODE=${PIPESTATUS[0]}
         set -e
 
@@ -49,8 +61,8 @@ runs:
           FAILED_APPS=()
           for APP in "${APPS[@]}"; do
             echo ""
-            echo "▶️ Running: pnpm turbo run test --filter=$APP"
-            if pnpm turbo run test "--filter=$APP"; then
+            echo "▶️ Running: pnpm turbo run test ${NO_CACHE[*]} --filter=$APP"
+            if pnpm turbo run test "${NO_CACHE[@]}" "--filter=$APP"; then
               echo "✅ Passed: $APP"
             else
               echo "❌ Failed: $APP"
@@ -64,8 +76,8 @@ runs:
             for FAILED_APP in "${FAILED_APPS[@]}"; do
               echo ""
               echo "🐛 Debug run for $FAILED_APP"
-              echo "▶️ Running: pnpm turbo run test --filter=$FAILED_APP --output-logs=full --summarize"
-              if pnpm turbo run test "--filter=$FAILED_APP" --output-logs=full --summarize; then
+              echo "▶️ Running: pnpm turbo run test ${NO_CACHE[*]} --filter=$FAILED_APP --output-logs=full --summarize"
+              if pnpm turbo run test "${NO_CACHE[@]}" "--filter=$FAILED_APP" --output-logs=full --summarize; then
                 echo "✅ Debug run passed: $FAILED_APP"
               else
                 echo "❌ Debug run failed: $FAILED_APP"

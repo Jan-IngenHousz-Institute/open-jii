@@ -48,18 +48,27 @@ jobs:
             echo "found=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          NAME="coverage-reports-$HEAD_SHA"
-          RUN_ID=$(gh api "repos/$REPO/actions/artifacts?name=$NAME&per_page=100" \
-            --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .workflow_run.id // empty' \
-            2>/dev/null || true)
+          # Each test job of the PR run uploads its own artifact under this prefix.
+          PREFIX="coverage-reports-$HEAD_SHA-"
+          RUN_ID=""
+          for CANDIDATE in $(gh api "repos/$REPO/actions/workflows/pr.yml/runs?head_sha=$HEAD_SHA&per_page=20" \
+              --jq '.workflow_runs | sort_by(.created_at) | reverse | .[].id' 2>/dev/null || true); do
+            COUNT=$(gh api "repos/$REPO/actions/runs/$CANDIDATE/artifacts?per_page=100" \
+              --jq "[.artifacts[] | select(.expired == false and (.name | startswith(\"$PREFIX\")))] | length" \
+              2>/dev/null || echo 0)
+            if [ "$COUNT" -gt 0 ]; then
+              RUN_ID=$CANDIDATE
+              break
+            fi
+          done
           if [ -z "$RUN_ID" ]; then
-            echo "No live artifact named $NAME; will regenerate."
+            echo "No live artifact named $PREFIX*; will regenerate."
             echo "found=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo "PR #$PR_NUMBER (head $HEAD_SHA): found $NAME on run $RUN_ID"
+          echo "PR #$PR_NUMBER (head $HEAD_SHA): found $COUNT artifacts named $PREFIX* on run $RUN_ID"
           echo "found=true" >> "$GITHUB_OUTPUT"
-          echo "artifact_name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "artifact_prefix=$PREFIX" >> "$GITHUB_OUTPUT"
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
 
       - name: Try to download coverage artifacts
@@ -68,7 +77,7 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         continue-on-error: true
         with:
-          name: ${{ steps.locate.outputs.artifact_name }}
+          pattern: ${{ steps.locate.outputs.artifact_prefix }}*
           path: ./coverage-artifacts
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
