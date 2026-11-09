@@ -171,6 +171,22 @@ describe("PlatformAnnotationsService", () => {
     expect(result.value.rows[0][1]).toBe("[]");
   });
 
+  it("matches a row by its experiment as well as its id", async () => {
+    const { experiment: other } = await testApp.createExperiment({ name: "Other trial", userId });
+    await annotate({ experimentId: other.id });
+    const data = page(["id", "annotations"], [["1", "[]"]]);
+
+    const result = await service.fill({
+      experimentId,
+      tableName: "raw_data",
+      data,
+      phoneAnnotationsFrom: "annotations",
+    });
+
+    assertSuccess(result);
+    expect(result.value.rows[0][1]).toBe("[]");
+  });
+
   it("leaves a read without annotations as it is, apart from the phone's column", async () => {
     const data = page(["id", "payload_annotations"], [["1", "[]"]]);
 

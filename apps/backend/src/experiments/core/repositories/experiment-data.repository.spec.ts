@@ -3367,6 +3367,44 @@ describe("ExperimentDataRepository", () => {
       ]);
     });
 
+    it("adds the platform's to a filtered store page's", async () => {
+      const servingStore = testApp.module.get<ServingStorePort>(SERVING_STORE_PORT);
+      vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(success([table]));
+      const countSql = "SELECT toString(count()) AS total";
+      vi.spyOn(servingStore, "executeQuery").mockImplementation(({ sql }) =>
+        Promise.resolve(
+          sql.startsWith(countSql)
+            ? success({
+                columns: [{ name: "total", type_name: "LONG", type_text: "BIGINT", position: 0 }],
+                rows: [["1"]],
+                totalRows: 1,
+                truncated: false,
+              })
+            : success({
+                columns: [column("id", 0), column("annotations", 1)],
+                rows: [["1", JSON.stringify([phoneComment])]],
+                totalRows: 1,
+                truncated: false,
+              }),
+        ),
+      );
+
+      const result = await repository.getTableData({
+        experimentId: experiment.id,
+        experiment,
+        tableName: "raw_data",
+        filters: [{ column: "id", operator: "equals", value: "1" }],
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(annotationsOf(result.value[0].data?.rows)).toEqual([
+        [phoneComment, expect.objectContaining({ id: flag.id, type: "flag" })],
+      ]);
+    });
+
     it("shows a pseudonym for the platform's authors in an anonymised experiment", async () => {
       const servingStore = testApp.module.get<ServingStorePort>(SERVING_STORE_PORT);
       vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(success([table]));
