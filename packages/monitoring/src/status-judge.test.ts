@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEPENDENCY_WINDOW_MINUTES,
-  INGEST_THROUGHPUT_WINDOW_MINUTES,
   LAG_WINDOW_MINUTES,
   MACRO_FAILURE_WINDOW_MINUTES,
   PIPELINE_WINDOW_MINUTES,
@@ -77,7 +76,6 @@ const HEALTHY_READINGS: StatusReadings = {
   ingestRefusedPublishes: 0,
   ingestThrottled: 0,
   iotUp: 1,
-  ingestPublished: 300,
   deliveryLatencyP95: 20,
   ingestIdle: 2,
   devicePublishesBeforeIdle: 4500,
@@ -586,7 +584,6 @@ describe("the thresholds and windows", () => {
       MACRO_FAILURE_WINDOW_MINUTES,
       DEPENDENCY_WINDOW_MINUTES,
       LAG_WINDOW_MINUTES,
-      INGEST_THROUGHPUT_WINDOW_MINUTES,
       PIPELINE_WINDOW_MINUTES,
     }).toEqual({
       WEBSITE_SLOW_PROBE_MS: 3000,
@@ -608,7 +605,6 @@ describe("the thresholds and windows", () => {
       MACRO_FAILURE_WINDOW_MINUTES: 60,
       DEPENDENCY_WINDOW_MINUTES: 10,
       LAG_WINDOW_MINUTES: 5,
-      INGEST_THROUGHPUT_WINDOW_MINUTES: 5,
       PIPELINE_WINDOW_MINUTES: 75,
     });
   });
@@ -856,16 +852,6 @@ describe("recording measured outcomes", () => {
     });
     expect(componentOf(late, "data-intake")).not.toHaveProperty("delayMinutes");
     expect(componentOf(recovered, "data-delivery")).not.toHaveProperty("delayMinutes");
-  });
-
-  it("reports messages per minute over the throughput window", () => {
-    const busy = run(undefined, "2026-11-03T12:00:00.000Z", { readings: { ingestPublished: 300 } });
-    const quiet = run(undefined, "2026-11-03T12:00:00.000Z", {
-      readings: { ingestPublished: undefined },
-    });
-
-    expect(busy.document.messagesPerMinute).toBe(300 / INGEST_THROUGHPUT_WINDOW_MINUTES);
-    expect(quiet.document.messagesPerMinute).toBe(0);
   });
 });
 

@@ -55,7 +55,7 @@ Local development commands that need a credential (a dev session, Linear access)
    - `fix(backend): reject expired API keys`
    - `docs: update contributing guide`
 
-   Common scopes are the app or package name (`web`, `backend`, `mobile`, `data`, `docs`, `ui`, ...).
+   Common scopes are the app or package name (`web`, `backend`, `mobile`, `data`, `docs`, `status`, `ui`, ...).
 
 5. Open a pull request against `main`. Describe the problem and the solution, and follow the release metadata contract below. CI must pass before review.
 

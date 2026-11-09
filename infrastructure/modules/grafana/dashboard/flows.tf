@@ -360,6 +360,7 @@ locals {
     "macro-sandbox-javascript",
     "macro-sandbox-python",
     "macro-sandbox-r",
+    "status",
     "web",
   ]
 

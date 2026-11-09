@@ -118,8 +118,6 @@ export const statusDocumentSchema = z.object({
   components: componentsSchema,
   incidents: z.array(incidentSchema),
   notices: z.array(noticeSchema),
-  /** Messages IoT accepted over the last few minutes, per minute. */
-  messagesPerMinute: z.optional(z.number().check(z.nonnegative())),
 });
 export type StatusDocument = z.infer<typeof statusDocumentSchema>;
 

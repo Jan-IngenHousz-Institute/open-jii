@@ -1,6 +1,6 @@
 import { z } from "zod/mini";
 
-import { INGEST_THROUGHPUT_WINDOW_MINUTES, STATUS_COMPONENTS } from "./status-components.js";
+import { STATUS_COMPONENTS } from "./status-components.js";
 import type { StatusReadings } from "./status-components.js";
 import {
   STATUS_DOCUMENT_VERSION,
@@ -409,7 +409,6 @@ export function judgeStatus(input: JudgeInput): JudgeResult {
       components,
       incidents: input.incidents,
       notices: [],
-      messagesPerMinute: (input.readings.ingestPublished ?? 0) / INGEST_THROUGHPUT_WINDOW_MINUTES,
     },
     state: {
       version: PUBLISHER_STATE_VERSION,

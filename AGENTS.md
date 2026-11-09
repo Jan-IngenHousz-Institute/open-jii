@@ -13,6 +13,7 @@ verify them against the code.
 | `apps/data`          | Databricks pipelines and notebooks. Separate Python toolchain, outside the pnpm dev loop.                                    | `apps/data/README.md`                                               |
 | `apps/macro-sandbox` | Sandboxed runtimes that execute user-authored macros.                                                                        | `apps/macro-sandbox/README.md`                                      |
 | `apps/docs`          | The public documentation site.                                                                                               | `apps/docs/README.md`                                               |
+| `apps/status`        | Public status page. Static export, hosted apart from the platform; reads data/status.json.                                   | `apps/status/README.md`                                             |
 | `apps/tools`         | Standalone device utilities, e.g. the MultispeQ MQTT interface.                                                              | `apps/tools/multispeq_mqtt_interface/README.md`                     |
 
 | Package                                                           | Owns                                                                |
