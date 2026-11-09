@@ -560,6 +560,45 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect((await page(2)).rows).toEqual([["5", "oldest"]]);
   });
 
+  it("pages through rows that share a sort value, each on exactly one page", async () => {
+    const row = {
+      experiment_id: "e3",
+      device_id: "d1",
+      device_name: "Same name",
+      _commit_version: 1,
+      _commit_timestamp: "2026-10-01 08:00:01",
+    };
+    await admin.insert({
+      table: "measurements",
+      values: [
+        { ...row, id: 21, timestamp: "2026-10-01 08:00:00" },
+        { ...row, id: 22, timestamp: "2026-09-30 08:00:00" },
+        { ...row, id: 23, timestamp: "2026-09-29 08:00:00" },
+      ],
+      format: "JSONEachRow",
+    });
+
+    const page = async (offset: number) =>
+      (
+        await rowsOf({
+          tableName: "raw_data",
+          tableType: "static",
+          experimentId: "e3",
+          columns: ["id"],
+          ordering: { column: "device_name", direction: "ASC" },
+          limit: 1,
+          offset,
+        })
+      ).rows;
+
+    // Equal names fall back to the store's key, which starts with the time.
+    expect([...(await page(0)), ...(await page(1)), ...(await page(2))]).toEqual([
+      ["23"],
+      ["22"],
+      ["21"],
+    ]);
+  });
+
   it("flattens payload fields by type and keeps a field named like a column apart from it", async () => {
     const macroSchema = VariantSchema.merge([PAYLOAD_SCHEMAS[1].schema, PAYLOAD_SCHEMAS[2].schema]);
     const data = await rowsOf({

@@ -218,7 +218,7 @@ describe("StoreQueryBuilder", () => {
         `WHERE (${key}) IN (SELECT ${key}`,
         "FROM experiment_macro_results(experiment = 'e1')",
         "WHERE macro_id = 'm1' AND device_id = 'd1'",
-        "ORDER BY timestamp DESC NULLS LAST",
+        `ORDER BY timestamp DESC NULLS LAST, ${key}`,
         "LIMIT 10",
         "OFFSET 20)",
         "ORDER BY timestamp DESC NULLS LAST",

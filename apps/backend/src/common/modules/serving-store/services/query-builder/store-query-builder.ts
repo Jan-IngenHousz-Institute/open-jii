@@ -226,11 +226,13 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       this.ordering !== undefined && this.limitValue !== undefined && !this.isDistinct;
     if (isSortedPage) {
       const key = this.key.join(", ");
+      // Rows with equal sort values come in no fixed order, so a row on a page boundary could land
+      // on two pages or on none. The key, unique per row, fixes the order.
       const page = this.joinClauses([
         `SELECT ${key}`,
         `FROM ${this.fromClause}`,
         where,
-        order,
+        `${order}, ${key}`,
         limitClause,
         offsetClause,
       ]);
