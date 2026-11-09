@@ -121,4 +121,16 @@ describe("list departure boundary", () => {
     expect(flush).not.toHaveBeenCalled();
     expect(useRouter().push).toHaveBeenCalledWith("/detail");
   });
+
+  it("flushes replace only when it changes the pathname", () => {
+    window.history.replaceState(null, "", "/source");
+    const flush = vi.fn();
+    const { result } = renderHook(() => useRegisteredNavigation(flush), {
+      wrapper: ListDepartureProvider,
+    });
+    act(() => result.current.router.replace("/source?focus=search#section"));
+    expect(flush).not.toHaveBeenCalled();
+    act(() => result.current.router.replace("/different"));
+    expect(flush).toHaveBeenCalledOnce();
+  });
 });

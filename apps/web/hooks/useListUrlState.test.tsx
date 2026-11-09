@@ -589,4 +589,67 @@ describe("useListUrlState", () => {
     });
     expect(replace).toHaveBeenCalledExactlyOnceWith("/list?q=wheat", { scroll: false });
   });
+
+  it("restores a same-path destination that equals the URL from before the flush", () => {
+    const { result, rerender } = renderHook(
+      () => ({
+        list: useListUrlState(withSearch),
+        router: useDepartureRouter(),
+      }),
+      { wrapper: ListDepartureProvider },
+    );
+    act(() => result.current.list.setSearch("draft"));
+    act(() => result.current.router.push("/list"));
+    expect(location.search).toBe("?q=draft");
+    // Next can batch the native replacement and push into the original search-params object.
+    window.history.replaceState(null, "", "/list");
+    rerender();
+    expect(result.current.list.search).toBe("");
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("repairs a late router echo after a native flush when the list stays mounted", () => {
+    const { result, rerender } = renderHook(
+      () => ({
+        list: useListUrlState(withSearch),
+        router: useDepartureRouter(),
+      }),
+      { wrapper: ListDepartureProvider },
+    );
+    act(() => result.current.list.setSearch("earlier"));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    act(() => result.current.list.setSearch("latest"));
+    act(() => result.current.router.push("/list"));
+    expect(location.search).toBe("?q=latest");
+    replace.mockClear();
+    setSearchParams("q=earlier");
+    rerender();
+    expect(result.current.list.search).toBe("latest");
+    expect(replace).toHaveBeenCalledExactlyOnceWith("/list?q=latest", { scroll: false });
+    setSearchParams("q=latest");
+    rerender();
+    expect(result.current.list.search).toBe("latest");
+  });
+
+  it("keeps the draft and its deadline through a hash-only history step", () => {
+    setSearchParams("q=committed");
+    const { result, rerender } = renderHook(() => useListUrlState(withSearch));
+    act(() => result.current.setSearch("draft"));
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    window.history.pushState(null, "", "/list?q=committed#section");
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams("q=committed"));
+    rerender();
+    expect(result.current.search).toBe("draft");
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    expect(replace).toHaveBeenCalledExactlyOnceWith("/list?q=draft#section", { scroll: false });
+  });
 });

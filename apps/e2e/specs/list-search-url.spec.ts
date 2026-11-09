@@ -55,6 +55,7 @@ test("typing then following a row before 300 ms preserves the source entry", asy
   await search.fill("Winter Wheat");
   expect(new URL(page.url()).searchParams.has("q")).toBe(false);
   await row.click({ force: true });
+  await page.clock.runFor(400);
   await page.clock.resume();
   await expect(page).toHaveURL(
     (url) => url.pathname === destination && !url.searchParams.has("q"),
@@ -105,6 +106,7 @@ test("a delayed router replacement cannot undo a newer departure flush", async (
     (request) => new URL(request.url()).pathname === destination && !!request.headers().rsc,
   );
   await row.click({ force: true });
+  await page.clock.runFor(400);
   await page.clock.resume();
   await navigating;
   release();
@@ -147,6 +149,7 @@ test("Back cancels a draft and Forward restores the last committed term", async 
   await freeze(page);
   await search.fill("Winter Wheat");
   await page.goBack();
+  await page.clock.runFor(400);
   await page.clock.resume();
   await expect(page).toHaveURL((url) => url.pathname === `/${locale}/platform` && !url.search);
   await page.goForward();
@@ -213,11 +216,39 @@ for (const exit of ["row", "sidebar", "header", "shortcut", "palette"] as const)
       await page.getByRole("button", { name: "Open command palette" }).click({ force: true });
       await page.getByRole("option", { name: /^Workbooks/ }).click({ force: true });
     }
+    await page.clock.runFor(400);
     await page.clock.resume();
     await expect(page).toHaveURL(
       (url) => url.pathname === destination && !url.searchParams.has("q"),
       { timeout: 20_000 },
     );
+    await page.goBack();
+    await expect(page).toHaveURL(
+      (url) => url.pathname === listPath && url.searchParams.get("q") === "Winter Wheat",
+    );
+    await expect(search).toHaveValue("Winter Wheat");
+  });
+}
+
+for (const exit of ["header", "sidebar"] as const) {
+  test(`a same-list ${exit} navigation keeps the flushed source and resets the destination`, async ({
+    page,
+  }) => {
+    const search = await openList(page);
+    await freeze(page);
+    await search.fill("Winter Wheat");
+    const link =
+      exit === "header"
+        ? page.locator("header").getByRole("link", { name: "Experiments", exact: true })
+        : page
+            .locator('a[href="' + listPath + '"]')
+            .filter({ hasText: "Experiments" })
+            .first();
+    await link.click({ force: true });
+    await page.clock.runFor(400);
+    await page.clock.resume();
+    await expect(page).toHaveURL((url) => url.pathname === listPath && !url.searchParams.has("q"));
+    await expect(search).toHaveValue("");
     await page.goBack();
     await expect(page).toHaveURL(
       (url) => url.pathname === listPath && url.searchParams.get("q") === "Winter Wheat",

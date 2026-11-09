@@ -114,11 +114,15 @@ function buildUrl<S extends ListFilterShape, T extends ListSortItem>(
   return `${source.pathname}${query ? `?${query}` : ""}${source.hash}`;
 }
 
+/**
+ * One writer merges search, filters and sort so concurrent edits cannot undo each other.
+ * Replacements preserve unowned parameters and scroll without adding history steps.
+ */
 export function useListUrlState<S extends ListFilterShape, T extends ListSortItem>(
-  options: ListUrlStateOptions<S, T>,
+  config: ListUrlStateOptions<S, T>,
 ) {
-  const { filters, sort, searchKey } = options;
-  options = useMemo(() => ({ filters, sort, searchKey }), [filters, sort, searchKey]);
+  const { filters, sort, searchKey } = config;
+  const options = useMemo(() => ({ filters, sort, searchKey }), [filters, sort, searchKey]);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -131,9 +135,9 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
   const pending = useRef(false);
   const intent = useRef<"search" | "immediate" | null>("immediate");
   const emitted = useRef<string[]>([]);
-  const lastTransport = useRef<"router" | "history">("router");
-  const observed = useRef({ pathname, serialized: serialize(toParams(options, values)) });
-  const urlSerialized = serialize(toParams(options, parse(options, searchParams)));
+  const observed = useRef<{ pathname: string; serialized: string } | null>(null);
+  observed.current ??= { pathname, serialized: serialize(toParams(options, values)) };
+  const lastBrowserUrl = useRef<string | null>(null);
 
   const cancel = useCallback(() => {
     if (timer.current !== null) clearTimeout(timer.current);
@@ -149,12 +153,17 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
       const next = buildUrl(options, snapshot.current, source);
       pending.current = false;
       intent.current = null;
+      const written = serialize(toParams(options, snapshot.current));
+      if (transport === "history") observed.current = { pathname, serialized: written };
       const query = source.searchParams.toString().replace(/%2C/g, ",");
       if (next === `${source.pathname}${query ? `?${query}` : ""}${source.hash}`) return;
-      emitted.current.push(serialize(toParams(options, snapshot.current)));
-      lastTransport.current = transport;
-      if (transport === "history") window.history.replaceState(null, "", next);
-      else router.replace(next, { scroll: false });
+      if (transport === "history") {
+        window.history.replaceState(null, "", next);
+        lastBrowserUrl.current = window.location.href;
+      } else {
+        emitted.current.push(written);
+        router.replace(next, { scroll: false });
+      }
     },
     [cancel, options, pathname, router],
   );
@@ -165,7 +174,17 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
 
   useEffect(() => {
     mounted.current = true;
+    lastBrowserUrl.current = window.location.href;
     const onHistoryStep = () => {
+      const current = new URL(window.location.href);
+      const previous = lastBrowserUrl.current ? new URL(lastBrowserUrl.current) : null;
+      lastBrowserUrl.current = current.href;
+      if (
+        previous?.pathname === current.pathname &&
+        previous.search === current.search &&
+        previous.hash !== current.hash
+      )
+        return;
       cancel();
       pending.current = false;
       intent.current = null;
@@ -194,19 +213,28 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
     return departure?.register(flush);
   }, [departure, flush, options.searchKey]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- a native flush and same-path push can retain Next's params object; reconcile the live URL after every render.
   useEffect(() => {
-    const samePath = observed.current.pathname === pathname;
-    if (samePath && observed.current.serialized === urlSerialized) return;
+    if (window.location.pathname !== pathname) return;
+    lastBrowserUrl.current = window.location.href;
+    const params = new URLSearchParams(window.location.search);
+    const restored = parse(options, params);
+    const urlSerialized = serialize(toParams(options, restored));
+    const samePath = observed.current?.pathname === pathname;
+    if (
+      samePath &&
+      observed.current?.serialized === urlSerialized &&
+      (pending.current ||
+        emitted.current.length > 0 ||
+        serialize(toParams(options, snapshot.current)) === urlSerialized)
+    )
+      return;
     observed.current = { pathname, serialized: urlSerialized };
     const echoed = samePath ? emitted.current.indexOf(urlSerialized) : -1;
     if (echoed >= 0) {
       emitted.current = emitted.current.slice(echoed + 1);
       // An acknowledgment never commits a newer draft ahead of its timer.
-      if (
-        !pending.current &&
-        lastTransport.current === "router" &&
-        serialize(toParams(options, snapshot.current)) !== urlSerialized
-      )
+      if (!pending.current && serialize(toParams(options, snapshot.current)) !== urlSerialized)
         write("router");
       return;
     }
@@ -214,10 +242,9 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
     pending.current = false;
     intent.current = null;
     emitted.current = [];
-    const restored = parse(options, searchParams);
     snapshot.current = restored;
     setValues(restored);
-  }, [cancel, options, pathname, searchParams, urlSerialized, write]);
+  });
 
   useEffect(() => {
     if (intent.current === null) return;

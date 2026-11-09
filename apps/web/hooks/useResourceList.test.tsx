@@ -1,3 +1,4 @@
+import { openOnUrl } from "@/test/list-request";
 import { act, renderHook, waitFor } from "@/test/test-utils";
 import { queryOptions } from "@tanstack/react-query";
 import * as nav from "next/navigation";
@@ -62,10 +63,9 @@ describe("useResourceList", () => {
   });
 
   it("asks for page 1 with the URL's filters and sort and no search", async () => {
-    vi.mocked(nav.useSearchParams).mockReturnValue(
-      new nav.ReadonlyURLSearchParams(
-        `status=stale&sort=${encodeURIComponent(JSON.stringify([{ field: "name", direction: "asc" }]))}`,
-      ),
+    openOnUrl(
+      "/list",
+      `status=stale&sort=${encodeURIComponent(JSON.stringify([{ field: "name", direction: "asc" }]))}`,
     );
     const { result, views } = renderList(() => envelope(rows(2), 1, 1));
 

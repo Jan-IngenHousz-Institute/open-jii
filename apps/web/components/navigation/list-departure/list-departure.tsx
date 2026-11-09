@@ -41,7 +41,8 @@ export function useDepartureRouter() {
         router.push(...args);
       },
       replace: (...args: Parameters<typeof router.replace>) => {
-        departure?.flush();
+        if (new URL(args[0], window.location.href).pathname !== window.location.pathname)
+          departure?.flush();
         router.replace(...args);
       },
     }),
