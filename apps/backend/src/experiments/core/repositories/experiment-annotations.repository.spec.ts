@@ -225,6 +225,20 @@ describe("ExperimentAnnotationsRepository", () => {
     expect(found.value).toEqual([{ ...kept, userName: "Ada Lovelace" }]);
   });
 
+  it("names an author who deactivated their profile as every other read does", async () => {
+    const kept = record();
+    await insert(kept);
+    await testApp.database
+      .update(profiles)
+      .set({ firstName: "Ada", lastName: "Lovelace", activated: false })
+      .where(eq(profiles.userId, userId));
+
+    const found = await repository.findCopies([kept.id]);
+
+    assertSuccess(found);
+    expect(found.value).toEqual([{ ...kept, userName: "Unknown User" }]);
+  });
+
   it("finds no name for an author without a profile", async () => {
     const orphan = record({ createdBy: faker.string.uuid() });
     await insert(orphan);
