@@ -3,8 +3,8 @@
 **How to tell researchers about a problem or planned work on the public status page.** The page
 colours each component from our own checks. Only a person can say what is wrong, what a researcher
 can do about it and when to expect news. You write that in Contentful. The status publisher reads
-the published entries every minute, puts them on https://status.openjii.org and posts each change
-to the status Slack channel.
+the published entries every five minutes, puts them on https://status.openjii.org and posts each
+change to the status Slack channel.
 
 ## When to post
 
@@ -130,9 +130,10 @@ Untick Active to take a notice down at once. The notice also goes to Slack.
 
 ## How long changes take
 
-A published change appears on the page in about two minutes. The publisher runs every minute, the
-data file is cached for 30 seconds, and an open page fetches it again every minute, so nobody needs
-to reload. Slack gets its message when the publisher sees the change, in the same window.
+A published change appears on the page within about seven minutes. The publisher reads Contentful
+every five minutes, because the website shares the space's monthly API quota, then the data file is
+cached for 30 seconds and an open page fetches it again every minute, so nobody needs to reload.
+Slack gets its message when the publisher sees the change, in the same window.
 
 ## If a change does not show
 

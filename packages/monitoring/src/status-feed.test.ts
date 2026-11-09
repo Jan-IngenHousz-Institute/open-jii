@@ -4,9 +4,11 @@ import { toStatusContent } from "./status-content.js";
 import type { StatusDocument } from "./status-document.js";
 import { statusEvents } from "./status-events.js";
 import {
+  CONTENT_READ_MINUTES,
   CONTENT_STALE_MINUTES,
   STATUS_FEED_STATE_VERSION,
   contentFailure,
+  isContentDue,
   statusFeedStateSchema,
 } from "./status-feed.js";
 
@@ -122,5 +124,44 @@ describe("contentFailure", () => {
     expect(contentFailure("timed out", undefined, after(0))).toBe(
       "Contentful is unreadable and no earlier read is kept: timed out",
     );
+  });
+});
+
+describe("isContentDue", () => {
+  const cached = { fetchedAt: "2026-11-03T12:00:24.000Z", incidents: [], notices: [] };
+  const after = (minutes: number, seconds = 0) =>
+    new Date(Date.parse(cached.fetchedAt) + (minutes * 60 + seconds) * 1000);
+
+  it("reads when nothing is cached", () => {
+    expect(isContentDue(undefined, after(0))).toBe(true);
+  });
+
+  it.each([
+    [0, false],
+    [CONTENT_READ_MINUTES - 1, false],
+    [CONTENT_READ_MINUTES, true],
+    [CONTENT_READ_MINUTES + 3, true],
+  ])("after %i minutes reads: %s", (minutes, due) => {
+    expect(isContentDue(cached, after(minutes))).toBe(due);
+  });
+
+  it("counts whole minutes, so a run early in its minute is not put off to the next one", () => {
+    expect(isContentDue(cached, new Date("2026-11-03T12:05:01.000Z"))).toBe(true);
+  });
+
+  it("reads 288 times in a day of runs once a minute while every read works", () => {
+    let fetchedAt: string | undefined;
+    let reads = 0;
+
+    for (let minute = 0; minute < 1440; minute += 1) {
+      const now = new Date(Date.parse("2026-11-03T00:00:24.000Z") + minute * 60_000);
+      const cache = fetchedAt === undefined ? undefined : { ...cached, fetchedAt };
+      if (isContentDue(cache, now)) {
+        reads += 1;
+        fetchedAt = now.toISOString();
+      }
+    }
+
+    expect(reads).toBe(288);
   });
 });

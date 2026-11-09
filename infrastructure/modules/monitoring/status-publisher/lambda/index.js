@@ -27,6 +27,7 @@ const {
 const {
   STATUS_FEED_STATE_VERSION,
   contentFailure,
+  isContentDue,
   statusFeedStateSchema,
 } = require("./lib/status-feed.js");
 const { judgeStatus, publisherStateSchema } = require("./lib/status-judge.js");
@@ -241,6 +242,16 @@ async function readFeedState(bucket) {
   }
 }
 
+// The cached read decides whether Contentful is due, so it comes first.
+async function readContent(stateBucket, secretArn, now) {
+  const feed = await readFeedState(stateBucket);
+  const contentRead = isContentDue(feed?.content, now)
+    ? await readStatusContent(secretArn, now)
+    : {};
+
+  return { feed, contentRead };
+}
+
 async function publishEvents(topicArn, events) {
   for (const batch of batchEvents(events)) {
     const result = await sns.send(
@@ -312,12 +323,11 @@ exports.handler = async (event) => {
   // EventBridge delivers a scheduled event some seconds late; bucketing by the wall clock would
   // skip or repeat minutes.
   const now = event?.time ? new Date(event.time) : new Date();
-  const [website, platform, previous, feed, contentRead, ...regions] = await Promise.all([
+  const [website, platform, previous, { feed, contentRead }, ...regions] = await Promise.all([
     probe(websiteProbeUrl(required("WEB_URL"), now), isWebsiteHealthy),
     probe(required("API_HEALTH_URL"), isApiHealthy),
     readState(stateBucket, STATE_KEY, publisherStateSchema),
-    readFeedState(stateBucket),
-    readStatusContent(contentfulSecretArn, now),
+    readContent(stateBucket, contentfulSecretArn, now),
     ...statusQueries(config).map((region) => regionReadings(region, now)),
   ]);
 
