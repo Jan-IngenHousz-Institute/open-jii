@@ -27,6 +27,7 @@ import { Result, success, failure, AppError, tryCatch } from "../../../common/ut
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
 import { ExperimentStoreReadsService } from "../../application/services/experiment-store-reads.service";
 import { ExperimentWarehouseReadsService } from "../../application/services/experiment-warehouse-reads.service";
+import { PlatformAnnotationsService } from "../../application/services/platform-annotations.service";
 import {
   MACRO_TABLE_CONFIG,
   PAGE_TOO_LARGE_MESSAGE,
@@ -97,6 +98,8 @@ const LATE_PAYLOAD_MIN_ROWS = 200_000;
 /** The row id every payload view carries. */
 const ROW_ID = "id";
 
+const ANNOTATIONS = "annotations";
+
 /** What a read of one table flattens and hides, and the names its base columns hold. */
 interface TableShape {
   source: ExperimentDataSource;
@@ -107,6 +110,11 @@ interface TableShape {
   exceptColumns: string[];
   reservedColumns: string[];
   baseColumns?: string[];
+  /**
+   * The column a read's phone annotations come from: the store's own annotations, the warehouse
+   * view's payload_annotations, or none, as on an upload table. The platform's come from Postgres.
+   */
+  phoneAnnotationsFrom?: string;
 }
 
 type RenamedColumns = Map<string, { name: string; source: VariantColumn }>;
@@ -126,6 +134,7 @@ export class ExperimentDataRepository {
     @Inject(CACHE_PORT) private readonly cachePort: CachePort,
     @Inject(SCHEMA_CACHE_PORT) private readonly schemaCache: CachePort,
     private readonly contributorAnonymizer: ContributorAnonymizerService,
+    private readonly platformAnnotations: PlatformAnnotationsService,
     private readonly warehouseReads: ExperimentWarehouseReadsService,
     private readonly storeReads: ExperimentStoreReadsService,
   ) {}
@@ -292,6 +301,16 @@ export class ExperimentDataRepository {
         }
         this.logRead(read, pageResult.value);
 
+        const filled = await this.withPlatformAnnotations(
+          experimentId,
+          tableName,
+          shape,
+          pageResult.value,
+        );
+        if (filled.isFailure()) {
+          return filled;
+        }
+
         const totalRows = Number(countResult.value.rows[0]?.[0] ?? 0);
         return success([
           this.tablePage({
@@ -301,7 +320,7 @@ export class ExperimentDataRepository {
             page,
             pageSize,
             rowCount: totalRows,
-            data: pageResult.value,
+            data: filled.value,
           }),
         ]);
       }
@@ -352,6 +371,16 @@ export class ExperimentDataRepository {
     }
     this.logRead(read, pageResult.value);
 
+    const filled = await this.withPlatformAnnotations(
+      experimentId,
+      tableName,
+      shape,
+      pageResult.value,
+    );
+    if (filled.isFailure()) {
+      return filled;
+    }
+
     return success([
       this.tablePage({
         tableName,
@@ -360,7 +389,7 @@ export class ExperimentDataRepository {
         page: usedPage,
         pageSize: usedPageSize,
         rowCount: shape.metadata.rowCount,
-        data: pageResult.value,
+        data: filled.value,
       }),
     ]);
   }
@@ -729,6 +758,7 @@ export class ExperimentDataRepository {
 
     const exceptColumns = [...config.exceptColumns];
     const variants: TableShape["variants"] = [];
+    const phoneAnnotationsFrom = source === "store" ? ANNOTATIONS : config.phoneAnnotationsColumn;
 
     if (config.variantColumns.includes("macro_output")) {
       if (macroSchema) {
@@ -779,7 +809,14 @@ export class ExperimentDataRepository {
     }
 
     if (variants.length === 0 && tableType === "upload") {
-      return success({ source, metadata, variants, exceptColumns, reservedColumns: [] });
+      return success({
+        source,
+        metadata,
+        variants,
+        exceptColumns,
+        reservedColumns: [],
+        phoneAnnotationsFrom,
+      });
     }
 
     const viewColumnsResult = await this.viewColumns(source, tableType, identifier);
@@ -801,6 +838,7 @@ export class ExperimentDataRepository {
       exceptColumns,
       reservedColumns,
       baseColumns: viewColumnsResult.value,
+      phoneAnnotationsFrom,
     });
   }
 
@@ -915,8 +953,9 @@ export class ExperimentDataRepository {
       "columns" | "filters" | "aggregation" | "distinct" | "ordering" | "limit" | "offset"
     > = {},
   ): Promise<Result<TableQuery>> {
-    const { columns, filters, aggregation, distinct, ordering, limit, offset } = options;
+    const { filters, aggregation, distinct, ordering, limit, offset } = options;
     const { metadata, variants, exceptColumns, reservedColumns } = shape;
+    const columns = this.withPhoneAnnotations(shape, options.columns);
 
     let effectiveOrdering = ordering;
     const questionType =
@@ -1072,12 +1111,17 @@ export class ExperimentDataRepository {
     const data: SchemaData = { ...dataResult.value, rows, totalRows: totalResult.value, truncated };
     this.logRead(read, data);
 
+    const filled = await this.withPlatformAnnotations(experiment.id, tableName, shape, data);
+    if (filled.isFailure()) {
+      return filled;
+    }
+
     return success([
       {
         name: tableName,
         catalog_name: experiment.name,
         schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
-        data: this.transformSchemaData(data, experiment, shape),
+        data: this.transformSchemaData(filled.value, experiment, shape),
         page: 1,
         pageSize: rows.length,
         totalRows: data.totalRows,
@@ -1293,14 +1337,50 @@ export class ExperimentDataRepository {
     shape: TableShape,
   ): SchemaDataDto["columns"] {
     const renamed = this.renamedColumns(shape);
-    return columns.map((column) => {
+    const hidden = this.separatePhoneAnnotations(shape);
+    return columns.flatMap((column) => {
+      if (column.name === hidden) {
+        return [];
+      }
       const joined = shape.columns?.find((c) => c.name === column.name);
       const renamedFrom = joined?.renamedFrom ?? renamed.get(column.name);
-      return {
-        ...column,
-        ...(joined?.sourceTable ? { sourceTable: joined.sourceTable } : {}),
-        ...(renamedFrom ? { renamedFrom } : {}),
-      };
+      return [
+        {
+          ...column,
+          ...(joined?.sourceTable ? { sourceTable: joined.sourceTable } : {}),
+          ...(renamedFrom ? { renamedFrom } : {}),
+        },
+      ];
+    });
+  }
+
+  /** A read of the annotations also reads the phone's, when they sit in a column of their own. */
+  private withPhoneAnnotations(shape: TableShape, columns?: string[]): string[] | undefined {
+    const phone = this.separatePhoneAnnotations(shape);
+    if (phone === undefined || columns === undefined) {
+      return columns;
+    }
+    const missesPhoneColumn = columns.includes(ANNOTATIONS) && !columns.includes(phone);
+    return missesPhoneColumn ? [...columns, phone] : columns;
+  }
+
+  /** The column the phone's annotations come from when it is not the annotations column itself. */
+  private separatePhoneAnnotations(shape: TableShape): string | undefined {
+    return shape.phoneAnnotationsFrom === ANNOTATIONS ? undefined : shape.phoneAnnotationsFrom;
+  }
+
+  /** Each row's annotations: the phone's, then the platform's from Postgres. */
+  private withPlatformAnnotations(
+    experimentId: string,
+    tableName: string,
+    shape: TableShape,
+    data: SchemaData,
+  ): Promise<Result<SchemaData>> {
+    return this.platformAnnotations.fill({
+      experimentId,
+      tableName,
+      data,
+      phoneAnnotationsFrom: shape.phoneAnnotationsFrom,
     });
   }
 

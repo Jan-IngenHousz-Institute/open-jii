@@ -31,6 +31,7 @@ import { ExperimentStoreReadsService } from "./application/services/experiment-s
 import { ExperimentWarehouseReadsService } from "./application/services/experiment-warehouse-reads.service";
 import { ExportRunReconcilerService } from "./application/services/export-run-reconciler.service";
 import { MultipartUploadService } from "./application/services/multipart-upload.service";
+import { PlatformAnnotationsService } from "./application/services/platform-annotations.service";
 import { UploadRunReconcilerService } from "./application/services/upload-run-reconciler.service";
 import { AttachWorkbookUseCase } from "./application/use-cases/attach-workbook/attach-workbook";
 // Use Cases
@@ -241,6 +242,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     // Services
     EmbargoProcessorService,
     ExperimentDataOutboxWorker,
+    PlatformAnnotationsService,
     ExportRunReconcilerService,
     ContributorAnonymizerService,
     ExperimentDataSourceService,
