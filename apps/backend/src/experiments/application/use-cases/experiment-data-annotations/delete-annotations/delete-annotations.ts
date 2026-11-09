@@ -1,14 +1,13 @@
-import { Injectable, Logger, Inject } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import { ExperimentAnnotationRowsAffected } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 import { AppError, failure, Result, success } from "../../../../../common/utils/fp-utils";
 import { DeleteAnnotationsRequest } from "../../../../core/models/experiment-data-annotation.model";
-import { DATABRICKS_PORT } from "../../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../../core/ports/databricks.port";
-import { ExperimentAnnotationsWarehouseRepository } from "../../../../core/repositories/experiment-annotations-warehouse.repository";
 import { ExperimentAnnotationsRepository } from "../../../../core/repositories/experiment-annotations.repository";
+import { ExperimentDataOutboxRepository } from "../../../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
+import { ExperimentDataOutboxWorker } from "../../../services/experiment-data-outbox.worker";
 
 @Injectable()
 export class DeleteAnnotationsUseCase {
@@ -16,9 +15,9 @@ export class DeleteAnnotationsUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly annotationsWarehouseRepository: ExperimentAnnotationsWarehouseRepository,
     private readonly annotationsRepository: ExperimentAnnotationsRepository,
-    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
 
   async execute(
@@ -59,65 +58,28 @@ export class DeleteAnnotationsUseCase {
     }
 
     // The right to contribute here is enforced by @CanAccess.
-    if ("annotationId" in request) {
-      const result = await this.annotationsWarehouseRepository.deleteAnnotation(
-        experimentId,
-        request.annotationId,
+    const written = await this.annotationsRepository.transaction(async (tx) => {
+      const deleted =
+        "annotationId" in request
+          ? await this.annotationsRepository.delete(tx, experimentId, request.annotationId)
+          : await this.annotationsRepository.deleteFromRows(
+              tx,
+              experimentId,
+              request.tableName,
+              request.rowIds,
+              request.type,
+            );
+      await this.outboxRepository.owe(
+        tx,
+        deleted.map((recordId) => ({ recordType: "annotation", recordId, experimentId })),
       );
-
-      if (result.isFailure()) {
-        return failure(AppError.internal(result.error.message));
-      }
-
-      this.warnIfNotCopied(
-        experimentId,
-        { annotationId: request.annotationId },
-        await this.annotationsRepository.delete(experimentId, request.annotationId),
-      );
-      return success(result.value);
+      return deleted.length;
+    });
+    if (written.isFailure()) {
+      return failure(written.error);
     }
 
-    const result = await this.annotationsWarehouseRepository.deleteAnnotationsBulk(
-      experimentId,
-      request.tableName,
-      request.rowIds,
-      request.type,
-    );
-
-    if (result.isFailure()) {
-      return failure(AppError.internal(result.error.message));
-    }
-
-    this.warnIfNotCopied(
-      experimentId,
-      { tableName: request.tableName, rowCount: request.rowIds.length },
-      await this.annotationsRepository.deleteFromRows(
-        experimentId,
-        request.tableName,
-        request.rowIds,
-        request.type,
-      ),
-    );
-    return success(result.value);
-  }
-
-  /**
-   * Postgres follows the lakehouse until pages read it, and the annotations-move runbook fills in
-   * what a failed copy missed.
-   */
-  private warnIfNotCopied(
-    experimentId: string,
-    deleted: { annotationId: string } | { tableName: string; rowCount: number },
-    copied: Result<void>,
-  ): void {
-    if (copied.isFailure()) {
-      this.logger.warn({
-        msg: "Annotation delete not copied to Postgres",
-        operation: "deleteAnnotations",
-        experimentId,
-        ...deleted,
-        error: copied.error.message,
-      });
-    }
+    this.outboxWorker.nudge();
+    return success({ rowsAffected: written.value });
   }
 }

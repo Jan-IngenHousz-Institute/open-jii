@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "crypto";
 
 import {
@@ -9,20 +9,12 @@ import {
 import type { Result } from "../../../../../common/utils/fp-utils";
 import { success } from "../../../../../common/utils/fp-utils";
 import { AppError, failure } from "../../../../../common/utils/fp-utils";
-import { UserRepository } from "../../../../../users/core/repositories/user.repository";
-import {
-  isCommentContent,
-  isFlagContent,
-} from "../../../../core/models/experiment-data-annotation.model";
-import type {
-  AnnotationRecord,
-  CreateAnnotationDto,
-} from "../../../../core/models/experiment-data-annotation.model";
-import { DATABRICKS_PORT } from "../../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../../core/ports/databricks.port";
-import { ExperimentAnnotationsWarehouseRepository } from "../../../../core/repositories/experiment-annotations-warehouse.repository";
+import { isFlagContent } from "../../../../core/models/experiment-data-annotation.model";
+import type { AnnotationRecord } from "../../../../core/models/experiment-data-annotation.model";
 import { ExperimentAnnotationsRepository } from "../../../../core/repositories/experiment-annotations.repository";
+import { ExperimentDataOutboxRepository } from "../../../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
+import { ExperimentDataOutboxWorker } from "../../../services/experiment-data-outbox.worker";
 
 @Injectable()
 export class AddAnnotationsUseCase {
@@ -30,10 +22,9 @@ export class AddAnnotationsUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly annotationsWarehouseRepository: ExperimentAnnotationsWarehouseRepository,
     private readonly annotationsRepository: ExperimentAnnotationsRepository,
-    private readonly userRepository: UserRepository,
-    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
 
   async execute(
@@ -74,84 +65,34 @@ export class AddAnnotationsUseCase {
     }
 
     // The right to contribute here is enforced by @CanAccess.
-    const userProfilesResult = await this.userRepository.findUsersByIds([userId]);
-    if (userProfilesResult.isFailure()) {
-      this.logger.warn({
-        msg: "Failed to fetch user profile",
-        operation: "addAnnotations",
-        userId,
-        experimentId,
-      });
-    }
-    const userProfile = userProfilesResult.isSuccess() ? userProfilesResult.value[0] : null;
-    const userName = userProfile
-      ? `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() || null
-      : null;
-
     const now = new Date();
-    const newAnnotations = data.rowIds.map((rowId) => {
-      const base: CreateAnnotationDto & { id: string } = {
+    const records = data.rowIds.map(
+      (rowId): AnnotationRecord => ({
         id: randomUUID(),
-        userId,
-        userName,
+        experimentId,
         tableName: data.tableName,
         rowId,
         type: data.annotation.type,
-      };
-
-      if (isCommentContent(data.annotation.content)) {
-        return { ...base, contentText: data.annotation.content.text };
-      }
-
-      if (isFlagContent(data.annotation.content)) {
-        return {
-          ...base,
-          flagType: data.annotation.content.flagType,
-          contentText: data.annotation.content.text ?? null,
-        };
-      }
-
-      return base;
-    });
-
-    const result = await this.annotationsWarehouseRepository.storeAnnotations(
-      experimentId,
-      newAnnotations,
-      now,
-    );
-
-    if (result.isFailure()) {
-      return failure(AppError.internal(result.error.message));
-    }
-
-    const records = newAnnotations.map(
-      (annotation): AnnotationRecord => ({
-        id: annotation.id,
-        experimentId,
-        tableName: annotation.tableName,
-        rowId: annotation.rowId,
-        type: data.annotation.type,
-        contentText: annotation.contentText ?? null,
-        flagType: annotation.flagType ?? null,
+        contentText: data.annotation.content.text ?? null,
+        flagType: isFlagContent(data.annotation.content) ? data.annotation.content.flagType : null,
         createdBy: userId,
         createdAt: now,
         updatedAt: now,
       }),
     );
-    // Postgres follows the lakehouse until pages read it, and the annotations-move runbook fills in
-    // what a failed copy missed.
-    const copied = await this.annotationsRepository.insert(records);
-    if (copied.isFailure()) {
-      this.logger.warn({
-        msg: "Annotations not copied to Postgres",
-        operation: "addAnnotations",
-        experimentId,
-        tableName: data.tableName,
-        annotationCount: records.length,
-        error: copied.error.message,
-      });
+
+    const written = await this.annotationsRepository.transaction(async (tx) => {
+      await this.annotationsRepository.insert(tx, records);
+      await this.outboxRepository.owe(
+        tx,
+        records.map((record) => ({ recordType: "annotation", recordId: record.id, experimentId })),
+      );
+    });
+    if (written.isFailure()) {
+      return failure(written.error);
     }
 
-    return success(result.value);
+    this.outboxWorker.nudge();
+    return success({ rowsAffected: records.length });
   }
 }

@@ -9,6 +9,7 @@ import { success } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { ExperimentMetadataWarehouseRepository } from "../core/repositories/experiment-metadata-warehouse.repository";
+import { ExperimentMetadataRepository } from "../core/repositories/experiment-metadata.repository";
 
 // Minimal payload that satisfies zCustomMetadataPayload. Reused across
 // create/update tests since the controller-level checks (auth, access, 404)
@@ -132,18 +133,6 @@ describe("ExperimentMetadataController", () => {
         userId: testUserId,
       });
 
-      const metadataRepository = testApp.module.get(ExperimentMetadataWarehouseRepository);
-      const mockResult = {
-        metadataId: faker.string.uuid(),
-        experimentId: experiment.id,
-        metadata: { location: "Lab B" },
-        createdBy: testUserId,
-        createdAt: new Date("2025-06-01T12:00:00.000Z"),
-        updatedAt: new Date("2025-06-01T12:00:00.000Z"),
-      };
-
-      vi.spyOn(metadataRepository, "create").mockResolvedValue(success(mockResult));
-
       const path = testApp.resolveOrpcPath(contract.experiments.createExperimentMetadata, {
         id: experiment.id,
       });
@@ -216,17 +205,18 @@ describe("ExperimentMetadataController", () => {
       });
 
       const metadataId = faker.string.uuid();
-      const metadataRepository = testApp.module.get(ExperimentMetadataWarehouseRepository);
-      const mockResult = {
-        metadataId,
-        experimentId: experiment.id,
-        metadata: { location: "Lab C Updated" },
-        createdBy: testUserId,
-        createdAt: new Date("2025-06-01T12:00:00.000Z"),
-        updatedAt: new Date("2025-06-03T12:00:00.000Z"),
-      };
-
-      vi.spyOn(metadataRepository, "update").mockResolvedValue(success(mockResult));
+      const sheets = testApp.module.get(ExperimentMetadataRepository);
+      const created = new Date("2025-06-01T12:00:00.000Z");
+      await sheets.transaction((tx) =>
+        sheets.insert(tx, {
+          id: metadataId,
+          experimentId: experiment.id,
+          metadata: { location: "Lab C" },
+          createdBy: testUserId,
+          createdAt: created,
+          updatedAt: created,
+        }),
+      );
 
       const path = testApp.resolveOrpcPath(contract.experiments.updateExperimentMetadata, {
         id: experiment.id,
@@ -306,8 +296,6 @@ describe("ExperimentMetadataController", () => {
       });
 
       const metadataId = faker.string.uuid();
-      const metadataRepository = testApp.module.get(ExperimentMetadataWarehouseRepository);
-      vi.spyOn(metadataRepository, "deleteByMetadataId").mockResolvedValue(success(true));
 
       const path = testApp.resolveOrpcPath(contract.experiments.deleteExperimentMetadata, {
         id: experiment.id,

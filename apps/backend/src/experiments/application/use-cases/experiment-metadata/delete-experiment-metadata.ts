@@ -3,9 +3,10 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
-import { ExperimentMetadataWarehouseRepository } from "../../../core/repositories/experiment-metadata-warehouse.repository";
+import { ExperimentDataOutboxRepository } from "../../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { ExperimentDataOutboxWorker } from "../../services/experiment-data-outbox.worker";
 
 @Injectable()
 export class DeleteExperimentMetadataUseCase {
@@ -13,8 +14,9 @@ export class DeleteExperimentMetadataUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly metadataWarehouseRepository: ExperimentMetadataWarehouseRepository,
     private readonly metadataRepository: ExperimentMetadataRepository,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
 
   async execute(experimentId: string, metadataId: string, userId: string): Promise<Result<void>> {
@@ -48,12 +50,15 @@ export class DeleteExperimentMetadataUseCase {
         return failure(AppError.forbidden("Cannot modify an archived experiment"));
       }
 
-      const deleteResult = await this.metadataWarehouseRepository.deleteByMetadataId(
-        metadataId,
-        experimentId,
-      );
+      const written = await this.metadataRepository.transaction(async (tx) => {
+        if (await this.metadataRepository.delete(tx, experimentId, metadataId)) {
+          await this.outboxRepository.owe(tx, [
+            { recordType: "metadata_sheet", recordId: metadataId, experimentId },
+          ]);
+        }
+      });
 
-      if (deleteResult.isFailure()) {
+      if (written.isFailure()) {
         this.logger.error({
           msg: "Failed to delete experiment metadata",
           errorCode: ErrorCodes.EXPERIMENT_METADATA_DELETE_FAILED,
@@ -61,7 +66,7 @@ export class DeleteExperimentMetadataUseCase {
           experimentId,
           metadataId,
           userId,
-          error: deleteResult.error.message,
+          error: written.error.message,
         });
         return failure(AppError.internal("Failed to delete metadata"));
       }
@@ -74,19 +79,7 @@ export class DeleteExperimentMetadataUseCase {
         userId,
         status: "success",
       });
-
-      // Postgres follows the lakehouse until pages read it, and the metadata-sheets-move runbook
-      // fills in what a failed copy missed.
-      const copied = await this.metadataRepository.delete(experimentId, metadataId);
-      if (copied.isFailure()) {
-        this.logger.warn({
-          msg: "Experiment metadata delete not copied to Postgres",
-          operation: "deleteExperimentMetadata",
-          experimentId,
-          metadataId,
-          error: copied.error.message,
-        });
-      }
+      this.outboxWorker.nudge();
 
       return success(undefined);
     });
