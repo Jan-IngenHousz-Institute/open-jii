@@ -25,6 +25,7 @@ import { WorkbookModule } from "../workbooks/workbook.module";
 // Services
 import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
+import { ExperimentDataOutboxWorker } from "./application/services/experiment-data-outbox.worker";
 import { ExperimentDataSourceService } from "./application/services/experiment-data-source.service";
 import { ExperimentStoreReadsService } from "./application/services/experiment-store-reads.service";
 import { ExperimentWarehouseReadsService } from "./application/services/experiment-warehouse-reads.service";
@@ -103,6 +104,7 @@ import { ExperimentAnnotationsWarehouseRepository } from "./core/repositories/ex
 import { ExperimentAnnotationsRepository } from "./core/repositories/experiment-annotations.repository";
 import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
 import { ExperimentDataExportsRepository } from "./core/repositories/experiment-data-exports.repository";
+import { ExperimentDataOutboxRepository } from "./core/repositories/experiment-data-outbox.repository";
 import { ExperimentDataUploadsRepository } from "./core/repositories/experiment-data-uploads.repository";
 // Repositories
 import { ExperimentDataRepository } from "./core/repositories/experiment-data.repository";
@@ -216,6 +218,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentJoinCodeRepository,
     ExperimentMetadataWarehouseRepository,
     ExperimentMetadataRepository,
+    ExperimentDataOutboxRepository,
     ExperimentAnnotationsWarehouseRepository,
     ExperimentAnnotationsRepository,
     ExperimentVisualizationRepository,
@@ -237,6 +240,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
 
     // Services
     EmbargoProcessorService,
+    ExperimentDataOutboxWorker,
     ExportRunReconcilerService,
     ContributorAnonymizerService,
     ExperimentDataSourceService,

@@ -60,6 +60,11 @@ export interface AnnotationRecord {
   updatedAt: Date;
 }
 
+/** An annotation as its copies take it, with its author's name as it reads now. */
+export interface AnnotationCopy extends AnnotationRecord {
+  userName: string | null;
+}
+
 // Input type for updating annotations
 export type UpdateAnnotationDto = Partial<Pick<BaseAnnotation, "contentText" | "flagType">>;
 

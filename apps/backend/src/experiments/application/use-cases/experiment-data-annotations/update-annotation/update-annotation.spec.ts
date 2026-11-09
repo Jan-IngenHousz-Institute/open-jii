@@ -1,19 +1,15 @@
-import { Logger } from "@nestjs/common";
-
-import type { ExperimentUpdateAnnotationBody } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
-import { experimentAnnotations } from "@repo/database";
+import { experimentAnnotations, experimentDataOutbox } from "@repo/database";
 
 import {
   AppError,
   assertFailure,
   assertSuccess,
-  success,
   failure,
 } from "../../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../../test/test-harness";
 import type { AnnotationRecord } from "../../../../core/models/experiment-data-annotation.model";
-import { ExperimentAnnotationsWarehouseRepository } from "../../../../core/repositories/experiment-annotations-warehouse.repository";
 import { ExperimentAnnotationsRepository } from "../../../../core/repositories/experiment-annotations.repository";
+import { ExperimentDataOutboxWorker } from "../../../services/experiment-data-outbox.worker";
 import { UpdateAnnotationUseCase } from "./update-annotation";
 
 describe("UpdateAnnotation", () => {
@@ -21,208 +17,13 @@ describe("UpdateAnnotation", () => {
   let testUserId: string;
   let useCase: UpdateAnnotationUseCase;
 
-  beforeAll(async () => {
-    await testApp.setup();
-  });
-
-  beforeEach(async () => {
-    await testApp.beforeEach();
-    testUserId = await testApp.createTestUser({});
-
-    useCase = testApp.module.get(UpdateAnnotationUseCase);
-  });
-
-  afterEach(() => {
-    testApp.afterEach();
-  });
-
-  afterAll(async () => {
-    await testApp.teardown();
-  });
-
-  it("should update a comment annotation", async () => {
-    // Create an experiment in the database
-    const { experiment } = await testApp.createExperiment({
-      name: "Test Experiment",
-      description: "Test Description",
-      status: "active",
-      visibility: "private",
-      userId: testUserId,
-    });
-
-    // Mock the repository to succeed
-    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
-    vi.spyOn(repository, "updateAnnotation").mockResolvedValue(success({ rowsAffected: 1 }));
-
-    const annotationId = "c926b964-a1fd-4fb9-9a41-c154d631a524";
-    const updateData: ExperimentUpdateAnnotationBody = {
-      content: {
-        type: "comment",
-        text: "Updated comment text",
-      },
-    };
-
-    // Act
-    const result = await useCase.execute(experiment.id, annotationId, updateData, testUserId);
-
-    // Assert result is success
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value).toStrictEqual({ rowsAffected: 1 });
-  });
-
-  it("should update a flag annotation", async () => {
-    // Create an experiment in the database
-    const { experiment } = await testApp.createExperiment({
-      userId: testUserId,
-      name: "test-experiment-flag-update",
-      status: "active",
-    });
-
-    // Mock the repository to succeed
-    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
-    vi.spyOn(repository, "updateAnnotation").mockResolvedValue(success({ rowsAffected: 1 }));
-
-    const annotationId = "test-annotation-id";
-    const updateData: ExperimentUpdateAnnotationBody = {
-      content: {
-        type: "flag",
-        flagType: "outlier",
-        text: "Updated flag text",
-      },
-    };
-
-    // Act
-    const result = await useCase.execute(experiment.id, annotationId, updateData, testUserId);
-
-    // Assert
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value.rowsAffected).toBe(1);
-  });
-
-  it("should handle flag annotation with null text", async () => {
-    // Create an experiment
-    const { experiment } = await testApp.createExperiment({
-      name: "Test Experiment Flag Null",
-      description: "Test Description",
-      status: "active",
-      visibility: "private",
-      userId: testUserId,
-    });
-
-    // Mock the repository to succeed
-    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
-    vi.spyOn(repository, "updateAnnotation").mockResolvedValue(success({ rowsAffected: 1 }));
-
-    const annotationId = "test-annotation-id";
-    const updateData: ExperimentUpdateAnnotationBody = {
-      content: {
-        type: "flag",
-        flagType: "outlier",
-        text: undefined,
-      },
-    };
-
-    // Act
-    const result = await useCase.execute(experiment.id, annotationId, updateData, testUserId);
-
-    // Assert
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value.rowsAffected).toBe(1);
-  });
-
-  it("should return bad request error when user ID is missing", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Test Experiment",
-      description: "Test Description",
-      status: "active",
-      visibility: "private",
-      userId: testUserId,
-    });
-
-    const annotationId = "test-annotation-id";
-    const updateData: ExperimentUpdateAnnotationBody = {
-      content: {
-        type: "comment",
-        text: "Updated text",
-      },
-    };
-
-    // Act - pass empty string as userId
-    const result = await useCase.execute(experiment.id, annotationId, updateData, "");
-
-    // Assert
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.code).toBe("BAD_REQUEST");
-    expect(result.error.message).toContain("User ID is required");
-  });
-
-  it("should return not found error when experiment does not exist", async () => {
-    const nonExistentId = "00000000-0000-0000-0000-000000000000";
-    const annotationId = "test-annotation-id";
-    const updateData: ExperimentUpdateAnnotationBody = {
-      content: {
-        type: "comment",
-        text: "Updated text",
-      },
-    };
-
-    const result = await useCase.execute(nonExistentId, annotationId, updateData, testUserId);
-
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.code).toBe("NOT_FOUND");
-    expect(result.error.message).toContain(`Experiment with ID ${nonExistentId} not found`);
-  });
-
-  it("should handle repository updateAnnotation failure", async () => {
-    // Create an experiment
-    const { experiment } = await testApp.createExperiment({
-      name: "Test Experiment Update Fail",
-      description: "Test Description",
-      status: "active",
-      visibility: "private",
-      userId: testUserId,
-    });
-
-    // Mock the repository to return failure
-    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
-    vi.spyOn(repository, "updateAnnotation").mockResolvedValue(
-      failure({
-        message: "Failed to update annotation in database",
-        code: "DATABASE_ERROR",
-        statusCode: 500,
-        name: "DatabaseError",
-      }),
-    );
-
-    const annotationId = "test-annotation-id";
-    const updateData: ExperimentUpdateAnnotationBody = {
-      content: {
-        type: "comment",
-        text: "Updated text",
-      },
-    };
-
-    // Act
-    const result = await useCase.execute(experiment.id, annotationId, updateData, testUserId);
-
-    // Assert - should fail with internal error
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("INTERNAL_ERROR");
-    expect(result.error.message).toContain("Failed to update annotation");
-  });
+  const created = new Date("2026-09-01T08:00:00.000Z");
 
   /** An annotation already in Postgres, as an earlier write left it. */
-  async function inPostgres(
+  async function existing(
     experimentId: string,
     overrides: Partial<AnnotationRecord> = {},
   ): Promise<AnnotationRecord> {
-    const created = new Date("2026-09-01T08:00:00.000Z");
     const record: AnnotationRecord = {
       id: "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b",
       experimentId,
@@ -236,101 +37,117 @@ describe("UpdateAnnotation", () => {
       updatedAt: created,
       ...overrides,
     };
-    assertSuccess(await testApp.module.get(ExperimentAnnotationsRepository).insert([record]));
+    const repository = testApp.module.get(ExperimentAnnotationsRepository);
+    assertSuccess(await repository.transaction((tx) => repository.insert(tx, [record])));
     return record;
   }
 
-  function postgres(): Promise<AnnotationRecord[]> {
+  function annotations() {
     return testApp.database.select().from(experimentAnnotations);
   }
 
-  describe("the copy in Postgres", () => {
-    it("takes the update with the time the lakehouse got", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Drought trial",
-        userId: testUserId,
-      });
-      const record = await inPostgres(experiment.id);
-      const update = vi
-        .spyOn(testApp.module.get(ExperimentAnnotationsWarehouseRepository), "updateAnnotation")
-        .mockResolvedValue(success({ rowsAffected: 1 }));
+  function outbox() {
+    return testApp.database.select().from(experimentDataOutbox);
+  }
 
-      assertSuccess(
-        await useCase.execute(
-          experiment.id,
-          record.id,
-          { content: { type: "comment", text: "Leaf was dry" } },
-          testUserId,
-        ),
-      );
-
-      const [, , , , now] = update.mock.calls[0];
-      expect(await postgres()).toEqual([
-        { ...record, contentText: "Leaf was dry", updatedAt: now },
-      ]);
-    });
-
-    it("leaves a comment alone when the update is a flag, in both places", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Drought trial",
-        userId: testUserId,
-      });
-      const record = await inPostgres(experiment.id);
-      const update = vi
-        .spyOn(testApp.module.get(ExperimentAnnotationsWarehouseRepository), "updateAnnotation")
-        .mockResolvedValue(success({ rowsAffected: 0 }));
-
-      const result = await useCase.execute(
-        experiment.id,
-        record.id,
-        { content: { type: "flag", flagType: "outlier" } },
-        testUserId,
-      );
-
-      assertSuccess(result);
-      expect(result.value.rowsAffected).toBe(0);
-      const [, , type] = update.mock.calls[0];
-      expect(type).toBe("flag");
-      expect(await postgres()).toEqual([record]);
-    });
-
-    it("keeps the old text when the lakehouse refuses the update", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Drought trial",
-        userId: testUserId,
-      });
-      const record = await inPostgres(experiment.id);
-      vi.spyOn(
-        testApp.module.get(ExperimentAnnotationsWarehouseRepository),
-        "updateAnnotation",
-      ).mockResolvedValue(failure(AppError.internal("Warehouse down")));
-
-      assertFailure(
-        await useCase.execute(
-          experiment.id,
-          record.id,
-          { content: { type: "comment", text: "Leaf was dry" } },
-          testUserId,
-        ),
-      );
-
-      expect(await postgres()).toEqual([record]);
-    });
+  beforeAll(async () => {
+    await testApp.setup();
   });
 
-  it("still updates the annotation when the copy in Postgres fails", async () => {
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    testUserId = await testApp.createTestUser({});
+    useCase = testApp.module.get(UpdateAnnotationUseCase);
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
+  });
+
+  it("changes a comment's text and updated time, owes its copy and starts it", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Drought trial",
       userId: testUserId,
     });
-    vi.spyOn(
-      testApp.module.get(ExperimentAnnotationsWarehouseRepository),
-      "updateAnnotation",
-    ).mockResolvedValue(success({ rowsAffected: 1 }));
-    vi.spyOn(testApp.module.get(ExperimentAnnotationsRepository), "update").mockResolvedValue(
-      failure(AppError.internal("Postgres down")),
+    const record = await existing(experiment.id);
+    const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+
+    const result = await useCase.execute(
+      experiment.id,
+      record.id,
+      { content: { type: "comment", text: "Leaf was dry" } },
+      testUserId,
     );
-    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+
+    assertSuccess(result);
+    expect(result.value).toEqual({ rowsAffected: 1 });
+    const [kept] = await annotations();
+    expect(kept).toEqual({ ...record, contentText: "Leaf was dry", updatedAt: kept.updatedAt });
+    expect(kept.updatedAt.getTime()).toBeGreaterThan(created.getTime());
+    expect(await outbox()).toEqual([
+      expect.objectContaining({
+        recordType: "annotation",
+        recordId: record.id,
+        destination: "lakehouse",
+      }),
+    ]);
+    expect(nudge).toHaveBeenCalledTimes(1);
+  });
+
+  it("changes a flag's type and clears its text when none is given", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
+    const record = await existing(experiment.id, {
+      type: "flag",
+      flagType: "outlier",
+      contentText: "Too high",
+    });
+
+    assertSuccess(
+      await useCase.execute(
+        experiment.id,
+        record.id,
+        { content: { type: "flag", flagType: "needs_review" } },
+        testUserId,
+      ),
+    );
+
+    expect(await annotations()).toEqual([
+      expect.objectContaining({ flagType: "needs_review", contentText: null }),
+    ]);
+  });
+
+  it("leaves a comment alone, and owes no copy, when the update is a flag", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
+    const record = await existing(experiment.id);
+
+    const result = await useCase.execute(
+      experiment.id,
+      record.id,
+      { content: { type: "flag", flagType: "outlier" } },
+      testUserId,
+    );
+
+    assertSuccess(result);
+    expect(result.value).toEqual({ rowsAffected: 0 });
+    expect(await annotations()).toEqual([record]);
+    expect(await outbox()).toEqual([]);
+  });
+
+  it("affects no row, and owes no copy, when the annotation is not there", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
 
     const result = await useCase.execute(
       experiment.id,
@@ -340,13 +157,56 @@ describe("UpdateAnnotation", () => {
     );
 
     assertSuccess(result);
-    expect(result.value.rowsAffected).toBe(1);
-    expect(warn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        msg: "Annotation update not copied to Postgres",
-        experimentId: experiment.id,
-        annotationId: "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b",
-      }),
+    expect(result.value).toEqual({ rowsAffected: 0 });
+    expect(await outbox()).toEqual([]);
+  });
+
+  it("refuses a request without a user", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
+
+    const result = await useCase.execute(
+      experiment.id,
+      "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b",
+      { content: { type: "comment", text: "Leaf was dry" } },
+      "",
     );
+
+    assertFailure(result);
+    expect(result.error.code).toBe("BAD_REQUEST");
+  });
+
+  it("answers not found for an experiment that does not exist", async () => {
+    const result = await useCase.execute(
+      "00000000-0000-0000-0000-000000000000",
+      "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b",
+      { content: { type: "comment", text: "Leaf was dry" } },
+      testUserId,
+    );
+
+    assertFailure(result);
+    expect(result.error.code).toBe("NOT_FOUND");
+  });
+
+  it("fails when Postgres refuses the update", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
+    vi.spyOn(testApp.module.get(ExperimentAnnotationsRepository), "transaction").mockResolvedValue(
+      failure(AppError.internal("Postgres did not answer the annotations query")),
+    );
+
+    const result = await useCase.execute(
+      experiment.id,
+      "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b",
+      { content: { type: "comment", text: "Leaf was dry" } },
+      testUserId,
+    );
+
+    assertFailure(result);
+    expect(result.error.message).toBe("Postgres did not answer the annotations query");
   });
 });

@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import {
   ExperimentAnnotationRowsAffected,
@@ -7,11 +7,10 @@ import {
 
 import { AppError, failure, Result, success } from "../../../../../common/utils/fp-utils";
 import { UpdateAnnotationDto } from "../../../../core/models/experiment-data-annotation.model";
-import { DATABRICKS_PORT } from "../../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../../core/ports/databricks.port";
-import { ExperimentAnnotationsWarehouseRepository } from "../../../../core/repositories/experiment-annotations-warehouse.repository";
 import { ExperimentAnnotationsRepository } from "../../../../core/repositories/experiment-annotations.repository";
+import { ExperimentDataOutboxRepository } from "../../../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
+import { ExperimentDataOutboxWorker } from "../../../services/experiment-data-outbox.worker";
 
 @Injectable()
 export class UpdateAnnotationUseCase {
@@ -19,9 +18,9 @@ export class UpdateAnnotationUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly annotationsWarehouseRepository: ExperimentAnnotationsWarehouseRepository,
     private readonly annotationsRepository: ExperimentAnnotationsRepository,
-    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
 
   async execute(
@@ -75,37 +74,27 @@ export class UpdateAnnotationUseCase {
     }
 
     const now = new Date();
-    const result = await this.annotationsWarehouseRepository.updateAnnotation(
-      experimentId,
-      annotationId,
-      data.content.type,
-      updateAnnotation,
-      now,
-    );
-
-    if (result.isFailure()) {
-      return failure(AppError.internal(result.error.message));
-    }
-
-    // Postgres follows the lakehouse until pages read it, and the annotations-move runbook fills in
-    // what a failed copy missed.
-    const copied = await this.annotationsRepository.update(
-      experimentId,
-      annotationId,
-      data.content.type,
-      updateAnnotation,
-      now,
-    );
-    if (copied.isFailure()) {
-      this.logger.warn({
-        msg: "Annotation update not copied to Postgres",
-        operation: "updateAnnotation",
+    const written = await this.annotationsRepository.transaction(async (tx) => {
+      const found = await this.annotationsRepository.update(
+        tx,
         experimentId,
         annotationId,
-        error: copied.error.message,
-      });
+        data.content.type,
+        updateAnnotation,
+        now,
+      );
+      if (found) {
+        await this.outboxRepository.owe(tx, [
+          { recordType: "annotation", recordId: annotationId, experimentId },
+        ]);
+      }
+      return found;
+    });
+    if (written.isFailure()) {
+      return failure(written.error);
     }
 
-    return success(result.value);
+    this.outboxWorker.nudge();
+    return success({ rowsAffected: written.value ? 1 : 0 });
   }
 }

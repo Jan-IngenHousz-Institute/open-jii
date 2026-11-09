@@ -1,10 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import { and, eq, experimentAnnotations, inArray } from "@repo/database";
-import type { DatabaseInstance, Transaction } from "@repo/database";
+import { and, eq, experimentAnnotations, inArray, profiles, sql } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, Transaction } from "@repo/database";
 
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import type {
+  AnnotationCopy,
   AnnotationRecord,
   UpdateAnnotationDto,
 } from "../models/experiment-data-annotation.model";
@@ -20,85 +21,114 @@ const ROW_ID_CHUNK = 10_000;
 export class ExperimentAnnotationsRepository {
   constructor(@Inject("DATABASE") private readonly database: DatabaseInstance) {}
 
-  /** Inserts every record or none, in statements small enough for Postgres's parameter limit. */
-  async insert(records: AnnotationRecord[]): Promise<Result<void>> {
+  /** Runs `work` as one transaction, so a write and the copies it owes land together or not at all. */
+  async transaction<T>(work: (tx: Transaction) => Promise<T>): Promise<Result<T>> {
     return tryCatch(
-      () => this.database.transaction((tx) => this.insertInChunks(tx, records)),
+      () => this.database.transaction(work),
       (error) => this.queryError(error),
     );
   }
 
+  /** Inserts every record, in statements small enough for Postgres's parameter limit. */
+  async insert(tx: DbOrTx, records: AnnotationRecord[]): Promise<void> {
+    for (let start = 0; start < records.length; start += INSERT_CHUNK) {
+      await tx.insert(experimentAnnotations).values(records.slice(start, start + INSERT_CHUNK));
+    }
+  }
+
+  /** Whether the annotation was there to update. */
   /** Updates an annotation of the given type; one of the other type stays as it is. */
   async update(
+    tx: DbOrTx,
     experimentId: string,
     annotationId: string,
     type: AnnotationRecord["type"],
     update: UpdateAnnotationDto,
     updatedAt: Date,
-  ): Promise<Result<void>> {
-    return tryCatch(
-      async () => {
-        await this.database
-          .update(experimentAnnotations)
-          .set({ ...update, updatedAt })
-          .where(
-            and(
-              eq(experimentAnnotations.id, annotationId),
-              eq(experimentAnnotations.experimentId, experimentId),
-              eq(experimentAnnotations.type, type),
-            ),
-          );
-      },
-      (error) => this.queryError(error),
-    );
+  ): Promise<boolean> {
+    const updated = await tx
+      .update(experimentAnnotations)
+      .set({ ...update, updatedAt })
+      .where(
+        and(
+          eq(experimentAnnotations.id, annotationId),
+          eq(experimentAnnotations.experimentId, experimentId),
+          eq(experimentAnnotations.type, type),
+        ),
+      )
+      .returning({ id: experimentAnnotations.id });
+
+    return updated.length > 0;
   }
 
-  async delete(experimentId: string, annotationId: string): Promise<Result<void>> {
-    return tryCatch(
-      async () => {
-        await this.database
-          .delete(experimentAnnotations)
-          .where(
-            and(
-              eq(experimentAnnotations.id, annotationId),
-              eq(experimentAnnotations.experimentId, experimentId),
-            ),
-          );
-      },
-      (error) => this.queryError(error),
-    );
+  /** The ids it deleted: the annotation's, or none when it was not there. */
+  async delete(tx: DbOrTx, experimentId: string, annotationId: string): Promise<string[]> {
+    const deleted = await tx
+      .delete(experimentAnnotations)
+      .where(
+        and(
+          eq(experimentAnnotations.id, annotationId),
+          eq(experimentAnnotations.experimentId, experimentId),
+        ),
+      )
+      .returning({ id: experimentAnnotations.id });
+
+    return deleted.map(({ id }) => id);
   }
 
+  /** Deletes the annotations of one type on the given rows of one table, returning their ids. */
   async deleteFromRows(
+    tx: DbOrTx,
     experimentId: string,
     tableName: string,
     rowIds: string[],
     type: AnnotationRecord["type"],
-  ): Promise<Result<void>> {
-    return tryCatch(
-      () =>
-        this.database.transaction(async (tx) => {
-          for (let start = 0; start < rowIds.length; start += ROW_ID_CHUNK) {
-            await tx
-              .delete(experimentAnnotations)
-              .where(
-                and(
-                  eq(experimentAnnotations.experimentId, experimentId),
-                  eq(experimentAnnotations.tableName, tableName),
-                  eq(experimentAnnotations.type, type),
-                  inArray(experimentAnnotations.rowId, rowIds.slice(start, start + ROW_ID_CHUNK)),
-                ),
-              );
-          }
-        }),
-      (error) => this.queryError(error),
-    );
+  ): Promise<string[]> {
+    const ids: string[] = [];
+
+    for (let start = 0; start < rowIds.length; start += ROW_ID_CHUNK) {
+      const deleted = await tx
+        .delete(experimentAnnotations)
+        .where(
+          and(
+            eq(experimentAnnotations.experimentId, experimentId),
+            eq(experimentAnnotations.tableName, tableName),
+            eq(experimentAnnotations.type, type),
+            inArray(experimentAnnotations.rowId, rowIds.slice(start, start + ROW_ID_CHUNK)),
+          ),
+        )
+        .returning({ id: experimentAnnotations.id });
+      ids.push(...deleted.map(({ id }) => id));
+    }
+
+    return ids;
   }
 
-  private async insertInChunks(tx: Transaction, records: AnnotationRecord[]): Promise<void> {
-    for (let start = 0; start < records.length; start += INSERT_CHUNK) {
-      await tx.insert(experimentAnnotations).values(records.slice(start, start + INSERT_CHUNK));
-    }
+  /** The annotations among `ids` that still exist, each with its author's name as it reads now. */
+  async findCopies(ids: string[]): Promise<Result<AnnotationCopy[]>> {
+    return tryCatch(
+      () =>
+        this.database
+          .select({
+            id: experimentAnnotations.id,
+            experimentId: experimentAnnotations.experimentId,
+            tableName: experimentAnnotations.tableName,
+            rowId: experimentAnnotations.rowId,
+            type: experimentAnnotations.type,
+            contentText: experimentAnnotations.contentText,
+            flagType: experimentAnnotations.flagType,
+            createdBy: experimentAnnotations.createdBy,
+            createdAt: experimentAnnotations.createdAt,
+            updatedAt: experimentAnnotations.updatedAt,
+            userName: sql<
+              string | null
+            >`nullif(trim(coalesce(${profiles.firstName}, '') || ' ' || coalesce(${profiles.lastName}, '')), '')`,
+          })
+          .from(experimentAnnotations)
+          .leftJoin(profiles, eq(profiles.userId, experimentAnnotations.createdBy))
+          .where(inArray(experimentAnnotations.id, ids)),
+      (error) => this.queryError(error),
+    );
   }
 
   /**
