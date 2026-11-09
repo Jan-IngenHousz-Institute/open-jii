@@ -195,7 +195,7 @@ describe("NotificationRow", () => {
       category: "data_jobs",
       actor: null,
       resource: { type: "experiment", id: "00000000-0000-4000-8000-0000000000cc" },
-      params: { experimentName: "Drought trial", skippedFiles: "plot_1.csv (no rows)", ...skipped },
+      params: { experimentName: "Drought trial", skippedFiles: "plot_1.csv — no rows", ...skipped },
     });
 
     expect(screen.getByText(copy)).toBeInTheDocument();

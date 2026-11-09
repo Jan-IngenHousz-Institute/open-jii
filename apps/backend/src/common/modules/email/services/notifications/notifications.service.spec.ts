@@ -1902,6 +1902,42 @@ describe("NotificationsService", () => {
             unsubscribe,
           }),
       ],
+      [
+        "sendDataUploadCompletedNotification",
+        "renderDataUploadCompletedNotificationEmail",
+        (unsubscribe) =>
+          service.sendDataUploadCompletedNotification({
+            experimentId: MOCK_EXPERIMENT_ID,
+            experimentName: "Drought trial",
+            email: MOCK_EMAIL,
+            unsubscribe,
+          }),
+      ],
+      [
+        "sendDataUploadPartlyCompletedNotification",
+        "renderDataUploadPartlyCompletedNotificationEmail",
+        (unsubscribe) =>
+          service.sendDataUploadPartlyCompletedNotification({
+            experimentId: MOCK_EXPERIMENT_ID,
+            experimentName: "Drought trial",
+            skippedCount: "2",
+            skippedFiles: "broken.csv — could not be read\nempty.csv — no rows",
+            email: MOCK_EMAIL,
+            unsubscribe,
+          }),
+      ],
+      [
+        "sendDataUploadFailedNotification",
+        "renderDataUploadFailedNotificationEmail",
+        (unsubscribe) =>
+          service.sendDataUploadFailedNotification({
+            experimentId: MOCK_EXPERIMENT_ID,
+            experimentName: "Drought trial",
+            tableName: "leaf_traits",
+            email: MOCK_EMAIL,
+            unsubscribe,
+          }),
+      ],
     ];
 
     let mockSendMail: MockInstance;

@@ -221,6 +221,21 @@ describe("UploadRunReconcilerService", () => {
     ]);
   });
 
+  it("keeps the reason last on a left-out file whose name holds the separator", async () => {
+    const uploadId = await uploadInFlight();
+    vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(success(succeededRun()));
+    vi.spyOn(databricksPort, "getJobRunOutput").mockResolvedValue(
+      success(
+        outcome(uploadId, { rejectedFiles: [{ name: "plot — east.csv", reason: "no_rows" }] }),
+      ),
+    );
+
+    await reconciler.reconcile();
+
+    const [row] = await notificationsFor(userId);
+    expect(row.params).toMatchObject({ skippedFiles: "plot — east.csv — no rows" });
+  });
+
   it("names no left-out files for an upload that took every file", async () => {
     const uploadId = await uploadInFlight();
     vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(success(succeededRun()));

@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 
+import type { EmailUnsubscribe } from "../components/email-layout";
 import { linesPanelHtmlToTextOptions } from "../components/lines-panel";
 import { Email } from "../emails/email";
 import { DataUploadPartlyCompletedNotification } from "../emails/fallbacks/data-upload-partly-completed-notification";
@@ -12,6 +13,7 @@ export interface RenderDataUploadPartlyCompletedNotificationParams {
   skippedCount: string;
   skippedFiles: string;
   dataUrl: string;
+  unsubscribe?: EmailUnsubscribe;
 }
 
 export interface RenderedEmail {
@@ -23,7 +25,8 @@ export interface RenderedEmail {
 export async function renderDataUploadPartlyCompletedNotification(
   params: RenderDataUploadPartlyCompletedNotificationParams,
 ): Promise<RenderedEmail> {
-  const { host, baseUrl, experimentName, skippedCount, skippedFiles, dataUrl } = params;
+  const { host, baseUrl, experimentName, skippedCount, skippedFiles, dataUrl, unsubscribe } =
+    params;
 
   const emailData = await getCmsEmail("data-upload-partly-completed-notification", {
     host,
@@ -35,7 +38,15 @@ export async function renderDataUploadPartlyCompletedNotification(
   });
 
   if (!emailData) {
-    const props = { host, baseUrl, experimentName, skippedCount, skippedFiles, dataUrl };
+    const props = {
+      host,
+      baseUrl,
+      experimentName,
+      skippedCount,
+      skippedFiles,
+      dataUrl,
+      unsubscribe,
+    };
     const html = await render(DataUploadPartlyCompletedNotification(props), {});
     const text = await render(DataUploadPartlyCompletedNotification(props), {
       plainText: true,
@@ -54,6 +65,7 @@ export async function renderDataUploadPartlyCompletedNotification(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     {},
   );
@@ -64,6 +76,7 @@ export async function renderDataUploadPartlyCompletedNotification(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     { plainText: true, htmlToTextOptions: linesPanelHtmlToTextOptions },
   );

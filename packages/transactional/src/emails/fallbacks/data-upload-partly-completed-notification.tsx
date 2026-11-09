@@ -1,5 +1,6 @@
 import { Button, Link, Section, Text } from "@react-email/components";
 
+import type { EmailUnsubscribe } from "../../components/email-layout";
 import { EmailLayout } from "../../components/email-layout";
 import { LinesPanel } from "../../components/lines-panel";
 
@@ -11,6 +12,7 @@ export interface DataUploadPartlyCompletedNotificationProps {
   senderName?: string;
   host: string;
   baseUrl: string;
+  unsubscribe?: EmailUnsubscribe;
 }
 
 export const DataUploadPartlyCompletedNotification = ({
@@ -21,6 +23,7 @@ export const DataUploadPartlyCompletedNotification = ({
   senderName = "openJII",
   host,
   baseUrl,
+  unsubscribe,
 }: DataUploadPartlyCompletedNotificationProps) => {
   return (
     <EmailLayout
@@ -28,6 +31,7 @@ export const DataUploadPartlyCompletedNotification = ({
       senderName={senderName}
       host={host}
       baseUrl={baseUrl}
+      unsubscribe={unsubscribe}
     >
       <Section className="rounded-t-xl bg-white px-8 pb-4 pt-8">
         <Text className="mb-2 mt-0 text-center text-[24px] font-semibold text-gray-800">

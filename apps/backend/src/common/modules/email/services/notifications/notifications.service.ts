@@ -1044,8 +1044,9 @@ export class NotificationsService {
     experimentId: string;
     experimentName: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }) {
-    const { experimentId, experimentName, email } = input;
+    const { experimentId, experimentName, email, unsubscribe } = input;
 
     return await tryCatch(
       async () => {
@@ -1064,6 +1065,7 @@ export class NotificationsService {
           baseUrl,
           experimentName,
           dataUrl,
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -1071,6 +1073,7 @@ export class NotificationsService {
           subject: `Your upload to ${experimentName} is ready to query`,
           html,
           text,
+          unsubscribe,
         });
 
         this.logger.log({
@@ -1096,8 +1099,9 @@ export class NotificationsService {
     skippedCount: string;
     skippedFiles: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }) {
-    const { experimentId, experimentName, skippedCount, skippedFiles, email } = input;
+    const { experimentId, experimentName, skippedCount, skippedFiles, email, unsubscribe } = input;
 
     return await tryCatch(
       async () => {
@@ -1118,6 +1122,7 @@ export class NotificationsService {
           skippedCount,
           skippedFiles,
           dataUrl,
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -1125,6 +1130,7 @@ export class NotificationsService {
           subject: `Your upload to ${experimentName} is ready to query, with files left out`,
           html,
           text,
+          unsubscribe,
         });
 
         this.logger.log({
@@ -1149,8 +1155,9 @@ export class NotificationsService {
     experimentName: string;
     tableName: string;
     email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
   }) {
-    const { experimentId, experimentName, tableName, email } = input;
+    const { experimentId, experimentName, tableName, email, unsubscribe } = input;
 
     return await tryCatch(
       async () => {
@@ -1170,6 +1177,7 @@ export class NotificationsService {
           experimentName,
           tableName,
           dataUrl,
+          unsubscribe,
         });
 
         await this.dispatch({
@@ -1177,6 +1185,7 @@ export class NotificationsService {
           subject: `Your upload to ${tableName} in ${experimentName} failed`,
           html,
           text,
+          unsubscribe,
         });
 
         this.logger.log({

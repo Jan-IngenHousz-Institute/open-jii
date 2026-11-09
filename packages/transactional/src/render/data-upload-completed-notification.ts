@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 
+import type { EmailUnsubscribe } from "../components/email-layout";
 import { Email } from "../emails/email";
 import { DataUploadCompletedNotification } from "../emails/fallbacks/data-upload-completed-notification";
 import { getCmsEmail } from "../lib/contentful";
@@ -9,6 +10,7 @@ export interface RenderDataUploadCompletedNotificationParams {
   baseUrl: string;
   experimentName: string;
   dataUrl: string;
+  unsubscribe?: EmailUnsubscribe;
 }
 
 export interface RenderedEmail {
@@ -20,7 +22,7 @@ export interface RenderedEmail {
 export async function renderDataUploadCompletedNotification(
   params: RenderDataUploadCompletedNotificationParams,
 ): Promise<RenderedEmail> {
-  const { host, baseUrl, experimentName, dataUrl } = params;
+  const { host, baseUrl, experimentName, dataUrl, unsubscribe } = params;
 
   const emailData = await getCmsEmail("data-upload-completed-notification", {
     host,
@@ -31,11 +33,11 @@ export async function renderDataUploadCompletedNotification(
 
   if (!emailData) {
     const html = await render(
-      DataUploadCompletedNotification({ host, baseUrl, experimentName, dataUrl }),
+      DataUploadCompletedNotification({ host, baseUrl, experimentName, dataUrl, unsubscribe }),
       {},
     );
     const text = await render(
-      DataUploadCompletedNotification({ host, baseUrl, experimentName, dataUrl }),
+      DataUploadCompletedNotification({ host, baseUrl, experimentName, dataUrl, unsubscribe }),
       { plainText: true },
     );
     return {
@@ -51,6 +53,7 @@ export async function renderDataUploadCompletedNotification(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     {},
   );
@@ -61,6 +64,7 @@ export async function renderDataUploadCompletedNotification(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     { plainText: true },
   );

@@ -46,7 +46,10 @@ export const LinesPanel = ({ lines }: { lines: string[] }) => {
     >
       <tbody>
         {pairs.map((line, index) => {
-          const [name, ...reason] = line.split(SEPARATOR);
+          // A file name may hold the separator itself; the reason never does.
+          const cut = line.lastIndexOf(SEPARATOR);
+          const name = line.slice(0, cut);
+          const reason = line.slice(cut + SEPARATOR.length);
           const divider = index === 0 ? {} : { borderTop: BORDER };
           return (
             <tr key={index}>
@@ -72,7 +75,7 @@ export const LinesPanel = ({ lines }: { lines: string[] }) => {
                   whiteSpace: "nowrap",
                 }}
               >
-                {reason.join(SEPARATOR)}
+                {reason}
               </td>
             </tr>
           );

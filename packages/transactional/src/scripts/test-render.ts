@@ -207,6 +207,11 @@ async function main(): Promise<void> {
       skippedCount: "2",
       skippedFiles: "broken.csv — could not be read\nempty.csv — no rows",
       dataUrl: `${baseUrl}/en-US/platform/experiments/123/data`,
+      unsubscribe: {
+        categoryLabel: "Data exports and uploads",
+        settingsUrl: `${baseUrl}/platform/account/notifications`,
+        unsubscribeUrl: `${baseUrl}/unsubscribe?token=preview-token`,
+      },
     }),
   );
 
