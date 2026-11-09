@@ -1,6 +1,19 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import { alias, and, eq, exists, experimentDataOutbox, inArray, isNull, sql } from "@repo/database";
+import {
+  alias,
+  and,
+  eq,
+  exists,
+  experimentDataOutbox,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+} from "@repo/database";
 import type { DatabaseInstance, DbOrTx } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -77,17 +90,50 @@ export class ExperimentDataOutboxRepository {
    * is taken back with the attempt counted. Every comparison uses the database clock, which
    * stamped `next_attempt_at`. The due set is a CTE, evaluated once, so the claim cannot walk past
    * the rows it means to take.
+   *
+   * At most one row of a record is ever claimed. Two tasks copying one record at once could land
+   * an older state after a newer one, such as a delete the lakehouse ran before an insert, and
+   * nothing would owe the record again. Rows of a destination or kind this build does not know,
+   * written by a newer task during a deploy, are left for that task.
    */
   async claimDue(leaseMs: number, limit: number): Promise<Result<ClaimedOutboxRow[]>> {
+    const now = sql`(now() AT TIME ZONE 'UTC')`;
+    const leaseStart = sql`${now} - make_interval(secs => ${leaseMs / 1000})`;
+    const other = alias(experimentDataOutbox, "other");
+    const isClaimed = sql`${experimentDataOutbox.claimedAt} IS NOT NULL`;
+    const recordTakenElsewhere = exists(
+      this.database
+        .select({ id: other.id })
+        .from(other)
+        .where(
+          and(
+            eq(other.recordType, experimentDataOutbox.recordType),
+            eq(other.recordId, experimentDataOutbox.recordId),
+            eq(other.destination, experimentDataOutbox.destination),
+            ne(other.id, experimentDataOutbox.id),
+            or(
+              // Another task holds the record.
+              sql`${other.claimedAt} > ${leaseStart}`,
+              // A waiting row goes before an abandoned claim of the same record.
+              and(isClaimed, isNull(other.claimedAt)),
+              // Of two abandoned claims, the older row goes first.
+              and(isClaimed, isNotNull(other.claimedAt), lt(other.id, experimentDataOutbox.id)),
+            ),
+          ),
+        ),
+    );
+
     return tryCatch(async () => {
       const claimed = await this.database.execute<ClaimedRow>(sql`
         WITH due AS (
           SELECT ${experimentDataOutbox.id}
           FROM ${experimentDataOutbox}
-          WHERE (${experimentDataOutbox.claimedAt} IS NULL
-                 AND ${experimentDataOutbox.nextAttemptAt} <= (now() AT TIME ZONE 'UTC'))
-             OR ${experimentDataOutbox.claimedAt}
-                <= (now() AT TIME ZONE 'UTC') - make_interval(secs => ${leaseMs / 1000})
+          WHERE ((${experimentDataOutbox.claimedAt} IS NULL
+                  AND ${experimentDataOutbox.nextAttemptAt} <= ${now})
+                 OR ${experimentDataOutbox.claimedAt} <= ${leaseStart})
+            AND ${inArray(experimentDataOutbox.destination, zExperimentDataDestination.options)}
+            AND ${inArray(experimentDataOutbox.recordType, zExperimentDataRecordType.options)}
+            AND NOT ${recordTakenElsewhere}
           ORDER BY ${experimentDataOutbox.nextAttemptAt}
           LIMIT ${limit}
           FOR UPDATE SKIP LOCKED

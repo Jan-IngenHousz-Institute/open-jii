@@ -135,6 +135,51 @@ describe("ExperimentDataOutboxRepository", () => {
     expect(await claim()).toEqual([expect.objectContaining({ id: held.id, attempts: 1 })]);
   });
 
+  it("holds a record's new row back while another task copies the record", async () => {
+    const record = annotation();
+    await owe(record);
+    const [held] = await claim();
+    await owe(record);
+
+    expect(await claim()).toEqual([]);
+
+    assertSuccess(await repository.markApplied([held]));
+    expect(await claim()).toEqual([
+      expect.objectContaining({ recordId: record.recordId, attempts: 0 }),
+    ]);
+  });
+
+  it("offers a record's waiting row before an abandoned claim of it", async () => {
+    const record = annotation();
+    await owe(record);
+    const [abandoned] = await claim();
+    await owe(record);
+    await age(abandoned.id, LEASE_MS / 1000 + 1);
+
+    const [waiting] = await claim();
+
+    expect(waiting.id).not.toBe(abandoned.id);
+    expect(await claim()).toEqual([]);
+    assertSuccess(await repository.markApplied([waiting]));
+    expect(await claim()).toEqual([expect.objectContaining({ id: abandoned.id })]);
+  });
+
+  it("takes one of two abandoned claims of a record at a time", async () => {
+    const record = annotation();
+    await owe(record);
+    await claim();
+    await owe(record);
+    await testApp.database.execute(sql`
+      UPDATE experiment_data_outbox
+      SET claimed_at = (now() AT TIME ZONE 'UTC') - interval '1 day'
+    `);
+
+    const taken = await claim();
+
+    expect(taken).toHaveLength(1);
+    expect(taken[0].id).toBe((await rows()).map(({ id }) => id).sort()[0]);
+  });
+
   it("deletes applied rows, but not one another task has taken back since", async () => {
     await owe(annotation(), annotation());
     const [kept, applied] = await claim();
