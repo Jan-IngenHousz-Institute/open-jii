@@ -4,6 +4,8 @@ import {
   MATCHABLE_MEASUREMENT_COLUMNS,
   makeCustomMetadataFormSchema,
   zExperimentCustomMetadataPayload,
+  zExperimentMetadataExperimentPathParam,
+  zExperimentMetadataPathParam,
 } from "./experiment-metadata.schema";
 
 describe("zExperimentCustomMetadataPayload", () => {
@@ -139,17 +141,48 @@ describe("zExperimentCustomMetadataPayload", () => {
   });
 
   it.each([
-    ["a cell", { rows: [{ _id: "row_1", plot: "A\u00001", treatment: "control" }] }],
-    ["a nested cell", { rows: [{ _id: "row_1", plot: "A1", notes: [{ text: "wet\u0000" }] }] }],
-    ["a row's key", { rows: [{ _id: "row_1", plot: "A1", "note\u0000": "dry" }] }],
-    ["the name", { name: "Plot\u0000 map" }],
-  ])("rejects a NUL character in %s, which Postgres cannot keep", (_where, change) => {
-    const result = zExperimentCustomMetadataPayload.safeParse({ ...validBlob, ...change });
+    ["a cell", "rows", { rows: [{ _id: "row_1", plot: "A\u00001", treatment: "control" }] }],
+    [
+      "a nested cell",
+      "rows",
+      { rows: [{ _id: "row_1", plot: "A1", notes: [{ text: "wet\u0000" }] }] },
+    ],
+    ["a row's key", "rows", { rows: [{ _id: "row_1", plot: "A1", "note\u0000": "dry" }] }],
+    ["the name", "name", { name: "Plot\u0000 map" }],
+    ["half of a character pair", "rows", { rows: [{ _id: "row_1", plot: "A\ud8001" }] }],
+  ])(
+    "rejects %s on the field that holds it, since Postgres cannot keep it",
+    (_what, field, change) => {
+      const result = zExperimentCustomMetadataPayload.safeParse({ ...validBlob, ...change });
 
-    expect(result.success).toBe(false);
-    expect(result.error?.issues.map((issue) => issue.message)).toContain(
-      "Metadata cannot hold a NUL character",
-    );
+      expect(result.success).toBe(false);
+      expect(result.error?.issues).toContainEqual(
+        expect.objectContaining({
+          path: [field],
+          message: "Metadata cannot hold a NUL character or a broken character",
+        }),
+      );
+    },
+  );
+
+  it("accepts a whole character pair, such as an emoji", () => {
+    const blob = {
+      ...validBlob,
+      rows: [{ _id: "row_1", plot: "A1 \ud83c\udf31", treatment: "control" }],
+    };
+
+    expect(zExperimentCustomMetadataPayload.safeParse(blob).success).toBe(true);
+  });
+
+  it("lowercases every id a metadata route takes, as Postgres prints a uuid", () => {
+    const upper = "AAAAAAAA-1111-1111-1111-111111111111";
+    const lower = "aaaaaaaa-1111-1111-1111-111111111111";
+
+    expect(zExperimentMetadataPathParam.parse({ id: upper, metadataId: upper })).toEqual({
+      id: lower,
+      metadataId: lower,
+    });
+    expect(zExperimentMetadataExperimentPathParam.parse({ id: upper })).toEqual({ id: lower });
   });
 
   it("accepts the text of an escape, which is no NUL character", () => {

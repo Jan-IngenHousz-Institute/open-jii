@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { sanitizeQuestionLabel } from "../../../transforms/label-sanitization";
-import { RESERVED_EXPERIMENT_COLUMN_NAMES } from "../experiment.schema";
+import { RESERVED_EXPERIMENT_COLUMN_NAMES, zLowercaseId } from "../experiment.schema";
 
 /** Measurement columns custom metadata may match against directly. */
 export const MATCHABLE_MEASUREMENT_COLUMNS = ["device_id"] as const;
@@ -11,11 +11,16 @@ function isAllowedMetadataColumnChar(c: string): boolean {
   return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || (c >= "0" && c <= "9") || c === "_";
 }
 
-function holdsNul(value: unknown): boolean {
-  if (typeof value === "string") return value.includes("\u0000");
-  if (Array.isArray(value)) return value.some(holdsNul);
+// Half of a UTF-16 surrogate pair, which neither Postgres nor the lakehouse parses as JSON.
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+
+function holdsUnstorableText(value: unknown): boolean {
+  if (typeof value === "string") return value.includes("\u0000") || LONE_SURROGATE.test(value);
+  if (Array.isArray(value)) return value.some(holdsUnstorableText);
   if (typeof value === "object" && value !== null) {
-    return Object.entries(value).some(([key, inner]) => key.includes("\u0000") || holdsNul(inner));
+    return Object.entries(value).some(
+      ([key, inner]) => holdsUnstorableText(key) || holdsUnstorableText(inner),
+    );
   }
   return false;
 }
@@ -42,8 +47,9 @@ const zMetadataRow = z
   .catchall(z.unknown());
 
 /**
- * Custom metadata payload as stored on the wire and persisted to
- * `experiment_custom_metadata.metadata` (VARIANT).
+ * Custom metadata payload as stored on the wire and persisted to the lakehouse's
+ * `experiment_custom_metadata.metadata` (VARIANT) and Postgres's `experiment_metadata_sheets.metadata`
+ * (jsonb).
  */
 export const zExperimentCustomMetadataPayload = z
   .object({
@@ -103,14 +109,17 @@ export const zExperimentCustomMetadataPayload = z
       }
     });
 
-    // Postgres keeps no NUL character in a jsonb document, in a key or in a value.
-    if (holdsNul(blob)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: [],
-        message: "Metadata cannot hold a NUL character",
-      });
-    }
+    // Postgres keeps no NUL character in a jsonb document, in a key or in a value. Reported on the
+    // field that holds it, so the form can show it there.
+    Object.entries(blob).forEach(([field, value]) => {
+      if (holdsUnstorableText(value)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: "Metadata cannot hold a NUL character or a broken character",
+        });
+      }
+    });
 
     // identifierColumnId must reference a real column on this blob.
     // Compared against `column.id` so the same schema validates both shapes:
@@ -169,9 +178,13 @@ export const zUpdateExperimentMetadataBody = z.object({
   metadata: zExperimentCustomMetadataPayload,
 });
 
+export const zExperimentMetadataExperimentPathParam = z.object({
+  id: zLowercaseId.describe("ID of the experiment"),
+});
+
 export const zExperimentMetadataPathParam = z.object({
-  id: z.string().guid().describe("ID of the experiment"),
-  metadataId: z.string().guid().describe("ID of the metadata record"),
+  id: zLowercaseId.describe("ID of the experiment"),
+  metadataId: zLowercaseId.describe("ID of the metadata record"),
 });
 
 export type ExperimentMetadata = z.infer<typeof zExperimentMetadata>;

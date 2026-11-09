@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { zLowercaseId } from "../experiment.schema";
+
 // Experiment data annotations
 export const zExperimentAnnotationType = z.enum(["comment", "flag"]);
 
@@ -11,8 +13,6 @@ const zNoNulText = z
   .refine((text) => !text.includes("\u0000"), "Text cannot hold a NUL character");
 const zRowId = zNoNulText.min(1).max(64);
 const zTableName = zNoNulText.min(1).max(64);
-// Lowercase, as Postgres prints a uuid, so the lakehouse and Postgres match an id alike.
-const zLowercaseId = z.string().guid().toLowerCase();
 
 // Use discriminated union to properly differentiate between comment and flag content
 export const zExperimentAnnotationCommentContent = z.object({
