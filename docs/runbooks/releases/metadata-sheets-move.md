@@ -46,6 +46,8 @@ In the same editor:
 
 ```sql
 SET TIME ZONE 'UTC';
+SELECT date_format(current_timestamp(), 'yyyy-MM-dd HH:mm:ss.SSSSSS') AS export_time;
+
 SELECT metadata_id AS id, experiment_id, to_json(metadata) AS metadata, created_by,
        date_format(created_at, 'yyyy-MM-dd HH:mm:ss.SSSSSS') AS created_at,
        date_format(updated_at, 'yyyy-MM-dd HH:mm:ss.SSSSSS') AS updated_at
@@ -54,8 +56,8 @@ FROM centrum.experiment_custom_metadata;
 SELECT count(*), sum(length(to_json(metadata))) FROM centrum.experiment_custom_metadata;
 ```
 
-Note the time you ran it, in UTC, and the two numbers the last query gives, then download the
-export's result as CSV, `sheets.csv`. If the editor cuts the download short of the count, export it
+Note `export_time`, which the first query reads before the export starts, and the two numbers the
+last query gives, then download the export's result as CSV, `sheets.csv`. If the editor cuts the download short of the count, export it
 in parts with a `WHERE experiment_id IN (...)`. The editor's download writes a NULL as the text
 `null`, and step 1 leaves no NULL in any column this exports, so a column per field is safe here.
 
@@ -73,9 +75,9 @@ SELECT count(*), sum(length(metadata)) FROM lakehouse_sheets;
 ```
 
 Both numbers must match the export's. When they do not, or `\copy` stops on a row, the download was
-cut short or mangled: export again in parts as step 2 says, and load each part. The document stays
-text here so its length can be compared with the export's; Postgres reorders a document's keys once
-it is `jsonb`.
+cut short or mangled. Export again in parts as step 2 says, empty the table with
+`TRUNCATE lakehouse_sheets;` and `\copy` each part into it. The document stays text here so its
+length can be compared with the export's; Postgres reorders a document's keys once it is `jsonb`.
 
 ## 4. Copy what Postgres lacks or holds older
 
@@ -131,8 +133,7 @@ LEFT JOIN experiments e ON e.id = l.experiment_id WHERE e.id IS NULL;
 
 `jsonb` compares documents by their values, so key order and number spelling (`1.0` against `1`)
 do not count. The first query is clean when every row it returns was edited in Postgres after the
-second export, so `in_postgres` is the newer time. The second is clean when every row was created
-after the second export. A row created before it is a delete that step 4 undid, or one whose copy
+second export's `export_time`. The second is clean when every row was created after it. A row created before it is a delete that step 4 undid, or one whose copy
 to Postgres failed, for which the service's log warns "not copied to Postgres". Check it is gone
 from the lakehouse and delete it from Postgres.
 
@@ -151,11 +152,11 @@ SET experiment_id = l.experiment_id, metadata = l.metadata::jsonb, created_by = 
     created_at = l.created_at, updated_at = l.updated_at
 FROM lakehouse_sheets l
 WHERE s.id = l.id AND s.id IN ('<id>', '<id>')
-  AND s.updated_at < '<the second export's time, UTC>';
+  AND s.updated_at < '<the second export's export_time>';
 ```
 
-The last condition leaves a row edited since the export: that edit reached both stores, and
-the export is older than it.
+The last condition leaves a row edited since the export started: that edit reached both stores,
+and the export is older than it.
 
 ## Before the second release, and after
 
@@ -165,7 +166,10 @@ only when both are clean.
 Run steps 1 to 5 again right before the second release goes out, with a fresh export; a clean check
 is what lets it go. Once it is out, run steps 2 and 3 and step 5's checks once more without step 4,
 since Postgres is then where sheets are written: a difference is a write the first release's tasks
-took while the second rolled out, whose copy failed. Note its id in OJD-2153.
+took while the second rolled out, whose copy failed. Postgres is what the metadata list reads by
+then, so repair it as step 5 says: step 4 with `AND l.id IN ('<id>', '<id>')` added for a missing or
+older sheet, a `DELETE` from Postgres for one the lakehouse no longer holds. Note the ids in
+OJD-2153.
 
 Delete `sheets.csv`, `sheets-2.csv` and any parts once the checks are clean. They hold
 researchers' data.
