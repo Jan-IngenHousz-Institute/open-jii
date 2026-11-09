@@ -69,16 +69,84 @@ jq -r 'select(any(.failures[]; .failedResource == "open-jii-<env>-data-ingest-st
 ```
 
 A message whose Kinesis action failed while Firehose succeeded is also in the raw archive under
-`raw-iot/`, but only these objects say which messages the pipeline missed. No pipeline reads either
-prefix, so replay is a manual job of re-publishing those payloads into the stream, not a switch to
-flip. Establish which action failed before telling anyone the data is gone, because half the time it
-is not.
+`raw-iot/`, but only these objects say which messages the pipeline missed. Establish which action
+failed before telling anyone the data is gone, because half the time it is not.
+
+### Replaying it
+
+`pnpm ingest:replay` reads a window of either source, asks bronze which of its messages already
+landed, and sends only the missing ones back to the stream, exactly as the rule sent them. The window
+is when the messages reached the broker, in UTC, not when they were measured.
+
+- `--source errors` reads the error objects above, for a window in which the rule's Kinesis action
+  failed. It sends only the messages whose failures name the stream.
+- `--source archive`, the default, reads `raw-iot/`, for a window the pipeline lost after Kinesis,
+  such as a consumer stopped for longer than the stream keeps records.
+
+It runs under your AWS profile for the environment, which must hold the infrastructure maintainer
+role, the one that may call `kinesis:PutRecords` on the stream, and your Databricks profile.
+`--warehouse` takes the id of the environment's Investigations warehouse, which
+`databricks warehouses list -p <env>` lists. Start with a dry run, which only reads:
+
+```bash
+aws sso login --sso-session openjii
+pnpm ingest:replay <env> --source errors --from 2026-10-07T12:00Z --to 2026-10-07T16:00Z \
+  --warehouse <warehouse id> [--experiment <experiment id>] [--client <thing name>]
+```
+
+It prints a count per decision and writes a manifest of every message it read, with its object, line
+and decision, to `.claude/ingest-replays/`. The manifest names devices and measurements, so delete it
+once the incident is closed.
+
+- `missing`: not in bronze, and sent on `--apply`.
+- `in bronze`: already landed, matched on the phone's record id (`_client_id`), or on the client,
+  device and measurement time for a message without one.
+- `repeated in the window`: a second copy of a message the window already holds, sent at most once.
+- `reached kinesis`: an error object whose failures name only the archive.
+- `health check`, `no experiment in its topic` and `no timestamp`: never sent, since none would land
+  as a measurement.
+- `too large for one kinesis record`: over 1 MiB, which only the large-payload path takes. Recover
+  it from that path.
+
+When the counts look right, run the same command with `--apply`. Each record goes to the stream under
+the partition key `replay/<run>/<n>`, and a record Kinesis refuses is tried twice more. The command
+ends with exit code 1 when any stays refused; run it again, since what landed is then in bronze and
+skipped. A few minutes after the pipeline catches up, a dry run of the same window should count no
+`missing`. Note the window, the source and the counts in the incident's ticket.
+
+A replay sends no message bronze already holds. One that slips through, such as a message the stream
+still held when the replay ran, lands as a second copy with the same `_client_id`, so silver gives
+it the same id: the heartbeat's `measurement-copies` counts it, and the serving store and exports
+keep one row per id.
+
+### How far back
+
+| Source             | Holds                                         | From                                                                                             | Reach                                                                                     |
+| ------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| The stream         | every message the rule delivered              | the last 24 hours on dev, 72 on prod                                                             | A consumer stopped for less than that loses nothing; it reads the backlog when it starts. |
+| `raw-iot/`         | every message the broker accepted             | dev's first day is 11 May 2026; one JSON object per message until 20 August, gzipped lines since | See below.                                                                                |
+| `iot-rule-errors/` | every message a rule action failed to deliver | the error action's start on 7 October 2026; empty while nothing failed                           | See below.                                                                                |
+
+The bucket never deletes. Its lifecycle moves an object to Glacier at 90 days and to Deep Archive at
+a year, but S3 moves no object under 128 KB, and the archive's objects are mostly far smaller: dev's
+May objects were still in Standard in November. The dry run lists any object in Glacier or Deep
+Archive under `restoreFirst` without reading it, and `--apply` refuses to run while there are any.
+Restore each for a week, wait for the restore, which takes hours from Glacier and up to 12 from Deep
+Archive at the Standard tier, then run again:
+
+```bash
+aws s3api restore-object --profile openjii-<env> --bucket open-jii-iot-raw-archive-<env> \
+  --key <key> --restore-request 'Days=7,GlacierJobParameters={Tier=Standard}'
+```
+
+Neither source holds a publish the broker refused, which stays on the phone until it sends it again,
+or a payload too large for the rule, which takes the large-payload path that
+`support/measurement-missing.md` covers.
 
 The ingest health check publishes a synthetic message every minute to
 `experiment/data_ingest/v1/healthcheck/healthcheck/1/<env>`, so those messages are in the raw
-archive and in these objects too. Skip every one whose topic starts with
-`experiment/data_ingest/v1/healthcheck/`: they carry no measurement, and replayed into the stream
-they would reach `ingest_healthchecks` hours late and lift its latency.
+archive and in the error objects too. The replay skips them: they carry no measurement, and replayed
+into the stream they would reach `ingest_healthchecks` hours late and lift its latency.
 
 ## Closing
 
