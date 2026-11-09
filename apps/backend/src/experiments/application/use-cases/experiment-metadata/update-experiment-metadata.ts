@@ -103,7 +103,8 @@ export class UpdateExperimentMetadataUseCase {
       });
       this.outboxWorker.nudge();
 
-      return success({ ...written.value, metadataId: written.value.id });
+      const { id, ...updated } = written.value;
+      return success({ ...updated, metadataId: id });
     });
   }
 }

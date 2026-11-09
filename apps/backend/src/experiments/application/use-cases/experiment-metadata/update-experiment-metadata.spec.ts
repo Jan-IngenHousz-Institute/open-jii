@@ -77,7 +77,8 @@ describe("UpdateExperimentMetadataUseCase", () => {
     const [kept] = await sheets();
     expect(kept).toEqual({ ...record, metadata: sampleUpdate.metadata, updatedAt: kept.updatedAt });
     expect(kept.updatedAt.getTime()).toBeGreaterThan(created.getTime());
-    expect(result.value).toEqual({ ...kept, metadataId: kept.id });
+    const { id, ...sheet } = kept;
+    expect(result.value).toEqual({ ...sheet, metadataId: id });
     expect(await outbox()).toEqual([
       expect.objectContaining({ recordType: "metadata_sheet", recordId: record.id }),
     ]);

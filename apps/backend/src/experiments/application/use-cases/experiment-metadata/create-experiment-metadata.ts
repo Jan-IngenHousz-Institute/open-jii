@@ -96,7 +96,8 @@ export class CreateExperimentMetadataUseCase {
       });
       this.outboxWorker.nudge();
 
-      return success({ ...sheet, metadataId: sheet.id });
+      const { id, ...created } = sheet;
+      return success({ ...created, metadataId: id });
     });
   }
 }

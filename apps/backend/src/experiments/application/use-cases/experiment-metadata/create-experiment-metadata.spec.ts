@@ -61,7 +61,8 @@ describe("CreateExperimentMetadataUseCase", () => {
         createdBy: testUserId,
       }),
     );
-    expect(result.value).toEqual(expect.objectContaining({ ...kept, metadataId: kept.id }));
+    const { id, ...sheet } = kept;
+    expect(result.value).toEqual({ ...sheet, metadataId: id });
     expect(await outbox()).toEqual([
       expect.objectContaining({
         recordType: "metadata_sheet",
