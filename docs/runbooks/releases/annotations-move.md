@@ -188,12 +188,24 @@ Run this in the same session as [metadata-sheets-move](metadata-sheets-move.md).
 goes out only when both are clean.
 
 Run steps 1 to 5 again right before the second release goes out, with a fresh export and in a new
-psql session, since step 3 creates its tables; a clean check is what lets it go. Once it is out,
-run steps 2 and 3 and step 5's checks once more without step 4, since Postgres is then where
-annotations are written: a difference is a write the first release's tasks took while the second
-rolled out, whose copy failed. Postgres is what pages read by then, so repair it as step 5 says:
-step 4 with `AND l.id IN ('<id>', '<id>')` added for a missing or older row, a `DELETE` from
-Postgres for one the lakehouse no longer holds. Note the ids in OJD-2153.
+psql session, since step 3 creates its tables; a clean check is what lets it go.
+
+Once it is out, Postgres is where annotations are written, and the lakehouse holds a copy the backend
+keeps through the `experiment_data_outbox` table. First wait until no copy is owed, in psql:
+
+```sql
+SELECT count(*), max(attempts), max(last_error)
+FROM experiment_data_outbox WHERE record_type = 'annotation';
+```
+
+The backend copies each change as it is written and looks again every 15 seconds, so the count
+falls to 0 soon after the last edit. A row whose attempts keep climbing names the lakehouse's
+refusal in `last_error`, and the backend logs it as an error from the fifth attempt.
+Then run steps 2 and 3 and step 5's checks once more without step 4: a difference left is a write
+the first release's tasks took while the second rolled out, whose copy failed. Postgres is what
+pages read by then, so repair it as step 5 says: step 4 with `AND l.id IN ('<id>', '<id>')` added
+for a missing or older row, a `DELETE` from Postgres for one the lakehouse no longer holds. Note the
+ids in OJD-2153.
 
 Delete `annotations.csv`, `annotations-2.csv` and any parts once the checks are clean. They hold
 researchers' data.
