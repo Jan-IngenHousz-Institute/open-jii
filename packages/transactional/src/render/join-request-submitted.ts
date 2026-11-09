@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 
+import type { EmailUnsubscribe } from "../components/email-layout";
 import { Email } from "../emails/email";
 import { JoinRequestSubmitted } from "../emails/fallbacks/join-request-submitted";
 import { getCmsEmail } from "../lib/contentful";
@@ -11,6 +12,7 @@ export interface RenderJoinRequestSubmittedParams {
   requesterName: string;
   message?: string;
   baseUrl: string;
+  unsubscribe?: EmailUnsubscribe;
 }
 
 export interface RenderedEmail {
@@ -22,7 +24,8 @@ export interface RenderedEmail {
 export async function renderJoinRequestSubmitted(
   params: RenderJoinRequestSubmittedParams,
 ): Promise<RenderedEmail> {
-  const { host, baseUrl, experimentName, experimentUrl, requesterName, message } = params;
+  const { host, baseUrl, experimentName, experimentUrl, requesterName, message, unsubscribe } =
+    params;
 
   const emailData = await getCmsEmail("join-request-submitted", {
     host,
@@ -34,7 +37,15 @@ export async function renderJoinRequestSubmitted(
   });
 
   if (!emailData) {
-    const props = { host, experimentName, experimentUrl, requesterName, message, baseUrl };
+    const props = {
+      host,
+      experimentName,
+      experimentUrl,
+      requesterName,
+      message,
+      baseUrl,
+      unsubscribe,
+    };
     const html = await render(JoinRequestSubmitted(props), {});
     const text = await render(JoinRequestSubmitted(props), { plainText: true });
     return {
@@ -50,6 +61,7 @@ export async function renderJoinRequestSubmitted(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     {},
   );
@@ -60,6 +72,7 @@ export async function renderJoinRequestSubmitted(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     { plainText: true },
   );

@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 
+import type { EmailUnsubscribe } from "../components/email-layout";
 import { Email } from "../emails/email";
 import { OrganizationJoinRequestSubmitted } from "../emails/fallbacks/organization-join-request-submitted";
 import { getCmsEmail } from "../lib/contentful";
@@ -11,6 +12,7 @@ export interface RenderOrganizationJoinRequestSubmittedParams {
   requesterName: string;
   message?: string;
   baseUrl: string;
+  unsubscribe?: EmailUnsubscribe;
 }
 
 export interface RenderedEmail {
@@ -22,7 +24,8 @@ export interface RenderedEmail {
 export async function renderOrganizationJoinRequestSubmitted(
   params: RenderOrganizationJoinRequestSubmittedParams,
 ): Promise<RenderedEmail> {
-  const { host, baseUrl, organizationName, organizationUrl, requesterName, message } = params;
+  const { host, baseUrl, organizationName, organizationUrl, requesterName, message, unsubscribe } =
+    params;
 
   const emailData = await getCmsEmail("organization-join-request-submitted", {
     host,
@@ -34,7 +37,15 @@ export async function renderOrganizationJoinRequestSubmitted(
   });
 
   if (!emailData) {
-    const props = { host, organizationName, organizationUrl, requesterName, message, baseUrl };
+    const props = {
+      host,
+      organizationName,
+      organizationUrl,
+      requesterName,
+      message,
+      baseUrl,
+      unsubscribe,
+    };
     const html = await render(OrganizationJoinRequestSubmitted(props), {});
     const text = await render(OrganizationJoinRequestSubmitted(props), { plainText: true });
     return {
@@ -50,6 +61,7 @@ export async function renderOrganizationJoinRequestSubmitted(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     {},
   );
@@ -60,6 +72,7 @@ export async function renderOrganizationJoinRequestSubmitted(
       baseUrl,
       cmsPreview: emailData.preview,
       cmsContent: emailData.content,
+      unsubscribe,
     }),
     { plainText: true },
   );

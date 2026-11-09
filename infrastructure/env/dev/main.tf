@@ -2306,11 +2306,12 @@ module "auth_secrets" {
 
   # Store secrets as JSON using variables
   secret_string = jsonencode({
-    AUTH_SECRET        = var.auth_secret
-    AUTH_GITHUB_ID     = var.github_oauth_client_id
-    AUTH_GITHUB_SECRET = var.github_oauth_client_secret
-    AUTH_ORCID_ID      = var.orcid_oauth_client_id
-    AUTH_ORCID_SECRET  = var.orcid_oauth_client_secret
+    AUTH_SECRET                     = var.auth_secret
+    NOTIFICATION_UNSUBSCRIBE_SECRET = var.notification_unsubscribe_secret
+    AUTH_GITHUB_ID                  = var.github_oauth_client_id
+    AUTH_GITHUB_SECRET              = var.github_oauth_client_secret
+    AUTH_ORCID_ID                   = var.orcid_oauth_client_id
+    AUTH_ORCID_SECRET               = var.orcid_oauth_client_secret
   })
 
   tags = {
@@ -2787,6 +2788,10 @@ module "backend_ecs" {
     {
       name      = "AUTH_SECRET"
       valueFrom = "${module.auth_secrets.secret_arn}:AUTH_SECRET::"
+    },
+    {
+      name      = "NOTIFICATION_UNSUBSCRIBE_SECRET"
+      valueFrom = "${module.auth_secrets.secret_arn}:NOTIFICATION_UNSUBSCRIBE_SECRET::"
     },
     {
       name      = "AUTH_EMAIL_SERVER"

@@ -5,9 +5,9 @@ import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 
 import { newsletterContract } from "@repo/api/domains/newsletter/newsletter.contract";
 
+import { ClientIpThrottlerGuard } from "../../common/guards/client-ip-throttler.guard";
 import { NEWSLETTER_PORT } from "../core/ports/newsletter.port";
 import type { NewsletterPort } from "../core/ports/newsletter.port";
-import { NewsletterThrottlerGuard } from "./newsletter-throttler.guard";
 
 /**
  * Public, unauthenticated newsletter subscribe endpoint. Rate-limited per IP
@@ -16,7 +16,7 @@ import { NewsletterThrottlerGuard } from "./newsletter-throttler.guard";
  */
 @Controller()
 @AllowAnonymous()
-@UseGuards(NewsletterThrottlerGuard)
+@UseGuards(ClientIpThrottlerGuard)
 @Throttle({ default: { limit: 5, ttl: 60_000 } })
 export class NewsletterSubscribeController {
   private readonly logger = new Logger(NewsletterSubscribeController.name);

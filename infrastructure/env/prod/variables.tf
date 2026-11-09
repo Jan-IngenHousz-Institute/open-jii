@@ -95,6 +95,12 @@ variable "auth_secret" {
 
 }
 
+variable "notification_unsubscribe_secret" {
+  description = "Secret that signs notification email unsubscribe links"
+  type        = string
+  sensitive   = true
+}
+
 variable "github_oauth_client_id" {
   description = "GitHub OAuth client ID"
   type        = string

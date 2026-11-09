@@ -15,6 +15,7 @@ import {
   success,
 } from "../../../common/utils/fp-utils";
 import { queuedDeliveriesFor } from "../../../test/notification-deliveries";
+import { expectUnsubscribeFooter } from "../../../test/notification-unsubscribe";
 import { TestHarness } from "../../../test/test-harness";
 import { NotificationDeliveryRepository } from "../../core/repositories/notification-delivery.repository";
 import { NotificationRepository } from "../../core/repositories/notification.repository";
@@ -22,6 +23,7 @@ import { NotificationDispatchService } from "./notification-dispatch.service";
 import { NotificationEmailService } from "./notification-email.service";
 import { NotificationOutboxWorker } from "./notification-outbox.worker";
 import { NotificationPreferencesService } from "./notification-preferences.service";
+import { NotificationUnsubscribeService } from "./notification-unsubscribe.service";
 
 describe("NotificationDispatchService", () => {
   const testApp = TestHarness.App;
@@ -683,8 +685,36 @@ describe("NotificationDispatchService", () => {
   // The access email needs a resource it can build a page link for. The registry
   // allows an organization as a notification resource and the page-link map has no
   // entry for one, so the sender has to refuse rather than email a link that 404s.
+  describe("the join-request email entry", () => {
+    it("sends the request with the footer for the recipient's requests and invitations", async () => {
+      const result = await notificationEmail.send("experiment_join_request_received", {
+        recipientId,
+        recipientEmail,
+        actorName: "Ada Lovelace",
+        resource: experiment,
+        params: { experimentName: "Photosynthesis", message: "Hello" },
+      });
+
+      assertSuccess(result);
+      expect(sendSubmitted).toHaveBeenCalledExactlyOnceWith(
+        experiment.id,
+        "Photosynthesis",
+        "Ada Lovelace",
+        recipientEmail,
+        "Hello",
+        sendSubmitted.mock.calls[0]?.[5],
+      );
+      expectUnsubscribeFooter(testApp, sendSubmitted.mock.calls[0]?.[5], {
+        recipientId,
+        category: "requests_and_invitations",
+        categoryLabel: "Requests and invitations",
+      });
+    });
+  });
+
   describe("the access-granted email entry", () => {
     const grantedContext = (resource: { type: "organization"; id: string } | null) => ({
+      recipientId,
       recipientEmail,
       actorName: "Ada Lovelace",
       resource,
@@ -716,6 +746,7 @@ describe("NotificationDispatchService", () => {
       resource: { type: "device_group" | "organization"; id: string } | null,
       actorName: string | null = "Ada Lovelace",
     ) => ({
+      recipientId,
       recipientEmail,
       actorName,
       resource,
@@ -742,6 +773,12 @@ describe("NotificationDispatchService", () => {
         resourceName: "Greenhouse sensors",
         actor: "Someone",
         email: recipientEmail,
+        unsubscribe: sendDeleted.mock.calls[0]?.[0].unsubscribe,
+      });
+      expectUnsubscribeFooter(testApp, sendDeleted.mock.calls[0]?.[0].unsubscribe, {
+        recipientId,
+        category: "experiments_and_resources",
+        categoryLabel: "Experiments and resources",
       });
     });
 
@@ -780,6 +817,7 @@ describe("NotificationDispatchService", () => {
       ["member,admin", "an admin of"],
     ])("words the stored role %s as %s, linking to the organization", async (role, wording) => {
       const result = await notificationEmail.send("organization_role_changed", {
+        recipientId,
         recipientEmail,
         actorName: "Ada Lovelace",
         resource: organization,
@@ -793,11 +831,18 @@ describe("NotificationDispatchService", () => {
         actor: "Ada Lovelace",
         role: wording,
         email: recipientEmail,
+        unsubscribe: sendRoleChanged.mock.calls[0]?.[0].unsubscribe,
+      });
+      expectUnsubscribeFooter(testApp, sendRoleChanged.mock.calls[0]?.[0].unsubscribe, {
+        recipientId,
+        category: "membership_and_access",
+        categoryLabel: "Membership and access",
       });
     });
 
     it("refuses a role change stored with no resource", async () => {
       const result = await notificationEmail.send("organization_role_changed", {
+        recipientId,
         recipientEmail,
         actorName: "Ada Lovelace",
         resource: null,
@@ -811,6 +856,7 @@ describe("NotificationDispatchService", () => {
 
     it("sends a removal with no resource, falling back for a missing actor", async () => {
       const result = await notificationEmail.send("organization_membership_removed", {
+        recipientId,
         recipientEmail,
         actorName: null,
         resource: null,
@@ -822,12 +868,19 @@ describe("NotificationDispatchService", () => {
         organizationName: "Greenhouse Lab",
         actor: "Someone",
         email: recipientEmail,
+        unsubscribe: sendRemoved.mock.calls[0]?.[0].unsubscribe,
+      });
+      expectUnsubscribeFooter(testApp, sendRemoved.mock.calls[0]?.[0].unsubscribe, {
+        recipientId,
+        category: "membership_and_access",
+        categoryLabel: "Membership and access",
       });
     });
   });
 
   describe("the made-public email entry", () => {
     const madePublicContext = (resource: { type: "experiment"; id: string } | null) => ({
+      recipientId,
       recipientEmail,
       actorName: null,
       resource,
@@ -853,7 +906,13 @@ describe("NotificationDispatchService", () => {
         experiment.id,
         "Leaf Area Index",
         recipientEmail,
+        sendMadePublic.mock.calls[0]?.[3],
       );
+      expectUnsubscribeFooter(testApp, sendMadePublic.mock.calls[0]?.[3], {
+        recipientId,
+        category: "experiments_and_resources",
+        categoryLabel: "Experiments and resources",
+      });
     });
 
     it("refuses a notification stored with no resource", async () => {
@@ -868,8 +927,80 @@ describe("NotificationDispatchService", () => {
     });
   });
 
+  describe("the project transfer email entries", () => {
+    it("sends the request confirmation with the project and the footer", async () => {
+      const send = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendTransferRequestConfirmation")
+        .mockResolvedValue(success(undefined));
+
+      const result = await notificationEmail.send("project_transfer_requested", {
+        recipientId,
+        recipientEmail,
+        actorName: null,
+        resource: null,
+        params: { projectId: "12345", projectUrl: "https://photosynq.org/projects/12345" },
+      });
+
+      assertSuccess(result);
+      expect(send).toHaveBeenCalledExactlyOnceWith(
+        recipientEmail,
+        "12345",
+        "https://photosynq.org/projects/12345",
+        send.mock.calls[0]?.[3],
+      );
+      expectUnsubscribeFooter(testApp, send.mock.calls[0]?.[3], {
+        recipientId,
+        category: "project_transfers",
+        categoryLabel: "Project transfers",
+      });
+    });
+
+    it("sends the completion with the experiment and the footer", async () => {
+      const send = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendProjectTransferComplete")
+        .mockResolvedValue(success(undefined));
+
+      const result = await notificationEmail.send("project_transfer_completed", {
+        recipientId,
+        recipientEmail,
+        actorName: null,
+        resource: experiment,
+        params: { experimentName: "Leaf Area Index" },
+      });
+
+      assertSuccess(result);
+      expect(send).toHaveBeenCalledExactlyOnceWith(
+        recipientEmail,
+        experiment.id,
+        "Leaf Area Index",
+        send.mock.calls[0]?.[3],
+      );
+      expectUnsubscribeFooter(testApp, send.mock.calls[0]?.[3], {
+        recipientId,
+        category: "project_transfers",
+        categoryLabel: "Project transfers",
+      });
+    });
+  });
+
+  it("sends nothing and builds no footer for a type with no email", async () => {
+    const footerFor = vi.spyOn(testApp.module.get(NotificationUnsubscribeService), "footerFor");
+
+    const result = await notificationEmail.send("experiment_invitation_accepted", {
+      recipientId,
+      recipientEmail,
+      actorName: "Ada Lovelace",
+      resource: experiment,
+      params: { experimentName: "Leaf Area Index" },
+    });
+
+    assertSuccess(result);
+    expect(footerFor).not.toHaveBeenCalled();
+  });
+
   describe("the account security email entries", () => {
     const accountContext = <T>(params: T) => ({
+      recipientId,
       recipientEmail,
       actorName: null,
       resource: null,
@@ -878,8 +1009,10 @@ describe("NotificationDispatchService", () => {
 
     let sendApiKeyCreated: MockInstance<EmailAdapter["sendApiKeyCreatedNotification"]>;
     let sendPasskeyAdded: MockInstance<EmailAdapter["sendPasskeyAddedNotification"]>;
+    let footerFor: MockInstance<NotificationUnsubscribeService["footerFor"]>;
 
     beforeEach(() => {
+      footerFor = vi.spyOn(testApp.module.get(NotificationUnsubscribeService), "footerFor");
       const emailAdapter = testApp.module.get(EmailAdapter);
       sendApiKeyCreated = vi
         .spyOn(emailAdapter, "sendApiKeyCreatedNotification")
@@ -900,6 +1033,7 @@ describe("NotificationDispatchService", () => {
         keyName: "Field laptop",
         email: recipientEmail,
       });
+      expect(footerFor).not.toHaveBeenCalled();
     });
 
     it.each([["Google Password Manager"], [undefined]])(
@@ -915,6 +1049,7 @@ describe("NotificationDispatchService", () => {
           passkeyName,
           email: recipientEmail,
         });
+        expect(footerFor).not.toHaveBeenCalled();
       },
     );
   });
@@ -925,6 +1060,7 @@ describe("NotificationDispatchService", () => {
       resource: typeof device | null,
       actorName: string | null = "Ada Lovelace",
     ) => ({
+      recipientId,
       recipientEmail,
       actorName,
       resource,
@@ -938,7 +1074,7 @@ describe("NotificationDispatchService", () => {
     ] as const;
 
     it.each(entries)(
-      "%s sends the device's id, both names, the actor and the address",
+      "%s sends the device's id, both names, the actor, the address and the footer",
       async (type, method) => {
         const send = vi
           .spyOn(testApp.module.get(EmailAdapter), method)
@@ -953,6 +1089,12 @@ describe("NotificationDispatchService", () => {
           definitionName: "PAR sweep",
           actor: "Ada Lovelace",
           email: recipientEmail,
+          unsubscribe: send.mock.calls[0]?.[0].unsubscribe,
+        });
+        expectUnsubscribeFooter(testApp, send.mock.calls[0]?.[0].unsubscribe, {
+          recipientId,
+          category: "devices_and_calibration",
+          categoryLabel: "Devices and calibration",
         });
       },
     );

@@ -336,9 +336,19 @@ export const zUpdateNotificationPreferenceBody = z.object({
   enabled: z.boolean(),
 });
 
+export const zEmailPreferenceTokenParams = z.object({
+  token: z.string().min(1).max(1024),
+});
+
+export const zEmailPreferenceByTokenResponse = z.object({
+  category: zNotificationCategory,
+});
+
 export type Notification = z.infer<typeof zNotification>;
 export type ListNotificationsQuery = z.infer<typeof zListNotificationsQuery>;
 export type NotificationList = z.infer<typeof zNotificationList>;
 export type NotificationPreference = z.infer<typeof zNotificationPreference>;
 export type NotificationPreferences = z.infer<typeof zNotificationPreferences>;
 export type UpdateNotificationPreferenceBody = z.infer<typeof zUpdateNotificationPreferenceBody>;
+export type EmailPreferenceTokenParams = z.infer<typeof zEmailPreferenceTokenParams>;
+export type EmailPreferenceByTokenResponse = z.infer<typeof zEmailPreferenceByTokenResponse>;
