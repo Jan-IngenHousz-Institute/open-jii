@@ -192,6 +192,48 @@ describe("ExperimentMetadataWarehouseRepository", () => {
       );
     });
 
+    it("splits large sheets over statements of at most 4 MiB of documents", async () => {
+      const execute = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(success(emptySchemaData));
+      const large = () => sheet({ metadata: { note: "x".repeat(1_500_000) } });
+      const sheets = [large(), large(), large()];
+
+      assertSuccess(await repository.merge(sheets));
+
+      expect(execute).toHaveBeenCalledTimes(2);
+      const written = execute.mock.calls.map(([, , parameters]) =>
+        (parameters ?? [])
+          .filter(({ name }) => name.startsWith("metadata_id_"))
+          .map(({ value }) => value),
+      );
+      expect(written).toEqual([[sheets[0].id, sheets[1].id], [sheets[2].id]]);
+    });
+
+    it("writes a sheet larger than the cap alone", async () => {
+      const execute = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(success(emptySchemaData));
+
+      assertSuccess(
+        await repository.merge([sheet({ metadata: { note: "x".repeat(5_000_000) } }), sheet()]),
+      );
+
+      expect(execute).toHaveBeenCalledTimes(2);
+    });
+
+    it("stops at the first statement the warehouse refuses", async () => {
+      const execute = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(failure(AppError.internal("Warehouse down")));
+      const large = () => sheet({ metadata: { note: "x".repeat(3_000_000) } });
+
+      const result = await repository.merge([large(), large()]);
+
+      expect(result.isFailure()).toBe(true);
+      expect(execute).toHaveBeenCalledTimes(1);
+    });
+
     it("keeps the sheets' values out of the statement", async () => {
       const execute = vi
         .spyOn(databricksPort, "executeSqlQuery")
