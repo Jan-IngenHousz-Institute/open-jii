@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { success } from "../../../common/utils/fp-utils";
@@ -16,6 +16,8 @@ const ANNOTATIONS = "annotations";
  */
 @Injectable()
 export class PlatformAnnotationsService {
+  private readonly logger = new Logger(PlatformAnnotationsService.name);
+
   constructor(private readonly annotations: ExperimentAnnotationsRepository) {}
 
   /**
@@ -57,13 +59,24 @@ export class PlatformAnnotationsService {
       onRow.set(annotation.rowId, [...(onRow.get(annotation.rowId) ?? []), annotation]);
     }
 
-    const rows = data.rows.map((row) => {
-      const phone = phoneIndex === -1 ? [] : this.parsed(row[phoneIndex]);
+    const phones = data.rows.map((row) => (phoneIndex === -1 ? [] : this.parsed(row[phoneIndex])));
+    const unreadable = phones.filter((phone) => phone === undefined).length;
+    if (unreadable > 0) {
+      this.logger.warn({
+        msg: "Could not read the phone's annotations on some rows; they show the platform's alone",
+        operation: "fillPlatformAnnotations",
+        experimentId,
+        tableName,
+        rows: unreadable,
+      });
+    }
+
+    const rows = data.rows.map((row, at) => {
       const platform = (onRow.get(row[idIndex] ?? "") ?? []).map((annotation) =>
         this.cell(annotation),
       );
       return row.map((value, index) =>
-        index === annotationsIndex ? JSON.stringify([...phone, ...platform]) : value,
+        index === annotationsIndex ? JSON.stringify([...(phones[at] ?? []), ...platform]) : value,
       );
     });
     return success(this.without({ ...data, rows }, separatePhoneIndex));
@@ -83,15 +96,16 @@ export class PlatformAnnotationsService {
     };
   }
 
-  private parsed(cell: string | null): unknown[] {
+  /** A row's phone annotations, or undefined when the cell holds no list. */
+  private parsed(cell: string | null): unknown[] | undefined {
     if (cell === null) {
       return [];
     }
     try {
       const value: unknown = JSON.parse(cell);
-      return Array.isArray(value) ? value : [];
+      return Array.isArray(value) ? value : undefined;
     } catch {
-      return [];
+      return undefined;
     }
   }
 
