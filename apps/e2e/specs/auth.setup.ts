@@ -6,6 +6,7 @@ import { readLatestSignInOtp } from "@repo/devkit/otp";
 
 import { expect, test as setup } from "../fixtures.js";
 import {
+  authSecret,
   databaseUrl,
   dismissCookieBanner,
   locale,
@@ -27,7 +28,7 @@ async function authenticate(page: Page, email: string, outputFile: string) {
   await emailInput.fill(email);
   await expect(emailInput).toHaveValue(email);
 
-  const previousOtp = await readLatestSignInOtp(databaseUrl, email).catch(() => null);
+  const previousOtp = await readLatestSignInOtp(databaseUrl, email, authSecret).catch(() => null);
   await page.getByRole("button", { name: "Continue with Email" }).click();
   const otp = await waitForFreshOtp(databaseUrl, email, previousOtp);
 

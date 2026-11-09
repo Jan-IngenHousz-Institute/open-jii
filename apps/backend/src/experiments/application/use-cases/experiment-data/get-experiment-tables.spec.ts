@@ -89,7 +89,7 @@ describe("GetExperimentTablesUseCase", () => {
       );
 
       // Execute the use case
-      const result = await useCase.execute(experiment.id, testUserId);
+      const result = await useCase.execute(experiment.id, testUserId, "warehouse");
 
       // Assertions
       expect(result.isSuccess()).toBe(true);
@@ -150,7 +150,7 @@ describe("GetExperimentTablesUseCase", () => {
         success(mockMetadata),
       );
 
-      const result = await useCase.execute(experiment.id, testUserId);
+      const result = await useCase.execute(experiment.id, testUserId, "warehouse");
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -160,7 +160,7 @@ describe("GetExperimentTablesUseCase", () => {
     it("should return not found error when experiment does not exist", async () => {
       const nonExistentId = faker.string.uuid();
 
-      const result = await useCase.execute(nonExistentId, testUserId);
+      const result = await useCase.execute(nonExistentId, testUserId, "warehouse");
 
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
@@ -178,7 +178,7 @@ describe("GetExperimentTablesUseCase", () => {
         failure(AppError.internal("Failed to fetch metadata")),
       );
 
-      const result = await useCase.execute(experiment.id, testUserId);
+      const result = await useCase.execute(experiment.id, testUserId, "warehouse");
 
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
@@ -205,7 +205,7 @@ describe("GetExperimentTablesUseCase", () => {
         ]),
       );
 
-      const result = await useCase.execute(experiment.id, testUserId);
+      const result = await useCase.execute(experiment.id, testUserId, "warehouse");
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -242,7 +242,7 @@ describe("GetExperimentTablesUseCase", () => {
         ]),
       );
 
-      const result = await useCase.execute(experiment.id, testUserId);
+      const result = await useCase.execute(experiment.id, testUserId, "warehouse");
       assertSuccess(result);
       expect(result.value[0].displayName).toBe(uploadId);
     });
@@ -255,7 +255,7 @@ describe("GetExperimentTablesUseCase", () => {
 
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([]));
 
-      const result = await useCase.execute(experiment.id, testUserId);
+      const result = await useCase.execute(experiment.id, testUserId, "warehouse");
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);

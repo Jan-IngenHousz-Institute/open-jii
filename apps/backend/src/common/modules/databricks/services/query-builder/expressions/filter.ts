@@ -18,7 +18,7 @@ export function buildFilterCondition(filter: FilterCondition, builder: BaseQuery
       }
 
       const op = operator === "equals" ? "=" : "<>";
-      return `${col} ${op} ${builder.escapeScalarValue(value)}`;
+      return `${col} ${op} ${builder.filterLiteral(filter.column, value)}`;
     }
     case "greater_than":
     case "less_than":
@@ -37,7 +37,7 @@ export function buildFilterCondition(filter: FilterCondition, builder: BaseQuery
         } as const
       )[operator];
 
-      return `${col} ${op} ${builder.escapeScalarValue(value)}`;
+      return `${col} ${op} ${builder.filterLiteral(filter.column, value)}`;
     }
     case "contains": {
       if (typeof value !== "string") {
@@ -45,14 +45,14 @@ export function buildFilterCondition(filter: FilterCondition, builder: BaseQuery
       }
 
       // % and _ in user input are intentionally treated as wildcards.
-      return `${col} LIKE ${builder.escapeValue(`%${value}%`)}`;
+      return `${builder.textOf(col)} LIKE ${builder.escapeValue(`%${value}%`)}`;
     }
     case "in": {
       if (!Array.isArray(value) || value.length === 0) {
         throw new Error("'in' operator requires a non-empty array of values");
       }
 
-      const list = value.map((v) => builder.escapeScalarValue(v)).join(", ");
+      const list = value.map((v) => builder.filterLiteral(filter.column, v)).join(", ");
       return `${col} IN (${list})`;
     }
     case "between": {
@@ -65,7 +65,8 @@ export function buildFilterCondition(filter: FilterCondition, builder: BaseQuery
         throw new Error("'between' bounds cannot be arrays");
       }
 
-      return `${col} BETWEEN ${builder.escapeScalarValue(start)} AND ${builder.escapeScalarValue(end)}`;
+      const from = builder.filterLiteral(filter.column, start);
+      return `${col} BETWEEN ${from} AND ${builder.filterLiteral(filter.column, end)}`;
     }
   }
 }
@@ -80,19 +81,5 @@ function contributorPseudonymColumn(filter: FilterCondition, builder: BaseQueryB
   if (filter.contributorPseudonymSalt === undefined) {
     return col;
   }
-  return contributorPseudonym(col, filter.contributorPseudonymSalt, builder);
-}
-
-/**
- * The pseudonym of a contributor id expression, kept byte-identical to
- * `ContributorAnonymizerService.pseudonymFor`: `Contributor-` + first 6
- * upper-hex of `sha2('<experimentId>:<id>', 256)`.
- */
-export function contributorPseudonym(
-  idSql: string,
-  salt: string,
-  builder: BaseQueryBuilder,
-): string {
-  const prefix = builder.escapeValue(`${salt}:`);
-  return `concat('Contributor-', upper(substr(sha2(concat(${prefix}, ${idSql}), 256), 1, 6)))`;
+  return builder.contributorPseudonym(col, filter.contributorPseudonymSalt);
 }

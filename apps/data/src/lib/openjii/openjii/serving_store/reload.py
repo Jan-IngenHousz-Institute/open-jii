@@ -145,22 +145,21 @@ class StoreReload:
         return commit["version"], commit["timestamp"]
 
     def gold_rows(self, table: StoreTable, version: int) -> DataFrame:
-        """Gold's rows at ``version``, each with the commit that added it."""
-        return self.spark.sql(
-            f"SELECT *, _metadata.row_commit_version AS _row_commit_version "
-            f"FROM {self._gold_name(table)} VERSION AS OF {version}"
-        )
+        """Gold's rows at ``version``."""
+        return self.spark.sql(f"SELECT * FROM {self._gold_name(table)} VERSION AS OF {version}")
 
     def _newest_copies(self, table: StoreTable, rows: DataFrame) -> DataFrame:
         """Gold's newest copy of each store key, the one the store keeps from the feed. Gold's tables
         only append, so a recomputed row stands beside the one it replaces, and a load sends every
-        row at one version, which would leave the store to keep either."""
-        newest = Window.partitionBy(*table.key()).orderBy(F.col("_row_commit_version").desc())
-        return (
-            rows.withColumn("_copy", F.row_number().over(newest))
-            .filter(F.col("_copy") == 1)
-            .drop("_copy", "_row_commit_version")
-        )
+        row at one version, which would leave the store to keep either.
+
+        The newest copy is the one gold processed last. The commit that added a row would say it
+        more exactly, but the job's dedicated compute reads gold's streaming tables through a view,
+        which hides ``_metadata.row_commit_version``. Copies with one processing time, and copies of
+        an upload row, keep any one of them."""
+        processed_last = F.col(table.processed_at).desc_nulls_last() if table.processed_at else F.lit(0)
+        newest = Window.partitionBy(*table.key()).orderBy(processed_last)
+        return rows.withColumn("_copy", F.row_number().over(newest)).filter(F.col("_copy") == 1).drop("_copy")
 
     def _gold_name(self, table: StoreTable) -> str:
         return f"{self.gold_schema}.{table.gold_table}"

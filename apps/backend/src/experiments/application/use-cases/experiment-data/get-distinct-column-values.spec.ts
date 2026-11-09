@@ -52,11 +52,16 @@ describe("GetDistinctColumnValuesUseCase", () => {
       .spyOn(experimentDataRepository, "getDistinctColumnValues")
       .mockResolvedValue(success(mockResponse));
 
-    const result = await useCase.execute(experiment.id, testUserId, {
-      tableName: "bronze_data",
-      column: "category",
-      limit: 100,
-    });
+    const result = await useCase.execute(
+      experiment.id,
+      testUserId,
+      {
+        tableName: "bronze_data",
+        column: "category",
+        limit: 100,
+      },
+      "warehouse",
+    );
 
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
@@ -80,10 +85,15 @@ describe("GetDistinctColumnValuesUseCase", () => {
       .spyOn(experimentDataRepository, "getDistinctColumnValues")
       .mockResolvedValue(success({ values: [], truncated: false }));
 
-    await useCase.execute(experiment.id, testUserId, {
-      tableName: "bronze_data",
-      column: "category",
-    });
+    await useCase.execute(
+      experiment.id,
+      testUserId,
+      {
+        tableName: "bronze_data",
+        column: "category",
+      },
+      "warehouse",
+    );
 
     // Default cap from DISTINCT_VALUES_DEFAULT_LIMIT.
     expect(repoSpy.mock.calls[0]?.[0]).toMatchObject({
@@ -98,10 +108,15 @@ describe("GetDistinctColumnValuesUseCase", () => {
   it("should return not found error when experiment does not exist", async () => {
     const nonExistentId = faker.string.uuid();
 
-    const result = await useCase.execute(nonExistentId, testUserId, {
-      tableName: "bronze_data",
-      column: "category",
-    });
+    const result = await useCase.execute(
+      nonExistentId,
+      testUserId,
+      {
+        tableName: "bronze_data",
+        column: "category",
+      },
+      "warehouse",
+    );
 
     expect(result.isFailure()).toBe(true);
     assertFailure(result);
@@ -122,10 +137,15 @@ describe("GetDistinctColumnValuesUseCase", () => {
       success({ values: ["x"], truncated: false }),
     );
 
-    const result = await useCase.execute(experiment.id, anotherUserId, {
-      tableName: "bronze_data",
-      column: "category",
-    });
+    const result = await useCase.execute(
+      experiment.id,
+      anotherUserId,
+      {
+        tableName: "bronze_data",
+        column: "category",
+      },
+      "warehouse",
+    );
 
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
@@ -142,10 +162,15 @@ describe("GetDistinctColumnValuesUseCase", () => {
       failure(AppError.internal("Failed to fetch distinct values")),
     );
 
-    const result = await useCase.execute(experiment.id, testUserId, {
-      tableName: "bronze_data",
-      column: "category",
-    });
+    const result = await useCase.execute(
+      experiment.id,
+      testUserId,
+      {
+        tableName: "bronze_data",
+        column: "category",
+      },
+      "warehouse",
+    );
 
     expect(result.isFailure()).toBe(true);
     assertFailure(result);

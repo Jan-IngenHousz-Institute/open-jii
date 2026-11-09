@@ -25,13 +25,28 @@ export async function readEnvFile(path: string): Promise<EnvRecord> {
   }
 }
 
-export async function resolveDatabaseUrl(
+async function resolveBackendSetting(
+  root: string,
+  shellEnv: NodeJS.ProcessEnv,
+  name: string,
+): Promise<string | null> {
+  const shellValue = shellEnv[name]?.trim();
+  if (shellValue) return shellValue;
+  return (await readEnvFile(`${root}/apps/backend/.env`))[name] ?? null;
+}
+
+export function resolveDatabaseUrl(
   root: string,
   shellEnv: NodeJS.ProcessEnv,
 ): Promise<string | null> {
-  const shellValue = shellEnv.DATABASE_URL?.trim();
-  if (shellValue) return shellValue;
-  return (await readEnvFile(`${root}/apps/backend/.env`)).DATABASE_URL ?? null;
+  return resolveBackendSetting(root, shellEnv, "DATABASE_URL");
+}
+
+export function resolveAuthSecret(
+  root: string,
+  shellEnv: NodeJS.ProcessEnv,
+): Promise<string | null> {
+  return resolveBackendSetting(root, shellEnv, "AUTH_SECRET");
 }
 
 // The package that uses a credential owns its env file, the way each app owns its own.

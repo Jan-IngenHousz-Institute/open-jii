@@ -7,6 +7,7 @@ import {
   mainWorktreeRoot,
   pathFromRoot,
   requireLinearApiKey,
+  resolveAuthSecret,
   resolveLinearApiKey,
 } from "./config.js";
 
@@ -61,6 +62,17 @@ describe("resolveLinearApiKey", () => {
     const root = await rootWithEnvFile(null);
 
     await expect(resolveLinearApiKey(root, {})).resolves.toBeNull();
+  });
+});
+
+describe("resolveAuthSecret", () => {
+  it("prefers the shell, then the backend's env file", async () => {
+    const root = await mkdtemp(join(tmpdir(), "devkit-backend-"));
+    await mkdir(join(root, "apps", "backend"), { recursive: true });
+    await writeFile(join(root, "apps", "backend", ".env"), "AUTH_SECRET=from-file\n");
+
+    await expect(resolveAuthSecret(root, { AUTH_SECRET: " from-env " })).resolves.toBe("from-env");
+    await expect(resolveAuthSecret(root, {})).resolves.toBe("from-file");
   });
 });
 

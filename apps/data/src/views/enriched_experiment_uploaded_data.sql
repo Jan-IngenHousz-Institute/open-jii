@@ -29,7 +29,12 @@ SELECT
   uploaded.uploaded_at,
   uploaded.uploaded_data,
   contributors.user AS contributor,
-  coalesce(a.annotations, array()) AS annotations,
+  -- Built by named_struct alone, its content reads NOT NULL, a type the app does not render as
+  -- annotations; the other views get the nullable type from the payload's annotations.
+  CAST(coalesce(a.annotations, array()) AS ARRAY<STRUCT<
+    id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>,
+    createdBy: STRING, createdByName: STRING, createdAt: TIMESTAMP, updatedAt: TIMESTAMP
+  >>) AS annotations,
   CAST(NULL AS VARIANT) AS custom_metadata
 FROM ${catalog}.centrum.experiment_uploaded_data AS uploaded
 LEFT JOIN ${catalog}.centrum.experiment_contributors AS contributors

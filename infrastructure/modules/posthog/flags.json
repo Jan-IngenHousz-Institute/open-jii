@@ -55,5 +55,12 @@
     "continuity": false,
     "tags": [],
     "filters": { "groups": [{ "rollout_percentage": 0 }] }
+  },
+  "store-experiment-reads": {
+    "name": "An experiment's tables, pages, filter values and columns read from the serving store; charts stay on the warehouse. Off until a clean comparison of both read paths.",
+    "active": true,
+    "continuity": false,
+    "tags": ["backend", "serving-store"],
+    "filters": { "groups": [{ "rollout_percentage": 0 }] }
   }
 }

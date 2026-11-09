@@ -37,6 +37,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "better-auth": "1.7.14",
     "dotenv": "^16.6.1",
     "jsdom": "catalog:testing",
     "mermaid": "^12.2.0",

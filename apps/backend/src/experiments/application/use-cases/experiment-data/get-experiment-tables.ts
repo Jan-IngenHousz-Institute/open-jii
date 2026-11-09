@@ -12,6 +12,7 @@ import {
   UPLOAD_TABLE_CONFIG,
 } from "../../../core/models/experiment-data.model";
 import type {
+  ExperimentDataSource,
   ExperimentTableMetadata,
   ExperimentTableType,
 } from "../../../core/models/experiment-data.model";
@@ -44,6 +45,7 @@ export class GetExperimentTablesUseCase {
   async execute(
     experimentId: string,
     userId: string,
+    source: ExperimentDataSource,
   ): Promise<Result<ExperimentTablesMetadataDto>> {
     this.logger.log({
       msg: "Getting experiment tables metadata",
@@ -68,7 +70,7 @@ export class GetExperimentTablesUseCase {
 
     // Read authorization is enforced by the `@CanAccess({ resource: "experiment",
     // action: "read" })` route guard.
-    const metadataResult = await this.experimentDataRepository.tablesMetadata(experimentId);
+    const metadataResult = await this.experimentDataRepository.tablesMetadata(experimentId, source);
 
     if (metadataResult.isFailure()) {
       this.logger.error({

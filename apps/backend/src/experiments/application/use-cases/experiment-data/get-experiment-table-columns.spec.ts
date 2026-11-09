@@ -52,17 +52,31 @@ describe("GetExperimentTableColumnsUseCase", () => {
       .spyOn(experimentDataRepository, "getTableColumns")
       .mockResolvedValue(success(columns));
 
-    const result = await useCase.execute(experiment.id, testUserId, { tableName: "raw_data" });
+    const result = await useCase.execute(
+      experiment.id,
+      testUserId,
+      { tableName: "raw_data" },
+      "warehouse",
+    );
 
     assertSuccess(result);
     expect(result.value).toEqual({ columns });
-    expect(repoSpy).toHaveBeenCalledWith({ experimentId: experiment.id, tableName: "raw_data" });
+    expect(repoSpy).toHaveBeenCalledWith({
+      experimentId: experiment.id,
+      tableName: "raw_data",
+      source: "warehouse",
+    });
   });
 
   it("should return not found error when experiment does not exist", async () => {
     const nonExistentId = faker.string.uuid();
 
-    const result = await useCase.execute(nonExistentId, testUserId, { tableName: "raw_data" });
+    const result = await useCase.execute(
+      nonExistentId,
+      testUserId,
+      { tableName: "raw_data" },
+      "warehouse",
+    );
 
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
@@ -79,7 +93,12 @@ describe("GetExperimentTableColumnsUseCase", () => {
       failure(AppError.internal("Failed to read columns")),
     );
 
-    const result = await useCase.execute(experiment.id, testUserId, { tableName: "raw_data" });
+    const result = await useCase.execute(
+      experiment.id,
+      testUserId,
+      { tableName: "raw_data" },
+      "warehouse",
+    );
 
     assertFailure(result);
     expect(result.error.code).toBe("INTERNAL_ERROR");

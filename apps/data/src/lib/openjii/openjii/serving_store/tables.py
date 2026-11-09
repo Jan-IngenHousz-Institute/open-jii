@@ -64,6 +64,9 @@ class StoreTable:
     gold_table: str
     # The time the store table's month partitions follow.
     partitioned_by = "timestamp"
+    # The time gold processed a row at, later on a recomputed copy than on the row it replaces.
+    # Gold's uploads carry none.
+    processed_at: str | None = "processed_timestamp"
     # How gold's table listing (experiment_table_metadata) types the experiment tables this table
     # holds, and the payload columns whose schemas it lists.
     table_type: str
@@ -224,6 +227,7 @@ class Uploads(StoreTable):
     name = "uploads"
     gold_table = EXPERIMENT_UPLOADED_DATA_TABLE
     partitioned_by = "uploaded_at"
+    processed_at = None
     table_type = "upload"
     payloads = ("uploaded_data",)
 

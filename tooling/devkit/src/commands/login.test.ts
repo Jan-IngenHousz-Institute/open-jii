@@ -2,7 +2,45 @@ import { describe, expect, it, vi } from "vitest";
 
 import { loginLocal } from "./login.js";
 
+const env = { DATABASE_URL: "postgres://localhost/openjii", AUTH_SECRET: "local-secret" };
+
 describe("local login", () => {
+  it("reads the code with the backend's auth secret", async () => {
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 200,
+          headers: [["set-cookie", "better-auth.session_token=signed; Path=/; HttpOnly"]],
+        }),
+      );
+    const readOtp = vi.fn(() => Promise.resolve("123456"));
+
+    await loginLocal("seed@openjii.local", { root: "/repo", env, request, readOtp });
+
+    expect(readOtp).toHaveBeenCalledWith(
+      "postgres://localhost/openjii",
+      "seed@openjii.local",
+      "local-secret",
+    );
+  });
+
+  it("refuses to start without an auth secret", async () => {
+    const request = vi.fn<typeof fetch>();
+
+    await expect(
+      loginLocal("seed@openjii.local", {
+        root: "/repo",
+        env: { DATABASE_URL: env.DATABASE_URL },
+        request,
+        readOtp: () => Promise.resolve("123456"),
+      }),
+    ).rejects.toThrow("AUTH_SECRET is missing from the shell and apps/backend/.env");
+
+    expect(request).not.toHaveBeenCalled();
+  });
+
   it("selects the session token independently of Set-Cookie order", async () => {
     const request = vi
       .fn<typeof fetch>()
@@ -19,7 +57,7 @@ describe("local login", () => {
     await expect(
       loginLocal("seed@openjii.local", {
         root: "/repo",
-        env: { DATABASE_URL: "postgres://localhost/openjii" },
+        env,
         request,
         readOtp: () => Promise.resolve("123456"),
       }),
@@ -40,7 +78,7 @@ describe("local login", () => {
       );
     await loginLocal("seed@openjii.local", {
       root: "/repo",
-      env: { DATABASE_URL: "postgres://localhost/openjii" },
+      env,
       request,
       readOtp: () => Promise.resolve("123456"),
     });
@@ -62,7 +100,7 @@ describe("local login", () => {
     await expect(
       loginLocal("seed@openjii.local", {
         root: "/repo",
-        env: { DATABASE_URL: "postgres://localhost/openjii" },
+        env,
         request,
         requestTimeoutMs: 1,
         readOtp: () => Promise.resolve("123456"),
