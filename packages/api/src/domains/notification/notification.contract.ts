@@ -1,6 +1,8 @@
 import { oc } from "@orpc/contract";
 
 import {
+  zEmailPreferenceByTokenResponse,
+  zEmailPreferenceTokenParams,
   zListNotificationsQuery,
   zMarkNotificationsReadBody,
   zMarkNotificationsReadResponse,
@@ -32,4 +34,20 @@ export const notificationContract = {
     .route({ method: "PUT", path: "/api/v1/notifications/preferences", successStatus: 200 })
     .input(zUpdateNotificationPreferenceBody)
     .output(zNotificationPreferences),
+  unsubscribeEmailByToken: oc
+    .route({
+      method: "POST",
+      path: "/api/v1/notifications/email/unsubscribe/{token}",
+      successStatus: 200,
+    })
+    .input(zEmailPreferenceTokenParams)
+    .output(zEmailPreferenceByTokenResponse),
+  resubscribeEmailByToken: oc
+    .route({
+      method: "POST",
+      path: "/api/v1/notifications/email/resubscribe/{token}",
+      successStatus: 200,
+    })
+    .input(zEmailPreferenceTokenParams)
+    .output(zEmailPreferenceByTokenResponse),
 };

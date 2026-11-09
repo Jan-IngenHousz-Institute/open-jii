@@ -15,6 +15,7 @@ import { EmailAdapter } from "../../../common/modules/email/services/email.adapt
 import { ErrorCodes } from "../../../common/utils/error-codes";
 import { AppError, assertSuccess, failure, success } from "../../../common/utils/fp-utils";
 import { claimedRow } from "../../../test/notification-deliveries";
+import { expectUnsubscribeFooter } from "../../../test/notification-unsubscribe";
 import { TestHarness } from "../../../test/test-harness";
 import { NotificationDeliveryRepository } from "../../core/repositories/notification-delivery.repository";
 import { NotificationRepository } from "../../core/repositories/notification.repository";
@@ -37,6 +38,7 @@ describe("NotificationOutboxWorker", () => {
   let dispatch: NotificationDispatchService;
   let deliveryRepository: NotificationDeliveryRepository;
   let sendSubmitted: MockInstance<EmailAdapter["sendJoinRequestSubmittedNotification"]>;
+  let sendNotificationEmail: MockInstance<NotificationEmailService["send"]>;
   let actorId: string;
   let recipientId: string;
   const recipientEmail = "recipient@example.com";
@@ -59,6 +61,7 @@ describe("NotificationOutboxWorker", () => {
     sendSubmitted = vi
       .spyOn(testApp.module.get(EmailAdapter), "sendJoinRequestSubmittedNotification")
       .mockResolvedValue(success(undefined));
+    sendNotificationEmail = vi.spyOn(testApp.module.get(NotificationEmailService), "send");
   });
 
   afterEach(() => {
@@ -129,13 +132,23 @@ describe("NotificationOutboxWorker", () => {
     const counts = await worker.drain();
 
     expect(counts).toEqual({ sent: 1, retried: 0, deferred: 0, skipped: 0, failed: 0 });
+    expect(sendNotificationEmail).toHaveBeenCalledExactlyOnceWith(
+      "experiment_join_request_received",
+      expect.objectContaining({ recipientId, recipientEmail }),
+    );
     expect(sendSubmitted).toHaveBeenCalledExactlyOnceWith(
       experiment.id,
       "Photosynthesis",
       "Ada Lovelace",
       recipientEmail,
       "Please let me in",
+      sendSubmitted.mock.calls[0]?.[5],
     );
+    expectUnsubscribeFooter(testApp, sendSubmitted.mock.calls[0]?.[5], {
+      recipientId,
+      category: "requests_and_invitations",
+      categoryLabel: "Requests and invitations",
+    });
 
     const row = await deliveryById(queued.id);
     expect(row).toMatchObject({ status: "sent", attempts: 0, claimedAt: null });

@@ -10,6 +10,7 @@ import { renderCalibrationRunApprovedNotification } from "../render/calibration-
 import { renderCalibrationRunAwaitingApprovalNotification } from "../render/calibration-run-awaiting-approval-notification";
 import { renderCalibrationRunRejectedNotification } from "../render/calibration-run-rejected-notification";
 import { renderExperimentMadePublicNotification } from "../render/experiment-made-public-notification";
+import { renderJoinRequestSubmitted } from "../render/join-request-submitted";
 import { renderOrganizationMembershipRemoved } from "../render/organization-membership-removed";
 import { renderOrganizationRoleChanged } from "../render/organization-role-changed";
 import { renderOtpEmail } from "../render/otp-email";
@@ -22,10 +23,14 @@ const outDir = join(process.cwd(), "dist/email-previews");
 const host = process.env.HOST ?? "localhost";
 const baseUrl = process.env.BASE_URL ?? "http://localhost:3000";
 
-function write(name: string, { html, preview }: { html: string; preview: string }): void {
+function write(
+  name: string,
+  { html, text, preview }: { html: string; text: string; preview: string },
+): void {
   const file = join(outDir, `${name}.html`);
   const banner = `<p style="font-family:sans-serif;padding:8px 16px;"><strong>Preview:</strong> ${preview}</p>\n`;
   writeFileSync(file, banner + html);
+  writeFileSync(join(outDir, `${name}.txt`), text);
   console.log(file);
 }
 
@@ -39,6 +44,23 @@ async function main(): Promise<void> {
       senderName: "openJII",
       host,
       baseUrl,
+    }),
+  );
+
+  write(
+    "join-request-submitted",
+    await renderJoinRequestSubmitted({
+      host,
+      baseUrl,
+      experimentName: "Leaf Area Index",
+      experimentUrl: `${baseUrl}/en-US/platform/experiments/123`,
+      requesterName: "Jane Doe",
+      message: "I measure leaf area in the north field.",
+      unsubscribe: {
+        categoryLabel: "Requests and invitations",
+        settingsUrl: `${baseUrl}/platform/account/notifications`,
+        unsubscribeUrl: `${baseUrl}/unsubscribe?token=preview-token`,
+      },
     }),
   );
 

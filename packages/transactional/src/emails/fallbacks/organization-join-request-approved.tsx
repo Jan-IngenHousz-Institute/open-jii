@@ -1,5 +1,6 @@
 import { Button, Section, Text } from "@react-email/components";
 
+import type { EmailUnsubscribe } from "../../components/email-layout";
 import { EmailLayout } from "../../components/email-layout";
 
 export interface OrganizationJoinRequestApprovedProps {
@@ -8,6 +9,7 @@ export interface OrganizationJoinRequestApprovedProps {
   senderName?: string;
   host: string;
   baseUrl: string;
+  unsubscribe?: EmailUnsubscribe;
 }
 
 export const OrganizationJoinRequestApproved = ({
@@ -16,6 +18,7 @@ export const OrganizationJoinRequestApproved = ({
   senderName = "openJII",
   host,
   baseUrl,
+  unsubscribe,
 }: OrganizationJoinRequestApprovedProps) => {
   return (
     <EmailLayout
@@ -23,6 +26,7 @@ export const OrganizationJoinRequestApproved = ({
       senderName={senderName}
       host={host}
       baseUrl={baseUrl}
+      unsubscribe={unsubscribe}
     >
       <Section className="rounded-t-xl bg-white px-8 pb-4 pt-8">
         <Text className="mb-2 mt-0 text-center text-[24px] font-semibold text-gray-800">

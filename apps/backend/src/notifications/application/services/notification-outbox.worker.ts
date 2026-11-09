@@ -300,6 +300,7 @@ export class NotificationOutboxWorker implements OnApplicationShutdown {
         : null;
 
     const sent = await this.notificationEmail.send(type.data, {
+      recipientId: row.recipientId,
       recipientEmail,
       actorName: actor ? `${actor.firstName} ${actor.lastName}` : null,
       resource,

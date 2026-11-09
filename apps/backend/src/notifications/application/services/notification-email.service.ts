@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
+import { NOTIFICATION_TYPES } from "@repo/api/domains/notification/notification.schema";
 import type {
   NotificationParams,
   NotificationResourceType,
@@ -9,16 +10,21 @@ import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.sche
 import { zSharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
 import { EmailAdapter } from "../../../common/modules/email/services/email.adapter";
+import type { NotificationEmailUnsubscribe } from "../../../common/modules/email/services/notifications/notifications.service";
 import { describeAccess } from "../../../common/utils/access-wording";
 import { AppError, Result, failure, success } from "../../../common/utils/fp-utils";
 import { describeOrganizationRole } from "../../../organizations/core/organization-access";
+import { NotificationUnsubscribeService } from "./notification-unsubscribe.service";
 
 export interface NotificationEmailContext<T extends NotificationType> {
+  recipientId: string;
   recipientEmail: string;
   actorName: string | null;
   resource: { type: NotificationResourceType; id: string } | null;
   /** The type's params as the registry defines them, so a renamed key fails the build here. */
   params: NotificationParams<T>;
+  /** Set by `send` for a type whose email the recipient can switch off, never by a caller. */
+  unsubscribe?: NotificationEmailUnsubscribe;
 }
 
 type EmailSender<T extends NotificationType> = (
@@ -57,18 +63,19 @@ const isSharingResourceType = (type: NotificationResourceType): type is SharingR
  */
 const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
   experiment_join_request_received: aboutResource(
-    (experimentId, email, { params, actorName, recipientEmail }) =>
+    (experimentId, email, { params, actorName, recipientEmail, unsubscribe }) =>
       email.sendJoinRequestSubmittedNotification(
         experimentId,
         params.experimentName,
         actorName ?? "Someone",
         recipientEmail,
         params.message,
+        unsubscribe,
       ),
   ),
   // The same access email a direct share sends, fallback name included.
   experiment_join_request_approved: aboutResource(
-    (experimentId, email, { params, actorName, recipientEmail }) =>
+    (experimentId, email, { params, actorName, recipientEmail, unsubscribe }) =>
       email.sendAccessGrantedNotification({
         resourceType: "experiment",
         resourceId: experimentId,
@@ -76,74 +83,82 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
         actor: actorName ?? "An openJII admin",
         role: describeAccess({ tier: "viewer", resourceType: "experiment" }),
         email: recipientEmail,
+        unsubscribe,
       }),
   ),
   experiment_join_request_rejected: aboutResource(
-    (experimentId, email, { params, recipientEmail }) =>
+    (experimentId, email, { params, recipientEmail, unsubscribe }) =>
       email.sendJoinRequestRejectedNotification(
         experimentId,
         params.experimentName,
         recipientEmail,
+        unsubscribe,
       ),
   ),
   // Only an invitee who already has an account reaches here; `packages/auth` emails
   // the rest itself, from the same template. See `hasAccountForEmail`.
   organization_invitation_received: aboutResource(
-    (organizationId, email, { params, actorName, recipientEmail }) =>
+    (organizationId, email, { params, actorName, recipientEmail, unsubscribe }) =>
       email.sendOrganizationInvitationNotification(
         organizationId,
         params.organizationName,
         actorName ?? "Someone",
         params.role,
         recipientEmail,
+        unsubscribe,
       ),
   ),
   organization_join_request_received: aboutResource(
-    (organizationId, email, { params, actorName, recipientEmail }) =>
+    (organizationId, email, { params, actorName, recipientEmail, unsubscribe }) =>
       email.sendOrganizationJoinRequestSubmittedNotification(
         organizationId,
         params.organizationName,
         actorName ?? "Someone",
         recipientEmail,
         params.message,
+        unsubscribe,
       ),
   ),
   organization_join_request_approved: aboutResource(
-    (organizationId, email, { params, recipientEmail }) =>
+    (organizationId, email, { params, recipientEmail, unsubscribe }) =>
       email.sendOrganizationJoinRequestApprovedNotification(
         organizationId,
         params.organizationName,
         recipientEmail,
+        unsubscribe,
       ),
   ),
   // Deliberately neutral: no reason, no decider name, though the row carries one.
   organization_join_request_rejected: aboutResource(
-    (organizationId, email, { params, recipientEmail }) =>
+    (organizationId, email, { params, recipientEmail, unsubscribe }) =>
       email.sendOrganizationJoinRequestRejectedNotification(
         organizationId,
         params.organizationName,
         recipientEmail,
+        unsubscribe,
       ),
   ),
   organization_role_changed: aboutResource(
-    (organizationId, email, { params, actorName, recipientEmail }) =>
+    (organizationId, email, { params, actorName, recipientEmail, unsubscribe }) =>
       email.sendOrganizationRoleChangedNotification({
         organizationId,
         organizationName: params.organizationName,
         actor: actorName ?? "Someone",
         role: describeOrganizationRole(params.role),
         email: recipientEmail,
+        unsubscribe,
       }),
   ),
   // No `aboutResource`: a removed member can no longer open the organization.
-  organization_membership_removed: (email, { params, actorName, recipientEmail }) =>
+  organization_membership_removed: (email, { params, actorName, recipientEmail, unsubscribe }) =>
     email.sendOrganizationMembershipRemovedNotification({
       organizationName: params.organizationName,
       actor: actorName ?? "Someone",
       email: recipientEmail,
+      unsubscribe,
     }),
   resource_access_granted: aboutResource(
-    (resourceId, email, { params, actorName, recipientEmail, resource }) =>
+    (resourceId, email, { params, actorName, recipientEmail, resource, unsubscribe }) =>
       resource && isSharingResourceType(resource.type)
         ? email.sendAccessGrantedNotification({
             resourceType: resource.type,
@@ -155,61 +170,83 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
               resourceType: resource.type,
             }),
             email: recipientEmail,
+            unsubscribe,
           })
         : Promise.resolve(
             failure(AppError.internal("Access notification on a non-shareable resource")),
           ),
   ),
-  experiment_made_public: aboutResource((experimentId, email, { params, recipientEmail }) =>
-    email.sendExperimentMadePublicNotification(experimentId, params.experimentName, recipientEmail),
+  experiment_made_public: aboutResource(
+    (experimentId, email, { params, recipientEmail, unsubscribe }) =>
+      email.sendExperimentMadePublicNotification(
+        experimentId,
+        params.experimentName,
+        recipientEmail,
+        unsubscribe,
+      ),
   ),
   calibration_run_awaiting_approval: aboutResource(
-    (deviceId, email, { params, actorName, recipientEmail }) =>
+    (deviceId, email, { params, actorName, recipientEmail, unsubscribe }) =>
       email.sendCalibrationRunAwaitingApprovalNotification({
         deviceId,
         deviceName: params.deviceName,
         definitionName: params.definitionName,
         actor: actorName ?? "Someone",
         email: recipientEmail,
+        unsubscribe,
       }),
   ),
   calibration_run_approved: aboutResource(
-    (deviceId, email, { params, actorName, recipientEmail }) =>
+    (deviceId, email, { params, actorName, recipientEmail, unsubscribe }) =>
       email.sendCalibrationRunApprovedNotification({
         deviceId,
         deviceName: params.deviceName,
         definitionName: params.definitionName,
         actor: actorName ?? "Someone",
         email: recipientEmail,
+        unsubscribe,
       }),
   ),
   calibration_run_rejected: aboutResource(
-    (deviceId, email, { params, actorName, recipientEmail }) =>
+    (deviceId, email, { params, actorName, recipientEmail, unsubscribe }) =>
       email.sendCalibrationRunRejectedNotification({
         deviceId,
         deviceName: params.deviceName,
         definitionName: params.definitionName,
         actor: actorName ?? "Someone",
         email: recipientEmail,
+        unsubscribe,
       }),
   ),
   // No `aboutResource`: a deleted resource has no page to link back to.
-  resource_deleted: (email, { params, actorName, recipientEmail, resource }) =>
+  resource_deleted: (email, { params, actorName, recipientEmail, resource, unsubscribe }) =>
     resource && isSharingResourceType(resource.type)
       ? email.sendResourceDeletedNotification({
           resourceType: resource.type,
           resourceName: params.resourceName,
           actor: actorName ?? "Someone",
           email: recipientEmail,
+          unsubscribe,
         })
       : Promise.resolve(
           failure(AppError.internal("Deletion notification without a shareable resource")),
         ),
   // No `aboutResource`: the request is about a PhotosynQ project, not a platform resource.
-  project_transfer_requested: (email, { params, recipientEmail }) =>
-    email.sendTransferRequestConfirmation(recipientEmail, params.projectId, params.projectUrl),
-  project_transfer_completed: aboutResource((experimentId, email, { params, recipientEmail }) =>
-    email.sendProjectTransferComplete(recipientEmail, experimentId, params.experimentName),
+  project_transfer_requested: (email, { params, recipientEmail, unsubscribe }) =>
+    email.sendTransferRequestConfirmation(
+      recipientEmail,
+      params.projectId,
+      params.projectUrl,
+      unsubscribe,
+    ),
+  project_transfer_completed: aboutResource(
+    (experimentId, email, { params, recipientEmail, unsubscribe }) =>
+      email.sendProjectTransferComplete(
+        recipientEmail,
+        experimentId,
+        params.experimentName,
+        unsubscribe,
+      ),
   ),
   // No `aboutResource`: an account is not a resource; both emails link to a fixed page.
   api_key_created: (email, { params, recipientEmail }) =>
@@ -221,7 +258,10 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
 /** Turns a stored notification into the email its type sends. */
 @Injectable()
 export class NotificationEmailService {
-  constructor(private readonly emailAdapter: EmailAdapter) {}
+  constructor(
+    private readonly emailAdapter: EmailAdapter,
+    private readonly notificationUnsubscribe: NotificationUnsubscribeService,
+  ) {}
 
   /** False for a type whose email has not moved onto dispatch yet. */
   hasEmail(type: NotificationType): boolean {
@@ -233,7 +273,16 @@ export class NotificationEmailService {
     context: NotificationEmailContext<T>,
   ): Promise<Result<void>> {
     const sender = NOTIFICATION_EMAILS[type];
+    if (!sender) {
+      return success(undefined);
+    }
 
-    return sender ? sender(this.emailAdapter, context) : success(undefined);
+    const { category, channels } = NOTIFICATION_TYPES[type];
+    const unsubscribe =
+      channels.email === "preference"
+        ? this.notificationUnsubscribe.footerFor(context.recipientId, category)
+        : undefined;
+
+    return sender(this.emailAdapter, { ...context, unsubscribe });
   }
 }
