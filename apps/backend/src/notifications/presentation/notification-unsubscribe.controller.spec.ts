@@ -205,6 +205,24 @@ describe("NotificationUnsubscribeController", () => {
     expect(JSON.stringify(response.body)).not.toContain("Failed query");
   });
 
+  it.each([
+    ["an error with no cause", new Error("Connection reset"), "Connection reset"],
+    ["a thrown value that is not an error", "socket hang up", "socket hang up"],
+  ])("keeps the reason from %s", async (_, thrown, reason) => {
+    vi.spyOn(testApp.database, "insert").mockImplementationOnce(() => {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      throw thrown;
+    });
+
+    const response = await testApp
+      .post(unsubscribePath(unsubscribe.sign(userId, "requests_and_invitations")))
+      .withoutAuth()
+      .set("X-Forwarded-For", nextClientIp())
+      .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+
+    expect(response.body).toMatchObject({ data: { details: reason } });
+  });
+
   it("answers a server error, not a refused link, when the preference cannot be saved", async () => {
     vi.spyOn(testApp.module.get(NotificationRepository), "upsertPreference").mockResolvedValueOnce(
       failure(AppError.internal("Database unavailable")),
