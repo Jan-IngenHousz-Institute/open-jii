@@ -13,13 +13,19 @@ They are a copy done once, so nothing in the repository runs them.
 
 ## 1. Check that Postgres can keep every annotation
 
-In the environment's Databricks SQL editor:
+In the environment's Databricks SQL editor, in the environment's catalog, which steps 2 and 5
+use too:
 
 ```sql
-SELECT id, experiment_id, user_id, type, length(row_id), length(table_name), flag_type
+USE CATALOG open_jii_<env>;
+
+SELECT id, experiment_id, user_id, type, length(row_id), length(table_name), flag_type,
+       length(content_text)
 FROM centrum.experiment_annotations
 WHERE type NOT IN ('comment', 'flag') OR flag_type NOT IN ('outlier', 'needs_review')
    OR length(row_id) > 64 OR length(table_name) > 64 OR instr(content_text, char(0)) > 0
+   OR length(content_text) > 255 OR (type = 'flag' AND flag_type IS NULL)
+   OR (type = 'comment' AND (content_text IS NULL OR content_text = ''))
    OR id IS NULL OR experiment_id IS NULL OR table_name IS NULL OR row_id IS NULL
    OR type IS NULL OR user_id IS NULL OR created_at IS NULL OR updated_at IS NULL
    OR NOT lower(id) RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
@@ -31,11 +37,12 @@ SELECT id, count(*) FROM centrum.experiment_annotations GROUP BY id HAVING count
 SELECT table_name, count(*) FROM centrum.experiment_annotations GROUP BY table_name ORDER BY 1;
 ```
 
-Expect no rows from the first two. Postgres refuses any of the first, and the API refuses them since
-the first release; step 4 refuses an id held twice. Decide with the team what each one should be and
-correct it in the lakehouse before going on. The third lists the tables annotated, which should be
-`raw_data`, macro ids and upload table ids only, since the second release finds a row by its table
-and row id.
+Expect no rows from the first two. The API refuses all of the first since the first release, and
+Postgres refuses most of them. The rest, a flag without a kind, a comment without text or text over
+255 characters, fit Postgres but are annotations the API could not have written. Step 4 refuses an
+id held twice. Decide with the team what each one should be and correct it in the lakehouse before
+going on. The third lists the tables annotated, which should be `raw_data`, macro ids and upload
+table ids only, since the second release finds a row by its table and row id.
 
 ## 2. Export the lakehouse's annotations
 
@@ -52,9 +59,9 @@ FROM centrum.experiment_annotations;
 SELECT count(*), sum(length(content_text)) FROM centrum.experiment_annotations;
 ```
 
-Note the time you ran it and the two numbers the last query gives, then download the export's
-result as CSV. If the editor cuts the download short of the count, export it in parts with a
-`WHERE experiment_id IN (...)`. `user_name` is not copied; pages look names up at read time.
+Note the time you ran it, in UTC, and the two numbers the last query gives, then download the
+export's result as CSV. If the editor cuts the download short of the count, export it in parts with
+a `WHERE experiment_id IN (...)`. `user_name` is not copied; pages look names up at read time.
 
 ## 3. Load it beside Postgres's annotations
 
@@ -66,7 +73,8 @@ CREATE TEMP TABLE lakehouse_annotations (LIKE experiment_annotations);
 SELECT count(*), sum(length(content_text)) FROM lakehouse_annotations;
 ```
 
-Both numbers must match the export's.
+Both numbers must match the export's. When they do not, or `\copy` stops on a row, the download was
+cut short or mangled: export again in parts as step 2 says, and load each part.
 
 ## 4. Copy what Postgres lacks or holds older
 
@@ -128,9 +136,16 @@ export. A row created before it is a delete that step 4 undid, or one whose copy
 for which the service's log warns "not copied to Postgres". Check it is gone from the lakehouse and
 delete it from Postgres.
 
+A row of the first query whose `in_postgres` is older, or empty, is a change the lakehouse took
+that Postgres missed, such as an edit to an annotation step 4 had not reached yet. Run step 4
+again with this export, then step 5's checks again.
+
 ## Before the second release, and after
 
 Run steps 1 to 5 again right before the second release goes out, with a fresh export; a clean check
 is what lets it go. Once it is out, run steps 2 and 3 and step 5's checks once more without step 4,
 since Postgres is then where annotations are written: a difference is a write the first release's
 tasks took while the second rolled out, whose copy failed. Note its id in OJD-2153.
+
+Delete `annotations.csv`, `annotations-2.csv` and any parts once the checks are clean. They hold
+researchers' data.
