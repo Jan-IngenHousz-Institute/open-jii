@@ -4,6 +4,10 @@ import { and, eq, experimentAnnotations, inArray, profiles, sql } from "@repo/da
 import type { DatabaseInstance, DbOrTx, Transaction } from "@repo/database";
 
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
+import {
+  getAnonymizedFirstName,
+  getAnonymizedLastName,
+} from "../../../common/utils/profile-anonymization";
 import type {
   AnnotationCopy,
   AnnotationRecord,
@@ -120,9 +124,9 @@ export class ExperimentAnnotationsRepository {
             createdBy: experimentAnnotations.createdBy,
             createdAt: experimentAnnotations.createdAt,
             updatedAt: experimentAnnotations.updatedAt,
-            userName: sql<
-              string | null
-            >`nullif(trim(coalesce(${profiles.firstName}, '') || ' ' || coalesce(${profiles.lastName}, '')), '')`,
+            // As every other read shows a person: "Unknown User" once they deactivate their profile.
+            userName: sql<string | null>`CASE WHEN ${profiles.userId} IS NULL THEN NULL
+              ELSE nullif(trim(${getAnonymizedFirstName()} || ' ' || ${getAnonymizedLastName()}), '') END`,
           })
           .from(experimentAnnotations)
           .leftJoin(profiles, eq(profiles.userId, experimentAnnotations.createdBy))
