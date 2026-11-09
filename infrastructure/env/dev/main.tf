@@ -3603,9 +3603,10 @@ module "status_publisher" {
   state_bucket_id  = module.status_state_s3.bucket_id
   state_bucket_arn = module.status_state_s3.bucket_arn
 
-  # A static page that reads nothing from the backend: the home page's public metrics reload
-  # through the SQL warehouse, which a probe every minute would keep starting.
-  web_url             = "https://${module.route53.environment_domain}/en-US/cookie-settings"
+  # The email sign-in confirmation renders on every request and reads Contentful only through
+  # shared caches. A cached page regenerates under the probe, the sign-in page reads its terms
+  # uncached, and the home page's public metrics go through the SQL warehouse.
+  web_url             = "https://${module.route53.environment_domain}/en-US/verify-request?provider=email"
   api_health_url      = "https://${module.route53.api_domain}/health"
   load_balancer_arn   = module.backend_alb.alb_arn
   web_distribution_id = module.opennext.cloudfront_distribution_id

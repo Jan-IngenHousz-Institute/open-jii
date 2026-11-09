@@ -29,7 +29,7 @@ describe("isApiHealthy", () => {
 });
 
 describe("websiteProbeUrl", () => {
-  const page = "https://dev.example.org/en-US/cookie-settings";
+  const page = "https://dev.example.org/en-US/verify-request?provider=email";
 
   it("gives each minute its own address, so the distribution cannot answer from its cache", () => {
     const first = websiteProbeUrl(page, new Date("2026-11-06T12:00:10Z"));
@@ -40,10 +40,11 @@ describe("websiteProbeUrl", () => {
     expect(nextMinute).not.toBe(first);
   });
 
-  it("keeps the page's path and adds only the probe parameter", () => {
+  it("keeps the page's path and query and adds only the probe parameter", () => {
     const url = new URL(websiteProbeUrl(page, new Date("2026-11-06T12:00:00Z")));
 
-    expect(url.origin + url.pathname).toBe(page);
-    expect([...url.searchParams.keys()]).toEqual(["probe"]);
+    expect(url.origin + url.pathname).toBe("https://dev.example.org/en-US/verify-request");
+    expect([...url.searchParams.keys()]).toEqual(["provider", "probe"]);
+    expect(url.searchParams.get("provider")).toBe("email");
   });
 });
