@@ -24,6 +24,7 @@ SELECT id, experiment_id, user_id, type, length(row_id), length(table_name), fla
 FROM centrum.experiment_annotations
 WHERE type NOT IN ('comment', 'flag') OR flag_type NOT IN ('outlier', 'needs_review')
    OR length(row_id) > 64 OR length(table_name) > 64 OR instr(content_text, char(0)) > 0
+   OR instr(row_id, char(0)) > 0 OR instr(table_name, char(0)) > 0
    OR length(content_text) > 255 OR (type = 'flag' AND flag_type IS NULL)
    OR (type = 'comment' AND (content_text IS NULL OR content_text = ''))
    OR id IS NULL OR experiment_id IS NULL OR table_name IS NULL OR row_id IS NULL
@@ -50,10 +51,11 @@ In the same editor:
 
 ```sql
 SET TIME ZONE 'UTC';
-SELECT id, experiment_id, table_name, row_id, type, content_text, flag_type,
-       user_id AS created_by,
-       date_format(created_at, 'yyyy-MM-dd HH:mm:ss.SSSSSS') AS created_at,
-       date_format(updated_at, 'yyyy-MM-dd HH:mm:ss.SSSSSS') AS updated_at
+SELECT to_json(named_struct(
+         'id', id, 'experiment_id', experiment_id, 'table_name', table_name, 'row_id', row_id,
+         'type', type, 'content_text', content_text, 'flag_type', flag_type, 'created_by', user_id,
+         'created_at', date_format(created_at, 'yyyy-MM-dd HH:mm:ss.SSSSSS'),
+         'updated_at', date_format(updated_at, 'yyyy-MM-dd HH:mm:ss.SSSSSS'))) AS annotation
 FROM centrum.experiment_annotations;
 
 SELECT count(*), sum(length(content_text)) FROM centrum.experiment_annotations;
@@ -63,18 +65,25 @@ Note the time you ran it, in UTC, and the two numbers the last query gives, then
 export's result as CSV. If the editor cuts the download short of the count, export it in parts with
 a `WHERE experiment_id IN (...)`. `user_name` is not copied; pages look names up at read time.
 
+Each row goes out as one JSON document because the editor's download writes a NULL as the text
+`null`, which a column of its own could not tell from a comment that reads null. The document
+leaves a NULL field out, and step 3 reads a missing field back as NULL.
+
 ## 3. Load it beside Postgres's annotations
 
 In a psql session to the environment's Aurora, as the admin, from the folder holding the CSV:
 
 ```sql
-CREATE TEMP TABLE lakehouse_annotations (LIKE experiment_annotations);
-\copy lakehouse_annotations (id, experiment_id, table_name, row_id, type, content_text, flag_type, created_by, created_at, updated_at) FROM 'annotations.csv' WITH (FORMAT csv, HEADER)
+CREATE TEMP TABLE lakehouse_export (annotation jsonb);
+\copy lakehouse_export FROM 'annotations.csv' WITH (FORMAT csv, HEADER)
+CREATE TEMP TABLE lakehouse_annotations AS
+SELECT r.* FROM lakehouse_export, jsonb_populate_record(NULL::experiment_annotations, annotation) r;
 SELECT count(*), sum(length(content_text)) FROM lakehouse_annotations;
 ```
 
 Both numbers must match the export's. When they do not, or `\copy` stops on a row, the download was
-cut short or mangled: export again in parts as step 2 says, and load each part.
+cut short or mangled: export again in parts as step 2 says, `\copy` each part into
+`lakehouse_export`, then build `lakehouse_annotations`.
 
 ## 4. Copy what Postgres lacks or holds older
 
@@ -99,8 +108,10 @@ delete made after it is undone by this step, and only a second export shows it.
 Repeat step 2 for a second export, `annotations-2.csv`, and load it in place of the first:
 
 ```sql
-TRUNCATE lakehouse_annotations;
-\copy lakehouse_annotations (id, experiment_id, table_name, row_id, type, content_text, flag_type, created_by, created_at, updated_at) FROM 'annotations-2.csv' WITH (FORMAT csv, HEADER)
+TRUNCATE lakehouse_export, lakehouse_annotations;
+\copy lakehouse_export FROM 'annotations-2.csv' WITH (FORMAT csv, HEADER)
+INSERT INTO lakehouse_annotations
+SELECT r.* FROM lakehouse_export, jsonb_populate_record(NULL::experiment_annotations, annotation) r;
 SELECT count(*), sum(length(content_text)) FROM lakehouse_annotations;
 ```
 
@@ -138,7 +149,21 @@ delete it from Postgres.
 
 A row of the first query whose `in_postgres` is older, or empty, is a change the lakehouse took
 that Postgres missed, such as an edit to an annotation step 4 had not reached yet. Run step 4
-again with this export, then step 5's checks again.
+with this export, then step 5's checks again.
+
+A row whose `in_postgres` equals the lakehouse's time, or is newer but from before the second
+export, holds two edits of one annotation that reached the two stores in opposite orders. Step 4
+never replaces it. The first release's pages show the lakehouse's copy, so make Postgres match it,
+naming the rows' ids, then run step 5's checks again:
+
+```sql
+UPDATE experiment_annotations a
+SET experiment_id = l.experiment_id, table_name = l.table_name, row_id = l.row_id,
+    type = l.type, content_text = l.content_text, flag_type = l.flag_type,
+    created_by = l.created_by, created_at = l.created_at, updated_at = l.updated_at
+FROM lakehouse_annotations l
+WHERE a.id = l.id AND a.id IN ('<id>', '<id>');
+```
 
 ## Before the second release, and after
 
