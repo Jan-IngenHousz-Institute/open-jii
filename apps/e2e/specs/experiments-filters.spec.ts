@@ -149,6 +149,8 @@ test("experiments-archive search survives reload and a shared link with filters 
     term: "Lighting",
     matchingName: "[Seed] Indoor Lighting Calibration",
     excludedName: "[Seed] Barley Root Imaging",
+    // The archive table's Name column collapses beside a Private badge, leaving the link zero-wide.
+    visible: "row",
   });
 
   await search.clear();

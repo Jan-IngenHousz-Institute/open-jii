@@ -41,14 +41,19 @@ export async function expectSearchSurvivesReopen(
     matchingName,
     excludedName,
     rows = page,
+    visible = "link",
   }: {
     search: Locator;
     term: string;
     matchingName: string;
     excludedName: string;
     rows?: Locator | Page;
+    visible?: "link" | "row";
   },
 ): Promise<void> {
+  const matching = rows.getByRole("link", { name: matchingName, exact: true }).first();
+  const shown =
+    visible === "row" ? rows.getByRole("row").filter({ has: matching }).first() : matching;
   const sharedUrl = page.url();
   for (const reopen of ["reload", "shared link"]) {
     if (reopen === "reload") await page.reload();
@@ -58,7 +63,7 @@ export async function expectSearchSurvivesReopen(
     }
 
     await expect(search).toHaveValue(term);
-    await expect(rows.getByRole("link", { name: matchingName, exact: true }).first()).toBeVisible();
+    await expect(shown).toBeVisible();
     await expect(rows.getByRole("link", { name: excludedName, exact: true })).toHaveCount(0);
     await expect(page).toHaveURL(sharedUrl);
     expect(new URL(page.url()).searchParams.get("q")).toBe(term);
