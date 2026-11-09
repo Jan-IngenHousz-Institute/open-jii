@@ -23,11 +23,16 @@ locals {
         }
       },
       {
-        Sid       = "ThisAccountsRepositoriesOnly"
+        # Callers in the VPC only pull. CI pushes from GitHub's runners, outside the VPC.
+        Sid       = "PullFromThisAccountsRepositories"
         Effect    = "Allow"
         Principal = "*"
-        Action    = "*"
-        Resource  = "*"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer",
+        ]
+        Resource = "*"
         Condition = {
           StringEquals = {
             "aws:PrincipalAccount" = data.aws_caller_identity.current.account_id
