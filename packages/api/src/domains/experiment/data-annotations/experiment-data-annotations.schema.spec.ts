@@ -245,6 +245,34 @@ describe("Annotations", () => {
     expect(zExperimentAnnotationExperimentPathParam.parse({ id: upper })).toEqual({ id: lower });
   });
 
+  it("refuses an annotation whose type differs from its content's, on the content's type", () => {
+    const flagAsComment = {
+      type: "flag" as const,
+      content: { type: "comment" as const, text: "Wet" },
+    };
+    const commentAsFlag = {
+      type: "comment" as const,
+      content: { type: "flag" as const, flagType: "outlier" as const },
+    };
+
+    const single = zExperimentAddAnnotationBody.safeParse({
+      tableName: "raw_data",
+      rowId: "1",
+      annotation: flagAsComment,
+    });
+    const bulk = zExperimentAddAnnotationsBulkBody.safeParse({
+      tableName: "raw_data",
+      rowIds: ["1"],
+      annotation: commentAsFlag,
+    });
+
+    expect(single.success).toBe(false);
+    expect(single.error?.issues.map(({ path }) => path)).toEqual([
+      ["annotation", "content", "type"],
+    ]);
+    expect(bulk.success).toBe(false);
+  });
+
   it("refuses a row id or table name longer than Postgres keeps", () => {
     const comment = {
       type: "comment" as const,

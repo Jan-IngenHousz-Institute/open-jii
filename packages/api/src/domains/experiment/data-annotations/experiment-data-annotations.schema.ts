@@ -49,22 +49,28 @@ export const zExperimentAnnotationPathParam = z.object({
   annotationId: zLowercaseId.describe("ID of the annotation"),
 });
 
+// The type is stored apart from the content, so they must agree: a flag keeps its kind, a comment
+// its text.
+const zNewAnnotation = z
+  .object({
+    type: zExperimentAnnotationType,
+    content: zExperimentAnnotationContent,
+  })
+  .refine((annotation) => annotation.type === annotation.content.type, {
+    message: "The annotation's type must match its content's type",
+    path: ["content", "type"],
+  });
+
 export const zExperimentAddAnnotationBody = z.object({
   tableName: zTableName,
   rowId: zRowId,
-  annotation: z.object({
-    type: zExperimentAnnotationType,
-    content: zExperimentAnnotationContent,
-  }),
+  annotation: zNewAnnotation,
 });
 
 export const zExperimentAddAnnotationsBulkBody = z.object({
   tableName: zTableName,
   rowIds: z.array(zRowId).min(1),
-  annotation: z.object({
-    type: zExperimentAnnotationType,
-    content: zExperimentAnnotationContent,
-  }),
+  annotation: zNewAnnotation,
 });
 
 export const zExperimentListAnnotationsQuery = z.object({
