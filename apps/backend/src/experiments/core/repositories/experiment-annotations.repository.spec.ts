@@ -254,7 +254,9 @@ describe("ExperimentAnnotationsRepository", () => {
     const earlier = record({ rowId: "2", createdAt: new Date("2026-09-02T08:00:00.000Z") });
     const otherRow = record({ rowId: "3" });
     const otherTable = record({ rowId: "1", tableName: "4f0c6b1e-3a8e-4b7e-9c55-1d2e3f4a5b6c" });
-    await insert(later, earlier, otherRow, otherTable);
+    const { experiment: other } = await testApp.createExperiment({ name: "Other trial", userId });
+    const otherExperiment = record({ rowId: "1", experimentId: other.id });
+    await insert(later, earlier, otherRow, otherTable, otherExperiment);
     await testApp.database
       .update(profiles)
       .set({ firstName: "Ada", lastName: "Lovelace" })
