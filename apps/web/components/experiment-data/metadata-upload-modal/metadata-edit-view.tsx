@@ -205,6 +205,9 @@ export function MetadataEditView({
 
   const hasData = columns.length > 0;
 
+  const hasTableErrors =
+    columnErrors.length > 0 || Boolean(errors.columns?.message) || Boolean(errors.rows?.message);
+
   return (
     <form
       onSubmit={(e) => {
@@ -257,10 +260,13 @@ export function MetadataEditView({
             </Button>
           </div>
 
-          {(columnErrors.length > 0 || errors.columns?.message) && (
+          {hasTableErrors && (
             <div className="border-destructive/50 bg-destructive/5 rounded-md border px-3 py-2">
               {errors.columns?.message && (
                 <p className="text-destructive text-sm">{errors.columns.message}</p>
+              )}
+              {errors.rows?.message && (
+                <p className="text-destructive text-sm">{errors.rows.message}</p>
               )}
               {columnErrors.length > 0 && (
                 <ul className="text-destructive list-disc space-y-0.5 pl-5 text-xs">
