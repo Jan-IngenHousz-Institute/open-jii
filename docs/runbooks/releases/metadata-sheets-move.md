@@ -15,9 +15,12 @@ repository runs them.
 
 ## 1. Check that Postgres can keep every sheet
 
-In the environment's Databricks SQL editor:
+In the environment's Databricks SQL editor, in the environment's catalog, which steps 2 and 5
+use too:
 
 ```sql
+USE CATALOG open_jii_<env>;
+
 SELECT metadata_id, experiment_id, created_by
 FROM centrum.experiment_custom_metadata
 WHERE metadata_id IS NULL OR experiment_id IS NULL OR metadata IS NULL OR created_by IS NULL
@@ -51,9 +54,9 @@ FROM centrum.experiment_custom_metadata;
 SELECT count(*), sum(length(to_json(metadata))) FROM centrum.experiment_custom_metadata;
 ```
 
-Note the time you ran it and the two numbers the last query gives, then download the export's
-result as CSV, `sheets.csv`. If the editor cuts the download short of the count, export it in parts
-with a `WHERE experiment_id IN (...)`.
+Note the time you ran it, in UTC, and the two numbers the last query gives, then download the
+export's result as CSV, `sheets.csv`. If the editor cuts the download short of the count, export it
+in parts with a `WHERE experiment_id IN (...)`.
 
 ## 3. Load it beside Postgres's sheets
 
@@ -68,8 +71,10 @@ CREATE TEMP TABLE lakehouse_sheets (
 SELECT count(*), sum(length(metadata)) FROM lakehouse_sheets;
 ```
 
-Both numbers must match the export's. The document stays text here so its length can be compared
-with the export's; Postgres reorders a document's keys once it is `jsonb`.
+Both numbers must match the export's. When they do not, or `\copy` stops on a row, the download was
+cut short or mangled: export again in parts as step 2 says, and load each part. The document stays
+text here so its length can be compared with the export's; Postgres reorders a document's keys once
+it is `jsonb`.
 
 ## 4. Copy what Postgres lacks or holds older
 
@@ -130,9 +135,19 @@ after the second export. A row created before it is a delete that step 4 undid, 
 to Postgres failed, for which the service's log warns "not copied to Postgres". Check it is gone
 from the lakehouse and delete it from Postgres.
 
+A row of the first query whose `in_postgres` is older, or empty, is a change the lakehouse took
+that Postgres missed, such as an edit to a sheet step 4 had not reached yet. Run step 4
+again with this export, then step 5's checks again.
+
 ## Before the second release, and after
+
+Run this in the same session as [annotations-move](annotations-move.md). The second release goes out
+only when both are clean.
 
 Run steps 1 to 5 again right before the second release goes out, with a fresh export; a clean check
 is what lets it go. Once it is out, run steps 2 and 3 and step 5's checks once more without step 4,
 since Postgres is then where sheets are written: a difference is a write the first release's tasks
 took while the second rolled out, whose copy failed. Note its id in OJD-2153.
+
+Delete `sheets.csv`, `sheets-2.csv` and any parts once the checks are clean. They hold
+researchers' data.
