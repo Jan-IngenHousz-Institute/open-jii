@@ -9,7 +9,6 @@ import {
 } from "@repo/monitoring/status-components";
 import { DAY_DEGRADED_MINUTES } from "@repo/monitoring/status-history";
 import {
-  BAD_PROBES_FOR_DEGRADED,
   DELIVERY_DEGRADED_LATENCY_MINUTES,
   DELIVERY_OUTAGE_LATENCY_MINUTES,
   DELIVERY_STALL_IDLE_MINUTES,
@@ -17,10 +16,11 @@ import {
   ITERATOR_AGE_DEGRADED_MINUTES,
   MACRO_DEGRADED_LATENCY_MINUTES,
   MACRO_OUTAGE_LATENCY_MINUTES,
+  MINUTES_FOR_DEGRADED,
+  MINUTES_FOR_OUTAGE,
   PLATFORM_MIN_ERRORS,
   PLATFORM_OUTAGE_ERROR_SHARE,
   PLATFORM_SLOW_PROBE_MS,
-  PROBE_FAILURES_FOR_OUTAGE,
   WEBSITE_MIN_REQUESTS,
   WEBSITE_OUTAGE_ERROR_PERCENT,
   WEBSITE_SLOW_PROBE_MS,
@@ -58,9 +58,9 @@ const CASES: [string, string, string[]][] = [
     "website",
     en.component.website.details,
     [
-      `${count(BAD_PROBES_FOR_DEGRADED)} slow or failed checks in a row`,
+      `${count(MINUTES_FOR_DEGRADED)} slow or failed checks in a row`,
       `slow if it takes more than ${seconds(WEBSITE_SLOW_PROBE_MS)}`,
-      `${count(PROBE_FAILURES_FOR_OUTAGE)} failed checks in a row`,
+      `${count(MINUTES_FOR_OUTAGE)} failed checks in a row`,
       `in ${recent(RULE_WINDOW_MINUTES)}, at least ${WEBSITE_MIN_REQUESTS} requests`,
       "more than half of them failed",
     ],
@@ -74,9 +74,9 @@ const CASES: [string, string, string[]][] = [
     "platform",
     en.component.platform.details,
     [
-      `${count(BAD_PROBES_FOR_DEGRADED)} slow or failed test requests in a row`,
+      `${count(MINUTES_FOR_DEGRADED)} slow or failed test requests in a row`,
       `slow if it takes more than ${seconds(PLATFORM_SLOW_PROBE_MS)}`,
-      `${count(PROBE_FAILURES_FOR_OUTAGE)} failed test requests in a row`,
+      `${count(MINUTES_FOR_OUTAGE)} failed test requests in a row`,
       `in ${recent(RULE_WINDOW_MINUTES)}, at least ${PLATFORM_MIN_ERRORS} requests ended in a server error`,
       `Databricks failed every check in ${recent(DEPENDENCY_WINDOW_MINUTES)}`,
       `database failed every check in ${recent(DEPENDENCY_WINDOW_MINUTES)}`,
@@ -141,6 +141,12 @@ describe("the en-US measuring notes", () => {
   it("marks a day Degraded from the minutes the history sets", () => {
     expect(en.howWeMeasure.uptime).toContain(
       `marked Degraded from ${count(DAY_DEGRADED_MINUTES)} degraded minutes`,
+    );
+  });
+
+  it("waits as long as the judge does before a component changes", () => {
+    expect(en.howWeMeasure.checks).toContain(
+      `last ${count(MINUTES_FOR_DEGRADED)} minutes in a row before a component shows Degraded, and ${count(MINUTES_FOR_OUTAGE)} before it shows Outage`,
     );
   });
 });
