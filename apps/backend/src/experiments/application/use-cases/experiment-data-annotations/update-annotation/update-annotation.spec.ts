@@ -1,3 +1,5 @@
+import { Logger } from "@nestjs/common";
+
 import type { ExperimentUpdateAnnotationBody } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import { experimentAnnotations } from "@repo/database";
 
@@ -304,6 +306,7 @@ describe("UpdateAnnotation", () => {
     vi.spyOn(testApp.module.get(ExperimentAnnotationsRepository), "update").mockResolvedValue(
       failure(AppError.internal("Postgres down")),
     );
+    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
 
     const result = await useCase.execute(
       experiment.id,
@@ -314,5 +317,12 @@ describe("UpdateAnnotation", () => {
 
     assertSuccess(result);
     expect(result.value.rowsAffected).toBe(1);
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        msg: "Annotation update not copied to Postgres",
+        experimentId: experiment.id,
+        annotationId: "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b",
+      }),
+    );
   });
 });

@@ -87,8 +87,16 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
         databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining("INSERT INTO experiment_annotations"),
-        expect.arrayContaining([{ name: "experiment_id", value: mockExperimentId }]),
+        expect.arrayContaining([
+          { name: "experiment_id", value: mockExperimentId },
+          // The id and time Postgres gets too.
+          { name: "id_0", value: annotations[0].id },
+          { name: "now", value: now.toISOString(), type: "TIMESTAMP" },
+        ]),
       );
+      const statement = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0][1];
+      expect(statement).toContain("(:id_0, :experiment_id,");
+      expect(statement).toContain(":now, :now)");
     });
 
     it("should successfully store multiple annotations with bulk insert", async () => {
@@ -255,6 +263,7 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
           { name: "annotation_id", value: mockAnnotationId },
           { name: "content_text", value: validUpdateData.contentText },
           { name: "flag_type", value: validUpdateData.flagType },
+          { name: "now", value: now.toISOString(), type: "TIMESTAMP" },
         ]),
       );
 
@@ -264,6 +273,7 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
       expect(sqlQuery).toContain("WHERE id = :annotation_id AND experiment_id = :experiment_id");
       expect(sqlQuery).toContain("content_text = :content_text");
       expect(sqlQuery).toContain("flag_type = :flag_type");
+      expect(sqlQuery).toContain("updated_at = :now");
       expect(sqlQuery).toContain("updated_at = :now");
     });
 
