@@ -11,6 +11,7 @@ import {
 import { TestHarness } from "../../../../../test/test-harness";
 import type { AnnotationRecord } from "../../../../core/models/experiment-data-annotation.model";
 import { ExperimentAnnotationsRepository } from "../../../../core/repositories/experiment-annotations.repository";
+import { ExperimentDataOutboxRepository } from "../../../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentDataOutboxWorker } from "../../../services/experiment-data-outbox.worker";
 import { DeleteAnnotationsUseCase } from "./delete-annotations";
 
@@ -171,5 +172,22 @@ describe("DeleteAnnotations", () => {
 
     assertFailure(result);
     expect(result.error.message).toBe("Postgres did not answer the annotations query");
+  });
+
+  it("keeps the annotation when the copy it owes cannot be written", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
+    const [kept] = await existing(experiment.id, {});
+    vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe").mockRejectedValue(
+      new Error("outbox unavailable"),
+    );
+
+    const result = await useCase.execute(experiment.id, { annotationId: kept.id }, testUserId);
+
+    assertFailure(result);
+    expect(await annotationIds()).toEqual([kept.id]);
+    expect(await owed()).toEqual([]);
   });
 });
