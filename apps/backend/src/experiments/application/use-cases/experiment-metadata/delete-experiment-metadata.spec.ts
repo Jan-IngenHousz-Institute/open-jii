@@ -1,3 +1,5 @@
+import { Logger } from "@nestjs/common";
+
 import { experimentMetadataSheets } from "@repo/database";
 
 import {
@@ -146,6 +148,16 @@ describe("DeleteExperimentMetadataUseCase", () => {
       failure(AppError.internal("Postgres did not answer the metadata sheets query")),
     );
 
+    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+
     assertSuccess(await useCase.execute(experiment.id, record.id, testUserId));
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        msg: "Experiment metadata delete not copied to Postgres",
+        experimentId: experiment.id,
+        metadataId: record.id,
+      }),
+    );
   });
 });
