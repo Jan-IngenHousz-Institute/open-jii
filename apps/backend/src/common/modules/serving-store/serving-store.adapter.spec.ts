@@ -9,6 +9,11 @@ import { AppError, assertFailure, assertSuccess, failure, success } from "../../
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
 import { ServingStoreClientService } from "./services/client/client.service";
 import { ServingStoreConfigService } from "./services/config/config.service";
+import {
+  MACRO_RESULTS_TABLE,
+  MEASUREMENTS_TABLE,
+  UPLOADS_TABLE,
+} from "./services/query-builder/store-tables";
 import { ServingStoreAdapter } from "./serving-store.adapter";
 
 describe("ServingStoreAdapter", () => {
@@ -522,6 +527,78 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(second).toMatchObject({ latitude: "3.0", measurement_time_local: null });
   });
 
+  it("returns a sorted page's own rows, each in its newest copy", async () => {
+    const row = {
+      experiment_id: "e2",
+      device_id: "d1",
+      _commit_version: 1,
+      _commit_timestamp: "2026-10-01 08:00:01",
+    };
+    const rows = [
+      { ...row, id: 5, device_name: "oldest", timestamp: "2026-09-29 08:00:00" },
+      { ...row, id: 6, device_name: "first", timestamp: "2026-09-30 08:00:00" },
+      { ...row, id: 7, device_name: "newest", timestamp: "2026-10-01 08:00:00" },
+    ];
+    const copy = { ...rows[1], device_name: "second", _commit_version: 2 };
+    // A separate insert puts the copy in its own part, so the read itself has to merge it.
+    await admin.insert({ table: "measurements", values: rows, format: "JSONEachRow" });
+    await admin.insert({ table: "measurements", values: [copy], format: "JSONEachRow" });
+
+    const page = (offset: number) =>
+      rowsOf({
+        tableName: "raw_data",
+        tableType: "static",
+        experimentId: "e2",
+        columns: ["id", "device_name"],
+        ordering: { column: "timestamp", direction: "DESC" },
+        limit: 1,
+        offset,
+      });
+
+    expect((await page(0)).rows).toEqual([["7", "newest"]]);
+    expect((await page(1)).rows).toEqual([["6", "second"]]);
+    expect((await page(2)).rows).toEqual([["5", "oldest"]]);
+  });
+
+  it("pages through rows that share a sort value, each on exactly one page", async () => {
+    const row = {
+      experiment_id: "e3",
+      device_id: "d1",
+      device_name: "Same name",
+      _commit_version: 1,
+      _commit_timestamp: "2026-10-01 08:00:01",
+    };
+    await admin.insert({
+      table: "measurements",
+      values: [
+        { ...row, id: 21, timestamp: "2026-10-01 08:00:00" },
+        { ...row, id: 22, timestamp: "2026-09-30 08:00:00" },
+        { ...row, id: 23, timestamp: "2026-09-29 08:00:00" },
+      ],
+      format: "JSONEachRow",
+    });
+
+    const page = async (offset: number) =>
+      (
+        await rowsOf({
+          tableName: "raw_data",
+          tableType: "static",
+          experimentId: "e3",
+          columns: ["id"],
+          ordering: { column: "device_name", direction: "ASC" },
+          limit: 1,
+          offset,
+        })
+      ).rows;
+
+    // Equal names fall back to the store's key, which starts with the time.
+    expect([...(await page(0)), ...(await page(1)), ...(await page(2))]).toEqual([
+      ["23"],
+      ["22"],
+      ["21"],
+    ]);
+  });
+
   it("flattens payload fields by type and keeps a field named like a column apart from it", async () => {
     const macroSchema = VariantSchema.merge([PAYLOAD_SCHEMAS[1].schema, PAYLOAD_SCHEMAS[2].schema]);
     const data = await rowsOf({
@@ -748,6 +825,28 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(contributors.value.sort()).toEqual([ADA, BEN]);
     expect(devices.value.sort()).toEqual(["PST-client", "thing-1"]);
   });
+});
+
+describe("StoreTables against the migrations", () => {
+  // A sorted page picks its rows by the key, so it must be the table's whole sorting key; and the
+  // client folds each month on its own, which holds only while a row's month is part of its key.
+  it.each([
+    ["measurements", MEASUREMENTS_TABLE],
+    ["macro_results", MACRO_RESULTS_TABLE],
+    ["uploads", UPLOADS_TABLE],
+  ])(
+    "%s is read by its migration's sorting key, which holds its partition's time",
+    (name, table) => {
+      const create =
+        migrationStatements().find((statement) =>
+          statement.includes(`CREATE TABLE IF NOT EXISTS ${name}\n`),
+        ) ?? "";
+
+      expect(create).toContain(`ORDER BY (${["experiment_id", ...table.key].join(", ")})`);
+      const partitionTime = /PARTITION BY toYYYYMM\((\w+)\)/.exec(create)?.[1];
+      expect(table.key).toContain(partitionTime);
+    },
+  );
 });
 
 /** The migrations as their runner applies them, one statement at a time. */

@@ -41,6 +41,7 @@ const STORE_SCALARS: Record<string, string> = {
 export class StoreQueryBuilder extends BaseQueryBuilder {
   private fromClause = "";
   private columns: StoreColumn[] = [];
+  private key: string[] = [];
   private selectColumns?: string[];
   private variantColumns: FlattenedSource[] = [];
   private reservedColumns: string[] = [];
@@ -53,6 +54,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   read(table: StoreTable, experimentId: string, identifier?: string): this {
     this.columns = table.columns;
+    this.key = table.key;
     this.from(`${table.view}(experiment = ${this.escapeValue(experimentId)})`);
     if (table.identifierColumn !== undefined && identifier !== undefined) {
       this.where(`${table.identifierColumn} = ${this.escapeValue(identifier)}`);
@@ -217,16 +219,39 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const limitClause = this.limitValue === undefined ? "" : `LIMIT ${this.limitValue}`;
     const offsetClause = this.offsetValue === undefined ? "" : `OFFSET ${this.offsetValue}`;
 
-    return [
+    // Through FINAL, the store reads every column of every matching row before it applies LIMIT.
+    // A sorted page therefore finds its rows' keys first, reading only the key columns, and then
+    // reads just those rows. A key names one row, so the outer statement needs no LIMIT.
+    const isSortedPage =
+      this.ordering !== undefined && this.limitValue !== undefined && !this.isDistinct;
+    if (isSortedPage) {
+      const key = this.key.join(", ");
+      // Rows with equal sort values come in no fixed order, so a row on a page boundary could land
+      // on two pages or on none. The key, unique per row, fixes the order.
+      const page = this.joinClauses([
+        `SELECT ${key}`,
+        `FROM ${this.fromClause}`,
+        where,
+        `${order}, ${key}`,
+        limitClause,
+        offsetClause,
+      ]);
+      return this.joinClauses([
+        `SELECT ${projection}`,
+        `FROM ${this.fromClause}`,
+        `WHERE (${key}) IN (${page})`,
+        order,
+      ]);
+    }
+
+    return this.joinClauses([
       `${selectKeyword} ${projection}`,
       `FROM ${this.fromClause}`,
       where,
       order,
       limitClause,
       offsetClause,
-    ]
-      .filter((clause) => clause.length > 0)
-      .join("\n");
+    ]);
   }
 
   private outputColumn(name: string): StoreOutputColumn {

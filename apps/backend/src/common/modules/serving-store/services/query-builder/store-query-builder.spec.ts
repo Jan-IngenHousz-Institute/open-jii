@@ -199,6 +199,41 @@ describe("StoreQueryBuilder", () => {
     );
   });
 
+  it("finds a sorted page's rows by key first, then reads only those rows", () => {
+    const sql = new StoreQueryBuilder()
+      .read(MACRO_RESULTS_TABLE, "e1", "m1")
+      .select(["id"])
+      .filter({ column: "device_id", operator: "equals", value: "d1" })
+      .orderBy({ column: "timestamp", direction: "DESC" })
+      .limit(10)
+      .offset(20)
+      .build();
+
+    const key =
+      "ifNull(macro_id, ''), timestamp, raw_id, ifNull(macro_filename, ''), ifNull(device_id, '')";
+    expect(sql).toBe(
+      [
+        "SELECT toString(id) AS `id`",
+        "FROM experiment_macro_results(experiment = 'e1')",
+        `WHERE (${key}) IN (SELECT ${key}`,
+        "FROM experiment_macro_results(experiment = 'e1')",
+        "WHERE macro_id = 'm1' AND device_id = 'd1'",
+        `ORDER BY timestamp DESC NULLS LAST, ${key}`,
+        "LIMIT 10",
+        "OFFSET 20)",
+        "ORDER BY timestamp DESC NULLS LAST",
+      ].join("\n"),
+    );
+  });
+
+  it("reads an unsorted page as one statement, which stops at its limit", () => {
+    const sql = measurements().select(["id"]).limit(5).build();
+
+    expect(sql).toBe(
+      "SELECT toString(id) AS `id`\nFROM experiment_measurements(experiment = 'e1')\nLIMIT 5",
+    );
+  });
+
   it("refuses a column the table does not have, and a struct field it cannot read", () => {
     expect(() => measurements().select(["nope"]).build()).toThrow(QueryBuilderInputError);
     expect(() =>
