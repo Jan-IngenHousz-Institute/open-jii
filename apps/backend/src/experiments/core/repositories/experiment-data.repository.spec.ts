@@ -2220,14 +2220,16 @@ describe("ExperimentDataRepository", () => {
       expect(result.error.code).toBe("NOT_FOUND");
     });
 
-    it("propagates a query-builder failure", async () => {
+    it.each(["site", "device"])("propagates a %s query-builder failure", async (column) => {
+      const error = AppError.badRequest("bad query");
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
-        failure(AppError.badRequest("bad query")),
-      );
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(failure(error));
+      const execute = vi.spyOn(databricksPort, "executeSqlQuery");
 
-      const result = await repository.getDistinctColumnValues(baseParams);
+      const result = await repository.getDistinctColumnValues({ ...baseParams, column });
       assertFailure(result);
+      expect(result.error).toBe(error);
+      expect(execute).not.toHaveBeenCalled();
     });
 
     it("propagates an executeSqlQuery failure", async () => {
@@ -3080,6 +3082,30 @@ describe("ExperimentDataRepository", () => {
       expect(sql).toContain(
         "ORDER BY lower(`serial_number`) ASC, `serial_number` ASC LIMIT 4 OFFSET 200",
       );
+    });
+
+    it("returns a warehouse shape failure when routing the Device picker from the store", async () => {
+      const error = AppError.internal("Warehouse metadata is unavailable");
+      const metadata = vi
+        .spyOn(databricksPort, "getExperimentTableMetadata")
+        .mockResolvedValue(failure(error));
+      const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
+      const store = vi.spyOn(servingStore, "executeQuery");
+
+      const result = await repository.getDistinctColumnValues({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        column: "device",
+        limit: 3,
+        source: "store",
+      });
+
+      assertFailure(result);
+      expect(result.error).toBe(error);
+      expect(metadata).toHaveBeenCalledWith(experimentId, { includeSchemas: true });
+      expect(warehouse).not.toHaveBeenCalled();
+      expect(store).not.toHaveBeenCalled();
     });
 
     it("keeps non-device distinct reads on the store", async () => {
