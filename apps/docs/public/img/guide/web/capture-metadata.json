@@ -144,11 +144,11 @@
     },
     {
       "asset": "experiments-list.webp",
-      "sha256": "8d2f3277f3dd3859400d9cb56b57269b072ee4c36d19cf92fce8ca222d9e5c30",
+      "sha256": "75818834a9fbf69aacadc8215545af588d58749a7e5b9e3d46769c71ece27a5a",
       "script": "apps/e2e/docs-media/shots.ts",
       "environment": "localhost (seeded local stack)",
       "route": "/platform/experiments?status=active&visibility=public",
-      "captured_at": "2026-11-02T17:40:36+01:00",
+      "captured_at": "2026-11-10T09:27:00+01:00",
       "viewport": {
         "width": 1920,
         "height": 1200
@@ -156,13 +156,14 @@
       "color_scheme": "light",
       "locale": "en-US",
       "review_status": "approved",
-      "reviewed_at": "2026-11-02T17:40:36+01:00",
+      "reviewed_at": "2026-11-10T09:27:00+01:00",
       "reviewer": "User",
-      "review_notes": "Experiments overview with Name sorted ascending and Status is Active and Visibility is Public chips. Full-size review confirmed only seeded content and no real names, emails, credentials or dev overlays. Encoded as WebP at quality 90 with metadata omitted using cwebp.",
+      "review_notes": "Experiments overview with Name sorted ascending and Status is Active and Visibility is Public chips. Activity header shows its sort icon, in the unavailable state because Databricks was unreachable. Non-[Seed] experiments in the local database were held out of the list response. Full-size review confirmed only seeded content and no real names, emails, credentials or dev overlays. Encoded as WebP at quality 90 with metadata omitted using cwebp.",
       "redactions": [],
       "live_checks_observed": [
         "Name sorted ascending; Status is Active and Visibility is Public chips appear beneath the toolbar; Clear filters is visible at right.",
-        "Only seeded experiment names and the seeded account are visible."
+        "Only seeded experiment names and the seeded account are visible.",
+        "Activity header carries a sort icon."
       ]
     },
     {

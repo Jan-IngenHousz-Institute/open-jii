@@ -1,6 +1,10 @@
-import { experiments, inArray } from "@repo/database";
+import { experiments, inArray, workbookVersions } from "@repo/database";
 
-import { assertSuccess } from "../../../../common/utils/fp-utils";
+import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
+import { assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
+import { resourceMetricsCacheKey } from "../../../../metrics/application/resource-metrics.service";
+import { CACHE_PORT } from "../../../../metrics/core/ports/cache.port";
+import type { CachePort } from "../../../../metrics/core/ports/cache.port";
 import { TestHarness } from "../../../../test/test-harness";
 import { ListWorkbooksUseCase } from "./list-workbooks";
 
@@ -84,5 +88,233 @@ describe("ListWorkbooksUseCase", () => {
     assertSuccess(result);
     expect(result.value.find((w) => w.id === used.id)?.experimentCount).toBe(2);
     expect(result.value.find((w) => w.id === unused.id)?.experimentCount).toBe(0);
+  });
+
+  describe("activity snapshot fallback", () => {
+    async function makeWarehouseUnavailable() {
+      const adapter = testApp.module.get(DatabricksAdapter);
+      vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+        failure({
+          name: "AppError",
+          code: "INTERNAL_ERROR",
+          message: "warehouse down",
+          statusCode: 500,
+        }),
+      );
+      await testApp.module
+        .get<CachePort>(CACHE_PORT)
+        .invalidate(resourceMetricsCacheKey("workbook"));
+    }
+
+    it("falls back to name order and reports unavailable when activity is paired with name and there is no snapshot", async () => {
+      await makeWarehouseUnavailable();
+      await testApp.createWorkbook({ name: "Alpha", createdBy: userId, visibility: "public" });
+      await testApp.createWorkbook({ name: "Bravo", createdBy: userId, visibility: "public" });
+
+      const result = await useCase.executePaginated(1, 20, {
+        userId,
+        sort: [
+          { field: "activity", direction: "desc" },
+          { field: "name", direction: "asc" },
+        ],
+      });
+
+      assertSuccess(result);
+      expect(result.value.activityAvailable).toBe(false);
+      expect(result.value.items.map((item) => item.name)).toEqual(["Alpha", "Bravo"]);
+    });
+
+    it("reports unavailable and the default order when sorting only by activity with no snapshot", async () => {
+      await makeWarehouseUnavailable();
+      // Created out of alphabetical order, so a name-order result proves the
+      // real default ordering ran rather than insertion order.
+      const charlie = await testApp.createWorkbook({
+        name: "Charlie",
+        createdBy: userId,
+        visibility: "public",
+      });
+      const alpha = await testApp.createWorkbook({
+        name: "Alpha",
+        createdBy: userId,
+        visibility: "public",
+      });
+      const bravo = await testApp.createWorkbook({
+        name: "Bravo",
+        createdBy: userId,
+        visibility: "public",
+      });
+
+      const result = await useCase.executePaginated(1, 20, {
+        userId,
+        sort: [{ field: "activity", direction: "desc" }],
+      });
+
+      assertSuccess(result);
+      expect(result.value.activityAvailable).toBe(false);
+      expect(result.value.items.map((item) => item.id)).toEqual([alpha.id, bravo.id, charlie.id]);
+    });
+
+    it("orders items consistently with the activity measurements it reports", async () => {
+      const busy = await testApp.createWorkbook({
+        name: "Busy workbook",
+        createdBy: userId,
+        visibility: "public",
+      });
+      const quiet = await testApp.createWorkbook({
+        name: "Quiet workbook",
+        createdBy: userId,
+        visibility: "public",
+      });
+      const [busyVersion, quietVersion] = await testApp.database
+        .insert(workbookVersions)
+        .values([
+          {
+            workbookId: busy.id,
+            version: 1,
+            cells: [],
+            metadata: {},
+            entitySnapshots: { protocols: {}, macros: {} },
+            createdBy: userId,
+          },
+          {
+            workbookId: quiet.id,
+            version: 1,
+            cells: [],
+            metadata: {},
+            entitySnapshots: { protocols: {}, macros: {} },
+            createdBy: userId,
+          },
+        ])
+        .returning();
+
+      const adapter = testApp.module.get(DatabricksAdapter);
+      const today = new Date().toISOString().slice(0, 10);
+      vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+        success([
+          {
+            date: today,
+            resourceType: "workbook_version",
+            resourceId: busyVersion.id,
+            measurements: 9,
+          },
+          {
+            date: today,
+            resourceType: "workbook_version",
+            resourceId: quietVersion.id,
+            measurements: 1,
+          },
+        ]),
+      );
+      await testApp.module
+        .get<CachePort>(CACHE_PORT)
+        .invalidate(resourceMetricsCacheKey("workbook"));
+
+      const result = await useCase.executePaginated(1, 20, {
+        userId,
+        sort: [{ field: "activity", direction: "desc" }],
+      });
+
+      assertSuccess(result);
+      expect(result.value.activityAvailable).toBe(true);
+      const foundIds = result.value.items.map((item) => item.id);
+      expect(foundIds.indexOf(busy.id)).toBeLessThan(foundIds.indexOf(quiet.id));
+      expect(result.value.items.find((item) => item.id === busy.id)?.activity?.measurements).toBe(
+        9,
+      );
+      expect(result.value.items.find((item) => item.id === quiet.id)?.activity?.measurements).toBe(
+        1,
+      );
+    });
+
+    it("array path (execute): sorts by activity when a snapshot is available", async () => {
+      // Named so default (name) order would put quiet first; only activity
+      // sort can put busy first, proving activity actually drove the order.
+      const busy = await testApp.createWorkbook({
+        name: "Zulu workbook",
+        createdBy: userId,
+        visibility: "public",
+      });
+      const quiet = await testApp.createWorkbook({
+        name: "Alpha workbook",
+        createdBy: userId,
+        visibility: "public",
+      });
+      const [busyVersion, quietVersion] = await testApp.database
+        .insert(workbookVersions)
+        .values([
+          {
+            workbookId: busy.id,
+            version: 1,
+            cells: [],
+            metadata: {},
+            entitySnapshots: { protocols: {}, macros: {} },
+            createdBy: userId,
+          },
+          {
+            workbookId: quiet.id,
+            version: 1,
+            cells: [],
+            metadata: {},
+            entitySnapshots: { protocols: {}, macros: {} },
+            createdBy: userId,
+          },
+        ])
+        .returning();
+
+      const adapter = testApp.module.get(DatabricksAdapter);
+      const today = new Date().toISOString().slice(0, 10);
+      vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+        success([
+          {
+            date: today,
+            resourceType: "workbook_version",
+            resourceId: busyVersion.id,
+            measurements: 9,
+          },
+          {
+            date: today,
+            resourceType: "workbook_version",
+            resourceId: quietVersion.id,
+            measurements: 1,
+          },
+        ]),
+      );
+      await testApp.module
+        .get<CachePort>(CACHE_PORT)
+        .invalidate(resourceMetricsCacheKey("workbook"));
+
+      const result = await useCase.execute({
+        userId,
+        sort: [{ field: "activity", direction: "desc" }],
+      });
+
+      assertSuccess(result);
+      const ids = result.value.map((item) => item.id);
+      expect(ids.indexOf(busy.id)).toBeLessThan(ids.indexOf(quiet.id));
+    });
+
+    it("array path (execute): drops the activity criterion silently when there is no snapshot", async () => {
+      await makeWarehouseUnavailable();
+      // Created out of alphabetical order, so a name-order result proves the
+      // real default ordering ran rather than insertion order.
+      const charlie = await testApp.createWorkbook({
+        name: "Charlie",
+        createdBy: userId,
+        visibility: "public",
+      });
+      const alpha = await testApp.createWorkbook({
+        name: "Alpha",
+        createdBy: userId,
+        visibility: "public",
+      });
+
+      const result = await useCase.execute({
+        userId,
+        sort: [{ field: "activity", direction: "desc" }],
+      });
+
+      assertSuccess(result);
+      expect(result.value.map((item) => item.id)).toEqual([alpha.id, charlie.id]);
+    });
   });
 });

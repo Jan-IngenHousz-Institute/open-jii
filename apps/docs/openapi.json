@@ -668,7 +668,8 @@
                       "owner",
                       "organization",
                       "members",
-                      "updated"
+                      "updated",
+                      "activity"
                     ],
                     "type": "string"
                   },
@@ -1432,6 +1433,9 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "activityAvailable": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -1439,7 +1443,8 @@
                         "page",
                         "pageSize",
                         "totalPages",
-                        "totalCount"
+                        "totalCount",
+                        "activityAvailable"
                       ]
                     }
                   ]
@@ -28371,7 +28376,8 @@
                       "name",
                       "language",
                       "protocols",
-                      "updated"
+                      "updated",
+                      "activity"
                     ],
                     "type": "string"
                   },
@@ -28797,6 +28803,9 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "activityAvailable": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -28804,7 +28813,8 @@
                         "page",
                         "pageSize",
                         "totalPages",
-                        "totalCount"
+                        "totalCount",
+                        "activityAvailable"
                       ]
                     }
                   ]
@@ -33364,7 +33374,8 @@
                       "name",
                       "family",
                       "macros",
-                      "updated"
+                      "updated",
+                      "activity"
                     ],
                     "type": "string"
                   },
@@ -33804,6 +33815,9 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "activityAvailable": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -33811,7 +33825,8 @@
                         "page",
                         "pageSize",
                         "totalPages",
-                        "totalCount"
+                        "totalCount",
+                        "activityAvailable"
                       ]
                     }
                   ]
@@ -38340,7 +38355,8 @@
                       "name",
                       "usedBy",
                       "user",
-                      "updated"
+                      "updated",
+                      "activity"
                     ],
                     "type": "string"
                   },
@@ -38754,6 +38770,9 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "activityAvailable": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -38761,7 +38780,8 @@
                         "page",
                         "pageSize",
                         "totalPages",
-                        "totalCount"
+                        "totalCount",
+                        "activityAvailable"
                       ]
                     }
                   ]

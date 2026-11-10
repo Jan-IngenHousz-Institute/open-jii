@@ -528,6 +528,10 @@ describe("Experiment Schema", () => {
       expect(
         zExperimentFilterQuery.safeParse({ sort: [{ field: "activity", direction: "asc" }] })
           .success,
+      ).toBe(true);
+      expect(
+        zExperimentFilterQuery.safeParse({ sort: [{ field: "invalid", direction: "asc" }] })
+          .success,
       ).toBe(false);
 
       // Test combinations

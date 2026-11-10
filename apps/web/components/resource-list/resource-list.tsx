@@ -33,6 +33,8 @@ export interface ResourceListModel<Item, F extends string> {
   page: number;
   setPage(this: void, page: number): void;
   sort: SortItem<F>[];
+  /** The server could not load activity, so it cannot sort by it right now. */
+  activityUnavailable?: boolean;
   setSort(this: void, sort: SortItem<F>[]): void;
   toggleSort(this: void, field: F, multi: boolean): void;
   hasActiveFilters: boolean;
@@ -101,7 +103,11 @@ export function ResourceList<Item extends RowData, F extends string>({
       >
         <OverviewTable
           columns={columns}
-          sorting={{ sort: list.sort, onToggle: list.toggleSort }}
+          sorting={{
+            sort: list.sort,
+            onToggle: list.toggleSort,
+            activityUnavailable: list.activityUnavailable,
+          }}
           items={list.data?.items}
           isLoading={list.isLoading}
           error={list.error}

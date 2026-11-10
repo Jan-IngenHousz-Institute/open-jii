@@ -117,6 +117,10 @@ export function useResourceList<
         ? query.data
         : pageRows(query.data, page);
 
+  // Activity lists report whether activity loaded; the URL sort stays, so it applies again later.
+  const activityUnavailable =
+    data !== undefined && "activityAvailable" in data && data.activityAvailable === false;
+
   const isSearchPending = useSearchPending({
     search: url.search,
     debouncedSearch,
@@ -145,6 +149,7 @@ export function useResourceList<
     page,
     setPage,
     sort: url.sort,
+    activityUnavailable,
     setSort: (next: T[]) => {
       url.setSort(next);
       setPage(1);

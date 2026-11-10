@@ -5,7 +5,7 @@ import type { MetricsWindowDay, ResourceKind } from "@repo/api/domains/metrics/m
 import { CACHE_PORT, CachePort } from "../core/ports/cache.port";
 import { METRICS_DATABRICKS_PORT } from "../core/ports/databricks.port";
 import type { DatabricksPort, ResourceDailyRow } from "../core/ports/databricks.port";
-import { MetricsRepository } from "../core/repositories/metrics.repository";
+import { MetricsRepository, UUID_PATTERN } from "../core/repositories/metrics.repository";
 
 export const RESOURCE_METRICS_WINDOW_DAYS = 30;
 
@@ -20,11 +20,18 @@ const WAREHOUSE_TYPE: Record<ResourceKind, string> = {
   workbook: "workbook_version",
 };
 
-export const resourceMetricsCacheKey = (kind: ResourceKind) => `resource-metrics-${kind}`;
+// Versioned because entries now hold attributed rows; a raw entry from before
+// would read workbook version ids as workbook ids.
+export const resourceMetricsCacheKey = (kind: ResourceKind) => `resource-metrics-v2-${kind}`;
 
 export interface ResourceSeries {
   measurements: number;
   days: MetricsWindowDay[];
+}
+
+export interface ResourceActivitySnapshot {
+  totals: Map<string, number>;
+  seriesFor(ids: string[]): Map<string, ResourceSeries>;
 }
 
 /** The window's totals and its shape, across a set of resources. */
@@ -56,43 +63,60 @@ export class ResourceMetricsService {
     private readonly metricsRepository: MetricsRepository,
   ) {}
 
-  /** Series keyed by resource id; a resource with no activity is absent. */
-  async seriesFor(kind: ResourceKind, ids: string[]): Promise<Map<string, ResourceSeries>> {
-    if (ids.length === 0) {
-      return new Map();
+  /** One cached read supplies both whole-kind totals and page series. */
+  async activitySnapshot(kind: ResourceKind): Promise<ResourceActivitySnapshot | null> {
+    const attributed = await this.cachedRows(kind);
+    if (attributed === null) {
+      return null;
     }
 
-    const rows = await this.cachePort.tryCache(resourceMetricsCacheKey(kind), () =>
-      this.loadRows(kind),
-    );
-    if (rows === null) {
-      return new Map();
-    }
-
-    const attributed = await this.attributeToResources(kind, rows, ids);
-    const wanted = new Set(ids);
+    const dates = this.windowDates();
+    const currentDates = new Set(dates);
     const byResource = new Map<string, Map<string, number>>();
+    const totals = new Map<string, number>();
 
     for (const row of attributed) {
-      if (!wanted.has(row.resourceId)) {
-        continue;
-      }
       const days = byResource.get(row.resourceId) ?? new Map<string, number>();
       days.set(row.date, (days.get(row.date) ?? 0) + row.measurements);
       byResource.set(row.resourceId, days);
+
+      if (currentDates.has(row.date)) {
+        totals.set(row.resourceId, (totals.get(row.resourceId) ?? 0) + row.measurements);
+      }
     }
 
-    const series = new Map<string, ResourceSeries>();
-
-    for (const [id, days] of byResource) {
-      const dense = this.densify(days);
-      series.set(id, {
-        measurements: dense.reduce((sum, day) => sum + day.measurements, 0),
-        days: dense,
-      });
+    for (const [id, total] of totals) {
+      if (total <= 0) {
+        totals.delete(id);
+      }
     }
 
-    return series;
+    return {
+      totals,
+      seriesFor: (ids) => {
+        const series = new Map<string, ResourceSeries>();
+        const wanted = new Set(ids);
+        for (const [id, days] of byResource) {
+          if (!wanted.has(id)) {
+            continue;
+          }
+          const dense = dates.map((date) => ({ date, measurements: days.get(date) ?? 0 }));
+          series.set(id, {
+            measurements: dense.reduce((sum, day) => sum + day.measurements, 0),
+            days: dense,
+          });
+        }
+        return series;
+      },
+    };
+  }
+
+  /** Rows keyed by resource id, cached after attribution so it runs once per fill. */
+  private cachedRows(kind: ResourceKind): Promise<ResourceDailyRow[] | null> {
+    return this.cachePort.tryCache(resourceMetricsCacheKey(kind), async () => {
+      const rows = await this.loadRows(kind);
+      return rows === null ? null : this.attributeToResources(kind, rows);
+    });
   }
 
   /** The window's shape across the resources of this kind the caller may read. */
@@ -101,14 +125,11 @@ export class ResourceMetricsService {
       return this.emptyTotals();
     }
 
-    const rows = await this.cachePort.tryCache(resourceMetricsCacheKey(kind), () =>
-      this.loadRows(kind),
-    );
-    if (rows === null) {
+    const attributed = await this.cachedRows(kind);
+    if (attributed === null) {
       return this.emptyTotals();
     }
 
-    const attributed = await this.attributeToResources(kind, rows, visibleIds);
     const visible = new Set(visibleIds);
     // Membership is tested against both windows rather than inferred from one:
     // cached rows outlive midnight, and a date that has aged out of the current
@@ -231,19 +252,23 @@ export class ResourceMetricsService {
     );
   }
 
-  /** Workbook rows arrive keyed by version and fold onto their workbook. */
+  /**
+   * Workbook rows arrive keyed by version and fold onto their workbook. Other
+   * kinds keep the warehouse's ids, which are free text there, so anything that
+   * is not a UUID is dropped before it reaches a `::uuid[]` cast.
+   */
   private async attributeToResources(
     kind: ResourceKind,
     rows: ResourceDailyRow[],
-    workbookIds: string[],
-  ): Promise<ResourceDailyRow[]> {
+  ): Promise<ResourceDailyRow[] | null> {
     if (kind !== "workbook") {
-      return rows;
+      return rows.filter((row) => UUID_PATTERN.test(row.resourceId));
     }
 
-    const versions = await this.metricsRepository.getWorkbookVersionMap(workbookIds);
+    const versionIds = Array.from(new Set(rows.map((row) => row.resourceId)));
+    const versions = await this.metricsRepository.getWorkbookVersionMapForVersions(versionIds);
     if (versions.isFailure()) {
-      return [];
+      return null;
     }
 
     const owned: ResourceDailyRow[] = [];

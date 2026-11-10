@@ -30,6 +30,11 @@ describe("workbook list query", () => {
       zWorkbookFilterQuery.safeParse({
         sort: [{ field: "activity", direction: "asc" }],
       }).success,
+    ).toBe(true);
+    expect(
+      zWorkbookFilterQuery.safeParse({
+        sort: [{ field: "invalid", direction: "asc" }],
+      }).success,
     ).toBe(false);
     expect(
       zWorkbookFilterQuery.safeParse({

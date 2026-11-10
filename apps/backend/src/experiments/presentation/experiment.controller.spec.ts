@@ -193,7 +193,7 @@ describe("ExperimentController", () => {
     it("rejects a sort field outside the experiment allowlist", async () => {
       await testApp
         .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
-        .query({ page: 1, "sort[0][field]": "activity", "sort[0][direction]": "asc" })
+        .query({ page: 1, "sort[0][field]": "invalid", "sort[0][direction]": "asc" })
         .withAuth(testUserId)
         .expect(StatusCodes.BAD_REQUEST);
     });

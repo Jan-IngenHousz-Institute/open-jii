@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import type { ResourceSeries } from "@repo/api/domains/metrics/metrics.schema";
 
+import { sortsByActivity, withoutActivity } from "../../../../common/utils/activity-sort";
 import { Result, success } from "../../../../common/utils/fp-utils";
 import { ResourceMetricsService } from "../../../../metrics/application/resource-metrics.service";
 import { WorkbookListItemDto } from "../../../core/models/workbook.model";
@@ -24,14 +25,25 @@ export class ListWorkbooksUseCase {
       operation: "listWorkbooks",
       hasSearch: !!filter?.search,
     });
-    return await this.workbookRepository.findAll(filter);
+    const snapshot = sortsByActivity(filter?.sort)
+      ? await this.resourceMetrics.activitySnapshot("workbook")
+      : undefined;
+    const activeSort = snapshot === null ? withoutActivity(filter?.sort) : filter?.sort;
+    const activeFilter = activeSort === filter?.sort ? filter : { ...filter, sort: activeSort };
+    return await this.workbookRepository.findAll(
+      activeFilter,
+      undefined,
+      sortsByActivity(activeSort) ? snapshot?.totals : undefined,
+    );
   }
 
   async executePaginated(
     page: number,
     pageSize: number,
     filter?: WorkbookFilter,
-  ): Promise<Result<{ items: WorkbookWithActivity[]; totalCount: number }>> {
+  ): Promise<
+    Result<{ items: WorkbookWithActivity[]; totalCount: number; activityAvailable: boolean }>
+  > {
     this.logger.log({
       msg: "Listing workbooks",
       operation: "listWorkbooksPaginated",
@@ -39,16 +51,23 @@ export class ListWorkbooksUseCase {
       pageSize,
       hasSearch: !!filter?.search,
     });
-    const paged = await this.workbookRepository.findPage(page, pageSize, filter);
+    const snapshot = await this.resourceMetrics.activitySnapshot("workbook");
+    const activeSort = snapshot === null ? withoutActivity(filter?.sort) : filter?.sort;
+    const activeFilter = activeSort === filter?.sort ? filter : { ...filter, sort: activeSort };
+    const paged = await this.workbookRepository.findPage(
+      page,
+      pageSize,
+      activeFilter,
+      sortsByActivity(activeSort) ? snapshot?.totals : undefined,
+    );
     if (paged.isFailure()) {
       return paged;
     }
 
     // These ids already passed the access check.
-    const series = await this.resourceMetrics.seriesFor(
-      "workbook",
-      paged.value.items.map((item) => item.id),
-    );
+    const series =
+      snapshot?.seriesFor(paged.value.items.map((item) => item.id)) ??
+      new Map<string, ResourceSeries>();
 
     return success({
       items: paged.value.items.map((item) => ({
@@ -56,6 +75,7 @@ export class ListWorkbooksUseCase {
         activity: series.get(item.id) ?? null,
       })),
       totalCount: paged.value.totalCount,
+      activityAvailable: snapshot !== null,
     });
   }
 }
