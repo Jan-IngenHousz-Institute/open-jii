@@ -2466,6 +2466,7 @@ module "opennext_waf" {
   enable_bot_control = true
 
   managed_rules_excluded_paths = ["/ingest"]
+  allow_page_regeneration      = true
 
   tags = {
     Environment = var.environment

@@ -704,6 +704,7 @@ module "opennext_waf" {
   log_retention_days = 365
 
   managed_rules_excluded_paths = ["/ingest"]
+  allow_page_regeneration      = true
 
   tags = {
     Environment = var.environment

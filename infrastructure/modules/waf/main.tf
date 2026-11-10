@@ -87,6 +87,17 @@ resource "aws_wafv2_web_acl" "main" {
           }
         }
 
+        # BlockNoUserAgentRule decides on this rule's label instead
+        dynamic "rule_action_override" {
+          for_each = var.allow_page_regeneration ? [1] : []
+          content {
+            action_to_use {
+              count {}
+            }
+            name = "NoUserAgent_HEADER"
+          }
+        }
+
         # Exclude configured paths from this rule group entirely via scope-down.
         # Uses local.managed_rules_scope_down_statement so both managed rule groups
         # share identical scope-down logic without duplication.
@@ -307,6 +318,75 @@ resource "aws_wafv2_web_acl" "main" {
       visibility_config {
         cloudwatch_metrics_enabled = true
         metric_name                = "GeoBlockRuleMetric"
+        sampled_requests_enabled   = true
+      }
+    }
+  }
+
+  # OpenNext regenerates a page with a HEAD request that carries Next's revalidation header and no
+  # User-Agent. Every other request the core rule set labels for a missing User-Agent is blocked.
+  dynamic "rule" {
+    for_each = var.allow_page_regeneration ? [1] : []
+    content {
+      name     = "BlockNoUserAgentRule"
+      priority = 7
+
+      action {
+        block {}
+      }
+
+      statement {
+        and_statement {
+          statement {
+            label_match_statement {
+              scope = "LABEL"
+              key   = "awswaf:managed:aws:core-rule-set:NoUserAgent_Header"
+            }
+          }
+
+          statement {
+            not_statement {
+              statement {
+                and_statement {
+                  statement {
+                    byte_match_statement {
+                      search_string         = "HEAD"
+                      positional_constraint = "EXACTLY"
+                      field_to_match {
+                        method {}
+                      }
+                      text_transformation {
+                        priority = 0
+                        type     = "NONE"
+                      }
+                    }
+                  }
+
+                  statement {
+                    size_constraint_statement {
+                      field_to_match {
+                        single_header {
+                          name = "x-prerender-revalidate"
+                        }
+                      }
+                      comparison_operator = "GT"
+                      size                = 0
+                      text_transformation {
+                        priority = 0
+                        type     = "NONE"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "BlockNoUserAgentRuleMetric"
         sampled_requests_enabled   = true
       }
     }
