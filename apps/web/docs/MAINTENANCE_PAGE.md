@@ -50,7 +50,9 @@ outage does not affect them.
 
 The public pages are rendered once and regenerated at most every 300 seconds
 (`revalidate` in their routes), and CloudFront serves the stored copy in between.
-That changes how an outage shows:
+The published Contentful reads behind them are cached for an hour on their own
+(`PUBLISHED_CONTENT_SECONDS` in `lib/cms-cache.ts`), so a regeneration reads
+Contentful only for a query whose hour is up. That changes how an outage shows:
 
 - **While a page is cached**, a failed regeneration keeps the last good copy in
   service. Visitors keep seeing real content through the outage.

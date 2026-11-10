@@ -370,6 +370,12 @@ vi.mock("@repo/ui/hooks/use-toast", () => ({
   useIsLgTablet: vi.fn(() => false),
 }));
 
+vi.mock("next/cache", async () => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  const actual = await vi.importActual<typeof import("next/cache")>("next/cache");
+  return { ...actual, unstable_cache: <T>(fn: T) => fn };
+});
+
 vi.mock("~/lib/contentful", () => ({
   buildTimeLocaleParams: vi.fn().mockResolvedValue([]),
   getContentfulClients: vi.fn().mockResolvedValue({

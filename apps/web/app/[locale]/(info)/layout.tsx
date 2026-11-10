@@ -1,9 +1,11 @@
 import { PublicNavbar } from "@/components/navigation/public-navbar";
 import { NewsletterSubscribeForm } from "@/components/newsletter/newsletter-subscribe-form";
 import { TranslationBundles } from "@/components/translation-bundles";
+import { unstable_cache } from "next/cache";
 import { draftMode } from "next/headers";
 import React from "react";
 import { HomeFooter } from "~/components/cms/footer";
+import { PUBLISHED_CONTENT_SECONDS } from "~/lib/cms-cache";
 import { buildTimeLocaleParams, getContentfulClients } from "~/lib/contentful";
 
 import type { FooterFieldsFragment } from "@repo/cms/lib/__generated/sdk";
@@ -23,6 +25,19 @@ export const revalidate = 300;
 
 export const generateStaticParams = buildTimeLocaleParams;
 
+async function fetchFooter(locale: string, preview: boolean) {
+  const { previewClient, client } = await getContentfulClients();
+  return (preview ? previewClient : client).footer({ locale, preview });
+}
+
+const getPublishedFooter = unstable_cache(
+  (locale: string) => fetchFooter(locale, false),
+  ["footer"],
+  {
+    revalidate: PUBLISHED_CONTENT_SECONDS,
+  },
+);
+
 export default async function InfoGroupLayout({ children, params }: InfoLayoutProps) {
   const { isEnabled: preview } = await draftMode();
   const { locale } = await params;
@@ -30,9 +45,7 @@ export default async function InfoGroupLayout({ children, params }: InfoLayoutPr
 
   let footerData: FooterFieldsFragment | undefined;
   try {
-    const { previewClient, client } = await getContentfulClients();
-    const gqlClient = preview ? previewClient : client;
-    const footerQuery = await gqlClient.footer({ locale, preview });
+    const footerQuery = await (preview ? fetchFooter(locale, true) : getPublishedFooter(locale));
     footerData = footerQuery.footerCollection?.items[0] as FooterFieldsFragment;
   } catch {
     // Contentful unavailable - render without footer
