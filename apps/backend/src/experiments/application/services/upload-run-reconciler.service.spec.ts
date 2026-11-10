@@ -15,6 +15,8 @@ import {
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
 import { AppError, assertSuccess, failure, success } from "../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../notifications/application/services/notification-dispatch.service";
+import { NotificationRepository } from "../../../notifications/core/repositories/notification.repository";
+import { queuedDeliveriesFor } from "../../../test/notification-deliveries";
 import { TestHarness } from "../../../test/test-harness";
 import { uploadOutcomeSchema } from "../../core/models/experiment-data-uploads.model";
 import type { UploadOutcome } from "../../core/models/experiment-data-uploads.model";
@@ -121,6 +123,16 @@ describe("UploadRunReconcilerService", () => {
   const notificationsFor = (recipientId: string) =>
     testApp.database.select().from(notifications).where(eq(notifications.recipientId, recipientId));
 
+  const deliveriesFor = (recipientId: string) => queuedDeliveriesFor(testApp.database, recipientId);
+
+  async function switchDataJobEmailsOn() {
+    assertSuccess(
+      await testApp.module
+        .get(NotificationRepository)
+        .upsertPreference(userId, "data_jobs", "email", true),
+    );
+  }
+
   function outcomeOf(uploadId: string, overrides: Partial<UploadOutcome> = {}): UploadOutcome {
     return {
       uploadId,
@@ -200,7 +212,79 @@ describe("UploadRunReconcilerService", () => {
         actorId: null,
         resourceType: "experiment",
         resourceId: experimentId,
+        params: {
+          experimentName: "Drought trial",
+          skippedCount: "1",
+          skippedFiles: "broken.csv — could not be read",
+        },
+      }),
+    ]);
+  });
+
+  it("keeps the reason last on a left-out file whose name holds the separator", async () => {
+    const uploadId = await uploadInFlight();
+    vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(success(succeededRun()));
+    vi.spyOn(databricksPort, "getJobRunOutput").mockResolvedValue(
+      success(
+        outcome(uploadId, { rejectedFiles: [{ name: "plot — east.csv", reason: "no_rows" }] }),
+      ),
+    );
+
+    await reconciler.reconcile();
+
+    const [row] = await notificationsFor(userId);
+    expect(row.params).toMatchObject({ skippedFiles: "plot — east.csv — no rows" });
+  });
+
+  it("names no left-out files for an upload that took every file", async () => {
+    const uploadId = await uploadInFlight();
+    vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(success(succeededRun()));
+    vi.spyOn(databricksPort, "getJobRunOutput").mockResolvedValue(
+      success(outcome(uploadId, { rejectedFiles: [] })),
+    );
+
+    await reconciler.reconcile();
+
+    expect(await notificationsFor(userId)).toEqual([
+      expect.objectContaining({
+        type: "data_upload_completed",
         params: { experimentName: "Drought trial" },
+      }),
+    ]);
+  });
+
+  it("names ten left-out files with their reasons and counts the rest", async () => {
+    const uploadId = await uploadInFlight();
+    const rejectedFiles = Array.from({ length: 12 }, (_, index) => ({
+      name: `plot_${index + 1}.csv`,
+      reason: index % 2 === 0 ? ("unparseable" as const) : ("no_rows" as const),
+    }));
+    vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(success(succeededRun()));
+    vi.spyOn(databricksPort, "getJobRunOutput").mockResolvedValue(
+      success(outcome(uploadId, { rejectedFiles })),
+    );
+
+    await reconciler.reconcile();
+
+    expect(await notificationsFor(userId)).toEqual([
+      expect.objectContaining({
+        params: {
+          experimentName: "Drought trial",
+          skippedCount: "12",
+          skippedFiles: [
+            "plot_1.csv — could not be read",
+            "plot_2.csv — no rows",
+            "plot_3.csv — could not be read",
+            "plot_4.csv — no rows",
+            "plot_5.csv — could not be read",
+            "plot_6.csv — no rows",
+            "plot_7.csv — could not be read",
+            "plot_8.csv — no rows",
+            "plot_9.csv — could not be read",
+            "plot_10.csv — no rows",
+            "and 2 more, listed on the Data tab",
+          ].join("\n"),
+        },
       }),
     ]);
   });
@@ -261,6 +345,66 @@ describe("UploadRunReconcilerService", () => {
         type: "data_upload_failed",
         params: { experimentName: "Drought trial", tableName: "leaf_traits" },
       }),
+    ]);
+  });
+
+  it("emails nothing for a completed upload while data job emails are off, as they start", async () => {
+    const uploadId = await uploadInFlight();
+    vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(success(succeededRun()));
+    vi.spyOn(databricksPort, "getJobRunOutput").mockResolvedValue(success(outcome(uploadId)));
+
+    await reconciler.reconcile();
+
+    expect(await notificationsFor(userId)).toEqual([
+      expect.objectContaining({ type: "data_upload_completed" }),
+    ]);
+    expect(await deliveriesFor(userId)).toEqual([]);
+  });
+
+  it("queues one email for a completed upload once the uploader switched data job emails on", async () => {
+    await switchDataJobEmailsOn();
+    const uploadId = await uploadInFlight();
+    vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(success(succeededRun()));
+    vi.spyOn(databricksPort, "getJobRunOutput").mockResolvedValue(success(outcome(uploadId)));
+
+    await reconciler.reconcile();
+
+    const [row] = await notificationsFor(userId);
+    expect(row).toMatchObject({ type: "data_upload_completed" });
+    expect(await deliveriesFor(userId)).toEqual([
+      {
+        notificationId: row.id,
+        type: "data_upload_completed",
+        channel: "email",
+        status: "pending",
+      },
+    ]);
+  });
+
+  it("queues one email naming the table for a failed upload once the uploader switched data job emails on", async () => {
+    await switchDataJobEmailsOn();
+    const uploadId = await uploadInFlight();
+    vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(success(succeededRun()));
+    vi.spyOn(databricksPort, "getJobRunOutput").mockResolvedValue(
+      success(
+        outcome(uploadId, {
+          outcome: "failed",
+          rowCount: 0,
+          rejectedFiles: [{ name: "empty.csv", reason: "no_rows" }],
+          errorCode: "no_rows",
+        }),
+      ),
+    );
+
+    await reconciler.reconcile();
+
+    const [row] = await notificationsFor(userId);
+    expect(row).toMatchObject({
+      type: "data_upload_failed",
+      params: { experimentName: "Drought trial", tableName: "leaf_traits" },
+    });
+    expect(await deliveriesFor(userId)).toEqual([
+      { notificationId: row.id, type: "data_upload_failed", channel: "email", status: "pending" },
     ]);
   });
 

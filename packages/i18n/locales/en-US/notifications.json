@@ -72,6 +72,8 @@
     "data_export_completed": "Your {{format}} export of {{experimentName}} is ready",
     "data_export_failed": "Your export of {{experimentName}} failed",
     "data_upload_completed": "Your upload to {{experimentName}} is ready to query",
+    "data_upload_completed_skipped_one": "Your upload to {{experimentName}} is ready to query, with one file left out",
+    "data_upload_completed_skipped_other": "Your upload to {{experimentName}} is ready to query, with {{skippedCount}} files left out",
     "data_upload_failed": "Your upload of {{tableName}} to {{experimentName}} failed",
     "organization_invitation_accepted": "{{actor}} accepted your invitation to {{organizationName}}",
     "organization_role_changed": "{{actor}} made you {{role}} in {{organizationName}}",

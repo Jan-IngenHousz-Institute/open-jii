@@ -39,6 +39,7 @@
       "macros-list retaken on 2026-10-27 at 1920x1200 from the local stack with the expanded sidebar, matching the other platform captures. The frame shows Name sorted ascending, Language and Visibility filters with none applied, only [Seed] macro names, and no data-processing status notice. Reviewed at full size; the account details in the sidebar are the seeded development identity. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine.",
       "Retaken on 2026-11-02 at 1920x1200 from the local stack with the seeded development identity (seed@openjii.local), via pnpm --filter @repo/e2e capture-docs-media --only experiments-list,protocols-list,macros-list,workbooks-list,organizations-list. experiments-list shows Name ascending with Status is Active and Visibility is Public chips and Clear filters; protocols-list, macros-list and workbooks-list show Name ascending, while organizations-list shows Type ascending. Those four frames have the Filter menu closed and no chips. All five frames were reviewed at full size and approved before publishing; only [Seed] resource names and the seeded identity appear, with no real names, emails, credentials or dev overlays. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine.",
       "charts-filters recaptured on 2026-11-02 at 1920x1200 with capture-docs-media and synthetic FixtureWarehouse measurements in an isolated local stack. The full frame shows only the seed identity and example experiment data, with no credentials or dev overlays. The user approved the staged frame in the OJD-2320 handoff before publication. The capture replaces the former PNG whose top-right panel had no X labels.",
+      "notification-settings retaken on 2026-11-05 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only notification-settings, after the upload emails made Data exports and uploads switchable: Requests and invitations, Membership and access, Experiments and resources, Devices and calibration and Project transfers are on, Data exports and uploads is off at its default and enabled, no category reads Not available yet, and Account security stays checked and locked with Always on. Reviewed at full size; no experiment, organization or person is named in the frame beyond the seeded identity in the sidebar. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp.",
       "experiments-list retaken on 2026-11-10 at 1920x1200 from the local stack with the seeded development identity, because the Activity header became sortable and now carries a sort icon. The backend ran with Databricks unreachable, as in the previous capture, so no dev measurements show and the Activity header is in its unavailable state. The repo capture command was not used as is: the local database holds three developer-authored public experiments, so a one-off Playwright script with the shot's route, frame and preparation dropped every non-[Seed] experiment from the list response and checked that no developer name or experiment name reached the page text. Reviewed at full size and approved before publishing; only [Seed] experiments and the seeded identity appear. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine's ffmpeg lacks libwebp."
     ]
   },
@@ -401,10 +402,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 63706,
-      "sha256": "a6200f2e2135858fa6d536983cab76e51ef733b41bddacb6f9f056efa1837706",
+      "bytes": 62794,
+      "sha256": "de9caffd08a4905e5c489ac8b38de2e5e8d50b0f4dce75891e1712af4d769e04",
       "disposition": "published",
-      "scope": "Notifications tab in account settings: the three switchable categories, the three not yet available, and Account security locked on"
+      "scope": "Notifications tab in account settings: every category switchable at its default, Data exports and uploads off, and Account security locked on"
     },
     {
       "path": "/img/guide/web/account-security/passkeys-table.webp",

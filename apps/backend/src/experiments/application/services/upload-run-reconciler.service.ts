@@ -47,6 +47,39 @@ const IN_FLIGHT_LIMIT_MS = 48 * 60 * 60_000;
 /** An outcome that still cannot be announced a day after the upload finished is let go. */
 const ANNOUNCE_WINDOW_MS = 24 * 60 * 60_000;
 
+/** How many left-out files the completed message names before it only counts the rest. */
+const SKIPPED_FILES_NAMED = 10;
+
+const SKIPPED_REASON: Record<ExperimentUploadRejectedFile["reason"], string> = {
+  unparseable: "could not be read",
+  no_rows: "no rows",
+};
+
+/**
+ * The left-out files as the completed message lists them, one line each; nothing when none
+ * were left out.
+ */
+function skippedParams(
+  rejectedFiles: ExperimentUploadRejectedFile[] | null,
+): { skippedCount: string; skippedFiles: string } | Record<string, never> {
+  if (!rejectedFiles?.length) {
+    return {};
+  }
+
+  const lines = rejectedFiles
+    .slice(0, SKIPPED_FILES_NAMED)
+    .map((file) => `${file.name} — ${SKIPPED_REASON[file.reason]}`);
+  const unnamed = rejectedFiles.length - SKIPPED_FILES_NAMED;
+  if (unnamed > 0) {
+    lines.push(`and ${unnamed} more, listed on the Data tab`);
+  }
+
+  return {
+    skippedCount: String(rejectedFiles.length),
+    skippedFiles: lines.join("\n"),
+  };
+}
+
 type RunOutcome =
   | { kind: "in-flight"; status: UploadStatus }
   | { kind: "succeeded" }
@@ -451,7 +484,10 @@ export class UploadRunReconcilerService {
             type: "data_upload_completed",
             ...target,
             dedupeKey: `data_upload_completed:${record.id}`,
-            params: { experimentName: experiment.value.name },
+            params: {
+              experimentName: experiment.value.name,
+              ...skippedParams(record.rejectedFiles),
+            },
           })
         : await this.notifications.dispatch({
             type: "data_upload_failed",

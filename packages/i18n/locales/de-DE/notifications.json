@@ -72,6 +72,8 @@
     "data_export_completed": "Ihr {{format}}-Export von {{experimentName}} ist fertig",
     "data_export_failed": "Ihr Export von {{experimentName}} ist fehlgeschlagen",
     "data_upload_completed": "Ihr Upload in {{experimentName}} kann jetzt abgefragt werden",
+    "data_upload_completed_skipped_one": "Ihr Upload in {{experimentName}} kann jetzt abgefragt werden, eine Datei wurde ausgelassen",
+    "data_upload_completed_skipped_other": "Ihr Upload in {{experimentName}} kann jetzt abgefragt werden, {{skippedCount}} Dateien wurden ausgelassen",
     "data_upload_failed": "Ihr Upload von {{tableName}} in {{experimentName}} ist fehlgeschlagen",
     "organization_invitation_accepted": "{{actor}} hat Ihre Einladung zu {{organizationName}} angenommen",
     "organization_role_changed": "{{actor}} hat Ihnen in {{organizationName}} die Rolle {{role}} gegeben",
