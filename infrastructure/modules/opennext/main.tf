@@ -112,6 +112,37 @@ resource "aws_s3_bucket_lifecycle_configuration" "assets" {
       expired_object_delete_marker = true
     }
   }
+
+  rule {
+    id     = "expire-replaced-versions"
+    status = "Enabled"
+
+    filter {}
+
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
+  }
+}
+
+# Every regeneration replaces a page here, so replaced versions would otherwise pile up for good.
+resource "aws_s3_bucket_lifecycle_configuration" "cache" {
+  bucket = aws_s3_bucket.cache.id
+
+  rule {
+    id     = "expire-replaced-versions"
+    status = "Enabled"
+
+    filter {}
+
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
+
+    expiration {
+      expired_object_delete_marker = true
+    }
+  }
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "assets" {
