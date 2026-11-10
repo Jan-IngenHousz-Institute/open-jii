@@ -60,6 +60,10 @@ gold table that does the derivation (e.g. `experiment_macro_data`, just
 before the macro UDF). That way you can full-refresh the gold table to
 retroactively repair historical rows without touching `experiment_raw_data`.
 
+Raw gold refuses full refresh with `pipelines.reset.allowed=false`: macro and schema readers skip
+change commits, so a raw reset would replay history into macro execution.
+See [Pipeline behavior](../../../QUESTION_ANSWERS.md#pipeline-behavior).
+
 ## Severity
 
 ```python
