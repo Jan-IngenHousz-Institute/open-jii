@@ -2587,8 +2587,9 @@ metrics:
     notes: >-
       Notification emails the outbox stopped trying to send. A row gets five attempts, the last about
       eighty minutes after the first, then turns failed and nobody gets the email. Shown on the daily
-      report, red from the first one, and not alerted: an outage shows first as a waiting email
-      (141), and one bad address should not wake anyone.
+      report as a plain count beside the other levels, with the limit drawn on its chart, and not
+      alerted: an outage shows first as a waiting email (141), and one bad address should not wake
+      anyone.
 
   - num: 141
     id: email-outbox-waiting
