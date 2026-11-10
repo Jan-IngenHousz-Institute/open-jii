@@ -91,6 +91,7 @@
     "sortAscending": "oplopend",
     "sortDescending": "aflopend",
     "sortSecondary": "tweede sortering",
+    "sortActivityUnavailable": "Sorteren op activiteit is nu niet beschikbaar",
     "searchMinCharacters": "Typ minimaal 2 tekens om te zoeken",
     "searchFailed": "Zoekresultaten konden niet worden geladen.",
     "emailMatched": "Komt overeen met het ingevoerde e-mailadres",

@@ -79,6 +79,25 @@ describe("useResourceList", () => {
     expect(result.current.isLoading).toBe(false);
   });
 
+  it("marks activity unavailable when the response says so, and keeps the URL sort", async () => {
+    openOnUrl(
+      "/list",
+      `sort=${encodeURIComponent(JSON.stringify([{ field: "activity", direction: "desc" }]))}`,
+    );
+    const { result } = renderList(() => ({ ...envelope(rows(1), 1, 1), activityAvailable: false }));
+
+    expect(result.current.activityUnavailable).toBe(false);
+    await waitFor(() => expect(result.current.activityUnavailable).toBe(true));
+    expect(result.current.sort).toEqual([{ field: "activity", direction: "desc" }]);
+  });
+
+  it("leaves activity sortable when the response says activity loaded", async () => {
+    const { result } = renderList(() => ({ ...envelope(rows(1), 1, 1), activityAvailable: true }));
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+    expect(result.current.activityUnavailable).toBe(false);
+  });
+
   it("sends search only once the debounce settles and reports it pending until then", async () => {
     const { result, views } = renderList(() => envelope([], 1, 1));
     await waitFor(() => expect(result.current.isLoading).toBe(false));

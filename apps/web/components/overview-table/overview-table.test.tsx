@@ -1,7 +1,7 @@
 import type { OrganizationListItem } from "@/hooks/organization/useOrganizationsList/useOrganizationsList";
 import { createExperiment, createMacro, createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import { act, fireEvent, render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -573,3 +573,150 @@ describe("workbook overview columns", () => {
     expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" }));
   });
 });
+
+describe("activity sort header", () => {
+  const lists = [
+    {
+      name: "experiments",
+      header: "columns.activity",
+      render: (sorting: ActivitySorting) =>
+        render(
+          <OverviewTable
+            columns={getExperimentColumns(t, "en-US")}
+            sorting={sorting}
+            items={[createExperiment({ id: "e-1" })]}
+            getRowKey={(item) => item.id}
+            getRowHref={(item) => `/platform/experiments/${item.id}`}
+            emptyMessage="empty"
+          />,
+        ),
+    },
+    {
+      name: "protocols",
+      header: "protocols.columns.activity",
+      render: (sorting: ActivitySorting) =>
+        render(
+          <OverviewTable
+            columns={getProtocolColumns(t, "en-US")}
+            sorting={sorting}
+            items={[createProtocol({ id: "p-1" })]}
+            getRowKey={(item) => item.id}
+            getRowHref={(item) => `/platform/protocols/${item.id}`}
+            emptyMessage="empty"
+          />,
+        ),
+    },
+    {
+      name: "macros",
+      header: "macros.columns.activity",
+      render: (sorting: ActivitySorting) =>
+        render(
+          <OverviewTable
+            columns={getMacroColumns(t, "en-US")}
+            sorting={sorting}
+            items={[createMacro({ id: "m-1" })]}
+            getRowKey={(item) => item.id}
+            getRowHref={(item) => `/platform/macros/${item.id}`}
+            emptyMessage="empty"
+          />,
+        ),
+    },
+    {
+      name: "workbooks",
+      header: "workbooks.columns.activity",
+      render: (sorting: ActivitySorting) =>
+        render(
+          <OverviewTable
+            columns={getWorkbookColumns(t, "en-US")}
+            sorting={sorting}
+            items={[makeWorkbook({ id: "11111111-1111-1111-1111-111111111111", name: "WB" })]}
+            getRowKey={(item) => item.id}
+            getRowHref={(item) => `/platform/workbooks/${item.id}`}
+            emptyMessage="empty"
+          />,
+        ),
+    },
+  ];
+
+  it.each(lists)("toggles the activity sort on the $name list", async ({ header, render }) => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    render({ sort: [], onToggle });
+
+    const button = screen.getByRole("button", { name: `${header}: common.sortUnsorted` });
+    await user.click(button);
+    expect(onToggle).toHaveBeenLastCalledWith("activity", false);
+    await user.keyboard("{Shift>}");
+    await user.click(button);
+    await user.keyboard("{/Shift}");
+    expect(onToggle).toHaveBeenLastCalledWith("activity", true);
+  });
+
+  it.each(lists)(
+    "explains an unavailable activity sort on the $name list and ignores clicks",
+    async ({ header, render }) => {
+      const user = userEvent.setup();
+      const onToggle = vi.fn();
+      render({
+        sort: [{ field: "activity", direction: "desc" }],
+        onToggle,
+        activityUnavailable: true,
+      });
+
+      const button = screen.getByRole("button", {
+        name: `${header}: common.sortActivityUnavailable`,
+      });
+      expect(button).toHaveAttribute("aria-disabled", "true");
+      await user.hover(button);
+      await waitFor(() =>
+        expect(screen.getAllByText("common.sortActivityUnavailable").length).toBeGreaterThan(0),
+      );
+
+      await user.click(button);
+      fireEvent.click(button, { shiftKey: true });
+      expect(onToggle).not.toHaveBeenCalled();
+    },
+  );
+
+  it("explains an unavailable activity sort on keyboard focus", async () => {
+    lists[0]?.render({ sort: [], onToggle: vi.fn(), activityUnavailable: true });
+
+    act(() =>
+      screen
+        .getByRole("button", { name: "columns.activity: common.sortActivityUnavailable" })
+        .focus(),
+    );
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("common.sortActivityUnavailable");
+  });
+
+  it("keeps other headers sortable while activity is unavailable", async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    lists[0]?.render({ sort: [], onToggle, activityUnavailable: true });
+
+    await user.click(screen.getByRole("button", { name: "columns.name: common.sortUnsorted" }));
+    expect(onToggle).toHaveBeenLastCalledWith("name", false);
+  });
+
+  it("does not count an unavailable activity sort ahead of the next field", () => {
+    lists[0]?.render({
+      sort: [
+        { field: "activity", direction: "desc" },
+        { field: "name", direction: "asc" },
+      ],
+      onToggle: vi.fn(),
+      activityUnavailable: true,
+    });
+
+    const name = screen.getByRole("button", { name: "columns.name: common.sortAscending" });
+    expect(name).not.toHaveTextContent("2");
+    expect(name.closest("th")).toHaveAttribute("aria-sort", "ascending");
+  });
+});
+
+interface ActivitySorting {
+  sort: { field: "activity" | "name"; direction: "asc" | "desc" }[];
+  onToggle: (field: string, multi: boolean) => void;
+  activityUnavailable?: boolean;
+}

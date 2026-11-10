@@ -163,7 +163,7 @@ describe("useListUrlState", () => {
       setSearchParams("sort=%7B");
       expect(renderHook(() => useListUrlState(options)).result.current.sort).toEqual([]);
 
-      setSearchParams(sortParam([{ field: "activity", direction: "asc" }]));
+      setSearchParams(sortParam([{ field: "popularity", direction: "asc" }]));
       expect(renderHook(() => useListUrlState(options)).result.current.sort).toEqual([]);
     });
 

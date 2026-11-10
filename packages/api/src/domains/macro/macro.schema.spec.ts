@@ -215,6 +215,9 @@ describe("Macro Schema", () => {
       ).toBe(false);
       expect(
         zMacroFilterQuery.safeParse({ sort: [{ field: "activity", direction: "asc" }] }).success,
+      ).toBe(true);
+      expect(
+        zMacroFilterQuery.safeParse({ sort: [{ field: "invalid", direction: "asc" }] }).success,
       ).toBe(false);
       expect(
         zMacroFilterQuery.safeParse({
