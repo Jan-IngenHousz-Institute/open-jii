@@ -373,6 +373,35 @@ describe("FixtureQuery, distinct values", () => {
     expect(all).toEqual({ values: [2, 4, 6, 8], truncated: false });
     expect(capped).toEqual({ values: ["North 1", "North 2"], truncated: true });
   });
+
+  it("pages distinct devices through the final value without repeating earlier pages", () => {
+    const devices = new FixtureQuery([
+      {
+        ...PLOTS,
+        identifier: "devices",
+        columns: [{ name: "device", type_name: "STRING", type_text: "STRING" }],
+        rows: ["Ambit (d3)", "Ambit (d1)", "Ambit (d2)", "Ambit (d1)"].map((device) => ({
+          device,
+        })),
+      },
+    ]);
+    const page = (offset: number) =>
+      zExperimentDistinctValuesResponse.parse(
+        devices.answer(
+          "/data/distinct",
+          new URLSearchParams({
+            tableName: "devices",
+            column: "device",
+            limit: "2",
+            offset: String(offset),
+          }),
+        )?.body,
+      );
+
+    expect(page(0)).toEqual({ values: ["Ambit (d1)", "Ambit (d2)"], truncated: true });
+    expect(page(2)).toEqual({ values: ["Ambit (d3)"], truncated: false });
+    expect(page(3)).toEqual({ values: [], truncated: false });
+  });
 });
 
 describe("FixtureQuery, example tables", () => {

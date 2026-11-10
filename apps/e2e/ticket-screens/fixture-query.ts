@@ -91,7 +91,10 @@ export class FixtureQuery {
       const table = this.find(query.data.tableName);
       if (table === undefined) return this.notFound(query.data.tableName);
       const limit = query.data.limit ?? DISTINCT_VALUES_DEFAULT_LIMIT;
-      return { status: 200, body: this.distinct(table, query.data.column, limit) };
+      return {
+        status: 200,
+        body: this.distinct(table, query.data.column, limit, query.data.offset ?? 0),
+      };
     }
 
     if (path === "/data") {
@@ -194,6 +197,7 @@ export class FixtureQuery {
     table: FixtureTable,
     column: string,
     limit: number,
+    offset: number,
   ): ExperimentDistinctValuesResponse {
     const seen = new Set<string | number>();
     for (const row of table.rows) {
@@ -202,7 +206,10 @@ export class FixtureQuery {
     }
 
     const values = [...seen].sort((a, b) => this.compare(a, b));
-    return { values: values.slice(0, limit), truncated: values.length > limit };
+    return {
+      values: values.slice(offset, offset + limit),
+      truncated: values.length > offset + limit,
+    };
   }
 
   // Mirrors the repository's three branches: aggregated, filtered or projected, and plain pages.
