@@ -1,10 +1,10 @@
 "use client";
 
 import { DocsHelpLink } from "@/components/docs-help-link";
+import { useDepartureRouter } from "@/components/navigation/list-departure/list-departure";
 import { rowSortingFeature, tableFeatures, useTable } from "@tanstack/react-table";
 import type { ColumnDef, RowData, SortingState } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 
@@ -91,7 +91,7 @@ export function OverviewTable<T extends RowData, F extends string = string>({
   emptyAction,
   sorting,
 }: OverviewTableProps<T, F>) {
-  const router = useRouter();
+  const router = useDepartureRouter();
   const { t } = useTranslation("common");
   const sortLabels = {
     unsorted: t("common.sortUnsorted"),

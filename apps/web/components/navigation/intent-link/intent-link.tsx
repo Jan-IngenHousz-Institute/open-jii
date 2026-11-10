@@ -1,8 +1,10 @@
 "use client";
 
-import Link from "next/link";
+import type Link from "next/link";
 import type { ComponentProps, FocusEvent, MouseEvent, TouchEvent } from "react";
 import { useState } from "react";
+
+import { DepartureLink } from "../list-departure/departure-link";
 
 type IntentLinkProps = Omit<ComponentProps<typeof Link>, "prefetch"> & {
   /**
@@ -45,7 +47,7 @@ export function IntentLink({
   }
 
   return (
-    <Link
+    <DepartureLink
       {...props}
       prefetch={hasIntent ? true : visiblePrefetch}
       onMouseEnter={handleMouseEnter}

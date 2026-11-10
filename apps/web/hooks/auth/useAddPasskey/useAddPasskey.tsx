@@ -1,9 +1,9 @@
 "use client";
 
+import { useDepartureRouter } from "@/components/navigation/list-departure/list-departure";
 import { NOTIFICATIONS_KEY } from "@/hooks/notifications/useNotifications/useNotifications";
 import { useLocale } from "@/hooks/useLocale";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 
 import { authClient } from "@repo/auth/client";
@@ -34,7 +34,7 @@ export function useAddPasskey(options: UseAddPasskeyOptions = {}) {
   const queryClient = useQueryClient();
   const { t } = useTranslation("account");
   const locale = useLocale();
-  const router = useRouter();
+  const router = useDepartureRouter();
   const signOut = useSignOut();
 
   const signInAgain = async () => {

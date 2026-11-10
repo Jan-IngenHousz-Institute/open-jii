@@ -1,11 +1,12 @@
 "use client";
 
+import { useDepartureRouter } from "@/components/navigation/list-departure/list-departure";
 import { NOTIFICATION_BELL_OPEN_EVENT } from "@/components/notifications/notifications-popover";
 import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
 import { modifierLabel } from "@/lib/platform";
 import { useHotkey, useHotkeySequence } from "@tanstack/react-hotkeys";
 import type { Hotkey } from "@tanstack/react-hotkeys";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { useSidebar } from "@repo/ui/components/sidebar";
@@ -80,7 +81,7 @@ function GoToSequence({
 }
 
 export function ShortcutsRoot({ locale }: { locale: string }) {
-  const router = useRouter();
+  const router = useDepartureRouter();
   const pathname = usePathname();
   const { toggleSidebar } = useSidebar();
 

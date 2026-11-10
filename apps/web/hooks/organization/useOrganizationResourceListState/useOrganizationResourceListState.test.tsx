@@ -23,10 +23,14 @@ describe("useOrganizationResourceListState", () => {
     expect(result.current.hasActiveFilters).toBe(false);
   });
 
-  it("reads the type filter and sort from the URL", () => {
-    openOnUrl(PATH, `type=macro,device&${sortParam([{ field: "type", direction: "asc" }])}`);
+  it("reads search, the type filter and sort from the URL", () => {
+    openOnUrl(
+      PATH,
+      `q=canopy&type=macro,device&${sortParam([{ field: "type", direction: "asc" }])}`,
+    );
     const { result } = renderHook(() => useOrganizationResourceListState());
 
+    expect(result.current.query).toBe("canopy");
     expect(result.current.filters.type).toEqual(["macro", "device"]);
     expect(result.current.sort).toBe("type");
     expect(result.current.hasActiveFilters).toBe(true);
@@ -54,7 +58,7 @@ describe("useOrganizationResourceListState", () => {
     expect(result.current.sort).toBe("recent");
   });
 
-  it("keeps the search out of the URL and clears only the type filter", () => {
+  it("clears only the type filter and includes pending search in the URL", () => {
     openOnUrl(PATH, "type=macro");
     const replace = vi.mocked(nav.useRouter().replace);
     const { result } = renderHook(() => useOrganizationResourceListState());
@@ -65,5 +69,6 @@ describe("useOrganizationResourceListState", () => {
     act(() => result.current.clearFilters());
     expect(result.current.filters.type).toEqual([]);
     expect(result.current.query).toBe("canopy");
+    expect(replace).toHaveBeenLastCalledWith(`${PATH}?q=canopy`, { scroll: false });
   });
 });

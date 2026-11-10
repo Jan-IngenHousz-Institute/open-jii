@@ -41,6 +41,7 @@ export function NameUpdatedList<T extends NamedAndUpdated>({
   emptyHelpPath,
 }: NameUpdatedListProps<T>) {
   const { sort, setSort, toggleSort } = useListUrlState({
+    searchKey: null,
     filters: NO_FILTERS,
     sort: zNameUpdatedSort,
   });

@@ -11,6 +11,18 @@ import { useMacros } from "./useMacros";
 const sort = encodeURIComponent(JSON.stringify([{ field: "name", direction: "asc" }]));
 
 describe("useMacros", () => {
+  it("uses a shared link's search in the first request", async () => {
+    openOnUrl("/platform/macros", "q=anova");
+    const spy = server.mount(contract.macros.listMacros, { body: listEnvelope([]) });
+
+    const { result } = renderHook(() => useMacros());
+
+    expect(result.current.search).toBe("anova");
+    expect(result.current.debouncedSearch).toBe("anova");
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.calls[0]?.query.search).toBe("anova");
+  });
+
   it("returns the macros from the API", async () => {
     server.mount(contract.macros.listMacros, {
       body: listEnvelope([createMacro({ id: "m-1", name: "M1" })]),
