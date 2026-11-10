@@ -355,3 +355,135 @@ describe("setDataSourceAggregate", () => {
     ]);
   });
 });
+
+describe("ordered row calculations", () => {
+  it.each(["previous", "change_from_previous", "row_number"] as const)(
+    "keeps raw siblings for %s and wires both columns",
+    (fn) => {
+      const { result } = renderHook(() =>
+        useForm<ChartFormValues>({
+          defaultValues: {
+            dataConfig: {
+              tableName: "t",
+              dataSources: [
+                { tableName: "t", columnName: "time", role: "x" },
+                { tableName: "t", columnName: "value", role: "y" },
+                { tableName: "t", columnName: "other", role: "y" },
+              ],
+            },
+          },
+        }),
+      );
+      setDataSourceAggregate(result.current, 1, fn, "time");
+      result.current.setValue("dataConfig.dataSources.1.partitionColumn", "sensor");
+      result.current.setValue("dataConfig.dataSources.1.orderColumn", "time");
+      setDataSourceAggregate(result.current, 1, fn, "time");
+      const data = sanitizeDataConfigForSave(result.current.getValues("dataConfig"));
+      expect(data.dataSources[2].aggregate).toBeUndefined();
+      expect(data.aggregation?.groupBy).toBeUndefined();
+      expect(data.aggregation?.functions).toEqual([
+        {
+          column: "value",
+          function: fn,
+          alias: `value_${fn}_s1`,
+          partitionColumn: "sensor",
+          orderColumn: "time",
+        },
+      ]);
+      setDataSourceAggregate(result.current, 1, undefined, "time");
+      expect(result.current.getValues("dataConfig.dataSources.1.partitionColumn")).toBe("");
+      expect(result.current.getValues("dataConfig.dataSources.1.orderColumn")).toBe("");
+    },
+  );
+
+  it.each(["latest", "earliest"] as const)("activates grouping and AVG siblings for %s", (fn) => {
+    const { result } = renderHook(() =>
+      useForm<ChartFormValues>({
+        defaultValues: {
+          dataConfig: {
+            tableName: "t",
+            dataSources: [
+              { tableName: "t", columnName: "time", role: "x" },
+              { tableName: "t", columnName: "value", role: "y" },
+              { tableName: "t", columnName: "other", role: "y" },
+            ],
+          },
+        },
+      }),
+    );
+    setDataSourceAggregate(result.current, 1, fn, "time");
+    expect(result.current.getValues("dataConfig.aggregation.groupBy")).toEqual([
+      { column: "time" },
+    ]);
+    expect(result.current.getValues("dataConfig.dataSources.2.aggregate")).toBe("avg");
+  });
+
+  it("materializes row numbers without a value column", () => {
+    const data = sanitizeDataConfigForSave({
+      tableName: "t",
+      dataSources: [
+        { tableName: "t", columnName: "", role: "y", aggregate: "row_number", orderColumn: "time" },
+      ],
+    });
+    expect(data.aggregation?.functions?.[0]).toMatchObject({
+      column: "*",
+      function: "row_number",
+      orderColumn: "time",
+    });
+  });
+});
+
+it("keeps Ordered by between window functions and Per between row windows", () => {
+  const { result } = renderHook(() =>
+    useForm<ChartFormValues>({
+      defaultValues: {
+        dataConfig: {
+          tableName: "t",
+          dataSources: [
+            { tableName: "t", columnName: "time", role: "x" },
+            {
+              tableName: "t",
+              columnName: "value",
+              role: "y",
+              aggregate: "previous",
+              orderColumn: "time",
+              partitionColumn: "sensor",
+            },
+          ],
+        },
+      },
+    }),
+  );
+  setDataSourceAggregate(result.current, 1, "change_from_previous", "time");
+  expect(result.current.getValues("dataConfig.dataSources.1.orderColumn")).toBe("time");
+  expect(result.current.getValues("dataConfig.dataSources.1.partitionColumn")).toBe("sensor");
+  setDataSourceAggregate(result.current, 1, "latest", "time");
+  expect(result.current.getValues("dataConfig.dataSources.1.orderColumn")).toBe("time");
+  expect(result.current.getValues("dataConfig.dataSources.1.partitionColumn")).toBe("");
+  setDataSourceAggregate(result.current, 1, "earliest", "time");
+  expect(result.current.getValues("dataConfig.dataSources.1.orderColumn")).toBe("time");
+  setDataSourceAggregate(result.current, 1, "avg", "time");
+  expect(result.current.getValues("dataConfig.dataSources.1.orderColumn")).toBe("");
+});
+
+it("omits controlled empty window fields from source and wire settings", () => {
+  const data = sanitizeDataConfigForSave({
+    tableName: "t",
+    dataSources: [
+      {
+        tableName: "t",
+        columnName: "reading",
+        role: "y",
+        aggregate: "latest",
+        partitionColumn: "",
+        orderColumn: "timestamp",
+      },
+    ],
+  });
+  expect(data.dataSources[0].partitionColumn).toBeUndefined();
+  expect(data.aggregation?.functions?.[0]).toMatchObject({
+    function: "latest",
+    orderColumn: "timestamp",
+  });
+  expect(JSON.stringify(data)).not.toContain('"partitionColumn"');
+});

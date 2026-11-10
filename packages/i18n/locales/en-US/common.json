@@ -1439,7 +1439,8 @@
   "autosave": {
     "saving": "Saving…",
     "saved": "All changes saved",
-    "failed": "Couldn't save your changes"
+    "failed": "Couldn't save your changes",
+    "invalid": "Not saved: check the chart settings"
   },
   "columnPicker": {
     "dragHandle": "Drag {{name}}",

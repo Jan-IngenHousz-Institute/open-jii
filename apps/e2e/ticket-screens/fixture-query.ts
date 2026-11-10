@@ -1,4 +1,5 @@
 import {
+  aggregateKind,
   DATA_QUERY_MAX_LIMIT,
   DISTINCT_VALUES_DEFAULT_LIMIT,
   zExperimentDataQuery,
@@ -20,6 +21,7 @@ import type {
   ExperimentTimeBucketUnit,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataJoin } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { isNumericType } from "@repo/api/transforms/column-type-utils";
 import { joinedColumns } from "@repo/api/transforms/joined-columns";
 import {
   hasRelativeTimeFilters,
@@ -291,13 +293,14 @@ export class FixtureQuery {
     if (orderBy === undefined) return shaped;
 
     const direction = query.orderDirection === "DESC" ? -1 : 1;
+    const orderType = shaped.columns.find((column) => column.name === orderBy)?.type_name;
     const rows = [...shaped.rows].sort((a, b) => {
       const left = a[orderBy] ?? null;
       const right = b[orderBy] ?? null;
       if (left === null && right === null) return 0;
       if (left === null) return -direction;
       if (right === null) return direction;
-      return this.compare(left, right) * direction;
+      return this.compare(left, right, orderType) * direction;
     });
     return { columns: shaped.columns, rows };
   }
@@ -377,7 +380,10 @@ export class FixtureQuery {
     return isTime ? Date.parse(cell) === Date.parse(value) : cell === String(value);
   }
 
-  private compare(a: Scalar, b: Scalar): number {
+  private compare(a: Scalar, b: Scalar, type?: string): number {
+    if (type === "TIMESTAMP_NTZ" && typeof a === "string" && typeof b === "string") {
+      return this.windowTime(a, type) - this.windowTime(b, type);
+    }
     if (typeof a === "number" && typeof b === "number") return a - b;
     if (typeof a === "number") return a - Number(b);
     if (
@@ -389,6 +395,13 @@ export class FixtureQuery {
       return Date.parse(a) - Date.parse(b);
     }
     return String(a).localeCompare(String(b), undefined, { numeric: true });
+  }
+
+  private compareIds(left: FixtureValue | undefined, right: FixtureValue | undefined): number {
+    if (typeof left === "number" && typeof right === "number") return left - right;
+    const a = String(left ?? "");
+    const b = String(right ?? "");
+    return a < b ? -1 : a > b ? 1 : 0;
   }
 
   private isTimestamp(text: string): boolean {
@@ -403,11 +416,11 @@ export class FixtureQuery {
   ): Shaped {
     const keys = (aggregation.groupBy ?? []).map((item) => this.groupKey(item, table));
     const functions = aggregation.functions ?? [];
-    const rowFunctions = functions.filter((item) => item.function !== "cumsum");
+    const rowFunctions = functions.filter((item) => aggregateKind(item.function) === "row");
     const cumulative = functions.filter((item) => item.function === "cumsum");
 
     const isWindowOnly = keys.length === 0 && rowFunctions.length === 0;
-    if (isWindowOnly) return this.windowOnly(rows, cumulative, table, orderBy);
+    if (isWindowOnly) return this.windowOnly(rows, functions, table, orderBy);
 
     const groups = new Map<string, { key: FixtureValue[]; rows: FixtureRow[] }>();
     for (const row of rows) {
@@ -425,7 +438,7 @@ export class FixtureQuery {
       keys.forEach((groupKey, index) => {
         row[groupKey.alias] = key[index] ?? null;
       });
-      for (const item of rowFunctions) row[this.alias(item)] = this.reduce(members, item);
+      for (const item of rowFunctions) row[this.alias(item)] = this.reduce(members, item, table);
       return { row, members };
     });
 
@@ -437,6 +450,8 @@ export class FixtureQuery {
         );
       }
       const orderKey = first?.alias ?? orderBy ?? "";
+      const orderType =
+        first?.type ?? table.columns.find((column) => column.name === orderBy)?.type_name;
       const sums = out.map(({ row, members }) => ({
         order: row[orderKey] ?? null,
         amount: item.column === "*" ? members.length : this.total(members, item.column),
@@ -444,7 +459,10 @@ export class FixtureQuery {
       for (const entry of out) {
         const at = entry.row[orderKey] ?? null;
         entry.row[this.alias(item)] = sums
-          .filter((sum) => sum.order === null || (at !== null && this.compare(sum.order, at) <= 0))
+          .filter(
+            (sum) =>
+              sum.order === null || (at !== null && this.compare(sum.order, at, orderType) <= 0),
+          )
           .reduce((running, sum) => running + sum.amount, 0);
       }
     }
@@ -461,38 +479,98 @@ export class FixtureQuery {
     return { columns, rows: out.map(({ row }) => row) };
   }
 
-  // Cumulative sums alone keep every raw row, the running total ordered by `orderBy`.
+  // Raw windows keep every filtered row. Cumsum uses RANGE peers; row windows use id ties.
   private windowOnly(
     rows: FixtureRow[],
-    cumulative: ExperimentAggregationItem[],
+    functions: ExperimentAggregationItem[],
     table: FixtureTable,
     orderBy: string | undefined,
   ): Shaped {
-    if (orderBy === undefined) {
+    if (functions.some((item) => item.function === "cumsum") && orderBy === undefined) {
       throw new Error(
         "Cumulative sum needs an X column or orderBy parameter to define the running-total order",
       );
     }
 
+    const orderType = table.columns.find((column) => column.name === orderBy)?.type_name;
     const out = rows.map((row) => {
-      const at = row[orderBy] ?? null;
+      const at = row[orderBy ?? ""] ?? null;
       const peers = rows.filter((other) => {
-        const order = other[orderBy] ?? null;
-        return order === null || (at !== null && this.compare(order, at) <= 0);
+        const order = other[orderBy ?? ""] ?? null;
+        return order === null || (at !== null && this.compare(order, at, orderType) <= 0);
       });
       const extra: Record<string, FixtureValue> = {};
-      for (const item of cumulative) {
-        extra[this.alias(item)] =
-          item.column === "*" ? peers.length : this.total(peers, item.column);
+      for (const item of functions) {
+        if (item.function === "cumsum") {
+          extra[this.alias(item)] =
+            item.column === "*" ? peers.length : this.total(peers, item.column);
+          continue;
+        }
+        if (row[item.orderColumn ?? ""] == null) {
+          extra[this.alias(item)] = null;
+          continue;
+        }
+        const partition = rows.filter(
+          (other) =>
+            !item.partitionColumn || other[item.partitionColumn] === row[item.partitionColumn],
+        );
+        const windowOrderType = table.columns.find(
+          (column) => column.name === item.orderColumn,
+        )?.type_name;
+        const ordered = [...partition];
+        // Undated rows sort last and cannot supply a previous value to dated rows.
+        ordered.sort((a, b) => {
+          const left = a[item.orderColumn ?? ""] ?? null;
+          const right = b[item.orderColumn ?? ""] ?? null;
+          return (
+            (left === null && right === null
+              ? 0
+              : left === null
+                ? 1
+                : right === null
+                  ? -1
+                  : this.compare(left, right, windowOrderType)) ||
+            (table.columns.some((column) => column.name === "id") ? this.compareIds(a.id, b.id) : 0)
+          );
+        });
+        const index = ordered.indexOf(row);
+        const previous = ordered[index - 1]?.[item.column] ?? null;
+        const current = row[item.column] ?? null;
+        let value: FixtureValue;
+        if (item.function === "row_number") value = index + 1;
+        else if (item.function === "previous") value = previous;
+        else if (item.function === "change_from_previous") {
+          const type = table.columns.find((column) => column.name === item.column)?.type_name;
+          if (type && /^(TIMESTAMP|TIMESTAMP_NTZ|DATE)$/.test(type)) {
+            value =
+              previous === null || current === null
+                ? null
+                : (this.windowTime(current, type) - this.windowTime(previous, type)) / 1000;
+          } else {
+            if (current !== null && typeof current !== "number")
+              throw new Error("Change from previous requires numeric or temporal values");
+            value =
+              typeof previous === "number" && typeof current === "number"
+                ? current - previous
+                : null;
+          }
+        } else throw new Error(`Unsupported raw window: ${item.function}`);
+        extra[this.alias(item)] = value;
       }
       return { ...row, ...extra };
     });
 
     const columns = [
       ...table.columns,
-      ...cumulative.map((item) => this.functionColumn(item, table)),
+      ...functions.map((item) => this.functionColumn(item, table)),
     ];
     return { columns, rows: out };
+  }
+
+  private windowTime(value: FixtureValue, type: string): number {
+    const text = String(value);
+    const zoneless = type === "TIMESTAMP_NTZ" && !/(?:Z|[+-]\d{2}:\d{2})$/i.test(text);
+    return Date.parse(zoneless ? `${text}Z` : text);
   }
 
   private groupKey(item: ExperimentGroupByItem, table: FixtureTable): GroupKey {
@@ -556,6 +634,7 @@ export class FixtureQuery {
 
   private alias(item: ExperimentAggregationItem): string {
     if (item.alias !== undefined) return item.alias;
+    if (item.function === "row_number") return `${item.column}_row_number`;
     if (item.function === "corr") return `${item.column}_corr_${item.secondColumn ?? ""}`;
     const base = item.column === "*" ? "count" : item.column;
     return `${base}_${item.function}`;
@@ -566,14 +645,22 @@ export class FixtureQuery {
     table: FixtureTable,
   ): ExperimentDataColumn {
     const source = table.columns.find((column) => column.name === item.column);
-    const keepsType = item.function === "min" || item.function === "max";
+    const keepsType =
+      ["min", "max", "previous", "latest", "earliest"].includes(item.function) ||
+      (item.function === "change_from_previous" && isNumericType(source?.type_text));
     const type =
-      item.function === "count" || item.function === "count_distinct"
+      item.function === "count" ||
+      item.function === "count_distinct" ||
+      item.function === "row_number"
         ? "BIGINT"
         : keepsType
           ? (source?.type_name ?? "DOUBLE")
           : "DOUBLE";
-    return { name: this.alias(item), type_name: type, type_text: type };
+    return {
+      name: this.alias(item),
+      type_name: type,
+      type_text: keepsType ? (source?.type_text ?? type) : type,
+    };
   }
 
   private total(rows: FixtureRow[], column: string): number {
@@ -587,7 +674,26 @@ export class FixtureQuery {
   }
 
   // STDDEV and VARIANCE are the sample forms, NULL below two values.
-  private reduce(rows: FixtureRow[], item: ExperimentAggregationItem): FixtureValue {
+  private reduce(
+    rows: FixtureRow[],
+    item: ExperimentAggregationItem,
+    table: FixtureTable,
+  ): FixtureValue {
+    if (item.function === "latest" || item.function === "earliest") {
+      const candidates = rows.filter((row) => row[item.orderColumn ?? ""] != null);
+      const direction = item.function === "latest" ? -1 : 1;
+      const hasId = table.columns.some((column) => column.name === "id");
+      const orderType = table.columns.find((column) => column.name === item.orderColumn)?.type_name;
+      const ordered = [...candidates].sort((a, b) => {
+        const order = this.compare(
+          a[item.orderColumn ?? ""] ?? "",
+          b[item.orderColumn ?? ""] ?? "",
+          orderType,
+        );
+        return (order || (hasId ? this.compareIds(a.id, b.id) : 0)) * direction;
+      });
+      return ordered[0]?.[item.column] ?? null;
+    }
     if (item.function === "count_distinct") {
       return new Set(rows.map((row) => row[item.column] ?? null).filter((value) => value !== null))
         .size;
@@ -630,6 +736,8 @@ export class FixtureQuery {
         return variance;
       case "cumsum":
         return sum;
+      default:
+        throw new Error(`Unsupported grouped aggregate: ${item.function}`);
     }
   }
 

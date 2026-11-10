@@ -1,6 +1,7 @@
 import type { CDPSession, Locator, Page } from "@playwright/test";
 
 import type { FrameName } from "./frames.js";
+import { choose, chooseOrderedBy, configureGap, openSyntheticChart } from "./ordered-aggregates.js";
 import { experimentId, organizationId, protocolWorkbookId, workbookId } from "./seed-entities.js";
 
 export interface Shot {
@@ -159,6 +160,30 @@ const privacyShots: readonly Shot[] = privacyCaptureEmail
 
 export const SHOTS: readonly Shot[] = [
   ...privacyShots,
+  {
+    slug: "ordered-aggregates-gap",
+    publish: "img/guide/web/ordered-aggregates-gap.webp",
+    frame: "desktop",
+    route: "/platform",
+    async prepare(page) {
+      await openSyntheticChart(page);
+      await configureGap(page);
+    },
+    scope: "Change from previous of report timestamps per synthetic sensor, measured in seconds",
+  },
+  {
+    slug: "ordered-aggregates-row-number",
+    publish: "img/guide/web/ordered-aggregates-row-number.webp",
+    frame: "desktop",
+    route: "/platform",
+    async prepare(page) {
+      await openSyntheticChart(page);
+      await choose(page, "Aggregate", "Row number");
+      await choose(page, "Per", "sensor");
+      await chooseOrderedBy(page, "timestamp");
+    },
+    scope: "Row number ordered by report time per synthetic sensor",
+  },
   // ------------------------------------------- tier 1: shell, overviews, access
   {
     slug: "dashboard",

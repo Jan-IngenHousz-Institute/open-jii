@@ -1,8 +1,11 @@
 import { Injectable } from "@nestjs/common";
 
+import { requiresGroupBy } from "@repo/api/domains/experiment/data/experiment-data.schema";
+
 import type { Result } from "../../../../utils/fp-utils";
 import { AppError, failure, success } from "../../../../utils/fp-utils";
 import { hasAggregationContent, wrapWithAggregation } from "./expressions/aggregation";
+import { timestampExpression } from "./expressions/time";
 import { SqlQueryBuilder, VariantQueryBuilder } from "./query-builder.base";
 import type { AsOfJoin, CountQueryParams, QueryParams } from "./query-builder.types";
 import { QueryBuilderInputError } from "./query-builder.types";
@@ -92,7 +95,7 @@ export class QueryBuilderService {
     const secondaryFilters = filters?.filter((filter) => !isPrimary(filter.column));
     const rowAggregation =
       (aggregation?.groupBy?.length ?? 0) > 0 ||
-      aggregation?.functions?.some((fn) => fn.function !== "cumsum");
+      aggregation?.functions?.some((fn) => requiresGroupBy(fn.function));
     const allNames = new Set([
       ...join.primaryColumns,
       ...join.secondaryColumns.map((column) => column.alias),
@@ -105,6 +108,8 @@ export class QueryBuilderService {
       ...(aggregation?.functions?.flatMap((fn) => [
         fn.column,
         ...(fn.secondColumn ? [fn.secondColumn] : []),
+        ...(fn.partitionColumn ? [fn.partitionColumn] : []),
+        ...(fn.orderColumn ? [fn.orderColumn] : []),
       ]) ?? []),
       ...(aggregation?.explode ? [aggregation.explode.column] : []),
     ];
@@ -133,17 +138,8 @@ export class QueryBuilderService {
     const quoteName = (name: string) => builder.quoteName(name);
     const p = (name: string) => `p.${quoteName(name)}`;
     const s = (name: string) => `s.${quoteName(name)}`;
-    const time = (expression: string, rawType: string) => {
-      const type = rawType.toUpperCase();
-      if (type === "TIMESTAMP") return expression;
-      if (type !== "TIMESTAMP_NTZ" && type !== "DATE") {
-        throw new QueryBuilderInputError("Time matching requires a timestamp or date column");
-      }
-      // DATE and NTZ carry no zone. Build a UTC instant without the session's implicit cast.
-      return `make_timestamp(year(${expression}), month(${expression}), day(${expression}), ${type === "DATE" ? "0, 0, 0" : `hour(${expression}), minute(${expression}), date_part('SECOND', ${expression})`}, 'UTC')`;
-    };
-    const primaryTime = time(p(join.primaryTimeColumn), join.primaryTimeType);
-    const secondaryTime = time(s(join.secondaryTimeColumn), join.secondaryTimeType);
+    const primaryTime = timestampExpression(p(join.primaryTimeColumn), join.primaryTimeType);
+    const secondaryTime = timestampExpression(s(join.secondaryTimeColumn), join.secondaryTimeType);
     const used = new Set(
       [...join.primaryColumns, ...join.secondaryColumns.map((c) => c.alias)].map((name) =>
         name.toLowerCase(),

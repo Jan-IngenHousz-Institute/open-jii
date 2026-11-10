@@ -11635,9 +11635,22 @@
                                     "std",
                                     "var",
                                     "cumsum",
+                                    "previous",
+                                    "change_from_previous",
+                                    "row_number",
+                                    "latest",
+                                    "earliest",
                                     "corr"
                                   ],
                                   "type": "string"
+                                },
+                                "partitionColumn": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "orderColumn": {
+                                  "type": "string",
+                                  "minLength": 1
                                 },
                                 "errorColumn": {
                                   "type": "string"
@@ -11761,6 +11774,11 @@
                                         "std",
                                         "var",
                                         "cumsum",
+                                        "previous",
+                                        "change_from_previous",
+                                        "row_number",
+                                        "latest",
+                                        "earliest",
                                         "corr"
                                       ],
                                       "type": "string"
@@ -11770,6 +11788,14 @@
                                     },
                                     "secondColumn": {
                                       "type": "string"
+                                    },
+                                    "partitionColumn": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "orderColumn": {
+                                      "type": "string",
+                                      "minLength": 1
                                     }
                                   },
                                   "required": [
@@ -12012,9 +12038,22 @@
                                 "std",
                                 "var",
                                 "cumsum",
+                                "previous",
+                                "change_from_previous",
+                                "row_number",
+                                "latest",
+                                "earliest",
                                 "corr"
                               ],
                               "type": "string"
+                            },
+                            "partitionColumn": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "orderColumn": {
+                              "type": "string",
+                              "minLength": 1
                             },
                             "errorColumn": {
                               "type": "string"
@@ -12138,6 +12177,11 @@
                                     "std",
                                     "var",
                                     "cumsum",
+                                    "previous",
+                                    "change_from_previous",
+                                    "row_number",
+                                    "latest",
+                                    "earliest",
                                     "corr"
                                   ],
                                   "type": "string"
@@ -12147,6 +12191,14 @@
                                 },
                                 "secondColumn": {
                                   "type": "string"
+                                },
+                                "partitionColumn": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "orderColumn": {
+                                  "type": "string",
+                                  "minLength": 1
                                 }
                               },
                               "required": [
@@ -12367,9 +12419,22 @@
                                   "std",
                                   "var",
                                   "cumsum",
+                                  "previous",
+                                  "change_from_previous",
+                                  "row_number",
+                                  "latest",
+                                  "earliest",
                                   "corr"
                                 ],
                                 "type": "string"
+                              },
+                              "partitionColumn": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "orderColumn": {
+                                "type": "string",
+                                "minLength": 1
                               },
                               "errorColumn": {
                                 "type": "string"
@@ -12493,6 +12558,11 @@
                                       "std",
                                       "var",
                                       "cumsum",
+                                      "previous",
+                                      "change_from_previous",
+                                      "row_number",
+                                      "latest",
+                                      "earliest",
                                       "corr"
                                     ],
                                     "type": "string"
@@ -12502,6 +12572,14 @@
                                   },
                                   "secondColumn": {
                                     "type": "string"
+                                  },
+                                  "partitionColumn": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "orderColumn": {
+                                    "type": "string",
+                                    "minLength": 1
                                   }
                                 },
                                 "required": [
@@ -12771,9 +12849,22 @@
                                   "std",
                                   "var",
                                   "cumsum",
+                                  "previous",
+                                  "change_from_previous",
+                                  "row_number",
+                                  "latest",
+                                  "earliest",
                                   "corr"
                                 ],
                                 "type": "string"
+                              },
+                              "partitionColumn": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "orderColumn": {
+                                "type": "string",
+                                "minLength": 1
                               },
                               "errorColumn": {
                                 "type": "string"
@@ -12897,6 +12988,11 @@
                                       "std",
                                       "var",
                                       "cumsum",
+                                      "previous",
+                                      "change_from_previous",
+                                      "row_number",
+                                      "latest",
+                                      "earliest",
                                       "corr"
                                     ],
                                     "type": "string"
@@ -12906,6 +13002,14 @@
                                   },
                                   "secondColumn": {
                                     "type": "string"
+                                  },
+                                  "partitionColumn": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "orderColumn": {
+                                    "type": "string",
+                                    "minLength": 1
                                   }
                                 },
                                 "required": [
@@ -13157,9 +13261,22 @@
                                 "std",
                                 "var",
                                 "cumsum",
+                                "previous",
+                                "change_from_previous",
+                                "row_number",
+                                "latest",
+                                "earliest",
                                 "corr"
                               ],
                               "type": "string"
+                            },
+                            "partitionColumn": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "orderColumn": {
+                              "type": "string",
+                              "minLength": 1
                             },
                             "errorColumn": {
                               "type": "string"
@@ -13283,6 +13400,11 @@
                                     "std",
                                     "var",
                                     "cumsum",
+                                    "previous",
+                                    "change_from_previous",
+                                    "row_number",
+                                    "latest",
+                                    "earliest",
                                     "corr"
                                   ],
                                   "type": "string"
@@ -13292,6 +13414,14 @@
                                 },
                                 "secondColumn": {
                                   "type": "string"
+                                },
+                                "partitionColumn": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "orderColumn": {
+                                  "type": "string",
+                                  "minLength": 1
                                 }
                               },
                               "required": [
@@ -13512,9 +13642,22 @@
                                   "std",
                                   "var",
                                   "cumsum",
+                                  "previous",
+                                  "change_from_previous",
+                                  "row_number",
+                                  "latest",
+                                  "earliest",
                                   "corr"
                                 ],
                                 "type": "string"
+                              },
+                              "partitionColumn": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "orderColumn": {
+                                "type": "string",
+                                "minLength": 1
                               },
                               "errorColumn": {
                                 "type": "string"
@@ -13638,6 +13781,11 @@
                                       "std",
                                       "var",
                                       "cumsum",
+                                      "previous",
+                                      "change_from_previous",
+                                      "row_number",
+                                      "latest",
+                                      "earliest",
                                       "corr"
                                     ],
                                     "type": "string"
@@ -13647,6 +13795,14 @@
                                   },
                                   "secondColumn": {
                                     "type": "string"
+                                  },
+                                  "partitionColumn": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "orderColumn": {
+                                    "type": "string",
+                                    "minLength": 1
                                   }
                                 },
                                 "required": [

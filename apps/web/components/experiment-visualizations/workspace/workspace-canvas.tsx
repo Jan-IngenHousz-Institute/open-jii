@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import type { Control } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
+import { zExperimentChartDataConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { isDataJoinValid } from "@repo/api/transforms/joined-columns";
 import { useTranslation } from "@repo/i18n";
@@ -15,6 +16,7 @@ import { useExperimentVisualizationData } from "../../../hooks/experiment/useExp
 import "../../../styles/plotly-chart.css";
 import type { ChartFormValues } from "../charts/chart-config";
 import { getChartTypeDef } from "../charts/chart-registry";
+import { sanitizeDataConfigForSave } from "../charts/data/aggregation";
 import { dataSourcesByRole } from "../charts/data/data-sources";
 import { truncationOf } from "../charts/hooks/use-chart-data";
 import { ProvidedChartRead } from "../charts/provided-read-context";
@@ -50,7 +52,16 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
   // Draw on first configured column; renderers synthesize the missing axis.
   const hasAnyColumn = configuredSources.length > 0;
   const joinReady = isDataJoinValid(dataConfig.join);
-  const isReady = joinReady && Boolean(def) && Boolean(tableName) && hasAnyColumn;
+  const validation = useMemo(
+    () => zExperimentChartDataConfig.safeParse(sanitizeDataConfigForSave(dataConfig)),
+    [dataConfig],
+  );
+  const dataConfigReady = validation.success;
+  const needsOrderColumn =
+    !validation.success &&
+    validation.error.issues.some((issue) => issue.path.at(-1) === "orderColumn");
+  const isReady =
+    dataConfigReady && joinReady && Boolean(def) && Boolean(tableName) && hasAnyColumn;
 
   const aggregation = dataConfig.aggregation;
   const filters = dataConfig.filters;
@@ -126,6 +137,19 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
       <CanvasPlaceholder
         title={t("workspace.secondTable.incompleteTitle")}
         body={t("workspace.secondTable.incompleteHelp")}
+      />
+    );
+  }
+
+  if (!dataConfigReady) {
+    return (
+      <CanvasPlaceholder
+        title={t("workspace.canvas.incompleteWindowTitle")}
+        body={t(
+          needsOrderColumn
+            ? "workspace.canvas.incompleteWindowHelp"
+            : "workspace.canvas.invalidConfigHelp",
+        )}
       />
     );
   }
