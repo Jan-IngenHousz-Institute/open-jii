@@ -14,7 +14,7 @@ def number_answer(value: Column) -> Column:
 
 
 def typed_question_answers_expression(value: str, numeric_keys: str) -> str:
-    """SQL expressions are supplied by the pipeline or the validated backfill command."""
+    """Build the conversion used by the raw and macro gold pipelines."""
     text = "try_cast(answer AS STRING)"
     number = f"try_cast({text} AS DOUBLE)"
     finite = f"nullif(nullif(nullif({number}, double('NaN')), double('Infinity')), double('-Infinity'))"

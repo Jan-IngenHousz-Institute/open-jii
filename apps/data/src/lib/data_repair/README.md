@@ -60,13 +60,6 @@ gold table that does the derivation (e.g. `experiment_macro_data`, just
 before the macro UDF). That way you can full-refresh the gold table to
 retroactively repair historical rows without touching `experiment_raw_data`.
 
-Raw gold now sets `pipelines.reset.allowed=false` because append readers skip
-change commits. A raw full refresh could replay all history into macro execution.
-Do not remove the property or full-refresh the whole pipeline as a routine repair.
-A deliberate raw rebuild needs a reviewed property change and a coordinated reset
-of macro/checkpoint state, schema summaries and serving-store reconciliation.
-See [question-answer rollout and recovery](../../../QUESTION_ANSWERS.md).
-
 ## Severity
 
 ```python

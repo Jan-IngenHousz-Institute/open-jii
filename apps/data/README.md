@@ -62,7 +62,7 @@ uv build --all-packages
 
 ## Tests
 
-Question answer classification and its reviewed historical rollout are described in
+Question answer classification and storage are described in
 [Numeric question answers](QUESTION_ANSWERS.md).
 
 The test suite covers the pure-logic surface of each library: compression, HMAC signing, batching and chunked-error paths in the backend client, question-label sanitization and Spark-side column expansion, the repair-manifest registry (severity + predicate filtering), the RIDES re-interleave algorithm, and the upload-directory parser.
