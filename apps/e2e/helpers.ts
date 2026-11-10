@@ -1,4 +1,5 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import postgres from "postgres";
 
 import { readLatestSignInOtp } from "@repo/devkit/otp";
@@ -29,6 +30,44 @@ export function assertSafeFixtureDatabase(url = databaseUrl): void {
 export async function dismissCookieBanner(page: Page): Promise<void> {
   const button = page.getByRole("button", { name: "Reject all" });
   if (await button.isVisible().catch(() => false)) await button.click();
+}
+
+/** Reopen the saved list URL through both a document reload and a fresh shared link. */
+export async function expectSearchSurvivesReopen(
+  page: Page,
+  {
+    search,
+    term,
+    matchingName,
+    excludedName,
+    rows = page,
+    visible = "link",
+  }: {
+    search: Locator;
+    term: string;
+    matchingName: string;
+    excludedName: string;
+    rows?: Locator | Page;
+    visible?: "link" | "row";
+  },
+): Promise<void> {
+  const matching = rows.getByRole("link", { name: matchingName, exact: true }).first();
+  const shown =
+    visible === "row" ? rows.getByRole("row").filter({ has: matching }).first() : matching;
+  const sharedUrl = page.url();
+  for (const reopen of ["reload", "shared link"]) {
+    if (reopen === "reload") await page.reload();
+    else {
+      await page.goto("about:blank");
+      await page.goto(sharedUrl);
+    }
+
+    await expect(search).toHaveValue(term);
+    await expect(shown).toBeVisible();
+    await expect(rows.getByRole("link", { name: excludedName, exact: true })).toHaveCount(0);
+    await expect(page).toHaveURL(sharedUrl);
+    expect(new URL(page.url()).searchParams.get("q")).toBe(term);
+  }
 }
 
 export async function waitForFreshOtp(

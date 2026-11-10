@@ -16,6 +16,7 @@ export function arrayParam(url: string, key: string): string[] {
 
 /** Opens the page on `pathname?qs`, as a shared link would. */
 export function openOnUrl(pathname: string, qs: string): void {
+  window.history.replaceState(null, "", `${pathname}${qs ? `?${qs}` : ""}`);
   vi.mocked(nav.usePathname).mockReturnValue(pathname);
   vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams(qs));
 }

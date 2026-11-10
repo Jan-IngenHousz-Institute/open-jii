@@ -90,6 +90,7 @@ Alerts are routed to Slack via webhook with severity-based policies:
 - `backend` - NestJS API (ECS)
 - `web` - Next.js frontend (Lambda/CloudFront)
 - `docs` - Documentation site (S3/CloudFront)
+- `status` - Public status page (S3/CloudFront)
 - `database` - Migration deployments
 - `databricks` - Lakehouse pipelines and jobs
 - `macro-sandbox-python`, `macro-sandbox-javascript`, `macro-sandbox-r` - Macro sandboxes

@@ -94,6 +94,18 @@
     "./render/calibration-run-rejected-notification": {
       "types": "./dist/render/calibration-run-rejected-notification.d.ts",
       "default": "./dist/render/calibration-run-rejected-notification.js"
+    },
+    "./render/data-upload-completed-notification": {
+      "types": "./dist/render/data-upload-completed-notification.d.ts",
+      "default": "./dist/render/data-upload-completed-notification.js"
+    },
+    "./render/data-upload-failed-notification": {
+      "types": "./dist/render/data-upload-failed-notification.d.ts",
+      "default": "./dist/render/data-upload-failed-notification.js"
+    },
+    "./render/data-upload-partly-completed-notification": {
+      "types": "./dist/render/data-upload-partly-completed-notification.d.ts",
+      "default": "./dist/render/data-upload-partly-completed-notification.js"
     }
   },
   "scripts": {

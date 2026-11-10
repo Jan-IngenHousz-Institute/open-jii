@@ -1,10 +1,10 @@
 "use client";
 
+import { useDepartureRouter } from "@/components/navigation/list-departure/list-departure";
 import { OPEN_WORKBOOK_CREATE_EVENT } from "@/components/navigation/site-header/platform-header-events";
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
 import { Eye, Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { OrganizationPicker } from "~/components/organizations/organization-picker";
 import { getWorkbookColumns } from "~/components/overview-table/workbook-columns";
@@ -35,7 +35,7 @@ import {
 export function ListWorkbooks() {
   const list = useWorkbooks();
   const { t } = useTranslation(["workbook", "common"]);
-  const router = useRouter();
+  const router = useDepartureRouter();
   const locale = useLocale();
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");

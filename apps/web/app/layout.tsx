@@ -1,3 +1,4 @@
+import { ListDepartureProvider } from "@/components/navigation/list-departure/list-departure";
 import { INDEXABLE, SITE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
@@ -102,8 +103,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
           disableTransitionOnChange
         >
           <PostHogProvider>
-            {children}
-            <CookieBanner />
+            <ListDepartureProvider>
+              {children}
+              <CookieBanner />
+            </ListDepartureProvider>
           </PostHogProvider>
         </ThemeProvider>
       </body>

@@ -11,6 +11,18 @@ import { useProtocols } from "./useProtocols";
 const sort = encodeURIComponent(JSON.stringify([{ field: "name", direction: "asc" }]));
 
 describe("useProtocols", () => {
+  it("uses a shared link's search in the first request", async () => {
+    openOnUrl("/platform/protocols", "q=fluor");
+    const spy = server.mount(contract.protocols.listProtocols, { body: listEnvelope([]) });
+
+    const { result } = renderHook(() => useProtocols());
+
+    expect(result.current.search).toBe("fluor");
+    expect(result.current.debouncedSearch).toBe("fluor");
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.calls[0]?.query.search).toBe("fluor");
+  });
+
   it("returns the protocols from the API", async () => {
     server.mount(contract.protocols.listProtocols, {
       body: listEnvelope([createProtocol({ id: "p-1", name: "P1" })]),

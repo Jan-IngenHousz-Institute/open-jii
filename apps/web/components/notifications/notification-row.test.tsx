@@ -178,6 +178,29 @@ describe("NotificationRow", () => {
     ).toBeInTheDocument();
   });
 
+  it.each([
+    [{}, "Your upload to Drought trial is ready to query"],
+    [
+      { skippedCount: "1" },
+      "Your upload to Drought trial is ready to query, with one file left out",
+    ],
+    [
+      { skippedCount: "3" },
+      "Your upload to Drought trial is ready to query, with 3 files left out",
+    ],
+  ])("says how many files a completed upload left out, given %o", async (skipped, copy) => {
+    await renderRow({
+      ...moved("organization"),
+      type: "data_upload_completed",
+      category: "data_jobs",
+      actor: null,
+      resource: { type: "experiment", id: "00000000-0000-4000-8000-0000000000cc" },
+      params: { experimentName: "Drought trial", skippedFiles: "plot_1.csv — no rows", ...skipped },
+    });
+
+    expect(screen.getByText(copy)).toBeInTheDocument();
+  });
+
   it("names the passkey that was added", async () => {
     await renderRow(passkeyAdded({ passkeyName: "Google Password Manager" }));
 

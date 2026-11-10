@@ -58,8 +58,8 @@ interface ResourceListOptions<
 > {
   filters: S;
   sort: z.ZodType<T[]>;
-  /** Writes search to the URL under this key; without it, search stays in memory. */
-  searchKey?: string;
+  /** Searchable lists own q; sort-only lists explicitly leave it alone. */
+  searchKey: "q" | null;
   /**
    * The request for one view, answering with a list response. A paginated response is shown
    * as it comes; an unpaged one is paged here, 20 rows at a time. Its options override the

@@ -257,7 +257,6 @@ describe("the status queries against the catalogue", () => {
     expect(iotSearches.map((read) => read.signal).sort()).toEqual([
       "devicePublishesBeforeIdle",
       "ingestForwardingFailures",
-      "ingestPublished",
       "ingestRefusedPublishes",
     ]);
     expect(iotSearches.every((read) => read.namespace === "AWS/IoT")).toBe(true);

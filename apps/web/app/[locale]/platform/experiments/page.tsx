@@ -9,7 +9,7 @@ import initTranslations from "@repo/i18n/server";
 
 interface ExperimentPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ sort?: string; status?: string; visibility?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; status?: string; visibility?: string }>;
 }
 
 export async function generateMetadata({
@@ -21,12 +21,11 @@ export async function generateMetadata({
   return { title: t("experiments.title") };
 }
 
-/** Render the experiments page, prefetching page 1 when sort, status and visibility are falsy. */
+/** Prefetch page 1 only when search, sort, status and visibility are empty. */
 export default async function ExperimentPage({ searchParams }: ExperimentPageProps) {
-  // Only the default view is fetched ahead; a sorted or filtered view's input comes from the
-  // client's parsing.
-  const { sort, status, visibility } = await searchParams;
-  const isDefaultView = !sort && !status && !visibility;
+  // Only the default view is fetched ahead; other views use the client's parsing.
+  const { q, sort, status, visibility } = await searchParams;
+  const isDefaultView = !q && !sort && !status && !visibility;
 
   return (
     <PageContainer width="fluid" className="space-y-6">

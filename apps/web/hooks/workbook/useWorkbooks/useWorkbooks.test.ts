@@ -11,6 +11,18 @@ import { useWorkbooks } from "./useWorkbooks";
 const sort = encodeURIComponent(JSON.stringify([{ field: "name", direction: "asc" }]));
 
 describe("useWorkbooks", () => {
+  it("uses a shared link's search in the first request", async () => {
+    openOnUrl("/platform/workbooks", "q=soil");
+    const spy = server.mount(contract.workbooks.listWorkbooks, { body: listEnvelope([]) });
+
+    const { result } = renderHook(() => useWorkbooks());
+
+    expect(result.current.search).toBe("soil");
+    expect(result.current.debouncedSearch).toBe("soil");
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.calls[0]?.query.search).toBe("soil");
+  });
+
   it("returns the workbooks from the API", async () => {
     server.mount(contract.workbooks.listWorkbooks, {
       body: listEnvelope([createWorkbook({ id: "w-1", name: "W1" })]),

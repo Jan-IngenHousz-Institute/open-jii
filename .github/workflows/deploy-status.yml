@@ -1,0 +1,497 @@
+# Status Page Deployment Workflow
+# Builds the status page (Next.js static export) and deploys to S3 with CloudFront invalidation
+
+name: Status Page Deployment Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "The deployment environment (dev, prod)"
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+      ref:
+        description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
+        required: false
+        type: string
+        default: ""
+  workflow_call:
+    inputs:
+      environment:
+        description: "The deployment environment (dev, prod)"
+        required: true
+        type: string
+      ref:
+        description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
+        required: false
+        type: string
+        default: ""
+jobs:
+  deploy-status:
+    name: Build & Deploy Status Page
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    # Job-level (workflow_call ignores workflow-level): overlapping runs' prune pass would delete each other's new assets
+    concurrency:
+      group: status-deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Validate environment
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+        run: |
+          case "$TARGET_ENV" in
+            dev | prod) ;;
+            *) echo "::error::Unknown environment '$TARGET_ENV'"; exit 1 ;;
+          esac
+
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Get Checked Out SHA
+        id: get-sha
+        run: |
+          ACTUAL_SHA=$(git rev-parse HEAD)
+          echo "sha=$ACTUAL_SHA" >> $GITHUB_OUTPUT
+          echo "Checked out SHA: $ACTUAL_SHA"
+
+      - name: Capture Deployment Start Time
+        uses: ./.github/actions/capture-dora-start
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "24"
+          hoisted: "false"
+
+      - name: Install Dependencies
+        run: |
+          echo "Installing dependencies..."
+          pnpm install --frozen-lockfile
+
+      - name: Build Status Page
+        env:
+          # Only production is crawlable; dev/staging keep robots.txt Disallow.
+          STATUS_INDEXABLE: ${{ inputs.environment == 'prod' && 'true' || 'false' }}
+          STATUS_BASE_URL: ${{ inputs.environment == 'prod' && 'https://status.openjii.org' || format('https://status.{0}.openjii.org', inputs.environment) }}
+        run: |
+          echo "Building status page (Next.js static export)..."
+          pnpm run build --filter=status
+
+      - name: Check Build Output
+        run: |
+          echo "Verifying status page build output..."
+          if [[ ! -d "apps/status/out" ]]; then
+            echo "::error::Status page build directory not found: apps/status/out"
+            exit 1
+          fi
+
+          echo "Status page build directory found"
+          echo "Build contents:"
+          ls -la apps/status/out/
+
+          # CloudFront serves index.html at / and maps 403/404 to 404.html
+          if [[ ! -f "apps/status/out/index.html" ]]; then
+            echo "::error::No index.html found in build output"
+            exit 1
+          fi
+          echo "✓ index.html found"
+
+          if [[ ! -f "apps/status/out/404.html" ]]; then
+            echo "::error::No 404.html found in build output (CloudFront serves this on 403/404)"
+            exit 1
+          fi
+          echo "✓ 404.html found"
+
+          # Middleware code in a client chunk means a client file imported a server entry point.
+          if grep -rlq "x-middleware" apps/status/out/_next/static/chunks; then
+            echo "::error::A client chunk carries Next.js middleware code"
+            exit 1
+          fi
+          echo "✓ no middleware code in the client chunks"
+
+          # Check build size
+          BUILD_SIZE=$(du -sh apps/status/out | cut -f1)
+          echo "Build size: $BUILD_SIZE"
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          mask-aws-account-id: true
+          role-duration-seconds: 3600 # 1 hour
+
+      - name: Get Infrastructure Configuration
+        uses: ./.github/actions/get-infrastructure-config
+        with:
+          environment: ${{ inputs.environment }}
+          prefix: "/status"
+
+      - name: Verify Infrastructure Configuration
+        run: |
+          echo "Verifying infrastructure configuration..."
+          echo "S3 Bucket: ${{ env.STATUS_BUCKET }}"
+          echo "CloudFront Distribution ID: ${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
+
+          # Verify S3 bucket access
+          if [[ -n "${{ env.STATUS_BUCKET }}" ]]; then
+            if aws s3api get-bucket-location --bucket "${{ env.STATUS_BUCKET }}" >/dev/null 2>&1; then
+              echo "✓ S3 bucket access verified: ${{ env.STATUS_BUCKET }}"
+            else
+              echo "::error::S3 bucket '${{ env.STATUS_BUCKET }}' not found or not accessible"
+              echo "Please ensure the infrastructure has been deployed and the bucket exists"
+              exit 1
+            fi
+          else
+            echo "::error::STATUS_BUCKET environment variable not set from infrastructure config"
+            exit 1
+          fi
+
+      - name: Archive Current Site (Rollback Artifact)
+        id: rollback-archive
+        run: |
+          STATUS_BUCKET="${{ env.STATUS_BUCKET }}"
+          ROLLBACK_DIR="rollback-site"
+          ARTIFACT_NAME="status-rollback-${{ inputs.environment }}-${{ steps.get-sha.outputs.sha }}"
+          ARCHIVE="${ARTIFACT_NAME}.tar.gz"
+
+          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+
+          echo "Archiving current bucket state before the destructive (--delete) sync..."
+          echo "The status bucket is unversioned; this artifact is the rollback source."
+
+          mkdir -p "$ROLLBACK_DIR"
+
+          # Mirror the live site to a local dir. Fail closed: a partial/missing
+          # rollback mirror must stop the job before any destructive upload.
+          # A successful sync that copies no objects is a valid first deploy.
+          # data/ is rewritten every minute by the publisher, so it is not part
+          # of the site to roll back.
+          if ! aws s3 sync "s3://${STATUS_BUCKET}/" "$ROLLBACK_DIR/" --exclude "data/*" --quiet; then
+            echo "::error::Failed to capture the current status bucket; refusing destructive deployment"
+            exit 1
+          fi
+
+          if [[ -z "$(ls -A "$ROLLBACK_DIR" 2>/dev/null)" ]]; then
+            echo "::notice::Bucket has no site files (likely first deploy) - no prior site to archive."
+            echo "archived=false" >> "$GITHUB_OUTPUT"
+          else
+            tar -czf "$ARCHIVE" -C "$ROLLBACK_DIR" .
+            echo "Created rollback archive: $ARCHIVE ($(du -sh "$ARCHIVE" | cut -f1))"
+            echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
+            echo "archived=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload Rollback Artifact
+        if: steps.rollback-archive.outputs.archived == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.rollback-archive.outputs.artifact_name }}
+          path: ${{ steps.rollback-archive.outputs.archive }}
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Record Existing Status Data
+        id: existing-data
+        run: |
+          STATUS_BUCKET="${{ env.STATUS_BUCKET }}"
+
+          # The validation gate fails on a missing data/status.json only when
+          # the publisher had already written it before this deploy.
+          if HEAD_ERROR=$(aws s3api head-object --bucket "$STATUS_BUCKET" --key data/status.json 2>&1 >/dev/null); then
+            echo "data/status.json exists before this deploy"
+            echo "had_data=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$HEAD_ERROR" == *"(404)"* ]]; then
+            echo "data/status.json does not exist yet (likely first deploy)"
+            echo "had_data=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Could not check data/status.json: $HEAD_ERROR"
+            exit 1
+          fi
+
+      - name: Upload Status Page to S3
+        id: upload-status
+        run: |
+          STATUS_BUCKET="${{ env.STATUS_BUCKET }}"
+          BUILD_DIR="apps/status/out"
+
+          echo "Uploading status page to S3 bucket: $STATUS_BUCKET"
+
+          cd "$BUILD_DIR"
+
+          # The publisher writes data/status.json into this bucket every minute.
+          # Every command below excludes data/* so a deploy never deletes or
+          # overwrites it, not even through --delete.
+
+          # New objects go up before anything is replaced or removed, so the live
+          # index.html keeps finding every file it references until the HTML swap.
+          echo "Uploading static assets with long cache..."
+          aws s3 sync . "s3://${STATUS_BUCKET}/" \
+            --cache-control "public, max-age=31536000" \
+            --exclude "*.html" \
+            --exclude "*.xml" \
+            --exclude "*.txt" \
+            --exclude "data/*" \
+            --quiet
+
+          # cp rather than sync: sync skips a file whose size is unchanged and
+          # whose destination is newer, and two builds' HTML often match in size.
+          echo "Uploading HTML page files with no cache..."
+          aws s3 cp . "s3://${STATUS_BUCKET}/" \
+            --recursive \
+            --exclude "*" \
+            --include "*.html" \
+            --exclude "data/*" \
+            --cache-control "public, max-age=0, must-revalidate" \
+            --quiet
+
+          echo "Uploading XML and TXT files with medium cache..."
+          aws s3 cp . "s3://${STATUS_BUCKET}/" \
+            --recursive \
+            --exclude "*" \
+            --include "*.xml" \
+            --include "*.txt" \
+            --exclude "data/*" \
+            --cache-control "public, max-age=86400" \
+            --quiet
+
+          # Every export file is already in the bucket, so --size-only makes this
+          # pass copy nothing: it only removes keys the export no longer has.
+          echo "Pruning objects that are not part of this build..."
+          aws s3 sync . "s3://${STATUS_BUCKET}/" \
+            --delete \
+            --size-only \
+            --exclude "data/*" \
+            --quiet
+
+          echo "✓ Status page uploaded successfully to S3"
+          echo "uploaded=true" >> $GITHUB_OUTPUT
+
+      - name: Invalidate CloudFront Distribution
+        if: steps.upload-status.outputs.uploaded == 'true' && env.CLOUDFRONT_DISTRIBUTION_ID != ''
+        run: |
+          CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
+
+          echo "Creating CloudFront invalidation for distribution: $CLOUDFRONT_DISTRIBUTION_ID"
+
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+            --paths "/*" \
+            --query "Invalidation.Id" \
+            --output text)
+          echo "CloudFront invalidation created with ID: $INVALIDATION_ID"
+
+          # Wait for invalidation to complete (improves reliability for immediate testing)
+          echo "Waiting for invalidation to complete..."
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+            --id "$INVALIDATION_ID"
+
+          echo "✅ CloudFront invalidation completed successfully"
+
+      - name: Get Status Page URLs
+        id: get-urls
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+        run: |
+          CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
+
+          # Production lives on the apex domain, every other environment under its own subdomain
+          if [[ "$TARGET_ENV" == "prod" ]]; then
+            STATUS_DOMAIN="status.openjii.org"
+          else
+            STATUS_DOMAIN="status.${TARGET_ENV}.openjii.org"
+          fi
+          echo "status_url=https://$STATUS_DOMAIN" >> $GITHUB_OUTPUT
+
+          # CloudFront URL
+          if [[ -n "$CLOUDFRONT_DISTRIBUTION_ID" ]]; then
+            CLOUDFRONT_DOMAIN=$(aws cloudfront get-distribution \
+              --id "$CLOUDFRONT_DISTRIBUTION_ID" \
+              --query "Distribution.DomainName" \
+              --output text 2>/dev/null || echo "")
+
+            if [[ -n "$CLOUDFRONT_DOMAIN" ]]; then
+              echo "cloudfront_url=https://$CLOUDFRONT_DOMAIN" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Run Deployed Status Page Validation Gate
+        id: remote-gate
+        shell: bash
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          HAD_DATA: ${{ steps.existing-data.outputs.had_data }}
+        run: |
+          BASE_URL="${{ steps.get-urls.outputs.status_url }}"
+          EXPECTED_TITLE="status"
+
+          echo "Validating deployed status page at $BASE_URL"
+
+          # Prints the HTTP status; the body goes to $2 and the headers to $3.
+          fetch() {
+            curl -sS --retry 5 --retry-delay 5 --retry-all-errors \
+              -o "$2" -D "$3" -w '%{http_code}' "$BASE_URL$1"
+          }
+
+          PAGE_FILE=$(mktemp)
+          PAGE_CODE=$(fetch / "$PAGE_FILE" /dev/null)
+          if [[ "$PAGE_CODE" != "200" ]]; then
+            echo "::error::$BASE_URL/ returned HTTP $PAGE_CODE, expected 200"
+            exit 1
+          fi
+          if ! grep -qiE "<title[^>]*>[^<]*${EXPECTED_TITLE}" "$PAGE_FILE"; then
+            echo "::error::$BASE_URL/ has no <title> containing '$EXPECTED_TITLE'"
+            exit 1
+          fi
+          echo "✓ $BASE_URL/ returned 200 with the expected title"
+
+          # The title is static HTML, so it passes even when every chunk is missing.
+          for EXTENSION in css js; do
+            ASSET_PATH=$(grep -oE "/_next/static/[A-Za-z0-9_./-]+\.${EXTENSION}" "$PAGE_FILE" | head -n 1 || true)
+            if [[ -z "$ASSET_PATH" ]]; then
+              echo "::error::$BASE_URL/ references no .${EXTENSION} file under /_next/static/"
+              exit 1
+            fi
+            ASSET_CODE=$(fetch "$ASSET_PATH" /dev/null /dev/null)
+            if [[ "$ASSET_CODE" != "200" ]]; then
+              echo "::error::$BASE_URL$ASSET_PATH returned HTTP $ASSET_CODE, expected 200"
+              exit 1
+            fi
+            echo "✓ $BASE_URL$ASSET_PATH returned 200"
+          done
+
+          # Only production is crawlable.
+          if [[ "$TARGET_ENV" == "prod" ]]; then
+            ROBOTS_WANTED="Allow: /"
+            ROBOTS_UNWANTED="Disallow: /"
+          else
+            ROBOTS_WANTED="Disallow: /"
+            ROBOTS_UNWANTED="Allow: /"
+          fi
+          ROBOTS_FILE=$(mktemp)
+          ROBOTS_CODE=$(fetch /robots.txt "$ROBOTS_FILE" /dev/null)
+          if [[ "$ROBOTS_CODE" != "200" ]]; then
+            echo "::error::$BASE_URL/robots.txt returned HTTP $ROBOTS_CODE, expected 200"
+            exit 1
+          fi
+          ROBOTS=$(tr -d '\r' < "$ROBOTS_FILE")
+          if ! grep -qxF "$ROBOTS_WANTED" <<< "$ROBOTS" || grep -qxF "$ROBOTS_UNWANTED" <<< "$ROBOTS"; then
+            echo "::error::$BASE_URL/robots.txt does not match $TARGET_ENV, expected '$ROBOTS_WANTED' and not '$ROBOTS_UNWANTED'"
+            exit 1
+          fi
+          echo "✓ $BASE_URL/robots.txt matches $TARGET_ENV"
+
+          DATA_FILE=$(mktemp)
+          DATA_HEADERS=$(mktemp)
+          DATA_CODE=$(fetch /data/status.json "$DATA_FILE" "$DATA_HEADERS")
+          case "$DATA_CODE" in
+            200)
+              if ! jq -e 'type == "object"' "$DATA_FILE" >/dev/null; then
+                echo "::error::$BASE_URL/data/status.json is not a valid JSON object"
+                exit 1
+              fi
+              echo "✓ $BASE_URL/data/status.json returned 200 with valid JSON"
+
+              # The publisher sets this; the page polls every minute and relies on it.
+              CACHE_CONTROL=$(grep -i '^cache-control:' "$DATA_HEADERS" | tr -d '\r' || true)
+              if ! grep -qiE 'max-age=30([^0-9]|$)' <<< "$CACHE_CONTROL"; then
+                echo "::error::$BASE_URL/data/status.json has no max-age=30 in its Cache-Control (${CACHE_CONTROL:-no header})"
+                exit 1
+              fi
+              echo "✓ $BASE_URL/data/status.json carries max-age=30"
+              ;;
+            404)
+              if [[ "$HAD_DATA" == "true" ]]; then
+                echo "::error::$BASE_URL/data/status.json returned 404 although it existed before this deploy"
+                exit 1
+              fi
+              # The publisher writes this object every minute, so the very first
+              # deploy can finish before its first run. A missing object is not a
+              # failed deploy, the page itself already passed.
+              echo "::warning::$BASE_URL/data/status.json returned 404; the publisher has not written it yet"
+              ;;
+            *)
+              echo "::error::$BASE_URL/data/status.json returned HTTP $DATA_CODE, expected 200"
+              exit 1
+              ;;
+          esac
+
+      - name: Publish DORA Metrics
+        if: always()
+        uses: ./.github/actions/publish-dora-metrics
+        with:
+          deployment-outcome: ${{ steps.remote-gate.outcome || steps.upload-status.outcome || 'failure' }}
+          service: "status"
+          environment: ${{ inputs.environment }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo ""
+          echo "=== Status Page Deployment Summary ==="
+          echo "Environment: ${{ inputs.environment }}"
+          echo "S3 Bucket: ${{ env.STATUS_BUCKET }}"
+          echo "Status Page Uploaded: ${{ steps.upload-status.outputs.uploaded || 'false' }}"
+          echo "Validation Gate: ${{ steps.remote-gate.outcome || 'not-run' }}"
+          if [[ "${{ steps.rollback-archive.outputs.archived }}" == "true" ]]; then
+            echo "Rollback Artifact: ${{ steps.rollback-archive.outputs.artifact_name }}"
+          else
+            echo "Rollback Artifact: not created (pre-deploy bucket had no site files or capture did not complete)"
+          fi
+
+          CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
+          if [[ -n "$CLOUDFRONT_DISTRIBUTION_ID" ]]; then
+            echo "CloudFront Distribution: $CLOUDFRONT_DISTRIBUTION_ID"
+          else
+            echo "CloudFront Distribution: Not found"
+          fi
+
+          echo ""
+          echo "=== Status Page URLs ==="
+
+          # CloudFront URL
+          CLOUDFRONT_URL="${{ steps.get-urls.outputs.cloudfront_url }}"
+          if [[ -n "$CLOUDFRONT_URL" ]]; then
+            echo "CloudFront URL: $CLOUDFRONT_URL"
+          fi
+
+          # Custom domain URL
+          STATUS_URL="${{ steps.get-urls.outputs.status_url }}"
+          if [[ -n "$STATUS_URL" ]]; then
+            echo "Custom Domain: $STATUS_URL"
+          fi
+
+          # Check overall deployment success
+          UPLOADED="${{ steps.upload-status.outputs.uploaded }}"
+          GATE_OUTCOME="${{ steps.remote-gate.outcome }}"
+          if [[ "$UPLOADED" == "true" && "$GATE_OUTCOME" == "success" ]]; then
+            echo ""
+            echo "✅ Status page deployment completed successfully!"
+            echo "The status page has been updated in the ${{ inputs.environment }} environment"
+            echo "Deployment finished at $(date)"
+          elif [[ "$UPLOADED" == "true" ]]; then
+            echo ""
+            echo "❌ Status page uploaded, but the validation gate did not pass (${GATE_OUTCOME:-not-run})"
+            echo "Please check the logs above for details"
+            exit 1
+          else
+            echo ""
+            echo "❌ Status page deployment failed"
+            echo "Please check the logs above for details"
+            exit 1
+          fi
+          echo ""

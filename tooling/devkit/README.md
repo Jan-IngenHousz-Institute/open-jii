@@ -8,27 +8,28 @@ Run them from the repo root through the aliases in the root `package.json`. Run 
 commands in the main checkout: every worktree finds a key stored there, while a key stored in a
 linked worktree serves only that worktree.
 
-| Command                                   | What it does                                            |
-| ----------------------------------------- | ------------------------------------------------------- |
-| `pnpm local:login`                        | Signs in the seed user and writes a session header file |
-| `pnpm linear:auth`                        | Stores your Linear key in `tooling/devkit/.env`         |
-| `pnpm linear:query`                       | Runs one GraphQL document against Linear                |
-| `pnpm linear:check`                       | Checks a ticket draft against the ticket standard       |
-| `pnpm linear:create`                      | Creates the tickets in a draft, with comments and links |
-| `pnpm linear:milestones`                  | Creates, renames and orders a project's milestones      |
-| `pnpm linear:document`                    | Publishes a project document from a Markdown file       |
-| `pnpm linear:upload`                      | Uploads a file to Linear and prints its asset URL       |
-| `pnpm linear:resources`                   | Adds outside links to a project's Resources             |
-| `pnpm linear:view`                        | Creates a project's shared ticket view and its document |
-| `pnpm linear:taxonomy`                    | Plans and applies the `OJD` label taxonomy              |
-| `pnpm linear:apply`                       | Applies a reviewed per-ticket change file in batches    |
-| `pnpm posthog:auth`                       | Stores your PostHog key in `tooling/devkit/.env`        |
-| `pnpm posthog:query`                      | Runs one HogQL query against the openJII project        |
-| `pnpm posthog:issues`                     | Lists, shows and triages open error-tracking issues     |
-| `pnpm grafana:auth`                       | Stores your Grafana token for the daily round           |
-| `pnpm grafana:get`                        | Reads one path of a Grafana workspace's API             |
-| `pnpm round:read`                         | Writes the daily round's reading of one environment     |
-| `pnpm --filter @repo/devkit env:generate` | Regenerates the `.env.example` files from the manifest  |
+| Command                                   | What it does                                                |
+| ----------------------------------------- | ----------------------------------------------------------- |
+| `pnpm local:login`                        | Signs in the seed user and writes a session header file     |
+| `pnpm linear:auth`                        | Stores your Linear key in `tooling/devkit/.env`             |
+| `pnpm linear:query`                       | Runs one GraphQL document against Linear                    |
+| `pnpm linear:check`                       | Checks a ticket draft against the ticket standard           |
+| `pnpm linear:create`                      | Creates the tickets in a draft, with comments and links     |
+| `pnpm linear:milestones`                  | Creates, renames and orders a project's milestones          |
+| `pnpm linear:document`                    | Publishes a project document from a Markdown file           |
+| `pnpm linear:upload`                      | Uploads a file to Linear and prints its asset URL           |
+| `pnpm linear:resources`                   | Adds outside links to a project's Resources                 |
+| `pnpm linear:view`                        | Creates a project's shared ticket view and its document     |
+| `pnpm linear:taxonomy`                    | Plans and applies the `OJD` label taxonomy                  |
+| `pnpm linear:apply`                       | Applies a reviewed per-ticket change file in batches        |
+| `pnpm posthog:auth`                       | Stores your PostHog key in `tooling/devkit/.env`            |
+| `pnpm posthog:query`                      | Runs one HogQL query against the openJII project            |
+| `pnpm posthog:issues`                     | Lists, shows and triages open error-tracking issues         |
+| `pnpm grafana:auth`                       | Stores your Grafana token for the daily round               |
+| `pnpm grafana:get`                        | Reads one path of a Grafana workspace's API                 |
+| `pnpm round:read`                         | Writes the daily round's reading of one environment         |
+| `pnpm status:fixtures`                    | Serves a sample status file to the status page's dev server |
+| `pnpm --filter @repo/devkit env:generate` | Regenerates the `.env.example` files from the manifest      |
 
 ## Linear access
 

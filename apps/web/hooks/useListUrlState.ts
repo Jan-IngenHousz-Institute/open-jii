@@ -1,7 +1,8 @@
 "use client";
 
+import { useListDeparture } from "@/components/navigation/list-departure/list-departure";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { z } from "zod";
 
 export type ListFilterShape = Record<string, z.ZodEnum<Readonly<Record<string, string>>>>;
@@ -18,8 +19,8 @@ export interface ListUrlStateOptions<S extends ListFilterShape, T extends ListSo
   filters: S;
   /** The resource's sort allowlist, written as `?sort=<json>`. */
   sort: z.ZodType<T[]>;
-  /** Writes search to the URL under this key; without it, search stays in memory. */
-  searchKey?: string;
+  /** Searchable lists own q; sort-only lists explicitly leave it alone. */
+  searchKey: "q" | null;
 }
 
 interface ListUrlValues<S extends ListFilterShape, T extends ListSortItem> {
@@ -99,119 +100,210 @@ function toggleSortItem<T extends ListSortItem>(sort: T[], field: T["field"], mu
   return next ? [...other.slice(-1), { field, direction: next } as T] : other;
 }
 
+function buildUrl<S extends ListFilterShape, T extends ListSortItem>(
+  options: ListUrlStateOptions<S, T>,
+  values: ListUrlValues<S, T>,
+  source: URL,
+): string {
+  const next = new URLSearchParams(source.search);
+  for (const [key, value] of toParams(options, values)) {
+    if (value === null) next.delete(key);
+    else next.set(key, value);
+  }
+  const query = next.toString().replace(/%2C/g, ",");
+  return `${source.pathname}${query ? `?${query}` : ""}${source.hash}`;
+}
+
 /**
- * A list's filters, sort and optional search, held together and written to the URL in one
- * navigation. Separate writers each built their URL from the same stale params, so one change
- * could undo another. Writes replace history without scrolling and keep params the list does
- * not own; back and forward restore the state.
+ * One writer merges search, filters and sort so concurrent edits cannot undo each other.
+ * Replacements preserve unowned parameters and scroll without adding history steps.
  */
 export function useListUrlState<S extends ListFilterShape, T extends ListSortItem>(
-  options: ListUrlStateOptions<S, T>,
+  config: ListUrlStateOptions<S, T>,
 ) {
+  const { filters, sort, searchKey } = config;
+  const options = useMemo(() => ({ filters, sort, searchKey }), [filters, sort, searchKey]);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const departure = useListDeparture();
+  const [values, setValues] = useState(() => parse(options, searchParams));
+  const snapshot = useRef(values);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const generation = useRef(0);
+  const mounted = useRef(false);
+  const pending = useRef(false);
+  const intent = useRef<"search" | "immediate" | null>("immediate");
+  const emitted = useRef<string[]>([]);
+  const observed = useRef<{ pathname: string; serialized: string } | null>(null);
+  observed.current ??= { pathname, serialized: serialize(toParams(options, values)) };
+  const lastBrowserUrl = useRef<string | null>(null);
 
-  const [values, setValues] = useState<ListUrlValues<S, T>>(() => parse(options, searchParams));
+  const cancel = useCallback(() => {
+    if (timer.current !== null) clearTimeout(timer.current);
+    timer.current = null;
+    generation.current += 1;
+  }, []);
 
-  const serialized = serialize(toParams(options, values));
-  const urlSerialized = serialize(toParams(options, parse(options, searchParams)));
-  // Writes the URL has not echoed yet, oldest first; one arriving late is not a back/forward step.
-  const pendingWrites = useRef<string[]>([]);
-  // Set by the browser's back or forward, which the URL must win over any pending write.
-  const isHistoryStep = useRef(false);
-
-  /** Writes this render's state over this render's params, keeping params the list does not own. */
-  const writeUrl = () => {
-    const current = searchParams.toString();
-    const next = new URLSearchParams(current);
-    for (const [key, value] of toParams(options, values)) {
-      if (value === null) {
-        next.delete(key);
+  const write = useCallback(
+    (transport: "router" | "history") => {
+      cancel();
+      if (!mounted.current || window.location.pathname !== pathname) return;
+      const source = new URL(window.location.href);
+      const next = buildUrl(options, snapshot.current, source);
+      pending.current = false;
+      intent.current = null;
+      const written = serialize(toParams(options, snapshot.current));
+      if (transport === "history") observed.current = { pathname, serialized: written };
+      const query = source.searchParams.toString().replace(/%2C/g, ",");
+      if (next === `${source.pathname}${query ? `?${query}` : ""}${source.hash}`) return;
+      if (transport === "history") {
+        window.history.replaceState(null, "", next);
+        lastBrowserUrl.current = window.location.href;
       } else {
-        next.set(key, value);
+        emitted.current.push(written);
+        router.replace(next, { scroll: false });
       }
-    }
-    // URLSearchParams encodes the commas; the raw form is the one people share.
-    const qs = next.toString().replace(/%2C/g, ",");
-    if (qs === current.replace(/%2C/g, ",")) return;
-    pendingWrites.current.push(serialized);
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  };
+    },
+    [cancel, options, pathname, router],
+  );
 
-  // Only a change of the list's own state should write.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `serialized` stands for `values`.
-  useEffect(writeUrl, [serialized, pathname, router]);
+  const flush = useCallback(() => {
+    if (pending.current) write("history");
+  }, [write]);
 
   useEffect(() => {
+    mounted.current = true;
+    lastBrowserUrl.current = window.location.href;
     const onHistoryStep = () => {
-      isHistoryStep.current = true;
+      const current = new URL(window.location.href);
+      const previous = lastBrowserUrl.current ? new URL(lastBrowserUrl.current) : null;
+      lastBrowserUrl.current = current.href;
+      if (
+        previous?.pathname === current.pathname &&
+        previous.search === current.search &&
+        previous.hash !== current.hash
+      )
+        return;
+      cancel();
+      pending.current = false;
+      intent.current = null;
+      emitted.current = [];
+      const restored = parse(options, new URLSearchParams(window.location.search));
+      observed.current = {
+        pathname: window.location.pathname,
+        serialized: serialize(toParams(options, restored)),
+      };
+      snapshot.current = restored;
+      setValues(restored);
     };
     window.addEventListener("popstate", onHistoryStep);
-    return () => window.removeEventListener("popstate", onHistoryStep);
-  }, []);
+    return () => {
+      mounted.current = false;
+      cancel();
+      pending.current = false;
+      intent.current = null;
+      emitted.current = [];
+      window.removeEventListener("popstate", onHistoryStep);
+    };
+  }, [cancel, options, pathname]);
 
-  // Back/forward replay.
   useEffect(() => {
-    if (isHistoryStep.current) {
-      isHistoryStep.current = false;
-      pendingWrites.current = [];
-      if (urlSerialized !== serialized) setValues(parse(options, searchParams));
+    if (!options.searchKey) return;
+    return departure?.register(flush);
+  }, [departure, flush, options.searchKey]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- a native flush and same-path push can retain Next's params object; reconcile the live URL after every render.
+  useEffect(() => {
+    if (window.location.pathname !== pathname) return;
+    lastBrowserUrl.current = window.location.href;
+    const params = new URLSearchParams(window.location.search);
+    const restored = parse(options, params);
+    const urlSerialized = serialize(toParams(options, restored));
+    const samePath = observed.current?.pathname === pathname;
+    if (
+      samePath &&
+      observed.current?.serialized === urlSerialized &&
+      (pending.current ||
+        emitted.current.length > 0 ||
+        serialize(toParams(options, snapshot.current)) === urlSerialized)
+    )
       return;
-    }
-    // Navigations commit in the order they were sent, so an echo settles every older write too.
-    const echoed = pendingWrites.current.indexOf(urlSerialized);
-    if (echoed >= 0) pendingWrites.current = pendingWrites.current.slice(echoed + 1);
-    if (urlSerialized === serialized) {
-      // A write of the state the URL already shows changes nothing, so it never echoes.
-      pendingWrites.current = pendingWrites.current.filter((write) => write !== serialized);
-      return;
-    }
-    // A late echo of an earlier write: the state has moved on, so write it again.
+    observed.current = { pathname, serialized: urlSerialized };
+    const echoed = samePath ? emitted.current.indexOf(urlSerialized) : -1;
     if (echoed >= 0) {
-      writeUrl();
+      emitted.current = emitted.current.slice(echoed + 1);
+      const latest = serialize(toParams(options, snapshot.current));
+      // A write of the state the URL already shows changes nothing, so it never echoes.
+      if (latest === urlSerialized)
+        emitted.current = emitted.current.filter((entry) => entry !== latest);
+      // An acknowledgment never commits a newer draft ahead of its timer or repeats one in flight.
+      else if (!pending.current && !emitted.current.includes(latest)) write("router");
       return;
     }
-    setValues(parse(options, searchParams));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally drives off URL change only.
-  }, [urlSerialized]);
+    cancel();
+    pending.current = false;
+    intent.current = null;
+    emitted.current = [];
+    snapshot.current = restored;
+    setValues(restored);
+  });
 
-  const setFilter = useCallback(<K extends keyof S>(key: K, next: z.infer<S[K]>[]) => {
-    setValues((previous) => ({
-      ...previous,
-      filters: { ...previous.filters, [key]: [...new Set(next)] },
-    }));
-  }, []);
+  useEffect(() => {
+    if (intent.current === null) return;
+    if (intent.current === "immediate") {
+      write("router");
+      return;
+    }
+    cancel();
+    const scheduled = generation.current;
+    timer.current = setTimeout(() => {
+      if (generation.current === scheduled) write("router");
+    }, 300);
+  }, [cancel, values, write]);
 
-  const clearFilters = useCallback(() => {
-    setValues((previous) => ({
-      ...previous,
-      filters: parse(options, new URLSearchParams()).filters,
-    }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the shape is a module constant.
-  }, []);
-
-  const setSort = useCallback((sort: T[]) => {
-    setValues((previous) => ({ ...previous, sort }));
-  }, []);
-
-  const toggleSort = useCallback((field: T["field"], multi: boolean) => {
-    setValues((previous) => ({ ...previous, sort: toggleSortItem(previous.sort, field, multi) }));
-  }, []);
-
-  const setSearch = useCallback((search: string) => {
-    setValues((previous) => ({ ...previous, search }));
-  }, []);
-
-  const hasActiveFilters = Object.values<string[]>(values.filters).some(
-    (picked) => picked.length > 0,
-  );
+  const update = (next: ListUrlValues<S, T>, immediate: boolean) => {
+    snapshot.current = next;
+    pending.current = true;
+    if (immediate || intent.current !== "immediate")
+      intent.current = immediate ? "immediate" : "search";
+    setValues(next);
+  };
+  const setFilter = <K extends keyof S>(key: K, next: z.infer<S[K]>[]) => {
+    update(
+      { ...snapshot.current, filters: { ...snapshot.current.filters, [key]: [...new Set(next)] } },
+      true,
+    );
+  };
+  const clearFilters = () =>
+    update(
+      {
+        ...snapshot.current,
+        filters: parse(options, new URLSearchParams()).filters,
+      },
+      true,
+    );
+  const setSort = (sort: T[]) => update({ ...snapshot.current, sort }, true);
+  const toggleSort = (field: T["field"], multi: boolean) => {
+    update(
+      { ...snapshot.current, sort: toggleSortItem(snapshot.current.sort, field, multi) },
+      true,
+    );
+  };
+  const setSearch = (search: string) => {
+    if (!options.searchKey) {
+      snapshot.current = { ...snapshot.current, search };
+      setValues(snapshot.current);
+      return;
+    }
+    update({ ...snapshot.current, search }, false);
+  };
 
   return {
     filters: values.filters,
     setFilter,
     clearFilters,
-    hasActiveFilters,
+    hasActiveFilters: Object.values<string[]>(values.filters).some((picked) => picked.length > 0),
     sort: values.sort,
     setSort,
     toggleSort,

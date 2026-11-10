@@ -80,6 +80,18 @@ vi.mock("@repo/transactional/render/calibration-run-rejected-notification", () =
   renderCalibrationRunRejectedNotification: vi.fn(),
 }));
 
+vi.mock("@repo/transactional/render/data-upload-completed-notification", () => ({
+  renderDataUploadCompletedNotification: vi.fn(),
+}));
+
+vi.mock("@repo/transactional/render/data-upload-failed-notification", () => ({
+  renderDataUploadFailedNotification: vi.fn(),
+}));
+
+vi.mock("@repo/transactional/render/data-upload-partly-completed-notification", () => ({
+  renderDataUploadPartlyCompletedNotification: vi.fn(),
+}));
+
 // Mock analytics server
 vi.mock("@repo/analytics/server", async (importOriginal) => ({
   ...(await importOriginal<typeof AnalyticsServer>()),

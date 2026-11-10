@@ -1,6 +1,7 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { useDepartureRouter } from "@/components/navigation/list-departure/list-departure";
 import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
 import { ownName, personName } from "@/components/people/person-name";
 import { LocalTime } from "@/components/shared/local-time";
@@ -12,7 +13,6 @@ import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkboo
 import { orpc } from "@/lib/orpc";
 import { useQueryClient } from "@tanstack/react-query";
 import { GitFork, MoreHorizontal, Pencil } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 import type { WorkbookListEntry } from "@repo/api/domains/workbook/workbook.schema";
 import type { WorkbookListItem } from "@repo/api/domains/workbook/workbook.schema";
@@ -34,7 +34,7 @@ import { overviewTableText } from "./overview-table";
 function WorkbookActionsCell({ workbook, href }: { workbook: WorkbookListItem; href: string }) {
   const { t } = useTranslation("workbook");
   const locale = useLocale();
-  const router = useRouter();
+  const router = useDepartureRouter();
   const queryClient = useQueryClient();
 
   const { mutate: createWorkbook, isPending: isDuplicating } = useWorkbookCreate({

@@ -1,8 +1,10 @@
 import type { Options } from "@contentful/rich-text-react-renderer";
 import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
-import type { Document, Node } from "@contentful/rich-text-types";
+import type { Block, Document, Node } from "@contentful/rich-text-types";
 import { BLOCKS, INLINES, MARKS } from "@contentful/rich-text-types";
 import React from "react";
+
+import { LinesPanel } from "./lines-panel";
 
 interface EmbeddedButton {
   __typename: "ComponentButton";
@@ -22,7 +24,27 @@ export interface EmailRichTextInterface {
   };
 }
 
+/**
+ * Opens each item of a list variable once it is substituted. Soft breaks typed into an entry's
+ * own text are left alone: they have always rendered as spaces, and published emails rely on it.
+ */
+export const VARIABLE_LIST_ITEM = String.fromCodePoint(0xe000);
+
+/** The items of a paragraph that holds nothing but a list variable, else null. */
+const listItems = (node: Node): string[] | null => {
+  const content = (node as Block).content;
+  const only = content.length === 1 ? content[0] : undefined;
+  return only?.nodeType === "text" && only.value.startsWith(VARIABLE_LIST_ITEM)
+    ? only.value.split(VARIABLE_LIST_ITEM).slice(1)
+    : null;
+};
+
 const emailRichTextOptions = (links?: EmailRichTextInterface["links"]): Options => ({
+  renderText: (text) =>
+    text
+      .split(VARIABLE_LIST_ITEM)
+      .filter((line, index) => index > 0 || line !== "")
+      .flatMap((line, index) => (index === 0 ? [line] : [<br key={index} />, line])),
   renderMark: {
     [MARKS.BOLD]: (text) => <strong className="font-semibold">{text}</strong>,
     [MARKS.ITALIC]: (text) => <em className="italic">{text}</em>,
@@ -47,9 +69,11 @@ const emailRichTextOptions = (links?: EmailRichTextInterface["links"]): Options 
     [BLOCKS.HEADING_6]: (_node: Node, children: React.ReactNode) => (
       <h6 className="my-2 text-base font-semibold">{children}</h6>
     ),
-    [BLOCKS.PARAGRAPH]: (_node: Node, children: React.ReactNode) => (
-      <p className="my-4 leading-5 last:mb-0">{children}</p>
-    ),
+    [BLOCKS.PARAGRAPH]: (node: Node, children: React.ReactNode) => {
+      const lines = listItems(node);
+      if (lines) return <LinesPanel lines={lines} />;
+      return <p className="my-4 leading-5 last:mb-0">{children}</p>;
+    },
     [BLOCKS.UL_LIST]: (_node: Node, children: React.ReactNode) => (
       <ul className="my-4 list-disc space-y-1 pl-6">{children}</ul>
     ),

@@ -1,0 +1,188 @@
+{
+  "title": "Platformstatus",
+  "metadata": {
+    "title": "openJII-status",
+    "description": "Actuele status van het openJII-platform en de bijbehorende diensten."
+  },
+  "notFound": {
+    "title": "Pagina niet gevonden",
+    "body": "Op dit adres staat geen pagina.",
+    "home": "Naar de huidige status"
+  },
+  "theme": {
+    "toggle": "Thema wisselen",
+    "switchToLight": "Naar lichte modus wisselen",
+    "switchToDark": "Naar donkere modus wisselen"
+  },
+  "header": {
+    "home": "Startpagina van openJII"
+  },
+  "duration": {
+    "minutes": "{{minutes}} min",
+    "hours": "{{hours}} u",
+    "hoursMinutes": "{{hours}} u {{minutes}} min",
+    "days": "{{days}} d",
+    "daysHours": "{{days}} d {{hours}} u"
+  },
+  "freshness": {
+    "lastChecked": "Laatst gecontroleerd om {{time}} UTC, {{ago}}.",
+    "justNow": "zojuist",
+    "ago": "{{duration}} geleden",
+    "delayed": "Onze controles hebben voor het laatst om {{time}} UTC resultaten gemeld, {{ago}}.",
+    "refreshFailed": "We konden deze pagina niet vernieuwen en proberen het elke minuut opnieuw. Tot die tijd toont ze de status van {{time}} UTC."
+  },
+  "skeleton": {
+    "label": "De huidige status wordt geladen",
+    "slow": "Laden duurt langer dan normaal, wat vaak komt door een trage of verbroken verbinding."
+  },
+  "noscript": "Deze pagina heeft JavaScript nodig om de huidige status te tonen.",
+  "unavailable": {
+    "title": "Status niet beschikbaar",
+    "body": "We konden de nieuwste status niet laden en kunnen dus niet zeggen of er iets mis is. De pagina probeert het elke minuut opnieuw, dus je hoeft haar niet te herladen.",
+    "help": "Laden andere websites wel en deze pagina nog steeds niet, <help>meld dan het probleem</help>."
+  },
+  "headline": {
+    "operational": {
+      "title": "Alle systemen werken",
+      "description": "Op dit moment is geen enkel onderdeel beperkt of uitgevallen.",
+      "help": "Werkt er bij jou toch iets niet, controleer dan eerst je verbinding en <help>meld daarna het probleem</help>."
+    },
+    "stale": {
+      "title": "De status is mogelijk niet meer actueel",
+      "description": "De onderdelen hieronder tonen de laatste status die onze controles hebben gemeld."
+    },
+    "maintenance_one": "{{names}} is in gepland onderhoud.",
+    "maintenance_other": "{{names}} zijn in gepland onderhoud.",
+    "maintenanceUntil_one": "{{names}} is in gepland onderhoud tot {{time}} UTC.",
+    "maintenanceUntil_other": "{{names}} zijn in gepland onderhoud tot {{time}} UTC.",
+    "outage_one": "{{names}} is uitgevallen.",
+    "outage_other": "{{names}} zijn uitgevallen.",
+    "degraded_one": "{{names}} werkt beperkt.",
+    "degraded_other": "{{names}} werken beperkt.",
+    "othersOperational_one": "{{names}} werkt normaal.",
+    "othersOperational_other": "{{names}} werken normaal."
+  },
+  "badge": {
+    "operational": "In bedrijf",
+    "degraded": "Beperkt",
+    "outage": "Uitval",
+    "maintenance": "Onderhoud",
+    "resolved": "Opgelost",
+    "scheduled": "Gepland",
+    "in-progress": "Bezig",
+    "completed": "Afgerond"
+  },
+  "legend": {
+    "operational": "In bedrijf",
+    "degraded": "Beperkt",
+    "outage": "Uitval",
+    "maintenance": "Onderhoud",
+    "none": "Geen gegevens"
+  },
+  "incident": {
+    "affects": "Getroffen: {{components}}.",
+    "started": "Begonnen op {{date}}, {{time}} UTC.",
+    "postedAt": "{{date}}, {{time}} UTC",
+    "nextUpdateBy": "Volgende update uiterlijk {{time}} UTC.",
+    "stage": {
+      "investigating": "Wordt onderzocht",
+      "identified": "Oorzaak gevonden",
+      "monitoring": "Wordt gevolgd",
+      "resolved": "Opgelost",
+      "scheduled": "Gepland",
+      "in-progress": "Bezig",
+      "completed": "Afgerond"
+    }
+  },
+  "maintenance": {
+    "windowSameDay": "{{date}}, {{from}} tot {{to}} UTC",
+    "windowSpansDays": "{{from}} tot {{to}} UTC",
+    "windowOpenEnded": "Vanaf {{from}} UTC"
+  },
+  "components": {
+    "title": "Onderdelen"
+  },
+  "history": {
+    "legend": "Kleurenlegenda van de geschiedenisbalken",
+    "group": "{{name}}, afgelopen {{days}} dagen",
+    "daysAgo": "{{days}} dagen geleden",
+    "uptime": "{{uptime}} beschikbaar in de afgelopen 90 dagen",
+    "uptimeSince": "{{uptime}} beschikbaar sinds {{date}}",
+    "degraded": "{{degraded}} beperkt",
+    "today": "Vandaag",
+    "problemDays": "Dagen waarop niet alles in bedrijf was",
+    "noProblemDays": "Geen uitval of beperkte werking in de afgelopen 90 dagen."
+  },
+  "component": {
+    "delayNow": "De traagste recente metingen duurden ongeveer {{minutes}} minuten.",
+    "website": {
+      "name": "Website",
+      "description": "De openJII-website die je in een browser opent.",
+      "details": "Elke minuut laden we een pagina van de openJII-website van buiten ons netwerk en controleren we of die antwoordt en de productnaam bevat. De website werkt beperkt na twee trage of mislukte controles achter elkaar. Een controle is traag als die langer dan 3 seconden duurt. De website is uitgevallen na drie mislukte controles achter elkaar, of als er in de afgelopen 15 minuten minstens 20 verzoeken binnenkwamen en meer dan de helft daarvan mislukte."
+    },
+    "sign-in": {
+      "name": "Inloggen",
+      "description": "Inloggen op je openJII-account.",
+      "details": "Inloggen met een e-mailcode heeft onze e-mailservice nodig. Elke vijf minuten test het platform zijn verbinding met die service. Inloggen werkt beperkt als in de afgelopen 10 minuten elke test mislukt."
+    },
+    "platform": {
+      "name": "Platform",
+      "description": "De openJII-dienst achter de website en de veldapp.",
+      "details": "Elke minuut sturen we een testverzoek naar het platform en meten we hoe snel het antwoordt. Elke vijf minuten controleert het platform ook zijn eigen verbindingen met de database en met Databricks, onze leverancier voor gegevensverwerking. Het platform werkt beperkt na twee trage of mislukte testverzoeken achter elkaar, of als de verbinding met Databricks in de afgelopen 10 minuten bij elke controle mislukte. Een testverzoek is traag als het langer dan 2 seconden duurt. Het platform is uitgevallen na drie mislukte testverzoeken achter elkaar, als de verbinding met de database in de afgelopen 10 minuten bij elke controle mislukte, of als er in de afgelopen 15 minuten minstens 10 verzoeken eindigden in een serverfout en die meer dan de helft van alle verzoeken uitmaakten."
+    },
+    "data-intake": {
+      "name": "Data-invoer",
+      "description": "Metingen van apparaten en de veldapp die bij openJII aankomen.",
+      "details": "De data-invoer werkt beperkt als in de afgelopen 15 minuten de stap die binnenkomende metingen opslaat een meting niet kon opslaan, het apparaatnetwerk door een eigen fout een upload niet kon aannemen, of er te veel metingen tegelijk binnenkwamen en sommige werden vastgehouden. Ook als de verbinding van het platform met het apparaatnetwerk in de afgelopen 10 minuten bij elke controle mislukte, werkt de invoer beperkt. De invoer is uitgevallen als in de afgelopen 15 minuten meer dan vijf metingen niet konden worden opgeslagen."
+    },
+    "data-delivery": {
+      "name": "Datalevering",
+      "description": "Nieuwe metingen die in je experimenten verschijnen.",
+      "details": "Elk half uur meldt de datapijplijn hoe lang het duurde om de traagste nieuwe metingen aan experimenten toe te voegen. De datalevering werkt beperkt als dat langer dan 15 minuten duurde, als de pijplijn meer dan 10 minuten achterloopt met het inlezen van nieuwe metingen, of als de verbinding met Databricks, onze leverancier voor gegevensverwerking, in de afgelopen 10 minuten bij elke controle mislukte. De datalevering is uitgevallen als het langer dan een uur duurde, als de pijplijn een uur lang geen nieuwe meting heeft opgeslagen terwijl apparaten metingen versturen, of als de pijplijn 75 minuten lang niets heeft gemeld."
+    },
+    "macro-processing": {
+      "name": "Macroverwerking",
+      "description": "Macro's die op je metingen draaien.",
+      "details": "De macroverwerking werkt beperkt als in het afgelopen uur een macro mislukte door een probleem aan onze kant, als er nog een achterstand van metingen op macroresultaten wacht, of als de traagste resultaten meer dan 5 minuten na hun metingen binnenkwamen. De macroverwerking is uitgevallen als de traagste resultaten meer dan 30 minuten na hun metingen binnenkwamen. Fouten in de eigen macrocode van een onderzoeker tellen niet mee."
+    },
+    "exports": {
+      "name": "Exports",
+      "description": "Het downloaden van experimentdata.",
+      "details": "Dit telt exports die mislukken door een probleem aan onze kant, niet door de data of het verzoek. Exports werken beperkt als er in het afgelopen uur een export op die manier is mislukt."
+    }
+  },
+  "day": {
+    "noRecord": "Geen gegevens, omdat de controles op {{date}} begonnen.",
+    "noDowntime": "Op deze dag is geen uitval geregistreerd.",
+    "related": "Gerelateerd",
+    "partial": "Vandaag, tot nu toe",
+    "row": {
+      "outage": "Uitval",
+      "degraded": "Beperkt",
+      "maintenance": "Onderhoud",
+      "unknown": "Controles konden niet worden uitgevoerd"
+    },
+    "aria": {
+      "noRecord": "{{date}}: geen gegevens, de controles begonnen op {{began}}",
+      "noDowntime": "{{date}}: geen uitval geregistreerd",
+      "summary": "{{date}}: {{summary}}",
+      "outage": "Uitval gedurende {{duration}}",
+      "degraded": "Beperkt gedurende {{duration}}",
+      "maintenance": "Onderhoud gedurende {{duration}}",
+      "unknown": "controles konden {{duration}} lang niet worden uitgevoerd",
+      "related": "gerelateerde incidenten: {{titles}}",
+      "todayDate": "{{date}}, vandaag tot nu toe"
+    }
+  },
+  "howWeMeasure": {
+    "title": "Hoe we meten",
+    "states": "Beperkt betekent dat een onderdeel traag is of maar gedeeltelijk werkt. Uitval, ook wel uitgevallen genoemd, betekent dat het niet werkt.",
+    "checks": "We testen de website en het platform elke minuut van buitenaf. Voor de rest gebruiken we de eigen cijfers van het platform. Het platform controleert zijn verbindingen elke vijf minuten en de datapijplijn stuurt elk half uur een rapport. Open een onderdeel om precies te zien wat als beperkt en als uitgevallen geldt.",
+    "uptime": "De beschikbaarheid is het deel van de minuten in de afgelopen 90 UTC-dagen waarin een onderdeel niet was uitgevallen. Minuten waarin onze eigen controles niet konden worden uitgevoerd, tellen als uitval. De tijd dat een onderdeel beperkt werkte, staat ernaast. Gepland onderhoud staat wel in de balken, maar telt niet mee in het cijfer. Een dag wordt als Beperkt gemarkeerd vanaf vijf minuten beperkte werking, en kortere haperingen blijven zichtbaar in de details van die dag."
+  },
+  "past": {
+    "title": "Eerdere incidenten",
+    "empty": "Geen incidenten in de afgelopen 90 dagen."
+  },
+  "footer": "Deze pagina wordt los van openJII gehost, zodat ze naar verwachting bereikbaar blijft wanneer het platform uitvalt."
+}

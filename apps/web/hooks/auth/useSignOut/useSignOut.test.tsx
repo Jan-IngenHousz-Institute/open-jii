@@ -1,3 +1,7 @@
+import {
+  ListDepartureProvider,
+  useListDeparture,
+} from "@/components/navigation/list-departure/list-departure";
 import { myJoinRequestQueryKey } from "@/hooks/experiment/join-request/useMyJoinRequest/useMyJoinRequest";
 import { experimentAccessQueryKey } from "@/hooks/experiment/useExperimentAccess/experiment-access-query";
 import { myOrganizationInvitationsQueryKey } from "@/hooks/organization/organization-cache";
@@ -8,7 +12,9 @@ import {
 import { invitationsQueryKey } from "@/hooks/user-invitation/useUserInvitations/useUserInvitations";
 import { orpc } from "@/lib/orpc";
 import { createExperimentAccess } from "@/test/factories";
+import { render, fireEvent, screen, waitFor } from "@/test/test-utils";
 import { renderHook, createTestQueryClient } from "@/test/test-utils";
+import { useEffect } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { authClient } from "@repo/auth/client";
@@ -16,6 +22,27 @@ import { authClient } from "@repo/auth/client";
 import { useSignOut } from "./useSignOut";
 
 describe("useSignOut", () => {
+  it("flushes the list before signing out can invalidate the platform layout", async () => {
+    const flush = vi.fn();
+    vi.mocked(authClient.signOut).mockImplementationOnce(() => {
+      expect(flush).toHaveBeenCalledOnce();
+      return Promise.resolve({ data: { success: true }, error: null });
+    });
+    function Probe() {
+      const departure = useListDeparture();
+      const signOut = useSignOut();
+      useEffect(() => departure?.register(flush), [departure]);
+      return <button onClick={() => signOut.mutate()}>Sign out</button>;
+    }
+    render(
+      <ListDepartureProvider>
+        <Probe />
+      </ListDepartureProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await waitFor(() => expect(authClient.signOut).toHaveBeenCalledOnce());
+  });
+
   it("signs out and clears session cache", async () => {
     vi.mocked(authClient.signOut).mockResolvedValue({ data: { success: true }, error: null });
 

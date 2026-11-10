@@ -607,4 +607,61 @@ describe("EmailAdapter", () => {
       expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
     });
   });
+
+  describe("sendDataUploadCompletedNotification", () => {
+    it("delegates to NotificationsService with the input unchanged", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendDataUploadCompletedNotification")
+        .mockResolvedValue(success(undefined));
+      const input = {
+        experimentId: "exp-123",
+        experimentName: "Drought trial",
+        email: "uploader@example.com",
+      };
+
+      const result = await adapter.sendDataUploadCompletedNotification(input);
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
+    });
+  });
+
+  describe("sendDataUploadPartlyCompletedNotification", () => {
+    it("delegates to NotificationsService with the input unchanged", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendDataUploadPartlyCompletedNotification")
+        .mockResolvedValue(success(undefined));
+      const input = {
+        experimentId: "exp-123",
+        experimentName: "Drought trial",
+        skippedCount: "2",
+        skippedFiles: "broken.csv — could not be read\nempty.csv — no rows",
+        email: "uploader@example.com",
+      };
+
+      const result = await adapter.sendDataUploadPartlyCompletedNotification(input);
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
+    });
+  });
+
+  describe("sendDataUploadFailedNotification", () => {
+    it("delegates to NotificationsService with the input unchanged", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendDataUploadFailedNotification")
+        .mockResolvedValue(success(undefined));
+      const input = {
+        experimentId: "exp-123",
+        experimentName: "Drought trial",
+        tableName: "leaf_traits",
+        email: "uploader@example.com",
+      };
+
+      const result = await adapter.sendDataUploadFailedNotification(input);
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
+    });
+  });
 });

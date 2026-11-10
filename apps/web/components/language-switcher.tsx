@@ -1,7 +1,7 @@
 "use client";
 
+import { DepartureLink } from "@/components/navigation/list-departure/departure-link";
 import { Globe } from "lucide-react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
@@ -65,13 +65,13 @@ export function LanguageSwitcher({ locale, variant = "default" }: LanguageSwitch
       <DropdownMenuContent align="end">
         {locales.map((loc) => (
           <DropdownMenuItem key={loc.code} asChild>
-            <Link
+            <DepartureLink
               href={getLanguageSwitchUrl(loc.code)}
               className={`w-full cursor-pointer ${loc.code === locale ? "bg-accent" : ""}`}
             >
               <span className="mr-2">{loc.flag}</span>
               {loc.name}
-            </Link>
+            </DepartureLink>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

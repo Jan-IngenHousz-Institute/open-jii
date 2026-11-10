@@ -72,6 +72,8 @@
     "data_export_completed": "Je {{format}}-export van {{experimentName}} is klaar",
     "data_export_failed": "Je export van {{experimentName}} is mislukt",
     "data_upload_completed": "Je upload naar {{experimentName}} is klaar om te bevragen",
+    "data_upload_completed_skipped_one": "Je upload naar {{experimentName}} is klaar om te bevragen, met één bestand weggelaten",
+    "data_upload_completed_skipped_other": "Je upload naar {{experimentName}} is klaar om te bevragen, met {{skippedCount}} bestanden weggelaten",
     "data_upload_failed": "Je upload van {{tableName}} naar {{experimentName}} is mislukt",
     "organization_invitation_accepted": "{{actor}} heeft je uitnodiging voor {{organizationName}} geaccepteerd",
     "organization_role_changed": "{{actor}} heeft je {{role}} gemaakt in {{organizationName}}",

@@ -1,0 +1,188 @@
+{
+  "title": "Plattformstatus",
+  "metadata": {
+    "title": "openJII-Status",
+    "description": "Aktueller Status der openJII-Plattform und ihrer Dienste."
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "body": "Unter dieser Adresse gibt es keine Seite.",
+    "home": "Zum aktuellen Status"
+  },
+  "theme": {
+    "toggle": "Darstellung umschalten",
+    "switchToLight": "Zum hellen Modus wechseln",
+    "switchToDark": "Zum dunklen Modus wechseln"
+  },
+  "header": {
+    "home": "openJII-Startseite"
+  },
+  "duration": {
+    "minutes": "{{minutes}} Min.",
+    "hours": "{{hours}} Std.",
+    "hoursMinutes": "{{hours}} Std. {{minutes}} Min.",
+    "days": "{{days}} Tg.",
+    "daysHours": "{{days}} Tg. {{hours}} Std."
+  },
+  "freshness": {
+    "lastChecked": "Zuletzt geprüft um {{time}} UTC, {{ago}}.",
+    "justNow": "gerade eben",
+    "ago": "vor {{duration}}",
+    "delayed": "Unsere Prüfungen haben zuletzt um {{time}} UTC Ergebnisse gemeldet, {{ago}}.",
+    "refreshFailed": "Wir konnten diese Seite nicht aktualisieren und versuchen es jede Minute erneut. Bis dahin zeigt sie den Stand von {{time}} UTC."
+  },
+  "skeleton": {
+    "label": "Der aktuelle Status wird geladen",
+    "slow": "Das Laden dauert länger als üblich, was oft an einer langsamen oder unterbrochenen Verbindung liegt."
+  },
+  "noscript": "Diese Seite braucht JavaScript, um den aktuellen Status anzuzeigen.",
+  "unavailable": {
+    "title": "Status nicht verfügbar",
+    "body": "Wir konnten den neuesten Status nicht laden und können daher nicht sagen, ob etwas gestört ist. Die Seite versucht es jede Minute erneut, Sie müssen sie also nicht neu laden.",
+    "help": "Wenn andere Websites laden und diese Seite weiterhin nicht, <help>melden Sie das Problem</help>."
+  },
+  "headline": {
+    "operational": {
+      "title": "Alle Systeme laufen",
+      "description": "Zurzeit ist keine Komponente beeinträchtigt oder ausgefallen.",
+      "help": "Wenn bei Ihnen trotzdem etwas nicht funktioniert, prüfen Sie zuerst Ihre Verbindung und <help>melden Sie dann das Problem</help>."
+    },
+    "stale": {
+      "title": "Der Status ist möglicherweise nicht aktuell",
+      "description": "Die Komponenten unten zeigen den letzten Status, den unsere Prüfungen gemeldet haben."
+    },
+    "maintenance_one": "{{names}} wird planmäßig gewartet.",
+    "maintenance_other": "{{names}} werden planmäßig gewartet.",
+    "maintenanceUntil_one": "{{names}} wird planmäßig gewartet, bis {{time}} UTC.",
+    "maintenanceUntil_other": "{{names}} werden planmäßig gewartet, bis {{time}} UTC.",
+    "outage_one": "{{names}} ist ausgefallen.",
+    "outage_other": "{{names}} sind ausgefallen.",
+    "degraded_one": "{{names}} ist beeinträchtigt.",
+    "degraded_other": "{{names}} sind beeinträchtigt.",
+    "othersOperational_one": "{{names}} läuft normal.",
+    "othersOperational_other": "{{names}} laufen normal."
+  },
+  "badge": {
+    "operational": "In Betrieb",
+    "degraded": "Beeinträchtigt",
+    "outage": "Ausfall",
+    "maintenance": "Wartung",
+    "resolved": "Behoben",
+    "scheduled": "Geplant",
+    "in-progress": "Läuft",
+    "completed": "Abgeschlossen"
+  },
+  "legend": {
+    "operational": "In Betrieb",
+    "degraded": "Beeinträchtigt",
+    "outage": "Ausfall",
+    "maintenance": "Wartung",
+    "none": "Keine Daten"
+  },
+  "incident": {
+    "affects": "Betroffen: {{components}}.",
+    "started": "Beginn: {{date}}, {{time}} UTC.",
+    "postedAt": "{{date}}, {{time}} UTC",
+    "nextUpdateBy": "Nächste Aktualisierung spätestens um {{time}} UTC.",
+    "stage": {
+      "investigating": "Wird untersucht",
+      "identified": "Ursache gefunden",
+      "monitoring": "Wird beobachtet",
+      "resolved": "Behoben",
+      "scheduled": "Geplant",
+      "in-progress": "Läuft",
+      "completed": "Abgeschlossen"
+    }
+  },
+  "maintenance": {
+    "windowSameDay": "{{date}}, {{from}} bis {{to}} UTC",
+    "windowSpansDays": "{{from}} bis {{to}} UTC",
+    "windowOpenEnded": "Ab {{from}} UTC"
+  },
+  "components": {
+    "title": "Komponenten"
+  },
+  "history": {
+    "legend": "Farbschlüssel für die Verlaufsbalken",
+    "group": "{{name}}, letzte {{days}} Tage",
+    "daysAgo": "Vor {{days}} Tagen",
+    "uptime": "{{uptime}} verfügbar in den letzten 90 Tagen",
+    "uptimeSince": "{{uptime}} verfügbar seit {{date}}",
+    "degraded": "{{degraded}} beeinträchtigt",
+    "today": "Heute",
+    "problemDays": "Tage, an denen nicht alles in Betrieb war",
+    "noProblemDays": "Weder Ausfälle noch Beeinträchtigungen in den letzten 90 Tagen."
+  },
+  "component": {
+    "delayNow": "Die langsamsten jüngsten Messungen brauchten etwa {{minutes}} Minuten.",
+    "website": {
+      "name": "Website",
+      "description": "Die openJII-Website, die Sie im Browser öffnen.",
+      "details": "Jede Minute laden wir eine Seite der openJII-Website von außerhalb unseres Netzwerks und prüfen, ob sie antwortet und den Produktnamen enthält. Die Website gilt als beeinträchtigt nach zwei langsamen oder fehlgeschlagenen Prüfungen in Folge. Eine Prüfung ist langsam, wenn sie länger als 3 Sekunden dauert. Die Website gilt als ausgefallen nach drei fehlgeschlagenen Prüfungen in Folge oder wenn in den letzten 15 Minuten mindestens 20 Anfragen eingingen und mehr als die Hälfte davon fehlschlug."
+    },
+    "sign-in": {
+      "name": "Anmeldung",
+      "description": "Die Anmeldung bei Ihrem openJII-Konto.",
+      "details": "Die Anmeldung mit einem E-Mail-Code braucht unseren E-Mail-Dienst. Alle fünf Minuten testet die Plattform ihre Verbindung zu diesem Dienst. Die Anmeldung gilt als beeinträchtigt, wenn in den letzten 10 Minuten jeder Test fehlschlägt."
+    },
+    "platform": {
+      "name": "Plattform",
+      "description": "Der openJII-Dienst hinter der Website und der Feld-App.",
+      "details": "Jede Minute senden wir eine Testanfrage an die Plattform und messen, wie schnell sie antwortet. Alle fünf Minuten prüft die Plattform außerdem ihre Verbindungen zur Datenbank und zu Databricks, unserem Anbieter für die Datenverarbeitung. Die Plattform gilt als beeinträchtigt nach zwei langsamen oder fehlgeschlagenen Testanfragen in Folge oder wenn die Verbindung zu Databricks in den letzten 10 Minuten bei jeder Prüfung fehlschlug. Eine Testanfrage ist langsam, wenn sie länger als 2 Sekunden dauert. Die Plattform gilt als ausgefallen nach drei fehlgeschlagenen Testanfragen in Folge, wenn die Verbindung zur Datenbank in den letzten 10 Minuten bei jeder Prüfung fehlschlug oder wenn in den letzten 15 Minuten mindestens 10 Anfragen mit einem Serverfehler endeten und diese mehr als die Hälfte aller Anfragen ausmachten."
+    },
+    "data-intake": {
+      "name": "Dateneingang",
+      "description": "Messungen von Geräten und der Feld-App, die bei openJII ankommen.",
+      "details": "Der Dateneingang gilt als beeinträchtigt, wenn in den letzten 15 Minuten der Schritt, der eingehende Messungen speichert, eine Messung nicht speichern konnte, das Gerätenetzwerk wegen eines eigenen Fehlers einen Upload nicht annehmen konnte oder zu viele Messungen auf einmal ankamen und einige zurückgehalten wurden. Auch wenn die Verbindung der Plattform zum Gerätenetzwerk in den letzten 10 Minuten bei jeder Prüfung fehlschlug, gilt er als beeinträchtigt. Er gilt als ausgefallen, wenn in den letzten 15 Minuten mehr als fünf Messungen nicht gespeichert werden konnten."
+    },
+    "data-delivery": {
+      "name": "Datenbereitstellung",
+      "description": "Neue Messungen, die in Ihren Experimenten erscheinen.",
+      "details": "Alle 30 Minuten meldet die Datenpipeline, wie lange sie gebraucht hat, um die langsamsten der neuen Messungen zu den Experimenten hinzuzufügen. Die Datenbereitstellung gilt als beeinträchtigt, wenn das mehr als 15 Minuten gedauert hat, wenn die Pipeline beim Lesen neuer Messungen mehr als 10 Minuten zurückliegt oder wenn die Verbindung zu Databricks, unserem Anbieter für die Datenverarbeitung, in den letzten 10 Minuten bei jeder Prüfung fehlschlug. Sie gilt als ausgefallen, wenn es länger als eine Stunde gedauert hat, wenn die Pipeline eine Stunde lang keine neue Messung gespeichert hat, obwohl Geräte Messungen senden, oder wenn sich die Pipeline 75 Minuten lang nicht gemeldet hat."
+    },
+    "macro-processing": {
+      "name": "Makro-Verarbeitung",
+      "description": "Makros, die auf Ihren Messungen laufen.",
+      "details": "Die Makro-Verarbeitung gilt als beeinträchtigt, wenn in der letzten Stunde ein Makro wegen eines Problems auf unserer Seite fehlgeschlagen ist, wenn noch ein Rückstau von Messungen auf Makro-Ergebnisse wartet oder wenn die langsamsten Ergebnisse mehr als 5 Minuten nach ihren Messungen eintrafen. Sie gilt als ausgefallen, wenn die langsamsten mehr als 30 Minuten nach ihren Messungen eintrafen. Fehler im eigenen Makro-Code einer Forscherin oder eines Forschers zählen nicht."
+    },
+    "exports": {
+      "name": "Exporte",
+      "description": "Das Herunterladen von Experimentdaten.",
+      "details": "Gezählt werden Exporte, die wegen eines Problems auf unserer Seite fehlschlagen, nicht wegen der Daten oder der Anfrage. Exporte gelten als beeinträchtigt, wenn in der letzten Stunde ein Export auf diese Weise fehlgeschlagen ist."
+    }
+  },
+  "day": {
+    "noRecord": "Keine Daten, weil die Prüfungen am {{date}} begannen.",
+    "noDowntime": "An diesem Tag wurde keine Ausfallzeit erfasst.",
+    "related": "Zugehörig",
+    "partial": "Heute, bis jetzt",
+    "row": {
+      "outage": "Ausfall",
+      "degraded": "Beeinträchtigt",
+      "maintenance": "Wartung",
+      "unknown": "Prüfungen konnten nicht ausgeführt werden"
+    },
+    "aria": {
+      "noRecord": "{{date}}: keine Daten, die Prüfungen begannen am {{began}}",
+      "noDowntime": "{{date}}: keine Ausfallzeit erfasst",
+      "summary": "{{date}}: {{summary}}",
+      "outage": "{{duration}} Ausfall",
+      "degraded": "{{duration}} lang beeinträchtigt",
+      "maintenance": "{{duration}} Wartung",
+      "unknown": "Prüfungen konnten {{duration}} lang nicht ausgeführt werden",
+      "related": "zugehörige Vorfälle: {{titles}}",
+      "todayDate": "{{date}}, heute bis jetzt"
+    }
+  },
+  "howWeMeasure": {
+    "title": "So messen wir",
+    "states": "Beeinträchtigt bedeutet, dass eine Komponente langsam ist oder nur teilweise funktioniert. Ausfall oder ausgefallen bedeutet, dass sie nicht funktioniert.",
+    "checks": "Wir testen die Website und die Plattform jede Minute von außen. Für alles andere nutzen wir die eigenen Messwerte der Plattform. Die Plattform prüft ihre Verbindungen alle fünf Minuten, und die Datenpipeline meldet sich alle 30 Minuten. Öffnen Sie eine Komponente, um genau zu sehen, was als beeinträchtigt und als ausgefallen gilt.",
+    "uptime": "Die Verfügbarkeit ist der Anteil der Minuten in den letzten 90 UTC-Tagen, in denen eine Komponente nicht ausgefallen war. Minuten, in denen unsere eigenen Prüfungen nicht ausgeführt werden konnten, zählen als Ausfall. Die beeinträchtigte Zeit steht daneben. Geplante Wartung erscheint in den Balken, fließt aber nicht in den Wert ein. Ein Tag wird ab fünf beeinträchtigten Minuten als Beeinträchtigt markiert, kürzere Störungen bleiben in den Details des Tages sichtbar."
+  },
+  "past": {
+    "title": "Frühere Vorfälle",
+    "empty": "Keine Vorfälle in den letzten 90 Tagen."
+  },
+  "footer": "Diese Seite wird getrennt von openJII betrieben und sollte daher erreichbar bleiben, wenn die Plattform ausfällt."
+}
