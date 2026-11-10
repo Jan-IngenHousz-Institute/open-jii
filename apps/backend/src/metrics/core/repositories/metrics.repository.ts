@@ -31,6 +31,8 @@ const RESOURCE_TABLES = {
   workbook: workbooks,
 };
 
+export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export interface ExperimentOrganizationRow {
   experimentId: string;
   organizationId: string | null;
@@ -132,19 +134,25 @@ export class MetricsRepository {
     return this.visibleIds(userId, "workbook", workbooks);
   }
 
-  /** The warehouse keys workbook activity by version; only Postgres can fold it back. */
-  async getWorkbookVersionMap(workbookIds: string[]): Promise<Result<Map<string, string>>> {
+  /** Resolve the warehouse's version ids across the whole workbook kind. */
+  async getWorkbookVersionMapForVersions(
+    versionIds: string[],
+  ): Promise<Result<Map<string, string>>> {
     return tryCatch(async () => {
-      if (workbookIds.length === 0) {
-        return new Map<string, string>();
+      const versions = new Map<string, string>();
+      const validVersionIds = versionIds.filter((id) => UUID_PATTERN.test(id));
+      for (let index = 0; index < validVersionIds.length; index += 10_000) {
+        const rows = await this.database
+          .select({ versionId: workbookVersions.id, workbookId: workbookVersions.workbookId })
+          .from(workbookVersions)
+          .where(inArray(workbookVersions.id, validVersionIds.slice(index, index + 10_000)));
+
+        for (const row of rows) {
+          versions.set(row.versionId, row.workbookId);
+        }
       }
 
-      const rows = await this.database
-        .select({ versionId: workbookVersions.id, workbookId: workbookVersions.workbookId })
-        .from(workbookVersions)
-        .where(inArray(workbookVersions.workbookId, workbookIds));
-
-      return new Map(rows.map((row) => [row.versionId, row.workbookId]));
+      return versions;
     });
   }
 

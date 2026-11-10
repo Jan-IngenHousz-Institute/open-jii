@@ -35,7 +35,7 @@ export const zWorkbook = z.object({
   experimentCount: z.number().int().nonnegative().optional(),
 });
 
-export const zWorkbookSort = zListSort(z.enum(["name", "usedBy", "user", "updated"]));
+export const zWorkbookSort = zListSort(z.enum(["name", "usedBy", "user", "updated", "activity"]));
 export type WorkbookSort = z.infer<typeof zWorkbookSort>;
 
 // List rows omit `cells`: they dominate the payload (output cells embed run data)
@@ -74,7 +74,9 @@ export const zWorkbookFilterQuery = z
   })
   .merge(zPaginationQuery);
 
-export const zWorkbookPaginatedList = zPaginated(zWorkbookListEntry);
+export const zWorkbookPaginatedList = zPaginated(zWorkbookListEntry).extend({
+  activityAvailable: z.boolean(),
+});
 
 /** Array when the caller sent no `page`, envelope when they did. */
 export const zWorkbookListResponse = z.union([zWorkbookList, zWorkbookPaginatedList]);

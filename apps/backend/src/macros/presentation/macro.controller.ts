@@ -87,9 +87,10 @@ export class MacroController {
         const pageSize = input.pageSize ?? DEFAULT_PAGE_SIZE;
         const paged = await this.listMacrosUseCase.executePaginated(input.page, pageSize, filter);
         if (paged.isSuccess()) {
-          return toPage(paged.value, input.page, pageSize, (items) =>
-            shape(formatDatesList(items)),
-          );
+          return {
+            ...toPage(paged.value, input.page, pageSize, (items) => shape(formatDatesList(items))),
+            activityAvailable: paged.value.activityAvailable,
+          };
         }
         return throwOrpcFailure(paged, this.logger);
       }

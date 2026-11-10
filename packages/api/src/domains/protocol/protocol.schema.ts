@@ -89,7 +89,7 @@ export const zProtocolDetail = zProtocol.extend({
   capabilities: zResourceCapabilities,
 });
 
-export const zProtocolSort = zListSort(z.enum(["name", "family", "macros", "updated"]));
+export const zProtocolSort = zListSort(z.enum(["name", "family", "macros", "updated", "activity"]));
 export type ProtocolSort = z.infer<typeof zProtocolSort>;
 
 // Query parameters
@@ -109,7 +109,9 @@ export const zProtocolFilterQuery = z
   })
   .merge(zPaginationQuery);
 
-export const zProtocolPaginatedList = zPaginated(zProtocolListEntry);
+export const zProtocolPaginatedList = zPaginated(zProtocolListEntry).extend({
+  activityAvailable: z.boolean(),
+});
 
 /** Array when the caller sent no `page`, envelope when they did. */
 export const zProtocolListResponse = z.union([zProtocolList, zProtocolPaginatedList]);

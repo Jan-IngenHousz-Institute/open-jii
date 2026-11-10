@@ -8,6 +8,7 @@ import type {
 import type { ResourceSeries } from "@repo/api/domains/metrics/metrics.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 
+import { sortsByActivity, withoutActivity } from "../../../../common/utils/activity-sort";
 import { AppError, Result, success } from "../../../../common/utils/fp-utils";
 import { ResourceMetricsService } from "../../../../metrics/application/resource-metrics.service";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -46,6 +47,10 @@ export class ListExperimentsUseCase {
       search,
     });
 
+    const snapshot = sortsByActivity(sort)
+      ? await this.resourceMetrics.activitySnapshot("experiment")
+      : undefined;
+    const activeSort = snapshot === null ? withoutActivity(sort) : sort;
     const result = await this.experimentRepository.findAll(
       userId,
       scope,
@@ -53,7 +58,8 @@ export class ListExperimentsUseCase {
       search,
       undefined,
       { visibilities },
-      sort,
+      activeSort,
+      sortsByActivity(activeSort) ? snapshot?.totals : undefined,
     );
 
     result.fold(
@@ -93,7 +99,9 @@ export class ListExperimentsUseCase {
     search?: string,
     sort?: ExperimentSort,
     visibilities?: ExperimentVisibility[],
-  ): Promise<Result<{ items: ExperimentWithActivity[]; totalCount: number }>> {
+  ): Promise<
+    Result<{ items: ExperimentWithActivity[]; totalCount: number; activityAvailable: boolean }>
+  > {
     this.logger.log({
       msg: "Listing experiments",
       operation: "listPaginated",
@@ -107,6 +115,8 @@ export class ListExperimentsUseCase {
       sort,
     });
 
+    const snapshot = await this.resourceMetrics.activitySnapshot("experiment");
+    const activeSort = snapshot === null ? withoutActivity(sort) : sort;
     const paged = await this.experimentRepository.findPage(
       userId,
       page,
@@ -115,17 +125,17 @@ export class ListExperimentsUseCase {
       statuses,
       search,
       { visibilities },
-      sort,
+      activeSort,
+      sortsByActivity(activeSort) ? snapshot?.totals : undefined,
     );
     if (paged.isFailure()) {
       return paged;
     }
 
     // These ids already passed the access check.
-    const series = await this.resourceMetrics.seriesFor(
-      "experiment",
-      paged.value.items.map((item) => item.id),
-    );
+    const series =
+      snapshot?.seriesFor(paged.value.items.map((item) => item.id)) ??
+      new Map<string, ResourceSeries>();
 
     return success({
       items: paged.value.items.map((item) => ({
@@ -133,6 +143,7 @@ export class ListExperimentsUseCase {
         activity: series.get(item.id) ?? null,
       })),
       totalCount: paged.value.totalCount,
+      activityAvailable: snapshot !== null,
     });
   }
 }

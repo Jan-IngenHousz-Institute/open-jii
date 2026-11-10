@@ -225,7 +225,55 @@ describe("MetricsRepository", () => {
     expect(result.value).toEqual([orgExperimentId]);
   });
 
-  it("folds workbook versions back onto the workbooks that own them", async () => {
+  it("maps only the requested workbook version ids to their owning workbooks", async () => {
+    const workbook = await testApp.createWorkbook({ name: "Collecting", createdBy: userId });
+    const otherWorkbook = await testApp.createWorkbook({ name: "Other", createdBy: userId });
+    const versions = await testApp.database
+      .insert(workbookVersions)
+      .values([
+        {
+          workbookId: workbook.id,
+          version: 1,
+          cells: [],
+          metadata: {},
+          entitySnapshots: { protocols: {}, macros: {} },
+          createdBy: userId,
+        },
+        {
+          workbookId: workbook.id,
+          version: 2,
+          cells: [],
+          metadata: {},
+          entitySnapshots: { protocols: {}, macros: {} },
+          createdBy: userId,
+        },
+        {
+          workbookId: otherWorkbook.id,
+          version: 1,
+          cells: [],
+          metadata: {},
+          entitySnapshots: { protocols: {}, macros: {} },
+          createdBy: userId,
+        },
+      ])
+      .returning();
+
+    const result = await repository.getWorkbookVersionMapForVersions([
+      versions[0].id,
+      versions[2].id,
+      "00000000-0000-4000-8000-000000000000",
+    ]);
+
+    assertSuccess(result);
+    expect(result.value).toEqual(
+      new Map([
+        [versions[0].id, workbook.id],
+        [versions[2].id, otherWorkbook.id],
+      ]),
+    );
+  });
+
+  it("keeps valid workbook versions when a warehouse id is malformed", async () => {
     const workbook = await testApp.createWorkbook({ name: "Collecting", createdBy: userId });
     const [version] = await testApp.database
       .insert(workbookVersions)
@@ -239,10 +287,10 @@ describe("MetricsRepository", () => {
       })
       .returning();
 
-    const result = await repository.getWorkbookVersionMap([workbook.id]);
+    const result = await repository.getWorkbookVersionMapForVersions(["not-a-uuid", version.id]);
 
     assertSuccess(result);
-    expect(result.value.get(version.id)).toBe(workbook.id);
+    expect(result.value).toEqual(new Map([[version.id, workbook.id]]));
   });
 
   it("names nothing for a resource the caller cannot read", async () => {
@@ -259,8 +307,8 @@ describe("MetricsRepository", () => {
     expect(result.value).toBeNull();
   });
 
-  it("maps no versions for an empty workbook list without querying", async () => {
-    const result = await repository.getWorkbookVersionMap([]);
+  it("maps no workbook version ids for an empty version list", async () => {
+    const result = await repository.getWorkbookVersionMapForVersions([]);
 
     assertSuccess(result);
     expect(result.value.size).toBe(0);
