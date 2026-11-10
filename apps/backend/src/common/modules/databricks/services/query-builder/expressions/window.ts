@@ -40,9 +40,6 @@ export function buildRowWindowExpression(
   const column = builder.escapeIdentifier(item.column);
   const previous = `LAG(${column}) ${window}`;
   if (item.function === "previous") return result(previous);
-  if (item.function !== "change_from_previous") {
-    throw new QueryBuilderInputError("Expected a row window function");
-  }
   const type = item.valueType?.trim().toUpperCase();
   if (type === undefined || isNumericType(type)) return result(`(${column} - ${previous})`);
   if (type === "TIMESTAMP" || type === "TIMESTAMP_NTZ" || type === "DATE") {

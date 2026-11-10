@@ -168,8 +168,6 @@ export const chartFormResolver: Resolver<ChartFormValues, ChartFormContext | und
           : "workspace.shelves.windowPerInvalid";
     else if (path.at(-1) === "name" && issue.code !== "too_big")
       key = "workspace.validation.nameRequired";
-    else if (path.at(-1) === "alias" || path.at(-1) === "seriesName")
-      key = "workspace.validation.seriesNameRequired";
     else if (path.at(-1) === "dataSources") key = "workspace.validation.seriesRequired";
     else if (groupingConflict && (path.at(-1) === "aggregate" || path.at(-1) === "aggregation"))
       key = "workspace.shelves.rowWindowConflict";

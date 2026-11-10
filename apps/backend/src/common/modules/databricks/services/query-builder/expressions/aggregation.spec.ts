@@ -85,6 +85,15 @@ describe("buildAggregateExpression", () => {
     ).toThrow(QueryBuilderInputError);
   });
 
+  it.each(["previous", "change_from_previous", "row_number"] as const)(
+    "rejects %s through the builder's aggregate-only entry point",
+    (fn) => {
+      expect(() =>
+        builder.buildAggregateExpression({ column: "value", function: fn, orderColumn: "time" }),
+      ).toThrow(new QueryBuilderInputError("Row windows must use the window-only query path"));
+    },
+  );
+
   it("rejects corr without a secondColumn", () => {
     expect(() => buildAggregateExpression({ column: "a", function: "corr" }, builder)).toThrow(
       QueryBuilderInputError,

@@ -85,6 +85,23 @@ function setup(
 }
 
 describe("row-window repository inputs", () => {
+  it("stops an ordered read when its column metadata cannot be loaded", async () => {
+    const { read, build, execute } = setup();
+    const error = AppError.internal("Column metadata is unavailable");
+    execute.mockResolvedValueOnce(failure(error));
+
+    const result = await read({
+      column: "value",
+      function: "change_from_previous",
+      orderColumn: "timestamp",
+    });
+
+    assertFailure(result);
+    expect(result.error).toBe(error);
+    expect(build.mock.calls.some(([query]) => query.aggregation !== undefined)).toBe(false);
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
   it.each(["DOUBLE", "TIMESTAMP", "TIMESTAMP_NTZ", "DATE"])(
     "passes schema type %s and an id tie breaker on a table with no variant payload",
     async (type) => {
