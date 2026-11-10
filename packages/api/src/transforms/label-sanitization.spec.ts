@@ -37,6 +37,11 @@ describe("sanitizeQuestionLabel", () => {
     expect(sanitizeQuestionLabel("a---b   c")).toBe("a_b_c");
   });
 
+  it("collapses underscores the label already holds, as the pipeline does", () => {
+    expect(sanitizeQuestionLabel("plant__height")).toBe("plant_height");
+    expect(sanitizeQuestionLabel("leaf_ _width")).toBe("leaf_width");
+  });
+
   it("trims leading and trailing underscores", () => {
     expect(sanitizeQuestionLabel("  hello  ")).toBe("hello");
     expect(sanitizeQuestionLabel("__weird__")).toBe("weird");

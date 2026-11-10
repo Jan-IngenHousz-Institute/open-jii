@@ -103,3 +103,24 @@ describe("VariantSchema.merge", () => {
     expect(VariantSchema.merge([])).toBeNull();
   });
 });
+
+describe("VariantSchema.withDoubles", () => {
+  it("types the named fields DOUBLE and leaves the rest as they are", () => {
+    expect(
+      VariantSchema.withDoubles(
+        "OBJECT<height: STRING, plot: STRING, notes: OBJECT<a: STRING>>",
+        new Set(["height"]),
+      ),
+    ).toBe("OBJECT<height: DOUBLE, notes: OBJECT<a: STRING>, plot: STRING>");
+  });
+
+  it("keeps a quoted name quoted", () => {
+    expect(VariantSchema.withDoubles("OBJECT<`leaf width`: STRING>", new Set(["leaf width"]))).toBe(
+      "OBJECT<`leaf width`: DOUBLE>",
+    );
+  });
+
+  it("returns a schema that is not an object unchanged", () => {
+    expect(VariantSchema.withDoubles("STRING", new Set(["height"]))).toBe("STRING");
+  });
+});
