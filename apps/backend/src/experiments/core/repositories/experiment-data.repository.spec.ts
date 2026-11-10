@@ -3024,58 +3024,87 @@ describe("ExperimentDataRepository", () => {
       expect(store).not.toHaveBeenCalled();
     });
 
-    it("runs two distinct device reads apart when only their limits differ", async () => {
-      const owner = await testApp.createTestUser({});
-      for (const thingName of ["thing-a", "thing-b", "thing-c"]) {
-        await testApp.createIotDevice({ createdBy: owner, serialNumber: thingName, thingName });
-      }
-      vi.spyOn(servingStore, "getExperimentIds").mockResolvedValue(
-        success(["thing-a", "thing-b", "thing-c"]),
+    it("reads Device picker labels from the warehouse when the source is store", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable]),
       );
-      const devices = {
-        columns: [
-          {
-            name: "device",
-            type_name: "STRUCT",
-            type_text: WellKnownColumnTypes.DEVICE,
-            position: 0,
-          },
-        ],
-        rows: [["thing-a"], ["thing-b"], ["thing-c"]],
-        totalRows: 3,
-        truncated: false,
-      };
-      const settle: (() => void)[] = [];
-      const execute = vi.spyOn(servingStore, "executeQuery").mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            settle.push(() => resolve(success(devices)));
-          }),
+      vi.spyOn(databricksPort, "getExperimentTableColumns").mockResolvedValue(
+        success([...VIEW_COLUMNS, "client_id", "device_name", "device_id"]),
       );
-      const distinctDevices = (limit: number) =>
-        repository.getDistinctColumnValues({
-          experimentId,
-          experiment: mockExperiment,
-          tableName: "raw_data",
-          column: "device",
-          limit,
-          source: "store",
-        });
+      const labels = ["Ambit (d2)", "Ambit (d3)", "phone (d4)"];
+      const warehouse = vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [
+            { name: "serial_number", type_name: "STRING", type_text: "STRING", position: 0 },
+          ],
+          rows: labels.map((label) => [label]),
+          totalRows: labels.length,
+          truncated: false,
+        }),
+      );
+      vi.spyOn(servingStore, "getExperimentIds").mockResolvedValue(success(["phone"]));
+      const store = vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
+        success({
+          columns: [
+            {
+              name: "device",
+              type_name: "STRUCT",
+              type_text: WellKnownColumnTypes.DEVICE,
+              position: 0,
+            },
+          ],
+          rows: [["phone"]],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
 
-      const reads = Promise.all([distinctDevices(1), distinctDevices(5)]);
+      const result = await repository.getDistinctColumnValues({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        column: "device",
+        limit: 3,
+        offset: 200,
+        source: "store",
+      });
 
-      // A distinct device read limits after the store answers, so both send the same SQL.
-      await vi.waitFor(() => expect(execute).toHaveBeenCalledTimes(2));
-      expect(execute.mock.calls[0][0].sql).toBe(execute.mock.calls[1][0].sql);
-      settle.forEach((resolve) => resolve());
+      assertSuccess(result);
+      expect(result.value).toEqual({ values: labels, truncated: false });
+      expect(store).not.toHaveBeenCalled();
+      const sql = warehouse.mock.calls[0][1];
+      expect(sql).toContain("named_struct(");
+      expect(sql).toContain("nullif(trim(`device_name`), '')");
+      expect(sql).toContain("nullif(trim(`client_id`), '')");
+      expect(sql).toContain("SELECT DISTINCT `serial_number`");
+      expect(sql).toContain(
+        "ORDER BY lower(`serial_number`) ASC, `serial_number` ASC LIMIT 4 OFFSET 200",
+      );
+    });
 
-      const [first, all] = await reads;
-      assertSuccess(first);
-      assertSuccess(all);
-      expect(first.value).toMatchObject({ truncated: true });
-      expect(first.value.values).toHaveLength(1);
-      expect(all.value).toMatchObject({ truncated: false });
-      expect(all.value.values).toHaveLength(3);
+    it("keeps non-device distinct reads on the store", async () => {
+      const store = vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
+        success({
+          columns: [{ name: "plot", type_name: "STRING", type_text: "STRING", position: 0 }],
+          rows: [["A1"], ["B2"]],
+          totalRows: 2,
+          truncated: false,
+        }),
+      );
+      const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
+      const result = await repository.getDistinctColumnValues({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        column: "plot",
+        limit: 3,
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ values: ["A1", "B2"], truncated: false });
+      expect(store).toHaveBeenCalled();
+      expect(warehouse).not.toHaveBeenCalled();
     });
 
     describe("in an anonymized experiment", () => {

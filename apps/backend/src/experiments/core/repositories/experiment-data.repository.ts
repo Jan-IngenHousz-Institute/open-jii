@@ -379,11 +379,22 @@ export class ExperimentDataRepository {
   }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
     const { experimentId, experiment, tableName, column, limit, offset, source } = params;
 
-    const shapeResult = await this.tableShape(experimentId, tableName, source);
+    let shapeResult = await this.tableShape(experimentId, tableName, source);
     if (shapeResult.isFailure()) {
       return shapeResult;
     }
 
+    // Device picker labels must match the charts they filter, which read from the warehouse.
+    if (
+      column === "device" &&
+      shapeResult.value.metadata.tableType !== "upload" &&
+      shapeResult.value.source === "store"
+    ) {
+      shapeResult = await this.tableShape(experimentId, tableName, "warehouse");
+      if (shapeResult.isFailure()) {
+        return shapeResult;
+      }
+    }
     const shape = shapeResult.value;
     const anonymizedResult = await this.anonymizedQuery(experiment, tableName, shape.source, {
       columns: [column],
