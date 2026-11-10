@@ -165,6 +165,10 @@ EOT
 locals {
   # Pages that differ per visitor never come from the edge cache, whatever their
   # headers say.
+  # The proxy skips these extensions, so on the server a missing file reads as an unknown locale and
+  # fails with a 500 instead of a 404.
+  public_file_patterns = ["*.svg", "*.ico", "*.png", "*.jpg", "*.jpeg"]
+
   uncached_page_patterns = [
     "/*/platform*",
     "/*/login*",
@@ -389,28 +393,20 @@ resource "aws_cloudfront_distribution" "distribution" {
     }
   }
 
-  # Cache behavior for SVG files in the root directory
-  ordered_cache_behavior {
-    path_pattern           = "*.svg"
-    target_origin_id       = "S3Assets"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
+  # Cache behaviors for the files in the root of apps/web/public
+  dynamic "ordered_cache_behavior" {
+    for_each = local.public_file_patterns
 
-    cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6" # Managed-CachingOptimizedForUncompressedObjects
-  }
+    content {
+      path_pattern           = ordered_cache_behavior.value
+      target_origin_id       = "S3Assets"
+      viewer_protocol_policy = "redirect-to-https"
+      allowed_methods        = ["GET", "HEAD"]
+      cached_methods         = ["GET", "HEAD"]
+      compress               = true
 
-  # Cache behavior for ICO files in the root directory
-  ordered_cache_behavior {
-    path_pattern           = "*.ico"
-    target_origin_id       = "S3Assets"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-
-    cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6" # Managed-CachingOptimizedForUncompressedObjects
+      cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6" # Managed-CachingOptimizedForUncompressedObjects
+    }
   }
 
   # After the asset behaviors, so a chunk under app/[locale]/platform still comes from S3.
