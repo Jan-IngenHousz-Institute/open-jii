@@ -218,6 +218,34 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
         unsubscribe,
       }),
   ),
+  data_upload_completed: aboutResource(
+    (experimentId, email, { params, recipientEmail, unsubscribe }) =>
+      params.skippedCount && params.skippedFiles
+        ? email.sendDataUploadPartlyCompletedNotification({
+            experimentId,
+            experimentName: params.experimentName,
+            skippedCount: params.skippedCount,
+            skippedFiles: params.skippedFiles,
+            email: recipientEmail,
+            unsubscribe,
+          })
+        : email.sendDataUploadCompletedNotification({
+            experimentId,
+            experimentName: params.experimentName,
+            email: recipientEmail,
+            unsubscribe,
+          }),
+  ),
+  data_upload_failed: aboutResource(
+    (experimentId, email, { params, recipientEmail, unsubscribe }) =>
+      email.sendDataUploadFailedNotification({
+        experimentId,
+        experimentName: params.experimentName,
+        tableName: params.tableName,
+        email: recipientEmail,
+        unsubscribe,
+      }),
+  ),
   // No `aboutResource`: a deleted resource has no page to link back to.
   resource_deleted: (email, { params, actorName, recipientEmail, resource, unsubscribe }) =>
     resource && isSharingResourceType(resource.type)

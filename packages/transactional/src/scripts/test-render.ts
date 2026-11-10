@@ -9,6 +9,9 @@ import { renderApiKeyCreatedNotification } from "../render/api-key-created-notif
 import { renderCalibrationRunApprovedNotification } from "../render/calibration-run-approved-notification";
 import { renderCalibrationRunAwaitingApprovalNotification } from "../render/calibration-run-awaiting-approval-notification";
 import { renderCalibrationRunRejectedNotification } from "../render/calibration-run-rejected-notification";
+import { renderDataUploadCompletedNotification } from "../render/data-upload-completed-notification";
+import { renderDataUploadFailedNotification } from "../render/data-upload-failed-notification";
+import { renderDataUploadPartlyCompletedNotification } from "../render/data-upload-partly-completed-notification";
 import { renderExperimentMadePublicNotification } from "../render/experiment-made-public-notification";
 import { renderJoinRequestSubmitted } from "../render/join-request-submitted";
 import { renderOrganizationMembershipRemoved } from "../render/organization-membership-removed";
@@ -182,6 +185,44 @@ async function main(): Promise<void> {
       definitionName: "PAR sweep",
       actor: "Jane Doe",
       calibrationUrl: `${baseUrl}/en-US/platform/devices/123/calibration`,
+    }),
+  );
+
+  write(
+    "data-upload-completed",
+    await renderDataUploadCompletedNotification({
+      host,
+      baseUrl,
+      experimentName: "Drought trial",
+      dataUrl: `${baseUrl}/en-US/platform/experiments/123/data`,
+    }),
+  );
+
+  write(
+    "data-upload-partly-completed",
+    await renderDataUploadPartlyCompletedNotification({
+      host,
+      baseUrl,
+      experimentName: "Drought trial",
+      skippedCount: "2",
+      skippedFiles: "broken.csv — could not be read\nempty.csv — no rows",
+      dataUrl: `${baseUrl}/en-US/platform/experiments/123/data`,
+      unsubscribe: {
+        categoryLabel: "Data exports and uploads",
+        settingsUrl: `${baseUrl}/platform/account/notifications`,
+        unsubscribeUrl: `${baseUrl}/unsubscribe?token=preview-token`,
+      },
+    }),
+  );
+
+  write(
+    "data-upload-failed",
+    await renderDataUploadFailedNotification({
+      host,
+      baseUrl,
+      experimentName: "Drought trial",
+      tableName: "leaf_traits",
+      dataUrl: `${baseUrl}/en-US/platform/experiments/123/data`,
     }),
   );
 

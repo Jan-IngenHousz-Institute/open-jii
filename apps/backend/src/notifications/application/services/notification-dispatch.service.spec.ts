@@ -1123,6 +1123,130 @@ describe("NotificationDispatchService", () => {
     });
   });
 
+  describe("the data upload email entries", () => {
+    const uploadedTo = { type: "experiment" as const, id: crypto.randomUUID() };
+
+    it("data_upload_completed sends the experiment's id, its name, the address and the footer", async () => {
+      const send = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendDataUploadCompletedNotification")
+        .mockResolvedValue(success(undefined));
+      const partly = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendDataUploadPartlyCompletedNotification")
+        .mockResolvedValue(success(undefined));
+
+      const result = await notificationEmail.send("data_upload_completed", {
+        recipientId,
+        recipientEmail,
+        actorName: null,
+        resource: uploadedTo,
+        params: { experimentName: "Drought trial" },
+      });
+
+      assertSuccess(result);
+      expect(send).toHaveBeenCalledExactlyOnceWith({
+        experimentId: uploadedTo.id,
+        experimentName: "Drought trial",
+        email: recipientEmail,
+        unsubscribe: send.mock.calls[0]?.[0].unsubscribe,
+      });
+      expectUnsubscribeFooter(testApp, send.mock.calls[0]?.[0].unsubscribe, {
+        recipientId,
+        category: "data_jobs",
+        categoryLabel: "Data exports and uploads",
+      });
+      expect(partly).not.toHaveBeenCalled();
+    });
+
+    it("data_upload_completed with files left out sends them with the experiment's id, its name, the address and the footer", async () => {
+      const plain = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendDataUploadCompletedNotification")
+        .mockResolvedValue(success(undefined));
+      const send = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendDataUploadPartlyCompletedNotification")
+        .mockResolvedValue(success(undefined));
+
+      const result = await notificationEmail.send("data_upload_completed", {
+        recipientId,
+        recipientEmail,
+        actorName: null,
+        resource: uploadedTo,
+        params: {
+          experimentName: "Drought trial",
+          skippedCount: "2",
+          skippedFiles: "broken.csv — could not be read\nempty.csv — no rows",
+        },
+      });
+
+      assertSuccess(result);
+      expect(send).toHaveBeenCalledExactlyOnceWith({
+        experimentId: uploadedTo.id,
+        experimentName: "Drought trial",
+        skippedCount: "2",
+        skippedFiles: "broken.csv — could not be read\nempty.csv — no rows",
+        email: recipientEmail,
+        unsubscribe: send.mock.calls[0]?.[0].unsubscribe,
+      });
+      expectUnsubscribeFooter(testApp, send.mock.calls[0]?.[0].unsubscribe, {
+        recipientId,
+        category: "data_jobs",
+        categoryLabel: "Data exports and uploads",
+      });
+      expect(plain).not.toHaveBeenCalled();
+    });
+
+    it("data_upload_failed sends the experiment's id, its name, the table, the address and the footer", async () => {
+      const send = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendDataUploadFailedNotification")
+        .mockResolvedValue(success(undefined));
+
+      const result = await notificationEmail.send("data_upload_failed", {
+        recipientId,
+        recipientEmail,
+        actorName: null,
+        resource: uploadedTo,
+        params: { experimentName: "Drought trial", tableName: "leaf_traits" },
+      });
+
+      assertSuccess(result);
+      expect(send).toHaveBeenCalledExactlyOnceWith({
+        experimentId: uploadedTo.id,
+        experimentName: "Drought trial",
+        tableName: "leaf_traits",
+        email: recipientEmail,
+        unsubscribe: send.mock.calls[0]?.[0].unsubscribe,
+      });
+      expectUnsubscribeFooter(testApp, send.mock.calls[0]?.[0].unsubscribe, {
+        recipientId,
+        category: "data_jobs",
+        categoryLabel: "Data exports and uploads",
+      });
+    });
+
+    it.each([
+      ["data_upload_completed", "sendDataUploadCompletedNotification", {}],
+      ["data_upload_failed", "sendDataUploadFailedNotification", { tableName: "leaf_traits" }],
+    ] as const)(
+      "%s refuses a notification stored with no resource",
+      async (type, method, extraParams) => {
+        const send = vi
+          .spyOn(testApp.module.get(EmailAdapter), method)
+          .mockResolvedValue(success(undefined));
+
+        const result = await notificationEmail.send(type, {
+          recipientId,
+          recipientEmail,
+          actorName: null,
+          resource: null,
+          params: { experimentName: "Drought trial", ...extraParams },
+        });
+
+        assertFailure(result);
+        expect(result.error.message).toContain("no resource to email about");
+        expect(send).not.toHaveBeenCalled();
+      },
+    );
+  });
+
   it("writes both rows on a replay after a first attempt rolled back", async () => {
     const send = {
       type: "experiment_join_request_received" as const,

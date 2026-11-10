@@ -1,0 +1,68 @@
+import { Button, Link, Section, Text } from "@react-email/components";
+
+import type { EmailUnsubscribe } from "../../components/email-layout";
+import { EmailLayout } from "../../components/email-layout";
+import { LinesPanel } from "../../components/lines-panel";
+
+export interface DataUploadPartlyCompletedNotificationProps {
+  experimentName: string;
+  skippedCount: string;
+  skippedFiles: string;
+  dataUrl: string;
+  senderName?: string;
+  host: string;
+  baseUrl: string;
+  unsubscribe?: EmailUnsubscribe;
+}
+
+export const DataUploadPartlyCompletedNotification = ({
+  experimentName,
+  skippedCount,
+  skippedFiles,
+  dataUrl,
+  senderName = "openJII",
+  host,
+  baseUrl,
+  unsubscribe,
+}: DataUploadPartlyCompletedNotificationProps) => {
+  return (
+    <EmailLayout
+      preview={`Your upload to ${experimentName} is ready to query, with files left out`}
+      senderName={senderName}
+      host={host}
+      baseUrl={baseUrl}
+      unsubscribe={unsubscribe}
+    >
+      <Section className="rounded-t-xl bg-white px-8 pb-4 pt-8">
+        <Text className="mb-2 mt-0 text-center text-[24px] font-semibold text-gray-800">
+          Your upload is ready to query, with files left out
+        </Text>
+        <Text className="mb-4 mt-0 text-center text-[16px] leading-relaxed text-gray-600">
+          The files you uploaded to <strong>{experimentName}</strong> on openJII have been added to
+          their table, and the rows can now be queried from the experiment's Data tab.
+        </Text>
+        <Text className="mb-0 mt-0 text-center text-[16px] leading-relaxed text-gray-600">
+          <strong>{skippedCount} of your files could not be used</strong>
+        </Text>
+        <LinesPanel lines={skippedFiles.split("\n")} />
+        <Text className="mb-6 mt-0 text-center text-[16px] leading-relaxed text-gray-600">
+          Fix them and upload them again to the same table.
+        </Text>
+        <Section className="mb-6 text-center">
+          <Button
+            className="rounded-lg bg-[#005E5E] px-8 py-4 font-semibold text-white no-underline"
+            href={dataUrl}
+          >
+            Open Data tab
+          </Button>
+        </Section>
+        <Text className="mb-0 mt-0 text-center text-[14px] leading-relaxed text-gray-500">
+          If you believe you received this email in error, please contact{" "}
+          <Link href="mailto:openjii@jii.org">openjii@jii.org</Link>.
+        </Text>
+      </Section>
+    </EmailLayout>
+  );
+};
+
+export default DataUploadPartlyCompletedNotification;
