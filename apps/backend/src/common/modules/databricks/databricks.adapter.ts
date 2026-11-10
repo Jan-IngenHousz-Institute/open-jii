@@ -49,6 +49,7 @@ import type { UploadFileResponse } from "./services/files/files.types";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
 import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
 import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
+import { deviceDisplaySource } from "./services/query-builder/expressions/device-label";
 import { QueryBuilderService } from "./services/query-builder/query-builder.service";
 import type {
   AggregationSpec,
@@ -880,6 +881,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     columns?: string[];
     variants?: { columnName: string; schema: string; suffix?: string }[];
     reservedColumns?: string[];
+    baseColumns?: string[];
     exceptColumns?: string[];
     filters?: FilterCondition[];
     aggregation?: AggregationSpec;
@@ -888,7 +890,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     limit?: number;
     offset?: number;
   }): Result<string> {
-    const { tableName, tableType, experimentId, join, ...query } = params;
+    const { tableName, tableType, experimentId, join, baseColumns, ...query } = params;
 
     const tableResult = this.experimentTable(tableType, tableName);
     if (tableResult.isFailure()) {
@@ -897,6 +899,10 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
 
     const whereConditions = this.experimentScope(tableType, tableName, experimentId);
 
+    const table =
+      tableType === "upload"
+        ? tableResult.value
+        : deviceDisplaySource(tableResult.value, this.queryBuilder.query(), baseColumns);
     let resolvedJoin: QueryParams["join"];
     if (join) {
       const secondaryTable = this.experimentTable(
@@ -908,7 +914,14 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         ...join,
         secondary: {
           ...join.secondary,
-          table: secondaryTable.value,
+          table:
+            join.secondary.tableType === "upload"
+              ? secondaryTable.value
+              : deviceDisplaySource(
+                  secondaryTable.value,
+                  this.queryBuilder.query(),
+                  join.secondary.baseColumns,
+                ),
           whereConditions: this.experimentScope(
             join.secondary.tableType,
             join.secondary.tableName,
@@ -917,12 +930,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         },
       };
     }
-    return this.queryBuilder.buildQuery({
-      ...query,
-      join: resolvedJoin,
-      table: tableResult.value,
-      whereConditions,
-    });
+    return this.queryBuilder.buildQuery({ ...query, join: resolvedJoin, table, whereConditions });
   }
 
   /** Column names of the view an experiment table reads from, in its own order. */
