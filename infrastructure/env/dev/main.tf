@@ -3499,6 +3499,7 @@ module "grafana_dashboard" {
   ingest_healthcheck_function_name = local.ingest_healthcheck_publishing ? module.ingest_healthcheck.function_name : ""
   ingest_healthcheck_alerting      = local.ingest_healthcheck_alerting
   status_publisher_function_name   = module.status_publisher.function_name
+  revalidation_dlq_name            = module.opennext.sqs_dlq_name
   db_cluster_identifier            = "open-jii-${var.environment}-db-cluster"
 
   # Measured over 14 days on this stream while dev's consumer ran on a schedule: the median

@@ -138,6 +138,9 @@ passes:
     note: >-
       notification email health: what the outbox sent, failed and has waiting, how long the oldest
       has waited, and the account's bounce and complaint rates
+  - date: 2026-11-16
+    range: [145, 145]
+    note: web pages that failed to regenerate, since a failed regeneration leaves the old copy up and nothing else says so
 
 metrics:
   # Ingest path
@@ -914,6 +917,29 @@ metrics:
       dimensions: { FunctionName: "${SERVER_FUNCTION_NAME}" }
     baseline: { method: threshold, max: 0 }
     runbook: docs/runbooks/web-server-throttles.md
+
+  - num: 145
+    id: web-regeneration-failures
+    name: Page regeneration failures
+    family: observability
+    area: web
+    source: aws
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: AWS/SQS
+      metric: ApproximateNumberOfMessagesVisible
+      stat: Maximum
+      dimensions: { QueueName: "${REVALIDATION_DLQ_NAME}" }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/web-regeneration-failures.md
+    notes: >-
+      Pages the web app failed to regenerate, read from the revalidation queue's DLQ. A page goes
+      there after three failed tries and keeps serving its old copy, so the count is how many pages
+      are stuck. The DLQ keeps a message for 14 days, so the rule stays firing until the cause is
+      fixed and the queue is purged.
 
   - num: 26
     id: web-vitals

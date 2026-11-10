@@ -1328,6 +1328,100 @@ EOT
   }
 }
 
+resource "grafana_rule_group" "page_regeneration" {
+  count = var.revalidation_dlq_name != "" ? 1 : 0
+
+  provider         = grafana.amg
+  name             = "Page Regeneration"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  # Catalog entry 145. A page whose regeneration failed three times lands in the DLQ and keeps
+  # serving its old copy, and the DLQ holds it for 14 days, so any message there is the signal.
+  rule {
+    name      = "Page Regeneration Failures"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/SQS"
+        metricName = "ApproximateNumberOfMessagesVisible"
+        statistic  = "Maximum"
+        dimensions = {
+          QueueName = var.revalidation_dlq_name
+        }
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "max"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "Pages failed to regenerate three times and wait in the revalidation DLQ, so visitors see their old copies."
+      summary          = "Web pages are failing to regenerate"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/web-regeneration-failures.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["web-regeneration-failures"]
+    }
+    labels = {
+      metric_id = "web-regeneration-failures"
+      severity  = "warning"
+      service   = "frontend"
+    }
+  }
+}
+
 # Database Alerts
 resource "grafana_rule_group" "database_health" {
   provider         = grafana.amg

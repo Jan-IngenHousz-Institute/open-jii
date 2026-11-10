@@ -22,3 +22,8 @@ output "dlq_arn" {
   description = "ARN of the dead letter queue (if created)"
   value       = var.create_dlq ? aws_sqs_queue.dlq[0].arn : null
 }
+
+output "dlq_name" {
+  description = "Name of the dead letter queue (if created)"
+  value       = var.create_dlq ? aws_sqs_queue.dlq[0].name : null
+}

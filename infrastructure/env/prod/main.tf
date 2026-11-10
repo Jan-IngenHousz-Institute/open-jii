@@ -3515,6 +3515,7 @@ module "grafana_dashboard" {
   ingest_healthcheck_function_name = local.ingest_healthcheck_publishing ? module.ingest_healthcheck.function_name : ""
   ingest_healthcheck_alerting      = local.ingest_healthcheck_alerting
   status_publisher_function_name   = module.status_publisher.function_name
+  revalidation_dlq_name            = module.opennext.sqs_dlq_name
   db_cluster_identifier            = "open-jii-${var.environment}-db-cluster"
 
   # IoT and Kinesis monitoring
