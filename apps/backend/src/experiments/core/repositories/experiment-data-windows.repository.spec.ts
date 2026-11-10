@@ -249,6 +249,51 @@ describe("row-window repository inputs", () => {
     },
   );
 
+  it.each(["previous", "change_from_previous", "row_number", "latest", "earliest"] as const)(
+    "refuses whole contributor ordering for %s, including case variants and joins",
+    async (fn) => {
+      for (const orderColumn of ["contributor", "CONTRIBUTOR", "second__contributor"]) {
+        const { repository, experiment, build } = setup([
+          column("id", "STRING"),
+          column("timestamp", "TIMESTAMP"),
+          column("station", "STRING"),
+          column("value", "DOUBLE"),
+          column("contributor", WellKnownColumnTypes.CONTRIBUTOR),
+        ]);
+        const result = await repository.getTableData({
+          experimentId: experiment.id,
+          experiment: { ...experiment, anonymizeContributors: true },
+          tableName: "raw_data",
+          source: "warehouse",
+          ...(orderColumn === "second__contributor"
+            ? {
+                join: {
+                  tableName: "weather",
+                  matchColumn: "station",
+                  primaryTimeColumn: "timestamp",
+                  secondaryTimeColumn: "timestamp",
+                  toleranceMinutes: 5,
+                },
+              }
+            : {}),
+          aggregation: { functions: [{ column: "value", function: fn, orderColumn }] },
+        });
+        assertFailure(result);
+        expect(result.error.statusCode).toBe(400);
+        expect(build.mock.calls.some(([query]) => query.aggregation !== undefined)).toBe(false);
+      }
+    },
+  );
+
+  it.each(["latest", "earliest"] as const)("sets an id tie breaker for %s", async (fn) => {
+    const { read, build } = setup();
+    assertSuccess(await read({ column: "value", function: fn, orderColumn: "timestamp" }));
+    expect(
+      build.mock.calls.find(([query]) => query.aggregation)?.[0].aggregation?.functions?.[0]
+        ?.tieBreaker,
+    ).toBe("id");
+  });
+
   it("uses resolved metadata to reject a string difference with a bad request", async () => {
     const { read, build } = setup([column("value", "STRING")]);
     const builder = new QueryBuilderService();

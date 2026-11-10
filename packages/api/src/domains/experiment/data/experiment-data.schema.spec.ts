@@ -509,3 +509,38 @@ describe("ordered aggregates", () => {
     }
   });
 });
+
+describe("aggregation query bounds", () => {
+  const read = (aggregation: unknown) =>
+    zExperimentDataQuery.safeParse({
+      tableName: "raw_data",
+      aggregation: JSON.stringify(aggregation),
+    });
+  it("allows 50 aggregates but refuses 51", () => {
+    const item = { column: "value", function: "avg" };
+    expect(read({ functions: Array.from({ length: 50 }, () => item) }).success).toBe(true);
+    expect(read({ functions: Array.from({ length: 51 }, () => item) }).success).toBe(false);
+  });
+
+  it("allows repeated row-window specs but caps distinct sorts at 10", () => {
+    const items = Array.from({ length: 10 }, (_, i) => ({
+      column: "value",
+      function: "previous",
+      orderColumn: `time_${i}`,
+      partitionColumn: "station",
+    }));
+    expect(
+      read({
+        functions: [...items, ...items, ...items, ...items, ...items],
+      }).success,
+    ).toBe(true);
+    const result = read({
+      functions: [...items, { ...items[0], partitionColumn: "other_station" }],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success)
+      expect(result.error.issues[0]?.message).toContain(
+        "10 different Per and Ordered by combinations",
+      );
+  });
+});

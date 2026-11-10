@@ -37,12 +37,17 @@ export function useVisualizationAutosave({
   enabled = true,
 }: UseVisualizationAutosaveOptions) {
   const values = useWatch({ control: form.control }) as ChartFormValues;
-  const validation = useMemo(() => validateChart(values), [values]);
-  const valid = validation.success && isDataJoinValid(values.dataConfig.join);
+  const validation = useMemo(
+    () => (enabled ? validateChart(values) : undefined),
+    [enabled, values],
+  );
+  const valid = validation?.success === true && isDataJoinValid(values.dataConfig.join);
+  const dirty = form.formState.isDirty;
+  const hasErrors = Object.keys(form.formState.errors).length > 0;
   const isValid = useCallback(() => valid, [valid]);
   useEffect(() => {
-    void form.trigger();
-  }, [form, values]);
+    if (enabled && ((!valid && dirty) || hasErrors)) void form.trigger();
+  }, [enabled, form, validation, valid, dirty, hasErrors]);
   const { mutateAsync } = useExperimentVisualizationUpdate({ experimentId });
 
   const save = useCallback(
@@ -65,7 +70,7 @@ export function useVisualizationAutosave({
     enabled,
   });
   useReportAutosaveStatus({
-    status: enabled ? (valid ? autosave.status : "dirty") : null,
+    status: enabled ? (valid ? autosave.status : "invalid") : null,
     error: autosave.error,
   });
 }

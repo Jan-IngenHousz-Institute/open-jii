@@ -107,6 +107,22 @@ export function takesWindow(fn: ExperimentAggregationFunction): boolean {
   return aggregateKind(fn) === "rowWindow" || fn === "latest" || fn === "earliest";
 }
 
+export function hasRowWindowGroupingConflict(
+  functions: readonly ExperimentAggregationFunction[],
+  hasGrouping: boolean,
+): boolean {
+  return (
+    functions.some((fn) => aggregateKind(fn) === "rowWindow") &&
+    (hasGrouping || functions.some(requiresGroupBy))
+  );
+}
+
+export const ORDER_COLUMN_REQUIRED_MESSAGE = "Choose an Ordered by column for this aggregate";
+export const ORDER_COLUMN_FORBIDDEN_MESSAGE = "This aggregate does not accept an Ordered by column";
+export const PARTITION_COLUMN_FORBIDDEN_MESSAGE = "Only row windows accept a Per column";
+export const MAX_AGGREGATION_FUNCTIONS = 50;
+export const MAX_ROW_WINDOW_SPECS = 10;
+
 export const ROW_WINDOW_GROUPING_MESSAGE =
   "Previous value, Change from previous and Row number keep every row, so they cannot share a chart with grouped series.";
 
@@ -292,21 +308,21 @@ export const zExperimentAggregationItem = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["orderColumn"],
-          message: "Choose an Ordered by column for this aggregate",
+          message: ORDER_COLUMN_REQUIRED_MESSAGE,
         });
       }
     } else if (item.orderColumn !== undefined) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["orderColumn"],
-        message: "This aggregate does not accept an Ordered by column",
+        message: ORDER_COLUMN_FORBIDDEN_MESSAGE,
       });
     }
     if (item.partitionColumn !== undefined && aggregateKind(item.function) !== "rowWindow") {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["partitionColumn"],
-        message: "Only row windows accept a Per column",
+        message: PARTITION_COLUMN_FORBIDDEN_MESSAGE,
       });
     }
     if (isBivariateAggregate(item.function)) {
@@ -341,14 +357,35 @@ export const zExperimentDataAggregation = z
   .superRefine((aggregation, ctx) => {
     const functions = aggregation.functions ?? [];
     if (
-      functions.some((item) => aggregateKind(item.function) === "rowWindow") &&
-      ((aggregation.groupBy?.length ?? 0) > 0 ||
-        functions.some((item) => requiresGroupBy(item.function)))
+      hasRowWindowGroupingConflict(
+        functions.map((item) => item.function),
+        (aggregation.groupBy?.length ?? 0) > 0,
+      )
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["functions"],
         message: ROW_WINDOW_GROUPING_MESSAGE,
+      });
+    }
+  });
+
+const zExperimentDataReadAggregation = zExperimentDataAggregation
+  .safeExtend({
+    functions: z.array(zExperimentAggregationItem).max(MAX_AGGREGATION_FUNCTIONS).optional(),
+  })
+  .superRefine((aggregation, ctx) => {
+    const functions = aggregation.functions ?? [];
+    const windowSpecs = new Set(
+      functions
+        .filter((item) => aggregateKind(item.function) === "rowWindow")
+        .map((item) => JSON.stringify([item.partitionColumn ?? null, item.orderColumn])),
+    );
+    if (windowSpecs.size > MAX_ROW_WINDOW_SPECS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["functions"],
+        message: `Use no more than ${MAX_ROW_WINDOW_SPECS} different Per and Ordered by combinations in one query`,
       });
     }
   });
@@ -425,7 +462,7 @@ export const zExperimentDataQuery = z.object({
     .describe(
       "JSON-encoded second-table settings for latest earlier readings matched by key and time",
     ),
-  aggregation: jsonQuerySchema(zExperimentDataAggregation)
+  aggregation: jsonQuerySchema(zExperimentDataReadAggregation)
     .optional()
     .describe("JSON-encoded GROUP BY + aggregate functions"),
   // `limit` only takes effect when filters or aggregation switch the

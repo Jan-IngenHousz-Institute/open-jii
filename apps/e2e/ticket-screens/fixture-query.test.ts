@@ -628,8 +628,8 @@ describe("FixtureQuery, ordered aggregates", () => {
       { id: "a2", prior: "2026-06-01T10:00:00Z", gap: 120, delta: 4, run: 2 },
       { id: "a3", prior: "2026-06-01T10:02:00Z", gap: 180, delta: 5, run: 3 },
       { id: "a4", prior: "2026-06-01T10:05:00Z", gap: 0, delta: null, run: 4 },
-      { id: "b0", prior: null, gap: null, delta: null, run: 1 },
-      { id: "b1", prior: null, gap: null, delta: 10, run: 2 },
+      { id: "b0", prior: null, gap: null, delta: null, run: null },
+      { id: "b1", prior: null, gap: null, delta: null, run: 1 },
     ]);
     expect(data.columns.find((column) => column.name === "prior")?.type_name).toBe("TIMESTAMP");
     expect(data.columns.find((column) => column.name === "run")?.type_name).toBe("BIGINT");
@@ -735,20 +735,42 @@ it("breaks equal ordering values with binary id order rather than natural numeri
   ]);
 });
 
-it("computes zone-less NTZ gaps as UTC even across the host's daylight-saving change", () => {
+it("orders zone-less NTZ windows and selectors in UTC across the host's spring-forward gap", () => {
   const previousTimezone = process.env.TZ;
   process.env.TZ = "America/New_York";
   try {
-    const data = orderedFixtureRead(
+    const table: FixtureTable = {
+      identifier: "ntz",
+      displayName: "NTZ reports",
+      columns: [{ name: "time", type_name: "TIMESTAMP_NTZ", type_text: "TIMESTAMP_NTZ" }],
+      rows: [{ time: "2026-03-08T02:45:00" }, { time: "2026-03-08T03:15:00" }],
+    };
+    const data = orderedFixtureRead(table, [
+      { column: "time", function: "previous", orderColumn: "time" },
+      { column: "time", function: "change_from_previous", orderColumn: "time" },
+      { column: "*", function: "row_number", orderColumn: "time" },
+    ]);
+    expect(data.rows).toEqual([
       {
-        identifier: "ntz",
-        displayName: "NTZ reports",
-        columns: [{ name: "time", type_name: "TIMESTAMP_NTZ", type_text: "TIMESTAMP_NTZ" }],
-        rows: [{ time: "2026-03-08T01:30:00" }, { time: "2026-03-08T03:30:00" }],
+        time: "2026-03-08T02:45:00",
+        time_previous: null,
+        time_change_from_previous: null,
+        "*_row_number": 1,
       },
-      [{ column: "time", function: "change_from_previous", orderColumn: "time" }],
-    );
-    expect(data.rows.map((row) => row.time_change_from_previous)).toEqual([null, 7200]);
+      {
+        time: "2026-03-08T03:15:00",
+        time_previous: "2026-03-08T02:45:00",
+        time_change_from_previous: 1800,
+        "*_row_number": 2,
+      },
+    ]);
+    const selectors = orderedFixtureRead(table, [
+      { column: "time", function: "latest", orderColumn: "time" },
+      { column: "time", function: "earliest", orderColumn: "time" },
+    ]);
+    expect(selectors.rows).toEqual([
+      { time_latest: "2026-03-08T03:15:00", time_earliest: "2026-03-08T02:45:00" },
+    ]);
   } finally {
     if (previousTimezone === undefined) delete process.env.TZ;
     else process.env.TZ = previousTimezone;
@@ -783,3 +805,67 @@ it.each([
   });
   expect(data.rows.map((row) => row.value_change_from_previous)).toEqual([null, 4]);
 });
+
+it("excludes undated rows from previous, change and row numbers while retaining the raw rows", () => {
+  const data = orderedFixtureRead(
+    {
+      identifier: "undated",
+      displayName: "Undated reports",
+      columns: [
+        { name: "id", type_name: "STRING", type_text: "STRING" },
+        { name: "time", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+        { name: "value", type_name: "INT", type_text: "INT" },
+      ],
+      rows: [
+        { id: "u1", time: null, value: 999 },
+        { id: "first", time: "2026-06-01T10:00:00Z", value: 10 },
+        { id: "u2", time: null, value: 777 },
+        { id: "second", time: "2026-06-01T10:02:00Z", value: 14 },
+      ],
+    },
+    [
+      { column: "value", function: "previous", orderColumn: "time", alias: "prior" },
+      { column: "value", function: "change_from_previous", orderColumn: "time", alias: "delta" },
+      { column: "*", function: "row_number", orderColumn: "time", alias: "run" },
+    ],
+  );
+  expect(data.rows.map(({ id, prior, delta, run }) => ({ id, prior, delta, run }))).toEqual([
+    { id: "u1", prior: null, delta: null, run: null },
+    { id: "first", prior: null, delta: null, run: 1 },
+    { id: "u2", prior: null, delta: null, run: null },
+    { id: "second", prior: 10, delta: 4, run: 2 },
+  ]);
+});
+
+it.each([
+  { type: "STRING", idOrder: "binary STRING", low: "a10", high: "a2", undated: "z" },
+  { type: "INT", idOrder: "numeric INT", low: 2, high: 10, undated: 100 },
+])(
+  "breaks latest/earliest ties by $idOrder id and ignores NULL order",
+  ({ type, low, high, undated }) => {
+    const rows = [
+      { id: low, position: 1, value: 10 },
+      { id: high, position: 1, value: 20 },
+      { id: undated, position: null, value: 999 },
+    ];
+    for (const input of [rows, [...rows].reverse()]) {
+      const data = orderedFixtureRead(
+        {
+          identifier: "ties",
+          displayName: "Tied reports",
+          columns: [
+            { name: "id", type_name: type, type_text: type },
+            { name: "position", type_name: "INT", type_text: "INT" },
+            { name: "value", type_name: "INT", type_text: "INT" },
+          ],
+          rows: input,
+        },
+        [
+          { column: "value", function: "latest", orderColumn: "position", alias: "last" },
+          { column: "value", function: "earliest", orderColumn: "position", alias: "first" },
+        ],
+      );
+      expect(data.rows).toEqual([{ last: 20, first: 10 }]);
+    }
+  },
+);

@@ -29,10 +29,18 @@ function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
   };
 }
 
-function Wrapper({ enabled, children }: { enabled?: boolean; children: ReactNode }) {
+function Wrapper({
+  enabled,
+  children,
+  initialValues,
+}: {
+  enabled?: boolean;
+  children: ReactNode;
+  initialValues?: ChartFormValues;
+}) {
   const { t } = translations.useTranslation("experimentVisualizations");
   const form = useForm<ChartFormValues>({
-    defaultValues: defaults(),
+    defaultValues: initialValues ?? defaults(),
     resolver: chartFormResolver,
     mode: "onChange",
     context: { translate: t },
@@ -59,7 +67,7 @@ function Inner({
 }) {
   useVisualizationAutosave({ form, experimentId: "exp-1", visualizationId: "viz-1", enabled });
 
-  const rename = () => form.setValue("name", "Renamed");
+  const rename = () => form.setValue("name", "Renamed", { shouldDirty: true });
 
   return (
     <>
@@ -97,17 +105,23 @@ function Inner({
       <button
         type="button"
         onClick={() => {
-          form.setValue("dataConfig.dataSources", [
-            { tableName: "t", columnName: "time", role: "x" },
-            { tableName: "t", columnName: "value", role: "y", aggregate: "previous" },
-          ]);
+          form.setValue(
+            "dataConfig.dataSources",
+            [
+              { tableName: "t", columnName: "time", role: "x" },
+              { tableName: "t", columnName: "value", role: "y", aggregate: "previous" },
+            ],
+            { shouldDirty: true },
+          );
         }}
       >
         incomplete window
       </button>
       <button
         type="button"
-        onClick={() => form.setValue("dataConfig.dataSources.1.orderColumn", "time")}
+        onClick={() =>
+          form.setValue("dataConfig.dataSources.1.orderColumn", "time", { shouldDirty: true })
+        }
       >
         complete window
       </button>
@@ -132,20 +146,26 @@ function Inner({
       )}
       <button
         type="button"
-        onClick={() => form.setValue("dataConfig.dataSources.1.partitionColumn", "  ")}
+        onClick={() =>
+          form.setValue("dataConfig.dataSources.1.partitionColumn", "  ", { shouldDirty: true })
+        }
       >
         invalid per
       </button>
-      <button type="button" onClick={() => form.setValue("name", "")}>
+      <button type="button" onClick={() => form.setValue("name", "", { shouldDirty: true })}>
         empty name
       </button>
       <button
         type="button"
         onClick={() =>
-          form.setValue("dataConfig.filters", [
-            { column: "", operator: "equals", value: "" },
-            { column: "temp", operator: "between", value: [1] },
-          ])
+          form.setValue(
+            "dataConfig.filters",
+            [
+              { column: "", operator: "equals", value: "" },
+              { column: "temp", operator: "between", value: [1] },
+            ],
+            { shouldDirty: true },
+          )
         }
       >
         invalid filter after draft
@@ -301,13 +321,15 @@ describe("useVisualizationAutosave", () => {
       </Wrapper>,
     );
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "rename" }));
+      fireEvent.click(screen.getByRole("button", { name: "incomplete window" }));
       await Promise.resolve();
     });
     await act(() => vi.advanceTimersByTimeAsync(1500));
 
     expect(spy.called).toBe(false);
     expect(screen.queryByText("autosave.saved")).not.toBeInTheDocument();
+    expect(screen.queryByText("autosave.invalid")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
 
@@ -369,4 +391,15 @@ it("reports sanitized filter failures at the section instead of a shifted form r
   expect(await screen.findByRole("alert")).toHaveTextContent("workspace.validation.invalidFilters");
   expect(screen.getByTestId("filter-errors")).toHaveTextContent('"type":"custom"');
   expect(screen.getByTestId("filter-errors")).not.toHaveTextContent('"0"');
+});
+
+it("explains an invalid draft even before untouched field errors are shown", async () => {
+  render(
+    <Wrapper initialValues={defaults({ name: "" })}>
+      <AutosaveIndicator />
+    </Wrapper>,
+  );
+  expect(await screen.findByText("autosave.invalid")).toBeInTheDocument();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.queryByText("autosave.saving")).not.toBeInTheDocument();
 });

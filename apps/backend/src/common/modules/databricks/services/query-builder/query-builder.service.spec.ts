@@ -920,7 +920,7 @@ describe("ordered aggregate query inputs", () => {
       }),
     );
     expect(sql).toBe(
-      "SELECT *, LAG(`value`) OVER (ORDER BY `timestamp` ASC) AS `value_previous` FROM (SELECT * FROM readings WHERE `value` > 5) LIMIT 2",
+      "SELECT *, CASE WHEN `timestamp` IS NULL THEN NULL ELSE LAG(`value`) OVER (ORDER BY `timestamp` ASC NULLS LAST) END AS `value_previous` FROM (SELECT * FROM readings WHERE `value` > 5) LIMIT 2",
     );
   });
 

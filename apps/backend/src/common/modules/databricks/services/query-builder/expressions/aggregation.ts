@@ -1,6 +1,7 @@
 import {
   aggregateKind,
-  requiresGroupBy,
+  hasRowWindowGroupingConflict,
+  ORDER_COLUMN_REQUIRED_MESSAGE,
   ROW_WINDOW_GROUPING_MESSAGE,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
@@ -39,11 +40,15 @@ export function buildAggregateExpression(
   }
   if (agg.function === "latest" || agg.function === "earliest") {
     if (!agg.orderColumn?.trim()) {
-      throw new QueryBuilderInputError("Choose an Ordered by column for this aggregate");
+      throw new QueryBuilderInputError(ORDER_COLUMN_REQUIRED_MESSAGE);
     }
     const fn = agg.function === "latest" ? "MAX_BY" : "MIN_BY";
+    const order = builder.escapeIdentifier(agg.orderColumn);
+    const key = agg.tieBreaker
+      ? `CASE WHEN ${order} IS NULL THEN NULL ELSE struct(${order}, ${builder.escapeIdentifier(agg.tieBreaker)}) END`
+      : order;
     return {
-      sql: `${fn}(${builder.escapeIdentifier(agg.column)}, ${builder.escapeIdentifier(agg.orderColumn)})`,
+      sql: `${fn}(${builder.escapeIdentifier(agg.column)}, ${key})`,
       alias: agg.alias ?? `${agg.column}_${agg.function}`,
     };
   }
@@ -155,9 +160,10 @@ export function wrapWithAggregation(
   if (opts.aggregation) {
     const functions = opts.aggregation.functions ?? [];
     if (
-      functions.some((item) => aggregateKind(item.function) === "rowWindow") &&
-      ((opts.aggregation.groupBy?.length ?? 0) > 0 ||
-        functions.some((item) => requiresGroupBy(item.function)))
+      hasRowWindowGroupingConflict(
+        functions.map((item) => item.function),
+        (opts.aggregation.groupBy?.length ?? 0) > 0,
+      )
     ) {
       throw new QueryBuilderInputError(ROW_WINDOW_GROUPING_MESSAGE);
     }

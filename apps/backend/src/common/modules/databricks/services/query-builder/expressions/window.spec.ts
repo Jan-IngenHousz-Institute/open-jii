@@ -9,16 +9,16 @@ describe("raw row windows", () => {
   it("orders within a partition and breaks timestamp ties with the row id", () => {
     expect(
       buildWindowSpec({ ...item, partitionColumn: "sensor.id", tieBreaker: "id" }, builder),
-    ).toBe("PARTITION BY `sensor.id` ORDER BY `timestamp` ASC, `id` ASC");
-    expect(buildWindowSpec(item, builder)).toBe("ORDER BY `timestamp` ASC");
+    ).toBe("PARTITION BY `sensor.id` ORDER BY `timestamp` ASC NULLS LAST, `id` ASC");
+    expect(buildWindowSpec(item, builder)).toBe("ORDER BY `timestamp` ASC NULLS LAST");
     expect(buildWindowSpec({ ...item, orderColumn: "id", tieBreaker: "id" }, builder)).toBe(
-      "ORDER BY `id` ASC",
+      "ORDER BY `id` ASC NULLS LAST",
     );
   });
 
   it("keeps the previous raw value, including null, and defaults its alias", () => {
     expect(buildRowWindowExpression(item, builder)).toEqual({
-      sql: "LAG(`value`) OVER (ORDER BY `timestamp` ASC)",
+      sql: "CASE WHEN `timestamp` IS NULL THEN NULL ELSE LAG(`value`) OVER (ORDER BY `timestamp` ASC NULLS LAST) END",
       alias: "value_previous",
     });
   });
@@ -27,7 +27,7 @@ describe("raw row windows", () => {
     expect(
       buildRowWindowExpression({ ...item, column: "*", function: "row_number" }, builder),
     ).toEqual({
-      sql: "ROW_NUMBER() OVER (ORDER BY `timestamp` ASC)",
+      sql: "CASE WHEN `timestamp` IS NULL THEN NULL ELSE ROW_NUMBER() OVER (ORDER BY `timestamp` ASC NULLS LAST) END",
       alias: "*_row_number",
     });
   });
@@ -38,7 +38,9 @@ describe("raw row windows", () => {
       expect(
         buildRowWindowExpression({ ...item, function: "change_from_previous", valueType }, builder)
           .sql,
-      ).toBe("(`value` - LAG(`value`) OVER (ORDER BY `timestamp` ASC))");
+      ).toBe(
+        "CASE WHEN `timestamp` IS NULL THEN NULL ELSE (`value` - LAG(`value`) OVER (ORDER BY `timestamp` ASC NULLS LAST)) END",
+      );
     },
   );
 
@@ -49,7 +51,7 @@ describe("raw row windows", () => {
         builder,
       ).sql,
     ).toBe(
-      "(unix_micros(`value`) - unix_micros(LAG(`value`) OVER (ORDER BY `timestamp` ASC, `id` ASC))) / 1e6",
+      "CASE WHEN `timestamp` IS NULL THEN NULL ELSE (unix_micros(`value`) - unix_micros(LAG(`value`) OVER (ORDER BY `timestamp` ASC NULLS LAST, `id` ASC))) / 1e6 END",
     );
   });
 
@@ -62,7 +64,7 @@ describe("raw row windows", () => {
       buildRowWindowExpression({ ...item, function: "change_from_previous", valueType }, builder)
         .sql,
     ).toBe(
-      `(unix_micros(${instant}) - unix_micros(LAG(${instant}) OVER (ORDER BY \`timestamp\` ASC))) / 1e6`,
+      `CASE WHEN \`timestamp\` IS NULL THEN NULL ELSE (unix_micros(${instant}) - unix_micros(LAG(${instant}) OVER (ORDER BY \`timestamp\` ASC NULLS LAST))) / 1e6 END`,
     );
   });
 
@@ -72,7 +74,9 @@ describe("raw row windows", () => {
         { ...item, column: "removed", function: "change_from_previous" },
         builder,
       ).sql,
-    ).toBe("(`removed` - LAG(`removed`) OVER (ORDER BY `timestamp` ASC))");
+    ).toBe(
+      "CASE WHEN `timestamp` IS NULL THEN NULL ELSE (`removed` - LAG(`removed`) OVER (ORDER BY `timestamp` ASC NULLS LAST)) END",
+    );
   });
 
   it.each(["STRING", "BOOLEAN", "STRUCT<a: INT>"])(

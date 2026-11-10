@@ -368,13 +368,13 @@
         "primary": "Primär",
         "secondary": "Sekundär (rechts)"
       },
-      "colorScaleHeatmap": "Heatmap color scale",
+      "colorScaleHeatmap": "Heatmap-Farbskala",
       "windowFunctions": {
         "previous": "Vorheriger Wert",
         "change_from_previous": "Änderung zum vorherigen Wert",
         "row_number": "Zeilennummer",
-        "latest": "Wert am spätesten Zeitpunkt",
-        "earliest": "Wert am frühesten Zeitpunkt"
+        "latest": "Wert zum spätesten Zeitpunkt",
+        "earliest": "Wert zum frühesten Zeitpunkt"
       },
       "windowPer": "Pro",
       "windowWholeTable": "Gesamte Tabelle",

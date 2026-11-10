@@ -2,7 +2,10 @@ import { z } from "zod";
 
 import {
   aggregateKind,
-  requiresGroupBy,
+  hasRowWindowGroupingConflict,
+  ORDER_COLUMN_REQUIRED_MESSAGE,
+  ORDER_COLUMN_FORBIDDEN_MESSAGE,
+  PARTITION_COLUMN_FORBIDDEN_MESSAGE,
   takesWindow,
   ROW_WINDOW_GROUPING_MESSAGE,
   zExperimentAggregationFunction,
@@ -164,9 +167,10 @@ export const zExperimentChartDataConfig = z
       ...(config.aggregation?.functions?.map((item) => item.function) ?? []),
       ...config.dataSources.flatMap((source) => (source.aggregate ? [source.aggregate] : [])),
     ];
-    const mixed =
-      functions.some((fn) => aggregateKind(fn) === "rowWindow") &&
-      ((config.aggregation?.groupBy?.length ?? 0) > 0 || functions.some(requiresGroupBy));
+    const mixed = hasRowWindowGroupingConflict(
+      functions,
+      (config.aggregation?.groupBy?.length ?? 0) > 0,
+    );
 
     if (
       mixed &&
@@ -190,16 +194,16 @@ export const zExperimentChartDataConfig = z
         });
       if (source.aggregate && takesWindow(source.aggregate)) {
         if (!source.orderColumn?.trim()) {
-          issue("orderColumn", "Choose an Ordered by column for this aggregate");
+          issue("orderColumn", ORDER_COLUMN_REQUIRED_MESSAGE);
         }
       } else if (source.orderColumn !== undefined) {
-        issue("orderColumn", "This aggregate does not accept an Ordered by column");
+        issue("orderColumn", ORDER_COLUMN_FORBIDDEN_MESSAGE);
       }
       if (
         source.partitionColumn !== undefined &&
         (!source.aggregate || aggregateKind(source.aggregate) !== "rowWindow")
       ) {
-        issue("partitionColumn", "Only row windows accept a Per column");
+        issue("partitionColumn", PARTITION_COLUMN_FORBIDDEN_MESSAGE);
       }
       if (mixed && source.aggregate && aggregateKind(source.aggregate) === "rowWindow") {
         issue("aggregate", ROW_WINDOW_GROUPING_MESSAGE);

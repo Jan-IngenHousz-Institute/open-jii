@@ -1,7 +1,10 @@
 import { toNestErrors } from "@hookform/resolvers";
 import type { FieldError, Resolver } from "react-hook-form";
 
-import { takesWindow } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import {
+  hasRowWindowGroupingConflict,
+  ORDER_COLUMN_REQUIRED_MESSAGE,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { CreateExperimentVisualizationBody } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { zCreateExperimentVisualizationBody } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { getColumnKind } from "@repo/api/transforms/column-type-utils";
@@ -134,7 +137,16 @@ export const chartFormResolver: Resolver<ChartFormValues, ChartFormContext | und
     ...values,
     dataConfig: sanitizeDataConfigForSave(values.dataConfig),
   });
-  if (result.success) return { values: result.data as ChartFormValues, errors: {} };
+  if (result.success) return { values, errors: {} };
+  const groupingConflict = hasRowWindowGroupingConflict(
+    [
+      ...values.dataConfig.dataSources.flatMap((source) =>
+        source.aggregate ? [source.aggregate] : [],
+      ),
+      ...(values.dataConfig.aggregation?.functions?.map((item) => item.function) ?? []),
+    ],
+    (values.dataConfig.aggregation?.groupBy?.length ?? 0) > 0,
+  );
   const errors: Record<string, FieldError> = {};
   const translate = context?.translate ?? ((key: string) => key);
   for (const issue of result.error.issues) {
@@ -145,14 +157,10 @@ export const chartFormResolver: Resolver<ChartFormValues, ChartFormContext | und
     let key = "workspace.validation.invalidChart";
     if (isFilter) key = "workspace.validation.invalidFilters";
     else if (path.at(-1) === "orderColumn") {
-      const aggregate =
-        path[1] === "dataSources"
-          ? values.dataConfig.dataSources[Number(path[2])]?.aggregate
-          : undefined;
       key =
-        aggregate && !takesWindow(aggregate)
-          ? "workspace.shelves.windowOrderUnsupported"
-          : "workspace.shelves.windowOrderRequired";
+        issue.message === ORDER_COLUMN_REQUIRED_MESSAGE || issue.code !== "custom"
+          ? "workspace.shelves.windowOrderRequired"
+          : "workspace.shelves.windowOrderUnsupported";
     } else if (path.at(-1) === "partitionColumn")
       key =
         issue.code === "custom"
@@ -163,7 +171,7 @@ export const chartFormResolver: Resolver<ChartFormValues, ChartFormContext | und
     else if (path.at(-1) === "alias" || path.at(-1) === "seriesName")
       key = "workspace.validation.seriesNameRequired";
     else if (path.at(-1) === "dataSources") key = "workspace.validation.seriesRequired";
-    else if (path.at(-1) === "aggregate" || path.at(-1) === "aggregation")
+    else if (groupingConflict && (path.at(-1) === "aggregate" || path.at(-1) === "aggregation"))
       key = "workspace.shelves.rowWindowConflict";
     errors[name] = { type: issue.code, message: translate(key) };
   }

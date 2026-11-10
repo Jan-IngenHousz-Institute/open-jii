@@ -320,7 +320,7 @@ describe("ordered aggregation routing", () => {
       limit: 10,
     });
     expect(sql).toBe(
-      "SELECT *, LAG(`value`) OVER (PARTITION BY `sensor` ORDER BY `timestamp` ASC) AS `sensor.previous`, SUM(`value`) OVER (ORDER BY `timestamp`) AS `value_cumsum` FROM (SELECT * FROM readings WHERE value > 0) ORDER BY `timestamp` ASC LIMIT 10",
+      "SELECT *, CASE WHEN `timestamp` IS NULL THEN NULL ELSE LAG(`value`) OVER (PARTITION BY `sensor` ORDER BY `timestamp` ASC NULLS LAST) END AS `sensor.previous`, SUM(`value`) OVER (ORDER BY `timestamp`) AS `value_cumsum` FROM (SELECT * FROM readings WHERE value > 0) ORDER BY `timestamp` ASC LIMIT 10",
     );
   });
 
@@ -342,4 +342,20 @@ describe("ordered aggregation routing", () => {
         );
     },
   );
+});
+
+describe("latest and earliest ties", () => {
+  it.each([
+    ["latest", "MAX_BY"],
+    ["earliest", "MIN_BY"],
+  ] as const)("breaks %s order ties by id while ignoring NULL ordering values", (fn, sqlFn) => {
+    expect(
+      buildAggregateExpression(
+        { column: "value", function: fn, orderColumn: "timestamp", tieBreaker: "id" },
+        new SqlQueryBuilder(),
+      ).sql,
+    ).toBe(
+      `${sqlFn}(\`value\`, CASE WHEN \`timestamp\` IS NULL THEN NULL ELSE struct(\`timestamp\`, \`id\`) END)`,
+    );
+  });
 });

@@ -250,3 +250,34 @@ describe("ordered aggregate chart saves", () => {
     }
   });
 });
+
+describe("saved charts exceeding ad-hoc read limits", () => {
+  it.each([
+    { functions: Array.from({ length: 51 }, () => ({ column: "value", function: "avg" })) },
+    {
+      functions: Array.from({ length: 11 }, (_, i) => ({
+        column: "value",
+        function: "previous",
+        orderColumn: `time_${i}`,
+      })),
+    },
+  ])("still parses visualization output beyond a read cap", ({ functions }) => {
+    const chart = {
+      id: "11111111-1111-1111-1111-111111111111",
+      name: "Existing chart",
+      description: null,
+      experimentId: "22222222-2222-2222-2222-222222222222",
+      chartFamily: "basic",
+      chartType: "line",
+      createdBy: "33333333-3333-3333-3333-333333333333",
+      createdAt: "2024-01-01T00:00:00.000Z",
+      updatedAt: "2024-01-01T00:00:00.000Z",
+      dataConfig: {
+        tableName: "raw_data",
+        dataSources: [{ tableName: "raw_data", columnName: "value", role: "y" }],
+        aggregation: { functions },
+      },
+    };
+    expect(zExperimentVisualization.safeParse(chart).success).toBe(true);
+  });
+});

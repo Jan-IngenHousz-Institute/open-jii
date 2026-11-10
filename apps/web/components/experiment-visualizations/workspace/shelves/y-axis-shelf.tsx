@@ -4,7 +4,10 @@ import { Plus } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import { aggregateKind } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import {
+  aggregateKind,
+  takesWindow,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentAggregationFunction } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { filterColumnsForRole } from "@repo/api/domains/experiment/visualizations/experiment-visualization-role-rules";
@@ -264,6 +267,53 @@ export function YAxisShelf({
     }
   };
 
+  const series = ySources.map((entry, seriesIndex) => {
+    const dsIndex = entry.index;
+    const seriesColumn = entry.source.columnName;
+    const aggregateValue = getDataSourceAggregate(sources, dsIndex) ?? AGG_NONE;
+    // Skip the silent-drop warning when the series's own column is itself
+    // a `groupBy` key (heatmap/contour treat Y as a positional axis).
+    const seriesColumnIsGroupKey = Boolean(
+      seriesColumn && aggregation?.groupBy?.some((g) => g.column === seriesColumn),
+    );
+    const willBeSilentlyDropped =
+      groupByActive && !entry.source.aggregate && Boolean(seriesColumn) && !seriesColumnIsGroupKey;
+    const siblings = sources.filter((_, index) => index !== dsIndex);
+    const hasRowWindowSibling = siblings.some(
+      (source) => source.aggregate && aggregateKind(source.aggregate) === "rowWindow",
+    );
+    const ownKind = entry.source.aggregate && aggregateKind(entry.source.aggregate);
+    const groupedElsewhere =
+      Boolean(aggregation?.groupBy?.some((group) => group.timeBucket)) ||
+      siblings.some((source) => source.aggregate && aggregateKind(source.aggregate) === "row") ||
+      (ownKind !== "row" && Boolean(aggregation?.groupBy?.length));
+    const rowWindowConflict = ownKind === "rowWindow" && groupByActive;
+    const aggregateOptions = buildAggregateOptions(groupedElsewhere, hasRowWindowSibling, t);
+    return {
+      entry,
+      seriesIndex,
+      dsIndex,
+      seriesColumn,
+      aggregateValue,
+      willBeSilentlyDropped,
+      rowWindowConflict,
+      aggregateOptions,
+    };
+  });
+  const groupingColumns = [
+    ...new Set(
+      [
+        ...(aggregation?.groupBy?.map((group) => group.column) ?? []),
+        ...sources
+          .filter((source) => source.role === "color" || source.role === "facet")
+          .map((source) => source.columnName),
+      ].filter(Boolean),
+    ),
+  ];
+  const windowColumns = columns.filter((column) =>
+    ["numeric", "temporal", "categorical"].includes(getColumnKind(column.type_text) ?? ""),
+  );
+
   return (
     <section className="space-y-3">
       <header className="flex items-center justify-between">
@@ -277,21 +327,17 @@ export function YAxisShelf({
       </header>
 
       <div className="space-y-3">
-        {ySources.map((entry, seriesIndex) => {
-          const dsIndex = entry.index;
-          const seriesColumn = entry.source.columnName;
-          const aggregateValue = getDataSourceAggregate(sources, dsIndex) ?? AGG_NONE;
-          // Skip the silent-drop warning when the series's own column is itself
-          // a `groupBy` key (heatmap/contour treat Y as a positional axis).
-          const seriesColumnIsGroupKey = Boolean(
-            seriesColumn && aggregation?.groupBy?.some((g) => g.column === seriesColumn),
-          );
-          const willBeSilentlyDropped =
-            groupByActive &&
-            !entry.source.aggregate &&
-            Boolean(seriesColumn) &&
-            !seriesColumnIsGroupKey;
-          return (
+        {series.map(
+          ({
+            entry,
+            seriesIndex,
+            dsIndex,
+            seriesColumn,
+            aggregateValue,
+            willBeSilentlyDropped,
+            rowWindowConflict,
+            aggregateOptions,
+          }) => (
             <YSeriesItem
               key={entry.source.role + dsIndex}
               form={form}
@@ -309,55 +355,10 @@ export function YAxisShelf({
               allowAggregateWithoutColumn={chartType !== undefined}
               effectiveErrorColumns={effectiveErrorColumns}
               xColumnName={xColumnName}
-              aggregateOptions={AGG_FUNCTIONS.map((option) => {
-                const siblings = sources.filter((_, i) => i !== dsIndex);
-                const hasRowWindowSibling = siblings.some(
-                  (ds) => ds.aggregate && aggregateKind(ds.aggregate) === "rowWindow",
-                );
-                const ownKind = entry.source.aggregate && aggregateKind(entry.source.aggregate);
-                const groupedElsewhere =
-                  Boolean(aggregation?.groupBy?.some((g) => g.timeBucket)) ||
-                  siblings.some((ds) => ds.aggregate && aggregateKind(ds.aggregate) === "row") ||
-                  (ownKind !== "row" && Boolean(aggregation?.groupBy?.length));
-                return {
-                  ...option,
-                  label: [
-                    "previous",
-                    "change_from_previous",
-                    "row_number",
-                    "latest",
-                    "earliest",
-                  ].includes(option.value)
-                    ? t(`workspace.shelves.windowFunctions.${option.value}`)
-                    : option.label,
-                  disabledReason:
-                    aggregateKind(option.value) === "rowWindow" && groupedElsewhere
-                      ? t("workspace.shelves.rowWindowNeedsRawRows")
-                      : aggregateKind(option.value) === "row" && hasRowWindowSibling
-                        ? t("workspace.shelves.aggregateConflictsWithRowWindow")
-                        : undefined,
-                };
-              })}
-              rowWindowConflict={Boolean(
-                entry.source.aggregate &&
-                  aggregateKind(entry.source.aggregate) === "rowWindow" &&
-                  groupByActive,
-              )}
-              groupingColumns={[
-                ...new Set(
-                  [
-                    ...(aggregation?.groupBy?.map((g) => g.column) ?? []),
-                    ...sources
-                      .filter((ds) => ds.role === "color" || ds.role === "facet")
-                      .map((ds) => ds.columnName),
-                  ].filter(Boolean),
-                ),
-              ]}
-              windowColumns={columns.filter((column) =>
-                ["numeric", "temporal", "categorical"].includes(
-                  getColumnKind(column.type_text) ?? "",
-                ),
-              )}
+              aggregateOptions={aggregateOptions}
+              rowWindowConflict={rowWindowConflict}
+              groupingColumns={groupingColumns}
+              windowColumns={windowColumns}
               showCartesianControls={showCartesianControls}
               showErrorColumn={showErrorColumn}
               showSeriesColor={showSeriesColor}
@@ -368,8 +369,8 @@ export function YAxisShelf({
               onAggregateChange={handleAggregateChange}
               onRemove={handleRemoveSeries}
             />
-          );
-        })}
+          ),
+        )}
       </div>
 
       <div className={hideAxisType ? "" : "grid grid-cols-2 gap-3"}>
@@ -490,4 +491,23 @@ function forcesLinearAxis(fn: ExperimentAggregationFunction | undefined): boolea
     fn !== undefined &&
     ["count", "count_distinct", "row_number", "change_from_previous"].includes(fn)
   );
+}
+
+function buildAggregateOptions(
+  groupedElsewhere: boolean,
+  hasRowWindowSibling: boolean,
+  translate: (key: string) => string,
+): AggregateOption[] {
+  return AGG_FUNCTIONS.map((option) => ({
+    ...option,
+    label: takesWindow(option.value)
+      ? translate(`workspace.shelves.windowFunctions.${option.value}`)
+      : option.label,
+    disabledReason:
+      aggregateKind(option.value) === "rowWindow" && groupedElsewhere
+        ? translate("workspace.shelves.rowWindowNeedsRawRows")
+        : aggregateKind(option.value) === "row" && hasRowWindowSibling
+          ? translate("workspace.shelves.aggregateConflictsWithRowWindow")
+          : undefined,
+  }));
 }

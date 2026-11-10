@@ -15,6 +15,7 @@ import { zUpdateExperimentVisualizationBody } from "@repo/api/domains/experiment
 import * as translations from "@repo/i18n";
 
 import german from "../../../../../packages/i18n/locales/de-DE/experimentVisualizations.json";
+import { AutosaveIndicator } from "../../shared/autosave/autosave-indicator";
 import { AutosaveStatusProvider } from "../../shared/autosave/autosave-status-context";
 import { chartFormResolver } from "../charts/chart-config";
 import type { ChartFormValues } from "../charts/chart-config";
@@ -36,6 +37,7 @@ function Editor({ form }: { form: UseFormReturn<ChartFormValues> }) {
   useVisualizationAutosave({ form, experimentId: "exp-1", visualizationId: "viz-1" });
   return (
     <DataSourcesFieldArrayProvider form={form}>
+      <AutosaveIndicator />
       <XAxisShelf form={form} columns={columns} />
       <YAxisShelf form={form} columns={columns} chartType="line" />
       <FacetShelf form={form} columns={columns} flat />
@@ -44,7 +46,11 @@ function Editor({ form }: { form: UseFormReturn<ChartFormValues> }) {
   );
 }
 
-function setup(translate: (key: string) => string = (key) => key, instance?: translations.i18n) {
+function setup(
+  translate: (key: string) => string = (key) => key,
+  instance?: translations.i18n,
+  initialSources?: ChartFormValues["dataConfig"]["dataSources"],
+) {
   server.mount(contract.experiments.getExperimentTableColumns, { body: { columns } });
   server.mount(contract.experiments.getExperimentTables, {
     body: [createExperimentTable({ identifier: "readings" })],
@@ -84,7 +90,7 @@ function setup(translate: (key: string) => string = (key) => key, instance?: tra
           config: {},
           dataConfig: {
             tableName: "readings",
-            dataSources: [
+            dataSources: initialSources ?? [
               { tableName: "readings", columnName: "timestamp", role: "x" },
               {
                 tableName: "readings",
@@ -208,4 +214,40 @@ it("omits empty window fields from preview reads when Per becomes Whole table", 
   const queries = reads.calls.map((call) => call.query.aggregation).join("\n");
   expect(queries).not.toContain('"partitionColumn":""');
   expect(queries).not.toContain('"orderColumn":""');
+});
+
+it("removes a middle series while retaining the last window series and saving without a phantom tail", async () => {
+  const user = userEvent.setup();
+  const { form, saves } = setup(undefined, undefined, [
+    { tableName: "readings", columnName: "timestamp", role: "x" },
+    { tableName: "readings", columnName: "reading", role: "y" },
+    { tableName: "readings", columnName: "reading", role: "y", alias: "Middle" },
+    {
+      tableName: "readings",
+      columnName: "reading",
+      role: "y",
+      aggregate: "previous",
+      orderColumn: "timestamp",
+      partitionColumn: "sensor",
+    },
+  ]);
+  await user.click(screen.getAllByRole("button", { name: "workspace.shelves.removeSeries" })[1]);
+  expect(form.getValues("dataConfig.dataSources")).toHaveLength(3);
+  expect(form.getValues("dataConfig.dataSources.3")).toBeUndefined();
+  await user.click(screen.getByRole("combobox", { name: "workspace.shelves.windowPer" }));
+  await user.click(screen.getByRole("option", { name: "workspace.shelves.windowWholeTable" }));
+  await waitFor(
+    () => {
+      const saved = zUpdateExperimentVisualizationBody.parse(saves.body);
+      expect(saved.dataConfig.dataSources).toHaveLength(3);
+      expect(saved.dataConfig.dataSources[2]).toMatchObject({
+        aggregate: "previous",
+        orderColumn: "timestamp",
+      });
+    },
+    { timeout: 3000 },
+  );
+  expect(form.getValues("dataConfig.dataSources.3")).toBeUndefined();
+  expect(screen.queryByText("autosave.invalid")).not.toBeInTheDocument();
+  expect(await screen.findByText("autosave.saved")).toBeInTheDocument();
 });

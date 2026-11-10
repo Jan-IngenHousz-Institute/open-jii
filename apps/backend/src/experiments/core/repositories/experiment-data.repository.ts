@@ -1,7 +1,7 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 
 import {
-  aggregateKind,
+  takesWindow,
   DATA_QUERY_MAX_LIMIT,
   WellKnownColumnTypes,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -592,6 +592,11 @@ export class ExperimentDataRepository {
 
     const referenceOf = (name: string) => this.contributorReference(name, columnsResult.value);
 
+    const contributorOrder = aggregation?.functions?.find(
+      (item) => item.orderColumn !== undefined && referenceOf(item.orderColumn) !== undefined,
+    )?.orderColumn;
+    if (contributorOrder !== undefined) return this.anonymizedRefusal(contributorOrder);
+
     const revealing = projected.find((name) => referenceOf(name)?.field !== undefined);
     if (revealing !== undefined) {
       return this.anonymizedRefusal(revealing);
@@ -925,7 +930,7 @@ export class ExperimentDataRepository {
     }
 
     let effectiveAggregation = aggregation;
-    if (aggregation?.functions?.some((item) => aggregateKind(item.function) === "rowWindow")) {
+    if (aggregation?.functions?.some((item) => takesWindow(item.function))) {
       const columnsResult = shape.columns
         ? success(shape.columns)
         : await this.getTableColumns({
@@ -946,7 +951,7 @@ export class ExperimentDataRepository {
                 )?.type_text,
               }
             : {}),
-          ...(aggregateKind(item.function) === "rowWindow"
+          ...(takesWindow(item.function)
             ? {
                 tieBreaker: tableColumns.some((column) => column.name === ROW_ID)
                   ? ROW_ID

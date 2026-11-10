@@ -5,7 +5,7 @@ import { AlertCircle } from "lucide-react";
 import { useMemo } from "react";
 
 import type { ExperimentVisualizationWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
-import { zCreateExperimentVisualizationBody } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import { zExperimentChartDataConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 
@@ -39,16 +39,13 @@ export function LoadedVisualizationView({
     const server = data;
     if (!server) return undefined;
     if (live?.vizId !== visualizationId) return server;
-    const validation = zCreateExperimentVisualizationBody.safeParse({
-      ...live.values,
-      dataConfig: sanitizeDataConfigForSave(live.values.dataConfig),
-    });
+    const validation = zExperimentChartDataConfig.safeParse(
+      sanitizeDataConfigForSave(live.values.dataConfig),
+    );
     if (!validation.success) return server;
     // Drop draft data sources so the renderer's query doesn't 400
     // on half-edited configs.
-    const configuredSources = validation.data.dataConfig.dataSources.filter((ds) =>
-      Boolean(ds.columnName),
-    );
+    const configuredSources = validation.data.dataSources.filter((ds) => Boolean(ds.columnName));
     return {
       ...server,
       name: live.values.name,
@@ -56,7 +53,7 @@ export function LoadedVisualizationView({
       chartFamily: live.values.chartFamily,
       chartType: live.values.chartType,
       config: { ...live.values.config },
-      dataConfig: { ...validation.data.dataConfig, dataSources: configuredSources },
+      dataConfig: { ...validation.data, dataSources: configuredSources },
     };
   }, [data, live, visualizationId]);
 

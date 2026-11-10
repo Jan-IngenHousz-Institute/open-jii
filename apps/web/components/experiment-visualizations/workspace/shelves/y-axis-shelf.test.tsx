@@ -620,6 +620,10 @@ describe("ordered Y calculations", () => {
       "true",
     );
     expect(screen.getAllByText("workspace.shelves.rowWindowNeedsRawRows")).toHaveLength(3);
+    for (const reason of screen.getAllByText("workspace.shelves.rowWindowNeedsRawRows")) {
+      expect(reason).toBeVisible();
+      expect(screen.getByRole("listbox")).toContainElement(reason);
+    }
     unmount();
     renderShelf((form) => <YAxisShelf form={form} columns={columns} />, {
       useFormProps: {

@@ -293,13 +293,14 @@ export class FixtureQuery {
     if (orderBy === undefined) return shaped;
 
     const direction = query.orderDirection === "DESC" ? -1 : 1;
+    const orderType = shaped.columns.find((column) => column.name === orderBy)?.type_name;
     const rows = [...shaped.rows].sort((a, b) => {
       const left = a[orderBy] ?? null;
       const right = b[orderBy] ?? null;
       if (left === null && right === null) return 0;
       if (left === null) return -direction;
       if (right === null) return direction;
-      return this.compare(left, right) * direction;
+      return this.compare(left, right, orderType) * direction;
     });
     return { columns: shaped.columns, rows };
   }
@@ -379,7 +380,10 @@ export class FixtureQuery {
     return isTime ? Date.parse(cell) === Date.parse(value) : cell === String(value);
   }
 
-  private compare(a: Scalar, b: Scalar): number {
+  private compare(a: Scalar, b: Scalar, type?: string): number {
+    if (type === "TIMESTAMP_NTZ" && typeof a === "string" && typeof b === "string") {
+      return this.windowTime(a, type) - this.windowTime(b, type);
+    }
     if (typeof a === "number" && typeof b === "number") return a - b;
     if (typeof a === "number") return a - Number(b);
     if (
@@ -391,6 +395,13 @@ export class FixtureQuery {
       return Date.parse(a) - Date.parse(b);
     }
     return String(a).localeCompare(String(b), undefined, { numeric: true });
+  }
+
+  private compareIds(left: FixtureValue | undefined, right: FixtureValue | undefined): number {
+    if (typeof left === "number" && typeof right === "number") return left - right;
+    const a = String(left ?? "");
+    const b = String(right ?? "");
+    return a < b ? -1 : a > b ? 1 : 0;
   }
 
   private isTimestamp(text: string): boolean {
@@ -427,7 +438,7 @@ export class FixtureQuery {
       keys.forEach((groupKey, index) => {
         row[groupKey.alias] = key[index] ?? null;
       });
-      for (const item of rowFunctions) row[this.alias(item)] = this.reduce(members, item);
+      for (const item of rowFunctions) row[this.alias(item)] = this.reduce(members, item, table);
       return { row, members };
     });
 
@@ -439,6 +450,8 @@ export class FixtureQuery {
         );
       }
       const orderKey = first?.alias ?? orderBy ?? "";
+      const orderType =
+        first?.type ?? table.columns.find((column) => column.name === orderBy)?.type_name;
       const sums = out.map(({ row, members }) => ({
         order: row[orderKey] ?? null,
         amount: item.column === "*" ? members.length : this.total(members, item.column),
@@ -446,7 +459,10 @@ export class FixtureQuery {
       for (const entry of out) {
         const at = entry.row[orderKey] ?? null;
         entry.row[this.alias(item)] = sums
-          .filter((sum) => sum.order === null || (at !== null && this.compare(sum.order, at) <= 0))
+          .filter(
+            (sum) =>
+              sum.order === null || (at !== null && this.compare(sum.order, at, orderType) <= 0),
+          )
           .reduce((running, sum) => running + sum.amount, 0);
       }
     }
@@ -476,11 +492,12 @@ export class FixtureQuery {
       );
     }
 
+    const orderType = table.columns.find((column) => column.name === orderBy)?.type_name;
     const out = rows.map((row) => {
       const at = row[orderBy ?? ""] ?? null;
       const peers = rows.filter((other) => {
         const order = other[orderBy ?? ""] ?? null;
-        return order === null || (at !== null && this.compare(order, at) <= 0);
+        return order === null || (at !== null && this.compare(order, at, orderType) <= 0);
       });
       const extra: Record<string, FixtureValue> = {};
       for (const item of functions) {
@@ -489,32 +506,31 @@ export class FixtureQuery {
             item.column === "*" ? peers.length : this.total(peers, item.column);
           continue;
         }
+        if (row[item.orderColumn ?? ""] == null) {
+          extra[this.alias(item)] = null;
+          continue;
+        }
         const partition = rows.filter(
           (other) =>
             !item.partitionColumn || other[item.partitionColumn] === row[item.partitionColumn],
         );
+        const windowOrderType = table.columns.find(
+          (column) => column.name === item.orderColumn,
+        )?.type_name;
         const ordered = [...partition];
-        // The backend appends id where present, including tied or null ordering values.
+        // Undated rows sort last and cannot supply a previous value to dated rows.
         ordered.sort((a, b) => {
           const left = a[item.orderColumn ?? ""] ?? null;
           const right = b[item.orderColumn ?? ""] ?? null;
-          const leftId = String(a.id ?? "");
-          const rightId = String(b.id ?? "");
           return (
             (left === null && right === null
               ? 0
               : left === null
-                ? -1
+                ? 1
                 : right === null
-                  ? 1
-                  : this.compare(left, right)) ||
-            (table.columns.some((column) => column.name === "id")
-              ? leftId < rightId
-                ? -1
-                : leftId > rightId
-                  ? 1
-                  : 0
-              : 0)
+                  ? -1
+                  : this.compare(left, right, windowOrderType)) ||
+            (table.columns.some((column) => column.name === "id") ? this.compareIds(a.id, b.id) : 0)
           );
         });
         const index = ordered.indexOf(row);
@@ -658,17 +674,24 @@ export class FixtureQuery {
   }
 
   // STDDEV and VARIANCE are the sample forms, NULL below two values.
-  private reduce(rows: FixtureRow[], item: ExperimentAggregationItem): FixtureValue {
+  private reduce(
+    rows: FixtureRow[],
+    item: ExperimentAggregationItem,
+    table: FixtureTable,
+  ): FixtureValue {
     if (item.function === "latest" || item.function === "earliest") {
       const candidates = rows.filter((row) => row[item.orderColumn ?? ""] != null);
-      const ordered = this.ordered(
-        { columns: [], rows: candidates },
-        {
-          tableName: "fixture",
-          orderBy: item.orderColumn,
-          orderDirection: item.function === "latest" ? "DESC" : "ASC",
-        },
-      ).rows;
+      const direction = item.function === "latest" ? -1 : 1;
+      const hasId = table.columns.some((column) => column.name === "id");
+      const orderType = table.columns.find((column) => column.name === item.orderColumn)?.type_name;
+      const ordered = [...candidates].sort((a, b) => {
+        const order = this.compare(
+          a[item.orderColumn ?? ""] ?? "",
+          b[item.orderColumn ?? ""] ?? "",
+          orderType,
+        );
+        return (order || (hasId ? this.compareIds(a.id, b.id) : 0)) * direction;
+      });
       return ordered[0]?.[item.column] ?? null;
     }
     if (item.function === "count_distinct") {

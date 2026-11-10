@@ -3,7 +3,7 @@ title: "Viewing your data"
 description: "Inspect, filter, annotate, and visualize an experiment's processed tables."
 ---
 
-{/* verified: code@efd66bdd4 2026-08-04 */}
+{/* verified: code@109f58a49 2026-11-10 */}
 
 Open an experiment and select **Data**. The dataset picker above the table names
 the dataset you are looking at and its row count. Opening it lists every dataset
@@ -219,6 +219,8 @@ Filters apply before these calculations. The first row in each group, including
 the first row inside a filtered time range, has no previous value. A chart does
 not draw a point for that missing value. If rows have the same ordering value,
 the row ID breaks the tie when available. Otherwise their order can vary between reads.
+Rows with a missing **Ordered by** value sort last and have no calculation result.
+They do not take part in the sequence.
 
 ![A line chart numbering each sensor's readings in time order with Row number](/img/guide/web/ordered-aggregates-row-number.webp)
 
@@ -240,7 +242,8 @@ function groups the chart by X and turns other raw Y series into **Average**.
 Filters apply first. Rows with a missing ordering value do not take part. A
 missing Y value at the selected row remains missing, so **Value at latest** does
 not mean the latest non-empty value. If several rows tie for the latest or
-earliest ordering value, any of their Y values may be returned.
+earliest ordering value, the row ID breaks the tie when available. Without a row
+ID, any of the tied rows' Y values may be returned.
 
 ### Split a chart into panels
 

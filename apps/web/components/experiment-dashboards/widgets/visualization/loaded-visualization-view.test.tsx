@@ -105,7 +105,7 @@ function LiveDraft({ values, children }: { values: ChartFormValues; children: Re
   return children;
 }
 
-it.each(["missing order", "grouped rows", "valid"])(
+it.each(["missing order", "grouped rows", "valid", "empty name"])(
   "uses the server snapshot for invalid dashboard drafts: %s",
   async (state) => {
     const viz = createVisualization({ id: "viz-1", name: "Saved chart" });
@@ -114,7 +114,7 @@ it.each(["missing order", "grouped rows", "valid"])(
       config: { visualizationId: "viz-1", showTitle: true, showDescription: false },
     });
     const values: ChartFormValues = {
-      name: "Live chart",
+      name: state === "empty name" ? "" : "Live chart",
       chartFamily: "basic",
       chartType: "line",
       config: {},
@@ -142,8 +142,8 @@ it.each(["missing order", "grouped rows", "valid"])(
       </LiveVizProvider>,
     );
     await waitFor(() =>
-      expect(screen.getByTestId("viz-renderer")).toHaveTextContent(
-        state === "valid" ? "Live chart" : "Saved chart",
+      expect(screen.getByTestId("viz-renderer").textContent).toBe(
+        state === "empty name" ? "" : state === "valid" ? "Live chart" : "Saved chart",
       ),
     );
   },

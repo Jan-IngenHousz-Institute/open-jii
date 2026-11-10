@@ -228,7 +228,7 @@ export function setDataSourceAggregate(
     anyAxisWasBucketed ||
     previousSources.some((ds) => ds.aggregate && aggregateRequiresGroupBy(ds.aggregate));
 
-  // Undefined makes RHF remount these controls with their persisted default value.
+  // Keep cleared controls as empty strings so RHF does not restore their persisted defaults.
   const previousFn = previousSources[dsIndex]?.aggregate;
   if (
     fn === undefined ||
