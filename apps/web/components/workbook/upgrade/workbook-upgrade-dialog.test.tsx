@@ -60,6 +60,29 @@ function renderDialog(overrides: Partial<Parameters<typeof WorkbookUpgradeDialog
 }
 
 describe("WorkbookUpgradeDialog", () => {
+  it("blocks an upgrade when text question names normalize to the same column key", async () => {
+    const original = createQuestionCell({
+      name: "Plot Code",
+      question: { kind: "open_ended", text: "Which plot?", required: false },
+    });
+    mountPinned([], [original]);
+    server.mount(contract.workbooks.getWorkbook, {
+      body: createWorkbook({
+        id: WORKBOOK_ID,
+        cells: [original, createQuestionCell({ name: "plot-code" })],
+      }),
+    });
+
+    const { props } = renderDialog();
+
+    expect(await screen.findByText("flow.upgradeDiff.issue.duplicateQuestionName")).toBeVisible();
+    expect(screen.queryByText("flow.upgradeDiff.issue.questionTypeChange")).not.toBeInTheDocument();
+    const confirm = screen.getByRole("button", { name: "flow.confirmUpgrade" });
+    expect(confirm).toBeDisabled();
+    await userEvent.setup().click(confirm);
+    expect(props.onConfirm).not.toHaveBeenCalled();
+  });
+
   it("blocks a Number to text upgrade until the question is renamed", async () => {
     const original = createQuestionCell({
       name: "Height",
