@@ -155,7 +155,9 @@ def test_cached_columns_hide_new_client_ids_and_preserve_user_fields(
 ) -> None:
     stale = spark.sql(_QUERIES["staleColumns"])
     assert "client_id" not in stale.columns
-    assert stale.where("id = 2").first().device.serial_number == "Ambit (d2)"
+    row = stale.where("id = 2").first()
+    assert row is not None
+    assert row.device.serial_number == "Ambit (d2)"
     hidden = spark.sql(_QUERIES["hiddenClient"])
     assert hidden.columns.count("client_id") == 1
     assert all(row.client_id == "user-client" for row in hidden.collect())
