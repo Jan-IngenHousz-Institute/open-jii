@@ -12,7 +12,7 @@ import type {
   ExperimentTableMetadata,
   ExperimentTableType,
 } from "../../core/models/experiment-data.model";
-import type { FlowDto } from "../../core/models/flow.model";
+import type { FlowDto, FlowGraphDto } from "../../core/models/flow.model";
 import { DATABRICKS_PORT } from "../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../core/ports/databricks.port";
 import type {
@@ -90,12 +90,18 @@ export class ExperimentWarehouseReadsService implements ExperimentTableReads {
     const nodes = flow?.graph.nodes ?? [];
     return new Set(
       nodes
-        .filter(
-          (node) =>
-            node.type === "question" && "kind" in node.content && node.content.kind === "number",
-        )
-        .map((node) => sanitizeQuestionLabel(node.name)),
+        .filter((node) => this.isNumberQuestion(node))
+        .map((node) => this.pipelineKey(node.name)),
     );
+  }
+
+  private isNumberQuestion(node: FlowGraphDto["nodes"][number]): boolean {
+    return node.type === "question" && "kind" in node.content && node.content.kind === "number";
+  }
+
+  /** Gold's `_key` also collapses underscores the name already holds, which the shared rule keeps. */
+  private pipelineKey(name: string): string {
+    return sanitizeQuestionLabel(name).replace(/_+/g, "_");
   }
 
   /** The revision changes with the typed keys, so cached column lists follow a flow edit. */

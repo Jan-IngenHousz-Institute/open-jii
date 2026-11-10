@@ -1,4 +1,4 @@
-import { assertSuccess, success } from "../../../common/utils/fp-utils";
+import { AppError, assertSuccess, failure, success } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import type { ExperimentTableMetadata } from "../../core/models/experiment-data.model";
 import type { FlowGraphDto } from "../../core/models/flow.model";
@@ -113,7 +113,7 @@ describe("ExperimentWarehouseReadsService", () => {
   it("matches a question to its column by the pipeline's key", async () => {
     const renamed: FlowGraphDto = {
       ...graph,
-      nodes: [{ ...graph.nodes[0], name: "Plant  Height (cm)" }, graph.nodes[1]],
+      nodes: [{ ...graph.nodes[0], name: "Plant__Height (cm)" }, graph.nodes[1]],
     };
     assertSuccess(await flows.create(experimentId, renamed));
     metadata([{ ...rawData, questionsSchema: "OBJECT<plant_height_cm: STRING, plot: STRING>" }]);
@@ -122,5 +122,38 @@ describe("ExperimentWarehouseReadsService", () => {
 
     assertSuccess(result);
     expect(result.value[0].questionsSchema).toBe("OBJECT<plant_height_cm: DOUBLE, plot: STRING>");
+  });
+
+  it("gives each set of typed keys its own revision", async () => {
+    const both: FlowGraphDto = {
+      ...graph,
+      nodes: [
+        graph.nodes[0],
+        {
+          ...graph.nodes[1],
+          content: { kind: "number", text: "Plot number", required: false },
+        },
+      ],
+    };
+    assertSuccess(await flows.create(experimentId, graph));
+    metadata([rawData]);
+    const heightOnly = await reads.tablesMetadata(experimentId);
+    assertSuccess(await flows.update(experimentId, both));
+    const heightAndPlot = await reads.tablesMetadata(experimentId);
+
+    assertSuccess(heightOnly);
+    assertSuccess(heightAndPlot);
+    expect(heightAndPlot.value[0].schemaRevision).not.toBe(heightOnly.value[0].schemaRevision);
+  });
+
+  it("fails the metadata when the flow cannot be read", async () => {
+    metadata([rawData]);
+    vi.spyOn(flows, "getByExperimentId").mockResolvedValue(
+      failure(AppError.internal("flow lookup failed")),
+    );
+
+    const result = await reads.tablesMetadata(experimentId);
+
+    expect(result.isFailure()).toBe(true);
   });
 });

@@ -2436,6 +2436,7 @@ describe("ExperimentDataRepository", () => {
         orderBy: "q",
         questionsSchema: "OBJECT<q: DOUBLE>",
         numeric: false,
+        number: true,
       },
       {
         source: "native boolean",
@@ -2465,7 +2466,7 @@ describe("ExperimentDataRepository", () => {
       },
     ])(
       "uses the resolved source for $source",
-      async ({ orderBy, questionsSchema, macroSchema, customMetadataSchema, numeric }) => {
+      async ({ orderBy, questionsSchema, macroSchema, customMetadataSchema, numeric, number }) => {
         vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
           success([
             {
@@ -2488,8 +2489,9 @@ describe("ExperimentDataRepository", () => {
         const result = await repository.getTableData({ ...params, tableName: "fixture", orderBy });
         assertSuccess(result);
         if (orderBy === "") expect(build.mock.calls[0][0].ordering).toBeUndefined();
+        const mode = numeric ? "numericString" : number ? "number" : undefined;
         expect(build.mock.calls[0][0].ordering?.mode).toEqual(
-          numeric ? { kind: "numericString", rowId: "id" } : undefined,
+          mode ? { kind: mode, rowId: "id" } : undefined,
         );
       },
     );
