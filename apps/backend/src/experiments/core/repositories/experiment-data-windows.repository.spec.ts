@@ -41,6 +41,7 @@ function setup(
     .mockResolvedValue(success({ columns, rows: [], totalRows: 0, truncated: false }));
   const port = fromPartial<DatabricksPort>({
     CENTRUM_SCHEMA_NAME: "centrum",
+    getExperimentTableColumns: vi.fn().mockResolvedValue(success(columns.map(({ name }) => name))),
     getExperimentTableMetadata: vi.fn().mockResolvedValue(
       success(
         ["raw_data", "weather"].map((identifier) => ({
