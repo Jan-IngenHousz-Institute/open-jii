@@ -937,7 +937,6 @@
       "invalidChart": "Check the chart settings before saving.",
       "invalidFilters": "Check the filter values before saving.",
       "nameRequired": "Enter a visualization name.",
-      "seriesNameRequired": "Enter a series name.",
       "seriesRequired": "Add a data series."
     }
   }

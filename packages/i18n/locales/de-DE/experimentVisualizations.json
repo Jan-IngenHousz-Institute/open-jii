@@ -909,7 +909,6 @@
       "invalidChart": "Prüfe vor dem Speichern die Diagrammeinstellungen.",
       "invalidFilters": "Prüfe vor dem Speichern die Filterwerte.",
       "nameRequired": "Gib einen Namen für die Visualisierung ein.",
-      "seriesNameRequired": "Gib einen Seriennamen ein.",
       "seriesRequired": "Füge eine Datenreihe hinzu."
     }
   }
