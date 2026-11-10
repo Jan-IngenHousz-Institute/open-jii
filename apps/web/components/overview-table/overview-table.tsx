@@ -20,6 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui/components/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 
 export interface OverviewTableColumn<T extends RowData, F extends string = string> {
@@ -53,6 +59,11 @@ interface OverviewTableProps<T extends RowData, F extends string> {
 export interface OverviewTableSorting<F extends string> {
   sort: readonly { field: F; direction: "asc" | "desc" }[];
   onToggle: (field: F, multi: boolean) => void;
+  /**
+   * The server could not load activity, so its header stays visible but cannot
+   * sort, and the URL's sort keeps it without the other headers counting it.
+   */
+  activityUnavailable?: boolean;
 }
 
 const HEADER_BG = "bg-muted/50";
@@ -60,6 +71,7 @@ const TABLE_BORDER = "border-border";
 const TEXT_STRONG = "text-foreground";
 const TEXT_MUTED = "text-muted-foreground";
 const EMPTY_ITEMS: never[] = [];
+const ACTIVITY_FIELD = "activity";
 
 export const overviewTableText = { strong: TEXT_STRONG, muted: TEXT_MUTED };
 
@@ -99,13 +111,16 @@ export function OverviewTable<T extends RowData, F extends string = string>({
     desc: t("common.sortDescending"),
     secondary: t("common.sortSecondary"),
   };
+  const unavailableLabel = t("common.sortActivityUnavailable");
   const sortingState = useMemo<SortingState>(
     () =>
-      (sorting?.sort ?? []).map(({ field, direction }) => ({
-        id: field,
-        desc: direction === "desc",
-      })),
-    [sorting?.sort],
+      (sorting?.sort ?? [])
+        .filter(({ field }) => !(sorting?.activityUnavailable && field === ACTIVITY_FIELD))
+        .map(({ field, direction }) => ({
+          id: field,
+          desc: direction === "desc",
+        })),
+    [sorting?.sort, sorting?.activityUnavailable],
   );
   const loading = isLoading === true;
   const tableColumns = useMemo<ColumnDef<typeof overviewTableFeatures, T>[]>(
@@ -199,7 +214,27 @@ export function OverviewTable<T extends RowData, F extends string = string>({
                       meta.className,
                     )}
                   >
-                    {header.isPlaceholder ? null : sorting && header.column.getCanSort() ? (
+                    {header.isPlaceholder ? null : sorting &&
+                      header.column.getCanSort() &&
+                      sorting.activityUnavailable &&
+                      header.column.id === ACTIVITY_FIELD ? (
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              aria-disabled
+                              className="inline-flex cursor-not-allowed items-center gap-1 text-left uppercase opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2"
+                              aria-label={`${meta.label ?? header.column.id}: ${unavailableLabel}`}
+                            >
+                              <table.FlexRender header={header} />
+                              <ArrowUpDown aria-hidden className="size-3.5 opacity-50" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>{unavailableLabel}</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : sorting && header.column.getCanSort() ? (
                       <button
                         type="button"
                         className="hover:text-foreground inline-flex items-center gap-1 text-left uppercase focus-visible:outline-2 focus-visible:outline-offset-2"
