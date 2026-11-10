@@ -66,9 +66,31 @@ describe("createWarehouse", () => {
 
     await expect(
       createWarehouse("dev", "w1", truncated, wait).rows("SELECT 1", []),
-    ).rejects.toThrow("narrow the window");
+    ).rejects.toThrow("cut the result short");
     await expect(createWarehouse("dev", "w1", failed, wait).rows("SELECT 1", [])).rejects.toThrow(
       "FAILED: TABLE_OR_VIEW_NOT_FOUND",
     );
+  });
+
+  it("cancels a statement still running after ten minutes", async () => {
+    const calls: string[][] = [];
+    const running: DatabricksCli = (args) => {
+      calls.push(args);
+      const isCancel = args[2].endsWith("/cancel");
+      return Promise.resolve(
+        isCancel ? "" : JSON.stringify({ statement_id: "s1", status: { state: "RUNNING" } }),
+      );
+    };
+    let waited = 0;
+    const countingWait = (ms: number) => {
+      waited += ms;
+      return Promise.resolve();
+    };
+
+    await expect(
+      createWarehouse("dev", "w1", running, countingWait).rows("SELECT 1", []),
+    ).rejects.toThrow("still RUNNING after 10 minutes");
+    expect(waited).toBe(10 * 60_000);
+    expect(calls.at(-1)?.slice(0, 3)).toEqual(["api", "post", "/api/2.0/sql/statements/s1/cancel"]);
   });
 });

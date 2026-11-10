@@ -1,19 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ArchiveObject, ArchiveReader, StreamRecord, StreamWriter } from "../lib/aws.js";
+import type {
+  ArchiveObject,
+  ArchiveReader,
+  StreamReaders,
+  StreamRecord,
+  StreamWriter,
+} from "../lib/aws.js";
 import type { Warehouse } from "../lib/databricks.js";
 import {
+  contentQuery,
   dayPrefixes,
+  isComplete,
   messageFromRuleError,
   messageOf,
   parseArgs,
+  recordIdQuery,
+  sampleDigest,
   runReplay,
   utcMillis,
 } from "./ingest-replay.js";
-import type { ReplayArgs } from "./ingest-replay.js";
+import type { ReplayArgs, ReplayDeps } from "./ingest-replay.js";
 
 const experiment = "11111111-1111-4111-8111-111111111111";
 const topic = `experiment/data_ingest/v1/${experiment}/multispeq/v1.0/protocol`;
+const archiveStream = "open-jii-dev-iot-raw-archive";
 
 function message(fields: Record<string, unknown>): string {
   return JSON.stringify({ topic, client_id: "phone-1", device_id: "MS-1", ...fields });
@@ -35,7 +46,9 @@ function args(overrides: Partial<ReplayArgs> = {}): ReplayArgs {
   };
 }
 
-function archive(objects: (ArchiveObject & { text: string })[]): ArchiveReader {
+type StoredObject = ArchiveObject & { text: string };
+
+function archive(objects: StoredObject[]): ArchiveReader {
   return {
     list: vi.fn((prefix: string) =>
       Promise.resolve(objects.filter((object) => object.key.startsWith(prefix))),
@@ -46,47 +59,89 @@ function archive(objects: (ArchiveObject & { text: string })[]): ArchiveReader {
   };
 }
 
-function object(key: string, lines: string[], written = "2026-10-07T12:20:00Z") {
-  return { key, lastModified: new Date(written), storageClass: "STANDARD", text: lines.join("\n") };
-}
-
-function warehouse(rows: (string | null)[][] = []): Warehouse {
-  return { rows: vi.fn<Warehouse["rows"]>().mockResolvedValue(rows) };
-}
-
-function stream(refuseFirst = 0): StreamWriter & { sent: StreamRecord[] } {
-  let refusals = refuseFirst;
-  const sent: StreamRecord[] = [];
+function object(key: string, lines: string[], written = "2026-10-07T12:20:00Z"): StoredObject {
   return {
-    sent,
-    put: vi.fn((records: StreamRecord[]) => {
-      sent.push(...records);
-      return Promise.resolve(
-        records.map((record) => {
-          if (refusals > 0) {
-            refusals -= 1;
-            return {
-              sequenceNumber: null,
-              error: "ProvisionedThroughputExceededException: slow down",
-            };
-          }
-          return { sequenceNumber: `seq-${record.partitionKey}`, error: null };
-        }),
-      );
+    key,
+    lastModified: new Date(written),
+    storageClass: "STANDARD",
+    restoredUntil: null,
+    text: lines.join("\n"),
+  };
+}
+
+interface Bronze {
+  recordIds?: string[];
+  /** Rows without a record id: experiment, _client_id (null or empty), client, device, millis. */
+  contentRows?: (string | null)[][];
+  latestArrival?: string | null;
+}
+
+function warehouse(bronze: Bronze = {}): Warehouse {
+  return {
+    rows: vi.fn<Warehouse["rows"]>((statement) => {
+      if (statement.includes("max(kinesis_arrival_time)")) {
+        return Promise.resolve([[bronze.latestArrival ?? null]]);
+      }
+      if (statement.includes("SELECT DISTINCT _client_id")) {
+        return Promise.resolve((bronze.recordIds ?? []).map((id) => [id]));
+      }
+      return Promise.resolve(bronze.contentRows ?? []);
     }),
   };
 }
 
-const deps = (overrides: Partial<Parameters<typeof runReplay>[1]> = {}) => ({
-  archive: archive([]),
-  stream: stream(),
-  warehouse: warehouse(),
-  wait: () => Promise.resolve(),
-  runId: "run-1",
-  ...overrides,
-});
+function stream(refuse: (record: StreamRecord, call: number) => boolean = () => false) {
+  const sent: StreamRecord[] = [];
+  let call = 0;
+  const writer: StreamWriter = {
+    put: vi.fn((records: StreamRecord[]) => {
+      call += 1;
+      sent.push(...records);
+      return Promise.resolve(
+        records.map((record) =>
+          refuse(record, call)
+            ? { sequenceNumber: null, error: "ProvisionedThroughputExceededException: slow down" }
+            : { sequenceNumber: `seq-${record.partitionKey}`, error: null },
+        ),
+      );
+    }),
+  };
+  return Object.assign(writer, { sent });
+}
+
+/** The stream's readers, caught up to a time, or reading nothing. */
+function readers(readUpTo: string | null): StreamReaders {
+  return {
+    readUpTo: vi.fn(() => Promise.resolve(readUpTo === null ? null : new Date(readUpTo))),
+  };
+}
+
+function deps(overrides: Partial<ReplayDeps> = {}): ReplayDeps {
+  return {
+    archive: archive([]),
+    stream: stream(),
+    readers: readers(null),
+    warehouse: warehouse(),
+    wait: vi.fn(() => Promise.resolve()),
+    // Long after the window, so the stream no longer holds it.
+    now: new Date("2026-10-20T00:00:00Z"),
+    runId: "run-1",
+    ...overrides,
+  };
+}
+
+function manyMissing(count: number): string[] {
+  return Array.from({ length: count }, (_, index) =>
+    message({
+      _client_id: `rec-${index}`,
+      timestamp: new Date(Date.parse("2026-10-07T11:00:00Z") + index).toISOString(),
+    }),
+  );
+}
 
 describe("parseArgs", () => {
+  const window = ["--from", "2026-10-07T12:00Z", "--to", "2026-10-07T13:00Z"];
+
   it("takes the environment, a window and a warehouse, with profiles named after the environment", () => {
     expect(
       parseArgs([
@@ -113,22 +168,10 @@ describe("parseArgs", () => {
   });
 
   it("takes the arguments behind the `--` the root alias passes", () => {
-    expect(
-      parseArgs([
-        "--",
-        "dev",
-        "--from",
-        "2026-10-07T12:00Z",
-        "--to",
-        "2026-10-07T13:00Z",
-        "--warehouse",
-        "w",
-      ]).environment,
-    ).toBe("dev");
+    expect(parseArgs(["--", "dev", ...window, "--warehouse", "w"]).environment).toBe("dev");
   });
 
   it("refuses a missing warehouse, a window that ends first, an unknown source or environment", () => {
-    const window = ["--from", "2026-10-07T12:00Z", "--to", "2026-10-07T13:00Z"];
     expect(() => parseArgs(["dev", ...window])).toThrow("--warehouse is required");
     expect(() =>
       parseArgs([
@@ -145,6 +188,12 @@ describe("parseArgs", () => {
       "--source",
     );
     expect(() => parseArgs(["staging", ...window, "--warehouse", "w"])).toThrow("Usage");
+  });
+
+  it("refuses an argument it does not know, so a misspelt filter cannot widen a replay", () => {
+    expect(() =>
+      parseArgs(["dev", ...window, "--warehouse", "w", "--experimnet", experiment, "--apply"]),
+    ).toThrow("Unknown argument --experimnet");
   });
 });
 
@@ -178,39 +227,59 @@ describe("messageOf", () => {
 
 describe("messageFromRuleError", () => {
   const payload = { device_id: "MS-1", timestamp: "2026-10-07T11:00:00Z", _client_id: "rec-1" };
-  const errorObject = (failedResource: string) =>
+  const errorObject = (failedResources: string[], body: Record<string, unknown> = payload) =>
     JSON.stringify({
       topic,
       clientId: "phone-1",
-      base64OriginalPayload: Buffer.from(JSON.stringify(payload)).toString("base64"),
-      failures: [{ failedAction: "Action", failedResource, errorMessage: "throttled" }],
+      base64OriginalPayload: Buffer.from(JSON.stringify(body)).toString("base64"),
+      failures: failedResources.map((failedResource) => ({
+        failedAction: "Action",
+        failedResource,
+        errorMessage: "throttled",
+      })),
     });
 
   it("rebuilds the message the rule sends when its Kinesis delivery failed", () => {
     const rebuilt = messageFromRuleError(
       "k",
-      errorObject("open-jii-dev-data-ingest-stream"),
-      "open-jii-dev-data-ingest-stream",
+      errorObject(["open-jii-dev-data-ingest-stream"]),
+      archiveStream,
     );
 
     expect(rebuilt).toEqual(
       expect.objectContaining({ experimentId: experiment, recordId: "rec-1" }),
     );
     expect(rebuilt !== null && rebuilt !== "reached kinesis" && JSON.parse(rebuilt.data)).toEqual({
+      ...payload,
       topic,
       client_id: "phone-1",
-      ...payload,
     });
   });
 
-  it("says a message that failed only on the archive reached Kinesis", () => {
+  it("keeps the broker's topic and client over a payload's own fields of those names", () => {
+    const rebuilt = messageFromRuleError(
+      "k",
+      errorObject(["open-jii-dev-data-ingest-stream"], { ...payload, client_id: "other-thing" }),
+      archiveStream,
+    );
+
+    expect(rebuilt).toEqual(expect.objectContaining({ clientId: "phone-1" }));
+  });
+
+  it("says only a message that failed on the archive alone reached Kinesis", () => {
+    expect(messageFromRuleError("k", errorObject([archiveStream]), archiveStream)).toBe(
+      "reached kinesis",
+    );
     expect(
       messageFromRuleError(
         "k",
-        errorObject("open-jii-dev-iot-raw-archive"),
-        "open-jii-dev-data-ingest-stream",
+        errorObject([archiveStream, "arn:aws:kinesis:eu-central-1:1:stream/x"]),
+        archiveStream,
       ),
-    ).toBe("reached kinesis");
+    ).toEqual(expect.objectContaining({ recordId: "rec-1" }));
+    expect(messageFromRuleError("k", errorObject([]), archiveStream)).toEqual(
+      expect.objectContaining({ recordId: "rec-1" }),
+    );
   });
 });
 
@@ -222,27 +291,67 @@ describe("dayPrefixes", () => {
   });
 });
 
+describe("sampleDigest", () => {
+  it("matches a payload's JSON sample with bronze's compact text of it", () => {
+    const sample = [{ measure_id: 221132, channel: "uart_2", values: [0.0001, 2.5] }];
+
+    expect(sampleDigest(sample)).toBe(sampleDigest(JSON.stringify(sample)));
+    expect(sampleDigest(sample)).toBe(sampleDigest(JSON.stringify(sample, null, 2)));
+    expect(sampleDigest("raw text")).toBe(sampleDigest("raw text"));
+    expect(sampleDigest(sample)).not.toBe(sampleDigest([{ ...sample[0], channel: "uart_3" }]));
+    expect(sampleDigest(null)).toBe("");
+  });
+});
+
+describe("bronze lookups", () => {
+  it("finds a record id in any experiment, parsed or not", () => {
+    const query = recordIdQuery("t", ["a", "b"], "2026-10-06");
+
+    expect(query.statement).not.toContain("experiment_id");
+    expect(query.statement).not.toContain("parsed_data");
+    expect(query.parameters).toEqual([
+      { name: "since", value: "2026-10-06", type: "DATE" },
+      { name: "record_0", value: "a" },
+      { name: "record_1", value: "b" },
+    ]);
+  });
+
+  it("matches content only on rows without a record id, at the exact milliseconds asked", () => {
+    const query = contentQuery("t", [experiment], [1, 2], "2026-10-06");
+
+    expect(query.statement).toContain("(_client_id IS NULL OR _client_id = '')");
+    expect(query.statement).toContain("unix_millis(parsed_data.timestamp) IN (:time_0, :time_1)");
+    expect(query.parameters).toContainEqual({ name: "time_1", value: "2", type: "BIGINT" });
+  });
+});
+
 describe("runReplay", () => {
   const missing = message({ _client_id: "rec-missing", timestamp: "2026-10-07T11:00:00Z" });
   const inBronzeById = message({ _client_id: "rec-kept", timestamp: "2026-10-07T11:05:00Z" });
-  const inBronzeByContent = message({ _client_id: "rec-old", timestamp: "2026-10-07T11:10:00Z" });
+  const inBronzeEarly = message({ _client_id: "rec-early", timestamp: "2026-10-07T11:10:00Z" });
+  const idlessInBronze = message({ timestamp: "2026-10-07T11:15:00Z" });
   const healthCheck = JSON.stringify({
     topic: "experiment/data_ingest/v1/healthcheck/healthcheck/1/dev",
     timestamp: "2026-10-07T12:00:00Z",
   });
   const noTime = message({ _client_id: "rec-no-time" });
-  const bronzeRows: (string | null)[][] = [
-    [experiment, "rec-kept", "phone-1", "MS-1", String(Date.parse("2026-10-07T11:05:00Z"))],
-    // Written before bronze kept the record id, so only its content matches.
-    [experiment, null, "phone-1", "MS-1", String(Date.parse("2026-10-07T11:10:00Z"))],
-  ];
+  const bronze: Bronze = {
+    recordIds: ["rec-kept"],
+    contentRows: [
+      // Written before bronze kept the record id.
+      [experiment, null, "phone-1", "MS-1", String(Date.parse("2026-10-07T11:10:00Z"))],
+      // A message that carried no record id.
+      [experiment, "", "phone-1", "MS-1", String(Date.parse("2026-10-07T11:15:00Z"))],
+    ],
+  };
 
   it("decides each message in the window and sends nothing on a dry run", async () => {
     const reader = archive([
       object("raw-iot/2026/10/07/a.gz", [
         missing,
         inBronzeById,
-        inBronzeByContent,
+        inBronzeEarly,
+        idlessInBronze,
         "{bad",
         "",
         missing,
@@ -250,7 +359,7 @@ describe("runReplay", () => {
       object("raw-iot/2026/10/07/b.gz", [healthCheck, noTime]),
       object("raw-iot/2026/10/07/before.gz", [missing], "2026-10-07T11:30:00Z"),
     ]);
-    const lake = warehouse(bronzeRows);
+    const lake = warehouse(bronze);
     const writer = stream();
 
     const manifest = await runReplay(
@@ -262,7 +371,7 @@ describe("runReplay", () => {
       "outside the filters": 0,
       unreadable: 1,
       missing: 1,
-      "in bronze": 2,
+      "in bronze": 3,
       "repeated in the window": 1,
       "health check": 1,
       "no timestamp": 1,
@@ -276,13 +385,106 @@ describe("runReplay", () => {
         recordId: "rec-missing",
       }),
     );
-    const [statement, parameters] = vi.mocked(lake.rows).mock.calls[0];
-    expect(statement).toContain("FROM open_jii_dev.centrum.raw_data");
-    expect(parameters).toEqual([
-      { name: "experiment_0", value: experiment },
-      { name: "earliest", value: "2026-10-07T11:00:00.000Z", type: "TIMESTAMP" },
-      { name: "latest", value: "2026-10-07T11:10:00.000Z", type: "TIMESTAMP" },
+
+    const [byRecord, byContent] = vi.mocked(lake.rows).mock.calls;
+    expect(byRecord[0]).toContain("FROM open_jii_dev.centrum.raw_data");
+    expect(byRecord[1]).toEqual([
+      { name: "since", value: "2026-10-06", type: "DATE" },
+      { name: "record_0", value: "rec-missing" },
+      { name: "record_1", value: "rec-kept" },
+      { name: "record_2", value: "rec-early" },
     ]);
+    expect(byContent[1]).toContainEqual({ name: "experiment_0", value: experiment });
+  });
+
+  it("tells apart samples a device sent without record ids under one timestamp", async () => {
+    const channel = (name: string) =>
+      message({ timestamp: "2026-10-07T11:00:00Z", sample: [{ measure_id: 1, channel: name }] });
+    const kept = [
+      experiment,
+      "",
+      "phone-1",
+      "MS-1",
+      String(Date.parse("2026-10-07T11:00:00Z")),
+      '[{"measure_id":1,"channel":"uart_1"}]',
+    ];
+
+    const manifest = await runReplay(
+      args(),
+      deps({
+        archive: archive([
+          object("raw-iot/2026/10/07/a.gz", [
+            channel("uart_1"),
+            channel("uart_2"),
+            channel("uart_1"),
+          ]),
+        ]),
+        warehouse: warehouse({ contentRows: [kept] }),
+      }),
+    );
+
+    expect(manifest.entries.map((entry) => entry.decision)).toEqual([
+      "in bronze",
+      "missing",
+      "repeated in the window",
+    ]);
+  });
+
+  it("replays a record whose content matches another record bronze holds", async () => {
+    const kept = message({ _client_id: "rec-1", timestamp: "2026-10-07T11:00:00Z" });
+    const sameMoment = message({ _client_id: "rec-2", timestamp: "2026-10-07T11:00:00Z" });
+
+    const manifest = await runReplay(
+      args(),
+      deps({
+        archive: archive([object("raw-iot/2026/10/07/a.gz", [kept, sameMoment])]),
+        warehouse: warehouse({ recordIds: ["rec-1"] }),
+      }),
+    );
+
+    expect(manifest.entries.map((entry) => [entry.recordId, entry.decision])).toEqual([
+      ["rec-1", "in bronze"],
+      ["rec-2", "missing"],
+    ]);
+  });
+
+  it("asks bronze about a late upload at its own time rather than a range reaching back to it", async () => {
+    const late = message({ _client_id: "rec-late", timestamp: "2026-09-16T08:00:00Z" });
+    const lake = warehouse();
+
+    await runReplay(
+      args(),
+      deps({
+        archive: archive([object("raw-iot/2026/10/07/a.gz", [missing, late])]),
+        warehouse: lake,
+      }),
+    );
+
+    const [, byContent] = vi.mocked(lake.rows).mock.calls;
+    expect(byContent[1]).toEqual([
+      { name: "since", value: "2026-09-15", type: "DATE" },
+      { name: "experiment_0", value: experiment },
+      { name: "time_0", value: String(Date.parse("2026-10-07T11:00:00Z")), type: "BIGINT" },
+      { name: "time_1", value: String(Date.parse("2026-09-16T08:00:00Z")), type: "BIGINT" },
+    ]);
+  });
+
+  it("asks bronze about a thousand messages at a time", async () => {
+    const lake = warehouse();
+
+    const manifest = await runReplay(
+      args(),
+      deps({
+        archive: archive([object("raw-iot/2026/10/07/a.gz", manyMissing(1001))]),
+        warehouse: lake,
+      }),
+    );
+
+    const recordLookups = vi
+      .mocked(lake.rows)
+      .mock.calls.filter(([statement]) => statement.includes("SELECT DISTINCT _client_id"));
+    expect(recordLookups.map(([, parameters]) => parameters.length)).toEqual([1001, 2]);
+    expect(manifest.counts.missing).toBe(1001);
   });
 
   it("keeps to one experiment or one client when asked", async () => {
@@ -301,33 +503,156 @@ describe("runReplay", () => {
   });
 
   it("sends the missing messages under their own partition keys, retrying a refused record", async () => {
-    const writer = stream(1);
+    const writer = stream((record, call) => call === 1 && record.partitionKey.endsWith("/0"));
     const second = message({ _client_id: "rec-missing-2", timestamp: "2026-10-07T11:20:00Z" });
+    const wait = vi.fn(() => Promise.resolve());
 
     const manifest = await runReplay(
       args({ apply: true }),
       deps({
         archive: archive([object("raw-iot/2026/10/07/a.gz", [missing, second])]),
         stream: writer,
+        wait,
       }),
     );
 
-    expect(writer.put).toHaveBeenCalledTimes(2);
     expect(writer.sent.map((record) => record.partitionKey)).toEqual([
       "replay/run-1/0",
       "replay/run-1/1",
       "replay/run-1/0",
     ]);
     expect(writer.sent[0].data).toBe(missing);
-    expect(manifest.counts).toEqual(expect.objectContaining({ missing: 2, sent: 2, refused: 0 }));
-    expect(manifest.entries.map((entry) => entry.sequenceNumber)).toEqual([
-      "seq-replay/run-1/0",
-      "seq-replay/run-1/1",
+    expect(wait.mock.calls).toEqual([[4000], [1000]]);
+    expect(manifest.counts).toEqual(
+      expect.objectContaining({ missing: 2, sent: 2, refused: 0, unknown: 0, "not sent": 0 }),
+    );
+    expect(manifest.entries.map((entry) => [entry.outcome, entry.sequenceNumber])).toEqual([
+      ["sent", "seq-replay/run-1/0"],
+      ["sent", "seq-replay/run-1/1"],
+    ]);
+    expect(isComplete(manifest)).toBe(true);
+  });
+
+  it("sends at most 250 records or 256 KiB a second", async () => {
+    const writer = stream();
+    const wait = vi.fn(() => Promise.resolve());
+
+    await runReplay(
+      args({ apply: true }),
+      deps({
+        archive: archive([object("raw-iot/2026/10/07/a.gz", manyMissing(600))]),
+        stream: writer,
+        wait,
+      }),
+    );
+
+    expect(vi.mocked(writer.put).mock.calls.map(([records]) => records.length)).toEqual([
+      250, 250, 100,
+    ]);
+    expect(wait.mock.calls).toEqual([[1000], [1000]]);
+  });
+
+  it("splits large messages so no request passes 256 KiB", async () => {
+    const writer = stream();
+    const large = Array.from({ length: 3 }, (_, index) =>
+      message({
+        _client_id: `rec-large-${index}`,
+        timestamp: "2026-10-07T11:00:00Z",
+        padding: "x".repeat(100 * 1024),
+      }),
+    );
+
+    await runReplay(
+      args({ apply: true }),
+      deps({ archive: archive([object("raw-iot/2026/10/07/a.gz", large)]), stream: writer }),
+    );
+
+    expect(vi.mocked(writer.put).mock.calls.map(([records]) => records.length)).toEqual([2, 1]);
+  });
+
+  it("reports a record Kinesis refused on every attempt, and fails the run", async () => {
+    const manifest = await runReplay(
+      args({ apply: true }),
+      deps({
+        archive: archive([object("raw-iot/2026/10/07/a.gz", [missing])]),
+        stream: stream(() => true),
+      }),
+    );
+
+    expect(manifest.counts).toEqual(expect.objectContaining({ sent: 0, refused: 1 }));
+    expect(manifest.entries[0].outcome).toBe("refused");
+    expect(manifest.entries[0].error).toContain("slow down");
+    expect(isComplete(manifest)).toBe(false);
+  });
+
+  it("still returns the manifest when a request fails after others went out", async () => {
+    let call = 0;
+    const writer: StreamWriter = {
+      put: vi.fn((records: StreamRecord[]) => {
+        call += 1;
+        if (call === 2) {
+          return Promise.reject(new Error("socket hang up"));
+        }
+        return Promise.resolve(
+          records.map((record) => ({ sequenceNumber: `seq-${record.partitionKey}`, error: null })),
+        );
+      }),
+    };
+
+    const manifest = await runReplay(
+      args({ apply: true }),
+      deps({
+        archive: archive([object("raw-iot/2026/10/07/a.gz", manyMissing(600))]),
+        stream: writer,
+      }),
+    );
+
+    expect(manifest.stopped).toBe("socket hang up");
+    expect(manifest.counts).toEqual(
+      expect.objectContaining({ sent: 250, unknown: 250, "not sent": 100 }),
+    );
+    expect(manifest.entries[250].outcome).toBe("unknown");
+    expect(manifest.entries[250].error).toContain("may hold it");
+    expect(isComplete(manifest)).toBe(false);
+  });
+
+  it("throws when bronze fails before anything was sent", async () => {
+    const failing: Warehouse = { rows: () => Promise.reject(new Error("warehouse stopped")) };
+
+    await expect(
+      runReplay(
+        args({ apply: true }),
+        deps({
+          archive: archive([object("raw-iot/2026/10/07/a.gz", [missing])]),
+          warehouse: failing,
+        }),
+      ),
+    ).rejects.toThrow("warehouse stopped");
+  });
+
+  it("reads the object Firehose wrote after midnight under the day before, and one finished late", async () => {
+    const window = args({
+      from: new Date("2026-10-08T00:00:00Z"),
+      to: new Date("2026-10-08T01:00:00Z"),
+    });
+    const reader = archive([
+      object("raw-iot/2026/10/07/straddling.gz", [missing], "2026-10-08T00:12:51Z"),
+      object("raw-iot/2026/10/07/earlier.gz", [missing], "2026-10-07T23:58:00Z"),
+      object("raw-iot/2026/10/08/late.gz", [missing], "2026-10-08T01:15:04Z"),
+      object("raw-iot/2026/10/08/after.gz", [missing], "2026-10-08T01:25:00Z"),
+    ]);
+
+    await runReplay(window, deps({ archive: reader }));
+
+    expect(vi.mocked(reader.read).mock.calls.map(([key]) => key)).toEqual([
+      "raw-iot/2026/10/07/straddling.gz",
+      "raw-iot/2026/10/08/late.gz",
     ]);
   });
 
   it("lists archived objects without reading them, and refuses to send until they are restored", async () => {
     const cold = { ...object("raw-iot/2026/10/07/cold.gz", [missing]), storageClass: "GLACIER" };
+    const expired = { ...cold, restoredUntil: new Date("2026-10-19T00:00:00Z") };
     const reader = archive([cold]);
 
     const manifest = await runReplay(args(), deps({ archive: reader }));
@@ -337,6 +662,119 @@ describe("runReplay", () => {
     await expect(runReplay(args({ apply: true }), deps({ archive: reader }))).rejects.toThrow(
       "restore them",
     );
+    await expect(
+      runReplay(args({ apply: true }), deps({ archive: archive([expired]) })),
+    ).rejects.toThrow("restore them");
+  });
+
+  it("reads and sends an archived object whose restore has finished", async () => {
+    const restored = {
+      ...object("raw-iot/2026/10/07/cold.gz", [missing]),
+      storageClass: "DEEP_ARCHIVE",
+      restoredUntil: new Date("2026-10-27T00:00:00Z"),
+    };
+    const writer = stream();
+
+    const manifest = await runReplay(
+      args({ apply: true }),
+      deps({ archive: archive([restored]), stream: writer }),
+    );
+
+    expect(manifest.restoreFirst).toEqual([]);
+    expect(writer.sent).toHaveLength(1);
+  });
+
+  describe("inside the stream's retention", () => {
+    const now = new Date("2026-10-07T14:00:00Z");
+    const window = (apply: boolean) => args({ apply });
+    const reader = () => archive([object("raw-iot/2026/10/07/a.gz", [missing])]);
+
+    it("refuses to send until bronze has read past the window", async () => {
+      const behind = warehouse({ latestArrival: String(Date.parse("2026-10-07T12:30:00Z")) });
+
+      await expect(
+        runReplay(window(true), deps({ archive: reader(), warehouse: behind, now })),
+      ).rejects.toThrow("the stream may still hold this window");
+      await expect(
+        runReplay(window(true), deps({ archive: reader(), warehouse: warehouse(), now })),
+      ).rejects.toThrow("Bronze has read the stream up to nothing");
+
+      const dryRun = await runReplay(
+        window(false),
+        deps({ archive: reader(), warehouse: behind, now }),
+      );
+      expect(dryRun).toEqual(
+        expect.objectContaining({
+          streamMayHold: true,
+          bronzeReadUpTo: "2026-10-07T12:30:00.000Z",
+        }),
+      );
+    });
+
+    it("sends once bronze has read past the window", async () => {
+      const caughtUp = warehouse({ latestArrival: String(Date.parse("2026-10-07T13:05:00Z")) });
+      const writer = stream();
+
+      const manifest = await runReplay(
+        window(true),
+        deps({ archive: reader(), warehouse: caughtUp, stream: writer, now }),
+      );
+
+      expect(manifest.streamMayHold).toBe(false);
+      expect(writer.sent).toHaveLength(1);
+    });
+
+    it("sends on a stream quiet since the window once its readers have caught up past it", async () => {
+      const quiet = warehouse({ latestArrival: String(Date.parse("2026-10-07T12:30:00Z")) });
+      const writer = stream();
+
+      const manifest = await runReplay(
+        window(true),
+        deps({
+          archive: reader(),
+          warehouse: quiet,
+          readers: readers("2026-10-07T13:55:00Z"),
+          stream: writer,
+          now,
+        }),
+      );
+
+      expect(manifest.bronzeReadUpTo).toBe("2026-10-07T13:55:00.000Z");
+      expect(writer.sent).toHaveLength(1);
+    });
+
+    it("refuses while the stream's readers are behind the window or not reading", async () => {
+      const quiet = warehouse({ latestArrival: String(Date.parse("2026-10-07T12:30:00Z")) });
+      const withReaders = (streamReaders: StreamReaders) =>
+        deps({ archive: reader(), warehouse: quiet, readers: streamReaders, now });
+
+      await expect(
+        runReplay(window(true), withReaders(readers("2026-10-07T12:45:00Z"))),
+      ).rejects.toThrow("may still hold this window");
+      await expect(runReplay(window(true), withReaders(readers(null)))).rejects.toThrow(
+        "may still hold this window",
+      );
+    });
+
+    it("asks the readers nothing when bronze already holds a later message", async () => {
+      const streamReaders = readers(null);
+      const caughtUp = warehouse({ latestArrival: String(Date.parse("2026-10-07T13:05:00Z")) });
+
+      await runReplay(
+        window(false),
+        deps({ archive: reader(), warehouse: caughtUp, readers: streamReaders, now }),
+      );
+
+      expect(streamReaders.readUpTo).not.toHaveBeenCalled();
+    });
+
+    it("skips the check for error objects, whose messages never entered the stream", async () => {
+      const lake = warehouse();
+
+      await runReplay(args({ source: "errors", apply: true }), deps({ warehouse: lake, now }));
+
+      expect(lake.rows).not.toHaveBeenCalled();
+    });
   });
 
   it("reads the rule's error objects and replays only those that missed Kinesis", async () => {
@@ -351,7 +789,7 @@ describe("runReplay", () => {
       });
     const reader = archive([
       object("iot-rule-errors/2026/10/07/1.json", [errorObject("open-jii-dev-data-ingest-stream")]),
-      object("iot-rule-errors/2026/10/07/2.json", [errorObject("open-jii-dev-iot-raw-archive")]),
+      object("iot-rule-errors/2026/10/07/2.json", [errorObject(archiveStream)]),
     ]);
 
     const manifest = await runReplay(args({ source: "errors" }), deps({ archive: reader }));

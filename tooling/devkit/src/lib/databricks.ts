@@ -24,6 +24,7 @@ const runCli: DatabricksCli = async (args) => {
 };
 
 const POLL_MS = 2000;
+const DEADLINE_MS = 10 * 60_000;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -46,8 +47,12 @@ export function createWarehouse(
 ): Warehouse {
   async function api(method: "get" | "post", path: string, body?: unknown): Promise<unknown> {
     const args = ["api", method, path, "-p", profile];
-    if (body !== undefined) args.push("--json", JSON.stringify(body));
-    const parsed: unknown = JSON.parse(await cli(args));
+    if (body !== undefined) {
+      args.push("--json", JSON.stringify(body));
+    }
+    const output = await cli(args);
+    // Cancelling answers with an empty body.
+    const parsed: unknown = output.trim() === "" ? {} : JSON.parse(output);
     return parsed;
   }
 
@@ -63,12 +68,24 @@ export function createWarehouse(
         disposition: "INLINE",
       });
 
+      let waited = 0;
       while (isRecord(response)) {
         const status = isRecord(response.status) ? response.status : {};
         const state = typeof status.state === "string" ? status.state : "UNKNOWN";
-        if (state !== "PENDING" && state !== "RUNNING") break;
+        if (state !== "PENDING" && state !== "RUNNING") {
+          break;
+        }
+
+        const statementPath = `/api/2.0/sql/statements/${String(response.statement_id)}`;
+        if (waited >= DEADLINE_MS) {
+          await api("post", `${statementPath}/cancel`);
+          throw new Error(
+            `The statement was still ${state} after ${DEADLINE_MS / 60_000} minutes, so it was cancelled`,
+          );
+        }
         await wait(POLL_MS);
-        response = await api("get", `/api/2.0/sql/statements/${String(response.statement_id)}`);
+        waited += POLL_MS;
+        response = await api("get", statementPath);
       }
 
       if (!isRecord(response)) throw new Error("The warehouse answered with something unreadable");
@@ -80,7 +97,7 @@ export function createWarehouse(
 
       const manifest = isRecord(response.manifest) ? response.manifest : {};
       if (manifest.truncated === true) {
-        throw new Error("The warehouse cut the result short; narrow the window and run again");
+        throw new Error("The warehouse cut the result short");
       }
 
       const rows = rowsOf(response.result);
@@ -91,7 +108,9 @@ export function createWarehouse(
           "get",
           `/api/2.0/sql/statements/${String(response.statement_id)}/result/chunks/${chunk}`,
         );
-        rows.push(...rowsOf(next));
+        for (const row of rowsOf(next)) {
+          rows.push(row);
+        }
       }
       return rows;
     },

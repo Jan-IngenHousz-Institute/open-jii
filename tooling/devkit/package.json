@@ -39,6 +39,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudwatch": "catalog:aws-sdk",
     "@aws-sdk/client-kinesis": "catalog:aws-sdk",
     "@aws-sdk/client-s3": "catalog:aws-sdk",
     "@repo/monitoring": "workspace:*",
@@ -54,6 +55,7 @@
     "@repo/vitest-config": "workspace:*",
     "@types/jsdom": "^21.1.7",
     "@types/node": "catalog:",
+    "aws-sdk-client-mock": "^4.1.0",
     "eslint": "catalog:",
     "tsx": "^4.21.0",
     "typescript": "catalog:",

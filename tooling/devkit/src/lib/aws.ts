@@ -1,3 +1,4 @@
+import { CloudWatchClient, GetMetricStatisticsCommand } from "@aws-sdk/client-cloudwatch";
 import { KinesisClient, PutRecordsCommand } from "@aws-sdk/client-kinesis";
 import { GetObjectCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
 import { gunzipSync } from "node:zlib";
@@ -7,6 +8,8 @@ export interface ArchiveObject {
   key: string;
   lastModified: Date;
   storageClass: string;
+  /** Until when a finished restore keeps an archived object readable, or null when none has. */
+  restoredUntil: Date | null;
 }
 
 export interface ArchiveReader {
@@ -30,6 +33,16 @@ export interface StreamWriter {
   put(records: StreamRecord[]): Promise<StreamResult[]>;
 }
 
+export interface StreamReaders {
+  /**
+   * The arrival time the stream's slowest reader had reached in its latest minute of reading, or
+   * null when nothing read the stream in the ten minutes before `now`.
+   */
+  readUpTo(now: Date): Promise<Date | null>;
+}
+
+const READERS_LOOKBACK_MS = 10 * 60_000;
+
 // The profile names an SSO session in ~/.aws/config, which also gives the region.
 export function createArchiveReader(bucket: string, profile: string): ArchiveReader {
   const s3 = new S3Client({ profile });
@@ -39,15 +52,24 @@ export function createArchiveReader(bucket: string, profile: string): ArchiveRea
       const objects: ArchiveObject[] = [];
       let token: string | undefined;
       do {
+        // A restored object keeps its archive storage class; only its restore status says it is readable.
         const page = await s3.send(
-          new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, ContinuationToken: token }),
+          new ListObjectsV2Command({
+            Bucket: bucket,
+            Prefix: prefix,
+            ContinuationToken: token,
+            OptionalObjectAttributes: ["RestoreStatus"],
+          }),
         );
         for (const item of page.Contents ?? []) {
           if (item.Key && item.LastModified) {
+            const restore = item.RestoreStatus;
             objects.push({
               key: item.Key,
               lastModified: item.LastModified,
               storageClass: item.StorageClass ?? "STANDARD",
+              restoredUntil:
+                restore?.IsRestoreInProgress === false ? (restore.RestoreExpiryDate ?? null) : null,
             });
           }
         }
@@ -68,7 +90,9 @@ export function createArchiveReader(bucket: string, profile: string): ArchiveRea
 }
 
 export function createStreamWriter(streamName: string, profile: string): StreamWriter {
-  const kinesis = new KinesisClient({ profile });
+  // A resent PutRecords whose first try landed would copy every record in it, so the SDK never
+  // retries; the replay resends only the records Kinesis says it refused.
+  const kinesis = new KinesisClient({ profile, maxAttempts: 1 });
 
   return {
     async put(records) {
@@ -85,6 +109,40 @@ export function createStreamWriter(streamName: string, profile: string): StreamW
         sequenceNumber: result.SequenceNumber ?? null,
         error: result.ErrorCode ? `${result.ErrorCode}: ${result.ErrorMessage ?? ""}` : null,
       }));
+    },
+  };
+}
+
+/**
+ * Reads the stream's `GetRecords.IteratorAgeMilliseconds`, whose maximum is the slowest reader's
+ * lag, and which reads zero while a reader is caught up on a quiet stream.
+ */
+export function createStreamReaders(streamName: string, profile: string): StreamReaders {
+  const cloudwatch = new CloudWatchClient({ profile });
+
+  return {
+    async readUpTo(now) {
+      const response = await cloudwatch.send(
+        new GetMetricStatisticsCommand({
+          Namespace: "AWS/Kinesis",
+          MetricName: "GetRecords.IteratorAgeMilliseconds",
+          Dimensions: [{ Name: "StreamName", Value: streamName }],
+          StartTime: new Date(now.getTime() - READERS_LOOKBACK_MS),
+          EndTime: now,
+          Period: 60,
+          Statistics: ["Maximum"],
+        }),
+      );
+
+      let latest: { at: number; age: number } | null = null;
+      for (const { Timestamp, Maximum } of response.Datapoints ?? []) {
+        const isLatest = Timestamp && (latest === null || Timestamp.getTime() > latest.at);
+        if (isLatest && Maximum !== undefined) {
+          latest = { at: Timestamp.getTime(), age: Maximum };
+        }
+      }
+      // At the start of that minute the reader had reached records at least this old.
+      return latest === null ? null : new Date(latest.at - latest.age);
     },
   };
 }
