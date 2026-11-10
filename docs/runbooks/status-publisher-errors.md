@@ -103,14 +103,16 @@ of minutes:
 aws logs tail /aws/lambda/<env>-status-publisher --since 30m --filter-pattern '"contentful-read-failed"'
 ```
 
-Once the last good read is more than 15 minutes old, or there is none (a first run, or after the
-feed state was deleted or found corrupt), the run still writes the files and sends the events, as
-it does while the cache is fresh, and then throws. The error names how many minutes Contentful has
-been unreadable and the time of the last good read, or says that no earlier read is kept, and gives
-the cause after it. That makes the run count as failed, so this alert fires after more than two of
-them in five minutes, a little over twenty minutes after Contentful went down. The page keeps serving the cached
-notes meanwhile, and with no cache it shows none. No baseline is written until a read works, so
-nothing already open is announced as new when it does.
+The publisher asks Contentful every five minutes, so the warning appears at most that often, and the
+runs in between repeat the last failure without asking again. Once the last good read is more than
+15 minutes old, or there is none (a first run, or after the feed state was deleted or found
+corrupt), each run still writes the files and sends the events, as it does while the cache is fresh,
+and then throws. The error names how many minutes Contentful has been unreadable and the time of the
+last good read, or says that no earlier read is kept, and gives the cause after it. That makes the
+run count as failed, so this alert fires after more than two of them in five minutes, a little over
+twenty minutes after Contentful went down. The page keeps serving the cached notes meanwhile, and
+with no cache it shows none. No baseline is written until a read works, so nothing already open is
+announced as new when it does.
 
 The line carries the error and `cachedAt`, the time of the last good read (`null` when there is
 none), which tells how stale the page's notes are. What the error says points at the cause:
