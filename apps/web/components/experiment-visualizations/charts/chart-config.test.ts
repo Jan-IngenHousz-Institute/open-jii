@@ -84,6 +84,43 @@ describe("chartFormResolver", () => {
       expect(await result.current.trigger()).toBe(true);
     });
   });
+
+  it.each([
+    {
+      source: { aggregate: "avg", orderColumn: "timestamp" },
+      field: "orderColumn",
+      message: "workspace.shelves.windowOrderUnsupported",
+    },
+    {
+      source: { aggregate: "latest", orderColumn: "timestamp", partitionColumn: "sensor" },
+      field: "partitionColumn",
+      message: "workspace.shelves.windowPerUnsupported",
+    },
+  ] as const)(
+    "explains a forbidden $field for $source.aggregate",
+    async ({ source, field, message }) => {
+      const { result } = renderHook(() =>
+        useForm<ChartFormValues>({
+          resolver: chartFormResolver,
+          defaultValues: {
+            ...values,
+            dataConfig: {
+              ...values.dataConfig,
+              dataSources: [{ tableName: "readings", columnName: "temp", role: "y", ...source }],
+            },
+          },
+        }),
+      );
+
+      await act(async () => {
+        expect(await result.current.trigger()).toBe(false);
+      });
+
+      expect(result.current.getFieldState(`dataConfig.dataSources.0.${field}`).error?.message).toBe(
+        message,
+      );
+    },
+  );
 });
 
 describe("narrowChartConfig", () => {

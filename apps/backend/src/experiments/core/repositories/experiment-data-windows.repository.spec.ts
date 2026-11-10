@@ -85,6 +85,38 @@ function setup(
 }
 
 describe("row-window repository inputs", () => {
+  it("enriches ordered aggregates without changing a correlation in the same anonymized read", async () => {
+    const { repository, experiment, build } = setup([
+      column("id", "STRING"),
+      column("timestamp", "TIMESTAMP"),
+      column("value", "DOUBLE"),
+      column("humidity", "DOUBLE"),
+    ]);
+    const correlation: AggregateExpression = {
+      column: "value",
+      function: "corr",
+      secondColumn: "humidity",
+    };
+
+    const result = await repository.getTableData({
+      experimentId: experiment.id,
+      experiment: { ...experiment, anonymizeContributors: true },
+      tableName: "raw_data",
+      source: "warehouse",
+      aggregation: {
+        functions: [{ column: "value", function: "latest", orderColumn: "timestamp" }, correlation],
+      },
+    });
+
+    assertSuccess(result);
+    const functions = build.mock.calls.find(([query]) => query.aggregation)?.[0].aggregation
+      ?.functions;
+    expect(functions).toEqual([
+      { column: "value", function: "latest", orderColumn: "timestamp", tieBreaker: "id" },
+      correlation,
+    ]);
+  });
+
   it("stops an ordered read when its column metadata cannot be loaded", async () => {
     const { read, build, execute } = setup();
     const error = AppError.internal("Column metadata is unavailable");
