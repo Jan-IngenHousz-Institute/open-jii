@@ -91,6 +91,7 @@
     "sortAscending": "aufsteigend",
     "sortDescending": "absteigend",
     "sortSecondary": "zweite Sortierung",
+    "sortActivityUnavailable": "Sortieren nach Aktivität ist gerade nicht verfügbar",
     "searchMinCharacters": "Gib mindestens 2 Zeichen ein, um zu suchen",
     "searchFailed": "Suchergebnisse konnten nicht geladen werden.",
     "emailMatched": "Entspricht der eingegebenen E-Mail-Adresse",

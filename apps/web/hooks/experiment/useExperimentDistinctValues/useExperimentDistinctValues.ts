@@ -1,6 +1,9 @@
 import { shouldRetryQuery } from "@/util/query-retry";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { orpc } from "~/lib/orpc";
+
+import { DISTINCT_VALUES_MAX_LIMIT } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 const STALE_TIME = 10 * 60 * 1000;
 
@@ -10,6 +13,7 @@ export interface UseExperimentDistinctValuesArgs {
   column: string;
   limit?: number;
   enabled?: boolean;
+  allPages?: boolean;
 }
 
 export const useExperimentDistinctValues = ({
@@ -18,22 +22,42 @@ export const useExperimentDistinctValues = ({
   column,
   limit,
   enabled = true,
+  allPages = false,
 }: UseExperimentDistinctValuesArgs) => {
-  const { data, isLoading, isSuccess, error } = useQuery(
-    orpc.experiments.getDistinctColumnValues.queryOptions({
-      input: { id: experimentId, tableName, column, limit },
-      staleTime: STALE_TIME,
-      enabled: enabled && Boolean(experimentId) && Boolean(tableName) && Boolean(column),
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      retry: shouldRetryQuery,
-    }),
-  );
+  const pageLimit = limit ?? (allPages ? DISTINCT_VALUES_MAX_LIMIT : undefined);
+  const { data, isLoading, isSuccess, error, hasNextPage, isFetchingNextPage, fetchNextPage } =
+    useInfiniteQuery(
+      orpc.experiments.getDistinctColumnValues.infiniteOptions({
+        input: (offset: number) => ({
+          id: experimentId,
+          tableName,
+          column,
+          limit: pageLimit,
+          offset,
+        }),
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _pages, offset) =>
+          allPages && lastPage.truncated && lastPage.values.length > 0
+            ? offset + lastPage.values.length
+            : undefined,
+        staleTime: STALE_TIME,
+        enabled: enabled && Boolean(experimentId) && Boolean(tableName) && Boolean(column),
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        retry: shouldRetryQuery,
+      }),
+    );
+
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage && !error) {
+      void fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, error, data?.pages.length]);
 
   return {
-    values: data?.values ?? [],
-    truncated: data?.truncated ?? false,
-    isLoading,
+    values: data?.pages.flatMap((page) => page.values) ?? [],
+    truncated: Boolean(data?.pages.at(-1)?.truncated && (!hasNextPage || error)),
+    isLoading: isLoading || Boolean(hasNextPage && !error),
     isSuccess,
     error,
   };

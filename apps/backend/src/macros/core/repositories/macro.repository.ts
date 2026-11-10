@@ -23,6 +23,11 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
+import {
+  activityTotalsSource,
+  activityTotalSql,
+  sortsByActivity,
+} from "../../../common/utils/activity-sort";
 import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
 import {
   crossTableBonus,
@@ -141,7 +146,7 @@ export class MacroRepository {
    * Shared shape behind the array and paginated listings, so both apply identical
    * scoping, ranking and ordering and the count matches the rows exactly.
    */
-  private buildListing(filter?: MacroFilter) {
+  private buildListing(filter?: MacroFilter, activityTotals?: ReadonlyMap<string, number>) {
     {
       const conditions: (SQL | undefined)[] = [];
 
@@ -222,24 +227,34 @@ export class MacroRepository {
         language: languageText,
         protocols: protocolCountSql(),
         updated: macros.updatedAt,
+        activity: activityTotalSql,
       };
       // Browse keeps tiers strict, with the curated `sortOrder` surviving as a
       // within-tier tiebreak. Every ordering ends on `id` so paging is stable.
+      // Sorted columns fall back to the default order, so ties keep a familiar order.
+      const defaultOrder = [desc(tier), asc(macros.sortOrder), asc(macros.name), asc(macros.id)];
       const orderBy = filter?.sort?.length
         ? [
             ...filter.sort.map(
               ({ field, direction }) =>
                 sql`${direction === "asc" ? asc(sortFields[field]) : desc(sortFields[field])} nulls last`,
             ),
-            asc(macros.id),
+            ...defaultOrder,
           ]
         : search
           ? [desc(score), asc(macros.id)]
-          : [desc(tier), asc(macros.sortOrder), asc(macros.name), asc(macros.id)];
+          : defaultOrder;
 
       const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-      return { where, orderBy, score };
+      return {
+        where,
+        orderBy,
+        score,
+        activitySource: sortsByActivity(filter?.sort)
+          ? activityTotalsSource(activityTotals ?? new Map())
+          : null,
+      };
     }
   }
 
@@ -256,11 +271,18 @@ export class MacroRepository {
       .$dynamic();
   }
 
-  async findAll(filter?: MacroFilter, limit?: number): Promise<Result<MacroSearchRow[]>> {
+  async findAll(
+    filter?: MacroFilter,
+    limit?: number,
+    activityTotals?: ReadonlyMap<string, number>,
+  ): Promise<Result<MacroSearchRow[]>> {
     return tryCatch(async () => {
-      const { where, orderBy, score } = this.buildListing(filter);
+      const { where, orderBy, score, activitySource } = this.buildListing(filter, activityTotals);
 
       let query = this.baseQuery(score);
+      if (activitySource) {
+        query = query.leftJoin(activitySource, sql`${macros.id} = activity_totals.id`);
+      }
       if (where) {
         query = query.where(where);
       }
@@ -327,11 +349,15 @@ export class MacroRepository {
     page: number,
     pageSize: number,
     filter?: MacroFilter,
+    activityTotals?: ReadonlyMap<string, number>,
   ): Promise<Result<{ items: MacroSearchRow[]; totalCount: number }>> {
     return tryCatch(async () => {
-      const { where, orderBy, score } = this.buildListing(filter);
+      const { where, orderBy, score, activitySource } = this.buildListing(filter, activityTotals);
 
       let rows = this.baseQuery(score);
+      if (activitySource) {
+        rows = rows.leftJoin(activitySource, sql`${macros.id} = activity_totals.id`);
+      }
       let total = this.database
         .select({ count: sql<number>`count(*)::int` })
         .from(macros)

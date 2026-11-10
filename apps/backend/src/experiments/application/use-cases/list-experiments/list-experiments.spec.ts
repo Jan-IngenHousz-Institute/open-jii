@@ -1,6 +1,10 @@
 import { experiments as experimentsTable, eq } from "@repo/database";
 
-import { assertSuccess } from "../../../../common/utils/fp-utils";
+import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
+import { assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
+import { resourceMetricsCacheKey } from "../../../../metrics/application/resource-metrics.service";
+import { CACHE_PORT } from "../../../../metrics/core/ports/cache.port";
+import type { CachePort } from "../../../../metrics/core/ports/cache.port";
 import { TestHarness } from "../../../../test/test-harness";
 import { ListExperimentsUseCase } from "./list-experiments";
 
@@ -350,5 +354,185 @@ describe("ListExperimentsUseCase", () => {
     assertSuccess(result);
     expect(result.value.totalCount).toBe(3);
     expect(result.value.items.map((e) => e.id)).toEqual([created[1].id, created[2].id]);
+  });
+
+  describe("activity snapshot fallback", () => {
+    async function makeWarehouseUnavailable() {
+      const adapter = testApp.module.get(DatabricksAdapter);
+      vi.spyOn(adapter, "getScopedDailyActivity").mockResolvedValue(
+        failure({
+          name: "AppError",
+          code: "INTERNAL_ERROR",
+          message: "warehouse down",
+          statusCode: 500,
+        }),
+      );
+      await testApp.module
+        .get<CachePort>(CACHE_PORT)
+        .invalidate(resourceMetricsCacheKey("experiment"));
+    }
+
+    it("falls back to name order and reports unavailable when activity is paired with name and there is no snapshot", async () => {
+      await makeWarehouseUnavailable();
+      await testApp.createExperiment({ name: "Alpha", userId: testUserId });
+      await testApp.createExperiment({ name: "Bravo", userId: testUserId });
+
+      const result = await useCase.executePaginated(
+        testUserId,
+        1,
+        20,
+        undefined,
+        undefined,
+        undefined,
+        [
+          { field: "activity", direction: "desc" },
+          { field: "name", direction: "asc" },
+        ],
+      );
+
+      assertSuccess(result);
+      expect(result.value.activityAvailable).toBe(false);
+      expect(result.value.items.map((item) => item.name)).toEqual(["Alpha", "Bravo"]);
+    });
+
+    it("reports unavailable and the default order when sorting only by activity with no snapshot", async () => {
+      await makeWarehouseUnavailable();
+      // Default order (no explicit sort) is most-recently-updated first, so set
+      // updatedAt out of creation order to prove the real default ordering ran.
+      const { experiment: older } = await testApp.createExperiment({
+        name: "Older",
+        userId: testUserId,
+      });
+      const { experiment: newer } = await testApp.createExperiment({
+        name: "Newer",
+        userId: testUserId,
+      });
+      await testApp.database
+        .update(experimentsTable)
+        .set({ updatedAt: new Date("2025-01-01T00:00:00Z") })
+        .where(eq(experimentsTable.id, older.id));
+      await testApp.database
+        .update(experimentsTable)
+        .set({ updatedAt: new Date("2025-01-02T00:00:00Z") })
+        .where(eq(experimentsTable.id, newer.id));
+
+      const result = await useCase.executePaginated(
+        testUserId,
+        1,
+        20,
+        undefined,
+        undefined,
+        undefined,
+        [{ field: "activity", direction: "desc" }],
+      );
+
+      assertSuccess(result);
+      expect(result.value.activityAvailable).toBe(false);
+      expect(result.value.items.map((item) => item.id)).toEqual([newer.id, older.id]);
+    });
+
+    it("orders items consistently with the activity measurements it reports", async () => {
+      const { experiment: busy } = await testApp.createExperiment({
+        name: "Busy experiment",
+        userId: testUserId,
+      });
+      const { experiment: quiet } = await testApp.createExperiment({
+        name: "Quiet experiment",
+        userId: testUserId,
+      });
+
+      const adapter = testApp.module.get(DatabricksAdapter);
+      const today = new Date().toISOString().slice(0, 10);
+      vi.spyOn(adapter, "getScopedDailyActivity").mockResolvedValue(
+        success([
+          { date: today, experimentId: busy.id, measurements: 9 },
+          { date: today, experimentId: quiet.id, measurements: 1 },
+        ]),
+      );
+      await testApp.module
+        .get<CachePort>(CACHE_PORT)
+        .invalidate(resourceMetricsCacheKey("experiment"));
+
+      const result = await useCase.executePaginated(
+        testUserId,
+        1,
+        20,
+        undefined,
+        undefined,
+        undefined,
+        [{ field: "activity", direction: "desc" }],
+      );
+
+      assertSuccess(result);
+      expect(result.value.activityAvailable).toBe(true);
+      const foundIds = result.value.items.map((item) => item.id);
+      expect(foundIds.indexOf(busy.id)).toBeLessThan(foundIds.indexOf(quiet.id));
+      expect(result.value.items.find((item) => item.id === busy.id)?.activity?.measurements).toBe(
+        9,
+      );
+      expect(result.value.items.find((item) => item.id === quiet.id)?.activity?.measurements).toBe(
+        1,
+      );
+    });
+
+    it("array path (execute): sorts by activity when a snapshot is available", async () => {
+      const { experiment: busy } = await testApp.createExperiment({
+        name: "Busy experiment",
+        userId: testUserId,
+      });
+      const { experiment: quiet } = await testApp.createExperiment({
+        name: "Quiet experiment",
+        userId: testUserId,
+      });
+
+      const adapter = testApp.module.get(DatabricksAdapter);
+      const today = new Date().toISOString().slice(0, 10);
+      vi.spyOn(adapter, "getScopedDailyActivity").mockResolvedValue(
+        success([
+          { date: today, experimentId: busy.id, measurements: 9 },
+          { date: today, experimentId: quiet.id, measurements: 1 },
+        ]),
+      );
+      await testApp.module
+        .get<CachePort>(CACHE_PORT)
+        .invalidate(resourceMetricsCacheKey("experiment"));
+
+      const result = await useCase.execute(testUserId, undefined, undefined, undefined, [
+        { field: "activity", direction: "desc" },
+      ]);
+
+      assertSuccess(result);
+      const ids = result.value.map((item) => item.id);
+      expect(ids.indexOf(busy.id)).toBeLessThan(ids.indexOf(quiet.id));
+    });
+
+    it("array path (execute): drops the activity criterion silently when there is no snapshot", async () => {
+      await makeWarehouseUnavailable();
+      // Default order (no explicit sort) is most-recently-updated first, so set
+      // updatedAt out of creation order to prove the real default ordering ran.
+      const { experiment: older } = await testApp.createExperiment({
+        name: "Older",
+        userId: testUserId,
+      });
+      const { experiment: newer } = await testApp.createExperiment({
+        name: "Newer",
+        userId: testUserId,
+      });
+      await testApp.database
+        .update(experimentsTable)
+        .set({ updatedAt: new Date("2025-01-01T00:00:00Z") })
+        .where(eq(experimentsTable.id, older.id));
+      await testApp.database
+        .update(experimentsTable)
+        .set({ updatedAt: new Date("2025-01-02T00:00:00Z") })
+        .where(eq(experimentsTable.id, newer.id));
+
+      const result = await useCase.execute(testUserId, undefined, undefined, undefined, [
+        { field: "activity", direction: "desc" },
+      ]);
+
+      assertSuccess(result);
+      expect(result.value.map((item) => item.id)).toEqual([newer.id, older.id]);
+    });
   });
 });

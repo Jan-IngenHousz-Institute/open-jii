@@ -28,6 +28,11 @@ import {
 import { profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
+import {
+  activityTotalsSource,
+  activityTotalSql,
+  sortsByActivity,
+} from "../../../common/utils/activity-sort";
 import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
 import {
   crossTableBonus,
@@ -133,6 +138,7 @@ export class ProtocolRepository {
     organizationId?: string,
     sort?: ProtocolSort,
     filter?: ProtocolListFilter,
+    activityTotals?: ReadonlyMap<string, number>,
   ) {
     {
       const conditions: (SQL | undefined)[] = [];
@@ -211,24 +217,39 @@ export class ProtocolRepository {
         family: familyText,
         macros: macroCountSql(),
         updated: protocols.updatedAt,
+        activity: activityTotalSql,
       };
       // Browse keeps tiers strict, with the curated `sortOrder` surviving as a
       // within-tier tiebreak. Every ordering ends on `id` so paging is stable.
+      // Sorted columns fall back to the default order, so ties keep a familiar order.
+      const defaultOrder = [
+        desc(tier),
+        asc(protocols.sortOrder),
+        asc(protocols.name),
+        asc(protocols.id),
+      ];
       const orderBy = sort?.length
         ? [
             ...sort.map(
               ({ field, direction }) =>
                 sql`${direction === "asc" ? asc(sortFields[field]) : desc(sortFields[field])} nulls last`,
             ),
-            asc(protocols.id),
+            ...defaultOrder,
           ]
         : search
           ? [desc(score), asc(protocols.id)]
-          : [desc(tier), asc(protocols.sortOrder), asc(protocols.name), asc(protocols.id)];
+          : defaultOrder;
 
       const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-      return { where, orderBy, score };
+      return {
+        where,
+        orderBy,
+        score,
+        activitySource: sortsByActivity(sort)
+          ? activityTotalsSource(activityTotals ?? new Map())
+          : null,
+      };
     }
   }
 
@@ -253,18 +274,23 @@ export class ProtocolRepository {
     organizationId?: string,
     sort?: ProtocolSort,
     filter?: ProtocolListFilter,
+    activityTotals?: ReadonlyMap<string, number>,
   ): Promise<Result<ProtocolSearchRow[]>> {
     return tryCatch(async () => {
-      const { where, orderBy, score } = this.buildListing(
+      const { where, orderBy, score, activitySource } = this.buildListing(
         search,
         scope,
         userId,
         organizationId,
         sort,
         filter,
+        activityTotals,
       );
 
       let query = this.baseQuery(score);
+      if (activitySource) {
+        query = query.leftJoin(activitySource, sql`${protocols.id} = activity_totals.id`);
+      }
       if (where) {
         query = query.where(where);
       }
@@ -336,18 +362,23 @@ export class ProtocolRepository {
     organizationId?: string,
     sort?: ProtocolSort,
     filter?: ProtocolListFilter,
+    activityTotals?: ReadonlyMap<string, number>,
   ): Promise<Result<{ items: ProtocolSearchRow[]; totalCount: number }>> {
     return tryCatch(async () => {
-      const { where, orderBy, score } = this.buildListing(
+      const { where, orderBy, score, activitySource } = this.buildListing(
         search,
         scope,
         userId,
         organizationId,
         sort,
         filter,
+        activityTotals,
       );
 
       let rows = this.baseQuery(score);
+      if (activitySource) {
+        rows = rows.leftJoin(activitySource, sql`${protocols.id} = activity_totals.id`);
+      }
       let total = this.database
         .select({ count: sql<number>`count(*)::int` })
         .from(protocols)

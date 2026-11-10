@@ -3,6 +3,14 @@ import { describe, expect, it } from "vitest";
 import { deviceDisplayName } from "./device-cells";
 
 describe("deviceDisplayName", () => {
+  it("accepts the scalar device names returned by distinct values", () => {
+    expect(deviceDisplayName("  client-007  ")).toBe("client-007");
+    expect(deviceDisplayName("007")).toBe("007");
+    expect(deviceDisplayName("42")).toBe("42");
+    expect(deviceDisplayName("null")).toBe("null");
+    expect(deviceDisplayName(" ")).toBe("Unknown device");
+  });
+
   it("returns the serial number from a device struct", () => {
     const struct = JSON.stringify({ id: "d-1", serial_number: "AA:11", status: "active" });
     expect(deviceDisplayName(struct)).toBe("AA:11");
@@ -16,6 +24,6 @@ describe("deviceDisplayName", () => {
   it("falls back to Unknown device for non-string or malformed values", () => {
     expect(deviceDisplayName(null)).toBe("Unknown device");
     expect(deviceDisplayName(42)).toBe("Unknown device");
-    expect(deviceDisplayName("not json")).toBe("Unknown device");
+    expect(deviceDisplayName("Bench (sensor-1)")).toBe("Bench (sensor-1)");
   });
 });

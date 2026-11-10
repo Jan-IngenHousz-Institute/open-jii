@@ -72,7 +72,9 @@ export const zMacroDetail = zMacro.extend({
   capabilities: zResourceCapabilities,
 });
 
-export const zMacroSort = zListSort(z.enum(["name", "language", "protocols", "updated"]));
+export const zMacroSort = zListSort(
+  z.enum(["name", "language", "protocols", "updated", "activity"]),
+);
 export type MacroSort = z.infer<typeof zMacroSort>;
 
 // Query parameters
@@ -98,7 +100,9 @@ export const zMacroFilterQuery = z
   })
   .merge(zPaginationQuery);
 
-export const zMacroPaginatedList = zPaginated(zMacroListEntry);
+export const zMacroPaginatedList = zPaginated(zMacroListEntry).extend({
+  activityAvailable: z.boolean(),
+});
 
 /** Array when the caller sent no `page`, envelope when they did. */
 export const zMacroListResponse = z.union([zMacroList, zMacroPaginatedList]);

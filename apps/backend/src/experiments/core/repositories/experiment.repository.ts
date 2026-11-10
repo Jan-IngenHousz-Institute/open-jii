@@ -36,6 +36,11 @@ import {
 import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
 import { AuthorizationService } from "../../../authorization/authorization.service";
+import {
+  activityTotalsSource,
+  activityTotalSql,
+  sortsByActivity,
+} from "../../../common/utils/activity-sort";
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
   crossTableBonus,
@@ -308,6 +313,7 @@ export class ExperimentRepository {
       visibilities?: ExperimentVisibility[];
     },
     sort?: ExperimentSort,
+    activityTotals?: ReadonlyMap<string, number>,
   ) {
     const { organizationId, includeArchived = false, visibilities } = options ?? {};
 
@@ -506,22 +512,33 @@ export class ExperimentRepository {
         organization: experimentFields.organizationName,
         members: experimentFields.membersCount,
         updated: experimentFields.updatedAt,
+        activity: activityTotalSql,
       };
+      // Sorted columns fall back to the default order, so ties keep a familiar order.
+      const defaultOrder = [desc(tier), desc(experiments.updatedAt), asc(experiments.id)];
       const orderBy = sort?.length
         ? [
             ...sort.map(
               ({ field, direction }) =>
                 sql`${direction === "asc" ? asc(sortFields[field]) : desc(sortFields[field])} nulls last`,
             ),
-            asc(experiments.id),
+            ...defaultOrder,
           ]
         : search
           ? [desc(score), asc(experiments.id)]
-          : [desc(tier), desc(experiments.updatedAt), asc(experiments.id)];
+          : defaultOrder;
 
       const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-      return { where, orderBy, score, fields: { ...experimentFields, score } };
+      return {
+        where,
+        orderBy,
+        score,
+        fields: { ...experimentFields, score },
+        activitySource: sortsByActivity(sort)
+          ? activityTotalsSource(activityTotals ?? new Map())
+          : null,
+      };
     }
   }
 
@@ -545,15 +562,17 @@ export class ExperimentRepository {
       visibilities?: ExperimentVisibility[];
     },
     sort?: ExperimentSort,
+    activityTotals?: ReadonlyMap<string, number>,
   ): Promise<Result<ExperimentSearchRow[]>> {
     return tryCatch(async () => {
-      const { where, orderBy, fields } = this.buildListing(
+      const { where, orderBy, fields, activitySource } = this.buildListing(
         userId,
         scope,
         statuses,
         search,
         options,
         sort,
+        activityTotals,
       );
 
       let query = this.database
@@ -561,6 +580,10 @@ export class ExperimentRepository {
         .from(experiments)
         .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
         .$dynamic();
+
+      if (activitySource) {
+        query = query.leftJoin(activitySource, sql`${experiments.id} = activity_totals.id`);
+      }
 
       if (where) {
         query = query.where(where);
@@ -593,15 +616,17 @@ export class ExperimentRepository {
       visibilities?: ExperimentVisibility[];
     },
     sort?: ExperimentSort,
+    activityTotals?: ReadonlyMap<string, number>,
   ): Promise<Result<{ items: ExperimentSearchRow[]; totalCount: number }>> {
     return tryCatch(async () => {
-      const { where, orderBy, fields } = this.buildListing(
+      const { where, orderBy, fields, activitySource } = this.buildListing(
         userId,
         scope,
         statuses,
         search,
         options,
         sort,
+        activityTotals,
       );
 
       let rows = this.database
@@ -609,6 +634,10 @@ export class ExperimentRepository {
         .from(experiments)
         .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
         .$dynamic();
+
+      if (activitySource) {
+        rows = rows.leftJoin(activitySource, sql`${experiments.id} = activity_totals.id`);
+      }
       let total = this.database
         .select({ count: sql<number>`count(*)::int` })
         .from(experiments)

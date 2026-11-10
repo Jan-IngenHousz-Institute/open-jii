@@ -668,7 +668,8 @@
                       "owner",
                       "organization",
                       "members",
-                      "updated"
+                      "updated",
+                      "activity"
                     ],
                     "type": "string"
                   },
@@ -1432,6 +1433,9 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "activityAvailable": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -1439,7 +1443,8 @@
                         "page",
                         "pageSize",
                         "totalPages",
-                        "totalCount"
+                        "totalCount",
+                        "activityAvailable"
                       ]
                     }
                   ]
@@ -3500,6 +3505,19 @@
             "allowReserved": true
           },
           {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Number of sorted DEVICE labels to skip. Other columns support only zero."
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -3534,7 +3552,7 @@
                           }
                         ]
                       },
-                      "description": "Distinct non-null values, sorted ascending"
+                      "description": "Distinct non-null values, sorted ascending. Device columns return display names."
                     },
                     "truncated": {
                       "type": "boolean",
@@ -28358,7 +28376,8 @@
                       "name",
                       "language",
                       "protocols",
-                      "updated"
+                      "updated",
+                      "activity"
                     ],
                     "type": "string"
                   },
@@ -28784,6 +28803,9 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "activityAvailable": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -28791,7 +28813,8 @@
                         "page",
                         "pageSize",
                         "totalPages",
-                        "totalCount"
+                        "totalCount",
+                        "activityAvailable"
                       ]
                     }
                   ]
@@ -33351,7 +33374,8 @@
                       "name",
                       "family",
                       "macros",
-                      "updated"
+                      "updated",
+                      "activity"
                     ],
                     "type": "string"
                   },
@@ -33791,6 +33815,9 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "activityAvailable": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -33798,7 +33825,8 @@
                         "page",
                         "pageSize",
                         "totalPages",
-                        "totalCount"
+                        "totalCount",
+                        "activityAvailable"
                       ]
                     }
                   ]
@@ -38327,7 +38355,8 @@
                       "name",
                       "usedBy",
                       "user",
-                      "updated"
+                      "updated",
+                      "activity"
                     ],
                     "type": "string"
                   },
@@ -38741,6 +38770,9 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "activityAvailable": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -38748,7 +38780,8 @@
                         "page",
                         "pageSize",
                         "totalPages",
-                        "totalCount"
+                        "totalCount",
+                        "activityAvailable"
                       ]
                     }
                   ]

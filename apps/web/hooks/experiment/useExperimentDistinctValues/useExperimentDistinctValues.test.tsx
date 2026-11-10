@@ -1,5 +1,8 @@
+import { API_URL } from "@/test/msw/mount";
+import type { SpyCall } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
+import { http, HttpResponse } from "msw";
 import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -40,6 +43,61 @@ describe("useExperimentDistinctValues", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.truncated).toBe(true);
+  });
+
+  it("advances by the received values when a warehouse byte cap shortens a page", async () => {
+    const spy = server.mount(contract.experiments.getDistinctColumnValues, {
+      body: ({ query }: SpyCall) =>
+        Number(query.offset) === 0
+          ? { values: ["A", "B"], truncated: true }
+          : { values: ["C"], truncated: false },
+    });
+    const { result } = renderHook(() =>
+      useExperimentDistinctValues({
+        experimentId: "exp-1",
+        tableName: "raw_data",
+        column: "device",
+        allPages: true,
+      }),
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.values).toEqual(["A", "B", "C"]);
+    expect(spy.calls.map((call) => call.query.offset)).toEqual(["0", "2"]);
+  });
+
+  it("keeps the loading hint while the remaining device options load", async () => {
+    let release: (() => void) | undefined;
+    let nextRequested = false;
+    const nextPage = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(`${API_URL}/api/v1/experiments/:id/data/distinct`, async ({ request }) => {
+        const offset = Number(new URL(request.url).searchParams.get("offset"));
+        if (offset === 0) return HttpResponse.json({ values: ["A"], truncated: true });
+        nextRequested = true;
+        await nextPage;
+        return HttpResponse.json({ values: ["B"], truncated: false });
+      }),
+    );
+    const { result } = renderHook(() =>
+      useExperimentDistinctValues({
+        experimentId: "exp-1",
+        tableName: "raw_data",
+        column: "device",
+        allPages: true,
+      }),
+    );
+    try {
+      await waitFor(() => expect(nextRequested).toBe(true));
+      expect(result.current.values).toEqual(["A"]);
+      expect(result.current.isLoading).toBe(true);
+      expect(result.current.truncated).toBe(false);
+    } finally {
+      release?.();
+    }
+    await waitFor(() => expect(result.current.values).toEqual(["A", "B"]));
+    expect(result.current.isLoading).toBe(false);
   });
 
   it("falls back to an empty array and not truncated when data is undefined", () => {

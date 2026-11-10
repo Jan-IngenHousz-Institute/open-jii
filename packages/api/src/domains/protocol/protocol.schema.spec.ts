@@ -194,6 +194,9 @@ describe("Protocol Schema", () => {
       ).toBe(false);
       expect(
         zProtocolFilterQuery.safeParse({ sort: [{ field: "activity", direction: "asc" }] }).success,
+      ).toBe(true);
+      expect(
+        zProtocolFilterQuery.safeParse({ sort: [{ field: "invalid", direction: "asc" }] }).success,
       ).toBe(false);
       expect(
         zProtocolFilterQuery.safeParse({

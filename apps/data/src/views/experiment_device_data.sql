@@ -5,6 +5,8 @@ WITH
 -- gold carries firmware, battery and version only on rows written after it gained them;
 -- a read scans silver's columns for the experiment asked for. ${catalog} is filled in by
 -- terraform. A capture that arrived more than once keeps its id and time, so it counts once.
+-- Restart backend instances after redefining or rolling back this view to refresh
+-- their cached source columns. See apps/data/README.md.
 -- Inside the WITH because Unity Catalog drops comments above a view's first keyword.
 devices AS (
   SELECT

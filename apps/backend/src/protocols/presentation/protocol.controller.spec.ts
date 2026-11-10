@@ -181,7 +181,7 @@ describe("ProtocolController - read and update endpoints", () => {
   it("listProtocols rejects a sort field outside the allowlist", async () => {
     await testApp
       .get(testApp.resolveOrpcPath(contract.protocols.listProtocols))
-      .query({ page: 1, "sort[0][field]": "activity", "sort[0][direction]": "asc" })
+      .query({ page: 1, "sort[0][field]": "invalid", "sort[0][direction]": "asc" })
       .withAuth(testUserId)
       .expect(StatusCodes.BAD_REQUEST);
   });
@@ -189,7 +189,7 @@ describe("ProtocolController - read and update endpoints", () => {
   it("listProtocols passes the indexed family and visibility arrays the web client sends", async () => {
     const executeSpy = vi
       .spyOn(testApp.module.get(ListProtocolsUseCase), "executePaginated")
-      .mockResolvedValue(success({ items: [], totalCount: 0 }));
+      .mockResolvedValue(success({ items: [], totalCount: 0, activityAvailable: false }));
 
     await testApp
       .get(testApp.resolveOrpcPath(contract.protocols.listProtocols))

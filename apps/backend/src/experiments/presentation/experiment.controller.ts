@@ -85,7 +85,10 @@ export class ExperimentController {
           input.visibility,
         );
         if (paged.isSuccess()) {
-          return toPage(paged.value, input.page, pageSize, formatDatesList);
+          return {
+            ...toPage(paged.value, input.page, pageSize, formatDatesList),
+            activityAvailable: paged.value.activityAvailable,
+          };
         }
         return throwOrpcFailure(paged, this.logger);
       }

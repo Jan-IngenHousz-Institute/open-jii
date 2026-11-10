@@ -29,6 +29,11 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
+import {
+  activityTotalsSource,
+  activityTotalSql,
+  sortsByActivity,
+} from "../../../common/utils/activity-sort";
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
   crossTableBonus,
@@ -180,7 +185,7 @@ export class WorkbookRepository {
    * Shared shape behind the array and paginated listings, so both apply identical
    * scoping, ranking and ordering and the count matches the rows exactly.
    */
-  private buildListing(filter?: WorkbookFilter) {
+  private buildListing(filter?: WorkbookFilter, activityTotals?: ReadonlyMap<string, number>) {
     {
       const conditions: (SQL | undefined)[] = [];
 
@@ -340,22 +345,32 @@ export class WorkbookRepository {
         usedBy: experimentCountSql(),
         user: authorName,
         updated: workbooks.updatedAt,
+        activity: activityTotalSql,
       };
+      // Sorted columns fall back to the default order, so ties keep a familiar order.
+      const defaultOrder = [desc(tier), asc(workbooks.name), asc(workbooks.id)];
       const orderBy = filter?.sort?.length
         ? [
             ...filter.sort.map(
               ({ field, direction }) =>
                 sql`${direction === "asc" ? asc(sortFields[field]) : desc(sortFields[field])} nulls last`,
             ),
-            asc(workbooks.id),
+            ...defaultOrder,
           ]
         : search
           ? [desc(score), asc(workbooks.id)]
-          : [desc(tier), asc(workbooks.name), asc(workbooks.id)];
+          : defaultOrder;
 
       const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-      return { where, orderBy, score };
+      return {
+        where,
+        orderBy,
+        score,
+        activitySource: sortsByActivity(filter?.sort)
+          ? activityTotalsSource(activityTotals ?? new Map())
+          : null,
+      };
     }
   }
 
@@ -374,11 +389,18 @@ export class WorkbookRepository {
       .$dynamic();
   }
 
-  async findAll(filter?: WorkbookFilter, limit?: number): Promise<Result<WorkbookSearchRow[]>> {
+  async findAll(
+    filter?: WorkbookFilter,
+    limit?: number,
+    activityTotals?: ReadonlyMap<string, number>,
+  ): Promise<Result<WorkbookSearchRow[]>> {
     return tryCatch(async () => {
-      const { where, orderBy, score } = this.buildListing(filter);
+      const { where, orderBy, score, activitySource } = this.buildListing(filter, activityTotals);
 
       let query = this.baseQuery(score);
+      if (activitySource) {
+        query = query.leftJoin(activitySource, sql`${workbooks.id} = activity_totals.id`);
+      }
       if (where) {
         query = query.where(where);
       }
@@ -445,11 +467,15 @@ export class WorkbookRepository {
     page: number,
     pageSize: number,
     filter?: WorkbookFilter,
+    activityTotals?: ReadonlyMap<string, number>,
   ): Promise<Result<{ items: WorkbookSearchRow[]; totalCount: number }>> {
     return tryCatch(async () => {
-      const { where, orderBy, score } = this.buildListing(filter);
+      const { where, orderBy, score, activitySource } = this.buildListing(filter, activityTotals);
 
       let rows = this.baseQuery(score);
+      if (activitySource) {
+        rows = rows.leftJoin(activitySource, sql`${workbooks.id} = activity_totals.id`);
+      }
       let total = this.database
         .select({ count: sql<number>`count(*)::int` })
         .from(workbooks)

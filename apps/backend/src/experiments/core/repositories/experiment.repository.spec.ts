@@ -214,9 +214,23 @@ describe("ExperimentRepository", () => {
       ]);
     });
 
-    it("uses ID to keep equal sort values stable across pages", async () => {
+    it("breaks equal sort values by the default order, stable across pages", async () => {
+      const created: string[] = [];
       for (const name of ["First", "Second", "Third"]) {
-        await testApp.createExperiment({ name, status: "active", userId: testUserId });
+        const { experiment } = await testApp.createExperiment({
+          name,
+          status: "active",
+          userId: testUserId,
+        });
+        created.push(experiment.id);
+      }
+      // Newest last in id order, so the default updatedAt-desc order runs against it.
+      const byId = [...created].sort();
+      for (const [index, id] of byId.entries()) {
+        await testApp.database
+          .update(experimentsTable)
+          .set({ updatedAt: new Date(Date.UTC(2026, 0, 1 + index)) })
+          .where(eq(experimentsTable.id, id));
       }
       const sort = [{ field: "status", direction: "asc" }] as const;
       const first = await repository.findPage(
@@ -242,8 +256,7 @@ describe("ExperimentRepository", () => {
       assertSuccess(first);
       assertSuccess(second);
       const ids = [...first.value.items, ...second.value.items].map((item) => item.id);
-      expect(ids).toEqual([...ids].sort());
-      expect(new Set(ids).size).toBe(3);
+      expect(ids).toEqual([...byId].reverse());
     });
 
     it("sorts computed owner, organization, and member columns plus updated time", async () => {

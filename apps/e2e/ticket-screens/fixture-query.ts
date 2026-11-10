@@ -91,7 +91,10 @@ export class FixtureQuery {
       const table = this.find(query.data.tableName);
       if (table === undefined) return this.notFound(query.data.tableName);
       const limit = query.data.limit ?? DISTINCT_VALUES_DEFAULT_LIMIT;
-      return { status: 200, body: this.distinct(table, query.data.column, limit) };
+      return {
+        status: 200,
+        body: this.distinct(table, query.data.column, limit, query.data.offset ?? 0),
+      };
     }
 
     if (path === "/data") {
@@ -194,6 +197,7 @@ export class FixtureQuery {
     table: FixtureTable,
     column: string,
     limit: number,
+    offset: number,
   ): ExperimentDistinctValuesResponse {
     const seen = new Set<string | number>();
     for (const row of table.rows) {
@@ -202,7 +206,10 @@ export class FixtureQuery {
     }
 
     const values = [...seen].sort((a, b) => this.compare(a, b));
-    return { values: values.slice(0, limit), truncated: values.length > limit };
+    return {
+      values: values.slice(offset, offset + limit),
+      truncated: values.length > offset + limit,
+    };
   }
 
   // Mirrors the repository's three branches: aggregated, filtered or projected, and plain pages.
@@ -299,7 +306,7 @@ export class FixtureQuery {
     row: FixtureRow,
     filter: ReturnType<typeof resolveRelativeTimeFilters>[number],
   ): boolean {
-    const cell = row[filter.column] ?? null;
+    const cell = this.cell(row, filter.column);
     if (cell === null) return false;
 
     const { value } = filter;
@@ -329,6 +336,24 @@ export class FixtureQuery {
         return typeof scalar === "string" && this.like(String(cell), `%${scalar}%`);
       case "in":
         return list.some((item) => this.equal(cell, item));
+    }
+  }
+
+  private cell(row: FixtureRow, column: string): FixtureValue {
+    if (column in row) return row[column];
+    const [parent, ...fields] = column.split(".");
+    if (fields.length === 0 || typeof row[parent] !== "string") return null;
+    try {
+      let value: unknown = JSON.parse(row[parent]);
+      for (const field of fields) {
+        if (value === null || typeof value !== "object" || !(field in value)) return null;
+        value = Reflect.get(value, field);
+      }
+      return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+        ? value
+        : null;
+    } catch {
+      return null;
     }
   }
 
