@@ -1,15 +1,15 @@
-import { revalidatePath } from "next/cache";
+import { refresh } from "next/cache";
 import { describe, it, expect, vi } from "vitest";
 
 import { revalidateAuth } from "./revalidate";
 
 // This file tests the real revalidateAuth() function — unmock the global stub.
 vi.unmock("~/app/actions/revalidate");
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 
 describe("revalidateAuth", () => {
-  it("revalidates from the locale layout down, which decides the viewer's language", async () => {
+  it("refreshes the browser's pages without purging the server's", async () => {
     await revalidateAuth();
-    expect(revalidatePath).toHaveBeenCalledWith("/[locale]", "layout");
+    expect(refresh).toHaveBeenCalledOnce();
   });
 });

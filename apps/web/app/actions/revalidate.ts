@@ -1,13 +1,13 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { refresh } from "next/cache";
 
 /**
- * Server action to invalidate auth-related caches
- * Call this after login, logout or registration to force re-rendering of protected pages. From
- * the locale layout down, since it decides the viewer's language by their feature flags.
+ * Call this after sign-in, sign-out or registration. It clears the browser's page cache, which
+ * would otherwise replay pages and redirects prefetched for the previous session. The server's
+ * cached pages read no session, so they stay.
  */
 // eslint-disable-next-line @typescript-eslint/require-await
 export async function revalidateAuth() {
-  revalidatePath("/[locale]", "layout");
+  refresh();
 }
