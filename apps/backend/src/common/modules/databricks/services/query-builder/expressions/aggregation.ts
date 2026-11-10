@@ -1,7 +1,15 @@
+import {
+  aggregateKind,
+  hasRowWindowGroupingConflict,
+  ORDER_COLUMN_REQUIRED_MESSAGE,
+  ROW_WINDOW_GROUPING_MESSAGE,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
+
 import { SqlQueryBuilder } from "../query-builder.base";
 import type { BaseQueryBuilder } from "../query-builder.base";
 import type { AggregateExpression, AggregationSpec, QueryOrdering } from "../query-builder.types";
 import { QueryBuilderInputError } from "../query-builder.types";
+import { buildRowWindowExpression } from "./window";
 
 /** True when the spec has any grouping or aggregate functions to apply. */
 export function hasAggregationContent(spec: AggregationSpec | undefined): boolean {
@@ -23,6 +31,27 @@ export function buildAggregateExpression(
       "buildAggregateExpression: cumsum is a window function, route through buildCumsumExpression",
     );
   }
+  if (
+    agg.function === "previous" ||
+    agg.function === "change_from_previous" ||
+    agg.function === "row_number"
+  ) {
+    throw new QueryBuilderInputError("Row windows must use the window-only query path");
+  }
+  if (agg.function === "latest" || agg.function === "earliest") {
+    if (!agg.orderColumn?.trim()) {
+      throw new QueryBuilderInputError(ORDER_COLUMN_REQUIRED_MESSAGE);
+    }
+    const fn = agg.function === "latest" ? "MAX_BY" : "MIN_BY";
+    const order = builder.escapeIdentifier(agg.orderColumn);
+    const key = agg.tieBreaker
+      ? `CASE WHEN ${order} IS NULL THEN NULL ELSE struct(${order}, ${builder.escapeIdentifier(agg.tieBreaker)}) END`
+      : order;
+    return {
+      sql: `${fn}(${builder.escapeIdentifier(agg.column)}, ${key})`,
+      alias: agg.alias ?? `${agg.column}_${agg.function}`,
+    };
+  }
   if (agg.function === "count_distinct") {
     return {
       sql: `COUNT(DISTINCT ${builder.escapeIdentifier(agg.column)})`,
@@ -42,7 +71,17 @@ export function buildAggregateExpression(
   // in the dedicated branches above is a TS error here. Databricks needs
   // the spelled-out names (STDDEV/VARIANCE, not STD/VAR).
   const ROW_AGGREGATE_SQL: Record<
-    Exclude<AggregateExpression["function"], "cumsum" | "corr" | "count_distinct">,
+    Exclude<
+      AggregateExpression["function"],
+      | "cumsum"
+      | "corr"
+      | "count_distinct"
+      | "previous"
+      | "change_from_previous"
+      | "row_number"
+      | "latest"
+      | "earliest"
+    >,
     string
   > = {
     sum: "SUM",
@@ -94,8 +133,8 @@ function sortTarget(
  * Both accept an `explode` (`LATERAL VIEW EXPLODE`) so array elements can
  * be grouped by.
  * The window-only path activates only with no groupBy entries and no
- * row-aggregating functions (cumsum alone), so a no-aggregate series can
- * coexist with a cumsum sibling.
+ * row-aggregating functions, so raw series can coexist with running totals
+ * and raw-row windows.
  */
 export function wrapWithAggregation(
   innerSql: string,
@@ -119,6 +158,15 @@ export function wrapWithAggregation(
   let firstGroupBySql: string | undefined;
 
   if (opts.aggregation) {
+    const functions = opts.aggregation.functions ?? [];
+    if (
+      hasRowWindowGroupingConflict(
+        functions.map((item) => item.function),
+        (opts.aggregation.groupBy?.length ?? 0) > 0,
+      )
+    ) {
+      throw new QueryBuilderInputError(ROW_WINDOW_GROUPING_MESSAGE);
+    }
     for (const item of opts.aggregation.groupBy ?? []) {
       const expr = item.timeBucket
         ? builder.buildTimeBucketExpression(item.column, item.timeBucket)
@@ -150,6 +198,13 @@ export function wrapWithAggregation(
 
         outputNames.add(expr.alias);
         windowProjections.push(`${expr.sql} AS ${quoteAlias(expr.alias)}`);
+        continue;
+      }
+
+      if (aggregateKind(item.function) === "rowWindow") {
+        const expr = buildRowWindowExpression(item, builder);
+        outputNames.add(expr.alias);
+        windowProjections.push(`${expr.sql} AS ${builder.quoteName(expr.alias)}`);
         continue;
       }
 

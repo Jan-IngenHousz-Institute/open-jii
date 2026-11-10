@@ -86,10 +86,12 @@ interface FormHostProps {
 }
 
 function FormHost({ visualization, experimentId, section }: FormHostProps) {
+  const { t: translateValidation } = useTranslation("experimentVisualizations");
   const defaults = useMemo(() => buildDefaults(visualization), [visualization]);
   const form = useForm<ChartFormValues>({
     defaultValues: defaults,
     resolver: chartFormResolver,
+    context: { translate: translateValidation },
     mode: "onChange",
   });
 
@@ -143,6 +145,8 @@ function SectionBody({ form, experimentId, tableName, section }: SectionBodyProp
       columnName: "",
       alias: "",
       aggregate: undefined,
+      partitionColumn: "",
+      orderColumn: "",
     }));
     form.setValue("dataConfig.tableName", newTable, { shouldDirty: true });
     form.setValue("dataConfig.dataSources", reset, { shouldDirty: true });

@@ -1,6 +1,7 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 
 import {
+  takesWindow,
   DATA_QUERY_MAX_LIMIT,
   WellKnownColumnTypes,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -567,9 +568,12 @@ export class ExperimentDataRepository {
     const projected = [
       ...columns,
       ...(aggregation?.groupBy ?? []).map((group) => group.column),
-      ...(aggregation?.functions ?? []).flatMap((fn) =>
-        fn.secondColumn === undefined ? [fn.column] : [fn.column, fn.secondColumn],
-      ),
+      ...(aggregation?.functions ?? []).flatMap((fn) => [
+        fn.column,
+        ...(fn.secondColumn === undefined ? [] : [fn.secondColumn]),
+        ...(fn.partitionColumn === undefined ? [] : [fn.partitionColumn]),
+        ...(fn.orderColumn === undefined ? [] : [fn.orderColumn]),
+      ]),
     ];
     const namesAColumn = projected.length > 0 || (filters?.length ?? 0) > 0 || Boolean(orderBy);
     if (!experiment.anonymizeContributors || !namesAColumn) {
@@ -587,6 +591,11 @@ export class ExperimentDataRepository {
     }
 
     const referenceOf = (name: string) => this.contributorReference(name, columnsResult.value);
+
+    const contributorOrder = aggregation?.functions?.find(
+      (item) => item.orderColumn !== undefined && referenceOf(item.orderColumn) !== undefined,
+    )?.orderColumn;
+    if (contributorOrder !== undefined) return this.anonymizedRefusal(contributorOrder);
 
     const revealing = projected.find((name) => referenceOf(name)?.field !== undefined);
     if (revealing !== undefined) {
@@ -898,7 +907,7 @@ export class ExperimentDataRepository {
     return source === "store" ? this.storeReads : this.warehouseReads;
   }
 
-  private buildQuery(
+  private async buildQuery(
     experimentId: string,
     shape: TableShape,
     options: Pick<
@@ -920,6 +929,39 @@ export class ExperimentDataRepository {
       };
     }
 
+    let effectiveAggregation = aggregation;
+    if (aggregation?.functions?.some((item) => takesWindow(item.function))) {
+      const columnsResult = shape.columns
+        ? success(shape.columns)
+        : await this.getTableColumns({
+            experimentId,
+            tableName: metadata.identifier,
+            source: shape.source,
+          });
+      if (columnsResult.isFailure()) return columnsResult;
+      const tableColumns = columnsResult.value;
+      effectiveAggregation = {
+        ...aggregation,
+        functions: aggregation.functions.map((item) => ({
+          ...item,
+          ...(item.function === "change_from_previous"
+            ? {
+                valueType: tableColumns.find(
+                  (column) => column.name.toLowerCase() === item.column.toLowerCase(),
+                )?.type_text,
+              }
+            : {}),
+          ...(takesWindow(item.function)
+            ? {
+                tieBreaker: tableColumns.some((column) => column.name === ROW_ID)
+                  ? ROW_ID
+                  : undefined,
+              }
+            : {}),
+        })),
+      };
+    }
+
     return this.reads(shape).buildQuery({
       join: shape.join,
       tableName: metadata.identifier,
@@ -931,7 +973,7 @@ export class ExperimentDataRepository {
       baseColumns: shape.baseColumns,
       exceptColumns: exceptColumns.length > 0 ? exceptColumns : undefined,
       filters,
-      aggregation,
+      aggregation: effectiveAggregation,
       distinct,
       ordering: effectiveOrdering,
       limit,

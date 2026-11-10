@@ -5,6 +5,7 @@ import { relativeFilterStaleTime } from "@/util/relative-filter-query-options";
 import { afterEach, describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import { zExperimentDataAggregation } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useExperimentVisualizationData } from "./useExperimentVisualizationData";
@@ -657,4 +658,80 @@ describe("useExperimentVisualizationData", () => {
 
     expect(result.current.data?.rows).toEqual([{ contributor: "Unknown", id_count_s1: "35" }]);
   });
+});
+
+describe("ordered calculations with colour and facet", () => {
+  it.each(["previous", "change_from_previous", "row_number"] as const)(
+    "preserves raw ordering and split columns for %s",
+    async (fn) => {
+      const spy = server.mount(contract.experiments.getExperimentData, {
+        body: [createExperimentDataTable()],
+      });
+      const { result } = renderHook(() =>
+        useExperimentVisualizationData("exp-1", {
+          tableName: "raw_data",
+          columns: ["time", "value", "sensor", "panel"],
+          aggregation: {
+            functions: [
+              {
+                column: "value",
+                function: fn,
+                orderColumn: "time",
+                partitionColumn: "sensor",
+              },
+            ],
+          },
+          extraGroupByColumns: ["sensor", "panel"],
+          orderBy: "time",
+          orderDirection: "ASC",
+        }),
+      );
+      await waitFor(() => expect(result.current.data).toBeDefined());
+      const query = spy.calls.at(-1)?.query;
+      expect(query?.orderBy).toBe("time");
+      expect(
+        zExperimentDataAggregation.parse(JSON.parse(query?.aggregation ?? "{}")).groupBy,
+      ).toBeUndefined();
+    },
+  );
+
+  it("groups latest values by colour and facet", async () => {
+    const spy = server.mount(contract.experiments.getExperimentData, {
+      body: [createExperimentDataTable()],
+    });
+    const { result } = renderHook(() =>
+      useExperimentVisualizationData("exp-1", {
+        tableName: "raw_data",
+        aggregation: { functions: [{ column: "value", function: "latest", orderColumn: "time" }] },
+        extraGroupByColumns: ["sensor", "panel"],
+      }),
+    );
+    await waitFor(() => expect(result.current.data).toBeDefined());
+    expect(
+      zExperimentDataAggregation.parse(JSON.parse(spy.calls.at(-1)?.query.aggregation ?? "{}"))
+        .groupBy,
+    ).toEqual([{ column: "sensor" }, { column: "panel" }]);
+  });
+});
+
+it("preserves saved cumsum grouping by colour and facet", async () => {
+  const spy = server.mount(contract.experiments.getExperimentData, {
+    body: [createExperimentDataTable()],
+  });
+  const { result } = renderHook(() =>
+    useExperimentVisualizationData("exp-1", {
+      tableName: "raw_data",
+      aggregation: { functions: [{ column: "value", function: "cumsum" }] },
+      extraGroupByColumns: ["sensor", "panel"],
+      orderBy: "time",
+      orderDirection: "ASC",
+    }),
+  );
+  await waitFor(() => expect(result.current.data).toBeDefined());
+  const query = spy.calls.at(-1)?.query;
+  expect(zExperimentDataAggregation.parse(JSON.parse(query?.aggregation ?? "{}")).groupBy).toEqual([
+    { column: "sensor" },
+    { column: "panel" },
+  ]);
+  expect(query?.orderBy).toBeUndefined();
 });

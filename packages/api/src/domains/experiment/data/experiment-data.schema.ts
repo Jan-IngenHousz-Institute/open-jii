@@ -78,11 +78,53 @@ export const zExperimentAggregationFunction = z.enum([
   "std",
   "var",
   "cumsum",
+  "previous",
+  "change_from_previous",
+  "row_number",
+  "latest",
+  "earliest",
   // Bivariate. `corr(a, b)` produces the Pearson correlation between
   // the source's primary `column` and `secondColumn`. Spearman is built
   // on top of `corr` over `RANK() OVER` window outputs in the SQL builder.
   "corr",
 ]);
+
+export type AggregateKind = "row" | "running" | "rowWindow";
+
+export function aggregateKind(fn: ExperimentAggregationFunction): AggregateKind {
+  if (fn === "cumsum") return "running";
+  if (fn === "previous" || fn === "change_from_previous" || fn === "row_number") {
+    return "rowWindow";
+  }
+  return "row";
+}
+
+export function requiresGroupBy(fn: ExperimentAggregationFunction): boolean {
+  return aggregateKind(fn) === "row";
+}
+
+export function takesWindow(fn: ExperimentAggregationFunction): boolean {
+  return aggregateKind(fn) === "rowWindow" || fn === "latest" || fn === "earliest";
+}
+
+export function hasRowWindowGroupingConflict(
+  functions: readonly ExperimentAggregationFunction[],
+  hasGrouping: boolean,
+): boolean {
+  return (
+    functions.some((fn) => aggregateKind(fn) === "rowWindow") &&
+    (hasGrouping || functions.some(requiresGroupBy))
+  );
+}
+
+export const ORDER_COLUMN_REQUIRED_MESSAGE = "Choose an Ordered by column for this aggregate";
+export const ORDER_COLUMN_FORBIDDEN_MESSAGE = "This aggregate does not accept an Ordered by column";
+export const PARTITION_COLUMN_FORBIDDEN_MESSAGE = "Only row windows accept a Per column";
+export const MAX_AGGREGATION_FUNCTIONS = 50;
+export const MAX_ROW_WINDOW_SPECS = 10;
+
+export const ROW_WINDOW_GROUPING_MESSAGE =
+  "Previous value, Change from previous and Row number keep every row, so they cannot share a chart with grouped series.";
 
 /**
  * Per-series aggregates that take two columns. The SQL builder needs
@@ -227,7 +269,12 @@ export const zExperimentGroupByItem = z
     "A group-by column takes a calendar bucket or a width bucket, not both",
   );
 
-// `column: "*"` is allowed only with `count` and `cumsum`: `count(*)` is
+export const zExperimentWindowColumn = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().trim().min(1).optional(),
+);
+
+// `column: "*"` is allowed with count, cumsum and row_number: count(*) is
 // the row-count form, and `cumsum(*)` is cumulative row count (running
 // total of `count(*)` per group). Aliases default to `${column}_${function}`
 // if omitted; the SQL builder applies that.
@@ -245,13 +292,37 @@ export const zExperimentAggregationItem = z
      * `secondColumn` state.
      */
     secondColumn: z.string().optional(),
+    partitionColumn: zExperimentWindowColumn,
+    orderColumn: zExperimentWindowColumn,
   })
   .superRefine((item, ctx) => {
-    if (item.column === "*" && item.function !== "count" && item.function !== "cumsum") {
+    if (item.column === "*" && !["count", "cumsum", "row_number"].includes(item.function)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["column"],
-        message: "'*' column is only allowed with the 'count' or 'cumsum' functions",
+        message: "'*' column is only allowed with count, cumsum or row_number",
+      });
+    }
+    if (takesWindow(item.function)) {
+      if (!item.orderColumn?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["orderColumn"],
+          message: ORDER_COLUMN_REQUIRED_MESSAGE,
+        });
+      }
+    } else if (item.orderColumn !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["orderColumn"],
+        message: ORDER_COLUMN_FORBIDDEN_MESSAGE,
+      });
+    }
+    if (item.partitionColumn !== undefined && aggregateKind(item.function) !== "rowWindow") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["partitionColumn"],
+        message: PARTITION_COLUMN_FORBIDDEN_MESSAGE,
       });
     }
     if (isBivariateAggregate(item.function)) {
@@ -282,7 +353,42 @@ export const zExperimentDataAggregation = z
   .refine(
     (agg) => (agg.groupBy?.length ?? 0) > 0 || (agg.functions?.length ?? 0) > 0,
     "Aggregation must include at least one groupBy or function",
-  );
+  )
+  .superRefine((aggregation, ctx) => {
+    const functions = aggregation.functions ?? [];
+    if (
+      hasRowWindowGroupingConflict(
+        functions.map((item) => item.function),
+        (aggregation.groupBy?.length ?? 0) > 0,
+      )
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["functions"],
+        message: ROW_WINDOW_GROUPING_MESSAGE,
+      });
+    }
+  });
+
+const zExperimentDataReadAggregation = zExperimentDataAggregation
+  .safeExtend({
+    functions: z.array(zExperimentAggregationItem).max(MAX_AGGREGATION_FUNCTIONS).optional(),
+  })
+  .superRefine((aggregation, ctx) => {
+    const functions = aggregation.functions ?? [];
+    const windowSpecs = new Set(
+      functions
+        .filter((item) => aggregateKind(item.function) === "rowWindow")
+        .map((item) => JSON.stringify([item.partitionColumn ?? null, item.orderColumn])),
+    );
+    if (windowSpecs.size > MAX_ROW_WINDOW_SPECS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["functions"],
+        message: `Use no more than ${MAX_ROW_WINDOW_SPECS} different Per and Ordered by combinations in one query`,
+      });
+    }
+  });
 
 export type ExperimentDataFilterOperator = z.infer<typeof zExperimentDataFilterOperator>;
 export type ExperimentDataFilterValue = z.infer<typeof zExperimentDataFilterValue>;
@@ -356,7 +462,7 @@ export const zExperimentDataQuery = z.object({
     .describe(
       "JSON-encoded second-table settings for latest earlier readings matched by key and time",
     ),
-  aggregation: jsonQuerySchema(zExperimentDataAggregation)
+  aggregation: jsonQuerySchema(zExperimentDataReadAggregation)
     .optional()
     .describe("JSON-encoded GROUP BY + aggregate functions"),
   // `limit` only takes effect when filters or aggregation switch the
