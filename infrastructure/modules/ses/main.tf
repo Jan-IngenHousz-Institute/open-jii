@@ -345,6 +345,12 @@ resource "aws_ses_configuration_set" "main" {
   reputation_metrics_enabled = true
 }
 
+# Stops repeat sends to an address that bounced or complained. Account-level, one per account,
+# and a put: an account that already has it reads as no change.
+resource "aws_sesv2_account_suppression_attributes" "account" {
+  suppressed_reasons = ["BOUNCE", "COMPLAINT"]
+}
+
 # Event Destination for bounce and complaint tracking (optional)
 resource "aws_ses_event_destination" "cloudwatch" {
   count                  = var.enable_event_publishing ? 1 : 0

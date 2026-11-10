@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import { SchedulerRegistry } from "@nestjs/schedule";
 import type { MockInstance } from "vitest";
 
@@ -21,6 +22,7 @@ import { NotificationDeliveryRepository } from "../../core/repositories/notifica
 import { NotificationRepository } from "../../core/repositories/notification.repository";
 import { NotificationDispatchService } from "./notification-dispatch.service";
 import { NotificationEmailService } from "./notification-email.service";
+import { NotificationOutboxMetricsService } from "./notification-outbox-metrics.service";
 import { LEASE_MS, NotificationOutboxWorker, OUTBOX_INTERVAL } from "./notification-outbox.worker";
 
 const MINUTE = 60_000;
@@ -153,6 +155,58 @@ describe("NotificationOutboxWorker", () => {
     const row = await deliveryById(queued.id);
     expect(row).toMatchObject({ status: "sent", attempts: 0, claimedAt: null });
     expect(row.sentAt).toBeInstanceOf(Date);
+  });
+
+  it("hands what a drain did to the metrics", async () => {
+    const publishOutcomes = vi.spyOn(
+      testApp.module.get(NotificationOutboxMetricsService),
+      "publishOutcomes",
+    );
+    await queueOne();
+
+    await worker.drain();
+
+    expect(publishOutcomes).toHaveBeenCalledExactlyOnceWith({
+      sent: 1,
+      retried: 0,
+      deferred: 0,
+      skipped: 0,
+      failed: 0,
+    });
+  });
+
+  it("hands the metrics nothing from a drain that claimed nothing", async () => {
+    const publishOutcomes = vi.spyOn(
+      testApp.module.get(NotificationOutboxMetricsService),
+      "publishOutcomes",
+    );
+
+    await worker.drain();
+
+    expect(publishOutcomes).not.toHaveBeenCalled();
+  });
+
+  it("keeps a drain's counts and outcomes when its metrics cannot be handed over", async () => {
+    vi.spyOn(
+      testApp.module.get(NotificationOutboxMetricsService),
+      "publishOutcomes",
+    ).mockRejectedValue(new Error("Config unreadable"));
+    const warn = vi.spyOn(Logger.prototype, "warn");
+    const queued = await queueOne();
+
+    const counts = await worker.drain();
+
+    expect(counts).toEqual({ sent: 1, retried: 0, deferred: 0, skipped: 0, failed: 0 });
+    expect(await deliveryById(queued.id)).toMatchObject({ status: "sent" });
+    await vi.waitFor(() =>
+      expect(
+        warn.mock.calls.filter(
+          ([entry]) =>
+            (entry as { msg?: string }).msg ===
+            "Failed to publish the notification outbox's metrics",
+        ),
+      ).toEqual([[expect.objectContaining({ operation: "notification-outbox" })]]),
+    );
   });
 
   it("puts a row back to pending a minute out when the adapter fails", async () => {
@@ -381,6 +435,7 @@ describe("NotificationOutboxWorker", () => {
         new NotificationDeliveryRepository(secondary.database),
         testApp.module.get(NotificationRepository),
         testApp.module.get(NotificationEmailService),
+        testApp.module.get(NotificationOutboxMetricsService),
       );
 
       const [first, second] = await Promise.all([worker.drain(), otherTask.drain()]);
@@ -423,6 +478,7 @@ describe("NotificationOutboxWorker", () => {
         deliveryRepository,
         testApp.module.get(NotificationRepository),
         testApp.module.get(NotificationEmailService),
+        testApp.module.get(NotificationOutboxMetricsService),
       );
       const drain = vi
         .spyOn(real, "drain")
@@ -529,6 +585,7 @@ describe("NotificationOutboxWorker", () => {
         deliveryRepository,
         testApp.module.get(NotificationRepository),
         testApp.module.get(NotificationEmailService),
+        testApp.module.get(NotificationOutboxMetricsService),
       );
 
       expect(await impatient.drain()).toEqual({
@@ -554,6 +611,7 @@ describe("NotificationOutboxWorker", () => {
         deliveryRepository,
         testApp.module.get(NotificationRepository),
         testApp.module.get(NotificationEmailService),
+        testApp.module.get(NotificationOutboxMetricsService),
       );
 
       // Shutdown is called while the first row is mid-send, as a signal would.
@@ -765,6 +823,7 @@ describe("NotificationOutboxWorker", () => {
       deliveryRepository,
       testApp.module.get(NotificationRepository),
       testApp.module.get(NotificationEmailService),
+      testApp.module.get(NotificationOutboxMetricsService),
     );
 
     // Nothing is queued, so the first claim comes back empty; the nudge arriving in

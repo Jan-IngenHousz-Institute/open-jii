@@ -41,6 +41,7 @@ locals {
   flow_by_area = {
     web       = "platform"
     api       = "platform"
+    email     = "platform"
     ingest    = "data-pipeline"
     lakehouse = "data-pipeline"
     sandboxes = "data-pipeline"
@@ -114,7 +115,7 @@ locals {
   # A hop keeps one colour on every chart, in the order a thing travels through its flow; a
   # series that spans the whole flow, or watches the monitoring, stays neutral.
   flow_hop_colours = {
-    platform        = { site = "blue", page = "purple", api = "green", database = "yellow", calibration = "orange" }
+    platform        = { site = "blue", page = "purple", api = "green", database = "yellow", calibration = "orange", email = "teal" }
     "data-pipeline" = { devices = "blue", stream = "purple", lakehouse = "green", experiments = "yellow", macros = "orange", whole = "text" }
   }
 
@@ -635,6 +636,9 @@ locals {
     write       = "dark-${local.flow_hop_colours.platform.database}"
     db_cpu      = local.flow_hop_colours.platform.database
     calibration = local.flow_hop_colours.platform.calibration
+    sent        = local.flow_hop_colours.platform.email
+    failed      = "#005a5a"
+    waiting     = "text"
   }
 
   flow_platform_charts = {
@@ -700,7 +704,33 @@ locals {
         merge(local.flow_platform_targets["326"].A, { refId = "db_cpu", label = "Database CPU" }),
       ]
     }
+    email = {
+      id          = 355
+      title       = "Notification emails"
+      description = "Notification emails the outbox sent and gave up on each hour, and how long the oldest one still waiting has waited."
+      unit        = "short"
+      max         = null
+      inputs      = []
+      series      = []
+      direct = [
+        merge(local.heartbeat_readings["emails-sent"], { refId = "sent", id = "sent", label = "Sent", period = "3600" }),
+        merge(local.heartbeat_readings["email-failures"], { refId = "failed", id = "failed", label = "Given up on", period = "3600" }),
+        merge(local.heartbeat_readings["email-outbox-waiting"], { refId = "waiting", id = "waiting", label = "Oldest waiting", period = "300" }),
+      ]
+      # Counts per hour as stacked bars, the age as a line on its own axis.
+      styles = {
+        sent    = local.flow_platform_hourly_bars
+        failed  = local.flow_platform_hourly_bars
+        waiting = [{ id = "unit", value = "s" }, { id = "custom.axisPlacement", value = "right" }]
+      }
+    }
   }
+
+  flow_platform_hourly_bars = [
+    { id = "custom.drawStyle", value = "bars" },
+    { id = "custom.fillOpacity", value = 80 },
+    { id = "custom.stacking", value = { mode = "normal", group = "counts" } },
+  ]
 
   flow_platform_chart_panels = {
     for key, chart in local.flow_platform_charts : key => {
@@ -720,8 +750,11 @@ locals {
         }
         overrides = [
           for ref in concat([for target in chart.direct : target.refId], [for line in chart.series : line.key]) : {
-            matcher    = { id = "byFrameRefID", options = ref }
-            properties = [{ id = "color", value = { mode = "fixed", fixedColor = local.flow_platform_series_colours[ref] } }]
+            matcher = { id = "byFrameRefID", options = ref }
+            properties = concat(
+              [{ id = "color", value = { mode = "fixed", fixedColor = local.flow_platform_series_colours[ref] } }],
+              try(chart.styles[ref], []),
+            )
           }
         ]
       }
@@ -791,6 +824,17 @@ locals {
           { panel = "325", hop = "database" },
           { panel = "326", hop = "database" },
           { panel = "330", hop = "database" },
+        ]
+      },
+      {
+        key     = "email"
+        chart   = local.flow_platform_chart_panels.email
+        caption = "**An email waiting means it has not left yet; given up on means it never will.**\n\n- **Everything waiting at once:** the mail relay. Its check is in Services the API reaches on the [daily report](/d/${local.heartbeat_daily_uid}). [Runbook](${local.flow_runbooks}/email-outbox-waiting.md)\n- **One old email, the rest leaving:** a single email failing on every attempt; the row's `last_error` says why. [Runbook](${local.flow_runbooks}/email-failures.md)\n- **Bounce or complaint rate climbing:** AWS judges the whole account on these, sign-in codes included. [Bounces](${local.flow_runbooks}/email-bounce-rate.md), [complaints](${local.flow_runbooks}/email-complaint-rate.md)"
+        details = [
+          { panel = "email-outbox-waiting", hop = "email" },
+          { panel = "email-failures", hop = "email" },
+          { panel = "email-bounce-rate", hop = "email" },
+          { panel = "email-complaint-rate", hop = "email" },
         ]
       },
     ]
@@ -931,6 +975,7 @@ locals {
       local.flow_question_sections.platform.errors,
       local.flow_question_sections.platform.latency,
       local.flow_question_sections.platform.saturation,
+      local.flow_question_sections.platform.email,
       local.flow_templates.platform.logs,
     ]
     "data-pipeline" = [
