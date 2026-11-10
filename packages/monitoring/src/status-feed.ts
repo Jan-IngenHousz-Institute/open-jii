@@ -30,15 +30,20 @@ export const CONTENT_READ_MINUTES = 5;
 export const CONTENT_STALE_MINUTES = 15;
 
 /**
- * Whether this run reads Contentful. A failed read keeps the older cache, so the next run tries
- * again rather than waiting out another interval.
+ * Whether this run reads Contentful: once an interval has passed since the last good read and
+ * since the last failed one, so a read that keeps failing, such as one for a content type that
+ * does not exist yet, is not repeated every minute.
  */
-export function isContentDue(cached: CachedStatusContent | undefined, now: Date): boolean {
-  if (cached === undefined) {
-    return true;
-  }
+export function isContentDue(
+  cached: CachedStatusContent | undefined,
+  lastFailedAt: Date | undefined,
+  now: Date,
+): boolean {
+  const lastReadAt = cached === undefined ? undefined : new Date(cached.fetchedAt);
 
-  return minuteOf(now) - minuteOf(new Date(cached.fetchedAt)) >= CONTENT_READ_MINUTES;
+  return [lastReadAt, lastFailedAt].every(
+    (at) => at === undefined || minuteOf(now) - minuteOf(at) >= CONTENT_READ_MINUTES,
+  );
 }
 
 /**

@@ -54,6 +54,8 @@ const sns = new SNSClient({ requestHandler: AWS_REQUEST_HANDLER });
 const cloudwatchByRegion = new Map();
 // Kept for warm invocations, and dropped when a read fails so a rotated secret is picked up.
 let contentfulCredentials;
+let lastContentError;
+let lastContentErrorAt;
 
 function required(name) {
   const value = process.env[name];
@@ -242,13 +244,18 @@ async function readFeedState(bucket) {
   }
 }
 
-// The cached read decides whether Contentful is due, so it comes first.
+// The cached read decides whether Contentful is due, so it comes first. The last failure lives in
+// the container, which runs a minute apart usually share, so a cold start may try early. A good
+// read that the run then fails to save is read again on the next run.
 async function readContent(stateBucket, secretArn, now) {
   const feed = await readFeedState(stateBucket);
-  const contentRead = isContentDue(feed?.content, now)
-    ? await readStatusContent(secretArn, now)
-    : {};
+  if (!isContentDue(feed?.content, lastContentErrorAt, now)) {
+    return { feed, contentRead: {} };
+  }
 
+  const contentRead = await readStatusContent(secretArn, now);
+  lastContentError = contentRead.error;
+  lastContentErrorAt = contentRead.error === undefined ? undefined : now;
   return { feed, contentRead };
 }
 
@@ -391,7 +398,10 @@ exports.handler = async (event) => {
     }),
   );
 
-  const cause = contentRead.error === undefined ? undefined : describeError(contentRead.error);
+  // A run between two reads repeats the last read's failure, so the errors alarm, which needs
+  // several failed runs in five minutes, still sees Contentful down.
+  const error = contentRead.error ?? lastContentError;
+  const cause = error === undefined ? undefined : describeError(error);
   const failure = contentFailure(cause, feed?.content, now);
   if (failure !== undefined) {
     throw new Error(failure);

@@ -132,8 +132,8 @@ describe("isContentDue", () => {
   const after = (minutes: number, seconds = 0) =>
     new Date(Date.parse(cached.fetchedAt) + (minutes * 60 + seconds) * 1000);
 
-  it("reads when nothing is cached", () => {
-    expect(isContentDue(undefined, after(0))).toBe(true);
+  it("reads when nothing is cached and nothing was tried", () => {
+    expect(isContentDue(undefined, undefined, after(0))).toBe(true);
   });
 
   it.each([
@@ -142,23 +142,36 @@ describe("isContentDue", () => {
     [CONTENT_READ_MINUTES, true],
     [CONTENT_READ_MINUTES + 3, true],
   ])("after %i minutes reads: %s", (minutes, due) => {
-    expect(isContentDue(cached, after(minutes))).toBe(due);
+    expect(isContentDue(cached, undefined, after(minutes))).toBe(due);
   });
 
   it("counts whole minutes, so a run early in its minute is not put off to the next one", () => {
-    expect(isContentDue(cached, new Date("2026-11-03T12:05:01.000Z"))).toBe(true);
+    expect(isContentDue(cached, undefined, new Date("2026-11-03T12:05:01.000Z"))).toBe(true);
   });
 
-  it("reads 288 times in a day of runs once a minute while every read works", () => {
+  it("waits an interval after a failed read, even with an old cache or none", () => {
+    const failedAt = after(20);
+
+    expect(isContentDue(cached, failedAt, after(20 + CONTENT_READ_MINUTES - 1))).toBe(false);
+    expect(isContentDue(undefined, failedAt, after(20 + CONTENT_READ_MINUTES - 1))).toBe(false);
+    expect(isContentDue(undefined, failedAt, after(20 + CONTENT_READ_MINUTES))).toBe(true);
+  });
+
+  it.each([
+    ["every read works", true],
+    ["every read fails and nothing is cached", false],
+  ])("reads 288 times in a day of runs once a minute when %s", (_name, readsWork) => {
     let fetchedAt: string | undefined;
+    let lastFailedAt: Date | undefined;
     let reads = 0;
 
     for (let minute = 0; minute < 1440; minute += 1) {
       const now = new Date(Date.parse("2026-11-03T00:00:24.000Z") + minute * 60_000);
       const cache = fetchedAt === undefined ? undefined : { ...cached, fetchedAt };
-      if (isContentDue(cache, now)) {
+      if (isContentDue(cache, lastFailedAt, now)) {
         reads += 1;
-        fetchedAt = now.toISOString();
+        fetchedAt = readsWork ? now.toISOString() : fetchedAt;
+        lastFailedAt = readsWork ? undefined : now;
       }
     }
 
