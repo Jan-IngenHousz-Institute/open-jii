@@ -496,3 +496,292 @@ describe("YAxisShelf", () => {
     expect(screen.queryByText("workspace.shelves.seriesSilentlyDropped")).not.toBeInTheDocument();
   });
 });
+
+describe("ordered Y calculations", () => {
+  it("offers all five calculations and full order/Per columns on a bar chart, then clears them", async () => {
+    const user = userEvent.setup();
+    const { form } = renderShelf(
+      (form) => <YAxisShelf form={form} columns={columns} chartType="bar" />,
+      {
+        useFormProps: { defaultValues: defaults() },
+      },
+    );
+    const aggregate = screen.getByRole("combobox", { name: "workspace.shelves.aggregate" });
+    await user.click(aggregate);
+    for (const value of ["previous", "change_from_previous", "row_number", "latest", "earliest"]) {
+      expect(
+        screen.getByRole("option", { name: `workspace.shelves.windowFunctions.${value}` }),
+      ).toBeInTheDocument();
+    }
+    await user.click(
+      screen.getByRole("option", { name: "workspace.shelves.windowFunctions.previous" }),
+    );
+    await user.click(screen.getByRole("combobox", { name: "workspace.shelves.windowPer" }));
+    await user.click(screen.getByRole("option", { name: "label" }));
+    await user.click(screen.getByRole("combobox", { name: "workspace.shelves.windowOrderedBy" }));
+    expect(screen.queryByRole("option", { name: "label" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: "time" }));
+    expect(form.getValues("dataConfig.aggregation.functions.0")).toMatchObject({
+      function: "previous",
+      orderColumn: "time",
+      partitionColumn: "label",
+    });
+    await user.click(aggregate);
+    await user.click(screen.getByRole("option", { name: "workspace.shelves.aggregateNone" }));
+    expect(
+      screen.queryByRole("combobox", { name: "workspace.shelves.windowOrderedBy" }),
+    ).not.toBeInTheDocument();
+    expect(form.getValues("dataConfig.dataSources.1.orderColumn")).toBe("");
+    expect(form.getValues("dataConfig.dataSources.1.partitionColumn")).toBe("");
+  });
+
+  it.each(["row_number", "change_from_previous"] as const)(
+    "uses a numeric axis for %s and restores dates for Previous value",
+    async (fn) => {
+      const user = userEvent.setup();
+      const { form } = renderShelf(
+        (form) => <YAxisShelf form={form} columns={columns} chartType="line" />,
+        {
+          useFormProps: {
+            defaultValues: defaults({
+              config: { yAxisType: "date" },
+              dataConfig: {
+                tableName: "readings",
+                dataSources: [
+                  { tableName: "readings", columnName: "temp", role: "x" },
+                  { tableName: "readings", columnName: "time", role: "y" },
+                ],
+              },
+            }),
+          },
+        },
+      );
+      const aggregate = screen.getByRole("combobox", { name: "workspace.shelves.aggregate" });
+      await user.click(aggregate);
+      await user.click(
+        screen.getByRole("option", { name: `workspace.shelves.windowFunctions.${fn}` }),
+      );
+      expect(form.getValues("config.yAxisType")).toBe("linear");
+      await user.click(aggregate);
+      await user.click(
+        screen.getByRole("option", { name: "workspace.shelves.windowFunctions.previous" }),
+      );
+      expect(form.getValues("config.yAxisType")).toBe("date");
+    },
+  );
+
+  it.each([
+    ["previous", true],
+    ["change_from_previous", true],
+    ["row_number", false],
+    ["latest", false],
+  ] as const)("shows the no-previous-value note for %s: %s", async (fn, shown) => {
+    const user = userEvent.setup();
+    renderShelf((form) => <YAxisShelf form={form} columns={columns} chartType="line" />, {
+      useFormProps: {
+        defaultValues: defaults({
+          dataConfig: {
+            tableName: "readings",
+            dataSources: [
+              { tableName: "readings", columnName: "time", role: "x" },
+              { tableName: "readings", columnName: "temp", role: "y" },
+            ],
+          },
+        }),
+      },
+    });
+    await user.click(screen.getByRole("combobox", { name: "workspace.shelves.aggregate" }));
+    await user.click(
+      screen.getByRole("option", { name: `workspace.shelves.windowFunctions.${fn}` }),
+    );
+    expect(screen.getByText("workspace.shelves.windowFiltersFirst")).toBeInTheDocument();
+    expect(screen.queryByText("workspace.shelves.windowFirstRowNoPrevious") !== null).toBe(shown);
+  });
+
+  it("disables row windows with a bucket and row aggregates with a row-window sibling", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderShelf((form) => <YAxisShelf form={form} columns={columns} />, {
+      useFormProps: {
+        defaultValues: defaults({
+          dataConfig: {
+            tableName: "readings",
+            dataSources: [
+              { tableName: "readings", columnName: "time", role: "x" },
+              { tableName: "readings", columnName: "temp", role: "y" },
+            ],
+            aggregation: { groupBy: [{ column: "time", timeBucket: "hour" }] },
+          },
+        }),
+      },
+    });
+    await user.click(screen.getByRole("combobox", { name: "workspace.shelves.aggregate" }));
+    expect(screen.getByRole("option", { name: /windowFunctions.previous/ })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.getAllByText("workspace.shelves.rowWindowNeedsRawRows")).toHaveLength(3);
+    for (const reason of screen.getAllByText("workspace.shelves.rowWindowNeedsRawRows")) {
+      expect(reason).toBeVisible();
+      expect(screen.getByRole("listbox")).toContainElement(reason);
+    }
+    unmount();
+    renderShelf((form) => <YAxisShelf form={form} columns={columns} />, {
+      useFormProps: {
+        defaultValues: defaults({
+          dataConfig: {
+            tableName: "readings",
+            dataSources: [
+              { tableName: "readings", columnName: "time", role: "x" },
+              {
+                tableName: "readings",
+                columnName: "temp",
+                role: "y",
+                aggregate: "previous",
+                orderColumn: "time",
+              },
+              { tableName: "readings", columnName: "humidity", role: "y" },
+            ],
+          },
+        }),
+      },
+    });
+    await user.click(screen.getAllByRole("combobox", { name: "workspace.shelves.aggregate" })[1]);
+    expect(screen.getByRole("option", { name: /^Average/ })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.getByRole("option", { name: "Cumulative sum" })).not.toHaveAttribute(
+      "aria-disabled",
+    );
+  });
+
+  it("shows X, colour and facet as read-only groups for latest", () => {
+    renderShelf((form) => <YAxisShelf form={form} columns={columns} />, {
+      useFormProps: {
+        defaultValues: defaults({
+          dataConfig: {
+            tableName: "readings",
+            dataSources: [
+              { tableName: "readings", columnName: "time", role: "x" },
+              {
+                tableName: "readings",
+                columnName: "temp",
+                role: "y",
+                aggregate: "latest",
+                orderColumn: "time",
+              },
+              { tableName: "readings", columnName: "sensor", role: "color" },
+              { tableName: "readings", columnName: "panel", role: "facet" },
+            ],
+            aggregation: { groupBy: [{ column: "time", timeBucket: "hour" }] },
+          },
+        }),
+      },
+    });
+    expect(screen.getByText("time, sensor, panel")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "workspace.shelves.windowPer" }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+it("keeps a chosen log axis when switching between column-typed aggregates", async () => {
+  const user = userEvent.setup();
+  const { form } = renderShelf((form) => <YAxisShelf form={form} columns={columns} />, {
+    useFormProps: {
+      defaultValues: defaults({
+        config: { yAxisType: "log" },
+        dataConfig: {
+          tableName: "readings",
+          dataSources: [
+            { tableName: "readings", columnName: "time", role: "x" },
+            { tableName: "readings", columnName: "temp", role: "y", aggregate: "avg" },
+          ],
+        },
+      }),
+    },
+  });
+  await user.click(screen.getByRole("combobox", { name: "workspace.shelves.aggregate" }));
+  await user.click(screen.getByRole("option", { name: "Max" }));
+  expect(form.getValues("config.yAxisType")).toBe("log");
+});
+
+it.each([false, true])(
+  "defaults calculation labels while preserving custom labels, custom=%s",
+  async (custom) => {
+    const user = userEvent.setup();
+    const { form } = renderShelf((form) => <YAxisShelf form={form} columns={columns} />, {
+      useFormProps: {
+        defaultValues: defaults({
+          config: { yAxisTitle: custom ? "My duration" : "time" },
+          dataConfig: {
+            tableName: "readings",
+            dataSources: [
+              { tableName: "readings", columnName: "temp", role: "x" },
+              {
+                tableName: "readings",
+                columnName: "time",
+                role: "y",
+                alias: custom ? "My series" : "time",
+              },
+            ],
+          },
+        }),
+      },
+    });
+    const aggregate = screen.getByRole("combobox", { name: "workspace.shelves.aggregate" });
+    await user.click(aggregate);
+    await user.click(
+      screen.getByRole("option", {
+        name: "workspace.shelves.windowFunctions.change_from_previous",
+      }),
+    );
+    expect(form.getValues("config.yAxisTitle")).toBe(
+      custom ? "My duration" : "workspace.shelves.temporalChangeSeriesName",
+    );
+    expect(form.getValues("dataConfig.dataSources.1.alias")).toBe(
+      custom ? "My series" : "workspace.shelves.temporalChangeSeriesName",
+    );
+    await user.click(aggregate);
+    await user.click(
+      screen.getByRole("option", { name: "workspace.shelves.windowFunctions.row_number" }),
+    );
+    expect(form.getValues("config.yAxisTitle")).toBe(
+      custom ? "My duration" : "workspace.shelves.rowNumberSeriesName",
+    );
+    expect(form.getValues("dataConfig.dataSources.1.alias")).toBe(
+      custom ? "My series" : "workspace.shelves.rowNumberSeriesName",
+    );
+  },
+);
+
+it("keeps conflict explanations out of the selected label", async () => {
+  const user = userEvent.setup();
+  renderShelf((form) => <YAxisShelf form={form} columns={columns} />, {
+    useFormProps: {
+      defaultValues: defaults({
+        dataConfig: {
+          tableName: "readings",
+          dataSources: [
+            { tableName: "readings", columnName: "time", role: "x" },
+            {
+              tableName: "readings",
+              columnName: "temp",
+              role: "y",
+              aggregate: "previous",
+              orderColumn: "time",
+            },
+          ],
+          aggregation: { groupBy: [{ column: "time", timeBucket: "hour" }] },
+        },
+      }),
+    },
+  });
+  const aggregate = screen.getByRole("combobox", { name: "workspace.shelves.aggregate" });
+  expect(aggregate).toHaveTextContent("workspace.shelves.windowFunctions.previous");
+  expect(aggregate).not.toHaveTextContent("workspace.shelves.rowWindowNeedsRawRows");
+  await user.click(aggregate);
+  expect(
+    screen.getByRole("option", { name: "workspace.shelves.windowFunctions.previous" }),
+  ).toHaveAccessibleDescription("workspace.shelves.rowWindowNeedsRawRows");
+});

@@ -38,7 +38,12 @@ export type AggregateFunction =
   | "std"
   | "var"
   | "cumsum"
-  | "corr";
+  | "corr"
+  | "previous"
+  | "change_from_previous"
+  | "row_number"
+  | "latest"
+  | "earliest";
 
 export type TimeBucketUnit = "minute" | "hour" | "day" | "week" | "month" | "quarter" | "year";
 
@@ -75,6 +80,10 @@ export interface AggregateExpression {
    * actually missing at SQL-build time.
    */
   secondColumn?: string;
+  partitionColumn?: string;
+  orderColumn?: string;
+  valueType?: string;
+  tieBreaker?: string;
 }
 
 export interface AggregationSpec {

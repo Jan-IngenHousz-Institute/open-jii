@@ -402,3 +402,145 @@ describe("time matching query", () => {
     expect(zExperimentDataJoin.safeParse({ ...join, secondaryTimeColumn: "" }).success).toBe(false);
   });
 });
+
+describe("ordered aggregates", () => {
+  const windows = ["previous", "change_from_previous", "row_number"] as const;
+  const ordered = [...windows, "latest", "earliest"] as const;
+
+  it.each(ordered)("requires ordering for %s in items and ad-hoc queries", (fn) => {
+    const item = { column: "value", function: fn };
+    expect(zExperimentAggregationItem.safeParse(item).success).toBe(false);
+    expect(zExperimentAggregationItem.safeParse({ ...item, orderColumn: " " }).success).toBe(false);
+    expect(
+      zExperimentDataQuery.safeParse({
+        tableName: "raw_data",
+        aggregation: JSON.stringify({ functions: [item] }),
+      }).success,
+    ).toBe(false);
+    expect(
+      zExperimentAggregationItem.parse({ ...item, orderColumn: "timestamp" }).orderColumn,
+    ).toBe("timestamp");
+  });
+
+  it.each(windows)("allows optional partitioning for %s, including cumsum siblings", (fn) => {
+    const item = {
+      column: "value",
+      function: fn,
+      orderColumn: "timestamp",
+      partitionColumn: "sensor",
+    };
+    expect(
+      zExperimentDataAggregation.safeParse({
+        functions: [item, { column: "value", function: "cumsum" }],
+      }).success,
+    ).toBe(true);
+    expect(
+      zExperimentDataAggregation.safeParse({ groupBy: [{ column: "sensor" }], functions: [item] })
+        .success,
+    ).toBe(false);
+    expect(
+      zExperimentDataAggregation.safeParse({
+        functions: [item, { column: "value", function: "avg" }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each(["latest", "earliest"] as const)(
+    "uses chart grouping for %s and refuses its own partition",
+    (fn) => {
+      const item = { column: "value", function: fn, orderColumn: "timestamp" };
+      expect(
+        zExperimentDataAggregation.safeParse({ groupBy: [{ column: "sensor" }], functions: [item] })
+          .success,
+      ).toBe(true);
+      expect(
+        zExperimentAggregationItem.safeParse({ ...item, partitionColumn: "sensor" }).success,
+      ).toBe(false);
+    },
+  );
+
+  it("normalizes optional window columns before validating aggregate settings", () => {
+    expect(
+      zExperimentAggregationItem.parse({
+        column: "value",
+        function: "avg",
+        partitionColumn: "",
+        orderColumn: "",
+      }),
+    ).toMatchObject({ partitionColumn: undefined, orderColumn: undefined });
+    expect(
+      zExperimentAggregationItem.parse({
+        column: "value",
+        function: "previous",
+        partitionColumn: " sensor ",
+        orderColumn: " timestamp ",
+      }),
+    ).toMatchObject({ partitionColumn: "sensor", orderColumn: "timestamp" });
+    expect(
+      zExperimentAggregationItem.safeParse({
+        column: "value",
+        function: "previous",
+        orderColumn: "",
+      }).success,
+    ).toBe(false);
+    expect(
+      zExperimentAggregationItem.safeParse({
+        column: "value",
+        function: "previous",
+        orderColumn: "timestamp",
+        partitionColumn: " ",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("allows row_number(*) and forbids stale window settings on ordinary aggregates", () => {
+    expect(
+      zExperimentAggregationItem.safeParse({
+        column: "*",
+        function: "row_number",
+        orderColumn: "timestamp",
+      }).success,
+    ).toBe(true);
+    for (const settings of [{ partitionColumn: "sensor" }, { orderColumn: "timestamp" }]) {
+      expect(
+        zExperimentAggregationItem.safeParse({ column: "value", function: "sum", ...settings })
+          .success,
+      ).toBe(false);
+    }
+  });
+});
+
+describe("aggregation query bounds", () => {
+  const read = (aggregation: unknown) =>
+    zExperimentDataQuery.safeParse({
+      tableName: "raw_data",
+      aggregation: JSON.stringify(aggregation),
+    });
+  it("allows 50 aggregates but refuses 51", () => {
+    const item = { column: "value", function: "avg" };
+    expect(read({ functions: Array.from({ length: 50 }, () => item) }).success).toBe(true);
+    expect(read({ functions: Array.from({ length: 51 }, () => item) }).success).toBe(false);
+  });
+
+  it("allows repeated row-window specs but caps distinct sorts at 10", () => {
+    const items = Array.from({ length: 10 }, (_, i) => ({
+      column: "value",
+      function: "previous",
+      orderColumn: `time_${i}`,
+      partitionColumn: "station",
+    }));
+    expect(
+      read({
+        functions: [...items, ...items, ...items, ...items, ...items],
+      }).success,
+    ).toBe(true);
+    const result = read({
+      functions: [...items, { ...items[0], partitionColumn: "other_station" }],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success)
+      expect(result.error.issues[0]?.message).toContain(
+        "10 different Per and Ordered by combinations",
+      );
+  });
+});

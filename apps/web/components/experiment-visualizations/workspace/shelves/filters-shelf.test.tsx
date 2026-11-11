@@ -1,11 +1,12 @@
 import { server } from "@/test/msw/server";
-import { renderWithForm, screen, userEvent } from "@/test/test-utils";
+import { act, renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { lineChartType } from "../../charts/basic/line";
+import { chartFormResolver } from "../../charts/chart-config";
 import type { ChartFormValues } from "../../charts/chart-config";
 import { FiltersShelf } from "./filters-shelf";
 
@@ -39,6 +40,43 @@ function mountDistinct() {
 }
 
 describe("FiltersShelf", () => {
+  it.each([false, true])("shows and clears filter validation errors with flat=%s", async (flat) => {
+    mountDistinct();
+    const { form } = renderWithForm<ChartFormValues>(
+      (form) => (
+        <FiltersShelf
+          form={form}
+          columns={columns}
+          experimentId="exp-1"
+          tableName="readings"
+          flat={flat}
+        />
+      ),
+      {
+        useFormProps: {
+          resolver: chartFormResolver,
+          defaultValues: defaults({
+            dataConfig: {
+              ...defaults().dataConfig,
+              filters: [{ column: "value", operator: "between", value: [5] }],
+            },
+          }),
+        },
+      },
+    );
+
+    await act(async () => {
+      expect(await form.trigger()).toBe(false);
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("workspace.validation.invalidFilters");
+
+    await act(async () => {
+      form.setValue("dataConfig.filters.0.value", [5, 10]);
+      expect(await form.trigger()).toBe(true);
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("renders the section heading and starts collapsed", () => {
     mountDistinct();
     renderWithForm<ChartFormValues>(

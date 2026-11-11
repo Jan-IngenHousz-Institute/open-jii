@@ -11,7 +11,10 @@ import type {
   ExperimentDataFilter,
   ExperimentDataJoin,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import {
+  aggregateKind,
+  WellKnownColumnTypes,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isDataJoinValid } from "@repo/api/transforms/joined-columns";
 
 const STALE_TIME = 2 * 60 * 1000;
@@ -84,9 +87,6 @@ function buildAliasMap(aggregation: ExperimentDataAggregation): Record<string, s
   return map;
 }
 
-// Window functions skip GROUP BY; keep this in sync with the SQL builder.
-const WINDOW_FUNCTIONS: ReadonlySet<string> = new Set(["cumsum"]);
-
 function isWindowOnlyAggregation(aggregation: ExperimentDataAggregation): boolean {
   if ((aggregation.groupBy?.length ?? 0) > 0) {
     return false;
@@ -95,7 +95,7 @@ function isWindowOnlyAggregation(aggregation: ExperimentDataAggregation): boolea
   if (fns.length === 0) {
     return false;
   }
-  return fns.every((f) => WINDOW_FUNCTIONS.has(f.function));
+  return fns.every((f) => aggregateKind(f.function) !== "row");
 }
 
 // CONTRIBUTOR/DEVICE structs flatten to their display field so the chart layer sees plain strings.
@@ -140,9 +140,13 @@ export const useExperimentVisualizationData = (
   const baseAggregation = compactAggregation(dataConfig.aggregation);
   const baseAggregationActive = hasAggregationContent(baseAggregation);
   const extras = (dataConfig.extraGroupByColumns ?? []).filter((c) => c && c.length > 0);
+  const hasRowWindow = baseAggregation?.functions?.some(
+    (fn) => aggregateKind(fn.function) === "rowWindow",
+  );
+  const needsGrouping = baseAggregationActive && !hasRowWindow;
   const aggregation = useMemo(
     () =>
-      baseAggregationActive && extras.length > 0 && baseAggregation
+      needsGrouping && extras.length > 0 && baseAggregation
         ? {
             ...baseAggregation,
             groupBy: [
@@ -153,7 +157,7 @@ export const useExperimentVisualizationData = (
             ],
           }
         : baseAggregation,
-    [baseAggregation, baseAggregationActive, extras],
+    [baseAggregation, needsGrouping, extras],
   );
   const aggregationActive = baseAggregationActive;
 

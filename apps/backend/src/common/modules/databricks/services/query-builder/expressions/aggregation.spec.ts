@@ -85,6 +85,15 @@ describe("buildAggregateExpression", () => {
     ).toThrow(QueryBuilderInputError);
   });
 
+  it.each(["previous", "change_from_previous", "row_number"] as const)(
+    "rejects %s through the builder's aggregate-only entry point",
+    (fn) => {
+      expect(() =>
+        builder.buildAggregateExpression({ column: "value", function: fn, orderColumn: "time" }),
+      ).toThrow(new QueryBuilderInputError("Row windows must use the window-only query path"));
+    },
+  );
+
   it("rejects corr without a secondColumn", () => {
     expect(() => buildAggregateExpression({ column: "a", function: "corr" }, builder)).toThrow(
       QueryBuilderInputError,
@@ -271,6 +280,91 @@ describe("wrapWithAggregation", () => {
   it("throws when called with empty aggregation content", () => {
     expect(() => wrapWithAggregation("SELECT * FROM t", { aggregation: {} })).toThrow(
       /without aggregation content/,
+    );
+  });
+});
+
+describe("ordered aggregation routing", () => {
+  it.each([
+    ["latest", "MAX_BY"],
+    ["earliest", "MIN_BY"],
+  ] as const)("groups %s by the chart's groups", (fn, sqlFn) => {
+    expect(
+      wrapWithAggregation("SELECT * FROM readings", {
+        aggregation: {
+          groupBy: [{ column: "sensor" }],
+          functions: [{ column: "value", function: fn, orderColumn: "timestamp" }],
+        },
+      }),
+    ).toBe(
+      `SELECT \`sensor\` AS \`sensor\`, ${sqlFn}(\`value\`, \`timestamp\`) AS \`value_${fn}\` FROM (SELECT * FROM readings) GROUP BY \`sensor\``,
+    );
+    expect(
+      wrapWithAggregation("SELECT * FROM readings", {
+        aggregation: { functions: [{ column: "value", function: fn, orderColumn: "timestamp" }] },
+      }),
+    ).toBe(
+      `SELECT ${sqlFn}(\`value\`, \`timestamp\`) AS \`value_${fn}\` FROM (SELECT * FROM readings)`,
+    );
+    expect(() =>
+      buildAggregateExpression({ column: "value", function: fn }, new SqlQueryBuilder()),
+    ).toThrow(QueryBuilderInputError);
+  });
+
+  it("preserves raw rows with row windows and cumsum together", () => {
+    const sql = wrapWithAggregation("SELECT * FROM readings WHERE value > 0", {
+      aggregation: {
+        functions: [
+          {
+            column: "value",
+            function: "previous",
+            orderColumn: "timestamp",
+            partitionColumn: "sensor",
+            alias: "sensor.previous",
+          },
+          { column: "value", function: "cumsum" },
+        ],
+      },
+      ordering: { column: "timestamp" },
+      limit: 10,
+    });
+    expect(sql).toBe(
+      "SELECT *, CASE WHEN `timestamp` IS NULL THEN NULL ELSE LAG(`value`) OVER (PARTITION BY `sensor` ORDER BY `timestamp` ASC NULLS LAST) END AS `sensor.previous`, SUM(`value`) OVER (ORDER BY `timestamp`) AS `value_cumsum` FROM (SELECT * FROM readings WHERE value > 0) ORDER BY `timestamp` ASC LIMIT 10",
+    );
+  });
+
+  it.each(["previous", "change_from_previous", "row_number"] as const)(
+    "refuses %s mixed with grouping or ordinary aggregates even without schema validation",
+    (fn) => {
+      const item = { column: "value", function: fn, orderColumn: "timestamp", valueType: "DOUBLE" };
+      for (const aggregation of [
+        { groupBy: [{ column: "sensor" }], functions: [item] },
+        {
+          functions: [
+            item,
+            { column: "value", function: "latest" as const, orderColumn: "timestamp" },
+          ],
+        },
+      ])
+        expect(() => wrapWithAggregation("SELECT * FROM readings", { aggregation })).toThrow(
+          QueryBuilderInputError,
+        );
+    },
+  );
+});
+
+describe("latest and earliest ties", () => {
+  it.each([
+    ["latest", "MAX_BY"],
+    ["earliest", "MIN_BY"],
+  ] as const)("breaks %s order ties by id while ignoring NULL ordering values", (fn, sqlFn) => {
+    expect(
+      buildAggregateExpression(
+        { column: "value", function: fn, orderColumn: "timestamp", tieBreaker: "id" },
+        new SqlQueryBuilder(),
+      ).sql,
+    ).toBe(
+      `${sqlFn}(\`value\`, CASE WHEN \`timestamp\` IS NULL THEN NULL ELSE struct(\`timestamp\`, \`id\`) END)`,
     );
   });
 });

@@ -18,7 +18,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 // Child table updated_at triggers are migration-only; drizzle-kit db:push does not install them.
-// See postgres/migrations/0064_cynical_zuras.sql.
+// See postgres/migrations/0065_cynical_zuras.sql.
 // UTC timestamps helper
 const timestamps = {
   createdAt: timestamp("created_at")
@@ -901,6 +901,33 @@ export const experimentLocations = pgTable("experiment_locations", {
   addressLabel: text("address_label"),
   ...timestamps,
 });
+
+export const annotationTypeEnum = pgEnum("annotation_type", ["comment", "flag"]);
+export const annotationFlagTypeEnum = pgEnum("annotation_flag_type", ["outlier", "needs_review"]);
+
+// Researchers' comments and flags on rows of an experiment's data tables.
+export const experimentAnnotations = pgTable(
+  "experiment_annotations",
+  {
+    // Set by the backend, so annotations moved from the lakehouse keep theirs.
+    id: uuid("id").primaryKey(),
+    experimentId: uuid("experiment_id")
+      .notNull()
+      .references(() => experiments.id, { onDelete: "cascade" }),
+    // `raw_data`, a macro's id or an upload table's id.
+    tableName: varchar("table_name", { length: 64 }).notNull(),
+    rowId: varchar("row_id", { length: 64 }).notNull(),
+    type: annotationTypeEnum("type").notNull(),
+    contentText: text("content_text"),
+    flagType: annotationFlagTypeEnum("flag_type"),
+    // No foreign key: an annotation outlives its author's account, as the data rows do.
+    createdBy: uuid("created_by").notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    index("experiment_annotations_row_idx").on(table.experimentId, table.tableName, table.rowId),
+  ],
+);
 
 // Chart family enum for visualizations
 export const chartFamilyEnum = pgEnum("chart_family", ["basic", "scientific", "3d", "statistical"]);

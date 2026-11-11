@@ -39,6 +39,13 @@ export function FiltersShelf({
   // which autosave reads as an edit.
   const filters = useWatch({ control: form.control, name: "dataConfig.filters" }) ?? [];
 
+  const filterError = form.formState.errors.dataConfig?.filters?.message;
+  const error = filterError ? (
+    <p role="alert" className="text-destructive text-xs">
+      {filterError}
+    </p>
+  ) : null;
+
   const [open, setOpen] = useState(false);
 
   const list = (
@@ -56,7 +63,12 @@ export function FiltersShelf({
   );
 
   if (flat) {
-    return <div className="space-y-3">{list}</div>;
+    return (
+      <div className="space-y-3">
+        {error}
+        {list}
+      </div>
+    );
   }
 
   return (
@@ -75,6 +87,7 @@ export function FiltersShelf({
           />
         </CollapsibleTrigger>
 
+        {error}
         <CollapsibleContent>{list}</CollapsibleContent>
       </section>
     </Collapsible>

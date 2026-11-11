@@ -40,7 +40,8 @@
       "Retaken on 2026-11-02 at 1920x1200 from the local stack with the seeded development identity (seed@openjii.local), via pnpm --filter @repo/e2e capture-docs-media --only experiments-list,protocols-list,macros-list,workbooks-list,organizations-list. experiments-list shows Name ascending with Status is Active and Visibility is Public chips and Clear filters; protocols-list, macros-list and workbooks-list show Name ascending, while organizations-list shows Type ascending. Those four frames have the Filter menu closed and no chips. All five frames were reviewed at full size and approved before publishing; only [Seed] resource names and the seeded identity appear, with no real names, emails, credentials or dev overlays. WebP was encoded at quality 90 with metadata omitted using cwebp because ffmpeg is unavailable on this machine.",
       "charts-filters recaptured on 2026-11-02 at 1920x1200 with capture-docs-media and synthetic FixtureWarehouse measurements in an isolated local stack. The full frame shows only the seed identity and example experiment data, with no credentials or dev overlays. The user approved the staged frame in the OJD-2320 handoff before publication. The capture replaces the former PNG whose top-right panel had no X labels.",
       "notification-settings retaken on 2026-11-05 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only notification-settings, after the upload emails made Data exports and uploads switchable: Requests and invitations, Membership and access, Experiments and resources, Devices and calibration and Project transfers are on, Data exports and uploads is off at its default and enabled, no category reads Not available yet, and Account security stays checked and locked with Always on. Reviewed at full size; no experiment, organization or person is named in the frame beyond the seeded identity in the sidebar. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp.",
-      "experiments-list retaken on 2026-11-10 at 1920x1200 from the local stack with the seeded development identity, because the Activity header became sortable and now carries a sort icon. The backend ran with Databricks unreachable, as in the previous capture, so no dev measurements show and the Activity header is in its unavailable state. The repo capture command was not used as is: the local database holds three developer-authored public experiments, so a one-off Playwright script with the shot's route, frame and preparation dropped every non-[Seed] experiment from the list response and checked that no developer name or experiment name reached the page text. Reviewed at full size and approved before publishing; only [Seed] experiments and the seeded identity appear. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine's ffmpeg lacks libwebp."
+      "experiments-list retaken on 2026-11-10 at 1920x1200 from the local stack with the seeded development identity, because the Activity header became sortable and now carries a sort icon. The backend ran with Databricks unreachable, as in the previous capture, so no dev measurements show and the Activity header is in its unavailable state. The repo capture command was not used as is: the local database holds three developer-authored public experiments, so a one-off Playwright script with the shot's route, frame and preparation dropped every non-[Seed] experiment from the list response and checked that no developer name or experiment name reached the page text. Reviewed at full size and approved before publishing; only [Seed] experiments and the seeded identity appear. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine's ffmpeg lacks libwebp.",
+      "ordered-aggregates-gap and ordered-aggregates-row-number captured on 2026-11-09 at 1920x1200 from the local stack with the seeded development identity (seed@openjii.local), via pnpm --filter @repo/e2e capture-docs-media --only ordered-aggregates-gap,ordered-aggregates-row-number. The chart reads synthetic sensor rows that the capture tool serves at the warehouse boundary (FixtureWarehouse); no lakehouse data is shown. The page is scrolled so the Y series settings are visible, which cuts the top edge of the chart card. Both frames were reviewed at full size and approved before publishing; only the seeded identity and the [Seed] experiment name appear, with no credentials, real names or dev overlays."
     ]
   },
   "assets": [
@@ -483,6 +484,28 @@
       "sha256": "198269de953684509fb2fb9b14f4d1585c13eb1345ee3b07720ddbc53dcde410",
       "disposition": "published",
       "scope": "Three-panel line chart with X labels on both exposed panels; local seeded app and synthetic FixtureWarehouse measurements"
+    },
+    {
+      "path": "/img/guide/web/ordered-aggregates-gap.webp",
+      "slug": "ordered-aggregates-gap",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 56780,
+      "sha256": "b26bb823aca07a4f4b62a6caee42c79a3ba6af3489bbf47f430fea2928bf2994",
+      "disposition": "published",
+      "scope": "Change from previous of report timestamps per synthetic sensor, measured in seconds; local seeded app and synthetic FixtureWarehouse readings"
+    },
+    {
+      "path": "/img/guide/web/ordered-aggregates-row-number.webp",
+      "slug": "ordered-aggregates-row-number",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 52238,
+      "sha256": "ce877def8662c60c46617abd090cb6f4bd1bb02b9969b1c220dce197db36401f",
+      "disposition": "published",
+      "scope": "Row number ordered by report time per synthetic sensor; local seeded app and synthetic FixtureWarehouse readings"
     }
   ],
   "unmetCaptures": [
