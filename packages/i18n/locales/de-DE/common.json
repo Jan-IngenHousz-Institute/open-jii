@@ -1435,9 +1435,10 @@
     "analyticsDisabledToast": null
   },
   "autosave": {
-    "saving": null,
-    "saved": null,
-    "failed": null
+    "saving": "Wird gespeichert…",
+    "saved": "Alle Änderungen gespeichert",
+    "failed": "Deine Änderungen konnten nicht gespeichert werden",
+    "invalid": "Nicht gespeichert: Diagrammeinstellungen prüfen"
   },
   "columnPicker": {
     "dragHandle": "{{name}} ziehen",

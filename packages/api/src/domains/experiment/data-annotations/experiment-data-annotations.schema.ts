@@ -5,16 +5,25 @@ export const zExperimentAnnotationType = z.enum(["comment", "flag"]);
 
 export const zExperimentAnnotationFlagType = z.enum(["outlier", "needs_review"]);
 
+// Postgres keeps no NUL character in text, and rows and tables by names of up to 64.
+const zNoNulText = z
+  .string()
+  .refine((text) => !text.includes("\u0000"), "Text cannot hold a NUL character");
+const zRowId = zNoNulText.min(1).max(64);
+const zTableName = zNoNulText.min(1).max(64);
+// Lowercase, as Postgres prints a uuid, so the lakehouse and Postgres match an id alike.
+const zLowercaseId = z.string().guid().toLowerCase();
+
 // Use discriminated union to properly differentiate between comment and flag content
 export const zExperimentAnnotationCommentContent = z.object({
   type: z.literal("comment"),
-  text: z.string().min(1).max(255),
+  text: zNoNulText.min(1).max(255),
 });
 
 export const zExperimentAnnotationFlagContent = z.object({
   type: z.literal("flag"),
   flagType: zExperimentAnnotationFlagType,
-  text: z.string().max(255).optional(),
+  text: zNoNulText.max(255).optional(),
 });
 
 export const zExperimentAnnotationContent = z.discriminatedUnion("type", [
@@ -36,26 +45,32 @@ export const zExperimentAnnotation = z.object({
 export const zExperimentAnnotationList = z.array(zExperimentAnnotation);
 
 export const zExperimentAnnotationPathParam = z.object({
-  id: z.string().guid().describe("ID of the experiment"),
-  annotationId: z.string().guid().describe("ID of the annotation"),
+  id: zLowercaseId.describe("ID of the experiment"),
+  annotationId: zLowercaseId.describe("ID of the annotation"),
 });
 
-export const zExperimentAddAnnotationBody = z.object({
-  tableName: z.string(),
-  rowId: z.string().min(1),
-  annotation: z.object({
+// The type is stored apart from the content, so they must agree: a flag keeps its kind, a comment
+// its text.
+const zNewAnnotation = z
+  .object({
     type: zExperimentAnnotationType,
     content: zExperimentAnnotationContent,
-  }),
+  })
+  .refine((annotation) => annotation.type === annotation.content.type, {
+    message: "The annotation's type must match its content's type",
+    path: ["content", "type"],
+  });
+
+export const zExperimentAddAnnotationBody = z.object({
+  tableName: zTableName,
+  rowId: zRowId,
+  annotation: zNewAnnotation,
 });
 
 export const zExperimentAddAnnotationsBulkBody = z.object({
-  tableName: z.string(),
-  rowIds: z.array(z.string().min(1)).min(1),
-  annotation: z.object({
-    type: zExperimentAnnotationType,
-    content: zExperimentAnnotationContent,
-  }),
+  tableName: zTableName,
+  rowIds: z.array(zRowId).min(1),
+  annotation: zNewAnnotation,
 });
 
 export const zExperimentListAnnotationsQuery = z.object({
@@ -68,13 +83,13 @@ export const zExperimentUpdateAnnotationBody = z.object({
   content: zExperimentAnnotationContent.describe("Updated content"),
 });
 
-export const zExperimentAnnotationDeleteBulkPathParam = z.object({
-  id: z.string().guid().describe("ID of the experiment"),
+export const zExperimentAnnotationExperimentPathParam = z.object({
+  id: zLowercaseId.describe("ID of the experiment"),
 });
 
 export const zExperimentAnnotationDeleteBulkBody = z.object({
-  tableName: z.string().describe("Name of the data table"),
-  rowIds: z.array(z.string().min(1)).min(1).describe("Rows IDs to delete"),
+  tableName: zTableName.describe("Name of the data table"),
+  rowIds: z.array(zRowId).min(1).describe("Rows IDs to delete"),
   type: zExperimentAnnotationType.describe("Type of annotations to delete"),
 });
 

@@ -3,14 +3,17 @@ These run each view's SQL over small tables and check what a reader gets back.""
 
 from __future__ import annotations
 
+import ast
 import json
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import pytest
+from openjii.helpers import load_experiment_table
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
+from pyspark.sql import types as T
 from pyspark.sql.types import ArrayType
 
 pytestmark = pytest.mark.spark
@@ -33,24 +36,35 @@ _PAYLOAD_ANNOTATION = (
 )
 
 _TABLES = {
+    "experiment_table_metadata": """
+        SELECT * FROM VALUES
+          ('e1', 'raw_data', 'static', CAST(NULL AS STRING), 'STRUCT<plot: STRING>',
+           CAST(NULL AS STRING), CAST(NULL AS STRING)),
+          ('e1', 'mac-1', 'macro', 'STRUCT<phi2: DOUBLE>', 'STRUCT<plot: STRING>',
+           CAST(NULL AS STRING), CAST(NULL AS STRING))
+        AS t(experiment_id, identifier, table_type, macro_schema, questions_schema, custom_metadata_schema,
+             upload_schema)
+    """,
     "experiment_raw_data": f"""
         SELECT * FROM VALUES
           ('e1', 1L, 'd1', 'MultispeQ', TIMESTAMP'2026-09-01 08:00:00', 'Europe/Amsterdam', DATE'2026-09-01',
            array(named_struct('id', 'm1', 'name', 'Fluo', 'filename', 'fluo.py')),
            parse_json('{{"plot": "A1"}}'), array({_PAYLOAD_ANNOTATION}),
-           'u1', 'c1', 'p1', 'w1', 52.0D, 5.1D, parse_json('[{{"x": 1}}]'), TIMESTAMP'2026-09-23 10:00:00'),
+           'u1', 'c1', 'p1', 'w1', 'v1', 52.0D, 5.1D, parse_json('[{{"x": 1}}]'),
+           TIMESTAMP'2026-09-23 10:00:00'),
           ('e1', 2L, 'd2', 'Ambit', TIMESTAMP'2026-09-02 09:30:00', CAST(NULL AS STRING), DATE'2026-09-02',
            CAST(array() AS ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>),
            parse_json('{{"plot": "B2"}}'), CAST(array() AS ARRAY<{_ANNOTATION}>),
-           'u2', 'c9', 'p1', 'w1', 52.1D, 5.2D, parse_json('[{{"x": 2}}]'), TIMESTAMP'2026-09-23 10:01:00'),
+           'u2', 'c9', 'p1', 'w1', CAST(NULL AS STRING), 52.1D, 5.2D, parse_json('[{{"x": 2}}]'),
+           TIMESTAMP'2026-09-23 10:01:00'),
           ('e2', 3L, 'd1', 'MultispeQ', TIMESTAMP'2026-09-03 10:00:00', CAST(NULL AS STRING), DATE'2026-09-03',
            CAST(NULL AS ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>),
            CAST(NULL AS VARIANT), CAST(NULL AS ARRAY<{_ANNOTATION}>),
-           'u1', 'c1', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS DOUBLE), CAST(NULL AS DOUBLE),
-           parse_json('[]'), TIMESTAMP'2026-09-23 10:02:00')
+           'u1', 'c1', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS DOUBLE),
+           CAST(NULL AS DOUBLE), parse_json('[]'), TIMESTAMP'2026-09-23 10:02:00')
         AS t(experiment_id, id, device_id, device_name, timestamp, timezone, date, macros, questions_data,
-             annotations, user_id, client_id, protocol_id, workbook_run_id, latitude, longitude, data,
-             processed_timestamp)
+             annotations, user_id, client_id, protocol_id, workbook_run_id, workbook_version_id, latitude,
+             longitude, data, processed_timestamp)
     """,
     "experiment_macro_data": f"""
         SELECT * FROM VALUES
@@ -59,7 +73,7 @@ _TABLES = {
            CAST(NULL AS STRING), TIMESTAMP'2026-09-23 10:05:00', DATE'2026-09-01',
            parse_json('{{"plot": "A1"}}'), array({_PAYLOAD_ANNOTATION})),
           ('e1', 102, 2L, 'd2', 'c9', 'Ambit', TIMESTAMP'2026-09-02 09:30:00', CAST(NULL AS STRING), 'u2',
-           52.1D, 5.2D, 'mac-1', 'Fluo', 'fluo.py', 'w1', 'v1', CAST(NULL AS VARIANT),
+           52.1D, 5.2D, 'mac-1', 'Fluo', 'fluo.py', 'w1', CAST(NULL AS STRING), CAST(NULL AS VARIANT),
            'Macro failed', TIMESTAMP'2026-09-23 10:06:00', DATE'2026-09-02',
            parse_json('{{"plot": "B2"}}'), CAST(NULL AS ARRAY<{_ANNOTATION}>))
         AS t(experiment_id, id, raw_id, device_id, client_id, device_name, timestamp, timezone, user_id,
@@ -123,10 +137,14 @@ _TABLES = {
 
 @pytest.fixture(scope="module")
 def centrum(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
+    """Create the enriched views' source tables and export metadata in a local catalog."""
     location = tmp_path_factory.mktemp("centrum")
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {_CATALOG}.centrum LOCATION '{location}'")
     for name, query in _TABLES.items():
         spark.sql(f"CREATE TABLE {_CATALOG}.centrum.{name} USING parquet AS {query}")
+    for name in ("enriched_experiment_raw_data", "enriched_experiment_macro_data"):
+        query = (_VIEWS / f"{name}.sql").read_text().replace("${catalog}", _CATALOG)
+        spark.sql(f"CREATE VIEW {_CATALOG}.centrum.{name} AS {query}")
 
     # One measurement per timezone in experiment e3, ids from 10 up.
     spark.createDataFrame(
@@ -138,8 +156,8 @@ def centrum(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> It
         SELECT 'e3', 10L + position, 'd9', 'MultispeQ', TIMESTAMP'2026-09-06 12:00:00', timezone,
           DATE'2026-09-06', CAST(NULL AS ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>),
           CAST(NULL AS VARIANT), CAST(NULL AS ARRAY<{_ANNOTATION}>), 'u9', 'c9', CAST(NULL AS STRING),
-          CAST(NULL AS STRING), CAST(NULL AS DOUBLE), CAST(NULL AS DOUBLE), parse_json('[]'),
-          TIMESTAMP'2026-09-23 10:03:00'
+          CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS DOUBLE), CAST(NULL AS DOUBLE),
+          parse_json('[]'), TIMESTAMP'2026-09-23 10:03:00'
         FROM timezones
         """
     )
@@ -228,6 +246,66 @@ def test_local_time_follows_the_stored_zone_and_a_measurement_without_one_is_kep
         assert row["local_time"] is None
 
 
+def test_measurements_and_macro_results_name_the_workbook_version_that_produced_them(
+    spark: SparkSession, centrum: str
+) -> None:
+    """Both views retain the stored version ID, including rows without one."""
+    raw = _rows(spark, "enriched_experiment_raw_data")
+    macro = _rows(spark, "enriched_experiment_macro_data")
+
+    assert raw[1]["workbook_version_id"] == "v1"
+    # A measurement taken without a workbook keeps an empty version.
+    assert raw[3]["workbook_version_id"] is None
+    assert macro[101]["workbook_version_id"] == "v1"
+    assert macro[102]["workbook_version_id"] is None
+
+
+@pytest.mark.parametrize(("table_name", "ids"), [("raw_data", (1, 2)), ("mac-1", (101, 102))])
+@pytest.mark.parametrize("export_format", ["csv", "ndjson", "parquet"])
+def test_exports_keep_populated_and_null_workbook_versions(
+    spark: SparkSession,
+    centrum: str,
+    tmp_path: Path,
+    table_name: str,
+    ids: tuple[int, int],
+    export_format: str,
+) -> None:
+    """Read the actual views through the export loader and check the task's written parts."""
+    frame = load_experiment_table("e1", table_name, _CATALOG, parts=1)
+    expected = {ids[0]: "v1", ids[1]: None}
+    assert {
+        row.id: row.workbook_version_id for row in frame.select("id", "workbook_version_id").collect()
+    } == expected
+
+    # Load the notebook's writers without executing its Databricks widgets or main().
+    task_path = _VIEWS.parent / "tasks/data_export_task.py"
+    module = ast.parse(task_path.read_text())
+    writers: list[ast.stmt] = [
+        node
+        for node in module.body
+        if isinstance(node, ast.FunctionDef) and node.name in {"flatten_complex_columns", "write_parts"}
+    ]
+    output_path = str(tmp_path / "export")
+    namespace: dict[str, Any] = {
+        "FORMAT": export_format,
+        "OUTPUT_PATH": output_path,
+        "col": F.col,
+        "to_json": F.to_json,
+        "StructType": T.StructType,
+        "ArrayType": T.ArrayType,
+        "MapType": T.MapType,
+        "VariantType": T.VariantType,
+    }
+    exec(compile(ast.Module(body=writers, type_ignores=[]), task_path, "exec"), namespace)
+    namespace["write_parts"](frame)
+
+    reader = spark.read.option("header", True).option("escape", '"') if export_format == "csv" else spark.read
+    written = reader.format("json" if export_format == "ndjson" else export_format).load(output_path)
+    assert {
+        int(row.id): row.workbook_version_id for row in written.select("id", "workbook_version_id").collect()
+    } == expected
+
+
 def test_macro_results_keep_their_error_and_get_the_same_enrichment(
     spark: SparkSession, centrum: str
 ) -> None:
@@ -273,3 +351,15 @@ def test_annotations_read_as_the_type_the_app_renders_as_annotations(
 
     assert isinstance(actual, ArrayType) and isinstance(expected, ArrayType)
     assert actual.elementType == expected.elementType
+
+
+@pytest.mark.parametrize(
+    ("view", "row_id"),
+    [("enriched_experiment_raw_data", 2), ("enriched_experiment_macro_data", 102)],
+)
+def test_views_expose_the_client_id_without_synthesizing_registry_data(
+    spark: SparkSession, centrum: str, view: str, row_id: int
+) -> None:
+    row = _rows(spark, view)[row_id]
+    assert row["client_id"] == "c9"
+    assert row["device"] is None

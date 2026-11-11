@@ -254,3 +254,39 @@ describe("SecondTableSection", () => {
     });
   });
 });
+
+it("clears secondary Per and Ordered by references while retaining a primary row window", async () => {
+  const user = userEvent.setup();
+  const { form } = setup({
+    dataSources: [
+      {
+        tableName: "leaf",
+        columnName: "reading",
+        role: "y",
+        aggregate: "previous",
+        partitionColumn: "second__station",
+        orderColumn: "second__observed_at",
+      },
+    ],
+    aggregation: {
+      functions: [
+        {
+          column: "reading",
+          function: "previous",
+          partitionColumn: "second__station",
+          orderColumn: "second__observed_at",
+        },
+      ],
+    },
+  });
+  await user.click(screen.getByRole("combobox", { name: "workspace.secondTable.table" }));
+  await user.click(screen.getByRole("option", { name: "workspace.secondTable.none" }));
+  expect(form.getValues("dataConfig.dataSources.0")).toMatchObject({
+    columnName: "reading",
+    aggregate: "previous",
+  });
+  expect(form.getValues("dataConfig.dataSources.0.orderColumn")).toBe("");
+  expect(form.getValues("dataConfig.dataSources.0.partitionColumn")).toBe("");
+  expect(form.getValues("dataConfig.aggregation.functions.0.orderColumn")).toBeUndefined();
+  expect(form.getValues("dataConfig.aggregation.functions.0.partitionColumn")).toBeUndefined();
+});

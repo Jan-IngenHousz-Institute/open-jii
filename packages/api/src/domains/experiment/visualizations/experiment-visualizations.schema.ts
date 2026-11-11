@@ -1,10 +1,18 @@
 import { z } from "zod";
 
 import {
+  aggregateKind,
+  hasRowWindowGroupingConflict,
+  ORDER_COLUMN_REQUIRED_MESSAGE,
+  ORDER_COLUMN_FORBIDDEN_MESSAGE,
+  PARTITION_COLUMN_FORBIDDEN_MESSAGE,
+  takesWindow,
+  ROW_WINDOW_GROUPING_MESSAGE,
   zExperimentAggregationFunction,
   zExperimentDataAggregation,
   zExperimentDataFilter,
   zExperimentDataJoin,
+  zExperimentWindowColumn,
 } from "../data/experiment-data.schema";
 
 // Chart family enum
@@ -106,6 +114,8 @@ export const zExperimentDataSourceConfig = z.object({
   // is rebuilt from the per-source values with unique aliases, so two series
   // on the same column can carry different aggregates.
   aggregate: zExperimentAggregationFunction.optional(),
+  partitionColumn: zExperimentWindowColumn,
+  orderColumn: zExperimentWindowColumn,
   // Per-series error-bar column. When set, the renderer reads this column's
   // value alongside `columnName` and emits error bars on each point. Only
   // consumed by the error-bar chart today; other chart types ignore it.
@@ -142,15 +152,64 @@ export const zExperimentChartConfig = z.record(z.string(), z.unknown()).optional
 
 // Data configuration schema for visualization data sources. tableName allows
 // empty strings to match the draft state of zExperimentDataSourceConfig.
-export const zExperimentChartDataConfig = z.object({
-  tableName: z.string(),
-  join: zExperimentDataJoin.optional(),
-  dataSources: z.array(zExperimentDataSourceConfig).min(1),
-  // Optional filtering: applied as a WHERE clause when the chart is rendered.
-  filters: z.array(zExperimentDataFilter).optional(),
-  // Optional aggregation: when present the rendered rows are aggregated.
-  aggregation: zExperimentDataAggregation.optional(),
-});
+export const zExperimentChartDataConfig = z
+  .object({
+    tableName: z.string(),
+    join: zExperimentDataJoin.optional(),
+    dataSources: z.array(zExperimentDataSourceConfig).min(1),
+    // Optional filtering: applied as a WHERE clause when the chart is rendered.
+    filters: z.array(zExperimentDataFilter).optional(),
+    // Optional aggregation: when present the rendered rows are aggregated.
+    aggregation: zExperimentDataAggregation.optional(),
+  })
+  .superRefine((config, ctx) => {
+    const functions = [
+      ...(config.aggregation?.functions?.map((item) => item.function) ?? []),
+      ...config.dataSources.flatMap((source) => (source.aggregate ? [source.aggregate] : [])),
+    ];
+    const mixed = hasRowWindowGroupingConflict(
+      functions,
+      (config.aggregation?.groupBy?.length ?? 0) > 0,
+    );
+
+    if (
+      mixed &&
+      !config.dataSources.some(
+        (source) => source.aggregate && aggregateKind(source.aggregate) === "rowWindow",
+      )
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["aggregation"],
+        message: ROW_WINDOW_GROUPING_MESSAGE,
+      });
+    }
+
+    config.dataSources.forEach((source, index) => {
+      const issue = (field: string, message: string) =>
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["dataSources", index, field],
+          message,
+        });
+      if (source.aggregate && takesWindow(source.aggregate)) {
+        if (!source.orderColumn?.trim()) {
+          issue("orderColumn", ORDER_COLUMN_REQUIRED_MESSAGE);
+        }
+      } else if (source.orderColumn !== undefined) {
+        issue("orderColumn", ORDER_COLUMN_FORBIDDEN_MESSAGE);
+      }
+      if (
+        source.partitionColumn !== undefined &&
+        (!source.aggregate || aggregateKind(source.aggregate) !== "rowWindow")
+      ) {
+        issue("partitionColumn", PARTITION_COLUMN_FORBIDDEN_MESSAGE);
+      }
+      if (mixed && source.aggregate && aggregateKind(source.aggregate) === "rowWindow") {
+        issue("aggregate", ROW_WINDOW_GROUPING_MESSAGE);
+      }
+    });
+  });
 
 // Base visualization schema
 export const zExperimentVisualization = z.object({

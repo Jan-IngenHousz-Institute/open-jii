@@ -348,3 +348,78 @@ describe("XAxisShelf", () => {
     );
   });
 });
+
+it("removes grouping when undoing a bucket on a row window", async () => {
+  const user = userEvent.setup();
+  const { form } = renderWithForm<ChartFormValues>(
+    (form) => <XAxisShelf form={form} columns={columns} />,
+    {
+      useFormProps: {
+        defaultValues: defaults({
+          dataConfig: {
+            tableName: "readings",
+            dataSources: [
+              { tableName: "readings", columnName: "time", role: "x" },
+              {
+                tableName: "readings",
+                columnName: "temp",
+                role: "y",
+                aggregate: "previous",
+                orderColumn: "time",
+              },
+            ],
+            aggregation: {
+              groupBy: [{ column: "time", timeBucket: "hour" }],
+              functions: [{ column: "temp", function: "previous", orderColumn: "time" }],
+            },
+          },
+        }),
+      },
+    },
+  );
+  await user.click(screen.getByRole("combobox", { name: "workspace.shelves.timeBucket" }));
+  await user.click(screen.getByRole("option", { name: "workspace.shelves.noBucket" }));
+  expect(form.getValues("dataConfig.aggregation.groupBy")).toBeUndefined();
+  expect(form.getValues("dataConfig.dataSources.1.aggregate")).toBe("previous");
+});
+
+it("keeps raw siblings raw when adding then removing a bucket around a row window", async () => {
+  const user = userEvent.setup();
+  const { form } = renderWithForm<ChartFormValues>(
+    (form) => <XAxisShelf form={form} columns={columns} />,
+    {
+      useFormProps: {
+        defaultValues: defaults({
+          dataConfig: {
+            tableName: "readings",
+            dataSources: [
+              { tableName: "readings", columnName: "time", role: "x" },
+              {
+                tableName: "readings",
+                columnName: "temp",
+                role: "y",
+                aggregate: "previous",
+                orderColumn: "time",
+              },
+              { tableName: "readings", columnName: "sensor", role: "y" },
+            ],
+            aggregation: {
+              functions: [{ column: "temp", function: "previous", orderColumn: "time" }],
+            },
+          },
+        }),
+      },
+    },
+  );
+  const bucket = screen.getByRole("combobox", { name: "workspace.shelves.timeBucket" });
+  await user.click(bucket);
+  await user.click(screen.getByRole("option", { name: "Hour" }));
+  expect(form.getValues("dataConfig.dataSources.2.aggregate")).toBeUndefined();
+  expect(form.getValues("dataConfig.aggregation.groupBy")).toEqual([
+    { column: "time", timeBucket: "hour" },
+  ]);
+  await user.click(bucket);
+  await user.click(screen.getByRole("option", { name: "workspace.shelves.noBucket" }));
+  expect(form.getValues("dataConfig.aggregation.groupBy")).toBeUndefined();
+  expect(form.getValues("dataConfig.dataSources.2.aggregate")).toBeUndefined();
+});

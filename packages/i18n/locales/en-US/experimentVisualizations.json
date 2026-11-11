@@ -270,7 +270,10 @@
       "configureColumns": "Choose at least one column in the Data tab to render the chart.",
       "loading": "Loading chart data...",
       "previewName": "Preview",
-      "fetchErrorBody": "The query couldn't run with the current data configuration. Try a different column or table."
+      "fetchErrorBody": "The query couldn't run with the current data configuration. Try a different column or table.",
+      "incompleteWindowTitle": "Complete the chart settings",
+      "incompleteWindowHelp": "Choose an Ordered by column to preview this chart.",
+      "invalidConfigHelp": "Check the chart settings to preview this chart."
     },
     "inspector": {
       "dataset": "Dataset",
@@ -393,7 +396,29 @@
       "groupByHint": "Draws one line per unique value of this column.",
       "pieValuesCountHint": "Counts rows per label. Pick a column to count only its non-null values.",
       "seriesSilentlyDropped": "Picks an aggregate for this series. GROUP BY drops un-aggregated columns from the SQL projection, so it would render blank.",
-      "colorScaleHeatmap": "Heatmap color scale"
+      "colorScaleHeatmap": "Heatmap color scale",
+      "windowFunctions": {
+        "previous": "Previous value",
+        "change_from_previous": "Change from previous",
+        "row_number": "Row number",
+        "latest": "Value at latest",
+        "earliest": "Value at earliest"
+      },
+      "windowPer": "Per",
+      "windowWholeTable": "Whole table",
+      "windowOrderedBy": "Ordered by",
+      "windowFiltersFirst": "Filters apply first.",
+      "windowFirstRowNoPrevious": "The first row in each group has no previous value.",
+      "windowChangeSeconds": "Changes in date and time columns are measured in seconds.",
+      "rowWindowNeedsRawRows": "Keeps every row; turn off the X bucket and other aggregates first.",
+      "aggregateConflictsWithRowWindow": "Remove Previous value, Change from previous and Row number from other series first.",
+      "rowWindowConflict": "Previous value, Change from previous and Row number keep every row. Remove the X bucket and other aggregates before saving.",
+      "windowOrderRequired": "Choose an Ordered by column before saving.",
+      "windowOrderUnsupported": "This calculation does not use Ordered by.",
+      "windowPerUnsupported": "Per is available only for Previous value, Change from previous and Row number.",
+      "windowPerInvalid": "Choose a Per column or Whole table.",
+      "rowNumberSeriesName": "Row number",
+      "temporalChangeSeriesName": "{{column}} change (s)"
     },
     "axisTypes": {
       "linear": "Linear",
@@ -907,6 +932,12 @@
       "help": "Take the latest earlier reading with the same match value. Both time limits are inclusive. Zero matches the exact time. Date and timezone-free timestamps use UTC. Second table columns start with second__.",
       "incompleteTitle": "Finish time matching",
       "incompleteHelp": "Choose a shared match column, both time columns and a whole-number tolerance to preview and save."
+    },
+    "validation": {
+      "invalidChart": "Check the chart settings before saving.",
+      "invalidFilters": "Check the filter values before saving.",
+      "nameRequired": "Enter a visualization name.",
+      "seriesRequired": "Add a data series."
     }
   }
 }

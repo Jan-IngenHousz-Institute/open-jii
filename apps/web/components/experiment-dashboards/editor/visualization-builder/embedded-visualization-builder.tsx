@@ -63,11 +63,13 @@ interface BuilderShellProps {
 }
 
 function BuilderShell({ experimentId, visualization, renderWidgetTab }: BuilderShellProps) {
+  const { t: translateValidation } = useTranslation("experimentVisualizations");
   const defaults = useMemo(() => buildDefaults(visualization), [visualization]);
 
   const form = useForm<ChartFormValues>({
     defaultValues: defaults,
     resolver: chartFormResolver,
+    context: { translate: translateValidation },
     mode: "onChange",
   });
 
