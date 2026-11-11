@@ -4,22 +4,27 @@ terraform {
   required_providers {
     databricks = {
       source  = "databricks/databricks"
-      version = ">=1.80.0"
+      version = "~> 1.142"
     }
 
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 5.0"
+      version = "~> 6.72"
     }
 
     grafana = {
       source  = "grafana/grafana"
-      version = ">= 4.2.1"
+      version = "~> 4.54"
     }
 
     random = {
       source  = "hashicorp/random"
-      version = ">= 3.6"
+      version = "~> 3.9"
+    }
+
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.14"
     }
   }
 }

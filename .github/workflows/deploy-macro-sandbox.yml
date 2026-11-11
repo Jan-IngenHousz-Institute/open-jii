@@ -7,12 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "The deployment environment (dev, prod)"
+        description: "The deployment environment. Prod deploys go through the PROD Release workflow, which waits for an approval."
         required: true
         type: choice
         options:
           - dev
-          - prod
       ref:
         description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
         required: false

@@ -25,13 +25,8 @@ on:
         required: false
         type: boolean
         default: true
-      deploy_all:
-        description: "Deploy all applications regardless of changes"
-        required: false
-        type: boolean
-        default: false
       deploy_app:
-        description: "Comma-separated apps to force deploy (e.g. web,backend). Leave empty for change detection. Options: web, backend, migration, databricks, docs, status, macro-sandbox, calibration-sandbox"
+        description: "Leave empty: a release deploys every app. Only for a runbook that deploys named apps alone (e.g. backend,web). Options: web, backend, migration, databricks, docs, status, macro-sandbox, calibration-sandbox"
         required: false
         type: string
         default: ""
@@ -52,6 +47,8 @@ permissions:
   id-token: write
 
 jobs:
+  # Every app deploys at the released commit, so a release cannot leave out a change that
+  # an earlier commit, or an earlier failed release, did not ship.
   deploy-environment:
     name: Deploy to ${{ inputs.environment }}
     if: ${{ !inputs.dry_run }}
@@ -60,8 +57,8 @@ jobs:
       environment: ${{ inputs.environment }}
       ref: ${{ inputs.ref }}
       deploy_infrastructure: ${{ inputs.deploy_infrastructure }}
-      deploy_all: ${{ inputs.deploy_all }}
-      deploy_app: ${{ inputs.deploy_app || '' }}
+      deploy_all: ${{ inputs.deploy_app == '' }}
+      deploy_app: ${{ inputs.deploy_app }}
     secrets: inherit
 
   sync-linear-release:
