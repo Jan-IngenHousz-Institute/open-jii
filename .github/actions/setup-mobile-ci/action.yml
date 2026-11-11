@@ -18,7 +18,7 @@ runs:
         node-version: ${{ inputs.node-version }}
 
     - name: Setup Expo CLI
-      uses: expo/expo-github-action@9da89d3617bb88139671bad31b09c65714c2ee06 # 9
+      uses: expo/expo-github-action@5273c2136bd09c2a341fe3340d3e767ce5a13015 # 9
       with:
         expo-version: latest
         eas-version: latest
