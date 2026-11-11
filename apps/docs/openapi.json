@@ -4395,11 +4395,14 @@
                 "type": "object",
                 "properties": {
                   "tableName": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
                   },
                   "rowId": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 64
                   },
                   "annotation": {
                     "type": "object",
@@ -4518,14 +4521,17 @@
                 "type": "object",
                 "properties": {
                   "tableName": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
                   },
                   "rowIds": {
                     "type": "array",
                     "minItems": 1,
                     "items": {
                       "type": "string",
-                      "minLength": 1
+                      "minLength": 1,
+                      "maxLength": 64
                     }
                   },
                   "annotation": {
@@ -4802,6 +4808,8 @@
                 "properties": {
                   "tableName": {
                     "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
                     "description": "Name of the data table"
                   },
                   "rowIds": {
@@ -4809,7 +4817,8 @@
                     "minItems": 1,
                     "items": {
                       "type": "string",
-                      "minLength": 1
+                      "minLength": 1,
+                      "maxLength": 64
                     },
                     "description": "Rows IDs to delete"
                   },

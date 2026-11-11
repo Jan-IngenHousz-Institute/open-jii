@@ -1,14 +1,19 @@
+import { Logger } from "@nestjs/common";
+
 import type { ExperimentAddAnnotationsBulkBody } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
+import { experimentAnnotations } from "@repo/database";
 
 import {
   assertFailure,
+  AppError,
   assertSuccess,
   success,
   failure,
 } from "../../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../../test/test-harness";
 import { UserRepository } from "../../../../../users/core/repositories/user.repository";
-import { ExperimentDataAnnotationsRepository } from "../../../../core/repositories/experiment-data-annotations.repository";
+import { ExperimentAnnotationsWarehouseRepository } from "../../../../core/repositories/experiment-annotations-warehouse.repository";
+import { ExperimentAnnotationsRepository } from "../../../../core/repositories/experiment-annotations.repository";
 import { AddAnnotationsUseCase } from "./add-annotations";
 
 describe("AddAnnotations", () => {
@@ -46,7 +51,7 @@ describe("AddAnnotations", () => {
     });
 
     // Mock the repository to succeed
-    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(success({ rowsAffected: 2 }));
 
     const newAnnotation: ExperimentAddAnnotationsBulkBody = {
@@ -134,7 +139,7 @@ describe("AddAnnotations", () => {
     });
 
     // Mock the repository to return failure
-    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(
       failure({
         message: "Failed to store annotations in database",
@@ -175,7 +180,7 @@ describe("AddAnnotations", () => {
     });
 
     // Mock the repository to succeed
-    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(success({ rowsAffected: 2 }));
 
     const newAnnotation: ExperimentAddAnnotationsBulkBody = {
@@ -211,7 +216,7 @@ describe("AddAnnotations", () => {
     });
 
     // Mock the repository to succeed
-    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(success({ rowsAffected: 1 }));
 
     const newAnnotation: ExperimentAddAnnotationsBulkBody = {
@@ -246,7 +251,7 @@ describe("AddAnnotations", () => {
     });
 
     // Mock the repository to succeed
-    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(success({ rowsAffected: 1 }));
 
     const newAnnotation: ExperimentAddAnnotationsBulkBody = {
@@ -299,7 +304,7 @@ describe("AddAnnotations", () => {
     });
 
     // Mock the repository to succeed
-    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(success({ rowsAffected: 1 }));
 
     const newAnnotation: ExperimentAddAnnotationsBulkBody = {
@@ -345,7 +350,7 @@ describe("AddAnnotations", () => {
     );
 
     // Mock the annotations repository to succeed
-    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    const repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(success({ rowsAffected: 1 }));
 
     const newAnnotation: ExperimentAddAnnotationsBulkBody = {
@@ -367,5 +372,112 @@ describe("AddAnnotations", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value.rowsAffected).toBe(1);
+  });
+
+  describe("the copy in Postgres", () => {
+    const comment: ExperimentAddAnnotationsBulkBody = {
+      tableName: "raw_data",
+      rowIds: ["1", "2"],
+      annotation: { type: "comment", content: { type: "comment", text: "Leaf was wet" } },
+    };
+
+    it("keeps each annotation with the id and time the lakehouse got", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Drought trial",
+        userId: testUserId,
+      });
+      const store = vi
+        .spyOn(testApp.module.get(ExperimentAnnotationsWarehouseRepository), "storeAnnotations")
+        .mockResolvedValue(success({ rowsAffected: 2 }));
+
+      assertSuccess(await useCase.execute(experiment.id, comment, testUserId));
+
+      const [, sent, now] = store.mock.calls[0];
+      const copied = await testApp.database.select().from(experimentAnnotations);
+      expect(copied.map(({ id }) => id).sort()).toEqual(sent.map(({ id }) => id).sort());
+      expect(copied[0]).toMatchObject({
+        experimentId: experiment.id,
+        tableName: "raw_data",
+        type: "comment",
+        contentText: "Leaf was wet",
+        createdBy: testUserId,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    it("keeps a flag with its type", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Drought trial",
+        userId: testUserId,
+      });
+      vi.spyOn(
+        testApp.module.get(ExperimentAnnotationsWarehouseRepository),
+        "storeAnnotations",
+      ).mockResolvedValue(success({ rowsAffected: 1 }));
+
+      assertSuccess(
+        await useCase.execute(
+          experiment.id,
+          {
+            tableName: "raw_data",
+            rowIds: ["3"],
+            annotation: {
+              type: "flag",
+              content: { type: "flag", flagType: "needs_review", text: "Clip slipped" },
+            },
+          },
+          testUserId,
+        ),
+      );
+
+      const copied = await testApp.database.select().from(experimentAnnotations);
+      expect(copied).toMatchObject([
+        { rowId: "3", type: "flag", flagType: "needs_review", contentText: "Clip slipped" },
+      ]);
+    });
+
+    it("copies nothing when the lakehouse refuses the annotations", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Drought trial",
+        userId: testUserId,
+      });
+      vi.spyOn(
+        testApp.module.get(ExperimentAnnotationsWarehouseRepository),
+        "storeAnnotations",
+      ).mockResolvedValue(failure(AppError.internal("Warehouse down")));
+
+      assertFailure(await useCase.execute(experiment.id, comment, testUserId));
+
+      expect(await testApp.database.select().from(experimentAnnotations)).toEqual([]);
+    });
+
+    it("still adds the annotations when the copy fails", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Drought trial",
+        userId: testUserId,
+      });
+      vi.spyOn(
+        testApp.module.get(ExperimentAnnotationsWarehouseRepository),
+        "storeAnnotations",
+      ).mockResolvedValue(success({ rowsAffected: 2 }));
+      vi.spyOn(testApp.module.get(ExperimentAnnotationsRepository), "insert").mockResolvedValue(
+        failure(AppError.internal("Postgres down")),
+      );
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+
+      const result = await useCase.execute(experiment.id, comment, testUserId);
+
+      assertSuccess(result);
+      expect(result.value.rowsAffected).toBe(2);
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: "Annotations not copied to Postgres",
+          experimentId: experiment.id,
+          tableName: "raw_data",
+          annotationCount: 2,
+        }),
+      );
+    });
   });
 });

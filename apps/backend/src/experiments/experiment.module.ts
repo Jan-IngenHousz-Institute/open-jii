@@ -98,9 +98,10 @@ import { AWS_PORT } from "./core/ports/aws.port";
 import { CACHE_PORT, SCHEMA_CACHE_PORT } from "./core/ports/cache.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { SERVING_STORE_PORT } from "./core/ports/serving-store.port";
-import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
 // Repositories
-import { ExperimentDataAnnotationsRepository } from "./core/repositories/experiment-data-annotations.repository";
+import { ExperimentAnnotationsWarehouseRepository } from "./core/repositories/experiment-annotations-warehouse.repository";
+import { ExperimentAnnotationsRepository } from "./core/repositories/experiment-annotations.repository";
+import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
 import { ExperimentDataExportsRepository } from "./core/repositories/experiment-data-exports.repository";
 import { ExperimentDataUploadsRepository } from "./core/repositories/experiment-data-uploads.repository";
 // Repositories
@@ -213,7 +214,8 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentJoinRequestRepository,
     ExperimentJoinCodeRepository,
     ExperimentMetadataRepository,
-    ExperimentDataAnnotationsRepository,
+    ExperimentAnnotationsWarehouseRepository,
+    ExperimentAnnotationsRepository,
     ExperimentVisualizationRepository,
     ExperimentDashboardRepository,
     ExperimentDataRepository,

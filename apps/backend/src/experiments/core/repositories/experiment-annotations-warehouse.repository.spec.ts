@@ -16,13 +16,13 @@ import type {
 } from "../models/experiment-data-annotation.model";
 import type { DatabricksPort } from "../ports/databricks.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
-import { ExperimentDataAnnotationsRepository } from "./experiment-data-annotations.repository";
+import { ExperimentAnnotationsWarehouseRepository } from "./experiment-annotations-warehouse.repository";
 
 /* eslint-disable @typescript-eslint/unbound-method */
 
-describe("ExperimentDataAnnotationsRepository", () => {
+describe("ExperimentAnnotationsWarehouseRepository", () => {
   const testApp = TestHarness.App;
-  let repository: ExperimentDataAnnotationsRepository;
+  let repository: ExperimentAnnotationsWarehouseRepository;
   let databricksPort: DatabricksPort;
 
   const mockExperimentId = faker.string.uuid();
@@ -30,6 +30,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
   const mockAnnotationId = faker.string.uuid();
   const mockRowId = faker.string.uuid();
   const mockTableName = "experiment_data_table";
+  const now = new Date("2026-11-04T02:00:00.000Z");
 
   beforeAll(async () => {
     await testApp.setup();
@@ -37,7 +38,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    repository = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     databricksPort = testApp.module.get(DATABRICKS_PORT);
   });
 
@@ -50,7 +51,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
   });
 
   describe("storeAnnotations", () => {
-    const createValidAnnotation = (): CreateAnnotationDto => ({
+    const createValidAnnotation = (): CreateAnnotationDto & { id: string } => ({
+      id: faker.string.uuid(),
       userId: mockUserId,
       userName: "Test User",
       tableName: mockTableName,
@@ -75,7 +77,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       // Act
-      const result = await repository.storeAnnotations(mockExperimentId, annotations);
+      const result = await repository.storeAnnotations(mockExperimentId, annotations, now);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -85,13 +87,21 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
         databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining("INSERT INTO experiment_annotations"),
-        expect.arrayContaining([{ name: "experiment_id", value: mockExperimentId }]),
+        expect.arrayContaining([
+          { name: "experiment_id", value: mockExperimentId },
+          // The id and time Postgres gets too.
+          { name: "id_0", value: annotations[0].id },
+          { name: "now", value: now.toISOString(), type: "TIMESTAMP" },
+        ]),
       );
+      const statement = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0][1];
+      expect(statement).toContain("(:id_0, :experiment_id,");
+      expect(statement).toContain(":now, :now)");
     });
 
     it("should successfully store multiple annotations with bulk insert", async () => {
       // Arrange
-      const annotations = [
+      const annotations: (CreateAnnotationDto & { id: string })[] = [
         createValidAnnotation(),
         {
           ...createValidAnnotation(),
@@ -103,7 +113,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       // Act
-      const result = await repository.storeAnnotations(mockExperimentId, annotations);
+      const result = await repository.storeAnnotations(mockExperimentId, annotations, now);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -119,7 +129,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
 
     it("should store annotations on macro tables whose name is a UUID", async () => {
       // Arrange: macro tables are identified by a UUID, not a static identifier
-      const macroTableAnnotation = {
+      const macroTableAnnotation: CreateAnnotationDto & { id: string } = {
         ...createValidAnnotation(),
         tableName: faker.string.uuid(),
         type: "flag" as const,
@@ -129,7 +139,11 @@ describe("ExperimentDataAnnotationsRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       // Act
-      const result = await repository.storeAnnotations(mockExperimentId, [macroTableAnnotation]);
+      const result = await repository.storeAnnotations(
+        mockExperimentId,
+        [macroTableAnnotation],
+        now,
+      );
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -143,7 +157,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
 
     it("should return success with empty result when no annotations provided", async () => {
       // Act
-      const result = await repository.storeAnnotations(mockExperimentId, []);
+      const result = await repository.storeAnnotations(mockExperimentId, [], now);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -162,7 +176,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       ];
 
       // Act
-      const result = await repository.storeAnnotations(mockExperimentId, invalidAnnotations);
+      const result = await repository.storeAnnotations(mockExperimentId, invalidAnnotations, now);
 
       // Assert
       expect(result.isFailure()).toBe(true);
@@ -178,9 +192,11 @@ describe("ExperimentDataAnnotationsRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       // Act
-      const result = await repository.storeAnnotations(mockExperimentId, [
-        annotationWithSpecialChars,
-      ]);
+      const result = await repository.storeAnnotations(
+        mockExperimentId,
+        [annotationWithSpecialChars],
+        now,
+      );
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -198,7 +214,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(failure(databricksError));
 
       // Act
-      const result = await repository.storeAnnotations(mockExperimentId, annotations);
+      const result = await repository.storeAnnotations(mockExperimentId, annotations, now);
 
       // Assert
       expect(result.isFailure()).toBe(true);
@@ -232,7 +248,9 @@ describe("ExperimentDataAnnotationsRepository", () => {
       const result = await repository.updateAnnotation(
         mockExperimentId,
         mockAnnotationId,
+        "flag",
         validUpdateData,
+        now,
       );
 
       // Assert
@@ -244,15 +262,19 @@ describe("ExperimentDataAnnotationsRepository", () => {
         expect.stringContaining("UPDATE experiment_annotations"),
         expect.arrayContaining([
           { name: "annotation_id", value: mockAnnotationId },
+          { name: "type", value: "flag" },
           { name: "content_text", value: validUpdateData.contentText },
           { name: "flag_type", value: validUpdateData.flagType },
+          { name: "now", value: now.toISOString(), type: "TIMESTAMP" },
         ]),
       );
 
       const sqlCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
       const sqlQuery = sqlCall[1];
 
-      expect(sqlQuery).toContain("WHERE id = :annotation_id AND experiment_id = :experiment_id");
+      expect(sqlQuery).toContain(
+        "WHERE id = :annotation_id AND experiment_id = :experiment_id AND type = :type",
+      );
       expect(sqlQuery).toContain("content_text = :content_text");
       expect(sqlQuery).toContain("flag_type = :flag_type");
       expect(sqlQuery).toContain("updated_at = :now");
@@ -269,7 +291,9 @@ describe("ExperimentDataAnnotationsRepository", () => {
       const result = await repository.updateAnnotation(
         mockExperimentId,
         mockAnnotationId,
+        "comment",
         partialUpdateData,
+        now,
       );
 
       // Assert
@@ -288,7 +312,9 @@ describe("ExperimentDataAnnotationsRepository", () => {
       const result = await repository.updateAnnotation(
         mockExperimentId,
         "invalid-uuid",
+        "flag",
         validUpdateData,
+        now,
       );
 
       // Assert
@@ -308,7 +334,9 @@ describe("ExperimentDataAnnotationsRepository", () => {
       const result = await repository.updateAnnotation(
         mockExperimentId,
         mockAnnotationId,
+        "comment",
         invalidUpdateData,
+        now,
       );
 
       // Assert
@@ -467,7 +495,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
 
     it("should protect against SQL injection in annotation content", async () => {
       // Arrange
-      const maliciousAnnotation: CreateAnnotationDto = {
+      const maliciousAnnotation: CreateAnnotationDto & { id: string } = {
+        id: faker.string.uuid(),
         userId: mockUserId,
         userName: "Test User",
         tableName: mockTableName,
@@ -480,7 +509,11 @@ describe("ExperimentDataAnnotationsRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       // Act
-      const result = await repository.storeAnnotations(mockExperimentId, [maliciousAnnotation]);
+      const result = await repository.storeAnnotations(
+        mockExperimentId,
+        [maliciousAnnotation],
+        now,
+      );
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -500,17 +533,22 @@ describe("ExperimentDataAnnotationsRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       // Act
-      const result = await repository.storeAnnotations(mockExperimentId, [
-        {
-          userId: mockUserId,
-          userName: "Test User",
-          tableName: mockTableName,
-          rowId,
-          type: "comment",
-          contentText: "test",
-          flagType: null,
-        },
-      ]);
+      const result = await repository.storeAnnotations(
+        mockExperimentId,
+        [
+          {
+            id: faker.string.uuid(),
+            userId: mockUserId,
+            userName: "Test User",
+            tableName: mockTableName,
+            rowId,
+            type: "comment",
+            contentText: "test",
+            flagType: null,
+          },
+        ],
+        now,
+      );
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -548,7 +586,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
 
     it("should validate table names and types to prevent injection", async () => {
       // Arrange
-      const invalidAnnotation: CreateAnnotationDto = {
+      const invalidAnnotation: CreateAnnotationDto & { id: string } = {
+        id: faker.string.uuid(),
         userId: mockUserId,
         userName: "Test User",
         tableName: "invalid; DROP TABLE", // Invalid table name
@@ -559,7 +598,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       };
 
       // Act
-      const result = await repository.storeAnnotations(mockExperimentId, [invalidAnnotation]);
+      const result = await repository.storeAnnotations(mockExperimentId, [invalidAnnotation], now);
 
       // Assert
       expect(result.isFailure()).toBe(true);
