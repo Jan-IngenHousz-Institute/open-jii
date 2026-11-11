@@ -55,7 +55,7 @@ import type {
   IotDeviceGroupMemberHealth,
 } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import type { IotDeviceDetail, IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
-import type { Macro, MacroDetail } from "@repo/api/domains/macro/macro.schema";
+import type { Macro, MacroDetail, MacroProtocolEntry } from "@repo/api/domains/macro/macro.schema";
 import type { OrganizationJoinRequest } from "@repo/api/domains/organization/join-requests/organization-join-requests.schema";
 import type {
   MyOrganization,
@@ -66,7 +66,11 @@ import type {
   OrganizationTeam,
   OrganizationTeamGrant,
 } from "@repo/api/domains/organization/organization.schema";
-import type { Protocol, ProtocolDetail } from "@repo/api/domains/protocol/protocol.schema";
+import type {
+  Protocol,
+  ProtocolDetail,
+  ProtocolMacroEntry,
+} from "@repo/api/domains/protocol/protocol.schema";
 import type {
   GranteeUserDto,
   ResourceGrantDto,
@@ -293,6 +297,28 @@ export function createProtocol(overrides: Partial<Protocol> = {}): Protocol {
     visibility: "public",
     createdAt: "2025-01-01T00:00:00.000Z",
     updatedAt: "2025-01-10T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function createProtocolMacroEntry(
+  overrides: Partial<ProtocolMacroEntry> = {},
+): ProtocolMacroEntry {
+  return {
+    protocolId: "protocol-1",
+    macro: createMacro(),
+    addedAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function createMacroProtocolEntry(
+  overrides: Partial<MacroProtocolEntry> = {},
+): MacroProtocolEntry {
+  return {
+    macroId: "macro-1",
+    protocol: createProtocol(),
+    addedAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
 }

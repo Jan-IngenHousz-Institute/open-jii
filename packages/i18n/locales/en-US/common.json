@@ -1300,6 +1300,10 @@
     "detailsTitle": "Details",
     "codePlaceholder": "Enter protocol code as JSON",
     "columns": {
+      "macroCount_one": "{{count}} macro",
+      "macroCount_other": "{{count}} macros",
+      "macroCountLabel_one": "{{count}} compatible macro, show names",
+      "macroCountLabel_other": "{{count}} compatible macros, show names",
       "name": "Name",
       "family": "Family",
       "macros": "Macros",
