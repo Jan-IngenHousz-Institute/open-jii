@@ -40,6 +40,34 @@ server. If its log says `Exceeded maximum allowed payload size`, the response we
 6 MB limit. In October 2026 the Lambda was returning Contentful originals unresized, so any CMS
 photo over about 6 MB failed every time it was requested.
 
+Access logs record request metadata without cookie values. The cookie field is `-`;
+the status and path fields above stay in their usual positions. CloudFront log
+objects under `cloudfront-logs/` expire 30 days after creation. Previous versions
+expire 30 days after becoming noncurrent. Dev, production and DR use the same
+cookie-free distribution modules and retention rule. Firewall logs continue to redact `cookie` and `authorization`.
+
+## Approve retention and clear historical logs
+
+Before applying the retention rule, Petar must confirm that no investigation
+needs logs older than 30 days. Existing objects already older than 30 days become
+eligible for removal at the first lifecycle processing after apply. Obtain this
+confirmation before approving the apply, and review a separate infrastructure
+plan for each environment.
+
+After Petar explicitly approves clearing the stored CloudFront logs, an operator
+deletes objects under `cloudfront-logs/` in each of dev, production and DR's access-log buckets,
+including any previous versions. Record the confirmation, environment, prefix
+and completion in the ticket. Keep other prefixes, including ALB logs. This is a
+manual operator step; the pull request does not delete stored logs or run a
+cleanup command.
+
+The repository's Access Log Policy check runs without credentials and rejects
+cookie logging, missing CloudFront retention or missing firewall redactions.
+It runs inside the required Build, Lint, & Test check, including on infrastructure-only
+PRs. Adding standard logging v2 or real-time logging requires extending the
+policy to check their cookie fields before those resources can be introduced.
+Run it locally with `node --test infrastructure/tests/access-log-policy.test.mjs`.
+
 ## Distribution changes are the usual edge cause
 
 Behaviours, origin request policies and cache policies are all in

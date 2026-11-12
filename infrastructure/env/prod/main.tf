@@ -56,6 +56,15 @@ module "logs_bucket" {
   # Lets the backend ALB's enable_access_logs actually deliver to this bucket.
   elb_log_delivery_prefixes = ["backend-alb-logs"]
 
+  lifecycle_rules = [{
+    id                                 = "expire-cloudfront-access-logs"
+    status                             = "Enabled"
+    prefix                             = "cloudfront-logs/"
+    transitions                        = []
+    expiration_days                    = 30
+    noncurrent_version_expiration_days = 30
+  }]
+
   tags = {
     Environment = "prod"
     Project     = "open-jii"
