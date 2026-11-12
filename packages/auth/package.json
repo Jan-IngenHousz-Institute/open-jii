@@ -18,6 +18,10 @@
       "types": "./src/passkey.ts",
       "default": "./dist/passkey.js"
     },
+    "./sign-in-methods": {
+      "types": "./src/sign-in-methods.ts",
+      "default": "./dist/sign-in-methods.js"
+    },
     "./organization": {
       "types": "./src/organization/plugin.ts",
       "default": "./dist/organization/plugin.js"

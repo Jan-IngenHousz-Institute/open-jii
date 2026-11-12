@@ -29,6 +29,7 @@ import { EMAIL_PORT } from "./core/ports/email.port";
 import { InvitationRepository } from "./core/repositories/user-invitation.repository";
 import { UserRepository } from "./core/repositories/user.repository";
 import { AccountSecurityAuthHook } from "./presentation/hooks/account-security-auth.hook";
+import { SignInMethodsAuthHook } from "./presentation/hooks/sign-in-methods-auth.hook";
 import { UserAuthHook } from "./presentation/hooks/user-auth.hook";
 import { InvitationController } from "./presentation/user-invitation.controller";
 import { UserWebhookController } from "./presentation/user-webhook.controller";
@@ -84,6 +85,7 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
     // Auth hooks
     UserAuthHook,
     AccountSecurityAuthHook,
+    SignInMethodsAuthHook,
   ],
   exports: [
     UserRepository,

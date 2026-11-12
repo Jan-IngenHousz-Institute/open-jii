@@ -29,11 +29,21 @@ export class UserAuthHook {
     const hasValidEmail = z.string().email().safeParse(currentUser.email).success;
     if (currentUser.registered && hasValidEmail) return;
 
-    const body = ctx.body as { email?: string };
-    const { email } = body;
-    if (!email) return;
+    // The body is not validated until after this hook. Anything that is not an address is left
+    // to that validation: an ORCID iD written here would match an ORCID placeholder at sign-in.
+    // The endpoint looks the address up lowercased, so it is stored that way.
+    const body = ctx.body as { email?: unknown };
+    const parsed = z.string().email().safeParse(body.email);
+    if (!parsed.success) return;
+    const email = parsed.data.toLowerCase();
+    if (email === currentUser.email?.toLowerCase()) return;
 
-    const result = await this.userRepository.update(currentUser.id, { email });
+    // The verified flag must never carry over to an address nobody has proven; the code that
+    // follows proves it.
+    const result = await this.userRepository.update(currentUser.id, {
+      email,
+      emailVerified: false,
+    });
     if (result.isFailure()) {
       if (result.error.code === "REPOSITORY_DUPLICATE") {
         throw new APIError("BAD_REQUEST", {

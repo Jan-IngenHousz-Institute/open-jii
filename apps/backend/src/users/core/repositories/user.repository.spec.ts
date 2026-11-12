@@ -211,6 +211,84 @@ describe("UserRepository", () => {
     });
   });
 
+  describe("findSignInMethods", () => {
+    async function addPasskey(userId: string) {
+      const [row] = await testApp.database
+        .insert(passkeys)
+        .values({
+          publicKey: "public-key",
+          userId,
+          credentialID: faker.string.uuid(),
+          deviceType: "singleDevice",
+        })
+        .returning({ id: passkeys.id });
+      return row.id;
+    }
+
+    async function addAccount(userId: string, providerId: string) {
+      const [row] = await testApp.database
+        .insert(accounts)
+        .values({ userId, providerId, accountId: faker.string.numeric(8) })
+        .returning({ id: accounts.id });
+      return row.id;
+    }
+
+    it("reads a verified email account with nothing else", async () => {
+      const userId = await testApp.createTestUser({
+        email: "researcher@example.com",
+        emailVerified: true,
+      });
+
+      const result = await repository.findSignInMethods(userId);
+
+      assertSuccess(result);
+      expect(result.value).toEqual({
+        email: "researcher@example.com",
+        emailVerified: true,
+        passkeyCount: 0,
+        passkeyIds: [],
+        accountIds: [],
+      });
+    });
+
+    it("reads the person's passkeys and connected accounts", async () => {
+      const userId = await testApp.createTestUser({ email: "0000-0002-1825-0097" });
+      const passkeyIds = [await addPasskey(userId), await addPasskey(userId)];
+      const accountIds = [await addAccount(userId, "github"), await addAccount(userId, "orcid")];
+
+      const result = await repository.findSignInMethods(userId);
+
+      assertSuccess(result);
+      expect(result.value).toEqual({
+        email: "0000-0002-1825-0097",
+        emailVerified: false,
+        passkeyCount: 2,
+        passkeyIds: expect.arrayContaining(passkeyIds) as string[],
+        accountIds: expect.arrayContaining(accountIds) as string[],
+      });
+      expect(result.value?.passkeyIds).toHaveLength(2);
+      expect(result.value?.accountIds).toHaveLength(2);
+    });
+
+    it("leaves out another person's passkeys and accounts", async () => {
+      const otherId = await testApp.createTestUser({});
+      await addPasskey(otherId);
+      await addAccount(otherId, "github");
+
+      const result = await repository.findSignInMethods(testUserId);
+
+      assertSuccess(result);
+      expect(result.value).toMatchObject({ passkeyCount: 0, passkeyIds: [], accountIds: [] });
+    });
+
+    it("returns null for a user that does not exist", async () => {
+      const result = await repository.findSignInMethods(faker.string.uuid());
+
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+  });
+
   describe("findPendingOrganizationInvitationsToNotify", () => {
     const INVITEE_EMAIL = "Invitee@Example.com";
     let inviteeId: string;

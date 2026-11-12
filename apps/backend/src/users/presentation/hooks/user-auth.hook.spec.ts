@@ -90,14 +90,52 @@ describe("UserAuthHook", () => {
       expect(mockUserRepository.update).not.toHaveBeenCalled();
     });
 
-    it("should update user email when user lacks a valid email", async () => {
+    it("should update user email, unverified, when user lacks a valid email", async () => {
       const ctx = createBeforeHookContext("new@example.com");
 
       await hook.handleEmailOtpSignInBefore(ctx);
 
       expect(mockUserRepository.update).toHaveBeenCalledWith("user-123", {
         email: "new@example.com",
+        emailVerified: false,
       });
+    });
+
+    it("should store the address lowercased, as the endpoint looks it up", async () => {
+      const ctx = createBeforeHookContext("New.Person@Example.COM");
+
+      await hook.handleEmailOtpSignInBefore(ctx);
+
+      expect(mockUserRepository.update).toHaveBeenCalledWith("user-123", {
+        email: "new.person@example.com",
+        emailVerified: false,
+      });
+    });
+
+    it("should not write an ORCID iD, which would match an ORCID placeholder", async () => {
+      const ctx = createBeforeHookContext("0000-0002-1825-0097");
+
+      await hook.handleEmailOtpSignInBefore(ctx);
+
+      expect(mockUserRepository.update).not.toHaveBeenCalled();
+    });
+
+    it("should not write anything else that is not an address", async () => {
+      await hook.handleEmailOtpSignInBefore(createBeforeHookContext("not-an-address"));
+      await hook.handleEmailOtpSignInBefore({ body: { email: 42 } } as unknown as AuthHookContext);
+
+      expect(mockUserRepository.update).not.toHaveBeenCalled();
+    });
+
+    it("should not write the address the user already has, so a failed code unverifies nothing", async () => {
+      vi.spyOn(hook as any, "getSessionFromCtx").mockResolvedValue({
+        user: { id: "user-123", email: "Existing@Example.com", registered: false },
+      } as any);
+      const ctx = createBeforeHookContext("existing@example.COM");
+
+      await hook.handleEmailOtpSignInBefore(ctx);
+
+      expect(mockUserRepository.update).not.toHaveBeenCalled();
     });
 
     it("should throw BAD_REQUEST when email is already taken", async () => {
