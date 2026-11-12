@@ -115,7 +115,7 @@ export function RegistrationForm({
     }
 
     if (newsletterOptIn) {
-      void subscribeNewsletter.mutateAsync(undefined).catch((error: unknown) => {
+      await subscribeNewsletter.mutateAsync(undefined).catch((error: unknown) => {
         const isForgottenEmail = parseApiError(error)?.code === "MAILCHIMP_FORGOTTEN_EMAIL";
         toast({
           description: isForgottenEmail

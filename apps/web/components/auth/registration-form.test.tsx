@@ -190,6 +190,28 @@ describe("RegistrationForm", () => {
     );
   });
 
+  it("waits for the newsletter subscription before returning to Equipment", async () => {
+    let completeSubscription: () => void = () => undefined;
+    const subscription = new Promise<undefined>((resolve) => {
+      completeSubscription = () => resolve(undefined);
+    });
+    mockSubscribeNewsletter.mockReturnValueOnce(subscription);
+    const callbackUrl = "https://equipment.openjii.org/login/openjii";
+    render(<RegistrationForm {...defaultProps} callbackUrl={callbackUrl} />);
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "News");
+    await user.type(screen.getByLabelText("registration.lastName"), "Reader");
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
+    await user.click(screen.getByRole("checkbox", { name: "registration.newsletterOptIn" }));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
+
+    await waitFor(() => expect(mockSubscribeNewsletter).toHaveBeenCalledTimes(1));
+    expect(pushMock).not.toHaveBeenCalled();
+    completeSubscription();
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith(callbackUrl));
+  });
+
   it("does not call the newsletter endpoint when the user leaves the opt-in unchecked", async () => {
     render(<RegistrationForm {...defaultProps} />);
 
@@ -207,7 +229,12 @@ describe("RegistrationForm", () => {
 
   it("completes registration when the newsletter subscription fails", async () => {
     mockSubscribeNewsletter.mockRejectedValueOnce(new Error("Mailchimp unavailable"));
-    render(<RegistrationForm {...defaultProps} />);
+    render(
+      <RegistrationForm
+        {...defaultProps}
+        callbackUrl="https://equipment.openjii.org/login/openjii"
+      />,
+    );
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("registration.firstName"), "Still");
@@ -217,7 +244,7 @@ describe("RegistrationForm", () => {
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith("/dashboard");
+      expect(pushMock).toHaveBeenCalledWith("https://equipment.openjii.org/login/openjii");
       expect(toastMock).toHaveBeenCalledWith({
         description: "registration.newsletterOptInError",
       });
