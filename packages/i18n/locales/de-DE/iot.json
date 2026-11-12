@@ -373,6 +373,7 @@
           "title": "Übersicht",
           "description": "Was dieses Gerät ist und wo seine Einrichtung steht."
         },
+        "equipmentLink": "In Equipment öffnen",
         "about": {
           "title": "Details"
         }
