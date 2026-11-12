@@ -670,6 +670,271 @@ EOT
   }
 }
 
+# Notification email. The backend publishes the outbox's gauges every five minutes from each
+# task, and SES publishes the account's reputation once it has sent enough mail to judge, so
+# no data on any of the three is quiet, not broken; dependency-health watches the backend going
+# silent.
+resource "grafana_rule_group" "email_health" {
+  provider         = grafana.amg
+  name             = "Notification Email Health"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 60
+
+  # Catalog entry 141. Every task publishes the same age, so the highest reads right however many
+  # run. A relay outage holds every row; one email failing on every attempt crosses it too.
+  rule {
+    name      = "Notification Emails Waiting"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Backend"
+        metricName = "NotificationEmailOldestWaitingSeconds"
+        statistic  = "Maximum"
+        period     = "300"
+        dimensions = {
+          Environment = var.environment
+        }
+        matchExact = true
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 900"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "An email has waited in the outbox for over 15 minutes. Either the mail relay is unreachable and the whole outbox is waiting, or one email is failing on every attempt."
+      summary          = "Notification emails are not leaving"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/email-outbox-waiting.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["email-outbox-waiting"]
+    }
+    labels = {
+      metric_id = "email-outbox-waiting"
+      severity  = "warning"
+      service   = "backend"
+    }
+  }
+
+  # Catalog entry 142. SES's account-level figure, without dimensions: each environment is its
+  # own account. SES publishes it only around sends, with gaps of over a day on a quiet account, so
+  # the query looks back three days and the rule reads the newest point.
+  rule {
+    name      = "Email Bounce Rate"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/SES"
+        metricName = "Reputation.BounceRate"
+        statistic  = "Average"
+        period     = "300"
+        dimensions = {}
+        matchExact = true
+      })
+
+      relative_time_range {
+        from = 259200
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0.04"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "15m"
+
+    annotations = {
+      description      = "The account's bounce rate is nearing 5%, where AWS places it under review; at 10% it may pause sending, sign-in codes included."
+      summary          = "Email bounce rate is nearing AWS's review line"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/email-bounce-rate.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["email-bounce-rate"]
+    }
+    labels = {
+      metric_id = "email-bounce-rate"
+      severity  = "warning"
+      service   = "email"
+    }
+  }
+
+  # Catalog entry 143. The same as the bounce rate, against AWS's 0.1% review line.
+  rule {
+    name      = "Email Complaint Rate"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/SES"
+        metricName = "Reputation.ComplaintRate"
+        statistic  = "Average"
+        period     = "300"
+        dimensions = {}
+        matchExact = true
+      })
+
+      relative_time_range {
+        from = 259200
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0.0008"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "15m"
+
+    annotations = {
+      description      = "The account's complaint rate is nearing 0.1%, where AWS places it under review; at 0.5% it may pause sending, sign-in codes included."
+      summary          = "Email complaint rate is nearing AWS's review line"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/email-complaint-rate.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["email-complaint-rate"]
+    }
+    labels = {
+      metric_id = "email-complaint-rate"
+      severity  = "warning"
+      service   = "email"
+    }
+  }
+}
+
 # CloudFront Alerts
 resource "grafana_rule_group" "cloudfront_errors" {
   provider         = grafana.amg
